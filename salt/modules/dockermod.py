@@ -445,9 +445,18 @@ def _refresh_mine_cache(wrapped):
         refresh salt mine on exit.
         '''
         returned = wrapped(*args, **__utils__['args.clean_kwargs'](**kwargs))
-        __salt__['mine.send']('docker.ps', verbose=True, all=True, host=True)
+        if _check_update_mine():
+            __salt__['mine.send']('docker.ps', verbose=True, all=True, host=True)
         return returned
     return wrapper
+
+
+def _check_update_mine():
+    try:
+        ret = __context__['docker.update_mine']
+    except KeyError:
+        ret = __context__['docker.update_mine'] = __salt__['config.get']('docker.update_mine', default=True)
+    return ret
 
 
 # Helper functions
@@ -6585,7 +6594,6 @@ def _prepare_trans_tar(name, sls_opts, mods=None, pillar=None, extra_filerefs=''
     refs = salt.client.ssh.state.lowstate_file_refs(chunks, extra_filerefs)
     _mk_fileclient()
     trans_tar = salt.client.ssh.state.prep_trans_tar(
-        sls_opts,
         __context__['cp.fileclient'],
         chunks, refs, pillar, name)
     return trans_tar
@@ -6708,7 +6716,7 @@ def call(name, function, *args, **kwargs):
 
 def apply_(name, mods=None, **kwargs):
     '''
-    .. versionadded:: Flourine
+    .. versionadded:: Fluorine
 
     Apply states! This function will call highstate or state.sls based on the
     arguments passed in, ``apply`` is intended to be the main gateway for
@@ -6848,7 +6856,7 @@ def highstate(name, saltenv='base', **kwargs):
     '''
     Apply a highstate to the running container
 
-    .. versionadded:: Flourine
+    .. versionadded:: Fluorine
 
     The container does not need to have Salt installed, but Python is required.
 

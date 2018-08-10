@@ -31,6 +31,7 @@ execution modules
     apk
     aptpkg
     archive
+    arista_pyeapi
     artifactory
     at
     at_solaris
@@ -86,6 +87,7 @@ execution modules
     chocolatey
     chronos
     cimc
+    ciscoconfparse_mod
     cisconso
     cloud
     cmdmod
@@ -152,6 +154,7 @@ execution modules
     glanceng
     glusterfs
     gnomedesktop
+    google_chat
     gpg
     grafana4
     grains
@@ -185,6 +188,7 @@ execution modules
     inspectlib.query
     inspector
     introspect
+    iosconfig
     ipmi
     ipset
     iptables
@@ -192,6 +196,7 @@ execution modules
     jboss7
     jboss7_cli
     jenkinsmod
+    jira_mod
     junos
     k8s
     kapacitor
@@ -269,9 +274,10 @@ execution modules
     namecheap_ns
     namecheap_ssl
     namecheap_users
-    napalm
     napalm_acl
     napalm_bgp
+    napalm_formula
+    napalm_mod
     napalm_network
     napalm_ntp
     napalm_probes
@@ -283,6 +289,7 @@ execution modules
     netbox
     netbsd_sysctl
     netbsdservice
+    netmiko_mod
     netscaler
     network
     neutron
@@ -296,6 +303,7 @@ execution modules
     npm
     nspawn
     nxos
+    nxos_api
     omapi
     openbsd_sysctl
     openbsdpkg
@@ -320,6 +328,7 @@ execution modules
     pcs
     pdbedit
     pecl
+    peeringdb
     pf
     philips_hue
     pillar
@@ -372,9 +381,11 @@ execution modules
     s3
     s6
     salt_proxy
+    saltcheck
     saltcloudmod
     saltutil
     schedule
+    scp_mod
     scsi
     sdb
     seed

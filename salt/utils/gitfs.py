@@ -476,6 +476,10 @@ class GitProvider(object):
         use_tags = 'tag' in self.ref_types
 
         ret = set()
+        if salt.utils.stringutils.is_hex(self.base):
+            # gitfs_base or per-saltenv 'base' may point to a commit ID, which
+            # would not show up in the refs. Make sure we include it.
+            ret.add('base')
         for ref in salt.utils.data.decode(refs):
             if ref.startswith('refs/'):
                 ref = ref[5:]
@@ -1530,9 +1534,9 @@ class Pygit2(GitProvider):
 
             elif tag_ref in refs:
                 tag_obj = self.repo.revparse_single(tag_ref)
-                if not isinstance(tag_obj, pygit2.Tag):
+                if not isinstance(tag_obj, pygit2.Commit):
                     log.error(
-                        '%s does not correspond to pygit2.Tag object',
+                        '%s does not correspond to pygit2.Commit object',
                         tag_ref
                     )
                 else:
@@ -1552,9 +1556,10 @@ class Pygit2(GitProvider):
                                 exc_info=True
                             )
                             return None
+                    log.debug('SHA of tag %s: %s', tgt_ref, tag_sha)
 
-                    if head_sha != target_sha:
-                        if not _perform_checkout(local_ref, branch=False):
+                    if head_sha != tag_sha:
+                        if not _perform_checkout(tag_ref, branch=False):
                             return None
 
                     # Return the relative root, if present

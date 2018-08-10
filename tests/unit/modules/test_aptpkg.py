@@ -21,6 +21,11 @@ from salt.ext import six
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 import salt.modules.aptpkg as aptpkg
 
+try:
+    import pytest
+except ImportError:
+    pytest = None
+
 
 APT_KEY_LIST = r'''
 pub:-:1024:17:46181433FBB75451:1104433784:::-:::scSC:
@@ -273,7 +278,7 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
             'stdout': APT_Q_UPDATE
         })
         with patch('salt.utils.pkg.clear_rtag', MagicMock()):
-            with patch.dict(aptpkg.__salt__, {'cmd.run_all': mock}):
+            with patch.dict(aptpkg.__salt__, {'cmd.run_all': mock, 'config.get': MagicMock(return_value=False)}):
                 self.assertEqual(aptpkg.refresh_db(), refresh_db)
 
     def test_refresh_db_failed(self):
@@ -286,7 +291,7 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
             'stdout': APT_Q_UPDATE_ERROR
         })
         with patch('salt.utils.pkg.clear_rtag', MagicMock()):
-            with patch.dict(aptpkg.__salt__, {'cmd.run_all': mock}):
+            with patch.dict(aptpkg.__salt__, {'cmd.run_all': mock, 'config.get': MagicMock(return_value=False)}):
                 self.assertRaises(CommandExecutionError, aptpkg.refresh_db, **kwargs)
 
     def test_autoremove(self):
@@ -298,14 +303,14 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
             patch_kwargs = {
                 '__salt__': {
                     'config.get': MagicMock(return_value=True),
-                    'cmd.run': MagicMock(return_value=AUTOREMOVE)
+                    'cmd.run_all': MagicMock(return_value=MagicMock(return_value=AUTOREMOVE))
                 }
             }
             with patch.multiple(aptpkg, **patch_kwargs):
-                self.assertEqual(aptpkg.autoremove(), dict())
-                self.assertEqual(aptpkg.autoremove(purge=True), dict())
-                self.assertEqual(aptpkg.autoremove(list_only=True), list())
-                self.assertEqual(aptpkg.autoremove(list_only=True, purge=True), list())
+                assert aptpkg.autoremove() == {}
+                assert aptpkg.autoremove(purge=True) == {}
+                assert aptpkg.autoremove(list_only=True) == []
+                assert aptpkg.autoremove(list_only=True, purge=True) == []
 
     def test_remove(self):
         '''
@@ -464,3 +469,48 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(aptpkg.show('foo*', refresh=True), {})
             self.assert_called_once(refresh_mock)
             refresh_mock.reset_mock()
+
+
+@skipIf(pytest is None, 'PyTest is missing')
+class AptUtilsTestCase(TestCase, LoaderModuleMockMixin):
+    '''
+    apt utils test case
+    '''
+    def setup_loader_modules(self):
+        return {aptpkg: {}}
+
+    def test_call_apt_default(self):
+        '''
+        Call default apt.
+        :return:
+        '''
+        with patch.dict(aptpkg.__salt__, {'cmd.run_all': MagicMock(), 'config.get': MagicMock(return_value=False)}):
+            aptpkg._call_apt(['apt-get', 'install', 'emacs'])  # pylint: disable=W0106
+            aptpkg.__salt__['cmd.run_all'].assert_called_once_with(
+                ['apt-get', 'install', 'emacs'], env={},
+                output_loglevel='trace', python_shell=False)
+
+    @patch('salt.utils.systemd.has_scope', MagicMock(return_value=True))
+    def test_call_apt_in_scope(self):
+        '''
+        Call apt within the scope.
+        :return:
+        '''
+        with patch.dict(aptpkg.__salt__, {'cmd.run_all': MagicMock(), 'config.get': MagicMock(return_value=True)}):
+            aptpkg._call_apt(['apt-get', 'purge', 'vim'])  # pylint: disable=W0106
+            aptpkg.__salt__['cmd.run_all'].assert_called_once_with(
+                ['systemd-run', '--scope', 'apt-get', 'purge', 'vim'], env={},
+                output_loglevel='trace', python_shell=False)
+
+    def test_call_apt_with_kwargs(self):
+        '''
+        Call apt with the optinal keyword arguments.
+        :return:
+        '''
+        with patch.dict(aptpkg.__salt__, {'cmd.run_all': MagicMock(), 'config.get': MagicMock(return_value=False)}):
+            aptpkg._call_apt(['dpkg', '-l', 'python'],
+                             python_shell=True, output_loglevel='quiet', ignore_retcode=False,
+                             username='Darth Vader')  # pylint: disable=W0106
+            aptpkg.__salt__['cmd.run_all'].assert_called_once_with(
+                ['dpkg', '-l', 'python'], env={}, ignore_retcode=False,
+                output_loglevel='quiet', python_shell=True, username='Darth Vader')

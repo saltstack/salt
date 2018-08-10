@@ -25,6 +25,7 @@ import sys
 # Import salt libs
 import salt.utils.files
 import salt.utils.path
+import salt.utils.stringutils
 import salt.exceptions
 from salt.ext import six
 from salt.utils.odict import OrderedDict
@@ -945,7 +946,8 @@ def create_crl(  # pylint: disable=too-many-arguments,too-many-locals
             rev_item['not_after'] = rev_cert['Not After']
 
         serial_number = rev_item['serial_number'].replace(':', '')
-        serial_number = six.text_type(int(serial_number, 16))
+        # OpenSSL bindings requires this to be a non-unicode string
+        serial_number = salt.utils.stringutils.to_str(serial_number)
 
         if 'not_after' in rev_item and not include_expired:
             not_after = datetime.datetime.strptime(
@@ -966,7 +968,9 @@ def create_crl(  # pylint: disable=too-many-arguments,too-many-locals
         rev.set_rev_date(rev_date)
 
         if 'reason' in rev_item:
-            rev.set_reason(rev_item['reason'])
+            # Same here for OpenSSL bindings and non-unicode strings
+            reason = salt.utils.stringutils.to_str(rev_item['reason'])
+            rev.set_reason(reason)
 
         crl.add_revoked(rev)
 

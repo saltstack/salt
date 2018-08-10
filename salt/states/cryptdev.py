@@ -100,7 +100,7 @@ def mapped(name,
         if name not in active.keys():
             # Open the map using cryptsetup. This does not pass any options.
             if opts:
-                log.warn('passed cryptdev options are ignored when mapping immediately')
+                log.warning('Ignore cryptdev configuration when mapping immediately')
 
             if __opts__['test']:
                 ret['result'] = None

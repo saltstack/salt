@@ -33,6 +33,7 @@ pillar modules
     makostack
     mongo
     mysql
+    netbox
     neutron
     nodegroups
     pepa

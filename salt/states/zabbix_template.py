@@ -502,6 +502,8 @@ def present(name, params, static_host_list=True, **kwargs):
     ret = {'name': name, 'result': False, 'comment': '', 'changes': {}}
     params['host'] = name
 
+    del CHANGE_STACK[:]
+
     # Divide template yaml definition into parts
     # - template definition itself
     # - simple template components

@@ -803,8 +803,7 @@ Causes the master to periodically look for actively connected minions.
 :ref:`Presence events <event-master_presence>` are fired on the event bus on a
 regular interval with a list of connected minions, as well as events with lists
 of newly connected or disconnected minions. This is a master-only operation
-that does not send executions to minions. Note, this does not detect minions
-that connect to a master via localhost.
+that does not send executions to minions.
 
 .. code-block:: yaml
 
@@ -5106,6 +5105,21 @@ https://github.com/ytoolshed/range/wiki/%22yamlfile%22-module-file-spec
 
 Include Configuration
 =====================
+
+Configuration can be loaded from multiple files. The order in which this is
+done is:
+
+1. The master config file itself
+
+2. The files matching the glob in :conf_master:`default_include`
+
+3. The files matching the glob in :conf_master:`include` (if defined)
+
+Each successive step overrides any values defined in the previous steps.
+Therefore, any config options defined in one of the
+:conf_master:`default_include` files would override the same value in the
+master config file, and any options defined in :conf_master:`include` would
+override both.
 
 .. conf_master:: default_include
 

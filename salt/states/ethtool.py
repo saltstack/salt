@@ -107,8 +107,6 @@ def coalesce(name, **kwargs):
 
         # Retreive changes to made
         for key, value in kwargs.items():
-            if key in ['adaptive_rx', 'adaptive_tx']:
-                value = value and "on" or "off"
             if key in old and value != old[key]:
                 new.update({key: value})
                 diff.append('{0}: {1}'.format(key, value))

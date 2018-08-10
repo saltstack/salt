@@ -544,7 +544,7 @@ def list_nodes_full(call=None):
             try:
                 node['image'] = node['storage_profile']['os_disk']['image']['uri']
             except (TypeError, KeyError):
-                node['image'] = None
+                node['image'] = node.get('storage_profile', {}).get('image_reference', {}).get('id')
         try:
             netifaces = node['network_profile']['network_interfaces']
             for index, netiface in enumerate(netifaces):
@@ -886,7 +886,7 @@ def create_network_interface(call=None, kwargs=None):
     try:
         poller.wait()
     except Exception as exc:
-        log.warn('Network interface creation could not be polled. '
+        log.warning('Network interface creation could not be polled. '
                  'It is likely that we are reusing an existing interface. (%s)', exc)
 
     count = 0
@@ -1177,19 +1177,22 @@ def request_instance(vm_):
             volume['create_option'] = 'empty'
         data_disks.append(DataDisk(**volume))
 
+    img_ref = None
     if vm_['image'].startswith('http') or vm_.get('vhd') == 'unmanaged':
         if vm_['image'].startswith('http'):
             source_image = VirtualHardDisk(vm_['image'])
-            img_ref = None
         else:
             source_image = None
-            img_pub, img_off, img_sku, img_ver = vm_['image'].split('|')
-            img_ref = ImageReference(
-                publisher=img_pub,
-                offer=img_off,
-                sku=img_sku,
-                version=img_ver,
-            )
+            if '|' in vm_['image']:
+                img_pub, img_off, img_sku, img_ver = vm_['image'].split('|')
+                img_ref = ImageReference(
+                    publisher=img_pub,
+                    offer=img_off,
+                    sku=img_sku,
+                    version=img_ver,
+                )
+            elif vm_['image'].startswith('/subscriptions'):
+                img_ref = ImageReference(id=vm_['image'])
         if win_installer:
             os_type = 'Windows'
         else:
@@ -1210,19 +1213,22 @@ def request_instance(vm_):
             disk_size_gb=vm_.get('os_disk_size_gb')
         )
     else:
-        img_pub, img_off, img_sku, img_ver = vm_['image'].split('|')
         source_image = None
         os_type = None
         os_disk = OSDisk(
             create_option=DiskCreateOptionTypes.from_image,
             disk_size_gb=vm_.get('os_disk_size_gb')
         )
-        img_ref = ImageReference(
-            publisher=img_pub,
-            offer=img_off,
-            sku=img_sku,
-            version=img_ver,
-        )
+        if '|' in vm_['image']:
+            img_pub, img_off, img_sku, img_ver = vm_['image'].split('|')
+            img_ref = ImageReference(
+                publisher=img_pub,
+                offer=img_off,
+                sku=img_sku,
+                version=img_ver,
+            )
+        elif vm_['image'].startswith('/subscriptions'):
+            img_ref = ImageReference(id=vm_['image'])
 
     userdata_file = config.get_cloud_config_value(
         'userdata_file', vm_, __opts__, search_global=False, default=None
@@ -1745,7 +1751,7 @@ def list_blobs(call=None, kwargs=None):  # pylint: disable=unused-argument
                                'server_encrypted': blob.properties.server_encrypted,
                              }
     except Exception as exc:
-        log.warn(six.text_type(exc))
+        log.warning(six.text_type(exc))
 
     return ret
 
