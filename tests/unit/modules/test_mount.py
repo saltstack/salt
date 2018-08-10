@@ -63,6 +63,14 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                                                    'opts': ['D', 'E', 'F'],
                                                    'fstype': 'C'}})
 
+        with patch.dict(mount.__grains__, {'os': 'AIX', 'kernel': 'AIX'}):
+            mock = MagicMock(return_value='A * B * C D/E/F')
+            with patch.dict(mount.__salt__, {'cmd.run_stdout': mock}):
+                self.assertEqual(mount.active(),
+                                 {'B': {'node': 'A',
+                                        'device': '*',
+                                        'fstype': '*'}})
+
         with patch.dict(mount.__grains__, {'os': 'OpenBSD', 'kernel': 'OpenBSD'}):
             mock = MagicMock(return_value={})
             with patch.object(mount, '_active_mounts_openbsd', mock):
