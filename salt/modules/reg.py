@@ -18,13 +18,13 @@ Keys
 Keys are the folders in the registry. Keys can have many nested subkeys. Keys
 can have a value assigned to them under the (Default)
 
-When passing key on the CLI it must be quoted correctly depending on the
+When passing a key on the CLI it must be quoted correctly depending on the
 backslashes being used (``\`` vs ``\\``). The following are valid methods of
 passing the the key on the CLI:
 
 Using single backslashes:
     ``"SOFTWARE\Python"``
-    ``'SOFTWARE\Python' (will not work on a Windows Master)``
+    ``'SOFTWARE\Python'`` (will not work on a Windows Master)
 
 Using double backslashes:
     ``SOFTWARE\\Python``
