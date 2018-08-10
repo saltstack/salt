@@ -14,7 +14,6 @@ from __future__ import absolute_import
 import datetime
 import logging
 import subprocess
-import time
 log = logging.getLogger(__name__)
 
 # Import Salt Libs
