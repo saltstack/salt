@@ -98,7 +98,7 @@ def until(name,
         m_args = []
     if not m_kwargs:
         m_kwargs = {}
-    
+
     def timed_out():
         if time.time() >= timeout:
             return True
