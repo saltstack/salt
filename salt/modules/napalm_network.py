@@ -1895,6 +1895,7 @@ def load_template(template_name=None,
     deprecated_args = ('template_user', 'template_attrs', 'template_group', 'template_mode')
     for deprecated_arg in deprecated_args:
         if template_vars.get(deprecated_arg):
+            del template_vars[deprecated_arg]
             salt.utils.versions.warn_until(
                 'Sodium',
                 ('The \'{arg}\' argument to \'net.load_template\' is deprecated '
