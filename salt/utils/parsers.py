@@ -586,7 +586,7 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
                 dest=self._loglevel_config_setting_name_,
                 choices=list(log.LOG_LEVELS),
                 help='Console logging log level. One of {0}. Default: \'{1}\'.'.format(
-                     ', '.join([repr(l) for l in log.SORTED_LEVEL_NAMES]),
+                     ', '.join(["'{}'".format(n) for n in log.SORTED_LEVEL_NAMES]),
                      self._default_logging_level_
                 )
             )
@@ -605,7 +605,7 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
             dest=self._logfile_loglevel_config_setting_name_,
             choices=list(log.LOG_LEVELS),
             help='Logfile logging log level. One of {0}. Default: \'{1}\'.'.format(
-                 ', '.join([repr(l) for l in log.SORTED_LEVEL_NAMES]),
+                 ', '.join(["'{}'".format(n) for n in log.SORTED_LEVEL_NAMES]),
                  self._default_logging_level_
             )
         )

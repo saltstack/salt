@@ -685,6 +685,27 @@ class FileGrepTestCase(TestCase, LoaderModuleMockMixin):
                                   'Lorem Lorem',
                                   '-i -b2')
 
+    def test_grep_query_exists_wildcard(self):
+        _file = '{0}*'.format(self.tfile.name)
+        result = filemod.grep(_file,
+                     'Lorem ipsum')
+
+        self.assertTrue(result, None)
+        self.assertTrue(result['retcode'] == 0)
+        self.assertTrue(result['stdout'] == 'Lorem ipsum dolor sit amet, consectetur')
+        self.assertTrue(result['stderr'] == '')
+
+    def test_grep_file_not_exists_wildcard(self):
+        _file = '{0}-junk*'.format(self.tfile.name)
+        result = filemod.grep(_file,
+                     'Lorem ipsum')
+
+        self.assertTrue(result, None)
+        self.assertFalse(result['retcode'] == 0)
+        self.assertFalse(result['stdout'] == 'Lorem ipsum dolor sit amet, consectetur')
+        _expected_stderr = 'grep: {0}-junk*: No such file or directory'.format(self.tfile.name)
+        self.assertTrue(result['stderr'] == _expected_stderr)
+
 
 class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):

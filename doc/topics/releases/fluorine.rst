@@ -692,6 +692,9 @@ State Deprecations
 - The ``win_update`` state module has been removed. It has been replaced by
   :py:mod:`win_wua <salt.states.win_wua>`.
 
+- Support for virtual packages has been removed from the
+  py:mod:`pkg state <salt.states.pkg>`.
+
 Utils Deprecations
 ------------------
 
@@ -870,3 +873,46 @@ for viewing minions, runners, and jobs as well as running execution modules
 and runners of a running Salt system through a REST API that returns JSON.
 See Salt-API_ documentation.
 .. _Salt-API: https://docs.saltstack.com/en/latest/topics/netapi/index.html
+
+Logging Changes
+===============
+
+Include Job ID (JID) in Minion and Master Logs
+----------------------------------------------
+
+The Job ID (JID) can now be optionally included in both the minion and master logs
+by including ``jid`` in either the ``log_fmt_console`` or ``log_fmt_logfile``
+configuration option:
+
+.. code-block:: yaml
+
+   log_fmt_console: "[%(levelname)-8s] %(jid)s %(message)s"
+
+The will cause the JID to be included in any log entries that are related to a 
+particular Salt job.  The JID will be included using the default format, 
+``[JID: %(jid)s]`` but can be overriden with the ``log_fmt_jid`` configuration item.
+
+.. code-block:: yaml
+
+   log_fmt_jid: "[JID: %(jid)s]"
+
+Security
+========
+
+Windows runas changes
+---------------------
+
+A password is no longer required with ``runas`` under normal circumstances.
+The password option is only needed if the minion process is run under a
+restricted (non-administrator) account. In the aforementioned case, a password
+is only required when using the ``runas`` argument to run command as a
+different user.
+
+=======
+New Modules
+===========
+
+Execution modules
+-----------------
+
+- :mod:`salt.modules.google_chat <salt.modules.google_chat>`

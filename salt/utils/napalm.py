@@ -155,6 +155,15 @@ def call(napalm_device, method, *args, **kwargs):
     out = None
     opts = napalm_device.get('__opts__', {})
     retry = kwargs.pop('__retry', True)  # retry executing the task?
+    force_reconnect = kwargs.get('force_reconnect', False)
+    if force_reconnect:
+        log.debug('Forced reconnection initiated')
+        log.debug('The current opts (under the proxy key):')
+        log.debug(opts['proxy'])
+        opts['proxy'].update(**kwargs)
+        log.debug('Updated to:')
+        log.debug(opts['proxy'])
+        napalm_device = get_device(opts)
     try:
         if not napalm_device.get('UP', False):
             raise Exception('not connected')
@@ -361,16 +370,31 @@ def proxy_napalm_wrap(func):
         wrapped_global_namespace = func.__globals__
         # get __opts__ and __proxy__ from func_globals
         proxy = wrapped_global_namespace.get('__proxy__')
-        opts = wrapped_global_namespace.get('__opts__')
+        opts = copy.deepcopy(wrapped_global_namespace.get('__opts__'))
         # in any case, will inject the `napalm_device` global
         # the execution modules will make use of this variable from now on
         # previously they were accessing the device properties through the __proxy__ object
         always_alive = opts.get('proxy', {}).get('always_alive', True)
+        # force_reconnect is a magic keyword arg that allows one to establish
+        # a separate connection to the network device running under an always
+        # alive Proxy Minion, using new credentials (overriding the ones
+        # configured in the opts / pillar.
+        force_reconnect = kwargs.get('force_reconnect', False)
+        if force_reconnect:
+            log.debug('Usage of reconnect force detected')
+            log.debug('Opts before merging')
+            log.debug(opts['proxy'])
+            opts['proxy'].update(**kwargs)
+            log.debug('Opts after merging')
+            log.debug(opts['proxy'])
         if is_proxy(opts) and always_alive:
             # if it is running in a NAPALM Proxy and it's using the default
             # always alive behaviour, will get the cached copy of the network
             # device object which should preserve the connection.
-            wrapped_global_namespace['napalm_device'] = proxy['napalm.get_device']()
+            if force_reconnect:
+                wrapped_global_namespace['napalm_device'] = get_device(opts)
+            else:
+                wrapped_global_namespace['napalm_device'] = proxy['napalm.get_device']()
         elif is_proxy(opts) and not always_alive:
             # if still proxy, but the user does not want the SSH session always alive
             # get a new device instance
@@ -453,7 +477,12 @@ def proxy_napalm_wrap(func):
             # inject the __opts__ only when not always alive
             # otherwise, we don't want to overload the always-alive proxies
             wrapped_global_namespace['napalm_device']['__opts__'] = opts
-        return func(*args, **kwargs)
+        ret = func(*args, **kwargs)
+        if force_reconnect:
+            log.debug('That was a forced reconnect, gracefully clearing up')
+            device = wrapped_global_namespace['napalm_device']
+            closing = call(device, 'close', __retry=False)
+        return ret
     return func_wrapper
 
 
@@ -486,6 +515,9 @@ def loaded_ret(ret, loaded, test, debug, compliance_report=False, opts=None):
     if 'diff' in loaded:
         changes['diff'] = loaded['diff']
         pchanges['diff'] = loaded['diff']
+    if 'commit_id' in loaded:
+        changes['commit_id'] = loaded['commit_id']
+        pchanges['commit_id'] = loaded['commit_id']
     if 'compliance_report' in loaded:
         if compliance_report:
             changes['compliance_report'] = loaded['compliance_report']

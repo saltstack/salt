@@ -154,6 +154,7 @@ execution modules
     glanceng
     glusterfs
     gnomedesktop
+    google_chat
     gpg
     grafana4
     grains
@@ -187,6 +188,7 @@ execution modules
     inspectlib.query
     inspector
     introspect
+    iosconfig
     ipmi
     ipset
     iptables
@@ -274,6 +276,7 @@ execution modules
     namecheap_users
     napalm_acl
     napalm_bgp
+    napalm_formula
     napalm_mod
     napalm_network
     napalm_ntp
@@ -382,6 +385,7 @@ execution modules
     saltcloudmod
     saltutil
     schedule
+    scp_mod
     scsi
     sdb
     seed
