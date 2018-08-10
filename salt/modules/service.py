@@ -35,39 +35,24 @@ def __virtual__():
         'Ubuntu',
         'Debian',
         'Devuan',
-        'Arch',
-        'Arch ARM',
-        'Manjaro',
         'ALT',
-        'SUSE  Enterprise Server',
-        'SUSE',
         'OEL',
         'Linaro',
         'elementary OS',
         'McAfee  OS Server',
-        'Void',
-        'Mint',
         'Raspbian',
-        'XenServer',
-        'Cumulus'
     ))
-    if __grains__.get('os', '') in disable:
+    if __grains__.get('os') in disable:
         return (False, 'Your OS is on the disabled list')
     # Disable on all non-Linux OSes as well
     if __grains__['kernel'] != 'Linux':
         return (False, 'Non Linux OSes are not supported')
-    # SUSE >=12.0 uses systemd
-    if __grains__.get('os_family', '') == 'Suse':
-        try:
-            # osrelease might be in decimal format (e.g. "12.1"), or for
-            # SLES might include service pack (e.g. "11 SP3"), so split on
-            # non-digit characters, and the zeroth element is the major
-            # number (it'd be so much simpler if it was always "X.Y"...)
-            import re
-            if int(re.split(r'\D+', __grains__.get('osrelease', ''))[0]) >= 12:
-                return (False, 'SUSE version greater than or equal to 12 is not supported')
-        except ValueError:
-            return (False, 'You are missing the os_family grain')
+    init_grain = __grains__.get('init')
+    if init_grain not in (None, 'sysvinit', 'unknown'):
+        return (False, 'Minion is running {0}'.format(init_grain))
+    elif __utils__['systemd.booted'](__context__):
+        # Should have been caught by init grain check, but check just in case
+        return (False, 'Minion is running systemd')
     return 'service'
 
 

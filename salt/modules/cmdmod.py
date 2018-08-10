@@ -964,12 +964,23 @@ def run(cmd,
     :param str runas: Specify an alternate user to run the command. The default
         behavior is to run as the user under which Salt is running.
 
+        .. warning::
+
+            For versions 2018.3.3 and above on macosx while using runas,
+            to pass special characters to the command you need to escape
+            the characters on the shell.
+
+            Example:
+
+            .. code-block:: bash
+
+                cmd.run 'echo '\''h=\"baz\"'\''' runas=macuser
+
     :param str group: Group to run command as. Not currently supported
         on Windows.
 
-    :param str password: Windows only. Only required when the minion proccess
-        is running under a non-privileged account. This parameter will be
-        ignored on non-Windows platforms.
+    :param str password: Windows only. Required when specifying ``runas``. This
+        parameter will be ignored on non-Windows platforms.
 
         .. versionadded:: 2016.3.0
 
@@ -1222,6 +1233,18 @@ def shell(cmd,
         on a Windows minion you must also use the ``password`` argument, and
         the target user account must be in the Administrators group.
 
+        .. warning::
+
+            For versions 2018.3.3 and above on macosx while using runas,
+            to pass special characters to the command you need to escape
+            the characters on the shell.
+
+            Example:
+
+            .. code-block:: bash
+
+                cmd.shell 'echo '\\''h=\\"baz\\"'\\\''' runas=macuser
+
     :param str group: Group to run command as. Not currently supported
       on Windows.
 
@@ -1440,6 +1463,18 @@ def run_stdout(cmd,
         on a Windows minion you must also use the ``password`` argument, and
         the target user account must be in the Administrators group.
 
+        .. warning::
+
+            For versions 2018.3.3 and above on macosx while using runas,
+            to pass special characters to the command you need to escape
+            the characters on the shell.
+
+            Example:
+
+            .. code-block:: bash
+
+                cmd.run_stdout 'echo '\\''h=\\"baz\\"'\\\''' runas=macuser
+
     :param str password: Windows only. Required when specifying ``runas``. This
         parameter will be ignored on non-Windows platforms.
 
@@ -1635,6 +1670,18 @@ def run_stderr(cmd,
         behavior is to run as the user under which Salt is running. If running
         on a Windows minion you must also use the ``password`` argument, and
         the target user account must be in the Administrators group.
+
+        .. warning::
+
+            For versions 2018.3.3 and above on macosx while using runas,
+            to pass special characters to the command you need to escape
+            the characters on the shell.
+
+            Example:
+
+            .. code-block:: bash
+
+                cmd.run_stderr 'echo '\\''h=\\"baz\\"'\\\''' runas=macuser
 
     :param str password: Windows only. Required when specifying ``runas``. This
         parameter will be ignored on non-Windows platforms.
@@ -1833,6 +1880,18 @@ def run_all(cmd,
         behavior is to run as the user under which Salt is running. If running
         on a Windows minion you must also use the ``password`` argument, and
         the target user account must be in the Administrators group.
+
+        .. warning::
+
+            For versions 2018.3.3 and above on macosx while using runas,
+            to pass special characters to the command you need to escape
+            the characters on the shell.
+
+            Example:
+
+            .. code-block:: bash
+
+                cmd.run_all 'echo '\\''h=\\"baz\\"'\\\''' runas=macuser
 
     :param str password: Windows only. Required when specifying ``runas``. This
         parameter will be ignored on non-Windows platforms.
@@ -2053,6 +2112,18 @@ def retcode(cmd,
         behavior is to run as the user under which Salt is running. If running
         on a Windows minion you must also use the ``password`` argument, and
         the target user account must be in the Administrators group.
+
+        .. warning::
+
+            For versions 2018.3.3 and above on macosx while using runas,
+            to pass special characters to the command you need to escape
+            the characters on the shell.
+
+            Example:
+
+            .. code-block:: bash
+
+                cmd.retcode 'echo '\\''h=\\"baz\\"'\\\''' runas=macuser
 
     :param str password: Windows only. Required when specifying ``runas``. This
         parameter will be ignored on non-Windows platforms.
@@ -2469,9 +2540,12 @@ def script(source,
         os.chmod(path, 320)
         os.chown(path, __salt__['file.user_to_uid'](runas), -1)
 
-    path = _cmd_quote(path)
+    if salt.utils.platform.is_windows() and shell.lower() != 'powershell':
+        cmd_path = _cmd_quote(path, escape=False)
+    else:
+        cmd_path = _cmd_quote(path)
 
-    ret = _run(path + ' ' + six.text_type(args) if args else path,
+    ret = _run(cmd_path + ' ' + six.text_type(args) if args else cmd_path,
                cwd=cwd,
                stdin=stdin,
                output_encoding=output_encoding,
@@ -3935,6 +4009,18 @@ def run_bg(cmd,
         behavior is to run as the user under which Salt is running. If running
         on a Windows minion you must also use the ``password`` argument, and
         the target user account must be in the Administrators group.
+
+        .. warning::
+
+            For versions 2018.3.3 and above on macosx while using runas,
+            to pass special characters to the command you need to escape
+            the characters on the shell.
+
+            Example:
+
+            .. code-block:: bash
+
+                cmd.run_bg 'echo '\''h=\"baz\"'\''' runas=macuser
 
     :param str password: Windows only. Required when specifying ``runas``. This
         parameter will be ignored on non-Windows platforms.
