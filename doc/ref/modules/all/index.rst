@@ -154,6 +154,7 @@ execution modules
     glanceng
     glusterfs
     gnomedesktop
+    google_chat
     gpg
     grafana4
     grains
@@ -384,6 +385,7 @@ execution modules
     saltcloudmod
     saltutil
     schedule
+    scp_mod
     scsi
     sdb
     seed

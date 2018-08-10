@@ -489,7 +489,10 @@ def query(url,
 
         if verify_ssl:
             # tornado requires a str, cannot be unicode str in py2
-            req_kwargs['ca_certs'] = salt.utils.stringutils.to_str(ca_bundle)
+            if ca_bundle is None:
+                req_kwargs['ca_certs'] = ca_bundle
+            else:
+                req_kwargs['ca_certs'] = salt.utils.stringutils.to_str(ca_bundle)
 
         max_body = opts.get('http_max_body', salt.config.DEFAULT_MINION_OPTS['http_max_body'])
         connect_timeout = opts.get('http_connect_timeout', salt.config.DEFAULT_MINION_OPTS['http_connect_timeout'])

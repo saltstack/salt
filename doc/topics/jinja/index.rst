@@ -398,6 +398,29 @@ Returns:
   None
 
 
+.. jinja_ref:: regex_replace
+
+``regex_replace``
+-----------------
+
+.. versionadded:: 2017.7.0
+
+Searches for a pattern and replaces with a sequence of characters.
+
+Example:
+
+.. code-block:: jinja
+
+    {% set my_text = 'yes, this is a TEST' %}
+    {{ my_text | regex_replace(' ([a-z])', '__\\1', ignorecase=True) }}
+
+Returns:
+
+.. code-block:: text
+
+    yes,__this__is__a__TEST
+
+
 .. jinja_ref:: uuid
 
 ``uuid``
