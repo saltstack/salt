@@ -16,6 +16,7 @@ import tempfile
 # Import Salt Testing libs
 from tests.support.unit import skipIf, TestCase
 from tests.support.case import ModuleCase
+from tests.support.helpers import flaky
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock, Mock
 from tests.support.paths import BASE_FILES, TMP, TMP_CONF_DIR
 
@@ -184,6 +185,23 @@ class TestSaltCacheLoader(TestCase):
         assert len(fc.requests) == 2
         self.assertEqual(fc.requests[0]['path'], 'salt://hello_import')
         self.assertEqual(fc.requests[1]['path'], 'salt://macro')
+
+    def test_relative_import(self):
+        '''
+        You can import using relative paths
+        issue-13889
+        '''
+        fc, jinja = self.get_test_saltenv()
+        tmpl = jinja.get_template('relative/rhello')
+        result = tmpl.render()
+        self.assertEqual(result, 'Hey world !a b !')
+        assert len(fc.requests) == 3
+        self.assertEqual(fc.requests[0]['path'], 'salt://relative/rhello')
+        self.assertEqual(fc.requests[1]['path'], 'salt://relative/rmacro')
+        self.assertEqual(fc.requests[2]['path'], 'salt://macro')
+        # This must fail when rendered: attempts to import from outside file root
+        template = jinja.get_template('relative/rescape')
+        self.assertRaises(exceptions.TemplateNotFound, template.render)
 
     def test_include(self):
         '''
@@ -747,7 +765,7 @@ class TestCustomExtensions(TestCase):
                                    '{{ document.foo }}').render(document="{foo: it works}")
         self.assertEqual(rendered, "it works")
 
-        with self.assertRaises(exceptions.TemplateRuntimeError):
+        with self.assertRaises((TypeError, exceptions.TemplateRuntimeError)):
             env.from_string('{% set document = document|load_yaml %}'
                                        '{{ document.foo }}').render(document={"foo": "it works"})
 
@@ -1084,6 +1102,7 @@ class TestCustomExtensions(TestCase):
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
         self.assertEqual(rendered, '16777216')
 
+    @flaky
     def test_http_query(self):
         '''
         Test the `http_query` Jinja filter.
