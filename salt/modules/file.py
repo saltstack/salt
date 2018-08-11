@@ -2719,45 +2719,44 @@ def blockreplace(path,
             'Cannot edit marked block. Markers were not found in file.'
         )
 
-    if block_found:
-        diff = ''.join(difflib.unified_diff(orig_file, new_file))
-        has_changes = diff is not ''
-        if has_changes and not dry_run:
-            # changes detected
-            # backup file attrs
-            perms = {}
-            perms['user'] = get_user(path)
-            perms['group'] = get_group(path)
-            perms['mode'] = salt.utils.files.normalize_mode(get_mode(path))
+    diff = ''.join(difflib.unified_diff(orig_file, new_file))
+    has_changes = diff is not ''
+    if has_changes and not dry_run:
+        # changes detected
+        # backup file attrs
+        perms = {}
+        perms['user'] = get_user(path)
+        perms['group'] = get_group(path)
+        perms['mode'] = salt.utils.files.normalize_mode(get_mode(path))
 
-            # backup old content
-            if backup is not False:
-                backup_path = '{0}{1}'.format(path, backup)
-                shutil.copy2(path, backup_path)
-                # copy2 does not preserve ownership
-                check_perms(backup_path,
-                        None,
-                        perms['user'],
-                        perms['group'],
-                        perms['mode'])
-
-            # write new content in the file while avoiding partial reads
-            try:
-                fh_ = salt.utils.atomicfile.atomic_open(path, 'wb')
-                for line in new_file:
-                    fh_.write(salt.utils.stringutils.to_bytes(line, encoding=file_encoding))
-            finally:
-                fh_.close()
-
-            # this may have overwritten file attrs
-            check_perms(path,
+        # backup old content
+        if backup is not False:
+            backup_path = '{0}{1}'.format(path, backup)
+            shutil.copy2(path, backup_path)
+            # copy2 does not preserve ownership
+            check_perms(backup_path,
                     None,
                     perms['user'],
                     perms['group'],
                     perms['mode'])
 
-        if show_changes:
-            return diff
+        # write new content in the file while avoiding partial reads
+        try:
+            fh_ = salt.utils.atomicfile.atomic_open(path, 'wb')
+            for line in new_file:
+                fh_.write(salt.utils.stringutils.to_bytes(line, encoding=file_encoding))
+        finally:
+            fh_.close()
+
+        # this may have overwritten file attrs
+        check_perms(path,
+                None,
+                perms['user'],
+                perms['group'],
+                perms['mode'])
+
+    if show_changes:
+        return diff
 
     return has_changes
 
