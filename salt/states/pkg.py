@@ -154,16 +154,6 @@ def __virtual__():
     return 'pkg.install' in __salt__
 
 
-def _warn_virtual(virtual):
-    return [
-        'The following package(s) are "virtual package" names: {0}. These '
-        'will no longer be supported as of the Fluorine release. Please '
-        'update your SLS file(s) to use the actual package name.'.format(
-            ', '.join(virtual)
-        )
-    ]
-
-
 def _get_comparison_spec(pkgver):
     '''
     Return a tuple containing the comparison operator and the version. If no
@@ -579,11 +569,6 @@ def _find_install_targets(name=None,
         was_refreshed = True
         refresh = False
 
-    def _get_virtual(desired):
-        return [x for x in desired if cur_pkgs.get(x, []) == ['1']]
-
-    virtual_pkgs = []
-
     if any((pkgs, sources)):
         if pkgs:
             desired = _repack_pkgs(pkgs, normalize=normalize)
@@ -602,7 +587,6 @@ def _find_install_targets(name=None,
                                'minion log.'.format('pkgs' if pkgs
                                                     else 'sources')}
 
-        virtual_pkgs = _get_virtual(desired)
         to_unpurge = _find_unpurge_targets(desired)
     else:
         if salt.utils.platform.is_windows():
@@ -623,7 +607,6 @@ def _find_install_targets(name=None,
         else:
             desired = {name: version}
 
-        virtual_pkgs = _get_virtual(desired)
         to_unpurge = _find_unpurge_targets(desired)
 
         # FreeBSD pkg supports `openjdk` and `java/openjdk7` package names
@@ -640,28 +623,22 @@ def _find_install_targets(name=None,
                     and not reinstall \
                     and not pkg_verify:
                 # The package is installed and is the correct version
-                ret = {'name': name,
-                       'changes': {},
-                       'result': True,
-                       'comment': 'Version {0} of package \'{1}\' is already '
-                                  'installed'.format(version, name)}
-                if virtual_pkgs:
-                    ret['warnings'] = _warn_virtual(virtual_pkgs)
-                return ret
+                return {'name': name,
+                        'changes': {},
+                        'result': True,
+                        'comment': 'Version {0} of package \'{1}\' is already '
+                                   'installed'.format(version, name)}
 
             # if cver is not an empty string, the package is already installed
             elif cver and version is None \
                     and not reinstall \
                     and not pkg_verify:
                 # The package is installed
-                ret = {'name': name,
-                       'changes': {},
-                       'result': True,
-                       'comment': 'Package {0} is already '
-                                  'installed'.format(name)}
-                if virtual_pkgs:
-                    ret['warnings'] = _warn_virtual(virtual_pkgs)
-                return ret
+                return {'name': name,
+                        'changes': {},
+                        'result': True,
+                        'comment': 'Package {0} is already '
+                                   'installed'.format(name)}
 
     version_spec = False
     if not sources:
@@ -699,13 +676,10 @@ def _find_install_targets(name=None,
                     if comments:
                         if len(comments) > 1:
                             comments.append('')
-                        ret = {'name': name,
-                               'changes': {},
-                               'result': False,
-                               'comment': '. '.join(comments).rstrip()}
-                        if virtual_pkgs:
-                            ret['warnings'] = _warn_virtual(virtual_pkgs)
-                        return ret
+                        return {'name': name,
+                                'changes': {},
+                                'result': False,
+                                'comment': '. '.join(comments).rstrip()}
 
     # Resolve the latest package version for any packages with "latest" in the
     # package version
@@ -840,13 +814,10 @@ def _find_install_targets(name=None,
         problems.append(failed_verify)
 
     if problems:
-        ret = {'name': name,
-               'changes': {},
-               'result': False,
-               'comment': ' '.join(problems)}
-        if virtual_pkgs:
-            ret['warnings'] = _warn_virtual(virtual_pkgs)
-        return ret
+        return {'name': name,
+                'changes': {},
+                'result': False,
+                'comment': ' '.join(problems)}
 
     if not any((targets, to_unpurge, to_reinstall)):
         # All specified packages are installed
@@ -861,8 +832,6 @@ def _find_install_targets(name=None,
                'comment': msg}
         if warnings:
             ret.setdefault('warnings', []).extend(warnings)
-        if virtual_pkgs:
-            ret.setdefault('warnings', []).extend(_warn_virtual(virtual_pkgs))
         return ret
 
     return (desired, targets, to_unpurge, to_reinstall, altered_files,
@@ -1041,8 +1010,8 @@ def installed(
 
             In version 2015.8.9, an **ignore_epoch** argument has been added to
             :py:mod:`pkg.installed <salt.states.pkg.installed>`,
-            :py:mod:`pkg.removed <salt.states.pkg.installed>`, and
-            :py:mod:`pkg.purged <salt.states.pkg.installed>` states, which
+            :py:mod:`pkg.removed <salt.states.pkg.removed>`, and
+            :py:mod:`pkg.purged <salt.states.pkg.purged>` states, which
             causes the epoch to be disregarded when the state checks to see if
             the desired version was installed.
 
@@ -1602,54 +1571,46 @@ def installed(
         # _find_install_targets() found no targets or encountered an error
 
         # check that the hold function is available
-        if 'pkg.hold' in __salt__:
-            if 'hold' in kwargs:
-                try:
-                    if kwargs['hold']:
-                        hold_ret = __salt__['pkg.hold'](
-                            name=name, pkgs=pkgs, sources=sources
-                        )
-                    else:
-                        hold_ret = __salt__['pkg.unhold'](
-                            name=name, pkgs=pkgs, sources=sources
-                        )
-                except (CommandExecutionError, SaltInvocationError) as exc:
-                    return {'name': name,
-                            'changes': {},
-                            'result': False,
-                            'comment': six.text_type(exc)}
+        if 'pkg.hold' in __salt__ and 'hold' in kwargs:
+            try:
+                action = 'pkg.hold' if kwargs['hold'] else 'pkg.unhold'
+                hold_ret = __salt__[action](
+                    name=name, pkgs=pkgs, sources=sources
+                )
+            except (CommandExecutionError, SaltInvocationError) as exc:
+                return {'name': name,
+                        'changes': {},
+                        'result': False,
+                        'comment': six.text_type(exc)}
 
-                if 'result' in hold_ret and not hold_ret['result']:
-                    return {'name': name,
-                            'changes': {},
-                            'result': False,
-                            'comment': 'An error was encountered while '
-                                       'holding/unholding package(s): {0}'
-                                       .format(hold_ret['comment'])}
-                else:
-                    modified_hold = [hold_ret[x] for x in hold_ret
-                                     if hold_ret[x]['changes']]
-                    not_modified_hold = [hold_ret[x] for x in hold_ret
-                                         if not hold_ret[x]['changes']
-                                         and hold_ret[x]['result']]
-                    failed_hold = [hold_ret[x] for x in hold_ret
-                                   if not hold_ret[x]['result']]
+            if 'result' in hold_ret and not hold_ret['result']:
+                return {'name': name,
+                        'changes': {},
+                        'result': False,
+                        'comment': 'An error was encountered while '
+                                   'holding/unholding package(s): {0}'
+                                   .format(hold_ret['comment'])}
+            else:
+                modified_hold = [hold_ret[x] for x in hold_ret
+                                 if hold_ret[x]['changes']]
+                not_modified_hold = [hold_ret[x] for x in hold_ret
+                                     if not hold_ret[x]['changes']
+                                     and hold_ret[x]['result']]
+                failed_hold = [hold_ret[x] for x in hold_ret
+                               if not hold_ret[x]['result']]
 
-                    if modified_hold:
-                        for i in modified_hold:
-                            result['comment'] += '.\n{0}'.format(i['comment'])
-                            result['result'] = i['result']
-                            result['changes'][i['name']] = i['changes']
+                for i in modified_hold:
+                    result['comment'] += '.\n{0}'.format(i['comment'])
+                    result['result'] = i['result']
+                    result['changes'][i['name']] = i['changes']
 
-                    if not_modified_hold:
-                        for i in not_modified_hold:
-                            result['comment'] += '.\n{0}'.format(i['comment'])
-                            result['result'] = i['result']
+                for i in not_modified_hold:
+                    result['comment'] += '.\n{0}'.format(i['comment'])
+                    result['result'] = i['result']
 
-                    if failed_hold:
-                        for i in failed_hold:
-                            result['comment'] += '.\n{0}'.format(i['comment'])
-                            result['result'] = i['result']
+                for i in failed_hold:
+                    result['comment'] += '.\n{0}'.format(i['comment'])
+                    result['result'] = i['result']
         return result
 
     if to_unpurge and 'lowpkg.unpurge' not in __salt__:
@@ -1770,45 +1731,40 @@ def installed(
             # checks reinstall targets works.
             pkg_ret = {}
 
-        if 'pkg.hold' in __salt__:
-            if 'hold' in kwargs:
-                try:
-                    if kwargs['hold']:
-                        hold_ret = __salt__['pkg.hold'](
-                            name=name, pkgs=pkgs, sources=sources
-                        )
-                    else:
-                        hold_ret = __salt__['pkg.unhold'](
-                            name=name, pkgs=pkgs, sources=sources
-                        )
-                except (CommandExecutionError, SaltInvocationError) as exc:
-                    comment.append(six.text_type(exc))
-                    ret = {'name': name,
-                           'changes': changes,
-                           'result': False,
-                           'comment': '\n'.join(comment)}
-                    if warnings:
-                        ret.setdefault('warnings', []).extend(warnings)
-                    return ret
-                else:
-                    if 'result' in hold_ret and not hold_ret['result']:
-                        ret = {'name': name,
-                               'changes': {},
-                               'result': False,
-                               'comment': 'An error was encountered while '
-                                          'holding/unholding package(s): {0}'
-                                          .format(hold_ret['comment'])}
-                        if warnings:
-                            ret.setdefault('warnings', []).extend(warnings)
-                        return ret
-                    else:
-                        modified_hold = [hold_ret[x] for x in hold_ret
-                                         if hold_ret[x]['changes']]
-                        not_modified_hold = [hold_ret[x] for x in hold_ret
-                                             if not hold_ret[x]['changes']
-                                             and hold_ret[x]['result']]
-                        failed_hold = [hold_ret[x] for x in hold_ret
-                                       if not hold_ret[x]['result']]
+    if 'pkg.hold' in __salt__ and 'hold' in kwargs:
+        try:
+            action = 'pkg.hold' if kwargs['hold'] else 'pkg.unhold'
+            hold_ret = __salt__[action](
+                name=name, pkgs=desired, sources=sources
+            )
+        except (CommandExecutionError, SaltInvocationError) as exc:
+            comment.append(six.text_type(exc))
+            ret = {'name': name,
+                   'changes': changes,
+                   'result': False,
+                   'comment': '\n'.join(comment)}
+            if warnings:
+                ret.setdefault('warnings', []).extend(warnings)
+            return ret
+        else:
+            if 'result' in hold_ret and not hold_ret['result']:
+                ret = {'name': name,
+                       'changes': {},
+                       'result': False,
+                       'comment': 'An error was encountered while '
+                                  'holding/unholding package(s): {0}'
+                                  .format(hold_ret['comment'])}
+                if warnings:
+                    ret.setdefault('warnings', []).extend(warnings)
+                return ret
+            else:
+                modified_hold = [hold_ret[x] for x in hold_ret
+                                 if hold_ret[x]['changes']]
+                not_modified_hold = [hold_ret[x] for x in hold_ret
+                                     if not hold_ret[x]['changes']
+                                     and hold_ret[x]['result']]
+                failed_hold = [hold_ret[x] for x in hold_ret
+                               if not hold_ret[x]['result']]
 
     if to_unpurge:
         changes['purge_desired'] = __salt__['lowpkg.unpurge'](*to_unpurge)
@@ -1836,25 +1792,6 @@ def installed(
                         if x not in targets
                         and x not in to_reinstall]
         failed = [x for x in failed if x in targets]
-
-        # Check for virtual packages in list of desired packages
-        if not sources:
-            try:
-                virtual_pkgs = []
-                for pkgname in [next(iter(x)) for x in pkgs] if pkgs else [name]:
-                    cver = new_pkgs.get(pkgname, [])
-                    if '1' in cver:
-                        virtual_pkgs.append(pkgname)
-                if virtual_pkgs:
-                    warnings.extend(_warn_virtual(virtual_pkgs))
-            except Exception:
-                # This is just some temporary code to warn the user about using
-                # virtual packages. Don't let an exception break the entire
-                # state.
-                log.debug(
-                    'Failed to detect virtual packages after running '
-                    'pkg.install', exc_info=True
-                )
 
     # If there was nothing unpurged, just set the changes dict to the contents
     # of changes['installed'].
@@ -1890,6 +1827,10 @@ def installed(
                 if len(changes[change_name]['old']) > 0:
                     changes[change_name]['old'] += '\n'
                 changes[change_name]['old'] += '{0}'.format(i['changes']['old'])
+            else:
+                comment.append(i['comment'])
+                changes[change_name] = {}
+                changes[change_name]['new'] = '{0}'.format(i['changes']['new'])
 
     # Any requested packages that were not targeted for install or reinstall
     if not_modified:
@@ -2793,8 +2734,8 @@ def removed(name,
 
             In version 2015.8.9, an **ignore_epoch** argument has been added to
             :py:mod:`pkg.installed <salt.states.pkg.installed>`,
-            :py:mod:`pkg.removed <salt.states.pkg.installed>`, and
-            :py:mod:`pkg.purged <salt.states.pkg.installed>` states, which
+            :py:mod:`pkg.removed <salt.states.pkg.removed>`, and
+            :py:mod:`pkg.purged <salt.states.pkg.purged>` states, which
             causes the epoch to be disregarded when the state checks to see if
             the desired version was installed. If **ignore_epoch** was not set
             to ``True``, and instead of ``2:7.4.160-1.el7`` a version of
@@ -2899,8 +2840,8 @@ def purged(name,
 
             In version 2015.8.9, an **ignore_epoch** argument has been added to
             :py:mod:`pkg.installed <salt.states.pkg.installed>`,
-            :py:mod:`pkg.removed <salt.states.pkg.installed>`, and
-            :py:mod:`pkg.purged <salt.states.pkg.installed>` states, which
+            :py:mod:`pkg.removed <salt.states.pkg.removed>`, and
+            :py:mod:`pkg.purged <salt.states.pkg.purged>` states, which
             causes the epoch to be disregarded when the state checks to see if
             the desired version was installed. If **ignore_epoch** was not set
             to ``True``, and instead of ``2:7.4.160-1.el7`` a version of

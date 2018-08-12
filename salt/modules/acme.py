@@ -23,6 +23,16 @@ eventually falls back to /opt/letsencrypt/letsencrypt-auto
 
 Most parameters will fall back to cli.ini defaults if None is given.
 
+DNS plugins
+-----------
+
+This module currently supports the CloudFlare certbot DNS plugin.  The DNS
+plugin credentials file needs to be passed in using the
+``dns_plugin_credentials`` argument.
+
+Make sure the appropriate certbot plugin for the wanted DNS provider is
+installed before using this module.
+
 '''
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
@@ -107,7 +117,9 @@ def cert(name,
          tls_sni_01_port=None,
          tls_sni_01_address=None,
          http_01_port=None,
-         http_01_address=None):
+         http_01_address=None,
+         dns_plugin=None,
+         dns_plugin_credentials=None):
     '''
     Obtain/renew a certificate from an ACME CA, probably Let's Encrypt.
 
@@ -135,6 +147,8 @@ def cert(name,
                          the port Certbot listens on. A conforming ACME server
                          will still attempt to connect on port 80.
     :param https_01_address: The address the server listens to during http-01 challenge.
+    :param dns_plugin: Name of a DNS plugin to use (currently only 'cloudflare')
+    :param dns_plugin_credentials: Path to the credentials file if required by the specified DNS plugin
     :return: dict with 'result' True/False/None, 'comment' and certificate's expiry date ('not_after')
 
     CLI example:
@@ -145,6 +159,8 @@ def cert(name,
     '''
 
     cmd = [LEA, 'certonly', '--non-interactive', '--agree-tos']
+
+    supported_dns_plugins = ['cloudflare']
 
     cert_file = _cert_file(name, 'cert')
     if not __salt__['file.file_exists'](cert_file):
@@ -169,6 +185,12 @@ def cert(name,
         cmd.append('--authenticator webroot')
         if webroot is not True:
             cmd.append('--webroot-path {0}'.format(webroot))
+    elif dns_plugin in supported_dns_plugins:
+        if dns_plugin == 'cloudflare':
+            cmd.append('--dns-cloudflare')
+            cmd.append('--dns-cloudflare-credentials {0}'.format(dns_plugin_credentials))
+        else:
+            return {'result': False, 'comment': 'DNS plugin \'{0}\' is not supported'.format(dns_plugin)}
     else:
         cmd.append('--authenticator standalone')
 
