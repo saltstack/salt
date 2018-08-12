@@ -336,6 +336,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                     "type": "spice",
                     "listen": {"type": "address", "address": "192.168.0.1"},
                 }
+                loader = {"path": "/path/to/loader", "readonly": "yes"}
                 self.assertDictEqual(
                     virt.defined(
                         "myvm",
@@ -349,6 +350,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                         nic_profile="prod",
                         interfaces=ifaces,
                         graphics=graphics,
+                        loader=loader,
                         seed=False,
                         install=False,
                         pub_key="/path/to/key.pub",
@@ -370,6 +372,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                     nic="prod",
                     interfaces=ifaces,
                     graphics=graphics,
+                    loader=loader,
                     hypervisor="qemu",
                     seed=False,
                     boot=None,
@@ -553,6 +556,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                         nic_profile="prod",
                         interfaces=ifaces,
                         graphics=graphics,
+                        loader=loader,
                         seed=False,
                         install=False,
                         pub_key="/path/to/key.pub",
@@ -702,6 +706,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                     nic=None,
                     interfaces=None,
                     graphics=None,
+                    loader=None,
                     hypervisor=None,
                     start=False,
                     seed=True,
@@ -752,6 +757,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                     "type": "spice",
                     "listen": {"type": "address", "address": "192.168.0.1"},
                 }
+                loader = {"path": "/path/to/loader", "readonly": "yes"}
                 self.assertDictEqual(
                     virt.running(
                         "myvm",
@@ -765,6 +771,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                         nic_profile="prod",
                         interfaces=ifaces,
                         graphics=graphics,
+                        loader=loader,
                         seed=False,
                         install=False,
                         pub_key="/path/to/key.pub",
@@ -786,6 +793,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                     nic="prod",
                     interfaces=ifaces,
                     graphics=graphics,
+                    loader=loader,
                     hypervisor="qemu",
                     seed=False,
                     boot=None,

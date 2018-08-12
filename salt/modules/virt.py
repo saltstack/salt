@@ -438,6 +438,19 @@ def _get_graphics(dom):
     return out
 
 
+def _get_loader(dom):
+    """
+    Get domain loader from a libvirt domain object.
+    """
+    out = {"path": "None"}
+    doc = ElementTree.fromstring(dom.XMLDesc(0))
+    for g_node in doc.findall("os/loader"):
+        out["path"] = g_node.text
+        for key, value in six.iteritems(g_node.attrib):
+            out[key] = value
+    return out
+
+
 def _get_disks(dom):
     """
     Get domain disks from a libvirt domain object.
@@ -550,6 +563,7 @@ def _gen_xml(
     arch,
     graphics=None,
     boot=None,
+    loader=None,
     **kwargs
 ):
     """
@@ -583,6 +597,19 @@ def _gen_xml(
             graphics = None
     context["graphics"] = graphics
 
+    if loader and "path" not in loader:
+        log.info(
+            "`path` is a required property of `loader`, and cannot be found. Skipping loader configuration"
+        )
+        loader = None
+    elif loader:
+        loader_attributes = []
+        for key, val in loader.items():
+            if key == "path":
+                continue
+            loader_attributes.append("{key}='{val}'".format(key=key, val=val))
+        loader["_attributes"] = " ".join(loader_attributes)
+
     if "boot_dev" in kwargs:
         context["boot_dev"] = []
         for dev in kwargs["boot_dev"].split():
@@ -599,6 +626,7 @@ def _gen_xml(
                 context["boot"]["kernel"] = "/usr/lib/grub2/x86_64-xen/grub.xen"
                 context["boot_dev"] = []
 
+    context["loader"] = loader
     if "serial_type" in kwargs:
         context["serial_type"] = kwargs["serial_type"]
     if "serial_type" in context and context["serial_type"] == "tcp":
@@ -1197,6 +1225,7 @@ def init(
     os_type=None,
     arch=None,
     boot=None,
+    loader=None,
     **kwargs
 ):
     """
@@ -1241,6 +1270,11 @@ def init(
         The default value is taken from the host capabilities, with a preference for ``hvm``.
 
         .. versionadded:: 2019.2.0
+    :param loader:
+        Dictionary providing details on the BIOS firmware loader. (Default: ``None``)
+        See :ref:`init-loader-def` for more details on the possible values.
+
+        .. versionadded:: Sodium
     :param arch:
         architecture of the virtual machine. The default value is taken from the host capabilities,
         but ``x86_64`` is prefed over ``i686``.
@@ -1367,6 +1401,16 @@ def init(
 
         By default, not setting the ``listen`` part of the dictionary will default to
         listen on all addresses.
+
+    .. rubric:: Loader Definition
+
+    The loader dictionary must have the following property:
+
+    path
+        Path to the UEFI firmware binary
+
+    Optionally, you can provide arbitrary attributes such as ``readonly`` or ``type``. See
+    the libvirt documentation for all supported loader parameters.
 
     .. rubric:: CLI Example
 
@@ -2149,6 +2193,7 @@ def vm_info(vm_=None, **kwargs):
             "graphics": _get_graphics(dom),
             "nics": _get_nics(dom),
             "uuid": _get_uuid(dom),
+            "loader": _get_loader(dom),
             "on_crash": _get_on_crash(dom),
             "on_reboot": _get_on_reboot(dom),
             "on_poweroff": _get_on_poweroff(dom),
@@ -2334,6 +2379,29 @@ def get_graphics(vm_, **kwargs):
     graphics = _get_graphics(_get_domain(conn, vm_))
     conn.close()
     return graphics
+
+
+def get_loader(vm_, **kwargs):
+    """
+    Returns the information on the loader for a given vm
+
+    :param vm_: name of the domain
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.get_loader <domain>
+
+    .. versionadded:: Fluorine
+    """
+    conn = __get_conn(**kwargs)
+    loader = _get_loader(_get_domain(conn, vm_))
+    conn.close()
+    return loader
 
 
 def get_disks(vm_, **kwargs):

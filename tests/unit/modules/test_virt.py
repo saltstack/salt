@@ -334,6 +334,16 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         root = ET.fromstring(xml_data)
         self.assertIsNone(root.find("devices/graphics"))
 
+    def test_gen_xml_noloader_default(self):
+        """
+        Test virt._gen_xml() with default no loader
+        """
+        diskp = virt._disk_profile("default", "kvm", [], "hello")
+        nicp = virt._nic_profile("default", "kvm")
+        xml_data = virt._gen_xml("hello", 1, 512, diskp, nicp, "kvm", "hvm", "x86_64")
+        root = ET.fromstring(xml_data)
+        self.assertIsNone(root.find("os/loader"))
+
     def test_gen_xml_vnc_default(self):
         """
         Test virt._gen_xml() with default vnc graphics device
@@ -392,6 +402,56 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(
             root.find("devices/graphics/listen").attrib["address"], "0.0.0.0"
         )
+
+    def test_gen_xml_loader_default(self):
+        """
+        Test virt._gen_xml() with a loder specified
+        """
+        diskp = virt._disk_profile("default", "kvm", [], "hello")
+        nicp = virt._nic_profile("default", "kvm")
+
+        xml_data = virt._gen_xml(
+            "hello",
+            1,
+            512,
+            diskp,
+            nicp,
+            "kvm",
+            "hvm",
+            "x86_64",
+            loader={
+                "path": "/foo/bar",
+                "readonly": "yes",
+                "type": "pflash",
+                "secure": "yes",
+            },
+        )
+        root = ET.fromstring(xml_data)
+        self.assertEqual(root.find("os/loader").text, "/foo/bar")
+        self.assertEqual(root.find("os/loader").attrib["type"], "pflash")
+        self.assertEqual(root.find("os/loader").attrib["readonly"], "yes")
+        self.assertEqual(root.find("os/loader").attrib["secure"], "yes")
+
+    def test_gen_xml_loader_invalid(self):
+        """
+        Test virt._gen_xml() with an invalid loader (missing path) specified
+        """
+        diskp = virt._disk_profile("default", "kvm", [], "hello")
+        nicp = virt._nic_profile("default", "kvm")
+
+        xml_data = virt._gen_xml(
+            "hello",
+            1,
+            512,
+            diskp,
+            nicp,
+            "kvm",
+            "hvm",
+            "x86_64",
+            loader={"readonly": "yes", "type": "pflash", "secure": "yes"},
+        )
+        root = ET.fromstring(xml_data)
+        self.assertFalse("loader" in root.find("os"))
 
     def test_gen_xml_spice(self):
         """
@@ -1884,6 +1944,46 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         domain = self.set_mock_vm("test-vm", xml)
         self.assertEqual(xml, virt.get_xml("test-vm"))
         self.assertEqual(xml, virt.get_xml(domain))
+
+    def test_get_loader(self):
+        """
+        Test virt.get_loader()
+        """
+        xml = """<domain type='kvm' id='7'>
+              <name>test-vm</name>
+              <os>
+                <loader readonly='yes' type='pflash'>/foo/bar</loader>
+              </os>
+            </domain>
+        """
+        self.set_mock_vm("test-vm", xml)
+
+        loader = virt.get_loader("test-vm")
+        self.assertEqual("/foo/bar", loader["path"])
+        self.assertEqual("yes", loader["readonly"])
+
+    def test_get_nics(self):
+        """
+        Test virt.get_nics()
+        """
+        xml = """<domain type='kvm' id='7'>
+              <name>test-vm</name>
+              <devices>
+                <interface type='bridge'>
+                  <mac address='ac:de:48:b6:8b:59'/>
+                  <source bridge='br0'/>
+                  <model type='virtio'/>
+                  <address type='pci' domain='0x0000' bus='0x00' slot='0x03' function='0x0'/>
+                </interface>
+              </devices>
+            </domain>
+        """
+        self.set_mock_vm("test-vm", xml)
+
+        nics = virt.get_nics("test-vm")
+        nic = nics[list(nics)[0]]
+        self.assertEqual("bridge", nic["type"])
+        self.assertEqual("ac:de:48:b6:8b:59", nic["mac"])
 
     def test_parse_qemu_img_info(self):
         """

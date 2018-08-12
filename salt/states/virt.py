@@ -280,6 +280,7 @@ def defined(
     nic_profile=None,
     interfaces=None,
     graphics=None,
+    loader=None,
     seed=True,
     install=True,
     pub_key=None,
@@ -442,6 +443,7 @@ def defined(
                     nic=nic_profile,
                     interfaces=interfaces,
                     graphics=graphics,
+                    loader=loader,
                     seed=seed,
                     install=install,
                     pub_key=pub_key,
@@ -472,6 +474,7 @@ def running(
     nic_profile=None,
     interfaces=None,
     graphics=None,
+    loader=None,
     seed=True,
     install=True,
     pub_key=None,
@@ -520,6 +523,11 @@ def running(
         See :ref:`init-graphics-def` for more details on this dictionary
 
         .. versionadded:: 2019.2.0
+    :param loader:
+        Firmware loader for the new virtual machine.
+        See :ref:`init-loader-def` for more details on this dictionary
+
+        .. versionadded:: Sodium
     :param saltenv:
         Fileserver environment (Default: ``'base'``).
         See :mod:`cp module for more details <salt.modules.cp>`
@@ -641,6 +649,7 @@ def running(
         nic_profile=nic_profile,
         interfaces=interfaces,
         graphics=graphics,
+        loader=loader,
         seed=seed,
         install=install,
         pub_key=pub_key,
