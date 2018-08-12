@@ -334,6 +334,16 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         root = ET.fromstring(xml_data)
         self.assertIsNone(root.find("devices/graphics"))
 
+    def test_gen_xml_noloader_default(self):
+        """
+        Test virt._gen_xml() with default no loader
+        """
+        diskp = virt._disk_profile("default", "kvm", [], "hello")
+        nicp = virt._nic_profile("default", "kvm")
+        xml_data = virt._gen_xml("hello", 1, 512, diskp, nicp, "kvm", "hvm", "x86_64")
+        root = ET.fromstring(xml_data)
+        self.assertIsNone(root.find("os/loader"))
+
     def test_gen_xml_vnc_default(self):
         """
         Test virt._gen_xml() with default vnc graphics device
@@ -1884,6 +1894,23 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         domain = self.set_mock_vm("test-vm", xml)
         self.assertEqual(xml, virt.get_xml("test-vm"))
         self.assertEqual(xml, virt.get_xml(domain))
+
+    def test_get_loader(self):
+        """
+        Test virt.get_loader()
+        """
+        xml = """<domain type='kvm' id='7'>
+              <name>test-vm</name>
+              <os>
+                <loader readonly='yes' type='pflash'>/foo/bar</loader>
+              </os>
+            </domain>
+        """
+        self.set_mock_vm("test-vm", xml)
+
+        loader = virt.get_loader("test-vm")
+        self.assertEqual("/foo/bar", loader["path"])
+        self.assertEqual("yes", loader["readonly"])
 
     def test_parse_qemu_img_info(self):
         """
