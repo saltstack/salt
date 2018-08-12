@@ -986,10 +986,11 @@ def refresh_pillar():
         ret = False  # Effectively a no-op, since we can't really return without an event system
     return ret
 
+
 pillar_refresh = salt.utils.functools.alias_function(refresh_pillar, 'pillar_refresh')
 
 
-def refresh_modules(async=True):
+def refresh_modules(**kwargs):
     '''
     Signal the minion to refresh the module and grain data
 
@@ -1003,8 +1004,9 @@ def refresh_modules(async=True):
 
         salt '*' saltutil.refresh_modules
     '''
+    asynchronous = bool(kwargs.get('async', True))
     try:
-        if async:
+        if asynchronous:
             #  If we're going to block, first setup a listener
             ret = __salt__['event.fire']({}, 'module_refresh')
         else:
