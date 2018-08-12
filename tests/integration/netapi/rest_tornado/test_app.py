@@ -255,6 +255,7 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
         response_obj = salt.utils.json.loads(response.body)
         self.assertEqual(response_obj['return'], [{}])
 
+    @skipIf(True, 'Undetermined race condition in test. Temporarily disabled.')
     def test_simple_local_post_only_dictionary_request_with_order_masters(self):
         '''
         Test a basic API of /
@@ -398,7 +399,7 @@ class TestMinionSaltAPIHandler(_SaltnadoIntegrationTestCase):
 
     def test_post_with_incorrect_client(self):
         '''
-        The /minions endpoint is async only, so if you try something else
+        The /minions endpoint is asynchronous only, so if you try something else
         make sure you get an error
         '''
         # get a token for this test
