@@ -4454,7 +4454,8 @@ def check_perms(name, ret, user, group, mode, attrs=None, follow_symlinks=False)
     perms['lmode'] = salt.utils.files.normalize_mode(cur['mode'])
 
     is_dir = os.path.isdir(name)
-    if not salt.utils.platform.is_windows() and not is_dir:
+    is_link = os.path.islink(name)
+    if not salt.utils.platform.is_windows() and not is_dir and not is_link:
         lattrs = lsattr(name)
         if lattrs is not None:
             # List attributes on file
@@ -4991,7 +4992,7 @@ def get_diff(file1,
         )
 
     args = []
-    for filename in files:
+    for filename in paths:
         try:
             with salt.utils.files.fopen(filename, 'rb') as fp_:
                 args.append(fp_.readlines())
@@ -5009,12 +5010,12 @@ def get_diff(file1,
         elif not show_changes:
             ret = '<show_changes=False>'
         else:
-            bdiff = _binary_replace(*files)
+            bdiff = _binary_replace(*paths)  # pylint: disable=no-value-for-parameter
             if bdiff:
                 ret = bdiff
             else:
                 if show_filenames:
-                    args.extend(files)
+                    args.extend(paths)
                 ret = __utils__['stringutils.get_diff'](*args)
         return ret
     return ''

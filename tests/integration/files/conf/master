@@ -104,8 +104,8 @@ autosign_file: autosign_file
 discovery: false
 
 # enable using ssh minions and regular minions
-enable_ssh_minions: True
-ignore_host_keys: True
+#enable_ssh_minions: True
+#ignore_host_keys: True
 
 # test vault
 vault:

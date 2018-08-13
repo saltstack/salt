@@ -1065,6 +1065,16 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
 
         pkg_targets = _PKG_TARGETS.get(os_family, [])
 
+        if os_family.lower() == 'redhat':
+            # If we're in the Red Hat family first we ensure that
+            # the yum-plugin-versionlock package is installed
+            ret = self.run_state(
+                'pkg.installed',
+                name='yum-plugin-versionlock',
+                refresh=False,
+            )
+            self.assertSaltTrueReturn(ret)
+
         # Make sure that we have targets that match the os_family. If this
         # fails then the _PKG_TARGETS dict above needs to have an entry added,
         # with two packages that are not installed before these tests are run
@@ -1088,15 +1098,25 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             refresh=False,
         )
 
+        # changes from pkg.hold for Red Hat family are different
+        if os_family.lower() == 'redhat':
+            target_changes = {'new': 'hold', 'old': ''}
+        elif os_family.lower() == 'debian':
+            target_changes = {'new': 'hold', 'old': 'install'}
+
         try:
             tag = 'pkg_|-{0}_|-{0}_|-installed'.format(target)
             self.assertSaltTrueReturn(ret)
             self.assertIn(tag, ret)
             self.assertIn('changes', ret[tag])
             self.assertIn(target, ret[tag]['changes'])
-            self.assertEqual(ret[tag]['changes'][target], {'new': 'hold', 'old': 'install'})
+            self.assertEqual(ret[tag]['changes'][target], target_changes)
         finally:
             # Clean up, unhold package and remove
             self.run_function('pkg.unhold', name=target)
             ret = self.run_state('pkg.removed', name=target)
             self.assertSaltTrueReturn(ret)
+            if os_family.lower() == 'redhat':
+                ret = self.run_state('pkg.removed',
+                                     name='yum-plugin-versionlock')
+                self.assertSaltTrueReturn(ret)
