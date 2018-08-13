@@ -176,10 +176,12 @@ salt/modules/*_sysctl.py:
 salt/netapi/rest_cherrypy/*:
   - unit.netapi.test_rest_cherrypy
   - integration.netapi.rest_cherrypy.test_app_pam
+  - integration.netapi.test_client
 
 salt/netapi/rest_tornado/*:
   - unit.netapi.test_rest_tornado
   - integration.netapi.rest_tornado.test_app
+  - integration.netapi.test_client
 
 salt/output/*:
   - integration.output.test_output
