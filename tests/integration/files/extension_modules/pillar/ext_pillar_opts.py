@@ -15,11 +15,11 @@ import logging
 log = logging.getLogger(__name__)
 
 # DRY up the name we use
-MY_NAME = 'test_ext_pillar_opts'
+MY_NAME = 'ext_pillar_opts'
 
 
 def __virtual__():
-    log.debug('Loaded external pillar {0} as {1}'.format(__name__, MY_NAME))
+    log.debug('Loaded external pillar %s as %s', __name__, MY_NAME)
     return True
 
 
