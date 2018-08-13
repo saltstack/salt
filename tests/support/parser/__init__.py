@@ -29,6 +29,7 @@ import warnings
 from functools import partial
 from collections import namedtuple
 
+import tests.support.paths
 from tests.support import helpers
 from tests.support.unit import TestLoader, TextTestRunner
 from tests.support.xmlunit import HAS_XMLRUNNER, XMLTestRunner
@@ -130,8 +131,6 @@ class SaltTestingParser(optparse.OptionParser):
     }
 
     def __init__(self, testsuite_directory, *args, **kwargs):
-        self._tests_dir = salt.utils.data.decode(os.path.dirname(sys.argv[0]))
-
         if kwargs.pop('html_output_from_env', None) is not None or \
                 kwargs.pop('html_output_dir', None) is not None:
             warnings.warn(
@@ -345,25 +344,15 @@ class SaltTestingParser(optparse.OptionParser):
 
     @property
     def _test_mods(self):
+        '''
+        Use the test_mods generator to get all of the test module names, and
+        then store them in a set so that further references to this attribute
+        will not need to re-walk the test dir.
+        '''
         try:
             return self.__test_mods
         except AttributeError:
-            self.__test_mods = set()
-            test_re = re.compile(r'^test_.+\.py$')
-            unit_dir = salt.utils.path.join(self._tests_dir, 'unit')
-            integration_dir = salt.utils.path.join(self._tests_dir, 'integration')
-            for dirname in (unit_dir, integration_dir):
-                test_type = os.path.basename(dirname)
-                for root, _, files in salt.utils.path.os_walk(dirname):
-                    parent_mod = root[len(dirname):].lstrip(os.sep).replace(os.sep, '.')
-                    for filename in files:
-                        if test_re.match(filename):
-                            mod_name = test_type
-                            if parent_mod:
-                                mod_name += '.' + parent_mod
-                            mod_name += '.' + filename[:-3]
-                            self.__test_mods.add(mod_name)
-
+            self.__test_mods = set(tests.support.paths.test_mods())
             return self.__test_mods
 
     def _map_files(self, files):
