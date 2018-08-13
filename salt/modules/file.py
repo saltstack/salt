@@ -2477,10 +2477,10 @@ def blockreplace(path,
         final output
 
     marker_end
-        The line content identifying a line as the end of the content block.
-        Note that the whole line containing this marker will be considered, so
-        whitespace or extra content before or after the marker is included in
-        final output
+        The line content identifying the end of the content block. As of
+        versions 2017.7.5 and 2018.3.1, everything up to the text matching the
+        marker will be replaced, so it's important to ensure that your marker
+        includes the beginning of the text you wish to replace.
 
     content
         The content to be used between the two lines identified by marker_start
@@ -4528,6 +4528,7 @@ def check_perms(name, ret, user, group, mode, attrs=None, follow_symlinks=False)
                                           .format(user))
         elif 'cuser' in perms and user != '':
             ret['changes']['user'] = user
+
     if group:
         if isinstance(group, int):
             group = gid_to_group(group)
@@ -4547,13 +4548,6 @@ def check_perms(name, ret, user, group, mode, attrs=None, follow_symlinks=False)
                                       .format(group))
         elif 'cgroup' in perms and user != '':
             ret['changes']['group'] = group
-
-    if isinstance(orig_comment, six.string_types):
-        if orig_comment:
-            ret['comment'].insert(0, orig_comment)
-        ret['comment'] = '; '.join(ret['comment'])
-    if __opts__['test'] is True and ret['changes']:
-        ret['result'] = None
 
     if not salt.utils.platform.is_windows() and not is_dir:
         # Replace attributes on file if it had been removed
@@ -4606,6 +4600,18 @@ def check_perms(name, ret, user, group, mode, attrs=None, follow_symlinks=False)
                             )
                         else:
                             ret['changes']['attrs'] = attrs
+
+    # Only combine the comment list into a string
+    # after all comments are added above
+    if isinstance(orig_comment, six.string_types):
+        if orig_comment:
+            ret['comment'].insert(0, orig_comment)
+        ret['comment'] = '; '.join(ret['comment'])
+
+    # Set result to None at the very end of the function,
+    # after all changes have been recorded above
+    if __opts__['test'] is True and ret['changes']:
+        ret['result'] = None
 
     return ret, perms
 
@@ -5072,7 +5078,7 @@ def manage_file(name,
     source
         file reference on the master
 
-    source_hash
+    source_sum
         sum hash for source
 
     user
@@ -6210,6 +6216,16 @@ def grep(path,
     '''
     path = os.path.expanduser(path)
 
+    # Backup the path in case the glob returns nothing
+    _path = path
+    path = glob.glob(path)
+
+    # If the list is empty no files exist
+    # so we revert back to the original path
+    # so the result is an error.
+    if not path:
+        path = _path
+
     split_opts = []
     for opt in opts:
         try:
@@ -6224,7 +6240,10 @@ def grep(path,
             )
         split_opts.extend(split)
 
-    cmd = ['grep'] + split_opts + [pattern, path]
+    if isinstance(path, list):
+        cmd = ['grep'] + split_opts + [pattern] + path
+    else:
+        cmd = ['grep'] + split_opts + [pattern, path]
     try:
         ret = __salt__['cmd.run_all'](cmd, python_shell=False)
     except (IOError, OSError) as exc:

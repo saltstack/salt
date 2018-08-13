@@ -398,6 +398,29 @@ Returns:
   None
 
 
+.. jinja_ref:: regex_replace
+
+``regex_replace``
+-----------------
+
+.. versionadded:: 2017.7.0
+
+Searches for a pattern and replaces with a sequence of characters.
+
+Example:
+
+.. code-block:: jinja
+
+    {% set my_text = 'yes, this is a TEST' %}
+    {{ my_text | regex_replace(' ([a-z])', '__\\1', ignorecase=True) }}
+
+Returns:
+
+.. code-block:: text
+
+    yes,__this__is__a__TEST
+
+
 .. jinja_ref:: uuid
 
 ``uuid``
@@ -1147,6 +1170,40 @@ Returns:
       "body": "quia et suscipit\\nsuscipit recusandae consequuntur expedita et cum\\nreprehenderit molestiae ut ut quas totam\\nnostrum rerum est autem sunt rem eveniet architecto"
     }'
   }
+
+
+.. jinja_ref:: traverse
+
+``traverse``
+------------
+
+.. versionadded:: 2018.3.3
+
+Traverse a dict or list using a colon-delimited target string.
+The target 'foo:bar:0' will return data['foo']['bar'][0] if this value exists,
+and will otherwise return the provided default value.
+
+Example:
+
+.. code-block:: jinja
+
+  {{ {'a1': {'b1': {'c1': 'foo'}}, 'a2': 'bar'} | traverse('a1:b1', 'default') }}
+
+Returns:
+
+.. code-block:: python
+
+  {'c1': 'foo'}
+
+.. code-block:: jinja
+
+  {{ {'a1': {'b1': {'c1': 'foo'}}, 'a2': 'bar'} | traverse('a2:b2', 'default') }}
+
+Returns:
+
+.. code-block:: python
+
+  'default'
 
 .. _`builtin filters`: http://jinja.pocoo.org/docs/templates/#builtin-filters
 .. _`timelib`: https://github.com/pediapress/timelib/

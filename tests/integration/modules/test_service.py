@@ -120,21 +120,21 @@ class ServiceModuleTest(ModuleCase):
         systemd = salt.utils.systemd.booted()
 
         # check service was not enabled
-        if systemd or salt.utils.platform.is_windows():
-            self.assertIn('ERROR', enable)
-        else:
+        try:
             self.assertFalse(enable)
+        except AssertionError:
+            self.assertIn('ERROR', enable)
 
         # check service was not disabled
         if tuple(self.run_function('grains.item', ['osrelease_info'])['osrelease_info']) == (14, 0o4) and not systemd:
             # currently upstart does not have a mechanism to report if disabling a service fails if does not exist
             self.assertTrue(self.run_function('service.disable', [srv_name]))
         else:
-            if salt.utils.platform.is_windows():
+            try:
                 disable = self.run_function('service.disable', [srv_name])
+                self.assertFalse(disable)
+            except AssertionError:
                 self.assertTrue('error' in disable.lower())
-            else:
-                self.assertFalse(self.run_function('service.disable', [srv_name]))
 
         if salt.utils.platform.is_darwin():
             self.assertFalse(self.run_function('service.disabled', [srv_name]))

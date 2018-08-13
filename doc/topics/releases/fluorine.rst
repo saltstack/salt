@@ -57,6 +57,29 @@ Jinja filter`_:
 
 .. _`tojson Jinja filter`: http://jinja.pocoo.org/docs/2.10/templates/#tojson
 
+Ansible Playbook State and Execution Modules
+============================================
+
+Along with the including the :py:mod:`ansible modules
+<salt.module.ansiblegate>` in the Oxygen release, running playbooks has been
+added in Fluorine with the :py:func:`playbooks function
+<salt.modules.ansiblegate.playbooks>`.  This also includes an :py:func:`ansible
+playbooks state module <salt.states.ansiblegate.playbooks>` which can be used
+on a targeted host to run ansible playbooks, or used in an
+orchestration state runner.
+
+.. code-block:: yaml
+
+    install nginx:
+      ansible.playbooks:
+        - name: install.yml
+        - git_repo: git://github.com/gtmanfred/playbook.git
+        - git_kwargs:
+            rev: master
+
+The playbooks modules also includes the ability to specify a git repo to clone
+and use, or a specific directory can to used when running the playbook.
+
 New Docker Proxy Minion
 =======================
 
@@ -453,6 +476,27 @@ proxy.
 
     no_proxy: [ '127.0.0.1', 'foo.tld' ]
 
+Changes to :py:mod:`slack <salt.engines.slack>` Engine
+======================================================
+
+The output returned to Slack from functions run using this engine is now
+formatted using that function's proper outputter. Earlier releases would format
+the output in YAML for all functions except for when states were run.
+
+Enhancements to :py:mod:`wtmp <salt.beacons.wtmp>` Beacon
+=========================================================
+
+A new key, ``action``, has been added to the events fired by this beacon, which
+will contain either the string ``login`` or ``logout``. This will simplify
+reactors which use this beacon's data, as it will no longer be necessary to
+check the integer value of the ``type`` key to know whether the event is a
+login or logout.
+
+Additionally, in the event that your platform has a non-standard ``utmp.h``,
+you can now configure which type numbers indicate a login and logout.
+
+See the :py:mod:`wtmp beacon documentation <salt.beacons.wtmp>` for more
+information.
 
 Deprecations
 ============
@@ -477,6 +521,12 @@ their code to use ``tgt_type``.
     >>> local.cmd('*', 'cmd.run', ['whoami'], tgt_type='glob')
     {'jerry': 'root'}
 
+Minion Configuration Deprecations
+---------------------------------
+
+The :conf_minion:`master_shuffle` configuration option is deprecated as of the
+``Fluorine`` release. Please use the :conf_minion:`random_master` option instead.
+
 Module Deprecations
 -------------------
 
@@ -487,6 +537,11 @@ Module Deprecations
       :py:func:`net.load_template <salt.modules.napalm_network.load_template>`
       function. This is because support for NAPALM native templates has been
       dropped.
+
+- The :py:mod:`pip <salt.modules.pip>` module has been changed as follows:
+
+    - Support for the ``no_chown`` option has been removed from
+      :py:func:`pip.install <salt.modules.pip.install>` function.
 
 - The :py:mod:`trafficserver <salt.modules.trafficserver>` module has been
   changed as follows:
@@ -623,15 +678,30 @@ State Deprecations
   <salt.states.netconfig.managed` state has been removed. This is because
   support for NAPALM native templates has been dropped.
 
+- Support for the ``no_chown`` option in the
+  :py:func:`pip.insalled <salt.states.pip.installed>` state has been removed.
+
 - The :py:func:`trafficserver.set_var <salt.states.trafficserver.set_var>`
   state has been removed. Please use :py:func:`trafficserver.config
   <salt.states.trafficserver.config>` instead.
 
+- Support for the ``no_chown`` option in the
+  :py:func`virtualenv.managed <salt.states.virtualenv.managed>` function has
+  been removed.
+
 - The ``win_update`` state module has been removed. It has been replaced by
   :py:mod:`win_wua <salt.states.win_wua>`.
 
+- Support for virtual packages has been removed from the
+  py:mod:`pkg state <salt.states.pkg>`.
+
 Utils Deprecations
 ------------------
+
+The ``cloud`` utils module had the following changes:
+
+- Support for the ``cache_nodes_ip`` function in :mod:`salt utils module <salt.utils.cloud>`
+  has been removed. The function was incomplete and non-functional.
 
 The ``vault`` utils module had the following changes:
 
@@ -720,6 +790,34 @@ The :py:func:`event.send <salt.states.event.send>` state does not know the
 results of the sent event, so returns changed every state run.  It can now be
 set to return changed or unchanged.
 
+:py:mod:`influxdb_user.present <salt.states.influxdb_user>` Influxdb User Module State
+---------------------------------------------------------------------------------------
+
+The ``password`` parameter has been changed to ``passwd`` to remove the
+name collusion with the influxdb client configuration (``client_kwargs``)
+allowing management of users when authentication is enabled on the influxdb
+instance
+
+Old behavior:
+
+.. code-block:: example user in influxdb
+
+    influxdb_user.present:
+      - name: exampleuser
+      - password: exampleuserpassword
+      - user: admin
+      - password: adminpassword
+
+New behavior:
+
+.. code-block:: example user in influxdb
+
+    influxdb_user.present:
+      - name: exampleuser
+      - passwd: exampleuserpassword
+      - user: admin
+      - password: adminpassword
+
 LDAP External Authentication
 ============================
 
@@ -775,3 +873,46 @@ for viewing minions, runners, and jobs as well as running execution modules
 and runners of a running Salt system through a REST API that returns JSON.
 See Salt-API_ documentation.
 .. _Salt-API: https://docs.saltstack.com/en/latest/topics/netapi/index.html
+
+Logging Changes
+===============
+
+Include Job ID (JID) in Minion and Master Logs
+----------------------------------------------
+
+The Job ID (JID) can now be optionally included in both the minion and master logs
+by including ``jid`` in either the ``log_fmt_console`` or ``log_fmt_logfile``
+configuration option:
+
+.. code-block:: yaml
+
+   log_fmt_console: "[%(levelname)-8s] %(jid)s %(message)s"
+
+The will cause the JID to be included in any log entries that are related to a 
+particular Salt job.  The JID will be included using the default format, 
+``[JID: %(jid)s]`` but can be overriden with the ``log_fmt_jid`` configuration item.
+
+.. code-block:: yaml
+
+   log_fmt_jid: "[JID: %(jid)s]"
+
+Security
+========
+
+Windows runas changes
+---------------------
+
+A password is no longer required with ``runas`` under normal circumstances.
+The password option is only needed if the minion process is run under a
+restricted (non-administrator) account. In the aforementioned case, a password
+is only required when using the ``runas`` argument to run command as a
+different user.
+
+=======
+New Modules
+===========
+
+Execution modules
+-----------------
+
+- :mod:`salt.modules.google_chat <salt.modules.google_chat>`
