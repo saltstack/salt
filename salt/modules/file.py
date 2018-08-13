@@ -3886,7 +3886,10 @@ def get_managed(
     # If we have a source defined, let's figure out what the hash is
     if source:
         urlparsed_source = _urlparse(source)
-        parsed_scheme = urlparsed_source.scheme
+        if urlparsed_source.scheme in salt.utils.files.VALID_PROTOS:
+            parsed_scheme = urlparsed_source.scheme
+        else:
+            parsed_scheme = ''
         parsed_path = os.path.join(
                 urlparsed_source.netloc, urlparsed_source.path).rstrip(os.sep)
         unix_local_source = parsed_scheme in ('file', '')
