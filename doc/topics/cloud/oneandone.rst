@@ -160,5 +160,11 @@ Functions
 
     sudo salt-cloud -f create_block_storage my-oneandone-config name='SaltTest2' description='SaltTestDescription' size=50 datacenter_id='5091F6D8CBFEF9C26ACE957C652D5D49'
 
+* Create a firewall policy
+
+.. code-block:: bash
+
+    sudo salt-cloud -f create_firewall_policy oneandone name='1salttest' description='salttestdesc' rules='[{"protocol":"TCP", "port":"80", "description":"saltfwruledescr"}]'
+
 For more information concerning cloud profiles, see :ref:`here
 <salt-cloud-profiles>`.
