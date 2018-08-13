@@ -2435,6 +2435,32 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(pwd.getpwuid(temp_file_stats.st_uid).pw_name, user)
         self.assertEqual(grp.getgrgid(temp_file_stats.st_gid).gr_name, group)
 
+    @with_tempdir()
+    def test_issue_48557(self, tempdir):
+        tempfile = os.path.join(tempdir, 'temp_file_issue_48557')
+        with salt.utils.files.fopen(tempfile, 'wb') as fp:
+            fp.write(os.linesep.join([
+                'test1',
+                'test2',
+                'test3',
+                '',
+            ]).encode('utf-8'))
+        ret = self.run_state('file.line',
+                             name=tempfile,
+                             after='test2',
+                             mode='insert',
+                             content='test4')
+        self.assertSaltTrueReturn(ret)
+        with salt.utils.files.fopen(tempfile, 'rb') as fp:
+            content = fp.read()
+        self.assertEqual(content, os.linesep.join([
+            'test1',
+            'test2',
+            'test4',
+            'test3',
+            '',
+        ]).encode('utf-8'))
+
 
 class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
     marker_start = '# start'
