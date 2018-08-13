@@ -338,7 +338,28 @@ def avail_images(conn=None, call=None):
 
     ret = {}
 
-    for appliance in conn.list_appliances():
+    for appliance in conn.list_appliances(q='CLOUD'):
+        ret[appliance['name']] = appliance
+
+    return ret
+
+
+def avail_baremetal_images(conn=None, call=None):
+    '''
+    Return a list of the baremetal server appliances that are on the provider
+    '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The avail_baremetal_images function must be called with '
+            '-f or --function'
+        )
+
+    if not conn:
+        conn = get_conn()
+
+    ret = {}
+
+    for appliance in conn.list_appliances(q='BAREMETAL'):
         ret[appliance['name']] = appliance
 
     return ret
@@ -360,6 +381,23 @@ def avail_sizes(call=None):
     sizes = conn.fixed_server_flavors()
 
     return sizes
+
+
+def baremetal_models(call=None):
+    '''
+    Return a dict of all available baremetal models with relevant data.
+    '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The baremetal_models function must be called with '
+            '-f or --function'
+        )
+
+    conn = get_conn()
+
+    bmodels = conn.list_baremetal_models()
+
+    return bmodels
 
 
 def script(vm_):
@@ -484,16 +522,20 @@ def _get_server(vm_):
 
     ssh_key = load_public_key(vm_)
 
+    server_type = config.get_cloud_config_value(
+        'server_type', vm_, __opts__, default='cloud',
+        search_global=False
+    )
     vcore = None
     cores_per_processor = None
     ram = None
     fixed_instance_size_id = None
+    baremetal_model_id = None
 
     if 'fixed_instance_size' in vm_:
         fixed_instance_size = get_size(vm_)
         fixed_instance_size_id = fixed_instance_size['id']
-    elif (vm_['vcore'] and vm_['cores_per_processor'] and
-              vm_['ram'] and vm_['hdds']):
+    elif 'vm_core' in vm_ and 'cores_per_processor' in vm_ and 'ram' in vm_ and 'hdds' in vm_:
         vcore = config.get_cloud_config_value(
             'vcore', vm_, __opts__, default=None,
             search_global=False
@@ -506,9 +548,16 @@ def _get_server(vm_):
             'ram', vm_, __opts__, default=None,
             search_global=False
         )
+    elif 'baremetal_model_id' in vm_ and server_type == 'baremetal':
+        baremetal_model_id = config.get_cloud_config_value(
+            'baremetal_model_id', vm_, __opts__, default=None,
+            search_global=False
+        )
     else:
-        raise SaltCloudConfigError("'fixed_instance_size' or 'vcore',"
-                                   "'cores_per_processor', 'ram', and 'hdds'"
+        raise SaltCloudConfigError("'fixed_instance_size' or 'vcore', "
+                                   "'cores_per_processor', 'ram', and 'hdds' "
+                                   "must be provided for 'cloud' server. "
+                                   "For 'baremetal' server, 'baremetal_model_id'"
                                    "must be provided.")
 
     appliance_id = config.get_cloud_config_value(
@@ -557,7 +606,7 @@ def _get_server(vm_):
     )
 
     public_key = config.get_cloud_config_value(
-        'public_key_ids', vm_, __opts__, default=True,
+        'public_key_ids', vm_, __opts__, default=None,
         search_global=False
     )
 
@@ -579,7 +628,9 @@ def _get_server(vm_):
         datacenter_id=datacenter_id,
         rsa_key=ssh_key,
         private_network_id=private_network_id,
-        public_key=public_key
+        public_key=public_key,
+        server_type=server_type,
+        baremetal_model_id=baremetal_model_id
     )
 
 
@@ -627,7 +678,8 @@ def create(vm_):
     # Assemble the composite server object.
     server = _get_server(vm_)
 
-    if not bool(server.specs['hardware']['fixed_instance_size_id']):
+    if not bool(server.specs['hardware']['fixed_instance_size_id'])\
+        and not bool(server.specs['server_type'] == 'baremetal'):
         # Assemble the hdds object.
         hdds = _get_hdds(vm_)
 
