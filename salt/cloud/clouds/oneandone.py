@@ -68,6 +68,10 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
       load_balancer_id: <ID>
       # Monitoring policy ID
       monitoring_policy_id: <ID>
+      # Baremetal model ID
+      baremetal_model_id: <ID>
+      # Server type
+      server_type: <cloud or baremetal> - default cloud
 
 Set ``deploy`` to False if Salt should not be installed on the node.
 
@@ -88,6 +92,18 @@ Create a block storage
 
     sudo salt-cloud -f create_block_storage my-oneandone-config name='SaltTest2'
     description='SaltTestDescription' size=50 datacenter_id='5091F6D8CBFEF9C26ACE957C652D5D49'
+
+List baremetal models
+
+.. code-block:: bash
+
+    sudo salt-cloud -f baremetal_models oneandone
+
+List baremetal images
+
+.. code-block:: bash
+
+    sudo salt-cloud -f avail_baremetal_images oneandone
 
 '''
 
