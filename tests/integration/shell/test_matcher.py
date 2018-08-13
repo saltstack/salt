@@ -8,8 +8,9 @@ import time
 
 # Import Salt Testing libs
 from tests.support.case import ShellCase
-from tests.support.paths import TMP
+from tests.support.helpers import flaky
 from tests.support.mixins import ShellCaseCommonTestsMixin
+from tests.support.paths import TMP
 
 # Import salt libs
 import salt.utils.files
@@ -91,11 +92,13 @@ class MatchTest(ShellCase, ShellCaseCommonTestsMixin):
         assert minion_in_returns('minion', data) is True
         assert minion_in_returns('sub_minion', data) is True
 
+    @flaky
     def test_compound_pillar(self):
         data = self.run_salt("-C 'I%@companions%three%sarah*' test.ping")
         assert minion_in_returns('minion', data) is True
         assert minion_in_returns('sub_minion', data) is True
 
+    @flaky
     def test_coumpound_pillar_pcre(self):
         data = self.run_salt("-C 'J%@knights%^(Lancelot|Galahad)$' test.ping")
         self.assertTrue(minion_in_returns('minion', data))
@@ -335,6 +338,7 @@ class MatchTest(ShellCase, ShellCaseCommonTestsMixin):
         data = self.run_salt('-d "*" user')
         self.assertIn('user.add:', data)
 
+    @flaky
     def test_salt_documentation_arguments_not_assumed(self):
         '''
         Test to see if we're not auto-adding '*' and 'sys.doc' to the call
@@ -346,16 +350,16 @@ class MatchTest(ShellCase, ShellCaseCommonTestsMixin):
                           'see https://github.com/saltstack/salt-jenkins/issues/324.')
         data = self.run_salt('-d -t 20')
         if data:
-            self.assertIn('user.add:', data)
+            assert 'user.add:' in data
         data = self.run_salt('"*" -d -t 20')
         if data:
-            self.assertIn('user.add:', data)
+            assert 'user.add:' in data
         data = self.run_salt('"*" -d user -t 20')
-        self.assertIn('user.add:', data)
+        assert 'user.add:' in data
         data = self.run_salt('"*" sys.doc -d user -t 20')
-        self.assertIn('user.add:', data)
+        assert 'user.add:' in data
         data = self.run_salt('"*" sys.doc user -t 20')
-        self.assertIn('user.add:', data)
+        assert 'user.add:' in data
 
     def test_salt_documentation_too_many_arguments(self):
         '''
