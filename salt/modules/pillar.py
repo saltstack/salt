@@ -24,6 +24,7 @@ import salt.utils.odict
 import salt.utils.yaml
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import CommandExecutionError
+import tornado.gen
 
 __proxyenabled__ = ['*']
 
@@ -190,6 +191,7 @@ def get(key,
     return ret
 
 
+@tornado.gen.coroutine
 def items(*args, **kwargs):
     '''
     Calls the master for a fresh pillar and generates the pillar data on the
@@ -243,7 +245,7 @@ def items(*args, **kwargs):
     '''
     # Preserve backwards compatibility
     if args:
-        return item(*args)
+        raise tornado.gen.Return(item(*args))
 
     pillarenv = kwargs.get('pillarenv')
     if pillarenv is None:
@@ -268,14 +270,14 @@ def items(*args, **kwargs):
                 'Failed to decrypt pillar override: {0}'.format(exc)
             )
 
-    pillar = salt.pillar.get_pillar(
+    pillar = yield salt.pillar.get_async_pillar(
         __opts__,
         __grains__,
         __opts__['id'],
         pillar_override=pillar_override,
-        pillarenv=pillarenv)
+        pillarenv=pillarenv).compile_pillar()
 
-    return pillar.compile_pillar()
+    raise tornado.gen.Return(pillar)
 
 # Allow pillar.data to also be used to return pillar data
 data = salt.utils.functools.alias_function(items, 'data')
@@ -330,6 +332,7 @@ def obfuscate(*args):
 
 # naming chosen for consistency with grains.ls, although it breaks the short
 # identifier rule.
+@tornado.gen.coroutine
 def ls(*args):
     '''
     .. versionadded:: 2015.8.0
@@ -343,8 +346,8 @@ def ls(*args):
 
         salt '*' pillar.ls
     '''
-
-    return list(items(*args).keys())
+    pillar_dict = yield items(*args)
+    raise tornado.gen.Return(list(pillar_dict.keys()))
 
 
 def item(*args, **kwargs):

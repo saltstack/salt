@@ -403,7 +403,6 @@ class SaltEvent(object):
         if not self.cpub:
             return
 
-        self.subscriber.close()
         self.subscriber = None
         self.pending_events = []
         self.cpub = False
@@ -416,9 +415,9 @@ class SaltEvent(object):
         if self.cpush:
             return True
 
+        if self.pusher is None:
+            self.pusher = salt.transport.ipc.IPCMessageClient(self.pulluri)
         if self._run_io_loop_sync:
-            if self.pusher is None:
-                self.pusher = salt.transport.ipc.IPCMessageClient(self.pulluri)
             try:
                 tornado.ioloop.IOLoop.current().run_sync(
                     lambda: self.pusher.connect(timeout=timeout))
@@ -427,8 +426,6 @@ class SaltEvent(object):
                 log.error('Failed to connect IPCMessageClient to the bus %s: %s',
                           self.pulluri, exc)
         else:
-            if self.pusher is None:
-                self.pusher = salt.transport.ipc.IPCMessageClient(self.pulluri)
             # For the async case, the connect will be deferred to when
             # fire_event() is invoked.
             self.cpush = True
@@ -703,6 +700,7 @@ class SaltEvent(object):
 
         The default is 1000 ms
         '''
+        log.debug('FIRING EVENT %s: %s', tag, data)
         if not six.text_type(tag):  # no empty tags allowed
             raise ValueError('Empty tag.')
 
@@ -751,6 +749,7 @@ class SaltEvent(object):
                 raise
         else:
             tornado.ioloop.IOLoop.current().spawn_callback(self.pusher.send, msg)
+        log.debug('FIRE EVENT done')
         return True
 
     def fire_master(self, data, tag, timeout=1000):
@@ -769,12 +768,15 @@ class SaltEvent(object):
         return self.fire_event(msg, "fire_master", timeout)
 
     def destroy(self):
-        if self.subscriber is not None:
-            self.subscriber.close()
-        if self.pusher is not None:
-            self.pusher.close()
         if self._run_io_loop_sync and not self.keep_loop:
+            if self.subscriber is not None:
+                self.subscriber.close()
+            if self.pusher is not None:
+                self.pusher.close()
             self.io_loop.close()
+        else:
+            self.subscriber = None
+            self.pusher = None
 
     def _fire_ret_load_specific_fun(self, load, fun_index=0):
         '''

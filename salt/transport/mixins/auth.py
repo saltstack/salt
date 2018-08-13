@@ -98,7 +98,7 @@ class AESReqServerMixin(object):
         self.auto_key = salt.daemons.masterapi.AutoKey(self.opts)
 
         # only create a con_cache-client if the con_cache is active
-        if self.opts['con_cache']:
+        if self.opts.get('con_cache'):
             self.cache_cli = CacheCli(self.opts)
         else:
             self.cache_cli = False

@@ -70,11 +70,12 @@ def _zfs_pool_data():
     return grains
 
 
-def zfs():
+def zfs(grains=None):
     '''
     Provide grains for zfs/zpool
     '''
-    grains = {}
+    if not grains:
+        grains = {}
     grains['zfs_support'] = __utils__['zfs.is_supported']()
     grains['zfs_feature_flags'] = __utils__['zfs.has_feature_flags']()
     if grains['zfs_support']:

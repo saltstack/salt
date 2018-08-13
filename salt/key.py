@@ -293,7 +293,7 @@ class Key(object):
     REJ = 'minions_rejected'
     DEN = 'minions_denied'
 
-    def __init__(self, opts, io_loop=None):
+    def __init__(self, opts):
         self.opts = opts
         kind = self.opts.get('__role', '')  # application kind
         if kind not in salt.utils.kinds.APPL_KINDS:
@@ -306,7 +306,6 @@ class Key(object):
                 opts['transport'],
                 opts=opts,
                 listen=False,
-                io_loop=io_loop
                 )
 
         self.passphrase = salt.utils.sdb.sdb_get(self.opts.get('signing_key_pass'), self.opts)

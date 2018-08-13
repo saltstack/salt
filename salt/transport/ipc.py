@@ -116,6 +116,10 @@ class IPCServer(object):
 
         Blocks until socket is established
         '''
+        self.pre_fork()
+        self.post_fork()
+
+    def pre_fork(self):
         # Start up the ioloop
         log.trace('IPCServer: binding to socket: %s', self.socket_path)
         if isinstance(self.socket_path, int):
@@ -128,6 +132,9 @@ class IPCServer(object):
         else:
             self.sock = tornado.netutil.bind_unix_socket(self.socket_path)
 
+    def post_fork(self, payload_handler=None):
+        if payload_handler:
+            self.payload_handler = payload_handler
         tornado.netutil.add_accept_handler(
             self.sock,
             self.handle_connection,
@@ -235,17 +242,18 @@ class IPCClient(object):
     # Create singleton map between two sockets
     instance_map = weakref.WeakValueDictionary()
 
-    def __new__(cls, socket_path):
+    def __new__(cls, socket_path, singleton=True):
         # FIXME
         key = six.text_type(socket_path)
 
-        client = IPCClient.instance_map.get(key)
+        client = IPCClient.instance_map.get(key) if singleton else None
         if client is None:
             log.debug('Initializing new IPCClient for path: %s', key)
             client = object.__new__(cls)
             # FIXME
             client.__singleton_init__(socket_path=socket_path)
-            IPCClient.instance_map[key] = client
+            if singleton:
+                IPCClient.instance_map[key] = client
         else:
             log.debug('Re-using IPCClient for %s', key)
         return client
@@ -268,7 +276,7 @@ class IPCClient(object):
             encoding = 'utf-8'
         self.unpacker = msgpack.Unpacker(encoding=encoding)
 
-    def __init__(self, socket_path):
+    def __init__(self, socket_path, singleton=True):
         # Handled by singleton __new__
         pass
 
@@ -404,10 +412,15 @@ class IPCMessageClient(IPCClient):
         :param dict msg: The message to be sent
         :param int timeout: Timeout when sending message (Currently unimplemented)
         '''
+        log.debug('IPCMessageClient: send start')
         if not self.connected():
+            log.debug('IPCMessageClient: connecting')
             yield self.connect()
+            log.debug('IPCMessageClient: connected')
         pack = salt.transport.frame.frame_msg_ipc(msg, raw_body=True)
+        log.debug('IPCMessageClient: sending')
         yield self.stream.write(pack)
+        log.debug('IPCMessageClient: send done')
 
 
 class IPCMessageServer(IPCServer):

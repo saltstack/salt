@@ -2169,10 +2169,12 @@ class ClearFuncs(object):
         # Retrieve the jid
         fstr = '{0}.prep_jid'.format(self.opts['master_job_cache'])
         try:
+            log.debug('Retrieving jid: %s', fstr)
             # Retrieve the jid
             jid = self.mminion.returners[fstr](nocache=nocache,
                                                passed_jid=passed_jid)
-        except (KeyError, TypeError):
+        except (KeyError, TypeError) as ex:
+            log.debug('ERROR: %s', ex)
             # The returner is not present
             msg = (
                 'Failed to allocate a jid. The requested returner \'{0}\' '

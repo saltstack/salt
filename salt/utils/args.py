@@ -247,6 +247,10 @@ def get_function_argspec(func, is_class_method=None):
     if not callable(func):
         raise TypeError('{0} is not a callable'.format(func))
 
+    # Adding this to unwrap tornado coroutines to inspect the original function arguments
+    while hasattr(func, '__wrapped__'):
+        func = func.__wrapped__
+
     if six.PY2:
         if is_class_method is True:
             aspec = inspect.getargspec(func)
