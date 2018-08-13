@@ -2923,8 +2923,8 @@ def create(vm_):
 
     data = show_instance(vm_name, call='action')
 
-    if deploy and out is not None:
-        data['deploy_kwargs'] = out['deploy_kwargs']
+    if deploy and isinstance(out, dict):
+        data['deploy_kwargs'] = out.get('deploy_kwargs', {})
 
     __utils__['cloud.fire_event'](
         'event',
