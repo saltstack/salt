@@ -8,7 +8,7 @@ import tornado.testing
 import tornado.gen
 from tornado.testing import AsyncTestCase
 
-import salt.utils.async as async
+import salt.utils.asynchronous as asynchronous
 
 
 class HelperA(object):
@@ -24,7 +24,7 @@ class HelperA(object):
 class HelperB(object):
     def __init__(self, a=None, io_loop=None):
         if a is None:
-            a = async.SyncWrapper(HelperA)
+            a = asynchronous.SyncWrapper(HelperA)
         self.a = a
 
     @tornado.gen.coroutine
@@ -38,7 +38,7 @@ class TestSyncWrapper(AsyncTestCase):
     @tornado.testing.gen_test
     def test_helpers(self):
         '''
-        Test that the helper classes do what we expect within a regular async env
+        Test that the helper classes do what we expect within a regular asynchronous env
         '''
         ha = HelperA()
         ret = yield ha.sleep()
@@ -50,29 +50,29 @@ class TestSyncWrapper(AsyncTestCase):
 
     def test_basic_wrap(self):
         '''
-        Test that we can wrap an async caller.
+        Test that we can wrap an asynchronous caller.
         '''
-        sync = async.SyncWrapper(HelperA)
+        sync = asynchronous.SyncWrapper(HelperA)
         ret = sync.sleep()
         self.assertTrue(ret)
 
     def test_double(self):
         '''
-        Test when the async wrapper object itself creates a wrap of another thing
+        Test when the asynchronous wrapper object itself creates a wrap of another thing
 
         This works fine since the second wrap is based on the first's IOLoop so we
         don't have to worry about complex start/stop mechanics
         '''
-        sync = async.SyncWrapper(HelperB)
+        sync = asynchronous.SyncWrapper(HelperB)
         ret = sync.sleep()
         self.assertFalse(ret)
 
     def test_double_sameloop(self):
         '''
-        Test async wrappers initiated from the same IOLoop, to ensure that
+        Test asynchronous wrappers initiated from the same IOLoop, to ensure that
         we don't wire up both to the same IOLoop (since it causes MANY problems).
         '''
-        a = async.SyncWrapper(HelperA)
-        sync = async.SyncWrapper(HelperB, (a,))
+        a = asynchronous.SyncWrapper(HelperA)
+        sync = asynchronous.SyncWrapper(HelperB, (a,))
         ret = sync.sleep()
         self.assertFalse(ret)
