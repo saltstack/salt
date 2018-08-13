@@ -2111,7 +2111,7 @@ def replace(path,
                 if prepend_if_not_found or append_if_not_found:
                     # Search for content, to avoid pre/appending the
                     # content if it was pre/appended in a previous run.
-                    if re.search(salt.utils.to_bytes('^{0}$'.format(re.escape(content))),
+                    if re.search(salt.utils.to_bytes('^{0}($|(?=\r\n))'.format(re.escape(content))),
                                  r_data,
                                  flags=flags_num):
                         # Content was found, so set found.
