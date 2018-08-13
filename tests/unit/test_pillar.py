@@ -60,6 +60,7 @@ class PillarTestCase(TestCase):
 
     def test_ext_pillar_no_extra_minion_data_val_dict(self):
         opts = {
+            'optimization_order': [0, 1, 2],
             'renderer': 'json',
             'renderer_blacklist': [],
             'renderer_whitelist': [],
@@ -100,6 +101,7 @@ class PillarTestCase(TestCase):
 
     def test_ext_pillar_no_extra_minion_data_val_list(self):
         opts = {
+            'optimization_order': [0, 1, 2],
             'renderer': 'json',
             'renderer_blacklist': [],
             'renderer_whitelist': [],
@@ -140,6 +142,7 @@ class PillarTestCase(TestCase):
 
     def test_ext_pillar_no_extra_minion_data_val_elem(self):
         opts = {
+            'optimization_order': [0, 1, 2],
             'renderer': 'json',
             'renderer_blacklist': [],
             'renderer_whitelist': [],
@@ -178,6 +181,7 @@ class PillarTestCase(TestCase):
 
     def test_ext_pillar_with_extra_minion_data_val_dict(self):
         opts = {
+            'optimization_order': [0, 1, 2],
             'renderer': 'json',
             'renderer_blacklist': [],
             'renderer_whitelist': [],
@@ -218,6 +222,7 @@ class PillarTestCase(TestCase):
 
     def test_ext_pillar_with_extra_minion_data_val_list(self):
         opts = {
+            'optimization_order': [0, 1, 2],
             'renderer': 'json',
             'renderer_blacklist': [],
             'renderer_whitelist': [],
@@ -258,6 +263,7 @@ class PillarTestCase(TestCase):
 
     def test_ext_pillar_with_extra_minion_data_val_elem(self):
         opts = {
+            'optimization_order': [0, 1, 2],
             'renderer': 'json',
             'renderer_blacklist': [],
             'renderer_whitelist': [],
