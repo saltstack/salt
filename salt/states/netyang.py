@@ -80,7 +80,7 @@ def managed(name,
             *models,
             **kwargs):
     '''
-    Manage the device configuration given the input data strucuted
+    Manage the device configuration given the input data structured
     according to the YANG models.
 
     data
