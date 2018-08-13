@@ -1,3 +1,6 @@
+'*':
+  - unit.test_module_names
+
 salt/modules/(apk|aptpkg|ebuild|dpkg|freebsdpkg|mac_brew|mac_ports|openbsdpkg|opkg|pacman|pkgin|pkgng|pkg_resource|rpm|solarisips|solarispkg|win_pkg|xbpspkg|yumpkg|zypper)\.py:
   - unit.states.test_pkg
   - integration.modules.test_pkg
