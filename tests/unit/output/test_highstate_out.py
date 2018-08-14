@@ -27,6 +27,7 @@ class JsonTestCase(TestCase, LoaderModuleMockMixin):
             highstate: {
                 '__opts__': {
                     'extension_modules': '',
+                    'optimization_order': [0, 1, 2],
                     'color': False,
                 }
             }
