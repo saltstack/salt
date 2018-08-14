@@ -1,8 +1,14 @@
+# -*- coding: utf-8 -*-
 '''
 The matcher subsystem needs a function called 'confirm_top', which
 takes the data passed to a top file environment and determines if that
 data matches this minion.
 '''
+from __future__ import absolute_import
+import logging
+
+log = logging.getLogger(__file__)
+
 
 def confirm_top(self, match, data, nodegroups=None):
     '''
