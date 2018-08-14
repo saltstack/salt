@@ -47,7 +47,6 @@ MOCK_RET_HIGHSTATE = {
 }
 
 
-
 class AppOpticsTest(ShellCase):
     '''
     Test the AppOptics returner
