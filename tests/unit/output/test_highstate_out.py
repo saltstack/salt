@@ -121,6 +121,7 @@ class JsonNestedTestCase(TestCase, LoaderModuleMockMixin):
                 '__opts__': {
                     'extension_modules': '',
                     'color': False,
+                    'optimization_order': [0, 1, 2],
                 }
             }
         }
