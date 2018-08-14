@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Helpers/utils for working with tornado async stuff
+Helpers/utils for working with tornado asynchronous stuff
 '''
 
 from __future__ import absolute_import, print_function, unicode_literals
@@ -30,9 +30,9 @@ class SyncWrapper(object):
 
     This is uses as a simple wrapper, for example:
 
-    async = AsyncClass()
+    asynchronous = AsyncClass()
     # this method would reguarly return a future
-    future = async.async_method()
+    future = asynchronous.async_method()
 
     sync = SyncWrapper(async_factory_method, (arg1, arg2), {'kwarg1': 'val'})
     # the sync wrapper will automatically wait on the future
@@ -46,15 +46,15 @@ class SyncWrapper(object):
         kwargs['io_loop'] = self.io_loop
 
         with current_ioloop(self.io_loop):
-            self.async = method(*args, **kwargs)
+            self.asynchronous = method(*args, **kwargs)
 
     def __getattribute__(self, key):
         try:
             return object.__getattribute__(self, key)
         except AttributeError as ex:
-            if key == 'async':
+            if key == 'asynchronous':
                 raise ex
-        attr = getattr(self.async, key)
+        attr = getattr(self.asynchronous, key)
         if hasattr(attr, '__call__'):
             def wrap(*args, **kwargs):
                 # Overload the ioloop for the func call-- since it might call .current()
@@ -75,15 +75,15 @@ class SyncWrapper(object):
 
     def __del__(self):
         '''
-        On deletion of the async wrapper, make sure to clean up the async stuff
+        On deletion of the asynchronous wrapper, make sure to clean up the asynchronous stuff
         '''
-        if hasattr(self, 'async'):
-            if hasattr(self.async, 'close'):
+        if hasattr(self, 'asynchronous'):
+            if hasattr(self.asynchronous, 'close'):
                 # Certain things such as streams should be closed before
                 # their associated io_loop is closed to allow for proper
                 # cleanup.
-                self.async.close()
-            del self.async
+                self.asynchronous.close()
+            del self.asynchronous
             self.io_loop.close()
             del self.io_loop
         elif hasattr(self, 'io_loop'):
