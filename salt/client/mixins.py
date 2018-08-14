@@ -245,23 +245,6 @@ class SyncClientMixin(object):
             self._mminion = salt.minion.MasterMinion(self.opts, states=False, rend=False)
         return self._mminion
 
-    def low(self, fun, low, print_event=True, full_return=False):
-        '''
-        Check for deprecated usage and allow until Salt Fluorine.
-        '''
-        msg = []
-        if 'args' in low:
-            msg.append('call with arg instead')
-            low['arg'] = low.pop('args')
-        if 'kwargs' in low:
-            msg.append('call with kwarg instead')
-            low['kwarg'] = low.pop('kwargs')
-
-        if msg:
-            salt.utils.versions.warn_until('Fluorine', ' '.join(msg))
-
-        return self._low(fun, low, print_event=print_event, full_return=full_return)
-
     @property
     def store_job(self):
         '''
@@ -284,7 +267,7 @@ class SyncClientMixin(object):
             # just return True.
             return True
 
-    def _low(self, fun, low, print_event=True, full_return=False):
+    def low(self, fun, low, print_event=True, full_return=False):
         '''
         Execute a function from low data
         Low data includes:
@@ -464,7 +447,7 @@ class SyncClientMixin(object):
 
 class AsyncClientMixin(object):
     '''
-    A mixin for *Client interfaces to enable easy async function execution
+    A mixin for *Client interfaces to enable easy asynchronous function execution
     '''
     client = None
     tag_prefix = None
@@ -516,7 +499,7 @@ class AsyncClientMixin(object):
         tag = salt.utils.event.tagify(jid, prefix=self.tag_prefix)
         return {'tag': tag, 'jid': jid}
 
-    def async(self, fun, low, user='UNKNOWN', pub=None):
+    def asynchronous(self, fun, low, user='UNKNOWN', pub=None):
         '''
         Execute the function in a multiprocess and return the event tag to use
         to watch for the return

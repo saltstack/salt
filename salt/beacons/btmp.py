@@ -2,10 +2,93 @@
 '''
 Beacon to fire events at failed login of users
 
+.. versionadded:: 2015.5.0
+
+Example Configuration
+=====================
+
 .. code-block:: yaml
 
+    # Fire events on all failed logins
     beacons:
       btmp: []
+
+    # Matching on user name, using a default time range
+    beacons:
+      btmp:
+        - users:
+            gareth:
+        - defaults:
+            time_range:
+                start: '8am'
+                end: '4pm'
+
+    # Matching on user name, overriding the default time range
+    beacons:
+      btmp:
+        - users:
+            gareth:
+                time_range:
+                    start: '8am'
+                    end: '4pm'
+        - defaults:
+            time_range:
+                start: '8am'
+                end: '4pm'
+
+    # Matching on group name, overriding the default time range
+    beacons:
+      btmp:
+        - groups:
+            users:
+                time_range:
+                    start: '8am'
+                    end: '4pm'
+        - defaults:
+            time_range:
+                start: '8am'
+                end: '4pm'
+
+
+Use Case: Posting Failed Login Events to Slack
+==============================================
+
+This can be done using the following reactor SLS:
+
+.. code-block:: jinja
+
+    report-wtmp:
+      runner.salt.cmd:
+        - args:
+          - fun: slack.post_message
+          - channel: mychannel      # Slack channel
+          - from_name: someuser     # Slack user
+          - message: "Failed login from `{{ data.get('user', '') or 'unknown user' }}` on `{{ data['id'] }}`"
+
+Match the event like so in the master config file:
+
+.. code-block:: yaml
+
+    reactor:
+
+      - 'salt/beacon/*/btmp/':
+        - salt://reactor/btmp.sls
+
+.. note::
+    This approach uses the :py:mod:`slack execution module
+    <salt.modules.slack_notify>` directly on the master, and therefore requires
+    that the master has a slack API key in its configuration:
+
+    .. code-block:: yaml
+
+        slack:
+          api_key: xoxb-XXXXXXXXXXXX-XXXXXXXXXXXX-XXXXXXXXXXXXXXXXXXXXXXXX
+
+    See the :py:mod:`slack execution module <salt.modules.slack_notify>`
+    documentation for more information. While you can use an individual user's
+    API key to post to Slack, a bot user is likely better suited for this. The
+    :py:mod:`slack engine <salt.engines.slack>` documentation has information
+    on how to set up a bot user.
 '''
 
 # Import python libs
@@ -183,46 +266,6 @@ def validate(config):
 def beacon(config):
     '''
     Read the last btmp file and return information on the failed logins
-
-    .. code-block:: yaml
-
-        beacons:
-          btmp: []
-
-        beacons:
-          btmp:
-            - users:
-                gareth:
-            - defaults:
-                time_range:
-                    start: '8am'
-                    end: '4pm'
-
-        beacons:
-          btmp:
-            - users:
-                gareth:
-                    time_range:
-                        start: '8am'
-                        end: '4pm'
-            - defaults:
-                time_range:
-                    start: '8am'
-                    end: '4pm'
-
-        beacons:
-          btmp:
-            - groups:
-                users:
-                    time_range:
-                        start: '8am'
-                        end: '4pm'
-            - defaults:
-                time_range:
-                    start: '8am'
-                    end: '4pm'
-
-        .. versionadded:: Fluorine
     '''
     ret = []
 

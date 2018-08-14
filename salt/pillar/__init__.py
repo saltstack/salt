@@ -1029,6 +1029,11 @@ class Pillar(object):
         decrypt_errors = self.decrypt_pillar(pillar)
         if decrypt_errors:
             pillar.setdefault('_errors', []).extend(decrypt_errors)
+
+        # Reset the file_roots for the renderers
+        for mod_name in sys.modules:
+            if mod_name.startswith('salt.loaded.int.render.'):
+                sys.modules[mod_name].__opts__['file_roots'] = self.actual_file_roots
         return pillar
 
     def decrypt_pillar(self, pillar):

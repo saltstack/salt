@@ -471,8 +471,12 @@ def latest(name,
     depth
         Defines depth in history when git a clone is needed in order to ensure
         latest. E.g. ``depth: 1`` is useful when deploying from a repository
-        with a long history. Use rev to specify branch. This is not compatible
-        with tags or revision IDs.
+        with a long history. Use rev to specify branch or tag. This is not
+        compatible with revision IDs.
+
+        .. versionchanged:: Fluorine
+            This option now supports tags as well as branches, on Git 1.8.0 and
+            newer.
 
     identity
         Path to a private key to use for ssh URLs. This can be either a single
@@ -660,6 +664,7 @@ def latest(name,
             identity = [identity]
         elif not isinstance(identity, list):
             return _fail(ret, 'identity must be either a list or a string')
+        identity = [os.path.expanduser(x) for x in identity]
         for ident_path in identity:
             if 'salt://' in ident_path:
                 try:
@@ -830,11 +835,11 @@ def latest(name,
             )
             remote_loc = None
 
-    if depth is not None and remote_rev_type != 'branch':
+    if depth is not None and remote_rev_type not in ('branch', 'tag'):
         return _fail(
             ret,
             'When \'depth\' is used, \'rev\' must be set to the name of a '
-            'branch on the remote repository'
+            'branch or tag on the remote repository'
         )
 
     if remote_rev is None and not bare:
@@ -2311,6 +2316,7 @@ def detached(name,
             identity = [identity]
         elif not isinstance(identity, list):
             return _fail(ret, 'Identity must be either a list or a string')
+        identity = [os.path.expanduser(x) for x in identity]
         for ident_path in identity:
             if 'salt://' in ident_path:
                 try:
@@ -2697,7 +2703,7 @@ def cloned(name,
            https_pass=None,
            output_encoding=None):
     '''
-    .. versionadded:: 2018.3.2,Fluorine
+    .. versionadded:: 2018.3.3,Fluorine
 
     Ensure that a repository has been cloned to the specified target directory.
     If not, clone that repository. No fetches will be performed once cloned.

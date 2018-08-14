@@ -14,16 +14,16 @@ import tempfile
 import time
 import textwrap
 import threading
-from salt.ext.six.moves import queue
 
 # Import Salt Testing Libs
 from tests.support.case import ShellCase
-from tests.support.unit import skipIf
-from tests.support.paths import TMP
 from tests.support.helpers import flaky, expensiveTest
 from tests.support.mock import MagicMock, patch
+from tests.support.paths import TMP
+from tests.support.unit import skipIf
 
 # Import Salt Libs
+import salt.exceptions
 import salt.utils.platform
 import salt.utils.event
 import salt.utils.files
@@ -33,6 +33,7 @@ import salt.utils.yaml
 
 # Import 3rd-party libs
 from salt.ext import six
+from salt.ext.six.moves import queue
 
 log = logging.getLogger(__name__)
 
@@ -62,7 +63,6 @@ class StateRunnerTest(ShellCase):
         Also test against some sample "good" output that would be included in a correct
         orchestrate run.
         '''
-        #ret_output = self.run_run_plus('state.orchestrate', 'orch.simple')['out']
         ret_output = self.run_run('state.orchestrate orch.simple')
         bad_out = ['outputter:', '    highstate']
         good_out = ['    Function: salt.state',
@@ -73,11 +73,11 @@ class StateRunnerTest(ShellCase):
 
         # First, check that we don't have the "bad" output that was displaying in
         # Issue #31330 where only the highstate outputter was listed
-        self.assertIsNot(bad_out, ret_output)
+        assert bad_out != ret_output
 
         # Now test that some expected good sample output is present in the return.
         for item in good_out:
-            self.assertIn(item, ret_output)
+            assert item in ret_output
 
     def test_orchestrate_nested(self):
         '''
@@ -90,8 +90,8 @@ class StateRunnerTest(ShellCase):
                 'state.orchestrate nested-orch.outer',
                 with_retcode=True)
 
-        self.assertFalse(os.path.exists('/tmp/ewu-2016-12-13'))
-        self.assertNotEqual(code, 0)
+        assert os.path.exists('/tmp/ewu-2016-12-13') is False
+        assert code != 0
 
     def test_orchestrate_state_and_function_failure(self):
         '''
@@ -168,7 +168,7 @@ class StateRunnerTest(ShellCase):
 
         for out in ret_out:
             for item in out:
-                self.assertIn(item, ret)
+                assert item in ret
 
     def test_orchestrate_retcode(self):
         '''
@@ -199,7 +199,7 @@ class StateRunnerTest(ShellCase):
                        '      Result: False'):
             self.assertIn(result, ret)
 
-    def test_orchestrate_target_doesnt_exists(self):
+    def test_orchestrate_target_doesnt_exist(self):
         '''
         test orchestration when target doesn't exist
         while using multiple states
@@ -212,8 +212,8 @@ class StateRunnerTest(ShellCase):
                  '      Result: False']
 
         second = ['          ID: test-state',
-                 '    Function: salt.state',
-                 '      Result: True']
+                  '    Function: salt.state',
+                  '      Result: True']
 
         third = ['          ID: cmd.run',
                  '    Function: salt.function',
@@ -223,7 +223,7 @@ class StateRunnerTest(ShellCase):
 
         for out in ret_out:
             for item in out:
-                self.assertIn(item, ret)
+                assert item in ret
 
     def test_state_event(self):
         '''
@@ -241,7 +241,7 @@ class StateRunnerTest(ShellCase):
         while q.empty():
             self.run_salt('minion test.ping --static')
         out = q.get()
-        self.assertIn(expect, six.text_type(out))
+        assert expect in six.text_type(out)
 
         server_thread.join()
 
@@ -254,9 +254,9 @@ class StateRunnerTest(ShellCase):
         def count(thing, listobj):
             return sum([obj.strip() == thing for obj in listobj])
 
-        self.assertEqual(count('ID: test subset', ret), 1)
-        self.assertEqual(count('Succeeded: 1', ret), 1)
-        self.assertEqual(count('Failed:    0', ret), 1)
+        assert count('ID: test subset', ret) == 1
+        assert count('Succeeded: 1', ret) == 1
+        assert count('Failed:    0', ret) == 1
 
     def test_orchestrate_salt_function_return_false_failure(self):
         '''
@@ -275,10 +275,7 @@ class StateRunnerTest(ShellCase):
         state_result = ret['data']['master']['salt_|-deploy_check_|-test.false_|-function']['result']
         func_ret = ret['data']['master']['salt_|-deploy_check_|-test.false_|-function']['changes']
 
-        self.assertEqual(
-            state_result,
-            False,
-        )
+        assert state_result is False
 
         self.assertEqual(
             func_ret,
@@ -397,6 +394,7 @@ class OrchEventTest(ShellCase):
             del listener
             signal.alarm(0)
 
+    @expensiveTest
     def test_parallel_orchestrations(self):
         '''
         Test to confirm that the parallel state requisite works in orch
@@ -538,6 +536,90 @@ class OrchEventTest(ShellCase):
                     self.assertNotIn('test_|-stage_two_|-stage_two_|-fail_without_changes', ret)
                     break
 
+        finally:
+            self.assertTrue(received)
+            del listener
+            signal.alarm(0)
+
+    def test_orchestration_with_pillar_dot_items(self):
+        '''
+        Test to confirm when using a state file that includes other state file, if
+        one of those state files includes pillar related functions that will not
+        be pulling from the pillar cache that all the state files are available and
+        the file_roots has been preserved.  See issues #48277 and #46986.
+        '''
+        self.write_conf({
+            'fileserver_backend': ['roots'],
+            'file_roots': {
+                'base': [self.base_env],
+            },
+        })
+
+        orch_sls = os.path.join(self.base_env, 'main.sls')
+        with salt.utils.files.fopen(orch_sls, 'w') as fp_:
+            fp_.write(textwrap.dedent('''
+                include:
+                  - one
+                  - two
+                  - three
+            '''))
+
+        orch_sls = os.path.join(self.base_env, 'one.sls')
+        with salt.utils.files.fopen(orch_sls, 'w') as fp_:
+            fp_.write(textwrap.dedent('''
+                {%- set foo = salt['saltutil.runner']('pillar.show_pillar') %}
+                placeholder_one:
+                  test.succeed_without_changes
+            '''))
+
+        orch_sls = os.path.join(self.base_env, 'two.sls')
+        with salt.utils.files.fopen(orch_sls, 'w') as fp_:
+            fp_.write(textwrap.dedent('''
+                placeholder_two:
+                  test.succeed_without_changes
+            '''))
+
+        orch_sls = os.path.join(self.base_env, 'three.sls')
+        with salt.utils.files.fopen(orch_sls, 'w') as fp_:
+            fp_.write(textwrap.dedent('''
+                placeholder_three:
+                  test.succeed_without_changes
+            '''))
+
+        orch_sls = os.path.join(self.base_env, 'main.sls')
+
+        listener = salt.utils.event.get_event(
+            'master',
+            sock_dir=self.master_opts['sock_dir'],
+            transport=self.master_opts['transport'],
+            opts=self.master_opts)
+
+        jid = self.run_run_plus(
+            'state.orchestrate',
+            'main',
+            __reload_config=True).get('jid')
+
+        if jid is None:
+            raise salt.exceptions.SaltInvocationError('jid missing from run_run_plus output')
+
+        signal.signal(signal.SIGALRM, self.alarm_handler)
+        signal.alarm(self.timeout)
+        received = False
+        try:
+            while True:
+                event = listener.get_event(full=True)
+                if event is None:
+                    continue
+                if event.get('tag', '') == 'salt/run/{0}/ret'.format(jid):
+                    received = True
+                    # Don't wrap this in a try/except. We want to know if the
+                    # data structure is different from what we expect!
+                    ret = event['data']['return']['data']['master']
+                    for state in ret:
+                        data = ret[state]
+                        # Each state should be successful
+                        self.assertEqual(data['comment'], 'Success!')
+                    break
         finally:
             self.assertTrue(received)
             del listener

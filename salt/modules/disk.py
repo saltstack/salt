@@ -85,6 +85,10 @@ def usage(args=None):
     '''
     Return usage information for volumes mounted on this minion
 
+    .. versionchanged:: Fluorine
+
+        Default for SunOS changed to 1 kilobyte blocks
+
     CLI Example:
 
     .. code-block:: bash
@@ -103,6 +107,8 @@ def usage(args=None):
         cmd = 'df -P'
     elif __grains__['kernel'] == 'OpenBSD' or __grains__['kernel'] == 'AIX':
         cmd = 'df -kP'
+    elif __grains__['kernel'] == 'SunOS':
+        cmd = 'df -k'
     else:
         cmd = 'df'
     if flags:

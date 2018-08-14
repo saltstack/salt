@@ -96,6 +96,19 @@ vpn0: flags=120002200850<POINTOPOINT,RUNNING,MULTICAST,NONUD,IPv6,PHYSRUNNING> m
         inet6 ::/0 --> fe80::b2d6:7c10
 '''
 
+NETBSD = '''\
+vioif0: flags=0x8943<UP,BROADCAST,RUNNING,PROMISC,SIMPLEX,MULTICAST> mtu 1500
+        ec_capabilities=1<VLAN_MTU>
+        ec_enabled=0
+        address: 00:a0:98:e6:83:18
+        inet 192.168.1.80/24 broadcast 192.168.1.255 flags 0x0
+        inet6 fe80::2a0:98ff:fee6:8318%vioif0/64 flags 0x0 scopeid 0x1
+lo0: flags=0x8049<UP,LOOPBACK,RUNNING,MULTICAST> mtu 33624
+        inet 127.0.0.1/8 flags 0x0
+        inet6 ::1/128 flags 0x20<NODAD>
+        inet6 fe80::1%lo0/64 flags 0x0 scopeid 0x2
+'''
+
 FREEBSD_SOCKSTAT = '''\
 USER    COMMAND     PID     FD  PROTO  LOCAL ADDRESS    FOREIGN ADDRESS
 root    python2.7   1294    41  tcp4   127.0.0.1:61115  127.0.0.1:4506
@@ -318,6 +331,24 @@ class NetworkTestCase(TestCase):
                                              'address': '10.10.10.38'}],
                                             'up': True}}
             self.assertEqual(interfaces, expected_interfaces)
+
+    def test_interfaces_ifconfig_netbsd(self):
+        interfaces = network._netbsd_interfaces_ifconfig(NETBSD)
+        self.assertEqual(interfaces,
+                          {'lo0': {'inet': [{'address': '127.0.0.1', 'netmask': '255.0.0.0'}],
+                                   'inet6': [{'address': 'fe80::1',
+                                               'prefixlen': '64',
+                                               'scope': 'lo0'}],
+                                   'up': True},
+                           'vioif0': {'hwaddr': '00:a0:98:e6:83:18',
+                                      'inet': [{'address': '192.168.1.80',
+                                                 'broadcast': '192.168.1.255',
+                                                 'netmask': '255.255.255.0'}],
+                                      'inet6': [{'address': 'fe80::2a0:98ff:fee6:8318',
+                                                  'prefixlen': '64',
+                                                  'scope': 'vioif0'}],
+                                      'up': True}}
+        )
 
     def test_freebsd_remotes_on(self):
         with patch('salt.utils.platform.is_sunos', lambda: False):

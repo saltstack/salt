@@ -188,7 +188,7 @@ def set_pidfile(pidfile, user):
         uid = pwnam[2]
         gid = pwnam[3]
         #groups = [g.gr_gid for g in grp.getgrall() if user in g.gr_mem]
-    except IndexError:
+    except (KeyError, IndexError):
         sys.stderr.write(
             'Failed to set the pid to user: {0}. The user is not '
             'available.\n'.format(
@@ -482,7 +482,7 @@ class ProcessManager(object):
                 del self._process_map[pid]
 
     @gen.coroutine
-    def run(self, async=False):
+    def run(self, asynchronous=False):
         '''
         Load and start all available api modules
         '''
@@ -505,7 +505,7 @@ class ProcessManager(object):
                 # The event-based subprocesses management code was removed from here
                 # because os.wait() conflicts with the subprocesses management logic
                 # implemented in `multiprocessing` package. See #35480 for details.
-                if async:
+                if asynchronous:
                     yield gen.sleep(10)
                 else:
                     time.sleep(10)
