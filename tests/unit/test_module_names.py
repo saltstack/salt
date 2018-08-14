@@ -12,7 +12,6 @@ import os
 # Import Salt libs
 import salt.utils.path
 import salt.utils.stringutils
-from salt.ext.six.moves import map  # pylint: disable=redefined-builtin
 
 # Import Salt Testing libs
 from tests.support.unit import TestCase

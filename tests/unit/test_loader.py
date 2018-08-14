@@ -8,17 +8,17 @@
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+import collections
 import compileall
+import copy
+import imp
 import inspect
 import logging
+import os
+import shutil
+import sys
 import tempfile
 import textwrap
-import shutil
-import os
-import collections
-import sys
-import imp
-import copy
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
