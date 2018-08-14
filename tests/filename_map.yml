@@ -114,10 +114,6 @@ salt/cloud/__init__.py:
 salt/grains/*:
   - integration.grains.test_custom
 
-salt/minion.py:
-  - integration.shell.test_matcher
-  - integration.client.test_syndic
-
 salt/proxy/*:
   - integration.proxy.test_shell
   - integration.proxy.test_simple
@@ -168,9 +164,11 @@ salt/loader.py:
   - integration.loader.test_ext_modules
 
 salt/minion.py:
+  - integration.client.test_syndic
   - integration.minion.test_blackout
   - integration.minion.test_pillar
   - integration.minion.test_timeout
+  - integration.shell.test_matcher
 
 salt/modules/*_sysctl.py:
   - unit.states.test_sysctl
