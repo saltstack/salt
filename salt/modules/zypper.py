@@ -595,6 +595,8 @@ def latest_version(*names, **kwargs):
         status = pkg_info.get('status', '').lower()
         if status.find('not installed') > -1 or status.find('out-of-date') > -1:
             ret[name] = pkg_info.get('version')
+        else:
+            ret[name] = ''
 
     # Return a string if only one package name passed
     if len(names) == 1 and len(ret):
@@ -1481,11 +1483,6 @@ def upgrade(refresh=True,
     __zypper__(systemd_scope=_systemd_scope()).noraise.call(*cmd_update)
     _clean_cache()
     new = list_pkgs()
-
-    # Handle packages which report multiple new versions
-    # (affects only kernel packages at this point)
-    for pkg in new:
-        new[pkg] = new[pkg].split(',')[-1]
     ret = salt.utils.data.compare_dicts(old, new)
 
     if __zypper__.exit_code not in __zypper__.SUCCESS_EXIT_CODES:
@@ -2387,7 +2384,7 @@ def resolve_capabilities(pkgs, refresh, **kwargs):
                     if len(result) == 1:
                         name = result.keys()[0]
                     elif len(result) > 1:
-                        log.warn("Found ambiguous match for capability '%s'.", pkg)
+                        log.warning("Found ambiguous match for capability '%s'.", pkg)
                 except CommandExecutionError as exc:
                     # when search throws an exception stay with original name and version
                     log.debug("Search failed with: %s", exc)

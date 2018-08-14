@@ -25,6 +25,7 @@ EXCLUDED_DIRS = [
     os.path.join('tests', 'unit', 'modules', 'zypp'),
     os.path.join('tests', 'unit', 'templates', 'files'),
     os.path.join('tests', 'integration', 'files'),
+    os.path.join('tests', 'unit', 'files'),
     os.path.join('tests', 'integration', 'cloud', 'helpers'),
     os.path.join('tests', 'kitchen', 'tests'),
 ]

@@ -141,7 +141,7 @@ class Shell(object):
             options.append('UserKnownHostsFile={0}'.format(known_hosts))
         if self.port:
             options.append('Port={0}'.format(self.port))
-        if self.priv:
+        if self.priv and self.priv != 'agent-forwarding':
             options.append('IdentityFile={0}'.format(self.priv))
         if self.user:
             options.append('User={0}'.format(self.user))
@@ -374,6 +374,9 @@ class Shell(object):
         Execute a shell command via VT. This is blocking and assumes that ssh
         is being run
         '''
+        if not cmd:
+            return '', 'No command or passphrase', 245
+
         term = salt.utils.vt.Terminal(
                 cmd,
                 shell=True,

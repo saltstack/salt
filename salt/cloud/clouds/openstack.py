@@ -466,7 +466,10 @@ def show_instance(name, conn=None, call=None):
     ret['public_ips'] = _get_ips(node, 'public')
     ret['floating_ips'] = _get_ips(node, 'floating')
     ret['fixed_ips'] = _get_ips(node, 'fixed')
-    ret['image'] = conn.get_image(node.image.id).name
+    if isinstance(node.image, six.string_types):
+        ret['image'] = node.image
+    else:
+        ret['image'] = conn.get_image(node.image.id).name
     return ret
 
 

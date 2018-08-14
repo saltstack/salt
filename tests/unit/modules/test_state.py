@@ -10,6 +10,7 @@ import os
 import shutil
 import tempfile
 import textwrap
+import time
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -1365,6 +1366,10 @@ class TopFileMergingCase(TestCase, LoaderModuleMockMixin):
                             - {saltenv}_{env_name}
                         '''.format(env_name=env_name, saltenv=saltenv)))
 
+    def tearDown(self):
+        time.sleep(1)
+        os.remove(self.base_top_file)
+
     def show_top(self, **kwargs):
         local_opts = copy.deepcopy(self.dunder_opts)
         local_opts.update(kwargs)
@@ -1387,6 +1392,7 @@ class TopFileMergingCase(TestCase, LoaderModuleMockMixin):
                   '*':
                     - base_base
                 '''))
+        time.sleep(1)
 
     def test_merge_strategy_merge(self):
         '''

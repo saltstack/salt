@@ -64,7 +64,7 @@ To match a nodegroup on the CLI, use the ``-N`` command-line option:
 
     The ``N@`` classifier historically could not be used in compound matches
     within the CLI or :term:`top file`, it was only recognized in the
-    :conf_master:`nodegroups` master config file parameter. As of Fluorine
+    :conf_master:`nodegroups` master config file parameter. As of the Fluorine
     release, this limitation no longer exists.
 
 To match a nodegroup in your :term:`top file`, make sure to put ``- match:

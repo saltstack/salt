@@ -42,7 +42,6 @@ __proxyenabled__ = ['*']
 
 # Set up the default values for all systems
 DEFAULTS = {'mongo.db': 'salt',
-            'mongo.host': 'salt',
             'mongo.password': '',
             'mongo.port': 27017,
             'mongo.user': '',
@@ -462,3 +461,17 @@ def gather_bootstrap_script(bootstrap=None):
     ret = salt.utils.cloud.update_bootstrap(__opts__, url=bootstrap)
     if 'Success' in ret and len(ret['Success']['Files updated']) > 0:
         return ret['Success']['Files updated'][0]
+
+
+def items():
+    '''
+    Return the complete config from the currently running minion process.
+    This includes defaults for values not set in the config file.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' config.items
+    '''
+    return __opts__
