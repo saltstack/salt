@@ -19,7 +19,7 @@ import traceback
 
 # Import Salt Libs
 import salt.crypt
-import salt.utils.async
+import salt.utils.asynchronous
 import salt.utils.event
 import salt.utils.files
 import salt.utils.platform
@@ -480,7 +480,7 @@ class AsyncTCPPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.tran
                     'tok': self.tok,
                     'data': data,
                     'tag': tag}
-            req_channel = salt.utils.async.SyncWrapper(
+            req_channel = salt.utils.asynchronous.SyncWrapper(
                 AsyncTCPReqChannel, (self.opts,)
             )
             try:
@@ -509,9 +509,16 @@ class AsyncTCPPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.tran
             if not self.auth.authenticated:
                 yield self.auth.authenticate()
             if self.auth.authenticated:
+                # if this is changed from the default, we assume it was intentional
+                if int(self.opts.get('publish_port', 4506)) != 4506:
+                    self.publish_port = self.opts.get('publish_port')
+                # else take the relayed publish_port master reports
+                else:
+                    self.publish_port = self.auth.creds['publish_port']
+
                 self.message_client = SaltMessageClientPool(
                     self.opts,
-                    args=(self.opts, self.opts['master_ip'], int(self.auth.creds['publish_port']),),
+                    args=(self.opts, self.opts['master_ip'], int(self.publish_port),),
                     kwargs={'io_loop': self.io_loop,
                             'connect_callback': self.connect_callback,
                             'disconnect_callback': self.disconnect_callback,
@@ -607,7 +614,7 @@ class TCPReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.tra
         self.payload_handler = payload_handler
         self.io_loop = io_loop
         self.serial = salt.payload.Serial(self.opts)
-        with salt.utils.async.current_ioloop(self.io_loop):
+        with salt.utils.asynchronous.current_ioloop(self.io_loop):
             if USE_LOAD_BALANCER:
                 self.req_server = LoadBalancerWorker(self.socket_queue,
                                                      self.handle_message,
@@ -873,7 +880,7 @@ class SaltMessageClient(object):
 
         self.io_loop = io_loop or tornado.ioloop.IOLoop.current()
 
-        with salt.utils.async.current_ioloop(self.io_loop):
+        with salt.utils.asynchronous.current_ioloop(self.io_loop):
             self._tcp_client = TCPClientKeepAlive(opts, resolver=resolver)
 
         self._mid = 1
@@ -899,7 +906,7 @@ class SaltMessageClient(object):
         if hasattr(self, '_stream') and not self._stream.closed():
             # If _stream_return() hasn't completed, it means the IO
             # Loop is stopped (such as when using
-            # 'salt.utils.async.SyncWrapper'). Ensure that
+            # 'salt.utils.asynchronous.SyncWrapper'). Ensure that
             # _stream_return() completes by restarting the IO Loop.
             # This will prevent potential errors on shutdown.
             try:
@@ -972,7 +979,7 @@ class SaltMessageClient(object):
                                   'source_port': self.source_port}
                     else:
                         log.warning('If you need a certain source IP/port, consider upgrading Tornado >= 4.5')
-                with salt.utils.async.current_ioloop(self.io_loop):
+                with salt.utils.asynchronous.current_ioloop(self.io_loop):
                     self._stream = yield self._tcp_client.connect(self.host,
                                                                   self.port,
                                                                   ssl_options=self.opts.get('ssl'),
@@ -1451,9 +1458,9 @@ class TCPPubServerChannel(salt.transport.server.PubServerChannel):
             pull_uri = int(self.opts.get('tcp_master_publish_pull', 4514))
         else:
             pull_uri = os.path.join(self.opts['sock_dir'], 'publish_pull.ipc')
-        # TODO: switch to the actual async interface
+        # TODO: switch to the actual asynchronous interface
         #pub_sock = salt.transport.ipc.IPCMessageClient(self.opts, io_loop=self.io_loop)
-        pub_sock = salt.utils.async.SyncWrapper(
+        pub_sock = salt.utils.asynchronous.SyncWrapper(
             salt.transport.ipc.IPCMessageClient,
             (pull_uri,)
         )
