@@ -29,13 +29,18 @@ import datetime
 log = logging.getLogger(__name__)
 
 # Import Salt libs
+from salt.ext import six
 import salt.utils.files
 import salt.utils.napalm
+import salt.utils.versions
 import salt.utils.templates
-import salt.utils.stringutils
 
 # Import 3rd-party libs
-from salt.ext import six
+try:
+    import jxmlease  # pylint: disable=unused-import
+    HAS_JXMLEASE = True
+except ImportError:
+    HAS_JXMLEASE = False
 
 # ----------------------------------------------------------------------------------------------------------------------
 # module properties
@@ -275,7 +280,7 @@ def _config_logic(napalm_device,
                 revert_time = __utils__['timeutil.get_time_at'](time_in=revert_in,
                                                                 time_at=revert_at)
                 if __grains__['os'] == 'junos':
-                    if 'napalm.junos_rpc' not in __salt__:
+                    if not HAS_JXMLEASE:
                         loaded_result['comment'] = ('This feature requires the library jxmlease to be installed.\n'
                                 'To install, please execute: ``pip install jxmlease``.')
                         loaded_result['result'] = False
@@ -1373,7 +1378,7 @@ def load_config(filename=None,
             applies a manual configuration change, or a different process or
             command changes the configuration in the meanwhile).
 
-        .. versionadded: Fluorine
+        .. versionadded:: Fluorine
 
     commit_at: ``None``
         Commit the changes at a specific time. Example of accepted formats:
@@ -1397,7 +1402,7 @@ def load_config(filename=None,
             applies a manual configuration change, or a different process or
             command changes the configuration in the meanwhile).
 
-        .. versionadded: Fluorine
+        .. versionadded:: Fluorine
 
     revert_in: ``None``
         Commit and revert the changes in a specific number of minutes / hours.
@@ -1428,7 +1433,7 @@ def load_config(filename=None,
             commit and till the changes are reverted), these changes would be
             equally reverted, as Salt cannot be aware of them.
 
-        .. versionadded: Fluorine
+        .. versionadded:: Fluorine
 
     revert_at: ``None``
         Commit and revert the changes at a specific time. Example of accepted
@@ -1458,7 +1463,7 @@ def load_config(filename=None,
             commit and till the changes are reverted), these changes would be
             equally reverted, as Salt cannot be aware of them.
 
-        .. versionadded: Fluorine
+        .. versionadded:: Fluorine
 
     saltenv: ``base``
         Specifies the Salt environment name.
@@ -1547,18 +1552,15 @@ def load_config(filename=None,
 
 
 @salt.utils.napalm.proxy_napalm_wrap
-def load_template(template_name,
+def load_template(template_name=None,
                   template_source=None,
+                  context=None,
+                  defaults=None,
+                  template_engine='jinja',
+                  saltenv='base',
                   template_hash=None,
                   template_hash_name=None,
-                  template_user='root',
-                  template_group='root',
-                  template_mode='755',
-                  template_attrs='--------------e----',
-                  saltenv=None,
-                  template_engine='jinja',
                   skip_verify=False,
-                  defaults=None,
                   test=False,
                   commit=True,
                   debug=False,
@@ -1598,8 +1600,8 @@ def load_template(template_name,
         .. code-block:: yaml
 
             file_roots:
-                base:
-                    - /etc/salt/states
+              base:
+                - /etc/salt/states
 
         Placing the template under ``/etc/salt/states/templates/example.jinja``,
         it can be used as ``salt://templates/example.jinja``.
@@ -1614,6 +1616,11 @@ def load_template(template_name,
         - ``https:/example.com/template.mako``
         - ``ftp://example.com/template.py``
 
+        .. versionchanged:: Fluorine
+            This argument can now support a list of templates to be rendered.
+            The resulting configuration text is loaded at once, as a single
+            configuration chunk.
+
     template_source: None
         Inline config template to be rendered and loaded on the device.
 
@@ -1622,33 +1629,18 @@ def load_template(template_name,
 
         .. versionadded:: 2016.11.2
 
+    context: None
+        Overrides default context variables passed to the template.
+
+        .. versionadded:: Fluorine
+
     template_hash_name: None
         When ``template_hash`` refers to a remote file,
         this specifies the filename to look for in that file.
 
         .. versionadded:: 2016.11.2
 
-    template_group: root
-        Owner of file.
-
-        .. versionadded:: 2016.11.2
-
-    template_user: root
-        Group owner of file.
-
-        .. versionadded:: 2016.11.2
-
-    template_mode: 755
-        Permissions of file.
-
-        .. versionadded:: 2016.11.2
-
-    template_attrs: "--------------e----"
-        attributes of file. (see `man lsattr`)
-
-        .. versionadded:: 2018.3.0
-
-    saltenv: base
+    saltenv: ``base``
         Specifies the template environment.
         This will influence the relative imports inside the templates.
 
@@ -1715,7 +1707,7 @@ def load_template(template_name,
             applies a manual configuration change, or a different process or
             command changes the configuration in the meanwhile).
 
-        .. versionadded: Fluorine
+        .. versionadded:: Fluorine
 
     commit_at: ``None``
         Commit the changes at a specific time. Example of accepted formats:
@@ -1739,7 +1731,7 @@ def load_template(template_name,
             applies a manual configuration change, or a different process or
             command changes the configuration in the meanwhile).
 
-        .. versionadded: Fluorine
+        .. versionadded:: Fluorine
 
     revert_in: ``None``
         Commit and revert the changes in a specific number of minutes / hours.
@@ -1770,7 +1762,7 @@ def load_template(template_name,
             commit and till the changes are reverted), these changes would be
             equally reverted, as Salt cannot be aware of them.
 
-        .. versionadded: Fluorine
+        .. versionadded:: Fluorine
 
     revert_at: ``None``
         Commit and revert the changes at a specific time. Example of accepted
@@ -1800,7 +1792,7 @@ def load_template(template_name,
             commit and till the changes are reverted), these changes would be
             equally reverted, as Salt cannot be aware of them.
 
-        .. versionadded: Fluorine
+        .. versionadded:: Fluorine
 
     defaults: None
         Default variables/context passed to the template.
@@ -1811,10 +1803,13 @@ def load_template(template_name,
         Dictionary with the arguments/context to be used when the template is rendered.
 
         .. note::
-
             Do not explicitly specify this argument. This represents any other
             variable that will be sent to the template rendering system.
             Please see the examples below!
+
+        .. note::
+            It is more recommended to use the ``context`` argument to avoid
+            conflicts between CLI arguments and template variables.
 
     :return: a dictionary having the following keys:
 
@@ -1851,33 +1846,31 @@ def load_template(template_name,
         salt '*' net.load_template set_ntp_peers peers=[192.168.0.1]  # uses NAPALM default templates
 
         # inline template:
-        salt -G 'os:junos' net.load_template set_hostname template_source='system { host-name {{host_name}}; }' \
+        salt -G 'os:junos' net.load_template template_source='system { host-name {{host_name}}; }' \
         host_name='MX480.lab'
 
         # inline template using grains info:
-        salt -G 'os:junos' net.load_template set_hostname \
+        salt -G 'os:junos' net.load_template \
         template_source='system { host-name {{grains.model}}.lab; }'
         # if the device is a MX480, the command above will set the hostname as: MX480.lab
 
         # inline template using pillar data:
-        salt -G 'os:junos' net.load_template set_hostname template_source='system { host-name {{pillar.proxy.host}}; }'
+        salt -G 'os:junos' net.load_template template_source='system { host-name {{pillar.proxy.host}}; }'
 
-        salt '*' net.load_template my_template my_param='aaa'  # will commit
-        salt '*' net.load_template my_template my_param='aaa' test=True  # dry run
+        salt '*' net.load_template https://bit.ly/2OhSgqP hostname=example  # will commit
+        salt '*' net.load_template https://bit.ly/2OhSgqP hostname=example test=True  # dry run
 
-        salt '*' net.load_template salt://templates/my_stuff.jinja debug=True  # equivalent of the next command
-        salt '*' net.load_template my_stuff.jinja debug=True
-
-        # in case the template needs to include files that are not under the same path (e.g. http://),
-        # to help the templating engine find it, you will need to specify the `saltenv` argument:
-        salt '*' net.load_template my_stuff.jinja saltenv=/path/to/includes debug=True
+        salt '*' net.load_template salt://templates/example.jinja debug=True  # Using the salt:// URI
 
         # render a mako template:
-        salt '*' net.load_template salt://templates/my_stuff.mako template_engine=mako debug=True
+        salt '*' net.load_template salt://templates/example.mako template_engine=mako debug=True
 
         # render remote template
         salt -G 'os:junos' net.load_template http://bit.ly/2fReJg7 test=True debug=True peers=['192.168.0.1']
         salt -G 'os:ios' net.load_template http://bit.ly/2gKOj20 test=True debug=True peers=['192.168.0.1']
+
+        # render multiple templates at once
+        salt '*' net.load_template "['https://bit.ly/2OhSgqP', 'salt://templates/example.jinja']" context="{'hostname': 'example'}"
 
     Example output:
 
@@ -1899,6 +1892,15 @@ def load_template(template_name,
     }
     loaded_config = None
     # prechecks
+    deprecated_args = ('template_user', 'template_attrs', 'template_group', 'template_mode')
+    for deprecated_arg in deprecated_args:
+        if template_vars.get(deprecated_arg):
+            del template_vars[deprecated_arg]
+            salt.utils.versions.warn_until(
+                'Sodium',
+                ('The \'{arg}\' argument to \'net.load_template\' is deprecated '
+                 'and has been ignored').format(arg=deprecated_arg)
+            )
     if template_engine not in salt.utils.templates.TEMPLATE_REGISTRY:
         _loaded.update({
             'result': False,
@@ -1911,27 +1913,30 @@ def load_template(template_name,
     # to check if will be rendered by salt or NAPALM
     salt_render_prefixes = ('salt://', 'http://', 'https://', 'ftp://')
     salt_render = False
-    for salt_render_prefix in salt_render_prefixes:
-        if not salt_render:
-            salt_render = salt_render or template_name.startswith(salt_render_prefix)
-    file_exists = __salt__['file.file_exists'](template_name)
+    file_exists = False
+    if not isinstance(template_name, (tuple, list)):
+        for salt_render_prefix in salt_render_prefixes:
+            if not salt_render:
+                salt_render = salt_render or template_name.startswith(salt_render_prefix)
+        file_exists = __salt__['file.file_exists'](template_name)
 
-    if template_source or file_exists or salt_render:
+    if template_source or file_exists or salt_render or isinstance(template_name, (tuple, list)):
         # either inline template
         # either template in a custom path
         # either abs path send
         # either starts with salt:// and
         # then use Salt render system
 
+        if context is None:
+            context = {}
+        context.update(template_vars)
         # if needed to render the template send as inline arg
         if template_source:
             # render the content
-            if not saltenv:
-                saltenv = 'base'
             _rendered = __salt__['file.apply_template_on_contents'](
                 contents=template_source,
                 template=template_engine,
-                context=template_vars,
+                context=context,
                 defaults=defaults,
                 saltenv=saltenv
             )
@@ -1946,55 +1951,66 @@ def load_template(template_name,
                     _loaded['comment'] = 'Error while rendering the template.'
                 return _loaded
         else:
-            if not file_exists and not saltenv:
-                # no saltenv overridden
-                # use the custom template path
-                saltenv = 'base'
-            elif salt_render and not saltenv:
-                # if saltenv not overridden and path specified as salt:// or http:// etc.
-                # will use the default environment, from the base
-                saltenv = 'base'
-
-            if not saltenv:
-                # still not specified, default to `base`
-                saltenv = 'base'
             # render the file - either local, either remote
-            _rand_filename = __salt__['random.hash'](template_name, 'md5')
-            _temp_file = __salt__['file.join']('/tmp', _rand_filename)
-            _managed = __salt__['file.get_managed'](name=_temp_file,
-                                                    source=template_name,  # abs path
-                                                    source_hash=template_hash,
-                                                    source_hash_name=template_hash_name,
-                                                    user=template_user,
-                                                    group=template_group,
-                                                    mode=template_mode,
-                                                    attrs=template_attrs,
-                                                    template=template_engine,
-                                                    context=template_vars,
-                                                    defaults=defaults,
-                                                    saltenv=saltenv,
-                                                    skip_verify=skip_verify)
-            if not isinstance(_managed, (list, tuple)) and isinstance(_managed, six.string_types):
-                _loaded['comment'] = _managed
-                _loaded['result'] = False
-            elif isinstance(_managed, (list, tuple)) and not len(_managed) > 0:
-                _loaded['result'] = False
-                _loaded['comment'] = 'Error while rendering the template.'
-            elif isinstance(_managed, (list, tuple)) and not len(_managed[0]) > 0:
-                _loaded['result'] = False
-                _loaded['comment'] = _managed[-1]  # contains the error message
-            if _loaded['result']:  # all good
-                _temp_tpl_file = _managed[0]
-                _temp_tpl_file_exists = __salt__['file.file_exists'](_temp_tpl_file)
-                if not _temp_tpl_file_exists:
+            if not isinstance(template_name, (list, tuple)):
+                template_name = [template_name]
+            if template_hash_name and not isinstance(template_hash_name, (list, tuple)):
+                template_hash_name = [template_hash_name]
+            elif not template_hash_name:
+                template_hash_name = [None] * len(template_name)
+            if template_hash and isinstance(template_hash, six.string_types) and not\
+                    (template_hash.startswith('salt://') or template_hash.startswith('file://')):
+                # If the template hash is passed as string, and it's not a file
+                # (starts with the salt:// or file:// URI), then make it a list
+                # of 1 element (for the iteration below)
+                template_hash = [template_hash]
+            elif template_hash and isinstance(template_hash, six.string_types) and\
+                    (template_hash.startswith('salt://') or template_hash.startswith('file://')):
+                # If the template hash is a file URI, then provide the same value
+                # for each of the templates in the list, as probably they all
+                # share the same hash file, otherwise the user should provide
+                # this as a list
+                template_hash = [template_hash] * len(template_name)
+            elif not template_hash:
+                template_hash = [None] * len(template_name)
+            for tpl_index, tpl_name in enumerate(template_name):
+                tpl_hash = template_hash[tpl_index]
+                tpl_hash_name = template_hash_name[tpl_index]
+                _rand_filename = __salt__['random.hash'](tpl_name, 'md5')
+                _temp_file = __salt__['file.join']('/tmp', _rand_filename)
+                _managed = __salt__['file.get_managed'](name=_temp_file,
+                                                        source=tpl_name,
+                                                        source_hash=tpl_hash,
+                                                        source_hash_name=tpl_hash_name,
+                                                        user=None,
+                                                        group=None,
+                                                        mode=None,
+                                                        attrs=None,
+                                                        template=template_engine,
+                                                        context=context,
+                                                        defaults=defaults,
+                                                        saltenv=saltenv,
+                                                        skip_verify=skip_verify)
+                if not isinstance(_managed, (list, tuple)) and isinstance(_managed, six.string_types):
+                    _loaded['comment'] += _managed
                     _loaded['result'] = False
-                    _loaded['comment'] = 'Error while rendering the template.'
-                    return _loaded
-                with salt.utils.files.fopen(_temp_tpl_file) as rfh:
-                    _rendered = salt.utils.stringutils.to_unicode(rfh.read())
-                __salt__['file.remove'](_temp_tpl_file)
-            else:
-                return _loaded  # exit
+                elif isinstance(_managed, (list, tuple)) and not len(_managed) > 0:
+                    _loaded['result'] = False
+                    _loaded['comment'] += 'Error while rendering the template.'
+                elif isinstance(_managed, (list, tuple)) and not len(_managed[0]) > 0:
+                    _loaded['result'] = False
+                    _loaded['comment'] += _managed[-1]  # contains the error message
+                if _loaded['result']:  # all good
+                    _temp_tpl_file = _managed[0]
+                    _temp_tpl_file_exists = __salt__['file.file_exists'](_temp_tpl_file)
+                    if not _temp_tpl_file_exists:
+                        _loaded['result'] = False
+                        _loaded['comment'] += 'Error while rendering the template.'
+                        return _loaded
+                    _rendered += __salt__['file.read'](_temp_tpl_file)
+                    __salt__['file.remove'](_temp_tpl_file)
+                else:
+                    return _loaded  # exit
 
         loaded_config = _rendered
         if _loaded['result']:  # all good
@@ -2018,6 +2034,13 @@ def load_template(template_name,
                 }
             )
     else:
+        salt.utils.versions.warn_until(
+            'Sodium',
+            'Native NAPALM templates support will be removed in the Sodium '
+            'release. Please consider using the Salt rendering pipeline instead.'
+            'If you are using the \'netntp\', \'netsnmp\', or \'netusers\' Salt '
+            'State modules, you can ignore this message'
+        )
         # otherwise, use NAPALM render system, injecting pillar/grains/opts vars
         load_templates_params = defaults if defaults else {}
         load_templates_params.update(template_vars)
@@ -2219,7 +2242,7 @@ def cancel_commit(jid):
     Cancel a commit scheduled to be executed via the ``commit_in`` and
     ``commit_at`` arguments from the
     :py:func:`net.load_template <salt.modules.napalm_network.load_template>` or
-    :py:func:`net.load_config <salt.modules.napalm_network.load_config`
+    :py:func:`net.load_config <salt.modules.napalm_network.load_config>`
     execution functions. The commit ID is displayed when the commit is scheduled
     via the functions named above.
 
@@ -2246,7 +2269,7 @@ def confirm_commit(jid):
     Confirm a commit scheduled to be reverted via the ``revert_in`` and
     ``revert_at``  arguments from the
     :mod:`net.load_template <salt.modules.napalm_network.load_template>` or
-    :mod:`net.load_config <salt.modules.napalm_network.load_config`
+    :mod:`net.load_config <salt.modules.napalm_network.load_config>`
     execution functions. The commit ID is displayed when the commit confirmed
     is scheduled via the functions named above.
 
