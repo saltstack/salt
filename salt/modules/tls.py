@@ -1646,13 +1646,15 @@ def cert_info(cert, digest='sha256'):
                 continue
 
     if 'subjectAltName' in ret.get('extensions', {}):
+        valid_entries = ('DNS', 'IP Address')
         valid_names = set()
-        for name in str(ret['extensions']['subjectAltName']).split(", "):
-            if not name.startswith('DNS:'):
+        for name in str(ret['extensions']['subjectAltName']).split(', '):
+            entry, name = name.split(':', 1)
+            if entry not in valid_entries:
                 log.error('Cert {0} has an entry ({1}) which does not start '
-                          'with DNS:'.format(cert, name))
+                          'with {2}'.format(ret['subject'], name, '/'.join(valid_entries)))
             else:
-                valid_names.add(name[4:])
+                valid_names.add(name)
         ret['subject_alt_names'] = ' '.join(valid_names)
 
     if hasattr(cert, 'get_signature_algorithm'):
