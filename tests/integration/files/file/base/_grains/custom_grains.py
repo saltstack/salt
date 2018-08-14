@@ -1,4 +1,5 @@
+# -*- coding: utf-8 -*-
+
+
 def test(grains):
-    if 'os' in grains:
-        return {'custom_grain_test': 'itworked'}
-    return {'custom_grain_test': 'itdidntwork'}
+    return {'custom_grain_test': 'itworked' if 'os' in grains else 'itdidntwork'}
