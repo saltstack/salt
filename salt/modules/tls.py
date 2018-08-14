@@ -1636,7 +1636,8 @@ def cert_info(cert_path, digest='sha256'):
         for i in _range(cert.get_extension_count()):
             try:
                 ext = cert.get_extension(i)
-                ret['extensions'][ext.get_short_name()] = str(ext)
+                key = salt.utils.stringutils.to_unicode(ext.get_short_name())
+                ret['extensions'][key] = str(ext)
             except AttributeError:
                 continue
 
