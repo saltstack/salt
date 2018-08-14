@@ -187,10 +187,10 @@ def __ssh_gateway_arguments(kwargs):
                 ssh_gateway_command
             )
 
-    log.info(
-        'Using SSH gateway %s@%s:%s %s',
-        ssh_gateway_user, ssh_gateway, ssh_gateway_port, ssh_gateway_command
-    )
+        log.info(
+            'Using SSH gateway %s@%s:%s %s',
+            ssh_gateway_user, ssh_gateway, ssh_gateway_port, ssh_gateway_command
+        )
 
     return extended_arguments
 
