@@ -18,6 +18,8 @@ except ImportError:
 import yaml  # pylint: disable=blacklisted-import
 import collections
 
+import salt.utils.stringutils
+import salt.ext.six as six
 from salt.utils.odict import OrderedDict
 
 try:
@@ -107,8 +109,11 @@ def dump(data, stream=None, **kwargs):
     '''
     if 'allow_unicode' not in kwargs:
         kwargs['allow_unicode'] = True
-    return yaml.dump(data, stream, **kwargs)
 
+    result = yaml.dump(data, stream, **kwargs)
+    if six.PY2 and isinstance(result, str):
+        result = salt.utils.stringutils.to_unicode(result)
+    return result
 
 def safe_dump(data, stream=None, **kwargs):
     '''
@@ -118,4 +123,7 @@ def safe_dump(data, stream=None, **kwargs):
     '''
     if 'allow_unicode' not in kwargs:
         kwargs['allow_unicode'] = True
-    return yaml.dump(data, stream, Dumper=SafeOrderedDumper, **kwargs)
+    result = yaml.dump(data, stream, Dumper=SafeOrderedDumper, **kwargs)
+    if six.PY2 and isinstance(result, str):
+        result = salt.utils.stringutils.to_unicode(result)
+    return result
