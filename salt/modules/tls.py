@@ -1575,12 +1575,15 @@ def create_pkcs12(ca_name, CN, passphrase='', cacert_path=None, replace=False):
     )
 
 
-def cert_info(cert_path, digest='sha256'):
+def cert_info(cert, digest='sha256'):
     '''
     Return information for a particular certificate
 
-    cert_path
-        path to the cert file
+    cert
+        path to the certifiate PEM file or string
+
+        .. versionchanged:: 2018.3.4
+
     digest
         what digest to use for fingerprinting
 
@@ -1589,15 +1592,17 @@ def cert_info(cert_path, digest='sha256'):
     .. code-block:: bash
 
         salt '*' tls.cert_info /dir/for/certs/cert.pem
+
     '''
     # format that OpenSSL returns dates in
     date_fmt = '%Y%m%d%H%M%SZ'
-
-    with salt.utils.files.fopen(cert_path) as cert_file:
-        cert = OpenSSL.crypto.load_certificate(
-            OpenSSL.crypto.FILETYPE_PEM,
-            cert_file.read()
-        )
+    if '-----BEGIN' not in cert:
+        with salt.utils.files.fopen(cert) as cert_file:
+            cert = cert_file.read()
+    cert = OpenSSL.crypto.load_certificate(
+        OpenSSL.crypto.FILETYPE_PEM,
+        cert
+    )
 
     issuer = {}
     for key, value in cert.get_issuer().get_components():
@@ -1645,7 +1650,7 @@ def cert_info(cert_path, digest='sha256'):
         for name in str(ret['extensions']['subjectAltName']).split(", "):
             if not name.startswith('DNS:'):
                 log.error('Cert {0} has an entry ({1}) which does not start '
-                          'with DNS:'.format(cert_path, name))
+                          'with DNS:'.format(cert, name))
             else:
                 valid_names.add(name[4:])
         ret['subject_alt_names'] = ' '.join(valid_names)
