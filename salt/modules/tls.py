@@ -1641,7 +1641,8 @@ def cert_info(cert, digest='sha256'):
         for i in _range(cert.get_extension_count()):
             try:
                 ext = cert.get_extension(i)
-                ret['extensions'][ext.get_short_name()] = str(ext)
+                key = salt.utils.stringutils.to_unicode(ext.get_short_name())
+                ret['extensions'][key] = str(ext)
             except AttributeError:
                 continue
 
@@ -1655,7 +1656,7 @@ def cert_info(cert, digest='sha256'):
                           'with {2}'.format(ret['subject'], name, '/'.join(valid_entries)))
             else:
                 valid_names.add(name)
-        ret['subject_alt_names'] = ' '.join(valid_names)
+        ret['subject_alt_names'] = valid_names
 
     if hasattr(cert, 'get_signature_algorithm'):
         try:
