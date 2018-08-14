@@ -844,7 +844,8 @@ class SMinion(MinionBase):
                 self.utils,
                 self.serializers)
         self.rend = salt.loader.render(self.opts, self.functions)
-        self.matcher = Matcher(self.opts, self.functions)
+#        self.matcher = Matcher(self.opts, self.functions)
+        self.matchers = salt.loader.matchers(self.opts)
         self.functions['sys.reload_modules'] = self.gen_modules
         self.executors = salt.loader.executors(self.opts)
 
@@ -906,7 +907,7 @@ class MasterMinion(object):
         if self.mk_rend:
             self.rend = salt.loader.render(self.opts, self.functions)
         if self.mk_matcher:
-            self.matcher = Matcher(self.opts, self.functions)
+            self.matchers = salt.loader.matchers(self.opts)
         self.functions['sys.reload_modules'] = self.gen_modules
 
 
@@ -2145,7 +2146,7 @@ class Minion(MinionBase):
         Refresh the matchers
         '''
         log.debug('Refreshing matchers.')
-        self.matcher = Matcher(self.opts, self.functions)
+        self.matchers = salt.loader.matchers(self.opts)
 
     # TODO: only allow one future in flight at a time?
     @tornado.gen.coroutine
@@ -2522,7 +2523,8 @@ class Minion(MinionBase):
             self.functions, self.returners, self.function_errors, self.executors = self._load_modules()
             self.serial = salt.payload.Serial(self.opts)
             self.mod_opts = self._prep_mod_opts()
-            self.matcher = Matcher(self.opts, self.functions)
+#            self.matcher = Matcher(self.opts, self.functions)
+            self.matchers = salt.loader.matchers(self.opts)
             self.beacons = salt.beacons.Beacon(self.opts, self.functions)
             uid = salt.utils.user.get_uid(user=self.opts.get('user', None))
             self.proc_dir = get_proc_dir(self.opts['cachedir'], uid=uid)
@@ -2723,8 +2725,7 @@ class Minion(MinionBase):
         # publication if the master does not determine that it should.
 
         if 'tgt_type' in load:
-            match_func = getattr(self.matcher,
-                                 '{0}_match'.format(load['tgt_type']), None)
+            match_func = self.matchers.get('{0}_match.match'.format(load['tgt_type']), None)
             if match_func is None:
                 return False
             if load['tgt_type'] in ('grain', 'grain_pcre', 'pillar'):
@@ -2734,7 +2735,7 @@ class Minion(MinionBase):
             elif not match_func(load['tgt']):
                 return False
         else:
-            if not self.matcher.glob_match(load['tgt']):
+            if not self.matchers['glob_match.match'](load['tgt']):
                 return False
 
         return True
@@ -3232,48 +3233,6 @@ class SyndicManager(MinionBase):
                 del self.job_rets[master]
 
 
-class Matcher(object):
-    '''
-    Use to return the value for matching calls from the master
-    '''
-    def __init__(self, opts, functions=None):
-        self.opts = opts
-        self.functions = functions
-        Matcher._get_matchers_from_loader(opts)
-
-    @classmethod
-    def _get_matchers_from_loader(cls, opts):
-        matcher_functions = salt.loader.matchers(opts)
-        for meth in matcher_functions:
-            function_parts = meth.split('.')
-            function_name = function_parts[0]
-            if not getattr(cls, function_name, False):
-                setattr(cls, function_name, matcher_functions[meth])
-
-    def confirm_top(self, match, data, nodegroups=None):
-        '''
-        Takes the data passed to a top file environment and determines if the
-        data matches this minion
-        '''
-        matcher = 'compound'
-        if not data:
-            log.error('Received bad data when setting the match from the top '
-                        'file')
-            return False
-        for item in data:
-            if isinstance(item, dict):
-                if 'match' in item:
-                    matcher = item['match']
-        if hasattr(self, matcher + '_match'):
-            funcname = '{0}_match'.format(matcher)
-            if matcher == 'nodegroup':
-                return getattr(self, funcname)(match, nodegroups)
-            return getattr(self, funcname)(match)
-        else:
-            log.error('Attempting to match with unknown matcher: %s', matcher)
-            return False
-
-
 class ProxyMinionManager(MinionManager):
     '''
     Create the multi-minion interface but for proxy minions
@@ -3409,7 +3368,7 @@ class ProxyMinion(Minion):
 
         self.serial = salt.payload.Serial(self.opts)
         self.mod_opts = self._prep_mod_opts()
-        self.matcher = Matcher(self.opts, self.functions)
+        self.matchers = salt.loader.matchers(self.opts)
         self.beacons = salt.beacons.Beacon(self.opts, self.functions)
         uid = salt.utils.user.get_uid(user=self.opts.get('user', None))
         self.proc_dir = get_proc_dir(self.opts['cachedir'], uid=uid)
@@ -3619,7 +3578,7 @@ class SProxyMinion(SMinion):
 
         self.functions = salt.loader.minion_mods(self.opts, utils=self.utils, notify=False, proxy=self.proxy)
         self.returners = salt.loader.returners(self.opts, self.functions, proxy=self.proxy)
-        self.matcher = Matcher(self.opts, self.functions)
+        self.matchers = salt.loader.matchers(self.opts)
         self.functions['sys.reload_modules'] = self.gen_modules
         self.executors = salt.loader.executors(self.opts, self.functions, proxy=self.proxy)
 

@@ -509,8 +509,7 @@ class PillarTestCase(TestCase):
             )
 
     def test_topfile_order(self):
-        with patch('salt.pillar.salt.fileclient.get_file_client', autospec=True) as get_file_client, \
-                patch('salt.pillar.salt.minion.Matcher') as Matcher:  # autospec=True disabled due to py3 mock bug
+        with patch('salt.pillar.salt.fileclient.get_file_client', autospec=True) as get_file_client:  # autospec=True disabled due to py3 mock bug
             opts = {
                 'optimization_order': [0, 1, 2],
                 'renderer': 'yaml',
@@ -531,15 +530,17 @@ class PillarTestCase(TestCase):
                 'kernel': 'Linux'
             }
             # glob match takes precedence
-            self._setup_test_topfile_mocks(Matcher, get_file_client, 1, 2)
+            matchers = {}
+            self._setup_test_topfile_mocks(matchers, get_file_client, 1, 2)
             pillar = salt.pillar.Pillar(opts, grains, 'mocked-minion', 'base')
             self.assertEqual(pillar.compile_pillar()['ssh'], 'bar')
             # nodegroup match takes precedence
-            self._setup_test_topfile_mocks(Matcher, get_file_client, 2, 1)
+            matchers = {}
+            self._setup_test_topfile_mocks(matchers, get_file_client, 2, 1)
             pillar = salt.pillar.Pillar(opts, grains, 'mocked-minion', 'base')
             self.assertEqual(pillar.compile_pillar()['ssh'], 'foo')
 
-    def _setup_test_topfile_mocks(self, Matcher, get_file_client,
+    def _setup_test_topfile_mocks(self, matchers, get_file_client,
                                   nodegroup_order, glob_order):
         # Write a simple topfile and two pillar state files
         self.top_file = tempfile.NamedTemporaryFile(dir=TMP, delete=False)
@@ -592,8 +593,10 @@ generic:
         self.generic_minion_file.flush()
 
         # Setup Matcher mock
-        matcher = Matcher.return_value
-        matcher.confirm_top.return_value = True
+        # matcher = matchers.return_value
+        # matcher.confirm_top.return_value = True
+        matchers = {}
+        matchers['confirm_top.confirm_top'] = lambda: True
 
         # Setup fileclient mock
         client = get_file_client.return_value
@@ -610,8 +613,7 @@ generic:
         client.get_state.side_effect = get_state
 
     def test_include(self):
-        with patch('salt.pillar.salt.fileclient.get_file_client', autospec=True) as get_file_client, \
-            patch('salt.pillar.salt.minion.Matcher') as Matcher:  # autospec=True disabled due to py3 mock bug
+        with patch('salt.pillar.salt.fileclient.get_file_client', autospec=True) as get_file_client:  # autospec=True disabled due to py3 mock bug
             opts = {
                 'optimization_order': [0, 1, 2],
                 'renderer': 'yaml',
@@ -632,14 +634,15 @@ generic:
                 'kernel': 'Linux'
             }
 
-            self._setup_test_include_mocks(Matcher, get_file_client)
+            matchers = {}
+            self._setup_test_include_mocks(matchers, get_file_client)
             pillar = salt.pillar.Pillar(opts, grains, 'minion', 'base')
             compiled_pillar = pillar.compile_pillar()
             self.assertEqual(compiled_pillar['foo_wildcard'], 'bar_wildcard')
             self.assertEqual(compiled_pillar['foo1'], 'bar1')
             self.assertEqual(compiled_pillar['foo2'], 'bar2')
 
-    def _setup_test_include_mocks(self, Matcher, get_file_client):
+    def _setup_test_include_mocks(self, matchers, get_file_client):
         self.top_file = top_file = tempfile.NamedTemporaryFile(dir=TMP, delete=False)
         top_file.write(b'''
 base:
@@ -678,8 +681,9 @@ foo_wildcard:
 ''')
         sub_wildcard_1_sls.flush()
         # Setup Matcher mock
-        matcher = Matcher.return_value
-        matcher.confirm_top.return_value = True
+        matchers['confirm_top.confirm.top'] = lambda: True
+#        matcher = matchers.return_value
+#        matcher.confirm_top.return_value = True
 
         # Setup fileclient mock
         client = get_file_client.return_value
