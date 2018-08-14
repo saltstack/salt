@@ -35,11 +35,11 @@ You can add a tags section to specify which tags should be attached to
 all metrics created by the returner.
 
 .. code-block:: yaml
-    appoptics.tags: 
+    appoptics.tags:
       host_hostname_alias: <the minion ID - matches @host>
       tier: <the tier/etc. of this node>
       cluster: <the cluster name, etc.>
-    
+
 
 If no tags are explicitly configured, then the tag key ``host_hostname_alias``
 will be set, with the minion's ``id`` grain being the value.
@@ -47,7 +47,7 @@ will be set, with the minion's ``id`` grain being the value.
 In addition to the requested tags, for a highstate run each of these
 will be tagged with the ``key:value`` of ``state_type: highstate``.
 
-In order to return metrics for ``state.sls`` runs (distinct from highstates), you can 
+In order to return metrics for ``state.sls`` runs (distinct from highstates), you can
 specify a list of state names to the key ``appoptics.sls_states`` like so:
 
 .. code-block:: yaml
@@ -165,12 +165,12 @@ def _state_metrics(ret, options, tags):
     log.debug('Batching Metric retcode with %s' % ret['retcode'])
     appoptics_conn = _get_appoptics(options)
     q = appoptics_conn.new_queue(tags=tags)
-    
+
     q.add('saltstack.retcode', ret['retcode'])
     log.debug('Batching Metric num_failed_jobs with %s' %
         stats['num_failed_states'] )
     q.add('saltstack.failed', stats['num_failed_states'])
-    
+
     log.debug('Batching Metric num_passed_states with %s' %
         stats['num_passed_states'])
     q.add('saltstack.passed', stats['num_passed_states'])
@@ -184,13 +184,13 @@ def _state_metrics(ret, options, tags):
           (stats['num_failed_states'] + stats['num_passed_states']))
     log.info('Sending metrics to appoptics.')
     q.submit()
-    
+
 
 def returner(ret):
     '''
     Parse the return data and return metrics to AppOptics.
 
-    For each state that's provided in the configuration, return tagged metrics for 
+    For each state that's provided in the configuration, return tagged metrics for
     the result of that state if it's present.
     '''
 
@@ -210,5 +210,3 @@ def returner(ret):
             tags['state_name'] = sorted(matched_states)[0]
             log.debug('Found returned data from %s.' % tags['state_name'])
         _state_metrics(ret, options, tags)
-            
-
