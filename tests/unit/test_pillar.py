@@ -613,6 +613,7 @@ generic:
         with patch('salt.pillar.salt.fileclient.get_file_client', autospec=True) as get_file_client, \
             patch('salt.pillar.salt.minion.Matcher') as Matcher:  # autospec=True disabled due to py3 mock bug
             opts = {
+                'optimization_order': [0, 1, 2],
                 'renderer': 'yaml',
                 'renderer_blacklist': [],
                 'renderer_whitelist': [],
