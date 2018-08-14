@@ -844,13 +844,9 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         finally:
             shutil.rmtree(name, ignore_errors=True)
 
-    @skipIf(salt.utils.is_windows(), 'Skip on windows')
     def test_directory_clean_exclude(self):
         '''
         file.directory with clean=True and exclude_pat set
-
-        Skipped on windows because clean and exclude_pat not supported by
-        salt.sates.file._check_directory_win
         '''
         name = os.path.join(TMP, 'directory_clean_dir')
         if not os.path.isdir(name):
@@ -889,9 +885,13 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         finally:
             shutil.rmtree(name, ignore_errors=True)
 
+    @skipIf(salt.utils.is_windows(), 'Skip on windows')
     def test_test_directory_clean_exclude(self):
         '''
         file.directory with test=True, clean=True and exclude_pat set
+
+        Skipped on windows because clean and exclude_pat not supported by
+        salt.sates.file._check_directory_win
         '''
         name = os.path.join(TMP, 'directory_clean_dir')
         if not os.path.isdir(name):
