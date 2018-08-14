@@ -244,7 +244,9 @@ Section -Prerequisites
 
             # The Correct version of VCRedist is copied over by "build_pkg.bat"
             SetOutPath "$INSTDIR\"
-            File "..\prereqs\vcredist.exe"
+            # This will throw an error on Py3 since we're no longer including VCRedist
+            # So, we'll add the /nonfatal switch
+            File /nonfatal "..\prereqs\vcredist.exe"
             # If an output variable is specified ($0 in the case below),
             # ExecWait sets the variable with the exit code (and only sets the
             # error flag if an error occurs; if an error occurs, the contents
