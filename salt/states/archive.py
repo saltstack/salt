@@ -626,7 +626,7 @@ def extracted(name,
             older than 2016.11.0, this option is required.
 
     skip_same_file : False
-        Useful for lossy replacement file scenes. If specified,
+        Useful for cases where replacing files is harmful. If specified,
         this archives will be extracted to a temporary directory,
         then only copy the changed files to final directory.
 
@@ -1280,7 +1280,7 @@ def extracted(name,
                 'dirs': set(),
                 'links': set()
             }
-            for root, dirs, files in os.walk(tmp_path, followlinks=True):
+            for root, dirs, files in salt.utils.path.os_walk(tmp_path, followlinks=True):
                 for fname in files:
                     src_file = os.path.join(root, fname)
                     dest_file = src_file.replace(tmp_path, path.rstrip(os.sep))
@@ -1457,7 +1457,7 @@ def extracted(name,
             except Exception as exc:
                 __salt__['file.remove'](name)
                 ret['changes'] = {}
-                log.debug(traceback.format_exc())
+                log.exception(traceback.format_exc())
                 return _error(ret, 'Unable to manage dir: {0}'.format(exc))
 
         for dest_file, src_file in mng_files:
@@ -1480,11 +1480,11 @@ def extracted(name,
             except Exception as exc:
                 __salt__['file.remove'](name)
                 ret['changes'] = {}
-                log.debug(traceback.format_exc())
+                log.exception(traceback.format_exc())
                 return _error(ret, 'Unable to manage file: {0}'.format(exc))
             else:
                 if 'comment' in ret and ret['comment']:
-                    log.debug('The results of comparing {0} with {1}: {2}'.format(src_file, dest_file, ret['comment']))
+                    log.debug('The results of comparing %s with %s: %s', src_file, dest_file, ret['comment'])
                 if 'changes' in ret and ret['changes'] != {}:
                     extracted_files.append(src_file.replace(name.rstrip(os.sep), '.'))
 
@@ -1496,10 +1496,10 @@ def extracted(name,
             except Exception as exc:
                 __salt__['file.remove'](name)
                 ret['changes'] = {}
-                log.debug(traceback.format_exc())
+                log.exception(traceback.format_exc())
                 return _error(ret, 'Unable to manage link: {0}'.format(exc))
             else:
-                log.debug('create symlink from {0} to {1}'.format(link_src, link_dest))
+                log.debug('create symlink from %s to %s', link_src, link_dest)
                 extracted_files.append(link_dest.replace(origin_name.rstrip(os.sep), '.'))
 
         __salt__['file.remove'](name)
