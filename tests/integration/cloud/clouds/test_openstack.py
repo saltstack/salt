@@ -175,7 +175,6 @@ class OpenstackTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertTrue(driver.auth_token)
 
 
-
 @skipIf(not HAS_SHADE, 'openstack driver requires `shade`')
 class RackspaceTest(ShellCase):
     '''
