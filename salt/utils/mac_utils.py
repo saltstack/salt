@@ -15,7 +15,6 @@ import time
 # Import Salt Libs
 import salt.modules.cmdmod
 import salt.utils.args
-import salt.utils.decorators as decorators
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
@@ -306,7 +305,7 @@ def _available_services(refresh=False):
     try:
         if __context__['available_services'] and not refresh:
             log.debug('Found context for available services.')
-            __context__['available_services_cached'] = True
+            __context__['using_cached_services'] = True
             return __context__['available_services']
     except KeyError:
         pass
@@ -367,7 +366,7 @@ def _available_services(refresh=False):
     # a fix for this issue. https://github.com/saltstack/salt/issues/48414
     __context__['available_services'] = _available_services
     # this is a fresh gathering of services, set cached to false
-    __context__['available_services_cached'] = False
+    __context__['using_cached_services'] = False
 
     return __context__['available_services']
 
