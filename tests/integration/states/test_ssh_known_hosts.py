@@ -12,7 +12,7 @@ import shutil
 from tests.support.case import ModuleCase
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.helpers import skip_if_binaries_missing, skip_if_not_root
+from tests.support.helpers import skip_if_binaries_missing
 
 KNOWN_HOSTS = os.path.join(RUNTIME_VARS.TMP, 'known_hosts')
 GITHUB_FINGERPRINT = '9d:38:5b:83:a9:17:52:92:56:1a:5e:c4:d4:81:8e:0a:ca:51:a2:64:f1:74:20:11:2e:f8:8a:c3:a1:39:49:8f'

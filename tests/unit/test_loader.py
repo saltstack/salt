@@ -1132,7 +1132,7 @@ class LazyLoaderOptimizationOrderTest(TestCase):
     @classmethod
     def setUpClass(cls):
         cls.opts = salt.config.minion_config(None)
-        cls.opts['grains'] = grains(cls.opts)
+        cls.opts['grains'] = salt.loader.grains(cls.opts)
 
     def setUp(self):
         # Setup the module
@@ -1145,7 +1145,7 @@ class LazyLoaderOptimizationOrderTest(TestCase):
         if order is not None:
             opts['optimization_order'] = order
         # Return a loader
-        return LazyLoader([self.module_dir], opts, tag='module')
+        return salt.loader.LazyLoader([self.module_dir], opts, tag='module')
 
     def _get_module_filename(self):
         # The act of referencing the loader entry forces the module to be
@@ -1170,7 +1170,7 @@ class LazyLoaderOptimizationOrderTest(TestCase):
             os.fsync(fh.fileno())
 
     def _byte_compile(self):
-        if USE_IMPORTLIB:
+        if salt.loader.USE_IMPORTLIB:
             # Skip this check as "optimize" is unique to PY3's compileall
             # module, and this will be a false error when Pylint is run on
             # Python 2.
@@ -1195,7 +1195,7 @@ class LazyLoaderOptimizationOrderTest(TestCase):
         basename = os.path.basename(filename)
         assert basename == self._expected(order[0]), basename
 
-        if not USE_IMPORTLIB:
+        if not salt.loader.USE_IMPORTLIB:
             # We are only testing multiple optimization levels on Python 3.5+
             return
 
@@ -1223,7 +1223,7 @@ class LazyLoaderOptimizationOrderTest(TestCase):
         '''
         self._test_optimization_order([0, 1, 2])
         self._test_optimization_order([0, 2, 1])
-        if USE_IMPORTLIB:
+        if salt.loader.USE_IMPORTLIB:
             # optimization_order only supported on Python 3.5+, earlier
             # releases only support unoptimized .pyc files.
             self._test_optimization_order([1, 2, 0])
