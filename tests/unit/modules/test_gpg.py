@@ -31,7 +31,7 @@ except ImportError:
     HAS_GPG = False
 
 
-@skipIf(not salt.utils.path.which('gpg'), 'gpg not installed skipping')
+@skipIf(not salt.utils.path.which('gpg'), 'GPG not installed. Skipping')
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class GpgTestCase(TestCase, LoaderModuleMockMixin):
     '''
