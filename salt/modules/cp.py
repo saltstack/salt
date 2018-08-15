@@ -725,6 +725,22 @@ def hash_file(path, saltenv='base'):
     return _client().hash_file(path, saltenv)
 
 
+def get_url_data(path):
+    '''
+    Return useful url_data about the path.
+
+    .. note:: This is used by the fileprotos subsystem and probably isn't
+    needed on the commandline.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' cp.get_url_data salt://path/to/file
+    '''
+    return _client().get_url_data(path)
+
+
 def stat_file(path, saltenv='base', octal=True):
     '''
     Return the permissions of a file, to get the permissions of a file on the
