@@ -1605,8 +1605,8 @@ class Schedule(object):
                 if run:
                     data['_last_run'] = now
                     data['_splay'] = None
-                    if '_seconds' in data:
-                        data['_next_fire_time'] = now + datetime.timedelta(seconds=data['_seconds'])
+                if '_seconds' in data:
+                    data['_next_fire_time'] = now + datetime.timedelta(seconds=data['_seconds'])
 
     def _run_job(self, func, data):
         job_dry_run = data.get('dry_run', False)
