@@ -107,12 +107,10 @@ parameters are sensitive, it's recommended to pass them to the states via pillar
 
 # Python libs
 from __future__ import absolute_import
-import json
 import logging
 
 # Salt libs
 import salt.ext.six as six
-import salt.utils
 try:
     from salt.ext.six.moves import range as six_range
 except ImportError:
