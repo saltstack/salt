@@ -8,6 +8,7 @@ integration.modules.test_autoruns
 integration.modules.test_beacons
 integration.modules.test_config
 integration.modules.test_cp
+integration.modules.test_cmdmod
 integration.modules.test_data
 integration.modules.test_disk
 integration.modules.test_firewall

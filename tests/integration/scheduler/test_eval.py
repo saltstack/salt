@@ -418,6 +418,37 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.schedule.job_status('job1')
         self.assertEqual(ret['_last_run'], run_time1)
 
+    def test_eval_enabled_key(self):
+        '''
+        verify that scheduled job runs
+        when the enabled key is in place
+        https://github.com/saltstack/salt/issues/47695
+        '''
+        job = {
+          'schedule': {
+            'enabled': True,
+            'job1': {
+              'function': 'test.ping',
+              'when': '11/29/2017 4:00pm',
+            }
+          }
+        }
+        run_time2 = dateutil_parser.parse('11/29/2017 4:00pm')
+        run_time1 = run_time2 - datetime.timedelta(seconds=1)
+
+        # Add the job to the scheduler
+        self.schedule.opts.update(job)
+
+        # Evaluate 1 second before the run time
+        self.schedule.eval(now=run_time1)
+        ret = self.schedule.job_status('job1')
+        self.assertNotIn('_last_run', ret)
+
+        # Evaluate 1 second at the run time
+        self.schedule.eval(now=run_time2)
+        ret = self.schedule.job_status('job1')
+        self.assertEqual(ret['_last_run'], run_time2)
+
     def test_eval_disabled(self):
         '''
         verify that scheduled job does not run

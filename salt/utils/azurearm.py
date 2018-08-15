@@ -47,6 +47,9 @@ try:
         UserPassCredentials,
         ServicePrincipalCredentials,
     )
+    from msrestazure.azure_active_directory import (
+        MSIAuthentication
+    )
     from msrestazure.azure_cloud import (
         MetadataEndpointError,
         get_cloud_from_metadata_endpoint,
@@ -110,6 +113,9 @@ def _determine_auth(**kwargs):
             credentials = UserPassCredentials(kwargs['username'],
                                               kwargs['password'],
                                               cloud_environment=cloud_env)
+    elif 'subscription_id' in kwargs:
+        credentials = MSIAuthentication(cloud_environment=cloud_env)
+
     else:
         raise SaltInvocationError(
             'Unable to determine credentials. '

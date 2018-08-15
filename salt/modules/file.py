@@ -12,7 +12,6 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import datetime
-import difflib
 import errno
 import fnmatch
 import io
@@ -562,7 +561,7 @@ def lsattr(path):
         return None
 
     if not os.path.exists(path):
-        raise SaltInvocationError("File or directory does not exist.")
+        raise SaltInvocationError("File or directory does not exist: " + path)
 
     cmd = ['lsattr', path]
     result = __salt__['cmd.run'](cmd, ignore_retcode=True, python_shell=False)
@@ -1567,7 +1566,7 @@ def comment_line(path,
         check_perms(path, None, pre_user, pre_group, pre_mode)
 
     # Return a diff using the two dictionaries
-    return ''.join(difflib.unified_diff(orig_file, new_file))
+    return __utils__['stringutils.get_diff'](orig_file, new_file)
 
 
 def _get_flags(flags):
@@ -2038,9 +2037,7 @@ def line(path, content=None, match=None, mode=None, location=None,
         if show_changes:
             with salt.utils.files.fopen(path, 'r') as fp_:
                 path_content = salt.utils.data.decode_list(fp_.read().splitlines(True))
-            changes_diff = ''.join(difflib.unified_diff(
-                path_content, body
-            ))
+            changes_diff = __utils__['stringutils.get_diff'](path_content, body)
         if __opts__['test'] is False:
             fh_ = None
             try:
@@ -2426,18 +2423,15 @@ def replace(path,
     if not dry_run and not salt.utils.platform.is_windows():
         check_perms(path, None, pre_user, pre_group, pre_mode)
 
-    def get_changes():
-        orig_file_as_str = [salt.utils.stringutils.to_unicode(x) for x in orig_file]
-        new_file_as_str = [salt.utils.stringutils.to_unicode(x) for x in new_file]
-        return ''.join(difflib.unified_diff(orig_file_as_str, new_file_as_str))
+    differences = __utils__['stringutils.get_diff'](orig_file, new_file)
 
     if show_changes:
-        return get_changes()
+        return differences
 
     # We may have found a regex line match but don't need to change the line
     # (for situations where the pattern also matches the repl). Revert the
     # has_changes flag to False if the final result is unchanged.
-    if not get_changes():
+    if not differences:
         has_changes = False
 
     return has_changes
@@ -2688,7 +2682,7 @@ def blockreplace(path,
             )
 
     if block_found:
-        diff = ''.join(difflib.unified_diff(orig_file, new_file))
+        diff = __utils__['stringutils.get_diff'](orig_file, new_file)
         has_changes = diff is not ''
         if has_changes and not dry_run:
             # changes detected
@@ -4460,7 +4454,8 @@ def check_perms(name, ret, user, group, mode, attrs=None, follow_symlinks=False)
     perms['lmode'] = salt.utils.files.normalize_mode(cur['mode'])
 
     is_dir = os.path.isdir(name)
-    if not salt.utils.platform.is_windows() and not is_dir:
+    is_link = os.path.islink(name)
+    if not salt.utils.platform.is_windows() and not is_dir and not is_link:
         lattrs = lsattr(name)
         if lattrs is not None:
             # List attributes on file
@@ -4997,7 +4992,7 @@ def get_diff(file1,
         )
 
     args = []
-    for filename in files:
+    for filename in paths:
         try:
             with salt.utils.files.fopen(filename, 'rb') as fp_:
                 args.append(fp_.readlines())
@@ -5015,17 +5010,13 @@ def get_diff(file1,
         elif not show_changes:
             ret = '<show_changes=False>'
         else:
-            bdiff = _binary_replace(*files)
+            bdiff = _binary_replace(*paths)  # pylint: disable=no-value-for-parameter
             if bdiff:
                 ret = bdiff
             else:
                 if show_filenames:
-                    args.extend(files)
-                ret = ''.join(
-                    difflib.unified_diff(
-                        *salt.utils.data.decode(args)
-                    )
-                )
+                    args.extend(paths)
+                ret = __utils__['stringutils.get_diff'](*args)
         return ret
     return ''
 

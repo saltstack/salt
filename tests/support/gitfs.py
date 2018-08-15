@@ -331,11 +331,14 @@ class GitPillarTestBase(GitTestBase, LoaderModuleMockMixin):
         '''
         cachedir = tempfile.mkdtemp(dir=TMP)
         self.addCleanup(shutil.rmtree, cachedir, ignore_errors=True)
-        ext_pillar_opts = salt.utils.yaml.safe_load(
-            ext_pillar_conf.format(
-                cachedir=cachedir,
-                extmods=os.path.join(cachedir, 'extmods'),
-                **self.ext_opts
+        ext_pillar_opts = {'optimization_order': [0, 1, 2]}
+        ext_pillar_opts.update(
+            salt.utils.yaml.safe_load(
+                ext_pillar_conf.format(
+                    cachedir=cachedir,
+                    extmods=os.path.join(cachedir, 'extmods'),
+                    **self.ext_opts
+                )
             )
         )
         with patch.dict(git_pillar.__opts__, ext_pillar_opts):

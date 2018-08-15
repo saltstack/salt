@@ -36,6 +36,7 @@ GPG_SLS = os.path.join(PILLAR_BASE, 'gpg.sls')
 DEFAULT_OPTS = {
     'cachedir': os.path.join(TMP, 'rootdir', 'cache'),
     'config_dir': TMP_CONF_DIR,
+    'optimization_order': [0, 1, 2],
     'extension_modules': os.path.join(TMP,
                                       'test-decrypt-pillar',
                                       'extmods'),

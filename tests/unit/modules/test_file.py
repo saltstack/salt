@@ -63,7 +63,10 @@ class FileReplaceTestCase(TestCase, LoaderModuleMockMixin):
                     'grains': {},
                 },
                 '__grains__': {'kernel': 'Linux'},
-                '__utils__': {'files.is_text': MagicMock(return_value=True)},
+                '__utils__': {
+                    'files.is_text': MagicMock(return_value=True),
+                    'stringutils.get_diff': salt.utils.stringutils.get_diff,
+                },
             }
         }
 
@@ -241,7 +244,10 @@ class FileCommentLineTestCase(TestCase, LoaderModuleMockMixin):
                     'grains': {},
                 },
                 '__grains__': {'kernel': 'Linux'},
-                '__utils__': {'files.is_text': MagicMock(return_value=True)},
+                '__utils__': {
+                    'files.is_text': MagicMock(return_value=True),
+                    'stringutils.get_diff': salt.utils.stringutils.get_diff,
+                },
             }
         }
 
@@ -325,7 +331,8 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
                 '__grains__': {'kernel': 'Linux'},
                 '__utils__': {
                     'files.is_binary': MagicMock(return_value=False),
-                    'files.get_encoding': MagicMock(return_value='utf-8')
+                    'files.get_encoding': MagicMock(return_value='utf-8'),
+                    'stringutils.get_diff': salt.utils.stringutils.get_diff,
                 },
             }
         }
@@ -622,7 +629,10 @@ class FileGrepTestCase(TestCase, LoaderModuleMockMixin):
                     'grains': {},
                 },
                 '__grains__': {'kernel': 'Linux'},
-                '__utils__': {'files.is_text': MagicMock(return_value=True)},
+                '__utils__': {
+                    'files.is_text': MagicMock(return_value=True),
+                    'stringutils.get_diff': salt.utils.stringutils.get_diff,
+                },
             }
         }
 
@@ -723,7 +733,10 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
                     'cachedir': 'tmp',
                     'grains': {},
                 },
-                '__grains__': {'kernel': 'Linux'}
+                '__grains__': {'kernel': 'Linux'},
+                '__utils__': {
+                    'stringutils.get_diff': salt.utils.stringutils.get_diff,
+                },
             }
         }
 
@@ -982,6 +995,17 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
             baz
             яйца
             ''')
+        diff_result = textwrap.dedent('''\
+            --- text1
+            +++ text2
+            @@ -1,4 +1,4 @@
+             foo
+             bar
+             baz
+            -спам
+            +яйца
+            ''')
+
         # The below two variables are 8 bytes of data pulled from /dev/urandom
         binary1 = b'\xd4\xb2\xa6W\xc6\x8e\xf5\x0f'
         binary2 = b',\x13\x04\xa5\xb0\x12\xdf%'
@@ -1012,7 +1036,7 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
         # pylint: enable=no-self-argument
 
         fopen = MagicMock(side_effect=lambda x, *args, **kwargs: MockFopen(x))
-        cache_file = MagicMock(side_effect=lambda x, *args, **kwargs: x)
+        cache_file = MagicMock(side_effect=lambda x, *args, **kwargs: x.split('/')[-1])
 
         # Mocks for __utils__['files.is_text']
         mock_text_text = MagicMock(side_effect=[True, True])
@@ -1032,19 +1056,18 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
 
                 # Non-identical files
                 ret = filemod.get_diff('text1', 'text2')
-                self.assertEqual(
-                    ret,
-                    textwrap.dedent('''\
-                        --- text1
-                        +++ text2
-                        @@ -1,4 +1,4 @@
-                         foo
-                         bar
-                         baz
-                        -спам
-                        +яйца
-                        ''')
-                )
+                self.assertEqual(ret, diff_result)
+
+                # Repeat the above test with remote file paths. The expectation
+                # is that the cp.cache_file mock will ensure that we are not
+                # trying to do an fopen on the salt:// URL, but rather the
+                # "cached" file path we've mocked.
+                with patch.object(filemod, '_binary_replace',
+                                  MagicMock(return_value='')):
+                    ret = filemod.get_diff('salt://text1', 'salt://text1')
+                    self.assertEqual(ret, '')
+                    ret = filemod.get_diff('salt://text1', 'salt://text2')
+                    self.assertEqual(ret, diff_result)
 
             # Test diffing two binary files
             with patch.dict(filemod.__utils__, {'files.is_text': mock_bin_bin}):
@@ -1102,7 +1125,10 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
                     'cachedir': 'tmp',
                     'grains': {},
                 },
-                '__grains__': {'kernel': 'Linux'}
+                '__grains__': {'kernel': 'Linux'},
+                '__utils__': {
+                    'stringutils.get_diff': salt.utils.stringutils.get_diff,
+                },
             }
         }
 
