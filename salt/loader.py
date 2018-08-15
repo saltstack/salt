@@ -621,7 +621,7 @@ def grain_funcs(opts, proxy=None):
           __opts__ = salt.config.minion_config('/etc/salt/minion')
           grainfuncs = salt.loader.grain_funcs(__opts__)
     '''
-    return LazyLoader(
+    ret = LazyLoader(
         _module_dirs(
             opts,
             'grains',
@@ -631,6 +631,8 @@ def grain_funcs(opts, proxy=None):
         opts,
         tag='grains',
     )
+    ret.pack['__utils__'] = utils(opts, proxy=proxy)
+    return ret
 
 
 def _load_cached_grains(opts, cfn):
