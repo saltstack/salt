@@ -125,6 +125,15 @@ def _always_running_service(name):
         return False
 
     # check if KeepAlive is True and not just set.
+
+    if isinstance(keep_alive, dict):
+        # check for pathstate
+        for _file, value in six.iteritems(keep_alive.get('PathState', {})):
+            if value is True and os.path.exists(_file):
+                return True
+            elif value is False and not os.path.exists(_file):
+                return True
+
     if keep_alive is True:
         return True
 
@@ -441,12 +450,6 @@ def status(name, sig=None, runas=None):
     if sig:
         return __salt__['status.pid'](sig)
 
-    # mac services are a little different than other platforms as they may be
-    # set to run on intervals and may not always active with a PID. This will
-    # return a string 'loaded' if it shouldn't always be running and is enabled.
-    if not _always_running_service(name) and enabled(name):
-        return 'loaded'
-
     if not runas and _launch_agent(name):
         runas = __utils__['mac_utils.console_user'](username=True)
 
@@ -463,6 +466,12 @@ def status(name, sig=None, runas=None):
                 if pids:
                     pids += '\n'
                 pids += line.split()[0]
+
+    # mac services are a little different than other platforms as they may be
+    # set to run on intervals and may not always active with a PID. This will
+    # return a string 'loaded' if it shouldn't always be running and is enabled.
+    if not _always_running_service(name) and enabled(name) and not pids:
+        return 'loaded'
 
     return pids
 
