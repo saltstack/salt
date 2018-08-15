@@ -2449,12 +2449,12 @@ def blockreplace(path,
         content='',
         append_if_not_found=False,
         prepend_if_not_found=False,
-        insert_before_match=None,
-        insert_after_match=None,
         backup='.bak',
         dry_run=False,
         show_changes=True,
-        append_newline=False):
+        append_newline=False,
+        insert_before_match=None,
+        insert_after_match=None):
     '''
     .. versionadded:: 2014.1.0
 
@@ -2500,13 +2500,13 @@ def blockreplace(path,
         If markers are not found, this parameter can be set to a regex which will
         insert the block before the first found occurrence in the file.
 
-        .. versionadded:: Fluorine
+        .. versionadded:: Neon
 
     insert_after_match
         If markers are not found, this parameter can be set to a regex which will
         insert the block after the first found occurrence in the file.
 
-        .. versionadded:: Fluorine
+        .. versionadded:: Neon
 
     backup
         The file extension to use for a backup of the file if any edit is made.
@@ -2568,6 +2568,18 @@ def blockreplace(path,
                 'Cannot perform string replacements on a binary file: {0}'
                 .format(path)
         )
+
+    if insert_before_match or insert_after_match:
+        if insert_before_match:
+            if not isinstance(insert_before_match, six.string_types):
+                raise CommandExecutionError(
+                    'RegEx expected in insert_before_match parameter.'
+                )
+        elif insert_after_match:
+            if not isinstance(insert_after_match, six.string_types):
+                raise CommandExecutionError(
+                    'RegEx expected in insert_after_match parameter.'
+                )
 
     if append_newline is None and not content.endswith((os.linesep, '\n')):
         append_newline = True
@@ -2699,10 +2711,6 @@ def blockreplace(path,
             block_found = True
         elif insert_before_match or insert_after_match:
             match_regex = insert_before_match or insert_after_match
-            if not isinstance(match_regex, six.string_types):
-                raise CommandExecutionError(
-                    'RegEx expected in match parameter.'
-                )
             match_idx = [i for i, item in enumerate(orig_file) if re.search(match_regex, item)]
             if match_idx:
                 match_idx = match_idx[0]

@@ -4499,11 +4499,11 @@ def blockreplace(
         content='',
         append_if_not_found=False,
         prepend_if_not_found=False,
-        insert_before_match=None,
-        insert_after_match=None,
         backup='.bak',
         show_changes=True,
-        append_newline=None):
+        append_newline=None,
+        insert_before_match=None,
+        insert_after_match=None):
     '''
     Maintain an edit in a file in a zone delimited by two line markers
 
@@ -4633,13 +4633,13 @@ def blockreplace(
         If markers are not found, this parameter can be set to a regex which will
         insert the block before the first found occurrence in the file.
 
-        .. versionadded:: Fluorine
+        .. versionadded:: Neon
 
     insert_after_match
         If markers are not found, this parameter can be set to a regex which will
         insert the block after the first found occurrence in the file.
 
-        .. versionadded:: Fluorine
+        .. versionadded:: Neon
 
     backup
         The file extension to use for a backup of the file if any edit is made.
