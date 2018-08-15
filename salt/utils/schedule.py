@@ -1606,7 +1606,13 @@ class Schedule(object):
                     data['_last_run'] = now
                     data['_splay'] = None
                 if '_seconds' in data:
-                    data['_next_fire_time'] = now + datetime.timedelta(seconds=data['_seconds'])
+                    if not self.standalone and run:
+                        # If we are not in standalone mode and the job has run
+                        # set the next_fire_time
+                        data['_next_fire_time'] = now + datetime.timedelta(seconds=data['_seconds'])
+                    else:
+                        # If we are standalone mode set the _next_fire_time
+                        data['_next_fire_time'] = now + datetime.timedelta(seconds=data['_seconds'])
 
     def _run_job(self, func, data):
         job_dry_run = data.get('dry_run', False)
