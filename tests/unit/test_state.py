@@ -18,7 +18,7 @@ from tests.support.mock import (
     MagicMock,
     patch)
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
-from tests.support.paths import BASE_FILES
+from tests.support.paths import BASE_FILES, TMP
 
 # Import Salt libs
 import salt.exceptions
@@ -360,3 +360,105 @@ class StateFormatSlotsTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             self.state_obj.format_slots(cdata)
         mock.assert_not_called()
         self.assertEqual(cdata, sls_data)
+
+
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+class CheckRequisitesTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
+    '''
+    Test case to check requisite resolution
+    '''
+
+    def test__compound_requisites__onchanges_and_onfail(self):
+        low = {
+            'comment': 'Something changed or failed on 5f40dade1e64',
+            'onchanges': [{'test': 'changes_state'}],
+            'name': 'Compound requisite test',
+            'onfail': [{'test': 'changes_state'}],
+            'state': 'test',
+            '__id__': 'test_state',
+            'fun': 'configurable_test_state',
+            '__env__': 'base',
+            '__sls__': 'test',
+            'changes': True,
+            'order': 10001,
+            'result': False,
+        }
+        running = {
+            'test_|-changes_state_|-changes_state_|-succeed_with_changes': {
+                'comment': 'Success!',
+                'name': 'changes_state',
+                'start_time': '14:34:03.308871',
+                'result': True,
+                'duration': 0.609,
+                '__run_num__': 0,
+                '__sls__': 'test',
+                'changes': {
+                    'testing': {
+                        'new': 'Something pretended to change',
+                        'old': 'Unchanged',
+                    }
+                },
+                '__id__': u'changes_state',
+            },
+        }
+        chunks =[
+            {
+                'name': 'changes_state',
+                'state': 'test',
+                '__id__': 'changes_state',
+                'fun': 'succeed_with_changes',
+                '__env__': 'base',
+                '__sls__': 'test',
+                'order': 10000
+            },
+            {
+                'comment': 'Something changed or failed on 5f40dade1e64',
+                'onchanges': [{'test': 'changes_state'}],
+                'name': 'Compound requisite test',
+                'onfail': [{'test': 'changes_state'}],
+                'state': 'test',
+                '__id__': 'test_state',
+                'fun': 'configurable_test_state',
+                '__env__': 'base',
+                '__sls__': 'test',
+                'changes': True,
+                'order': 10001,
+                'result': False
+            },
+        ]
+        with patch.object(salt.state.State, '_gather_pillar', return_value={}):
+            status, reqs = salt.state.State(opts=self.get_temp_config('minion')).check_requisite(low=low, running=running, chunks=chunks, pre=True)
+        assert status == 'met'
+        exp_reqs = {
+            'onchanges': [
+                {
+                    'name': 'changes_state',
+                    'state': 'test',
+                    '__id__': 'changes_state',
+                    'fun': 'succeed_with_changes',
+                    '__env__': 'base',
+                    '__sls__': 'test',
+                    'order': 10000,
+                },
+            ],
+            'prereq': [],
+            'prerequired': [],
+            'onchanges_any': [],
+            'require': [],
+            'watch_any': [],
+            'watch': [],
+            'require_any': [],
+            'onfail_any': [],
+            'onfail': [
+                {
+                    'name': 'changes_state',
+                    'state': 'test',
+                    '__id__': 'changes_state',
+                    'fun': 'succeed_with_changes',
+                    '__env__':
+                    'base',
+                    '__sls__': 'test',
+                    'order': 10000,
+                },
+            ],
+        }
