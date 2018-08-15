@@ -1574,11 +1574,11 @@ class Schedule(object):
 
                 if 'jid_include' not in data or data['jid_include']:
                     data['jid_include'] = True
-                    log.debug('schedule: Job %s was scheduled with jid_include, '
+                    log.trace('schedule: Job %s was scheduled with jid_include, '
                               'adding to cache (jid_include defaults to True)',
                               job_name)
                     if 'maxrunning' in data:
-                        log.debug('schedule: Job %s was scheduled with a max '
+                        log.trace('schedule: Job %s was scheduled with a max '
                                   'number of %s', job_name, data['maxrunning'])
                     else:
                         log.info('schedule: maxrunning parameter was not specified for '
