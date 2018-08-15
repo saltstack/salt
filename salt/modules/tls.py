@@ -1656,7 +1656,7 @@ def cert_info(cert, digest='sha256'):
                           'with {2}'.format(ret['subject'], name, '/'.join(valid_entries)))
             else:
                 valid_names.add(name)
-        ret['subject_alt_names'] = valid_names
+        ret['subject_alt_names'] = list(valid_names)
 
     if hasattr(cert, 'get_signature_algorithm'):
         try:
