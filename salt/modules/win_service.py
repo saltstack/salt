@@ -84,8 +84,6 @@ SERVICE_ERROR_CONTROL = {0: 'Ignore',
                          'severe': 2,
                          'critical': 3}
 
-RETRY_ATTEMPTS = 90
-
 
 def __virtual__():
     '''
@@ -374,7 +372,7 @@ def info(name):
     return ret
 
 
-def start(name):
+def start(name, timeout=90):
     '''
     Start the specified service.
 
@@ -385,8 +383,12 @@ def start(name):
     Args:
         name (str): The name of the service to start
 
+        timeout (int):
+            The time in seconds to wait for the service to start before
+            returning. Default is 90 seconds
+
     Returns:
-        bool: True if successful, False otherwise
+        bool: ``True`` if successful, otherwise ``False``
 
     CLI Example:
 
@@ -409,22 +411,26 @@ def start(name):
 
     attempts = 0
     while info(name)['Status'] in ['Start Pending', 'Stopped'] \
-            and attempts <= RETRY_ATTEMPTS:
+            and attempts <= timeout:
         time.sleep(1)
         attempts += 1
 
     return status(name)
 
 
-def stop(name):
+def stop(name, timeout=90):
     '''
     Stop the specified service
 
     Args:
         name (str): The name of the service to stop
 
+        timeout (int):
+            The time in seconds to wait for the service to stop before
+            returning. Default is 90 seconds
+
     Returns:
-        bool: True if successful, False otherwise
+        bool: ``True`` if successful, otherwise ``False``
 
     CLI Example:
 
@@ -450,26 +456,35 @@ def stop(name):
 
     attempts = 0
     while info(name)['Status'] in ['Running', 'Stop Pending'] \
-            and attempts <= RETRY_ATTEMPTS:
+            and attempts <= timeout:
         time.sleep(1)
         attempts += 1
 
     return not status(name)
 
 
-def restart(name):
+def restart(name, timeout=90):
     '''
     Restart the named service. This issues a stop command followed by a start.
 
     Args:
         name: The name of the service to restart.
 
-    .. note::
-        If the name passed is ``salt-minion`` a scheduled task is created and
-        executed to restart the salt-minion service.
+            .. note::
+                If the name passed is ``salt-minion`` a scheduled task is
+                created and executed to restart the salt-minion service.
+
+        timeout (int):
+            The time in seconds to wait for the service to stop and start before
+            returning. Default is 90 seconds
+
+            .. note::
+                The timeout is cumulative meaning it is applied to the stop and
+                then to the start command. A timeout of 90 could take up to 180
+                seconds if the service is long in stopping and starting
 
     Returns:
-        bool: ``True`` if successful, ``False`` otherwise
+        bool: ``True`` if successful, otherwise ``False``
 
     CLI Example:
 
@@ -481,7 +496,8 @@ def restart(name):
         create_win_salt_restart_task()
         return execute_salt_restart_task()
 
-    return stop(name) and start(name)
+    return stop(name=name, timeout=timeout) and \
+           start(name=name, timeout=timeout)
 
 
 def create_win_salt_restart_task():
@@ -527,13 +543,12 @@ def execute_salt_restart_task():
     return __salt__['task.run'](name='restart-salt-minion')
 
 
-def status(name, sig=None):
+def status(name, **kwargs):
     '''
     Return the status for a service
 
     Args:
         name (str): The name of the service to check
-        sig (str): Not supported on Windows
 
     Returns:
         bool: True if running, False otherwise
@@ -590,20 +605,26 @@ def modify(name,
     .. versionadded:: 2016.11.0
 
     Args:
-        name (str): The name of the service. Can be found using the
+        name (str):
+            The name of the service. Can be found using the
             ``service.get_service_name`` function
 
-        bin_path (str): The path to the service executable. Backslashes must be
-            escaped, eg: C:\\path\\to\\binary.exe
+        bin_path (str):
+            The path to the service executable. Backslashes must be escaped, eg:
+            ``C:\\path\\to\\binary.exe``
 
-        exe_args (str): Any arguments required by the service executable
+        exe_args (str):
+            Any arguments required by the service executable
 
-        display_name (str): The name to display in the service manager
+        display_name (str):
+            The name to display in the service manager
 
-        description (str): The description to display for the service
+        description (str):
+            The description to display for the service
 
-        service_type (str): Specifies the service type. Default is ``own``.
-            Valid options are as follows:
+        service_type (str):
+            Specifies the service type. Default is ``own``. Valid options are as
+            follows:
 
             - kernel: Driver service
             - filesystem: File system driver service
@@ -612,8 +633,8 @@ def modify(name,
             - own (default): Service runs in its own process
             - share: Service shares a process with one or more other services
 
-        start_type (str): Specifies the service start type. Valid options are as
-            follows:
+        start_type (str):
+            Specifies the service start type. Valid options are as follows:
 
             - boot: Device driver that is loaded by the boot loader
             - system: Device driver that is started during kernel initialization
@@ -621,13 +642,14 @@ def modify(name,
             - manual: Service must be started manually
             - disabled: Service cannot be started
 
-        start_delayed (bool): Set the service to Auto(Delayed Start). Only valid
-            if the start_type is set to ``Auto``. If service_type is not passed,
-            but the service is already set to ``Auto``, then the flag will be
-            set.
+        start_delayed (bool):
+            Set the service to Auto(Delayed Start). Only valid if the start_type
+            is set to ``Auto``. If service_type is not passed, but the service
+            is already set to ``Auto``, then the flag will be set.
 
-        error_control (str): The severity of the error, and action taken, if
-            this service fails to start. Valid options are as follows:
+        error_control (str):
+            The severity of the error, and action taken, if this service fails
+            to start. Valid options are as follows:
 
             - normal: Error is logged and a message box is displayed
             - severe: Error is logged and computer attempts a restart with the
@@ -637,29 +659,33 @@ def modify(name,
             - ignore: Error is logged and startup continues, no notification is
               given to the user
 
-        load_order_group: The name of the load order group to which this service
-            belongs
+        load_order_group (str):
+            The name of the load order group to which this service belongs
 
-        dependencies (list): A list of services or load ordering groups that
-            must start before this service
+        dependencies (list):
+            A list of services or load ordering groups that must start before
+            this service
 
-        account_name (str): The name of the account under which the service
-            should run. For ``own`` type services this should be in the
-            ``domain\username`` format. The following are examples of valid
-            built-in service accounts:
+        account_name (str):
+            The name of the account under which the service should run. For
+            ``own`` type services this should be in the ``domain\username``
+            format. The following are examples of valid built-in service
+            accounts:
 
             - NT Authority\\LocalService
             - NT Authority\\NetworkService
             - NT Authority\\LocalSystem
             - .\LocalSystem
 
-        account_password (str): The password for the account name specified in
-            ``account_name``. For the above built-in accounts, this can be None.
-            Otherwise a password must be specified.
+        account_password (str):
+            The password for the account name specified in ``account_name``. For
+            the above built-in accounts, this can be None. Otherwise a password
+            must be specified.
 
-        run_interactive (bool): If this setting is True, the service will be
-            allowed to interact with the user. Not recommended for services that
-            run with elevated privileges.
+        run_interactive (bool):
+            If this setting is True, the service will be allowed to interact
+            with the user. Not recommended for services that run with elevated
+            privileges.
 
     Returns:
         dict: a dictionary of changes made
@@ -895,20 +921,26 @@ def create(name,
 
     Args:
 
-        name (str): Specifies the service name. This is not the display_name
+        name (str):
+            Specifies the service name. This is not the display_name
 
-        bin_path (str): Specifies the path to the service binary file.
-            Backslashes must be escaped, eg: C:\\path\\to\\binary.exe
+        bin_path (str):
+            Specifies the path to the service binary file. Backslashes must be
+            escaped, eg: ``C:\\path\\to\\binary.exe``
 
-        exe_args (str): Any additional arguments required by the service binary.
+        exe_args (str):
+            Any additional arguments required by the service binary.
 
-        display_name (str): the name to be displayed in the service manager. If
-            not passed, the ``name`` will be used
+        display_name (str):
+            The name to be displayed in the service manager. If not passed, the
+            ``name`` will be used
 
-        description (str): A description of the service
+        description (str):
+            A description of the service
 
-        service_type (str): Specifies the service type. Default is ``own``.
-            Valid options are as follows:
+        service_type (str):
+            Specifies the service type. Default is ``own``. Valid options are as
+            follows:
 
             - kernel: Driver service
             - filesystem: File system driver service
@@ -917,8 +949,8 @@ def create(name,
             - own (default): Service runs in its own process
             - share: Service shares a process with one or more other services
 
-        start_type (str): Specifies the service start type. Valid options are as
-            follows:
+        start_type (str):
+            Specifies the service start type. Valid options are as follows:
 
             - boot: Device driver that is loaded by the boot loader
             - system: Device driver that is started during kernel initialization
@@ -926,13 +958,15 @@ def create(name,
             - manual (default): Service must be started manually
             - disabled: Service cannot be started
 
-        start_delayed (bool): Set the service to Auto(Delayed Start). Only valid
-            if the start_type is set to ``Auto``. If service_type is not passed,
-            but the service is already set to ``Auto``, then the flag will be
-            set. Default is ``False``
+        start_delayed (bool):
+            Set the service to Auto(Delayed Start). Only valid if the start_type
+            is set to ``Auto``. If service_type is not passed, but the service
+            is already set to ``Auto``, then the flag will be set. Default is
+            ``False``
 
-        error_control (str): The severity of the error, and action taken, if
-            this service fails to start. Valid options are as follows:
+        error_control (str):
+            The severity of the error, and action taken, if this service fails
+            to start. Valid options are as follows:
 
             - normal (normal): Error is logged and a message box is displayed
             - severe: Error is logged and computer attempts a restart with the
@@ -942,29 +976,33 @@ def create(name,
             - ignore: Error is logged and startup continues, no notification is
               given to the user
 
-        load_order_group: The name of the load order group to which this service
-            belongs
+        load_order_group (str):
+            The name of the load order group to which this service belongs
 
-        dependencies (list): A list of services or load ordering groups that
-            must start before this service
+        dependencies (list):
+            A list of services or load ordering groups that must start before
+            this service
 
-        account_name (str): The name of the account under which the service
-            should run. For ``own`` type services this should be in the
-            ``domain\username`` format. The following are examples of valid
-            built-in service accounts:
+        account_name (str):
+            The name of the account under which the service should run. For
+            ``own`` type services this should be in the ``domain\username``
+            format. The following are examples of valid built-in service
+            accounts:
 
             - NT Authority\\LocalService
             - NT Authority\\NetworkService
             - NT Authority\\LocalSystem
             - .\\LocalSystem
 
-        account_password (str): The password for the account name specified in
-            ``account_name``. For the above built-in accounts, this can be None.
-            Otherwise a password must be specified.
+        account_password (str):
+            The password for the account name specified in ``account_name``. For
+            the above built-in accounts, this can be None. Otherwise a password
+            must be specified.
 
-        run_interactive (bool): If this setting is True, the service will be
-            allowed to interact with the user. Not recommended for services that
-            run with elevated privileges.
+        run_interactive (bool):
+            If this setting is True, the service will be allowed to interact
+            with the user. Not recommended for services that run with elevated
+            privileges.
 
     Returns:
         dict: A dictionary containing information about the new service
@@ -1250,15 +1288,23 @@ def config(name,
                   account_password=password)
 
 
-def delete(name):
+def delete(name, timeout=90):
     '''
     Delete the named service
 
     Args:
+
         name (str): The name of the service to delete
 
+        timeout (int):
+            The time in seconds to wait for the service to be deleted before
+            returning. This is necessary because a service must be stopped
+            before it can be deleted. Default is 90 seconds
+
+            .. versionadded:: 2017.7.9, 2018.3.4
+
     Returns:
-        bool: True if successful, False otherwise
+        bool: ``True`` if successful, otherwise ``False``
 
     CLI Example:
 
@@ -1282,7 +1328,7 @@ def delete(name):
     win32service.CloseServiceHandle(handle_svc)
 
     attempts = 0
-    while name in get_all() and attempts <= RETRY_ATTEMPTS:
+    while name in get_all() and attempts <= timeout:
         time.sleep(1)
         attempts += 1
 
