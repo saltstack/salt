@@ -13,7 +13,7 @@
 # pylint: disable=repr-flag-used-in-string
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 import os
 import re
 import sys
@@ -149,17 +149,19 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 arg_str,
                 with_retcode=False,
                 catch_stderr=False,
-                async=False,
+                asynchronous=False,
                 timeout=60,
-                config_dir=None):
+                config_dir=None,
+                **kwargs):
         '''
         Execute salt-run
         '''
+        asynchronous = kwargs.get('async', asynchronous)
         arg_str = '-c {0}{async_flag} -t {timeout} {1}'.format(
                 config_dir or self.config_dir,
                 arg_str,
                 timeout=timeout,
-                async_flag=' --async' if async else '')
+                async_flag=' --async' if asynchronous else '')
         return self.run_script('salt-run',
                                arg_str,
                                with_retcode=with_retcode,
@@ -531,14 +533,16 @@ class ShellCase(ShellTestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixi
         log.debug('Result of run_ssh for command \'%s\': %s', arg_str, ret)
         return ret
 
-    def run_run(self, arg_str, with_retcode=False, catch_stderr=False, async=False, timeout=180, config_dir=None):
+    def run_run(self, arg_str, with_retcode=False, catch_stderr=False,
+                asynchronous=False, timeout=180, config_dir=None, **kwargs):
         '''
         Execute salt-run
         '''
+        asynchronous = kwargs.get('async', asynchronous)
         arg_str = '-c {0}{async_flag} -t {timeout} {1}'.format(config_dir or self.config_dir,
                                                                arg_str,
                                                                timeout=timeout,
-                                                               async_flag=' --async' if async else '')
+                                                               async_flag=' --async' if asynchronous else '')
         ret = self.run_script('salt-run',
                               arg_str,
                               with_retcode=with_retcode,

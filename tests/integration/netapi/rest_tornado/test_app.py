@@ -80,6 +80,7 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
         self.assertEqual(response.headers['Location'], '/login')
 
     # Local client tests
+
     @skipIf(True, 'to be re-enabled when #23623 is merged')
     def test_simple_local_post(self):
         '''
@@ -121,6 +122,7 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
         self.assertEqual(response_obj['return'], ["No minions matched the target. No command was sent, no jid was assigned."])
 
     # local client request body test
+
     @skipIf(True, 'Undetermined race condition in test. Temporarily disabled.')
     def test_simple_local_post_only_dictionary_request(self):
         '''
@@ -177,7 +179,7 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
         # TODO: verify pub function? Maybe look at how we test the publisher
         self.assertEqual(len(ret), 1)
         self.assertIn('jid', ret[0])
-        self.assertEqual(ret[0]['minions'], sorted(['minion', 'sub_minion', 'localhost']))
+        self.assertEqual(ret[0]['minions'], sorted(['minion', 'sub_minion']))
 
     def test_multi_local_async_post(self):
         low = [{'client': 'local_async',
@@ -203,8 +205,8 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
         self.assertEqual(len(ret), 2)
         self.assertIn('jid', ret[0])
         self.assertIn('jid', ret[1])
-        self.assertEqual(ret[0]['minions'], sorted(['minion', 'sub_minion', 'localhost']))
-        self.assertEqual(ret[1]['minions'], sorted(['minion', 'sub_minion', 'localhost']))
+        self.assertEqual(ret[0]['minions'], sorted(['minion', 'sub_minion']))
+        self.assertEqual(ret[1]['minions'], sorted(['minion', 'sub_minion']))
 
     def test_multi_local_async_post_multitoken(self):
         low = [{'client': 'local_async',
@@ -238,8 +240,8 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
         self.assertIn('jid', ret[0])  # the first 2 are regular returns
         self.assertIn('jid', ret[1])
         self.assertIn('Authentication error occurred.', ret[2])  # bad auth
-        self.assertEqual(ret[0]['minions'], sorted(['minion', 'sub_minion', 'localhost']))
-        self.assertEqual(ret[1]['minions'], sorted(['minion', 'sub_minion', 'localhost']))
+        self.assertEqual(ret[0]['minions'], sorted(['minion', 'sub_minion']))
+        self.assertEqual(ret[1]['minions'], sorted(['minion', 'sub_minion']))
 
     def test_simple_local_async_post_no_tgt(self):
         low = [{'client': 'local_async',
@@ -255,6 +257,7 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
         response_obj = salt.utils.json.loads(response.body)
         self.assertEqual(response_obj['return'], [{}])
 
+    @skipIf(True, 'Undetermined race condition in test. Temporarily disabled.')
     def test_simple_local_post_only_dictionary_request_with_order_masters(self):
         '''
         Test a basic API of /
@@ -293,7 +296,7 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
                               )
         response_obj = salt.utils.json.loads(response.body)
         self.assertEqual(len(response_obj['return']), 1)
-        self.assertEqual(sorted(response_obj['return'][0]), sorted(['localhost', 'minion', 'sub_minion']))
+        self.assertEqual(sorted(response_obj['return'][0]), sorted(['minion', 'sub_minion']))
 
     # runner_async tests
     def test_simple_local_runner_async_post(self):
@@ -398,7 +401,7 @@ class TestMinionSaltAPIHandler(_SaltnadoIntegrationTestCase):
 
     def test_post_with_incorrect_client(self):
         '''
-        The /minions endpoint is async only, so if you try something else
+        The /minions endpoint is asynchronous only, so if you try something else
         make sure you get an error
         '''
         # get a token for this test

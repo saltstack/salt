@@ -937,7 +937,7 @@ class MinionManager(MinionBase):
         install_zmq()
         self.io_loop = ZMQDefaultLoop.current()
         self.process_manager = ProcessManager(name='MultiMinionProcessManager')
-        self.io_loop.spawn_callback(self.process_manager.run, async=True)
+        self.io_loop.spawn_callback(self.process_manager.run, **{'asynchronous': True})  # Tornado backward compat
 
     def __del__(self):
         self.destroy()
@@ -1134,7 +1134,7 @@ class Minion(MinionBase):
             time.sleep(sleep_time)
 
         self.process_manager = ProcessManager(name='MinionProcessManager')
-        self.io_loop.spawn_callback(self.process_manager.run, async=True)
+        self.io_loop.spawn_callback(self.process_manager.run, **{'asynchronous': True})
         # We don't have the proxy setup yet, so we can't start engines
         # Engines need to be able to access __proxy__
         if not salt.utils.platform.is_proxy():
