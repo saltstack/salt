@@ -538,3 +538,14 @@ class NetworkTestCase(TestCase):
         self.assertRaises(ValueError, network.mac_str_to_bytes, 'a0:b0:c0:d0:e0:fg')
         self.assertEqual(b'\x10\x08\x06\x04\x02\x00', network.mac_str_to_bytes('100806040200'))
         self.assertEqual(b'\xf8\xe7\xd6\xc5\xb4\xa3', network.mac_str_to_bytes('f8e7d6c5b4a3'))
+
+    def test_get_fqhostname_return(self):
+        '''
+        Test if proper hostname is used when RevDNS differ from hostname
+
+        :return:
+        '''
+        with patch('socket.gethostname', MagicMock(return_value='hostname')), \
+             patch('socket.getfqdn', MagicMock(return_value='very.long.and.complex.domain.name')), \
+             patch('socket.getaddrinfo', MagicMock(return_value=[(2, 3, 0, 'hostname', ('127.0.1.1', 0))])):
+            self.assertEqual(network.get_fqhostname(), 'hostname')

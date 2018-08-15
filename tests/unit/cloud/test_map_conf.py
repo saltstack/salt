@@ -115,6 +115,7 @@ class MapConfTest(TestCase):
                 patch('salt.cloud.Map.read', MagicMock(return_value=EXAMPLE_MAP)):
             self.maxDiff = None
             opts = {'extension_modules': '/var/cache/salt/master/extmods',
+                    'optimization_order': [0, 1, 2],
                     'providers': EXAMPLE_PROVIDERS, 'profiles': EXAMPLE_PROFILES}
             cloud_map = salt.cloud.Map(opts)
 

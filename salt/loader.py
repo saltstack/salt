@@ -8,6 +8,7 @@ plugin interfaces used by Salt.
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 import os
+import re
 import sys
 import time
 import logging
@@ -83,8 +84,8 @@ if USE_IMPORTLIB:
 else:
     SUFFIXES = imp.get_suffixes()
 
-BIN_PRE_EXT = '' if six.PY2 \
-    else '.cpython-{0}{1}'.format(sys.version_info.major, sys.version_info.minor)
+PY3_PRE_EXT = \
+    re.compile(r'\.cpython-{0}{1}(\.opt-[1-9])?'.format(*sys.version_info[:2]))
 
 # Because on the cloud drivers we do `from salt.cloud.libcloudfuncs import *`
 # which simplifies code readability, it adds some unsupported functions into
@@ -1137,6 +1138,15 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             )
         )
 
+        # A map of suffix to description for imp
+        self.suffix_map = {}
+        # A list to determine precedence of extensions
+        # Prefer packages (directories) over modules (single files)!
+        self.suffix_order = ['']
+        for (suffix, mode, kind) in SUFFIXES:
+            self.suffix_map[suffix] = (suffix, mode, kind)
+            self.suffix_order.append(suffix)
+
         self._lock = threading.RLock()
         self._refresh_file_mapping()
 
@@ -1210,14 +1220,6 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         refresh the mapping of the FS on disk
         '''
         # map of suffix to description for imp
-        self.suffix_map = {}
-        suffix_order = ['']  # local list to determine precedence of extensions
-                             # Prefer packages (directories) over modules (single files)!
-
-        for (suffix, mode, kind) in SUFFIXES:
-            self.suffix_map[suffix] = (suffix, mode, kind)
-            suffix_order.append(suffix)
-
         if self.opts.get('cython_enable', True) is True:
             try:
                 global pyximport
@@ -1241,11 +1243,25 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         # The files are added in order of priority, so order *must* be retained.
         self.file_mapping = salt.utils.odict.OrderedDict()
 
+        opt_match = []
+
+        def _replace_pre_ext(obj):
+            '''
+            Hack so we can get the optimization level that we replaced (if
+            any) out of the re.sub call below. We use a list here because
+            it is a persistent data structure that we will be able to
+            access after re.sub is called.
+            '''
+            opt_match.append(obj)
+            return ''
+
         for mod_dir in self.module_dirs:
             try:
                 # Make sure we have a sorted listdir in order to have
                 # expectable override results
-                files = sorted(os.listdir(mod_dir))
+                files = sorted(
+                    x for x in os.listdir(mod_dir) if x != '__pycache__'
+                )
             except OSError:
                 continue  # Next mod_dir
             if six.PY3:
@@ -1257,8 +1273,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                 except OSError:
                     pass
                 else:
-                    pycache_files.extend(files)
-                    files = pycache_files
+                    files.extend(pycache_files)
+
             for filename in files:
                 try:
                     dirname, basename = os.path.split(filename)
@@ -1267,7 +1283,30 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                         # log messages omitted for obviousness
                         continue  # Next filename
                     f_noext, ext = os.path.splitext(basename)
-                    f_noext = f_noext.replace(BIN_PRE_EXT, '')
+                    if six.PY3:
+                        f_noext = PY3_PRE_EXT.sub(_replace_pre_ext, f_noext)
+                        try:
+                            opt_level = int(
+                                opt_match.pop().group(1).rsplit('-', 1)[-1]
+                            )
+                        except (AttributeError, IndexError, ValueError):
+                            # No regex match or no optimization level matched
+                            opt_level = 0
+                        try:
+                            opt_index = self.opts['optimization_order'].index(opt_level)
+                        except KeyError:
+                            log.trace(
+                                'Disallowed optimization level %d for module '
+                                'name \'%s\', skipping. Add %d to the '
+                                '\'optimization_order\' config option if you '
+                                'do not want to ignore this optimization '
+                                'level.', opt_level, f_noext, opt_level
+                            )
+                            continue
+                    else:
+                        # Optimization level not reflected in filename on PY2
+                        opt_index = 0
+
                     # make sure it is a suffix we support
                     if ext not in self.suffix_map:
                         continue  # Next filename
@@ -1282,7 +1321,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                     if ext == '':
                         # is there something __init__?
                         subfiles = os.listdir(fpath)
-                        for suffix in suffix_order:
+                        for suffix in self.suffix_order:
                             if '' == suffix:
                                 continue  # Next suffix (__init__ must have a suffix)
                             init_file = '__init__{0}'.format(suffix)
@@ -1291,17 +1330,29 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                         else:
                             continue  # Next filename
 
-                    if f_noext in self.file_mapping:
+                    try:
                         curr_ext = self.file_mapping[f_noext][1]
-                        #log.debug("****** curr_ext={0} ext={1} suffix_order={2}".format(curr_ext, ext, suffix_order))
+                        curr_opt_index = self.file_mapping[f_noext][2]
+                    except KeyError:
+                        pass
+                    else:
                         if '' in (curr_ext, ext) and curr_ext != ext:
                             log.error(
                                 'Module/package collision: \'%s\' and \'%s\'',
                                 fpath,
                                 self.file_mapping[f_noext][0]
                             )
-                        if not curr_ext or suffix_order.index(ext) >= suffix_order.index(curr_ext):
-                            continue  # Next filename
+
+                        if six.PY3 and ext == '.pyc' and curr_ext == '.pyc':
+                            # Check the optimization level
+                            if opt_index >= curr_opt_index:
+                                # Module name match, but a higher-priority
+                                # optimization level was already matched, skipping.
+                                continue
+                        elif not curr_ext or self.suffix_order.index(ext) >= self.suffix_order.index(curr_ext):
+                            # Match found but a higher-priorty match already
+                            # exists, so skip this.
+                            continue
 
                     if six.PY3 and not dirname and ext == '.pyc':
                         # On Python 3, we should only load .pyc files from the
@@ -1310,13 +1361,13 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                         continue
 
                     # Made it this far - add it
-                    self.file_mapping[f_noext] = (fpath, ext)
+                    self.file_mapping[f_noext] = (fpath, ext, opt_index)
 
                 except OSError:
                     continue
         for smod in self.static_modules:
             f_noext = smod.split('.')[-1]
-            self.file_mapping[f_noext] = (smod, '.o')
+            self.file_mapping[f_noext] = (smod, '.o', 0)
 
     def clear(self):
         '''
@@ -1385,7 +1436,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
 
     def _load_module(self, name):
         mod = None
-        fpath, suffix = self.file_mapping[name]
+        fpath, suffix = self.file_mapping[name][:2]
         self.loaded_files.add(name)
         fpath_dirname = os.path.dirname(fpath)
         try:
