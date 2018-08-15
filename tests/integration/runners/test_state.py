@@ -97,10 +97,18 @@ class StateRunnerTest(ShellCase):
         '''
         test salt-run state.orchestrate with mine.get call in sls
         '''
-        test = self.run_run('mine.update "*"')
-        ret = self.run_run('state.orchestrate orch.mine')
+        fail_time = time.time() + 120
+        self.run_run('mine.update "*"')
 
-        assert 'Succeeded: 1 (changed=1)' in ret
+        exp_ret = 'Succeeded: 1 (changed=1)'
+        while True:
+            ret = self.run_run('state.orchestrate orch.mine')
+            try:
+                assert exp_ret in ret
+                break
+            except AssertionError:
+                if time.time() > fail_time:
+                    self.fail('"{0}" was not found in the orchestration call'.format(exp_ret))
 
     def test_orchestrate_state_and_function_failure(self):
         '''
