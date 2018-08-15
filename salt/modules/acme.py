@@ -48,7 +48,8 @@ log = logging.getLogger(__name__)
 LEA = salt.utils.path.which_bin(['certbot', 'letsencrypt',
                                  'certbot-auto', 'letsencrypt-auto',
                                  '/opt/letsencrypt/letsencrypt-auto'])
-LE_LIVE = '/etc/letsencrypt/live/'
+if salt.utils.platform.is_freebsd():
+    LE_LIVE = '/usr/local' + LE_LIVE
 
 
 def __virtual__():
