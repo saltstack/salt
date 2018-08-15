@@ -1,7 +1,7 @@
 ==========================
-salt.modules.napalm module
+salt.modules.arista_pyeapi
 ==========================
 
-.. automodule:: salt.modules.napalm
+.. automodule:: salt.modules.arista_pyeapi
     :members:
 

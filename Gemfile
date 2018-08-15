@@ -11,16 +11,11 @@ group :docker do
   gem 'kitchen-docker', :git => 'https://github.com/test-kitchen/kitchen-docker.git'
 end
 
-group :opennebula do
-  gem 'kitchen-opennebula', '>=0.2.3'
-  gem 'xmlrpc'
-end
-
 group :windows do
   gem 'vagrant-wrapper'
   gem 'kitchen-vagrant'
   gem 'winrm', '~>2.0'
-  gem 'winrm-fs', :git => 'https://github.com/WinRb/winrm-fs.git'
+  gem 'winrm-fs', '~>1.2.1'
 end
 
 group :ec2 do

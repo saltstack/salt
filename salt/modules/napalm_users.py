@@ -35,6 +35,7 @@ from salt.utils.napalm import proxy_napalm_wrap
 
 __virtualname__ = 'users'
 __proxyenabled__ = ['napalm']
+__virtual_aliases__ = ('napalm_users',)
 # uses NAPALM-based proxy to interact with network devices
 
 # ----------------------------------------------------------------------------------------------------------------------

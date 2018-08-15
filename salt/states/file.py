@@ -277,7 +277,7 @@ import sys
 import time
 import traceback
 from collections import Iterable, Mapping, defaultdict
-from datetime import datetime   # python3 problem in the making?
+from datetime import datetime, date   # python3 problem in the making?
 
 # Import salt libs
 import salt.loader
@@ -1123,8 +1123,7 @@ def _get_template_texts(source_list=None,
             tmplines = None
             with salt.utils.files.fopen(rndrd_templ_fn, 'rb') as fp_:
                 tmplines = fp_.read()
-                if six.PY3:
-                    tmplines = tmplines.decode(__salt_system_encoding__)
+                tmplines = tmplines.decode(__salt_system_encoding__)
                 tmplines = tmplines.splitlines(True)
             if not tmplines:
                 msg = 'Failed to read rendered template file {0} ({1})'
@@ -1430,19 +1429,25 @@ def symlink(
     preflight_errors = []
     if salt.utils.platform.is_windows():
         # Make sure the passed owner exists
-        if not salt.utils.win_functions.get_sid_from_name(win_owner):
+        try:
+            salt.utils.win_functions.get_sid_from_name(win_owner)
+        except CommandExecutionError as exc:
             preflight_errors.append('User {0} does not exist'.format(win_owner))
 
         # Make sure users passed in win_perms exist
         if win_perms:
             for name_check in win_perms:
-                if not salt.utils.win_functions.get_sid_from_name(name_check):
+                try:
+                    salt.utils.win_functions.get_sid_from_name(name_check)
+                except CommandExecutionError as exc:
                     preflight_errors.append('User {0} does not exist'.format(name_check))
 
         # Make sure users passed in win_deny_perms exist
         if win_deny_perms:
             for name_check in win_deny_perms:
-                if not salt.utils.win_functions.get_sid_from_name(name_check):
+                try:
+                    salt.utils.win_functions.get_sid_from_name(name_check)
+                except CommandExecutionError as exc:
                     preflight_errors.append('User {0} does not exist'.format(name_check))
     else:
         uid = __salt__['file.user_to_uid'](user)
@@ -1671,6 +1676,129 @@ def absent(name,
             return _error(ret, 'Failed to remove directory {0}'.format(name))
 
     ret['comment'] = 'File {0} is not present'.format(name)
+    return ret
+
+
+def tidied(name,
+           age=0,
+           matches=None,
+           rmdirs=False,
+           size=0,
+           **kwargs):
+    '''
+    Remove unwanted files based on specific criteria. Multiple criteria
+    are OR’d together, so a file that is too large but is not old enough
+    will still get tidied.
+
+    If neither age nor size is given all files which match a pattern in
+    matches will be removed.
+
+    name
+        The directory tree that should be tidied
+
+    age
+        Maximum age in days after which files are considered for removal
+
+    matches
+        List of regular expressions to restrict what gets removed.  Default: ['.*']
+
+    rmdirs
+        Whether or not it's allowed to remove directories
+
+    size
+        Maximum allowed file size. Files greater or equal to this size are
+        removed. Doesn't apply to directories or symbolic links
+
+    .. code-block:: yaml
+
+        cleanup:
+          file.tidied:
+            - name: /tmp/salt_test
+            - rmdirs: True
+            - matches:
+              - foo
+              - b.*r
+    '''
+    name = os.path.expanduser(name)
+
+    ret = {'name': name,
+           'changes': {},
+           'pchanges': {},
+           'result': True,
+           'comment': ''}
+
+    # Check preconditions
+    if not os.path.isabs(name):
+        return _error(ret, 'Specified file {0} is not an absolute path'.format(name))
+    if not os.path.isdir(name):
+        return _error(ret, '{0} does not exist or is not a directory.'.format(name))
+
+    # Define some variables
+    todelete = []
+    today = date.today()
+
+    # Compile regular expressions
+    if matches is None:
+        matches = ['.*']
+    progs = []
+    for regex in matches:
+        progs.append(re.compile(regex))
+
+    # Helper to match a given name against one or more pre-compiled regular
+    # expressions
+    def _matches(name):
+        for prog in progs:
+            if prog.match(name):
+                return True
+        return False
+
+    # Iterate over given directory tree, depth-first
+    for root, dirs, files in os.walk(top=name, topdown=False):
+        # Check criteria for the found files and directories
+        for elem in files + dirs:
+            myage = 0
+            mysize = 0
+            deleteme = True
+            path = os.path.join(root, elem)
+            if os.path.islink(path):
+                # Get age of symlink (not symlinked file)
+                myage = abs(today - date.fromtimestamp(os.lstat(path).st_atime))
+            elif elem in dirs:
+                # Get age of directory, check if directories should be deleted at all
+                myage = abs(today - date.fromtimestamp(os.path.getatime(path)))
+                deleteme = rmdirs
+            else:
+                # Get age and size of regular file
+                myage = abs(today - date.fromtimestamp(os.path.getatime(path)))
+                mysize = os.path.getsize(path)
+            # Verify against given criteria, collect all elements that should be removed
+            if (mysize >= size or myage.days >= age) and _matches(name=elem) and deleteme:
+                todelete.append(path)
+
+    # Now delete the stuff
+    if todelete:
+        if __opts__['test']:
+            ret['result'] = None
+            ret['comment'] = '{0} is set for tidy'.format(name)
+            ret['changes'] = {'removed': todelete}
+            return ret
+        ret['changes']['removed'] = []
+        # Iterate over collected items
+        try:
+            for path in todelete:
+                if salt.utils.platform.is_windows():
+                    __salt__['file.remove'](path, force=True)
+                else:
+                    __salt__['file.remove'](path)
+                # Remember what we've removed, will appear in the summary
+                ret['changes']['removed'].append(path)
+        except CommandExecutionError as exc:
+            return _error(ret, '{0}'.format(exc))
+        # Set comment for the summary
+        ret['comment'] = 'Removed {0} files or directories from directory {1}'.format(len(todelete), name)
+    else:
+        # Set comment in case there was nothing to remove
+        ret['comment'] = 'Nothing to remove from directory {0}'.format(name)
     return ret
 
 
@@ -3894,6 +4022,8 @@ def retention_schedule(name, retain, strptime_format=None, timezone=None):
             return (None, None)
 
     def get_file_time_from_mtime(f):
+        if f == '.' or f == '..':
+            return (None, None)
         lstat = __salt__['file.lstat'](os.path.join(name, f))
         if lstat:
             mtime = lstat['st_mtime']
@@ -4388,9 +4518,15 @@ def blockreplace(
     A block of content delimited by comments can help you manage several lines
     entries without worrying about old entries removal. This can help you
     maintaining an un-managed file containing manual edits.
-    Note: this function will store two copies of the file in-memory
-    (the original version and the edited version) in order to detect changes
-    and only edit the targeted file if necessary.
+
+    .. note::
+        This function will store two copies of the file in-memory (the original
+        version and the edited version) in order to detect changes and only
+        edit the targeted file if necessary.
+
+        Additionally, you can use :py:func:`file.accumulated
+        <salt.states.file.accumulated>` and target this state. All accumulated
+        data dictionaries' content will be added in the content block.
 
     name
         Filesystem path to the file to be edited
@@ -4402,12 +4538,10 @@ def blockreplace(
         final output
 
     marker_end
-        The line content identifying a line as the end of the content block.
-        Note that the whole line containing this marker will be considered, so
-        whitespace or extra content before or after the marker is included in
-        final output. Note: you can use file.accumulated and target this state.
-        All accumulated data dictionaries content will be added as new lines in
-        the content
+        The line content identifying the end of the content block. As of
+        versions 2017.7.5 and 2018.3.1, everything up to the text matching the
+        marker will be replaced, so it's important to ensure that your marker
+        includes the beginning of the text you wish to replace.
 
     content
         The content to be used between the two lines identified by
@@ -6126,7 +6260,7 @@ def copy_(name,
     if not os.path.isdir(dname):
         if makedirs:
             try:
-                _makedirs(name=name)
+                _makedirs(name=name, user=user, group=group, dir_mode=mode)
             except CommandExecutionError as exc:
                 return _error(ret, 'Drive {0} is not mapped'.format(exc.message))
         else:

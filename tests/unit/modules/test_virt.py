@@ -78,6 +78,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
 
         # Return state as shutdown
         mock_domain.info.return_value = [4, 0, 0, 0]  # pylint: disable=no-member
+        return mock_domain
 
     def test_disk_profile_merge(self):
         '''
@@ -660,6 +661,259 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertTrue(len(controllers) == 0)
         # kvm mac address shoud start with 52:54:00
         self.assertTrue("mac address='52:54:00" in xml_data)
+
+    def test_diff_disks(self):
+        '''
+        Test virt._diff_disks()
+        '''
+        old_disks = ET.fromstring('''
+            <devices>
+              <disk type='file' device='disk'>
+                <source file='/path/to/img0.qcow2'/>
+                <target dev='vda' bus='virtio'/>
+              </disk>
+              <disk type='file' device='disk'>
+                <source file='/path/to/img1.qcow2'/>
+                <target dev='vdb' bus='virtio'/>
+              </disk>
+              <disk type='file' device='disk'>
+                <source file='/path/to/img2.qcow2'/>
+                <target dev='hda' bus='ide'/>
+              </disk>
+            </devices>
+        ''').findall('disk')
+
+        new_disks = ET.fromstring('''
+            <devices>
+              <disk type='file' device='disk'>
+                <source file='/path/to/img3.qcow2'/>
+                <target dev='vda' bus='virtio'/>
+              </disk>
+              <disk type='file' device='disk' cache='default'>
+                <source file='/path/to/img0.qcow2'/>
+                <target dev='vdb' bus='virtio'/>
+              </disk>
+            </devices>
+        ''').findall('disk')
+        ret = virt._diff_disk_lists(old_disks, new_disks)
+        self.assertEqual([disk.find('source').get('file') for disk in ret['deleted']],
+                         ['/path/to/img1.qcow2', '/path/to/img2.qcow2'])
+        self.assertEqual([disk.find('source').get('file') for disk in ret['unchanged']],
+                         ['/path/to/img0.qcow2'])
+        self.assertEqual([disk.find('source').get('file') for disk in ret['new']],
+                         ['/path/to/img3.qcow2'])
+        self.assertEqual(ret['new'][0].find('target').get('dev'), 'vdb')
+
+    def test_diff_nics(self):
+        '''
+        Test virt._diff_nics()
+        '''
+        old_nics = ET.fromstring('''
+            <devices>
+               <interface type='network'>
+                 <mac address='52:54:00:39:02:b1'/>
+                 <source network='default'/>
+                 <model type='virtio'/>
+                 <address type='pci' domain='0x0000' bus='0x00' slot='0x03' function='0x0'/>
+               </interface>
+               <interface type='network'>
+                 <mac address='52:54:00:39:02:b2'/>
+                 <source network='admin'/>
+                 <model type='virtio'/>
+                 <address type='pci' domain='0x0000' bus='0x00' slot='0x03' function='0x0'/>
+               </interface>
+            </devices>
+        ''').findall('interface')
+
+        new_nics = ET.fromstring('''
+            <devices>
+               <interface type='network'>
+                 <mac address='52:54:00:39:02:b3'/>
+                 <source network='default'/>
+                 <model type='virtio'/>
+               </interface>
+               <interface type='network'>
+                 <mac address='52:54:00:39:02:b4'/>
+                 <source network='default'/>
+                 <model type='othermodel'/>
+               </interface>
+            </devices>
+        ''').findall('interface')
+        ret = virt._diff_interface_lists(old_nics, new_nics)
+        self.assertEqual([nic.find('mac').get('address') for nic in ret['unchanged']],
+                         ['52:54:00:39:02:b1'])
+        self.assertEqual([nic.find('mac').get('address') for nic in ret['new']],
+                         ['52:54:00:39:02:b4'])
+        self.assertEqual([nic.find('mac').get('address') for nic in ret['deleted']],
+                         ['52:54:00:39:02:b2'])
+
+    def test_update(self):
+        '''
+        Test virt.update()
+        '''
+        xml = '''
+            <domain type='kvm' id='7'>
+              <name>myvm</name>
+              <memory unit='KiB'>1048576</memory>
+              <currentMemory unit='KiB'>1048576</currentMemory>
+              <vcpu placement='auto'>1</vcpu>
+              <devices>
+                <disk type='file' device='disk'>
+                  <driver name='qemu' type='qcow2'/>
+                  <source file='/srv/salt-images/myvm_system.qcow2'/>
+                  <backingStore/>
+                  <target dev='vda' bus='virtio'/>
+                  <alias name='virtio-disk0'/>
+                  <address type='pci' domain='0x0000' bus='0x00' slot='0x07' function='0x0'/>
+                </disk>
+                <disk type='file' device='disk'>
+                  <driver name='qemu' type='qcow2'/>
+                  <source file='/srv/salt-images/myvm_data.qcow2'/>
+                  <backingStore/>
+                  <target dev='vda' bus='virtio'/>
+                  <alias name='virtio-disk1'/>
+                  <address type='pci' domain='0x0000' bus='0x00' slot='0x07' function='0x1'/>
+                </disk>
+                <interface type='network'>
+                  <mac address='52:54:00:39:02:b1'/>
+                  <source network='default' bridge='virbr0'/>
+                  <target dev='vnet0'/>
+                  <model type='virtio'/>
+                  <alias name='net0'/>
+                  <address type='pci' domain='0x0000' bus='0x00' slot='0x03' function='0x0'/>
+                </interface>
+                <interface type='network'>
+                  <mac address='52:54:00:39:02:b2'/>
+                  <source network='oldnet' bridge='virbr1'/>
+                  <target dev='vnet1'/>
+                  <model type='virtio'/>
+                  <alias name='net1'/>
+                  <address type='pci' domain='0x0000' bus='0x00' slot='0x03' function='0x1'/>
+                </interface>
+                <graphics type='spice' port='5900' autoport='yes' listen='127.0.0.1'>
+                  <listen type='address' address='127.0.0.1'/>
+                </graphics>
+                <video>
+                  <model type='qxl' ram='65536' vram='65536' vgamem='16384' heads='1' primary='yes'/>
+                  <alias name='video0'/>
+                  <address type='pci' domain='0x0000' bus='0x00' slot='0x02' function='0x0'/>
+                </video>
+              </devices>
+            </domain>
+        '''
+        domain_mock = self.set_mock_vm('myvm', xml)
+        define_mock = MagicMock(return_value=True)
+        self.mock_conn.defineXML = define_mock
+
+        # Update vcpus case
+        setvcpus_mock = MagicMock(return_value=0)
+        domain_mock.setVcpusFlags = setvcpus_mock
+        self.assertEqual({
+                'definition': True,
+                'cpu': True,
+                'disk': {'attached': [], 'detached': []},
+                'interface': {'attached': [], 'detached': []}
+            }, virt.update('myvm', cpu=2))
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(setxml.find('vcpu').text, '2')
+        self.assertEqual(setvcpus_mock.call_args[0][0], 2)
+
+        # Update memory case
+        setmem_mock = MagicMock(return_value=0)
+        domain_mock.setMemoryFlags = setmem_mock
+
+        self.assertEqual({
+                'definition': True,
+                'mem': True,
+                'disk': {'attached': [], 'detached': []},
+                'interface': {'attached': [], 'detached': []}
+            }, virt.update('myvm', mem=2048))
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(setxml.find('memory').text, '2048')
+        self.assertEqual(setxml.find('memory').get('unit'), 'MiB')
+        self.assertEqual(setmem_mock.call_args[0][0], 2048 * 1024)
+
+        # Update disks case
+        devattach_mock = MagicMock(return_value=0)
+        devdetach_mock = MagicMock(return_value=0)
+        domain_mock.attachDevice = devattach_mock
+        domain_mock.detachDevice = devdetach_mock
+        ret = virt.update('myvm', disk_profile='default', disks=[{'name': 'added', 'size': 2048}])
+        self.assertEqual(['/srv/salt-images/myvm_added.qcow2'],
+                         [ET.fromstring(disk).find('source').get('file') for disk in ret['disk']['attached']])
+        self.assertEqual(['/srv/salt-images/myvm_data.qcow2'],
+                         [ET.fromstring(disk).find('source').get('file') for disk in ret['disk']['detached']])
+        devattach_mock.assert_called_once()
+        devdetach_mock.assert_called_once()
+
+        # Update nics case
+        yaml_config = '''
+          virt:
+             nic:
+                myprofile:
+                   - network: default
+                     name: eth0
+        '''
+        mock_config = salt.utils.yaml.safe_load(yaml_config)
+        devattach_mock.reset_mock()
+        devdetach_mock.reset_mock()
+        with patch.dict(salt.modules.config.__opts__, mock_config):  # pylint: disable=no-member
+            ret = virt.update('myvm', nic_profile='myprofile',
+                              interfaces=[{'name': 'eth0', 'type': 'network', 'source': 'default'},
+                                          {'name': 'eth1', 'type': 'network', 'source': 'newnet'}])
+            self.assertEqual(['newnet'],
+                             [ET.fromstring(nic).find('source').get('network') for nic in ret['interface']['attached']])
+            self.assertEqual(['oldnet'],
+                             [ET.fromstring(nic).find('source').get('network') for nic in ret['interface']['detached']])
+            devattach_mock.assert_called_once()
+            devdetach_mock.assert_called_once()
+
+        # Graphics change test case
+        self.assertEqual({
+                'definition': True,
+                'disk': {'attached': [], 'detached': []},
+                'interface': {'attached': [], 'detached': []}
+            }, virt.update('myvm', graphics={'type': 'vnc'}))
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual('vnc', setxml.find('devices/graphics').get('type'))
+
+        # Update with no diff case
+        self.assertEqual({
+                'definition': False,
+                'disk': {'attached': [], 'detached': []},
+                'interface': {'attached': [], 'detached': []}
+            }, virt.update('myvm', cpu=1, mem=1024,
+                           disk_profile='default', disks=[{'name': 'data', 'size': 2048}],
+                           nic_profile='myprofile',
+                           interfaces=[{'name': 'eth0', 'type': 'network', 'source': 'default'},
+                                       {'name': 'eth1', 'type': 'network', 'source': 'oldnet'}],
+                           graphics={'type': 'spice',
+                                     'listen': {'type': 'address', 'address': '127.0.0.1'}}))
+
+        # Failed XML description update case
+        self.mock_conn.defineXML.side_effect = self.mock_libvirt.libvirtError("Test error")
+        setmem_mock.reset_mock()
+        with self.assertRaises(self.mock_libvirt.libvirtError):
+            virt.update('myvm', mem=2048)
+
+        # Failed single update failure case
+        self.mock_conn.defineXML = MagicMock(return_value=True)
+        setmem_mock.side_effect = self.mock_libvirt.libvirtError("Failed to live change memory")
+        self.assertEqual({
+                'definition': True,
+                'errors': ['Failed to live change memory'],
+                'disk': {'attached': [], 'detached': []},
+                'interface': {'attached': [], 'detached': []}
+            }, virt.update('myvm', mem=2048))
+
+        # Failed multiple updates failure case
+        self.assertEqual({
+                'definition': True,
+                'errors': ['Failed to live change memory'],
+                'cpu': True,
+                'disk': {'attached': [], 'detached': []},
+                'interface': {'attached': [], 'detached': []}
+            }, virt.update('myvm', cpu=4, mem=2048))
 
     def test_mixed_dict_and_list_as_profile_objects(self):
         '''
@@ -1581,7 +1835,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test virt._gen_pool_xml()
         '''
-        xml_data = virt._gen_pool_xml('pool', 'logical', 'base')
+        xml_data = virt._gen_pool_xml('pool', 'logical', '/dev/base')
         root = ET.fromstring(xml_data)
         self.assertEqual(root.find('name').text, 'pool')
         self.assertEqual(root.attrib['type'], 'logical')
@@ -1591,12 +1845,119 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test virt._gen_pool_xml() with a source device
         '''
-        xml_data = virt._gen_pool_xml('pool', 'logical', 'base', 'sda')
+        xml_data = virt._gen_pool_xml('pool', 'logical', '/dev/base', source_devices=[{'path': '/dev/sda'}])
         root = ET.fromstring(xml_data)
         self.assertEqual(root.find('name').text, 'pool')
         self.assertEqual(root.attrib['type'], 'logical')
         self.assertEqual(root.find('target/path').text, '/dev/base')
         self.assertEqual(root.find('source/device').attrib['path'], '/dev/sda')
+
+    def test_pool_with_scsi(self):
+        '''
+        Test virt._gen_pool_xml() with a SCSI source
+        '''
+        xml_data = virt._gen_pool_xml('pool',
+                                      'scsi',
+                                      '/dev/disk/by-path',
+                                      source_devices=[{'path': '/dev/sda'}],
+                                      source_adapter={
+                                          'type': 'scsi_host',
+                                          'parent_address': {
+                                              'unique_id': 5,
+                                              'address': {
+                                                  'domain': '0x0000',
+                                                  'bus': '0x00',
+                                                  'slot': '0x1f',
+                                                  'function': '0x2'
+                                              }
+                                          }
+                                      },
+                                      source_name='srcname')
+        root = ET.fromstring(xml_data)
+        self.assertEqual(root.find('name').text, 'pool')
+        self.assertEqual(root.attrib['type'], 'scsi')
+        self.assertEqual(root.find('target/path').text, '/dev/disk/by-path')
+        self.assertEqual(root.find('source/device'), None)
+        self.assertEqual(root.find('source/name'), None)
+        self.assertEqual(root.find('source/adapter').attrib['type'], 'scsi_host')
+        self.assertEqual(root.find('source/adapter/parentaddr').attrib['unique_id'], '5')
+        self.assertEqual(root.find('source/adapter/parentaddr/address').attrib['domain'], '0x0000')
+        self.assertEqual(root.find('source/adapter/parentaddr/address').attrib['bus'], '0x00')
+        self.assertEqual(root.find('source/adapter/parentaddr/address').attrib['slot'], '0x1f')
+        self.assertEqual(root.find('source/adapter/parentaddr/address').attrib['function'], '0x2')
+
+    def test_pool_with_rbd(self):
+        '''
+        Test virt._gen_pool_xml() with an RBD source
+        '''
+        xml_data = virt._gen_pool_xml('pool',
+                                      'rbd',
+                                      source_devices=[{'path': '/dev/sda'}],
+                                      source_hosts=['1.2.3.4', 'my.ceph.monitor:69'],
+                                      source_auth={
+                                          'type': 'ceph',
+                                          'username': 'admin',
+                                          'secret': {
+                                              'type': 'uuid',
+                                              'value': 'someuuid'
+                                          }
+                                      },
+                                      source_name='srcname',
+                                      source_adapter={'type': 'scsi_host', 'name': 'host0'},
+                                      source_dir='/some/dir',
+                                      source_format='fmt')
+        root = ET.fromstring(xml_data)
+        self.assertEqual(root.find('name').text, 'pool')
+        self.assertEqual(root.attrib['type'], 'rbd')
+        self.assertEqual(root.find('target'), None)
+        self.assertEqual(root.find('source/device'), None)
+        self.assertEqual(root.find('source/name').text, 'srcname')
+        self.assertEqual(root.find('source/adapter'), None)
+        self.assertEqual(root.find('source/dir'), None)
+        self.assertEqual(root.find('source/format'), None)
+        self.assertEqual(root.findall('source/host')[0].attrib['name'], '1.2.3.4')
+        self.assertTrue('port' not in root.findall('source/host')[0].attrib)
+        self.assertEqual(root.findall('source/host')[1].attrib['name'], 'my.ceph.monitor')
+        self.assertEqual(root.findall('source/host')[1].attrib['port'], '69')
+        self.assertEqual(root.find('source/auth').attrib['type'], 'ceph')
+        self.assertEqual(root.find('source/auth').attrib['username'], 'admin')
+        self.assertEqual(root.find('source/auth/secret').attrib['type'], 'uuid')
+        self.assertEqual(root.find('source/auth/secret').attrib['uuid'], 'someuuid')
+
+    def test_pool_with_netfs(self):
+        '''
+        Test virt._gen_pool_xml() with a netfs source
+        '''
+        xml_data = virt._gen_pool_xml('pool',
+                                      'netfs',
+                                      target='/path/to/target',
+                                      permissions={
+                                        'mode': '0770',
+                                        'owner': 1000,
+                                        'group': 100,
+                                        'label': 'seclabel'
+                                      },
+                                      source_devices=[{'path': '/dev/sda'}],
+                                      source_hosts=['nfs.host'],
+                                      source_name='srcname',
+                                      source_adapter={'type': 'scsi_host', 'name': 'host0'},
+                                      source_dir='/some/dir',
+                                      source_format='nfs')
+        root = ET.fromstring(xml_data)
+        self.assertEqual(root.find('name').text, 'pool')
+        self.assertEqual(root.attrib['type'], 'netfs')
+        self.assertEqual(root.find('target/path').text, '/path/to/target')
+        self.assertEqual(root.find('target/permissions/mode').text, '0770')
+        self.assertEqual(root.find('target/permissions/owner').text, '1000')
+        self.assertEqual(root.find('target/permissions/group').text, '100')
+        self.assertEqual(root.find('target/permissions/label').text, 'seclabel')
+        self.assertEqual(root.find('source/device'), None)
+        self.assertEqual(root.find('source/name'), None)
+        self.assertEqual(root.find('source/adapter'), None)
+        self.assertEqual(root.find('source/dir').attrib['path'], '/some/dir')
+        self.assertEqual(root.find('source/format').attrib['type'], 'nfs')
+        self.assertEqual(root.find('source/host').attrib['name'], 'nfs.host')
+        self.assertEqual(root.find('source/auth'), None)
 
     def test_list_pools(self):
         '''
@@ -1652,6 +2013,46 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             'persistent': True,
             'type': 'dir',
             'target_path': '/srv/vms'}, pool)
+
+    def test_pool_info_notarget(self):
+        '''
+        Test virt.pool_info()
+        '''
+        # pylint: disable=no-member
+        pool_mock = MagicMock()
+        pool_mock.UUIDString.return_value = 'some-uuid'
+        pool_mock.info.return_value = [0, 0, 0, 0]
+        pool_mock.autostart.return_value = True
+        pool_mock.isPersistent.return_value = True
+        pool_mock.XMLDesc.return_value = '''<pool type='rbd'>
+  <name>ceph</name>
+  <uuid>some-uuid</uuid>
+  <capacity unit='bytes'>0</capacity>
+  <allocation unit='bytes'>0</allocation>
+  <available unit='bytes'>0</available>
+  <source>
+    <host name='localhost' port='6789'/>
+    <host name='localhost' port='6790'/>
+    <name>rbd</name>
+    <auth type='ceph' username='admin'>
+      <secret uuid='2ec115d7-3a88-3ceb-bc12-0ac909a6fd87'/>
+    </auth>
+  </source>
+</pool>'''
+        self.mock_conn.storagePoolLookupByName.return_value = pool_mock
+        # pylint: enable=no-member
+
+        pool = virt.pool_info('ceph')
+        self.assertEqual({
+            'uuid': 'some-uuid',
+            'state': 'inactive',
+            'capacity': 0,
+            'allocation': 0,
+            'free': 0,
+            'autostart': True,
+            'persistent': True,
+            'type': 'rbd',
+            'target_path': None}, pool)
 
     def test_pool_info_notfound(self):
         '''
