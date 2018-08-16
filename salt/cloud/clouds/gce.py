@@ -1250,6 +1250,8 @@ def create_address(kwargs=None, call=None):
     name = kwargs['name']
     ex_region = kwargs['region']
     ex_address = kwargs.get("address", None)
+    tmp = {}
+    kwargs['region'] = tmp.update(kwargs['region'].__dict__)
 
     conn = get_conn()
 
