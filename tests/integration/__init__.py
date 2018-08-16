@@ -1117,7 +1117,7 @@ class TestDaemon(object):
             if os.path.isdir(dirname):
                 try:
                     shutil.rmtree(dirname, onerror=remove_readonly)
-                except:
+                except Exception:
                     log.exception('Failed to remove directory: %s', dirname)
 
     def wait_for_jid(self, targets, jid, timeout=120):
