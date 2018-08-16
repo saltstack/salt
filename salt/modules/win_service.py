@@ -438,15 +438,6 @@ def stop(name, timeout=90):
 
         salt '*' service.stop <service name>
     '''
-    # net stop issues a stop command and waits briefly (~30s), but will give
-    # up if the service takes too long to stop with a misleading
-    # "service could not be stopped" message and RC 0.
-
-    cmd = ['net', 'stop', '/y', name]
-    res = __salt__['cmd.run'](cmd, python_shell=False)
-    if 'service was stopped' in res:
-        return True
-
     try:
         win32serviceutil.StopService(name)
     except pywintypes.error as exc:
@@ -543,7 +534,7 @@ def execute_salt_restart_task():
     return __salt__['task.run'](name='restart-salt-minion')
 
 
-def status(name, **kwargs):
+def status(name, *args, **kwargs):
     '''
     Return the status for a service
 
