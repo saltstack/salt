@@ -1311,6 +1311,12 @@ class Schedule(object):
             else:
                 data['run'] = True
 
+        def _chop_ms(dt):
+            '''
+            Remove the microseconds from a datetime object
+            '''
+            return dt - datetime.timedelta(microseconds=dt.microsecond)
+
         schedule = self._get_schedule()
         if not isinstance(schedule, dict):
             raise ValueError('Schedule must be of type dict.')
@@ -1336,6 +1342,7 @@ class Schedule(object):
             # Clear these out between runs
             for item in ['_continue',
                          '_error',
+                         '_skipped',
                          '_skip_reason']:
                 if item in data:
                     del data[item]
@@ -1431,7 +1438,7 @@ class Schedule(object):
             if '_error' in data and data['_error']:
                 continue
 
-            seconds = int((data['_next_fire_time'] - now).total_seconds())
+            seconds = int((_chop_ms(data['_next_fire_time']) - _chop_ms(now)).total_seconds())
 
             # If there is no job specific splay available,
             # grab the global which defaults to None.
@@ -1606,12 +1613,11 @@ class Schedule(object):
                     data['_last_run'] = now
                     data['_splay'] = None
                 if '_seconds' in data:
-                    if not self.standalone and run:
-                        # If we are not in standalone mode and the job has run
-                        # set the next_fire_time
+                    if self.standalone:
                         data['_next_fire_time'] = now + datetime.timedelta(seconds=data['_seconds'])
-                    else:
-                        # If we are standalone mode set the _next_fire_time
+                    elif '_skipped' in data and data['_skipped']:
+                        data['_next_fire_time'] = now + datetime.timedelta(seconds=data['_seconds'])
+                    elif run:
                         data['_next_fire_time'] = now + datetime.timedelta(seconds=data['_seconds'])
 
     def _run_job(self, func, data):
