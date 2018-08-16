@@ -1475,6 +1475,7 @@ def extracted(name,
                     attrs=None,
                     saltenv=__env__,
                     backup=None,
+                    makedirs=True,
                     follow_symlinks=True,
                     show_changes=True)
             except Exception as exc:
