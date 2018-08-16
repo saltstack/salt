@@ -16,6 +16,7 @@ import tests.integration as integration
 
 # Import Salt Libs
 import salt.config
+from salt.ext.six import moves
 from salt.utils.schedule import Schedule
 
 # pylint: disable=import-error,unused-import
@@ -24,6 +25,14 @@ try:
     _CRON_SUPPORTED = True
 except ImportError:
     _CRON_SUPPORTED = False
+# pylint: enable=import-error
+
+# pylint: disable=import-error,unused-import
+try:
+    import dateutil
+    _DATEUTIL_SUPPORTED = True
+except ImportError:
+    _DATEUTIL_SUPPORTED = False
 # pylint: enable=import-error
 
 
@@ -37,6 +46,21 @@ DEFAULT_CONFIG['sock_dir'] = SOCK_DIR
 DEFAULT_CONFIG['pki_dir'] = os.path.join(ROOT_DIR, 'pki')
 DEFAULT_CONFIG['cachedir'] = os.path.join(ROOT_DIR, 'cache')
 
+ZERO = datetime.timedelta(0)
+
+
+class UTC(datetime.tzinfo):
+    """UTC Class, not included in Python 2 by default"""
+
+    def utcoffset(self, dt):
+        return ZERO
+
+    def tzname(self, dt):
+        return "UTC"
+
+    def dst(self, dt):
+        return ZERO
+
 
 # pylint: disable=too-many-public-methods,invalid-name
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -46,10 +70,110 @@ class ScheduleTestCase(TestCase):
     '''
 
     def setUp(self):
+        self.utc = UTC()
         with patch('salt.utils.schedule.clean_proc_dir', MagicMock(return_value=None)):
             self.schedule = Schedule(copy.deepcopy(DEFAULT_CONFIG), {}, returners={})
 
     # delete_job tests
+
+    @staticmethod
+    def replace_dt(dt, dtrange, key):
+        dt = dt.replace(
+            hour=dtrange[key].hour,
+            minute=dtrange[key].minute,
+            second=dtrange[key].second,
+            microsecond=dtrange[key].microsecond
+        )
+        return dt
+
+    @classmethod
+    def increment_range(cls, next_fire, dtrange):
+        if next_fire.day != dtrange['end'].day:
+            dtrange['start'] = cls.replace_dt(next_fire, dtrange, 'start')
+            dtrange['end'] = cls.replace_dt(next_fire, dtrange, 'end')
+
+    def calculate_future_runs(self, schedule_data, now=None, end=None):
+        '''
+        Approximation of how SaltEnterprise calculates future runs
+        '''
+        if now is None:
+            now = datetime.datetime.now(self.utc)
+
+        sched_id = 'narf'
+        last_fire = None
+        runs = []
+        fake_functions = {
+            'job.run': lambda: True,
+            'job.skip': lambda: True,
+            'test.pass': lambda: True,
+        }
+
+        opts = {
+            'schedule': {sched_id: schedule_data},
+            '__role': 'raas',
+            'grains': {},
+            'pillar': {},
+            'loop_interval': 1,
+            'extension_modules': '',
+        }
+
+        schedule = Schedule(opts, fake_functions, standalone=True, new_instance=True)
+
+        for i in moves.range(0, 1000):
+            if i == 1000 - 1:
+                raise Exception('Future runs loop limit reached')
+
+            schedule.eval(now=now)
+            if '_next_fire_time' in opts['schedule'][sched_id]:
+                next_fire = opts['schedule'][sched_id]['_next_fire_time']
+
+                if 'range' in schedule_data:
+                    self.increment_range(next_fire, schedule_data['range'])
+                    if '_skip_reason' in schedule_data:
+                        if next_fire in (None, last_fire) or (end is not None and next_fire > end):
+                            break
+
+                        last_fire = next_fire
+                        now = next_fire
+                        continue
+
+                elif 'cron' in schedule_data:
+                    next_fire = schedule_data['_next_scheduled_fire_time']
+
+                if next_fire in (None, last_fire) or (end is not None and next_fire > end):
+                    break
+
+                elif next_fire >= now:
+                    if 'range' in schedule_data:
+                        drange = schedule_data['range']
+                        if drange['invert'] and now >= drange['start'] and now <= drange['end']:
+                            last_fire = next_fire
+                            now = next_fire
+                            continue
+
+                        elif not drange['invert'] and (now < drange['start'] or now > drange['end']):
+                            last_fire = next_fire
+                            now = next_fire
+                            continue
+
+                    runs.append(next_fire)
+                    last_fire = next_fire
+                    now = next_fire
+
+                    if 'cron' in schedule_data:
+                        schedule_data['_next_fire_time'] = None
+
+                    elif 'once' in schedule_data:
+                        break
+
+                else:
+                    break
+
+                continue
+
+            break
+
+        return runs
 
     def test_delete_job_exists(self):
         '''
@@ -331,3 +455,127 @@ class ScheduleTestCase(TestCase):
         self.schedule.eval()
         self.assertTrue(self.schedule.opts['schedule']['testjob']['_splay'] >
                         self.schedule.opts['schedule']['testjob']['_next_fire_time'])
+
+    def test_once(self):
+        '''
+        Test once schedule
+        '''
+        once = datetime.datetime.now(self.utc) + datetime.timedelta(minutes=20)
+        schedule = {'once': once}
+
+        runs = self.calculate_future_runs(schedule)
+        self.assertEqual(len(runs), 1)
+
+    def test_recurring_seconds(self):
+        '''
+        Test schedule with seconds option
+        '''
+        start = datetime.datetime.now(self.utc) + datetime.timedelta(seconds=30)
+        end = start + datetime.timedelta(minutes=10)
+        schedule = {'seconds': 60}
+
+        runs = self.calculate_future_runs(schedule, now=start, end=end)
+        self.assertEqual(len(runs), 10)
+
+    def test_recurring_minutes(self):
+        '''
+        Test schedule with minutes option
+        '''
+        start = datetime.datetime.now(self.utc) + datetime.timedelta(seconds=30)
+        end = start + datetime.timedelta(minutes=10)
+        schedule = {'minutes': 1}
+
+        runs = self.calculate_future_runs(schedule, now=start, end=end)
+        self.assertEqual(len(runs), 10)
+
+    def test_recurring_hours(self):
+        '''
+        Test schedule with hours option
+        '''
+        start = datetime.datetime.now(self.utc) + datetime.timedelta(seconds=30)
+        end = start + datetime.timedelta(hours=10)
+        schedule = {'hours': 2}
+
+        runs = self.calculate_future_runs(schedule, now=start, end=end)
+        self.assertEqual(len(runs), 5)
+
+    @skipIf(not _DATEUTIL_SUPPORTED, 'dateutil module not installed')
+    def test_recurring_hours_inside_range(self):
+        '''
+        Test schedule with hours option inside a range
+        '''
+        now = datetime.datetime.now(self.utc)
+        end = now + datetime.timedelta(days=8)
+
+        range_start = now + datetime.timedelta(days=1)
+        range_start = range_start.replace(hour=1, minute=0, second=0, microsecond=0)
+        range_end = range_start + datetime.timedelta(hours=2)
+        schedule = {
+            'hours': 1,
+            'range': {
+                'start': range_start,
+                'end': range_end,
+                'invert': False,
+            }
+        }
+
+        runs = self.calculate_future_runs(schedule, now=now, end=end)
+        self.assertEqual(len(runs), 16)
+
+    @skipIf(not _DATEUTIL_SUPPORTED, 'dateutil module not installed')
+    def test_recurring_hours_outside_range(self):
+        '''
+        Test schedule with hours option outside a range
+        '''
+        now = datetime.datetime.now(self.utc)
+        end = now + datetime.timedelta(days=8)
+
+        range_start = now + datetime.timedelta(days=1)
+        range_start = range_start.replace(hour=1, minute=0, second=0, microsecond=0)
+        range_end = range_start + datetime.timedelta(hours=2)
+        schedule = {
+            'hours': 1,
+            'range': {
+                'start': range_start,
+                'end': range_end,
+                'invert': True,
+            }
+        }
+
+        runs = self.calculate_future_runs(schedule, now=now, end=end)
+        self.assertEqual(len(runs), 176)
+
+    def test_recurring_days(self):
+        '''
+        Test schedule with days option
+        '''
+        start = datetime.datetime.now(self.utc) + datetime.timedelta(seconds=30)
+        end = start + datetime.timedelta(days=10)
+        schedule = {'days': 3}
+
+        runs = self.calculate_future_runs(schedule, now=start, end=end)
+        self.assertEqual(len(runs), 3)
+
+    @skipIf(not _CRON_SUPPORTED, 'croniter module not installed')
+    def test_cron(self):
+        '''
+        Test schedule with cron option
+        '''
+        start = datetime.datetime.now(self.utc) + datetime.timedelta(seconds=30)
+        end = start + datetime.timedelta(days=28)
+        schedule = {"cron": "0 0 * * *"}
+
+        runs = self.calculate_future_runs(schedule, now=start, end=end)
+        self.assertEqual(len(runs), 28)
+
+    @skipIf(not _DATEUTIL_SUPPORTED, 'dateutil module not installed')
+    def test_repeat_when(self):
+        '''
+        Test schedule with when option
+        '''
+        start = datetime.datetime.now(self.utc) + datetime.timedelta(seconds=30)
+        end = start + datetime.timedelta(days=10)
+        schedule = {'when': start.isoformat()}
+
+        runs = self.calculate_future_runs(schedule, end=end)
+        self.assertEqual(len(runs), 1)
