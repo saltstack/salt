@@ -108,10 +108,10 @@ def _status_wait(service_name, end_time, service_states):
     Args:
         service_name (str):
             The name of the service
-        
+
         end_time (float):
             A future time. e.g. time.time() + 10
-        
+
         service_states (list):
             Services statuses to wait for as returned by info()
 
