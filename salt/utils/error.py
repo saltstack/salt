@@ -5,11 +5,15 @@ Utilities to enable exception reraising across the master commands
 '''
 from __future__ import absolute_import
 
-# Import python libs
-try:
+import sys
+# True if we are running on Python 3.
+PY3 = sys.version_info[0] == 3
+
+if PY3:
+    import builtins
+    exceptions = builtins
+else:
     import exceptions
-except ImportError:
-    pass
 
 # Import salt libs
 import salt.exceptions
