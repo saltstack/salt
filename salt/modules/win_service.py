@@ -495,10 +495,6 @@ def stop(name, timeout=90):
                               end_time=time.time() + int(timeout),
                               service_states=['Running', 'Stop Pending'])
 
-    log.debug('TEST ' * 20)
-    log.debug(srv_status)
-    log.debug('TEST ' * 20)
-
     return srv_status['Status'] == 'Stopped'
 
 
