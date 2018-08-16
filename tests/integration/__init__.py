@@ -1115,7 +1115,10 @@ class TestDaemon(object):
         for dirname in (TMP, RUNTIME_VARS.TMP_STATE_TREE,
                         RUNTIME_VARS.TMP_PILLAR_TREE, RUNTIME_VARS.TMP_PRODENV_STATE_TREE):
             if os.path.isdir(dirname):
-                shutil.rmtree(dirname, onerror=remove_readonly)
+                try:
+                    shutil.rmtree(dirname, onerror=remove_readonly)
+                except Exception:
+                    log.exception('Failed to remove directory: %s', dirname)
 
     def wait_for_jid(self, targets, jid, timeout=120):
         time.sleep(1)  # Allow some time for minions to accept jobs
