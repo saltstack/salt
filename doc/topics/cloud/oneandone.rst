@@ -164,7 +164,7 @@ Functions
 
 .. code-block:: bash
 
-    sudo salt-cloud -f create_firewall_policy oneandone name='1salttest' description='salttestdesc' rules='[{"protocol":"TCP", "port":"80", "description":"saltfwruledescr"}]'
+    sudo salt-cloud -f create_firewall_policy oneandone name='1salt_test' description='salt_test_desc' rules='[{"protocol":"TCP", "port":"80", "description":"salt_fw_rule_descr"}]'
 
 For more information concerning cloud profiles, see :ref:`here
 <salt-cloud-profiles>`.
