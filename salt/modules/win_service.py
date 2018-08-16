@@ -97,6 +97,39 @@ def __virtual__():
 
     return __virtualname__
 
+def _wait_while_status_is(service_name, end_time, *service_states):
+    '''
+    Internal use only in this module, wait for status of the service to
+    match the provided status before a end time expires.
+
+    Args:
+        service_name (str): name of the service
+        
+        end_time (float): a future time. e.g. time.time() + 10
+        
+        service_states (list): Status to wait for as return by info()
+
+    Returns:
+        dict: A dictionary containing information about the service.
+
+    :codeauthor: Damon Atkins <https://github.com/damon-atkins>
+    '''
+
+    info_results =  info(service_name)
+    while info_results['Status'] in service_states and time.time() < end_time:
+        # From MS. Do not wait longer than the wait hint. A good interval is  one-tenth of the
+        # wait hint but not less than 1 second  and not more than 10 seconds.
+        wait_time = info_results['Status_WaitHint']/1000
+        if wait_time < 1000:
+            wait_time = 1
+        elif wait_time > 10000:
+            wait_time = 10
+        else:
+            wait_time = wait_time / 1000 # convert ms to seconds
+        time.sleep(wait_time)
+        info_results =  info(service_name)
+
+    return info_results
 
 def get_enabled():
     '''
@@ -403,19 +436,15 @@ def start(name, timeout=90):
     if disabled(name):
         modify(name, start_type='Manual')
 
+    end_t = time.time() + int(timeout)
     try:
         win32serviceutil.StartService(name)
     except pywintypes.error as exc:
         raise CommandExecutionError(
             'Failed To Start {0}: {1}'.format(name, exc[2]))
 
-    attempts = 0
-    while info(name)['Status'] in ['Start Pending', 'Stopped'] \
-            and attempts <= timeout:
-        time.sleep(1)
-        attempts += 1
-
-    return status(name)
+    srv_status = _wait_while_status_is(name, end_t, 'Start Pending', 'Stopped')
+    return srv_status['status'] == 'Running'
 
 
 def stop(name, timeout=90):
@@ -438,6 +467,7 @@ def stop(name, timeout=90):
 
         salt '*' service.stop <service name>
     '''
+    end_t = time.time() + int(timeout)
     try:
         win32serviceutil.StopService(name)
     except pywintypes.error as exc:
@@ -445,13 +475,8 @@ def stop(name, timeout=90):
             raise CommandExecutionError(
                 'Failed To Stop {0}: {1}'.format(name, exc[2]))
 
-    attempts = 0
-    while info(name)['Status'] in ['Running', 'Stop Pending'] \
-            and attempts <= timeout:
-        time.sleep(1)
-        attempts += 1
-
-    return not status(name)
+    srv_status = _wait_while_status_is(name, end_t, 'Running', 'Stop Pending')
+    return srv_status['status'] == 'Stopped'
 
 
 def restart(name, timeout=90):
