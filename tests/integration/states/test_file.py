@@ -723,6 +723,29 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             if os.path.exists(name):
                 os.remove(name)
 
+    @with_tempfile
+    def test_managed_keep_source_false_salt(self, name):
+        '''
+        This test ensures that we properly clean the cached file if keep_source
+        is set to False, for source files using a salt:// URL
+        '''
+        source = 'salt://grail/scene33'
+        saltenv = 'base'
+
+        # Run the state
+        ret = self.run_state(
+            'file.managed',
+            name=name,
+            source=source,
+            saltenv=saltenv,
+            keep_source=False)
+        ret = ret[next(iter(ret))]
+        assert ret['result'] is True
+
+        # Now make sure that the file is not cached
+        result = self.run_function('cp.is_cached', [source, saltenv])
+        assert result == '', 'File is still cached at {0}'.format(result)
+
     def test_directory(self):
         '''
         file.directory
@@ -3860,6 +3883,11 @@ class RemoteFileTest(ModuleCase, SaltReturnAssertsMixin):
             if exc.errno != errno.ENOENT:
                 raise exc
 
+    def run_state(self, *args, **kwargs):
+        ret = super(RemoteFileTest, self).run_state(*args, **kwargs)
+        log.debug('ret = %s', ret)
+        return ret
+
     def test_file_managed_http_source_no_hash(self):
         '''
         Test a remote file with no hash
@@ -3868,7 +3896,6 @@ class RemoteFileTest(ModuleCase, SaltReturnAssertsMixin):
                              name=self.name,
                              source=self.source,
                              skip_verify=False)
-        log.debug('ret = %s', ret)
         # This should fail because no hash was provided
         self.assertSaltFalseReturn(ret)
 
@@ -3881,7 +3908,6 @@ class RemoteFileTest(ModuleCase, SaltReturnAssertsMixin):
                              source=self.source,
                              source_hash=self.source_hash,
                              skip_verify=False)
-        log.debug('ret = %s', ret)
         self.assertSaltTrueReturn(ret)
 
     def test_file_managed_http_source_skip_verify(self):
@@ -3892,8 +3918,26 @@ class RemoteFileTest(ModuleCase, SaltReturnAssertsMixin):
                              name=self.name,
                              source=self.source,
                              skip_verify=True)
-        log.debug('ret = %s', ret)
         self.assertSaltTrueReturn(ret)
+
+    def test_file_managed_keep_source_false_http(self):
+        '''
+        This test ensures that we properly clean the cached file if keep_source
+        is set to False, for source files using an http:// URL
+        '''
+        # Run the state
+        ret = self.run_state('file.managed',
+                             name=self.name,
+                             source=self.source,
+                             source_hash=self.source_hash,
+                             keep_source=False)
+        ret = ret[next(iter(ret))]
+        assert ret['result'] is True
+
+        # Now make sure that the file is not cached
+        result = self.run_function('cp.is_cached', [self.source])
+        assert result == '', 'File is still cached at {0}'.format(result)
+
 
 WIN_TEST_FILE = 'c:/testfile'
 
