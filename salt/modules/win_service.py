@@ -1357,16 +1357,20 @@ def delete(name, timeout=90):
             handle_scm, name, win32service.SERVICE_ALL_ACCESS)
     except pywintypes.error as exc:
         raise CommandExecutionError(
-            'Failed To Open {0}: {1}'.format(name, exc[2]))
+            'Failed to open {0}. {1}'.format(name, exc.strerror))
 
-    win32service.DeleteService(handle_svc)
+    try:
+        win32service.DeleteService(handle_svc)
+    except pywintypes.error as exc:
+        raise CommandExecutionError(
+            'Failed to delete {0}. {1}'.format(name, exc.strerror))
+    finally:
+        log.debug('Cleaning up')
+        win32service.CloseServiceHandle(handle_scm)
+        win32service.CloseServiceHandle(handle_svc)
 
-    win32service.CloseServiceHandle(handle_scm)
-    win32service.CloseServiceHandle(handle_svc)
-
-    attempts = 0
-    while name in get_all() and attempts <= timeout:
+    end_time = time.time() + int(timeout)
+    while name in get_all() and time.time() < end_time:
         time.sleep(1)
-        attempts += 1
 
     return name not in get_all()
