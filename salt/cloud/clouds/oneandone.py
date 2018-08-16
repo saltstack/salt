@@ -94,7 +94,7 @@ Create a firewall policy
 .. code-block:: bash
 
     sudo salt-cloud -f create_firewall_policy oneandone name='1salttest'
-    description='salttestdesc' rules='[{"protocol":"TCP", "port":"80", "description":"saltfwruledescr"}]'
+    description='salt_test_desc' rules='[{"protocol":"TCP", "port":"80", "description":"salt_fw_rule_desc"}]'
 
 '''
 
