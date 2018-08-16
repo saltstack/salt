@@ -934,6 +934,59 @@ def create_cache_parameter_group(name, region=None, key=None, keyid=None, profil
                             region=region, key=key, keyid=keyid, profile=profile, **args)
 
 
+def modify_cache_parameter_group(name, region=None, key=None, keyid=None, profile=None,
+                                 **args):
+    '''
+    Update a cache parameter group in place.
+
+    Note that due to a design limitation in AWS, this function is not atomic -- a maximum of 20
+    params may be modified in one underlying boto call.  This means that if more than 20 params
+    need to be changed, the update is performed in blocks of 20, which in turns means that if a
+    later sub-call fails after an earlier one has succeeded, the overall update will be left
+    partially applied.
+
+    CacheParameterGroupName
+        The name of the cache parameter group to modify.
+
+    ParameterNameValues
+        A [list] of {dicts}, each composed of a parameter name and a value, for the parameter
+        update.  At least one parameter/value pair is required.
+
+    .. code-block:: yaml
+        ParameterNameValues:
+        - ParameterName: timeout
+          # Amazon requires ALL VALUES to be strings...
+          ParameterValue: "30"
+        - ParameterName: appendonly
+          # The YAML parser will turn a bare `yes` into a bool, which Amazon will then throw on...
+          ParameterValue: "yes"
+
+    Example:
+
+    .. code-block:: bash
+
+        salt myminion boto3_elasticache.modify_cache_parameter_group \
+                CacheParameterGroupName=myParamGroup \
+                ParameterNameValues='[ { ParameterName: timeout,
+                                         ParameterValue: "30" },
+                                       { ParameterName: appendonly,
+                                         ParameterValue: "yes" } ]'
+    '''
+    args = dict([(k, v) for k, v in args.items() if not k.startswith('_')])
+    try:
+        Params = args['ParameterNameValues']
+    except ValueError as e:
+        raise SaltInvocationError('Invalid `ParameterNameValues` structure passed.')
+    while len(Params) > 0:
+        args.update({'ParameterNameValues': Params[:20]})
+        Params = Params[20:]
+        if not _modify_resource(name, name_param='CacheParameterGroupName',
+                                desc='cache parameter group', res_type='cache_parameter_group',
+                                region=region, key=key, keyid=keyid, profile=profile, **args):
+            return False
+    return True
+
+
 def delete_cache_parameter_group(name, region=None, key=None, keyid=None, profile=None, **args):
     '''
     Delete a cache parameter group.
