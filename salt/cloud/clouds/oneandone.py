@@ -354,7 +354,7 @@ def avail_images(conn=None, call=None):
 
     ret = {}
 
-    for appliance in conn.list_appliances(q='CLOUD'):
+    for appliance in conn.list_appliances():
         ret[appliance['name']] = appliance
 
     return ret
