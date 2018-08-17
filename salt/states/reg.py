@@ -1,31 +1,40 @@
 # -*- coding: utf-8 -*-
 r'''
-===========================
 Manage the Windows registry
 ===========================
 Many python developers think of registry keys as if they were python keys in a
 dictionary which is not the case. The windows registry is broken down into the
 following components:
 
------
 Hives
 -----
 
 This is the top level of the registry. They all begin with HKEY.
+
 - HKEY_CLASSES_ROOT (HKCR)
 - HKEY_CURRENT_USER(HKCU)
 - HKEY_LOCAL MACHINE (HKLM)
 - HKEY_USER (HKU)
 - HKEY_CURRENT_CONFIG
 
-----
 Keys
 ----
 
 Hives contain keys. These are basically the folders beneath the hives. They can
 contain any number of subkeys.
 
------------------
+When passing the hive\key values they must be quoted correctly depending on the
+backslashes being used (``\`` vs ``\\``). The way backslashes are handled in
+the state file is different from the way they are handled when working on the
+CLI. The following are valid methods of passing the hive\key:
+
+Using single backslashes:
+    HKLM\SOFTWARE\Python
+    'HKLM\SOFTWARE\Python'
+
+Using double backslashes:
+    "HKLM\\SOFTWARE\\Python"
+
 Values or Entries
 -----------------
 
@@ -34,17 +43,18 @@ have a default name/data pair. It is usually "(Default)"="(value not set)". The
 actual value for the name and the date is Null. The registry editor will display
 "(Default)" and "(value not set)".
 
--------
 Example
 -------
 
 The following example is taken from the windows startup portion of the registry:
-```
-[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Run]
-"RTHDVCPL"="\"C:\\Program Files\\Realtek\\Audio\\HDA\\RtkNGUI64.exe\" -s"
-"NvBackend"="\"C:\\Program Files (x86)\\NVIDIA Corporation\\Update Core\\NvBackend.exe\""
-"BTMTrayAgent"="rundll32.exe \"C:\\Program Files (x86)\\Intel\\Bluetooth\\btmshellex.dll\",TrayApp"
-```
+
+.. code-block:: text
+
+    [HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Run]
+    "RTHDVCPL"="\"C:\\Program Files\\Realtek\\Audio\\HDA\\RtkNGUI64.exe\" -s"
+    "NvBackend"="\"C:\\Program Files (x86)\\NVIDIA Corporation\\Update Core\\NvBackend.exe\""
+    "BTMTrayAgent"="rundll32.exe \"C:\\Program Files (x86)\\Intel\\Bluetooth\\btmshellex.dll\",TrayApp"
+
 In this example these are the values for each:
 
 Hive: `HKEY_LOCAL_MACHINE`
@@ -52,8 +62,9 @@ Hive: `HKEY_LOCAL_MACHINE`
 Key and subkeys: `SOFTWARE\Microsoft\Windows\CurrentVersion\Run`
 
 Value:
-    - There are 3 value names: `RTHDVCPL`, `NvBackend`, and `BTMTrayAgent`
-    - Each value name has a corresponding value
+
+- There are 3 value names: `RTHDVCPL`, `NvBackend`, and `BTMTrayAgent`
+- Each value name has a corresponding value
 '''
 from __future__ import absolute_import
 
@@ -102,74 +113,83 @@ def present(name,
             vdata=None,
             vtype='REG_SZ',
             use_32bit_registry=False):
-    '''
+    r'''
     Ensure a registry key or value is present.
 
-    :param str name: A string value representing the full path of the key to
-    include the HIVE, Key, and all Subkeys. For example:
+    Args:
 
-    ``HKEY_LOCAL_MACHINE\\SOFTWARE\\Salt``
+        name (str):
+            A string value representing the full path of the key to include the
+            HIVE, Key, and all Subkeys. For example:
 
-    Valid hive values include:
-    - HKEY_CURRENT_USER or HKCU
-    - HKEY_LOCAL_MACHINE or HKLM
-    - HKEY_USERS or HKU
+            ``HKEY_LOCAL_MACHINE\SOFTWARE\Salt``
+            ``HKLM\SOFTWARE\Salt``
 
-    :param str vname: The name of the value you'd like to create beneath the
-    Key. If this parameter is not passed it will assume you want to set the
-    (Default) value
+            Valid hive values include:
 
-    :param str vdata: The value you'd like to set. If a value name (vname) is
-    passed, this will be the data for that value name. If not, this will be the
-    (Default) value for the key.
+            - HKEY_CURRENT_USER or HKCU
+            - HKEY_LOCAL_MACHINE or HKLM
+            - HKEY_USERS or HKU
 
-    The type for the (Default) value is always REG_SZ and cannot be changed.
-    This parameter is optional. If not passed, the Key will be created with no
-    associated item/value pairs.
+        vname (str):
+            The name of the value you'd like to create beneath the Key. If this
+            parameter is not passed it will assume you want to set the (Default)
+            value
 
-    :param str vtype: The value type for the data you wish to store in the
-    registry. Valid values are:
+        vdata (str):
+            The value you'd like to set. If a value name (vname) is passed, this
+            will be the data for that value name. If not, this will be the
+            (Default) value for the key.
 
-    - REG_BINARY
-    - REG_DWORD
-    - REG_EXPAND_SZ
-    - REG_MULTI_SZ
-    - REG_SZ (Default)
+            The type for the (Default) value is always REG_SZ and cannot be
+            changed. This parameter is optional. If not passed, the Key will be
+            created with no associated item/value pairs.
 
-    :param bool use_32bit_registry: Use the 32bit portion of the registry.
-    Applies only to 64bit windows. 32bit Windows will ignore this parameter.
-    Default is False.
+        vtype (str):
+            The value type for the data you wish to store in the registry. Valid
+            values are:
 
-    :return: Returns a dictionary showing the results of the registry operation.
-    :rtype: dict
+            - REG_BINARY
+            - REG_DWORD
+            - REG_EXPAND_SZ
+            - REG_MULTI_SZ
+            - REG_SZ (Default)
+
+        use_32bit_registry (bool):
+            Use the 32bit portion of the registry. Applies only to 64bit
+            windows. 32bit Windows will ignore this parameter.  Default is
+            ``False``
+
+    Returns:
+        dict: Returns a dictionary showing the results of the registry operation
 
     The following example will set the ``(Default)`` value for the
-    ``SOFTWARE\\Salt`` key in the ``HKEY_CURRENT_USER`` hive to ``2016.3.1``:
+    ``SOFTWARE\Salt`` key in the ``HKEY_CURRENT_USER`` hive to ``2016.3.1``:
 
     Example:
 
     .. code-block:: yaml
 
-        HKEY_CURRENT_USER\\SOFTWARE\\Salt:
+        "HKEY_CURRENT_USER\\SOFTWARE\\Salt":
           reg.present:
             - vdata: 2016.3.1
 
     The following example will set the value for the ``version`` entry under the
-    ``SOFTWARE\\Salt`` key in the ``HKEY_CURRENT_USER`` hive to ``2016.3.1``. The
+    ``SOFTWARE\Salt`` key in the ``HKEY_CURRENT_USER`` hive to ``2016.3.1``. The
     value will be reflected in ``Wow6432Node``:
 
     Example:
 
     .. code-block:: yaml
 
-        HKEY_CURRENT_USER\\SOFTWARE\\Salt:
+        HKEY_CURRENT_USER\SOFTWARE\Salt:
           reg.present:
             - vname: version
             - vdata: 2016.3.1
 
     In the above example the path is interpreted as follows:
     - ``HKEY_CURRENT_USER`` is the hive
-    - ``SOFTWARE\\Salt`` is the key
+    - ``SOFTWARE\Salt`` is the key
     - ``vname`` is the value name ('version') that will be created under the key
     - ``vdata`` is the data that will be assigned to 'version'
     '''
@@ -226,42 +246,48 @@ def present(name,
 
 
 def absent(name, vname=None, use_32bit_registry=False):
-    '''
+    r'''
     Ensure a registry value is removed. To remove a key use key_absent.
 
-    :param str name: A string value representing the full path of the key to
-    include the HIVE, Key, and all Subkeys. For example:
+    Args:
 
-    ``HKEY_LOCAL_MACHINE\\SOFTWARE\\Salt``
+        name (str):
+            A string value representing the full path of the key to include the
+            HIVE, Key, and all Subkeys. For example:
 
-    Valid hive values include:
+            ``HKEY_LOCAL_MACHINE\SOFTWARE\Salt``
+            ``HKLM\SOFTWARE\Salt``
 
-    - HKEY_CURRENT_USER or HKCU
-    - HKEY_LOCAL_MACHINE or HKLM
-    - HKEY_USERS or HKU
+            Valid hive values include:
 
-    :param str vname: The name of the value you'd like to create beneath the
-    Key. If this parameter is not passed it will assume you want to set the
-    (Default) value
+            - HKEY_CURRENT_USER or HKCU
+            - HKEY_LOCAL_MACHINE or HKLM
+            - HKEY_USERS or HKU
 
-    :param bool use_32bit_registry: Use the 32bit portion of the registry.
-    Applies only to 64bit windows. 32bit Windows will ignore this parameter.
-    Default is False.
+        vname (str):
+            The name of the value you'd like to create beneath the Key. If this
+            parameter is not passed it will assume you want to set the (Default)
+            value
 
-    :return: Returns a dictionary showing the results of the registry operation.
-    :rtype: dict
+        use_32bit_registry (bool):
+            Use the 32bit portion of the registry. Applies only to 64bit
+            Windows. 32bit Windows will ignore this parameter.  Default is
+            ``False``
+
+    Returns:
+        dict: A dictionary showing the results of the registry operation
 
     CLI Example:
 
     .. code-block:: yaml
 
-        'HKEY_CURRENT_USER\\SOFTWARE\\Salt':
+        'HKEY_CURRENT_USER\SOFTWARE\Salt':
           reg.absent
             - vname: version
 
     In the above example the value named ``version`` will be removed from
-    the SOFTWARE\\Salt key in the HKEY_CURRENT_USER hive. If ``vname`` was not
-    passed, the (Default) value would be deleted.
+    the ``SOFTWARE\Salt`` key in the ``HKEY_CURRENT_USER`` hive. If ``vname``
+    was not passed, the (Default) value would be deleted.
     '''
     ret = {'name': name,
            'result': True,
@@ -310,20 +336,24 @@ def key_absent(name, use_32bit_registry=False):
     Ensure a registry key is removed. This will remove a key and all value
     entries it contains. It will fail if the key contains subkeys.
 
-    :param str name: A string representing the full path to the key to be
-    removed to include the hive and the keypath. The hive can be any of the
-    following:
+    Args:
 
-    - HKEY_LOCAL_MACHINE or HKLM
-    - HKEY_CURRENT_USER or HKCU
-    - HKEY_USER or HKU
+        name (str):
+            A string representing the full path to the key to be removed to
+            include the hive and the keypath. The hive can be any of the
+            following:
 
-    :param bool use_32bit_registry: Use the 32bit portion of the registry.
-    Applies only to 64bit windows. 32bit Windows will ignore this parameter.
-    Default is False.
+            - HKEY_LOCAL_MACHINE or HKLM
+            - HKEY_CURRENT_USER or HKCU
+            - HKEY_USER or HKU
 
-    :return: Returns a dictionary showing the results of the registry operation.
-    :rtype: dict
+        use_32bit_registry (bool):
+            Use the 32bit portion of the registry. Applies only to 64bit
+            Windows. 32bit Windows will ignore this parameter.  Default is
+            ``False``
+
+    Return:
+        dict: A dictionary showing the results of the registry operation
 
     The following example will delete the ``SOFTWARE\Salt`` key and all subkeys
     under the ``HKEY_CURRENT_USER`` hive.

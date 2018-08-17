@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Jayesh Kariya <jayeshk@saltstack.com>`
-    :codeauthor: :email:`Joe Julian <me@joejulian.name>`
+    :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
+    :codeauthor: Joe Julian <me@joejulian.name>
 '''
 
 # Import Python libs

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 
 
     tests.integration.shell.master
@@ -24,9 +24,11 @@ import tests.integration.utils
 from tests.support.case import ShellCase
 from tests.support.paths import TMP
 from tests.support.mixins import ShellCaseCommonTestsMixin
+from tests.support.unit import skipIf
 from tests.integration.utils import testprogram
 
 
+@skipIf(True, 'This test file should be in an isolated test space.')
 class MasterTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin):
 
     _call_binary_ = 'salt-master'

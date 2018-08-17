@@ -45,6 +45,7 @@ def present(name,
     **Example:**
 
     .. code-block:: yaml
+
         example user present in influxdb:
           influxdb_user.present:
             - name: example

@@ -1802,9 +1802,13 @@ def list_worker_processes(apppool):
 
 def get_webapp_settings(name, site, settings):
     r'''
+    .. versionadded:: 2017.7.0
+
     Get the value of the setting for the IIS web application.
+
     .. note::
-        Params are case sensitive.
+        Params are case sensitive
+
     :param str name: The name of the IIS web application.
     :param str site: The site name contains the web application.
         Example: Default Web Site
@@ -1812,9 +1816,11 @@ def get_webapp_settings(name, site, settings):
         Available settings: physicalPath, applicationPool, userName, password
     Returns:
         dict: A dictionary of the provided settings and their values.
-    .. versionadded:: 2017.7.0
+
     CLI Example:
+
     .. code-block:: bash
+
         salt '*' win_iis.get_webapp_settings name='app0' site='Default Web Site'
             settings="['physicalPath','applicationPool']"
     '''
@@ -1872,22 +1878,28 @@ def get_webapp_settings(name, site, settings):
 
 def set_webapp_settings(name, site, settings):
     r'''
+    .. versionadded:: 2017.7.0
+
     Configure an IIS application.
+
     .. note::
-        This function only configures existing app.
-        Params are case sensitive.
+        This function only configures an existing app. Params are case
+        sensitive.
+
     :param str name: The IIS application.
     :param str site: The IIS site name.
     :param str settings: A dictionary of the setting names and their values.
-    :available settings:    physicalPath: The physical path of the webapp.
-    :                       applicationPool: The application pool for the webapp.
-    :                       userName: "connectAs" user
-    :                       password: "connectAs" password for user
+        - physicalPath: The physical path of the webapp.
+        - applicationPool: The application pool for the webapp.
+        - userName: "connectAs" user
+        - password: "connectAs" password for user
     :return: A boolean representing whether all changes succeeded.
     :rtype: bool
-    .. versionadded:: 2017.7.0
+
     CLI Example:
+
     .. code-block:: bash
+
         salt '*' win_iis.set_webapp_settings name='app0' site='site0' settings="{'physicalPath': 'C:\site0', 'apppool': 'site0'}"
     '''
     pscmd = list()

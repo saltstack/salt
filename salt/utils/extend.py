@@ -10,7 +10,7 @@ directory. This tool uses Jinja2 for templating.
 
 This tool is accessed using `salt-extend`
 
-    :codeauthor: :email:`Anthony Shaw <anthonyshaw@apache.org>`
+    :codeauthor: Anthony Shaw <anthonyshaw@apache.org>
 '''
 
 # Import Python libs

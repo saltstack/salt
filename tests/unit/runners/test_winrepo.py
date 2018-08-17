@@ -86,6 +86,7 @@ class WinrepoTest(TestCase, LoaderModuleMockMixin):
             winrepo: {
                 '__opts__': {
                     'winrepo_cachefile': 'winrepo.p',
+                    'optimization_order': [0, 1, 2],
                     'renderer': 'yaml',
                     'renderer_blacklist': [],
                     'renderer_whitelist': [],

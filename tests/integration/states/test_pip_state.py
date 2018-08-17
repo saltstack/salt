@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 
 
     tests.integration.states.pip_state
@@ -586,8 +586,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
                     continue
                 self.assertEqual(
                     ret[key]['comment'],
-                    ('Python package carbon < 1.3 was already installed\n'
-                     'All specified packages are already installed'))
+                    ('All packages were successfully installed'))
                 break
             else:
                 raise Exception('Expected state did not run')

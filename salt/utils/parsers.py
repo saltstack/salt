@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 
 
     salt.utils.parsers
@@ -3014,11 +3014,20 @@ class SaltSSHOptionParser(six.with_metaclass(OptionParserMeta,
         auth_group.add_option(
             '--key-deploy',
             dest='ssh_key_deploy',
-            default=False,
+            default=None,
             action='store_true',
             help='Set this flag to attempt to deploy the authorized ssh key '
                  'with all minions. This combined with --passwd can make '
                  'initial deployment of keys very fast and easy.'
+        )
+        auth_group.add_option(
+            '--no-key-deploy',
+            dest='ssh_key_deploy',
+            default=None,
+            action='store_false',
+            help='Set this flag to stop salt-ssh from attempting to deploy an authorized ssh key '
+                 'with all minions.  This is useful to skip the message about deploying to minions '
+                 'that cannot be logged into.'
         )
         auth_group.add_option(
             '--identities-only',

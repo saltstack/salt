@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
 Manage Elasticsearch Domains
-=================
+============================
 
 .. versionadded:: 2016.11.0
 
@@ -31,9 +31,9 @@ config:
 .. code-block:: yaml
 
     myprofile:
-        keyid: GKTADJGHEIQSXMKKRBJ08H
-        key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
-            region: us-east-1
+      keyid: GKTADJGHEIQSXMKKRBJ08H
+      key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+      region: us-east-1
 
 .. code-block:: yaml
 
@@ -60,12 +60,12 @@ config:
                       AWS: "*"
                   - Action:
                     - "es:*"
-                  - Resource: "arn:aws:es:*:111111111111:domain/mydomain/*
+                  - Resource: "arn:aws:es:*:111111111111:domain/mydomain/*"
                   - Condition:
                       IpAddress:
                         "aws:SourceIp":
-                          - "127.0.0.1",
-                          - "127.0.0.2",
+                          - "127.0.0.1"
+                          - "127.0.0.2"
             - SnapshotOptions:
                 AutomatedSnapshotStartHour: 0
             - AdvancedOptions:

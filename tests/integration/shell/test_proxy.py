@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Thayne Harbaugh (tharbaug@adobe.com)`
+    :codeauthor: Thayne Harbaugh (tharbaug@adobe.com)
 
     tests.integration.shell.proxy
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

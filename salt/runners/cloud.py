@@ -154,7 +154,7 @@ def action(func=None,
     info = {}
     client = _get_client()
     try:
-        info = client.action(func, cloudmap, instances, provider, instance, **_filter_kwargs(kwargs))
+        info = client.action(func, cloudmap, instances, provider, instance, _filter_kwargs(kwargs))
     except SaltCloudConfigError as err:
         log.error(err)
     return info

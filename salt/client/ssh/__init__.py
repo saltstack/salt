@@ -341,12 +341,12 @@ class SSH(object):
         '''
         Deploy the SSH key if the minions don't auth
         '''
-        if not isinstance(ret[host], dict) or self.opts.get('ssh_key_deploy'):
+        if not isinstance(ret[host], dict) or self.opts.get('ssh_key_deploy') is True:
             target = self.targets[host]
             if target.get('passwd', False) or self.opts['ssh_passwd']:
                 self._key_deploy_run(host, target, False)
             return ret
-        if ret[host].get('stderr', '').count('Permission denied'):
+        if ret[host].get('stderr', '').count('Permission denied') and not self.opts.get('ssh_key_deploy') is False:
             target = self.targets[host]
             # permission denied, attempt to auto deploy ssh key
             print(('Permission denied for host {0}, do you want to deploy '
@@ -1106,7 +1106,10 @@ ARGS = {10}\n'''.format(self.minion_config,
             shim_tmp_file.write(salt.utils.to_bytes(cmd_str))
 
         # Copy shim to target system, under $HOME/.<randomized name>
-        target_shim_file = '.{0}.{1}'.format(binascii.hexlify(os.urandom(6)), extension)
+        target_shim_file = '.{0}.{1}'.format(
+            binascii.hexlify(os.urandom(6)).decode('ascii'),
+            extension
+        )
         if self.winrm:
             target_shim_file = saltwinshell.get_target_shim_file(self, target_shim_file)
         self.shell.send(shim_tmp_file.name, target_shim_file, makedirs=True)

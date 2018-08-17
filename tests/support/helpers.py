@@ -1093,7 +1093,7 @@ def requires_salt_modules(*names):
                 )
 
             for name in names:
-                if name not in cls.run_function('sys.doc'):
+                if name not in cls.run_function('sys.doc', [name]):
                     cls.skipTest(
                         'Salt module {0!r} is not available'.format(name)
                     )
@@ -1563,5 +1563,5 @@ def this_user():
     Get the user associated with the current process.
     '''
     if salt.utils.is_windows():
-        return salt.utils.win_functions.get_current_user()
+        return salt.utils.win_functions.get_current_user(with_domain=False)
     return pwd.getpwuid(os.getuid())[0]

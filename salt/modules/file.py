@@ -1921,8 +1921,8 @@ def replace(path,
         otherwise all occurrences will be replaced.
 
     flags (list or int)
-        A list of flags defined in the :ref:`re module documentation
-        <contents-of-module-re>`. Each list item should be a string that will
+        A list of flags defined in the ``re`` module documentation from the
+        Python standard library. Each list item should be a string that will
         correlate to the human-friendly flag name. E.g., ``['IGNORECASE',
         'MULTILINE']``. Optionally, ``flags`` may be an int, with a value
         corresponding to the XOR (``|``) of all the desired flags. Defaults to
@@ -2111,7 +2111,7 @@ def replace(path,
                 if prepend_if_not_found or append_if_not_found:
                     # Search for content, to avoid pre/appending the
                     # content if it was pre/appended in a previous run.
-                    if re.search(salt.utils.to_bytes('^{0}$'.format(re.escape(content))),
+                    if re.search(salt.utils.to_bytes('^{0}($|(?=\r\n))'.format(re.escape(content))),
                                  r_data,
                                  flags=flags_num):
                         # Content was found, so set found.
@@ -3886,12 +3886,19 @@ def get_managed(
     # If we have a source defined, let's figure out what the hash is
     if source:
         urlparsed_source = _urlparse(source)
-        parsed_scheme = urlparsed_source.scheme
+        if urlparsed_source.scheme in salt.utils.files.VALID_PROTOS:
+            parsed_scheme = urlparsed_source.scheme
+        else:
+            parsed_scheme = ''
         parsed_path = os.path.join(
                 urlparsed_source.netloc, urlparsed_source.path).rstrip(os.sep)
         unix_local_source = parsed_scheme in ('file', '')
-
-        if unix_local_source:
+        if parsed_scheme == '':
+            parsed_path = sfn = source
+            if not os.path.exists(sfn):
+                msg = 'Local file source {0} does not exist'.format(sfn)
+                return '', {}, msg
+        elif parsed_scheme == 'file':
             sfn = parsed_path
             if not os.path.exists(sfn):
                 msg = 'Local file source {0} does not exist'.format(sfn)
@@ -4262,26 +4269,6 @@ def check_perms(name, ret, user, group, mode, follow_symlinks=False):
     perms['lgroup'] = cur['group']
     perms['lmode'] = salt.utils.normalize_mode(cur['mode'])
 
-    # Mode changes if needed
-    if mode is not None:
-        # File is a symlink, ignore the mode setting
-        # if follow_symlinks is False
-        if os.path.islink(name) and not follow_symlinks:
-            pass
-        else:
-            mode = salt.utils.normalize_mode(mode)
-            if mode != perms['lmode']:
-                if __opts__['test'] is True:
-                    ret['changes']['mode'] = mode
-                else:
-                    set_mode(name, mode)
-                    if mode != salt.utils.normalize_mode(get_mode(name)):
-                        ret['result'] = False
-                        ret['comment'].append(
-                            'Failed to change mode to {0}'.format(mode)
-                        )
-                    else:
-                        ret['changes']['mode'] = mode
     # user/group changes if needed, then check if it worked
     if user:
         if isinstance(user, int):
@@ -4357,6 +4344,27 @@ def check_perms(name, ret, user, group, mode, follow_symlinks=False):
                                       .format(group))
         elif 'cgroup' in perms and user != '':
             ret['changes']['group'] = group
+
+    # Mode changes if needed
+    if mode is not None:
+        # File is a symlink, ignore the mode setting
+        # if follow_symlinks is False
+        if os.path.islink(name) and not follow_symlinks:
+            pass
+        else:
+            mode = salt.utils.normalize_mode(mode)
+            if mode != perms['lmode']:
+                if __opts__['test'] is True:
+                    ret['changes']['mode'] = mode
+                else:
+                    set_mode(name, mode)
+                    if mode != salt.utils.normalize_mode(get_mode(name)):
+                        ret['result'] = False
+                        ret['comment'].append(
+                            'Failed to change mode to {0}'.format(mode)
+                        )
+                    else:
+                        ret['changes']['mode'] = mode
 
     if isinstance(orig_comment, six.string_types):
         if orig_comment:
@@ -4484,6 +4492,11 @@ def check_managed_changes(
             defaults,
             skip_verify,
             **kwargs)
+
+        # Ensure that user-provided hash string is lowercase
+        if source_sum and ('hsum' in source_sum):
+            source_sum['hsum'] = source_sum['hsum'].lower()
+
         if comments:
             __clean_tmp(sfn)
             return False, comments
@@ -4725,7 +4738,7 @@ def manage_file(name,
     source
         file reference on the master
 
-    source_hash
+    source_sum
         sum hash for source
 
     user
