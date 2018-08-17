@@ -5,20 +5,12 @@ Utilities to enable exception reraising across the master commands
 '''
 from __future__ import absolute_import
 
-import sys
-# True if we are running on Python 3.
-PY3 = sys.version_info[0] == 3
-
-if PY3:
-    import builtins
-    exceptions = builtins
-else:
-    import exceptions
-
 # Import salt libs
 import salt.exceptions
 import salt.utils.event
 
+# Import 3rd-party libs
+from salt.ext.six.moves import builtins as exceptions
 
 def raise_error(name=None, args=None, message=''):
     '''
