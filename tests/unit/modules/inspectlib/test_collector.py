@@ -71,7 +71,7 @@ class InspectorCollectorTestCase(TestCase):
         inspector = Inspector(cachedir=os.sep + 'test',
                               piddir=os.sep + 'test',
                               pidfilename='bar.pid')
-        tree_root = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'inspectlib', 'tree_test')
+        tree_root = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'tree_test')
         expected_tree = ([os.sep + os.sep.join(['a', 'a', 'dummy.a']),
                           os.sep + os.sep.join(['a', 'b', 'dummy.b']),
                           os.sep + os.sep.join(['b', 'b.1']),

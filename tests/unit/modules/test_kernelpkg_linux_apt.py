@@ -3,7 +3,7 @@
     :synopsis: Unit Tests for 'module.aptkernelpkg'
     :platform: Linux
     :maturity: develop
-    versionadded:: 2018.3.0
+    .. versionadded:: 2018.3.0
 '''
 # pylint: disable=invalid-name,no-member
 
@@ -18,7 +18,7 @@ try:
     from tests.support.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
 
     # Import Salt Libs
-    from tests.unit.modules.test_kernelpkg import KernelPkgTestCase
+    from tests.support.kernelpkg import KernelPkgTestCase
     import salt.modules.kernelpkg_linux_apt as kernelpkg
     from salt.exceptions import CommandExecutionError
     HAS_MODULES = True

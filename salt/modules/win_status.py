@@ -419,17 +419,29 @@ def uptime(human_readable=False):
     '''
     .. versionadded:: 2015.8.0
 
-    Return the system uptime for this machine in seconds
+    Return the system uptime for the machine
 
-    human_readable : False
-        If ``True``, then return uptime in years, days, and seconds.
+    Args:
+
+        human_readable (bool):
+            Return uptime in human readable format if ``True``, otherwise
+            return seconds. Default is ``False``
+
+            .. note::
+                Human readable format is ``days, hours:min:sec``. Days will only
+                be displayed if more than 0
+
+    Returns:
+        str:
+            The uptime in seconds or human readable format depending on the
+            value of ``human_readable``
 
     CLI Example:
 
     .. code-block:: bash
 
-       salt '*' status.uptime
-       salt '*' status.uptime human_readable=True
+        salt '*' status.uptime
+        salt '*' status.uptime human_readable=True
     '''
     # Get startup time
     startup_time = datetime.datetime.fromtimestamp(psutil.boot_time())

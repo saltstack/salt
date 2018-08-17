@@ -78,7 +78,10 @@ def no_symlinks():
         return not HAS_SYMLINKS
     output = ''
     try:
-        output = subprocess.check_output('git config --get core.symlinks', shell=True)
+        output = subprocess.Popen(
+            ['git', 'config', '--get', 'core.symlinks'],
+            cwd=TMP,
+            stdout=subprocess.PIPE).communicate()[0]
     except OSError as exc:
         if exc.errno != errno.ENOENT:
             raise
