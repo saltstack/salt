@@ -742,6 +742,7 @@ class TestDaemon(object):
         master_opts['config_dir'] = RUNTIME_VARS.TMP_CONF_DIR
         master_opts['root_dir'] = os.path.join(TMP, 'rootdir')
         master_opts['pki_dir'] = os.path.join(TMP, 'rootdir', 'pki', 'master')
+        master_opts['syndic_master'] = 'localhost'
 
         # This is the syndic for master
         # Let's start with a copy of the syndic master configuration
