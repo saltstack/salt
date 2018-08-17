@@ -21,28 +21,20 @@ import imp
 import copy
 
 # Import Salt Testing libs
+from tests.support.case import ModuleCase
 from tests.support.unit import TestCase
 from tests.support.mock import patch
 from tests.support.paths import TMP
 
 # Import Salt libs
 import salt.config
+import salt.loader
 import salt.utils.files
 import salt.utils.stringutils
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 from salt.ext import six
 from salt.ext.six.moves import range
 # pylint: enable=no-name-in-module,redefined-builtin
-
-from salt.loader import (
-    LazyLoader,
-    USE_IMPORTLIB,
-    _module_dirs,
-    grains,
-    utils,
-    proxy,
-    minion_mods
-)
 
 log = logging.getLogger(__name__)
 
@@ -83,7 +75,7 @@ class LazyLoaderTest(TestCase):
     @classmethod
     def setUpClass(cls):
         cls.opts = salt.config.minion_config(None)
-        cls.opts['grains'] = grains(cls.opts)
+        cls.opts['grains'] = salt.loader.grains(cls.opts)
         if not os.path.isdir(TMP):
             os.makedirs(TMP)
 
@@ -98,7 +90,7 @@ class LazyLoaderTest(TestCase):
             os.fsync(fh.fileno())
 
         # Invoke the loader
-        self.loader = LazyLoader([self.module_dir], copy.deepcopy(self.opts), tag='module')
+        self.loader = salt.loader.LazyLoader([self.module_dir], copy.deepcopy(self.opts), tag='module')
 
     def tearDown(self):
         shutil.rmtree(self.module_dir)
@@ -135,12 +127,13 @@ class LazyLoaderVirtualEnabledTest(TestCase):
     def setUpClass(cls):
         cls.opts = salt.config.minion_config(None)
         cls.opts['disable_modules'] = ['pillar']
-        cls.opts['grains'] = grains(cls.opts)
+        cls.opts['grains'] = salt.loader.grains(cls.opts)
 
     def setUp(self):
-        self.loader = LazyLoader(_module_dirs(copy.deepcopy(self.opts), 'modules', 'module'),
-                                 copy.deepcopy(self.opts),
-                                 tag='module')
+        self.loader = salt.loader.LazyLoader(
+            salt.loader._module_dirs(copy.deepcopy(self.opts), 'modules', 'module'),
+            copy.deepcopy(self.opts),
+            tag='module')
 
     def tearDown(self):
         del self.loader
@@ -240,13 +233,14 @@ class LazyLoaderVirtualDisabledTest(TestCase):
     @classmethod
     def setUpClass(cls):
         cls.opts = salt.config.minion_config(None)
-        cls.opts['grains'] = grains(cls.opts)
+        cls.opts['grains'] = salt.loader.grains(cls.opts)
 
     def setUp(self):
-        self.loader = LazyLoader(_module_dirs(copy.deepcopy(self.opts), 'modules', 'module'),
-                                 copy.deepcopy(self.opts),
-                                 tag='module',
-                                 virtual_enable=False)
+        self.loader = salt.loader.LazyLoader(
+            salt.loader._module_dirs(copy.deepcopy(self.opts), 'modules', 'module'),
+            copy.deepcopy(self.opts),
+            tag='module',
+            virtual_enable=False)
 
     def tearDown(self):
         del self.loader
@@ -266,13 +260,14 @@ class LazyLoaderWhitelistTest(TestCase):
     @classmethod
     def setUpClass(cls):
         cls.opts = salt.config.minion_config(None)
-        cls.opts['grains'] = grains(cls.opts)
+        cls.opts['grains'] = salt.loader.grains(cls.opts)
 
     def setUp(self):
-        self.loader = LazyLoader(_module_dirs(copy.deepcopy(self.opts), 'modules', 'module'),
-                                 copy.deepcopy(self.opts),
-                                 tag='module',
-                                 whitelist=['test', 'pillar'])
+        self.loader = salt.loader.LazyLoader(
+            salt.loader._module_dirs(copy.deepcopy(self.opts), 'modules', 'module'),
+            copy.deepcopy(self.opts),
+            tag='module',
+            whitelist=['test', 'pillar'])
 
     def tearDown(self):
         del self.loader
@@ -295,12 +290,13 @@ class LazyLoaderSingleItem(TestCase):
     @classmethod
     def setUpClass(cls):
         cls.opts = salt.config.minion_config(None)
-        cls.opts['grains'] = grains(cls.opts)
+        cls.opts['grains'] = salt.loader.grains(cls.opts)
 
     def setUp(self):
-        self.loader = LazyLoader(_module_dirs(copy.deepcopy(self.opts), 'modules', 'module'),
-                                 copy.deepcopy(self.opts),
-                                 tag='module')
+        self.loader = salt.loader.LazyLoader(
+            salt.loader._module_dirs(copy.deepcopy(self.opts), 'modules', 'module'),
+            copy.deepcopy(self.opts),
+            tag='module')
 
     def tearDown(self):
         del self.loader
@@ -356,7 +352,7 @@ class LazyLoaderReloadingTest(TestCase):
     @classmethod
     def setUpClass(cls):
         cls.opts = salt.config.minion_config(None)
-        cls.opts['grains'] = grains(cls.opts)
+        cls.opts['grains'] = salt.loader.grains(cls.opts)
         if not os.path.isdir(TMP):
             os.makedirs(TMP)
 
@@ -365,17 +361,18 @@ class LazyLoaderReloadingTest(TestCase):
 
         self.count = 0
         opts = copy.deepcopy(self.opts)
-        dirs = _module_dirs(opts, 'modules', 'module')
+        dirs = salt.loader._module_dirs(opts, 'modules', 'module')
         dirs.append(self.tmp_dir)
-        self.utils = utils(opts)
-        self.proxy = proxy(opts)
-        self.minion_mods = minion_mods(opts)
-        self.loader = LazyLoader(dirs,
-                                 opts,
-                                 tag='module',
-                                 pack={'__utils__': self.utils,
-                                       '__proxy__': self.proxy,
-                                       '__salt__': self.minion_mods})
+        self.utils = salt.loader.utils(opts)
+        self.proxy = salt.loader.proxy(opts)
+        self.minion_mods = salt.loader.minion_mods(opts)
+        self.loader = salt.loader.LazyLoader(
+            dirs,
+            opts,
+            tag='module',
+            pack={'__utils__': self.utils,
+                  '__proxy__': self.proxy,
+                  '__salt__': self.minion_mods})
 
     def tearDown(self):
         shutil.rmtree(self.tmp_dir)
@@ -498,24 +495,25 @@ class LazyLoaderVirtualAliasTest(TestCase):
     @classmethod
     def setUpClass(cls):
         cls.opts = salt.config.minion_config(None)
-        cls.opts['grains'] = grains(cls.opts)
+        cls.opts['grains'] = salt.loader.grains(cls.opts)
         if not os.path.isdir(TMP):
             os.makedirs(TMP)
 
     def setUp(self):
         self.tmp_dir = tempfile.mkdtemp(dir=TMP)
         opts = copy.deepcopy(self.opts)
-        dirs = _module_dirs(opts, 'modules', 'module')
+        dirs = salt.loader._module_dirs(opts, 'modules', 'module')
         dirs.append(self.tmp_dir)
-        self.utils = utils(opts)
-        self.proxy = proxy(opts)
-        self.minion_mods = minion_mods(opts)
-        self.loader = LazyLoader(dirs,
-                                 opts,
-                                 tag='module',
-                                 pack={'__utils__': self.utils,
-                                       '__proxy__': self.proxy,
-                                       '__salt__': self.minion_mods})
+        self.utils = salt.loader.utils(opts)
+        self.proxy = salt.loader.proxy(opts)
+        self.minion_mods = salt.loader.minion_mods(opts)
+        self.loader = salt.loader.LazyLoader(
+            dirs,
+            opts,
+            tag='module',
+            pack={'__utils__': self.utils,
+                  '__proxy__': self.proxy,
+                  '__salt__': self.minion_mods})
 
     def tearDown(self):
         del self.tmp_dir
@@ -584,7 +582,7 @@ class LazyLoaderSubmodReloadingTest(TestCase):
     @classmethod
     def setUpClass(cls):
         cls.opts = salt.config.minion_config(None)
-        cls.opts['grains'] = grains(cls.opts)
+        cls.opts['grains'] = salt.loader.grains(cls.opts)
         if not os.path.isdir(TMP):
             os.makedirs(TMP)
 
@@ -596,18 +594,18 @@ class LazyLoaderSubmodReloadingTest(TestCase):
         self.lib_count = 0
 
         opts = copy.deepcopy(self.opts)
-        dirs = _module_dirs(opts, 'modules', 'module')
+        dirs = salt.loader._module_dirs(opts, 'modules', 'module')
         dirs.append(self.tmp_dir)
-        self.utils = utils(opts)
-        self.proxy = proxy(opts)
-        self.minion_mods = minion_mods(opts)
-        self.loader = LazyLoader(dirs,
-                                 opts,
-                                 tag='module',
-                                 pack={'__utils__': self.utils,
-                                       '__proxy__': self.proxy,
-                                       '__salt__': self.minion_mods}
-                                 )
+        self.utils = salt.loader.utils(opts)
+        self.proxy = salt.loader.proxy(opts)
+        self.minion_mods = salt.loader.minion_mods(opts)
+        self.loader = salt.loader.LazyLoader(
+            dirs,
+            opts,
+            tag='module',
+            pack={'__utils__': self.utils,
+                  '__proxy__': self.proxy,
+                  '__salt__': self.minion_mods})
 
     def tearDown(self):
         shutil.rmtree(self.tmp_dir)
@@ -757,18 +755,19 @@ class LazyLoaderModulePackageTest(TestCase):
     @classmethod
     def setUpClass(cls):
         cls.opts = salt.config.minion_config(None)
-        cls.opts['grains'] = grains(cls.opts)
+        cls.opts['grains'] = salt.loader.grains(cls.opts)
         if not os.path.isdir(TMP):
             os.makedirs(TMP)
 
     def setUp(self):
         self.tmp_dir = tempfile.mkdtemp(dir=TMP)
 
-        dirs = _module_dirs(copy.deepcopy(self.opts), 'modules', 'module')
+        dirs = salt.loader._module_dirs(copy.deepcopy(self.opts), 'modules', 'module')
         dirs.append(self.tmp_dir)
-        self.loader = LazyLoader(dirs,
-                                 copy.deepcopy(self.opts),
-                                 tag='module')
+        self.loader = salt.loader.LazyLoader(
+            dirs,
+            copy.deepcopy(self.opts),
+            tag='module')
 
     def tearDown(self):
         shutil.rmtree(self.tmp_dir)
@@ -861,7 +860,7 @@ class LazyLoaderDeepSubmodReloadingTest(TestCase):
     @classmethod
     def setUpClass(cls):
         cls.opts = salt.config.minion_config(None)
-        cls.opts['grains'] = grains(cls.opts)
+        cls.opts['grains'] = salt.loader.grains(cls.opts)
         if not os.path.isdir(TMP):
             os.makedirs(TMP)
 
@@ -892,18 +891,18 @@ class LazyLoaderDeepSubmodReloadingTest(TestCase):
             self.update_lib(lib_name)
 
         opts = copy.deepcopy(self.opts)
-        dirs = _module_dirs(opts, 'modules', 'module')
+        dirs = salt.loader._module_dirs(opts, 'modules', 'module')
         dirs.append(self.tmp_dir)
-        self.utils = utils(opts)
-        self.proxy = proxy(opts)
-        self.minion_mods = minion_mods(opts)
-        self.loader = LazyLoader(dirs,
-                                 copy.deepcopy(opts),
-                                 tag='module',
-                                 pack={'__utils__': self.utils,
-                                       '__proxy__': self.proxy,
-                                       '__salt__': self.minion_mods}
-                                 )
+        self.utils = salt.loader.utils(opts)
+        self.proxy = salt.loader.proxy(opts)
+        self.minion_mods = salt.loader.minion_mods(opts)
+        self.loader = salt.loader.LazyLoader(
+            dirs,
+            copy.deepcopy(opts),
+            tag='module',
+            pack={'__utils__': self.utils,
+            '__proxy__': self.proxy,
+            '__salt__': self.minion_mods})
         self.assertIn('{0}.top'.format(self.module_name), self.loader)
 
     def tearDown(self):
@@ -967,6 +966,156 @@ class LazyLoaderDeepSubmodReloadingTest(TestCase):
                 self._verify_libs()
 
 
+class LoaderGlobalsTest(ModuleCase):
+    '''
+    Test all of the globals that the loader is responsible for adding to modules
+
+    This shouldn't be done here, but should rather be done per module type (in the cases where they are used)
+    so they can check ALL globals that they have (or should have) access to.
+
+    This is intended as a shorter term way of testing these so we don't break the loader
+    '''
+    def _verify_globals(self, mod_dict):
+        '''
+        Verify that the globals listed in the doc string (from the test) are in these modules
+        '''
+        # find the globals
+        global_vars = []
+        for val in six.itervalues(mod_dict):
+            # only find salty globals
+            if val.__module__.startswith('salt.loaded') and hasattr(val, '__globals__'):
+                global_vars.append(val.__globals__)
+
+        # if we couldn't find any, then we have no modules -- so something is broken
+        self.assertNotEqual(global_vars, [], msg='No modules were loaded.')
+
+        # get the names of the globals you should have
+        func_name = inspect.stack()[1][3]
+        names = next(six.itervalues(salt.utils.yaml.safe_load(getattr(self, func_name).__doc__)))
+
+        # Now, test each module!
+        for item in global_vars:
+            for name in names:
+                self.assertIn(name, list(item.keys()))
+
+    def test_auth(self):
+        '''
+        Test that auth mods have:
+            - __pillar__
+            - __grains__
+            - __salt__
+            - __context__
+        '''
+        self._verify_globals(salt.loader.auth(self.master_opts))
+
+    def test_runners(self):
+        '''
+        Test that runners have:
+            - __pillar__
+            - __salt__
+            - __opts__
+            - __grains__
+            - __context__
+        '''
+        self._verify_globals(salt.loader.runner(self.master_opts))
+
+    def test_returners(self):
+        '''
+        Test that returners have:
+            - __salt__
+            - __opts__
+            - __pillar__
+            - __grains__
+            - __context__
+        '''
+        self._verify_globals(salt.loader.returners(self.master_opts, {}))
+
+    def test_pillars(self):
+        '''
+        Test that pillars have:
+            - __salt__
+            - __opts__
+            - __pillar__
+            - __grains__
+            - __context__
+        '''
+        self._verify_globals(salt.loader.pillars(self.master_opts, {}))
+
+    def test_tops(self):
+        '''
+        Test that tops have: []
+        '''
+        self._verify_globals(salt.loader.tops(self.master_opts))
+
+    def test_outputters(self):
+        '''
+        Test that outputters have:
+            - __opts__
+            - __pillar__
+            - __grains__
+            - __context__
+        '''
+        self._verify_globals(salt.loader.outputters(self.master_opts))
+
+    def test_serializers(self):
+        '''
+        Test that serializers have: []
+        '''
+        self._verify_globals(salt.loader.serializers(self.master_opts))
+
+    def test_states(self):
+        '''
+        Test that states:
+            - __pillar__
+            - __salt__
+            - __opts__
+            - __grains__
+            - __context__
+        '''
+        self._verify_globals(salt.loader.states(self.master_opts, {}, {}, {}))
+
+    def test_renderers(self):
+        '''
+        Test that renderers have:
+            - __salt__    # Execution functions (i.e. __salt__['test.echo']('foo'))
+            - __grains__  # Grains (i.e. __grains__['os'])
+            - __pillar__  # Pillar data (i.e. __pillar__['foo'])
+            - __opts__    # Minion configuration options
+            - __context__ # Context dict shared amongst all modules of the same type
+        '''
+        self._verify_globals(salt.loader.render(self.master_opts, {}))
+
+
+class RawModTest(TestCase):
+    '''
+    Test the interface of raw_mod
+    '''
+    def setUp(self):
+        self.opts = salt.config.minion_config(None)
+
+    def tearDown(self):
+        del self.opts
+
+    def test_basic(self):
+        testmod = salt.loader.raw_mod(self.opts, 'test', None)
+        for k, v in six.iteritems(testmod):
+            self.assertEqual(k.split('.')[0], 'test')
+
+    def test_bad_name(self):
+        testmod = salt.loader.raw_mod(self.opts, 'module_we_do_not_have', None)
+        self.assertEqual(testmod, {})
+
+
+class NetworkUtilsTestCase(ModuleCase):
+    def test_is_private(self):
+        mod = salt.loader.raw_mod(self.minion_opts, 'network', None)
+        self.assertTrue(mod['network.is_private']('10.0.0.1'), True)
+
+    def test_is_loopback(self):
+        mod = salt.loader.raw_mod(self.minion_opts, 'network', None)
+        self.assertTrue(mod['network.is_loopback']('127.0.0.1'), True)
+
+
 class LazyLoaderOptimizationOrderTest(TestCase):
     '''
     Test the optimization order priority in the loader (PY3)
@@ -983,7 +1132,7 @@ class LazyLoaderOptimizationOrderTest(TestCase):
     @classmethod
     def setUpClass(cls):
         cls.opts = salt.config.minion_config(None)
-        cls.opts['grains'] = grains(cls.opts)
+        cls.opts['grains'] = salt.loader.grains(cls.opts)
 
     def setUp(self):
         # Setup the module
@@ -996,7 +1145,7 @@ class LazyLoaderOptimizationOrderTest(TestCase):
         if order is not None:
             opts['optimization_order'] = order
         # Return a loader
-        return LazyLoader([self.module_dir], opts, tag='module')
+        return salt.loader.LazyLoader([self.module_dir], opts, tag='module')
 
     def _get_module_filename(self):
         # The act of referencing the loader entry forces the module to be
@@ -1021,7 +1170,7 @@ class LazyLoaderOptimizationOrderTest(TestCase):
             os.fsync(fh.fileno())
 
     def _byte_compile(self):
-        if USE_IMPORTLIB:
+        if salt.loader.USE_IMPORTLIB:
             # Skip this check as "optimize" is unique to PY3's compileall
             # module, and this will be a false error when Pylint is run on
             # Python 2.
@@ -1046,7 +1195,7 @@ class LazyLoaderOptimizationOrderTest(TestCase):
         basename = os.path.basename(filename)
         assert basename == self._expected(order[0]), basename
 
-        if not USE_IMPORTLIB:
+        if not salt.loader.USE_IMPORTLIB:
             # We are only testing multiple optimization levels on Python 3.5+
             return
 
@@ -1074,7 +1223,7 @@ class LazyLoaderOptimizationOrderTest(TestCase):
         '''
         self._test_optimization_order([0, 1, 2])
         self._test_optimization_order([0, 2, 1])
-        if USE_IMPORTLIB:
+        if salt.loader.USE_IMPORTLIB:
             # optimization_order only supported on Python 3.5+, earlier
             # releases only support unoptimized .pyc files.
             self._test_optimization_order([1, 2, 0])
