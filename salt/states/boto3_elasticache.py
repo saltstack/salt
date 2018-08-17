@@ -1169,7 +1169,7 @@ def cache_parameter_group_present(name, region=None, key=None, keyid=None, profi
                 if __opts__['test']:
                     ret['comment'] = 'Cache parameter group %s would be updated.' % name
                     ret['result'] = None
-                    rety'changes']['old'] = current[0]
+                    ret['changes']['old'] = current[0]
                     ret['changes']['old']['ParameterNameValues'] = oldvals
                     ret['changes']['new'] = deepcopy(current[0])
                     ret['changes']['new']['ParameterNameValues'] = newvals
@@ -1180,7 +1180,7 @@ def cache_parameter_group_present(name, region=None, key=None, keyid=None, profi
                     ret['result'] = False
                     ret['comment'] = 'Failed to update cache parameter group `%s`.' % name
                     return ret
-                rety'changes']['old'] = current[0]
+                ret['changes']['old'] = current[0]
                 ret['changes']['old']['ParameterNameValues'] = oldvals
                 ret['changes']['new'] = deepcopy(current[0])
                 ret['changes']['new']['ParameterNameValues'] = newvals
