@@ -12,6 +12,7 @@ import salt.utils.event
 # Import 3rd-party libs
 from salt.ext.six.moves import builtins as exceptions
 
+
 def raise_error(name=None, args=None, message=''):
     '''
     Raise an exception with __name__ from name, args from args
