@@ -767,7 +767,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
         name = '/etc/testdir'
         user = 'salt'
         group = 'saltstack'
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             name = name.replace('/', '\\')
 
         ret = {'name': name,
@@ -922,7 +922,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
         source = 'salt://code/flask'
         user = 'salt'
         group = 'saltstack'
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             name = name.replace('/', '\\')
 
         ret = {'name': name,
