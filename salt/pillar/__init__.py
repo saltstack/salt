@@ -761,7 +761,7 @@ class Pillar(object):
                                      '\'{0}\' found'.format(saltenv)]
                                 )
 
-                        for sub_sls in set(matched_pstates):
+                        for sub_sls in matched_pstates:
                             if sub_sls not in mods:
                                 nstate, mods, err = self.render_pstate(
                                         sub_sls,
