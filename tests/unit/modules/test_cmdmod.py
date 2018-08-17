@@ -324,7 +324,8 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
 
                     self.assertEqual(environment, environment2)
 
-                    getpwnam_mock.assert_called_with('foobar')
+                    if not salt.utils.platform.is_darwin():
+                        getpwnam_mock.assert_called_with('foobar')
 
     def test_run_cwd_doesnt_exist_issue_7154(self):
         '''
