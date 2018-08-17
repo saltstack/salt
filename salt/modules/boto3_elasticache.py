@@ -101,7 +101,7 @@ def _collect_results(func, item, args, marker='Marker'):
 
 
 def _describe_resource(name=None, name_param=None, res_type=None, info_node=None, conn=None,
-                            region=None, key=None, keyid=None, profile=None, **args):
+                       region=None, key=None, keyid=None, profile=None, **args):
     if conn is None:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
@@ -638,9 +638,8 @@ def describe_cache_security_groups(name=None, conn=None, region=None, key=None, 
         salt myminion boto3_elasticache.describe_cache_security_groups mycachesecgrp
     '''
     return _describe_resource(name=name, name_param='CacheSecurityGroupName',
-                              res_type='cache_security_group',
-                              info_node='CacheSecurityGroups', conn=conn, region=region, key=key,
-                              keyid=keyid, profile=profile)
+                              res_type='cache_security_group', info_node='CacheSecurityGroups',
+                              conn=conn, region=region, key=key, keyid=keyid, profile=profile)
 
 
 def cache_security_group_exists(name, region=None, key=None, keyid=None, profile=None):
@@ -653,7 +652,8 @@ def cache_security_group_exists(name, region=None, key=None, keyid=None, profile
 
         salt myminion boto3_elasticache.cache_security_group_exists mysecuritygroup
     '''
-    return bool(describe_cache_security_groups(name=name, region=region, key=key, keyid=keyid, profile=profile))
+    return bool(describe_cache_security_groups(name=name, region=region, key=key, keyid=keyid,
+                profile=profile))
 
 
 def create_cache_security_group(name, region=None, key=None, keyid=None, profile=None, **args):
@@ -914,6 +914,46 @@ def describe_cache_parameter_groups(name=None, conn=None, region=None, key=None,
     return _describe_resource(name=name, name_param='CacheParameterGroupName',
                               res_type='cache_parameter_group', info_node='CacheParameterGroups',
                               conn=conn, region=region, key=key, keyid=keyid, profile=profile)
+
+
+
+def describe_cache_parameters(name=None, conn=None, region=None, key=None, keyid=None,
+                              profile=None, **args):
+    '''
+    Returns the detailed parameter list for a particular cache parameter group.
+
+    name
+        The name of a specific cache parameter group to return details for.
+
+    CacheParameterGroupName
+        The name of a specific cache parameter group to return details for.  Generally not
+        required, as `name` will be used if not provided.
+
+    Source
+        Optionally, limit the parameter types to return.
+        Valid values:
+        - user
+        - system
+        - engine-default
+
+    Example:
+
+    .. code-block:: bash
+
+        salt myminion boto3_elasticache.describe_cache_parameters name=myParamGroup Source=user
+    '''
+    ret = {}
+    generic = _describe_resource(name=name, name_param='CacheParameterGroupName',
+                                  res_type='cache_parameter', info_node='Parameters',
+                                  conn=conn, region=region, key=key, keyid=keyid, profile=profile,
+                                  **args)
+    specific = _describe_resource(name=name, name_param='CacheParameterGroupName',
+                                  res_type='cache_parameter',
+                                  info_node='CacheNodeTypeSpecificParameters', conn=conn,
+                                  region=region, key=key, keyid=keyid, profile=profile, **args)
+    ret.update({'Parameters': generic}) if generic else None
+    ret.update({'CacheNodeTypeSpecificParameters': specific}) if specific else None
+    return ret
 
 
 def create_cache_parameter_group(name, region=None, key=None, keyid=None, profile=None, **args):
