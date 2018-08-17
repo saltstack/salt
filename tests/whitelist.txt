@@ -8,6 +8,7 @@ integration.modules.test_autoruns
 integration.modules.test_beacons
 integration.modules.test_config
 integration.modules.test_cp
+integration.modules.test_cmdmod
 integration.modules.test_data
 integration.modules.test_disk
 integration.modules.test_firewall
@@ -30,6 +31,7 @@ integration.modules.test_system
 integration.modules.test_test
 integration.modules.test_useradd
 integration.modules.test_win_dns_client
+integration.modules.test_win_pkg
 integration.reactor.test_reactor
 integration.renderers.test_pydsl
 integration.returners.test_librato_return
@@ -42,6 +44,7 @@ integration.states.test_pip_state
 integration.states.test_pkg
 integration.states.test_reg
 integration.states.test_renderers
+integration.states.test_file
 integration.states.test_user
 integration.utils.testprogram
 integration.wheel.test_client

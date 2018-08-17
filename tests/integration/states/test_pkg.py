@@ -168,7 +168,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             __testcontext__['refresh'] = True
 
     @requires_system_grains
-    def test_pkg_001_installed(self, grains=None):
+    def test_pkg_001_installed(self, grains):
         '''
         This is a destructive test as it installs and then removes a package
         '''
@@ -198,7 +198,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
 
     @requires_system_grains
-    def test_pkg_002_installed_with_version(self, grains=None):
+    def test_pkg_002_installed_with_version(self, grains):
         '''
         This is a destructive test as it installs and then removes a package
         '''
@@ -245,7 +245,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
 
     @requires_system_grains
-    def test_pkg_003_installed_multipkg(self, grains=None):
+    def test_pkg_003_installed_multipkg(self, grains):
         '''
         This is a destructive test as it installs and then removes two packages
         '''
@@ -281,7 +281,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertSaltTrueReturn(ret)
 
     @requires_system_grains
-    def test_pkg_004_installed_multipkg_with_version(self, grains=None):
+    def test_pkg_004_installed_multipkg_with_version(self, grains):
         '''
         This is a destructive test as it installs and then removes two packages
         '''
@@ -331,7 +331,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertSaltTrueReturn(ret)
 
     @requires_system_grains
-    def test_pkg_005_installed_32bit(self, grains=None):
+    def test_pkg_005_installed_32bit(self, grains):
         '''
         This is a destructive test as it installs and then removes a package
         '''
@@ -367,7 +367,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertSaltTrueReturn(ret)
 
     @requires_system_grains
-    def test_pkg_006_installed_32bit_with_version(self, grains=None):
+    def test_pkg_006_installed_32bit_with_version(self, grains):
         '''
         This is a destructive test as it installs and then removes a package
         '''
@@ -414,7 +414,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
 
     @requires_system_grains
-    def test_pkg_007_with_dot_in_pkgname(self, grains=None):
+    def test_pkg_007_with_dot_in_pkgname(self, grains):
         '''
         This tests for the regression found in the following issue:
         https://github.com/saltstack/salt/issues/8614
@@ -444,7 +444,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
 
     @requires_system_grains
-    def test_pkg_008_epoch_in_version(self, grains=None):
+    def test_pkg_008_epoch_in_version(self, grains):
         '''
         This tests for the regression found in the following issue:
         https://github.com/saltstack/salt/issues/8614
@@ -513,7 +513,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertTrue(pkgquery in six.text_type(ret))
 
     @requires_system_grains
-    def test_pkg_011_latest(self, grains=None):
+    def test_pkg_011_latest(self, grains):
         '''
         This tests pkg.latest with a package that has no epoch (or a zero
         epoch).
@@ -544,7 +544,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
 
     @requires_system_grains
-    def test_pkg_012_latest_only_upgrade(self, grains=None):
+    def test_pkg_012_latest_only_upgrade(self, grains):
         '''
         WARNING: This test will pick a package with an available upgrade (if
         there is one) and upgrade it to the latest version.
@@ -610,7 +610,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             )
 
     @requires_system_grains
-    def test_pkg_013_installed_with_wildcard_version(self, grains=None):
+    def test_pkg_013_installed_with_wildcard_version(self, grains):
         '''
         This is a destructive test as it installs and then removes a package
         '''
@@ -679,7 +679,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
 
     @requires_system_grains
-    def test_pkg_014_installed_with_comparison_operator(self, grains=None):
+    def test_pkg_014_installed_with_comparison_operator(self, grains):
         '''
         This is a destructive test as it installs and then removes a package
         '''
@@ -728,7 +728,8 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             ret = self.run_state('pkg.removed', name=target)
             self.assertSaltTrueReturn(ret)
 
-    def test_pkg_014_installed_missing_release(self, grains=None):  # pylint: disable=unused-argument
+    @requires_system_grains
+    def test_pkg_014_installed_missing_release(self, grains):
         '''
         Tests that a version number missing the release portion still resolves
         as correctly installed. For example, version 2.0.2 instead of 2.0.2-1.el7
@@ -766,8 +767,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
 
     @requires_salt_modules('pkg.group_install')
-    @requires_system_grains
-    def test_group_installed_handle_missing_package_group(self, grains=None):  # pylint: disable=unused-argument
+    def test_group_installed_handle_missing_package_group(self):  # pylint: disable=unused-argument
         '''
         Tests that a CommandExecutionError is caught and the state returns False when
         the package group is missing. Before this fix, the state would stacktrace.
@@ -797,7 +797,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
 
     @skipIf(salt.utils.platform.is_windows(), 'minion is windows')
     @requires_system_grains
-    def test_pkg_cap_001_installed(self, grains=None):
+    def test_pkg_cap_001_installed(self, grains):
         '''
         This is a destructive test as it installs and then removes a package
         '''
@@ -829,7 +829,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
 
     @skipIf(salt.utils.platform.is_windows(), 'minion is windows')
     @requires_system_grains
-    def test_pkg_cap_002_already_installed(self, grains=None):
+    def test_pkg_cap_002_already_installed(self, grains):
         '''
         This is a destructive test as it installs and then removes a package
         '''
@@ -867,7 +867,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
 
     @skipIf(salt.utils.platform.is_windows(), 'minion is windows')
     @requires_system_grains
-    def test_pkg_cap_003_installed_multipkg_with_version(self, grains=None):
+    def test_pkg_cap_003_installed_multipkg_with_version(self, grains):
         '''
         This is a destructive test as it installs and then removes two packages
         '''
@@ -939,7 +939,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
 
     @skipIf(salt.utils.platform.is_windows(), 'minion is windows')
     @requires_system_grains
-    def test_pkg_cap_004_latest(self, grains=None):
+    def test_pkg_cap_004_latest(self, grains):
         '''
         This tests pkg.latest with a package that has no epoch (or a zero
         epoch).
@@ -977,7 +977,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
 
     @skipIf(salt.utils.platform.is_windows(), 'minion is windows')
     @requires_system_grains
-    def test_pkg_cap_005_downloaded(self, grains=None):
+    def test_pkg_cap_005_downloaded(self, grains):
         '''
         This is a destructive test as it installs and then removes a package
         '''
@@ -1011,7 +1011,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
 
     @skipIf(salt.utils.platform.is_windows(), 'minion is windows')
     @requires_system_grains
-    def test_pkg_cap_006_uptodate(self, grains=None):
+    def test_pkg_cap_006_uptodate(self, grains):
         '''
         This is a destructive test as it installs and then removes a package
         '''
@@ -1051,3 +1051,72 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
                              refresh=False,
                              test=True)
         self.assertInSaltComment("System update will be performed", ret)
+
+    @requires_salt_modules('pkg.hold', 'pkg.unhold')
+    @requires_system_grains
+    def test_pkg_015_installed_held(self, grains):
+        '''
+        Tests that a package can be held even when the package is already installed.
+        '''
+        os_family = grains.get('os_family', '')
+
+        if os_family.lower() != 'redhat' and os_family.lower() != 'debian':
+            self.skipTest('Test only runs on RedHat or Debian family')
+
+        pkg_targets = _PKG_TARGETS.get(os_family, [])
+
+        if os_family.lower() == 'redhat':
+            # If we're in the Red Hat family first we ensure that
+            # the yum-plugin-versionlock package is installed
+            ret = self.run_state(
+                'pkg.installed',
+                name='yum-plugin-versionlock',
+                refresh=False,
+            )
+            self.assertSaltTrueReturn(ret)
+
+        # Make sure that we have targets that match the os_family. If this
+        # fails then the _PKG_TARGETS dict above needs to have an entry added,
+        # with two packages that are not installed before these tests are run
+        self.assertTrue(pkg_targets)
+
+        target = pkg_targets[0]
+
+        # First we ensure that the package is installed
+        ret = self.run_state(
+            'pkg.installed',
+            name=target,
+            refresh=False,
+        )
+        self.assertSaltTrueReturn(ret)
+
+        # Then we check that the package is now held
+        ret = self.run_state(
+            'pkg.installed',
+            name=target,
+            hold=True,
+            refresh=False,
+        )
+
+        # changes from pkg.hold for Red Hat family are different
+        if os_family.lower() == 'redhat':
+            target_changes = {'new': 'hold', 'old': ''}
+        elif os_family.lower() == 'debian':
+            target_changes = {'new': 'hold', 'old': 'install'}
+
+        try:
+            tag = 'pkg_|-{0}_|-{0}_|-installed'.format(target)
+            self.assertSaltTrueReturn(ret)
+            self.assertIn(tag, ret)
+            self.assertIn('changes', ret[tag])
+            self.assertIn(target, ret[tag]['changes'])
+            self.assertEqual(ret[tag]['changes'][target], target_changes)
+        finally:
+            # Clean up, unhold package and remove
+            self.run_function('pkg.unhold', name=target)
+            ret = self.run_state('pkg.removed', name=target)
+            self.assertSaltTrueReturn(ret)
+            if os_family.lower() == 'redhat':
+                ret = self.run_state('pkg.removed',
+                                     name='yum-plugin-versionlock')
+                self.assertSaltTrueReturn(ret)

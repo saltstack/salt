@@ -328,28 +328,6 @@ if WITH_SETUPTOOLS:
             develop.run(self)
 
 
-def uri_to_resource(resource_file):
-    # ## Returns the URI for a resource
-    # The basic case is that the resource is on saltstack.com
-    # It could be the case that the resource is cached.
-    salt_uri = 'https://repo.saltstack.com/windows/dependencies/' + resource_file
-    if os.getenv('SALTREPO_LOCAL_CACHE') is None:
-        # if environment variable not set, return the basic case
-        return salt_uri
-    if not os.path.isdir(os.getenv('SALTREPO_LOCAL_CACHE')):
-        # if environment variable is not a directory, return the basic case
-        return salt_uri
-    cached_resource = os.path.join(os.getenv('SALTREPO_LOCAL_CACHE'), resource_file)
-    cached_resource = cached_resource.replace('/', '\\')
-    if not os.path.isfile(cached_resource):
-        # if file does not exist, return the basic case
-        return salt_uri
-    if os.path.getsize(cached_resource) == 0:
-        # if file has zero size, return the basic case
-        return salt_uri
-    return cached_resource
-
-
 class DownloadWindowsDlls(Command):
 
     description = 'Download required DLL\'s for windows'
@@ -368,14 +346,14 @@ class DownloadWindowsDlls(Command):
         import pip
         # pip has moved many things to `_internal` starting with pip 10
         if LooseVersion(pip.__version__) < LooseVersion('10.0'):
-            from pip.utils.logging import indent_log
+            from pip.utils.logging import indent_log  # pylint: disable=no-name-in-module
         else:
             from pip._internal.utils.logging import indent_log  # pylint: disable=no-name-in-module
         platform_bits, _ = platform.architecture()
         url = 'https://repo.saltstack.com/windows/dependencies/{bits}/{fname}.dll'
         dest = os.path.join(os.path.dirname(sys.executable), '{fname}.dll')
         with indent_log():
-            for fname in ('libeay32', 'ssleay32', 'msvcr120'):
+            for fname in ('libeay32', 'libsodium', 'ssleay32', 'msvcr120'):
                 # See if the library is already on the system
                 if find_library(fname):
                     continue

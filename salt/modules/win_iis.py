@@ -104,7 +104,10 @@ def _list_certs(certificate_store='My'):
             if key not in blacklist_keys:
                 cert_info[key.lower()] = item[key]
 
-        cert_info['dnsnames'] = [name['Unicode'] for name in item['DnsNameList']]
+        cert_info['dnsnames'] = []
+        if item['DnsNameList']:
+            cert_info['dnsnames'] = [name['Unicode'] for name in item['DnsNameList']]
+
         ret[item['Thumbprint']] = cert_info
 
     return ret

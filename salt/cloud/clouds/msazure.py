@@ -888,7 +888,7 @@ def _wait_for_async(conn, request_id):
     while result.status == 'InProgress':
         count = count + 1
         if count > 120:
-            raise ValueError('Timed out waiting for async operation to complete.')
+            raise ValueError('Timed out waiting for asynchronous operation to complete.')
         time.sleep(5)
         result = conn.get_operation_status(request_id)
 

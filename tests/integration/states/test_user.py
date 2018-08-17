@@ -22,6 +22,11 @@ from tests.support.mixins import SaltReturnAssertsMixin
 # Import Salt libs
 import salt.utils.platform
 
+try:
+    import grp
+except ImportError:
+    grp = None
+
 if salt.utils.platform.is_darwin():
     USER = 'macuser'
     GROUP = 'macuser'
@@ -32,13 +37,11 @@ elif salt.utils.platform.is_windows():
     GROUP = 'winuser'
     GID = randint(400, 500)
     NOGROUPGID = randint(400, 500)
-    grp = None
 else:
     USER = 'nobody'
     GROUP = 'nobody'
     GID = 'nobody'
     NOGROUPGID = 'nogroup'
-    import grp
 
 
 @destructiveTest

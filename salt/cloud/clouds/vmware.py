@@ -126,10 +126,12 @@ import subprocess
 
 # Import salt libs
 import salt.utils.cloud
+import salt.utils.master
 import salt.utils.network
 import salt.utils.stringutils
 import salt.utils.xmlutil
 import salt.utils.vmware
+from salt._compat import ipaddress
 from salt.exceptions import SaltCloudSystemExit
 
 # Import salt cloud libs
@@ -977,41 +979,67 @@ def _wait_for_vmware_tools(vm_ref, max_wait):
 
 def _valid_ip(ip_address):
     '''
-    Check if the IP address is valid
+    Check if the IP address is valid and routable
     Return either True or False
     '''
 
-    # Make sure IP has four octets
-    octets = ip_address.split('.')
-    if len(octets) != 4:
+    try:
+        address = ipaddress.IPv4Address(ip_address)
+    except ipaddress.AddressValueError:
         return False
 
-    # convert octet from string to int
-    for i, octet in enumerate(octets):
-
-        try:
-            octets[i] = int(octet)
-        except ValueError:
-            # couldn't convert octet to an integer
-            return False
-
-    # map variables to elements of octets list
-    first_octet, second_octet, third_octet, fourth_octet = octets
-
-    # Check first_octet meets conditions
-    if first_octet < 1 or first_octet > 223 or first_octet == 127:
+    if address.is_unspecified or \
+        address.is_loopback or \
+        address.is_link_local or \
+        address.is_multicast or \
+        address.is_reserved:
         return False
 
-    # Check 169.254.X.X condition
-    if first_octet == 169 and second_octet == 254:
-        return False
-
-    # Check 2nd - 4th octets
-    for octet in (second_octet, third_octet, fourth_octet):
-        if (octet < 0) or (octet > 255):
-            return False
-    # Passed all of the checks
     return True
+
+
+def _valid_ip6(ip_address):
+    '''
+    Check if the IPv6 address is valid and routable
+    Return either True or False
+    '''
+
+    # Validate IPv6 address
+    try:
+        address = ipaddress.IPv6Address(ip_address)
+    except ipaddress.AddressValueError:
+        return False
+
+    if address.is_unspecified or \
+        address.is_loopback or \
+        address.is_link_local or \
+        address.is_multicast or \
+        address.is_reserved:
+        return False
+
+    if address.ipv4_mapped is not None:
+        return False
+
+    return True
+
+
+def _master_supports_ipv6():
+    '''
+    Check if the salt master has a valid and
+    routable IPv6 address available
+    '''
+    master_fqdn = salt.utils.network.get_fqhostname()
+    pillar_util = salt.utils.master.MasterPillarUtil(master_fqdn,
+                                                     tgt_type='glob',
+                                                     use_cached_grains=False,
+                                                     grains_fallback=False,
+                                                     opts=__opts__)
+    grains_data = pillar_util.get_minion_grains()
+    ipv6_addresses = grains_data[master_fqdn]['ipv6']
+    for address in ipv6_addresses:
+        if _valid_ip6(address):
+            return True
+    return False
 
 
 def _wait_for_ip(vm_ref, max_wait):
@@ -1028,34 +1056,43 @@ def _wait_for_ip(vm_ref, max_wait):
         if isinstance(resolved_ips, list) and resolved_ips:
             return resolved_ips[0]
         return False
+    master_supports_ipv6 = _master_supports_ipv6()
+    log.info(
+        "[ %s ] Master has IPv6 support: %s",
+        vm_ref.name, master_supports_ipv6
+    )
     time_counter = 0
     starttime = time.time()
+    ipv4_address = None
     while time_counter < max_wait_ip:
         if time_counter % 5 == 0:
             log.info(
-                "[ %s ] Waiting to retrieve IPv4 information [%s s]",
+                "[ %s ] Waiting to retrieve IPv4/6 information [%s s]",
                 vm_ref.name, time_counter
             )
 
-        if vm_ref.summary.guest.ipAddress and _valid_ip(vm_ref.summary.guest.ipAddress):
-            log.info(
-                "[ %s ] Successfully retrieved IPv4 information in %s seconds",
-                vm_ref.name, time_counter
-            )
-            return vm_ref.summary.guest.ipAddress
         for net in vm_ref.guest.net:
             if net.ipConfig.ipAddress:
                 for current_ip in net.ipConfig.ipAddress:
-                    if _valid_ip(current_ip.ipAddress):
+                    if master_supports_ipv6 and _valid_ip6(current_ip.ipAddress):
                         log.info(
-                            "[ %s ] Successfully retrieved IPv4 information "
+                            "[ %s ] Successfully retrieved IPv6 information "
                             "in %s seconds", vm_ref.name, time_counter
                         )
                         return current_ip.ipAddress
+                    if _valid_ip(current_ip.ipAddress) and not ipv4_address:
+                        # Delay return in case we have a valid IPv6 available
+                        ipv4_address = current_ip
+        if ipv4_address:
+            log.info(
+                "[ %s ] Successfully retrieved IPv4 information "
+                "in %s seconds", vm_ref.name, time_counter
+            )
+            return ipv4_address.ipAddress
         time.sleep(1.0 - ((time.time() - starttime) % 1.0))
         time_counter += 1
     log.warning(
-        "[ %s ] Timeout Reached. Unable to retrieve IPv4 information after "
+        "[ %s ] Timeout Reached. Unable to retrieve IPv4/6 information after "
         "waiting for %s seconds", vm_ref.name, max_wait_ip
     )
     return False
@@ -2923,8 +2960,8 @@ def create(vm_):
 
     data = show_instance(vm_name, call='action')
 
-    if deploy and out is not None:
-        data['deploy_kwargs'] = out['deploy_kwargs']
+    if deploy and isinstance(out, dict):
+        data['deploy_kwargs'] = out.get('deploy_kwargs', {})
 
     __utils__['cloud.fire_event'](
         'event',

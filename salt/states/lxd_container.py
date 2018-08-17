@@ -508,7 +508,7 @@ def running(name,
         if not restart:
             return _success(
                 ret,
-                'The container "{0} is already running"'.format(name)
+                'The container "{0}" is already running'.format(name)
             )
         else:
             if __opts__['test']:

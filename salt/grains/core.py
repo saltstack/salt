@@ -90,6 +90,10 @@ if salt.utils.platform.is_windows():
             'will be missing'
         )
 
+HAS_UNAME = True
+if not hasattr(os, 'uname'):
+    HAS_UNAME = False
+
 _INTERFACES = {}
 
 
@@ -128,6 +132,7 @@ def _linux_cpudata():
     # Parse over the cpuinfo file
     if os.path.isfile(cpuinfo):
         with salt.utils.files.fopen(cpuinfo, 'r') as _fp:
+            grains['num_cpus'] = 0
             for line in _fp:
                 comps = line.split(':')
                 if not len(comps) > 1:
@@ -135,7 +140,7 @@ def _linux_cpudata():
                 key = comps[0].strip()
                 val = comps[1].strip()
                 if key == 'processor':
-                    grains['num_cpus'] = int(val) + 1
+                    grains['num_cpus'] += 1
                 elif key == 'model name':
                     grains['cpu_model'] = val
                 elif key == 'flags':
@@ -456,7 +461,7 @@ def _osx_memdata():
     sysctl = salt.utils.path.which('sysctl')
     if sysctl:
         mem = __salt__['cmd.run']('{0} -n hw.memsize'.format(sysctl))
-        swap_total = __salt__['cmd.run']('{0} -n vm.swapusage'.format(sysctl)).split()[2]
+        swap_total = __salt__['cmd.run']('{0} -n vm.swapusage'.format(sysctl)).split()[2].replace(',', '.')
         if swap_total.endswith('K'):
             _power = 2**10
         elif swap_total.endswith('M'):
@@ -693,7 +698,7 @@ def _virtual(osdata):
 
     # Quick backout for BrandZ (Solaris LX Branded zones)
     # Don't waste time trying other commands to detect the virtual grain
-    if osdata['kernel'] == 'Linux' and 'BrandZ virtual linux' in os.uname():
+    if HAS_UNAME and osdata['kernel'] == 'Linux' and 'BrandZ virtual linux' in os.uname():
         grains['virtual'] = 'zone'
         return grains
 
@@ -947,7 +952,7 @@ def _virtual(osdata):
         if os.path.isfile('/sys/devices/virtual/dmi/id/product_name'):
             try:
                 with salt.utils.files.fopen('/sys/devices/virtual/dmi/id/product_name', 'r') as fhr:
-                    output = salt.utils.stringutils.to_unicode(fhr.read())
+                    output = salt.utils.stringutils.to_unicode(fhr.read(), errors='replace')
                     if 'VirtualBox' in output:
                         grains['virtual'] = 'VirtualBox'
                     elif 'RHEV Hypervisor' in output:
@@ -1353,6 +1358,7 @@ _OS_NAME_MAP = {
     'poky': 'Poky',
     'manjaro': 'Manjaro',
     'manjarolin': 'Manjaro',
+    'univention': 'Univention',
     'antergos': 'Antergos',
     'sles': 'SUSE',
     'void': 'Void',
@@ -1413,6 +1419,7 @@ _OS_FAMILY_MAP = {
     'GCEL': 'Debian',
     'Linaro': 'Debian',
     'elementary OS': 'Debian',
+    'Univention': 'Debian',
     'ScientificLinux': 'RedHat',
     'Raspbian': 'Debian',
     'Devuan': 'Debian',
@@ -1846,7 +1853,10 @@ def os_data():
     elif grains['kernel'] == 'SunOS':
         if salt.utils.platform.is_smartos():
             # See https://github.com/joyent/smartos-live/issues/224
-            uname_v = os.uname()[3]  # format: joyent_20161101T004406Z
+            if HAS_UNAME:
+                uname_v = os.uname()[3]  # format: joyent_20161101T004406Z
+            else:
+                uname_v = os.name
             uname_v = uname_v[uname_v.index('_')+1:]
             grains['os'] = grains['osfullname'] = 'SmartOS'
             # store a parsed version of YYYY.MM.DD as osrelease
@@ -1875,7 +1885,10 @@ def os_data():
                 else:
                     if development is not None:
                         osname = ' '.join((osname, development))
-                    uname_v = os.uname()[3]
+                    if HAS_UNAME:
+                        uname_v = os.uname()[3]
+                    else:
+                        uname_v = os.name
                     grains['os'] = grains['osfullname'] = osname
                     if osname in ['Oracle Solaris'] and uname_v.startswith(osmajorrelease):
                         # Oracla Solars 11 and up have minor version in uname
@@ -2389,7 +2402,7 @@ def _hw_data(osdata):
             if os.path.exists(contents_file):
                 try:
                     with salt.utils.files.fopen(contents_file, 'r') as ifile:
-                        grains[key] = salt.utils.stringutils.to_unicode(ifile.read().strip())
+                        grains[key] = salt.utils.stringutils.to_unicode(ifile.read().strip(), errors='replace')
                         if key == 'uuid':
                             grains['uuid'] = grains['uuid'].lower()
                 except (IOError, OSError) as err:
