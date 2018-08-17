@@ -267,7 +267,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
 
         if IS_WINDOWS:
             expected = 'The \'mode\' option is not supported on Windows'
-            self.assertEqual(ret[list(ret)[0]]['comment'], expected)
+            self.assertEqual(ret[list(ret.keys())[0]]['comment'], expected)
             self.assertSaltFalseReturn(ret)
             return
 
@@ -303,7 +303,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
 
         if IS_WINDOWS:
             expected = 'The \'mode\' option is not supported on Windows'
-            self.assertEqual(ret[list(ret)[0]]['comment'], expected)
+            self.assertEqual(ret[list(ret.keys())[0]]['comment'], expected)
             self.assertSaltFalseReturn(ret)
             return
 
@@ -335,7 +335,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
 
         if IS_WINDOWS:
             expected = 'The \'mode\' option is not supported on Windows'
-            self.assertEqual(ret[list(ret)[0]]['comment'], expected)
+            self.assertEqual(ret[list(ret.keys())[0]]['comment'], expected)
             self.assertSaltFalseReturn(ret)
             return
 
