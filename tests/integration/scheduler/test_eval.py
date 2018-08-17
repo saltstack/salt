@@ -9,6 +9,7 @@ import os
 import random
 
 import dateutil.parser as dateutil_parser
+import datetime
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
@@ -587,3 +588,216 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
             self.schedule.eval(now=run_time)
             ret = self.schedule.job_status('job_eval_splay')
             self.assertEqual(ret['_last_run'], run_time)
+
+    def test_eval_seconds(self):
+        '''
+        verify that scheduled job run mutiple times with seconds
+        '''
+        job = {
+          'schedule': {
+            'job_eval_seconds': {
+              'function': 'test.ping',
+              'seconds': '30',
+            }
+          }
+        }
+
+        # Add job to schedule
+        self.schedule.opts.update(job)
+
+        # eval at 2:00pm to prime, simulate minion start up.
+        run_time = dateutil_parser.parse('11/29/2017 2:00pm')
+        next_run_time = run_time + datetime.timedelta(seconds=30)
+        self.schedule.eval(now=run_time)
+        ret = self.schedule.job_status('job_eval_seconds')
+        self.assertEqual(ret['_next_fire_time'], next_run_time)
+
+        # eval at 2:00:01pm, will not run.
+        run_time = dateutil_parser.parse('11/29/2017 2:00:01pm')
+        self.schedule.eval(now=run_time)
+        ret = self.schedule.job_status('job_eval_seconds')
+        self.assertNotIn('_last_run', ret)
+        self.assertEqual(ret['_next_fire_time'], next_run_time)
+
+        # eval at 2:00:30pm, will run.
+        run_time = dateutil_parser.parse('11/29/2017 2:00:30pm')
+        next_run_time = run_time + datetime.timedelta(seconds=30)
+        self.schedule.eval(now=run_time)
+        ret = self.schedule.job_status('job_eval_seconds')
+        self.assertEqual(ret['_last_run'], run_time)
+        self.assertEqual(ret['_next_fire_time'], next_run_time)
+
+        # eval at 2:01:00pm, will run.
+        run_time = dateutil_parser.parse('11/29/2017 2:01:00pm')
+        next_run_time = run_time + datetime.timedelta(seconds=30)
+        self.schedule.eval(now=run_time)
+        ret = self.schedule.job_status('job_eval_seconds')
+        self.assertEqual(ret['_last_run'], run_time)
+        self.assertEqual(ret['_next_fire_time'], next_run_time)
+
+        # eval at 2:01:30pm, will run.
+        run_time = dateutil_parser.parse('11/29/2017 2:01:30pm')
+        next_run_time = run_time + datetime.timedelta(seconds=30)
+        self.schedule.eval(now=run_time)
+        ret = self.schedule.job_status('job_eval_seconds')
+        self.assertEqual(ret['_last_run'], run_time)
+        self.assertEqual(ret['_next_fire_time'], next_run_time)
+
+    def test_eval_minutes(self):
+        '''
+        verify that scheduled job run mutiple times with minutes
+        '''
+        job = {
+          'schedule': {
+            'job_eval_minutes': {
+              'function': 'test.ping',
+              'minutes': '30',
+            }
+          }
+        }
+
+        # Add job to schedule
+        self.schedule.opts.update(job)
+
+        # eval at 2:00pm to prime, simulate minion start up.
+        run_time = dateutil_parser.parse('11/29/2017 2:00pm')
+        next_run_time = run_time + datetime.timedelta(minutes=30)
+        self.schedule.eval(now=run_time)
+        ret = self.schedule.job_status('job_eval_minutes')
+        self.assertEqual(ret['_next_fire_time'], next_run_time)
+
+        # eval at 2:00:01pm, will not run.
+        run_time = dateutil_parser.parse('11/29/2017 2:00:01pm')
+        self.schedule.eval(now=run_time)
+        ret = self.schedule.job_status('job_eval_minutes')
+        self.assertNotIn('_last_run', ret)
+        self.assertEqual(ret['_next_fire_time'], next_run_time)
+
+        # eval at 2:30:00pm, will run.
+        run_time = dateutil_parser.parse('11/29/2017 2:30:00pm')
+        self.schedule.eval(now=run_time)
+        ret = self.schedule.job_status('job_eval_minutes')
+        self.assertEqual(ret['_last_run'], run_time)
+
+        # eval at 3:00:00pm, will run.
+        run_time = dateutil_parser.parse('11/29/2017 3:00:00pm')
+        self.schedule.eval(now=run_time)
+        ret = self.schedule.job_status('job_eval_minutes')
+        self.assertEqual(ret['_last_run'], run_time)
+
+        # eval at 3:30:00pm, will run.
+        run_time = dateutil_parser.parse('11/29/2017 3:30:00pm')
+        self.schedule.eval(now=run_time)
+        ret = self.schedule.job_status('job_eval_minutes')
+        self.assertEqual(ret['_last_run'], run_time)
+
+    def test_eval_hours(self):
+        '''
+        verify that scheduled job run mutiple times with hours
+        '''
+        job = {
+          'schedule': {
+            'job_eval_hours': {
+              'function': 'test.ping',
+              'hours': '2',
+            }
+          }
+        }
+
+        # Add job to schedule
+        self.schedule.opts.update(job)
+
+        # eval at 2:00pm to prime, simulate minion start up.
+        run_time = dateutil_parser.parse('11/29/2017 2:00pm')
+        next_run_time = run_time + datetime.timedelta(hours=2)
+        self.schedule.eval(now=run_time)
+        ret = self.schedule.job_status('job_eval_hours')
+        self.assertEqual(ret['_next_fire_time'], next_run_time)
+
+        # eval at 2:00:01pm, will not run.
+        run_time = dateutil_parser.parse('11/29/2017 2:00:01pm')
+        self.schedule.eval(now=run_time)
+        ret = self.schedule.job_status('job_eval_hours')
+        self.assertNotIn('_last_run', ret)
+        self.assertEqual(ret['_next_fire_time'], next_run_time)
+
+        # eval at 4:00:00pm, will run.
+        run_time = dateutil_parser.parse('11/29/2017 4:00:00pm')
+        self.schedule.eval(now=run_time)
+        ret = self.schedule.job_status('job_eval_hours')
+        self.assertEqual(ret['_last_run'], run_time)
+
+        # eval at 6:00:00pm, will run.
+        run_time = dateutil_parser.parse('11/29/2017 6:00:00pm')
+        self.schedule.eval(now=run_time)
+        ret = self.schedule.job_status('job_eval_hours')
+        self.assertEqual(ret['_last_run'], run_time)
+
+        # eval at 8:00:00pm, will run.
+        run_time = dateutil_parser.parse('11/29/2017 8:00:00pm')
+        self.schedule.eval(now=run_time)
+        ret = self.schedule.job_status('job_eval_hours')
+        self.assertEqual(ret['_last_run'], run_time)
+
+    def test_eval_days(self):
+        '''
+        verify that scheduled job run mutiple times with days
+        '''
+        job = {
+          'schedule': {
+            'job_eval_days': {
+              'function': 'test.ping',
+              'days': '2',
+            }
+          }
+        }
+
+        # Add job to schedule
+        self.schedule.opts.update(job)
+
+        # eval at 11/23/2017 2:00pm to prime, simulate minion start up.
+        run_time = dateutil_parser.parse('11/23/2017 2:00pm')
+        next_run_time = run_time + datetime.timedelta(days=2)
+        self.schedule.eval(now=run_time)
+        ret = self.schedule.job_status('job_eval_days')
+        self.assertEqual(ret['_next_fire_time'], next_run_time)
+
+        # eval at 11/25/2017 2:00:00pm, will run.
+        run_time = dateutil_parser.parse('11/25/2017 2:00:00pm')
+        next_run_time = run_time + datetime.timedelta(days=2)
+        self.schedule.eval(now=run_time)
+        ret = self.schedule.job_status('job_eval_days')
+        self.assertEqual(ret['_last_run'], run_time)
+        self.assertEqual(ret['_next_fire_time'], next_run_time)
+
+        # eval at 11/26/2017 2:00:00pm, will not run.
+        run_time = dateutil_parser.parse('11/26/2017 2:00:00pm')
+        last_run_time = run_time - datetime.timedelta(days=1)
+        self.schedule.eval(now=run_time)
+        ret = self.schedule.job_status('job_eval_days')
+        self.assertEqual(ret['_last_run'], last_run_time)
+        self.assertEqual(ret['_next_fire_time'], next_run_time)
+
+        # eval at 11/27/2017 2:00:00pm, will run.
+        run_time = dateutil_parser.parse('11/27/2017 2:00:00pm')
+        next_run_time = run_time + datetime.timedelta(days=2)
+        self.schedule.eval(now=run_time)
+        ret = self.schedule.job_status('job_eval_days')
+        self.assertEqual(ret['_last_run'], run_time)
+        self.assertEqual(ret['_next_fire_time'], next_run_time)
+
+        # eval at 11/28/2017 2:00:00pm, will not run.
+        run_time = dateutil_parser.parse('11/28/2017 2:00:00pm')
+        last_run_time = run_time - datetime.timedelta(days=1)
+        self.schedule.eval(now=run_time)
+        ret = self.schedule.job_status('job_eval_days')
+        self.assertEqual(ret['_last_run'], last_run_time)
+        self.assertEqual(ret['_next_fire_time'], next_run_time)
+
+        # eval at 11/29/2017 2:00:00pm, will run.
+        run_time = dateutil_parser.parse('11/29/2017 2:00:00pm')
+        next_run_time = run_time + datetime.timedelta(days=2)
+        self.schedule.eval(now=run_time)
+        ret = self.schedule.job_status('job_eval_days')
+        self.assertEqual(ret['_last_run'], run_time)
+        self.assertEqual(ret['_next_fire_time'], next_run_time)

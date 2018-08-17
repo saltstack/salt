@@ -24,6 +24,18 @@ Keys
 Hives contain keys. These are basically the folders beneath the hives. They can
 contain any number of subkeys.
 
+When passing the hive\key values they must be quoted correctly depending on the
+backslashes being used (``\`` vs ``\\``). The way backslashes are handled in
+the state file is different from the way they are handled when working on the
+CLI. The following are valid methods of passing the hive\key:
+
+Using single backslashes:
+    HKLM\SOFTWARE\Python
+    'HKLM\SOFTWARE\Python'
+
+Using double backslashes:
+    "HKLM\\SOFTWARE\\Python"
+
 Values or Entries
 -----------------
 
@@ -446,7 +458,7 @@ def present(name,
 
 
 def absent(name, vname=None, use_32bit_registry=False):
-    '''
+    r'''
     Ensure a registry value is removed. To remove a key use key_absent.
 
     Args:
