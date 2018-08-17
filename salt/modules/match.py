@@ -104,7 +104,6 @@ def pillar_pcre(tgt, delimiter=DEFAULT_TARGET_DELIM):
     '''
     matchers = salt.loader.matchers({'pillar': __pillar__})
     try:
-        return matcher.pillar_pcre_match(tgt
         return matchers['pillar_pcre_match.match'](tgt, delimiter=delimiter)
     except Exception as exc:
         log.exception(exc)
