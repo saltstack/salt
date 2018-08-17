@@ -20,7 +20,6 @@ except ImportError:
 # Import Salt Libs
 import salt.modules.cmdmod
 import salt.utils.args
-import salt.utils.decorators as decorators
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
@@ -304,14 +303,18 @@ def launchctl(sub_cmd, *args, **kwargs):
         return ret['stdout'] if return_stdout else True
 
 
-def _available_services():
+def _available_services(refresh=False):
     '''
-    This is a helper function needed for testing. We are using the memoziation
-    decorator on the `available_services` function, which causes the function
-    to run once and then return the results of the first run on subsequent
-    calls. This causes problems when trying to test the functionality of the
-    `available_services` function.
+    This is a helper function for getting the available macOS services.
     '''
+    try:
+        if __context__['available_services'] and not refresh:
+            log.debug('Found context for available services.')
+            __context__['using_cached_services'] = True
+            return __context__['available_services']
+    except KeyError:
+        pass
+
     launchd_paths = [
         '/Library/LaunchAgents',
         '/Library/LaunchDaemons',
@@ -373,13 +376,21 @@ def _available_services():
                         'file_path': true_path,
                         'plist': plist}
 
-    return _available_services
+    # put this in __context__ as this is a time consuming function.
+    # a fix for this issue. https://github.com/saltstack/salt/issues/48414
+    __context__['available_services'] = _available_services
+    # this is a fresh gathering of services, set cached to false
+    __context__['using_cached_services'] = False
+
+    return __context__['available_services']
 
 
-@decorators.memoize
-def available_services():
+def available_services(refresh=False):
     '''
     Return a dictionary of all available services on the system
+
+    :param bool refresh: If you wish to refresh the available services
+    as this data is cached on the first run.
 
     Returns:
         dict: All available services
@@ -391,7 +402,8 @@ def available_services():
         import salt.utils.mac_service
         salt.utils.mac_service.available_services()
     '''
-    return _available_services()
+    log.debug('Loading available services')
+    return _available_services(refresh)
 
 
 def console_user(username=False):
