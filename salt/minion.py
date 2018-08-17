@@ -1253,6 +1253,7 @@ class Minion(MinionBase):
                     'minutes': self.opts['mine_interval'],
                     'jid_include': True,
                     'maxrunning': 2,
+                    'run_on_start': True,
                     'return_job': self.opts.get('mine_return_job', False)
                 }
             }, persist=True)
