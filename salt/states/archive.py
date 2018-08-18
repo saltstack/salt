@@ -1261,7 +1261,8 @@ def extracted(name,
 
         if skip_same_file:
             origin_name = name
-            name = os.path.join(os.path.dirname(cached), salt.utils.hashutils.md5_digest(os.path.basename(cached)))
+            tmp_filename = salt.utils.hashutils.md5_digest(os.path.basename(cached))
+            name = os.path.join(os.path.dirname(cached), tmp_filename)
             trim_output = False
             if os.path.exists(name):
                 __salt__['file.remove'](name)
@@ -1270,31 +1271,6 @@ def extracted(name,
         else:
             origin_name = ''
             log.debug('Extracting %s to %s', cached, name)
-
-        def _file_lists(tmp_path, path):
-            '''
-            Return a tuple containing the file lists of given path for files, dirs, links
-            '''
-            ret = {
-                'files': set(),
-                'dirs': set(),
-                'links': set()
-            }
-            for root, dirs, files in salt.utils.path.os_walk(tmp_path, followlinks=True):
-                for fname in files:
-                    src_file = os.path.join(root, fname)
-                    dest_file = src_file.replace(tmp_path, path.rstrip(os.sep))
-                    if __salt__['file.is_link'](src_file):
-                        src_file_link = __salt__['file.readlink'](src_file, canonicalize=True)
-                        dest_file_link = src_file_link.replace(tmp_path, path.rstrip(os.sep))
-                        if not __salt__['file.is_link'](dest_file) or __salt__['file.readlink'](dest_file, canonicalize=True) != dest_file_link:
-                            ret['links'].add((dest_file, dest_file_link))
-                    else:
-                        ret['files'].add((dest_file, src_file))
-                src_dir = root
-                dest_dir = root.replace(tmp_path, path)
-                ret['dirs'].add((dest_dir, src_dir))
-            return ret['files'], ret['dirs'], ret['links']
 
         try:
             if archive_format == 'zip':
@@ -1443,6 +1419,32 @@ def extracted(name,
             ret['comment'] = exc.strerror
             return ret
 
+    def _file_lists(src_path, dest_path):
+        '''
+        Return a tuple containing the file lists of given path for files, dirs, links
+        '''
+        ret = {
+            'files': set(),
+            'dirs': set(),
+            'links': set()
+        }
+        for root, dirs, files in salt.utils.path.os_walk(src_path, followlinks=True):
+            for fname in files:
+                src_file = os.path.join(root, fname)
+                dest_file = src_file.replace(src_path, dest_path.rstrip(os.sep))
+                if __salt__['file.is_link'](src_file):
+                    src_file_link = __salt__['file.readlink'](src_file, canonicalize=True)
+                    dest_file_link = src_file_link.replace(src_path, dest_path.rstrip(os.sep))
+                    cur_dest_file_link = __salt__['file.readlink'](dest_file, canonicalize=True)
+                    if not __salt__['file.is_link'](dest_file) or cur_dest_file_link != dest_file_link:
+                        ret['links'].add((dest_file, dest_file_link))
+                else:
+                    ret['files'].add((dest_file, src_file))
+            src_dir = root
+            dest_dir = root.replace(src_path, dest_path)
+            ret['dirs'].add((dest_dir, src_dir))
+        return ret['files'], ret['dirs'], ret['links']
+
     if skip_same_file:
         extracted_files = []
         log.debug('Extracting %s to %s', name, origin_name)
@@ -1453,7 +1455,12 @@ def extracted(name,
                     if os.path.exists(dest_dir):
                         __salt__['file.remove'](dest_dir)
                     stats = __salt__['file.stats'](src_dir)
-                    __states__['file.directory'](dest_dir, user=stats.get('user'), group=stats.get('group'), file_mode=stats.get('mode'))
+                    __states__['file.directory'](
+                        dest_dir,
+                        user=stats.get('user'),
+                        group=stats.get('group'),
+                        file_mode=stats.get('mode')
+                    )
             except Exception as exc:
                 __salt__['file.remove'](name)
                 ret['changes'] = {}
@@ -1485,7 +1492,11 @@ def extracted(name,
                 return _error(ret, 'Unable to manage file: {0}'.format(exc))
             else:
                 if 'comment' in ret and ret['comment']:
-                    log.debug('The results of comparing %s with %s: %s', src_file, dest_file, ret['comment'])
+                    log.debug('The results of comparing %s with %s: %s',
+                        src_file,
+                        dest_file,
+                        ret['comment']
+                    )
                 if 'changes' in ret and ret['changes'] != {}:
                     extracted_files.append(src_file.replace(name.rstrip(os.sep), '.'))
 
