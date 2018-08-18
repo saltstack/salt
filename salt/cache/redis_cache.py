@@ -238,7 +238,8 @@ def _get_redis_server(opts=None):
                                    opts['port'],
                                    unix_socket_path=opts['unix_socket_path'],
                                    db=opts['db'],
-                                   password=opts['password'])
+                                   password=opts['password'],
+                                   decode_responses=True)
     return REDIS_SERVER
 
 
