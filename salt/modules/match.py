@@ -271,7 +271,7 @@ def pcre(tgt, minion_id=None):
         minion_id = __grains__['id']
     matchers = salt.loader.matchers({'id': minion_id})
     try:
-        return matcher['pcre_match.match'](tgt)
+        return matchers['pcre_match.match'](tgt)
     except Exception as exc:
         log.exception(exc)
         return False
