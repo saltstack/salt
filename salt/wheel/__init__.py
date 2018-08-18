@@ -57,7 +57,7 @@ class WheelClient(salt.client.mixins.SyncClientMixin,
         return self.low(fun, kwargs, print_event=kwargs.get('print_event', True), full_return=kwargs.get('full_return', False))
 
     # TODO: Inconsistent with runner client-- the runner client's master_call gives
-    # an async return, unlike this
+    # an asynchronous return, unlike this
     def master_call(self, **kwargs):
         '''
         Execute a wheel function through the master network interface (eauth).
@@ -120,7 +120,7 @@ class WheelClient(salt.client.mixins.SyncClientMixin,
             {'jid': '20131219224744416681', 'tag': 'salt/wheel/20131219224744416681'}
         '''
         fun = low.pop('fun')
-        return self.async(fun, low)
+        return self.asynchronous(fun, low)
 
     def cmd(self, fun, arg=None, pub_data=None, kwarg=None, print_event=True, full_return=False):
         '''

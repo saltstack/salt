@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import absolute_import, print_function, unicode_literals
+import re
 import textwrap
 
 # Import Salt libs
@@ -17,6 +18,98 @@ STR = BYTES = UNICODE.encode('utf-8')
 # This is an example of a unicode string with й constructed using two separate
 # code points. Do not modify it.
 EGGS = '\u044f\u0438\u0306\u0446\u0430'
+
+LATIN1_UNICODE = 'räksmörgås'
+LATIN1_BYTES = LATIN1_UNICODE.encode('latin-1')
+
+DOUBLE_TXT = '''\
+# set variable identifying the chroot you work in (used in the prompt below)
+if [ -z "$debian_chroot" ] && [ -r /etc/debian_chroot ]; then
+    debian_chroot=$(cat /etc/debian_chroot)
+fi
+'''
+
+SINGLE_TXT = '''\
+# set variable identifying the chroot you work in (used in the prompt below)
+if [ -z '$debian_chroot' ] && [ -r /etc/debian_chroot ]; then
+    debian_chroot=$(cat /etc/debian_chroot)
+fi
+'''
+
+SINGLE_DOUBLE_TXT = '''\
+# set variable identifying the chroot you work in (used in the prompt below)
+if [ -z '$debian_chroot' ] && [ -r /etc/debian_chroot ]; then
+    debian_chroot=$(cat /etc/debian_chroot)
+fi
+
+# set variable identifying the chroot you work in (used in the prompt below)
+if [ -z "$debian_chroot" ] && [ -r /etc/debian_chroot ]; then
+    debian_chroot=$(cat /etc/debian_chroot)
+fi
+'''
+
+SINGLE_DOUBLE_SAME_LINE_TXT = '''\
+# set variable identifying the chroot you work in (used in the prompt below)
+if [ -z '$debian_chroot' ] && [ -r "/etc/debian_chroot" ]; then
+    debian_chroot=$(cat /etc/debian_chroot)
+fi
+'''
+
+MATCH = '''\
+# set variable identifying the chroot you work in (used in the prompt below)
+if [ -z '$debian_chroot' ] && [ -r /etc/debian_chroot ]; then
+    debian_chroot=$(cat /etc/debian_chroot)
+fi
+
+
+# set variable identifying the chroot you work in (used in the prompt below)
+if [ -z "$debian_chroot" ] && [ -r /etc/debian_chroot ]; then
+    debian_chroot=$(cat /etc/debian_chroot)
+fi
+
+
+# set variable identifying the chroot you work in (used in the prompt below)
+if [ -z "$debian_chroot" ] && [ -r /etc/debian_chroot ]; then
+    debian_chroot=$(cat /etc/debian_chroot)
+fi
+
+
+# set variable identifying the chroot you work in (used in the prompt below)
+if [ -z '$debian_chroot' ] && [ -r /etc/debian_chroot ]; then
+    debian_chroot=$(cat /etc/debian_chroot)
+fi
+
+
+# set variable identifying the chroot you work in (used in the prompt below)
+if [ -z '$debian_chroot' ] && [ -r "/etc/debian_chroot" ]; then
+    debian_chroot=$(cat /etc/debian_chroot)
+fi
+'''
+
+
+class TestBuildWhitespaceRegex(TestCase):
+
+    def test_single_quotes(self):
+        regex = salt.utils.stringutils.build_whitespace_split_regex(SINGLE_TXT)
+        self.assertTrue(re.search(regex, MATCH))
+
+    def test_double_quotes(self):
+        regex = salt.utils.stringutils.build_whitespace_split_regex(DOUBLE_TXT)
+        self.assertTrue(re.search(regex, MATCH))
+
+    def test_single_and_double_quotes(self):
+        regex = salt.utils.stringutils.build_whitespace_split_regex(SINGLE_DOUBLE_TXT)
+        self.assertTrue(re.search(regex, MATCH))
+
+    def test_issue_2227(self):
+        regex = salt.utils.stringutils.build_whitespace_split_regex(SINGLE_DOUBLE_SAME_LINE_TXT)
+        self.assertTrue(re.search(regex, MATCH))
+
+    def test_build_whitespace_split_regex(self):
+        expected_regex = '(?m)^(?:[\\s]+)?Lorem(?:[\\s]+)?ipsum(?:[\\s]+)?dolor(?:[\\s]+)?sit(?:[\\s]+)?amet\\,' \
+                         '(?:[\\s]+)?$'
+        ret = salt.utils.stringutils.build_whitespace_split_regex(' '.join(LOREM_IPSUM.split()[:5]))
+        self.assertEqual(ret, expected_regex)
 
 
 class StringutilsTestCase(TestCase):
@@ -134,6 +227,13 @@ class StringutilsTestCase(TestCase):
             'яйца'
         )
 
+        self.assertEqual(
+            salt.utils.stringutils.to_unicode(
+                LATIN1_BYTES, encoding='latin-1'
+            ),
+            LATIN1_UNICODE
+        )
+
         if six.PY3:
             self.assertEqual(salt.utils.stringutils.to_unicode('plugh'), 'plugh')
             self.assertEqual(salt.utils.stringutils.to_unicode('áéíóúý'), 'áéíóúý')
@@ -150,11 +250,9 @@ class StringutilsTestCase(TestCase):
             with patch.object(builtins, '__salt_system_encoding__', 'CP1252'):
                 self.assertEqual(salt.utils.stringutils.to_unicode('Ψ'.encode('utf-8')), 'Ψ')
 
-    def test_build_whitespace_split_regex(self):
-        expected_regex = '(?m)^(?:[\\s]+)?Lorem(?:[\\s]+)?ipsum(?:[\\s]+)?dolor(?:[\\s]+)?sit(?:[\\s]+)?amet\\,' \
-                         '(?:[\\s]+)?$'
-        ret = salt.utils.stringutils.build_whitespace_split_regex(' '.join(LOREM_IPSUM.split()[:5]))
-        self.assertEqual(ret, expected_regex)
+    def test_to_unicode_multi_encoding(self):
+        result = salt.utils.stringutils.to_unicode(LATIN1_BYTES, encoding=('utf-8', 'latin1'))
+        assert result == LATIN1_UNICODE
 
     def test_get_context(self):
         expected_context = textwrap.dedent('''\
