@@ -81,7 +81,7 @@ class NestDisplay(object):
             )
         # Number includes all python numbers types
         #  (float, int, long, complex, ...)
-        # use repr() to get the full precision also for older python versions 
+        # use repr() to get the full precision also for older python versions
         # as until about python32 it was limited to 12 digits only by default
         elif isinstance(ret, Number):
             out.append(
