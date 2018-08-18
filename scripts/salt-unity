@@ -1,45 +1,13 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+'''
+Start the unity wrapper to call desired script
+'''
 
-# Import python libs
-import sys
-
-# Import salt libs
-import salt.scripts
+from __future__ import absolute_import
 import salt.utils.platform
-
-
-def get_avail():
-    '''
-    Return the available salt commands
-    '''
-    ret = []
-    for fun in dir(salt.scripts):
-        if fun.startswith('salt'):
-            ret.append(fun[5:])
-    return ret
-
-
-def redirect():
-    '''
-    Change the args and redirect to another salt script
-    '''
-    avail = get_avail()
-    if len(sys.argv) < 2:
-        msg = 'Must pass in a salt command, available commands are:'
-        for cmd in avail:
-            msg += '\n{0}'.format(cmd)
-        print(msg)
-        sys.exit(1)
-    cmd = sys.argv[1]
-    if cmd not in avail:
-        # Fall back to the salt command
-        sys.argv[0] = 'salt'
-        s_fun = salt.scripts.salt_main
-    else:
-        sys.argv[0] = 'salt-{0}'.format(cmd)
-        sys.argv.pop(1)
-        s_fun = getattr(salt.scripts, 'salt_{0}'.format(cmd))
-    s_fun()
+from salt.scripts import salt_unity
+from multiprocessing import freeze_support
 
 
 if __name__ == '__main__':
@@ -54,4 +22,7 @@ if __name__ == '__main__':
         cfile = os.path.splitext(__file__)[0] + '.pyc'
         if not os.path.exists(cfile):
             py_compile.compile(__file__, cfile)
-    redirect()
+    # This handles the bootstrapping code that is included with frozen
+    # scripts. It is a no-op on unfrozen code.
+    freeze_support()
+    salt_unity()
