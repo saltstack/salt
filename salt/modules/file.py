@@ -4080,7 +4080,12 @@ def get_managed(
                 urlparsed_source.netloc, urlparsed_source.path).rstrip(os.sep)
         unix_local_source = parsed_scheme in ('file', '')
 
-        if unix_local_source:
+        if parsed_scheme == '':
+            parsed_path = sfn = source
+            if not os.path.exists(sfn):
+                msg = 'Local file source {0} does not exist'.format(sfn)
+                return '', {}, msg
+        elif parsed_scheme == 'file':
             sfn = parsed_path
             if not os.path.exists(sfn):
                 msg = 'Local file source {0} does not exist'.format(sfn)
