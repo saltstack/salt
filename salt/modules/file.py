@@ -4079,6 +4079,7 @@ def get_managed(
         parsed_path = os.path.join(
                 urlparsed_source.netloc, urlparsed_source.path).rstrip(os.sep)
         unix_local_source = parsed_scheme in ('file', '')
+
         if parsed_scheme == '':
             parsed_path = sfn = source
             if not os.path.exists(sfn):
