@@ -10,6 +10,7 @@ import os
 # Import Salt Testing Libs
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON, call
+from tests.support.mixins import LoaderModuleMockMixin
 
 # Import Salt libs
 import salt.utils.mac_utils as mac_utils
@@ -21,10 +22,13 @@ from salt.ext import six
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class MacUtilsTestCase(TestCase):
+class MacUtilsTestCase(TestCase, LoaderModuleMockMixin):
     '''
     test mac_utils salt utility
     '''
+    def setup_loader_modules(self):
+        return {mac_utils: {}}
+
     def test_execute_return_success_not_supported(self):
         '''
         test execute_return_success function

@@ -41,12 +41,12 @@ class VaultTestCase(ModuleCase, ShellCase):
         )
         self.run_function(
             'cmd.run',
-            cmd='vault login token=testsecret',
+            cmd='/usr/local/bin/vault login token=testsecret',
             env={'VAULT_ADDR': 'http://127.0.0.1:8200'},
         )
         self.run_function(
             'cmd.run',
-            cmd='vault policy write testpolicy {0}/vault.hcl'.format(FILES),
+            cmd='/usr/local/bin/vault policy write testpolicy {0}/vault.hcl'.format(FILES),
             env={'VAULT_ADDR': 'http://127.0.0.1:8200'},
         )
 
