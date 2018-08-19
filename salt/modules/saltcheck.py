@@ -380,7 +380,7 @@ class SaltCheck(object):
             args = test_dict.get('args', None)
             kwargs = test_dict.get('kwargs', None)
             assertion = test_dict['assertion']
-            expected_return = test_dict['expected-return']
+            expected_return = test_dict.get('expected-return', None)
             actual_return = self.call_salt_command(mod_and_func, args, kwargs)
             if assertion not in ["assertIn", "assertNotIn", "assertEmpty", "assertNotEmpty",
                                  "assertTrue", "assertFalse"]:
@@ -410,7 +410,7 @@ class SaltCheck(object):
             elif assertion == "assertNotEmpty":
                 value = self.__assert_not_empty(actual_return)
             else:
-                value = "Fail - bas assertion"
+                value = "Fail - bad assertion"
         else:
             return "Fail - invalid test"
         return value
@@ -580,10 +580,11 @@ class SaltCheck(object):
         '''
         result = "Pass"
         try:
-            assert (returned), "{0} is empty".format(returned)
+            assert (returned), "value is empty".format(returned)
         except AssertionError as err:
             result = "Fail: " + six.text_type(err)
         return result
+
     @staticmethod
     def get_state_search_path_list():
         '''
