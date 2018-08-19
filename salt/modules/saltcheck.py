@@ -75,7 +75,7 @@ def __virtual__():
     return __virtualname__
 
 
-def update_master_cache(saltenv=None):
+def update_master_cache(saltenv='base'):
     '''
     Updates the master cache onto the minion - transfers all salt-check-tests
     Should be done one time before running tests, and if tests are updated
@@ -132,6 +132,8 @@ def run_state_tests(state, saltenv=None):
     '''
     if not saltenv:
         saltenv = __opts__['saltenv']
+    if not saltenv:
+        saltenv = 'base'
     scheck = SaltCheck(saltenv)
     paths = scheck._get_state_search_path_list(saltenv)
     stl = StateTestLoader(search_paths=paths)
@@ -521,7 +523,7 @@ class SaltCheck(object):
         '''
         result = "Pass"
         try:
-            assert (expected in returned), "{0} not False".format(returned)
+            assert (expected in returned), "{0} not found in {1}".format(expected, returned)
         except AssertionError as err:
             result = "Fail: " + six.text_type(err)
         return result
@@ -533,7 +535,7 @@ class SaltCheck(object):
         '''
         result = "Pass"
         try:
-            assert (expected not in returned), "{0} not False".format(returned)
+            assert (expected not in returned), "{0} was found in {1}".format(expected, returned)
         except AssertionError as err:
             result = "Fail: " + six.text_type(err)
         return result
