@@ -42,7 +42,7 @@ Example:
       assertion: assertEqual
       expected-return:  'hello'
 
-Support assertions:
+Supported assertions:
 assertEqual assertNotEqual assertTrue assertFalse assertIn assertNotIn assertGreater
 assertGreaterEqual assertLess assertLessEqual assertEmpty assertNotEmpty
 
@@ -289,7 +289,6 @@ class SaltCheck(object):
     '''
 
     def __init__(self):
-        # self.sls_list_top = []
         self.sls_list_state = []
         self.modules = []
         self.results_dict = {}
