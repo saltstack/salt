@@ -607,7 +607,7 @@ class SaltCheck(object):
         '''
         result = "Pass"
         try:
-            assert (returned), "value is empty".format(returned)
+            assert (returned), "value is empty"
         except AssertionError as err:
             result = "Fail: " + six.text_type(err)
         return result
