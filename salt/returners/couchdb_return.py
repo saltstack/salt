@@ -86,6 +86,16 @@ try:
 except ImportError:
     boltons_lib = False
 
+# if boltons lib not installed
+# redact_pws and minimum_return functionality
+# will not be implemented
+try:
+    from boltons.iterutils import remap
+
+    boltons_lib = True
+except ImportError:
+    boltons_lib = False
+
 log = logging.getLogger(__name__)
 
 # Define the module's virtual name
@@ -106,6 +116,7 @@ def _get_options(ret=None):
         "user": "user",
         "passwd": "passwd",
         "redact_pws": "redact_pws",
+        "minimum_return": "minimum_return",
     }
 
     _options = salt.returners.get_returner_options(
@@ -118,6 +129,22 @@ def _get_options(ret=None):
     if "db" not in _options:
         log.debug("Using default database.")
         _options["db"] = "salt"
+
+    if "user" not in _options:
+        log.debug("Not athenticating with a user.")
+        _options["user"] = None
+
+    if "passwd" not in _options:
+        log.debug("Not athenticating with a password.")
+        _options["passwd"] = None
+
+    if "redact_pws" not in _options:
+        log.debug("Not redacting passwords.")
+        _options["redact_pws"] = None
+
+    if "minimum_return" not in _options:
+        log.debug("Not minimizing the return object.")
+        _options["minimum_return"] = None
 
     if "user" not in _options:
         log.debug("Not athenticating with a user.")
@@ -334,7 +361,7 @@ def event_return(events):
     for event in events:
         # Call _generate_doc to get a dict object of the document we're going
         # to shove into the database.
-        log.debug("event data is: {}".format(event))
+        log.info("event data is: {}".format(event))
         doc = _generate_event_doc(event)
 
         # Make the actual HTTP PUT request to create the doc.
