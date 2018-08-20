@@ -128,13 +128,14 @@ def _status_wait(service_name, end_time, service_states):
         # than 10 seconds.
         # https://docs.microsoft.com/en-us/windows/desktop/services/starting-a-service
         # https://docs.microsoft.com/en-us/windows/desktop/services/stopping-a-service
-        wait_time = info_results['Status_WaitHint'] / 1000
-        if wait_time < 1000:
+        # Wait hint is in ms
+        wait_time = info_results['Status_WaitHint']
+        # Convert to seconds or 0
+        wait_time = wait_time / 1000 if wait_time else 0
+        if wait_time < 1:
             wait_time = 1
-        elif wait_time > 10000:
+        elif wait_time > 10:
             wait_time = 10
-        else:
-            wait_time = wait_time / 1000  # convert ms to seconds
 
         time.sleep(wait_time)
         info_results = info(service_name)
