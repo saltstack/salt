@@ -944,7 +944,7 @@ VALID_OPTS = {
     # Always generate minion id in lowercase.
     'minion_id_lowercase': bool,
 
-    # If set, suppress this domain in a generated minion id.
+    # If set, suppress this single domain (example "foo.bar") in a generated minion id.
     'minion_id_generate_no_domain': six.string_types,
 
     # If set, the master will sign all publications before they are sent out
