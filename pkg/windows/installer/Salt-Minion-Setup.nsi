@@ -248,7 +248,7 @@ Section -install_ucrt
     Pop $1 # Gets the stdout, which should be KB2999226 if it's installed
     ${IfNot} $R0 == 0
         detailPrint "error: $R0"
-        detailPrint "output: $R2"
+        detailPrint "KB2999226 not found"
     ${EndIf}
 
     # If it returned KB2999226 it's already installed
