@@ -454,7 +454,6 @@ class SaltCheck(object):
         result['duration'] = round(end - start, 4)
         return result
 
-
     @staticmethod
     def _cast_expected_to_returned_type(expected, returned):
         '''
