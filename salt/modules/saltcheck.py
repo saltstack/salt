@@ -30,11 +30,11 @@ Example file system layout:
             pkg_and_mods.tst
             config.tst
 
-Example:
+Example1:
 
 .. code-block:: yaml
 
-    echo-test-hello:
+    echo_test_hello:
       module_and_function: test.echo
       args:
         - "hello"
@@ -42,10 +42,23 @@ Example:
       assertion: assertEqual
       expected-return:  'hello'
 
+Example2:
+
+.. code-block:: jinja
+
+    {% for package in ["apache2", "openssh"] %}
+    {# or another example #}
+    {# for package in salt['pillar.get']("packages") #}
+    test_{{ package }}_latest:
+      module_and_function: pkg.upgrade_available
+      args:
+        - {{ package }}
+      assertion: assertFalse
+    {% endfor %}
+
 Supported assertions:
 assertEqual assertNotEqual assertTrue assertFalse assertIn assertNotIn assertGreater
 assertGreaterEqual assertLess assertLessEqual assertEmpty assertNotEmpty
-
 '''
 
 # Import Python libs
