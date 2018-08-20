@@ -227,6 +227,7 @@ def expand_variables(a, b, expanded, path=None):
                 b = find_and_process_re(v, v, k, b, expanded)
     return b
 
+
 def match_class_glob(_class, saltclass_path):
     '''
     Takes a class name possibly including `*` or `?` wildcards (or any other wildcards supportet by `glob.glob`) and
@@ -257,6 +258,7 @@ def match_class_glob(_class, saltclass_path):
     for match in matches:
         classes.append(get_class_from_file(match, saltclass_path))
     return classes
+
 
 def expand_classes_glob(classes, salt_data):
     '''
