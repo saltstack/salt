@@ -313,8 +313,9 @@ class SaltCheck(object):
                                   assertLess assertLessEqual
                                   assertEmpty assertNotEmpty'''.split()
         self.auto_update_master_cache = _get_auto_update_cache_value
-        # self.salt_lc = salt.client.Caller(mopts=__opts__)
-        self.salt_lc = salt.client.Caller()
+        local_opts = salt.config.minion_config(__opts__['conf_file'])
+        local_opts['file_client'] = 'local'
+        self.salt_lc = salt.client.Caller(mopts=local_opts)
         if self.auto_update_master_cache:
             update_master_cache(saltenv)
 
