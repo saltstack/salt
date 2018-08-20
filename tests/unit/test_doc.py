@@ -10,10 +10,10 @@ import os
 import re
 
 # Import Salt Testing libs
+from tests.support.paths import CODE_DIR
 from tests.support.unit import TestCase
 
 # Import Salt libs
-import tests.integration as integration
 import salt.modules.cmdmod
 import salt.utils.platform
 
@@ -34,7 +34,7 @@ class DocTestCase(TestCase):
 
         https://github.com/saltstack/salt/issues/12788
         '''
-        salt_dir = integration.CODE_DIR
+        salt_dir = CODE_DIR
 
         if salt.utils.platform.is_windows():
             # No grep in Windows, use findstr

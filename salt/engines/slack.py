@@ -787,7 +787,7 @@ class SlackClient(object):
         :param interval: time to wait between ending a loop and beginning the next
 
         '''
-        log.debug('Going to run a command async')
+        log.debug('Going to run a command asynchronous')
         runner_functions = sorted(salt.runner.Runner(__opts__).functions)
         # Parse args and kwargs
         cmd = msg['cmdline'][0]
@@ -809,7 +809,7 @@ class SlackClient(object):
             log.debug('Command %s will run via runner_functions', cmd)
             # pylint is tripping
             # pylint: disable=missing-whitespace-after-comma
-            job_id_dict = runner.async(cmd, {'args': args, 'kwargs': kwargs})
+            job_id_dict = runner.asynchronous(cmd, {'args': args, 'kwargs': kwargs})
             job_id = job_id_dict['jid']
 
         # Default to trying to run as a client module.

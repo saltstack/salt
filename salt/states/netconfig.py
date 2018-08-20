@@ -452,17 +452,14 @@ def saved(name,
 
 
 def managed(name,
-            template_name,
+            template_name=None,
             template_source=None,
             template_hash=None,
             template_hash_name=None,
-            template_user='root',
-            template_group='root',
-            template_mode='755',
-            template_attrs='--------------e----',
-            saltenv=None,
+            saltenv='base',
             template_engine='jinja',
             skip_verify=False,
+            context=None,
             defaults=None,
             test=False,
             commit=True,
@@ -473,7 +470,6 @@ def managed(name,
             revert_in=None,
             revert_at=None,
             **template_vars):
-
     '''
     Manages the configuration on network devices.
 
@@ -515,6 +511,11 @@ def managed(name,
         - ``https:/example.com/template.mako``
         - ``ftp://example.com/template.py``
 
+        .. versionchanged:: Fluorine
+            This argument can now support a list of templates to be rendered.
+            The resulting configuration text is loaded at once, as a single
+            configuration chunk.
+
     template_source: None
         Inline config template to be rendered and loaded on the device.
 
@@ -523,20 +524,6 @@ def managed(name,
 
     template_hash_name: None
         When ``template_hash`` refers to a remote file, this specifies the filename to look for in that file.
-
-    template_group: root
-        Owner of file.
-
-    template_user: root
-        Group owner of file.
-
-    template_mode: 755
-        Permissions of file
-
-    template_attrs: "--------------e----"
-        Attributes of file (see `man lsattr`)
-
-        .. versionadded:: 2018.3.0
 
     saltenv: base
         Specifies the template environment. This will influence the relative imports inside the templates.
@@ -598,7 +585,7 @@ def managed(name,
             applies a manual configuration change, or a different process or
             command changes the configuration in the meanwhile).
 
-        .. versionadded: Fluorine
+        .. versionadded:: Fluorine
 
     commit_at: ``None``
         Commit the changes at a specific time. Example of accepted formats:
@@ -622,7 +609,7 @@ def managed(name,
             applies a manual configuration change, or a different process or
             command changes the configuration in the meanwhile).
 
-        .. versionadded: Fluorine
+        .. versionadded:: Fluorine
 
     revert_in: ``None``
         Commit and revert the changes in a specific number of minutes / hours.
@@ -653,7 +640,7 @@ def managed(name,
             commit and till the changes are reverted), these changes would be
             equally reverted, as Salt cannot be aware of them.
 
-        .. versionadded: Fluorine
+        .. versionadded:: Fluorine
 
     revert_at: ``None``
         Commit and revert the changes at a specific time. Example of accepted
@@ -683,10 +670,15 @@ def managed(name,
             commit and till the changes are reverted), these changes would be
             equally reverted, as Salt cannot be aware of them.
 
-        .. versionadded: Fluorine
+        .. versionadded:: Fluorine
 
     replace: False
         Load and replace the configuration. Default: ``False`` (will apply load merge).
+
+    context: None
+        Overrides default context variables passed to the template.
+
+        .. versionadded:: Fluorine
 
     defaults: None
         Default variables/context passed to the template.
@@ -696,6 +688,10 @@ def managed(name,
         argument. This represents any other variable that will be sent to the template rendering system. Please
         see an example below! In both ``ntp_peers_example_using_pillar`` and ``ntp_peers_example``, ``peers`` is sent as
         template variable.
+
+        .. note::
+            It is more recommended to use the ``context`` argument instead, to
+            avoid any conflicts with other arguments.
 
     SLS Example (e.g.: under salt://router/config.sls) :
 
@@ -727,6 +723,26 @@ def managed(name,
             netconfig.managed:
                 - template_name: http://bit.ly/2gKOj20
                 - peers: {{ pillar.get('ntp.peers', []) }}
+
+    Multi template example:
+
+    .. code-block:: yaml
+
+        hostname_and_ntp:
+          netconfig.managed:
+            - template_name:
+                - https://bit.ly/2OhSgqP
+                - https://bit.ly/2M6C4Lx
+                - https://bit.ly/2OIWVTs
+            - debug: true
+            - context:
+                hostname: {{ opts.id }}
+                servers:
+                  - 172.17.17.1
+                  - 172.17.17.2
+                peers:
+                  - 192.168.0.1
+                  - 192.168.0.2
 
     Usage examples:
 
@@ -810,17 +826,14 @@ def managed(name,
     revert_in = __salt__['config.merge']('revert_in', revert_in)
     revert_at = __salt__['config.merge']('revert_at', revert_at)
 
-    config_update_ret = _update_config(template_name,
+    config_update_ret = _update_config(template_name=template_name,
                                        template_source=template_source,
                                        template_hash=template_hash,
                                        template_hash_name=template_hash_name,
-                                       template_user=template_user,
-                                       template_group=template_group,
-                                       template_mode=template_mode,
-                                       template_attrs=template_attrs,
                                        saltenv=saltenv,
                                        template_engine=template_engine,
                                        skip_verify=skip_verify,
+                                       context=context,
                                        defaults=defaults,
                                        test=test,
                                        commit=commit,
@@ -842,7 +855,7 @@ def commit_cancelled(name):
     Cancel a commit scheduled to be executed via the ``commit_in`` and
     ``commit_at`` arguments from the
     :py:func:`net.load_template <salt.modules.napalm_network.load_template>` or
-    :py:func:`net.load_config <salt.modules.napalm_network.load_config`
+    :py:func:`net.load_config <salt.modules.napalm_network.load_config>`
     execution functions. The commit ID is displayed when the commit is scheduled
     via the functions named above.
 
@@ -874,7 +887,7 @@ def commit_confirmed(name):
     Confirm a commit scheduled to be reverted via the ``revert_in`` and
     ``revert_at`` arguments from the
     :mod:`net.load_template <salt.modules.napalm_network.load_template>` or
-    :mod:`net.load_config <salt.modules.napalm_network.load_config`
+    :mod:`net.load_config <salt.modules.napalm_network.load_config>`
     execution functions. The commit ID is displayed when the commit confirmed
     is scheduled via the functions named above.
 
