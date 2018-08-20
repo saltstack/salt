@@ -1290,7 +1290,7 @@ def cache_parameter_group_present(
 
     if not current:
         if __opts__["test"]:
-            ret["comment"] = "Cache parameter group {} would be created.".format(name)
+            ret["comment"] = "Cache parameter group `{}` would be created.".format(name)
             ret["result"] = None
             return ret
         created = __salt__["boto3_elasticache.create_cache_parameter_group"](

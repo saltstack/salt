@@ -45,6 +45,8 @@ Execution module for Amazon Elasticache using boto3
 
 # keep lint from choking on _get_conn and _cache_id
 # pylint: disable=E0602
+# keep lint from whinging about perfectly valid code...
+# pylint: disable=W0106
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
@@ -1245,6 +1247,62 @@ def describe_cache_parameter_groups(
         keyid=keyid,
         profile=profile,
     )
+
+
+def describe_cache_parameters(
+    name=None, conn=None, region=None, key=None, keyid=None, profile=None, **args
+):
+    """
+    Returns the detailed parameter list for a particular cache parameter group.
+
+    name
+        The name of a specific cache parameter group to return details for.
+
+    CacheParameterGroupName
+        The name of a specific cache parameter group to return details for.  Generally not
+        required, as `name` will be used if not provided.
+
+    Source
+        Optionally, limit the parameter types to return.
+        Valid values:
+        - user
+        - system
+        - engine-default
+
+    Example:
+
+    .. code-block:: bash
+
+        salt myminion boto3_elasticache.describe_cache_parameters name=myParamGroup Source=user
+    """
+    ret = {}
+    generic = _describe_resource(
+        name=name,
+        name_param="CacheParameterGroupName",
+        res_type="cache_parameter",
+        info_node="Parameters",
+        conn=conn,
+        region=region,
+        key=key,
+        keyid=keyid,
+        profile=profile,
+        **args
+    )
+    specific = _describe_resource(
+        name=name,
+        name_param="CacheParameterGroupName",
+        res_type="cache_parameter",
+        info_node="CacheNodeTypeSpecificParameters",
+        conn=conn,
+        region=region,
+        key=key,
+        keyid=keyid,
+        profile=profile,
+        **args
+    )
+    ret.update({"Parameters": generic}) if generic else None
+    ret.update({"CacheNodeTypeSpecificParameters": specific}) if specific else None
+    return ret
 
 
 def create_cache_parameter_group(
