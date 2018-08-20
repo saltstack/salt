@@ -242,21 +242,17 @@ def returner(ret):
     if boltons_lib:
         # redact all passwords if options['redact_pws'] is True
         if options['redact_pws']:
-            log.info('Redacting passwords.')
             ret_remap_pws = remap(ret, visit=_redact_passwords)
         else:
-            log.info('Not redacting passwords.')
             ret_remap_pws = ret
 
         # remove all return values starting with '__pub' if options['minimum_return'] is True
         if options['minimum_return']:
-            log.info('Minimizing the return data.')
             ret_remapped = remap(ret_remap_pws, visit=_minimize_return)
         else:
-            log.info('Not minimizing the return data.')
             ret_remapped = ret_remap_pws
     else:
-        log.info('boltons library not installed. Cannot redact passwords or minimize the return')
+        log.info('boltons library not installed. pip install boltons. https://github.com/mahmoud/boltons.')
         ret_remapped = ret
 
     # Call _generate_doc to get a dict object of the document we're going to shove into the database.
