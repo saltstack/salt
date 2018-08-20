@@ -78,9 +78,7 @@ from salt.ext.six.moves.urllib.request import build_opener as _build_opener
 # pylint: enable=no-name-in-module,import-error
 
 
-# if boltons lib not installed
-# redact_pws and minimum_return functionality
-# will not be implemented
+# boltons lib for redact_pws and minimum_return
 try:
     from boltons.iterutils import remap
 
@@ -241,8 +239,11 @@ def returner(ret):
 
         # Confirm that the response back was simple 'ok': true.
         if "ok" not in _response or _response["ok"] is not True:
-            log.error('Unable to create database "{0}"'.format(options["db"]))
-            log.error("Nothing logged! Lost data.")
+            log.error(
+                'Nothing logged! Lost data. Unable to create database "{0}"'.format(
+                    options["db"]
+                )
+            )
             log.debug("_response object is: {0}".format(_response))
             return
         log.info("Created database '%s'", options["db"])
@@ -274,8 +275,7 @@ def returner(ret):
         )
         ret_remapped = ret
 
-    # Call _generate_doc to get a dict object of the document we're going to
-    # shove into the database.
+    # Call _generate_doc to get a dict object of the document we're going to shove into the database.
     doc = _generate_doc(ret_remapped)
 
     # Make the actual HTTP PUT request to create the doc.
@@ -334,7 +334,7 @@ def event_return(events):
     for event in events:
         # Call _generate_doc to get a dict object of the document we're going
         # to shove into the database.
-        log.info("event data is: {}".format(event))
+        log.debug("event data is: {}".format(event))
         doc = _generate_event_doc(event)
 
         # Make the actual HTTP PUT request to create the doc.
@@ -402,8 +402,7 @@ def get_fun(fun):
     # Define a simple return object.
     _ret = {}
 
-    # get_minions takes care of calling ensure_views for us.
-    # For each minion we know about
+    # get_minions takes care of calling ensure_views for us. For each minion we know about
     for minion in get_minions():
 
         # Make a query of the by-minion-and-timestamp view and limit the count
