@@ -21,8 +21,8 @@ New in Carbon (2016.11)
 -----------------------
 
 The methodologies for network automation have been introduced in
-:ref:`Carbon <release-2016-11-0.network-automation-napalm>` based on proxy
-minions:
+:ref:`2016.11.0 <release-2016-11-0-network-automation-napalm>`. Network
+automation support is based on proxy minions.
 
 - :mod:`NAPALM proxy <salt.proxy.napalm>`
 - :mod:`Junos proxy<salt.proxy.junos>`

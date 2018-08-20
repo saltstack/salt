@@ -23,6 +23,7 @@ TEMP_DATABASE_FILE = os.path.join(RUNTIME_VARS.TMP, 'test_sdb.sqlite')
 
 SDB_OPTS = {
             'extension_modules': '',
+            'optimization_order': [0, 1, 2],
             'test_sdb_data': {
                 'driver': 'sqlite3',
                 'database': TEMP_DATABASE_FILE,

@@ -74,8 +74,7 @@ def _atrun_enabled():
         # Collect information on service: will raise an error if it fails
         salt.utils.mac_utils.launchctl('list',
                                        label,
-                                       return_stdout=True,
-                                       output_loglevel='quiet')
+                                       return_stdout=True)
         return True
     except CommandExecutionError:
         return False
@@ -111,9 +110,8 @@ def _enable_atrun():
         return False
 
     salt.utils.mac_utils.launchctl('enable',
-                                   'system/{0}'.format(label),
-                                   output_loglevel='quiet')
-    salt.utils.mac_utils.launchctl('load', path, output_loglevel='quiet')
+                                   'system/{0}'.format(label))
+    salt.utils.mac_utils.launchctl('load', path)
     return _atrun_enabled()
 
 
@@ -137,17 +135,18 @@ def halt(at_time=None):
     Halt a running system
 
     :param str at_time: Any valid `at` expression. For example, some valid at
-    expressions could be:
-    - noon
-    - midnight
-    - fri
-    - 9:00 AM
-    - 2:30 PM tomorrow
-    - now + 10 minutes
+        expressions could be:
 
-    Note::
-    If you pass a time only, with no 'AM/PM' designation, you have to double
-    quote the parameter on the command line. For example: '"14:00"'
+        - noon
+        - midnight
+        - fri
+        - 9:00 AM
+        - 2:30 PM tomorrow
+        - now + 10 minutes
+
+    .. note::
+        If you pass a time only, with no 'AM/PM' designation, you have to
+        double quote the parameter on the command line. For example: '"14:00"'
 
     CLI Example:
 
@@ -166,17 +165,18 @@ def sleep(at_time=None):
     sleep.
 
     :param str at_time: Any valid `at` expression. For example, some valid at
-    expressions could be:
-    - noon
-    - midnight
-    - fri
-    - 9:00 AM
-    - 2:30 PM tomorrow
-    - now + 10 minutes
+        expressions could be:
 
-    Note::
-    If you pass a time only, with no 'AM/PM' designation, you have to double
-    quote the parameter on the command line. For example: '"14:00"'
+        - noon
+        - midnight
+        - fri
+        - 9:00 AM
+        - 2:30 PM tomorrow
+        - now + 10 minutes
+
+    .. note::
+        If you pass a time only, with no 'AM/PM' designation, you have to
+        double quote the parameter on the command line. For example: '"14:00"'
 
     CLI Example:
 
@@ -194,17 +194,18 @@ def restart(at_time=None):
     Restart the system
 
     :param str at_time: Any valid `at` expression. For example, some valid at
-    expressions could be:
-    - noon
-    - midnight
-    - fri
-    - 9:00 AM
-    - 2:30 PM tomorrow
-    - now + 10 minutes
+        expressions could be:
 
-    Note::
-    If you pass a time only, with no 'AM/PM' designation, you have to double
-    quote the parameter on the command line. For example: '"14:00"'
+        - noon
+        - midnight
+        - fri
+        - 9:00 AM
+        - 2:30 PM tomorrow
+        - now + 10 minutes
+
+    .. note::
+        If you pass a time only, with no 'AM/PM' designation, you have to
+        double quote the parameter on the command line. For example: '"14:00"'
 
     CLI Example:
 
@@ -222,17 +223,18 @@ def shutdown(at_time=None):
     Shutdown the system
 
     :param str at_time: Any valid `at` expression. For example, some valid at
-    expressions could be:
-    - noon
-    - midnight
-    - fri
-    - 9:00 AM
-    - 2:30 PM tomorrow
-    - now + 10 minutes
+        expressions could be:
 
-    Note::
-    If you pass a time only, with no 'AM/PM' designation, you have to double
-    quote the parameter on the command line. For example: '"14:00"'
+        - noon
+        - midnight
+        - fri
+        - 9:00 AM
+        - 2:30 PM tomorrow
+        - now + 10 minutes
+
+    .. note::
+        If you pass a time only, with no 'AM/PM' designation, you have to
+        double quote the parameter on the command line. For example: '"14:00"'
 
     CLI Example:
 
@@ -271,8 +273,8 @@ def set_remote_login(enable):
     Set the remote login (SSH) to either on or off.
 
     :param bool enable: True to enable, False to disable. "On" and "Off" are
-    also acceptable values. Additionally you can pass 1 and 0 to represent True
-    and False respectively
+        also acceptable values. Additionally you can pass 1 and 0 to represent
+        True and False respectively
 
     :return: True if successful, False if not
     :rtype: bool
@@ -323,8 +325,8 @@ def set_remote_events(enable):
     AppleScripts)
 
     :param bool enable: True to enable, False to disable. "On" and "Off" are
-    also acceptable values. Additionally you can pass 1 and 0 to represent True
-    and False respectively
+        also acceptable values. Additionally you can pass 1 and 0 to represent
+        True and False respectively
 
     :return: True if successful, False if not
     :rtype: bool
@@ -513,7 +515,7 @@ def get_restart_delay():
     power failure.
 
     :return: A string value representing the number of seconds the system will
-    delay restart after power loss
+        delay restart after power loss
     :rtype: str
 
     CLI Example:
@@ -600,8 +602,8 @@ def set_disable_keyboard_on_lock(enable):
     enclosure lock is engaged.
 
     :param bool enable: True to enable, False to disable. "On" and "Off" are
-    also acceptable values. Additionally you can pass 1 and 0 to represent True
-    and False respectively
+        also acceptable values. Additionally you can pass 1 and 0 to represent
+        True and False respectively
 
     :return: True if successful, False if not
     :rtype: bool
@@ -658,20 +660,17 @@ def set_boot_arch(arch='default'):
     Set the kernel to boot in 32 or 64 bit mode on next boot.
 
     .. note::
-
-        This command fails with the following error:
-
-        ``changes to kernel architecture failed to save!``
-
-        The setting is not updated. This is either an apple bug, not available
-        on the test system, or a result of system files now being locked down in
-        macOS (SIP Protection).
+        When this function fails with the error ``changes to kernel
+        architecture failed to save!``, then the boot arch is not updated.
+        This is either an Apple bug, not available on the test system, or a
+        result of system files being locked down in macOS (SIP Protection).
 
     :param str arch: A string representing the desired architecture. If no
-    value is passed, default is assumed. Valid values include:
-    - i386
-    - x86_64
-    - default
+        value is passed, default is assumed. Valid values include:
+
+        - i386
+        - x86_64
+        - default
 
     :return: True if successful, False if not
     :rtype: bool

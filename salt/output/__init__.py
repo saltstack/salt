@@ -6,8 +6,10 @@ for managing outputters.
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+
 import errno
 import logging
+import io
 import os
 import re
 import sys
@@ -168,7 +170,7 @@ def get_printout(out, opts=None, **kwargs):
             '''
             try:
                 fileno = sys.stdout.fileno()
-            except AttributeError:
+            except (AttributeError, io.UnsupportedOperation):
                 fileno = -1  # sys.stdout is StringIO or fake
             return not os.isatty(fileno)
 

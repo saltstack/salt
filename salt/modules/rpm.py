@@ -9,6 +9,7 @@ import logging
 import os
 import re
 import datetime
+from salt.utils.versions import LooseVersion
 
 # Import Salt libs
 import salt.utils.decorators.path
@@ -609,7 +610,7 @@ def info(*packages, **kwargs):
     # pick only latest versions
     # (in case multiple packages installed, e.g. kernel)
     ret = dict()
-    for pkg_data in reversed(sorted(_ret, key=lambda x: x['edition'])):
+    for pkg_data in reversed(sorted(_ret, key=lambda x: LooseVersion(x['edition']))):
         pkg_name = pkg_data.pop('name')
         # Filter out GPG public keys packages
         if pkg_name.startswith('gpg-pubkey'):

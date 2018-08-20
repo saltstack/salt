@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 
 
     salt.utils.parsers
@@ -586,7 +586,7 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
                 dest=self._loglevel_config_setting_name_,
                 choices=list(log.LOG_LEVELS),
                 help='Console logging log level. One of {0}. Default: \'{1}\'.'.format(
-                     ', '.join([repr(l) for l in log.SORTED_LEVEL_NAMES]),
+                     ', '.join(["'{}'".format(n) for n in log.SORTED_LEVEL_NAMES]),
                      self._default_logging_level_
                 )
             )
@@ -605,7 +605,7 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
             dest=self._logfile_loglevel_config_setting_name_,
             choices=list(log.LOG_LEVELS),
             help='Logfile logging log level. One of {0}. Default: \'{1}\'.'.format(
-                 ', '.join([repr(l) for l in log.SORTED_LEVEL_NAMES]),
+                 ', '.join(["'{}'".format(n) for n in log.SORTED_LEVEL_NAMES]),
                  self._default_logging_level_
             )
         )
@@ -977,9 +977,17 @@ class DaemonMixIn(six.with_metaclass(MixInMeta, object)):
                     # Log error only when running salt-master as a root user.
                     # Otherwise this can be ignored, since salt-master is able to
                     # overwrite the PIDfile on the next start.
-                    if not os.getuid():
-                        logger.info('PIDfile could not be deleted: %s', six.text_type(self.config['pidfile']))
-                        logger.debug(six.text_type(err))
+                    err_msg = ('PIDfile could not be deleted: %s',
+                               six.text_type(self.config['pidfile']))
+                    if salt.utils.platform.is_windows():
+                        user = salt.utils.win_functions.get_current_user()
+                        if salt.utils.win_functions.is_admin(user):
+                            logger.info(*err_msg)
+                            logger.debug(six.text_type(err))
+                    else:
+                        if not os.getuid():
+                            logger.info(*err_msg)
+                            logger.debug(six.text_type(err))
 
     def set_pidfile(self):
         from salt.utils.process import set_pidfile
@@ -1255,6 +1263,28 @@ class ProxyIdMixIn(six.with_metaclass(MixInMeta, object)):
             default=None,
             dest='proxyid',
             help=('Id for this proxy.')
+        )
+
+
+class ExecutorsMixIn(six.with_metaclass(MixInMeta, object)):
+    _mixin_prio = 10
+
+    def _mixin_setup(self):
+        self.add_option(
+            '--module-executors',
+            dest='module_executors',
+            default=None,
+            metavar='EXECUTOR_LIST',
+            help=('Set an alternative list of executors to override the one '
+                  'set in minion config.')
+        )
+        self.add_option(
+            '--executor-opts',
+            dest='executor_opts',
+            default=None,
+            metavar='EXECUTOR_OPTS',
+            help=('Set alternate executor options if supported by executor. '
+                  'Options set by minion config are used by default.')
         )
 
 
@@ -1871,6 +1901,7 @@ class SaltCMDOptionParser(six.with_metaclass(OptionParserMeta,
                                              ExtendedTargetOptionsMixIn,
                                              OutputOptionsMixIn,
                                              LogLevelMixIn,
+                                             ExecutorsMixIn,
                                              HardCrashMixin,
                                              SaltfileMixIn,
                                              ArgsStdinMixIn,
@@ -2007,22 +2038,6 @@ class SaltCMDOptionParser(six.with_metaclass(OptionParserMeta,
             default={},
             metavar='RETURNER_KWARGS',
             help=('Set any returner options at the command line.')
-        )
-        self.add_option(
-            '--module-executors',
-            dest='module_executors',
-            default=None,
-            metavar='EXECUTOR_LIST',
-            help=('Set an alternative list of executors to override the one '
-                  'set in minion config.')
-        )
-        self.add_option(
-            '--executor-opts',
-            dest='executor_opts',
-            default=None,
-            metavar='EXECUTOR_OPTS',
-            help=('Set alternate executor options if supported by executor. '
-                  'Options set by minion config are used by default.')
         )
         self.add_option(
             '-d', '--doc', '--documentation',
@@ -2564,7 +2579,9 @@ class SaltKeyOptionParser(six.with_metaclass(OptionParserMeta,
 
 class SaltCallOptionParser(six.with_metaclass(OptionParserMeta,
                                               OptionParser,
+                                              ProxyIdMixIn,
                                               ConfigDirMixIn,
+                                              ExecutorsMixIn,
                                               MergeConfigMixIn,
                                               LogLevelMixIn,
                                               OutputOptionsMixIn,
@@ -2724,8 +2741,13 @@ class SaltCallOptionParser(six.with_metaclass(OptionParserMeta,
             self.config['arg'] = self.args[1:]
 
     def setup_config(self):
-        opts = config.minion_config(self.get_config_file_path(),
-                                    cache_minion_id=True)
+        if self.options.proxyid:
+            opts = config.proxy_config(self.get_config_file_path(configfile='proxy'),
+                                       cache_minion_id=True,
+                                       minion_id=self.options.proxyid)
+        else:
+            opts = config.minion_config(self.get_config_file_path(),
+                                        cache_minion_id=True)
 
         if opts.get('transport') == 'raet':
             if not self._find_raet_minion(opts):  # must create caller minion
@@ -3024,6 +3046,12 @@ class SaltSSHOptionParser(six.with_metaclass(OptionParserMeta,
             help='Ssh private key file.'
         )
         auth_group.add_option(
+            '--priv-passwd',
+            dest='ssh_priv_passwd',
+            default='',
+            help='Passphrase for ssh private key file.'
+        )
+        auth_group.add_option(
             '-i',
             '--ignore-host-keys',
             dest='ignore_host_keys',
@@ -3087,11 +3115,11 @@ class SaltSSHOptionParser(six.with_metaclass(OptionParserMeta,
             help='Run command via sudo.'
         )
         auth_group.add_option(
-            '--skip-roster',
-            dest='ssh_skip_roster',
+            '--update-roster',
+            dest='ssh_update_roster',
             default=False,
             action='store_true',
-            help='If hostname is not found in the roster, do not store the information'
+            help='If hostname is not found in the roster, store the information'
                  'into the default roster file (flat).'
         )
         self.add_option_group(auth_group)

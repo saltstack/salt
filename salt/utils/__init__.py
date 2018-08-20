@@ -16,6 +16,7 @@ from salt.defaults import DEFAULT_TARGET_DELIM
 
 # Import 3rd-party libs
 from salt.ext import six
+import os
 
 
 #

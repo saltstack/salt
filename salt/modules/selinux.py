@@ -21,6 +21,7 @@ import salt.utils.files
 import salt.utils.path
 import salt.utils.stringutils
 import salt.utils.decorators as decorators
+import salt.utils.versions
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 # Import 3rd-party libs
@@ -502,12 +503,11 @@ def fcontext_get_policy(name, filetype=None, sel_type=None, sel_user=None, sel_l
     return ret
 
 
-def fcontext_add_or_delete_policy(action, name, filetype=None, sel_type=None, sel_user=None, sel_level=None):
+def fcontext_add_policy(name, filetype=None, sel_type=None, sel_user=None, sel_level=None):
     '''
-    .. versionadded:: 2017.7.0
+    .. versionadded:: Fluorine
 
-    Sets or deletes the SELinux policy for a given filespec and other
-    optional parameters.
+    Adds the SELinux policy for a given filespec and other optional parameters.
 
     Returns the result of the call to semanage.
 
@@ -537,7 +537,113 @@ def fcontext_add_or_delete_policy(action, name, filetype=None, sel_type=None, se
 
     .. code-block:: bash
 
+        salt '*' selinux.fcontext_add_policy my-policy
+    '''
+    return _fcontext_add_or_delete_policy('add', name, filetype, sel_type, sel_user, sel_level)
+
+
+def fcontext_delete_policy(name, filetype=None, sel_type=None, sel_user=None, sel_level=None):
+    '''
+    .. versionadded:: Fluorine
+
+    Deletes the SELinux policy for a given filespec and other optional parameters.
+
+    Returns the result of the call to semanage.
+
+    Note that you don't have to remove an entry before setting a new
+    one for a given filespec and filetype, as adding one with semanage
+    automatically overwrites a previously configured SELinux context.
+
+    name
+        filespec of the file or directory. Regex syntax is allowed.
+
+    file_type
+        The SELinux filetype specification. Use one of [a, f, d, c, b,
+        s, l, p]. See also ``man semanage-fcontext``. Defaults to 'a'
+        (all files).
+
+    sel_type
+        SELinux context type. There are many.
+
+    sel_user
+        SELinux user. Use ``semanage login -l`` to determine which ones
+        are available to you.
+
+    sel_level
+        The MLS range of the SELinux context.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' selinux.fcontext_delete_policy my-policy
+    '''
+    return _fcontext_add_or_delete_policy('delete', name, filetype, sel_type, sel_user, sel_level)
+
+
+def fcontext_add_or_delete_policy(action, name, filetype=None, sel_type=None, sel_user=None, sel_level=None):
+    '''
+    .. versionadded:: 2017.7.0
+
+    Adds or deletes the SELinux policy for a given filespec and other optional parameters.
+
+    Returns the result of the call to semanage.
+
+    Note that you don't have to remove an entry before setting a new
+    one for a given filespec and filetype, as adding one with semanage
+    automatically overwrites a previously configured SELinux context.
+
+    .. warning::
+
+        Use :mod:`selinux.fcontext_add_policy()<salt.modules.selinux.fcontext_add_policy>`,
+        or :mod:`selinux.fcontext_delete_policy()<salt.modules.selinux.fcontext_delete_policy>`.
+
+    .. deprecated:: Fluorine
+
+    action
+        The action to perform. Either ``add`` or ``delete``.
+
+    name
+        filespec of the file or directory. Regex syntax is allowed.
+
+    file_type
+        The SELinux filetype specification. Use one of [a, f, d, c, b,
+        s, l, p]. See also ``man semanage-fcontext``. Defaults to 'a'
+        (all files).
+
+    sel_type
+        SELinux context type. There are many.
+
+    sel_user
+        SELinux user. Use ``semanage login -l`` to determine which ones
+        are available to you.
+
+    sel_level
+        The MLS range of the SELinux context.
+
+    CLI Example:
+
+    .. code-block:: bash
+
         salt '*' selinux.fcontext_add_or_delete_policy add my-policy
+    '''
+    salt.utils.versions.warn_until(
+        'Sodium',
+        'The \'selinux.fcontext_add_or_delete_policy\' module has been deprecated. Please use the '
+        '\'selinux.fcontext_add_policy\' and \'selinux.fcontext_delete_policy\' modules instead. '
+        'Support for the \'selinux.fcontext_add_or_delete_policy\' module will be removed in Salt '
+        '{version}.'
+    )
+    return _fcontext_add_or_delete_policy(action, name, filetype, sel_type, sel_user, sel_level)
+
+
+def _fcontext_add_or_delete_policy(action, name, filetype=None, sel_type=None, sel_user=None, sel_level=None):
+    '''
+    .. versionadded:: Fluorine
+
+    Performs the action as called from ``fcontext_add_policy`` or ``fcontext_delete_policy``.
+
+    Returns the result of the call to semanage.
     '''
     if action not in ['add', 'delete']:
         raise SaltInvocationError('Actions supported are "add" and "delete", not "{0}".'.format(action))
@@ -642,13 +748,13 @@ def port_get_policy(name, sel_type=None, protocol=None, port=None):
     * port (the port(s) and/or port range(s))
 
     name
-        The protocol and port spec. Can be formatted as (tcp|udp)/(port|port-range).
+        The protocol and port spec. Can be formatted as ``(tcp|udp)/(port|port-range)``.
 
     sel_type
         The SELinux Type.
 
     protocol
-        The protocol for the port (tcp|udp). Required if name is not formatted.
+        The protocol for the port, ``tcp`` or ``udp``. Required if name is not formatted.
 
     port
         The port or port range. Required if name is not formatted.
@@ -680,25 +786,22 @@ def port_get_policy(name, sel_type=None, protocol=None, port=None):
         'port': parts.group(3).strip(), }
 
 
-def port_add_or_delete_policy(action, name, sel_type=None, protocol=None, port=None, sel_range=None):
+def port_add_policy(name, sel_type=None, protocol=None, port=None, sel_range=None):
     '''
     .. versionadded:: Fluorine
 
-    Adds or deletes the SELinux policy for a given protocol and port.
+    Adds the SELinux policy for a given protocol and port.
 
     Returns the result of the call to semanage.
 
-    action
-        The action to perform. Either 'add' or 'delete'.
-
     name
-        The protocol and port spec. Can be formatted as (tcp|udp)/(port|port-range).
+        The protocol and port spec. Can be formatted as ``(tcp|udp)/(port|port-range)``.
 
     sel_type
-        The SELinux Type. Required for 'add'.
+        The SELinux Type. Required.
 
     protocol
-        The protocol for the port (tcp|udp). Required if name is not formatted.
+        The protocol for the port, ``tcp`` or ``udp``. Required if name is not formatted.
 
     port
         The port or port range. Required if name is not formatted.
@@ -710,8 +813,46 @@ def port_add_or_delete_policy(action, name, sel_type=None, protocol=None, port=N
 
     .. code-block:: bash
 
-        salt '*' selinux.port_add_or_delete_policy add tcp/8080 http_port_t
-        salt '*' selinux.port_add_or_delete_policy add foobar http_port_t protocol=tcp port=8091
+        salt '*' selinux.port_add_policy add tcp/8080 http_port_t
+        salt '*' selinux.port_add_policy add foobar http_port_t protocol=tcp port=8091
+    '''
+    return _port_add_or_delete_policy('add', name, sel_type, protocol, port, sel_range)
+
+
+def port_delete_policy(name, protocol=None, port=None):
+    '''
+    .. versionadded:: Fluorine
+
+    Deletes the SELinux policy for a given protocol and port.
+
+    Returns the result of the call to semanage.
+
+    name
+        The protocol and port spec. Can be formatted as ``(tcp|udp)/(port|port-range)``.
+
+    protocol
+        The protocol for the port, ``tcp`` or ``udp``. Required if name is not formatted.
+
+    port
+        The port or port range. Required if name is not formatted.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' selinux.port_delete_policy tcp/8080
+        salt '*' selinux.port_delete_policy foobar protocol=tcp port=8091
+    '''
+    return _port_add_or_delete_policy('delete', name, None, protocol, port, None)
+
+
+def _port_add_or_delete_policy(action, name, sel_type=None, protocol=None, port=None, sel_range=None):
+    '''
+    .. versionadded:: Fluorine
+
+    Performs the action as called from ``port_add_policy`` or ``port_delete_policy``.
+
+    Returns the result of the call to semanage.
     '''
     if action not in ['add', 'delete']:
         raise SaltInvocationError('Actions supported are "add" and "delete", not "{0}".'.format(action))

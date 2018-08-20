@@ -5,7 +5,9 @@ Module for handling OpenStack Nova calls
 :depends:   - novaclient Python module
 :configuration: This module is not usable until the user, password, tenant, and
     auth URL are specified either in a pillar or in the minion's config file.
-    For example::
+    For example:
+
+    .. code-block:: yaml
 
         keystone.user: admin
         keystone.password: verybadpass
@@ -16,7 +18,9 @@ Module for handling OpenStack Nova calls
 
     If configuration for multiple OpenStack accounts is required, they can be
     set up as different configuration profiles:
-    For example::
+    For example:
+
+    .. code-block:: yaml
 
         openstack1:
           keystone.user: admin
@@ -32,14 +36,17 @@ Module for handling OpenStack Nova calls
 
     With this configuration in place, any of the nova functions can make use of
     a configuration profile by declaring it explicitly.
-    For example::
+    For example:
+
+    .. code-block:: bash
 
         salt '*' nova.flavor_list profile=openstack1
 
     To use keystoneauth1 instead of keystoneclient, include the `use_keystoneauth`
     option in the pillar or minion config.
 
-    .. note:: this is required to use keystone v3 as for authentication.
+    .. note::
+        This is required to use keystone v3 as for authentication.
 
     .. code-block:: yaml
 
@@ -51,12 +58,15 @@ Module for handling OpenStack Nova calls
         keystone.verify: '/path/to/custom/certs/ca-bundle.crt'
 
 
-    Note: by default the nova module will attempt to verify its connection
-    utilizing the system certificates. If you need to verify against another bundle
-    of CA certificates or want to skip verification altogether you will need to
-    specify the `verify` option. You can specify True or False to verify (or not)
-    against system certificates, a path to a bundle or CA certs to check against, or
-    None to allow keystoneauth to search for the certificates on its own.(defaults to True)
+    .. note::
+        By default the nova module will attempt to verify its connection
+        utilizing the system certificates. If you need to verify against
+        another bundle of CA certificates or want to skip verification
+        altogether you will need to specify the `verify` option. You can
+        specify True or False to verify (or not) against system certificates, a
+        path to a bundle or CA certs to check against, or None to allow
+        keystoneauth to search for the certificates on its own. (defaults to
+        True)
 '''
 from __future__ import absolute_import, unicode_literals, print_function
 
@@ -196,9 +206,7 @@ def volume_list(search_opts=None, profile=None):
 
     .. code-block:: bash
 
-        salt '*' nova.volume_list \
-                search_opts='{"display_name": "myblock"}' \
-                profile=openstack
+        salt '*' nova.volume_list search_opts='{"display_name": "myblock"}' profile=openstack
 
     '''
     conn = _auth(profile)
@@ -337,8 +345,7 @@ def volume_attach(name,
     .. code-block:: bash
 
         salt '*' nova.volume_attach myblock slice.example.com profile=openstack
-        salt '*' nova.volume_attach myblock server.example.com \
-                device='/dev/xvdb' profile=openstack
+        salt '*' nova.volume_attach myblock server.example.com device=/dev/xvdb profile=openstack
 
     '''
     conn = _auth(profile)
@@ -461,8 +468,7 @@ def flavor_create(name,      # pylint: disable=C0103
 
     .. code-block:: bash
 
-        salt '*' nova.flavor_create myflavor flavor_id=6 \
-                ram=4096 disk=10 vcpus=1
+        salt '*' nova.flavor_create myflavor flavor_id=6 ram=4096 disk=10 vcpus=1
     '''
     conn = _auth(profile)
     return conn.flavor_create(
@@ -510,7 +516,7 @@ def keypair_add(name, pubfile=None, pubkey=None, profile=None):
 
     .. code-block:: bash
 
-        salt '*' nova.keypair_add mykey pubfile='/home/myuser/.ssh/id_rsa.pub'
+        salt '*' nova.keypair_add mykey pubfile=/home/myuser/.ssh/id_rsa.pub
         salt '*' nova.keypair_add mykey pubkey='ssh-rsa <key> myuser@mybox'
     '''
     conn = _auth(profile)
@@ -529,7 +535,7 @@ def keypair_delete(name, profile=None):
 
     .. code-block:: bash
 
-        salt '*' nova.keypair_delete mykey'
+        salt '*' nova.keypair_delete mykey
     '''
     conn = _auth(profile)
     return conn.keypair_delete(name)
@@ -562,8 +568,7 @@ def image_meta_set(image_id=None,
 
     .. code-block:: bash
 
-        salt '*' nova.image_meta_set 6f52b2ff-0b31-4d84-8fd1-af45b84824f6 \
-                cheese=gruyere
+        salt '*' nova.image_meta_set 6f52b2ff-0b31-4d84-8fd1-af45b84824f6 cheese=gruyere
         salt '*' nova.image_meta_set name=myimage salad=pasta beans=baked
     '''
     conn = _auth(profile)
@@ -586,8 +591,7 @@ def image_meta_delete(image_id=None,     # pylint: disable=C0103
 
     .. code-block:: bash
 
-        salt '*' nova.image_meta_delete \
-                6f52b2ff-0b31-4d84-8fd1-af45b84824f6 keys=cheese
+        salt '*' nova.image_meta_delete 6f52b2ff-0b31-4d84-8fd1-af45b84824f6 keys=cheese
         salt '*' nova.image_meta_delete name=myimage keys=salad,beans
     '''
     conn = _auth(profile)

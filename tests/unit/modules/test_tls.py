@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Joe Julian <me@joejulian.name>`
+    :codeauthor: Joe Julian <me@joejulian.name>
 '''
 # Import the future
 from __future__ import absolute_import, unicode_literals, print_function

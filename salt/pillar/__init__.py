@@ -761,7 +761,7 @@ class Pillar(object):
                                      '\'{0}\' found'.format(saltenv)]
                                 )
 
-                        for sub_sls in set(matched_pstates):
+                        for sub_sls in matched_pstates:
                             if sub_sls not in mods:
                                 nstate, mods, err = self.render_pstate(
                                         sub_sls,
@@ -960,7 +960,7 @@ class Pillar(object):
                         )
                     )
                     log.error(
-                        'Execption caught loading ext_pillar \'%s\':\n%s',
+                        'Exception caught loading ext_pillar \'%s\':\n%s',
                         key, ''.join(traceback.format_tb(sys.exc_info()[2]))
                     )
             if ext:
@@ -1006,6 +1006,13 @@ class Pillar(object):
             mopts['file_roots'] = self.actual_file_roots
             mopts['saltversion'] = __version__
             pillar['master'] = mopts
+        if 'pillar' in self.opts and self.opts.get('ssh_merge_pillar', False):
+            pillar = merge(
+                self.opts['pillar'],
+                pillar,
+                self.merge_strategy,
+                self.opts.get('renderer', 'yaml'),
+                self.opts.get('pillar_merge_lists', False))
         if errors:
             for error in errors:
                 log.critical('Pillar render error: %s', error)
@@ -1022,6 +1029,11 @@ class Pillar(object):
         decrypt_errors = self.decrypt_pillar(pillar)
         if decrypt_errors:
             pillar.setdefault('_errors', []).extend(decrypt_errors)
+
+        # Reset the file_roots for the renderers
+        for mod_name in sys.modules:
+            if mod_name.startswith('salt.loaded.int.render.'):
+                sys.modules[mod_name].__opts__['file_roots'] = self.actual_file_roots
         return pillar
 
     def decrypt_pillar(self, pillar):

@@ -16,7 +16,6 @@ import types
 
 log = logging.getLogger(__name__)
 
-from salt.ext import six
 try:
     import testinfra
     from testinfra import modules
@@ -218,7 +217,7 @@ def _copy_function(module_name, name=None):
             comparison: eq
     ```
     """
-    log.debug('Generating function for %s module', module_name)
+    log.debug('Generating function for testinfra.%s', module_name)
 
     def _run_tests(name, **methods):
         success = True
@@ -278,9 +277,15 @@ def _copy_function(module_name, name=None):
                             ))
         return success, pass_msgs, fail_msgs
     func = _run_tests
+    if name is not None:
+        # types.FunctionType requires a str for __name__ attribute, using a
+        # unicode type will result in a TypeError.
+        name = str(name)  # future lint: disable=blacklisted-function
+    else:
+        name = func.__name__
     return types.FunctionType(func.__code__,
                               func.__globals__,
-                              name or func.__name__,
+                              name,
                               func.__defaults__,
                               func.__closure__)
 
@@ -297,7 +302,7 @@ def _register_functions():
         modules_ = [module_ for module_ in modules.modules]
 
     for mod_name in modules_:
-        mod_func = _copy_function(mod_name, six.text_type(mod_name))
+        mod_func = _copy_function(mod_name, mod_name)
         mod_func.__doc__ = _build_doc(mod_name)
         __all__.append(mod_name)
         globals()[mod_name] = mod_func

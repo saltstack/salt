@@ -12,10 +12,9 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import datetime
-import difflib
 import errno
-import fileinput
 import fnmatch
+import io
 import itertools
 import logging
 import operator
@@ -48,19 +47,20 @@ except ImportError:
 # Import salt libs
 import salt.utils.args
 import salt.utils.atomicfile
+import salt.utils.data
 import salt.utils.filebuffer
 import salt.utils.files
 import salt.utils.find
 import salt.utils.functools
 import salt.utils.hashutils
 import salt.utils.itertools
-import salt.utils.locales
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.templates
 import salt.utils.url
 import salt.utils.user
+import salt.utils.data
 from salt.exceptions import CommandExecutionError, MinionError, SaltInvocationError, get_error_message as _get_error_message
 from salt.utils.files import HASHES, HASHES_REVMAP
 
@@ -561,7 +561,7 @@ def lsattr(path):
         return None
 
     if not os.path.exists(path):
-        raise SaltInvocationError("File or directory does not exist.")
+        raise SaltInvocationError("File or directory does not exist: " + path)
 
     cmd = ['lsattr', path]
     result = __salt__['cmd.run'](cmd, ignore_retcode=True, python_shell=False)
@@ -575,30 +575,26 @@ def lsattr(path):
     return results
 
 
-def chattr(*args, **kwargs):
+def chattr(*files, **kwargs):
     '''
     .. versionadded:: 2018.3.0
 
-    Change the attributes of files
-
-    *args
-        list of files to modify attributes of
-
-    **kwargs - the following are valid <key,value> pairs:
+    Change the attributes of files. This function accepts one or more files and
+    the following options:
 
     operator
-        add|remove
-        determines whether attributes should be added or removed from files
+        Can be wither ``add`` or ``remove``. Determines whether attributes
+        should be added or removed from files
 
     attributes
-        acdijstuADST
-        string of characters representing attributes to add/remove from files
+        One or more of the following characters: ``acdijstuADST``, representing
+        attributes to add to/remove from files
 
     version
-        a version number to assign to the files
+        a version number to assign to the file(s)
 
     flags
-        [RVf]
+        One or more of the following characters: ``RVf``, representing
         flags to assign to chattr (recurse, verbose, suppress most errors)
 
     CLI Example:
@@ -608,34 +604,34 @@ def chattr(*args, **kwargs):
         salt '*' file.chattr foo1.txt foo2.txt operator=add attributes=ai
         salt '*' file.chattr foo3.txt operator=remove attributes=i version=2
     '''
-    args = [arg if salt.utils.stringutils.is_quoted(arg) else '"{0}"'.format(arg)
-            for arg in args]
-
     operator = kwargs.pop('operator', None)
     attributes = kwargs.pop('attributes', None)
     flags = kwargs.pop('flags', None)
     version = kwargs.pop('version', None)
 
-    if (operator is None) or (operator not in ['add', 'remove']):
+    if (operator is None) or (operator not in ('add', 'remove')):
         raise SaltInvocationError(
             "Need an operator: 'add' or 'remove' to modify attributes.")
     if attributes is None:
         raise SaltInvocationError("Need attributes: [AacDdijsTtSu]")
+
+    cmd = ['chattr']
 
     if operator == "add":
         attrs = '+{0}'.format(attributes)
     elif operator == "remove":
         attrs = '-{0}'.format(attributes)
 
-    flgs = ''
+    cmd.append(attrs)
+
     if flags is not None:
-        flgs = '-{0}'.format(flags)
+        cmd.append('-{0}'.format(flags))
 
-    vrsn = ''
     if version is not None:
-        vrsn = '-v {0}'.format(version)
+        cmd.extend(['-v', version])
 
-    cmd = 'chattr {0} {1} {2} {3}'.format(attrs, flgs, vrsn, ' '.join(args))
+    cmd.extend(files)
+
     result = __salt__['cmd.run'](cmd, python_shell=False)
 
     if bool(result):
@@ -1570,7 +1566,7 @@ def comment_line(path,
         check_perms(path, None, pre_user, pre_group, pre_mode)
 
     # Return a diff using the two dictionaries
-    return ''.join(difflib.unified_diff(orig_file, new_file))
+    return __utils__['stringutils.get_diff'](orig_file, new_file)
 
 
 def _get_flags(flags):
@@ -1722,18 +1718,19 @@ def _regex_to_static(src, regex):
         return None
 
     try:
-        src = re.search(regex, src, re.M)
+        compiled = re.compile(regex, re.DOTALL)
+        src = [line for line in src if compiled.search(line) or line.count(regex)]
     except Exception as ex:
         raise CommandExecutionError("{0}: '{1}'".format(_get_error_message(ex), regex))
 
-    return src and src.group().rstrip('\r') or regex
+    return src and src or []
 
 
-def _assert_occurrence(src, probe, target, amount=1):
+def _assert_occurrence(probe, target, amount=1):
     '''
     Raise an exception, if there are different amount of specified occurrences in src.
     '''
-    occ = src.count(probe)
+    occ = len(probe)
     if occ > amount:
         msg = 'more than'
     elif occ < amount:
@@ -1749,7 +1746,7 @@ def _assert_occurrence(src, probe, target, amount=1):
     return occ
 
 
-def _get_line_indent(src, line, indent):
+def _set_line_indent(src, line, indent):
     '''
     Indent the line with the source line.
     '''
@@ -1762,7 +1759,36 @@ def _get_line_indent(src, line, indent):
             break
         idt.append(c)
 
-    return ''.join(idt) + line.strip()
+    return ''.join(idt) + line.lstrip()
+
+
+def _get_eol(line):
+    match = re.search('((?<!\r)\n|\r(?!\n)|\r\n)$', line)
+    return match and match.group() or ''
+
+
+def _set_line_eol(src, line):
+    '''
+    Add line ending
+    '''
+    line_ending = _get_eol(src) or os.linesep
+    return line.rstrip() + line_ending
+
+
+def _insert_line_before(idx, body, content, indent):
+    if not idx or (idx and _starts_till(body[idx - 1], content) < 0):
+        cnd = _set_line_indent(body[idx], content, indent)
+        body.insert(idx, cnd)
+    return body
+
+
+def _insert_line_after(idx, body, content, indent):
+    # No duplicates or append, if "after" is the last line
+    next_line = idx + 1 < len(body) and body[idx + 1] or None
+    if next_line is None or _starts_till(next_line, content) < 0:
+        cnd = _set_line_indent(body[idx], content, indent)
+        body.insert(idx + 1, cnd)
+    return body
 
 
 def line(path, content=None, match=None, mode=None, location=None,
@@ -1893,132 +1919,110 @@ def line(path, content=None, match=None, mode=None, location=None,
         match = content
 
     with salt.utils.files.fopen(path, mode='r') as fp_:
-        body = salt.utils.stringutils.to_unicode(fp_.read())
-    body_before = hashlib.sha256(salt.utils.stringutils.to_bytes(body)).hexdigest()
+        body = salt.utils.data.decode_list(fp_.readlines())
+    body_before = hashlib.sha256(salt.utils.stringutils.to_bytes(''.join(body))).hexdigest()
+    # Add empty line at the end if last line ends with eol.
+    # Allows simpler code
+    if body and _get_eol(body[-1]):
+        body.append('')
+
     after = _regex_to_static(body, after)
     before = _regex_to_static(body, before)
     match = _regex_to_static(body, match)
 
     if os.stat(path).st_size == 0 and mode in ('delete', 'replace'):
         log.warning('Cannot find text to {0}. File \'{1}\' is empty.'.format(mode, path))
-        body = ''
-    elif mode == 'delete':
-        body = os.linesep.join([line for line in body.split(os.linesep) if line.find(match) < 0])
-    elif mode == 'replace':
-        body = os.linesep.join([(_get_line_indent(file_line, content, indent)
-                                if (file_line.find(match) > -1 and not file_line == content) else file_line)
-                                for file_line in body.split(os.linesep)])
+        body = []
+    elif mode == 'delete' and match:
+        body = [line for line in body if line != match[0]]
+    elif mode == 'replace' and match:
+        idx = body.index(match[0])
+        file_line = body.pop(idx)
+        body.insert(idx, _set_line_indent(file_line, content, indent))
     elif mode == 'insert':
         if not location and not before and not after:
             raise CommandExecutionError('On insert must be defined either "location" or "before/after" conditions.')
 
         if not location:
             if before and after:
-                _assert_occurrence(body, before, 'before')
-                _assert_occurrence(body, after, 'after')
+                _assert_occurrence(before, 'before')
+                _assert_occurrence(after, 'after')
+
                 out = []
-                lines = body.split(os.linesep)
                 in_range = False
-                for line in lines:
-                    if line.find(after) > -1:
+                for line in body:
+                    if line == after[0]:
                         in_range = True
-                    elif line.find(before) > -1 and in_range:
-                        out.append(_get_line_indent(line, content, indent))
+                    elif line == before[0] and in_range:
+                        cnd = _set_line_indent(line, content, indent)
+                        out.append(cnd)
                     out.append(line)
-                body = os.linesep.join(out)
+                body = out
 
             if before and not after:
-                _assert_occurrence(body, before, 'before')
-                out = []
-                lines = body.split(os.linesep)
-                for idx in range(len(lines)):
-                    _line = lines[idx]
-                    if _line.find(before) > -1:
-                        cnd = _get_line_indent(_line, content, indent)
-                        if not idx or (idx and _starts_till(lines[idx - 1], cnd) < 0):  # Job for replace instead
-                            out.append(cnd)
-                    out.append(_line)
-                body = os.linesep.join(out)
+                _assert_occurrence(before, 'before')
+
+                idx = body.index(before[0])
+                body = _insert_line_before(idx, body, content, indent)
 
             elif after and not before:
-                _assert_occurrence(body, after, 'after')
-                out = []
-                lines = body.split(os.linesep)
-                for idx, _line in enumerate(lines):
-                    out.append(_line)
-                    cnd = _get_line_indent(_line, content, indent)
-                    # No duplicates or append, if "after" is the last line
-                    if (_line.find(after) > -1 and
-                            (lines[((idx + 1) < len(lines)) and idx + 1 or idx].strip() != cnd or
-                             idx + 1 == len(lines))):
-                        out.append(cnd)
-                body = os.linesep.join(out)
+                _assert_occurrence(after, 'after')
+
+                idx = body.index(after[0])
+                body = _insert_line_after(idx, body, content, indent)
 
         else:
             if location == 'start':
-                body = os.linesep.join((content, body))
+                if body:
+                    body.insert(0, _set_line_eol(body[0], content))
+                else:
+                    body.append(content + os.linesep)
             elif location == 'end':
-                body = os.linesep.join((body, _get_line_indent(body[-1], content, indent) if body else content))
+                body.append(_set_line_indent(body[-1], content, indent) if body else content)
 
     elif mode == 'ensure':
-        after = after and after.strip()
-        before = before and before.strip()
 
         if before and after:
-            _assert_occurrence(body, before, 'before')
-            _assert_occurrence(body, after, 'after')
+            _assert_occurrence(before, 'before')
+            _assert_occurrence(after, 'after')
 
-            is_there = bool(body.count(content))
+            is_there = bool([l for l in body if l.count(content)])
             if not is_there:
-                out = []
-                body = body.split(os.linesep)
-                for idx, line in enumerate(body):
-                    out.append(line)
-                    if line.find(content) > -1:
-                        is_there = True
-                    if not is_there:
-                        if idx < (len(body) - 1) and line.find(after) > -1 and body[idx + 1].find(before) > -1:
-                            out.append(content)
-                        elif line.find(after) > -1:
-                            raise CommandExecutionError('Found more than one line between '
-                                                        'boundaries "before" and "after".')
-                body = os.linesep.join(out)
+                idx = body.index(after[0])
+                if idx < (len(body) - 1) and body[idx + 1] == before[0]:
+                    cnd = _set_line_indent(body[idx], content, indent)
+                    body.insert(idx + 1, cnd)
+                else:
+                    raise CommandExecutionError('Found more than one line between '
+                                                'boundaries "before" and "after".')
 
         elif before and not after:
-            _assert_occurrence(body, before, 'before')
-            body = body.split(os.linesep)
-            out = []
-            for idx in range(len(body)):
-                if body[idx].find(before) > -1:
-                    prev = (idx > 0 and idx or 1) - 1
-                    out.append(_get_line_indent(body[idx], content, indent))
-                    if _starts_till(out[prev], content) > -1:
-                        del out[prev]
-                out.append(body[idx])
-            body = os.linesep.join(out)
+            _assert_occurrence(before, 'before')
+
+            idx = body.index(before[0])
+            body = _insert_line_before(idx, body, content, indent)
 
         elif not before and after:
-            _assert_occurrence(body, after, 'after')
-            body = body.split(os.linesep)
-            skip = None
-            out = []
-            for idx in range(len(body)):
-                if skip != body[idx]:
-                    out.append(body[idx])
+            _assert_occurrence(after, 'after')
 
-                if body[idx].find(after) > -1:
-                    next_line = idx + 1 < len(body) and body[idx + 1] or None
-                    if next_line is not None and _starts_till(next_line, content) > -1:
-                        skip = next_line
-                    out.append(_get_line_indent(body[idx], content, indent))
-            body = os.linesep.join(out)
+            idx = body.index(after[0])
+            body = _insert_line_after(idx, body, content, indent)
 
         else:
             raise CommandExecutionError("Wrong conditions? "
                                         "Unable to ensure line without knowing "
                                         "where to put it before and/or after.")
 
-    changed = body_before != hashlib.sha256(salt.utils.stringutils.to_bytes(body)).hexdigest()
+    if body:
+        for idx, line in enumerate(body):
+            if not _get_eol(line) and idx+1 < len(body):
+                prev = idx and idx-1 or 1
+                body[idx] = _set_line_eol(body[prev], line)
+        # We do not need empty line at the end anymore
+        if '' == body[-1]:
+            body.pop()
+
+    changed = body_before != hashlib.sha256(salt.utils.stringutils.to_bytes(''.join(body))).hexdigest()
 
     if backup and changed and __opts__['test'] is False:
         try:
@@ -2032,20 +2036,20 @@ def line(path, content=None, match=None, mode=None, location=None,
     if changed:
         if show_changes:
             with salt.utils.files.fopen(path, 'r') as fp_:
-                path_content = [salt.utils.stringutils.to_unicode(x)
-                                for x in fp_.read().splitlines(True)]
-            changes_diff = ''.join(difflib.unified_diff(
-                path_content,
-                [salt.utils.stringutils.to_unicode(x)
-                 for x in body.splitlines(True)]
-            ))
+                path_content = salt.utils.data.decode_list(fp_.read().splitlines(True))
+            changes_diff = __utils__['stringutils.get_diff'](path_content, body)
         if __opts__['test'] is False:
             fh_ = None
             try:
                 # Make sure we match the file mode from salt.utils.files.fopen
-                mode = 'wb' if six.PY2 and salt.utils.platform.is_windows() else 'w'
+                if six.PY2 and salt.utils.platform.is_windows():
+                    mode = 'wb'
+                    body = salt.utils.data.encode_list(body)
+                else:
+                    mode = 'w'
+                    body = salt.utils.data.decode_list(body, to_str=True)
                 fh_ = salt.utils.atomicfile.atomic_open(path, mode)
-                fh_.write(body)
+                fh_.writelines(body)
             finally:
                 if fh_:
                     fh_.close()
@@ -2097,8 +2101,8 @@ def replace(path,
         otherwise all occurrences will be replaced.
 
     flags (list or int)
-        A list of flags defined in the :ref:`re module documentation
-        <contents-of-module-re>`. Each list item should be a string that will
+        A list of flags defined in the ``re`` module documentation from the
+        Python standard library. Each list item should be a string that will
         correlate to the human-friendly flag name. E.g., ``['IGNORECASE',
         'MULTILINE']``. Optionally, ``flags`` may be an int, with a value
         corresponding to the XOR (``|``) of all the desired flags. Defaults to
@@ -2286,7 +2290,7 @@ def replace(path,
                 if prepend_if_not_found or append_if_not_found:
                     # Search for content, to avoid pre/appending the
                     # content if it was pre/appended in a previous run.
-                    if re.search(salt.utils.stringutils.to_bytes('^{0}$'.format(re.escape(content))),
+                    if re.search(salt.utils.stringutils.to_bytes('^{0}($|(?=\r\n))'.format(re.escape(content))),
                                  r_data,
                                  flags=flags_num):
                         # Content was found, so set found.
@@ -2419,18 +2423,15 @@ def replace(path,
     if not dry_run and not salt.utils.platform.is_windows():
         check_perms(path, None, pre_user, pre_group, pre_mode)
 
-    def get_changes():
-        orig_file_as_str = [salt.utils.stringutils.to_unicode(x) for x in orig_file]
-        new_file_as_str = [salt.utils.stringutils.to_unicode(x) for x in new_file]
-        return ''.join(difflib.unified_diff(orig_file_as_str, new_file_as_str))
+    differences = __utils__['stringutils.get_diff'](orig_file, new_file)
 
     if show_changes:
-        return get_changes()
+        return differences
 
     # We may have found a regex line match but don't need to change the line
     # (for situations where the pattern also matches the repl). Revert the
     # has_changes flag to False if the final result is unchanged.
-    if not get_changes():
+    if not differences:
         has_changes = False
 
     return has_changes
@@ -2470,10 +2471,10 @@ def blockreplace(path,
         final output
 
     marker_end
-        The line content identifying a line as the end of the content block.
-        Note that the whole line containing this marker will be considered, so
-        whitespace or extra content before or after the marker is included in
-        final output
+        The line content identifying the end of the content block. As of
+        versions 2017.7.5 and 2018.3.1, everything up to the text matching the
+        marker will be replaced, so it's important to ensure that your marker
+        includes the beginning of the text you wish to replace.
 
     content
         The content to be used between the two lines identified by marker_start
@@ -2535,10 +2536,16 @@ def blockreplace(path,
     if not os.path.exists(path):
         raise SaltInvocationError('File not found: {0}'.format(path))
 
-    if not __utils__['files.is_text'](path):
-        raise SaltInvocationError(
-            'Cannot perform string replacements on a binary file: {0}'
-            .format(path)
+    try:
+        file_encoding = __utils__['files.get_encoding'](path)
+    except CommandExecutionError:
+        file_encoding = None
+
+    if __utils__['files.is_binary'](path):
+        if not file_encoding:
+            raise SaltInvocationError(
+                'Cannot perform string replacements on a binary file: {0}'
+                .format(path)
         )
 
     if append_newline is None and not content.endswith((os.linesep, '\n')):
@@ -2593,18 +2600,9 @@ def blockreplace(path,
     # We do not use in-place editing to avoid file attrs modifications when
     # no changes are required and to avoid any file access on a partially
     # written file.
-    #
-    # We could also use salt.utils.filebuffer.BufferedReader
     try:
-        fi_file = fileinput.input(
-            path,
-            inplace=False,
-            backup=False,
-            bufsize=1,
-            mode='rb')
-
+        fi_file = io.open(path, mode='r', encoding=file_encoding, newline='')
         for line in fi_file:
-            line = salt.utils.stringutils.to_unicode(line)
             write_line_to_new_file = True
 
             if linesep is None:
@@ -2684,7 +2682,7 @@ def blockreplace(path,
             )
 
     if block_found:
-        diff = ''.join(difflib.unified_diff(orig_file, new_file))
+        diff = __utils__['stringutils.get_diff'](orig_file, new_file)
         has_changes = diff is not ''
         if has_changes and not dry_run:
             # changes detected
@@ -2709,7 +2707,7 @@ def blockreplace(path,
             try:
                 fh_ = salt.utils.atomicfile.atomic_open(path, 'wb')
                 for line in new_file:
-                    fh_.write(salt.utils.stringutils.to_bytes(line))
+                    fh_.write(salt.utils.stringutils.to_bytes(line, encoding=file_encoding))
             finally:
                 fh_.close()
 
@@ -4074,7 +4072,10 @@ def get_managed(
     # If we have a source defined, let's figure out what the hash is
     if source:
         urlparsed_source = _urlparse(source)
-        parsed_scheme = urlparsed_source.scheme
+        if urlparsed_source.scheme in salt.utils.files.VALID_PROTOS:
+            parsed_scheme = urlparsed_source.scheme
+        else:
+            parsed_scheme = ''
         parsed_path = os.path.join(
                 urlparsed_source.netloc, urlparsed_source.path).rstrip(os.sep)
         unix_local_source = parsed_scheme in ('file', '')
@@ -4456,35 +4457,15 @@ def check_perms(name, ret, user, group, mode, attrs=None, follow_symlinks=False)
     perms['lmode'] = salt.utils.files.normalize_mode(cur['mode'])
 
     is_dir = os.path.isdir(name)
-    if not salt.utils.platform.is_windows() and not is_dir:
+    is_link = os.path.islink(name)
+    if not salt.utils.platform.is_windows() and not is_dir and not is_link:
         lattrs = lsattr(name)
         if lattrs is not None:
             # List attributes on file
-            perms['lattrs'] = ''.join(lattrs.get('name', ''))
+            perms['lattrs'] = ''.join(lattrs.get(name, ''))
             # Remove attributes on file so changes can be enforced.
             if perms['lattrs']:
                 chattr(name, operator='remove', attributes=perms['lattrs'])
-
-    # Mode changes if needed
-    if mode is not None:
-        # File is a symlink, ignore the mode setting
-        # if follow_symlinks is False
-        if os.path.islink(name) and not follow_symlinks:
-            pass
-        else:
-            mode = salt.utils.files.normalize_mode(mode)
-            if mode != perms['lmode']:
-                if __opts__['test'] is True:
-                    ret['changes']['mode'] = mode
-                else:
-                    set_mode(name, mode)
-                    if mode != salt.utils.files.normalize_mode(get_mode(name)):
-                        ret['result'] = False
-                        ret['comment'].append(
-                            'Failed to change mode to {0}'.format(mode)
-                        )
-                    else:
-                        ret['changes']['mode'] = mode
 
     # user/group changes if needed, then check if it worked
     if user:
@@ -4545,6 +4526,7 @@ def check_perms(name, ret, user, group, mode, attrs=None, follow_symlinks=False)
                                           .format(user))
         elif 'cuser' in perms and user != '':
             ret['changes']['user'] = user
+
     if group:
         if isinstance(group, int):
             group = gid_to_group(group)
@@ -4565,17 +4547,31 @@ def check_perms(name, ret, user, group, mode, attrs=None, follow_symlinks=False)
         elif 'cgroup' in perms and user != '':
             ret['changes']['group'] = group
 
-    if isinstance(orig_comment, six.string_types):
-        if orig_comment:
-            ret['comment'].insert(0, orig_comment)
-        ret['comment'] = '; '.join(ret['comment'])
-    if __opts__['test'] is True and ret['changes']:
-        ret['result'] = None
-
     if not salt.utils.platform.is_windows() and not is_dir:
         # Replace attributes on file if it had been removed
         if perms.get('lattrs', ''):
             chattr(name, operator='add', attributes=perms['lattrs'])
+
+    # Mode changes if needed
+    if mode is not None:
+        # File is a symlink, ignore the mode setting
+        # if follow_symlinks is False
+        if os.path.islink(name) and not follow_symlinks:
+            pass
+        else:
+            mode = salt.utils.files.normalize_mode(mode)
+            if mode != perms['lmode']:
+                if __opts__['test'] is True:
+                    ret['changes']['mode'] = mode
+                else:
+                    set_mode(name, mode)
+                    if mode != salt.utils.files.normalize_mode(get_mode(name)):
+                        ret['result'] = False
+                        ret['comment'].append(
+                            'Failed to change mode to {0}'.format(mode)
+                        )
+                    else:
+                        ret['changes']['mode'] = mode
 
     # Modify attributes of file if needed
     if attrs is not None and not is_dir:
@@ -4602,6 +4598,18 @@ def check_perms(name, ret, user, group, mode, attrs=None, follow_symlinks=False)
                             )
                         else:
                             ret['changes']['attrs'] = attrs
+
+    # Only combine the comment list into a string
+    # after all comments are added above
+    if isinstance(orig_comment, six.string_types):
+        if orig_comment:
+            ret['comment'].insert(0, orig_comment)
+        ret['comment'] = '; '.join(ret['comment'])
+
+    # Set result to None at the very end of the function,
+    # after all changes have been recorded above
+    if __opts__['test'] is True and ret['changes']:
+        ret['result'] = None
 
     return ret, perms
 
@@ -4727,6 +4735,11 @@ def check_managed_changes(
             defaults,
             skip_verify,
             **kwargs)
+
+        # Ensure that user-provided hash string is lowercase
+        if source_sum and ('hsum' in source_sum):
+            source_sum['hsum'] = source_sum['hsum'].lower()
+
         if comments:
             __clean_tmp(sfn)
             return False, comments
@@ -4982,7 +4995,7 @@ def get_diff(file1,
         )
 
     args = []
-    for filename in files:
+    for filename in paths:
         try:
             with salt.utils.files.fopen(filename, 'rb') as fp_:
                 args.append(fp_.readlines())
@@ -5000,17 +5013,13 @@ def get_diff(file1,
         elif not show_changes:
             ret = '<show_changes=False>'
         else:
-            bdiff = _binary_replace(*files)
+            bdiff = _binary_replace(*paths)  # pylint: disable=no-value-for-parameter
             if bdiff:
                 ret = bdiff
             else:
                 if show_filenames:
-                    args.extend(files)
-                ret = ''.join(
-                    difflib.unified_diff(
-                        *salt.utils.data.decode(args)
-                    )
-                )
+                    args.extend(paths)
+                ret = __utils__['stringutils.get_diff'](*args)
         return ret
     return ''
 
@@ -5063,7 +5072,7 @@ def manage_file(name,
     source
         file reference on the master
 
-    source_hash
+    source_sum
         sum hash for source
 
     user
@@ -5331,12 +5340,12 @@ def manage_file(name,
 
         if ret['changes']:
             ret['comment'] = 'File {0} updated'.format(
-                salt.utils.locales.sdecode(name)
+                salt.utils.data.decode(name)
             )
 
         elif not ret['changes'] and ret['result']:
             ret['comment'] = 'File {0} is in the correct state'.format(
-                salt.utils.locales.sdecode(name)
+                salt.utils.data.decode(name)
             )
         if sfn:
             __clean_tmp(sfn)
@@ -6201,6 +6210,16 @@ def grep(path,
     '''
     path = os.path.expanduser(path)
 
+    # Backup the path in case the glob returns nothing
+    _path = path
+    path = glob.glob(path)
+
+    # If the list is empty no files exist
+    # so we revert back to the original path
+    # so the result is an error.
+    if not path:
+        path = _path
+
     split_opts = []
     for opt in opts:
         try:
@@ -6215,7 +6234,10 @@ def grep(path,
             )
         split_opts.extend(split)
 
-    cmd = ['grep'] + split_opts + [pattern, path]
+    if isinstance(path, list):
+        cmd = ['grep'] + split_opts + [pattern] + path
+    else:
+        cmd = ['grep'] + split_opts + [pattern, path]
     try:
         ret = __salt__['cmd.run_all'](cmd, python_shell=False)
     except (IOError, OSError) as exc:

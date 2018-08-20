@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Jayesh Kariya <jayeshk@saltstack.com>`
+    :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 '''
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
@@ -25,12 +25,9 @@ class BotoSqsTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         utils = salt.loader.utils(
             self.opts,
-            whitelist=['boto3', 'yamldumper'],
+            whitelist=['boto3', 'yaml'],
             context={}
         )
-        # Force the LazyDict to populate its references. Otherwise the lookup
-        # will fail inside the unit tests.
-        list(utils)
         return {
             boto_sqs: {
                 '__utils__': utils,

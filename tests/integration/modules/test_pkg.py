@@ -335,16 +335,28 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         check that pkg.latest_version returns the latest version of the uninstalled package (it does not install the package, just checking the version)
         '''
         grains = self.run_function('grains.items')
-        cmd_info = self.run_function('pkg.info_installed', ['htop'])
-        if cmd_info != 'ERROR: package htop is not installed':
-            cmd_remove = self.run_function('pkg.remove', ['htop'])
+        remove = False
+        if salt.utils.platform.is_windows():
+            cmd_info = self.run_function('pkg.version', [self.pkg])
+            remove = False if cmd_info == '' else True
+        else:
+            cmd_info = self.run_function('pkg.info_installed', [self.pkg])
+            if cmd_info != 'ERROR: package {0} is not installed'.format(self.pkg):
+                remove = True
+
+        # remove package if its installed
+        if remove:
+            cmd_remove = self.run_function('pkg.remove', [self.pkg])
+
         if grains['os_family'] == 'RedHat':
-            cmd_htop = self.run_function('cmd.run', ['yum list htop'])
+            cmd_pkg = self.run_function('cmd.run', ['yum list {0}'.format(self.pkg)])
+        elif salt.utils.platform.is_windows():
+            cmd_pkg = self.run_function('pkg.list_available', [self.pkg])
         elif grains['os_family'] == 'Debian':
-            cmd_htop = self.run_function('cmd.run', ['apt list htop'])
+            cmd_pkg = self.run_function('cmd.run', ['apt list {0}'.format(self.pkg)])
         elif grains['os_family'] == 'Arch':
-            cmd_htop = self.run_function('cmd.run', ['pacman -Si htop'])
+            cmd_pkg = self.run_function('cmd.run', ['pacman -Si {0}'.format(self.pkg)])
         elif grains['os_family'] == 'Suse':
-            cmd_htop = self.run_function('cmd.run', ['zypper info htop'])
-        pkg_latest = self.run_function('pkg.latest_version', ['htop'])
-        self.assertIn(pkg_latest, cmd_htop)
+            cmd_pkg = self.run_function('cmd.run', ['zypper info {0}'.format(self.pkg)])
+        pkg_latest = self.run_function('pkg.latest_version', [self.pkg])
+        self.assertIn(pkg_latest, cmd_pkg)

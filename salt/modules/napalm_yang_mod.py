@@ -28,7 +28,7 @@ from salt.utils.napalm import proxy_napalm_wrap
 # -----------------------------------------------------------------------------
 
 __virtualname__ = 'napalm_yang'
-__proxyenabled__ = ['napalm']
+__proxyenabled__ = ['*']
 # uses NAPALM-based proxy to interact with network devices
 
 log = logging.getLogger(__file__)
@@ -155,7 +155,7 @@ def parse(*models, **kwargs):
 
     Output Example:
 
-    .. code-block:: json
+    .. code-block:: python
 
         {
             "interfaces": {

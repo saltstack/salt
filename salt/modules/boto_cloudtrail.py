@@ -55,7 +55,6 @@ import logging
 
 # Import Salt libs
 from salt.ext import six
-import salt.utils.boto3
 import salt.utils.compat
 import salt.utils.versions
 
@@ -117,7 +116,7 @@ def exists(Name,
         conn.get_trail_status(Name=Name)
         return {'exists': True}
     except ClientError as e:
-        err = salt.utils.boto3.get_error(e)
+        err = __utils__['boto3.get_error'](e)
         if e.response.get('Error', {}).get('Code') == 'TrailNotFoundException':
             return {'exists': False}
         return {'error': err}
@@ -167,7 +166,7 @@ def create(Name,
             log.warning('Trail was not created')
             return {'created': False}
     except ClientError as e:
-        return {'created': False, 'error': salt.utils.boto3.get_error(e)}
+        return {'created': False, 'error': __utils__['boto3.get_error'](e)}
 
 
 def delete(Name,
@@ -191,7 +190,7 @@ def delete(Name,
         conn.delete_trail(Name=Name)
         return {'deleted': True}
     except ClientError as e:
-        return {'deleted': False, 'error': salt.utils.boto3.get_error(e)}
+        return {'deleted': False, 'error': __utils__['boto3.get_error'](e)}
 
 
 def describe(Name,
@@ -224,10 +223,10 @@ def describe(Name,
         else:
             return {'trail': None}
     except ClientError as e:
-        err = salt.utils.boto3.get_error(e)
+        err = __utils__['boto3.get_error'](e)
         if e.response.get('Error', {}).get('Code') == 'TrailNotFoundException':
             return {'trail': None}
-        return {'error': salt.utils.boto3.get_error(e)}
+        return {'error': __utils__['boto3.get_error'](e)}
 
 
 def status(Name,
@@ -265,10 +264,10 @@ def status(Name,
         else:
             return {'trail': None}
     except ClientError as e:
-        err = salt.utils.boto3.get_error(e)
+        err = __utils__['boto3.get_error'](e)
         if e.response.get('Error', {}).get('Code') == 'TrailNotFoundException':
             return {'trail': None}
-        return {'error': salt.utils.boto3.get_error(e)}
+        return {'error': __utils__['boto3.get_error'](e)}
 
 
 def list(region=None, key=None, keyid=None, profile=None):
@@ -293,7 +292,7 @@ def list(region=None, key=None, keyid=None, profile=None):
             log.warning('No trails found')
         return {'trails': trails.get('trailList', [])}
     except ClientError as e:
-        return {'error': salt.utils.boto3.get_error(e)}
+        return {'error': __utils__['boto3.get_error'](e)}
 
 
 def update(Name,
@@ -340,7 +339,7 @@ def update(Name,
             log.warning('Trail was not created')
             return {'updated': False}
     except ClientError as e:
-        return {'updated': False, 'error': salt.utils.boto3.get_error(e)}
+        return {'updated': False, 'error': __utils__['boto3.get_error'](e)}
 
 
 def start_logging(Name,
@@ -364,7 +363,7 @@ def start_logging(Name,
         conn.start_logging(Name=Name)
         return {'started': True}
     except ClientError as e:
-        return {'started': False, 'error': salt.utils.boto3.get_error(e)}
+        return {'started': False, 'error': __utils__['boto3.get_error'](e)}
 
 
 def stop_logging(Name,
@@ -388,7 +387,7 @@ def stop_logging(Name,
         conn.stop_logging(Name=Name)
         return {'stopped': True}
     except ClientError as e:
-        return {'stopped': False, 'error': salt.utils.boto3.get_error(e)}
+        return {'stopped': False, 'error': __utils__['boto3.get_error'](e)}
 
 
 def _get_trail_arn(name, region=None, key=None, keyid=None, profile=None):
@@ -433,7 +432,7 @@ def add_tags(Name,
                       profile=profile), TagsList=tagslist)
         return {'tagged': True}
     except ClientError as e:
-        return {'tagged': False, 'error': salt.utils.boto3.get_error(e)}
+        return {'tagged': False, 'error': __utils__['boto3.get_error'](e)}
 
 
 def remove_tags(Name,
@@ -464,7 +463,7 @@ def remove_tags(Name,
                               profile=profile), TagsList=tagslist)
         return {'tagged': True}
     except ClientError as e:
-        return {'tagged': False, 'error': salt.utils.boto3.get_error(e)}
+        return {'tagged': False, 'error': __utils__['boto3.get_error'](e)}
 
 
 def list_tags(Name,
@@ -497,4 +496,4 @@ def list_tags(Name,
             tagdict[tag.get('Key')] = tag.get('Value')
         return {'tags': tagdict}
     except ClientError as e:
-        return {'error': salt.utils.boto3.get_error(e)}
+        return {'error': __utils__['boto3.get_error'](e)}
