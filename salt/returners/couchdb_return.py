@@ -86,9 +86,7 @@ try:
 except ImportError:
     boltons_lib = False
 
-# if boltons lib not installed
-# redact_pws and minimum_return functionality
-# will not be implemented
+# boltons lib for redact_pws and minimum_return
 try:
     from boltons.iterutils import remap
 
@@ -279,22 +277,18 @@ def returner(ret):
         # redact all passwords if options['redact_pws'] is True
         if options["redact_pws"]:
             log.info("Redacting passwords.")
-            log.info("options['redact_pws'] = {}".format(options["redact_pws"]))
             ret_remap_pws = remap(ret, visit=_redact_passwords)
         else:
             log.info("Not redacting passwords.")
-            log.info("options['redact_pws'] = {}".format(options["redact_pws"]))
             ret_remap_pws = ret
 
         # remove all return values starting with '__pub'
         # if options['minimum_return'] is True
         if options["minimum_return"]:
             log.info("Minimizing the return data.")
-            log.info("options['minimum_return'] = {}".format(options["minimum_return"]))
             ret_remapped = remap(ret_remap_pws, visit=_minimize_return)
         else:
             log.info("Not minimizing the return data.")
-            log.info("options['minimum_return'] = {}".format(options["minimum_return"]))
             ret_remapped = ret_remap_pws
     else:
         log.info(
@@ -315,8 +309,9 @@ def returner(ret):
 
     # Sanity check regarding the response..
     if "ok" not in _response or _response["ok"] is not True:
-        log.error("Unable to create document: '%s'", _response)
-        log.error("Nothing logged! Lost data.")
+        log.error(
+            "Nothing logged! Lost data. Unable to create document: '%s'", _response
+        )
 
 
 def event_return(events):
@@ -331,8 +326,7 @@ def event_return(events):
       - couchdb
 
     """
-    log.info("INSIDE EVENT RETURN")
-    log.info("events data is: {}".format(events))
+    log.debug("events data is: {}".format(events))
 
     options = _get_options()
 
@@ -352,16 +346,17 @@ def event_return(events):
 
         # Confirm that the response back was simple 'ok': true.
         if "ok" not in _response or _response["ok"] is not True:
-            log.error('Unable to create database "{0}"'.format(event_db))
-            log.error("Nothing logged! Lost data.")
-            log.error("Error response is: {0}".format(_response))
+            log.error(
+                'Nothing logged! Lost data. Unable to create database "{0}"'.format(
+                    event_db
+                )
+            )
             return
         log.info('Created database "{0}"'.format(event_db))
 
     for event in events:
-        # Call _generate_doc to get a dict object of the document we're going
-        # to shove into the database.
-        log.info("event data is: {}".format(event))
+        # Call _generate_doc to get a dict object of the document we're going to shove into the database.
+        log.debug("event data is: {}".format(event))
         doc = _generate_event_doc(event)
 
         # Make the actual HTTP PUT request to create the doc.
@@ -373,8 +368,11 @@ def event_return(events):
         )
         # Sanity check regarding the response..
         if "ok" not in _response or _response["ok"] is not True:
-            log.error('Unable to create document: "{0}"'.format(_response))
-            log.error("Nothing logged! Lost data.")
+            log.error(
+                'Nothing logged! Lost data. Unable to create document: "{0}"'.format(
+                    _response
+                )
+            )
 
 
 def get_jid(jid):
