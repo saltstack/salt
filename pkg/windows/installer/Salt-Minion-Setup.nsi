@@ -344,7 +344,7 @@ Section -install_vcredist
             # of the user variable are undefined).
             # http://nsis.sourceforge.net/Reference/ExecWait
             ClearErrors
-            ExecWait '"$PLUGINSDIR\vcredist.exe" /qb!' $0
+            ExecWait '"$PLUGINSDIR\vcredist.exe" /q' $0
             IfErrors 0 CheckVcRedistErrorCode
                 MessageBox MB_OK \
                     "$VcRedistName failed to install. Try installing the package manually." \
