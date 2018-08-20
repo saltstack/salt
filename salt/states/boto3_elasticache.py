@@ -1061,7 +1061,6 @@ def cache_subnet_group_absent(name, region=None, key=None, keyid=None, profile=N
     return ret
 
 
-
 def cache_parameter_group_present(name, region=None, key=None, keyid=None, profile=None, **args):
     '''
     Ensure cache parameter group exists.
@@ -1122,14 +1121,14 @@ def cache_parameter_group_present(name, region=None, key=None, keyid=None, profi
 
     if not current:
         if __opts__['test']:
-            ret['comment'] = 'Cache parameter group %s would be created.' % name
+            ret['comment'] = 'Cache parameter group `{}` would be created.'.format(name)
             ret['result'] = None
             return ret
         created = __salt__['boto3_elasticache.create_cache_parameter_group'](name, region=region,
                 key=key, keyid=keyid, profile=profile, **args)
         if not created:
             ret['result'] = False
-            ret['comment'] = 'Failed to create cache parameter group `%s`.' % name
+            ret['comment'] = 'Failed to create cache parameter group `{}`.'.format(name)
             return ret
         new = __salt__['boto3_elasticache.describe_cache_parameter_groups'](name, region=region,
                 key=key, keyid=keyid, profile=profile)
@@ -1141,17 +1140,17 @@ def cache_parameter_group_present(name, region=None, key=None, keyid=None, profi
                     region=region, key=key, keyid=keyid, profile=profile, **kwargs)
             if not updated:
                 ret['result'] = False
-                ret['comment'] = 'Failed to update new cache parameter group `%s`.' % name
+                ret['comment'] = 'Failed to update new cache parameter group `{}`.'.format(name)
                 return ret
             kwargs = {'Source': 'user'}
             new['ParameterNameValues'] = __salt__['boto3_elasticache.describe_cache_parameters'](
                     name, region=region, key=key, keyid=keyid, profile=profile, **kwargs)
-        ret['comment'] = 'Cache parameter group {0} was created.'.format(name)
+        ret['comment'] = 'Cache parameter group `{}` was created.'.format(name)
         ret['changes']['old'] = None
         ret['changes']['new'] = new
     else:
         if not tunables:
-            ret['comment'] = 'Cache parameter group `%s` exists.' % name
+            ret['comment'] = 'Cache parameter group `{}` exists.'.format(name)
         else:
             oldvals = []
             newvals = []
@@ -1167,7 +1166,7 @@ def cache_parameter_group_present(name, region=None, key=None, keyid=None, profi
                     newvals += [{'ParameterName': pname, 'ParameterValue': pval}]
             if newvals:
                 if __opts__['test']:
-                    ret['comment'] = 'Cache parameter group %s would be updated.' % name
+                    ret['comment'] = 'Cache parameter group `{}` would be updated.'.format(name)
                     ret['result'] = None
                     ret['changes']['old'] = current[0]
                     ret['changes']['old']['ParameterNameValues'] = oldvals
@@ -1178,14 +1177,14 @@ def cache_parameter_group_present(name, region=None, key=None, keyid=None, profi
                 if not __salt__['boto3_elasticache.modify_cache_parameter_groups'](name,
                         region=region, key=key, keyid=keyid, profile=profile, **kwargs):
                     ret['result'] = False
-                    ret['comment'] = 'Failed to update cache parameter group `%s`.' % name
+                    ret['comment'] = 'Failed to update cache parameter group `{}`.'.format(name)
                     return ret
                 ret['changes']['old'] = current[0]
                 ret['changes']['old']['ParameterNameValues'] = oldvals
                 ret['changes']['new'] = deepcopy(current[0])
                 ret['changes']['new']['ParameterNameValues'] = newvals
             else:
-                ret['comment'] = 'Cache parameter group `%s` is in the desired state.' % name
+                ret['comment'] = 'Cache parameter group `{}` is in the desired state.'.format(name)
     return ret
 
 
@@ -1219,7 +1218,7 @@ def cache_parameter_group_absent(name, region=None, key=None, keyid=None, profil
             key=key, keyid=keyid, profile=profile)
     if exists:
         if __opts__['test']:
-            ret['comment'] = 'Cache parameter group %s would be removed.' % name
+            ret['comment'] = 'Cache parameter group `{}` would be removed.'.format(name)
             ret['result'] = None
             return ret
         deleted = __salt__['boto3_elasticache.delete_cache_parameter_group'](name, region=region,
@@ -1229,7 +1228,7 @@ def cache_parameter_group_absent(name, region=None, key=None, keyid=None, profil
             ret['changes']['new'] = None
         else:
             ret['result'] = False
-            ret['comment'] = 'Failed to delete %s cache parameter group.' % name
+            ret['comment'] = 'Failed to delete cache parameter group `{}`.'.format(name)
     else:
-        ret['comment'] = 'Cache parameter group %s already absent.' % name
+        ret['comment'] = 'Cache parameter group `{}` already absent.'.format(name)
     return ret

@@ -45,6 +45,8 @@ Execution module for Amazon Elasticache using boto3
 
 # keep lint from choking on _get_conn and _cache_id
 #pylint: disable=E0602
+# keep lint from whinging about perfectly valid code...
+#pylint: disable=W0106
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
@@ -914,7 +916,6 @@ def describe_cache_parameter_groups(name=None, conn=None, region=None, key=None,
     return _describe_resource(name=name, name_param='CacheParameterGroupName',
                               res_type='cache_parameter_group', info_node='CacheParameterGroups',
                               conn=conn, region=region, key=key, keyid=keyid, profile=profile)
-
 
 
 def describe_cache_parameters(name=None, conn=None, region=None, key=None, keyid=None,
