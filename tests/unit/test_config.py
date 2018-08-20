@@ -662,8 +662,9 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
     @with_tempdir()
     def test_minion_id_lowercase(self, tempdir):
         '''
-        This tests that setting  `minion_id_lowercase: True`  does lower case the minion id.
-        Lowercase does not operate on a static `id: KING_BOB` setting, or a cached id.
+        This tests that setting  `minion_id_lowercase: True`  does lower case
+        the minion id.  Lowercase does not operate on a static `id: KING_BOB`
+        setting, or a cached id.
         '''
         minion_config = os.path.join(tempdir, 'minion')
         with salt.utils.files.fopen(minion_config, 'w') as fp_:
