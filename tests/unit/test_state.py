@@ -18,7 +18,7 @@ from tests.support.mock import (
     MagicMock,
     patch)
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
-from tests.support.paths import BASE_FILES, TMP
+from tests.support.paths import BASE_FILES
 
 # Import Salt libs
 import salt.exceptions
@@ -401,7 +401,7 @@ class CheckRequisitesTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 '__id__': u'changes_state',
             },
         }
-        chunks =[
+        chunks = [
             {
                 'name': 'changes_state',
                 'state': 'test',
