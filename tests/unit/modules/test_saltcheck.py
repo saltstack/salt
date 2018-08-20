@@ -37,11 +37,12 @@ class LinuxSysctlTestCase(TestCase, LoaderModuleMockMixin):
         local_opts = salt.config.minion_config(
             os.path.join(syspaths.CONFIG_DIR, 'minion'))
         local_opts['file_client'] = 'local'
+        local_opts['conf_file'] = '/etc/salt/minion'
         patcher = patch('salt.config.minion_config',
                         MagicMock(return_value=local_opts))
         patcher.start()
         self.addCleanup(patcher.stop)
-        return {saltcheck: {}}
+        return {saltcheck: {'__opts__': local_opts}}
 
     def test_call_salt_command(self):
         '''test simple test.echo module'''
@@ -50,7 +51,7 @@ class LinuxSysctlTestCase(TestCase, LoaderModuleMockMixin):
                                              'cp.cache_master': MagicMock(return_value=[True])
                                              }):
             sc_instance = saltcheck.SaltCheck()
-            returned = sc_instance.call_salt_command(fun="test.echo", args=['hello'], kwargs=None)
+            returned = sc_instance._call_salt_command(fun="test.echo", args=['hello'], kwargs=None)
             self.assertEqual(returned, 'hello')
 
     def test_update_master_cache(self):
@@ -64,7 +65,7 @@ class LinuxSysctlTestCase(TestCase, LoaderModuleMockMixin):
                                              'cp.cache_master': MagicMock(return_value=[True])
                                              }):
             sc_instance = saltcheck.SaltCheck()
-            returned = sc_instance.call_salt_command(fun="test.echo", args=['hello'], kwargs=None)
+            returned = sc_instance._call_salt_command(fun="test.echo", args=['hello'], kwargs=None)
             self.assertNotEqual(returned, 'not-hello')
 
     def test__assert_equal1(self):
@@ -368,4 +369,4 @@ class LinuxSysctlTestCase(TestCase, LoaderModuleMockMixin):
                                                 "expected-return": "This works!",
                                                 "args": ["This works!"]
                                                 })
-            self.assertEqual(returned, 'Pass')
+            self.assertEqual(returned['status'], 'Pass')
