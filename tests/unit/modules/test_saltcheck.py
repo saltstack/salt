@@ -321,6 +321,42 @@ class LinuxSysctlTestCase(TestCase, LoaderModuleMockMixin):
             mybool = sc_instance._SaltCheck__assert_less_equal(aaa, bbb)
             self.assertEqual(mybool, 'Pass')
 
+    def test__assert_empty(self):
+        '''test'''
+        with patch.dict(saltcheck.__salt__, {'config.get': MagicMock(return_value=True),
+                                             'cp.cache_master': MagicMock(return_value=[True])
+                                             }):
+            sc_instance = saltcheck.SaltCheck()
+            mybool = sc_instance._SaltCheck__assert_empty("")
+            self.assertEqual(mybool, 'Pass')
+
+    def test__assert_empty_fail(self):
+        '''test'''
+        with patch.dict(saltcheck.__salt__, {'config.get': MagicMock(return_value=True),
+                                             'cp.cache_master': MagicMock(return_value=[True])
+                                             }):
+            sc_instance = saltcheck.SaltCheck()
+            mybool = sc_instance._SaltCheck__assert_empty("data")
+            self.assertNotEqual(mybool, 'Pass')
+
+    def test__assert__not_empty(self):
+        '''test'''
+        with patch.dict(saltcheck.__salt__, {'config.get': MagicMock(return_value=True),
+                                             'cp.cache_master': MagicMock(return_value=[True])
+                                             }):
+            sc_instance = saltcheck.SaltCheck()
+            mybool = sc_instance._SaltCheck__assert_not_empty("data")
+            self.assertEqual(mybool, 'Pass')
+
+    def test__assert__not_empty_fail(self):
+        '''test'''
+        with patch.dict(saltcheck.__salt__, {'config.get': MagicMock(return_value=True),
+                                             'cp.cache_master': MagicMock(return_value=[True])
+                                             }):
+            sc_instance = saltcheck.SaltCheck()
+            mybool = sc_instance._SaltCheck__assert_not_empty("")
+            self.assertNotEqual(mybool, 'Pass')
+
     def test_run_test_1(self):
         '''test'''
         with patch.dict(saltcheck.__salt__, {'config.get': MagicMock(return_value=True),
