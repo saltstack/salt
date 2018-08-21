@@ -2950,7 +2950,7 @@ class SyndicManager(MinionBase):
                 yield tornado.gen.sleep(auth_wait)  # TODO: log?
             except KeyboardInterrupt:
                 raise
-            except:  # pylint: disable=W0702
+            except Exception:
                 failed = True
                 log.critical(
                     'Unexpected error while connecting to %s',
