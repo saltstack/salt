@@ -534,11 +534,11 @@ def mounted(name,
         if __opts__['test']:
             if __grains__['os'] in ['MacOS', 'Darwin']:
                 out = __salt__['mount.set_automaster'](name,
-                                              device,
-                                              fstype,
-                                              opts,
-                                              config,
-                                              test=True)
+                                                       device,
+                                                       fstype,
+                                                       opts,
+                                                       config,
+                                                       test=True)
             else:
                 out = __salt__['mount.set_fstab'](name,
                                                   device,
@@ -583,10 +583,10 @@ def mounted(name,
         else:
             if __grains__['os'] in ['MacOS', 'Darwin']:
                 out = __salt__['mount.set_automaster'](name,
-                                              device,
-                                              fstype,
-                                              opts,
-                                              config)
+                                                       device,
+                                                       fstype,
+                                                       opts,
+                                                       config)
             else:
                 out = __salt__['mount.set_fstab'](name,
                                                   device,
