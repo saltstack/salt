@@ -670,7 +670,7 @@ class CkMinions(object):
                'S': 'ipcidr',
                'E': 'pcre',
                'N': 'node',
-               None: 'glob'}
+               None: 'compound'}
 
         target_info = parse_target(auth_entry)
         if not target_info:
