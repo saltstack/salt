@@ -200,15 +200,111 @@ InstallDirRegKey HKLM "${PRODUCT_DIR_REGKEY}" ""
 ShowInstDetails show
 ShowUnInstDetails show
 
+Section -copy_prereqs
+    # Copy prereqs to the Plugins Directory
+    # These files will be vcredist 2008 and KB2999226 for Win8.1 and below
+    # These files are downloaded by build_pkg.bat
+    # This directory gets removed upon completion
+    SetOutPath "$PLUGINSDIR\"
+    File /r "..\prereqs\"
+SectionEnd
+
+# Check and install the Windows 10 Universal C Runtime (KB2999226)
+# ucrt is needed on Windows 8.1 and lower
+# They are installed as a Microsoft Update package (.msu)
+# ucrt for Windows 8.1 RT is only available via Windows Update
+Section -install_ucrt
+
+    Var /GLOBAL MsuPrefix
+    Var /GLOBAL MsuFileName
+
+    # UCRT only needs to be installed for Python 3
+    StrCmp ${PYTHON_VERSION} 2 lbl_done
+
+    # Get the Major.Minor version Number
+    # Windows 10 introduced CurrentMajorVersionNumber
+    ReadRegStr $R0 HKLM "SOFTWARE\Microsoft\Windows NT\CurrentVersion" \
+        CurrentMajorVersionNumber
+
+    # Windows 10/2016 will return a value here, skip to the end if returned
+    StrCmp $R0 '' lbl_needs_ucrt 0
+
+    # Found Windows 10
+    detailPrint "KB2999226 does not apply to this machine"
+    goto lbl_done
+
+    lbl_needs_ucrt:
+    # UCRT only needed on Windows Server 2012R2/Windows 8.1 and below
+    # The first ReadRegStr command above should have skipped to lbl_done if on
+    # Windows 10 box
+
+    # Is the update already installed
+    ClearErrors
+
+    # Use WMI to check if it's installed
+    detailPrint "Checking for existing KB2999226 installation"
+    nsExec::ExecToStack 'cmd /q /c wmic qfe get hotfixid | findstr "^KB2999226"'
+    Pop $0 # Gets the ErrorCode
+    Pop $1 # Gets the stdout, which should be KB2999226 if it's installed
+    ${IfNot} $R0 == 0
+        detailPrint "error: $R0"
+        detailPrint "KB2999226 not found"
+    ${EndIf}
+
+    # If it returned KB2999226 it's already installed
+    StrCmp $1 'KB2999226' lbl_done
+
+    # All lower versions of Windows
+    ReadRegStr $R0 HKLM "SOFTWARE\Microsoft\Windows NT\CurrentVersion" \
+        CurrentVersion
+
+    # Get the name of the .msu file based on the value of $R0
+    ${Switch} "$R0"
+        ${Case} "6.3"
+            StrCpy $MsuPrefix "Windows8.1"
+            ${break}
+        ${Case} "6.2"
+            StrCpy $MsuPrefix "Windows8-RT"
+            ${break}
+        ${Case} "6.1"
+            StrCpy $MsuPrefix "Windows6.1"
+            ${break}
+        ${Case} "6.0"
+            StrCpy $MsuPrefix "Windows6.0"
+            ${break}
+    ${EndSwitch}
+
+    ${If} ${CPUARCH} == "AMD64"
+        StrCpy $MsuFileName "$MsuPrefix-KB2999226-x64.msu"
+    ${Else}
+        StrCpy $MsuFileName "$MsuPrefix-KB2999226-x86.msu"
+    ${EndIf}
+
+    ClearErrors
+
+    detailPrint "Installing KB2999226 using file $MsuFileName"
+    nsExec::ExecToStack 'cmd /c wusa "$PLUGINSDIR\$MsuFileName" /quiet /norestart'
+    Pop $R0  # Get Error
+    Pop $R1  # Get stdout
+    ${IfNot} $R0 == 0
+        detailPrint "error: $R0"
+        detailPrint "output: $R2"
+    ${EndIf}
+
+    lbl_done:
+
+SectionEnd
+
 
 # Check and install Visual C++ redist packages
 # See http://blogs.msdn.com/b/astebner/archive/2009/01/29/9384143.aspx for more info
-Section -Prerequisites
+# Hidden section (-) to install VCRedist
+Section -install_vcredist
 
     Var /GLOBAL VcRedistName
     Var /GLOBAL VcRedistGuid
     Var /GLOBAL NeedVcRedist
-    Var /Global CheckVcRedist
+    Var /GLOBAL CheckVcRedist
     StrCpy $CheckVcRedist "False"
 
     # Visual C++ 2008 SP1 MFC Security Update redist packages
@@ -242,21 +338,13 @@ Section -Prerequisites
                 "$VcRedistName is currently not installed. Would you like to install?" \
                 /SD IDYES IDNO endVcRedist
 
-            # The Correct version of VCRedist is copied over by "build_pkg.bat"
-            SetOutPath "$INSTDIR\"
-            # This will throw an error on Py3 since we're no longer including VCRedist
-            # So, we'll add the /nonfatal switch
-            File /nonfatal "..\prereqs\vcredist.exe"
             # If an output variable is specified ($0 in the case below),
             # ExecWait sets the variable with the exit code (and only sets the
             # error flag if an error occurs; if an error occurs, the contents
             # of the user variable are undefined).
             # http://nsis.sourceforge.net/Reference/ExecWait
-            # /passive used by 2015 installer
-            # /qb! used by 2008 installer
-            # It just ignores the unrecognized switches...
             ClearErrors
-            ExecWait '"$INSTDIR\vcredist.exe" /qb! /quiet /norestart' $0
+            ExecWait '"$PLUGINSDIR\vcredist.exe" /q' $0
             IfErrors 0 CheckVcRedistErrorCode
                 MessageBox MB_OK \
                     "$VcRedistName failed to install. Try installing the package manually." \
@@ -399,8 +487,6 @@ Section -Post
 
     Push "C:\salt"
     Call AddToPath
-
-    Delete "$INSTDIR\vcredist.exe"
 
 SectionEnd
 
