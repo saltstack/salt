@@ -618,6 +618,14 @@ def bootstrap(vm_, opts=None):
     del event_kwargs['sudo_password']
     if 'password' in event_kwargs:
         del event_kwargs['password']
+    external_ip_dict = getattr(event_kwargs['vm_']['external_ip'], '__dict__', None)
+    if external_ip_dict:
+        if 'driver' in external_ip_dict:
+            del external_ip_dict['driver']
+        if 'region' in external_ip_dict:
+            external_ip_dict['region'] = external_ip_dict['region'].name
+            del external_ip_dict['region']
+        event_kwargs['vm_']['external_ip'] = external_ip_dict
     ret['deploy_kwargs'] = event_kwargs
 
     fire_event(
