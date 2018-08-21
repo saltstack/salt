@@ -15,6 +15,7 @@ import logging
 import os
 
 # Import Salt libs
+import salt.defaults.exitcodes
 import salt.utils.files
 import salt.utils.path
 
