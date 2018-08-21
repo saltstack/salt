@@ -246,6 +246,12 @@ def _expand_address(addy):
     return ret
 
 
+def _expand_region(region):
+    ret = {}
+    ret["name"] = region.name
+    return ret
+
+
 def _expand_balancer(lb):
     """
     Convert the libcloud load-balancer object into something more serializable.
@@ -1180,6 +1186,7 @@ def create_address(kwargs=None, call=None):
     name = kwargs["name"]
     ex_region = kwargs["region"]
     ex_address = kwargs.get("address", None)
+    kwargs["region"] = _expand_region(kwargs["region"])
 
     conn = get_conn()
 
