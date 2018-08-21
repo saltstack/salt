@@ -186,6 +186,21 @@ def mounted(name,
            'result': True,
            'comment': ''}
 
+    if not name:
+        ret['result'] = False
+        ret['comment'] = 'Must provide name to mount.mounted'
+        return ret
+
+    if not device:
+        ret['result'] = False
+        ret['comment'] = 'Must provide device to mount.mounted'
+        return ret
+
+    if not fstype:
+        ret['result'] = False
+        ret['comment'] = 'Must provide fstype to mount.mounted'
+        return ret
+
     if device_name_regex is None:
         device_name_regex = []
 
@@ -719,6 +734,11 @@ def unmounted(name,
            'changes': {},
            'result': True,
            'comment': ''}
+
+    if not name:
+        ret['result'] = False
+        ret['comment'] = 'Must provide name to mount.unmounted'
+        return ret
 
     # Get the active data
     active = __salt__['mount.active'](extended=True)
