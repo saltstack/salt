@@ -12,6 +12,7 @@ import yaml
 from salt.config import cloud_providers_config
 import salt.utils.cloud
 import salt.utils.files
+import salt.utils.yaml
 
 # Import Salt Testing Libs
 from tests.support.case import ShellCase
