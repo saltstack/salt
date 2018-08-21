@@ -1284,6 +1284,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             sorted(['foo.txt', 'спам.txt', 'яйца.txt']),
         )
 
+
     @with_tempfile()
     def test_replace(self, name):
         '''
