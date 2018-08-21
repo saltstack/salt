@@ -681,13 +681,14 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         self.assertEqual(config['id'], 'king_bob')
 
     @with_tempdir()
-    def test_minion_id_generate_no_domain(self, tempdir):
+    def test_minion_id_fqdn_filter(self, tempdir):
         '''
-        This tests that the value of `minion_id_generate_no_domain` is suppressed in a generated minion id.
+        This tests that the value of `minion_id_fqdn_filter` is suppressed in a generated minion id, 
+        effectivly generating a hostname minion_id.
         Example:
-        minion_id_generate_no_domain: foo.bar
-        generated minion id (FQDN) is king_bob.foo.bar
-        resulting in minion id king_bob
+        minion_id_fqdn_filter: foo.com
+        Fully qualified domain name is king_bob.foo.com
+        result in the generated minion_id king_bob
         '''
         minion_config = os.path.join(tempdir, 'minion')
 
@@ -695,15 +696,15 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             fp_.write(textwrap.dedent('''\
                 id_function:
                   test.echo:
-                    text: king_bob.foo.bar
-                minion_id_generate_no_domain: foo.bar
+                    text: king_bob.foo.com
+                minion_id_fqdn_filter: foo.com
                 minion_id_caching: False
             '''))
 
         # Let's load the configuration
         config = sconfig.minion_config(minion_config)
 
-        self.assertEqual(config['minion_id_generate_no_domain'], 'foo.bar')
+        self.assertEqual(config['minion_id_fqdn_filter'], 'foo.com')
         self.assertEqual(config['id'], 'king_bob')
 
     @with_tempdir()

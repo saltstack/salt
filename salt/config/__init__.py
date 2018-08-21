@@ -945,7 +945,7 @@ VALID_OPTS = {
     'minion_id_lowercase': bool,
 
     # If set, suppress this single domain (example "foo.bar") in a generated minion id.
-    'minion_id_generate_no_domain': six.string_types,
+    'minion_id_fqdn_filter': six.string_types,
 
     # If set, the master will sign all publications before they are sent out
     'sign_pub_messages': bool,
@@ -1456,7 +1456,7 @@ DEFAULT_MINION_OPTS = {
     'grains_refresh_every': 0,
     'minion_id_caching': True,
     'minion_id_lowercase': False,
-    'minion_id_generate_no_domain': '',
+    'minion_id_fqdn_filter': '',
     'keysize': 2048,
     'transport': 'zeromq',
     'auth_timeout': 5,
@@ -3655,10 +3655,10 @@ def get_id(opts, cache_minion_id=False):
         log.debug('Changed minion id %s to lowercase.', newid)
 
     # Optionally suppress a domain in a generated minion id
-    if opts.get('minion_id_generate_no_domain') and \
-        newid.upper().endswith('.' + opts.get('minion_id_generate_no_domain').upper()):
-        newid = newid[:-len('.' + opts.get('minion_id_generate_no_domain'))]
-        log.debug('Suppressed domain %s in minion id.', opts.get('minion_id_generate_no_domain'))
+    if opts.get('minion_id_fqdn_filter') and \
+        newid.upper().endswith('.' + opts.get('minion_id_fqdn_filter').upper()):
+        newid = newid[:-len('.' + opts.get('minion_id_fqdn_filter'))]
+        log.debug('Suppressed domain %s in minion id.', opts.get('minion_id_fqdn_filter'))
 
     if '__role' in opts and opts.get('__role') == 'minion':
         if opts.get('id_function'):
