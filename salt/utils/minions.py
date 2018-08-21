@@ -239,13 +239,12 @@ class CkMinions(object):
         Retreive complete minion list from PKI dir.
         Respects cache if configured
         '''
-        opts_role = self.opts.get('__role')
-        if (opts_role == 'master' and self.opts.get('__cli') == 'salt-run') or (opts_role == 'minion'):
-            # If we're compiling the pillar directly on the master (or running masterless)
-            # just return our local ID as that is the only one that is available.
-            return [self.opts['id']]
         minions = []
         pki_cache_fn = os.path.join(self.opts['pki_dir'], self.acc, '.key_cache')
+        try:
+            os.makedirs(os.path.dirname(pki_cache_fn))
+        except OSError:
+            pass
         try:
             if self.opts['key_cache'] and os.path.exists(pki_cache_fn):
                 log.debug('Returning cached minion list')
@@ -1156,11 +1155,27 @@ def mine_get(tgt, fun, tgt_type='glob', opts=None):
             tgt_type)
     minions = _res['minions']
     cache = salt.cache.factory(opts)
+
+    if isinstance(fun, six.string_types):
+        functions = list(set(fun.split(',')))
+        _ret_dict = len(functions) > 1
+    elif isinstance(fun, list):
+        functions = fun
+        _ret_dict = True
+    else:
+        return {}
+
     for minion in minions:
         mdata = cache.fetch('minions/{0}'.format(minion), 'mine')
-        if mdata is None:
+
+        if not isinstance(mdata, dict):
             continue
-        fdata = mdata.get(fun)
-        if fdata:
-            ret[minion] = fdata
+
+        if not _ret_dict and functions and functions[0] in mdata:
+            ret[minion] = mdata.get(functions)
+        elif _ret_dict:
+            for fun in functions:
+                if fun in mdata:
+                    ret.setdefault(fun, {})[minion] = mdata.get(fun)
+
     return ret

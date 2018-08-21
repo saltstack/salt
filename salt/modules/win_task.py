@@ -1864,6 +1864,15 @@ def add_trigger(name=None,
     - SessionLock: When the workstation is locked
     - SessionUnlock: When the workstation is unlocked
 
+    .. note::
+
+        Arguments are parsed by the YAML loader and are subject to yaml's
+        idiosyncrasies. Therefore, time values in some formats (``%H:%M:%S`` and
+        ``%H:%M``) should to be quoted. See `YAML IDIOSYNCRASIES`_ for more details.
+
+    .. _`YAML IDIOSYNCRASIES`: https://docs.saltstack.com/en/latest/topics/troubleshooting/yaml_idiosyncrasies.html#time-expressions
+
+
     :return: True if successful, False if unsuccessful
     :rtype: bool
 
@@ -1871,7 +1880,7 @@ def add_trigger(name=None,
 
     .. code-block:: bash
 
-        salt 'minion-id' task.add_trigger <task_name> trigger_type=Once trigger_enabled=True start_date=2016/12/1 start_time=12:01
+        salt 'minion-id' task.add_trigger <task_name> trigger_type=Once trigger_enabled=True start_date=2016/12/1 start_time='"12:01"'
     '''
     if not trigger_type:
         return 'Required parameter "trigger_type" not specified'

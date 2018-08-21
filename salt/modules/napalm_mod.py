@@ -12,7 +12,6 @@ from __future__ import absolute_import, unicode_literals, print_function
 # Import python stdlib
 import inspect
 import logging
-log = logging.getLogger(__file__)
 
 # import NAPALM utils
 import salt.utils.napalm
@@ -20,7 +19,9 @@ from salt.utils.napalm import proxy_napalm_wrap
 
 # Import Salt modules
 from salt.ext import six
+from salt.utils.decorators import depends
 from salt.exceptions import CommandExecutionError
+
 try:
     from netmiko import BaseConnection
     HAS_NETMIKO = True
@@ -39,13 +40,27 @@ try:
 except ImportError:
     HAS_JXMLEASE = False
 
+try:
+    import ciscoconfparse  # pylint: disable=unused-import
+    HAS_CISCOCONFPARSE = True
+except ImportError:
+    HAS_CISCOCONFPARSE = False
+
+try:
+    import scp  # pylint: disable=unused-import
+    HAS_SCP = True
+except ImportError:
+    HAS_SCP = False
+
 # ----------------------------------------------------------------------------------------------------------------------
 # module properties
 # ----------------------------------------------------------------------------------------------------------------------
 
 __virtualname__ = 'napalm'
-__proxyenabled__ = ['napalm']
+__proxyenabled__ = ['*']
 # uses NAPALM-based proxy to interact with network devices
+
+log = logging.getLogger(__file__)
 
 # ----------------------------------------------------------------------------------------------------------------------
 # property functions
@@ -771,6 +786,55 @@ def junos_rpc(cmd=None, dest=None, format=None, **kwargs):
 
 
 @proxy_napalm_wrap
+def junos_commit(**kwargs):
+    '''
+    .. versionadded:: Fluorine
+
+    Commit the changes loaded in the candidate configuration.
+
+    dev_timeout: ``30``
+        The NETCONF RPC timeout (in seconds).
+
+    comment
+      Provide a comment for the commit.
+
+    confirm
+      Provide time in minutes for commit confirmation. If this option is
+      specified, the commit will be rolled back in the specified amount of time
+      unless the commit is confirmed.
+
+    sync: ``False``
+      When ``True``, on dual control plane systems, requests that the candidate
+      configuration on one control plane be copied to the other control plane,
+      checked for correct syntax, and committed on both Routing Engines.
+
+    force_sync: ``False``
+      When ``True``, on dual control plane systems, force the candidate
+      configuration on one control plane to be copied to the other control
+      plane.
+
+    full
+      When ``True``, requires all the daemons to check and evaluate the new
+      configuration.
+
+    detail
+      When ``True``, return commit detail.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' napalm.junos_commit comment='Commitiing via Salt' detail=True
+        salt '*' napalm.junos_commit dev_timeout=60 confirm=10
+        salt '*' napalm.junos_commit sync=True dev_timeout=90
+    '''
+    prep = _junos_prep_fun(napalm_device)  # pylint: disable=undefined-variable
+    if not prep['result']:
+        return prep
+    return __salt__['junos.commit'](**kwargs)
+
+
+@proxy_napalm_wrap
 def junos_install_os(path=None, **kwargs):
     '''
     .. versionadded:: Fluorine
@@ -1240,12 +1304,12 @@ def rpc(command, **kwargs):
     systems supported by NAPALM, invoking the following functions for the NAPALM
     native drivers:
 
-    - :py:func:`napalm.junos_rpc <salt.modules.napalm.junos_rpc>` for ``junos``
-    - :py:func:`napalm.pyeapi_run_commands <salt.modules.napalm.pyeapi_run_commands>`
+    - :py:func:`napalm.junos_rpc <salt.modules.napalm_mod.junos_rpc>` for ``junos``
+    - :py:func:`napalm.pyeapi_run_commands <salt.modules.napalm_mod.pyeapi_run_commands>`
       for ``eos``
-    - :py:func:`napalm.nxos_api_rpc <salt.modules.napalm.nxos_api_rpc>` for
+    - :py:func:`napalm.nxos_api_rpc <salt.modules.napalm_mod.nxos_api_rpc>` for
       ``nxos``
-    - :py:func:`napalm.netmiko_commands <salt.modules.napalm.netmiko_commands>`
+    - :py:func:`napalm.netmiko_commands <salt.modules.napalm_mod.netmiko_commands>`
       for ``ios``, ``iosxr``, and ``nxos_ssh``
 
     command
@@ -1286,3 +1350,608 @@ def rpc(command, **kwargs):
     napalm_map.update(default_map)
     fun = napalm_map.get(__grains__['os'], 'napalm.netmiko_commands')
     return __salt__[fun](command, **kwargs)
+
+
+@depends(HAS_CISCOCONFPARSE)
+def config_find_lines(regex, source='running'):
+    r'''
+    .. versionadded:: Fluorine
+
+    Return the configuration lines that match the regular expressions from the
+    ``regex`` argument. The configuration is read from the network device
+    interrogated.
+
+    regex
+        The regular expression to match the configuration lines against.
+
+    source: ``running``
+        The configuration type to retrieve from the network device. Default:
+        ``running``. Available options: ``running``, ``startup``, ``candidate``.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' napalm.config_find_lines '^interface Ethernet1\d'
+    '''
+    config_txt = __salt__['net.config'](source=source)['out'][source]
+    return __salt__['ciscoconfparse.find_lines'](config=config_txt,
+                                                 regex=regex)
+
+
+@depends(HAS_CISCOCONFPARSE)
+def config_lines_w_child(parent_regex, child_regex, source='running'):
+    r'''
+     .. versionadded:: Fluorine
+
+    Return the configuration lines that match the regular expressions from the
+    ``parent_regex`` argument, having child lines matching ``child_regex``.
+    The configuration is read from the network device interrogated.
+
+    .. note::
+        This function is only available only when the underlying library
+        `ciscoconfparse <http://www.pennington.net/py/ciscoconfparse/index.html>`_
+        is installed. See
+        :py:func:`ciscoconfparse module <salt.modules.ciscoconfparse_mod>` for
+        more details.
+
+    parent_regex
+        The regular expression to match the parent configuration lines against.
+
+    child_regex
+        The regular expression to match the child configuration lines against.
+
+    source: ``running``
+        The configuration type to retrieve from the network device. Default:
+        ``running``. Available options: ``running``, ``startup``, ``candidate``.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' napalm.config_lines_w_child '^interface' 'ip address'
+        salt '*' napalm.config_lines_w_child '^interface' 'shutdown' source=candidate
+    '''
+    config_txt = __salt__['net.config'](source=source)['out'][source]
+    return __salt__['ciscoconfparse.find_lines_w_child'](config=config_txt,
+                                                         parent_regex=parent_regex,
+                                                         child_regex=child_regex)
+
+
+@depends(HAS_CISCOCONFPARSE)
+def config_lines_wo_child(parent_regex, child_regex, source='running'):
+    '''
+      .. versionadded:: Fluorine
+
+    Return the configuration lines that match the regular expressions from the
+    ``parent_regex`` argument, having the child lines *not* matching
+    ``child_regex``.
+    The configuration is read from the network device interrogated.
+
+    .. note::
+        This function is only available only when the underlying library
+        `ciscoconfparse <http://www.pennington.net/py/ciscoconfparse/index.html>`_
+        is installed. See
+        :py:func:`ciscoconfparse module <salt.modules.ciscoconfparse_mod>` for
+        more details.
+
+    parent_regex
+        The regular expression to match the parent configuration lines against.
+
+    child_regex
+        The regular expression to match the child configuration lines against.
+
+    source: ``running``
+        The configuration type to retrieve from the network device. Default:
+        ``running``. Available options: ``running``, ``startup``, ``candidate``.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' napalm.config_lines_wo_child '^interface' 'ip address'
+        salt '*' napalm.config_lines_wo_child '^interface' 'shutdown' source=candidate
+    '''
+    config_txt = __salt__['net.config'](source=source)['out'][source]
+    return __salt__['ciscoconfparse.find_lines_wo_child'](config=config_txt,
+                                                          parent_regex=parent_regex,
+                                                          child_regex=child_regex)
+
+
+@depends(HAS_CISCOCONFPARSE)
+def config_filter_lines(parent_regex, child_regex, source='running'):
+    r'''
+    .. versionadded:: Fluorine
+
+    Return a list of detailed matches, for the configuration blocks (parent-child
+    relationship) whose parent respects the regular expressions configured via
+    the ``parent_regex`` argument, and the child matches the ``child_regex``
+    regular expression. The result is a list of dictionaries with the following
+    keys:
+
+    - ``match``: a boolean value that tells whether ``child_regex`` matched any
+      children lines.
+    - ``parent``: the parent line (as text).
+    - ``child``: the child line (as text). If no child line matched, this field
+      will be ``None``.
+
+    .. note::
+        This function is only available only when the underlying library
+        `ciscoconfparse <http://www.pennington.net/py/ciscoconfparse/index.html>`_
+        is installed. See
+        :py:func:`ciscoconfparse module <salt.modules.ciscoconfparse_mod>` for
+        more details.
+
+    parent_regex
+        The regular expression to match the parent configuration lines against.
+
+    child_regex
+        The regular expression to match the child configuration lines against.
+
+    source: ``running``
+        The configuration type to retrieve from the network device. Default:
+        ``running``. Available options: ``running``, ``startup``, ``candidate``.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' napalm.config_filter_lines '^interface' 'ip address'
+        salt '*' napalm.config_filter_lines '^interface' 'shutdown' source=candidate
+    '''
+    config_txt = __salt__['net.config'](source=source)['out'][source]
+    return __salt__['ciscoconfparse.filter_lines'](config=config_txt,
+                                                   parent_regex=parent_regex,
+                                                   child_regex=child_regex)
+
+
+def config_tree(source='running', with_tags=False):
+    '''
+    .. versionadded:: Fluorine
+
+    Transform Cisco IOS style configuration to structured Python dictionary.
+    Depending on the value of the ``with_tags`` argument, this function may
+    provide different views, valuable in different situations.
+
+    source: ``running``
+        The configuration type to retrieve from the network device. Default:
+        ``running``. Available options: ``running``, ``startup``, ``candidate``.
+
+    with_tags: ``False``
+        Whether this function should return a detailed view, with tags.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' napalm.config_tree
+    '''
+    config_txt = __salt__['net.config'](source=source)['out'][source]
+    return __salt__['iosconfig.tree'](config=config_txt)
+
+
+def config_merge_tree(source='running',
+                      merge_config=None,
+                      merge_path=None,
+                      saltenv='base'):
+    '''
+    .. versionadded:: Fluorine
+
+    Return the merge tree of the ``initial_config`` with the ``merge_config``,
+    as a Python dictionary.
+
+    source: ``running``
+        The configuration type to retrieve from the network device. Default:
+        ``running``. Available options: ``running``, ``startup``, ``candidate``.
+
+    merge_config
+        The config to be merged into the initial config, sent as text. This
+        argument is ignored when ``merge_path`` is set.
+
+    merge_path
+        Absolute or remote path from where to load the merge configuration
+        text. This argument allows any URI supported by
+        :py:func:`cp.get_url <salt.modules.cp.get_url>`), e.g., ``salt://``,
+        ``https://``, ``s3://``, ``ftp:/``, etc.
+
+    saltenv: ``base``
+        Salt fileserver environment from which to retrieve the file.
+        Ignored if ``merge_path`` is not a ``salt://`` URL.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' napalm.config_merge_tree merge_path=salt://path/to/merge.cfg
+    '''
+    config_txt = __salt__['net.config'](source=source)['out'][source]
+    return __salt__['iosconfig.merge_tree'](initial_config=config_txt,
+                                            merge_config=merge_config,
+                                            merge_path=merge_path,
+                                            saltenv=saltenv)
+
+
+def config_merge_text(source='running',
+                      merge_config=None,
+                      merge_path=None,
+                      saltenv='base'):
+    '''
+    .. versionadded:: Fluorine
+
+    Return the merge result of the configuration from ``source`` with the
+    merge configuration, as plain text (without loading the config on the
+    device).
+
+    source: ``running``
+        The configuration type to retrieve from the network device. Default:
+        ``running``. Available options: ``running``, ``startup``, ``candidate``.
+
+    merge_config
+        The config to be merged into the initial config, sent as text. This
+        argument is ignored when ``merge_path`` is set.
+
+    merge_path
+        Absolute or remote path from where to load the merge configuration
+        text. This argument allows any URI supported by
+        :py:func:`cp.get_url <salt.modules.cp.get_url>`), e.g., ``salt://``,
+        ``https://``, ``s3://``, ``ftp:/``, etc.
+
+    saltenv: ``base``
+        Salt fileserver environment from which to retrieve the file.
+        Ignored if ``merge_path`` is not a ``salt://`` URL.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' napalm.config_merge_text merge_path=salt://path/to/merge.cfg
+    '''
+    config_txt = __salt__['net.config'](source=source)['out'][source]
+    return __salt__['iosconfig.merge_text'](initial_config=config_txt,
+                                            merge_config=merge_config,
+                                            merge_path=merge_path,
+                                            saltenv=saltenv)
+
+
+def config_merge_diff(source='running',
+                      merge_config=None,
+                      merge_path=None,
+                      saltenv='base'):
+    '''
+    .. versionadded:: Fluorine
+
+    Return the merge diff, as text, after merging the merge config into the
+    configuration source requested (without loading the config on the device).
+
+    source: ``running``
+        The configuration type to retrieve from the network device. Default:
+        ``running``. Available options: ``running``, ``startup``, ``candidate``.
+
+    merge_config
+        The config to be merged into the initial config, sent as text. This
+        argument is ignored when ``merge_path`` is set.
+
+    merge_path
+        Absolute or remote path from where to load the merge configuration
+        text. This argument allows any URI supported by
+        :py:func:`cp.get_url <salt.modules.cp.get_url>`), e.g., ``salt://``,
+        ``https://``, ``s3://``, ``ftp:/``, etc.
+
+    saltenv: ``base``
+        Salt fileserver environment from which to retrieve the file.
+        Ignored if ``merge_path`` is not a ``salt://`` URL.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' napalm.config_merge_diff merge_path=salt://path/to/merge.cfg
+    '''
+    config_txt = __salt__['net.config'](source=source)['out'][source]
+    return __salt__['iosconfig.merge_diff'](initial_config=config_txt,
+                                            merge_config=merge_config,
+                                            merge_path=merge_path,
+                                            saltenv=saltenv)
+
+
+def config_diff_tree(source1='candidate',
+                     candidate_path=None,
+                     source2='running',
+                     running_path=None):
+    '''
+    .. versionadded:: Fluorine
+
+    Return the diff, as Python dictionary, between two different sources.
+    The sources can be either specified using the ``source1`` and ``source2``
+    arguments when retrieving from the managed network device.
+
+    source1: ``candidate``
+        The source from where to retrieve the configuration to be compared with.
+        Available options: ``candidate``, ``running``, ``startup``. Default:
+        ``candidate``.
+
+    candidate_path
+        Absolute or remote path from where to load the candidate configuration
+        text. This argument allows any URI supported by
+        :py:func:`cp.get_url <salt.modules.cp.get_url>`), e.g., ``salt://``,
+        ``https://``, ``s3://``, ``ftp:/``, etc.
+
+    source2: ``running``
+        The source from where to retrieve the configuration to compare with.
+        Available options: ``candidate``, ``running``, ``startup``. Default:
+        ``running``.
+
+    running_path
+        Absolute or remote path from where to load the runing configuration
+        text. This argument allows any URI supported by
+        :py:func:`cp.get_url <salt.modules.cp.get_url>`), e.g., ``salt://``,
+        ``https://``, ``s3://``, ``ftp:/``, etc.
+
+    saltenv: ``base``
+        Salt fileserver environment from which to retrieve the file.
+        Ignored if ``candidate_path`` or ``running_path`` is not a
+        ``salt://`` URL.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' napalm.config_diff_text
+        salt '*' napalm.config_diff_text candidate_path=https://bit.ly/2mAdq7z
+        # Would compare the running config with the configuration available at
+        # https://bit.ly/2mAdq7z
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' napalm.config_diff_tree
+        salt '*' napalm.config_diff_tree running startup
+    '''
+    get_config = __salt__['net.config']()['out']
+    candidate_cfg = get_config[source1]
+    running_cfg = get_config[source2]
+    return __salt__['iosconfig.diff_tree'](candidate_config=candidate_cfg,
+                                           candidate_path=candidate_path,
+                                           running_config=running_cfg,
+                                           running_path=running_path)
+
+
+def config_diff_text(source1='candidate',
+                     candidate_path=None,
+                     source2='running',
+                     running_path=None):
+    '''
+    .. versionadded:: Fluorine
+
+    Return the diff, as text, between the two different configuration sources.
+    The sources can be either specified using the ``source1`` and ``source2``
+    arguments when retrieving from the managed network device.
+
+    source1: ``candidate``
+        The source from where to retrieve the configuration to be compared with.
+        Available options: ``candidate``, ``running``, ``startup``. Default:
+        ``candidate``.
+
+    candidate_path
+        Absolute or remote path from where to load the candidate configuration
+        text. This argument allows any URI supported by
+        :py:func:`cp.get_url <salt.modules.cp.get_url>`), e.g., ``salt://``,
+        ``https://``, ``s3://``, ``ftp:/``, etc.
+
+    source2: ``running``
+        The source from where to retrieve the configuration to compare with.
+        Available options: ``candidate``, ``running``, ``startup``. Default:
+        ``running``.
+
+    running_path
+        Absolute or remote path from where to load the runing configuration
+        text. This argument allows any URI supported by
+        :py:func:`cp.get_url <salt.modules.cp.get_url>`), e.g., ``salt://``,
+        ``https://``, ``s3://``, ``ftp:/``, etc.
+
+    saltenv: ``base``
+        Salt fileserver environment from which to retrieve the file.
+        Ignored if ``candidate_path`` or ``running_path`` is not a
+        ``salt://`` URL.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' napalm.config_diff_text
+        salt '*' napalm.config_diff_text candidate_path=https://bit.ly/2mAdq7z
+        # Would compare the running config with the configuration available at
+        # https://bit.ly/2mAdq7z
+    '''
+    get_config = __salt__['net.config']()['out']
+    candidate_cfg = get_config[source1]
+    running_cfg = get_config[source2]
+    return __salt__['iosconfig.diff_text'](candidate_config=candidate_cfg,
+                                           candidate_path=candidate_path,
+                                           running_config=running_cfg,
+                                           running_path=running_path)
+
+
+@depends(HAS_SCP)
+def scp_get(remote_path,
+            local_path='',
+            recursive=False,
+            preserve_times=False,
+            **kwargs):
+    '''
+    .. versionadded:: Fluorine
+
+    Transfer files and directories from remote network device to the localhost
+    of the Minion.
+
+    .. note::
+        This function is only available only when the underlying library
+        `scp <https://github.com/jbardin/scp.py>`_
+        is installed. See
+        :mod:`scp module <salt.modules.scp_mod>` for
+        more details.
+
+    remote_path
+        Path to retrieve from remote host. Since this is evaluated by scp on the
+        remote host, shell wildcards and environment variables may be used.
+
+    recursive: ``False``
+        Transfer files and directories recursively.
+
+    preserve_times: ``False``
+        Preserve ``mtime`` and ``atime`` of transferred files and directories.
+
+    passphrase
+        Used for decrypting private keys.
+
+    pkey
+        An optional private key to use for authentication.
+
+    key_filename
+        The filename, or list of filenames, of optional private key(s) and/or
+        certificates to try for authentication.
+
+    timeout
+        An optional timeout (in seconds) for the TCP connect.
+
+    socket_timeout: ``10``
+        The channel socket timeout in seconds.
+
+    buff_size: ``16384``
+        The size of the SCP send buffer.
+
+    allow_agent: ``True``
+        Set to ``False`` to disable connecting to the SSH agent.
+
+    look_for_keys: ``True``
+        Set to ``False`` to disable searching for discoverable private key
+        files in ``~/.ssh/``
+
+    banner_timeout
+        An optional timeout (in seconds) to wait for the SSH banner to be
+        presented.
+
+    auth_timeout
+        An optional timeout (in seconds) to wait for an authentication
+        response.
+
+    auto_add_policy: ``False``
+        Automatically add the host to the ``known_hosts``.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' napalm.scp_get /var/tmp/file /tmp/file auto_add_policy=True
+    '''
+    conn_args = netmiko_args(**kwargs)
+    conn_args['hostname'] = conn_args['host']
+    kwargs.update(conn_args)
+    return __salt__['scp.get'](remote_path,
+                               local_path=local_path,
+                               recursive=recursive,
+                               preserve_times=preserve_times,
+                               **kwargs)
+
+
+@depends(HAS_SCP)
+def scp_put(files,
+            remote_path=None,
+            recursive=False,
+            preserve_times=False,
+            saltenv='base',
+            **kwargs):
+    '''
+    .. versionadded:: Fluorine
+
+    Transfer files and directories to remote network device.
+
+    .. note::
+        This function is only available only when the underlying library
+        `scp <https://github.com/jbardin/scp.py>`_
+        is installed. See
+        :mod:`scp module <salt.modules.scp_mod>` for
+        more details.
+
+    files
+        A single path or a list of paths to be transferred.
+
+    remote_path
+        The path on the remote device where to store the files.
+
+    recursive: ``True``
+        Transfer files and directories recursively.
+
+    preserve_times: ``False``
+        Preserve ``mtime`` and ``atime`` of transferred files and directories.
+
+    saltenv: ``base``
+        The name of the Salt environment. Ignored when ``files`` is not a
+        ``salt://`` URL.
+
+    hostname
+        The hostname of the remote device.
+
+    port: ``22``
+        The port of the remote device.
+
+    username
+        The username required for SSH authentication on the device.
+
+    password
+        Used for password authentication. It is also used for private key
+        decryption if ``passphrase`` is not given.
+
+    passphrase
+        Used for decrypting private keys.
+
+    pkey
+        An optional private key to use for authentication.
+
+    key_filename
+        The filename, or list of filenames, of optional private key(s) and/or
+        certificates to try for authentication.
+
+    timeout
+        An optional timeout (in seconds) for the TCP connect.
+
+    socket_timeout: ``10``
+        The channel socket timeout in seconds.
+
+    buff_size: ``16384``
+        The size of the SCP send buffer.
+
+    allow_agent: ``True``
+        Set to ``False`` to disable connecting to the SSH agent.
+
+    look_for_keys: ``True``
+        Set to ``False`` to disable searching for discoverable private key
+        files in ``~/.ssh/``
+
+    banner_timeout
+        An optional timeout (in seconds) to wait for the SSH banner to be
+        presented.
+
+    auth_timeout
+        An optional timeout (in seconds) to wait for an authentication
+        response.
+
+    auto_add_policy: ``False``
+        Automatically add the host to the ``known_hosts``.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' napalm.scp_put /path/to/file /var/tmp/file auto_add_policy=True
+    '''
+    conn_args = netmiko_args(**kwargs)
+    conn_args['hostname'] = conn_args['host']
+    kwargs.update(conn_args)
+    return __salt__['scp.put'](files,
+                               remote_path=remote_path,
+                               recursive=recursive,
+                               preserve_times=preserve_times,
+                               saltenv=saltenv,
+                               **kwargs)

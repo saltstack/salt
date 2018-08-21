@@ -1782,6 +1782,25 @@ the master will drop the request and the minion's key will remain accepted.
 
     allow_minion_key_revoke: False
 
+.. conf_master:: optimization_order
+
+``optimization_order``
+----------------------
+
+Default: ``[0, 1, 2]``
+
+In cases where Salt is distributed without .py files, this option determines
+the priority of optimization level(s) Salt's module loader should prefer.
+
+.. note::
+    This option is only supported on Python 3.5+.
+
+.. code-block:: yaml
+
+    optimization_order:
+      - 2
+      - 0
+      - 1
 
 Master Large Scale Tuning Settings
 ==================================
@@ -5105,6 +5124,21 @@ https://github.com/ytoolshed/range/wiki/%22yamlfile%22-module-file-spec
 
 Include Configuration
 =====================
+
+Configuration can be loaded from multiple files. The order in which this is
+done is:
+
+1. The master config file itself
+
+2. The files matching the glob in :conf_master:`default_include`
+
+3. The files matching the glob in :conf_master:`include` (if defined)
+
+Each successive step overrides any values defined in the previous steps.
+Therefore, any config options defined in one of the
+:conf_master:`default_include` files would override the same value in the
+master config file, and any options defined in :conf_master:`include` would
+override both.
 
 .. conf_master:: default_include
 

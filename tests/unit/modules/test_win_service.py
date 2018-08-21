@@ -241,6 +241,18 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
             self.assertTrue(win_service.enabled('spongebob'))
             self.assertFalse(win_service.enabled('squarepants'))
 
+    def test_enabled_with_space_in_name(self):
+        '''
+            Test to check to see if the named
+            service is enabled to start on boot
+            when have space in service name
+        '''
+        mock = MagicMock(side_effect=[{'StartType': 'Auto'},
+                                      {'StartType': 'Disabled'}])
+        with patch.object(win_service, 'info', mock):
+            self.assertTrue(win_service.enabled('spongebob test'))
+            self.assertFalse(win_service.enabled('squarepants test'))
+
     def test_disabled(self):
         '''
             Test to check to see if the named

@@ -1916,3 +1916,92 @@ class TestFindKeepFiles(TestCase):
         ]
         actual = sorted(list(keep))
         assert actual == expected, actual
+
+
+class TestFileTidied(TestCase):
+    def setUp(self):
+        setattr(filestate, '__opts__', {})
+        setattr(filestate, '__salt__', {})
+
+    def tearDown(self):
+        delattr(filestate, '__opts__')
+        delattr(filestate, '__salt__')
+
+    def test__tidied(self):
+        walker = [
+            ('test/test1', [], ['file1']),
+            ('test/test2/test3', [], []),
+            ('test/test2', ['test3'], ['file2']),
+            ('test/', ['test1', 'test2'], ['file3']),
+        ]
+        today_delta = datetime.today() - datetime.utcfromtimestamp(0)
+        remove = MagicMock(name='file.remove')
+        with patch('os.walk', return_value=walker), \
+             patch('os.path.islink', return_value=False), \
+             patch('os.path.getatime', return_value=today_delta.total_seconds()), \
+             patch('os.path.getsize', return_value=10), \
+             patch.dict(filestate.__opts__, {'test': False}), \
+             patch.dict(filestate.__salt__, {'file.remove': remove}), \
+             patch('os.path.isdir', return_value=True):
+            ret = filestate.tidied(name='/test/')
+        exp = {
+            'name': '/test/',
+            'changes': {
+                'removed': [
+                    'test/test1/file1',
+                    'test/test2/file2',
+                    'test/file3'
+                ],
+            },
+            'pchanges': {},
+            'result': True,
+            'comment': 'Removed 3 files or directories from directory /test/',
+        }
+        assert ret == exp
+        assert remove.call_count == 3
+
+        remove.reset_mock()
+        with patch('os.walk', return_value=walker), \
+             patch('os.path.islink', return_value=False), \
+             patch('os.path.getatime', return_value=today_delta.total_seconds()), \
+             patch('os.path.getsize', return_value=10), \
+             patch.dict(filestate.__opts__, {'test': False}), \
+             patch.dict(filestate.__salt__, {'file.remove': remove}), \
+             patch('os.path.isdir', return_value=True):
+            ret = filestate.tidied(name='/test/', rmdirs=True)
+        exp = {
+            'name': '/test/',
+            'changes': {
+                'removed': [
+                    'test/test1/file1',
+                    'test/test2/file2',
+                    'test/test2/test3',
+                    'test/file3',
+                    'test/test1',
+                    'test/test2'
+                ]
+            },
+            'pchanges': {},
+            'result': True,
+            'comment': 'Removed 6 files or directories from directory /test/',
+        }
+        assert ret == exp
+        assert remove.call_count == 6
+
+    def test__bad_input(self):
+        exp = {
+            'name': 'test/',
+            'changes': {},
+            'pchanges': {},
+            'result': False,
+            'comment': 'Specified file test/ is not an absolute path',
+        }
+        assert filestate.tidied(name='test/') == exp
+        exp = {
+            'name': '/bad-directory-name/',
+            'changes': {},
+            'pchanges': {},
+            'result': False,
+            'comment': '/bad-directory-name/ does not exist or is not a directory.',
+        }
+        assert filestate.tidied(name='/bad-directory-name/') == exp
