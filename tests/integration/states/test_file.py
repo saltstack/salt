@@ -2624,31 +2624,31 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
 class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
     marker_start = '# start'
     marker_end = '# end'
-    content = os.linesep.join([
+    content = six.text_type(os.linesep.join([
         'Line 1 of block',
         'Line 2 of block',
-        '']).decode('utf-8')
-    without_block = os.linesep.join([
+        '']))
+    without_block = six.text_type(os.linesep.join([
         'Hello world!',
         '',
         '# comment here',
-        '']).decode('utf-8')
-    with_non_matching_block = os.linesep.join([
+        '']))
+    with_non_matching_block = six.text_type(os.linesep.join([
         'Hello world!',
         '',
         '# start',
         'No match here',
         '# end',
         '# comment here',
-        '']).decode('utf-8')
-    with_non_matching_block_and_marker_end_not_after_newline = os.linesep.join([
+        '']))
+    with_non_matching_block_and_marker_end_not_after_newline = six.text_type(os.linesep.join([
         'Hello world!',
         '',
         '# start',
         'No match here# end',
         '# comment here',
-        '']).decode('utf-8')
-    with_matching_block = os.linesep.join([
+        '']))
+    with_matching_block = six.text_type(os.linesep.join([
         'Hello world!',
         '',
         '# start',
@@ -2656,8 +2656,8 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
         'Line 2 of block',
         '# end',
         '# comment here',
-        '']).decode('utf-8')
-    with_matching_block_and_extra_newline = os.linesep.join([
+        '']))
+    with_matching_block_and_extra_newline = six.text_type(os.linesep.join([
         'Hello world!',
         '',
         '# start',
@@ -2666,15 +2666,15 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
         '',
         '# end',
         '# comment here',
-        '']).decode('utf-8')
-    with_matching_block_and_marker_end_not_after_newline = os.linesep.join([
+        '']))
+    with_matching_block_and_marker_end_not_after_newline = six.text_type(os.linesep.join([
         'Hello world!',
         '',
         '# start',
         'Line 1 of block',
         'Line 2 of block# end',
         '# comment here',
-        '']).decode('utf-8')
+        '']))
     content_explicit_posix_newlines = ('Line 1 of block\n'
                                        'Line 2 of block\n')
     content_explicit_windows_newlines = ('Line 1 of block\r\n'
