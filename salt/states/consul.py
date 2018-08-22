@@ -26,7 +26,7 @@ from salt.exceptions import SaltInvocationError, CommandExecutionError
 log = logging.getLogger(__name__)
 
 
-def _acl_changes(id=None, type=None, rules=None, consul_url=None, token=None):
+def _acl_changes(name, id=None, type=None, rules=None, consul_url=None, token=None):
     '''
        return True if the acl need to be update, False if it doesn't need to be update
     '''
@@ -110,7 +110,7 @@ def acl_present(name, id=None, token=None, type="client", rules="", consul_url='
           ret['result'] = False
 	  ret['comment'] = "failed to create the acl"
     elif exists['result']:
-        changes = _acl_changes(id=exists['id'], token=token, type=type, rules=rules, consul_url=consul_url)
+        changes = _acl_changes(name=name, id=exists['id'], token=token, type=type, rules=rules, consul_url=consul_url)
         if changes:
             if __opts__['test']:
                 ret['result'] = None
