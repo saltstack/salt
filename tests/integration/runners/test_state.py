@@ -30,6 +30,7 @@ import salt.utils.event
 log = logging.getLogger(__name__)
 
 
+@flaky
 class StateRunnerTest(ShellCase):
     '''
     Test the state runner.
@@ -84,7 +85,6 @@ class StateRunnerTest(ShellCase):
         assert os.path.exists('/tmp/ewu-2016-12-13') is False
         assert code != 0
 
-    @flaky
     def test_orchestrate_target_exists(self):
         '''
         test orchestration when target exists
@@ -110,7 +110,6 @@ class StateRunnerTest(ShellCase):
             for item in out:
                 assert item in ret
 
-    @flaky
     def test_orchestrate_target_doesnt_exist(self):
         '''
         test orchestration when target doesn't exist
@@ -190,6 +189,7 @@ class StateRunnerTest(ShellCase):
 
 
 @skipIf(salt.utils.is_windows(), '*NIX-only test')
+@flaky
 class OrchEventTest(ShellCase):
     '''
     Tests for orchestration events
