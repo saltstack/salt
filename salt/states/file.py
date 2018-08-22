@@ -2902,7 +2902,7 @@ def managed(name,
                 salt.utils.files.remove(sfn)
 
 
-_RECURSE_TYPES = ['user', 'group', 'mode', 'ignore_files', 'ignore_dirs']
+_RECURSE_TYPES = ['user', 'group', 'mode', 'ignore_files', 'ignore_dirs', 'silent']
 
 
 def _get_recurse_set(recurse):
@@ -2982,7 +2982,8 @@ def directory(name,
         a list of strings representing what you would like to recurse.  If
         ``mode`` is defined, will recurse on both ``file_mode`` and ``dir_mode`` if
         they are defined.  If ``ignore_files`` or ``ignore_dirs`` is included, files or
-        directories will be left unchanged respectively.
+        directories will be left unchanged respectively. If ``silent`` is defined,
+        individual file/directory change notifications will be suppressed.
         Example:
 
         .. code-block:: yaml
@@ -3393,6 +3394,9 @@ def directory(name,
         if 'mode' not in recurse_set:
             file_mode = None
             dir_mode = None
+
+        if 'silent' in recurse_set:
+            ret['pchanges'] = 'Changes silenced'
 
         check_files = 'ignore_files' not in recurse_set
         check_dirs = 'ignore_dirs' not in recurse_set
