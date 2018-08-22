@@ -18,7 +18,7 @@
 #======================================================================================================================
 set -o nounset                              # Treat unset variables as an error
 
-__ScriptVersion="2018.08.13"
+__ScriptVersion="2018.08.15"
 __ScriptName="bootstrap-salt.sh"
 
 __ScriptFullName="$0"
@@ -339,7 +339,7 @@ __usage() {
         with -c and -k
     -C  Only run the configuration function. Implies -F (forced overwrite).
         To overwrite Master or Syndic configs, -M or -S, respectively, must
-        also be specified. Salt installation will be omitted, but some of the
+        also be specified. Salt installation will be ommitted, but some of the
         dependencies could be installed to write configuration with -j or -J.
     -A  Pass the salt-master DNS name or IP. This will be stored under
         \${BS_SALT_ETC_DIR}/minion.d/99-master-address.conf
@@ -3140,7 +3140,7 @@ install_debian_8_git_deps() {
 
     __PACKAGES="libzmq3 libzmq3-dev lsb-release python-apt python-crypto python-jinja2"
     __PACKAGES="${__PACKAGES} python-m2crypto python-msgpack python-requests python-systemd"
-    __PACKAGES="${__PACKAGES} python-yaml python-zmq"
+    __PACKAGES="${__PACKAGES} python-yaml python-zmq python-concurrent.futures"
 
     if [ "$_INSTALL_CLOUD" -eq $BS_TRUE ]; then
         # Install python-libcloud if asked to
@@ -3211,7 +3211,7 @@ install_debian_9_git_deps() {
         PY_PKG_VER=""
 
         # These packages are PY2-ONLY
-        __PACKAGES="${__PACKAGES} python-backports-abc python-m2crypto"
+        __PACKAGES="${__PACKAGES} python-backports-abc python-m2crypto python-concurrent.futures"
     fi
 
     __PACKAGES="${__PACKAGES} python${PY_PKG_VER}-apt python${PY_PKG_VER}-crypto python${PY_PKG_VER}-jinja2"
@@ -3429,7 +3429,7 @@ install_fedora_deps() {
        fi
     fi
 
-    __PACKAGES="${__PACKAGES} dnf-utils libyaml python${PY_PKG_VER}-crypto python${PY_PKG_VER}-jinja2"
+    __PACKAGES="${__PACKAGES} procps-ng dnf-utils libyaml python${PY_PKG_VER}-crypto python${PY_PKG_VER}-jinja2"
     __PACKAGES="${__PACKAGES} python${PY_PKG_VER}-msgpack python${PY_PKG_VER}-requests python${PY_PKG_VER}-zmq"
 
     # shellcheck disable=SC2086
@@ -3800,7 +3800,7 @@ install_centos_git_deps() {
         fi
     fi
 
-    __PACKAGES="python${PY_PKG_VER}-crypto python${PY_PKG_VER}-jinja2"
+    __PACKAGES="${__PACKAGES} python${PY_PKG_VER}-crypto python${PY_PKG_VER}-jinja2"
     __PACKAGES="${__PACKAGES} python${PY_PKG_VER}-msgpack python${PY_PKG_VER}-requests"
     __PACKAGES="${__PACKAGES} python${PY_PKG_VER}-tornado python${PY_PKG_VER}-zmq"
 
@@ -3815,7 +3815,7 @@ install_centos_git_deps() {
 
     if [ "${_PY_EXE}" != "" ] && [ "$_PIP_ALLOWED" -eq "$BS_TRUE" ]; then
         # If "-x" is defined, install dependencies with pip based on the Python version given.
-        _PIP_PACKAGES="m2crypto jinja2 msgpack-python pycrypto PyYAML tornado<5.0 zmq"
+        _PIP_PACKAGES="m2crypto jinja2 msgpack-python pycrypto PyYAML tornado<5.0 zmq futures>=2.0"
 
         # install swig and openssl on cent6
         if [ "$DISTRO_MAJOR_VERSION" -eq 6 ]; then
@@ -4608,6 +4608,7 @@ _eof
     # which is already installed
     __PACKAGES="m2crypto ${pkg_append}-crypto ${pkg_append}-jinja2 ${pkg_append}-PyYAML"
     __PACKAGES="${__PACKAGES} ${pkg_append}-msgpack ${pkg_append}-requests ${pkg_append}-zmq"
+    __PACKAGES="${__PACKAGES} ${pkg_append}-futures"
 
     # shellcheck disable=SC2086
     __yum_install_noinput ${__PACKAGES} || return 1
@@ -4627,6 +4628,9 @@ install_amazon_linux_ami_git_deps() {
     PIP_EXE='pip'
     if __check_command_exists python2.7; then
         if ! __check_command_exists pip2.7; then
+            if ! __check_command_exists easy_install-2.7; then
+                __yum_install_noinput python27-setuptools
+            fi
             /usr/bin/easy_install-2.7 pip || return 1
         fi
         PIP_EXE='/usr/local/bin/pip2.7'
@@ -4646,7 +4650,7 @@ install_amazon_linux_ami_git_deps() {
 
     if [ "$_INSTALL_CLOUD" -eq $BS_TRUE ]; then
         __check_pip_allowed "You need to allow pip based installations (-P) in order to install apache-libcloud"
-        __PACKAGES="${__PACKAGES} python-pip"
+        __PACKAGES="${__PACKAGES} python27-pip"
         __PIP_PACKAGES="${__PIP_PACKAGES} apache-libcloud>=$_LIBCLOUD_MIN_VERSION"
     fi
 
@@ -4795,7 +4799,7 @@ install_arch_linux_stable() {
     pacman -S --noconfirm --needed bash || return 1
     pacman -Su --noconfirm || return 1
     # We can now resume regular salt update
-    pacman -Syu --noconfirm salt || return 1
+    pacman -Syu --noconfirm salt python2-futures || return 1
     return 0
 }
 
@@ -5649,7 +5653,7 @@ install_opensuse_git_deps() {
 
     __git_clone_and_checkout || return 1
 
-    __PACKAGES="libzmq5 python-Jinja2 python-m2crypto python-msgpack-python python-pycrypto python-pyzmq python-xml"
+    __PACKAGES="libzmq5 python-Jinja2 python-m2crypto python-msgpack-python python-pycrypto python-pyzmq python-xml python-futures"
 
     if [ -f "${_SALT_GIT_CHECKOUT_DIR}/requirements/base.txt" ]; then
         # We're on the develop branch, install whichever tornado is on the requirements file

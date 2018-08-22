@@ -254,3 +254,45 @@ class SchedulerSkipTest(ModuleCase, SaltReturnAssertsMixin):
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status('job1')
         self.assertEqual(ret['_last_run'], run_time)
+
+    def test_run_seconds_skip(self):
+        '''
+        verify that scheduled job is skipped during the specified range
+        '''
+        job = {
+          'schedule': {
+            'job1': {
+              'function': 'test.ping',
+              'seconds': '10',
+            }
+          }
+        }
+
+        # Add job to schedule
+        self.schedule.opts.update(job)
+
+        # eval at 2:00pm, to prime the scheduler
+        run_time = dateutil_parser.parse('11/29/2017 2:00pm')
+        self.schedule.eval(now=run_time)
+        ret = self.schedule.job_status('job1')
+
+        # eval at 2:00:10pm
+        run_time = dateutil_parser.parse('11/29/2017 2:00:10pm')
+        self.schedule.eval(now=run_time)
+        ret = self.schedule.job_status('job1')
+
+        # Skip at 2:00:20pm
+        run_time = dateutil_parser.parse('11/29/2017 2:00:20pm')
+        self.schedule.skip_job('job1', {'time': run_time.strftime('%Y-%m-%dT%H:%M:%S'),
+                                        'time_fmt': '%Y-%m-%dT%H:%M:%S'})
+        self.schedule.eval(now=run_time)
+        ret = self.schedule.job_status('job1')
+        self.assertIn('_next_fire_time', ret)
+        self.assertEqual(ret['_skip_reason'], 'skip_explicit')
+        self.assertEqual(ret['_skipped_time'], run_time)
+
+        # Run at 2:00:30pm
+        run_time = dateutil_parser.parse('11/29/2017 2:00:30pm')
+        self.schedule.eval(now=run_time)
+        ret = self.schedule.job_status('job1')
+        self.assertIn('_last_run', ret)

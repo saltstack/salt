@@ -624,7 +624,7 @@ def bootstrap(vm_, opts=None):
         'event',
         'executing deploy script',
         'salt/cloud/{0}/deploying'.format(vm_['name']),
-        args={'kwargs': event_kwargs},
+        args={'kwargs': salt.utils.data.simple_types_filter(event_kwargs)},
         sock_dir=opts.get(
             'sock_dir',
             os.path.join(__opts__['sock_dir'], 'master')),
