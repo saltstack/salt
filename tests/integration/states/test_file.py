@@ -30,7 +30,7 @@ from tests.support.helpers import (
     with_system_user_and_group,
     with_tempfile,
     Webserver,
-    destructiveTest
+    destructiveTest,
     dedent,
 )
 from tests.support.mixins import SaltReturnAssertsMixin
