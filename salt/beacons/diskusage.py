@@ -89,10 +89,10 @@ def beacon(config):
         mount = mounts.keys()[0]
 
         try:
-            _current_usage = psutil.disk_usage(mount)
+            _current_usage = psutil.disk_usage(_mount)
         except OSError:
             # Ensure a valid mount point
-            log.warning('{0} is not a valid mount point, try regex.'.format(mount))
+            log.warning('{0} is not a valid mount point, try regex.'.format(_mount))
             for part in parts:
                 if re.match(mount, part.mountpoint):
                     row = {}
