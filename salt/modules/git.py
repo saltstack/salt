@@ -265,10 +265,10 @@ def _git_run(command, cwd=None, user=None, password=None, identity=None,
 
             # copy wrapper to area accessible by ``runas`` user
             # currently no support in windows for wrapping git ssh
-            ssh_id_wrapper = os.path.join(
+            ssh_id_wrapper = os.path.abspath(os.path.join(
                 salt.utils.templates.TEMPLATE_DIRNAME,
                 'git/ssh-id-wrapper'
-            )
+            ))
             tmp_ssh_wrapper = None
             if salt.utils.platform.is_windows():
                 ssh_exe = _find_ssh_exe()

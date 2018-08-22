@@ -68,7 +68,7 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMix
         with salt.utils.files.fopen(full_path_to_file, 'rb') as s_fp:
             with salt.utils.files.fopen(os.path.join(cls.tmp_dir, 'testfile'), 'wb') as d_fp:
                 for line in s_fp:
-                    d_fp.write(line.rstrip(b'\n').rstrip(b'\r') + b'\n')
+                    d_fp.write(line)
 
     @classmethod
     def tearDownClass(cls):
