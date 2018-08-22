@@ -1574,5 +1574,5 @@ def dedent(text, linesep=os.linesep):
     if isinstance(text, six.text_type):
         linesep = salt.utils.stringutils.to_unicode(linesep)
     else:
-        linesep = salt.utils.stringutils.to_bytes(linesep)
+        linesep = salt.utils.stringutils.to_str(linesep)
     return linesep.join(textwrap.dedent(text).splitlines())
