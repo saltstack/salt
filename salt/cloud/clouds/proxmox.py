@@ -523,18 +523,19 @@ def list_nodes_select(call=None):
         list_nodes_full(), __opts__["query.selection"], call,
     )
 
+
 def _stringlist_to_dictionary(input_string):
-    '''
+    """
     Convert a stringlist (comma separated settings) to a dictionary
 
     The result of the string setting1=value1,setting2=value2 will be a python dictionary:
 
     {'setting1':'value1','setting2':'value2'}
-    '''
-    li = str(input_string).split(',')
+    """
+    li = str(input_string).split(",")
     ret = {}
     for item in li:
-        pair = str(item).replace(' ','').split('=')
+        pair = str(item).replace(" ", "").split("=")
         if len(pair) != 2:
             log.warn("Cannot process stringlist item %s", item)
             continue
@@ -542,19 +543,21 @@ def _stringlist_to_dictionary(input_string):
         ret[pair[0]] = pair[1]
     return ret
 
+
 def _dictionary_to_stringlist(input_dict):
-    '''
+    """
     Convert a dictionary to a stringlist (comma separated settings)
 
     The result of the dictionary {'setting1':'value1','setting2':'value2'} will be:
 
     setting1=value1,setting2=value2
-    '''
-    string_value=""
+    """
+    string_value = ""
     for s in input_dict:
         string_value += "{0}={1},".format(s, input_dict[s])
     string_value = string_value[:-1]
     return string_value
+
 
 def _stringlist_to_dictionary(input_string):
     """
@@ -930,37 +933,49 @@ def create(vm_):
                     postParams,
                 )
 
-    if 'clone' in vm_ and vm_['clone'] is True and vm_['technology'] == 'qemu':
+    if "clone" in vm_ and vm_["clone"] is True and vm_["technology"] == "qemu":
         # If we cloned a machine, see if we need to reconfigure any of the options such as net0,
         # ide2, etc. This enables us to have a different cloud-init ISO mounted for each VM that's
         # brought up
 
         # TODO: Support other settings here too as these are not the only ones that can be modified
         # after a clone operation
-        log.info('Configuring cloned VM')
+        log.info("Configuring cloned VM")
 
         # Modify the settings for the VM one at a time so we can see any problems with the values
         # as quickly as possible
         for setting_number in range(3):
-            setting = 'ide{0}'.format(setting_number)
+            setting = "ide{0}".format(setting_number)
             if setting in vm_:
                 postParams = {}
                 postParams[setting] = vm_[setting]
-                query('post', 'nodes/{0}/qemu/{1}/config'.format(vm_['host'], vmid), postParams)
+                query(
+                    "post",
+                    "nodes/{0}/qemu/{1}/config".format(vm_["host"], vmid),
+                    postParams,
+                )
 
         for setting_number in range(5):
-            setting = 'sata{0}'.format(setting_number)
+            setting = "sata{0}".format(setting_number)
             if setting in vm_:
                 postParams = {}
                 postParams[setting] = vm_[setting]
-                query('post', 'nodes/{0}/qemu/{1}/config'.format(vm_['host'], vmid), postParams)
+                query(
+                    "post",
+                    "nodes/{0}/qemu/{1}/config".format(vm_["host"], vmid),
+                    postParams,
+                )
 
         for setting_number in range(13):
-            setting = 'scsi{0}'.format(setting_number)
+            setting = "scsi{0}".format(setting_number)
             if setting in vm_:
                 postParams = {}
                 postParams[setting] = vm_[setting]
-                query('post', 'nodes/{0}/qemu/{1}/config'.format(vm_['host'], vmid), postParams)
+                query(
+                    "post",
+                    "nodes/{0}/qemu/{1}/config".format(vm_["host"], vmid),
+                    postParams,
+                )
 
         # net strings are a list of comma seperated settings. We need to merge the settings so that
         # the setting in the profile only changes the settings it touches and the other settings
@@ -968,9 +983,11 @@ def create(vm_):
         # in here and generally you don't want to alter or have to know the MAC address of the new
         # instance, but you may want to set the VLAN bridge for example
         for setting_number in range(20):
-            setting = 'net{0}'.format(setting_number)
+            setting = "net{0}".format(setting_number)
             if setting in vm_:
-                data = query('get', 'nodes/{0}/qemu/{1}/config'.format(vm_['host'], vmid))
+                data = query(
+                    "get", "nodes/{0}/qemu/{1}/config".format(vm_["host"], vmid)
+                )
 
                 # Generate a dictionary of settings from the existing string
                 new_setting = {}
@@ -982,9 +999,12 @@ def create(vm_):
                 new_setting.update(_stringlist_to_dictionary(vm_[setting]))
 
                 # Convert the dictionary back into a string list
-                postParams = { setting: _dictionary_to_stringlist(new_setting) }
-                query('post', 'nodes/{0}/qemu/{1}/config'.format(vm_['host'], vmid), postParams)
-
+                postParams = {setting: _dictionary_to_stringlist(new_setting)}
+                query(
+                    "post",
+                    "nodes/{0}/qemu/{1}/config".format(vm_["host"], vmid),
+                    postParams,
+                )
 
     # VM has been created. Starting..
     if not start(name, vmid, call="action"):
