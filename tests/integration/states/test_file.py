@@ -740,7 +740,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             source='salt://issue-48777/new.html')
         ret = ret[next(iter(ret))]
         assert ret['result'] is True, ret
-        diff_lines = ret['changes']['diff'].split('\n')
+        diff_lines = ret['changes']['diff'].split(os.linesep)
         assert '+räksmörgås' in diff_lines, diff_lines
 
     def test_directory(self):
@@ -1273,8 +1273,15 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                              name=name,
                              source='salt://соль')
         self.assertSaltTrueReturn(ret)
+        if six.PY2 and salt.utils.platform.is_windows():
+            # Providing unicode to os.listdir so that we avoid having listdir
+            # try to decode the filenames using the systemencoding on windows
+            # python 2.
+            files = os.listdir(name.decode('utf-8'))
+        else:
+            files = salt.utils.data.decode(os.listdir(name), normalize=True)
         self.assertEqual(
-            sorted(salt.utils.data.decode(os.listdir(name), normalize=True)),
+            sorted(files),
             sorted(['foo.txt', 'спам.txt', 'яйца.txt']),
         )
 
@@ -2207,10 +2214,10 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             else:
                 diff = '--- \n+++ \n@@ -1 +1,3 @@\n'
             diff += (
-                '+첫 번째 행\n'
-                ' 한국어 시험\n'
-                '+마지막 행\n'
-            )
+                '+첫 번째 행{0}'
+                ' 한국어 시험{0}'
+                '+마지막 행{0}'
+            ).format(os.linesep)
 
             ret = {x.split('_|-')[1]: y for x, y in six.iteritems(result)}
 
