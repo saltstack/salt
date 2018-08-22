@@ -1273,13 +1273,17 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                              name=name,
                              source='salt://соль')
         self.assertSaltTrueReturn(ret)
-        # Providing unicode to os.listdir so that we avoid having listdir try
-        # to decode the filenames using the systemencoding on windows.
+        if six.PY2 and salt.utils.platform.is_windows():
+            # Providing unicode to os.listdir so that we avoid having listdir
+            # try to decode the filenames using the systemencoding on windows
+            # python 2.
+            files = os.listdir(name.decode('utf-8'))
+        else:
+            files = salt.utils.data.decode(os.listdir(name), normalize=True)
         self.assertEqual(
-            sorted(os.listdir(name.decode('utf-8'))),
+            sorted(files),
             sorted(['foo.txt', 'спам.txt', 'яйца.txt']),
         )
-
 
     @with_tempfile()
     def test_replace(self, name):
