@@ -2111,7 +2111,7 @@ def replace(path,
                 if prepend_if_not_found or append_if_not_found:
                     # Search for content, to avoid pre/appending the
                     # content if it was pre/appended in a previous run.
-                    if re.search(salt.utils.to_bytes('^{0}$'.format(re.escape(content))),
+                    if re.search(salt.utils.to_bytes('^{0}($|(?=\r\n))'.format(re.escape(content))),
                                  r_data,
                                  flags=flags_num):
                         # Content was found, so set found.
@@ -3886,12 +3886,19 @@ def get_managed(
     # If we have a source defined, let's figure out what the hash is
     if source:
         urlparsed_source = _urlparse(source)
-        parsed_scheme = urlparsed_source.scheme
+        if urlparsed_source.scheme in salt.utils.files.VALID_PROTOS:
+            parsed_scheme = urlparsed_source.scheme
+        else:
+            parsed_scheme = ''
         parsed_path = os.path.join(
                 urlparsed_source.netloc, urlparsed_source.path).rstrip(os.sep)
         unix_local_source = parsed_scheme in ('file', '')
-
-        if unix_local_source:
+        if parsed_scheme == '':
+            parsed_path = sfn = source
+            if not os.path.exists(sfn):
+                msg = 'Local file source {0} does not exist'.format(sfn)
+                return '', {}, msg
+        elif parsed_scheme == 'file':
             sfn = parsed_path
             if not os.path.exists(sfn):
                 msg = 'Local file source {0} does not exist'.format(sfn)
