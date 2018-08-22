@@ -46,16 +46,20 @@ class VaultTestCase(ModuleCase, ShellCase):
                 cap_add='IPC_LOCK',
             )
             time.sleep(5)
-            self.run_function(
-                'cmd.run',
+            ret = self.run_function(
+                'cmd.retcode',
                 cmd='/usr/local/bin/vault login token=testsecret',
                 env={'VAULT_ADDR': 'http://127.0.0.1:8200'},
             )
-            self.run_function(
-                'cmd.run',
+            if ret != 0:
+                self.skipTest('unable to login to vault')
+            ret = self.run_function(
+                'cmd.retcode',
                 cmd='/usr/local/bin/vault policy write testpolicy {0}/vault.hcl'.format(FILES),
                 env={'VAULT_ADDR': 'http://127.0.0.1:8200'},
             )
+            if ret != 0:
+                self.skipTest('unable to assign policy to vault')
         self.count += 1
 
     def tearDown(self):
