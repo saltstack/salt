@@ -379,9 +379,11 @@ def deployed(name, jboss_config, salt_source=None):
 
     return ret
 
+
 def __undeploy(jboss_config, deployment):
     __salt__['jboss7.undeploy'](jboss_config, deployment)
     return deployment
+
 
 def __validate_arguments(jboss_config, salt_source):
     result, comment = __check_dict_contains(jboss_config, 'jboss_config', ['cli_path', 'controller'])
