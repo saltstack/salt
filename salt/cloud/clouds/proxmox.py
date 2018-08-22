@@ -491,6 +491,38 @@ def list_nodes_select(call=None):
         list_nodes_full(), __opts__['query.selection'], call,
     )
 
+def _stringlist_to_dictionary(input_string):
+    '''
+    Convert a stringlist (comma separated settings) to a dictionary
+
+    The result of the string setting1=value1,setting2=value2 will be a python dictionary:
+
+    {'setting1':'value1','setting2':'value2'}
+    '''
+    li = str(input_string).split(',')
+    ret = {}
+    for item in li:
+        pair = str(item).replace(' ','').split('=')
+        if len(pair) != 2:
+            log.warn("Cannot process stringlist item %s", item)
+            continue
+
+        ret[pair[0]] = pair[1]
+    return ret
+
+def _dictionary_to_stringlist(input_dict):
+    '''
+    Convert a dictionary to a stringlist (comma separated settings)
+
+    The result of the dictionary {'setting1':'value1','setting2':'value2'} will be:
+
+    setting1=value1,setting2=value2
+    '''
+    string_value=""
+    for s in input_dict:
+        string_value += "{0}={1},".format(s, input_dict[s])
+    string_value = string_value[:-1]
+    return string_value
 
 def create(vm_):
     '''
@@ -581,23 +613,12 @@ def create(vm_):
         # ide2, etc. This enables us to have a different cloud-init ISO mounted for each VM that's
         # brought up
 
+        # TODO: Support other settings here too as these are not the only ones that can be modified
+        # after a clone operation
         log.info('Configuring cloned VM')
 
         # Modify the settings for the VM one at a time so we can see any problems with the values
         # as quickly as possible
-        for setting in 'sockets', 'cores', 'cpulimit', 'memory', 'onboot', 'agent':
-            if setting in vm_:  # if the property is set, use it for the VM request
-                postParams = {}
-                postParams[setting] = vm_[setting]
-                query('post', 'nodes/{0}/qemu/{1}/config'.format(vm_['host'], vmid), postParams)
-
-        # cloud-init settings
-        for setting in 'ciuser', 'cipassword', 'sshkeys', 'nameserver', 'searchdomain':
-            if setting in vm_:  # if the property is set, use it for the VM request
-                postParams = {}
-                postParams[setting] = vm_[setting]
-                query('post', 'nodes/{0}/qemu/{1}/config'.format(vm_['host'], vmid), postParams)
-
         for setting_number in range(3):
             setting = 'ide{0}'.format(setting_number)
             if setting in vm_:
@@ -608,74 +629,16 @@ def create(vm_):
         for setting_number in range(5):
             setting = 'sata{0}'.format(setting_number)
             if setting in vm_:
-                vm_config = query('get', 'nodes/{0}/qemu/{1}/config'.format(vm_['host'], vmid))
-                if setting in vm_config:
-                    setting_params = vm_[setting]
-                    setting_storage = setting_params.split(':')[0]
-                    setting_size = _stringlist_to_dictionary(setting_params)['size']
-                    vm_disk_params = vm_config[setting]
-                    vm_disk_storage = vm_disk_params.split(':')[0]
-                    vm_disk_size = _stringlist_to_dictionary(vm_disk_params)['size']
-                    # if storage is different, move the disk
-                    if setting_storage != vm_disk_storage:
-                        postParams = {}
-                        postParams['disk'] = setting
-                        postParams['storage'] = setting_storage
-                        postParams['delete'] = 1
-                        node = query('post', 'nodes/{0}/qemu/{1}/move_disk'.format(
-                            vm_['host'], vmid), postParams)
-                        data = _parse_proxmox_upid(node, vm_)
-                        # wait until the disk has been moved
-                        if not wait_for_task(data['upid'], timeout=300):
-                            return {'Error': 'Unable to move disk {0}, command timed out'.format(
-                                setting)}
-                    # if storage is different, move the disk
-                    if setting_size != vm_disk_size:
-                        postParams = {}
-                        postParams['disk'] = setting
-                        postParams['size'] = setting_size
-                        query('put', 'nodes/{0}/qemu/{1}/resize'.format(
-                            vm_['host'], vmid), postParams)
-                else:
-                    postParams = {}
-                    postParams[setting] = vm_[setting]
-                    query('post', 'nodes/{0}/qemu/{1}/config'.format(vm_['host'], vmid), postParams)
+                postParams = {}
+                postParams[setting] = vm_[setting]
+                query('post', 'nodes/{0}/qemu/{1}/config'.format(vm_['host'], vmid), postParams)
 
         for setting_number in range(13):
             setting = 'scsi{0}'.format(setting_number)
             if setting in vm_:
-                vm_config = query('get', 'nodes/{0}/qemu/{1}/config'.format(vm_['host'], vmid))
-                if setting in vm_config:
-                    setting_params = vm_[setting]
-                    setting_storage = setting_params.split(':')[0]
-                    setting_size = _stringlist_to_dictionary(setting_params)['size']
-                    vm_disk_params = vm_config[setting]
-                    vm_disk_storage = vm_disk_params.split(':')[0]
-                    vm_disk_size = _stringlist_to_dictionary(vm_disk_params)['size']
-                    # if storage is different, move the disk
-                    if setting_storage != vm_disk_storage:
-                        postParams = {}
-                        postParams['disk'] = setting
-                        postParams['storage'] = setting_storage
-                        postParams['delete'] = 1
-                        node = query('post', 'nodes/{0}/qemu/{1}/move_disk'.format(
-                            vm_['host'], vmid), postParams)
-                        data = _parse_proxmox_upid(node, vm_)
-                        # wait until the disk has been moved
-                        if not wait_for_task(data['upid'], timeout=300):
-                            return {'Error': 'Unable to move disk {0}, command timed out'.format(
-                                setting)}
-                    # if storage is different, move the disk
-                    if setting_size != vm_disk_size:
-                        postParams = {}
-                        postParams['disk'] = setting
-                        postParams['size'] = setting_size
-                        query('put', 'nodes/{0}/qemu/{1}/resize'.format(
-                            vm_['host'], vmid), postParams)
-                else:
-                    postParams = {}
-                    postParams[setting] = vm_[setting]
-                    query('post', 'nodes/{0}/qemu/{1}/config'.format(vm_['host'], vmid), postParams)
+                postParams = {}
+                postParams[setting] = vm_[setting]
+                query('post', 'nodes/{0}/qemu/{1}/config'.format(vm_['host'], vmid), postParams)
 
         # net strings are a list of comma seperated settings. We need to merge the settings so that
         # the setting in the profile only changes the settings it touches and the other settings
@@ -697,35 +660,9 @@ def create(vm_):
                 new_setting.update(_stringlist_to_dictionary(vm_[setting]))
 
                 # Convert the dictionary back into a string list
-                postParams = {setting: _dictionary_to_stringlist(new_setting)}
+                postParams = { setting: _dictionary_to_stringlist(new_setting) }
                 query('post', 'nodes/{0}/qemu/{1}/config'.format(vm_['host'], vmid), postParams)
 
-        for setting_number in range(20):
-            setting = 'ipconfig{0}'.format(setting_number)
-            if setting in vm_:
-                data = query('get', 'nodes/{0}/qemu/{1}/config'.format(vm_['host'], vmid))
-
-                # Generate a dictionary of settings from the existing string
-                new_setting = {}
-                if setting in data:
-                    new_setting.update(_stringlist_to_dictionary(data[setting]))
-
-                # Merge the new settings (as a dictionary) into the existing dictionary to get the
-                # new merged settings
-                if setting_number == 0 and 'ip_address' in vm_:
-                    if 'gw' in _stringlist_to_dictionary(vm_[setting]):
-                        new_setting.update(_stringlist_to_dictionary(
-                            'ip={0}/24,gw={1}'.format(
-                                vm_['ip_address'], _stringlist_to_dictionary(vm_[setting])['gw'])))
-                    else:
-                        new_setting.update(
-                            _stringlist_to_dictionary('ip={0}/24'.format(vm_['ip_address'])))
-                else:
-                    new_setting.update(_stringlist_to_dictionary(vm_[setting]))
-
-                # Convert the dictionary back into a string list
-                postParams = {setting: _dictionary_to_stringlist(new_setting)}
-                query('post', 'nodes/{0}/qemu/{1}/config'.format(vm_['host'], vmid), postParams)
 
     # VM has been created. Starting..
     if not start(name, vmid, call='action'):
