@@ -70,19 +70,19 @@ def __virtual__():
     return __virtualname__
 
 
-def _get_service(name):
+def _name_in_services(name, services):
     '''
-    Get information about a service.  If the service is not found, raise an
-    error
+    Checks to see if the given service is in the given services.
 
     :param str name: Service label, file name, or full path
 
-    :return: The service information for the service, otherwise an Error
+    :param dict services: The currently available services.
+
+    :return: The service information for the service, otherwise
+    an empty dictionary
+
     :rtype: dict
     '''
-    services = __utils__['mac_utils.available_services']()
-    name = name.lower()
-
     if name in services:
         # Match on label
         return services[name]
@@ -96,8 +96,50 @@ def _get_service(name):
             # Match on basename
             return service
 
-    # Could not find service
-    raise CommandExecutionError('Service not found: {0}'.format(name))
+    return dict()
+
+
+def _get_service(name):
+    '''
+    Get information about a service.  If the service is not found, raise an
+    error
+
+    :param str name: Service label, file name, or full path
+
+    :return: The service information for the service, otherwise an Error
+    :rtype: dict
+    '''
+    services = __utils__['mac_utils.available_services']()
+    name = name.lower()
+
+    service = _name_in_services(name, services)
+
+    # if we would the service we can return it
+    if service:
+        return service
+
+    # if we got here our service is not available, now we can check to see if
+    # we received a cached batch of services, if not we did a fresh check
+    # so we need to raise that the service could not be found.
+    try:
+        if not __context__['using_cached_services']:
+            raise CommandExecutionError('Service not found: {0}'.format(name))
+    except KeyError:
+        pass
+
+    # we used a cached version to check, a service could have been made
+    # between now and then, we should refresh our available services.
+    services = __utils__['mac_utils.available_services'](refresh=True)
+
+    # check to see if we found the service we are looking for.
+    service = _name_in_services(name, services)
+
+    if not service:
+        # Could not find the service after refresh raise.
+        raise CommandExecutionError('Service not found: {0}'.format(name))
+
+    # found it :)
+    return service
 
 
 def _always_running_service(name):
@@ -125,6 +167,15 @@ def _always_running_service(name):
         return False
 
     # check if KeepAlive is True and not just set.
+
+    if isinstance(keep_alive, dict):
+        # check for pathstate
+        for _file, value in six.iteritems(keep_alive.get('PathState', {})):
+            if value is True and os.path.exists(_file):
+                return True
+            elif value is False and not os.path.exists(_file):
+                return True
+
     if keep_alive is True:
         return True
 
@@ -441,12 +492,6 @@ def status(name, sig=None, runas=None):
     if sig:
         return __salt__['status.pid'](sig)
 
-    # mac services are a little different than other platforms as they may be
-    # set to run on intervals and may not always active with a PID. This will
-    # return a string 'loaded' if it shouldn't always be running and is enabled.
-    if not _always_running_service(name) and enabled(name):
-        return 'loaded'
-
     if not runas and _launch_agent(name):
         runas = __utils__['mac_utils.console_user'](username=True)
 
@@ -463,6 +508,12 @@ def status(name, sig=None, runas=None):
                 if pids:
                     pids += '\n'
                 pids += line.split()[0]
+
+    # mac services are a little different than other platforms as they may be
+    # set to run on intervals and may not always active with a PID. This will
+    # return a string 'loaded' if it shouldn't always be running and is enabled.
+    if not _always_running_service(name) and enabled(name) and not pids:
+        return 'loaded'
 
     return pids
 
@@ -553,7 +604,7 @@ def disabled(name, runas=None, domain='system'):
 
         salt '*' service.disabled org.cups.cupsd
     '''
-    ret = False
+
     disabled = launchctl('print-disabled',
                          domain,
                          return_stdout=True,

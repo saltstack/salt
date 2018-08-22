@@ -713,3 +713,23 @@ class JinjaFiltersTest(object):
         self.assertIn('module_|-test_|-test.echo_|-run', ret)
         self.assertEqual(ret['module_|-test_|-test.echo_|-run']['changes'],
                          _expected)
+
+    def test_yaml(self):
+        '''
+        test yaml filter
+        '''
+        _expected = {'ret': "{Question: 'Quieres Café?'}"}
+        ret = self.run_function('state.sls', ['jinja_filters.yaml'])
+        self.assertIn('module_|-test_|-test.echo_|-run', ret)
+        self.assertEqual(ret['module_|-test_|-test.echo_|-run']['changes'],
+                         _expected)
+
+    def test_json(self):
+        '''
+        test json filter
+        '''
+        _expected = {'ret': '{"Question": "Quieres Café?"}'}
+        ret = self.run_function('state.sls', ['jinja_filters.json'])
+        self.assertIn('module_|-test_|-test.echo_|-run', ret)
+        self.assertEqual(ret['module_|-test_|-test.echo_|-run']['changes'],
+                         _expected)

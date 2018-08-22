@@ -220,8 +220,9 @@ class SaltTestingParser(optparse.OptionParser):
             dest='filename_map',
             default=None,
             help=('Path to a YAML file mapping paths/path globs to a list '
-                  'of test names to run. See tests/files_map.yml '
-                  'for example usage.')
+                  'of test names to run. See tests/filename_map.yml '
+                  'for example usage (when --from-filenames is used, this '
+                  'map file will be the default one used).')
         )
         self.add_option_group(self.test_selection_group)
 
@@ -464,6 +465,14 @@ class SaltTestingParser(optparse.OptionParser):
 
         if self.options.from_filenames is not None:
             self.options.from_filenames = self._expand_paths(self.options.from_filenames)
+
+            # Locate the default map file if one was not passed
+            if self.options.filename_map is None:
+                self.options.filename_map = salt.utils.path.join(
+                    tests.support.paths.TESTS_DIR,
+                    'filename_map.yml'
+                )
+
             mapped_mods = self._map_files(self.options.from_filenames)
             if mapped_mods:
                 if self.options.name is None:
