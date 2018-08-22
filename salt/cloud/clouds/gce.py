@@ -1194,7 +1194,7 @@ def create_address(kwargs=None, call=None):
         "event",
         "create address",
         "salt/cloud/address/creating",
-        args=kwargs,
+        args=salt.utils.data.simple_types_filter(kwargs),
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
     )
@@ -1205,7 +1205,7 @@ def create_address(kwargs=None, call=None):
         "event",
         "created address",
         "salt/cloud/address/created",
-        args=kwargs,
+        args=salt.utils.data.simple_types_filter(kwargs),
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
     )
@@ -2340,13 +2340,20 @@ def request_instance(vm_):
 
     if external_ip.lower() == "ephemeral":
         external_ip = "ephemeral"
+        vm_["external_ip"] = external_ip
     elif external_ip == "None":
         external_ip = None
+        vm_["external_ip"] = external_ip
     else:
         region = __get_region(conn, vm_)
         external_ip = __create_orget_address(conn, external_ip, region)
+
+        vm_["external_ip"] = {
+            "name": external_ip.name,
+            "address": external_ip.address,
+            "region": external_ip.region.name,
+        }
     kwargs["external_ip"] = external_ip
-    vm_["external_ip"] = external_ip
 
     if LIBCLOUD_VERSION_INFO > (0, 15, 1):
 

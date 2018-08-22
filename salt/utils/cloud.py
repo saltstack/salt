@@ -593,28 +593,19 @@ def bootstrap(vm_, opts=None):
 
     # Store what was used to the deploy the VM
     event_kwargs = copy.deepcopy(deploy_kwargs)
-
     del event_kwargs["opts"]
     del event_kwargs["minion_pem"]
     del event_kwargs["minion_pub"]
     del event_kwargs["sudo_password"]
     if "password" in event_kwargs:
         del event_kwargs["password"]
-    external_ip_dict = getattr(event_kwargs["vm_"]["external_ip"], "__dict__", None)
-    if external_ip_dict:
-        if "driver" in external_ip_dict:
-            del external_ip_dict["driver"]
-        if "region" in external_ip_dict:
-            external_ip_dict["region"] = external_ip_dict["region"].name
-            del external_ip_dict["region"]
-        event_kwargs["vm_"]["external_ip"] = external_ip_dict
     ret["deploy_kwargs"] = event_kwargs
 
     fire_event(
         "event",
         "executing deploy script",
         "salt/cloud/{}/deploying".format(vm_["name"]),
-        args={"kwargs": event_kwargs},
+        args={"kwargs": salt.utils.data.simple_types_filter(event_kwargs)},
         sock_dir=opts.get("sock_dir", os.path.join(__opts__["sock_dir"], "master")),
         transport=opts.get("transport", "zeromq"),
     )
