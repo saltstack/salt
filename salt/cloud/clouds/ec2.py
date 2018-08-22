@@ -4141,9 +4141,9 @@ def create_keypair(kwargs=None, call=None):
                      provider=get_provider(),
                      opts=__opts__,
                      sigver='4')
-    keys = [ x for x in data[0] if 'requestId' not in x ]
+    keys = [x for x in data[0] if 'requestId' not in x]
     
-    return ( keys, data[1] )
+    return (keys, data[1])
 
 
 def import_keypair(kwargs=None, call=None):
