@@ -527,7 +527,7 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
         )
 
 
-@skipIf(salt.platform.is_windows(), 'Skip on windows')
+@skipIf(salt.utils.platform.is_windows(), 'Skip on windows')
 class FileGrepTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {
