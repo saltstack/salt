@@ -944,8 +944,8 @@ VALID_OPTS = {
     # Always generate minion id in lowercase.
     'minion_id_lowercase': bool,
 
-    # By default '', suppress this single domain (example 'foo.com') in a generated minion id.
-    'minion_id_fqdn_filter': six.string_types,
+    # By default '', suppress this single domain (example 'foo.org') in a generated minion id.
+    'remove_domain': six.string_types,
 
     # If set, the master will sign all publications before they are sent out
     'sign_pub_messages': bool,
@@ -1456,7 +1456,7 @@ DEFAULT_MINION_OPTS = {
     'grains_refresh_every': 0,
     'minion_id_caching': True,
     'minion_id_lowercase': False,
-    'minion_id_fqdn_filter': '',
+    'remove_domain': '',
     'keysize': 2048,
     'transport': 'zeromq',
     'auth_timeout': 5,
@@ -3655,10 +3655,10 @@ def get_id(opts, cache_minion_id=False):
         log.debug('Changed minion id %s to lowercase.', newid)
 
     # Optionally suppress a domain in a generated minion id
-    if opts.get('minion_id_fqdn_filter') and \
-        newid.upper().endswith('.' + opts.get('minion_id_fqdn_filter').upper()):
-        newid = newid[:-len('.' + opts.get('minion_id_fqdn_filter'))]
-        log.debug('Suppressed domain %s in minion id.', opts.get('minion_id_fqdn_filter'))
+    if opts.get('remove_domain') and \
+        newid.upper().endswith('.' + opts.get('remove_domain').upper()):
+        newid = newid[:-len('.' + opts.get('remove_domain'))]
+        log.debug('Removed domain %s from minion id.', opts.get('remove_domain'))
 
     if '__role' in opts and opts.get('__role') == 'minion':
         if opts.get('id_function'):
