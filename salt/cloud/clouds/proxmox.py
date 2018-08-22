@@ -491,6 +491,7 @@ def list_nodes_select(call=None):
         list_nodes_full(), __opts__['query.selection'], call,
     )
 
+
 def _stringlist_to_dictionary(input_string):
     '''
     Convert a stringlist (comma separated settings) to a dictionary
@@ -502,13 +503,14 @@ def _stringlist_to_dictionary(input_string):
     li = str(input_string).split(',')
     ret = {}
     for item in li:
-        pair = str(item).replace(' ','').split('=')
+        pair = str(item).replace(' ', '').split('=')
         if len(pair) != 2:
             log.warn("Cannot process stringlist item %s", item)
             continue
 
         ret[pair[0]] = pair[1]
     return ret
+
 
 def _dictionary_to_stringlist(input_dict):
     '''
@@ -518,11 +520,12 @@ def _dictionary_to_stringlist(input_dict):
 
     setting1=value1,setting2=value2
     '''
-    string_value=""
+    string_value = ""
     for s in input_dict:
         string_value += "{0}={1},".format(s, input_dict[s])
     string_value = string_value[:-1]
     return string_value
+
 
 def create(vm_):
     '''
@@ -660,9 +663,8 @@ def create(vm_):
                 new_setting.update(_stringlist_to_dictionary(vm_[setting]))
 
                 # Convert the dictionary back into a string list
-                postParams = { setting: _dictionary_to_stringlist(new_setting) }
+                postParams = {setting: _dictionary_to_stringlist(new_setting)}
                 query('post', 'nodes/{0}/qemu/{1}/config'.format(vm_['host'], vmid), postParams)
-
 
     # VM has been created. Starting..
     if not start(name, vmid, call='action'):
