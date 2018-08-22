@@ -74,6 +74,7 @@ import salt.utils.path
 import salt.utils.yaml
 import salt.client
 import salt.exceptions
+from salt.utils.decorators import memoize
 from salt.ext import six
 
 log = logging.getLogger(__name__)
@@ -226,7 +227,9 @@ def _generate_out_list(results):
     for key, value in results.items():
         out_list.append({key: value})
     out_list.sort()
-    out_list.append({"TEST RESULTS": {'Execution Time': round(total_time, 4), 'Passed': passed, 'Failed': failed, 'Skipped': skipped, 'Missing Tests': missing_tests}})
+    out_list.append({"TEST RESULTS": {'Execution Time': round(total_time, 4),
+                    'Passed': passed, 'Failed': failed, 'Skipped': skipped,
+                    'Missing Tests': missing_tests}})
     return out_list
 
 
@@ -239,7 +242,7 @@ def _render_file(file_path):
     log.info("rendered: %s", rendered)
     return rendered
 
-
+@memoize
 def _is_valid_module(module):
     '''
     Return a list of all modules available on minion
@@ -255,7 +258,7 @@ def _get_auto_update_cache_value():
     __salt__['config.get']('auto_update_master_cache')
     return True
 
-
+@memoize
 def _is_valid_function(module_name, function):
     '''
     Determine if a function is valid for a module
