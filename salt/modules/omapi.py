@@ -13,8 +13,7 @@ config or pillar:
 '''
 
 # Import python libs
-# Not importing unicode_literals as pypureomapi needs byte strings not unicode
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import struct
 
