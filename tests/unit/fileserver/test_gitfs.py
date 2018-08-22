@@ -424,7 +424,9 @@ class GitFSTestBase(object):
 
             # Add a tag
             repo.create_tag(TAG_NAME, 'HEAD')
-            repo.close()
+            # Older GitPython versions do not have a close method.
+            if hasattr(repo, 'close'):
+                repo.close()
         finally:
             if orig_username is not None:
                 os.environ[username_key] = orig_username
@@ -443,8 +445,6 @@ class GitFSTestBase(object):
             except OSError as exc:
                 if exc.errno != errno.EEXIST:
                     raise
-            except Exception:
-                log.exception("Exception encountered durring recursive remove: %s", path)
 
     def setUp(self):
         '''
