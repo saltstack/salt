@@ -683,7 +683,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
     @with_tempdir()
     def test_minion_id_fqdn_filter(self, tempdir):
         '''
-        This tests that the value of `minion_id_fqdn_filter` is suppressed in a generated minion id, 
+        This tests that the value of `minion_id_fqdn_filter` is suppressed in a generated minion id,
         effectivly generating a hostname minion_id.
         Example:
         minion_id_fqdn_filter: foo.com
