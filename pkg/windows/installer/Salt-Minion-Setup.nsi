@@ -754,8 +754,6 @@ Section -Post
     Push "C:\salt"
     Call AddToPath
 
-    Delete "$INSTDIR\vcredist.exe"
-
 SectionEnd
 
 
