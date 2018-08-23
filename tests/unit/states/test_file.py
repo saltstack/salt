@@ -870,7 +870,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                             'comment': comt,
                             'result': None,
                             'pchanges': p_chg,
-                            'changes': {name: {'directory': 'new'}}
+                            'changes': {}
                         })
                         self.assertDictEqual(filestate.directory(name,
                                                                  user=user,
