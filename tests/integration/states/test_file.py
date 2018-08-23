@@ -743,7 +743,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         diff_lines = ret['changes']['diff'].split(os.linesep)
         assert '+räksmörgås' in diff_lines, diff_lines
 
-    @with_tempfile
+    @with_tempfile()
     def test_managed_keep_source_false_salt(self, name):
         '''
         This test ensures that we properly clean the cached file if keep_source
