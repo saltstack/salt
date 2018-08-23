@@ -851,11 +851,14 @@ def latest(name,
                 user=user,
                 password=password,
                 output_encoding=output_encoding)
-            all_local_tags = __salt__['git.list_tags'](
-                target,
-                user=user,
-                password=password,
-                output_encoding=output_encoding)
+            all_local_tags = set(
+                __salt__['git.list_tags'](
+                    target,
+                    user=user,
+                    password=password,
+                    output_encoding=output_encoding
+                )
+            )
             local_rev, local_branch = _get_local_rev_and_branch(
                 target,
                 user,
@@ -1370,11 +1373,32 @@ def latest(name,
                         ignore_retcode=True,
                         output_encoding=output_encoding) if '^{}' not in x
                 ])
-                if set(all_local_tags) != remote_tags:
+                if all_local_tags != remote_tags:
                     has_remote_rev = False
-                    ret['changes']['new_tags'] = list(remote_tags.symmetric_difference(
-                        all_local_tags
-                    ))
+                    new_tags = remote_tags - all_local_tags
+                    deleted_tags = all_local_tags - remote_tags
+                    if new_tags:
+                        ret['changes']['new_tags'] = new_tags
+                    if deleted_tags:
+                        # Delete the local copy of the tags to keep up with the
+                        # remote repository.
+                        for tag_name in deleted_tags:
+                            try:
+                                __salt__['git.tag'](
+                                    target,
+                                    tag_name,
+                                    opts='-d',
+                                    user=user,
+                                    password=password,
+                                    output_encoding=output_encoding)
+                            except CommandExecutionError as exc:
+                                ret.setdefault('warnings', []).append(
+                                    'Failed to remove local tag \'{0}\':\n\n'
+                                    '{1}\n\n'.format(tag_name, exc)
+                                )
+                            else:
+                                ret['changes'].setdefault(
+                                    'deleted_tags', []).append(tag_name)
 
                 if not has_remote_rev:
                     try:
