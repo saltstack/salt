@@ -743,6 +743,29 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         diff_lines = ret['changes']['diff'].split(os.linesep)
         assert '+räksmörgås' in diff_lines, diff_lines
 
+    @with_tempfile
+    def test_managed_keep_source_false_salt(self, name):
+        '''
+        This test ensures that we properly clean the cached file if keep_source
+        is set to False, for source files using a salt:// URL
+        '''
+        source = 'salt://grail/scene33'
+        saltenv = 'base'
+
+        # Run the state
+        ret = self.run_state(
+            'file.managed',
+            name=name,
+            source=source,
+            saltenv=saltenv,
+            keep_source=False)
+        ret = ret[next(iter(ret))]
+        assert ret['result'] is True
+
+        # Now make sure that the file is not cached
+        result = self.run_function('cp.is_cached', [source, saltenv])
+        assert result == '', 'File is still cached at {0}'.format(result)
+
     def test_directory(self):
         '''
         file.directory
@@ -861,14 +884,10 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertFalse(os.path.exists(straydir))
         self.assertTrue(os.path.isdir(name))
 
-    @skipIf(salt.utils.platform.is_windows(), 'Skip on windows')
     @with_tempdir()
     def test_directory_clean_exclude(self, base_dir):
         '''
         file.directory with clean=True and exclude_pat set
-
-        Skipped on windows because clean and exclude_pat not supported by
-        salt.sates.file._check_directory_win
         '''
         name = os.path.join(base_dir, 'directory_clean_dir')
         if not os.path.isdir(name):
@@ -909,6 +928,9 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
     def test_test_directory_clean_exclude(self, base_dir):
         '''
         file.directory with test=True, clean=True and exclude_pat set
+
+        Skipped on windows because clean and exclude_pat not supported by
+        salt.sates.file._check_directory_win
         '''
         name = os.path.join(base_dir, 'directory_clean_dir')
         os.mkdir(name)
@@ -2496,18 +2518,18 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
 class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
     marker_start = '# start'
     marker_end = '# end'
-    content = os.linesep.join([
+    content = six.text_type(os.linesep.join([
         'Line 1 of block',
         'Line 2 of block',
         ''
-    ])
-    without_block = os.linesep.join([
+    ]))
+    without_block = six.text_type(os.linesep.join([
         'Hello world!',
         '',
         '# comment here',
         ''
-    ])
-    with_non_matching_block = os.linesep.join([
+    ]))
+    with_non_matching_block = six.text_type(os.linesep.join([
         'Hello world!',
         '',
         '# start',
@@ -2515,16 +2537,16 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
         '# end',
         '# comment here',
         ''
-    ])
-    with_non_matching_block_and_marker_end_not_after_newline = os.linesep.join([
+    ]))
+    with_non_matching_block_and_marker_end_not_after_newline = six.text_type(os.linesep.join([
         'Hello world!',
         '',
         '# start',
         'No match here# end',
         '# comment here',
         ''
-    ])
-    with_matching_block = os.linesep.join([
+    ]))
+    with_matching_block = six.text_type(os.linesep.join([
         'Hello world!',
         '',
         '# start',
@@ -2533,8 +2555,8 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
         '# end',
         '# comment here',
         ''
-    ])
-    with_matching_block_and_extra_newline = os.linesep.join([
+    ]))
+    with_matching_block_and_extra_newline = six.text_type(os.linesep.join([
         'Hello world!',
         '',
         '# start',
@@ -2544,8 +2566,8 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
         '# end',
         '# comment here',
         ''
-    ])
-    with_matching_block_and_marker_end_not_after_newline = os.linesep.join([
+    ]))
+    with_matching_block_and_marker_end_not_after_newline = six.text_type(os.linesep.join([
         'Hello world!',
         '',
         '# start',
@@ -2553,7 +2575,7 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
         'Line 2 of block# end',
         '# comment here',
         ''
-    ])
+    ]))
     content_explicit_posix_newlines = ('Line 1 of block\n'
                                        'Line 2 of block\n')
     content_explicit_windows_newlines = ('Line 1 of block\r\n'
@@ -3732,6 +3754,11 @@ class RemoteFileTest(ModuleCase, SaltReturnAssertsMixin):
             if exc.errno != errno.ENOENT:
                 raise exc
 
+    def run_state(self, *args, **kwargs):
+        ret = super(RemoteFileTest, self).run_state(*args, **kwargs)
+        log.debug('ret = %s', ret)
+        return ret
+
     def test_file_managed_http_source_no_hash(self):
         '''
         Test a remote file with no hash
@@ -3740,7 +3767,6 @@ class RemoteFileTest(ModuleCase, SaltReturnAssertsMixin):
                              name=self.name,
                              source=self.source,
                              skip_verify=False)
-        log.debug('ret = %s', ret)
         # This should fail because no hash was provided
         self.assertSaltFalseReturn(ret)
 
@@ -3753,7 +3779,6 @@ class RemoteFileTest(ModuleCase, SaltReturnAssertsMixin):
                              source=self.source,
                              source_hash=self.source_hash,
                              skip_verify=False)
-        log.debug('ret = %s', ret)
         self.assertSaltTrueReturn(ret)
 
     def test_file_managed_http_source_skip_verify(self):
@@ -3764,8 +3789,26 @@ class RemoteFileTest(ModuleCase, SaltReturnAssertsMixin):
                              name=self.name,
                              source=self.source,
                              skip_verify=True)
-        log.debug('ret = %s', ret)
         self.assertSaltTrueReturn(ret)
+
+    def test_file_managed_keep_source_false_http(self):
+        '''
+        This test ensures that we properly clean the cached file if keep_source
+        is set to False, for source files using an http:// URL
+        '''
+        # Run the state
+        ret = self.run_state('file.managed',
+                             name=self.name,
+                             source=self.source,
+                             source_hash=self.source_hash,
+                             keep_source=False)
+        ret = ret[next(iter(ret))]
+        assert ret['result'] is True
+
+        # Now make sure that the file is not cached
+        result = self.run_function('cp.is_cached', [self.source])
+        assert result == '', 'File is still cached at {0}'.format(result)
+
 
 WIN_TEST_FILE = 'c:/testfile'
 
