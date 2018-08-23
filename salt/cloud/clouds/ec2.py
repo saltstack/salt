@@ -4142,7 +4142,7 @@ def create_keypair(kwargs=None, call=None):
                      opts=__opts__,
                      sigver='4')
     keys = [x for x in data[0] if 'requestId' not in x]
-    
+
     return (keys, data[1])
 
 
