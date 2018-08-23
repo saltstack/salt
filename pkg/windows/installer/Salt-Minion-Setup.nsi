@@ -244,15 +244,14 @@ Section -install_ucrt
     # Use WMI to check if it's installed
     detailPrint "Checking for existing KB2999226 installation"
     nsExec::ExecToStack 'cmd /q /c wmic qfe get hotfixid | findstr "^KB2999226"'
-    Pop $0 # Gets the ErrorCode
-    Pop $1 # Gets the stdout, which should be KB2999226 if it's installed
-    ${IfNot} $R0 == 0
-        detailPrint "error: $R0"
-        detailPrint "KB2999226 not found"
-    ${EndIf}
+    # Clean up the stack
+    Pop $R0 # Gets the ErrorCode
+    Pop $R1 # Gets the stdout, which should be KB2999226 if it's installed
 
     # If it returned KB2999226 it's already installed
-    StrCmp $1 'KB2999226' lbl_done
+    StrCmp $R1 'KB2999226' lbl_done
+
+    detailPrint "KB2999226 not found"
 
     # All lower versions of Windows
     ReadRegStr $R0 HKLM "SOFTWARE\Microsoft\Windows NT\CurrentVersion" \
@@ -274,7 +273,10 @@ Section -install_ucrt
             ${break}
     ${EndSwitch}
 
-    ${If} ${CPUARCH} == "AMD64"
+    # Use RunningX64 here to get the Architecture for the system running the installer
+    # CPUARCH is defined when the installer is built and is based on the machine that
+    # built the installer, not the target system as we need here.
+    ${If} ${RunningX64}
         StrCpy $MsuFileName "$MsuPrefix-KB2999226-x64.msu"
     ${Else}
         StrCpy $MsuFileName "$MsuPrefix-KB2999226-x86.msu"
@@ -284,11 +286,15 @@ Section -install_ucrt
 
     detailPrint "Installing KB2999226 using file $MsuFileName"
     nsExec::ExecToStack 'cmd /c wusa "$PLUGINSDIR\$MsuFileName" /quiet /norestart'
+    # Clean up the stack
     Pop $R0  # Get Error
     Pop $R1  # Get stdout
     ${IfNot} $R0 == 0
         detailPrint "error: $R0"
         detailPrint "output: $R2"
+        Sleep 3000
+    ${Else}
+        detailPrint "KB2999226 installed successfully"
     ${EndIf}
 
     lbl_done:
