@@ -406,7 +406,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
                 self.run_script(
                     'salt-call',
                     '-c {0} --output-file={1} -l trace -g'.format(
-                        self.get_config_dir(),
+                        self.config_dir,
                         output_file
                     ),
                     catch_stderr=True,
