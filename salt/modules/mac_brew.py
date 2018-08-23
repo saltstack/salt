@@ -123,7 +123,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
             return ret
 
     ret = {}
-    cmd = 'brew info --json=v1 --installed'
+    cmd = 'info --json=v1 --installed'
     package_info = salt.utils.json.loads(_call_brew(cmd)['stdout'])
 
     for package in package_info:
@@ -143,7 +143,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
     # Grab packages from brew cask, if available.
     # Brew Cask doesn't provide a JSON interface, must be parsed the old way.
     try:
-        cask_cmd = 'brew cask list --versions'
+        cask_cmd = 'cask list --versions'
         out = _call_brew(cask_cmd)['stdout']
 
         for line in out.splitlines():

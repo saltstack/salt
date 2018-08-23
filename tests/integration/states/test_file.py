@@ -363,7 +363,11 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         with salt.utils.files.fopen(grain_path, 'r') as fp_:
             file_contents = fp_.readlines()
 
-        self.assertTrue(re.match('^minion$', file_contents[0]))
+        if salt.utils.platform.is_windows():
+            match = '^minion\r\n'
+        else:
+            match = '^minion\n'
+        self.assertTrue(re.match(match, file_contents[0]))
 
     def test_managed_file_with_pillar_sls(self):
         '''
@@ -588,6 +592,9 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         name = os.path.join(TMP, 'local_source_with_source_hash')
         local_path = os.path.join(BASE_FILES, 'grail', 'scene33')
         actual_hash = '567fd840bf1548edc35c48eb66cdd78bfdfcccff'
+        if salt.utils.platform.is_windows():
+            # CRLF vs LF causes a differnt hash on windows
+            actual_hash = 'f658a0ec121d9c17088795afcc6ff3c43cb9842a'
         # Reverse the actual hash
         bad_hash = actual_hash[::-1]
 
@@ -712,6 +719,9 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                      '-{0}_|-managed'.format(name)
         local_path = os.path.join(BASE_FILES, 'hello_world.txt')
         actual_hash = 'c98c24b677eff44860afea6f493bbaec5bb1c4cbb209c6fc2bbb47f66ff2ad31'
+        if salt.utils.platform.is_windows():
+            # CRLF vs LF causes a differnt hash on windows
+            actual_hash = '92b772380a3f8e27a93e57e6deeca6c01da07f5aadce78bb2fbb20de10a66925'
         uppercase_hash = actual_hash.upper()
 
         try:
@@ -893,10 +903,14 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertFalse(os.path.exists(straydir))
         self.assertTrue(os.path.isdir(name))
 
+    @skipIf(salt.utils.platform.is_windows(), 'Skip on windows')
     @with_tempdir()
     def test_directory_clean_exclude(self, base_dir):
         '''
         file.directory with clean=True and exclude_pat set
+
+        Skipped on windows because clean and exclude_pat not supported by
+        salt.sates.file._check_directory_win
         '''
         name = os.path.join(base_dir, 'directory_clean_dir')
         if not os.path.isdir(name):
@@ -1258,6 +1272,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertTrue(os.path.isfile(os.path.join(name, '32', 'scene')))
         self.assertTrue(os.path.isfile(os.path.join(name, 'scene34')))
 
+    @skipIf(salt.utils.platform.is_windows(), 'Skip on windows')
     @with_tempdir()
     def test_recurse_issue_34945(self, base_dir):
         '''
@@ -1273,6 +1288,8 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         repaired.
 
         This was fixed in https://github.com/saltstack/salt/pull/35309
+
+        Skipped on windows because dir_mode is not supported.
         '''
         dir_mode = '2775'
         issue_dir = 'issue-34945'
@@ -1514,7 +1531,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         ret = []
         for x in range(0, 3):
             ret.append(self.run_state('file.replace',
-                name=path_test, pattern='^#foo=bar$', repl='foo=salt', append_if_not_found=True))
+                name=path_test, pattern='^#foo=bar($|(?=\r\n))', repl='foo=salt', append_if_not_found=True))
 
         # ensure, the resulting file contains the expected lines
         self.assertTrue(filecmp.cmp(path_test, path_out))
@@ -1601,16 +1618,18 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         with salt.utils.files.fopen(path_test, 'r') as fp_:
             serialized_file = fp_.read()
 
-        expected_file = '''{
-  "a_list": [
-    "first_element",
-    "second_element"
-  ],
-  "description": "A basic test",
-  "finally": "the last item",
-  "name": "naive"
-}
-'''
+        expected_file = os.linesep.join([
+            '{',
+            '  "a_list": [',
+            '    "first_element",',
+            '    "second_element"',
+            '  ],',
+            '  "description": "A basic test",',
+            '  "finally": "the last item",',
+            '  "name": "naive"',
+            '}',
+            '',
+        ])
         self.assertEqual(serialized_file, expected_file)
 
     @with_tempdir()
@@ -2014,6 +2033,10 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
     def test_issue_8343_accumulated_require_in(self, base_dir):
         template_path = os.path.join(TMP_STATE_TREE, 'issue-8343.sls')
         testcase_filedest = os.path.join(base_dir, 'issue-8343.txt')
+        if os.path.exists(template_path):
+            os.remove(template_path)
+        if os.path.exists(testcase_filedest):
+            os.remove(testcase_filedest)
         sls_template = [
             '{0}:',
             '  file.managed:',
@@ -3731,7 +3754,11 @@ class RemoteFileTest(ModuleCase, SaltReturnAssertsMixin):
         cls.webserver = Webserver()
         cls.webserver.start()
         cls.source = cls.webserver.url('grail/scene33')
-        cls.source_hash = 'd2feb3beb323c79fc7a0f44f1408b4a3'
+        if salt.utils.platform.is_windows():
+            # CRLF vs LF causes a differnt hash on windows
+            cls.source_hash = '21438b3d5fd2c0028bcab92f7824dc69'
+        else:
+            cls.source_hash = 'd2feb3beb323c79fc7a0f44f1408b4a3'
 
     @classmethod
     def tearDownClass(cls):
