@@ -113,7 +113,7 @@ xcopy /Q /Y "%SrcDir%\conf\master" "%CnfDir%\"
 xcopy /Q /Y "%SrcDir%\conf\minion" "%CnfDir%\"
 @echo.
 
-@echo Copying NSSM to buildenv
+@echo Copying SSM to buildenv
 @echo ----------------------------------------------------------------------
 
 :: Set the location of the ssm to download
