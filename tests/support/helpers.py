@@ -1612,7 +1612,7 @@ def dedent(text, linesep=os.linesep):
     A wrapper around textwrap.dedent that also sets line endings.
     '''
     if isinstance(text, six.text_type):
-        linesep = salt.utils.stringutils.to_unicode(linesep)
+        linesep = salt.utils.to_unicode(linesep)
     else:
-        linesep = salt.utils.stringutils.to_str(linesep)
+        linesep = salt.utils.to_str(linesep)
     return linesep.join(textwrap.dedent(text).splitlines())
