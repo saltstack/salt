@@ -443,7 +443,7 @@ def running(name,
     if warnings:
         ret.setdefault('warnings', []).extend(warnings)
 
-    if salt.utils.is_windows() and kwargs.get('timeout', False):
+    if salt.utils.platform.is_windows() and kwargs.get('timeout', False):
         start_kwargs.update({'timeout': kwargs.get('timeout')})
 
     try:
@@ -589,7 +589,7 @@ def dead(name,
     if warnings:
         ret.setdefault('warnings', []).extend(warnings)
 
-    if salt.utils.is_windows() and kwargs.get('timeout', False):
+    if salt.utils.platform.is_windows() and kwargs.get('timeout', False):
         stop_kwargs.update({'timeout': kwargs.get('timeout')})
 
     func_ret = __salt__['service.stop'](name, **stop_kwargs)
