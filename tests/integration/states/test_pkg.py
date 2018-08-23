@@ -728,6 +728,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             ret = self.run_state('pkg.removed', name=target)
             self.assertSaltTrueReturn(ret)
 
+    @requires_system_grains
     def test_pkg_014_installed_missing_release(self, grains=None):  # pylint: disable=unused-argument
         '''
         Tests that a version number missing the release portion still resolves
