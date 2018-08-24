@@ -37,6 +37,7 @@ from tests.support.mixins import SaltReturnAssertsMixin
 # Import Salt libs
 import salt.utils.data
 import salt.utils.files
+import salt.utils.json
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
@@ -1631,6 +1632,48 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             '',
         ])
         self.assertEqual(serialized_file, expected_file)
+
+    @with_tempfile(create=False)
+    def test_serializer_deserializer_opts(self, name):
+        '''
+        Test the serializer_opts and deserializer_opts options
+        '''
+        data1 = {'foo': {'bar': 'baz'}}
+        data2 = {'foo': {'abc': 123}}
+        merged = {'foo': {'bar': 'baz', 'abc': 123}}
+
+        ret = self.run_state(
+            'file.serialize',
+            name=name,
+            dataset=data1,
+            formatter='json',
+            deserializer_opts=[{'encoding': 'latin-1'}])
+        ret = ret[next(iter(ret))]
+        assert ret['result'], ret
+        # We should have warned about deserializer_opts being used when
+        # merge_if_exists was not set to True.
+        assert 'warnings' in ret
+
+        # Run with merge_if_exists, as well as serializer and deserializer opts
+        ret = self.run_state(
+            'file.serialize',
+            name=name,
+            dataset=data2,
+            formatter='json',
+            merge_if_exists=True,
+            serializer_opts=[{'indent': 8}],
+            deserializer_opts=[{'encoding': 'latin-1'}])
+        ret = ret[next(iter(ret))]
+        assert ret['result'], ret
+
+        with salt.utils.files.fopen(name) as fp_:
+            serialized_data = salt.utils.json.load(fp_)
+
+        # If this test fails, this debug logging will help tell us how the
+        # serialized data differs from what was serialized.
+        log.debug('serialized_data = %r', serialized_data)
+        log.debug('merged = %r', merged)
+        assert serialized_data == merged
 
     @with_tempdir()
     def test_replace_issue_18841_omit_backup(self, base_dir):
