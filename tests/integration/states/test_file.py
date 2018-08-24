@@ -2256,8 +2256,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             else:
                 self.assertEqual(
                     ret['some-utf8-file-content-test']['comment'],
-                    'Command "{0} "{1}"" run'.format(
-                        'type' if salt.utils.platform.is_windows() else 'cmd',
+                    'Command "cat "{1}"" run'.format(
                         test_file_encoded
                     )
                 )
