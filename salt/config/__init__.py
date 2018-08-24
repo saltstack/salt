@@ -1508,7 +1508,8 @@ DEFAULT_MINION_OPTS = {
     },
     'discovery': False,
     'schedule': {},
-    'ssh_merge_pillar': True
+    'ssh_merge_pillar': True,
+    'server_id_use_crc': False,
 }
 
 DEFAULT_MASTER_OPTS = {
