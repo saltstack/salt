@@ -193,6 +193,7 @@ def _get_serv(ret=None):
                                        port=_options.get('port'),
                                        unix_socket_path=_options.get('unix_socket_path', None),
                                        db=_options.get('db'),
+                                       decode_responses=True,
                                        password=_options.get('password'))
     return REDIS_POOL
 

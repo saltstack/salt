@@ -55,7 +55,7 @@ def _connect(host=None, port=None, db=None, password=None):
     if not password:
         password = __salt__['config.option']('redis.password')
 
-    return redis.StrictRedis(host, port, db, password)
+    return redis.StrictRedis(host, port, db, password, decode_responses=True)
 
 
 def _sconnect(host=None, port=None, password=None):
@@ -69,7 +69,7 @@ def _sconnect(host=None, port=None, password=None):
     if password is None:
         password = __salt__['config.option']('redis_sentinel.password')
 
-    return redis.StrictRedis(host, port, password=password)
+    return redis.StrictRedis(host, port, password=password, decode_responses=True)
 
 
 def bgrewriteaof(host=None, port=None, db=None, password=None):
