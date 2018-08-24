@@ -2256,7 +2256,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             else:
                 self.assertEqual(
                     ret['some-utf8-file-content-test']['comment'],
-                    'Command "cat "{1}"" run'.format(
+                    'Command "cat "{0}"" run'.format(
                         test_file_encoded
                     )
                 )
