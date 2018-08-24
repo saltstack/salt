@@ -2684,7 +2684,12 @@ def get_server_id():
     if salt.utils.platform.is_proxy():
         server_id = {}
     else:
-        server_id = {'server_id': zlib.adler32(__opts__.get('id', '').encode()) & 0xffffffff}
+        use_crc = __opts__.get('server_id_use_crc')
+        if bool(use_crc):
+            id_hash = getattr(zlib, use_crc, zlib.adler32)(__opts__.get('id', '').encode()) & 0xffffffff
+        else:
+            id_hash = _get_hash_by_shell()
+        server_id = {'server_id': id_hash}
 
     return server_id
 
