@@ -98,12 +98,15 @@ def query(key, value=None, service=None, profile=None):  # pylint: disable=W0613
     '''
     Get a value from the REST interface
     '''
-    comps = key.split('?')
-    key = comps[0]
-    key_vars = {}
-    for pair in comps[1].split('&'):
-        pair_key, pair_val = pair.split('=')
-        key_vars[pair_key] = pair_val
+    try:
+        key, query_string = key.split('?')
+        key_vars = {}
+        if query_string:
+           for pair in query_string.split('&'):
+               pair_key, pair_val = pair.split('=')
+               key_vars[pair_key] = pair_val
+    except ValueError:
+        key_vars = {}
 
     renderer = __opts__.get('renderer', 'jinja|yaml')
     rend = salt.loader.render(__opts__, {})
