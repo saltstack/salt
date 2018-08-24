@@ -38,6 +38,7 @@ from salt.ext.six.moves import queue
 log = logging.getLogger(__name__)
 
 
+@flaky
 class StateRunnerTest(ShellCase):
     '''
     Test the state runner.
@@ -51,7 +52,6 @@ class StateRunnerTest(ShellCase):
         q.put(ret)
         q.task_done()
 
-    @flaky
     def test_orchestrate_output(self):
         '''
         Ensure the orchestrate runner outputs useful state data.
@@ -284,6 +284,7 @@ class StateRunnerTest(ShellCase):
 
 
 @skipIf(salt.utils.platform.is_windows(), '*NIX-only test')
+@flaky
 class OrchEventTest(ShellCase):
     '''
     Tests for orchestration events
