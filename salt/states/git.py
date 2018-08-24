@@ -158,7 +158,12 @@ def _uptodate(ret, target, comments=None, local_changes=False):
         # Shouldn't be making any changes if the repo was up to date, but
         # report on them so we are alerted to potential problems with our
         # logic.
-        ret['comment'] += '\n\nChanges made: ' + comments
+        ret['comment'] += (
+            '\n\nChanges {0}made: {1}'.format(
+                'that would be ' if __opts__['test'] else '',
+                _format_comments(comments)
+            )
+        )
     return ret
 
 
@@ -171,8 +176,7 @@ def _neutral_test(ret, comment):
 def _fail(ret, msg, comments=None):
     ret['result'] = False
     if comments:
-        msg += '\n\nChanges already made: '
-        msg += _format_comments(comments)
+        msg += '\n\nChanges already made: ' + _format_comments(comments)
     ret['comment'] = msg
     return ret
 
@@ -184,8 +188,12 @@ def _already_cloned(ret, target, branch=None, comments=None):
         ' and is checked out to branch \'{0}\''.format(branch) if branch else ''
     )
     if comments:
-        ret['comment'] += '\n\nChanges already made: '
-        ret['comment'] += _format_comments(comments)
+        ret['comment'] += (
+            '\n\nChanges {0}made: {1}'.format(
+                'that would be ' if __opts__['test'] else '',
+                _format_comments(comments)
+            )
+        )
     return ret
 
 
@@ -268,6 +276,7 @@ def latest(name,
            mirror=False,
            remote='origin',
            fetch_tags=True,
+           sync_tags=True,
            depth=None,
            identity=None,
            https_user=None,
@@ -459,6 +468,12 @@ def latest(name,
     fetch_tags : True
         If ``True``, then when a fetch is performed all tags will be fetched,
         even those which are not reachable by any branch on the remote.
+
+    sync_tags : True
+        If ``True``, then Salt will delete tags which exist in the local clone
+        but are not found on the remote repository.
+
+        .. versionadded:: 2018.3.4
 
     depth
         Defines depth in history when git a clone is needed in order to ensure
@@ -1379,18 +1394,19 @@ def latest(name,
                     deleted_tags = all_local_tags - remote_tags
                     if new_tags:
                         ret['changes']['new_tags'] = new_tags
-                    if deleted_tags:
+                    if sync_tags and deleted_tags:
                         # Delete the local copy of the tags to keep up with the
                         # remote repository.
                         for tag_name in deleted_tags:
                             try:
-                                __salt__['git.tag'](
-                                    target,
-                                    tag_name,
-                                    opts='-d',
-                                    user=user,
-                                    password=password,
-                                    output_encoding=output_encoding)
+                                if not __opts__['test']:
+                                    __salt__['git.tag'](
+                                        target,
+                                        tag_name,
+                                        opts='-d',
+                                        user=user,
+                                        password=password,
+                                        output_encoding=output_encoding)
                             except CommandExecutionError as exc:
                                 ret.setdefault('warnings', []).append(
                                     'Failed to remove local tag \'{0}\':\n\n'
@@ -1399,6 +1415,16 @@ def latest(name,
                             else:
                                 ret['changes'].setdefault(
                                     'deleted_tags', []).append(tag_name)
+
+                        if ret['changes'].get('deleted_tags'):
+                            comments.append(
+                                'The following tags {0} removed from the local '
+                                'checkout: {1}'.format(
+                                    'would be' if __opts__['test']
+                                        else 'were',
+                                    ', '.join(ret['changes']['deleted_tags'])
+                                )
+                            )
 
                 if not has_remote_rev:
                     try:

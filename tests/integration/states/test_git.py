@@ -479,7 +479,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
 
     @with_git_mirror(TEST_REPO)
     @uses_git_opts
-    def test_latest_changed_tags(self, mirror_url, admin_dir, clone_dir):
+    def test_latest_sync_tags(self, mirror_url, admin_dir, clone_dir):
         '''
         Test that a removed tag is properly reported as such and removed in the
         local clone, and that new tags are reported as new.
@@ -502,22 +502,38 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         self.run_function('git.tag', [admin_dir, tag2])
         self.run_function('git.push', [admin_dir, 'origin', tag2])
 
-        # Re-run the state, it should delete the tag from the local clone and
-        # reflect that the tag was removed in the changes dict.
-        ret = self.run_state('git.latest', name=mirror_url, target=clone_dir)
+        # Re-run the state with sync_tags=False. This should NOT delete the tag
+        # from the local clone, but should report that a tag has been added.
+        ret = self.run_state('git.latest',
+                             name=mirror_url,
+                             target=clone_dir,
+                             sync_tags=False)
         ret = ret[next(iter(ret))]
         assert ret['result']
-        expected_changes = {
-            'deleted_tags': [tag1],
-            'new_tags': [tag2],
-        }
+        # Make ABSOLUTELY SURE both tags are present, since we shouldn't have
+        # removed tag1.
+        all_tags = self.run_function('git.list_tags', [clone_dir])
+        assert tag1 in all_tags
+        assert tag2 in all_tags
+        # Make sure the reported changes are correct
+        expected_changes = {'new_tags': [tag2]}
+        assert ret['changes'] == expected_changes, ret['changes']
+
+        # Re-run the state with sync_tags=True. This should remove the local
+        # tag, since it doesn't exist in the remote repository.
+        ret = self.run_state('git.latest',
+                             name=mirror_url,
+                             target=clone_dir,
+                             sync_tags=True)
+        ret = ret[next(iter(ret))]
+        assert ret['result']
         # Make ABSOLUTELY SURE the expected tags are present/gone
         all_tags = self.run_function('git.list_tags', [clone_dir])
         assert tag1 not in all_tags
         assert tag2 in all_tags
         # Make sure the reported changes are correct
+        expected_changes = {'deleted_tags': [tag1]}
         assert ret['changes'] == expected_changes, ret['changes']
-
 
     @with_tempdir(create=False)
     def test_cloned(self, target):
