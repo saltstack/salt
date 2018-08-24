@@ -38,7 +38,7 @@ Tests can be run for each state, or all apache tests
     salt '*' saltcheck.run_state_tests apache check_all=True
     salt '*' saltcheck.run_highstate_tests
 
-Example1:
+Example 1:
 
 .. code-block:: yaml
 
@@ -50,7 +50,7 @@ Example1:
       assertion: assertEqual
       expected-return:  'hello'
 
-Example2:
+Example 2:
 
 .. code-block:: jinja
 
@@ -265,6 +265,7 @@ def _get_auto_update_cache_value():
     '''
     __salt__['config.get']('auto_update_master_cache')
     return True
+
 
 
 @memoize

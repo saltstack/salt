@@ -2902,7 +2902,7 @@ def managed(name,
                 salt.utils.files.remove(sfn)
 
 
-_RECURSE_TYPES = ['user', 'group', 'mode', 'ignore_files', 'ignore_dirs']
+_RECURSE_TYPES = ['user', 'group', 'mode', 'ignore_files', 'ignore_dirs', 'silent']
 
 
 def _get_recurse_set(recurse):
@@ -2982,7 +2982,8 @@ def directory(name,
         a list of strings representing what you would like to recurse.  If
         ``mode`` is defined, will recurse on both ``file_mode`` and ``dir_mode`` if
         they are defined.  If ``ignore_files`` or ``ignore_dirs`` is included, files or
-        directories will be left unchanged respectively.
+        directories will be left unchanged respectively. If ``silent`` is defined,
+        individual file/directory change notifications will be suppressed.
         Example:
 
         .. code-block:: yaml
@@ -3393,6 +3394,9 @@ def directory(name,
         if 'mode' not in recurse_set:
             file_mode = None
             dir_mode = None
+
+        if 'silent' in recurse_set:
+            ret['pchanges'] = 'Changes silenced'
 
         check_files = 'ignore_files' not in recurse_set
         check_dirs = 'ignore_dirs' not in recurse_set
@@ -4501,7 +4505,9 @@ def blockreplace(
         prepend_if_not_found=False,
         backup='.bak',
         show_changes=True,
-        append_newline=None):
+        append_newline=None,
+        insert_before_match=None,
+        insert_after_match=None):
     '''
     Maintain an edit in a file in a zone delimited by two line markers
 
@@ -4626,6 +4632,18 @@ def blockreplace(
     prepend_if_not_found : False
         If markers are not found and this option is set to ``True``, the
         content block will be prepended to the file.
+
+    insert_before_match
+        If markers are not found, this parameter can be set to a regex which will
+        insert the block before the first found occurrence in the file.
+
+        .. versionadded:: Neon
+
+    insert_after_match
+        If markers are not found, this parameter can be set to a regex which will
+        insert the block after the first found occurrence in the file.
+
+        .. versionadded:: Neon
 
     backup
         The file extension to use for a backup of the file if any edit is made.
@@ -4759,6 +4777,8 @@ def blockreplace(
             content=content,
             append_if_not_found=append_if_not_found,
             prepend_if_not_found=prepend_if_not_found,
+            insert_before_match=insert_before_match,
+            insert_after_match=insert_after_match,
             backup=backup,
             dry_run=__opts__['test'],
             show_changes=show_changes,
