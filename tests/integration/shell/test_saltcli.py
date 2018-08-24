@@ -12,6 +12,12 @@
 # Import python libs
 from __future__ import absolute_import
 import logging
+import os
+
+# Import Salt libs
+import salt.defaults.exitcodes
+import salt.utils.files
+import salt.utils.path
 
 # Import Salt Testing libs
 from tests.support.case import ShellCase
@@ -79,9 +85,9 @@ class RetcodeTestCase(ShellCase):
     # Hard-coding these instead of substituting values from
     # salt.defaults.exitcodes will give us a heads-up in the event that someone
     # tries to do something daft like change these values.
-    error_status = 1  # i.e. EX_GENERIC
-    state_compiler_error = 1
-    state_failure = 2
+    error_status = salt.defaults.exitcodes.EX_GENERIC
+    state_compiler_error = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
+    state_failure = salt.defaults.exitcodes.EX_STATE_FAILURE
 
     def _salt(self, command):
         cmdline = 'minion ' + command
@@ -175,3 +181,31 @@ class RetcodeTestCase(ShellCase):
         '''
         self._test_error()
         self._test_error(salt_call=True)
+
+    def test_missing_minion(self):
+        '''
+        Test that a minion which doesn't respond results in a nonzeo exit code
+        '''
+        good = salt.utils.path.join(self.master_opts['pki_dir'], 'minions', 'minion')
+        bad = salt.utils.path.join(self.master_opts['pki_dir'], 'minions', 'minion2')
+        try:
+            # Copy the key
+            with salt.utils.files.fopen(good, 'rb') as fhr, \
+                    salt.utils.files.fopen(bad, 'wb') as fhw:
+                fhw.write(fhr.read())
+            retcode = self.run_script(
+                'salt',
+                '-c {0} -t 5 minion2 test.ping'.format(self.config_dir),
+                with_retcode=True,
+                timeout=20)[1]
+            assert retcode == salt.defaults.exitcodes.EX_GENERIC, retcode
+        finally:
+            # Now get rid of it
+            try:
+                os.remove(bad)
+            except OSError as exc:
+                if exc.errno != os.errno.ENOENT:
+                    log.error(
+                        'Failed to remove %s, this may affect other tests: %s',
+                        bad, exc
+                    )

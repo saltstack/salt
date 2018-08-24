@@ -122,6 +122,7 @@ def state(name,
         expect_minions=True,
         fail_minions=None,
         allow_fail=0,
+        exclude=None,
         concurrent=False,
         timeout=None,
         batch=None,
@@ -201,6 +202,9 @@ def state(name,
         Pass in the number of minions to allow for failure before setting
         the result of the execution to False
 
+    exclude
+        Pass exclude kwarg to state
+
     concurrent
         Allow multiple state runs to occur at once.
 
@@ -235,6 +239,18 @@ def state(name,
               - apache
               - django
               - core
+            - saltenv: prod
+
+    Run sls file via :py:func:`state.sls <salt.state.sls>` on target
+    minions with exclude:
+
+    .. code-block:: yaml
+
+        docker:
+          salt.state:
+            - tgt: 'docker*'
+            - sls: docker
+            - exclude: docker.swarm
             - saltenv: prod
 
     Run a full :py:func:`state.highstate <salt.state.highstate>` on target
@@ -297,6 +313,9 @@ def state(name,
 
     if saltenv is not None:
         cmd_kw['kwarg']['saltenv'] = saltenv
+
+    if exclude is not None:
+        cmd_kw['kwarg']['exclude'] = exclude
 
     cmd_kw['kwarg']['queue'] = queue
 
