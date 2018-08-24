@@ -62,6 +62,8 @@ log = logging.getLogger(__name__)
 
 TMP_SOCK_DIR = tempfile.mkdtemp(dir=TMP)
 TMP_REPO_DIR = os.path.join(TMP, 'gitfs_root')
+if salt.utils.platform.is_windows():
+    TMP_REPO_DIR = TMP_REPO_DIR.replace('\\', '/')
 INTEGRATION_BASE_FILES = os.path.join(FILES, 'file', 'base')
 UNICODE_FILENAME = 'питон.txt'
 UNICODE_DIRNAME = UNICODE_ENVNAME = 'соль'
@@ -422,6 +424,9 @@ class GitFSTestBase(object):
 
             # Add a tag
             repo.create_tag(TAG_NAME, 'HEAD')
+            # Older GitPython versions do not have a close method.
+            if hasattr(repo, 'close'):
+                repo.close()
         finally:
             if orig_username is not None:
                 os.environ[username_key] = orig_username
@@ -436,7 +441,7 @@ class GitFSTestBase(object):
         '''
         for path in (cls.tmp_cachedir, cls.tmp_sock_dir, TMP_REPO_DIR):
             try:
-                shutil.rmtree(path, onerror=_rmtree_error)
+                salt.utils.files.rm_rf(path)
             except OSError as exc:
                 if exc.errno != errno.EEXIST:
                     raise
@@ -457,7 +462,7 @@ class GitFSTestBase(object):
         _clear_instance_map()
         for subdir in ('gitfs', 'file_lists'):
             try:
-                shutil.rmtree(os.path.join(self.tmp_cachedir, subdir))
+                salt.utils.files.rm_rf(os.path.join(self.tmp_cachedir, subdir))
             except OSError as exc:
                 if exc.errno != errno.ENOENT:
                     raise
