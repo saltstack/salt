@@ -470,8 +470,7 @@ def _process_stack_cfg(cfg, stack, minion_id, pillar, namespace, config):
     )
     for line in _parse_top_cfg(tops):
         dirs = [basedir]
-        if line.startswith("/"):
-            dirs += ["/"]
+        dirs += ["/"] if line.startswith("/") else []
         lookup = TemplateLookup(directories=dirs)
         try:
             p = lookup.get_template(line).render(
@@ -496,11 +495,10 @@ def _process_stack_cfg(cfg, stack, minion_id, pillar, namespace, config):
             log.debug("MakoStack template `{}` parsed".format(line))
         except exceptions.TopLevelLookupException as err:
             if config.get("fail_on_missing_file"):
-                log.error(
-                    "MakoStack template `{}` not found - aborting compilation.".format(
-                        line
-                    )
+                msg = "MakoStack template `{}` not found - aborting compilation.".format(
+                    line
                 )
+                log.error(msg)
                 raise CommandExecutionError(msg)
             log.info("MakoStack template `{}` not found.".format(line))
             continue
