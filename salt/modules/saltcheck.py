@@ -14,7 +14,7 @@ be created and named ``saltcheck-tests``.
 Tests for a state should be created in files ending in ``*.tst`` and placed in
 the ``saltcheck-tests`` folder.
 
-Multiple tests can be created in a file. Multiple ``*.tst`` files can be
+Multiple tests can be specified in a file. Multiple ``*.tst`` files can be
 created in the ``saltcheck-tests`` folder. Salt rendering is supported in test
 files (e.g. ``yaml + jinja``). The ``id`` of a test works in the same manner as
 in salt state files. They should be unique and descriptive.
@@ -27,8 +27,16 @@ Example file system layout:
         init.sls
         config.sls
         saltcheck-tests/
-            pkg_and_mods.tst
+            init.tst
             config.tst
+
+Tests can be run for each state, or all apache tests
+
+.. code-block:: bash
+
+    salt '*' saltcheck.run_state_tests apache,apache.config
+    salt '*' saltcheck.run_state_tests apache check_all=True
+    salt '*' saltcheck.run_highstate_tests
 
 Example1:
 
@@ -131,32 +139,32 @@ def run_test(**kwargs):
         return "Test must be a dictionary"
 
 
-def run_state_tests(state, saltenv=None):
+def run_state_tests(state, saltenv=None, check_all=False):
     '''
     Execute all tests for a salt state and return results
     Nested states will also be tested
 
     :param str state: the name of a user defined state
+    :param bool check_all: boolean to run all tests in state/saltcheck-tests directory
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' saltcheck.run_state_tests postfix
+        salt '*' saltcheck.run_state_tests postfix,common
     '''
     if not saltenv:
         saltenv = __opts__['saltenv']
     if not saltenv:
         saltenv = 'base'
     scheck = SaltCheck(saltenv)
-    paths = scheck._get_state_search_path_list(saltenv)
+    paths = scheck.get_state_search_path_list(saltenv)
     stl = StateTestLoader(search_paths=paths)
     results = {}
-    sls_list = _get_state_sls(state)
+    sls_list = state.split(',')
     for state_name in sls_list:
-        mypath = stl._convert_sls_to_path(state_name)
-        stl._add_test_files_for_sls(mypath)
-        stl._load_test_suite()
+        stl.add_test_files_for_sls(state_name, check_all)
+        stl.load_test_suite()
         results_dict = {}
         for key, value in stl.test_dict.items():
             result = scheck.run_test(value)
@@ -180,21 +188,18 @@ def run_highstate_tests(saltenv=None):
     if not saltenv:
         saltenv = 'base'
     scheck = SaltCheck(saltenv)
-    paths = scheck._get_state_search_path_list(saltenv)
+    paths = scheck.get_state_search_path_list(saltenv)
     stl = StateTestLoader(search_paths=paths)
     results = {}
     sls_list = _get_top_states(saltenv)
     all_states = []
-    for top_state in sls_list:
-        sls_list = _get_state_sls(top_state)
-        for state in sls_list:
-            if state not in all_states:
-                all_states.append(state)
+    for state in sls_list:
+        if state not in all_states:
+            all_states.append(state)
 
     for state_name in all_states:
-        mypath = stl._convert_sls_to_path(state_name)
-        stl._add_test_files_for_sls(mypath)
-        stl._load_test_suite()
+        stl.add_test_files_for_sls(state_name)
+        stl.load_test_suite()
         results_dict = {}
         for key, value in stl.test_dict.items():
             result = scheck.run_test(value)
@@ -204,14 +209,16 @@ def run_highstate_tests(saltenv=None):
 
 
 def _generate_out_list(results):
-    ''' generate test results output list '''
+    '''
+    generate test results output list
+    '''
     passed = 0
     failed = 0
     skipped = 0
     missing_tests = 0
     total_time = 0.0
     for state in results:
-        if len(results[state].items()) == 0:
+        if not results[state].items():
             missing_tests = missing_tests + 1
         else:
             for dummy, val in results[state].items():
@@ -227,9 +234,9 @@ def _generate_out_list(results):
     for key, value in results.items():
         out_list.append({key: value})
     out_list.sort()
-    out_list.append({"TEST RESULTS": {'Execution Time': round(total_time, 4),
-                    'Passed': passed, 'Failed': failed, 'Skipped': skipped,
-                    'Missing Tests': missing_tests}})
+    out_list.append({'TEST RESULTS': {'Execution Time': round(total_time, 4),
+                     'Passed': passed, 'Failed': failed, 'Skipped': skipped,
+                     'Missing Tests': missing_tests}})
     return out_list
 
 
@@ -241,6 +248,7 @@ def _render_file(file_path):
     rendered = __salt__['slsutil.renderer'](file_path)
     log.info("rendered: %s", rendered)
     return rendered
+
 
 @memoize
 def _is_valid_module(module):
@@ -257,6 +265,7 @@ def _get_auto_update_cache_value():
     '''
     __salt__['config.get']('auto_update_master_cache')
     return True
+
 
 @memoize
 def _is_valid_function(module_name, function):
@@ -285,22 +294,10 @@ def _get_top_states(saltenv='base'):
     return alt_states
 
 
-def _get_state_sls(state):
-    '''
-    Equivalent to a salt cli: salt web state.show_low_sls STATE
-    '''
-    sls_list_state = []
-    try:
-        returned = __salt__['state.show_low_sls'](state)
-        for i in returned:
-            if i['__sls__'] not in sls_list_state:
-                sls_list_state.append(i['__sls__'])
-    except Exception:
-        raise
-    return sls_list_state
-
-
 class SaltCheck(object):
+    '''
+    This class validates and runs the saltchecks
+    '''
 
     def __init__(self, saltenv='base'):
         self.sls_list_state = []
@@ -374,9 +371,9 @@ class SaltCheck(object):
         return tots >= required_total
 
     def _call_salt_command(self,
-                          fun,
-                          args,
-                          kwargs):
+                           fun,
+                           args,
+                           kwargs):
         '''
         Generic call of salt Caller command
         '''
@@ -629,7 +626,7 @@ class SaltCheck(object):
         return result
 
     @staticmethod
-    def _get_state_search_path_list(saltenv='base'):
+    def get_state_search_path_list(saltenv='base'):
         '''
         For the state file system, return a list of paths to search for states
         '''
@@ -654,7 +651,7 @@ class StateTestLoader(object):
         self.test_files = []  # list of file paths
         self.test_dict = {}
 
-    def _load_test_suite(self):
+    def load_test_suite(self):
         '''
         Load tests either from one file, or a set of files
         '''
@@ -680,16 +677,13 @@ class StateTestLoader(object):
         Gather files for a test suite
         '''
         self.test_files = []
-        log.info("gather_files: %s", time.time())
         filepath = filepath + os.sep + 'saltcheck-tests'
-
-        rootdir = filepath
-        # for dirname, subdirlist, filelist in salt.utils.path.os_walk(rootdir):
-        for dirname, dummy, filelist in salt.utils.path.os_walk(rootdir):
+        for dirname, dummy, filelist in salt.utils.path.os_walk(filepath):
             for fname in filelist:
                 if fname.endswith('.tst'):
                     start_path = dirname + os.sep + fname
                     full_path = os.path.abspath(start_path)
+                    log.info("Found test: %s", full_path)
                     self.test_files.append(full_path)
         return
 
@@ -701,24 +695,30 @@ class StateTestLoader(object):
         sls = sls.replace(".", os.sep)
         return sls
 
-    def _add_test_files_for_sls(self, sls_path):
+    def add_test_files_for_sls(self, sls_name, check_all=False):
         '''
         Adding test files
         '''
+        sls_split = sls_name.rpartition('.')
         for path in self.search_paths:
-            full_path = path + os.sep + sls_path
-            rootdir = full_path
-            if os.path.isdir(full_path):
-                log.info("searching path= %s", full_path)
-                # for dirname, subdirlist, filelist in salt.utils.path.os_walk(rootdir, topdown=True):
-                for dirname, subdirlist, dummy in salt.utils.path.os_walk(rootdir, topdown=True):
-                    if "saltcheck-tests" in subdirlist:
-                        self._gather_files(dirname)
-                        log.info("test_files list: %s", self.test_files)
-                        log.info("found subdir match in = %s", dirname)
-                    else:
-                        log.info("did not find subdir match in = %s", dirname)
-                    del subdirlist[:]
+            if sls_split[0]:
+                base_path = path + os.sep + self._convert_sls_to_path(sls_split[0])
             else:
-                log.info("path is not a directory= %s", full_path)
+                base_path = path
+            if os.path.isdir(base_path):
+                log.info("searching path: %s", base_path)
+                if check_all:
+                    # Find and run all tests in the state/saltcheck-tests directory
+                    self._gather_files(base_path + os.sep + sls_split[2])
+                    return
+                init_path = base_path + os.sep + sls_split[2] + os.sep + 'saltcheck-tests' + os.sep + 'init.tst'
+                name_path = base_path + os.sep + 'saltcheck-tests' + os.sep + sls_split[2] + '.tst'
+                if os.path.isfile(init_path):
+                    self.test_files.append(init_path)
+                    log.info("Found test init: %s", init_path)
+                if os.path.isfile(name_path):
+                    self.test_files.append(name_path)
+                    log.info("Found test named: %s", name_path)
+            else:
+                log.info("path is not a directory: %s", base_path)
         return
