@@ -461,22 +461,15 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
 def _process_stack_cfg(cfg, stack, minion_id, pillar, namespace, config):
     basedir, filename = os.path.split(cfg)
     lookup = TemplateLookup(directories=[basedir])
-    tops = lookup.get_template(filename).render(__opts__=__opts__,
-                                                __salt__=__salt__,
-                                                __grains__=__grains__,
-                                                minion_id=minion_id,
-                                                pillar=pillar, stack=stack)
+    tops = lookup.get_template(filename).render(__opts__=__opts__, __salt__=__salt__,
+            __grains__=__grains__, minion_id=minion_id, pillar=pillar, stack=stack)
     for line in _parse_top_cfg(tops):
         dirs = [basedir]
-        if line.startswith('/'):
-            dirs += ['/']
+        dirs += ['/'] if line.startswith('/') else []
         lookup = TemplateLookup(directories=dirs)
         try:
-            p = lookup.get_template(line).render(__opts__=__opts__,
-                                                 __salt__=__salt__,
-                                                 __grains__=__grains__,
-                                                 minion_id=minion_id,
-                                                 pillar=pillar, stack=stack)
+            p = lookup.get_template(line).render(__opts__=__opts__, __salt__=__salt__,
+                    __grains__=__grains__, minion_id=minion_id, pillar=pillar, stack=stack)
             obj = salt.utils.yaml.safe_load(p)
             if not isinstance(obj, dict):
                 msg = "Can't parse makostack template `{}` as a valid yaml dictionary".format(line)
@@ -489,7 +482,8 @@ def _process_stack_cfg(cfg, stack, minion_id, pillar, namespace, config):
             log.debug('MakoStack template `{}` parsed'.format(line))
         except exceptions.TopLevelLookupException as err:
             if config.get('fail_on_missing_file'):
-                log.error('MakoStack template `{}` not found - aborting compilation.'.format(line))
+                msg = 'MakoStack template `{}` not found - aborting compilation.'.format(line)
+                log.error(msg)
                 raise CommandExecutionError(msg)
             log.info('MakoStack template `{}` not found.'.format(line))
             continue
@@ -497,11 +491,11 @@ def _process_stack_cfg(cfg, stack, minion_id, pillar, namespace, config):
             # Catches the above KeyError, and any other parsing errors...
             if config.get('fail_on_parse_error'):
                 msg = 'Invalid MakoStack template `{}` - aborting compilation:\n{}'.format(line,
-                      exceptions.text_error_template().render())
+                        exceptions.text_error_template().render())
                 log.error(msg)
                 raise CommandExecutionError(msg)
             msg = 'Invalid MakoStack template `{}`:\n{}'.format(line,
-                  exceptions.text_error_template().render())
+                    exceptions.text_error_template().render())
             log.warning(msg)
             continue
     return stack
