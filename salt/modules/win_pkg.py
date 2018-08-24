@@ -466,18 +466,13 @@ def _get_reg_software():
                                                     '{0}\\{1}'.format(key, reg_key),
                                                     'DisplayVersion',
                                                     use_32bit)
-        if (not d_vers_regdata['success'] or
-            d_vers_regdata['vtype'] not in ['REG_SZ', 'REG_EXPAND_SZ', 'REG_DWORD'] or
-                d_vers_regdata['vdata'] in [None, False]):
-            return
-
-        if isinstance(d_vers_regdata['vdata'], int):
-            d_vers = six.text_type(d_vers_regdata['vdata'])
-        else:
-            d_vers = d_vers_regdata['vdata']
-
-        if not d_vers or d_vers == '(value not set)':
-            d_vers = 'Not Found'
+        d_vers = 'Not Found'
+        if (d_vers_regdata['success'] and
+            d_vers_regdata['vtype'] in ['REG_SZ', 'REG_EXPAND_SZ', 'REG_DWORD']):
+            if isinstance(d_vers_regdata['vdata'], int):
+                d_vers = six.text_type(d_vers_regdata['vdata'])
+            elif d_vers_regdata['vdata'] and d_vers_regdata['vdata'] != '(value not set)':  # Check for blank values
+                d_vers = d_vers_regdata['vdata']
 
         check_ok = False
         for check_reg in ['UninstallString', 'QuietUninstallString', 'ModifyPath']:
@@ -1097,7 +1092,8 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
             .. versionadded:: 2016.11.0
 
     Returns:
-        dict: Return a dict containing the new package names and versions
+        dict: Return a dict containing the new package names and versions. If
+        the package is already installed, an empty dict is returned.
 
         If the package is installed by ``pkg.install``:
 
@@ -1105,12 +1101,6 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
 
             {'<package>': {'old': '<old-version>',
                            'new': '<new-version>'}}
-
-        If the package is already installed:
-
-        .. code-block:: cfg
-
-            {'<package>': {'current': '<current-version>'}}
 
     The following example will refresh the winrepo and install a single
     package, 7zip.
@@ -1205,7 +1195,6 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
 
     # Loop through each package
     changed = []
-    latest = []
     for pkg_name, options in six.iteritems(pkg_params):
 
         # Load package information for the package
@@ -1217,28 +1206,33 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
             ret[pkg_name] = 'Unable to locate package {0}'.format(pkg_name)
             continue
 
-        version_num = options.get('version', '')
+        version_num = options.get('version')
         #  Using the salt cmdline with version=5.3 might be interpreted
         #  as a float it must be converted to a string in order for
         #  string matching to work.
         if not isinstance(version_num, six.string_types) and version_num is not None:
             version_num = six.text_type(version_num)
 
+        # If the version was not passed, version_num will be None
         if not version_num:
             if pkg_name in old:
-                log.debug('A version (%s) already installed for package '
-                          '%s', version_num, pkg_name)
+                log.debug('pkg.install: \'%s\' version \'%s\' is already installed',
+                          pkg_name, old[pkg_name][0])
                 continue
-            # following can be version number or latest or Not Found
+            # Get the most recent version number available from winrepo.p
+            # May also return `latest` or an empty string
             version_num = _get_latest_pkg_version(pkginfo)
 
         if version_num == 'latest' and 'latest' not in pkginfo:
+            # Get the most recent version number available from winrepo.p
+            # May also return `latest` or an empty string
             version_num = _get_latest_pkg_version(pkginfo)
 
         # Check if the version is already installed
         if version_num in old.get(pkg_name, []):
             # Desired version number already installed
-            ret[pkg_name] = {'current': version_num}
+            log.debug('pkg.install: \'%s\' version \'%s\' is already installed',
+                      pkg_name, version_num)
             continue
         # If version number not installed, is the version available?
         elif version_num != 'latest' and version_num not in pkginfo:
@@ -1246,9 +1240,6 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
                       version_num, pkg_name)
             ret[pkg_name] = {'not found': version_num}
             continue
-
-        if 'latest' in pkginfo:
-            latest.append(pkg_name)
 
         # Get the installer settings from winrepo.p
         installer = pkginfo[version_num].get('installer', '')
@@ -1334,18 +1325,18 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
 
         # Fix non-windows slashes
         cached_pkg = cached_pkg.replace('/', '\\')
-        cache_path, _ = os.path.split(cached_pkg)
+        cache_path = os.path.dirname(cached_pkg)
 
         # Compare the hash sums
         source_hash = pkginfo[version_num].get('source_hash', False)
         if source_hash:
             source_sum = _get_source_sum(source_hash, cached_pkg, saltenv)
-            log.debug('Source %s hash: %s',
+            log.debug('pkg.install: Source %s hash: %s',
                       source_sum['hash_type'], source_sum['hsum'])
 
             cached_pkg_sum = salt.utils.hashutils.get_hash(cached_pkg,
                                                            source_sum['hash_type'])
-            log.debug('Package %s hash: %s',
+            log.debug('pkg.install: Package %s hash: %s',
                       source_sum['hash_type'], cached_pkg_sum)
 
             if source_sum['hsum'] != cached_pkg_sum:
@@ -1353,7 +1344,7 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
                     ("Source hash '{0}' does not match package hash"
                      " '{1}'").format(source_sum['hsum'], cached_pkg_sum)
                 )
-            log.debug('Source hash matches package hash.')
+            log.debug('pkg.install: Source hash matches package hash.')
 
         # Get install flags
 
@@ -1463,15 +1454,6 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
     # Take the "old" package list and convert the values to strings in
     # preparation for the comparison below.
     __salt__['pkg_resource.stringify'](old)
-
-    # For installers that have no specific version (ie: chrome)
-    # The software definition file will have a version of 'latest'
-    # In that case there's no way to know which version has been installed
-    # Just return the current installed version
-    if latest:
-        for pkg_name in latest:
-            if old.get(pkg_name, 'old') == new.get(pkg_name, 'new'):
-                ret[pkg_name] = {'current': new[pkg_name]}
 
     # Check for changes in the registry
     difference = salt.utils.data.compare_dicts(old, new)

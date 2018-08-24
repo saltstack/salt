@@ -447,7 +447,7 @@ class SyncClientMixin(object):
 
 class AsyncClientMixin(object):
     '''
-    A mixin for *Client interfaces to enable easy async function execution
+    A mixin for *Client interfaces to enable easy asynchronous function execution
     '''
     client = None
     tag_prefix = None
@@ -499,7 +499,7 @@ class AsyncClientMixin(object):
         tag = salt.utils.event.tagify(jid, prefix=self.tag_prefix)
         return {'tag': tag, 'jid': jid}
 
-    def async(self, fun, low, user='UNKNOWN', pub=None):
+    def asynchronous(self, fun, low, user='UNKNOWN', pub=None):
         '''
         Execute the function in a multiprocess and return the event tag to use
         to watch for the return

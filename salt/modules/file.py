@@ -12,7 +12,6 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import datetime
-import difflib
 import errno
 import fnmatch
 import io
@@ -562,7 +561,7 @@ def lsattr(path):
         return None
 
     if not os.path.exists(path):
-        raise SaltInvocationError("File or directory does not exist.")
+        raise SaltInvocationError("File or directory does not exist: " + path)
 
     cmd = ['lsattr', path]
     result = __salt__['cmd.run'](cmd, ignore_retcode=True, python_shell=False)
@@ -1567,7 +1566,7 @@ def comment_line(path,
         check_perms(path, None, pre_user, pre_group, pre_mode)
 
     # Return a diff using the two dictionaries
-    return ''.join(difflib.unified_diff(orig_file, new_file))
+    return __utils__['stringutils.get_diff'](orig_file, new_file)
 
 
 def _get_flags(flags):
@@ -2038,9 +2037,7 @@ def line(path, content=None, match=None, mode=None, location=None,
         if show_changes:
             with salt.utils.files.fopen(path, 'r') as fp_:
                 path_content = salt.utils.data.decode_list(fp_.read().splitlines(True))
-            changes_diff = ''.join(difflib.unified_diff(
-                path_content, body
-            ))
+            changes_diff = __utils__['stringutils.get_diff'](path_content, body)
         if __opts__['test'] is False:
             fh_ = None
             try:
@@ -2293,7 +2290,7 @@ def replace(path,
                 if prepend_if_not_found or append_if_not_found:
                     # Search for content, to avoid pre/appending the
                     # content if it was pre/appended in a previous run.
-                    if re.search(salt.utils.stringutils.to_bytes('^{0}$'.format(re.escape(content))),
+                    if re.search(salt.utils.stringutils.to_bytes('^{0}($|(?=\r\n))'.format(re.escape(content))),
                                  r_data,
                                  flags=flags_num):
                         # Content was found, so set found.
@@ -2426,18 +2423,15 @@ def replace(path,
     if not dry_run and not salt.utils.platform.is_windows():
         check_perms(path, None, pre_user, pre_group, pre_mode)
 
-    def get_changes():
-        orig_file_as_str = [salt.utils.stringutils.to_unicode(x) for x in orig_file]
-        new_file_as_str = [salt.utils.stringutils.to_unicode(x) for x in new_file]
-        return ''.join(difflib.unified_diff(orig_file_as_str, new_file_as_str))
+    differences = __utils__['stringutils.get_diff'](orig_file, new_file)
 
     if show_changes:
-        return get_changes()
+        return differences
 
     # We may have found a regex line match but don't need to change the line
     # (for situations where the pattern also matches the repl). Revert the
     # has_changes flag to False if the final result is unchanged.
-    if not get_changes():
+    if not differences:
         has_changes = False
 
     return has_changes
@@ -2452,7 +2446,9 @@ def blockreplace(path,
         backup='.bak',
         dry_run=False,
         show_changes=True,
-        append_newline=False):
+        append_newline=False,
+        insert_before_match=None,
+        insert_after_match=None):
     '''
     .. versionadded:: 2014.1.0
 
@@ -2494,6 +2490,17 @@ def blockreplace(path,
         If markers are not found and set to ``True`` then, the markers and
         content will be prepended to the file.
 
+    insert_before_match
+        If markers are not found, this parameter can be set to a regex which will
+        insert the block before the first found occurrence in the file.
+
+        .. versionadded:: Neon
+
+    insert_after_match
+        If markers are not found, this parameter can be set to a regex which will
+        insert the block after the first found occurrence in the file.
+
+        .. versionadded:: Neon
 
     backup
         The file extension to use for a backup of the file if any edit is made.
@@ -2532,9 +2539,11 @@ def blockreplace(path,
         '#-- end managed zone foobar --' $'10.0.1.1 foo.foobar\\n10.0.1.2 bar.foobar' True
 
     '''
-    if append_if_not_found and prepend_if_not_found:
+    exclusive_params = [append_if_not_found, prepend_if_not_found, bool(insert_before_match), bool(insert_after_match)]
+    if sum(exclusive_params) > 1:
         raise SaltInvocationError(
-            'Only one of append and prepend_if_not_found is permitted'
+            'Only one of append_if_not_found, prepend_if_not_found,'
+            ' insert_before_match, and insert_after_match is permitted'
         )
 
     path = os.path.expanduser(path)
@@ -2553,6 +2562,18 @@ def blockreplace(path,
                 'Cannot perform string replacements on a binary file: {0}'
                 .format(path)
         )
+
+    if insert_before_match or insert_after_match:
+        if insert_before_match:
+            if not isinstance(insert_before_match, six.string_types):
+                raise CommandExecutionError(
+                    'RegEx expected in insert_before_match parameter.'
+                )
+        elif insert_after_match:
+            if not isinstance(insert_after_match, six.string_types):
+                raise CommandExecutionError(
+                    'RegEx expected in insert_after_match parameter.'
+                )
 
     if append_newline is None and not content.endswith((os.linesep, '\n')):
         append_newline = True
@@ -2676,56 +2697,68 @@ def blockreplace(path,
             block_found = True
         elif append_if_not_found:
             # Make sure we have a newline at the end of the file
-            if 0 != len(new_file):
+            if new_file:
                 if not new_file[-1].endswith(linesep):
                     new_file[-1] += linesep
             # add the markers and content at the end of file
             _add_content(linesep, lines=new_file)
             block_found = True
-        else:
-            raise CommandExecutionError(
-                'Cannot edit marked block. Markers were not found in file.'
-            )
+        elif insert_before_match or insert_after_match:
+            match_regex = insert_before_match or insert_after_match
+            match_idx = [i for i, item in enumerate(orig_file) if re.search(match_regex, item)]
+            if match_idx:
+                match_idx = match_idx[0]
+                for line in _add_content(linesep):
+                    if insert_after_match:
+                        match_idx += 1
+                    new_file.insert(match_idx, line)
+                    if insert_before_match:
+                        match_idx += 1
+                block_found = True
 
-    if block_found:
-        diff = ''.join(difflib.unified_diff(orig_file, new_file))
-        has_changes = diff is not ''
-        if has_changes and not dry_run:
-            # changes detected
-            # backup file attrs
-            perms = {}
-            perms['user'] = get_user(path)
-            perms['group'] = get_group(path)
-            perms['mode'] = salt.utils.files.normalize_mode(get_mode(path))
+    if not block_found:
+        raise CommandExecutionError(
+            'Cannot edit marked block. Markers were not found in file.'
+        )
 
-            # backup old content
-            if backup is not False:
-                backup_path = '{0}{1}'.format(path, backup)
-                shutil.copy2(path, backup_path)
-                # copy2 does not preserve ownership
-                check_perms(backup_path,
-                        None,
-                        perms['user'],
-                        perms['group'],
-                        perms['mode'])
+    diff = __utils__['stringutils.get_diff'](orig_file, new_file)
+    has_changes = diff is not ''
+    if has_changes and not dry_run:
+        # changes detected
+        # backup file attrs
+        perms = {}
+        perms['user'] = get_user(path)
+        perms['group'] = get_group(path)
+        perms['mode'] = salt.utils.files.normalize_mode(get_mode(path))
 
-            # write new content in the file while avoiding partial reads
-            try:
-                fh_ = salt.utils.atomicfile.atomic_open(path, 'wb')
-                for line in new_file:
-                    fh_.write(salt.utils.stringutils.to_bytes(line, encoding=file_encoding))
-            finally:
-                fh_.close()
-
-            # this may have overwritten file attrs
-            check_perms(path,
+        # backup old content
+        if backup is not False:
+            backup_path = '{0}{1}'.format(path, backup)
+            shutil.copy2(path, backup_path)
+            # copy2 does not preserve ownership
+            check_perms(backup_path,
                     None,
                     perms['user'],
                     perms['group'],
                     perms['mode'])
 
-        if show_changes:
-            return diff
+        # write new content in the file while avoiding partial reads
+        try:
+            fh_ = salt.utils.atomicfile.atomic_open(path, 'wb')
+            for line in new_file:
+                fh_.write(salt.utils.stringutils.to_bytes(line, encoding=file_encoding))
+        finally:
+            fh_.close()
+
+        # this may have overwritten file attrs
+        check_perms(path,
+                None,
+                perms['user'],
+                perms['group'],
+                perms['mode'])
+
+    if show_changes:
+        return diff
 
     return has_changes
 
@@ -4078,7 +4111,10 @@ def get_managed(
     # If we have a source defined, let's figure out what the hash is
     if source:
         urlparsed_source = _urlparse(source)
-        parsed_scheme = urlparsed_source.scheme
+        if urlparsed_source.scheme in salt.utils.files.VALID_PROTOS:
+            parsed_scheme = urlparsed_source.scheme
+        else:
+            parsed_scheme = ''
         parsed_path = os.path.join(
                 urlparsed_source.netloc, urlparsed_source.path).rstrip(os.sep)
         unix_local_source = parsed_scheme in ('file', '')
@@ -4460,7 +4496,8 @@ def check_perms(name, ret, user, group, mode, attrs=None, follow_symlinks=False)
     perms['lmode'] = salt.utils.files.normalize_mode(cur['mode'])
 
     is_dir = os.path.isdir(name)
-    if not salt.utils.platform.is_windows() and not is_dir:
+    is_link = os.path.islink(name)
+    if not salt.utils.platform.is_windows() and not is_dir and not is_link:
         lattrs = lsattr(name)
         if lattrs is not None:
             # List attributes on file
@@ -4997,7 +5034,7 @@ def get_diff(file1,
         )
 
     args = []
-    for filename in files:
+    for filename in paths:
         try:
             with salt.utils.files.fopen(filename, 'rb') as fp_:
                 args.append(fp_.readlines())
@@ -5015,17 +5052,13 @@ def get_diff(file1,
         elif not show_changes:
             ret = '<show_changes=False>'
         else:
-            bdiff = _binary_replace(*files)
+            bdiff = _binary_replace(*paths)  # pylint: disable=no-value-for-parameter
             if bdiff:
                 ret = bdiff
             else:
                 if show_filenames:
-                    args.extend(files)
-                ret = ''.join(
-                    difflib.unified_diff(
-                        *salt.utils.data.decode(args)
-                    )
-                )
+                    args.extend(paths)
+                ret = __utils__['stringutils.get_diff'](*args)
         return ret
     return ''
 
