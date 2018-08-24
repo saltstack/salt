@@ -4944,7 +4944,7 @@ def tag(cwd,
         )
     command.extend(formatted_opts)
     command.append(name)
-    if not '-d' in formatted_opts and not '--delete' in formatted_opts:
+    if '-d' not in formatted_opts and '--delete' not in formatted_opts:
         command.append(ref)
     return _git_run(command,
                     cwd=cwd,

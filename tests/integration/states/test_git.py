@@ -23,7 +23,7 @@ from tests.support.paths import TMP
 import salt.utils.files
 import salt.utils.path
 from salt.utils.versions import LooseVersion as _LooseVersion
-from salt.ext.six.moves.urllib.parse import urlparse
+from salt.ext.six.moves.urllib.parse import urlparse  # pylint: disable=no-name-in-module
 
 TEST_REPO = 'https://github.com/saltstack/salt-test-repo.git'
 
