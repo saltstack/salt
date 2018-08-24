@@ -1167,6 +1167,13 @@ class LowDataAdapter(object):
             if token:
                 chunk['token'] = token
 
+            if 'token' in chunk:
+                # Make sure that auth token is hex
+                try:
+                    int(chunk['token'], 16)
+                except (TypeError, ValueError):
+                    raise cherrypy.HTTPError(401, 'Invalid token')
+
             if client:
                 chunk['client'] = client
 
@@ -2167,7 +2174,11 @@ class Events(object):
 
         :return bool: True if valid, False if not valid.
         '''
-        if auth_token is None:
+        # Make sure that auth token is hex. If it's None, or something other
+        # than hex, this will raise a ValueError.
+        try:
+            int(auth_token, 16)
+        except ValueError:
             return False
 
         # First check if the given token is in our session table; if so it's a
