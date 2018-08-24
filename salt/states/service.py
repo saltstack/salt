@@ -437,15 +437,14 @@ def running(name,
         ret['comment'] = 'Service {0} is set to start'.format(name)
         return ret
 
-    if salt.utils.platform.is_windows():
-        if enable is True:
-            ret.update(_enable(name, False, result=False, **kwargs))
-
     # Conditionally add systemd-specific args to call to service.start
     start_kwargs, warnings = \
         _get_systemd_only(__salt__['service.start'], locals())
     if warnings:
         ret.setdefault('warnings', []).extend(warnings)
+
+    if salt.utils.platform.is_windows() and kwargs.get('timeout', False):
+        start_kwargs.update({'timeout': kwargs.get('timeout')})
 
     try:
         func_ret = __salt__['service.start'](name, **start_kwargs)
@@ -589,6 +588,9 @@ def dead(name,
     stop_kwargs, warnings = _get_systemd_only(__salt__['service.stop'], kwargs)
     if warnings:
         ret.setdefault('warnings', []).extend(warnings)
+
+    if salt.utils.platform.is_windows() and kwargs.get('timeout', False):
+        stop_kwargs.update({'timeout': kwargs.get('timeout')})
 
     func_ret = __salt__['service.stop'](name, **stop_kwargs)
     if not func_ret:
