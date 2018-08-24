@@ -30,7 +30,7 @@ Example file system layout:
             pkg_and_mods.tst
             config.tst
 
-Example1:
+Example 1:
 
 .. code-block:: yaml
 
@@ -42,7 +42,7 @@ Example1:
       assertion: assertEqual
       expected-return:  'hello'
 
-Example2:
+Example 2:
 
 .. code-block:: jinja
 
@@ -242,6 +242,7 @@ def _render_file(file_path):
     log.info("rendered: %s", rendered)
     return rendered
 
+
 @memoize
 def _is_valid_module(module):
     '''
@@ -257,6 +258,7 @@ def _get_auto_update_cache_value():
     '''
     __salt__['config.get']('auto_update_master_cache')
     return True
+
 
 @memoize
 def _is_valid_function(module_name, function):
