@@ -19,8 +19,8 @@ Module to provide redis functionality to Salt
 from __future__ import absolute_import, unicode_literals, print_function
 from salt.ext.six.moves import zip
 from salt.ext import six
-from salt.utils import clean_kwargs
 from datetime import datetime
+import salt.utils.args
 
 # Import third party libs
 try:
@@ -396,7 +396,7 @@ def hmset(key, **fieldsvals):
     database = fieldsvals.pop('db', None)
     password = fieldsvals.pop('password', None)
     server = _connect(host, port, database, password)
-    return server.hmset(key, clean_kwargs(**fieldsvals))
+    return server.hmset(key, salt.utils.args.clean_kwargs(**fieldsvals))
 
 
 def hset(key, field, value, host=None, port=None, db=None, password=None):
