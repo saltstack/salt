@@ -267,7 +267,6 @@ def _get_auto_update_cache_value():
     return True
 
 
-
 @memoize
 def _is_valid_function(module_name, function):
     '''
