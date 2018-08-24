@@ -29,6 +29,7 @@ from datetime import datetime
 # Import salt libs
 import salt.config
 import salt.cache
+import salt.defaults.exitcodes
 import salt.payload
 import salt.transport
 import salt.loader
@@ -1526,13 +1527,23 @@ class LocalClient(object):
                             and connected_minions \
                             and id_ not in connected_minions:
 
-                        yield {id_: {'out': 'no_return',
-                                     'ret': 'Minion did not return. [Not connected]'}}
+                        yield {
+                            id_: {
+                                'out': 'no_return',
+                                'ret': 'Minion did not return. [Not connected]',
+                                'retcode': salt.defaults.exitcodes.EX_GENERIC
+                            }
+                        }
                     else:
                         # don't report syndics as unresponsive minions
                         if not os.path.exists(os.path.join(self.opts['syndic_dir'], id_)):
-                            yield {id_: {'out': 'no_return',
-                                         'ret': 'Minion did not return. [No response]'}}
+                            yield {
+                                id_: {
+                                    'out': 'no_return',
+                                    'ret': 'Minion did not return. [No response]',
+                                    'retcode': salt.defaults.exitcodes.EX_GENERIC
+                                }
+                            }
                 else:
                     yield {id_: min_ret}
 

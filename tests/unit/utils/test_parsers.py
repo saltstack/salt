@@ -712,7 +712,7 @@ class SaltKeyOptionParserTestCase(LogSettingsParserTests):
         self.log_file = '/tmp/salt_key_parser_test'
         self.key_logfile = '/tmp/key_logfile'
         # Function to patch
-        self.config_func = 'salt.config.master_config'
+        self.config_func = 'salt.config.client_config'
 
         # Mock log setup
         self.setup_log()
