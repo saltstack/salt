@@ -261,3 +261,24 @@ class SaltSupportRunnerTestCase(TestCase):
         err_msg = "The UPS doesn't have a battery backup."
         caller().call = MagicMock(side_effect=Exception(err_msg))
         assert self.runner._local_call({}) == "Unhandled exception occurred: The UPS doesn't have a battery backup."
+
+    def test_local_runner(self):
+        '''
+        Test local runner.
+
+        :return:
+        '''
+        msg = 'Big to little endian conversion error'
+        runner = MagicMock()
+        runner().run = MagicMock(return_value=msg)
+
+        self.runner._get_runner = runner
+        self.runner.out = MagicMock()
+        assert self.runner._local_run({}) == msg
+
+        runner().run = MagicMock(side_effect=SystemExit)
+        assert self.runner._local_run({}) == 'Runner is not available at this moment'
+
+        err_msg = 'Trojan horse ran out of hay'
+        runner().run = MagicMock(side_effect=Exception(err_msg))
+        assert self.runner._local_run({}) == 'Unhandled exception occurred: Trojan horse ran out of hay'
