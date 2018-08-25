@@ -166,5 +166,6 @@ class SaltSupportCollectorTestCase(TestCase):
             self.collector.link(title='Backup Path', path='/path/to/backup.config')
             self.collector._flush_content()
 
+            assert archive.bz2open().addfile.call_count == 1
             assert (archive.bz2open().addfile.call_args[1]['fileobj'].read()
                     == to_bytes('Backup Path\n-----------\n\npath=/dev/null\n\n\n'))
