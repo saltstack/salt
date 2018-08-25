@@ -229,7 +229,7 @@ class SaltSupportRunnerTestCase(TestCase):
 
     def test_function_config(self):
         '''
-        Function config.
+        Test function config formation.
 
         :return:
         '''
