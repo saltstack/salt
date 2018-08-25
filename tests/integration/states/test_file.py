@@ -799,7 +799,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                 ret = self.run_state(
                     'file.directory', test=True, name=sym_dir,
                     follow_symlinks=True, mode=700)
-
             self.assertSaltTrueReturn(ret)
         finally:
             if os.path.isdir(tmp_dir):
@@ -2120,7 +2119,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             '#-- end salt managed zoneend --',
             '']
 
-        self.assertEqual(expected, contents)
+        self.assertEqual([line.encode('utf-8') for line in expected], contents)
 
     @with_tempdir()
     def test_issue_11003_immutable_lazy_proxy_sum(self, base_dir):
@@ -2212,6 +2211,10 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                    {korean_3}
                 - replace: True
                 - show_diff: True
+            '''.format(**locals()))
+
+        if not salt.utils.platform.is_windows():
+            template += textwrap.dedent('''\
             some-utf8-file-content-test:
               cmd.run:
                 - name: 'cat "{test_file}"'
@@ -2262,18 +2265,28 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                 ret['some-utf8-file-create2']['changes'],
                 {'diff': diff}
             )
-
-            # Confirm that the file has the expected contents as specified in
-            # the prior state.
-            self.assertEqual(
-                ret['some-utf8-file-content-test']['comment'],
-                'Command "cat "{0}"" run'.format(test_file_encoded)
-            )
-            self.assertEqual(
-                ret['some-utf8-file-content-test']['changes']['stdout'],
-                '\n'.join((korean_2, korean_1, korean_3))
-            )
-
+            if salt.utils.platform.is_windows():
+                import subprocess
+                import win32api
+                p = subprocess.Popen(salt.utils.to_str('type {}'.format(win32api.GetShortPathName(test_file))),
+                    shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                p.poll()
+                out = p.stdout.read()
+                self.assertEqual(
+                        out.decode('utf-8'),
+                        os.linesep.join((korean_2, korean_1, korean_3)) + os.linesep
+                )
+            else:
+                self.assertEqual(
+                    ret['some-utf8-file-content-test']['comment'],
+                    'Command "cat "{0}"" run'.format(
+                        test_file_encoded
+                    )
+                )
+                self.assertEqual(
+                    ret['some-utf8-file-content-test']['changes']['stdout'],
+                    '\n'.join((korean_2, korean_1, korean_3))
+                )
         finally:
             try:
                 os.remove(template_path)
