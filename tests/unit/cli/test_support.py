@@ -169,3 +169,37 @@ class SaltSupportCollectorTestCase(TestCase):
             assert archive.bz2open().addfile.call_count == 1
             assert (archive.bz2open().addfile.call_args[1]['fileobj'].read()
                     == to_bytes('Backup Path\n-----------\n\npath=/dev/null\n\n\n'))
+
+    @patch('salt.cli.support.collector.open', MagicMock(return_value='path=/dev/null'))
+    def test_archive_discard_section(self):
+        '''
+        Test discard a section from the archive.
+
+        :return:
+        '''
+        archive = MagicMock()
+        with patch('salt.cli.support.collector.tarfile.TarFile', archive):
+            self.collector.open()
+            self.collector.add('solar-interference')
+            self.collector.link(title='Thermal anomaly', path='/path/to/another/great.config')
+            self.collector.add('foo')
+            self.collector.link(title='Backup Path', path='/path/to/backup.config')
+            self.collector._flush_content()
+            assert archive.bz2open().addfile.call_count == 2
+            assert (archive.bz2open().addfile.mock_calls[0][2]['fileobj'].read()
+                    == to_bytes('Thermal anomaly\n---------------\n\npath=/dev/null\n\n\n'))
+            self.collector.close()
+
+        archive = MagicMock()
+        with patch('salt.cli.support.collector.tarfile.TarFile', archive):
+            self.collector.open()
+            self.collector.add('solar-interference')
+            self.collector.link(title='Thermal anomaly', path='/path/to/another/great.config')
+            self.collector.discard_current()
+            self.collector.add('foo')
+            self.collector.link(title='Backup Path', path='/path/to/backup.config')
+            self.collector._flush_content()
+            assert archive.bz2open().addfile.call_count == 2
+            assert (archive.bz2open().addfile.mock_calls[0][2]['fileobj'].read()
+                    == to_bytes('Backup Path\n-----------\n\npath=/dev/null\n\n\n'))
+            self.collector.close()
