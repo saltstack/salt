@@ -7,9 +7,16 @@ Windows Service module.
 
 # Import python libs
 from __future__ import absolute_import
+import logging
+import re
 import salt.utils
 import time
-import logging
+try:
+    from shlex import quote as _shlex_quote  # pylint: disable=E0611
+except ImportError:
+    from pipes import quote as _shlex_quote
+
+# Import salt libs
 from salt.exceptions import CommandExecutionError
 
 # Import 3rd party libs
@@ -141,6 +148,29 @@ def _status_wait(service_name, end_time, service_states):
         info_results = info(service_name)
 
     return info_results
+
+
+def _cmd_quote(cmd):
+    '''
+    Helper function to properly format the path to the binary for the service
+    Must be double quoted. No single quotes. For example:
+
+    ``"C:\Program Files\Path\to\bin.exe"``
+
+    Args:
+        cmd (str): Full path to the binary
+
+    Returns:
+        str: Properly quoted path to the binary
+    '''
+    # Remove all single and double quotes
+    pattern = re.compile('^(\\"|\').*|.*(\\"|\')$')
+    while pattern.match(cmd) is not None:
+        cmd = cmd.strip('"').strip('\'')
+    # Ensure the path to the binary is wrapped in double quotes to account for
+    # spaces in the path
+    cmd = '"{0}"'.format(cmd)
+    return cmd
 
 
 def get_enabled():
@@ -330,7 +360,7 @@ def info(name):
             None, None, win32service.SC_MANAGER_CONNECT)
     except pywintypes.error as exc:
         raise CommandExecutionError(
-            'Failed to connect to the SCM: {0}'.format(exc[2]))
+            'Failed to connect to the SCM: {0}'.format(exc.strerror))
 
     try:
         handle_svc = win32service.OpenService(
@@ -341,7 +371,7 @@ def info(name):
             win32service.SERVICE_QUERY_STATUS)
     except pywintypes.error as exc:
         raise CommandExecutionError(
-            'Failed To Open {0}: {1}'.format(name, exc[2]))
+            'Failed To Open {0}: {1}'.format(name, exc.strerror))
 
     try:
         config_info = win32service.QueryServiceConfig(handle_svc)
@@ -435,7 +465,8 @@ def start(name, timeout=90):
             .. versionadded:: 2017.7.9, 2018.3.4
 
     Returns:
-        bool: ``True`` if successful, otherwise ``False``
+        bool: ``True`` if successful, otherwise ``False``. Also returns ``True``
+            if the service is already started
 
     CLI Example:
 
@@ -443,9 +474,6 @@ def start(name, timeout=90):
 
         salt '*' service.start <service name>
     '''
-    if status(name):
-        return True
-
     # Set the service to manual if disabled
     if disabled(name):
         modify(name, start_type='Manual')
@@ -453,8 +481,10 @@ def start(name, timeout=90):
     try:
         win32serviceutil.StartService(name)
     except pywintypes.error as exc:
-        raise CommandExecutionError(
-            'Failed To Start {0}: {1}'.format(name, exc[2]))
+        if exc.winerror != 1056:
+            raise CommandExecutionError(
+                'Failed To Start {0}: {1}'.format(name, exc.strerror))
+        log.debug('Service "{0}" is running'.format(name))
 
     srv_status = _status_wait(service_name=name,
                               end_time=time.time() + int(timeout),
@@ -477,7 +507,8 @@ def stop(name, timeout=90):
             .. versionadded:: 2017.7.9, 2018.3.4
 
     Returns:
-        bool: ``True`` if successful, otherwise ``False``
+        bool: ``True`` if successful, otherwise ``False``. Also returns ``True``
+            if the service is already stopped
 
     CLI Example:
 
@@ -488,9 +519,10 @@ def stop(name, timeout=90):
     try:
         win32serviceutil.StopService(name)
     except pywintypes.error as exc:
-        if exc[0] != 1062:
+        if exc.winerror != 1062:
             raise CommandExecutionError(
-                'Failed To Stop {0}: {1}'.format(name, exc[2]))
+                'Failed To Stop {0}: {1}'.format(name, exc.strerror))
+        log.debug('Service "{0}" is not running'.format(name))
 
     srv_status = _status_wait(service_name=name,
                               end_time=time.time() + int(timeout),
@@ -747,7 +779,7 @@ def modify(name,
             win32service.SERVICE_QUERY_CONFIG)
     except pywintypes.error as exc:
         raise CommandExecutionError(
-            'Failed To Open {0}: {1}'.format(name, exc))
+            'Failed To Open {0}: {1}'.format(name, exc.strerror))
 
     config_info = win32service.QueryServiceConfig(handle_svc)
 
@@ -755,7 +787,8 @@ def modify(name,
 
     # Input Validation
     if bin_path is not None:
-        bin_path = bin_path.strip('"')
+        # shlex.quote the path to the binary
+        bin_path = _cmd_quote(bin_path)
         if exe_args is not None:
             bin_path = '{0} {1}'.format(bin_path, exe_args)
         changes['BinaryPath'] = bin_path
@@ -1149,8 +1182,8 @@ def create(name,
     if name in get_all():
         raise CommandExecutionError('Service Already Exists: {0}'.format(name))
 
-    # Input validation
-    bin_path = bin_path.strip('"')
+    # shlex.quote the path to the binary
+    bin_path = _cmd_quote(bin_path)
     if exe_args is not None:
         bin_path = '{0} {1}'.format(bin_path, exe_args)
 
@@ -1342,7 +1375,8 @@ def delete(name, timeout=90):
             .. versionadded:: 2017.7.9, 2018.3.4
 
     Returns:
-        bool: ``True`` if successful, otherwise ``False``
+        bool: ``True`` if successful, otherwise ``False``. Also returns ``True``
+            if the service is not present
 
     CLI Example:
 
@@ -1357,8 +1391,12 @@ def delete(name, timeout=90):
         handle_svc = win32service.OpenService(
             handle_scm, name, win32service.SERVICE_ALL_ACCESS)
     except pywintypes.error as exc:
-        raise CommandExecutionError(
-            'Failed to open {0}. {1}'.format(name, exc.strerror))
+        win32service.CloseServiceHandle(handle_scm)
+        if exc.winerror != 1060:
+            raise CommandExecutionError(
+                'Failed to open {0}. {1}'.format(name, exc.strerror))
+        log.debug('Service "{0}" is not present'.format(name))
+        return True
 
     try:
         win32service.DeleteService(handle_svc)
