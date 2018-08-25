@@ -217,7 +217,10 @@ class SaltSupportRunnerTestCase(TestCase):
         Set up test suite.
         :return:
         '''
+        self.archive_path = '/dev/null'
+        self.output_device = MagicMock()
         self.runner = SaltSupport()
+        self.runner.collector = SupportDataCollector(self.archive_path, self.output_device)
 
     def tearDown(self):
         '''
@@ -225,6 +228,8 @@ class SaltSupportRunnerTestCase(TestCase):
 
         :return:
         '''
+        del self.archive_path
+        del self.output_device
         del self.runner
 
     def test_function_config(self):
@@ -282,3 +287,15 @@ class SaltSupportRunnerTestCase(TestCase):
         err_msg = 'Trojan horse ran out of hay'
         runner().run = MagicMock(side_effect=Exception(err_msg))
         assert self.runner._local_run({}) == 'Unhandled exception occurred: Trojan horse ran out of hay'
+
+    @patch('salt.cli.support.intfunc', MagicMock(spec=[]))
+    def test_internal_function_call_stub(self):
+        '''
+        Test missing internal function call is handled accordingly.
+
+        :return:
+        '''
+        self.runner.out = MagicMock()
+        out = self.runner._internal_function_call({'fun': 'everythingisawesome',
+                                                   'arg': [], 'kwargs': {}})
+        assert out == 'Function everythingisawesome is not available'
