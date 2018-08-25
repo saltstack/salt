@@ -240,3 +240,24 @@ class SaltSupportRunnerTestCase(TestCase):
                                                                        'fun': '', 'kwarg': {},
                                                                        'description': msg,
                                                                        'cache_jobs': False, 'arg': []}
+
+    def test_local_caller(self):
+        '''
+        Test local caller.
+
+        :return:
+        '''
+        msg = 'Because of network lag due to too many people playing deathmatch'
+        caller = MagicMock()
+        caller().call = MagicMock(return_value=msg)
+
+        self.runner._get_caller = caller
+        self.runner.out = MagicMock()
+        assert self.runner._local_call({}) == msg
+
+        caller().call = MagicMock(side_effect=SystemExit)
+        assert self.runner._local_call({}) == 'Data is not available at this moment'
+
+        err_msg = "The UPS doesn't have a battery backup."
+        caller().call = MagicMock(side_effect=Exception(err_msg))
+        assert self.runner._local_call({}) == "Unhandled exception occurred: The UPS doesn't have a battery backup."
