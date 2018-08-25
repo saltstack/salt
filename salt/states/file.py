@@ -2600,7 +2600,9 @@ def managed(name,
                     'contents_grains is not a string or list of strings, and '
                     'is not binary data. SLS is likely malformed.'
                 )
-            contents = os.linesep.join(validated_contents)
+            contents = os.linesep.join(
+                [line.rstrip('\n').rstrip('\r') for line in validated_contents]
+            )
             if contents_newline and not contents.endswith(os.linesep):
                 contents += os.linesep
         if template:
@@ -3159,7 +3161,7 @@ def directory(name,
                   perms: full_control
             - win_inheritance: False
     '''
-    name = os.path.expanduser(name)
+    name = os.path.normcase(os.path.expanduser(name))
     ret = {'name': name,
            'changes': {},
            'pchanges': {},
@@ -3690,7 +3692,9 @@ def recurse(name,
         # "env" is not supported; Use "saltenv".
         kwargs.pop('env')
 
-    name = salt.utils.data.decode(os.path.expanduser(name))
+    name = salt.utils.data.decode(
+        os.path.normcase(os.path.expanduser(name))
+    )
 
     user = _test_owner(kwargs, user=user)
     if salt.utils.platform.is_windows():
