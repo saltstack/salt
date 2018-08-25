@@ -2097,7 +2097,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             '#-- end salt managed zoneend --',
             '']
 
-        self.assertEqual([line.encode('utf-8') for line in expected], contents)
+        self.assertEqual([salt.utils.stringutils.to_str(line) for line in expected], contents)
 
     @with_tempdir()
     def test_issue_11003_immutable_lazy_proxy_sum(self, base_dir):
