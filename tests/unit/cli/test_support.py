@@ -300,6 +300,21 @@ class SaltSupportRunnerTestCase(TestCase):
                                                    'arg': [], 'kwargs': {}})
         assert out == 'Function everythingisawesome is not available'
 
+    def test_internal_function_call(self):
+        '''
+        Test missing internal function call is handled accordingly.
+
+        :return:
+        '''
+        msg = 'Internet outage'
+        intfunc = MagicMock()
+        intfunc.everythingisawesome = MagicMock(return_value=msg)
+        self.runner.out = MagicMock()
+        with patch('salt.cli.support.intfunc', intfunc):
+            out = self.runner._internal_function_call({'fun': 'everythingisawesome',
+                                                       'arg': [], 'kwargs': {}})
+            assert out == msg
+
     def test_get_action(self):
         '''
         Test action meta gets parsed.
