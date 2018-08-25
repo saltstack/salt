@@ -9,7 +9,7 @@ from tests.support.unit import skipIf, TestCase
 from tests.support.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
 
 from salt.cli.support.console import IndentOutput
-from salt.cli.support.collector import SupportDataCollector
+from salt.cli.support.collector import SupportDataCollector, SaltSupport
 from salt.utils.color import get_colors
 from salt.utils.stringutils import to_bytes
 import salt.exceptions
@@ -203,3 +203,40 @@ class SaltSupportCollectorTestCase(TestCase):
             assert (archive.bz2open().addfile.mock_calls[0][2]['fileobj'].read()
                     == to_bytes('Backup Path\n-----------\n\npath=/dev/null\n\n\n'))
             self.collector.close()
+
+
+@skipIf(not bool(pytest), 'Pytest needs to be installed')
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+class SaltSupportRunnerTestCase(TestCase):
+    '''
+    Test runner class.
+    '''
+
+    def setUp(self):
+        '''
+        Set up test suite.
+        :return:
+        '''
+        self.runner = SaltSupport()
+
+    def tearDown(self):
+        '''
+        Tear down.
+
+        :return:
+        '''
+        del self.runner
+
+    def test_function_config(self):
+        '''
+        Function config.
+
+        :return:
+        '''
+        self.runner.config = {}
+        msg = 'Electromagnetic energy loss'
+        assert self.runner._setup_fun_config({'description': msg}) == {'print_metadata': False,
+                                                                       'file_client': 'local',
+                                                                       'fun': '', 'kwarg': {},
+                                                                       'description': msg,
+                                                                       'cache_jobs': False, 'arg': []}
