@@ -299,3 +299,16 @@ class SaltSupportRunnerTestCase(TestCase):
         out = self.runner._internal_function_call({'fun': 'everythingisawesome',
                                                    'arg': [], 'kwargs': {}})
         assert out == 'Function everythingisawesome is not available'
+
+    def test_get_action(self):
+        '''
+        Test action meta gets parsed.
+
+        :return:
+        '''
+        action_meta = {'run:jobs.list_jobs_filter': {'info': 'List jobs filter', 'args': [1]}}
+        assert self.runner._get_action(action_meta) == ('List jobs filter', None,
+                                                        {'fun': 'run:jobs.list_jobs_filter', 'kwargs': {}, 'arg': [1]})
+        action_meta = {'user.info': {'info': 'Information about "usbmux"', 'args': ['usbmux']}}
+        assert self.runner._get_action(action_meta) == ('Information about "usbmux"', None,
+                                                        {'fun': 'user.info', 'kwargs': {}, 'arg': ['usbmux']})
