@@ -46,6 +46,7 @@ class SaltSupportIndentOutputTestCase(TestCase):
         del self.message
         del self.device
         del self.iout
+        del self.colors
 
     def test_standard_output(self):
         '''
@@ -104,6 +105,8 @@ class SaltSupportCollectorTestCase(TestCase):
         :return:
         '''
         del self.collector
+        del self.archive_path
+        del self.output_device
 
     @patch('salt.cli.support.collector.tarfile.TarFile', MagicMock())
     def test_archive_open(self):
