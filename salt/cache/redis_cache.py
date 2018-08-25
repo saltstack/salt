@@ -231,8 +231,7 @@ def _get_redis_server(opts=None):
 
     if opts['cluster_mode']:
         REDIS_SERVER = StrictRedisCluster(startup_nodes=opts['startup_nodes'],
-                                          skip_full_coverage_check=opts['skip_full_coverage_check'],
-                                          decode_responses=True)
+                                          skip_full_coverage_check=opts['skip_full_coverage_check'])
     else:
         REDIS_SERVER = redis.StrictRedis(opts['host'],
                                    opts['port'],
