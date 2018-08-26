@@ -1,3 +1,6 @@
+integration.cli.test_batch
+integration.cli.test_custom_module
+integration.cli.test_grains
 integration.client.test_runner
 integration.client.test_standard
 integration.grains.test_core
