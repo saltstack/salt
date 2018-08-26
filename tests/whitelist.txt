@@ -9,6 +9,10 @@ integration.doc.test_man
 integration.grains.test_core
 integration.loader.test_ext_grains
 integration.loader.test_ext_modules
+integration.logging.test_jid_logging
+integration.minion.test_blackout
+integration.minion.test_pillar
+integration.minion.test_timeout
 integration.modules.test_aliases
 integration.modules.test_win_autoruns
 integration.modules.test_beacons
