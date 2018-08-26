@@ -43,7 +43,7 @@ class GrainsTargetingTest(ShellCase):
         if salt.utils.is_windows():
              ret = self.run_salt('-G "os:{0}" test.ping'.format(os_grain))
         else:
-             ret = self.run_salt('-G \'os:{0}\' test.ping'.format(os_grain))
+            ret = self.run_salt('-G \'os:{0}\' test.ping'.format(os_grain))
         self.assertEqual(sorted(ret), sorted(test_ret))
 
     def test_grains_targeting_minion_id_running(self):
