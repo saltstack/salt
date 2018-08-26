@@ -1,8 +1,10 @@
 integration.cli.test_batch
 integration.cli.test_custom_module
 integration.cli.test_grains
+integration.client.test_kwarg
 integration.client.test_runner
 integration.client.test_standard
+integration.client.test_syndic
 integration.grains.test_core
 integration.loader.test_ext_grains
 integration.loader.test_ext_modules
