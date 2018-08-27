@@ -2,6 +2,7 @@
 
 # Import python libs
 from __future__ import absolute_import
+import os
 import json
 
 # Import salt libs
@@ -155,6 +156,32 @@ class TestRun(cptc.BaseRestCherryPyTest):
         Test the run URL with incorrect token
         '''
         cmd = dict(self.low, **{'token': 'bad'})
+        body = urlencode(cmd)
+
+        request, response = self.request('/run', method='POST', body=body,
+            headers={
+                'content-type': 'application/x-www-form-urlencoded'
+        })
+        assert response.status == '401 Unauthorized'
+
+    def test_run_pathname_token(self):
+        '''
+        Test the run URL with path that exists in token
+        '''
+        cmd = dict(self.low, **{'token': os.path.join('etc', 'passwd')})
+        body = urlencode(cmd)
+
+        request, response = self.request('/run', method='POST', body=body,
+            headers={
+                'content-type': 'application/x-www-form-urlencoded'
+        })
+        assert response.status == '401 Unauthorized'
+
+    def test_run_pathname_not_exists_token(self):
+        '''
+        Test the run URL with path that does not exist in token
+        '''
+        cmd = dict(self.low, **{'token': os.path.join('tmp', 'doesnotexist')})
         body = urlencode(cmd)
 
         request, response = self.request('/run', method='POST', body=body,

@@ -2089,7 +2089,7 @@ class Events(object):
         # than hex, this will raise a ValueError.
         try:
             int(auth_token, 16)
-        except ValueError:
+        except (TypeError, ValueError):
             return False
 
         # First check if the given token is in our session table; if so it's a
