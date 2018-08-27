@@ -17,12 +17,11 @@ integration.minion.test_timeout
 integration.modules.test_aliases
 integration.modules.test_archive
 integration.modules.test_beacons
+integration.modules.test_cmdmod
 integration.modules.test_config
 integration.modules.test_cp
-integration.modules.test_cmdmod
 integration.modules.test_data
 integration.modules.test_disk
-integration.modules.test_win_firewall
 integration.modules.test_git
 integration.modules.test_grains
 integration.modules.test_groupadd
@@ -43,6 +42,7 @@ integration.modules.test_test
 integration.modules.test_useradd
 integration.modules.test_win_autoruns
 integration.modules.test_win_dns_client
+integration.modules.test_win_firewall
 integration.modules.test_win_pkg
 integration.reactor.test_reactor
 integration.renderers.test_pydsl
