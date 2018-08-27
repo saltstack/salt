@@ -11,10 +11,6 @@ import logging
 import re
 import salt.utils
 import time
-try:
-    from shlex import quote as _shlex_quote  # pylint: disable=E0611
-except ImportError:
-    from pipes import quote as _shlex_quote
 
 # Import salt libs
 from salt.exceptions import CommandExecutionError
@@ -151,7 +147,7 @@ def _status_wait(service_name, end_time, service_states):
 
 
 def _cmd_quote(cmd):
-    '''
+    r'''
     Helper function to properly format the path to the binary for the service
     Must be wrapped in double quotes to account for paths that have spaces. For
     example:
