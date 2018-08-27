@@ -35,7 +35,7 @@ def __virtual__():
     return __virtualname__
 
 
-def doc(*args, **kwargs):
+def doc(*args):
     '''
     Return the docstrings for all modules. Optionally, specify a module or a
     function to narrow the selection.
@@ -44,12 +44,6 @@ def doc(*args, **kwargs):
     reading.
 
     Multiple modules/functions can be specified.
-
-    type : modules
-        The type of function for which documentation should be retrieved. Can
-        be one of ``modules``, ``states``, or ``utils``.
-
-        .. versionadded:: Neon
 
     CLI Example:
 
@@ -69,39 +63,10 @@ def doc(*args, **kwargs):
         salt '*' sys.doc 'sys.*'
         salt '*' sys.doc 'sys.list_*'
     '''
-    kwargs = salt.utils.args.clean_kwargs(**kwargs)
-    try:
-        type_ = kwargs.pop('type', 'modules').lower()
-    except AttributeError:
-        raise CommandExecutionError('Invalid type \'{0}\''.format(type_))
-    if kwargs:
-        salt.utils.args.invalid_kwargs(kwargs)
-
-    if type_ == 'states':
-        # Execution modules do not get __states__, so they will need to be
-        # loaded here.
-        states = salt.loader.states(
-            opts=__opts__,
-            functions=__salt__,
-            utils=__utils__,
-            serializers={})
-    else:
-        # Prevent a NameError below
-        states = {}
-
-    try:
-        dunder_dict = {
-            'modules': __salt__,
-            'states': states,
-            'utils': __utils__,
-        }.get(type_, __salt__)
-    except KeyError:
-        raise CommandExecutionError('Invalid type \'{0}\''.format(type_))
-
     docs = {}
     if not args:
-        for fun in dunder_dict:
-            docs[fun] = dunder_dict[fun].__doc__
+        for fun in __salt__:
+            docs[fun] = __salt__[fun].__doc__
         return _strip_rst(docs)
 
     for module in args:
@@ -116,13 +81,13 @@ def doc(*args, **kwargs):
         else:
             target_mod = ''
         if _use_fnmatch:
-            for fun in fnmatch.filter(dunder_dict, target_mod):
-                docs[fun] = dunder_dict[fun].__doc__
+            for fun in fnmatch.filter(__salt__, target_mod):
+                docs[fun] = __salt__[fun].__doc__
         else:
 
-            for fun in dunder_dict:
+            for fun in __salt__:
                 if fun == module or fun.startswith(target_mod):
-                    docs[fun] = dunder_dict[fun].__doc__
+                    docs[fun] = __salt__[fun].__doc__
     return _strip_rst(docs)
 
 
