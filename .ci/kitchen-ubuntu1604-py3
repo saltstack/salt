@@ -8,6 +8,7 @@ pipeline {
         SALT_KITCHEN_PLATFORMS = "/var/jenkins/workspace/platforms.yml"
         SALT_KITCHEN_DRIVER = "/var/jenkins/workspace/driver.yml"
         PATH = "/usr/local/rbenv/shims/:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/root/bin:/root/bin"
+        NO_SHOW_PROC = "True"
         RBENV_VERSION = "2.4.2"
         TEST_SUITE = "py3"
         TEST_PLATFORM = "ubuntu-1604"
