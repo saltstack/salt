@@ -460,7 +460,7 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
 def _process_stack_cfg(cfg, stack, minion_id, pillar, namespace, config):
     basedir, filename = os.path.split(cfg)
     lookup = TemplateLookup(directories=[basedir])
-    tops = lookup.get_template(filename).render(
+    data = lookup.get_template(filename).render(
         __opts__=__opts__,
         __salt__=__salt__,
         __grains__=__grains__,
@@ -468,7 +468,7 @@ def _process_stack_cfg(cfg, stack, minion_id, pillar, namespace, config):
         pillar=pillar,
         stack=stack,
     )
-    for line in _parse_top_cfg(tops):
+    for line in _parse_top_cfg(data, cfg):
         dirs = [basedir]
         dirs += ["/"] if line.startswith("/") else []
         lookup = TemplateLookup(directories=dirs)
@@ -586,14 +586,16 @@ def _merge_list(stack, obj):
         return stack + obj
 
 
-def _parse_top_cfg(content):
+def _parse_top_cfg(content, filename):
     """
     Allow top_cfg to be YAML
     """
     try:
         obj = salt.utils.yaml.safe_load(content)
         if isinstance(obj, list):
+            log.debug("MakoStack cfg `{}` parsed as YAML".format(filename))
             return obj
     except Exception as err:  # pylint: disable=broad-except
         pass
+    log.debug("MakoStack cfg `{}` parsed as plain text".format(filename))
     return content.splitlines()
