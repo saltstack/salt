@@ -4933,9 +4933,9 @@ def tag(cwd,
     cwd = _expand_path(cwd, user)
     command = ['git'] + _format_git_opts(git_opts)
     command.append('tag')
-    # Don't add options for annotated commits, since we'll automatically add
-    # them if a message was passed. This keeps us from blocking on input, since
-    # passing an annotated command
+    # Don't add options for annotated tags, since we'll automatically add them
+    # if a message was passed. This keeps us from blocking on input, as passing
+    # these options without a separate message option would launch an editor.
     formatted_opts = [x for x in _format_opts(opts) if x not in ('-a', '--annotate')]
     # Make sure that the message was not passed in the opts
     if any(x == '-m' or '--message' in x for x in formatted_opts):
