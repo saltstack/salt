@@ -15,6 +15,7 @@ integration.minion.test_pillar
 integration.minion.test_timeout
 integration.modules.test_aliases
 integration.modules.test_autoruns
+integration.modules.test_archive
 integration.modules.test_beacons
 integration.modules.test_config
 integration.modules.test_cp
@@ -40,6 +41,7 @@ integration.modules.test_sysmod
 integration.modules.test_system
 integration.modules.test_test
 integration.modules.test_useradd
+integration.modules.test_win_autoruns
 integration.modules.test_win_dns_client
 integration.modules.test_win_pkg
 integration.reactor.test_reactor
