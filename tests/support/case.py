@@ -38,7 +38,6 @@ from tests.support.mixins import AdaptedConfigurationTestCaseMixin, SaltClientTe
 from tests.support.paths import ScriptPathMixin, INTEGRATION_TEST_DIR, CODE_DIR, PYEXEC, SCRIPT_DIR
 
 # Import 3rd-party libs
-import salt.utils
 import salt.ext.six as six
 from salt.ext.six.moves import cStringIO  # pylint: disable=import-error
 
