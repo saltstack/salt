@@ -4119,7 +4119,12 @@ def get_managed(
                 urlparsed_source.netloc, urlparsed_source.path).rstrip(os.sep)
         unix_local_source = parsed_scheme in ('file', '')
 
-        if unix_local_source:
+        if parsed_scheme == '':
+            parsed_path = sfn = source
+            if not os.path.exists(sfn):
+                msg = 'Local file source {0} does not exist'.format(sfn)
+                return '', {}, msg
+        elif parsed_scheme == 'file':
             sfn = parsed_path
             if not os.path.exists(sfn):
                 msg = 'Local file source {0} does not exist'.format(sfn)
@@ -4498,7 +4503,10 @@ def check_perms(name, ret, user, group, mode, attrs=None, follow_symlinks=False)
     is_dir = os.path.isdir(name)
     is_link = os.path.islink(name)
     if not salt.utils.platform.is_windows() and not is_dir and not is_link:
-        lattrs = lsattr(name)
+        try:
+            lattrs = lsattr(name)
+        except SaltInvocationError:
+            lsattrs = None
         if lattrs is not None:
             # List attributes on file
             perms['lattrs'] = ''.join(lattrs.get(name, ''))
