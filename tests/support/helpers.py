@@ -25,6 +25,7 @@ import socket
 import subprocess
 import sys
 import tempfile
+import textwrap
 import threading
 import time
 import tornado.ioloop
@@ -1565,3 +1566,17 @@ def this_user():
     if salt.utils.is_windows():
         return salt.utils.win_functions.get_current_user(with_domain=False)
     return pwd.getpwuid(os.getuid())[0]
+
+
+def dedent(text, linesep=os.linesep):
+    '''
+    A wrapper around textwrap.dedent that also sets line endings.
+    '''
+    linesep = salt.utils.to_unicode(linesep)
+    unicode_text = textwrap.dedent(salt.utils.to_unicode(text))
+    clean_text = linesep.join(unicode_text.splitlines())
+    if unicode_text.endswith(u'\n'):
+        clean_text += linesep
+    if not isinstance(text, six.text_type):
+        return salt.utils.to_bytes(clean_text)
+    return clean_text
