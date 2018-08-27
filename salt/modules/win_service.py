@@ -153,7 +153,8 @@ def _status_wait(service_name, end_time, service_states):
 def _cmd_quote(cmd):
     '''
     Helper function to properly format the path to the binary for the service
-    Must be double quoted. No single quotes. For example:
+    Must be wrapped in double quotes to account for paths that have spaces. For
+    example:
 
     ``"C:\Program Files\Path\to\bin.exe"``
 
@@ -163,7 +164,7 @@ def _cmd_quote(cmd):
     Returns:
         str: Properly quoted path to the binary
     '''
-    # Remove all single and double quotes
+    # Remove all single and double quotes from the beginning and the end
     pattern = re.compile('^(\\"|\').*|.*(\\"|\')$')
     while pattern.match(cmd) is not None:
         cmd = cmd.strip('"').strip('\'')
