@@ -681,12 +681,12 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         self.assertEqual(config['id'], 'king_bob')
 
     @with_tempdir()
-    def test_remove_domain(self, tempdir):
+    def test_minion_id_remove_domain(self, tempdir):
         '''
-        This tests that the value of `remove_domain` is suppressed in a generated minion id,
+        This tests that the value of `minion_id_remove_domain` is suppressed in a generated minion id,
         effectivly generating a hostname minion_id.
         Example:
-        remove_domain: foo.org
+        minion_id_remove_domain: foo.org
         Fully qualified domain name is king_bob.foo.org
         result in the generated minion_id king_bob
         '''
@@ -697,14 +697,14 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 id_function:
                   test.echo:
                     text: king_bob.foo.org
-                remove_domain: foo.org
+                minion_id_remove_domain: foo.org
                 minion_id_caching: False
             '''))
 
         # Let's load the configuration
         config = sconfig.minion_config(minion_config)
 
-        self.assertEqual(config['remove_domain'], 'foo.org')
+        self.assertEqual(config['minion_id_remove_domain'], 'foo.org')
         self.assertEqual(config['id'], 'king_bob')
 
     @with_tempdir()
