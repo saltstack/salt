@@ -106,9 +106,11 @@ class ArchiveTest(ModuleCase):
         def normdir(path):
             normdir = os.path.normcase(os.path.abspath(path))
             if salt.utils.platform.is_windows():
+                # Remove the drive portion of path
                 if len(normdir) >= 2 and normdir[1] == ':':
                     normdir = normdir.split(':', 1)[1]
             normdir = normdir.lstrip(os.path.sep)
+            # Unzipped paths might have unix line endings
             if unix_sep:
                 normdir = normdir.replace(os.path.sep, '/')
             return normdir
