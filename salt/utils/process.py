@@ -293,12 +293,12 @@ class ThreadPool(object):
                  queue_size=0,
                  opts=None):
         if not opts:
-             opts = salt.config.master_config(
-                 os.environ.get(
-                     'SALT_MASTER_CONFIG',
-                     os.path.join(syspaths.CONFIG_DIR, 'master')
-                 )
-             )
+            opts = salt.config.master_config(
+                os.environ.get(
+                    'SALT_MASTER_CONFIG',
+                    os.path.join(syspaths.CONFIG_DIR, 'master')
+                )
+            )
         # if no count passed, default to number of CPUs
         if num_threads is None:
             num_threads = multiprocessing.cpu_count()
