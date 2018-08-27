@@ -238,13 +238,13 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         Execute a script with the given argument string
         '''
 
-        import salt.utils.platform
+        import salt.utils
 
         script_path = self.get_script_path(script)
         if not os.path.isfile(script_path):
             return False
 
-        if salt.utils.platform.is_windows():
+        if salt.utils.is_windows():
             cmd = 'python '
         else:
             cmd = 'PYTHONPATH='
