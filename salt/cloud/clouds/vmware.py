@@ -701,6 +701,19 @@ def _get_size_spec(device, size_gb=None, size_kb=None):
     return disk_spec
 
 
+def _iter_disk_unit_number(unit_number):
+    '''
+    Apparently vmware reserves ID 7 for SCSI controllers, so we cannot specify
+    hard drives for 7.
+
+    Skip 7 to make sure.
+    '''
+    unit_number += 1
+    if unit_number == 7:
+        unit_number += 1
+    return unit_number
+
+
 def _manage_devices(devices, vm=None, container_ref=None, new_vm_name=None):
     unit_number = 0
     bus_number = 0
@@ -722,7 +735,7 @@ def _manage_devices(devices, vm=None, container_ref=None, new_vm_name=None):
                 # this is a hard disk
                 if 'disk' in list(devices.keys()):
                     # there is atleast one disk specified to be created/configured
-                    unit_number += 1
+                    unit_number = _iter_disk_unit_number(unit_number)
                     existing_disks_label.append(device.deviceInfo.label)
                     if device.deviceInfo.label in list(devices['disk'].keys()):
                         disk_spec = None
@@ -899,7 +912,7 @@ def _manage_devices(devices, vm=None, container_ref=None, new_vm_name=None):
                         break
 
             device_specs.append(disk_spec)
-            unit_number += 1
+            unit_number = _iter_disk_unit_number(unit_number)
 
     if 'cd' in list(devices.keys()):
         cd_drives_to_create = list(set(devices['cd'].keys()) - set(existing_cd_drives_label))
