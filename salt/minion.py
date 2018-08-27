@@ -1422,7 +1422,6 @@ class Minion(MinionBase):
                 def handle_timeout(*_):
                     log.info('fire_master failed: master could not be contacted. Request timed out.')
                     # very likely one of the masters is dead, status.master will flush it
-
                     self.functions['status.master'](self.opts['master'])
                     return True
                 timeout_handler = handle_timeout
