@@ -126,7 +126,7 @@ The corresponding Pillar top file would look like this:
 
 .. code-block:: yaml
 
-    {{saltenv}}:
+    "{{saltenv}}":
       '*':
         - bar
 
