@@ -14,9 +14,9 @@ import fnmatch
 # Import salt libs
 import salt.minion
 import salt.fileclient
+import salt.utils.data
 import salt.utils.files
 import salt.utils.gzip_util
-import salt.utils.locales
 import salt.utils.path
 import salt.utils.templates
 import salt.utils.url
@@ -470,8 +470,8 @@ def cache_file(path, saltenv='base', source_hash=None):
         It may be necessary to quote the URL when using the querystring method,
         depending on the shell being used to run the command.
     '''
-    path = salt.utils.locales.sdecode(path)
-    saltenv = salt.utils.locales.sdecode(saltenv)
+    path = salt.utils.data.decode(path)
+    saltenv = salt.utils.data.decode(saltenv)
 
     contextkey = '{0}_|-{1}_|-{2}'.format('cp.cache_file', path, saltenv)
 
@@ -812,6 +812,7 @@ def push(path, keep_symlinks=False, upload_path=None, remove_source=False):
     load = {'cmd': '_file_recv',
             'id': __opts__['id'],
             'path': load_path_list,
+            'size': os.path.getsize(path),
             'tok': auth.gen_token(b'salt')}
     channel = salt.transport.Channel.factory(__opts__)
     with salt.utils.files.fopen(path, 'rb') as fp_:

@@ -715,8 +715,8 @@ def repo_present(
                         ret['result'] = None
                     else:
                         result = __salt__['github.add_team_repo'](name, team_name,
-                                                                  permission,
-                                                                  profile=profile)
+                                                                  profile=profile,
+                                                                  permission=permission)
                         if result:
                             ret['changes'][team_name] = team_change
                         else:

@@ -41,6 +41,11 @@ Grains data can be listed by using the 'grains.items' module:
 
 .. _static-custom-grains:
 
+Using grains in a state
+=======================
+
+To use a grain in a state you can access it via `{{ grains['key'] }}`.
+
 Grains in the Minion Config
 ===========================
 
@@ -124,9 +129,9 @@ Writing Grains
 The grains are derived by executing all of the "public" functions (i.e. those
 which do not begin with an underscore) found in the modules located in the
 Salt's core grains code, followed by those in any custom grains modules. The
-functions in a grains module must return a Python :ref:`dict
-<python2:typesmapping>`, where the dictionary keys are the names of grains, and
-each key's value is that value for that grain.
+functions in a grains module must return a :ref:`Python dictionary
+<typesmapping>`, where the dictionary keys are the names of grains, and each
+key's value is that value for that grain.
 
 Custom grains modules should be placed in a subdirectory named ``_grains``
 located under the :conf_master:`file_roots` specified by the master config
@@ -268,6 +273,11 @@ by custom grains modules synced to minions that have the same name as a core
 grain will override that core grain. Similarly, grains from
 ``/etc/salt/minion`` override both core grains and custom grain modules, and
 grains in ``_grains`` will override *any* grains of the same name.
+
+For custom grains, if the function takes an argument ``grains``, then the
+previously rendered grains will be passed in.  Because the rest of the grains
+could be rendered in any order, the only grains that can be relied upon to be
+passed in are ``core`` grains. This was added in the Fluorine release.
 
 
 Examples of Grains

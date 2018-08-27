@@ -12,7 +12,7 @@ A simple example to execute a command:
 .. code-block:: yaml
 
     # Store the current date in a file
-    date > /tmp/salt-run:
+    'date > /tmp/salt-run':
       cmd.run
 
 Only run if another execution failed, in this case truncate syslog if there is
@@ -20,7 +20,7 @@ no disk space:
 
 .. code-block:: yaml
 
-    > /var/log/messages:
+    '> /var/log/messages/:
       cmd.run:
         - unless: echo 'foo' > /tmp/.test && rm -f /tmp/.test
 
@@ -33,11 +33,12 @@ touch /tmp/foo if it does not exist:
       cmd.run:
         - creates: /tmp/foo
 
-``creates`` also accepts a list of files:
+``creates`` also accepts a list of files, in which case this state will
+run if **any** of the files does not exist:
 
 .. code-block:: yaml
 
-    echo 'foo' | tee /tmp/bar > /tmp/baz:
+    "echo 'foo' | tee /tmp/bar > /tmp/baz":
       cmd.run:
         - creates:
           - /tmp/bar
@@ -55,7 +56,7 @@ In situations like this try the following:
 
     run_installer:
       cmd.run:
-        - name: /tmp/installer.bin  > /dev/null 2>&1
+        - name: /tmp/installer.bin > /dev/null 2>&1
 
 Salt determines whether the ``cmd`` state is successfully enforced based on the exit
 code returned by the command. If the command returns a zero exit code, then salt
@@ -472,7 +473,7 @@ def wait(name,
 
         One can still use the existing $PATH by using a bit of Jinja:
 
-        .. code-block:: yaml
+        .. code-block:: jinja
 
             {% set current_path = salt['environ.get']('PATH', '/bin:/usr/bin') %}
 
@@ -490,7 +491,9 @@ def wait(name,
         a state. For more information, see the :ref:`stateful-argument` section.
 
     creates
-        Only run if the file or files specified by ``creates`` do not exist.
+        Only run if the file specified by ``creates`` do not exist. If you
+        specify a list of files then this state will only run if **any** of
+        the files does not exist.
 
         .. versionadded:: 2014.7.0
 
@@ -616,7 +619,7 @@ def wait_script(name,
 
         One can still use the existing $PATH by using a bit of Jinja:
 
-        .. code-block:: yaml
+        .. code-block:: jinja
 
             {% set current_path = salt['environ.get']('PATH', '/bin:/usr/bin') %}
 
@@ -743,7 +746,7 @@ def run(name,
 
         One can still use the existing $PATH by using a bit of Jinja:
 
-        .. code-block:: yaml
+        .. code-block:: jinja
 
             {% set current_path = salt['environ.get']('PATH', '/bin:/usr/bin') %}
 
@@ -801,7 +804,9 @@ def run(name,
         .. versionadded:: 2015.8.0
 
     creates
-        Only run if the file or files specified by ``creates`` do not exist.
+        Only run if the file specified by ``creates`` do not exist. If you
+        specify a list of files then this state will only run if **any** of
+        the files does not exist.
 
         .. versionadded:: 2014.7.0
 
@@ -1022,7 +1027,7 @@ def script(name,
 
         One can still use the existing $PATH by using a bit of Jinja:
 
-        .. code-block:: yaml
+        .. code-block:: jinja
 
             {% set current_path = salt['environ.get']('PATH', '/bin:/usr/bin') %}
 
@@ -1053,7 +1058,9 @@ def script(name,
         'arg two' arg3"
 
     creates
-        Only run if the file or files specified by ``creates`` do not exist.
+        Only run if the file specified by ``creates`` do not exist. If you
+        specify a list of files then this state will only run if **any** of
+        the files does not exist.
 
         .. versionadded:: 2014.7.0
 

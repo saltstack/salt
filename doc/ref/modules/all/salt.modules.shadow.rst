@@ -18,9 +18,3 @@ Execution Module                       Used for
 :py:mod:`~salt.modules.solaris_shadow` Solaris-based OSes
 :py:mod:`~salt.modules.win_shadow`     Windows
 ====================================== ========================================
-
-|
-
-.. automodule:: salt.modules.shadow
-    :members:
-

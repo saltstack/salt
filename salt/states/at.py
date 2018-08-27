@@ -26,6 +26,7 @@ def __virtual__():
 def present(name, timespec, tag=None, user=None, job=None, unique_tag=False):
     '''
     .. versionchanged:: 2017.7.0
+
     Add a job to queue.
 
     job : string
@@ -127,6 +128,7 @@ def present(name, timespec, tag=None, user=None, job=None, unique_tag=False):
 def absent(name, jobid=None, **kwargs):
     '''
     .. versionchanged:: 2017.7.0
+
     Remove a job from queue
 
     jobid: string|int
@@ -138,7 +140,7 @@ def absent(name, jobid=None, **kwargs):
     runas : string
         Runs user-specified jobs
 
-    **kwags : *
+    kwargs
         Addition kwargs can be provided to filter jobs.
         See output of `at.jobcheck` for more.
 
@@ -246,6 +248,7 @@ def absent(name, jobid=None, **kwargs):
 def watch(name, timespec, tag=None, user=None, job=None, unique_tag=False):
     '''
     .. versionadded:: 2017.7.0
+
     Add an at job if trigger by watch
 
     job : string

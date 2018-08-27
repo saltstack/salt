@@ -359,7 +359,6 @@ def managed(name, ppa=None, **kwargs):
         enabled = True
 
     repo = name
-    os_family = __grains__['os_family'].lower()
     if __grains__['os'] in ('Ubuntu', 'Mint'):
         if ppa is not None:
             # overload the name/repo value for PPAs cleanly
@@ -373,7 +372,7 @@ def managed(name, ppa=None, **kwargs):
             if enabled is not None \
             else salt.utils.data.is_true(disabled)
 
-    elif os_family in ('redhat', 'suse'):
+    elif __grains__['os_family'] in ('RedHat', 'Suse'):
         if 'humanname' in kwargs:
             kwargs['name'] = kwargs.pop('humanname')
         if 'name' not in kwargs:
@@ -384,7 +383,7 @@ def managed(name, ppa=None, **kwargs):
             if disabled is not None \
             else salt.utils.data.is_true(enabled)
 
-    elif os_family == 'nilinuxrt':
+    elif __grains__['os_family'] in ('NILinuxRT', 'Poky'):
         # opkg is the pkg virtual
         kwargs['enabled'] = not salt.utils.data.is_true(disabled) \
             if disabled is not None \
@@ -413,7 +412,7 @@ def managed(name, ppa=None, **kwargs):
     else:
         sanitizedkwargs = kwargs
 
-    if os_family == 'debian':
+    if __grains__['os_family'] == 'Debian':
         repo = salt.utils.pkg.deb.strip_uri(repo)
 
     if pre:
@@ -427,7 +426,7 @@ def managed(name, ppa=None, **kwargs):
                     # not explicitly set, so we don't need to update the repo
                     # if it's desired to be enabled and the 'enabled' key is
                     # missing from the repo definition
-                    if os_family == 'redhat':
+                    if __grains__['os_family'] == 'RedHat':
                         if not salt.utils.data.is_true(sanitizedkwargs[kwarg]):
                             break
                     else:
@@ -437,7 +436,7 @@ def managed(name, ppa=None, **kwargs):
             elif kwarg == 'comps':
                 if sorted(sanitizedkwargs[kwarg]) != sorted(pre[kwarg]):
                     break
-            elif kwarg == 'line' and os_family == 'debian':
+            elif kwarg == 'line' and __grains__['os_family'] == 'Debian':
                 # split the line and sort everything after the URL
                 sanitizedsplit = sanitizedkwargs[kwarg].split()
                 sanitizedsplit[3:] = sorted(sanitizedsplit[3:])
@@ -452,14 +451,14 @@ def managed(name, ppa=None, **kwargs):
                         salt.utils.pkg.deb.combine_comments(kwargs['comments'])
                     if pre_comments != post_comments:
                         break
-            elif kwarg == 'comments' and os_family == 'redhat':
+            elif kwarg == 'comments' and __grains__['os_family'] == 'RedHat':
                 precomments = salt.utils.pkg.rpm.combine_comments(pre[kwarg])
                 kwargcomments = salt.utils.pkg.rpm.combine_comments(
                         sanitizedkwargs[kwarg])
                 if precomments != kwargcomments:
                     break
             else:
-                if os_family in ('redhat', 'suse') \
+                if __grains__['os_family'] in ('RedHat', 'Suse') \
                         and any(isinstance(x, bool) for x in
                                 (sanitizedkwargs[kwarg], pre[kwarg])):
                     # This check disambiguates 1/0 from True/False
@@ -490,7 +489,7 @@ def managed(name, ppa=None, **kwargs):
             pass
 
     try:
-        if os_family == 'debian':
+        if __grains__['os_family'] == 'Debian':
             __salt__['pkg.mod_repo'](repo, saltenv=__env__, **kwargs)
         else:
             __salt__['pkg.mod_repo'](repo, **kwargs)

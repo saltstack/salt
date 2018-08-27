@@ -110,7 +110,7 @@ def get_conn(opts, profile=None, host=None, port=None):
 def _check_stats(conn):
     '''
     Helper function to check the stats data passed into it, and raise an
-    execption if none are returned. Otherwise, the stats are returned.
+    exception if none are returned. Otherwise, the stats are returned.
     '''
     stats = conn.get_stats()
     if not stats:

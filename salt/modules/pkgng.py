@@ -678,6 +678,7 @@ def install(name=None,
             reinstall_requires=False,
             regex=False,
             pcre=False,
+            batch=False,
             **kwargs):
     '''
     Install package(s) from a repository
@@ -801,7 +802,16 @@ def install(name=None,
 
         .. code-block:: bash
 
-            salt '*' pkg.install <extended regular expression> pcre=True
+
+    batch
+        Use BATCH=true for pkg install, skipping all questions.
+        Be careful when using in production.
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.install <package name> batch=True
     '''
     try:
         pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](
@@ -813,6 +823,7 @@ def install(name=None,
     if pkg_params is None or len(pkg_params) == 0:
         return {}
 
+    env = {}
     opts = 'y'
     if salt.utils.data.is_true(orphan):
         opts += 'A'
@@ -832,6 +843,11 @@ def install(name=None,
         opts += 'x'
     if salt.utils.data.is_true(pcre):
         opts += 'X'
+    if salt.utils.data.is_true(batch):
+        env = {
+                "BATCH": "true",
+                "ASSUME_ALWAYS_YES": "YES"
+              }
 
     old = list_pkgs(jail=jail, chroot=chroot, root=root)
 
@@ -870,7 +886,8 @@ def install(name=None,
     out = __salt__['cmd.run_all'](
         cmd,
         output_loglevel='trace',
-        python_shell=False
+        python_shell=False,
+        env=env
     )
 
     if out['retcode'] != 0 and out['stderr']:
@@ -1885,7 +1902,7 @@ def hold(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
 
     .. note::
         This function is provided primarily for compatibilty with some
-        parts of :py:module:`states.pkg <salt.states.pkg>`.
+        parts of :py:mod:`states.pkg <salt.states.pkg>`.
         Consider using Consider using :py:func:`pkg.lock <salt.modules.pkgng.lock>` instead. instead.
 
     name
@@ -1949,9 +1966,9 @@ def unhold(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
     Remove version locks
 
     .. note::
-        This function is provided primarily for compatibilty with some
-        parts of :py:module:`states.pkg <salt.states.pkg>`.
-        Consider using :py:func:`pkg.unlock <salt.modules.pkgng.unlock>` instead.
+        This function is provided primarily for compatibilty with some parts of
+        :py:mod:`states.pkg <salt.states.pkg>`.  Consider using
+        :py:func:`pkg.unlock <salt.modules.pkgng.unlock>` instead.
 
     name
         The name of the package to be unheld

@@ -267,6 +267,8 @@ def get(tgt,
     .. code-block:: bash
 
         salt '*' mine.get '*' network.interfaces
+        salt '*' mine.get '*' network.interfaces,network.ipaddrs
+        salt '*' mine.get '*' '["network.interfaces", "network.ipaddrs"]'
         salt '*' mine.get 'os:Fedora' network.interfaces grain
         salt '*' mine.get 'G@os:Fedora and S@192.168.5.0/24' network.ipaddrs compound
 
@@ -300,8 +302,24 @@ def get(tgt,
                      }[tgt_type](tgt)
         if is_target:
             data = __salt__['data.get']('mine_cache')
-            if isinstance(data, dict) and fun in data:
-                ret[__opts__['id']] = data[fun]
+
+            if isinstance(data, dict):
+                if isinstance(fun, six.string_types):
+                    functions = list(set(fun.split(',')))
+                    _ret_dict = len(functions) > 1
+                elif isinstance(fun, list):
+                    functions = fun
+                    _ret_dict = True
+                else:
+                    return {}
+
+                if not _ret_dict and functions and functions[0] in data:
+                    ret[__opts__['id']] = data.get(functions)
+                elif _ret_dict:
+                    for fun in functions:
+                        if fun in data:
+                            ret.setdefault(fun, {})[__opts__['id']] = data.get(fun)
+
         return ret
     load = {
             'cmd': '_mine_get',
@@ -361,10 +379,18 @@ def flush():
 
 def get_docker(interfaces=None, cidrs=None, with_container_id=False):
     '''
-    Get all mine data for 'docker.get_containers' and run an aggregation
-    routine. The "interfaces" parameter allows for specifying which network
-    interfaces to select ip addresses from. The "cidrs" parameter allows for
-    specifying a list of cidrs which the ip address must match.
+    .. versionchanged:: 2017.7.8,2018.3.3
+        When :conf_minion:`docker.update_mine` is set to ``False`` for a given
+        minion, no mine data will be populated for that minion, and thus none
+        will be returned for it.
+    .. versionchanged:: Fluorine
+        :conf_minion:`docker.update_mine` now defaults to ``False``
+
+    Get all mine data for :py:func:`docker.ps <salt.modules.dockermod.ps_>` and
+    run an aggregation routine. The ``interfaces`` parameter allows for
+    specifying the network interfaces from which to select IP addresses. The
+    ``cidrs`` parameter allows for specifying a list of subnets which the IP
+    address must match.
 
     with_container_id
         Boolean, to expose container_id in the list of results

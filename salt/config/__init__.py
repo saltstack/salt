@@ -35,7 +35,6 @@ import salt.utils.yaml
 import salt.utils.zeromq
 import salt.syspaths
 import salt.exceptions
-from salt.utils.locales import sdecode
 import salt.defaults.exitcodes
 
 try:
@@ -54,6 +53,7 @@ _DFLT_LOG_FMT_CONSOLE = '[%(levelname)-8s] %(message)s'
 _DFLT_LOG_FMT_LOGFILE = (
     '%(asctime)s,%(msecs)03d [%(name)-17s:%(lineno)-4d][%(levelname)-8s][%(process)d] %(message)s'
 )
+_DFLT_LOG_FMT_JID = "[JID: %(jid)s]"
 _DFLT_REFSPECS = ['+refs/heads/*:refs/remotes/origin/*', '+refs/tags/*:refs/tags/*']
 DEFAULT_INTERVAL = 60
 
@@ -135,7 +135,8 @@ VALID_OPTS = {
     # a master fingerprint with `salt-key -F master`
     'master_finger': six.string_types,
 
-    # Selects a random master when starting a minion up in multi-master mode
+    # Deprecated in Fluorine. Use 'random_master' instead.
+    # Do not remove! Keep as an alias for usability.
     'master_shuffle': bool,
 
     # When in multi-master mode, temporarily remove a master from the list if a conenction
@@ -311,6 +312,9 @@ VALID_OPTS = {
     # The type of hashing algorithm to use when doing file comparisons
     'hash_type': six.string_types,
 
+    # Order of preference for optimized .pyc files (PY3 only)
+    'optimization_order': list,
+
     # Refuse to load these modules
     'disable_modules': list,
 
@@ -370,7 +374,7 @@ VALID_OPTS = {
     'ipc_mode': six.string_types,
 
     # Enable ipv6 support for daemons
-    'ipv6': bool,
+    'ipv6': (type(None), bool),
 
     # The chunk size to use when streaming files with the file server
     'file_buffer_size': int,
@@ -968,6 +972,8 @@ VALID_OPTS = {
     # Never give up when trying to authenticate to a master
     'auth_safemode': bool,
 
+    # Selects a random master when starting a minion up in multi-master mode or
+    # when starting a minion with salt-call. ``master`` must be a list.
     'random_master': bool,
 
     # An upper bound for the amount of time for a minion to sleep before attempting to
@@ -992,6 +998,7 @@ VALID_OPTS = {
     'ssh_identities_only': bool,
     'ssh_log_file': six.string_types,
     'ssh_config_file': six.string_types,
+    'ssh_merge_pillar': bool,
 
     # Enable ioflo verbose logging. Warning! Very verbose!
     'ioflo_verbose': int,
@@ -1091,6 +1098,8 @@ VALID_OPTS = {
     'proxy_username': six.string_types,
     'proxy_password': six.string_types,
     'proxy_port': int,
+    # Exclude list of hostnames from proxy
+    'no_proxy': list,
 
     # Minion de-dup jid cache max size
     'minion_jid_queue_hwm': int,
@@ -1340,6 +1349,7 @@ DEFAULT_MINION_OPTS = {
     'gitfs_disable_saltenv_mapping': False,
     'unique_jid': False,
     'hash_type': 'sha256',
+    'optimization_order': [0, 1, 2],
     'disable_modules': [],
     'disable_returners': [],
     'whitelist_modules': [],
@@ -1364,7 +1374,7 @@ DEFAULT_MINION_OPTS = {
     'mine_interval': 60,
     'ipc_mode': _DFLT_IPC_MODE,
     'ipc_write_buffer': _DFLT_IPC_WBUFFER,
-    'ipv6': False,
+    'ipv6': None,
     'file_buffer_size': 262144,
     'tcp_pub_port': 4510,
     'tcp_pull_port': 4511,
@@ -1376,6 +1386,7 @@ DEFAULT_MINION_OPTS = {
     'log_datefmt_logfile': _DFLT_LOG_DATEFMT_LOGFILE,
     'log_fmt_console': _DFLT_LOG_FMT_CONSOLE,
     'log_fmt_logfile': _DFLT_LOG_FMT_LOGFILE,
+    'log_fmt_jid': _DFLT_LOG_FMT_JID,
     'log_granular_levels': {},
     'log_rotate_max_bytes': 0,
     'log_rotate_backup_count': 0,
@@ -1502,6 +1513,7 @@ DEFAULT_MINION_OPTS = {
     },
     'discovery': False,
     'schedule': {},
+    'ssh_merge_pillar': True
 }
 
 DEFAULT_MASTER_OPTS = {
@@ -1672,6 +1684,7 @@ DEFAULT_MASTER_OPTS = {
     'fileserver_verify_config': True,
     'max_open_files': 100000,
     'hash_type': 'sha256',
+    'optimization_order': [0, 1, 2],
     'conf_file': os.path.join(salt.syspaths.CONFIG_DIR, 'master'),
     'open_mode': False,
     'auto_accept': False,
@@ -1692,7 +1705,7 @@ DEFAULT_MASTER_OPTS = {
     'enforce_mine_cache': False,
     'ipc_mode': _DFLT_IPC_MODE,
     'ipc_write_buffer': _DFLT_IPC_WBUFFER,
-    'ipv6': False,
+    'ipv6': None,
     'tcp_master_pub_port': 4512,
     'tcp_master_pull_port': 4513,
     'tcp_master_publish_pull': 4514,
@@ -1704,6 +1717,7 @@ DEFAULT_MASTER_OPTS = {
     'log_datefmt_logfile': _DFLT_LOG_DATEFMT_LOGFILE,
     'log_fmt_console': _DFLT_LOG_FMT_CONSOLE,
     'log_fmt_logfile': _DFLT_LOG_FMT_LOGFILE,
+    'log_fmt_jid': _DFLT_LOG_FMT_JID,
     'log_granular_levels': {},
     'log_rotate_max_bytes': 0,
     'log_rotate_backup_count': 0,
@@ -1774,6 +1788,7 @@ DEFAULT_MASTER_OPTS = {
     'syndic_jid_forward_cache_hwm': 100,
     'regen_thin': False,
     'ssh_passwd': '',
+    'ssh_priv_passwd': '',
     'ssh_port': '22',
     'ssh_sudo': False,
     'ssh_sudo_user': '',
@@ -1897,6 +1912,7 @@ DEFAULT_CLOUD_OPTS = {
     'log_datefmt_logfile': _DFLT_LOG_DATEFMT_LOGFILE,
     'log_fmt_console': _DFLT_LOG_FMT_CONSOLE,
     'log_fmt_logfile': _DFLT_LOG_FMT_LOGFILE,
+    'log_fmt_jid': _DFLT_LOG_FMT_JID,
     'log_granular_levels': {},
     'log_rotate_max_bytes': 0,
     'log_rotate_backup_count': 0,
@@ -2109,7 +2125,7 @@ def _validate_ssh_minion_opts(opts):
 
     for opt_name in list(ssh_minion_opts):
         if re.match('^[a-z0-9]+fs_', opt_name, flags=re.IGNORECASE) \
-                or 'pillar' in opt_name \
+                or ('pillar' in opt_name and not 'ssh_merge_pillar' == opt_name) \
                 or opt_name in ('fileserver_backend',):
             log.warning(
                 '\'%s\' is not a valid ssh_minion_opts parameter, ignoring',
@@ -2157,7 +2173,7 @@ def _read_conf_file(path):
             if not isinstance(conf_opts['id'], six.string_types):
                 conf_opts['id'] = six.text_type(conf_opts['id'])
             else:
-                conf_opts['id'] = sdecode(conf_opts['id'])
+                conf_opts['id'] = salt.utils.data.decode(conf_opts['id'])
         return conf_opts
 
 
@@ -2784,6 +2800,8 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
 
     # prepend root_dir
     prepend_root_dirs = ['cachedir']
+    if 'log_file' in opts and urlparse(opts['log_file']).scheme == '':
+        prepend_root_dirs.append(opts['log_file'])
     prepend_root_dir(opts, prepend_root_dirs)
 
     # Return the final options
@@ -3336,7 +3354,7 @@ def get_cloud_config_value(name, vm_, opts, default=None, search_global=True):
         if isinstance(vm_[name], types.GeneratorType):
             value = next(vm_[name], '')
         else:
-            if isinstance(value, dict):
+            if isinstance(value, dict) and isinstance(vm_[name], dict):
                 value.update(vm_[name].copy())
             else:
                 value = deepcopy(vm_[name])
@@ -3344,7 +3362,7 @@ def get_cloud_config_value(name, vm_, opts, default=None, search_global=True):
     return value
 
 
-def is_provider_configured(opts, provider, required_keys=(), log_message=True):
+def is_provider_configured(opts, provider, required_keys=(), log_message=True, aliases=()):
     '''
     Check and return the first matching and fully configured cloud provider
     configuration.
@@ -3372,7 +3390,7 @@ def is_provider_configured(opts, provider, required_keys=(), log_message=True):
 
     for alias, drivers in six.iteritems(opts['providers']):
         for driver, provider_details in six.iteritems(drivers):
-            if driver != provider:
+            if driver != provider and driver not in aliases:
                 continue
 
             # If we reached this far, we have a matching provider, let's see if
