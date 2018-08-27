@@ -4,7 +4,6 @@
 '''
 # Import Python libs
 from __future__ import absolute_import
-import salt.utils
 
 # Import Salt Testing Libs
 from tests.support.case import ShellCase

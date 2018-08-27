@@ -18,6 +18,7 @@ from tests.support.helpers import destructiveTest
 import salt.utils
 
 # Import 3rd party libs
+from salt.ext import six
 try:
     import zipfile  # pylint: disable=W0611
     HAS_ZIPFILE = True
@@ -44,7 +45,7 @@ class ArchiveTest(ModuleCase):
         self.arch = os.path.join(self.base_path, 'archive.{0}'.format(arch_fmt))
         self.dst = os.path.join(self.base_path, '{0}_dst_dir'.format(arch_fmt))
 
-    def _set_up(self, arch_fmt):
+    def _set_up(self, arch_fmt, unicode_filename=False):
         '''
         Create source file tree and destination directory
 
@@ -63,8 +64,8 @@ class ArchiveTest(ModuleCase):
             filename = 'file®'
         else:
             filename = 'file'
-        with salt.utils.files.fopen(os.path.join(self.src, filename), 'wb') as theorem:
-            theorem.write(salt.utils.stringutils.to_bytes(textwrap.dedent('''\
+        with salt.utils.fopen(os.path.join(self.src, filename), 'wb') as theorem:
+            theorem.write(salt.utils.to_bytes(textwrap.dedent('''\
                 Compression theorem of computational complexity theory:
 
                 Given a Gödel numbering $φ$ of the computable functions and a
@@ -109,7 +110,7 @@ class ArchiveTest(ModuleCase):
 
         def normdir(path):
             normdir = os.path.normcase(os.path.abspath(path))
-            if salt.utils.platform.is_windows():
+            if salt.utils.is_windows():
                 # Remove the drive portion of path
                 if len(normdir) >= 2 and normdir[1] == ':':
                     normdir = normdir.split(':', 1)[1]
