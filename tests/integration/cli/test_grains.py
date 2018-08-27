@@ -18,7 +18,6 @@ import os
 
 # Import Salt Libs
 import salt.utils.files
-import salt.utils.platform
 
 # Import Salt Testing Libs
 from tests.support.case import ShellCase, SSHCase
@@ -41,26 +40,17 @@ class GrainsTargetingTest(ShellCase):
             if item != 'minion:':
                 os_grain = item.strip()
 
-        if salt.utils.platform.is_windows():
-            ret = self.run_salt('-G "os:{0}" test.ping'.format(os_grain))
-        else:
-            ret = self.run_salt('-G \'os:{0}\' test.ping'.format(os_grain))
+        ret = self.run_salt('-G "os:{0}" test.ping'.format(os_grain))
         self.assertEqual(sorted(ret), sorted(test_ret))
 
     def test_grains_targeting_minion_id_running(self):
         '''
         Tests return of each running test minion targeting with minion id grain
         '''
-        if salt.utils.platform.is_windows():
-            minion = self.run_salt('-G "id:minion" test.ping')
-        else:
-            minion = self.run_salt('-G \'id:minion\' test.ping')
+        minion = self.run_salt('-G \'id:minion\' test.ping')
         self.assertEqual(sorted(minion), sorted(['minion:', '    True']))
 
-        if salt.utils.platform.is_windows():
-            sub_minion = self.run_salt('-G "id:sub_minion" test.ping')
-        else:
-            sub_minion = self.run_salt('-G \'id:sub_minion\' test.ping')
+        sub_minion = self.run_salt('-G "id:sub_minion" test.ping')
         self.assertEqual(sorted(sub_minion), sorted(['sub_minion:', '    True']))
 
     @flaky
@@ -80,12 +70,8 @@ class GrainsTargetingTest(ShellCase):
         log = logging.getLogger(__name__)
         # ping disconnected minion and ensure it times out and returns with correct message
         try:
-            if salt.utils.platform.is_windows():
-                cmd_str = '-t 1 -G "id:disconnected" test.ping'
-            else:
-                cmd_str = '-t 1 -G \'id:disconnected\' test.ping'
             ret = ''
-            for item in self.run_salt(cmd_str, timeout=40):
+            for item in self.run_salt('-t 1 -G "id:disconnected" test.ping', timeout=40):
                 if item != 'disconnected:':
                     ret = item.strip()
             assert ret == test_ret

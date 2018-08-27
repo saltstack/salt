@@ -4,7 +4,6 @@
 '''
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
-import salt.utils.platform
 
 # Import Salt Testing Libs
 from tests.support.case import ShellCase
@@ -20,10 +19,7 @@ class BatchTest(ShellCase):
         Tests executing a simple batch command to help catch regressions
         '''
         ret = 'Executing run on [{0}]'.format(repr('sub_minion'))
-        if salt.utils.platform.is_windows():
-            cmd = self.run_salt('"*minion" test.echo "batch testing" -b 50%')
-        else:
-            cmd = self.run_salt('\'*minion\' test.echo \'batch testing\' -b 50%')
+        cmd = self.run_salt('"*minion" test.echo "batch testing" -b 50%')
         self.assertIn(ret, cmd)
 
     def test_batch_run_number(self):
@@ -32,10 +28,7 @@ class BatchTest(ShellCase):
         a percentage with full batch CLI call.
         '''
         ret = "Executing run on [{0}, {1}]".format(repr('minion'), repr('sub_minion'))
-        if salt.utils.platform.is_windows():
-            cmd = self.run_salt('"*minion" test.ping --batch-size 2')
-        else:
-            cmd = self.run_salt('\'*minion\' test.ping --batch-size 2')
+        cmd = self.run_salt('"*minion" test.ping --batch-size 2')
         self.assertIn(ret, cmd)
 
     def test_batch_run_grains_targeting(self):
@@ -52,10 +45,7 @@ class BatchTest(ShellCase):
                 os_grain = item
 
         os_grain = os_grain.strip()
-        if salt.utils.platform.is_windows():
-            cmd = self.run_salt('-C "G@os:{0} and not localhost" -b 25% test.ping'.format(os_grain))
-        else:
-            cmd = self.run_salt('-C \'G@os:{0} and not localhost\' -b 25% test.ping'.format(os_grain))
+        cmd = self.run_salt('-C "G@os:{0} and not localhost" -b 25% test.ping'.format(os_grain))
         self.assertIn(sub_min_ret, cmd)
         self.assertIn(min_ret, cmd)
 
