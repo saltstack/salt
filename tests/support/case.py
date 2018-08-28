@@ -267,7 +267,7 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         if not os.path.isfile(script_path):
             return False
 
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             cmd = 'python '
         else:
             cmd = 'PYTHONPATH='
