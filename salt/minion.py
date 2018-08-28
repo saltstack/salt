@@ -1411,6 +1411,8 @@ class Minion(MinionBase):
                 self._send_req_sync(load, timeout)
             except salt.exceptions.SaltReqTimeoutError:
                 log.info('fire_master failed: master could not be contacted. Request timed out.')
+                # very likely one of the masters is dead, status.master will flush it
+                self.functions['status.master'](self.opts['master'])
                 return False
             except Exception:
                 log.info('fire_master failed: %s', traceback.format_exc())
@@ -1419,6 +1421,8 @@ class Minion(MinionBase):
             if timeout_handler is None:
                 def handle_timeout(*_):
                     log.info('fire_master failed: master could not be contacted. Request timed out.')
+                    # very likely one of the masters is dead, status.master will flush it
+                    self.functions['status.master'](self.opts['master'])
                     return True
                 timeout_handler = handle_timeout
 
@@ -2363,12 +2367,17 @@ class Minion(MinionBase):
                 self.connected = False
                 log.info('Connection to master %s lost', self.opts['master'])
 
+                # we can't use the config default here because the default '0' value is overloaded
+                # to mean 'if 0 disable the job', but when salt detects a timeout it also sets up
+                # these jobs
+                master_alive_interval = self.opts['master_alive_interval'] or 60
+
                 if self.opts['master_type'] != 'failover':
                     # modify the scheduled job to fire on reconnect
                     if self.opts['transport'] != 'tcp':
                         schedule = {
                            'function': 'status.master',
-                           'seconds': self.opts['master_alive_interval'],
+                           'seconds': master_alive_interval,
                            'jid_include': True,
                            'maxrunning': 1,
                            'return_job': False,
@@ -2423,7 +2432,7 @@ class Minion(MinionBase):
                         if self.opts['transport'] != 'tcp':
                             schedule = {
                                'function': 'status.master',
-                               'seconds': self.opts['master_alive_interval'],
+                               'seconds': master_alive_interval,
                                'jid_include': True,
                                'maxrunning': 1,
                                'return_job': False,
@@ -2462,18 +2471,22 @@ class Minion(MinionBase):
                 # modify the __master_alive job to only fire,
                 # if the connection is lost again
                 if self.opts['transport'] != 'tcp':
-                    schedule = {
-                       'function': 'status.master',
-                       'seconds': self.opts['master_alive_interval'],
-                       'jid_include': True,
-                       'maxrunning': 1,
-                       'return_job': False,
-                       'kwargs': {'master': self.opts['master'],
-                                   'connected': True}
-                    }
+                    if self.opts['master_alive_interval'] > 0:
+                        schedule = {
+                           'function': 'status.master',
+                           'seconds': self.opts['master_alive_interval'],
+                           'jid_include': True,
+                           'maxrunning': 1,
+                           'return_job': False,
+                           'kwargs': {'master': self.opts['master'],
+                                       'connected': True}
+                        }
 
-                    self.schedule.modify_job(name=master_event(type='alive', master=self.opts['master']),
-                                             schedule=schedule)
+                        self.schedule.modify_job(name=master_event(type='alive', master=self.opts['master']),
+                                                 schedule=schedule)
+                    else:
+                        self.schedule.delete_job(name=master_event(type='alive', master=self.opts['master']), persist=True)
+
         elif tag.startswith('__schedule_return'):
             # reporting current connection with master
             if data['schedule'].startswith(master_event(type='alive', master='')):

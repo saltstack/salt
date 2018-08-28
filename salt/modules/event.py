@@ -66,7 +66,7 @@ def fire_master(data, tag, preload=None):
                     port=__opts__.get('ret_port', '4506')  # TODO, no fallback
                     )
         masters = list()
-        ret = True
+        ret = None
         if 'master_uri_list' in __opts__:
             for master_uri in __opts__['master_uri_list']:
                 masters.append(master_uri)
@@ -90,14 +90,16 @@ def fire_master(data, tag, preload=None):
                 # Ensure ret is True.
                 ret = True
             except Exception:
-                ret = False
+                # only set a False ret if it hasn't been sent atleast once
+                if ret is None:
+                    ret = False
         return ret
     else:
         # Usually, we can send the event via the minion, which is faster
         # because it is already authenticated
         try:
-            return salt.utils.event.MinionEvent(__opts__, listen=False).fire_event(
-                {'data': data, 'tag': tag, 'events': None, 'pretag': None}, 'fire_master')
+            me = salt.utils.event.MinionEvent(__opts__, listen=False, keep_loop=True)
+            return me.fire_event({'data': data, 'tag': tag, 'events': None, 'pretag': None}, 'fire_master')
         except Exception:
             exc_type, exc_value, exc_traceback = sys.exc_info()
             lines = traceback.format_exception(exc_type, exc_value, exc_traceback)
