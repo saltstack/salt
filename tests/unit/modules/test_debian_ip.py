@@ -76,34 +76,6 @@ class DebianIpTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(debian_ip.__grains__, {'osrelease': mock}):
                 self.assertTrue(debian_ip.build_bond('bond0', test='True'))
 
-    # 'build_interface' function tests: 1
-
-    def test_build_interface(self):
-        '''
-        Test if it builds an interface script for a network interface.
-        '''
-        with patch('salt.modules.debian_ip._write_file_ifaces',
-                   MagicMock(return_value='salt')):
-            self.assertEqual(debian_ip.build_interface('eth0', 'eth', 'enabled'),
-                             ['s\n', 'a\n', 'l\n', 't\n'])
-
-            self.assertTrue(debian_ip.build_interface('eth0', 'eth', 'enabled',
-                                                      test='True'))
-
-            with patch.object(debian_ip, '_parse_settings_eth',
-                              MagicMock(return_value={'routes': []})):
-                self.assertRaises(AttributeError, debian_ip.build_interface,
-                                  'eth0', 'bridge', 'enabled')
-
-                self.assertRaises(AttributeError, debian_ip.build_interface,
-                                  'eth0', 'slave', 'enabled')
-
-                self.assertRaises(AttributeError, debian_ip.build_interface,
-                                  'eth0', 'bond', 'enabled')
-
-            self.assertTrue(debian_ip.build_interface('eth0', 'eth', 'enabled',
-                                                      test='True'))
-
     # 'build_routes' function tests: 2
 
     def test_build_routes(self):
@@ -174,12 +146,34 @@ class DebianIpTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(jinja2.Environment, 'get_template', mock):
                 self.assertEqual(debian_ip.get_interface('lo'), '')
 
-    # 'build_interface' function tests: 12
+    # 'build_interface' function tests: 1
 
     def test_build_interface(self):
         '''
-        Test if salt correctly builds interfaces.
+        Test if it builds an interface script for a network interface.
         '''
+        with patch('salt.modules.debian_ip._write_file_ifaces',
+                   MagicMock(return_value='salt')):
+            self.assertEqual(debian_ip.build_interface('eth0', 'eth', 'enabled'),
+                             ['s\n', 'a\n', 'l\n', 't\n'])
+
+            self.assertTrue(debian_ip.build_interface('eth0', 'eth', 'enabled',
+                                                      test='True'))
+
+            with patch.object(debian_ip, '_parse_settings_eth',
+                              MagicMock(return_value={'routes': []})):
+                self.assertRaises(AttributeError, debian_ip.build_interface,
+                                  'eth0', 'bridge', 'enabled')
+
+                self.assertRaises(AttributeError, debian_ip.build_interface,
+                                  'eth0', 'slave', 'enabled')
+
+                self.assertRaises(AttributeError, debian_ip.build_interface,
+                                  'eth0', 'bond', 'enabled')
+
+            self.assertTrue(debian_ip.build_interface('eth0', 'eth', 'enabled',
+                                                      test='True'))
+
         interfaces = [
                 # IPv4-only interface; single address
                 {'iface_name': 'eth1', 'iface_type': 'eth', 'enabled': True,
@@ -408,7 +402,7 @@ class DebianIpTestCase(TestCase, LoaderModuleMockMixin):
                         '    dns-nameservers 8.8.8.8 8.8.4.4\n',
                         '\n']},
                 # Loopback; with IPv4 and IPv6 address
-                {'iface_name': 'lo11', 'iface_type': 'loopback', 'enabled': True,
+                {'iface_name': 'lo11', 'iface_type': 'eth', 'enabled': True,
                     'settings': {
                         'proto': 'loopback',
                         'ipaddr': '192.168.4.9',
@@ -431,8 +425,9 @@ class DebianIpTestCase(TestCase, LoaderModuleMockMixin):
                         '    netmask 128\n',
                         '\n']},
                 # Loopback; without address
-                {'iface_name': 'lo12', 'iface_type': 'loopback', 'enabled': True,
+                {'iface_name': 'lo12', 'iface_type': 'eth', 'enabled': True,
                     'settings': {
+                        'proto': 'loopback',
                         'enable_ipv6': False,
                         'noifupdown': True,
                         },

@@ -217,6 +217,7 @@ all interfaces are ignored unless specified.
       network.managed:
         - name: lo
         - type: eth
+        - proto: loopback
         - onboot: yes
         - userctl: no
         - ipv6_autoconf: no
