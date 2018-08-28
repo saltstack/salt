@@ -393,7 +393,7 @@ def __within(within=None, errmsg=None, dtype=None):
 
 def __space_delimited_list(value):
     '''validate that a value contains one or more space-delimited values'''
-    if isinstance(value, str):
+    if isinstance(value, six.string_types):
         value = value.strip().split()
 
     if hasattr(value, '__iter__') and value != []:
