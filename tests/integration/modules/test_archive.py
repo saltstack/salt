@@ -53,12 +53,12 @@ class ArchiveTest(ModuleCase):
 
         :param str arch_fmt: The archive format used in the test
         '''
-        # Setup artifact paths
         self._set_artifact_paths(arch_fmt)
 
         # Remove the artifacts if any present
         if any([os.path.exists(f) for f in (self.src, self.arch, self.dst)]):
             self._tear_down()
+            self._set_artifact_paths(arch_fmt)
 
         # Create source
         os.makedirs(self.src)
@@ -104,19 +104,32 @@ class ArchiveTest(ModuleCase):
         del self.arch
         del self.src_file
 
-    def _assert_artifacts_in_ret(self, ret, file_only=False):
+    def _assert_artifacts_in_ret(self, ret, file_only=False, unix_sep=False):
         '''
         Assert that the artifact source files are printed in the source command
         output
         '''
+
+        def normdir(path):
+            normdir = os.path.normcase(os.path.abspath(path))
+            if salt.utils.is_windows():
+                # Remove the drive portion of path
+                if len(normdir) >= 2 and normdir[1] == ':':
+                    normdir = normdir.split(':', 1)[1]
+            normdir = normdir.lstrip(os.path.sep)
+            # Unzipped paths might have unix line endings
+            if unix_sep:
+                normdir = normdir.replace(os.path.sep, '/')
+            return normdir
+
         # Try to find source directory and file in output lines
         dir_in_ret = None
         file_in_ret = None
         for line in ret:
-            if self.src.lstrip('/') in line \
-            and not self.src_file.lstrip('/') in line:
+            if normdir(self.src) in line \
+            and not normdir(self.src_file) in line:
                 dir_in_ret = True
-            if self.src_file.lstrip('/') in line:
+            if normdir(self.src_file) in line:
                 file_in_ret = True
 
         # Assert number of lines, reporting of source directory and file
@@ -283,7 +296,7 @@ class ArchiveTest(ModuleCase):
         # Test create archive
         ret = self.run_function('archive.unzip', [self.arch, self.dst])
         self.assertTrue(isinstance(ret, list), six.text_type(ret))
-        self._assert_artifacts_in_ret(ret)
+        self._assert_artifacts_in_ret(ret, unix_sep=True if six.PY2 else False)
 
         self._tear_down()
 
