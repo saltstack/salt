@@ -1708,7 +1708,7 @@ def build_interface(iface, iface_type, enabled, **settings):
         settings['proto'] = 'static'
 
     if 'ipv6ipaddr' not in settings and 'ipv6ipaddrs' in settings:
-        settings['ipv6addr'] = settings['ipv6ipaddrs'].pop(0)
+        settings['ipv6ipaddr'] = settings['ipv6ipaddrs'].pop(0)
     if 'ipaddr' not in settings and 'ipaddrs' in settings:
         settings['ipaddr'] = settings['ipaddrs'].pop(0)
 
