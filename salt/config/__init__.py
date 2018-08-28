@@ -3654,11 +3654,19 @@ def get_id(opts, cache_minion_id=False):
         newid = newid.lower()
         log.debug('Changed minion id %s to lowercase.', newid)
 
-    # Optionally remove a domain in a generated minion id
-    if opts.get('minion_id_remove_domain') and \
-        newid.upper().endswith('.' + opts.get('minion_id_remove_domain').upper()):
-        newid = newid[:-len('.' + opts.get('minion_id_remove_domain'))]
-        log.debug('Removed domain %s from minion id.', opts.get('minion_id_remove_domain'))
+    # Optionally remove a domain or many in a generated minion id
+    if opts.get('minion_id_remove_domain'):
+        rem_domain = opts.get('minion_id_remove_domain')
+        if isinstance(rem_domain, bool):
+            if '.' in newid:
+                # Clean away any domain
+                newid, xdomain = newid.split('.', 1)
+                log.debug('Cleaned away any domain (%s) from minion id.', xdomain)
+        else:
+            if newid.upper().endswith('.' + rem_domain.upper()):
+                # Remove single domain
+                newid = newid[:-len('.' + rem_domain)]
+                log.debug('Removed domain %s from minion id.', rem_domain)
 
     if '__role' in opts and opts.get('__role') == 'minion':
         if opts.get('id_function'):
