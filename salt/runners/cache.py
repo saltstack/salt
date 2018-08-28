@@ -69,7 +69,7 @@ def grains(tgt=None, tgt_type='glob', **kwargs):
     if tgt is None:
         # Change ``tgt=None`` to ``tgt`` (mandatory kwarg) in Salt Sodium.
         # This behavior was changed in PR #45588 to fix Issue #45489.
-        salt.utils.warn_until(
+        salt.utils.versions.warn_until(
             'Sodium',
             'Detected missing \'tgt\' option. Cached grains will not be returned '
             'without a specified \'tgt\'. This option will be required starting in '

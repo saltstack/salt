@@ -17,6 +17,7 @@ from tests.support.helpers import destructiveTest
 # Import salt libs
 import salt.utils.files
 import salt.utils.path
+import salt.utils.platform
 import salt.utils.stringutils
 
 # Import 3rd party libs
@@ -112,7 +113,7 @@ class ArchiveTest(ModuleCase):
 
         def normdir(path):
             normdir = os.path.normcase(os.path.abspath(path))
-            if salt.utils.is_windows():
+            if salt.utils.platform.is_windows():
                 # Remove the drive portion of path
                 if len(normdir) >= 2 and normdir[1] == ':':
                     normdir = normdir.split(':', 1)[1]
