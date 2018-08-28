@@ -18,6 +18,21 @@ all interfaces are ignored unless specified.
 
     Other platforms are not yet supported.
 
+.. note::
+
+    On Debian-based systems, networking configuration can be specified
+    in `/etc/network/interfaces` or via included files such as (by default)
+    `/etc/network/interfaces.d/*`. This can be problematic for configuration
+    management. It is recommended to use either `file.managed` *or*
+    `network.managed`.
+
+    If using `network.managed`, it can be useful to ensure `interfaces.d/`
+    is empty. This can be done using:
+
+        /etc/network/interfaces.d:
+          file.directory:
+            - clean: True
+
 .. code-block:: yaml
 
     system:
