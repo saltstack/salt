@@ -298,7 +298,7 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
             self.assertTrue(win_service.disabled('spongebob'))
             self.assertFalse(win_service.disabled('squarepants'))
 
-    def test_cmd_quote_no_quotes(self):
+    def test_cmd_quote(self):
         '''
         Make sure the command gets quoted correctly
         '''
