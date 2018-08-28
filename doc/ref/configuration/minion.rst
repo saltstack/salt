@@ -646,13 +646,16 @@ Default: ``''``
 
 Remove a domain when the minion id is generated as a fully qualified domain
 name (either by the user provided ``id_function``, or by Salt). This is useful
-when the minions shall be named like hostnames. Can only be a single domain to
-prevent name clashes.
+when the minions shall be named like hostnames. Can be a single domain (to
+prevent name clashes), or True, to remove all domains.
 
-Example:
- - FQDN = king_bob.foo.org
+Examples:
  - minion_id_remove_domain = foo.org
- - minion_id = king_bob
+   - FQDN = king_bob.foo.org --> minion_id = king_bob
+   - FQDN = king_bob.bar.org --> minion_id = king_bob.bar.org
+ - minion_id_remove_domain = True
+   - FQDN = king_bob.foo.org --> minion_id = king_bob
+   - FQDN = king_bob.bar.org --> minion_id = king_bob
 
 
 For more information, please see `Issue #49212`_ and `Pull Request #49213`_.
