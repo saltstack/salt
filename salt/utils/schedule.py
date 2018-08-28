@@ -1615,39 +1615,51 @@ class Schedule(object):
             self.handle_func(False, func, data)
             return
 
-        if multiprocessing_enabled and salt.utils.platform.is_windows():
-            # Temporarily stash our function references.
-            # You can't pickle function references, and pickling is
-            # required when spawning new processes on Windows.
-            functions = self.functions
-            self.functions = {}
-            returners = self.returners
-            self.returners = {}
-            utils = self.utils
-            self.utils = {}
+        if self.opts.get('ipc_mode', '') == 'tcp':
+            pull_uri = int(self.opts.get('tcp_minion_workers', 4516))
+        else:
+            pull_uri = os.path.join(self.opts['sock_dir'], 'worker_pull.ipc')
+        client = salt.transport.ipc.IPCMessageClient(pull_uri, singleton=False)
+        payload_data = {}
+        for key, value in six.iteritems(data):  # cleanup internal fields from job
+            if key.startswith('_'):
+                continue
+            payload_data[key] = value
+        client.send({'tag': 'schedule_job', 'data': payload_data, 'func': func})
 
-        try:
-            if multiprocessing_enabled:
-                thread_cls = salt.utils.process.SignalHandlingMultiprocessingProcess
-            else:
-                thread_cls = threading.Thread
+        #if multiprocessing_enabled and salt.utils.platform.is_windows():
+            ## Temporarily stash our function references.
+            ## You can't pickle function references, and pickling is
+            ## required when spawning new processes on Windows.
+            #functions = self.functions
+            #self.functions = {}
+            #returners = self.returners
+            #self.returners = {}
+            #utils = self.utils
+            #self.utils = {}
 
-            if multiprocessing_enabled:
-                with salt.utils.process.default_signals(signal.SIGINT, signal.SIGTERM):
-                    proc = thread_cls(target=self.handle_func, args=(multiprocessing_enabled, func, data))
-                    # Reset current signals before starting the process in
-                    # order not to inherit the current signal handlers
-                    proc.start()
-                proc.join()
-            else:
-                proc = thread_cls(target=self.handle_func, args=(multiprocessing_enabled, func, data))
-                proc.start()
-        finally:
-            if multiprocessing_enabled and salt.utils.platform.is_windows():
-                # Restore our function references.
-                self.functions = functions
-                self.returners = returners
-                self.utils = utils
+        #try:
+            #if multiprocessing_enabled:
+                #thread_cls = salt.utils.process.SignalHandlingMultiprocessingProcess
+            #else:
+                #thread_cls = threading.Thread
+
+            #if multiprocessing_enabled:
+                #with salt.utils.process.default_signals(signal.SIGINT, signal.SIGTERM):
+                    #proc = thread_cls(target=self.handle_func, args=(multiprocessing_enabled, func, data))
+                    ## Reset current signals before starting the process in
+                    ## order not to inherit the current signal handlers
+                    #proc.start()
+                #proc.join()
+            #else:
+                #proc = thread_cls(target=self.handle_func, args=(multiprocessing_enabled, func, data))
+                #proc.start()
+        #finally:
+            #if multiprocessing_enabled and salt.utils.platform.is_windows():
+                ## Restore our function references.
+                #self.functions = functions
+                #self.returners = returners
+                #self.utils = utils
 
 
 def clean_proc_dir(opts):

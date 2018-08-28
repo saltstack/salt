@@ -1553,8 +1553,8 @@ class Minion(MinionBase):
             pull_uri = int(self.opts.get('tcp_minion_workers', 4516))
         else:
             pull_uri = os.path.join(self.opts['sock_dir'], 'worker_pull.ipc')
-        client = salt.transport.ipc.IPCMessageClient(pull_uri)
-        yield client.send({'data': data, 'connected': self.connected})
+        client = salt.transport.ipc.IPCMessageClient(pull_uri, singleton=False)
+        yield client.send({'tag': 'minion_pub', 'data': data, 'connected': self.connected})
         #multiprocessing_enabled = self.opts.get('multiprocessing', True)
         #if multiprocessing_enabled:
             #if sys.platform.startswith('win'):
@@ -2059,7 +2059,7 @@ class Minion(MinionBase):
                 return ''
         else:
             with tornado.stack_context.ExceptionStackContext(timeout_handler):
-                ret_val = yield self._send_req_async(load, timeout=timeout, callback=lambda f: None)  # pylint: disable=unexpected-keyword-arg
+                ret_val = self._send_req_async(load, timeout=timeout, callback=lambda f: None)  # pylint: disable=unexpected-keyword-arg
 
         log.trace('ret_val = %s', ret_val)  # pylint: disable=no-member
         return ret_val
@@ -3547,6 +3547,20 @@ class WorkerMinion(Minion):
             self.opts.update(resolve_dns(self.opts))
             self.module_refresh()
             log.debug('MASTER URI: %s', self.opts.get('master_uri'))
+        elif tag.startswith('module_refresh'):
+            self.module_refresh(
+                force_refresh=data.get('force_refresh', False),
+                notify=data.get('notify', False)
+            )
+        elif tag.startswith('environ_setenv'):
+            self.environ_setenv(tag, data)
+        elif tag.startswith('salt/auth/creds'):
+            key = tuple(data['key'])
+            log.debug(
+                'Updating auth data for %s: %s -> %s',
+                key, salt.crypt.AsyncAuth.creds_map.get(key), data['creds']
+            )
+            salt.crypt.AsyncAuth.creds_map[tuple(data['key'])] = data['creds']
 
 
 class Worker(salt.utils.process.SignalHandlingMultiprocessingProcess):
@@ -3574,6 +3588,7 @@ class Worker(salt.utils.process.SignalHandlingMultiprocessingProcess):
         self.name = name
         self.req_chan = req_chan
         self._minion = None
+        self._schedule = None
 
     def __bind(self):
         '''
@@ -3583,7 +3598,7 @@ class Worker(salt.utils.process.SignalHandlingMultiprocessingProcess):
         install_zmq()
         io_loop = ZMQDefaultLoop.current()
         self.req_chan.post_fork(payload_handler=self.handle_payload)
-        io_loop.spawn_callback(self.handle_payload, {'connected': False}, None)
+        io_loop.spawn_callback(self.handle_payload, {'tag': 'minion_pub', 'connected': False}, None)
         try:
             io_loop.start()
         except (KeyboardInterrupt, SystemExit):
@@ -3593,16 +3608,30 @@ class Worker(salt.utils.process.SignalHandlingMultiprocessingProcess):
     def handle_payload(self, payload, something):
         log.debug('Payload: %s', payload)
         log.debug('Something: %s', something)
-        connected = payload.get('connected', True)
-        data = payload.get('data')
-        if connected is not None and self._minion:
-            self._minion.connected = connected
-        minion = WorkerMinion._target(self._minion, self.opts, data, connected)
-        if not self._minion:
-            self._minion = minion
-            self.event = salt.utils.event.get_event('minion', opts=self.opts, sync=False)
-            self.event.subscribe('')
-            self.event.set_event_handler(minion.handle_event)
+        tag = payload.get('tag')
+        if tag == 'minion_pub':
+            connected = payload.get('connected', True)
+            data = payload.get('data')
+            if connected is not None and self._minion:
+                self._minion.connected = connected
+            minion = WorkerMinion._target(self._minion, self.opts, data, connected)
+            if not self._minion:
+                self._minion = minion
+                self.event = salt.utils.event.get_event('minion', opts=self.opts, sync=False)
+                self.event.subscribe('')
+                self.event.set_event_handler(minion.handle_event)
+                self._schedule = salt.utils.schedule.Schedule(
+                    minion.opts,
+                    minion.functions,
+                    minion.returners,
+                    utils=minion.utils,
+                    cleanup=[master_event(type='alive')])
+        elif tag == 'schedule_job':
+            data = payload.get('data')
+            func = payload.get('func')
+            self._schedule.handle_func(False, func, data)
+        else:
+            log.warning('No tag found in worker payload')
 
     def run(self):
         '''
