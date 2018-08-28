@@ -716,9 +716,9 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         self.assertEqual(syndic_opts['id'], 'minion')
         self.assertEqual(syndic_opts['pki_dir'], os.path.join(root_dir, 'pki'))
         # the rest is configured master side
-        self.assertEqual(syndic_opts['master_uri'], 'tcp://127.0.0.1:54506')
+        self.assertIn(syndic_opts['master_uri'], ['tcp://127.0.0.1:54506', 'tcp://[::1]:54506'])
         self.assertEqual(syndic_opts['master_port'], 54506)
-        self.assertEqual(syndic_opts['master_ip'], '127.0.0.1')
+        self.assertIn(syndic_opts['master_ip'], ['127.0.0.1', '[::1]'])
         self.assertEqual(syndic_opts['master'], 'localhost')
         self.assertEqual(syndic_opts['sock_dir'], os.path.join(root_dir, 'minion_sock'))
         self.assertEqual(syndic_opts['cachedir'], os.path.join(root_dir, 'cache'))
