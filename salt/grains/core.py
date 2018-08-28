@@ -2973,12 +2973,11 @@ def get_server_id():
                 & 0xFFFFFFFF
             )
         else:
-            salt.utils.versions.warn_until(
-                "Sodium",
-                "This server_id is computed nor by Adler32 neither by CRC32. "
-                'Please use "server_id_use_crc" option and define algorithm you'
-                'prefer (default "Adler32"). The server_id will be computed with'
-                "Adler32 by default.",
+            log.info(
+                "This server_id is computed not by Adler32 nor by CRC32. "
+                'Please use "server_id_use_crc" option and define algorithm you '
+                'prefer (default "Adler32"). Starting with Sodium, the '
+                "server_id will be computed with Adler32 by default."
             )
             id_hash = _get_hash_by_shell()
         server_id = {"server_id": id_hash}
