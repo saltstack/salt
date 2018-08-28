@@ -35,7 +35,7 @@ Return data to a cassandra server
 
     Use the following cassandra database schema:
 
-    .. code-block:: sql
+    .. code-block:: text
 
         CREATE KEYSPACE IF NOT EXISTS salt
             WITH replication = {'class': 'SimpleStrategy', 'replication_factor' : 1};
@@ -202,7 +202,7 @@ def returner(ret):
         __salt__['cassandra_cql.cql_query_with_prepare'](query,
                                                          'returner_return',
                                                          tuple(statement_arguments),
-                                                         async=True)
+                                                         asynchronous=True)
     except CommandExecutionError:
         log.critical('Could not insert into salt_returns with Cassandra returner.')
         raise
@@ -223,7 +223,7 @@ def returner(ret):
         __salt__['cassandra_cql.cql_query_with_prepare'](query,
                                                          'returner_minion',
                                                          tuple(statement_arguments),
-                                                         async=True)
+                                                         asynchronous=True)
     except CommandExecutionError:
         log.critical('Could not store minion ID with Cassandra returner.')
         raise
@@ -265,7 +265,7 @@ def event_return(events):
         try:
             __salt__['cassandra_cql.cql_query_with_prepare'](query, 'salt_events',
                                                              statement_arguments,
-                                                             async=True)
+                                                             asynchronous=True)
         except CommandExecutionError:
             log.critical('Could not store events with Cassandra returner.')
             raise
@@ -295,7 +295,7 @@ def save_load(jid, load, minions=None):
     try:
         __salt__['cassandra_cql.cql_query_with_prepare'](query, 'save_load',
                                                          statement_arguments,
-                                                         async=True)
+                                                         asynchronous=True)
     except CommandExecutionError:
         log.critical('Could not save load in jids table.')
         raise

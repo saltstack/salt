@@ -35,9 +35,9 @@ def __virtual__():
     return __virtualname__
 
 
-ini_regx = re.compile(r'^\s*\[(.+?)\]\s*$', flags=re.M)
-com_regx = re.compile(r'^\s*(#|;)\s*(.*)')
-indented_regx = re.compile(r'(\s+)(.*)')
+INI_REGX = re.compile(r'^\s*\[(.+?)\]\s*$', flags=re.M)
+COM_REGX = re.compile(r'^\s*(#|;)\s*(.*)')
+INDENTED_REGX = re.compile(r'(\s+)(.*)')
 
 
 def set_option(file_name, sections=None, separator='='):
@@ -105,7 +105,13 @@ def get_option(file_name, section, option, separator='='):
         salt '*' ini.get_option /path/to/ini section_name option_name
     '''
     inifile = _Ini.get_ini_file(file_name, separator=separator)
-    return inifile.get(section, {}).get(option, None)
+    if section:
+        try:
+            return inifile.get(section, {}).get(option, None)
+        except AttributeError:
+            return None
+    else:
+        return inifile.get(option, None)
 
 
 def remove_option(file_name, section, option, separator='='):
@@ -129,7 +135,10 @@ def remove_option(file_name, section, option, separator='='):
         salt '*' ini.remove_option /path/to/ini section_name option_name
     '''
     inifile = _Ini.get_ini_file(file_name, separator=separator)
-    value = inifile.get(section, {}).pop(option, None)
+    if isinstance(inifile.get(section), (dict, OrderedDict)):
+        value = inifile.get(section, {}).pop(option, None)
+    else:
+        value = inifile.pop(option, None)
     inifile.flush()
     return value
 
@@ -182,15 +191,53 @@ def remove_section(file_name, section, separator='='):
 
         salt '*' ini.remove_section /path/to/ini section_name
     '''
+    inifile = _Ini.get_ini_file(file_name, separator=separator)
+    if section in inifile:
+        section = inifile.pop(section)
+        inifile.flush()
+        ret = {}
+        for key, value in six.iteritems(section):
+            if key[0] != '#':
+                ret.update({key: value})
+        return ret
+
+
+def get_ini(file_name, separator='='):
+    '''
+    Retrieve whole structure from an ini file and return it as dictionary.
+
+    API Example:
+
+    .. code-block:: python
+
+        import salt
+        sc = salt.client.get_local_client()
+        sc.cmd('target', 'ini.get_ini',
+               [path_to_ini_file])
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' ini.get_ini /path/to/ini
+    '''
+    def ini_odict2dict(odict):
+        '''
+        Transform OrderedDict to regular dict recursively
+        :param odict: OrderedDict
+        :return: regular dict
+        '''
+        ret = {}
+        for key, val in six.iteritems(odict):
+            if key[0] != '#':
+                if isinstance(val, (dict, OrderedDict)):
+                    ret.update({key: ini_odict2dict(val)})
+                else:
+                    ret.update({key: val})
+        return ret
 
     inifile = _Ini.get_ini_file(file_name, separator=separator)
-    section = inifile.pop(section, {})
-    inifile.flush()
-    ret = {}
-    for key, value in six.iteritems(section):
-        if key[0] != '#':
-            ret.update({key: value})
-    return ret
+    return ini_odict2dict(inifile)
 
 
 class _Section(OrderedDict):
@@ -221,7 +268,7 @@ class _Section(OrderedDict):
             self.pop(opt)
         for opt_str in inicontents.split(os.linesep):
             # Match comments
-            com_match = com_regx.match(opt_str)
+            com_match = COM_REGX.match(opt_str)
             if com_match:
                 name = '#comment{0}'.format(comment_count)
                 self.com = com_match.group(1)
@@ -229,7 +276,7 @@ class _Section(OrderedDict):
                 self.update({name: opt_str})
                 continue
             # Add indented lines to the value of the previous entry.
-            indented_match = indented_regx.match(opt_str)
+            indented_match = INDENTED_REGX.match(opt_str)
             if indented_match:
                 indent = indented_match.group(1).replace('\t', '    ')
                 if indent > curr_indent:
@@ -318,7 +365,7 @@ class _Section(OrderedDict):
         sections_dict = OrderedDict()
         for name, value in six.iteritems(self):
             # Handle Comment Lines
-            if com_regx.match(name):
+            if COM_REGX.match(name):
                 yield '{0}{1}'.format(value, os.linesep)
             # Handle Sections
             elif isinstance(value, _Section):
@@ -363,9 +410,6 @@ class _Section(OrderedDict):
 
 
 class _Ini(_Section):
-    def __init__(self, name, inicontents='', separator='=', commenter='#'):
-        super(_Ini, self).__init__(name, inicontents, separator, commenter)
-
     def refresh(self, inicontents=None):
         if inicontents is None:
             try:
@@ -382,7 +426,7 @@ class _Ini(_Section):
         # Remove anything left behind from a previous run.
         self.clear()
 
-        inicontents = ini_regx.split(inicontents)
+        inicontents = INI_REGX.split(inicontents)
         inicontents.reverse()
         # Pop anything defined outside of a section (ie. at the top of
         # the ini file).

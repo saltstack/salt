@@ -411,7 +411,8 @@ def add(connect_spec, dn, attributes):
 
     modlist = salt.utils.data.decode(
         ldap.modlist.addModlist(attributes),
-        to_str=True
+        to_str=True,
+        preserve_tuples=True
     )
     try:
         l.c.add_s(dn, modlist)
@@ -512,7 +513,7 @@ def modify(connect_spec, dn, directives):
             modlist[idx] = (mod[0], mod[1],
                 [_format_unicode_password(x) for x in mod[2]])
 
-    modlist = salt.utils.data.decode(modlist, to_str=True)
+    modlist = salt.utils.data.decode(modlist, to_str=True, preserve_tuples=True)
     try:
         l.c.modify_s(dn, modlist)
     except ldap.LDAPError as e:
@@ -581,7 +582,8 @@ def change(connect_spec, dn, before, after):
 
     modlist = salt.utils.data.decode(
         ldap.modlist.modifyModlist(before, after),
-        to_str=True
+        to_str=True,
+        preserve_tuples=True
     )
     try:
         l.c.modify_s(dn, modlist)

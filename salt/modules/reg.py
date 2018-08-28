@@ -2,20 +2,30 @@
 r'''
 Manage the Windows registry
 
------
 Hives
 -----
 Hives are the main sections of the registry and all begin with the word HKEY.
 
-    - HKEY_LOCAL_MACHINE
-    - HKEY_CURRENT_USER
-    - HKEY_USER
+- HKEY_LOCAL_MACHINE
+- HKEY_CURRENT_USER
+- HKEY_USER
 
-----
+
 Keys
 ----
 Keys are the folders in the registry. Keys can have many nested subkeys. Keys
 can have a value assigned to them under the (Default)
+
+When passing a key on the CLI it must be quoted correctly depending on the
+backslashes being used (``\`` vs ``\\``). The following are valid methods of
+passing the the key on the CLI:
+
+Using single backslashes:
+    ``"SOFTWARE\Python"``
+    ``'SOFTWARE\Python'`` (will not work on a Windows Master)
+
+Using double backslashes:
+    ``SOFTWARE\\Python``
 
 -----------------
 Values or Entries
@@ -25,7 +35,6 @@ Values or Entries are the name/data pairs beneath the keys and subkeys. All keys
 have a default name/data pair. The name is ``(Default)`` with a displayed value
 of ``(value not set)``. The actual value is Null.
 
--------
 Example
 -------
 
@@ -172,7 +181,7 @@ def list_keys(hive, key=None, use_32bit_registry=False):
 
 
 def list_values(hive, key=None, use_32bit_registry=False, include_default=True):
-    '''
+    r'''
     Enumerates the values in a registry key or hive.
 
     Args:
@@ -400,7 +409,7 @@ def set_value(hive,
 
 
 def delete_key_recursive(hive, key, use_32bit_registry=False):
-    '''
+    r'''
     .. versionadded:: 2015.5.4
 
     Delete a registry key to include all subkeys and value/data pairs.
@@ -442,7 +451,7 @@ def delete_key_recursive(hive, key, use_32bit_registry=False):
 
 
 def delete_value(hive, key, vname=None, use_32bit_registry=False):
-    '''
+    r'''
     Delete a registry value entry or the default value for a key.
 
     Args:
@@ -467,7 +476,7 @@ def delete_value(hive, key, vname=None, use_32bit_registry=False):
             Deletes the 32bit portion of the registry on 64bit installations. On
             32bit machines this is ignored.
 
-    Return:
+    Returns:
         bool: True if successful, otherwise False
 
     CLI Example:

@@ -8,6 +8,7 @@ import errno
 import os
 import textwrap
 import tempfile
+import time
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
@@ -83,6 +84,7 @@ class CMDRunRedirectTest(ModuleCase, SaltReturnAssertsMixin):
         super(CMDRunRedirectTest, self).setUp()
 
     def tearDown(self):
+        time.sleep(1)
         for path in (self.state_file, self.test_tmp_path, self.test_file):
             try:
                 os.remove(path)

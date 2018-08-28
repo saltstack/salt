@@ -47,6 +47,9 @@ try:
         UserPassCredentials,
         ServicePrincipalCredentials,
     )
+    from msrestazure.azure_active_directory import (
+        MSIAuthentication
+    )
     from msrestazure.azure_cloud import (
         MetadataEndpointError,
         get_cloud_from_metadata_endpoint,
@@ -110,6 +113,9 @@ def _determine_auth(**kwargs):
             credentials = UserPassCredentials(kwargs['username'],
                                               kwargs['password'],
                                               cloud_environment=cloud_env)
+    elif 'subscription_id' in kwargs:
+        credentials = MSIAuthentication(cloud_environment=cloud_env)
+
     else:
         raise SaltInvocationError(
             'Unable to determine credentials. '
@@ -133,7 +139,11 @@ def get_client(client_type, **kwargs):
     Dynamically load the selected client and return a management client object
     '''
     client_map = {'compute': 'ComputeManagement',
+                  'authorization': 'AuthorizationManagement',
+                  'dns': 'DnsManagement',
                   'storage': 'StorageManagement',
+                  'managementlock': 'ManagementLock',
+                  'monitor': 'MonitorManagement',
                   'network': 'NetworkManagement',
                   'policy': 'Policy',
                   'resource': 'ResourceManagement',
@@ -148,8 +158,10 @@ def get_client(client_type, **kwargs):
 
     map_value = client_map[client_type]
 
-    if client_type == 'subscription' or client_type == 'policy':
+    if client_type in ['policy', 'subscription']:
         module_name = 'resource'
+    elif client_type in ['managementlock']:
+        module_name = 'resource.locks'
     else:
         module_name = client_type
 
@@ -164,6 +176,7 @@ def get_client(client_type, **kwargs):
         )
 
     credentials, subscription_id, cloud_env = _determine_auth(**kwargs)
+
     if client_type == 'subscription':
         client = Client(
             credentials=credentials,

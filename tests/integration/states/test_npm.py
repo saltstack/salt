@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Erik Johnson (erik@saltstack.com)`
+    :codeauthor: Erik Johnson (erik@saltstack.com)
     tests.integration.states.npm
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
@@ -33,7 +33,7 @@ class NpmStateTest(ModuleCase, SaltReturnAssertsMixin):
         Basic test to determine if NPM module was successfully installed and
         removed.
         '''
-        ret = self.run_state('npm.installed', name='pm2', registry="http://registry.npmjs.org/")
+        ret = self.run_state('npm.installed', name='pm2@2.10.4', registry="http://registry.npmjs.org/")
         self.assertSaltTrueReturn(ret)
         ret = self.run_state('npm.removed', name='pm2')
         self.assertSaltTrueReturn(ret)
@@ -69,7 +69,7 @@ class NpmStateTest(ModuleCase, SaltReturnAssertsMixin):
         Basic test to determine if NPM module successfully installs multiple
         packages.
         '''
-        ret = self.run_state('npm.installed', name='unused', pkgs=['pm2', 'grunt'], registry="http://registry.npmjs.org/")
+        ret = self.run_state('npm.installed', name='unused', pkgs=['pm2@2.10.4', 'grunt@1.0.2'], registry="http://registry.npmjs.org/")
         self.assertSaltTrueReturn(ret)
 
     @skipIf(salt.utils.path.which('npm') and LooseVersion(cmd.run('npm -v')) >= LooseVersion(MAX_NPM_VERSION),

@@ -75,7 +75,6 @@ state modules
     debconfmod
     dellchassis
     disk
-    docker
     docker_container
     docker_image
     docker_network
@@ -136,7 +135,6 @@ state modules
     jboss7
     jenkins
     junos
-    k8s
     kapacitor
     kernelpkg
     keyboard
@@ -308,7 +306,6 @@ state modules
     win_smtp_server
     win_snmp
     win_system
-    win_update
     win_wua
     winrepo
     x509
@@ -326,4 +323,5 @@ state modules
     zk_concurrency
     zfs
     zone
+    zookeeper
     zpool

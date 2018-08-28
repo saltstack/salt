@@ -129,8 +129,6 @@ def serve_file(load, fnd):
     with salt.utils.files.fopen(fpath, 'rb') as fp_:
         fp_.seek(load['loc'])
         data = fp_.read(__opts__['file_buffer_size'])
-        if data and six.PY3 and not salt.utils.files.is_binary(fpath):
-            data = data.decode(__salt_system_encoding__)
         if gzip and data:
             data = salt.utils.gzip_util.compress(data, gzip)
             ret['gzip'] = gzip
@@ -253,7 +251,7 @@ def file_hash(load, fnd):
                     except OSError:
                         pass
                     return file_hash(load, fnd)
-                if os.path.getmtime(path) == mtime:
+                if str(os.path.getmtime(path)) == mtime:
                     # check if mtime changed
                     ret['hsum'] = hsum
                     return ret

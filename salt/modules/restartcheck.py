@@ -299,13 +299,6 @@ def _kernel_versions_redhat():
     return kernel_versions
 
 
-def _is_older_nilrt():
-    '''
-    If this is an older version of NILinuxRT, return True. Otherwise, return False.
-    '''
-    return os.path.exists('/usr/local/natinst/bin/nisafemodeversion')
-
-
 def _kernel_versions_nilrt():
     '''
     Last installed kernel name, for Debian based systems.
@@ -314,23 +307,42 @@ def _kernel_versions_nilrt():
             List with possible names of last installed kernel
             as they are probably interpreted in output of `uname -a` command.
     '''
-    kernel_versions = []
+    kver = None
 
-    if __grains__.get('os_family') == NILRT_FAMILY_NAME and _is_older_nilrt():
-        # bzImage is copied in the rootfs without any package management or
-        # version info. We also can't depend on kernel headers like
-        # include/generated/uapi/linux/version.h being installed. Even if
-        # we fix this in newer versions of "old NILRT" we still need to be
-        # backwards compatible so it'll just get more complicated.
-        kpath = '/boot/runmode/bzImage'
-        kernel_strings = __salt__['cmd.run']('strings {0}'.format(kpath))
-        re_result = re.search(r'[0-9]+\.[0-9]+\.[0-9]+-rt.*(?=\s\()', kernel_strings)
-        if re_result is not None:
-            kernel_versions.append(re_result.group(0))
+    def _get_kver_from_bin(kbin):
+        '''
+        Get kernel version from a binary image or None if detection fails
+        '''
+        kvregex = r'[0-9]+\.[0-9]+\.[0-9]+-rt\S+'
+        kernel_strings = __salt__['cmd.run']('strings {0}'.format(kbin))
+        re_result = re.search(kvregex, kernel_strings)
+        return None if re_result is None else re_result.group(0)
+
+    if __grains__.get('lsb_distrib_id') == 'nilrt':
+        if 'arm' in __grains__.get('cpuarch'):
+            # the kernel is inside a uboot created itb (FIT) image alongside the
+            # device tree, ramdisk and a bootscript. There is no package management
+            # or any other kind of versioning info, so we need to extract the itb.
+            itb_path = '/boot/linux_runmode.itb'
+            compressed_kernel = '/var/volatile/tmp/uImage.gz'
+            uncompressed_kernel = '/var/volatile/tmp/uImage'
+            __salt__['cmd.run']('dumpimage -i {0} -T flat_dt -p0 kernel -o {1}'
+                                .format(itb_path, compressed_kernel))
+            __salt__['cmd.run']('gunzip -f {0}'.format(compressed_kernel))
+            kver = _get_kver_from_bin(uncompressed_kernel)
+        else:
+            # the kernel bzImage is copied to rootfs without package management or
+            # other versioning info.
+            kver = _get_kver_from_bin('/boot/runmode/bzImage')
     else:
-        kernel_versions.append(os.path.basename(os.readlink('/boot/bzImage')).strip('bzImage-'))
+        # kernels in newer NILRT's are installed via package management and
+        # have the version appended to the kernel image filename
+        if 'arm' in __grains__.get('cpuarch'):
+            kver = os.path.basename(os.readlink('/boot/uImage')).strip('uImage-')
+        else:
+            kver = os.path.basename(os.readlink('/boot/bzImage')).strip('bzImage-')
 
-    return kernel_versions
+    return [] if kver is None else [kver]
 
 
 def _check_timeout(start_time, timeout):
@@ -345,34 +357,64 @@ def _check_timeout(start_time, timeout):
         raise salt.exceptions.TimeoutError('Timeout expired.')
 
 
+def _file_changed_nilrt(full_filepath):
+    '''
+    Detect whether a file changed in an NILinuxRT system using md5sum and timestamp
+    files from a state directory.
+
+    Returns:
+             - False if md5sum/timestamp state files don't exist
+             - True/False depending if ``base_filename`` got modified/touched
+    '''
+    rs_state_dir = "/var/lib/salt/restartcheck_state"
+    base_filename = os.path.basename(full_filepath)
+    timestamp_file = os.path.join(rs_state_dir, '{0}.timestamp'.format(base_filename))
+    md5sum_file = os.path.join(rs_state_dir, '{0}.md5sum'.format(base_filename))
+
+    if not os.path.exists(timestamp_file) or not os.path.exists(md5sum_file):
+        return False
+
+    prev_timestamp = __salt__['file.read'](timestamp_file).rstrip()
+    # Need timestamp in seconds so floor it using int()
+    cur_timestamp = str(int(os.path.getmtime(full_filepath)))
+
+    if prev_timestamp != cur_timestamp:
+        return True
+
+    return bool(__salt__['cmd.retcode']('md5sum -cs {0}'.format(md5sum_file), output_loglevel="quiet"))
+
+
 def _kernel_modules_changed_nilrt(kernelversion):
     '''
     Once a NILRT kernel module is inserted, it can't be rmmod so systems need
-    rebooting (some modules explicitely ask for reboots even on first install),
+    rebooting (some modules explicitly ask for reboots even on first install),
     hence this functionality of determining if the module state got modified by
     testing if depmod was run.
 
     Returns:
              - True/False depending if modules.dep got modified/touched
     '''
-    depmodpath_base = '/lib/modules/{0}/modules.dep'.format(kernelversion)
-    depmodpath_timestamp = "/var/lib/salt/kernel_module_state/modules.dep.timestamp"
-    depmodpath_md5sum = "/var/lib/salt/kernel_module_state/modules.dep.md5sum"
+    if kernelversion is not None:
+        return _file_changed_nilrt('/lib/modules/{0}/modules.dep'.format(kernelversion))
+    return False
 
-    # nothing can be detected without these dependencies
-    if (kernelversion is None or
-            not os.path.exists(depmodpath_timestamp) or
-            not os.path.exists(depmodpath_md5sum)):
-        return False
 
-    prev_timestamp = __salt__['file.read'](depmodpath_timestamp).rstrip()
-    # need timestamp in seconds so floor it using int()
-    cur_timestamp = str(int(os.path.getmtime(depmodpath_base)))
+def _sysapi_changed_nilrt():
+    '''
+    Besides the normal Linux kernel driver interfaces, NILinuxRT-supported hardware features an
+    extensible, plugin-based device enumeration and configuration interface named "System API".
+    When an installed package is extending the API it is very hard to know all repercurssions and
+    actions to be taken, so reboot making sure all drivers are reloaded, hardware reinitialized,
+    daemons restarted, etc.
 
-    if prev_timestamp != cur_timestamp:
-        return True
-
-    return bool(__salt__['cmd.retcode']('md5sum -cs {0}'.format(depmodpath_md5sum), output_loglevel="quiet"))
+    Returns:
+             - True/False depending on if nisysapi.ini got modified/touched
+             - False if nisysapi.ini does not exist to avoid triggering unnecessary reboots
+    '''
+    nisysapi_path = '/usr/local/natinst/share/nisysapi.ini'
+    if os.path.exists(nisysapi_path):
+        return _file_changed_nilrt(nisysapi_path)
+    return False
 
 
 # pylint: disable=too-many-locals,too-many-branches,too-many-statements
@@ -427,8 +469,8 @@ def restartcheck(ignorelist=None, blacklist=None, excludepid=None, **kwargs):
         _check_timeout(start_time, timeout)
         if kernel in kernel_current:
             if __grains__.get('os_family') == 'NILinuxRT':
-                # Check kernel modules for version changes
-                if not _kernel_modules_changed_nilrt(kernel):
+                # Check kernel modules and hardware API's for version changes
+                if not _kernel_modules_changed_nilrt(kernel) and not _sysapi_changed_nilrt():
                     kernel_restart = False
                     break
             else:

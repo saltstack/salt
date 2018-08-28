@@ -14,6 +14,7 @@ import os
 # Import Salt libs
 from salt.ext import six
 import salt.utils.files
+import salt.utils.platform
 import salt.utils.stringutils
 
 from salt.utils.decorators.jinja import jinja_filter
@@ -28,7 +29,8 @@ def base64_b64encode(instr):
     newline ('\\n') characters in the encoded output.
     '''
     return salt.utils.stringutils.to_unicode(
-        base64.b64encode(salt.utils.stringutils.to_bytes(instr))
+        base64.b64encode(salt.utils.stringutils.to_bytes(instr)),
+        encoding='utf8' if salt.utils.platform.is_windows() else None
     )
 
 
@@ -39,7 +41,10 @@ def base64_b64decode(instr):
     '''
     decoded = base64.b64decode(salt.utils.stringutils.to_bytes(instr))
     try:
-        return salt.utils.stringutils.to_unicode(decoded)
+        return salt.utils.stringutils.to_unicode(
+            decoded,
+            encoding='utf8' if salt.utils.platform.is_windows() else None
+        )
     except UnicodeDecodeError:
         return decoded
 
@@ -53,7 +58,8 @@ def base64_encodestring(instr):
     at the end of the encoded string.
     '''
     return salt.utils.stringutils.to_unicode(
-        base64.encodestring(salt.utils.stringutils.to_bytes(instr))
+        base64.encodestring(salt.utils.stringutils.to_bytes(instr)),
+        encoding='utf8' if salt.utils.platform.is_windows() else None
     )
 
 
@@ -69,7 +75,10 @@ def base64_decodestring(instr):
         # PY2
         decoded = base64.decodestring(b)
     try:
-        return salt.utils.stringutils.to_unicode(decoded)
+        return salt.utils.stringutils.to_unicode(
+            decoded,
+            encoding='utf8' if salt.utils.platform.is_windows() else None
+        )
     except UnicodeDecodeError:
         return decoded
 

@@ -127,7 +127,7 @@ Other render pipeline combinations include:
 The following is a contrived example SLS file using the ``jinja|mako|yaml``
 render pipeline:
 
-.. code-block:: python
+.. code-block:: text
 
     #!jinja|mako|yaml
 
