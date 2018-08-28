@@ -337,7 +337,6 @@ class ThreadPool(object):
         t = threading.Timer(60.0, _report_stats)
         t.start()
 
-
     # intentionally not called "apply_async"  since we aren't keeping track of
     # the return at all, if we want to make this API compatible with multiprocessing
     # threadpool we can in the future, and we won't have to worry about name collision
@@ -377,7 +376,6 @@ class ThreadPool(object):
                 func(*args, **kwargs)
             except Exception as err:
                 log.debug(err, exc_info=True)
-
 
 
 class ProcessManager(object):
