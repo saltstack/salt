@@ -931,10 +931,10 @@ class MinionEvent(SaltEvent):
     RAET compatible
     Create a master event management object
     '''
-    def __init__(self, opts, listen=True, io_loop=None, raise_errors=False):
+    def __init__(self, opts, listen=True, io_loop=None, keep_loop=False, raise_errors=False):
         super(MinionEvent, self).__init__(
             'minion', sock_dir=opts.get('sock_dir'),
-            opts=opts, listen=listen, io_loop=io_loop,
+            opts=opts, listen=listen, io_loop=io_loop, keep_loop=keep_loop,
             raise_errors=raise_errors)
 
 

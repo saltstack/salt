@@ -191,9 +191,9 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
         if self.crypt != 'clear':
             # we don't need to worry about auth as a kwarg, since its a singleton
             self.auth = salt.crypt.AsyncAuth(self.opts, io_loop=self._io_loop)
-        log.debug('Connecting the Minion to the Master URI (for the return server): %s', self.master_uri)
+        log.debug('Connecting the Minion to the Master URI (for the return server): %s', self.opts['master_uri'])
         self.message_client = AsyncReqMessageClientPool(self.opts,
-                                                        args=(self.opts, self.master_uri,),
+                                                        args=(self.opts, self.opts['master_uri'],),
                                                         kwargs={'io_loop': self._io_loop})
 
     def __del__(self):
