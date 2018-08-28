@@ -88,8 +88,6 @@ SERVICE_ERROR_CONTROL = {0: 'Ignore',
                          'severe': 2,
                          'critical': 3}
 
-RETRY_ATTEMPTS = 90
-
 
 def __virtual__():
     '''
@@ -102,6 +100,51 @@ def __virtual__():
         return False, 'Module win_service: failed to load win32 modules'
 
     return __virtualname__
+
+
+def _status_wait(service_name, end_time, service_states):
+    '''
+    Helper function that will wait for the status of the service to match the
+    provided status before an end time expires. Used for service stop and start
+
+    .. versionadded:: 2017.7.9, 2018.3.4
+
+    Args:
+        service_name (str):
+            The name of the service
+
+        end_time (float):
+            A future time. e.g. time.time() + 10
+
+        service_states (list):
+            Services statuses to wait for as returned by info()
+
+    Returns:
+        dict: A dictionary containing information about the service.
+
+    :codeauthor: Damon Atkins <https://github.com/damon-atkins>
+    '''
+    info_results = info(service_name)
+
+    while info_results['Status'] in service_states and time.time() < end_time:
+        # From Microsoft: Do not wait longer than the wait hint. A good interval
+        # is one-tenth of the wait hint but not less than 1 second and not more
+        # than 10 seconds.
+        # https://docs.microsoft.com/en-us/windows/desktop/services/starting-a-service
+        # https://docs.microsoft.com/en-us/windows/desktop/services/stopping-a-service
+        # Wait hint is in ms
+        wait_time = info_results['Status_WaitHint']
+        # Convert to seconds or 0
+        wait_time = wait_time / 1000 if wait_time else 0
+        if wait_time < 1:
+            wait_time = 1
+        elif wait_time > 10:
+            wait_time = 10
+
+        time.sleep(wait_time)
+        info_results = info(service_name)
+
+    return info_results
 
 
 def get_enabled():
@@ -378,7 +421,7 @@ def info(name):
     return ret
 
 
-def start(name):
+def start(name, timeout=90):
     '''
     Start the specified service.
 
@@ -389,8 +432,14 @@ def start(name):
     Args:
         name (str): The name of the service to start
 
+        timeout (int):
+            The time in seconds to wait for the service to start before
+            returning. Default is 90 seconds
+
+            .. versionadded:: 2017.7.9, 2018.3.4
+
     Returns:
-        bool: True if successful, False otherwise
+        bool: ``True`` if successful, otherwise ``False``
 
     CLI Example:
 
@@ -411,24 +460,28 @@ def start(name):
         raise CommandExecutionError(
             'Failed To Start {0}: {1}'.format(name, exc[2]))
 
-    attempts = 0
-    while info(name)['Status'] in ['Start Pending', 'Stopped'] \
-            and attempts <= RETRY_ATTEMPTS:
-        time.sleep(1)
-        attempts += 1
+    srv_status = _status_wait(service_name=name,
+                              end_time=time.time() + int(timeout),
+                              service_states=['Start Pending', 'Stopped'])
 
-    return status(name)
+    return srv_status['Status'] == 'Running'
 
 
-def stop(name):
+def stop(name, timeout=90):
     '''
     Stop the specified service
 
     Args:
         name (str): The name of the service to stop
 
+        timeout (int):
+            The time in seconds to wait for the service to stop before
+            returning. Default is 90 seconds
+
+            .. versionadded:: 2017.7.9, 2018.3.4
+
     Returns:
-        bool: True if successful, False otherwise
+        bool: ``True`` if successful, otherwise ``False``
 
     CLI Example:
 
@@ -436,15 +489,6 @@ def stop(name):
 
         salt '*' service.stop <service name>
     '''
-    # net stop issues a stop command and waits briefly (~30s), but will give
-    # up if the service takes too long to stop with a misleading
-    # "service could not be stopped" message and RC 0.
-
-    cmd = ['net', 'stop', '/y', name]
-    res = __salt__['cmd.run'](cmd, python_shell=False)
-    if 'service was stopped' in res:
-        return True
-
     try:
         win32serviceutil.StopService(name)
     except pywintypes.error as exc:
@@ -452,28 +496,37 @@ def stop(name):
             raise CommandExecutionError(
                 'Failed To Stop {0}: {1}'.format(name, exc[2]))
 
-    attempts = 0
-    while info(name)['Status'] in ['Running', 'Stop Pending'] \
-            and attempts <= RETRY_ATTEMPTS:
-        time.sleep(1)
-        attempts += 1
+    srv_status = _status_wait(service_name=name,
+                              end_time=time.time() + int(timeout),
+                              service_states=['Running', 'Stop Pending'])
 
-    return not status(name)
+    return srv_status['Status'] == 'Stopped'
 
 
-def restart(name):
+def restart(name, timeout=90):
     '''
     Restart the named service. This issues a stop command followed by a start.
 
     Args:
         name: The name of the service to restart.
 
-    .. note::
-        If the name passed is ``salt-minion`` a scheduled task is created and
-        executed to restart the salt-minion service.
+            .. note::
+                If the name passed is ``salt-minion`` a scheduled task is
+                created and executed to restart the salt-minion service.
+
+        timeout (int):
+            The time in seconds to wait for the service to stop and start before
+            returning. Default is 90 seconds
+
+            .. note::
+                The timeout is cumulative meaning it is applied to the stop and
+                then to the start command. A timeout of 90 could take up to 180
+                seconds if the service is long in stopping and starting
+
+            .. versionadded:: 2017.7.9, 2018.3.4
 
     Returns:
-        bool: ``True`` if successful, ``False`` otherwise
+        bool: ``True`` if successful, otherwise ``False``
 
     CLI Example:
 
@@ -485,7 +538,8 @@ def restart(name):
         create_win_salt_restart_task()
         return execute_salt_restart_task()
 
-    return stop(name) and start(name)
+    return stop(name=name, timeout=timeout) and \
+           start(name=name, timeout=timeout)
 
 
 def create_win_salt_restart_task():
@@ -531,7 +585,7 @@ def execute_salt_restart_task():
     return __salt__['task.run'](name='restart-salt-minion')
 
 
-def status(name, sig=None):
+def status(name, *args, **kwargs):
     '''
     Return the status for a service.
     If the name contains globbing, a dict mapping service name to True/False
@@ -542,7 +596,6 @@ def status(name, sig=None):
 
     Args:
         name (str): The name of the service to check
-        sig (str): Not supported on Windows
 
     Returns:
         bool: True if running, False otherwise
@@ -610,20 +663,26 @@ def modify(name,
     .. versionadded:: 2016.11.0
 
     Args:
-        name (str): The name of the service. Can be found using the
+        name (str):
+            The name of the service. Can be found using the
             ``service.get_service_name`` function
 
-        bin_path (str): The path to the service executable. Backslashes must be
-            escaped, eg: C:\\path\\to\\binary.exe
+        bin_path (str):
+            The path to the service executable. Backslashes must be escaped, eg:
+            ``C:\\path\\to\\binary.exe``
 
-        exe_args (str): Any arguments required by the service executable
+        exe_args (str):
+            Any arguments required by the service executable
 
-        display_name (str): The name to display in the service manager
+        display_name (str):
+            The name to display in the service manager
 
-        description (str): The description to display for the service
+        description (str):
+            The description to display for the service
 
-        service_type (str): Specifies the service type. Default is ``own``.
-            Valid options are as follows:
+        service_type (str):
+            Specifies the service type. Default is ``own``. Valid options are as
+            follows:
 
             - kernel: Driver service
             - filesystem: File system driver service
@@ -632,8 +691,8 @@ def modify(name,
             - own (default): Service runs in its own process
             - share: Service shares a process with one or more other services
 
-        start_type (str): Specifies the service start type. Valid options are as
-            follows:
+        start_type (str):
+            Specifies the service start type. Valid options are as follows:
 
             - boot: Device driver that is loaded by the boot loader
             - system: Device driver that is started during kernel initialization
@@ -641,13 +700,14 @@ def modify(name,
             - manual: Service must be started manually
             - disabled: Service cannot be started
 
-        start_delayed (bool): Set the service to Auto(Delayed Start). Only valid
-            if the start_type is set to ``Auto``. If service_type is not passed,
-            but the service is already set to ``Auto``, then the flag will be
-            set.
+        start_delayed (bool):
+            Set the service to Auto(Delayed Start). Only valid if the start_type
+            is set to ``Auto``. If service_type is not passed, but the service
+            is already set to ``Auto``, then the flag will be set.
 
-        error_control (str): The severity of the error, and action taken, if
-            this service fails to start. Valid options are as follows:
+        error_control (str):
+            The severity of the error, and action taken, if this service fails
+            to start. Valid options are as follows:
 
             - normal: Error is logged and a message box is displayed
             - severe: Error is logged and computer attempts a restart with the
@@ -657,29 +717,33 @@ def modify(name,
             - ignore: Error is logged and startup continues, no notification is
               given to the user
 
-        load_order_group: The name of the load order group to which this service
-            belongs
+        load_order_group (str):
+            The name of the load order group to which this service belongs
 
-        dependencies (list): A list of services or load ordering groups that
-            must start before this service
+        dependencies (list):
+            A list of services or load ordering groups that must start before
+            this service
 
-        account_name (str): The name of the account under which the service
-            should run. For ``own`` type services this should be in the
-            ``domain\\username`` format. The following are examples of valid
-            built-in service accounts:
+        account_name (str):
+            The name of the account under which the service should run. For
+            ``own`` type services this should be in the ``domain\\username``
+            format. The following are examples of valid built-in service
+            accounts:
 
             - NT Authority\\LocalService
             - NT Authority\\NetworkService
             - NT Authority\\LocalSystem
             - .\LocalSystem
 
-        account_password (str): The password for the account name specified in
-            ``account_name``. For the above built-in accounts, this can be None.
-            Otherwise a password must be specified.
+        account_password (str):
+            The password for the account name specified in ``account_name``. For
+            the above built-in accounts, this can be None. Otherwise a password
+            must be specified.
 
-        run_interactive (bool): If this setting is True, the service will be
-            allowed to interact with the user. Not recommended for services that
-            run with elevated privileges.
+        run_interactive (bool):
+            If this setting is True, the service will be allowed to interact
+            with the user. Not recommended for services that run with elevated
+            privileges.
 
     Returns:
         dict: a dictionary of changes made
@@ -936,20 +1000,26 @@ def create(name,
 
     Args:
 
-        name (str): Specifies the service name. This is not the display_name
+        name (str):
+            Specifies the service name. This is not the display_name
 
-        bin_path (str): Specifies the path to the service binary file.
-            Backslashes must be escaped, eg: C:\\path\\to\\binary.exe
+        bin_path (str):
+            Specifies the path to the service binary file. Backslashes must be
+            escaped, eg: ``C:\\path\\to\\binary.exe``
 
-        exe_args (str): Any additional arguments required by the service binary.
+        exe_args (str):
+            Any additional arguments required by the service binary.
 
-        display_name (str): the name to be displayed in the service manager. If
-            not passed, the ``name`` will be used
+        display_name (str):
+            The name to be displayed in the service manager. If not passed, the
+            ``name`` will be used
 
-        description (str): A description of the service
+        description (str):
+            A description of the service
 
-        service_type (str): Specifies the service type. Default is ``own``.
-            Valid options are as follows:
+        service_type (str):
+            Specifies the service type. Default is ``own``. Valid options are as
+            follows:
 
             - kernel: Driver service
             - filesystem: File system driver service
@@ -958,8 +1028,8 @@ def create(name,
             - own (default): Service runs in its own process
             - share: Service shares a process with one or more other services
 
-        start_type (str): Specifies the service start type. Valid options are as
-            follows:
+        start_type (str):
+            Specifies the service start type. Valid options are as follows:
 
             - boot: Device driver that is loaded by the boot loader
             - system: Device driver that is started during kernel initialization
@@ -967,13 +1037,15 @@ def create(name,
             - manual (default): Service must be started manually
             - disabled: Service cannot be started
 
-        start_delayed (bool): Set the service to Auto(Delayed Start). Only valid
-            if the start_type is set to ``Auto``. If service_type is not passed,
-            but the service is already set to ``Auto``, then the flag will be
-            set. Default is ``False``
+        start_delayed (bool):
+            Set the service to Auto(Delayed Start). Only valid if the start_type
+            is set to ``Auto``. If service_type is not passed, but the service
+            is already set to ``Auto``, then the flag will be set. Default is
+            ``False``
 
-        error_control (str): The severity of the error, and action taken, if
-            this service fails to start. Valid options are as follows:
+        error_control (str):
+            The severity of the error, and action taken, if this service fails
+            to start. Valid options are as follows:
 
             - normal (normal): Error is logged and a message box is displayed
             - severe: Error is logged and computer attempts a restart with the
@@ -983,29 +1055,33 @@ def create(name,
             - ignore: Error is logged and startup continues, no notification is
               given to the user
 
-        load_order_group: The name of the load order group to which this service
-            belongs
+        load_order_group (str):
+            The name of the load order group to which this service belongs
 
-        dependencies (list): A list of services or load ordering groups that
-            must start before this service
+        dependencies (list):
+            A list of services or load ordering groups that must start before
+            this service
 
-        account_name (str): The name of the account under which the service
-            should run. For ``own`` type services this should be in the
-            ``domain\\username`` format. The following are examples of valid
-            built-in service accounts:
+        account_name (str):
+            The name of the account under which the service should run. For
+            ``own`` type services this should be in the ``domain\\username``
+            format. The following are examples of valid built-in service
+            accounts:
 
             - NT Authority\\LocalService
             - NT Authority\\NetworkService
             - NT Authority\\LocalSystem
             - .\\LocalSystem
 
-        account_password (str): The password for the account name specified in
-            ``account_name``. For the above built-in accounts, this can be None.
-            Otherwise a password must be specified.
+        account_password (str):
+            The password for the account name specified in ``account_name``. For
+            the above built-in accounts, this can be None. Otherwise a password
+            must be specified.
 
-        run_interactive (bool): If this setting is True, the service will be
-            allowed to interact with the user. Not recommended for services that
-            run with elevated privileges.
+        run_interactive (bool):
+            If this setting is True, the service will be allowed to interact
+            with the user. Not recommended for services that run with elevated
+            privileges.
 
     Returns:
         dict: A dictionary containing information about the new service
@@ -1096,15 +1172,23 @@ def create(name,
     return info(name)
 
 
-def delete(name):
+def delete(name, timeout=90):
     '''
     Delete the named service
 
     Args:
+
         name (str): The name of the service to delete
 
+        timeout (int):
+            The time in seconds to wait for the service to be deleted before
+            returning. This is necessary because a service must be stopped
+            before it can be deleted. Default is 90 seconds
+
+            .. versionadded:: 2017.7.9, 2018.3.4
+
     Returns:
-        bool: True if successful, False otherwise
+        bool: ``True`` if successful, otherwise ``False``
 
     CLI Example:
 
@@ -1120,16 +1204,20 @@ def delete(name):
             handle_scm, name, win32service.SERVICE_ALL_ACCESS)
     except pywintypes.error as exc:
         raise CommandExecutionError(
-            'Failed To Open {0}: {1}'.format(name, exc[2]))
+            'Failed to open {0}. {1}'.format(name, exc.strerror))
 
-    win32service.DeleteService(handle_svc)
+    try:
+        win32service.DeleteService(handle_svc)
+    except pywintypes.error as exc:
+        raise CommandExecutionError(
+            'Failed to delete {0}. {1}'.format(name, exc.strerror))
+    finally:
+        log.debug('Cleaning up')
+        win32service.CloseServiceHandle(handle_scm)
+        win32service.CloseServiceHandle(handle_svc)
 
-    win32service.CloseServiceHandle(handle_scm)
-    win32service.CloseServiceHandle(handle_svc)
-
-    attempts = 0
-    while name in get_all() and attempts <= RETRY_ATTEMPTS:
+    end_time = time.time() + int(timeout)
+    while name in get_all() and time.time() < end_time:
         time.sleep(1)
-        attempts += 1
 
     return name not in get_all()
