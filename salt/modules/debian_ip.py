@@ -420,7 +420,7 @@ DEBIAN_ATTR_TO_SALT_ATTR_MAP['hwaddress'] = 'hwaddress'
 
 IPV4_VALID_PROTO = ['bootp', 'dhcp', 'static', 'manual', 'loopback', 'ppp']
 
-IPV6_ATTR_MAP = {
+IPV4_ATTR_MAP = {
     'proto': __within(IPV4_VALID_PROTO, dtype=six.text_type),
     # ipv4 static & manual
     'address': __ipv4_quad,
