@@ -221,9 +221,9 @@ class DebianIpTestCase(TestCase, LoaderModuleMockMixin):
                         'ipv6ipaddr': '2001:db8:dead:beef::3',
                         'ipv6netmask': '64',
                         'ipv6gateway': '2001:db8:dead:beef::1',
-                        'ttl': '18', # shared
-                        'ipv6ttl': '15', # overriden for v6
-                        'mtu': '1480', # shared
+                        'ttl': '18',  # shared
+                        'ipv6ttl': '15',  # overriden for v6
+                        'mtu': '1480',  # shared
                         'enable_ipv6': True,
                         'noifupdown': True,
                         },
@@ -441,9 +441,9 @@ class DebianIpTestCase(TestCase, LoaderModuleMockMixin):
             # Skip tests that require __salt__['pkg.install']()
             if iface['iface_type'] not in ['bridge', 'pppoe', 'vlan']:
                 self.assertListEqual(debian_ip.build_interface(
-                                            iface = iface['iface_name'],
-                                            iface_type = iface['iface_type'],
-                                            enabled = iface['enabled'],
+                                            iface=iface['iface_name'],
+                                            iface_type=iface['iface_type'],
+                                            enabled=iface['enabled'],
                                             **iface['settings']),
                                      iface['return'])
 
