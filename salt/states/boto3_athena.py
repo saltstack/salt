@@ -119,7 +119,7 @@ def named_query_present(name, Name=None, Description=None, Database=None, QueryS
             log.error(ret['comment'])
             ret['result'] = False
             return ret
-        log.debug('Athena Named Query `%s` deleted for updating' %
+        log.debug('Athena Named Query `%s` deleted for updating' % NamedQueryId)
 
     args = {'Name': Name, 'Description': Description, 'Database': Database,
             'QueryString': QueryString, 'ClientRequestToken': new_md5,

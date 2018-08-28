@@ -45,6 +45,7 @@ Execution module for Amazon Athena using boto3
 
 # keep lint from choking on _get_conn and _cache_id
 #pylint: disable=E0602
+#pylint: disable=E1320
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
@@ -54,7 +55,7 @@ import sys
 import hashlib
 
 # Import Salt libs
-import salt.utils.boto3
+import salt.utils.boto3  # pylint: disable=E0611
 import salt.utils.compat
 import salt.utils.versions
 from salt.exceptions import SaltInvocationError, CommandExecutionError
@@ -62,7 +63,7 @@ log = logging.getLogger(__name__)   # pylint: disable=W1699
 
 # Import third party libs
 try:
-    import boto3  #pylint: disable=unused-import
+    import boto3  # pylint: disable=unused-import
     from botocore.exceptions import ClientError, ParamValidationError
     logging.getLogger('boto3').setLevel(logging.CRITICAL)
     HAS_BOTO3 = True
@@ -103,19 +104,19 @@ def _call_with_retries(func, kwargs, wait=10, retries=30):
     try:
         wait = int(wait)
     except:
-        raise SaltInvocationError('Bad value `%s` passed for `wait` - must be an int.' % wait)
+        raise SaltInvocationError('Bad value `{}` passed for `wait` - must be an int.'.format(wait))
     while retries:
         try:
             return func(**kwargs)
         except ClientError as err:
             if err.response.get('Error', {}).get('Code') == 'Throttling':
-                log.debug('Throttled by AWS API.  Sleeping %s seconds for retry...' % wait)
+                log.debug('Throttled by AWS API.  Sleeping {} seconds for retry...'.format(wait))
                 time.sleep(wait)
                 continue
             raise err
         except ParamValidationError as err:
             raise SaltInvocationError(err)
-    raise CommandExecutionError('Failed %s retries over %s seconds' % (retries, retries * wait))
+    raise CommandExecutionError('Failed {} retries over {} seconds'.format(retries, retries * wait))
 
 
 def _do_generic_thing(region=None, key=None, keyid=None, profile=None, fname='', kwargs=None):
@@ -123,13 +124,13 @@ def _do_generic_thing(region=None, key=None, keyid=None, profile=None, fname='',
     func = getattr(conn, fname, None)
     kwargs = {key: val for key, val in kwargs.items() if not key.startswith('_')} if kwargs else {}
     if func is None:
-        raise SaltInvocationError('Function `%s()` not available.' % fname)
+        raise SaltInvocationError('Function `{}()` not available.'.format(fname))
     try:
         res = _call_with_retries(func=func, kwargs=kwargs)
         res.pop('ResponseMetadata', None)
         return res
     except (ClientError, CommandExecutionError) as err:
-        log.error('Failed calling `%s()`:  %s' % (fname, err))
+        log.error('Failed calling `{}()`:  {}'.format(fname, err))
         return None
 
 
@@ -259,8 +260,8 @@ def get_named_query_by_name(region=None, key=None, keyid=None, profile=None, **k
 
     '''
     if 'Name' not in kwargs:
-        raise SaltInvocationError('`Name` is a required param for `%s()`.' %
-                                  sys._getframe().f_code.co_name)
+        raise SaltInvocationError('`Name` is a required param for `{}()`.'.format(
+                                  sys._getframe().f_code.co_name))
     res = list_named_queries(region=region, key=key, keyid=keyid, profile=profile)
     if res is None:
         return None
