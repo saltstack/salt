@@ -45,7 +45,7 @@ class SaltclassPillarTestCase(TestCase, LoaderModuleMockMixin):
         self.assertListEqual(parsed_ret, expected_ret)
 
     def test_succeeds(self):
-        ret = ['default.users', 'default.motd', 'default.empty', 'default', 'roles.app']
+        ret = ['default.users', 'default.motd', 'default.empty', 'default', 'roles.app', 'roles.nginx']
         self._runner(ret)
 
 
