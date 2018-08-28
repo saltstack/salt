@@ -9,9 +9,12 @@ all interfaces are ignored unless specified.
 
 .. note::
 
-    Prior to version 2014.1.0, only RedHat-based systems (RHEL,
-    CentOS, Scientific Linux, etc.) are supported. Support for Debian/Ubuntu is
-    new in 2014.1.0 and should be considered experimental.
+    RedHat-based systems (RHEL, CentOS, Scientific, etc.)
+    have been supported since version 2014.1.0.
+
+    Debian-based systems (Debian, Ubuntu, etc.) have been
+    supported since version 2017.7.0. The following options
+    are not supported: ipaddr_start, and ipaddr_end.
 
     Other platforms are not yet supported.
 
@@ -31,9 +34,17 @@ all interfaces are ignored unless specified.
       network.managed:
         - enabled: True
         - type: eth
-        - proto: none
-        - ipaddr: 10.1.0.1
+        - proto: static
+        - ipaddr: 10.1.0.7
         - netmask: 255.255.255.0
+        - gateway: 10.1.0.1
+        - enable_ipv6: true
+        - ipv6proto: static
+        - ipv6ipaddrs:
+          - 2001:db8:dead:beef::3/64
+          - 2001:db8:dead:beef::7/64
+        - ipv6gateway: 2001:db8:dead:beef::1
+        - ipv6netmask: 64
         - dns:
           - 8.8.8.8
           - 8.8.4.4
@@ -121,12 +132,11 @@ all interfaces are ignored unless specified.
         - type: bond
         - ipaddr: 10.1.0.1
         - netmask: 255.255.255.0
-        - mode: active-backup
+        - mode: gre
         - proto: static
         - dns:
           - 8.8.8.8
           - 8.8.4.4
-        - ipv6:
         - enabled: False
         - slaves: eth2 eth3
         - require:
@@ -202,6 +212,62 @@ all interfaces are ignored unless specified.
         - require:
           - network: eth4
 
+    eth6:
+      network.managed:
+        - type: eth
+        - noifupdown: True
+
+        # IPv4
+        - proto: static
+        - ipaddr: 192.168.4.9
+        - netmask: 255.255.255.0
+        - gateway: 192.168.4.1
+        - enable_ipv6: True
+
+        # IPv6
+        - ipv6proto: static
+        - ipv6ipaddr: 2001:db8:dead:c0::3
+        - ipv6netmask: 64
+        - ipv6gateway: 2001:db8:dead:c0::1
+        # override shared; makes those options v4-only
+        - ipv6ttl: 15
+
+        # Shared
+        - mtu: 1480
+        - ttl: 18
+        - dns:
+          - 8.8.8.8
+          - 8.8.4.4
+
+    eth7:
+        - type: eth
+        - proto: static
+        - ipaddr: 10.1.0.7
+        - netmask: 255.255.255.0
+        - gateway: 10.1.0.1
+        - enable_ipv6: True
+        - ipv6proto: static
+        - ipv6ipaddr: 2001:db8:dead:beef::3
+        - ipv6netmask: 64
+        - ipv6gateway: 2001:db8:dead:beef::1
+        - noifupdown: True
+
+    eth8:
+      network.managed:
+        - enabled: True
+        - type: eth
+        - proto: static
+        - enable_ipv6: true
+        - ipv6proto: static
+        - ipv6ipaddrs:
+          - 2001:db8:dead:beef::3/64
+          - 2001:db8:dead:beef::7/64
+        - ipv6gateway: 2001:db8:dead:beef::1
+        - ipv6netmask: 64
+        - dns:
+          - 8.8.8.8
+          - 8.8.4.4
+
     system:
       network.system:
         - enabled: True
@@ -222,13 +288,6 @@ all interfaces are ignored unless specified.
         - userctl: no
         - ipv6_autoconf: no
         - enable_ipv6: true
-        - ipaddrs:
-          - 127.0.0.1/8
-          - 10.1.0.4/32
-          - 10.1.0.12/32
-        - ipv6addrs:
-          - fc00::1/128
-          - fc00::100/128
 
     .. note::
         Apply changes to hostname immediately.
