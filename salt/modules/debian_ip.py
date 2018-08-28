@@ -407,6 +407,7 @@ SALT_ATTR_TO_DEBIAN_ATTR_MAP = {
     'search': 'dns-search',
     'hwaddr': 'hwaddress',  # TODO: this limits bootp functionality
     'ipaddr': 'address',
+    'ipaddrs': 'addresses',
 }
 
 
@@ -419,10 +420,11 @@ DEBIAN_ATTR_TO_SALT_ATTR_MAP['hwaddress'] = 'hwaddress'
 
 IPV4_VALID_PROTO = ['bootp', 'dhcp', 'static', 'manual', 'loopback', 'ppp']
 
-IPV4_ATTR_MAP = {
+IPV6_ATTR_MAP = {
     'proto': __within(IPV4_VALID_PROTO, dtype=six.text_type),
     # ipv4 static & manual
     'address': __ipv4_quad,
+    'addresses': __anything,
     'netmask': __ipv4_netmask,
     'broadcast': __ipv4_quad,
     'metric':  __int,
@@ -473,6 +475,7 @@ IPV6_ATTR_MAP = {
     'proto': __within(IPV6_VALID_PROTO),
     # ipv6 static & manual
     'address': __ipv6,
+    'addresses': __anything,
     'netmask': __ipv6_netmask,
     'broadcast': __ipv6,
     'gateway': __ipv6,  # supports a colon-delimited list
