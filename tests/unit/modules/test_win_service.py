@@ -137,6 +137,7 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
                 patch.object(win_service, 'status', mock_true):
             self.assertTrue(win_service.start('spongebob'))
 
+    @skipIf(not WINAPI, 'pywintypes not available')
     def test_start_already_running(self):
         '''
         Test starting a service that is already running
@@ -174,6 +175,7 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
                 patch.object(win_service, 'status', mock_false):
             self.assertTrue(win_service.stop('spongebob'))
 
+    @skipIf(not WINAPI, 'pywintypes not available')
     def test_stop_not_running(self):
         '''
         Test stopping a service that is already stopped
