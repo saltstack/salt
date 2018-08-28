@@ -374,7 +374,7 @@ VALID_OPTS = {
     'ipc_mode': six.string_types,
 
     # Enable ipv6 support for daemons
-    'ipv6': bool,
+    'ipv6': (type(None), bool),
 
     # The chunk size to use when streaming files with the file server
     'file_buffer_size': int,
@@ -1207,6 +1207,10 @@ VALID_OPTS = {
 
     # Thorium top file location
     'thorium_top': six.string_types,
+
+    # Use Adler32 hashing algorithm for server_id (default False until Sodium, "adler32" after)
+    # Possible values are: False, adler32, crc32
+    'server_id_use_crc': (bool, six.string_types),
 }
 
 # default configurations
@@ -1374,7 +1378,7 @@ DEFAULT_MINION_OPTS = {
     'mine_interval': 60,
     'ipc_mode': _DFLT_IPC_MODE,
     'ipc_write_buffer': _DFLT_IPC_WBUFFER,
-    'ipv6': False,
+    'ipv6': None,
     'file_buffer_size': 262144,
     'tcp_pub_port': 4510,
     'tcp_pull_port': 4511,
@@ -1513,7 +1517,8 @@ DEFAULT_MINION_OPTS = {
     },
     'discovery': False,
     'schedule': {},
-    'ssh_merge_pillar': True
+    'ssh_merge_pillar': True,
+    'server_id_use_crc': False,
 }
 
 DEFAULT_MASTER_OPTS = {
@@ -1705,7 +1710,7 @@ DEFAULT_MASTER_OPTS = {
     'enforce_mine_cache': False,
     'ipc_mode': _DFLT_IPC_MODE,
     'ipc_write_buffer': _DFLT_IPC_WBUFFER,
-    'ipv6': False,
+    'ipv6': None,
     'tcp_master_pub_port': 4512,
     'tcp_master_pull_port': 4513,
     'tcp_master_publish_pull': 4514,
