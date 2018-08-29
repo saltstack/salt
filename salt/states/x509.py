@@ -163,6 +163,7 @@ import copy
 
 # Import Salt Libs
 import salt.exceptions
+import salt.utils.stringutils
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -741,6 +742,6 @@ def pem_managed(name,
         Any arguments supported by :py:func:`file.managed <salt.states.file.managed>` are supported.
     '''
     file_args, kwargs = _get_file_args(name, **kwargs)
-    file_args['contents'] = __salt__['x509.get_pem_entry'](text=text)
+    file_args['contents'] = salt.utils.stringutils.to_str(__salt__['x509.get_pem_entry'](text=text))
 
     return __states__['file.managed'](**file_args)
