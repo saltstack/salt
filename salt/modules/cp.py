@@ -296,6 +296,13 @@ def get_file(path,
                 gzip)
 
 
+def envs():
+    '''
+    List available environments for fileserver
+    '''
+    return _client().envs()
+
+
 def get_template(path,
                  dest,
                  template='jinja',
