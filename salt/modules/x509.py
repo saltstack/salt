@@ -319,9 +319,11 @@ def _text_or_file(input_):
     '''
     if os.path.isfile(input_):
         with salt.utils.files.fopen(input_) as fp_:
-            return salt.utils.stringutils.to_str(fp_.read())
+            out = salt.utils.stringutils.to_str(fp_.read())
     else:
-        return salt.utils.stringutils.to_str(input_)
+        out = salt.utils.stringutils.to_str(input_)
+
+    return out
 
 
 def _parse_subject(subject):
@@ -1682,18 +1684,10 @@ def create_csr(path=None, text=False, **kwargs):
         extstack.push(ext)
 
     csr.add_extensions(extstack)
-
     csr.sign(_get_private_key_obj(kwargs['private_key'],
                                   passphrase=kwargs['private_key_passphrase']), kwargs['algorithm'])
 
-    if path:
-        return write_pem(
-            text=csr.as_pem(),
-            path=path,
-            pem_type='CERTIFICATE REQUEST'
-        )
-    else:
-        return csr.as_pem()
+    return write_pem(text=csr.as_pem(), path=path, pem_type='CERTIFICATE REQUEST') if path else csr.as_pem()
 
 
 def verify_private_key(private_key, public_key, passphrase=None):
@@ -1796,10 +1790,7 @@ def verify_crl(crl, cert):
     crltempfile.close()
     certtempfile.close()
 
-    if 'verify OK' in output:
-        return True
-    else:
-        return False
+    return 'verify OK' in output
 
 
 def expired(certificate):
