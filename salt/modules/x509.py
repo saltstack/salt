@@ -124,10 +124,8 @@ def _new_extension(name, value, critical=0, issuer=None, _pyfree=1):
     doesn't support getting the publickeyidentifier from the issuer
     to create the authoritykeyidentifier extension.
     '''
-    if name == 'subjectKeyIdentifier' and \
-            value.strip('0123456789abcdefABCDEF:') is not '':
-        raise salt.exceptions.SaltInvocationError(
-            'value must be precomputed hash')
+    if name == 'subjectKeyIdentifier' and value.strip('0123456789abcdefABCDEF:') is not '':
+        raise salt.exceptions.SaltInvocationError('value must be precomputed hash')
 
     # ensure name and value are bytes
     name = salt.utils.stringutils.to_str(name)
@@ -193,10 +191,8 @@ def _get_csr_extensions(csr):
     csrtempfile.flush()
     csryaml = _parse_openssl_req(csrtempfile.name)
     csrtempfile.close()
-    if csryaml and 'Requested Extensions' in \
-            csryaml['Certificate Request']['Data']:
-        csrexts = \
-            csryaml['Certificate Request']['Data']['Requested Extensions']
+    if csryaml and 'Requested Extensions' in csryaml['Certificate Request']['Data']:
+        csrexts = csryaml['Certificate Request']['Data']['Requested Extensions']
 
         if not csrexts:
             return ret
@@ -628,11 +624,9 @@ def read_csr(csr):
         # Get size returns in bytes. The world thinks of key sizes in bits.
         'Subject': _parse_subject(csr.get_subject()),
         'Subject Hash': _dec2hex(csr.get_subject().as_hash()),
-        'Public Key Hash': hashlib.sha1(csr.get_pubkey().get_modulus())\
-        .hexdigest()
+        'Public Key Hash': hashlib.sha1(csr.get_pubkey().get_modulus()).hexdigest(),
+        'X509v3 Extensions': _get_csr_extensions(csr),
     }
-
-    ret['X509v3 Extensions'] = _get_csr_extensions(csr)
 
     return ret
 
@@ -955,8 +949,7 @@ def create_crl(  # pylint: disable=too-many-arguments,too-many-locals
                 continue
 
         if 'revocation_date' not in rev_item:
-            rev_item['revocation_date'] = datetime.datetime\
-                .now().strftime('%Y-%m-%d %H:%M:%S')
+            rev_item['revocation_date'] = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
         rev_date = datetime.datetime.strptime(
             rev_item['revocation_date'], '%Y-%m-%d %H:%M:%S')
@@ -1036,8 +1029,7 @@ def sign_remote_certificate(argdic, **kwargs):
     if 'signing_policy' in argdic:
         signing_policy = _get_signing_policy(argdic['signing_policy'])
         if not signing_policy:
-            return 'Signing policy {0} does not exist.'.format(
-                argdic['signing_policy'])
+            return 'Signing policy {0} does not exist.'.format(argdic['signing_policy'])
 
         if isinstance(signing_policy, list):
             dict_ = {}
@@ -1348,8 +1340,7 @@ def create_certificate(
         salt '*' x509.create_certificate path=/etc/pki/myca.crt signing_private_key='/etc/pki/myca.key' csr='/etc/pki/myca.csr'}
     '''
 
-    if not path and not text and \
-            ('testrun' not in kwargs or kwargs['testrun'] is False):
+    if not path and not text and ('testrun' not in kwargs or kwargs['testrun'] is False):
         raise salt.exceptions.SaltInvocationError(
             'Either path or text must be specified.')
     if path and text:
@@ -1378,8 +1369,7 @@ def create_certificate(
         # Including listen_in and preqreuired because they are not included
         # in STATE_INTERNAL_KEYWORDS
         # for salt 2014.7.2
-        for ignore in list(_STATE_INTERNAL_KEYWORDS) + \
-                ['listen_in', 'preqrequired', '__prerequired__']:
+        for ignore in list(_STATE_INTERNAL_KEYWORDS) + ['listen_in', 'preqrequired', '__prerequired__']:
             kwargs.pop(ignore, None)
 
         certs = __salt__['publish.publish'](
@@ -1489,8 +1479,7 @@ def create_certificate(
             continue
 
         # Use explicitly set values first, fall back to CSR values.
-        extval = kwargs.get(extname) or kwargs.get(extlongname) or \
-            csrexts.get(extname) or csrexts.get(extlongname)
+        extval = kwargs.get(extname) or kwargs.get(extlongname) or csrexts.get(extname) or csrexts.get(extlongname)
 
         critical = False
         if extval.startswith('critical '):
@@ -1632,11 +1621,9 @@ def create_csr(path=None, text=False, **kwargs):
         kwargs['private_key_passphrase'] = None
     if 'public_key_passphrase' not in kwargs:
         kwargs['public_key_passphrase'] = None
-    if kwargs['public_key_passphrase'] and not kwargs[
-            'private_key_passphrase']:
+    if kwargs['public_key_passphrase'] and not kwargs['private_key_passphrase']:
         kwargs['private_key_passphrase'] = kwargs['public_key_passphrase']
-    if kwargs['private_key_passphrase'] and not kwargs[
-            'public_key_passphrase']:
+    if kwargs['private_key_passphrase'] and not kwargs['public_key_passphrase']:
         kwargs['public_key_passphrase'] = kwargs['private_key_passphrase']
 
     csr.set_pubkey(get_public_key(kwargs['public_key'],
@@ -1711,8 +1698,7 @@ def verify_private_key(private_key, public_key, passphrase=None):
         salt '*' x509.verify_private_key private_key=/etc/pki/myca.key \\
                 public_key=/etc/pki/myca.crt
     '''
-    return bool(get_public_key(private_key, passphrase)
-                == get_public_key(public_key))
+    return get_public_key(private_key, passphrase) == get_public_key(public_key)
 
 
 def verify_signature(certificate, signing_pub_key=None,
@@ -1766,9 +1752,8 @@ def verify_crl(crl, cert):
         salt '*' x509.verify_crl crl=/etc/pki/myca.crl cert=/etc/pki/myca.crt
     '''
     if not salt.utils.path.which('openssl'):
-        raise salt.exceptions.SaltInvocationError(
-            'openssl binary not found in path'
-        )
+        raise salt.exceptions.SaltInvocationError('External command "openssl" not found')
+
     crltext = _text_or_file(crl)
     crltext = get_pem_entry(crltext, pem_type='X509 CRL')
     crltempfile = tempfile.NamedTemporaryFile()
@@ -1851,6 +1836,7 @@ def will_expire(certificate, days):
 
         salt '*' x509.will_expire "/etc/pki/mycert.crt" days=30
     '''
+    ts_pt = "%Y-%m-%d %H:%M:%S"
     ret = {}
 
     if os.path.isfile(certificate):
@@ -1860,18 +1846,13 @@ def will_expire(certificate, days):
 
             cert = _get_certificate_obj(certificate)
 
-            _check_time = datetime.datetime.utcnow() + \
-                datetime.timedelta(days=days)
+            _check_time = datetime.datetime.utcnow() + datetime.timedelta(days=days)
             _expiration_date = cert.get_not_after().get_datetime()
 
             ret['cn'] = _parse_subject(cert.get_subject())['CN']
-
-            if _expiration_date.strftime("%Y-%m-%d %H:%M:%S") <= \
-                    _check_time.strftime("%Y-%m-%d %H:%M:%S"):
-                ret['will_expire'] = True
-            else:
-                ret['will_expire'] = False
-        except ValueError:
-            pass
+            ret['will_expire'] = _expiration_date.strftime(ts_pt) <= _check_time.strftime(ts_pt)
+        except ValueError as err:
+            log.debug('Unable to return details of a sertificate expiration: %s', err)
+            log.trace(err, exc_info=True)
 
     return ret
