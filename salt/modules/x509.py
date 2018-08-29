@@ -990,8 +990,9 @@ def create_crl(  # pylint: disable=too-many-arguments,too-many-locals
     try:
         crltext = crl.export(**export_kwargs)
     except (TypeError, ValueError):
-        log.warning(
-            'Error signing crl with specified digest. Are you using pyopenssl 0.15 or newer? The default md5 digest will be used.')
+        log.warning('Error signing crl with specified digest. '
+                    'Are you using pyopenssl 0.15 or newer? '
+                    'The default md5 digest will be used.')
         export_kwargs.pop('digest', None)
         crltext = crl.export(**export_kwargs)
 
@@ -1069,6 +1070,7 @@ def get_signing_policy(signing_policy_name):
     signing_policy = _get_signing_policy(signing_policy_name)
     if not signing_policy:
         return 'Signing policy {0} does not exist.'.format(signing_policy_name)
+
     if isinstance(signing_policy, list):
         dict_ = {}
         for item in signing_policy:
@@ -1608,8 +1610,8 @@ def create_csr(path=None, text=False, **kwargs):
 
     if 'private_key' not in kwargs and 'public_key' in kwargs:
         kwargs['private_key'] = kwargs['public_key']
-        log.warning(
-            "OpenSSL no longer allows working with non-signed CSRs. A private_key must be specified. Attempting to use public_key as private_key")
+        log.warning("OpenSSL no longer allows working with non-signed CSRs. "
+                    "A private_key must be specified. Attempting to use public_key as private_key")
 
     if 'private_key' not in kwargs:
         raise salt.exceptions.SaltInvocationError('private_key is required')

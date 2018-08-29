@@ -268,7 +268,8 @@ def private_key_managed(name,
 
     new:
         Always create a new key. Defaults to False.
-        Combining new with :mod:`prereq <salt.states.requsities.preqreq>`, or when used as part of a `managed_private_key` can allow key rotation whenever a new certificiate is generated.
+        Combining new with :mod:`prereq <salt.states.requsities.preqreq>`, or when used as part of a
+        `managed_private_key` can allow key rotation whenever a new certificiate is generated.
 
     overwrite:
         Overwrite an existing private key if the provided passphrase cannot decrypt it.
@@ -487,8 +488,10 @@ def certificate_managed(name,
                 private_key_args['name'], pem_type='RSA PRIVATE KEY')
         else:
             new_private_key = True
-            private_key = __salt__['x509.create_private_key'](text=True, bits=private_key_args['bits'], passphrase=private_key_args[
-                                                              'passphrase'], cipher=private_key_args['cipher'], verbose=private_key_args['verbose'])
+            private_key = __salt__['x509.create_private_key'](text=True, bits=private_key_args['bits'],
+                                                              passphrase=private_key_args['passphrase'],
+                                                              cipher=private_key_args['cipher'],
+                                                              verbose=private_key_args['verbose'])
 
         kwargs['public_key'] = private_key
 
@@ -699,8 +702,10 @@ def crl_managed(name,
     else:
         current = '{0} does not exist.'.format(name)
 
-    new_crl = __salt__['x509.create_crl'](text=True, signing_private_key=signing_private_key, signing_private_key_passphrase=signing_private_key_passphrase,
-                                          signing_cert=signing_cert, revoked=revoked, days_valid=days_valid, digest=digest, include_expired=include_expired)
+    new_crl = __salt__['x509.create_crl'](text=True, signing_private_key=signing_private_key,
+                                          signing_private_key_passphrase=signing_private_key_passphrase,
+                                          signing_cert=signing_cert, revoked=revoked, days_valid=days_valid,
+                                          digest=digest, include_expired=include_expired)
 
     new = __salt__['x509.read_crl'](crl=new_crl)
     new_comp = new.copy()
