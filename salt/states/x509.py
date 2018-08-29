@@ -181,7 +181,7 @@ def __virtual__():
     if 'x509.get_pem_entry' in __salt__:
         return 'x509'
     else:
-        return (False, 'Could not load x509 state: m2crypto unavailable')
+        return False, 'Could not load x509 state: the x509 is not available'
 
 
 def _revoked_to_list(revs):
