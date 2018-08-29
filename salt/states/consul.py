@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
-Consul Managemnt
-===========================
+Consul Management
+================
 
 The consul module is used to create and manage ACL
 
@@ -25,13 +25,13 @@ def _acl_changes(name, id=None, type=None, rules=None, consul_url=None, token=No
     '''
        return True if the acl need to be update, False if it doesn't need to be update
     '''
-    r = __salt__['consul.acl_info'](id=id, token=token, consul_url=consul_url)
+    info = __salt__['consul.acl_info'](id=id, token=token, consul_url=consul_url)
 
-    if r['res'] and r['data'][0]['Name'] != name:
+    if info['res'] and info['data'][0]['Name'] != name:
         return True
-    elif r['res'] and r['data'][0]['Rules'] != rules:
+    elif info['res'] and info['data'][0]['Rules'] != rules:
         return True
-    elif r['res'] and r['data'][0]['Type'] != type:
+    elif info['res'] and info['data'][0]['Type'] != type:
         return True
     else:
         return False
@@ -39,26 +39,26 @@ def _acl_changes(name, id=None, type=None, rules=None, consul_url=None, token=No
 
 def _acl_exists(name=None, id=None, token=None, consul_url=None):
     '''
-       return True if acl exist, if False it not
+       If acl exists, return True. Otherwise, return False.
     '''
 
-    res = {'result': False, 'id': None}
+    ret = {'result': False, 'id': None}
 
     if id:
-        r = __salt__['consul.acl_info'](id=id, token=token, consul_url=consul_url)
+        info = __salt__['consul.acl_info'](id=id, token=token, consul_url=consul_url)
     elif name:
-        r = __salt__['consul.acl_list'](token=token, consul_url=consul_url)
+        info = __salt__['consul.acl_list'](token=token, consul_url=consul_url)
 
-    if len(r['data']):
-        for acl in r['data']:
+    if info.get('data'):
+        for acl in info['data']:
             if id and acl['ID'] == id:
-                res['result'] = True
-                res['id'] = id
+                ret['result'] = True
+                ret['id'] = id
             elif name and acl['Name'] == name:
-                res['result'] = True
-                res['id'] = acl['ID']
+                ret['result'] = True
+                ret['id'] = acl['ID']
 
-    return res
+    return ret
 
 
 def acl_present(name, id=None, token=None, type="client", rules="", consul_url='http://localhost:8500'):
@@ -96,14 +96,14 @@ def acl_present(name, id=None, token=None, type="client", rules="", consul_url='
     if not exists['result']:
         if __opts__['test']:
             ret['result'] = None
-            ret['comment'] = "the acl doesn't exist, it will be create"
+            ret['comment'] = "the acl doesn't exist, it will be created"
             return ret
 
-        r = __salt__['consul.acl_create'](name=name, id=id, token=token, type=type, rules=rules, consul_url=consul_url)
-        if r['res']:
+        create = __salt__['consul.acl_create'](name=name, id=id, token=token, type=type, rules=rules, consul_url=consul_url)
+        if create['res']:
             ret['result'] = True
             ret['comment'] = "the acl has been created"
-        elif not r['res']:
+        elif not create['res']:
             ret['result'] = False
             ret['comment'] = "failed to create the acl"
     elif exists['result']:
@@ -111,14 +111,14 @@ def acl_present(name, id=None, token=None, type="client", rules="", consul_url='
         if changes:
             if __opts__['test']:
                 ret['result'] = None
-                ret['comment'] = "the acl exist, but it need to be update"
+                ret['comment'] = "the acl exists and will be updated"
                 return ret
 
-            r = __salt__['consul.acl_update'](name=name, id=exists['id'], token=token, type=type, rules=rules, consul_url=consul_url)
-            if r['res']:
+            update = __salt__['consul.acl_update'](name=name, id=exists['id'], token=token, type=type, rules=rules, consul_url=consul_url)
+            if update['res']:
                 ret['result'] = True
                 ret['comment'] = "the acl has been updated"
-            elif not r['res']:
+            elif not update['res']:
                 ret['result'] = False
                 ret['comment'] = "failed to update the acl"
 
@@ -155,14 +155,14 @@ def acl_absent(name, id=None, token=None, consul_url='http://localhost:8500'):
     if exists['result']:
         if __opts__['test']:
             ret['result'] = None
-            ret['comment'] = "the acl exists, it will be delete"
+            ret['comment'] = "the acl exists, it will be deleted"
             return ret
 
-        r = __salt__['consul.acl_delete'](id=exists['id'], token=token, consul_url=consul_url)
-        if r['res']:
+        delete = __salt__['consul.acl_delete'](id=exists['id'], token=token, consul_url=consul_url)
+        if delete['res']:
             ret['result'] = True
             ret['comment'] = "the acl has been deleted"
-        elif not r['res']:
+        elif not delete['res']:
             ret['result'] = False
             ret['comment'] = "failed to delete the acl"
 
