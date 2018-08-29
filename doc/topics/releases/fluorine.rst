@@ -83,7 +83,7 @@ and use, or a specific directory can to used when running the playbook.
 Network Automation
 ==================
 
-Beginning with this release, Salt provides much broader support for a variety 
+Beginning with this release, Salt provides much broader support for a variety
 of network operating systems, and features for configuration manipulation or
 operational command execution.
 
@@ -121,7 +121,7 @@ much longer list of available features:
 - :mod:`netbox.update_device <salt.modules.netbox.update_device>`
 - :mod:`netbox.update_interface <salt.modules.netbox.update_interface>`
 
-Besides this Execution Module, Salt users can load data directly from NetBox 
+Besides this Execution Module, Salt users can load data directly from NetBox
 into the device Pillar, via the :mod:`netbox <salt.pillar.netbox>` External
 Pillar module.
 
@@ -129,16 +129,16 @@ Netmiko
 -------
 
 `Netmiko <https://github.com/ktbyers/netmiko>`_, the multi-vendor library to
-simplify Paramiko SSH connections to network devices, is now officially 
+simplify Paramiko SSH connections to network devices, is now officially
 integrated into Salt. The network community can use it via the
-:mod:`netmiko <salt.proxy.netmiko_px>` Proxy Module or directly from any Salt 
+:mod:`netmiko <salt.proxy.netmiko_px>` Proxy Module or directly from any Salt
 Minions, passing the connection credentials - see the documentation for the
 :mod:`netmiko <salt.modules.netmiko_mod>` Execution Module.
 
 Arista
 ------
 
-Arista switches can now be managed running under the :mod:`pyeapi 
+Arista switches can now be managed running under the :mod:`pyeapi
 <salt.proxy.arista_pyeapi>` Proxy Module, and execute RPC requests via the
 :mod:`pyeapi <salt.modules.arista_pyeapi>` Execution Module.
 
@@ -147,12 +147,12 @@ Cisco Nexus
 
 While support for SSH-based operations has been added in the release codename
 Carbon (2016.11), the new :mod:`nxos_api <salt.proxy.nxos_api>` Proxy Module
-and :mod:`nxos_api <salt.modules.nxos_api>` allow management of Cisco Nexus 
+and :mod:`nxos_api <salt.modules.nxos_api>` allow management of Cisco Nexus
 switches via the NX-API.
 
 It is important to note that these modules don't have third party dependencies,
 therefore they can be used straight away from any Salt Minion. This also means
-that the user may be able to install the regular Salt Minion on the Nexus 
+that the user may be able to install the regular Salt Minion on the Nexus
 switch directly and manage the network devices like a regular server.
 
 General-purpose Modules
@@ -175,38 +175,38 @@ Commit At and Commit Confirmed
 """"""""""""""""""""""""""""""
 
 Beginning with this release, NAPALM users are able to execute scheduled commits
-(broadly known as "commit at") and "commit confirmed" (revert the configuration 
-change unless the user confirms by running another command). These features are 
+(broadly known as "commit at") and "commit confirmed" (revert the configuration
+change unless the user confirms by running another command). These features are
 available via the ``commit_in``, ``commit_at``, ``revert_in``, or ``revert_at``
 arguments for the
 :mod:`net.load_config <salt.modules.napalm_network.load_config>` and
-:mod:`net.load_template <salt.modules.napalm_network.load_template>` execution 
+:mod:`net.load_template <salt.modules.napalm_network.load_template>` execution
 functions, or :mod:`netconfig.managed <salt.states.netconfig.managed>`.
 
 The counterpart execution functions
 :mod:`net.confirm_commit <salt.modules.napalm_network.confirm_commit>`, or
-:mod:`net.cancel_commit <salt.modules.napalm_network.cancel_commit>`, as well 
+:mod:`net.cancel_commit <salt.modules.napalm_network.cancel_commit>`, as well
 as the State functions
 :mod:`netconfig.commit_cancelled <salt.states.netconfig.commit_cancelled>`, or
-:mod:`netconfig.commit_confirmed <salt.states.netconfig.commit_confirmed>` can 
+:mod:`netconfig.commit_confirmed <salt.states.netconfig.commit_confirmed>` can
 be used to confirm or cancel a commit.
 
 Please note that the commit confirmed and commit cancelled functionalities are
-available for any platform whether the network devices supports the features 
-natively or not. However, be cautious and make sure you read and understand the 
+available for any platform whether the network devices supports the features
+natively or not. However, be cautious and make sure you read and understand the
 caveats before using them in production.
 
 Multiple Templates Rendered Simultaneously
 """"""""""""""""""""""""""""""""""""""""""
 
 The ``template_name`` argument of the
-:mod:`net.load_template <salt.modules.napalm_network.load_template>` Execution 
+:mod:`net.load_template <salt.modules.napalm_network.load_template>` Execution
 and :mod:`netconfig.managed <salt.states.netconfig.managed>` State function now
-supports a list of templates. This is particularly useful when a very large 
-Jinja template is split into multiple smaller and easier to read templates that 
-can eventually be reused in other States. For example, the following syntax is 
-not correct to manage the configuration of NTP and BGP simultaneously, using 
-two different templates and changing the device configuration through one 
+supports a list of templates. This is particularly useful when a very large
+Jinja template is split into multiple smaller and easier to read templates that
+can eventually be reused in other States. For example, the following syntax is
+not correct to manage the configuration of NTP and BGP simultaneously, using
+two different templates and changing the device configuration through one
 single commit:
 
 .. code-block:: yaml
@@ -255,10 +255,10 @@ Configuration Replace Features
 """"""""""""""""""""""""""""""
 
 To replace various configuration chunks, you can use the new
-:mod:`net.replace_pattern <salt.modules.napalm_network.replace_pattern>` 
+:mod:`net.replace_pattern <salt.modules.napalm_network.replace_pattern>`
 execution function, or the
 :mod:`netconfig.replace_pattern <salt.states.netconfig.replace_pattern>` State
-function. For example, if you want to update your configuration and rename 
+function. For example, if you want to update your configuration and rename
 a BGP policy referenced in many places, you can do so by running:
 
 .. code-block:: bash
@@ -271,11 +271,11 @@ Similarly, you can also replace entire configuration blocks using the
 Configuration Save Features
 """""""""""""""""""""""""""
 
-The :mod:`net.save_config <salt.modules.napalm_network.save_config>` function 
-can be used to save the configuration of the managed device into a file. For 
+The :mod:`net.save_config <salt.modules.napalm_network.save_config>` function
+can be used to save the configuration of the managed device into a file. For
 the State subsystem, the :mod:`netconfig.saved <salt.states.netconfig.saved>`
-function has been added which provides a complete list of facilities when 
-managing the target file where the configuration of the network device can be 
+function has been added which provides a complete list of facilities when
+managing the target file where the configuration of the network device can be
 saved.
 
 For example, backup the running configuration of each device under its own
@@ -300,8 +300,8 @@ Module are available via the following functions:
 
 - :mod:`napalm.junos_cli <salt.modules.napalm_mod.junos_cli>`: Execute a CLI
   command and return the output as text or Python dictionary.
-- :mod:`napalm.junos_rpc <salt.modules.napalm_mod.junos_rpc>`: Execute an RPC 
-  request on the remote Junos device, and return the result as a Python 
+- :mod:`napalm.junos_rpc <salt.modules.napalm_mod.junos_rpc>`: Execute an RPC
+  request on the remote Junos device, and return the result as a Python
   dictionary, easy to digest and manipulate.
 - :mod:`napalm.junos_install_os <salt.modules.napalm_mod.junos_install_os>`:
   Install the given image on the device.
@@ -327,13 +327,13 @@ Netmiko
 The features from the newly added :mod:`netmiko <salt.modules.netmiko_mod>`
 Execution Module are available as:
 
-- :mod:`napalm.netmiko_commands <salt.modules.napalm_mod.netmiko_commands>`: 
+- :mod:`napalm.netmiko_commands <salt.modules.napalm_mod.netmiko_commands>`:
   Execute one or more commands to be execute on the remote device, via Netmiko,
   and return the output as a text.
-- :mod:`napalm.netmiko_config <salt.modules.napalm_mod.netmiko_config>`: Load 
-  a list of configuration command on the remote device, via Netmiko. The 
-  commands can equally be loaded from a local or remote path, and passed 
-  through Salt's template rendering pipeline (by default using ``Jinja`` as the 
+- :mod:`napalm.netmiko_config <salt.modules.napalm_mod.netmiko_config>`: Load
+  a list of configuration command on the remote device, via Netmiko. The
+  commands can equally be loaded from a local or remote path, and passed
+  through Salt's template rendering pipeline (by default using ``Jinja`` as the
   template rendering engine).
 
 Usage examples:
@@ -350,11 +350,11 @@ For various operations and various extension modules, the following features
 have been added to gate functionality from the
 :mod:`pyeapi <salt.modules.arista_pyeapi>` module:
 
-- :mod:`napalm.pyeapi_run_commands 
-  <salt.modules.napalm_mod.pyeapi_run_commands>`: Execute a list of commands on 
+- :mod:`napalm.pyeapi_run_commands
+  <salt.modules.napalm_mod.pyeapi_run_commands>`: Execute a list of commands on
   the Arista switch, via the ``pyeapi`` library.
-- :mod:`napalm.pyeapi_config <salt.modules.napalm_mod.pyeapi_config>`: 
-  Configure the Arista switch with the specified commands, via the ``pyeapi`` 
+- :mod:`napalm.pyeapi_config <salt.modules.napalm_mod.pyeapi_config>`:
+  Configure the Arista switch with the specified commands, via the ``pyeapi``
   Python library. Similarly to
   :mod:`napalm.netmiko_config <salt.modules.napalm_mod.netmiko_config>`, you
   can use both local and remote files, with or without templating.
@@ -369,18 +369,18 @@ Usage examples:
 Cisco NX-API
 ^^^^^^^^^^^^
 
-In the exact same way as above, the user has absolute control by using the 
+In the exact same way as above, the user has absolute control by using the
 following primitives to manage Cisco Nexus switches via the NX-API:
 
-- :mod:`napalm.nxos_api_show <salt.modules.napalm_mod.nxos_api_show>`: Execute 
-  one or more show (non-configuration) commands, and return the output as plain 
+- :mod:`napalm.nxos_api_show <salt.modules.napalm_mod.nxos_api_show>`: Execute
+  one or more show (non-configuration) commands, and return the output as plain
   text or Python dictionary.
-- :mod:`napalm.nxos_api_rpc <salt.modules.napalm_mod.nxos_api_rpc>`: Execute 
+- :mod:`napalm.nxos_api_rpc <salt.modules.napalm_mod.nxos_api_rpc>`: Execute
   arbitrary RPC requests via the Nexus API.
 - :mod:`napalm.nxos_api_config <salt.modules.napalm_mod.nxos_api_config>`:
   Configures the Nexus switch with the specified commands, via the NX-API. The
   commands can be loaded from the command line, or a local or remote file,
-  eventually rendered using the templating engine of choice (default: 
+  eventually rendered using the templating engine of choice (default:
   ``jinja``).
 
 Usage examples:
@@ -395,21 +395,21 @@ Ciscoconfparse
 The following list of function may be handy when manipulating Cisco IOS or
 Junos style configurations:
 
-- :mod:`napalm.config_filter_lines 
-  <salt.modules.napalm_mod.config_filter_lines>`: Return a list of detailed 
-  matches, for the configuration blocks (parent-child relationship) whose 
+- :mod:`napalm.config_filter_lines
+  <salt.modules.napalm_mod.config_filter_lines>`: Return a list of detailed
+  matches, for the configuration blocks (parent-child relationship) whose
   parent and children respect the regular expressions provided.
-- :mod:`napalm.config_find_lines <salt.modules.napalm_mod.config_find_lines>`: 
+- :mod:`napalm.config_find_lines <salt.modules.napalm_mod.config_find_lines>`:
   Return the configuration lines that match the regular expression provided.
 - :mod:`napalm.config_lines_w_child <salt.modules.napalm_mod.config_lines_w_child>`:
   Return the configuration lines that match a regular expression, having child
   lines matching the child regular expression.
 - :mod:`napalm.config_lines_wo_child <salt.modules.napalm_mod.config_lines_wo_child>`:
-  Return the configuration lines that match a regular expression, that don't 
+  Return the configuration lines that match a regular expression, that don't
   have child lines matching the child regular expression.
 
 .. note::
-    These functions require the ``ciscoconfparse`` Python library to be 
+    These functions require the ``ciscoconfparse`` Python library to be
     installed.
 
 Usage example (find interfaces that are administratively shut down):
@@ -421,44 +421,44 @@ Usage example (find interfaces that are administratively shut down):
 IOSConfig
 ^^^^^^^^^
 
-For Cisco IOS style configuration, the following features have been added to 
+For Cisco IOS style configuration, the following features have been added to
 the :mod:`napalm <salt.modules.napalm_mod>` Execution Module:
 
-- :mod:`napalm.config_tree <salt.modules.napalm_mod.config_tree>`: Transform 
-  Cisco IOS style configuration to structured Python dictionary, using the 
+- :mod:`napalm.config_tree <salt.modules.napalm_mod.config_tree>`: Transform
+  Cisco IOS style configuration to structured Python dictionary, using the
   configuration of the interrogated network device.
-- :mod:`napalm.config_merge_tree <salt.modules.napalm_mod.config_merge_tree>`: 
-  Return the merge tree of the configuration of the managed network device with 
+- :mod:`napalm.config_merge_tree <salt.modules.napalm_mod.config_merge_tree>`:
+  Return the merge tree of the configuration of the managed network device with
   a different configuration to be merged with (without actually loading any
   changes on the device).
 - :mod:`napalm.config_merge_text <salt.modules.napalm_mod.config_merge_text>`:
   Return the merge result (as text) of the configuration of the managed network
   device with a different configuration to be merged with.
 - :mod:`napalm.config_merge_diff <salt.modules.napalm_mod.config_merge_diff>`:
-  Return the merge diff after merging the configuration of the managed network 
-  device with a different configuration (without actually loading any changes 
+  Return the merge diff after merging the configuration of the managed network
+  device with a different configuration (without actually loading any changes
   on the device).
 
 SCP
 ^^^
 
-Reusing the already available connection credentials provided for NAPALM, the 
+Reusing the already available connection credentials provided for NAPALM, the
 following features are now available:
 
-- :mod:`napalm.scp_put <salt.modules.napalm_mod.scp_put>`: Transfer files and 
+- :mod:`napalm.scp_put <salt.modules.napalm_mod.scp_put>`: Transfer files and
   directories to remote network device.
-- :mod:`napalm.scp_get <salt.modules.napalm_mod.scp_get>`: Transfer files and 
+- :mod:`napalm.scp_get <salt.modules.napalm_mod.scp_get>`: Transfer files and
   directories from remote network device to the localhost of the Minion.
 
 PeeringDB
 ---------
 
-The :mod:`peeringdb <salt.modules.peeringdb>` Execution Module is useful to 
-gather information about other networks you can potentially peer with, and 
-automatically establish BGP sessions, e.g., given just a specific AS number, 
-the rest of the data (i.e., IP addresses, locations where the remote network is 
-available, etc.) is retrieved from PeeringDB, and the session configuration is 
-automated with minimal to no effort (typing the IP addresses manually can be 
+The :mod:`peeringdb <salt.modules.peeringdb>` Execution Module is useful to
+gather information about other networks you can potentially peer with, and
+automatically establish BGP sessions, e.g., given just a specific AS number,
+the rest of the data (i.e., IP addresses, locations where the remote network is
+available, etc.) is retrieved from PeeringDB, and the session configuration is
+automated with minimal to no effort (typing the IP addresses manually can be
 both tedious and error prone).
 
 New Docker Proxy Minion
@@ -825,9 +825,9 @@ Pass Through Options to :py:func:`file.serialize <salt.states.file.serialize>` S
 ====================================================================================
 
 This allows for more granular control over the way in which the dataset is
-serialized. See the documentation for the new ``serializer_opts`` option in the
-:py:func:`file.serialize <salt.states.file.serialize>` state for more
-information.
+serialized. See the documentation for the new ``serializer_opts`` and
+``deserializer_opts`` options in the :py:func:`file.serialize
+<salt.states.file.serialize>` state for more information.
 
 
 :py:func:`file.patch <salt.sates.file.patch>` State Rewritten
@@ -1269,8 +1269,8 @@ configuration option:
 
    log_fmt_console: "[%(levelname)-8s] %(jid)s %(message)s"
 
-The will cause the JID to be included in any log entries that are related to a 
-particular Salt job.  The JID will be included using the default format, 
+The will cause the JID to be included in any log entries that are related to a
+particular Salt job.  The JID will be included using the default format,
 ``[JID: %(jid)s]`` but can be overriden with the ``log_fmt_jid`` configuration item.
 
 .. code-block:: yaml
