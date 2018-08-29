@@ -7778,6 +7778,7 @@ def serialize(
             salt.utils.data.repack_dictlist(deserializer_opts)
         )
 
+    existing_data = None
     if merge_if_exists:
         if os.path.isfile(name):
             if deserializer_name not in __serializers__:
