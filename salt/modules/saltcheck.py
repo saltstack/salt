@@ -165,6 +165,7 @@ def run_test(**kwargs):
     else:
         return "Test must be a dictionary"
 
+
 def state_apply(state_name, **kwargs):
     '''
     Apply state.apply with given state and pillars to set up test data
@@ -505,7 +506,6 @@ class SaltCheck(object):
         result['status'] = value
         result['duration'] = round(end - start, 4)
         return result
-
 
     @staticmethod
     def _cast_expected_to_returned_type(expected, returned):
