@@ -519,8 +519,8 @@ def get_pem_entries(glob_path):
         if os.path.isfile(path):
             try:
                 ret[path] = get_pem_entry(text=path)
-            except ValueError:
-                pass
+            except ValueError as err:
+                log.debug('Unable to get PEM entries from %s: %s', path, err)
 
     return ret
 
@@ -598,8 +598,8 @@ def read_certificates(glob_path):
         if os.path.isfile(path):
             try:
                 ret[path] = read_certificate(certificate=path)
-            except ValueError:
-                pass
+            except ValueError as err:
+                log.debug('Unable to read certificate %s: %s', path, err)
 
     return ret
 
@@ -1089,10 +1089,9 @@ def get_signing_policy(signing_policy_name):
         pass
 
     try:
-        signing_policy['signing_cert'] = get_pem_entry(
-            signing_policy['signing_cert'], 'CERTIFICATE')
+        signing_policy['signing_cert'] = get_pem_entry(signing_policy['signing_cert'], 'CERTIFICATE')
     except KeyError:
-        pass
+        log.debug('Unable to get "certificate" PEM entry')
 
     return signing_policy
 
@@ -1827,8 +1826,9 @@ def expired(certificate):
                 ret['expired'] = True
             else:
                 ret['expired'] = False
-        except ValueError:
-            pass
+        except ValueError as err:
+            log.debug('Failed to get data of expired certificate: %s', err)
+            log.trace(err, exc_info=True)
 
     return ret
 
