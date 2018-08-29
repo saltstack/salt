@@ -162,6 +162,7 @@ def _srvmgr(cmd, return_json=False):
 
     return ret
 
+
 def _collection_match_to_index(pspath, colfilter, name, match):
     '''
     Returns index of collection item matching the match dictionary.
