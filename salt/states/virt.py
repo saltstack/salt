@@ -246,6 +246,7 @@ def running(name,
             nic_profile=None,
             interfaces=None,
             graphics=None,
+            loader=None,
             seed=True,
             install=True,
             pub_key=None,
@@ -291,6 +292,11 @@ def running(name,
     :param graphics:
         Graphics device to create for the new virtual machine.
         See :ref:`init-graphics-def` for more details on this dictionary
+
+        .. versionadded:: Fluorine
+    :param loader:
+        Firmware loader for the new virtual machine.
+        See :ref:`init-loader-def` for more details on this dictionary
 
         .. versionadded:: Fluorine
     :param saltenv:
@@ -436,6 +442,7 @@ def running(name,
                                   nic=nic_profile,
                                   interfaces=interfaces,
                                   graphics=graphics,
+                                  loader=loader,
                                   seed=seed,
                                   install=install,
                                   pub_key=pub_key,
