@@ -142,7 +142,7 @@ def _new_extension(name, value, critical=0, issuer=None, _pyfree=1):
         x509_ext_ptr = M2Crypto.m2.x509v3_ext_conf(None, ctx, name, value)
         lhash = None
     except AttributeError:
-        lhash = M2Crypto.m2.x509v3_lhash()                      # pylint: disable=no-member
+        lhash = M2Crypto.m2.x509v3_lhash()  # pylint: disable=no-member
         ctx = M2Crypto.m2.x509v3_set_conf_lhash(
             lhash)          # pylint: disable=no-member
         # ctx not zeroed
