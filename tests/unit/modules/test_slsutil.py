@@ -51,3 +51,10 @@ class SlsUtilTestCase(TestCase):
             self.assertEqual(len(line), width)
             self.assertTrue(line.startswith(commentchar))
             self.assertTrue(line.endswith(commentchar))
+
+    def test_boolstr(self):
+        """
+        Test boolstr function
+        """
+        self.assertEqual("yes", slsutil.boolstr(True, true="yes", false="no"))
+        self.assertEqual("no", slsutil.boolstr(False, true="yes", false="no"))

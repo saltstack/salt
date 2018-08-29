@@ -346,3 +346,41 @@ def banner(
         return result + "\n"
 
     return result
+
+
+def boolstr(value, true='true', false='false'):
+    '''
+    Convert a boolean value into a string. This function is
+    intended to be used from within file templates to provide
+    an easy way to take boolean values stored in Pillars or
+    Grains, and write them out in the apprpriate syntax for
+    a particular file template.
+
+    :param value: The boolean value to be converted
+    :param true: The value to return if ``value`` is ``True``
+    :param false: The value to return if ``value`` is ``False``
+
+    In this example, a pillar named ``smtp:encrypted`` stores a boolean
+    value, but the template that uses that value needs ``yes`` or ``no``
+    to be written, based on the boolean value.
+
+    *Note: this is written on two lines for clarity. The same result
+    could be achieved in one line.*
+
+    .. code-block:: jinja
+
+        {% set encrypted = salt[pillar.get]('smtp:encrypted', false) %}
+        use_tls: {{ salt['slsutil.boolstr'](encrypted, 'yes', 'no') }}
+
+    Result (assuming the value is ``True``):
+
+    .. code-block:: none
+
+        use_tls: yes
+
+    '''
+
+    if value:
+        return true
+
+    return false
