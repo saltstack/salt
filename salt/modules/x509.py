@@ -288,7 +288,7 @@ def _get_signing_policy(name):
         signing_policy = policies.get(name)
         if signing_policy:
             return signing_policy
-    return __salt__['config.get']('x509_signing_policies', {}).get(name)
+    return __salt__['config.get']('x509_signing_policies', {}).get(name) or {}
 
 
 def _pretty_hex(hex_str):
