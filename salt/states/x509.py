@@ -171,7 +171,7 @@ from salt.ext import six
 try:
     from M2Crypto.RSA import RSAError
 except ImportError:
-    pass
+    RSAError = Exception('RSA Error')
 
 
 def __virtual__():
