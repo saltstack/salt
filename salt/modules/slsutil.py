@@ -6,6 +6,8 @@ Utility functions for use with or in SLS files
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import textwrap
+
 # Import Salt libs
 import salt.exceptions
 import salt.loader
@@ -243,3 +245,104 @@ def deserialize(serializer, stream_or_string, **mod_kwargs):
     """
     kwargs = salt.utils.args.clean_kwargs(**mod_kwargs)
     return _get_serialize_fn(serializer, "deserialize")(stream_or_string, **kwargs)
+
+
+def banner(
+    width=72,
+    commentchar="#",
+    borderchar="#",
+    blockstart=None,
+    blockend=None,
+    title=None,
+    text=None,
+    newline=False,
+):
+    """
+    Create a standardized comment block to include in a templated file.
+
+    A common technique in configuration management is to include a comment
+    block in managed files, warning users not to modify the file. This
+    function simplifies and standardizes those comment blocks.
+
+    :param width: The width, in characters, of the banner. Default is 72.
+    :param commentchar: The character to be used in the starting position of
+        each line. This value should be set to a valid line comment character
+        for the syntax of the file in which the banner is being inserted.
+        Multiple character sequences, like '//' are supported.
+        If the file's syntax does not support line comments (such as XML),
+        use the ``blockstart`` and ``blockend`` options.
+    :param borderchar: The character to use in the top and bottom border of
+        the comment box. Must be a single character.
+    :param blockstart: The character sequence to use at the beginning of a
+        block comment. Should be used in conjunction with ``blockend``
+    :param blockend: The character sequence to use at the end of a
+        block comment. Should be used in conjunction with ``blockstart``
+    :param title: The first field of the comment block. This field appears
+        centered at the top of the box.
+    :param text: The second filed of the comment block. This field appears
+        left-justifed at the bottom of the box.
+    :param newline: Boolean value to indicate whether the comment block should
+        end with a newline. Default is ``False``.
+
+    This banner can be injected into any templated file, for example:
+
+    .. code-block:: jinja
+
+        {{ salt['slsutil.banner'](width=120, commentchar='//') }}
+
+    The default banner:
+
+    .. code-block:: none
+
+        ########################################################################
+        #                                                                      #
+        #              THIS FILE IS MANAGED BY SALT - DO NOT EDIT              #
+        #                                                                      #
+        # The contents of this file are managed by Salt. Any changes to this   #
+        # file may be overwritten automatically and without warning.           #
+        ########################################################################
+    """
+
+    if title is None:
+        title = "THIS FILE IS MANAGED BY SALT - DO NOT EDIT"
+
+    if text is None:
+        text = (
+            "The contents of this file are managed by Salt. "
+            "Any changes to this file may be overwritten "
+            "automatically and without warning"
+        )
+
+    # Set up some typesetting variables
+    lgutter = commentchar.strip() + " "
+    rgutter = " " + commentchar.strip()
+    textwidth = width - len(lgutter) - len(rgutter)
+    border_line = (
+        commentchar + borderchar[:1] * (width - len(commentchar) * 2) + commentchar
+    )
+    spacer_line = commentchar + " " * (width - len(commentchar) * 2) + commentchar
+    wrapper = textwrap.TextWrapper(width=(width - len(lgutter) - len(rgutter)))
+    block = list()
+
+    # Create the banner
+    if blockstart is not None:
+        block.append(blockstart)
+    block.append(border_line)
+    block.append(spacer_line)
+    for line in wrapper.wrap(title):
+        block.append(lgutter + line.center(textwidth) + rgutter)
+    block.append(spacer_line)
+    for line in wrapper.wrap(text):
+        block.append(lgutter + line + " " * (textwidth - len(line)) + rgutter)
+    block.append(border_line)
+    if blockend is not None:
+        block.append(blockend)
+
+    # Convert list to multiline string
+    result = "\n".join(block)
+
+    # Add a newline character to the end of the banner
+    if newline:
+        return result + "\n"
+
+    return result
