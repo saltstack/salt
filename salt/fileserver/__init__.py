@@ -490,11 +490,13 @@ class Fileserver(object):
             return ret
         return list(ret)
 
-    def file_envs(self, load):
+    def file_envs(self, load=None):
         '''
         Return environments for all backends for requests from fileclient
         '''
-        return self.envs()
+        if load is None:
+            load = {}
+        return self.envs(**load)
 
     def init(self, back=None):
         '''
