@@ -38,7 +38,7 @@ Tests can be run for each state, or all apache tests
     salt '*' saltcheck.run_state_tests apache check_all=True
     salt '*' saltcheck.run_highstate_tests
 
-Example 1:
+Example:
 
 .. code-block:: yaml
 
@@ -50,7 +50,7 @@ Example 1:
       assertion: assertEqual
       expected-return:  'hello'
 
-Example 2:
+Example with jinja:
 
 .. code-block:: jinja
 
@@ -63,6 +63,32 @@ Example 2:
         - {{ package }}
       assertion: assertFalse
     {% endfor %}
+
+Example with setup/teardown and passing pillar:
+
+.. code-block:: jinja
+    setup_test_environment:
+      module_and_function: saltcheck.state_apply
+      args:
+        - common
+      pillar-data:
+        data: value
+
+    verify_vim:
+      module_and_function: pkg.version
+      args:
+        - vim
+      assertion: assertNotEmpty
+
+Example with skip:
+
+.. code-block:: jinja
+    package_latest:
+      module_and_function: pkg.upgrade_available
+      args:
+        - apache2
+      assertion: assertFalse
+      skip: True
 
 Supported assertions:
 assertEqual assertNotEqual assertTrue assertFalse assertIn assertNotIn assertGreater
