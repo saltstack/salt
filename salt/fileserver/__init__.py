@@ -489,11 +489,12 @@ class Fileserver(object):
                 ret[fsb] = self.servers[fstr]()
         return ret
 
-    def envs(self, back=None, sources=False):
+    def envs(self, load={}, back=None, sources=False):
         '''
         Return the environments for the named backend or all backends
         '''
-        back = self.backends(back)
+        back = self.backends(load.get('back', back))
+        sources = load.get('sources', sources)
         ret = set()
         if sources:
             ret = {}
