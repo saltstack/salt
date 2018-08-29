@@ -299,6 +299,12 @@ def get_file(path,
 def envs():
     '''
     List available environments for fileserver
+
+    CLI Example
+
+    .. code-block:: bash
+
+        salt '*' cp.envs
     '''
     return _client().envs()
 
