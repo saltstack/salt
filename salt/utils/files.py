@@ -547,6 +547,11 @@ def rm_rf(path):
     if os.path.islink(path) or not os.path.isdir(path):
         os.remove(path)
     else:
+        if salt.utils.platform.is_windows():
+            try:
+                path = salt.utils.stringutils.to_unicode(path)
+            except TypeError:
+                pass
         shutil.rmtree(path, onerror=_onerror)
 
 

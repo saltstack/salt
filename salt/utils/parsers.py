@@ -591,10 +591,19 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
                 )
             )
 
+        def _logfile_callback(option, opt, value, parser, *args, **kwargs):
+            if not os.path.dirname(value):
+                # if the path is only a file name (no parent directory), assume current directory
+                value = os.path.join(os.path.curdir, value)
+            setattr(parser.values, self._logfile_config_setting_name_, value)
+
         group.add_option(
             '--log-file',
             dest=self._logfile_config_setting_name_,
             default=None,
+            action='callback',
+            type='string',
+            callback=_logfile_callback,
             help='Log file path. Default: \'{0}\'.'.format(
                 self._default_logging_logfile_
             )
@@ -2522,7 +2531,7 @@ class SaltKeyOptionParser(six.with_metaclass(OptionParserMeta,
     process_config_dir._mixin_prio_ = ConfigDirMixIn._mixin_prio_
 
     def setup_config(self):
-        keys_config = config.master_config(self.get_config_file_path())
+        keys_config = config.client_config(self.get_config_file_path())
         if self.options.gen_keys:
             # Since we're generating the keys, some defaults can be assumed
             # or tweaked

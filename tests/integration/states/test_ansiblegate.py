@@ -16,13 +16,14 @@ import salt.utils.path
 
 # Import testing libraries
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest
+from tests.support.helpers import destructiveTest, requires_sshd_server
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
 
 
 @destructiveTest
+@requires_sshd_server
 @skipIf(not salt.utils.path.which('ansible-playbook'), 'ansible-playbook is not installed')
 class AnsiblePlaybooksTestCase(ModuleCase, SaltReturnAssertsMixin):
     '''

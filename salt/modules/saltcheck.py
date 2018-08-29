@@ -14,27 +14,35 @@ be created and named ``saltcheck-tests``.
 Tests for a state should be created in files ending in ``*.tst`` and placed in
 the ``saltcheck-tests`` folder.
 
-Multiple tests can be created in a file. Multiple ``*.tst`` files can be
+Multiple tests can be specified in a file. Multiple ``*.tst`` files can be
 created in the ``saltcheck-tests`` folder. Salt rendering is supported in test
 files (e.g. ``yaml + jinja``). The ``id`` of a test works in the same manner as
 in salt state files. They should be unique and descriptive.
 
 Example file system layout:
 
-.. code-block: txt
+.. code-block:: txt
 
     /srv/salt/apache/
         init.sls
         config.sls
         saltcheck-tests/
-            pkg_and_mods.tst
+            init.tst
             config.tst
 
-Example:
+Tests can be run for each state, or all apache tests
+
+.. code-block:: bash
+
+    salt '*' saltcheck.run_state_tests apache,apache.config
+    salt '*' saltcheck.run_state_tests apache check_all=True
+    salt '*' saltcheck.run_highstate_tests
+
+Example 1:
 
 .. code-block:: yaml
 
-    echo-test-hello:
+    echo_test_hello:
       module_and_function: test.echo
       args:
         - "hello"
@@ -42,6 +50,23 @@ Example:
       assertion: assertEqual
       expected-return:  'hello'
 
+Example 2:
+
+.. code-block:: jinja
+
+    {% for package in ["apache2", "openssh"] %}
+    {# or another example #}
+    {# for package in salt['pillar.get']("packages") #}
+    test_{{ package }}_latest:
+      module_and_function: pkg.upgrade_available
+      args:
+        - {{ package }}
+      assertion: assertFalse
+    {% endfor %}
+
+Supported assertions:
+assertEqual assertNotEqual assertTrue assertFalse assertIn assertNotIn assertGreater
+assertGreaterEqual assertLess assertLessEqual assertEmpty assertNotEmpty
 '''
 
 # Import Python libs
@@ -57,6 +82,7 @@ import salt.utils.path
 import salt.utils.yaml
 import salt.client
 import salt.exceptions
+from salt.utils.decorators import memoize
 from salt.ext import six
 
 log = logging.getLogger(__name__)
@@ -71,7 +97,7 @@ def __virtual__():
     return __virtualname__
 
 
-def update_master_cache():
+def update_master_cache(saltenv='base'):
     '''
     Updates the master cache onto the minion - transfers all salt-check-tests
     Should be done one time before running tests, and if tests are updated
@@ -83,7 +109,8 @@ def update_master_cache():
 
         salt '*' saltcheck.update_master_cache
     '''
-    __salt__['cp.cache_master']()
+    log.info("Updating files for environment: %s", saltenv)
+    __salt__['cp.cache_master'](saltenv)
     return True
 
 
@@ -112,55 +139,41 @@ def run_test(**kwargs):
         return "Test must be a dictionary"
 
 
-def run_state_tests(state):
+def run_state_tests(state, saltenv=None, check_all=False):
     '''
     Execute all tests for a salt state and return results
     Nested states will also be tested
 
     :param str state: the name of a user defined state
+    :param bool check_all: boolean to run all tests in state/saltcheck-tests directory
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' saltcheck.run_state_tests postfix
+        salt '*' saltcheck.run_state_tests postfix,common
     '''
-    scheck = SaltCheck()
-    paths = scheck.get_state_search_path_list()
+    if not saltenv:
+        saltenv = __opts__['saltenv']
+    if not saltenv:
+        saltenv = 'base'
+    scheck = SaltCheck(saltenv)
+    paths = scheck.get_state_search_path_list(saltenv)
     stl = StateTestLoader(search_paths=paths)
     results = {}
-    sls_list = _get_state_sls(state)
+    sls_list = state.split(',')
     for state_name in sls_list:
-        mypath = stl.convert_sls_to_path(state_name)
-        stl.add_test_files_for_sls(mypath)
+        stl.add_test_files_for_sls(state_name, check_all)
         stl.load_test_suite()
         results_dict = {}
         for key, value in stl.test_dict.items():
             result = scheck.run_test(value)
             results_dict[key] = result
         results[state_name] = results_dict
-    passed = 0
-    failed = 0
-    missing_tests = 0
-    for state in results:
-        if len(results[state].items()) == 0:
-            missing_tests = missing_tests + 1
-        else:
-            for dummy, val in results[state].items():
-                log.info("dummy=%s, val=%s", dummy, val)
-                if val.startswith('Pass'):
-                    passed = passed + 1
-                if val.startswith('Fail'):
-                    failed = failed + 1
-    out_list = []
-    for key, value in results.items():
-        out_list.append({key: value})
-    out_list.sort()
-    out_list.append({"TEST RESULTS": {'Passed': passed, 'Failed': failed, 'Missing Tests': missing_tests}})
-    return out_list
+    return _generate_out_list(results)
 
 
-def run_highstate_tests():
+def run_highstate_tests(saltenv=None):
     '''
     Execute all tests for a salt highstate and return results
 
@@ -170,45 +183,60 @@ def run_highstate_tests():
 
         salt '*' saltcheck.run_highstate_tests
     '''
-    scheck = SaltCheck()
-    paths = scheck.get_state_search_path_list()
+    if not saltenv:
+        saltenv = __opts__['saltenv']
+    if not saltenv:
+        saltenv = 'base'
+    scheck = SaltCheck(saltenv)
+    paths = scheck.get_state_search_path_list(saltenv)
     stl = StateTestLoader(search_paths=paths)
     results = {}
-    sls_list = _get_top_states()
+    sls_list = _get_top_states(saltenv)
     all_states = []
-    for top_state in sls_list:
-        sls_list = _get_state_sls(top_state)
-        for state in sls_list:
-            if state not in all_states:
-                all_states.append(state)
+    for state in sls_list:
+        if state not in all_states:
+            all_states.append(state)
 
     for state_name in all_states:
-        mypath = stl.convert_sls_to_path(state_name)
-        stl.add_test_files_for_sls(mypath)
+        stl.add_test_files_for_sls(state_name)
         stl.load_test_suite()
         results_dict = {}
         for key, value in stl.test_dict.items():
             result = scheck.run_test(value)
             results_dict[key] = result
         results[state_name] = results_dict
+    return _generate_out_list(results)
+
+
+def _generate_out_list(results):
+    '''
+    generate test results output list
+    '''
     passed = 0
     failed = 0
+    skipped = 0
     missing_tests = 0
+    total_time = 0.0
     for state in results:
-        if len(results[state].items()) == 0:
+        if not results[state].items():
             missing_tests = missing_tests + 1
         else:
             for dummy, val in results[state].items():
                 log.info("dummy=%s, val=%s", dummy, val)
-                if val.startswith('Pass'):
+                if val['status'].startswith('Pass'):
                     passed = passed + 1
-                if val.startswith('Fail'):
+                if val['status'].startswith('Fail'):
                     failed = failed + 1
+                if val['status'].startswith('Skip'):
+                    skipped = skipped + 1
+                total_time = total_time + float(val['duration'])
     out_list = []
     for key, value in results.items():
         out_list.append({key: value})
     out_list.sort()
-    out_list.append({"TEST RESULTS": {'Passed': passed, 'Failed': failed, 'Missing Tests': missing_tests}})
+    out_list.append({'TEST RESULTS': {'Execution Time': round(total_time, 4),
+                     'Passed': passed, 'Failed': failed, 'Skipped': skipped,
+                     'Missing Tests': missing_tests}})
     return out_list
 
 
@@ -222,6 +250,7 @@ def _render_file(file_path):
     return rendered
 
 
+@memoize
 def _is_valid_module(module):
     '''
     Return a list of all modules available on minion
@@ -238,6 +267,7 @@ def _get_auto_update_cache_value():
     return True
 
 
+@memoize
 def _is_valid_function(module_name, function):
     '''
     Determine if a function is valid for a module
@@ -249,14 +279,14 @@ def _is_valid_function(module_name, function):
     return "{0}.{1}".format(module_name, function) in functions
 
 
-def _get_top_states():
+def _get_top_states(saltenv='base'):
     '''
     Equivalent to a salt cli: salt web state.show_top
     '''
     alt_states = []
     try:
         returned = __salt__['state.show_top']()
-        for i in returned['base']:
+        for i in returned[saltenv]:
             alt_states.append(i)
     except Exception:
         raise
@@ -264,43 +294,30 @@ def _get_top_states():
     return alt_states
 
 
-def _get_state_sls(state):
-    '''
-    Equivalent to a salt cli: salt web state.show_low_sls STATE
-    '''
-    sls_list_state = []
-    try:
-        returned = __salt__['state.show_low_sls'](state)
-        for i in returned:
-            if i['__sls__'] not in sls_list_state:
-                sls_list_state.append(i['__sls__'])
-    except Exception:
-        raise
-    return sls_list_state
-
-
 class SaltCheck(object):
     '''
-    This class implements the saltcheck
+    This class validates and runs the saltchecks
     '''
 
-    def __init__(self):
-        # self.sls_list_top = []
+    def __init__(self, saltenv='base'):
         self.sls_list_state = []
         self.modules = []
         self.results_dict = {}
         self.results_dict_summary = {}
+        self.saltenv = saltenv
         self.assertions_list = '''assertEqual assertNotEqual
                                   assertTrue assertFalse
                                   assertIn assertNotIn
                                   assertGreater
                                   assertGreaterEqual
-                                  assertLess assertLessEqual'''.split()
+                                  assertLess assertLessEqual
+                                  assertEmpty assertNotEmpty'''.split()
         self.auto_update_master_cache = _get_auto_update_cache_value
-        # self.salt_lc = salt.client.Caller(mopts=__opts__)
-        self.salt_lc = salt.client.Caller()
+        local_opts = salt.config.minion_config(__opts__['conf_file'])
+        local_opts['file_client'] = 'local'
+        self.salt_lc = salt.client.Caller(mopts=local_opts)
         if self.auto_update_master_cache:
-            update_master_cache()
+            update_master_cache(saltenv)
 
     def __is_valid_test(self, test_dict):
         '''
@@ -309,13 +326,28 @@ class SaltCheck(object):
         - a test name
         - a valid module and function
         - a valid assertion
-        - an expected return value
+        - an expected return value - if assertion type requires it
+
+        6 points needed for standard test
+        4 points needed for test with assertion not requiring expected return
         '''
         tots = 0  # need total of >= 6 to be a valid test
+        skip = test_dict.get('skip', False)
         m_and_f = test_dict.get('module_and_function', None)
         assertion = test_dict.get('assertion', None)
-        expected_return = test_dict.get('expected-return', None)
+        exp_ret_key = 'expected-return' in test_dict.keys()
+        exp_ret_val = test_dict.get('expected-return', None)
         log.info("__is_valid_test has test: %s", test_dict)
+        if skip:
+            required_total = 0
+        if assertion in ["assertEmpty",
+                         "assertNotEmpty",
+                         "assertTrue",
+                         "assertFalse"]:
+            required_total = 4
+        else:
+            required_total = 6
+
         if m_and_f:
             tots += 1
             module, function = m_and_f.split('.')
@@ -324,21 +356,24 @@ class SaltCheck(object):
             if _is_valid_function(module, function):
                 tots += 1
             log.info("__is_valid_test has valid m_and_f")
-        if assertion:
+        if assertion in self.assertions_list:
+            log.info("__is_valid_test has valid_assertion")
             tots += 1
-            if assertion in self.assertions_list:
-                tots += 1
-                log.info("__is_valid_test has valid_assertion")
-        if expected_return:
-            tots += 1
-            log.info("__is_valid_test has valid_expected_return")
-        log.info("__is_valid_test score: %s", tots)
-        return tots >= 6
 
-    def call_salt_command(self,
-                          fun,
-                          args,
-                          kwargs):
+        if exp_ret_key:
+            tots += 1
+
+        if exp_ret_val is not None:
+            tots += 1
+
+        # log the test score for debug purposes
+        log.info("__test score: %s and required: %s", tots, required_total)
+        return tots >= required_total
+
+    def _call_salt_command(self,
+                           fun,
+                           args,
+                           kwargs):
         '''
         Generic call of salt Caller command
         '''
@@ -362,23 +397,38 @@ class SaltCheck(object):
         '''
         Run a single saltcheck test
         '''
+        start = time.time()
         if self.__is_valid_test(test_dict):
+            skip = test_dict.get('skip', False)
+            if skip:
+                return {'status': 'Skip', 'duration': 0.0}
             mod_and_func = test_dict['module_and_function']
             args = test_dict.get('args', None)
             kwargs = test_dict.get('kwargs', None)
+            pillar_data = test_dict.get('pillar-data', None)
+            if pillar_data:
+                if not kwargs:
+                    kwargs = {}
+                kwargs['pillar'] = pillar_data
+            else:
+                # make sure we clean pillar from previous test
+                if kwargs:
+                    kwargs.pop('pillar')
+
             assertion = test_dict['assertion']
-            expected_return = test_dict['expected-return']
-            actual_return = self.call_salt_command(mod_and_func, args, kwargs)
-            if assertion != "assertIn":
-                expected_return = self.cast_expected_to_returned_type(expected_return, actual_return)
+            expected_return = test_dict.get('expected-return', None)
+            actual_return = self._call_salt_command(mod_and_func, args, kwargs)
+            if assertion not in ["assertIn", "assertNotIn", "assertEmpty", "assertNotEmpty",
+                                 "assertTrue", "assertFalse"]:
+                expected_return = self._cast_expected_to_returned_type(expected_return, actual_return)
             if assertion == "assertEqual":
                 value = self.__assert_equal(expected_return, actual_return)
             elif assertion == "assertNotEqual":
                 value = self.__assert_not_equal(expected_return, actual_return)
             elif assertion == "assertTrue":
-                value = self.__assert_true(expected_return)
+                value = self.__assert_true(actual_return)
             elif assertion == "assertFalse":
-                value = self.__assert_false(expected_return)
+                value = self.__assert_false(actual_return)
             elif assertion == "assertIn":
                 value = self.__assert_in(expected_return, actual_return)
             elif assertion == "assertNotIn":
@@ -391,14 +441,22 @@ class SaltCheck(object):
                 value = self.__assert_less(expected_return, actual_return)
             elif assertion == "assertLessEqual":
                 value = self.__assert_less_equal(expected_return, actual_return)
+            elif assertion == "assertEmpty":
+                value = self.__assert_empty(actual_return)
+            elif assertion == "assertNotEmpty":
+                value = self.__assert_not_empty(actual_return)
             else:
-                value = "Fail - bas assertion"
+                value = "Fail - bad assertion"
         else:
-            return "Fail - invalid test"
-        return value
+            value = "Fail - invalid test"
+        end = time.time()
+        result = {}
+        result['status'] = value
+        result['duration'] = round(end - start, 4)
+        return result
 
     @staticmethod
-    def cast_expected_to_returned_type(expected, returned):
+    def _cast_expected_to_returned_type(expected, returned):
         '''
         Determine the type of variable returned
         Cast the expected to the type of variable returned
@@ -478,7 +536,7 @@ class SaltCheck(object):
         '''
         result = "Pass"
         try:
-            assert (expected in returned), "{0} not False".format(returned)
+            assert (expected in returned), "{0} not found in {1}".format(expected, returned)
         except AssertionError as err:
             result = "Fail: " + six.text_type(err)
         return result
@@ -490,7 +548,7 @@ class SaltCheck(object):
         '''
         result = "Pass"
         try:
-            assert (expected not in returned), "{0} not False".format(returned)
+            assert (expected not in returned), "{0} was found in {1}".format(expected, returned)
         except AssertionError as err:
             result = "Fail: " + six.text_type(err)
         return result
@@ -544,18 +602,39 @@ class SaltCheck(object):
         return result
 
     @staticmethod
-    def get_state_search_path_list():
+    def __assert_empty(returned):
+        '''
+        Test if a returned value is empty
+        '''
+        result = "Pass"
+        try:
+            assert (not returned), "{0} is not empty".format(returned)
+        except AssertionError as err:
+            result = "Fail: " + six.text_type(err)
+        return result
+
+    @staticmethod
+    def __assert_not_empty(returned):
+        '''
+        Test if a returned value is not empty
+        '''
+        result = "Pass"
+        try:
+            assert (returned), "value is empty"
+        except AssertionError as err:
+            result = "Fail: " + six.text_type(err)
+        return result
+
+    @staticmethod
+    def get_state_search_path_list(saltenv='base'):
         '''
         For the state file system, return a list of paths to search for states
         '''
         # state cache should be updated before running this method
         search_list = []
         cachedir = __opts__.get('cachedir', None)
-        environment = __opts__['saltenv']
-        if environment:
-            path = cachedir + os.sep + "files" + os.sep + environment
-            search_list.append(path)
-        path = cachedir + os.sep + "files" + os.sep + "base"
+        log.info("Searching for files in saltenv: %s", saltenv)
+        path = cachedir + os.sep + "files" + os.sep + saltenv
         search_list.append(path)
         return search_list
 
@@ -578,26 +657,10 @@ class StateTestLoader(object):
         '''
         self.test_dict = {}
         for myfile in self.test_files:
-            # self.load_file(myfile)
-            self.load_file_salt_rendered(myfile)
+            self._load_file_salt_rendered(myfile)
         self.test_files = []
 
-    def load_file(self, filepath):
-        '''
-        loads in one test file
-        '''
-        try:
-            with __utils__['files.fopen'](filepath, 'r') as myfile:
-                # with salt.utils.files.fopen(filepath, 'r') as myfile:
-                # with open(filepath, 'r') as myfile:
-                contents_yaml = salt.utils.data.decode(salt.utils.yaml.safe_load(myfile))
-                for key, value in contents_yaml.items():
-                    self.test_dict[key] = value
-        except:
-            raise
-        return
-
-    def load_file_salt_rendered(self, filepath):
+    def _load_file_salt_rendered(self, filepath):
         '''
         loads in one test file
         '''
@@ -609,60 +672,53 @@ class StateTestLoader(object):
             self.test_dict[key] = value
         return
 
-    def gather_files(self, filepath):
+    def _gather_files(self, filepath):
         '''
         Gather files for a test suite
         '''
         self.test_files = []
-        log.info("gather_files: %s", time.time())
         filepath = filepath + os.sep + 'saltcheck-tests'
-        rootdir = filepath
-        # for dirname, subdirlist, filelist in salt.utils.path.os_walk(rootdir):
-        for dirname, dummy, filelist in salt.utils.path.os_walk(rootdir):
+        for dirname, dummy, filelist in salt.utils.path.os_walk(filepath):
             for fname in filelist:
                 if fname.endswith('.tst'):
                     start_path = dirname + os.sep + fname
                     full_path = os.path.abspath(start_path)
+                    log.info("Found test: %s", full_path)
                     self.test_files.append(full_path)
         return
 
     @staticmethod
-    def convert_sls_to_paths(sls_list):
-        '''
-        Converting sls to paths
-        '''
-        new_sls_list = []
-        for sls in sls_list:
-            sls = sls.replace(".", os.sep)
-            new_sls_list.append(sls)
-        return new_sls_list
-
-    @staticmethod
-    def convert_sls_to_path(sls):
+    def _convert_sls_to_path(sls):
         '''
         Converting sls to paths
         '''
         sls = sls.replace(".", os.sep)
         return sls
 
-    def add_test_files_for_sls(self, sls_path):
+    def add_test_files_for_sls(self, sls_name, check_all=False):
         '''
         Adding test files
         '''
+        sls_split = sls_name.rpartition('.')
         for path in self.search_paths:
-            full_path = path + os.sep + sls_path
-            rootdir = full_path
-            if os.path.isdir(full_path):
-                log.info("searching path= %s", full_path)
-                # for dirname, subdirlist, filelist in salt.utils.path.os_walk(rootdir, topdown=True):
-                for dirname, subdirlist, dummy in salt.utils.path.os_walk(rootdir, topdown=True):
-                    if "saltcheck-tests" in subdirlist:
-                        self.gather_files(dirname)
-                        log.info("test_files list: %s", self.test_files)
-                        log.info("found subdir match in = %s", dirname)
-                    else:
-                        log.info("did not find subdir match in = %s", dirname)
-                    del subdirlist[:]
+            if sls_split[0]:
+                base_path = path + os.sep + self._convert_sls_to_path(sls_split[0])
             else:
-                log.info("path is not a directory= %s", full_path)
+                base_path = path
+            if os.path.isdir(base_path):
+                log.info("searching path: %s", base_path)
+                if check_all:
+                    # Find and run all tests in the state/saltcheck-tests directory
+                    self._gather_files(base_path + os.sep + sls_split[2])
+                    return
+                init_path = base_path + os.sep + sls_split[2] + os.sep + 'saltcheck-tests' + os.sep + 'init.tst'
+                name_path = base_path + os.sep + 'saltcheck-tests' + os.sep + sls_split[2] + '.tst'
+                if os.path.isfile(init_path):
+                    self.test_files.append(init_path)
+                    log.info("Found test init: %s", init_path)
+                if os.path.isfile(name_path):
+                    self.test_files.append(name_path)
+                    log.info("Found test named: %s", name_path)
+            else:
+                log.info("path is not a directory: %s", base_path)
         return

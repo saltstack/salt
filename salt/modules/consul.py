@@ -2267,7 +2267,7 @@ def acl_info(consul_url=None, **kwargs):
     function = 'acl/info/{0}'.format(kwargs['id'])
     ret = _query(consul_url=consul_url,
                  data=data,
-                 method='PUT',
+                 method='GET',
                  function=function)
     return ret
 
