@@ -5,6 +5,7 @@
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+import tempfile
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -437,15 +438,18 @@ class DebianIpTestCase(TestCase, LoaderModuleMockMixin):
                         '\n']},
                 ]
 
-        for iface in interfaces:
-            # Skip tests that require __salt__['pkg.install']()
-            if iface['iface_type'] not in ['bridge', 'pppoe', 'vlan']:
-                self.assertListEqual(debian_ip.build_interface(
-                                            iface=iface['iface_name'],
-                                            iface_type=iface['iface_type'],
-                                            enabled=iface['enabled'],
-                                            **iface['settings']),
-                                     iface['return'])
+        with tempfile.NamedTemporaryFile(mode='r', delete=True) as tfile:
+            with patch('salt.modules.debian_ip._DEB_NETWORK_FILE', str(tfile.name)):
+                for iface in interfaces:
+                    # Skip tests that require __salt__['pkg.install']()
+                    if iface['iface_type'] not in ['bridge', 'pppoe', 'vlan']:
+                        self.assertListEqual(debian_ip.build_interface(
+                                                    iface=iface['iface_name'],
+                                                    iface_type=iface['iface_type'],
+                                                    enabled=iface['enabled'],
+                                                    interface_file=tfile.name,
+                                                    **iface['settings']),
+                                             iface['return'])
 
     # 'up' function tests: 1
 
