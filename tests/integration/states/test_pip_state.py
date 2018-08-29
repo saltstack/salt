@@ -49,26 +49,6 @@ from salt.exceptions import CommandExecutionError
 from salt.ext import six
 
 
-def can_runas():
-    '''
-    Detect if we are running in a limited shell (winrm) and are un-able to use
-    the runas utility method.
-    '''
-    if salt.utils.platform.is_windows():
-        try:
-            salt.utils.win_runas.runas(
-                'cmd.exe /c echo 1', 'noexistuser', 'n0existp4ss',
-            )
-        except WindowsError as exc:  # pylint: disable=undefined-variable
-            if exc.winerror == 5:
-                # Access Denied
-                return False
-    return True
-
-
-CAN_RUNAS = can_runas()
-
-
 class VirtualEnv(object):
     def __init__(self, test, venv_dir):
         self.venv_dir = venv_dir
@@ -294,7 +274,6 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
 
     @destructiveTest
     @skip_if_not_root
-    @skipIf(not CAN_RUNAS, 'Runas support required')
     @with_system_user('issue-6912', on_existing='delete', delete=True,
                       password='PassWord1!')
     @with_tempdir()
@@ -338,7 +317,6 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
 
     @destructiveTest
     @skip_if_not_root
-    @skipIf(not CAN_RUNAS, 'Runas support required')
     @with_system_user('issue-6912', on_existing='delete', delete=True,
                       password='PassWord1!')
     @with_tempdir()

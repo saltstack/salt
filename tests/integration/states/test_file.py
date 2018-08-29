@@ -37,6 +37,7 @@ from tests.support.mixins import SaltReturnAssertsMixin
 # Import Salt libs
 import salt.utils.data
 import salt.utils.files
+import salt.utils.json
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
@@ -267,7 +268,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
 
         if IS_WINDOWS:
             expected = 'The \'mode\' option is not supported on Windows'
-            self.assertEqual(ret[ret.keys()[0]]['comment'], expected)
+            self.assertEqual(ret[list(ret)[0]]['comment'], expected)
             self.assertSaltFalseReturn(ret)
             return
 
@@ -303,7 +304,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
 
         if IS_WINDOWS:
             expected = 'The \'mode\' option is not supported on Windows'
-            self.assertEqual(ret[ret.keys()[0]]['comment'], expected)
+            self.assertEqual(ret[list(ret)[0]]['comment'], expected)
             self.assertSaltFalseReturn(ret)
             return
 
@@ -335,7 +336,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
 
         if IS_WINDOWS:
             expected = 'The \'mode\' option is not supported on Windows'
-            self.assertEqual(ret[ret.keys()[0]]['comment'], expected)
+            self.assertEqual(ret[list(ret)[0]]['comment'], expected)
             self.assertSaltFalseReturn(ret)
             return
 
@@ -418,7 +419,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         )
         if IS_WINDOWS:
             expected = 'The \'mode\' option is not supported on Windows'
-            self.assertEqual(ret[ret.keys()[0]]['comment'], expected)
+            self.assertEqual(ret[list(ret)[0]]['comment'], expected)
             self.assertSaltFalseReturn(ret)
             return
 
@@ -782,7 +783,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             source='salt://issue-48777/new.html')
         ret = ret[next(iter(ret))]
         assert ret['result'] is True, ret
-        diff_lines = ret['changes']['diff'].split('\n')
+        diff_lines = ret['changes']['diff'].split(os.linesep)
         assert '+räksmörgås' in diff_lines, diff_lines
 
     def test_directory(self):
@@ -946,6 +947,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertFalse(os.path.exists(strayfile2))
         self.assertTrue(os.path.exists(keepfile))
 
+    @skipIf(IS_WINDOWS, 'Skip on windows')
     @with_tempdir()
     def test_test_directory_clean_exclude(self, base_dir):
         '''
@@ -1314,8 +1316,15 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                              name=name,
                              source='salt://соль')
         self.assertSaltTrueReturn(ret)
+        if six.PY2 and salt.utils.platform.is_windows():
+            # Providing unicode to os.listdir so that we avoid having listdir
+            # try to decode the filenames using the systemencoding on windows
+            # python 2.
+            files = os.listdir(name.decode('utf-8'))
+        else:
+            files = salt.utils.data.decode(os.listdir(name), normalize=True)
         self.assertEqual(
-            sorted(salt.utils.data.decode(os.listdir(name), normalize=True)),
+            sorted(files),
             sorted(['foo.txt', 'спам.txt', 'яйца.txt']),
         )
 
@@ -1631,6 +1640,48 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             '',
         ])
         self.assertEqual(serialized_file, expected_file)
+
+    @with_tempfile(create=False)
+    def test_serializer_deserializer_opts(self, name):
+        '''
+        Test the serializer_opts and deserializer_opts options
+        '''
+        data1 = {'foo': {'bar': 'baz'}}
+        data2 = {'foo': {'abc': 123}}
+        merged = {'foo': {'bar': 'baz', 'abc': 123}}
+
+        ret = self.run_state(
+            'file.serialize',
+            name=name,
+            dataset=data1,
+            formatter='json',
+            deserializer_opts=[{'encoding': 'latin-1'}])
+        ret = ret[next(iter(ret))]
+        assert ret['result'], ret
+        # We should have warned about deserializer_opts being used when
+        # merge_if_exists was not set to True.
+        assert 'warnings' in ret
+
+        # Run with merge_if_exists, as well as serializer and deserializer opts
+        ret = self.run_state(
+            'file.serialize',
+            name=name,
+            dataset=data2,
+            formatter='json',
+            merge_if_exists=True,
+            serializer_opts=[{'indent': 8}],
+            deserializer_opts=[{'encoding': 'latin-1'}])
+        ret = ret[next(iter(ret))]
+        assert ret['result'], ret
+
+        with salt.utils.files.fopen(name) as fp_:
+            serialized_data = salt.utils.json.load(fp_)
+
+        # If this test fails, this debug logging will help tell us how the
+        # serialized data differs from what was serialized.
+        log.debug('serialized_data = %r', serialized_data)
+        log.debug('merged = %r', merged)
+        assert serialized_data == merged
 
     @with_tempdir()
     def test_replace_issue_18841_omit_backup(self, base_dir):
@@ -2215,10 +2266,10 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             else:
                 diff = '--- \n+++ \n@@ -1 +1,3 @@\n'
             diff += (
-                '+첫 번째 행\n'
-                ' 한국어 시험\n'
-                '+마지막 행\n'
-            )
+                '+첫 번째 행{0}'
+                ' 한국어 시험{0}'
+                '+마지막 행{0}'
+            ).format(os.linesep)
 
             ret = {x.split('_|-')[1]: y for x, y in six.iteritems(result)}
 
@@ -2644,8 +2695,8 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
         Test blockreplace when prepend_if_not_found=True and block doesn't
         exist in file.
         '''
-        expected = self.marker_start + '\n' + self.content + \
-            self.marker_end + '\n' + self.without_block
+        expected = self.marker_start + os.linesep + self.content + \
+            self.marker_end + os.linesep + self.without_block
 
         # Pass 1: content ends in newline
         self._write(name, self.without_block)
@@ -2698,8 +2749,8 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
         exist in file. Test with append_newline explicitly set to True.
         '''
         # Pass 1: content ends in newline
-        expected = self.marker_start + '\n' + self.content + \
-            '\n' + self.marker_end + '\n' + self.without_block
+        expected = self.marker_start + os.linesep + self.content + \
+            os.linesep + self.marker_end + os.linesep + self.without_block
         self._write(name, self.without_block)
         ret = self.run_state('file.blockreplace',
                              name=name,
@@ -2724,8 +2775,8 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(self._read(name), expected)
 
         # Pass 2: content does not end in newline
-        expected = self.marker_start + '\n' + self.content + \
-            self.marker_end + '\n' + self.without_block
+        expected = self.marker_start + os.linesep + self.content + \
+            self.marker_end + os.linesep + self.without_block
         self._write(name, self.without_block)
         ret = self.run_state('file.blockreplace',
                              name=name,
@@ -2756,8 +2807,8 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
         exist in file. Test with append_newline explicitly set to False.
         '''
         # Pass 1: content ends in newline
-        expected = self.marker_start + '\n' + self.content + \
-            self.marker_end + '\n' + self.without_block
+        expected = self.marker_start + os.linesep + self.content + \
+            self.marker_end + os.linesep + self.without_block
         self._write(name, self.without_block)
         ret = self.run_state('file.blockreplace',
                              name=name,
@@ -2782,8 +2833,8 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(self._read(name), expected)
 
         # Pass 2: content does not end in newline
-        expected = self.marker_start + '\n' + \
-            self.content.rstrip('\r\n') + self.marker_end + '\n' + \
+        expected = self.marker_start + os.linesep + \
+            self.content.rstrip('\r\n') + self.marker_end + os.linesep + \
             self.without_block
         self._write(name, self.without_block)
         ret = self.run_state('file.blockreplace',
@@ -2814,8 +2865,8 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
         Test blockreplace when append_if_not_found=True and block doesn't
         exist in file.
         '''
-        expected = self.without_block + self.marker_start + '\n' + \
-            self.content + self.marker_end + '\n'
+        expected = self.without_block + self.marker_start + os.linesep + \
+            self.content + self.marker_end + os.linesep
 
         # Pass 1: content ends in newline
         self._write(name, self.without_block)
@@ -2868,8 +2919,8 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
         exist in file. Test with append_newline explicitly set to True.
         '''
         # Pass 1: content ends in newline
-        expected = self.without_block + self.marker_start + '\n' + \
-            self.content + '\n' + self.marker_end + '\n'
+        expected = self.without_block + self.marker_start + os.linesep + \
+            self.content + os.linesep + self.marker_end + os.linesep
         self._write(name, self.without_block)
         ret = self.run_state('file.blockreplace',
                              name=name,
@@ -2894,8 +2945,8 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(self._read(name), expected)
 
         # Pass 2: content does not end in newline
-        expected = self.without_block + self.marker_start + '\n' + \
-            self.content + self.marker_end + '\n'
+        expected = self.without_block + self.marker_start + os.linesep + \
+            self.content + self.marker_end + os.linesep
         self._write(name, self.without_block)
         ret = self.run_state('file.blockreplace',
                              name=name,
@@ -2926,8 +2977,8 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
         exist in file. Test with append_newline explicitly set to False.
         '''
         # Pass 1: content ends in newline
-        expected = self.without_block + self.marker_start + '\n' + \
-            self.content + self.marker_end + '\n'
+        expected = self.without_block + self.marker_start + os.linesep + \
+            self.content + self.marker_end + os.linesep
         self._write(name, self.without_block)
         ret = self.run_state('file.blockreplace',
                              name=name,
@@ -2952,8 +3003,8 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(self._read(name), expected)
 
         # Pass 2: content does not end in newline
-        expected = self.without_block + self.marker_start + '\n' + \
-            self.content.rstrip('\r\n') + self.marker_end + '\n'
+        expected = self.without_block + self.marker_start + os.linesep + \
+            self.content.rstrip('\r\n') + self.marker_end + os.linesep
         self._write(name, self.without_block)
         ret = self.run_state('file.blockreplace',
                              name=name,
