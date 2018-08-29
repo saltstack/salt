@@ -184,8 +184,10 @@ class CloudClient(object):
     def __init__(self, path=None, opts=None, config_dir=None, pillars=None):
         if opts:
             self.opts = opts
-        else:
+        elif path:
             self.opts = salt.config.cloud_config(path)
+        else:
+            self.opts = salt.config.cloud_config()
 
         # Check the cache-dir exists. If not, create it.
         v_dirs = [self.opts['cachedir']]
@@ -2101,8 +2103,11 @@ class Map(Cloud):
         if master_name:
             # If the master already exists, get the host
             if master_name not in dmap['create']:
-                client = salt.client.get_local_client()
-                master_host = client.cmd(master_name, 'grains.get', ['host'])[master_name]
+                cloud_client = salt.cloud.CloudClient()
+                master_host = cloud_client.query()
+                for provider_part in master_profile['provider'].split(':'):
+                    master_host = master_host[provider_part]
+                master_host = master_host[master_name][master_profile.get('ssh_interface', 'public_ips')]
                 if not master_host:
                     raise SaltCloudSystemExit(
                         'Could not get the hostname of master {}.'.format(master_name)
