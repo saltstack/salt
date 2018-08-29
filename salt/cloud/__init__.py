@@ -519,6 +519,7 @@ class Cloud(object):
     '''
     def __init__(self, opts):
         self.opts = opts
+        self.client = CloudClient(self.opts)
         self.clouds = salt.loader.clouds(self.opts)
         self.__filter_non_working_providers()
         self.__cached_provider_queries = {}
@@ -2104,7 +2105,7 @@ class Map(Cloud):
         if master_name:
             # If the master already exists, get the host
             if master_name not in dmap['create']:
-                master_host = self.query()
+                master_host = self.client.query()
                 for provider_part in master_profile['provider'].split(':'):
                     master_host = master_host[provider_part]
                 master_host = master_host[master_name][master_profile.get('ssh_interface', 'public_ips')]
