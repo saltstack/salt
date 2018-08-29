@@ -37,14 +37,13 @@ from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
 # Import 3rd Party Libs
 try:
     import M2Crypto
-    HAS_M2 = True
 except ImportError:
-    HAS_M2 = False
+    M2Crypto = None
+
 try:
     import OpenSSL
-    HAS_OPENSSL = True
 except ImportError:
-    HAS_OPENSSL = False
+    OpenSSL = None
 
 __virtualname__ = 'x509'
 
@@ -82,10 +81,7 @@ def __virtual__():
     '''
     only load this module if m2crypto is available
     '''
-    if HAS_M2:
-        return __virtualname__
-    else:
-        return (False, 'Could not load x509 module, m2crypto unavailable')
+    return __virtualname__ if M2Crypto is not None else False, 'Could not load x509 module, m2crypto unavailable'
 
 
 class _Ctx(ctypes.Structure):
@@ -931,7 +927,7 @@ def create_crl(  # pylint: disable=too-many-arguments,too-many-locals
     # pyOpenSSL Note due to current limitations in pyOpenSSL it is impossible
     # to specify a digest For signing the CRL. This will hopefully be fixed
     # soon: https://github.com/pyca/pyopenssl/pull/161
-    if not HAS_OPENSSL:
+    if OpenSSL is None:
         raise salt.exceptions.SaltInvocationError(
             'Could not load OpenSSL module, OpenSSL unavailable'
         )
