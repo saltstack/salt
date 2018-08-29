@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
 Consul Management
-================
+=================
 
 The consul module is used to create and manage ACL
 
