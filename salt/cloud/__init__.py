@@ -2086,7 +2086,8 @@ class Map(Cloud):
         # Now sort the create list based on dependencies
         create_list = sorted(six.iteritems(dmap['create']), key=lambda x: x[1]['level'])
         full_map = dmap['create'].copy()
-        full_map.update(dmap['existing'])
+        if 'existing' in dmap:
+            full_map.update(dmap['existing'])
         possible_master_list = sorted(six.iteritems(full_map), key=lambda x: x[1]['level'])
         output = {}
         if self.opts['parallel']:
@@ -2103,8 +2104,7 @@ class Map(Cloud):
         if master_name:
             # If the master already exists, get the host
             if master_name not in dmap['create']:
-                cloud_client = salt.cloud.CloudClient()
-                master_host = cloud_client.query()
+                master_host = self.query()
                 for provider_part in master_profile['provider'].split(':'):
                     master_host = master_host[provider_part]
                 master_host = master_host[master_name][master_profile.get('ssh_interface', 'public_ips')]
