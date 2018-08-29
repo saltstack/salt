@@ -496,6 +496,7 @@ class Fileserver(object):
         '''
         if load is None:
             load = {}
+        load.pop('cmd', None)
         return self.envs(**load)
 
     def init(self, back=None):
