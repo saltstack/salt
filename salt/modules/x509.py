@@ -341,7 +341,7 @@ def _parse_subject(subject):
                 ret[nid_name] = val
                 nids.append(nid_num)
         except TypeError as err:
-            log.trace("Missing attribute '%s'. Error: %s", nid_name, err)
+            log.debug("Missing attribute '%s'. Error: %s", nid_name, err)
 
     return ret
 
