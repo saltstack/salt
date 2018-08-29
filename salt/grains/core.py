@@ -20,6 +20,7 @@ import platform
 import logging
 import locale
 import uuid
+import zlib
 from errno import EACCES, EPERM
 import datetime
 
@@ -54,6 +55,7 @@ import salt.utils.network
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
+import salt.utils.versions
 from salt.ext import six
 from salt.ext.six.moves import range
 
@@ -2659,6 +2661,31 @@ def _hw_data(osdata):
     return grains
 
 
+def _get_hash_by_shell():
+    '''
+    Shell-out Python 3 for compute reliable hash
+    :return:
+    '''
+    id_ = __opts__.get('id', '')
+    id_hash = None
+    py_ver = sys.version_info[:2]
+    if py_ver >= (3, 3):
+        # Python 3.3 enabled hash randomization, so we need to shell out to get
+        # a reliable hash.
+        id_hash = __salt__['cmd.run']([sys.executable, '-c', 'print(hash("{0}"))'.format(id_)],
+                                      env={'PYTHONHASHSEED': '0'})
+        try:
+            id_hash = int(id_hash)
+        except (TypeError, ValueError):
+            log.debug('Failed to hash the ID to get the server_id grain. Result of hash command: %s', id_hash)
+            id_hash = None
+    if id_hash is None:
+        # Python < 3.3 or error encountered above
+        id_hash = hash(id_)
+
+    return abs(id_hash % (2 ** 31))
+
+
 def get_server_id():
     '''
     Provides an integer based on the FQDN of a machine.
@@ -2669,30 +2696,20 @@ def get_server_id():
     #   server_id
 
     if salt.utils.platform.is_proxy():
-        return {}
-    id_ = __opts__.get('id', '')
-    id_hash = None
-    py_ver = sys.version_info[:2]
-    if py_ver >= (3, 3):
-        # Python 3.3 enabled hash randomization, so we need to shell out to get
-        # a reliable hash.
-        id_hash = __salt__['cmd.run'](
-            [sys.executable, '-c', 'print(hash("{0}"))'.format(id_)],
-            env={'PYTHONHASHSEED': '0'}
-        )
-        try:
-            id_hash = int(id_hash)
-        except (TypeError, ValueError):
-            log.debug(
-                'Failed to hash the ID to get the server_id grain. Result of '
-                'hash command: %s', id_hash
-            )
-            id_hash = None
-    if id_hash is None:
-        # Python < 3.3 or error encountered above
-        id_hash = hash(id_)
+        server_id = {}
+    else:
+        use_crc = __opts__.get('server_id_use_crc')
+        if bool(use_crc):
+            id_hash = getattr(zlib, use_crc, zlib.adler32)(__opts__.get('id', '').encode()) & 0xffffffff
+        else:
+            log.info('This server_id is computed not by Adler32 nor by CRC32. '
+                     'Please use "server_id_use_crc" option and define algorithm you '
+                     'prefer (default "Adler32"). Starting with Sodium, the '
+                     'server_id will be computed with Adler32 by default.')
+            id_hash = _get_hash_by_shell()
+        server_id = {'server_id': id_hash}
 
-    return {'server_id': abs(id_hash % (2 ** 31))}
+    return server_id
 
 
 def get_master():
