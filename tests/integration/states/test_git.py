@@ -970,14 +970,14 @@ class LocalRepoGitTest(ModuleCase, SaltReturnAssertsMixin):
         # Test that local changes are discarded
         ret = self.run_state(
             'git.latest',
-            name=self.repo,
+            name=TEST_REPO,
             target=self.target,
             force_reset=True)
         self.assertSaltTrueReturn(ret)
         ret = ret[next(iter(ret))]
-        self.assertIn('Uncommitted changes were discarded', ret['comment'])
-        self.assertIn('Repository was hard-reset', ret['comment'])
-        self.assertIn('forced update', ret['changes'])
+        assert 'Uncommitted changes were discarded' in ret['comment']
+        assert 'Repository was hard-reset' in ret['comment']
+        assert 'forced update' in ret['changes']
 
     def test_latest_force_reset_true_non_fast_forward(self):
         '''
