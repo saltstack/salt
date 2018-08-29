@@ -5,11 +5,8 @@ Helpers/utils for working with tornado asynchronous stuff
 
 from __future__ import absolute_import, print_function, unicode_literals
 
-import asyncio
 import tornado.ioloop
 import tornado.concurrent
-import contextlib
-from salt.utils import zeromq
 
 import logging
 log = logging.getLogger(__name__)

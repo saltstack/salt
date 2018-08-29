@@ -16,10 +16,8 @@ import os
 import sys
 import time
 import copy
-import signal
 import datetime
 import itertools
-import threading
 import logging
 import errno
 import random

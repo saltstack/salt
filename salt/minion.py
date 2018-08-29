@@ -99,8 +99,7 @@ from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.utils.debug import enable_sigusr1_handler
 from salt.utils.event import tagify
 from salt.utils.odict import OrderedDict
-from salt.utils.process import (default_signals,
-                                SignalHandlingMultiprocessingProcess,
+from salt.utils.process import (SignalHandlingMultiprocessingProcess,
                                 ProcessManager)
 from salt.exceptions import (
     CommandExecutionError,
@@ -773,12 +772,12 @@ class MinionBase(object):
         Based on the minion configuration, either return a randomized timer or
         just return the value of the return_retry_timer.
         '''
-        msg = 'Minion return retry timer set to {0} seconds'
+        msg = 'Minion return retry timer set to %s seconds%s'
         # future lint: disable=str-format-in-logging
         if self.opts.get('return_retry_timer_max'):
             try:
                 random_retry = randint(self.opts['return_retry_timer'], self.opts['return_retry_timer_max'])
-                log.debug(msg.format(random_retry) + ' (randomized)')
+                log.debug(msg, random_retry, ' (randomized)')
                 return random_retry
             except ValueError:
                 # Catch wiseguys using negative integers here
@@ -789,10 +788,10 @@ class MinionBase(object):
                     self.opts['return_retry_timer'],
                     self.opts['return_retry_timer_max'],
                 )
-                log.debug(msg.format(DEFAULT_MINION_OPTS['return_retry_timer']))
+                log.debug(msg, DEFAULT_MINION_OPTS['return_retry_timer'], '')
                 return DEFAULT_MINION_OPTS['return_retry_timer']
         else:
-            log.debug(msg.format(self.opts.get('return_retry_timer')))
+            log.debug(msg, self.opts.get('return_retry_timer'), '')
             return self.opts.get('return_retry_timer')
         # future lint: enable=str-format-in-logging
 
@@ -3563,7 +3562,7 @@ class WorkerMinion(Minion):
             salt.crypt.AsyncAuth.creds_map[tuple(data['key'])] = data['creds']
 
 
-class Worker(salt.utils.process.SignalHandlingMultiprocessingProcess):
+class Worker(SignalHandlingMultiprocessingProcess):
     '''
     The worker multiprocess instance to manage the backend operations for the
     salt master.

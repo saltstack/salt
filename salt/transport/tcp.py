@@ -226,7 +226,7 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
         Only create one instance of channel per __key()
         '''
         key = cls.__key(opts, **kwargs)
-        obj = instance_map.get(key)
+        obj = AsyncTCPReqChannel.instance_map.get(key)
         if obj is None:
             log.debug('Initializing new AsyncTCPReqChannel for %s', key)
             # we need to make a local variable for this, as we are going to store
@@ -234,7 +234,7 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
             # references it-- this forces a reference while we return to the caller
             obj = object.__new__(cls)
             obj.__singleton_init__(opts, **kwargs)
-            instance_map[key] = obj
+            AsyncTCPReqChannel.instance_map[key] = obj
         else:
             log.debug('Re-using AsyncTCPReqChannel for %s', key)
         return obj
@@ -894,24 +894,23 @@ class SaltMessageClient(object):
             # 'salt.utils.asynchronous.SyncWrapper'). Ensure that
             # _stream_return() completes by restarting the IO Loop.
             # This will prevent potential errors on shutdown.
-            try:
-                self._stream.close()
-                if self._read_until_future is not None:
-                    # This will prevent this message from showing up:
-                    # '[ERROR   ] Future exception was never retrieved:
-                    # StreamClosedError'
-                    # This happens because the logic is always waiting to read
-                    # the next message and the associated read future is marked
-                    # 'StreamClosedError' when the stream is closed.
-                    if self._read_until_future.done():
-                        self._read_until_future.exception()
-                    elif self.io_loop != tornado.ioloop.IOLoop.current(instance=False):
-                        io_loop = tornado.ioloop.IOLoop.current()
-                        io_loop.add_future(
-                            self._stream_return_future,
-                            lambda future: io_loop.stop()
-                        )
-                        io_loop.start()
+            self._stream.close()
+            if self._read_until_future is not None:
+                # This will prevent this message from showing up:
+                # '[ERROR   ] Future exception was never retrieved:
+                # StreamClosedError'
+                # This happens because the logic is always waiting to read
+                # the next message and the associated read future is marked
+                # 'StreamClosedError' when the stream is closed.
+                if self._read_until_future.done():
+                    self._read_until_future.exception()
+                elif self.io_loop != tornado.ioloop.IOLoop.current(instance=False):
+                    io_loop = tornado.ioloop.IOLoop.current()
+                    io_loop.add_future(
+                        self._stream_return_future,
+                        lambda future: io_loop.stop()
+                    )
+                    io_loop.start()
         self._tcp_client.close()
         # Clear callback references to allow the object that they belong to
         # to be deleted.
