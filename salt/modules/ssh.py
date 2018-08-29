@@ -222,6 +222,23 @@ def _validate_keys(key_file, fingerprint_hash_type):
 
     return ret
 
+def _convert_fingerprint_format(fingerprint):
+    try:
+        if fingerprint and fingerprint.find(':') == -1:
+            fingerprint_len = int(4 * ((len(fingerprint) + 3) / 4))
+            fingerprint = fingerprint.ljust(fingerprint_len, '=')
+            if six.PY2:
+                hash_val = fingerprint.decode('base64')
+            else:
+                hash_val = base64.b64decode(fingerprint)
+            hash_val = binascii.hexlify(hash_val).decode('ascii')
+            chunks = [hash_val[i:i + 2] for i in range(0, len(hash_val), 2)]
+            return ':'.join(chunks)
+    except binascii.Error:
+        return None
+
+    return fingerprint
+
 
 def _fingerprint(public_key, fingerprint_hash_type):
     '''
@@ -929,6 +946,7 @@ def check_known_host(user=None, hostname=None, key=None, fingerprint=None,
     if key:
         return 'exists' if key == known_host['key'] else 'update'
     elif fingerprint:
+        fingerprint = _convert_fingerprint_format(fingerprint)
         return ('exists' if fingerprint == known_host['fingerprint']
                 else 'update')
     else:
@@ -1054,6 +1072,7 @@ def set_known_host(user=None,
                                  config=config,
                                  port=port,
                                  fingerprint_hash_type=fingerprint_hash_type)
+    fingerprint = _convert_fingerprint_format(fingerprint)
 
     if not stored_host:
         update_required = True
