@@ -519,7 +519,7 @@ class Cloud(object):
     '''
     def __init__(self, opts):
         self.opts = opts
-        self.client = CloudClient(self.opts)
+        self.client = CloudClient(opts=self.opts)
         self.clouds = salt.loader.clouds(self.opts)
         self.__filter_non_working_providers()
         self.__cached_provider_queries = {}
