@@ -2022,7 +2022,7 @@ def set_webapp_settings(name, site, settings):
 
 
 def get_webconfiguration_settings(name, settings):
-    '''
+    r'''
     Get the webconfiguration settings for the IIS PSPath.
 
     Args:
@@ -2100,7 +2100,7 @@ def get_webconfiguration_settings(name, settings):
 
 
 def set_webconfiguration_settings(name, settings):
-    '''
+    r'''
     Set the value of the setting for an IIS container.
 
     Args:

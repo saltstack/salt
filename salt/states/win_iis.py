@@ -870,7 +870,7 @@ def set_app(name, site, settings=None):
 
 
 def webconfiguration_settings(name, settings=None):
-    '''
+    r'''
     Set the value of webconfiguration settings.
 
     :param str name: The name of the IIS PSPath containing the settings.
