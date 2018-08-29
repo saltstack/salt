@@ -82,6 +82,7 @@ import salt.utils.path
 import salt.utils.yaml
 import salt.client
 import salt.exceptions
+from salt.utils.odict import OrderedDict
 from salt.utils.decorators import memoize
 from salt.ext import six
 
@@ -138,6 +139,25 @@ def run_test(**kwargs):
     else:
         return "Test must be a dictionary"
 
+def state_apply(state_name, **kwargs):
+    '''
+    Apply state.apply with given state and pillars to set up test data
+
+    :param str state_name: the name of a user defined state
+    :param dict kwargs: optional keyword arguments
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' saltcheck.state_apply postfix
+    '''
+    caller = salt.client.Caller()
+    if kwargs:
+        return caller.cmd('state.apply', state_name, **kwargs)
+    else:
+        return caller.cmd('state.apply', state_name)
+
 
 def run_state_tests(state, saltenv=None, check_all=False):
     '''
@@ -160,12 +180,12 @@ def run_state_tests(state, saltenv=None, check_all=False):
     scheck = SaltCheck(saltenv)
     paths = scheck.get_state_search_path_list(saltenv)
     stl = StateTestLoader(search_paths=paths)
-    results = {}
+    results = OrderedDict()
     sls_list = state.split(',')
     for state_name in sls_list:
         stl.add_test_files_for_sls(state_name, check_all)
         stl.load_test_suite()
-        results_dict = {}
+        results_dict = OrderedDict()
         for key, value in stl.test_dict.items():
             result = scheck.run_test(value)
             results_dict[key] = result
@@ -190,7 +210,7 @@ def run_highstate_tests(saltenv=None):
     scheck = SaltCheck(saltenv)
     paths = scheck.get_state_search_path_list(saltenv)
     stl = StateTestLoader(search_paths=paths)
-    results = {}
+    results = OrderedDict()
     sls_list = _get_top_states(saltenv)
     all_states = []
     for state in sls_list:
@@ -200,7 +220,7 @@ def run_highstate_tests(saltenv=None):
     for state_name in all_states:
         stl.add_test_files_for_sls(state_name)
         stl.load_test_suite()
-        results_dict = {}
+        results_dict = OrderedDict()
         for key, value in stl.test_dict.items():
             result = scheck.run_test(value)
             results_dict[key] = result
@@ -340,7 +360,9 @@ class SaltCheck(object):
         log.info("__is_valid_test has test: %s", test_dict)
         if skip:
             required_total = 0
-        if assertion in ["assertEmpty",
+        elif m_and_f in ["saltcheck.state_apply"]:
+            required_total = 2
+        elif assertion in ["assertEmpty",
                          "assertNotEmpty",
                          "assertTrue",
                          "assertFalse"]:
@@ -413,9 +435,12 @@ class SaltCheck(object):
             else:
                 # make sure we clean pillar from previous test
                 if kwargs:
-                    kwargs.pop('pillar')
+                    kwargs.pop('pillar', None)
 
-            assertion = test_dict['assertion']
+            if mod_and_func in ["saltcheck.state_apply"]:
+                assertion = "assertNotEmpty"
+            else:
+                assertion = test_dict['assertion']
             expected_return = test_dict.get('expected-return', None)
             actual_return = self._call_salt_command(mod_and_func, args, kwargs)
             if assertion not in ["assertIn", "assertNotIn", "assertEmpty", "assertNotEmpty",
@@ -454,6 +479,7 @@ class SaltCheck(object):
         result['status'] = value
         result['duration'] = round(end - start, 4)
         return result
+
 
     @staticmethod
     def _cast_expected_to_returned_type(expected, returned):
@@ -649,13 +675,13 @@ class StateTestLoader(object):
         self.search_paths = search_paths
         self.path_type = None
         self.test_files = []  # list of file paths
-        self.test_dict = {}
+        self.test_dict = OrderedDict()
 
     def load_test_suite(self):
         '''
         Load tests either from one file, or a set of files
         '''
-        self.test_dict = {}
+        self.test_dict = OrderedDict()
         for myfile in self.test_files:
             self._load_file_salt_rendered(myfile)
         self.test_files = []
@@ -667,7 +693,7 @@ class StateTestLoader(object):
         # use the salt renderer module to interpret jinja and etc
         tests = _render_file(filepath)
         # use json as a convenient way to convert the OrderedDicts from salt renderer
-        mydict = loads(dumps(tests))
+        mydict = loads(dumps(tests), object_pairs_hook=OrderedDict)
         for key, value in mydict.items():
             self.test_dict[key] = value
         return
