@@ -199,6 +199,21 @@ def mounted(name,
 
     update_mount_cache = False
 
+    if not name:
+        ret['result'] = False
+        ret['comment'] = 'Must provide name to mount.mounted'
+        return ret
+
+    if not device:
+        ret['result'] = False
+        ret['comment'] = 'Must provide device to mount.mounted'
+        return ret
+
+    if not fstype:
+        ret['result'] = False
+        ret['comment'] = 'Must provide fstype to mount.mounted'
+        return ret
+
     if device_name_regex is None:
         device_name_regex = []
 
@@ -588,11 +603,11 @@ def mounted(name,
         if __opts__['test']:
             if __grains__['os'] in ['MacOS', 'Darwin']:
                 out = __salt__['mount.set_automaster'](name,
-                                              device,
-                                              fstype,
-                                              opts,
-                                              config,
-                                              test=True)
+                                                       device,
+                                                       fstype,
+                                                       opts,
+                                                       config,
+                                                       test=True)
             elif __grains__['os'] in ['AIX']:
                 out = __salt__['mount.set_filesystems'](name,
                                                   device,
@@ -646,10 +661,10 @@ def mounted(name,
         else:
             if __grains__['os'] in ['MacOS', 'Darwin']:
                 out = __salt__['mount.set_automaster'](name,
-                                              device,
-                                              fstype,
-                                              opts,
-                                              config)
+                                                       device,
+                                                       fstype,
+                                                       opts,
+                                                       config)
             elif __grains__['os'] in ['AIX']:
                 out = __salt__['mount.set_filesystems'](name,
                                                   device,
@@ -829,6 +844,11 @@ def unmounted(name,
            'comment': ''}
 
     update_mount_cache = False
+
+    if not name:
+        ret['result'] = False
+        ret['comment'] = 'Must provide name to mount.unmounted'
+        return ret
 
     # Get the active data
     active = __salt__['mount.active'](extended=True)
