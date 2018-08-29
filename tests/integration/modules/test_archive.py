@@ -65,6 +65,10 @@ class ArchiveTest(ModuleCase):
         else:
             filename = 'file'
         with salt.utils.fopen(os.path.join(self.src, filename), 'wb') as theorem:
+            if six.PY3 and salt.utils.is_windows():
+                encoding = 'utf-8'
+            else:
+                encoding = None
             theorem.write(salt.utils.to_bytes(textwrap.dedent('''\
                 Compression theorem of computational complexity theory:
 
@@ -82,7 +86,7 @@ class ArchiveTest(ModuleCase):
                 and
 
                     $\\mathrm C(φ_i) ⊊ \\mathrm{C}(φ_{f(i)})$.
-            ''')))
+            '''), encoding=encoding))
 
         # Create destination
         os.makedirs(self.dst)
@@ -124,10 +128,10 @@ class ArchiveTest(ModuleCase):
         dir_in_ret = None
         file_in_ret = None
         for line in ret:
-            if normdir(self.src) in line \
-            and not normdir(self.src_file) in line:
+            if normdir(self.src) in os.path.normcase(line) \
+            and not normdir(self.src_file) in os.path.normcase(line):
                 dir_in_ret = True
-            if normdir(self.src_file) in line:
+            if normdir(self.src_file) in os.path.normcase(line):
                 file_in_ret = True
 
         # Assert number of lines, reporting of source directory and file
@@ -250,7 +254,7 @@ class ArchiveTest(ModuleCase):
         # Test create archive
         ret = self.run_function('archive.unzip', [self.arch, self.dst])
         self.assertTrue(isinstance(ret, list), six.text_type(ret))
-        self._assert_artifacts_in_ret(ret, unix_sep=True if six.PY2 else False)
+        self._assert_artifacts_in_ret(ret, unix_sep=False)
 
         self._tear_down()
 
