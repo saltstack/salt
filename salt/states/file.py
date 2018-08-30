@@ -2429,7 +2429,9 @@ def managed(name,
                     'contents_grains is not a string or list of strings, and '
                     'is not binary data. SLS is likely malformed.'
                 )
-            contents = os.linesep.join(validated_contents)
+            contents = os.linesep.join(
+                [line.rstrip('\n').rstrip('\r') for line in validated_contents]
+            )
             if contents_newline and not contents.endswith(os.linesep):
                 contents += os.linesep
         if template:
@@ -2654,8 +2656,15 @@ def managed(name,
             ret['changes'] = {}
             log.debug(traceback.format_exc())
             salt.utils.files.remove(tmp_filename)
-            if not keep_source and sfn:
-                salt.utils.files.remove(sfn)
+            if not keep_source:
+                if not sfn \
+                        and source \
+                        and _urlparse(source).scheme == 'salt':
+                    # The file would not have been cached until manage_file was
+                    # run, so check again here for a cached copy.
+                    sfn = __salt__['cp.is_cached'](source, __env__)
+                if sfn:
+                    salt.utils.files.remove(sfn)
             return _error(ret, 'Unable to check_cmd file: {0}'.format(exc))
 
         # file being updated to verify using check_cmd
@@ -2727,8 +2736,15 @@ def managed(name,
         finally:
             if tmp_filename:
                 salt.utils.files.remove(tmp_filename)
-            if not keep_source and sfn:
-                salt.utils.files.remove(sfn)
+            if not keep_source:
+                if not sfn \
+                        and source \
+                        and _urlparse(source).scheme == 'salt':
+                    # The file would not have been cached until manage_file was
+                    # run, so check again here for a cached copy.
+                    sfn = __salt__['cp.is_cached'](source, __env__)
+                if sfn:
+                    salt.utils.files.remove(sfn)
 
 
 _RECURSE_TYPES = ['user', 'group', 'mode', 'ignore_files', 'ignore_dirs']
@@ -2987,7 +3003,7 @@ def directory(name,
                   perms: full_control
             - win_inheritance: False
     '''
-    name = os.path.expanduser(name)
+    name = os.path.normcase(os.path.expanduser(name))
     ret = {'name': name,
            'changes': {},
            'pchanges': {},
@@ -3515,7 +3531,7 @@ def recurse(name,
         # "env" is not supported; Use "saltenv".
         kwargs.pop('env')
 
-    name = os.path.expanduser(sdecode(name))
+    name = os.path.normcase(os.path.expanduser(sdecode(name)))
 
     user = _test_owner(kwargs, user=user)
     if salt.utils.platform.is_windows():

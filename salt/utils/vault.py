@@ -91,7 +91,7 @@ def _get_token_and_url_from_master():
            }
 
 
-def _get_vault_connection():
+def get_vault_connection():
     '''
     Get the connection details for calling Vault, from local configuration if
     it exists, or from the master otherwise
@@ -139,7 +139,7 @@ def make_request(method, resource, profile=None, **args):
         # Deprecated code path
         return make_request_with_profile(method, resource, profile, **args)
 
-    connection = _get_vault_connection()
+    connection = get_vault_connection()
     token, vault_url = connection['token'], connection['url']
     if 'verify' not in args:
         args['verify'] = connection['verify']
