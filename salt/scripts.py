@@ -134,16 +134,15 @@ def minion_process():
                 log.error('Minion process encountered exception: %s', exc)
                 os._exit(salt.defaults.exitcodes.EX_GENERIC)
 
-    if not salt.utils.platform.is_windows():
-        thread = threading.Thread(target=suicide_when_without_parent, args=(os.getppid(),))
-        thread.start()
-
-    minion = salt.cli.daemons.Minion()
-    signal.signal(signal.SIGHUP,
-                  functools.partial(handle_hup,
-                                    minion))
-
     try:
+        if not salt.utils.platform.is_windows():
+            thread = threading.Thread(target=suicide_when_without_parent, args=(os.getppid(),))
+            thread.start()
+
+        minion = salt.cli.daemons.Minion()
+        signal.signal(signal.SIGHUP,
+                      functools.partial(handle_hup,
+                                        minion))
         minion.start()
     except (SaltClientError, SaltReqTimeoutError, SaltSystemExit) as exc:
         lock.acquire(blocking=True)
