@@ -478,6 +478,10 @@ Enable GPU hardware data for your master. Be aware that the master can
 take a while to start up when lspci and/or dmidecode is used to populate the
 grains for the master.
 
+.. code-block:: yaml
+
+    enable_gpu_grains: True
+
 .. conf_master:: job_cache
 
 ``job_cache``
