@@ -318,6 +318,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
             self.skipTest('Failed to create testcase virtual environment: {0}'
                           ''.format(venv_create))
 
+        self.run_function('saltutil.clear_cache')
         # pip install passing the package name in `name`
         ret = self.run_state(
             'pip.installed', name='pep8', user=username, bin_env=venv_dir,
