@@ -218,7 +218,8 @@ class CkMinions(object):
         if isinstance(expr, six.string_types):
             expr = [m for m in expr.split(',') if m]
         minions = self._pki_minions()
-        return [x for x in expr if x in minions]
+        return {'minions': [x for x in expr if x in minions],
+                'missing': []}
 
     def _check_pcre_minions(self, expr, greedy):  # pylint: disable=unused-argument
         '''
