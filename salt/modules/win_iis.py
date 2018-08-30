@@ -160,6 +160,37 @@ def _srvmgr(cmd, return_json=False):
     return ret
 
 
+def _collection_match_to_index(pspath, colfilter, name, match):
+    '''
+    Returns index of collection item matching the match dictionary.
+    '''
+    collection = get_webconfiguration_settings(pspath, [{'name': name, 'filter': colfilter}])[0]['value']
+    for idx, collect_dict in enumerate(collection):
+        if all(item in collect_dict.items() for item in match.items()):
+            return idx
+    return -1
+
+
+def _prepare_settings(pspath, settings):
+    '''
+    Prepare settings before execution wit get or set functions.
+    Removes settings with a match parameter when index is not found.
+    '''
+    prepared_settings = []
+    for setting in settings:
+        match = re.search(r'Collection\[(\{.*\})\]', setting['name'])
+        if match:
+            name = setting['name'][:match.start(1)-1]
+            match_dict = yaml.load(match.group(1))
+            index = _collection_match_to_index(pspath, setting['filter'], name, match_dict)
+            if index != -1:
+                setting['name'] = setting['name'].replace(match.group(1), str(index))
+                prepared_settings.append(setting)
+        else:
+            prepared_settings.append(setting)
+    return prepared_settings
+
+
 def list_sites():
     '''
     List all the currently deployed websites.
