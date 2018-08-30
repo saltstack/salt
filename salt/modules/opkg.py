@@ -1239,6 +1239,7 @@ def del_repo(alias, **kwargs):  # pylint: disable=unused-argument
 
         salt '*' pkg.del_repo alias
     '''
+    refresh = salt.utils.data.is_true(kwargs.get('refresh', True))
     repos = list_repos()
     if repos:
         deleted_from = dict()
@@ -1264,8 +1265,8 @@ def del_repo(alias, **kwargs):  # pylint: disable=unused-argument
                     except OSError:
                         pass
                 ret += msg.format(alias, repo_file)
-            # explicit refresh after a repo is deleted
-            refresh_db()
+            if refresh:
+                refresh_db()
             return ret
 
     return "Repo {0} doesn't exist in the opkg repo lists".format(alias)
