@@ -181,7 +181,7 @@ def _prepare_settings(pspath, settings):
     '''
     prepared_settings = []
     for setting in settings:
-        match = re.search('Collection\[(\{.*\})\]', setting['name'])
+        match = re.search(r'Collection\[(\{.*\})\]', setting['name'])
         if match:
             name = setting['name'][:match.start(1)-1]
             match_dict = yaml.load(match.group(1))
