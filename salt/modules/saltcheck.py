@@ -64,7 +64,7 @@ Example with jinja:
       assertion: assertFalse
     {% endfor %}
 
-Example with setup/teardown and passing pillar:
+Example with setup state including pillar:
 
 .. code-block:: jinja
     setup_test_environment:
@@ -167,10 +167,10 @@ def run_test(**kwargs):
 
 def state_apply(state_name, **kwargs):
     '''
-    Apply state.apply with given state and pillars to set up test data
+    Runs `state.apply` with given options to set up test data
+    Intended to be used for optional test setup or teardown
 
-    :param str state_name: the name of a user defined state
-    :param dict kwargs: optional keyword arguments
+    Reference the `state.apply` module documentation for arguments and usage options
 
     CLI Example:
 
@@ -178,6 +178,9 @@ def state_apply(state_name, **kwargs):
 
         salt '*' saltcheck.state_apply postfix
     '''
+    # A new salt client is instantiated with the default configuration because the main module's
+    # client is hardcoded to local
+    # If the minion is running with a master, a non-local client is needed to lookup states
     caller = salt.client.Caller()
     if kwargs:
         return caller.cmd('state.apply', state_name, **kwargs)
