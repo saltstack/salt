@@ -9,7 +9,6 @@ integration.doc.test_man
 integration.grains.test_core
 integration.loader.test_ext_grains
 integration.loader.test_ext_modules
-integration.logging.test_jid_logging
 integration.minion.test_blackout
 integration.minion.test_pillar
 integration.minion.test_timeout
@@ -41,7 +40,7 @@ integration.modules.test_sysmod
 integration.modules.test_system
 integration.modules.test_test
 integration.modules.test_useradd
-integration.modules.test_win_autoruns
+integration.modules.test_autoruns
 integration.modules.test_win_dns_client
 integration.modules.test_win_pkg
 integration.reactor.test_reactor
