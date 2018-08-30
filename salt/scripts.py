@@ -112,7 +112,7 @@ def minion_process():
     def handle_hup(manager, sig, frame):
         manager.minion.reload()
 
-    lock = threading.Lock()
+    lock = threading.RLock()
 
     def suicide_when_without_parent(parent_pid):
         '''
@@ -156,7 +156,7 @@ def minion_process():
         log.info('waiting random_reauth_delay %ss', delay)
         time.sleep(delay)
         sys.exit(salt.defaults.exitcodes.SALT_KEEPALIVE)
-    except SystemExit:
+    except BaseException:
         lock.acquire(blocking=True)
         raise
 
