@@ -112,6 +112,8 @@ def minion_process():
     def handle_hup(manager, sig, frame):
         manager.minion.reload()
 
+    lock = threading.Lock()
+
     def suicide_when_without_parent(parent_pid):
         '''
         Have the minion suicide if the parent process is gone
@@ -119,7 +121,8 @@ def minion_process():
         NOTE: small race issue where the parent PID could be replace
         with another process with same PID!
         '''
-        while True:
+        while lock.acquire(blocking=False):
+            lock.release()
             time.sleep(5)
             try:
                 # check pid alive (Unix only trick!)
@@ -143,6 +146,7 @@ def minion_process():
     try:
         minion.start()
     except (SaltClientError, SaltReqTimeoutError, SaltSystemExit) as exc:
+        lock.acquire(blocking=True)
         log.warning('Fatal functionality error caught by minion handler:\n', exc_info=True)
         log.warning('** Restarting minion **')
         delay = 60
@@ -152,6 +156,9 @@ def minion_process():
         log.info('waiting random_reauth_delay %ss', delay)
         time.sleep(delay)
         sys.exit(salt.defaults.exitcodes.SALT_KEEPALIVE)
+    except SystemExit:
+        lock.acquire(blocking=True)
+        raise
 
 
 def salt_minion():
