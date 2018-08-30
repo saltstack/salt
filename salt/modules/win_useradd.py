@@ -164,7 +164,6 @@ def add(name,
     try:
         win32net.NetUserAdd(None, 1, user_info)
     except win32net.error as exc:
-        (number, context, message) = exc
         log.error('Failed to create user {0}'.format(name))
         log.error('nbr: {0}'.format(exc.winerror))
         log.error('ctx: {0}'.format(exc.funcname))
@@ -266,7 +265,6 @@ def update(name,
     try:
         user_info = win32net.NetUserGetInfo(None, name, 4)
     except win32net.error as exc:
-        (number, context, message) = exc
         log.error('Failed to update user {0}'.format(name))
         log.error('nbr: {0}'.format(exc.winerror))
         log.error('ctx: {0}'.format(exc.funcname))
@@ -326,7 +324,6 @@ def update(name,
     try:
         win32net.NetUserSetInfo(None, name, 4, user_info)
     except win32net.error as exc:
-        (number, context, message) = exc
         log.error('Failed to update user {0}'.format(name))
         log.error('nbr: {0}'.format(exc.winerror))
         log.error('ctx: {0}'.format(exc.funcname))
@@ -415,7 +412,7 @@ def delete(name,
             sid = getUserSid(name)
             win32profile.DeleteProfile(sid)
         except pywintypes.error as exc:
-            (number, context, message) = exc
+            (number, context, message) = exc.args
             if number == 2:  # Profile Folder Not Found
                 pass
             else:
@@ -429,7 +426,6 @@ def delete(name,
     try:
         win32net.NetUserDel(None, name)
     except win32net.error as exc:
-        (number, context, message) = exc
         log.error('Failed to delete user {0}'.format(name))
         log.error('nbr: {0}'.format(exc.winerror))
         log.error('ctx: {0}'.format(exc.funcname))

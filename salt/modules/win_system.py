@@ -303,7 +303,7 @@ def shutdown(message=None, timeout=5, force_close=True, reboot=False,  # pylint:
                                         force_close, reboot)
         return True
     except pywintypes.error as exc:
-        (number, context, message) = exc
+        (number, context, message) = exc.args
         log.error('Failed to shutdown the system')
         log.error('nbr: {0}'.format(number))
         log.error('ctx: {0}'.format(context))
@@ -346,7 +346,7 @@ def shutdown_abort():
         win32api.AbortSystemShutdown('127.0.0.1')
         return True
     except pywintypes.error as exc:
-        (number, context, message) = exc
+        (number, context, message) = exc.args
         log.error('Failed to abort system shutdown')
         log.error('nbr: {0}'.format(number))
         log.error('ctx: {0}'.format(context))
@@ -485,7 +485,7 @@ def set_computer_desc(desc=None):
     try:
         win32net.NetServerSetInfo(None, 101, system_info)
     except win32net.error as exc:
-        (number, context, message) = exc
+        (number, context, message) = exc.args
         log.error('Failed to update system')
         log.error('nbr: {0}'.format(number))
         log.error('ctx: {0}'.format(context))
@@ -1016,7 +1016,7 @@ def set_system_date_time(years=None,
     try:
         date_time = win32api.GetLocalTime()
     except win32api.error as exc:
-        (number, context, message) = exc
+        (number, context, message) = exc.args
         log.error('Failed to get local time')
         log.error('nbr: {0}'.format(number))
         log.error('ctx: {0}'.format(context))
