@@ -93,6 +93,11 @@ def latest_version(*names, **kwargs):
     If the latest version of a given package is already installed, an empty
     string will be returned for that package.
 
+    .. note::
+        Since this is looking for the latest version available, a refresh_db
+        will be triggered by default. This can take some time. To avoid this set
+        ``refresh`` to ``False``.
+
     Args:
         names (str): A single or multiple names to lookup
 
@@ -1898,6 +1903,10 @@ def _get_name_map(saltenv='base'):
     return u_name_map
 
 
+def get_package_info(name, saltenv='base'):
+    return _get_package_info(name=name, saltenv=saltenv)
+
+
 def _get_package_info(name, saltenv='base'):
     '''
     Return package info. Returns empty map if package not available
@@ -1932,7 +1941,7 @@ def _get_latest_pkg_version(pkginfo):
 
 def compare_versions(ver1='', oper='==', ver2=''):
     '''
-    Compare software package versions
+    Compare software package versions. Made public for use with Jinja
 
     Args:
         ver1 (str): A software version to compare
