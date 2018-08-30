@@ -245,6 +245,8 @@ def proxy_minion_process(queue):
     import salt.utils.platform
     # salt_minion spawns this function in a new process
 
+    lock = threading.RLock()
+
     def suicide_when_without_parent(parent_pid):
         '''
         Have the minion suicide if the parent process is gone
@@ -252,7 +254,8 @@ def proxy_minion_process(queue):
         NOTE: there is a small race issue where the parent PID could be replace
         with another process with the same PID!
         '''
-        while True:
+        while lock.acquire(blocking=False):
+            lock.release()
             time.sleep(5)
             try:
                 # check pid alive (Unix only trick!)
@@ -262,14 +265,14 @@ def proxy_minion_process(queue):
                 # isn't sufficient in a thread
                 os._exit(999)
 
-    if not salt.utils.platform.is_windows():
-        thread = threading.Thread(target=suicide_when_without_parent, args=(os.getppid(),))
-        thread.start()
-
-    restart = False
-    proxyminion = None
-    status = salt.defaults.exitcodes.EX_OK
     try:
+        if not salt.utils.platform.is_windows():
+            thread = threading.Thread(target=suicide_when_without_parent, args=(os.getppid(),))
+            thread.start()
+
+        restart = False
+        proxyminion = None
+        status = salt.defaults.exitcodes.EX_OK
         proxyminion = salt.cli.daemons.ProxyMinion()
         proxyminion.start()
     except (Exception, SaltClientError, SaltReqTimeoutError, SaltSystemExit) as exc:
@@ -280,6 +283,8 @@ def proxy_minion_process(queue):
     except SystemExit as exc:
         restart = False
         status = exc.code
+    finally:
+        lock.acquire(blocking=True)
 
     if restart is True:
         log.warning('** Restarting proxy minion **')
