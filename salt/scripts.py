@@ -156,9 +156,8 @@ def minion_process():
         log.info('waiting random_reauth_delay %ss', delay)
         time.sleep(delay)
         sys.exit(salt.defaults.exitcodes.SALT_KEEPALIVE)
-    except BaseException:
+    finally:
         lock.acquire(blocking=True)
-        raise
 
 
 def salt_minion():
