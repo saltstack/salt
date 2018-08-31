@@ -240,6 +240,7 @@ class _MovedItems(_LazyModule):
 
 
 _moved_attributes = [
+    MovedAttribute("Callable", "collections", "collections.abc"),
     MovedAttribute("cStringIO", "cStringIO", "io", "StringIO"),
     MovedAttribute("filter", "itertools", "builtins", "ifilter", "filter"),
     MovedAttribute("filterfalse", "itertools", "itertools", "ifilterfalse", "filterfalse"),

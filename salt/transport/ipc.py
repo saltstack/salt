@@ -604,15 +604,15 @@ class IPCMessageSubscriber(IPCClient):
     def __singleton_init__(self, socket_path):
         super(IPCMessageSubscriber, self).__singleton_init__(
             socket_path)
-        self._read_sync_future = None
+        self._read_future = None
         self._read_stream_future = None
         self._sync_ioloop_running = False
         self.saved_data = []
-        self._sync_read_in_progress = Semaphore()
+        self._read_in_progress = Semaphore()
 
     @tornado.gen.coroutine
-    def _read_sync(self, timeout):
-        yield self._sync_read_in_progress.acquire()
+    def _read(self, timeout, callback=None):
+        yield self._read_in_progress.acquire()
         exc_to_raise = None
         ret = None
 
@@ -638,7 +638,9 @@ class IPCMessageSubscriber(IPCClient):
                 self.unpacker.feed(wire_bytes)
                 first = True
                 for framed_msg in self.unpacker:
-                    if first:
+                    if callback:
+                        IOLoop.current().spawn_callback(callback, framed_msg['body'])
+                    elif first:
                         ret = framed_msg['body']
                         first = False
                     else:
@@ -666,7 +668,7 @@ class IPCMessageSubscriber(IPCClient):
 
         if exc_to_raise is not None:
             raise exc_to_raise  # pylint: disable=E0702
-        self._sync_read_in_progress.release()
+        self._read_in_progress.release()
         raise tornado.gen.Return(ret)
 
     def read_sync(self, timeout=None):
@@ -683,38 +685,24 @@ class IPCMessageSubscriber(IPCClient):
             return self.saved_data.pop(0)
 
         self._sync_ioloop_running = True
-        self._read_sync_future = self._read_sync(timeout)
+        self._read_future = self._read(timeout)
         IOLoop.current().start()
         self._sync_ioloop_running = False
 
-        ret_future = self._read_sync_future
-        self._read_sync_future = None
+        ret_future = self._read_future
+        self._read_future = None
         return ret_future.result()
 
     @tornado.gen.coroutine
-    def _read_async(self, callback):
-        while not self.stream.closed():
-            try:
-                self._read_stream_future = self.stream.read_bytes(4096, partial=True)
-                wire_bytes = yield self._read_stream_future
-                self._read_stream_future = None
-                self.unpacker.feed(wire_bytes)
-                for framed_msg in self.unpacker:
-                    body = framed_msg['body']
-                    IOLoop.current().spawn_callback(callback, body)
-            except tornado.iostream.StreamClosedError:
-                log.trace('Subscriber disconnected from IPC %s', self.socket_path)
-                break
-            except Exception as exc:
-                log.error('Exception occurred while Subscriber handling stream: %s', exc)
-
-    @tornado.gen.coroutine
-    def read_async(self, callback):
+    def read_async(self, callback=None, timeout=None):
         '''
         Asynchronously read messages and invoke a callback when they are ready.
 
         :param callback: A callback with the received data
         '''
+        if not callback and self.saved_data:
+            yield self.saved_data.pop(0)
+
         while not self.connected():
             try:
                 yield self.connect(timeout=5)
@@ -724,7 +712,7 @@ class IPCMessageSubscriber(IPCClient):
             except Exception as exc:
                 log.error('Exception occurred while Subscriber connecting: %s', exc)
                 yield tornado.gen.sleep(1)
-        yield self._read_async(callback)
+        yield self._read(timeout, callback)
 
     def close(self):
         '''
@@ -737,8 +725,8 @@ class IPCMessageSubscriber(IPCClient):
             # This will prevent this message from showing up:
             # '[ERROR   ] Future exception was never retrieved:
             # StreamClosedError'
-            if self._read_sync_future is not None and self._read_sync_future.done():
-                self._read_sync_future.exception()
+            if self._read_future is not None and self._read_future.done():
+                self._read_future.exception()
             if self._read_stream_future is not None and self._read_stream_future.done():
                 self._read_stream_future.exception()
 

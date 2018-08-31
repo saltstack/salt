@@ -316,7 +316,7 @@ class DefaultOrderedDict(OrderedDict):
     'Dictionary that remembers insertion order and '
     def __init__(self, default_factory=None, *a, **kw):
         if (default_factory is not None and
-            not isinstance(default_factory, Callable)):
+            not isinstance(default_factory, six.moves.Callable)):
             raise TypeError('first argument must be callable')
         super(DefaultOrderedDict, self).__init__(*a, **kw)
         self.default_factory = default_factory

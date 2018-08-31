@@ -873,6 +873,94 @@ class SaltEvent(object):
         # This will handle reconnects
         return self.subscriber.read_async(event_handler)
 
+    @tornado.gen.coroutine
+    def _get_event_async(self, wait, tag, match_func=None, no_block=False):
+        if match_func is None:
+            match_func = self._get_match_func()
+        start = time.time()
+        timeout_at = start + wait
+        run_once = False
+        if no_block is True:
+            wait = 0
+        elif wait == 0:
+            # If no_block is False and wait is 0, that
+            # means an infinite timeout.
+            wait = None
+        while (run_once is False and not wait) or time.time() <= timeout_at:
+            if no_block is True:
+                if run_once is True:
+                    break
+                # Trigger that at least a single iteration has gone through
+                run_once = True
+            try:
+                # tornado.ioloop.IOLoop.run_sync() timeouts are in seconds.
+                # IPCMessageSubscriber.read_sync() uses this type of timeout.
+                if not self.cpub and not self.connect_pub(timeout=wait):
+                    break
+
+                raw = yield self.subscriber.read_async(timeout=wait)
+                if raw is None:
+                    break
+                mtag, data = self.unpack(raw, self.serial)
+                ret = {'data': data, 'tag': mtag}
+            except KeyboardInterrupt:
+                raise tornado.gen.Return({'tag': 'salt/event/exit', 'data': {}})
+            except tornado.iostream.StreamClosedError:
+                if self.raise_errors:
+                    raise
+                else:
+                    raise tornado.gen.Return(None)
+            except RuntimeError:
+                raise tornado.gen.Return(None)
+
+            if not match_func(ret['tag'], tag):
+                # tag not match
+                if any(pmatch_func(ret['tag'], ptag) for ptag, pmatch_func in self.pending_tags):
+                    log.trace('get_event() caching unwanted event = %s', ret)
+                    self.pending_events.append(ret)
+                if wait:  # only update the wait timeout if we had one
+                    wait = timeout_at - time.time()
+                continue
+
+            log.trace('get_event() received = %s', ret)
+            raise tornado.gen.Return(ret)
+        log.trace('_get_event_async() waited %s seconds and received nothing', wait)
+        raise tornado.gen.Return(None)
+
+    @tornado.gen.coroutine
+    def get_event_async(self,
+                        wait=5,
+                        tag='',
+                        full=False,
+                        match_type=None,
+                        no_block=False,
+                        auto_reconnect=False):
+        assert not self._run_io_loop_sync
+
+        match_func = self._get_match_func(match_type)
+
+        ret = self._check_pending(tag, match_func)
+        if ret is None:
+            if auto_reconnect:
+                raise_errors = self.raise_errors
+                self.raise_errors = True
+                while True:
+                    try:
+                        ret = yield self._get_event_async(wait, tag, match_func, no_block)
+                        break
+                    except tornado.iostream.StreamClosedError:
+                        self.close_pub()
+                        self.connect_pub(timeout=wait)
+                        continue
+                self.raise_errors = raise_errors
+            else:
+                ret = yield self._get_event_async(wait, tag, match_func, no_block)
+
+        if ret is None or full:
+            raise tornado.gen.Return(ret)
+        else:
+            raise tornado.gen.Return(ret['data'])
+
     def __del__(self):
         # skip exceptions in destroy-- since destroy() doesn't cover interpreter
         # shutdown-- where globals start going missing
