@@ -3252,7 +3252,7 @@ class SyndicManager(MinionBase):
         self._spawn_syndics()
         # Instantiate the local client
         self.local = salt.client.get_local_client(
-            self.opts['_minion_conf_file'])
+            self.opts['_minion_conf_file'], sync=False)
         self.local.event.subscribe('')
 
         log.debug('SyndicManager \'%s\' trying to tune in', self.opts['id'])

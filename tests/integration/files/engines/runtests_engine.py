@@ -51,10 +51,9 @@ class PyTestEngine(object):
         self.stop_sending_events_file = opts.get('pytest_stop_sending_events_file')
 
     def start(self):
-        self.io_loop = ioloop.IOLoop()
-        self.io_loop.make_current()
-        self.io_loop.add_callback(self._start)
-        self.io_loop.start()
+        io_loop = ioloop.IOLoop()
+        io_loop.add_callback(self._start)
+        io_loop.start()
 
     @gen.coroutine
     def _start(self):
@@ -68,11 +67,10 @@ class PyTestEngine(object):
         self.sock.bind(('localhost', port))
         # become a server socket
         self.sock.listen(5)
-        with salt.utils.asynchronous.current_ioloop(self.io_loop):
-            netutil.add_accept_handler(
-                self.sock,
-                self.handle_connection,
-            )
+        netutil.add_accept_handler(
+            self.sock,
+            self.handle_connection,
+        )
 
         if self.opts['__role'] == 'master':
             yield self.fire_master_started_event()
