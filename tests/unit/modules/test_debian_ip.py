@@ -169,22 +169,13 @@ class DebianIpTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(debian_ip.build_interface('eth0', 'eth', 'enabled'),
                              ['s\n', 'a\n', 'l\n', 't\n'])
 
-            self.assertTrue(debian_ip.build_interface('eth0', 'eth', 'enabled',
-                                                      test='True'))
+            self.assertTrue(debian_ip.build_interface('eth0', 'eth', 'enabled', test='True'))
 
-            with patch.object(debian_ip, '_parse_settings_eth',
-                              MagicMock(return_value={'routes': []})):
-                self.assertRaises(AttributeError, debian_ip.build_interface,
-                                  'eth0', 'bridge', 'enabled')
+            with patch.object(debian_ip, '_parse_settings_eth', MagicMock(return_value={'routes': []})):
+                for eth_t in ['bridge', 'slave', 'bond']:
+                    self.assertRaises(AttributeError, debian_ip.build_interface, 'eth0', eth_t, 'enabled')
 
-                self.assertRaises(AttributeError, debian_ip.build_interface,
-                                  'eth0', 'slave', 'enabled')
-
-                self.assertRaises(AttributeError, debian_ip.build_interface,
-                                  'eth0', 'bond', 'enabled')
-
-            self.assertTrue(debian_ip.build_interface('eth0', 'eth', 'enabled',
-                                                      test='True'))
+            self.assertTrue(debian_ip.build_interface('eth0', 'eth', 'enabled', test='True'))
 
         interfaces = [
                 # IPv4-only interface; single address
@@ -207,7 +198,6 @@ class DebianIpTestCase(TestCase, LoaderModuleMockMixin):
                 # IPv6-only; single address
                 {'iface_name': 'eth2', 'iface_type': 'eth', 'enabled': True,
                     'settings': {
-                        'proto': 'static',
                         'ipv6proto': 'static',
                         'ipv6ipaddr': '2001:db8:dead:beef::3',
                         'ipv6netmask': '64',
@@ -220,6 +210,48 @@ class DebianIpTestCase(TestCase, LoaderModuleMockMixin):
                         'iface eth2 inet6 static\n',
                         '    address 2001:db8:dead:beef::3\n',
                         '    netmask 64\n',
+                        '    gateway 2001:db8:dead:beef::1\n',
+                        '\n']},
+                # IPv6-only; multiple addrs; no gw; first addr from ipv6addr
+                {'iface_name': 'eth16', 'iface_type': 'eth', 'enabled': True,
+                    'settings': {
+                        'ipv6proto': 'static',
+                        'ipv6ipaddr': '2001:db8:dead:beef::5/64',
+                        'ipv6ipaddrs': [
+                            '2001:db8:dead:beef::7/64',
+                            '2001:db8:dead:beef::8/64',
+                            '2001:db8:dead:beef::9/64'],
+                        'enable_ipv6': True,
+                        'noifupdown': True,
+                        },
+                    'return': [
+                        'auto eth16\n',
+                        'iface eth16 inet6 static\n',
+                        '    address 2001:db8:dead:beef::5/64\n',
+                        '    address 2001:db8:dead:beef::7/64\n',
+                        '    address 2001:db8:dead:beef::8/64\n',
+                        '    address 2001:db8:dead:beef::9/64\n',
+                        '\n']},
+                # IPv6-only; multiple addresses
+                {'iface_name': 'eth17', 'iface_type': 'eth', 'enabled': True,
+                    'settings': {
+                        'ipv6proto': 'static',
+                        'ipv6ipaddrs': [
+                            '2001:db8:dead:beef::5/64',
+                            '2001:db8:dead:beef::7/64',
+                            '2001:db8:dead:beef::8/64',
+                            '2001:db8:dead:beef::9/64'],
+                        'ipv6gateway': '2001:db8:dead:beef::1',
+                        'enable_ipv6': True,
+                        'noifupdown': True,
+                        },
+                    'return': [
+                        'auto eth17\n',
+                        'iface eth17 inet6 static\n',
+                        '    address 2001:db8:dead:beef::5/64\n',
+                        '    address 2001:db8:dead:beef::7/64\n',
+                        '    address 2001:db8:dead:beef::8/64\n',
+                        '    address 2001:db8:dead:beef::9/64\n',
                         '    gateway 2001:db8:dead:beef::1\n',
                         '\n']},
                 # IPv4 and IPv6; shared/overridden settings
@@ -299,7 +331,14 @@ class DebianIpTestCase(TestCase, LoaderModuleMockMixin):
                         '    address 2001:db8:dead:c0::3\n',
                         '    netmask 64\n',
                         '    gateway 2001:db8:dead:c0::1\n',
-                             # TODO: I suspect there should be more here.
+                        '    bond-ad_select 0\n',
+                        '    bond-downdelay 200\n',
+                        '    bond-lacp_rate 0\n',
+                        '    bond-miimon 100\n',
+                        '    bond-mode 4\n',
+                        '    bond-slaves eth4 eth5\n',
+                        '    bond-updelay 0\n',
+                        '    bond-use_carrier on\n',
                         '\n']},
                 # Bond; with address IPv4 and IPv6 address; slaves as list
                 {'iface_name': 'bond6', 'iface_type': 'bond', 'enabled': True,
@@ -337,7 +376,14 @@ class DebianIpTestCase(TestCase, LoaderModuleMockMixin):
                         '    address 2001:db8:dead:c0::3\n',
                         '    netmask 64\n',
                         '    gateway 2001:db8:dead:c0::1\n',
-                             # TODO: I suspect there should be more here.
+                        '    bond-ad_select 0\n',
+                        '    bond-downdelay 200\n',
+                        '    bond-lacp_rate 0\n',
+                        '    bond-miimon 100\n',
+                        '    bond-mode 4\n',
+                        '    bond-slaves eth4 eth5\n',
+                        '    bond-updelay 0\n',
+                        '    bond-use_carrier on\n',
                         '\n']},
                 # Bond VLAN; with IPv4 address
                 {'iface_name': 'bond1.7', 'iface_type': 'vlan', 'enabled': True,
@@ -420,6 +466,8 @@ class DebianIpTestCase(TestCase, LoaderModuleMockMixin):
                         'ipaddr': '192.168.4.9',
                         'netmask': '255.255.255.0',
                         'gateway': '192.168.4.1',
+                        'enable_ipv6': True,
+                        'ipv6proto': 'loopback',
                         'ipv6ipaddr': 'fc00::1',
                         'ipv6netmask': '128',
                         'ipv6_autoconf': False,
@@ -436,6 +484,22 @@ class DebianIpTestCase(TestCase, LoaderModuleMockMixin):
                         '    address fc00::1\n',
                         '    netmask 128\n',
                         '\n']},
+                # Loopback; with only IPv6 address; enabled=False
+                {'iface_name': 'lo11', 'iface_type': 'eth', 'enabled': False,
+                    'settings': {
+                        'enable_ipv6': True,
+                        'ipv6proto': 'loopback',
+                        'ipv6ipaddr': 'fc00::1',
+                        'ipv6netmask': '128',
+                        'ipv6_autoconf': False,
+                        'enable_ipv6': True,
+                        'noifupdown': True,
+                        },
+                    'return': [
+                        'iface lo11 inet6 loopback\n',
+                        '    address fc00::1\n',
+                        '    netmask 128\n',
+                        '\n']},
                 # Loopback; without address
                 {'iface_name': 'lo12', 'iface_type': 'eth', 'enabled': True,
                     'settings': {
@@ -447,6 +511,42 @@ class DebianIpTestCase(TestCase, LoaderModuleMockMixin):
                         'auto lo12\n',
                         'iface lo12 inet loopback\n',
                         '\n']},
+                # IPv4=DHCP; IPv6=Static; with IPv6 netmask
+                {'iface_name': 'eth14', 'iface_type': 'eth', 'enabled': True,
+                    'settings': {
+                        'proto': 'dhcp',
+                        'enable_ipv6': True,
+                        'ipv6proto': 'static',
+                        'ipv6ipaddr': '2001:db8:dead:c0::3',
+                        'ipv6netmask': '64',
+                        'ipv6gateway': '2001:db8:dead:c0::1',
+                        'noifupdown': True,
+                        },
+                    'return': [
+                        'auto eth14\n',
+                        'iface eth14 inet dhcp\n',
+                        'iface eth14 inet6 static\n',
+                        '    address 2001:db8:dead:c0::3\n',
+                        '    netmask 64\n',
+                        '    gateway 2001:db8:dead:c0::1\n',
+                        '\n']},
+                # IPv4=DHCP; IPv6=Static; without IPv6 netmask
+                {'iface_name': 'eth15', 'iface_type': 'eth', 'enabled': True,
+                    'settings': {
+                        'proto': 'dhcp',
+                        'enable_ipv6': True,
+                        'ipv6proto': 'static',
+                        'ipv6ipaddr': '2001:db8:dead:c0::3/64',
+                        'ipv6gateway': '2001:db8:dead:c0::1',
+                        'noifupdown': True,
+                        },
+                    'return': [
+                        'auto eth15\n',
+                        'iface eth15 inet dhcp\n',
+                        'iface eth15 inet6 static\n',
+                        '    address 2001:db8:dead:c0::3/64\n',
+                        '    gateway 2001:db8:dead:c0::1\n',
+                        '\n']},
                 ]
 
         with tempfile.NamedTemporaryFile(mode='r', delete=True) as tfile:
@@ -454,13 +554,14 @@ class DebianIpTestCase(TestCase, LoaderModuleMockMixin):
                 for iface in interfaces:
                     # Skip tests that require __salt__['pkg.install']()
                     if iface['iface_type'] not in ['bridge', 'pppoe', 'vlan']:
-                        self.assertListEqual(debian_ip.build_interface(
-                                                    iface=iface['iface_name'],
-                                                    iface_type=iface['iface_type'],
-                                                    enabled=iface['enabled'],
-                                                    interface_file=tfile.name,
-                                                    **iface['settings']),
-                                             iface['return'])
+                        self.assertListEqual(
+                                debian_ip.build_interface(
+                                        iface=iface['iface_name'],
+                                        iface_type=iface['iface_type'],
+                                        enabled=iface['enabled'],
+                                        interface_file=tfile.name,
+                                        **iface['settings']),
+                                iface['return'])
 
     # 'up' function tests: 1
 
