@@ -400,6 +400,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
             if os.path.exists(output_file_append):
                 os.unlink(output_file_append)
 
+    @flaky
     def test_issue_14979_output_file_permissions(self):
         output_file = os.path.join(TMP, 'issue-14979')
         with salt.utils.files.set_umask(0o077):
