@@ -59,7 +59,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import re
 import logging
 
-import salt.utils.json as json
+import salt.utils.json
 from salt.ext import six
 
 log = logging.getLogger(__name__)
@@ -169,10 +169,11 @@ def topic_present(name, subscriptions=None, attributes=None,
         if _json_objs_equal(want_val, curr_val):
             continue
         if __opts__['test']:
-            ret['comment'] += '  Attribute {0} would be updated on topic {1}.'.format(attr, TopicArn)
+            ret['comment'] += '  Attribute {} would be updated on topic {}.'.format(attr, TopicArn)
             ret['result'] = None
             continue
-        want_val = want_val if isinstance(want_val, six.string_types) else json.dumps(want_val)
+        want_val = want_val if isinstance(want_val,
+                                          six.string_types) else salt.utils.json.dumps(want_val)
         if __salt__['boto3_sns.set_topic_attributes'](TopicArn, attr, want_val, region=region,
                                                       key=key, keyid=keyid, profile=profile):
             ret['comment'] += '  Attribute {0} set to {1} on topic {2}.'.format(attr, want_val,
@@ -253,8 +254,8 @@ def _create_or_update_subscription(ret, sub, curr_subs, attrs, topic, region, ke
             ret['comment'] += msg
             ret['result'] = None
             return ret
-        fixed = {k: (sub[k] if isinstance(sub[k], six.string_types) else json.dumps(sub[k]))
-                 for k in attrs if k in sub}
+        fixed = {k: (sub[k] if isinstance(sub[k], six.string_types) else
+                 salt.utils.json.dumps(sub[k])) for k in attrs if k in sub}
         args = {'TopicArn': topic,
                 'Protocol': sub['Protocol'],
                 'Endpoint': sub['Endpoint'],
@@ -278,7 +279,8 @@ def _create_or_update_subscription(ret, sub, curr_subs, attrs, topic, region, ke
     # Set requested subscriptions attributes if their current values differ...
     for attr in attrs:
         if attr in sub and not _json_objs_equal(curr_attrs.get(attr), sub[attr]):
-            fixed = sub[attr] if isinstance(sub[attr], six.string_types) else json.dumps(sub[attr])
+            fixed = sub[attr] if isinstance(sub[attr],
+                                            six.string_types) else salt.utils.json.dumps(sub[attr])
             if __opts__['test']:
                 msg = ' Attribute {} would be set on subscription {}:{} for topic {}.'.format(
                         attr, prot, obfu, topic)
@@ -378,11 +380,11 @@ def topic_absent(name, unsubscribe=False, region=None, key=None, keyid=None, pro
 
 def _json_objs_equal(left, right):
     left = __utils__['boto3.ordered'](
-        json.loads(left)
+        salt.utils.json.loads(left)
         if isinstance(left, six.string_types)
         else left)
     right = __utils__['boto3.ordered'](
-        json.loads(right)
+        salt.utils.json.loads(right)
         if isinstance(right, six.string_types)
         else right)
     return left == right
