@@ -254,6 +254,48 @@ class DebianIpTestCase(TestCase, LoaderModuleMockMixin):
                         '    address 2001:db8:dead:beef::9/64\n',
                         '    gateway 2001:db8:dead:beef::1\n',
                         '\n']},
+                # IPv4 and IPv6 settings with v4 disabled
+                {'iface_name': 'eth18', 'iface_type': 'eth', 'enabled': True,
+                    'settings': {
+                        'proto': 'static',
+                        'ipaddr': '192.168.4.9',
+                        'netmask': '255.255.255.0',
+                        'gateway': '192.168.4.1',
+                        'ipv6proto': 'static',
+                        'ipv6ipaddr': '2001:db8:dead:beef::3',
+                        'ipv6netmask': '64',
+                        'ipv6gateway': '2001:db8:dead:beef::1',
+                        'enable_ipv4': False,
+                        'noifupdown': True,
+                        },
+                    'return': [
+                        'auto eth18\n',
+                        'iface eth18 inet6 static\n',
+                        '    address 2001:db8:dead:beef::3\n',
+                        '    netmask 64\n',
+                        '    gateway 2001:db8:dead:beef::1\n',
+                        '\n']},
+                # IPv4 and IPv6 settings with v6 disabled
+                {'iface_name': 'eth19', 'iface_type': 'eth', 'enabled': True,
+                    'settings': {
+                        'proto': 'static',
+                        'ipaddr': '192.168.4.9',
+                        'netmask': '255.255.255.0',
+                        'gateway': '192.168.4.1',
+                        'ipv6proto': 'static',
+                        'ipv6ipaddr': '2001:db8:dead:beef::3',
+                        'ipv6netmask': '64',
+                        'ipv6gateway': '2001:db8:dead:beef::1',
+                        'enable_ipv6': False,
+                        'noifupdown': True,
+                        },
+                    'return': [
+                        'auto eth19\n',
+                        'iface eth19 inet static\n',
+                        '    address 192.168.4.9\n',
+                        '    netmask 255.255.255.0\n',
+                        '    gateway 192.168.4.1\n',
+                        '\n']},
                 # IPv4 and IPv6; shared/overridden settings
                 {'iface_name': 'eth3', 'iface_type': 'eth', 'enabled': True,
                     'settings': {
