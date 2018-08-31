@@ -28,7 +28,9 @@ import salt.utils.path
 import salt.utils.platform
 import salt.log.setup
 import salt.defaults.exitcodes
+import salt.syspaths as syspaths
 from salt.log.mixins import NewStyleClassMixIn
+from salt.utils.event import tagify
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -288,7 +290,15 @@ class ThreadPool(object):
     '''
     def __init__(self,
                  num_threads=None,
-                 queue_size=0):
+                 queue_size=0,
+                 opts=None):
+        if not opts:
+            opts = salt.config.master_config(
+                os.environ.get(
+                    'SALT_MASTER_CONFIG',
+                    os.path.join(syspaths.CONFIG_DIR, 'master')
+                )
+            )
         # if no count passed, default to number of CPUs
         if num_threads is None:
             num_threads = multiprocessing.cpu_count()
@@ -299,12 +309,33 @@ class ThreadPool(object):
 
         self._workers = []
 
+        # keep stats on overflows, puts, tasks_done
+        self._stats = {'overflows': 0,
+                       'puts': 0,
+                       'tasks_done': 0
+                      }
+
+        self.event = salt.utils.event.get_event(
+                 'master',
+                 self.opts['sock_dir'],
+                 self.opts['transport'],
+                 opts=self.opts,
+                 listen=False)
+
         # create worker threads
         for _ in range(num_threads):
             thread = threading.Thread(target=self._thread_target)
             thread.daemon = True
             thread.start()
             self._workers.append(thread)
+
+        # create stats thread
+        def _report_stats(self):
+            self.event.fire_event(self._stats, tagify(self.name,
+                'reactor_threadpool_stats'))
+
+        t = threading.Timer(60.0, _report_stats)
+        t.start()
 
     # intentionally not called "apply_async"  since we aren't keeping track of
     # the return at all, if we want to make this API compatible with multiprocessing
@@ -316,8 +347,10 @@ class ThreadPool(object):
             kwargs = {}
         try:
             self._job_queue.put_nowait((func, args, kwargs))
+            self._stats['puts'] = self._stats['puts'] + 1
             return True
         except queue.Full:
+            self._stats['overflows'] = self._stats['overflows'] + 1
             return False
 
     def _thread_target(self):
@@ -327,6 +360,7 @@ class ThreadPool(object):
                 try:
                     func, args, kwargs = self._job_queue.get(timeout=1)
                     self._job_queue.task_done()  # Mark the task as done once we get it
+                    self._stats['tasks_done'] = self._stats['tasks_done'] + 1
                 except queue.Empty:
                     continue
             except AttributeError:
