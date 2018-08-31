@@ -31,3 +31,15 @@ renderer. For example:
     foo:
       bar.baz:
         - some_arg: {{ mydict|tojson }}
+
+MacOSX escape characters with runas
+===================================
+
+You are now required to escape quotes when using the runas argument with the
+cmd module on macosx.
+
+Example:
+
+.. code-block:: bash
+
+    cmd.run 'echo '\''h=\"baz\"'\''' runas=macuser

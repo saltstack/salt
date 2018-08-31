@@ -294,6 +294,7 @@ import salt.utils.templates
 import salt.utils.url
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError
+from salt.serializers import DeserializationError
 from salt.state import get_accumulator_dir as _get_accumulator_dir
 
 if salt.utils.platform.is_windows():
@@ -2600,7 +2601,9 @@ def managed(name,
                     'contents_grains is not a string or list of strings, and '
                     'is not binary data. SLS is likely malformed.'
                 )
-            contents = os.linesep.join(validated_contents)
+            contents = os.linesep.join(
+                [line.rstrip('\n').rstrip('\r') for line in validated_contents]
+            )
             if contents_newline and not contents.endswith(os.linesep):
                 contents += os.linesep
         if template:
@@ -2825,8 +2828,15 @@ def managed(name,
             ret['changes'] = {}
             log.debug(traceback.format_exc())
             salt.utils.files.remove(tmp_filename)
-            if not keep_source and sfn:
-                salt.utils.files.remove(sfn)
+            if not keep_source:
+                if not sfn \
+                        and source \
+                        and _urlparse(source).scheme == 'salt':
+                    # The file would not have been cached until manage_file was
+                    # run, so check again here for a cached copy.
+                    sfn = __salt__['cp.is_cached'](source, __env__)
+                if sfn:
+                    salt.utils.files.remove(sfn)
             return _error(ret, 'Unable to check_cmd file: {0}'.format(exc))
 
         # file being updated to verify using check_cmd
@@ -2898,11 +2908,18 @@ def managed(name,
         finally:
             if tmp_filename:
                 salt.utils.files.remove(tmp_filename)
-            if not keep_source and sfn:
-                salt.utils.files.remove(sfn)
+            if not keep_source:
+                if not sfn \
+                        and source \
+                        and _urlparse(source).scheme == 'salt':
+                    # The file would not have been cached until manage_file was
+                    # run, so check again here for a cached copy.
+                    sfn = __salt__['cp.is_cached'](source, __env__)
+                if sfn:
+                    salt.utils.files.remove(sfn)
 
 
-_RECURSE_TYPES = ['user', 'group', 'mode', 'ignore_files', 'ignore_dirs']
+_RECURSE_TYPES = ['user', 'group', 'mode', 'ignore_files', 'ignore_dirs', 'silent']
 
 
 def _get_recurse_set(recurse):
@@ -2982,7 +2999,8 @@ def directory(name,
         a list of strings representing what you would like to recurse.  If
         ``mode`` is defined, will recurse on both ``file_mode`` and ``dir_mode`` if
         they are defined.  If ``ignore_files`` or ``ignore_dirs`` is included, files or
-        directories will be left unchanged respectively.
+        directories will be left unchanged respectively. If ``silent`` is defined,
+        individual file/directory change notifications will be suppressed.
         Example:
 
         .. code-block:: yaml
@@ -3158,7 +3176,7 @@ def directory(name,
                   perms: full_control
             - win_inheritance: False
     '''
-    name = os.path.expanduser(name)
+    name = os.path.normcase(os.path.expanduser(name))
     ret = {'name': name,
            'changes': {},
            'pchanges': {},
@@ -3393,6 +3411,9 @@ def directory(name,
         if 'mode' not in recurse_set:
             file_mode = None
             dir_mode = None
+
+        if 'silent' in recurse_set:
+            ret['pchanges'] = 'Changes silenced'
 
         check_files = 'ignore_files' not in recurse_set
         check_dirs = 'ignore_dirs' not in recurse_set
@@ -3686,7 +3707,9 @@ def recurse(name,
         # "env" is not supported; Use "saltenv".
         kwargs.pop('env')
 
-    name = salt.utils.data.decode(os.path.expanduser(name))
+    name = salt.utils.data.decode(
+        os.path.normcase(os.path.expanduser(name))
+    )
 
     user = _test_owner(kwargs, user=user)
     if salt.utils.platform.is_windows():
@@ -4501,7 +4524,9 @@ def blockreplace(
         prepend_if_not_found=False,
         backup='.bak',
         show_changes=True,
-        append_newline=None):
+        append_newline=None,
+        insert_before_match=None,
+        insert_after_match=None):
     '''
     Maintain an edit in a file in a zone delimited by two line markers
 
@@ -4626,6 +4651,18 @@ def blockreplace(
     prepend_if_not_found : False
         If markers are not found and this option is set to ``True``, the
         content block will be prepended to the file.
+
+    insert_before_match
+        If markers are not found, this parameter can be set to a regex which will
+        insert the block before the first found occurrence in the file.
+
+        .. versionadded:: Neon
+
+    insert_after_match
+        If markers are not found, this parameter can be set to a regex which will
+        insert the block after the first found occurrence in the file.
+
+        .. versionadded:: Neon
 
     backup
         The file extension to use for a backup of the file if any edit is made.
@@ -4759,6 +4796,8 @@ def blockreplace(
             content=content,
             append_if_not_found=append_if_not_found,
             prepend_if_not_found=prepend_if_not_found,
+            insert_before_match=insert_before_match,
+            insert_after_match=insert_after_match,
             backup=backup,
             dry_run=__opts__['test'],
             show_changes=show_changes,
@@ -6502,6 +6541,7 @@ def serialize(name,
               encoding=None,
               encoding_errors='strict',
               serializer_opts=None,
+              deserializer_opts=None,
               **kwargs):
     '''
     Serializes dataset and store it into managed file. Useful for sharing
@@ -6608,6 +6648,41 @@ def serialize(name,
         .. _`json.dumps()`: https://docs.python.org/2/library/json.html#json.dumps
         .. _`pprint.pformat()`: https://docs.python.org/2/library/pprint.html#pprint.pformat
 
+    deserializer_opts
+        Like ``serializer_opts`` above, but only used when merging with an
+        existing file (i.e. when ``merge_if_exists`` is set to ``True``).
+
+        The options specified here will be passed to the deserializer to load
+        the existing data, before merging with the specified data and
+        re-serializing.
+
+        .. code-block:: yaml
+
+           /etc/dummy/package.yaml
+             file.serialize:
+               - formatter: yaml
+               - serializer_opts:
+                 - explicit_start: True
+                 - default_flow_style: True
+                 - indent: 4
+               - deserializer_opts:
+                 - encoding: latin-1
+               - merge_if_exists: True
+
+        The valid opts are the additional opts (i.e. not the data being
+        deserialized) for the function used to deserialize the data.
+        Documentation for the these functions can be found in the list below:
+
+        - For **yaml**: `yaml.load()`_
+        - For **json**: `json.loads()`_
+
+        .. _`yaml.load()`: https://pyyaml.org/wiki/PyYAMLDocumentation
+        .. _`json.loads()`: https://docs.python.org/2/library/json.html#json.loads
+
+        However, note that not all arguments are supported. For example, when
+        deserializing JSON, arguments like ``parse_float`` and ``parse_int``
+        which accept a callable object cannot be handled in an SLS file.
+
         .. versionadded:: Fluorine
 
     For example, this state:
@@ -6648,7 +6723,7 @@ def serialize(name,
     name = os.path.expanduser(name)
 
     # Set some defaults
-    options = {
+    serializer_options = {
         'yaml.serialize': {
             'default_flow_style': False,
         },
@@ -6658,9 +6733,13 @@ def serialize(name,
             'sort_keys': True,
         }
     }
+    deserializer_options = {
+        'yaml.deserialize': {},
+        'json.deserialize': {},
+    }
     if encoding:
-        options['yaml.serialize'].update({'allow_unicode': True})
-        options['json.serialize'].update({'ensure_ascii': False})
+        serializer_options['yaml.serialize'].update({'allow_unicode': True})
+        serializer_options['json.serialize'].update({'ensure_ascii': False})
 
     ret = {'changes': {},
            'comment': '',
@@ -6709,29 +6788,37 @@ def serialize(name,
                 }
 
     if serializer_opts:
-        if not options.get(serializer_name, {}):
-            options[serializer_name] = {}
-
-        options.get(serializer_name, {}).update(
+        serializer_options.setdefault(serializer_name, {}).update(
             salt.utils.data.repack_dictlist(serializer_opts)
+        )
+
+    if deserializer_opts:
+        deserializer_options.setdefault(deserializer_name, {}).update(
+            salt.utils.data.repack_dictlist(deserializer_opts)
         )
 
     if merge_if_exists:
         if os.path.isfile(name):
-            if '{0}.deserialize'.format(formatter) not in __serializers__:
-                return {'changes': {},
-                        'comment': ('{0} format is not supported for merging'
-                                    .format(formatter.capitalize())),
-                        'name': name,
-                        'result': False}
+            if deserializer_name not in __serializers__:
+                return {
+                    'changes': {},
+                    'comment': 'merge_if_exists is not supported for the {0} '
+                               'formatter'.format(formatter),
+                    'name': name,
+                    'result': False
+                }
 
             with salt.utils.files.fopen(name, 'r') as fhr:
                 try:
-                    existing_data = __serializers__[deserializer_name](fhr, **options.get(serializer_name, {}))
-                except (TypeError, salt.serializers.DeserializationError):
-                    log.debug('DeserializationError exception caught, trying to merge without serializer_opts: %s', options.get(serializer_name, {}))
-                    fhr.seek(0)
-                    existing_data = __serializers__[deserializer_name](fhr)
+                    existing_data = __serializers__[deserializer_name](
+                        fhr,
+                        **deserializer_options.get(serializer_name, {})
+                    )
+                except (TypeError, DeserializationError) as exc:
+                    ret['result'] = False
+                    ret['comment'] = \
+                        'Failed to deserialize existing data: {0}'.format(exc)
+                    return False
 
             if existing_data is not None:
                 merged_data = salt.utils.dictupdate.merge_recurse(existing_data, dataset)
@@ -6740,7 +6827,17 @@ def serialize(name,
                     ret['comment'] = 'The file {0} is in the correct state'.format(name)
                     return ret
                 dataset = merged_data
-    contents = __serializers__[serializer_name](dataset, **options.get(serializer_name, {}))
+    else:
+        if deserializer_opts:
+            ret.setdefault('warnings', []).append(
+                'The \'deserializer_opts\' option is ignored unless '
+                'merge_if_exists is set to True.'
+            )
+
+    contents = __serializers__[serializer_name](
+        dataset,
+        **serializer_options.get(serializer_name, {})
+    )
 
     contents += '\n'
 

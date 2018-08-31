@@ -1633,12 +1633,15 @@ def create_pkcs12(ca_name, CN, passphrase='', cacert_path=None, replace=False):
     )
 
 
-def cert_info(cert_path, digest='sha256'):
+def cert_info(cert, digest='sha256'):
     '''
     Return information for a particular certificate
 
-    cert_path
-        path to the cert file
+    cert
+        path to the certifiate PEM file or string
+
+        .. versionchanged:: 2018.3.4
+
     digest
         what digest to use for fingerprinting
 
@@ -1647,15 +1650,17 @@ def cert_info(cert_path, digest='sha256'):
     .. code-block:: bash
 
         salt '*' tls.cert_info /dir/for/certs/cert.pem
+
     '''
     # format that OpenSSL returns dates in
     date_fmt = '%Y%m%d%H%M%SZ'
-
-    with salt.utils.files.fopen(cert_path) as cert_file:
-        cert = OpenSSL.crypto.load_certificate(
-            OpenSSL.crypto.FILETYPE_PEM,
-            cert_file.read()
-        )
+    if '-----BEGIN' not in cert:
+        with salt.utils.files.fopen(cert) as cert_file:
+            cert = cert_file.read()
+    cert = OpenSSL.crypto.load_certificate(
+        OpenSSL.crypto.FILETYPE_PEM,
+        cert
+    )
 
     issuer = {}
     for key, value in cert.get_issuer().get_components():
@@ -1694,19 +1699,22 @@ def cert_info(cert_path, digest='sha256'):
         for i in _range(cert.get_extension_count()):
             try:
                 ext = cert.get_extension(i)
-                ret['extensions'][ext.get_short_name()] = str(ext)
+                key = salt.utils.stringutils.to_unicode(ext.get_short_name())
+                ret['extensions'][key] = str(ext).strip()
             except AttributeError:
                 continue
 
     if 'subjectAltName' in ret.get('extensions', {}):
+        valid_entries = ('DNS', 'IP Address')
         valid_names = set()
-        for name in str(ret['extensions']['subjectAltName']).split(", "):
-            if not name.startswith('DNS:'):
+        for name in str(ret['extensions']['subjectAltName']).split(', '):
+            entry, name = name.split(':', 1)
+            if entry not in valid_entries:
                 log.error('Cert {0} has an entry ({1}) which does not start '
-                          'with DNS:'.format(cert_path, name))
+                          'with {2}'.format(ret['subject'], name, '/'.join(valid_entries)))
             else:
-                valid_names.add(name[4:])
-        ret['subject_alt_names'] = ' '.join(valid_names)
+                valid_names.add(name)
+        ret['subject_alt_names'] = list(valid_names)
 
     if hasattr(cert, 'get_signature_algorithm'):
         try:

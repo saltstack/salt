@@ -160,7 +160,7 @@ TEST_SUITES = {
         'path': 'integration/netapi'},
     'cloud_provider':
        {'display_name': 'Cloud Provider',
-        'path': 'integration/cloud/providers'},
+        'path': 'integration/cloud/clouds'},
     'minion':
         {'display_name': 'Minion',
          'path': 'integration/minion'},
@@ -738,13 +738,16 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                     continue
                 named_tests.append(test)
 
-        if (self.options.unit or self.options.kitchen or named_unit_test) and not named_tests and not \
-                self._check_enabled_suites(include_cloud_provider=True):
+        if (self.options.unit or self.options.kitchen or named_unit_test) \
+                and not named_tests \
+                and (self.options.from_filenames or
+                     not self._check_enabled_suites(include_cloud_provider=True)):
             # We're either not running any integration test suites, or we're
             # only running unit tests by passing --unit or by passing only
             # `unit.<whatever>` to --name.  We don't need the tests daemon
             # running
             return [True]
+
         if not salt.utils.platform.is_windows():
             self.set_filehandle_limits('integration')
 
@@ -803,9 +806,11 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                     continue
                 named_unit_test.append(test)
 
-        if not self.options.unit and not named_unit_test:
+        if not named_unit_test \
+                and (self.options.from_filenames or not self.options.unit):
             # We are not explicitly running the unit tests and none of the
-            # names passed to --name is a unit test.
+            # names passed to --name (or derived via --from-filenames) is a
+            # unit test.
             return [True]
 
         status = []
