@@ -6,6 +6,7 @@ Utility functions for use with or in SLS files
 # Import Python libs
 from __future__ import absolute_import, unicode_literals, print_function
 import textwrap
+import os
 
 # Import Salt libs
 import salt.exceptions
@@ -328,12 +329,12 @@ def banner(width=72, commentchar='#', borderchar='#', blockstart=None, blockend=
     if blockend is not None:
         block.append(blockend)
 
-    # Convert list to multiline string
-    result = '\n'.join(block)
+    # Convert list to multi-line string
+    result = os.linesep.join(block)
 
     # Add a newline character to the end of the banner
     if newline:
-        return result + '\n'
+        return result + os.linesep
 
     return result
 
