@@ -216,7 +216,7 @@ class CkMinions(object):
         return {'minions': fnmatch.filter(self._pki_minions(), expr),
                 'missing': []}
 
-    def _check_list_minions(self, expr, greedy):  # pylint: disable=unused-argument
+    def _check_list_minions(self, expr, greedy, ignore_missing=False):  # pylint: disable=unused-argument
         '''
         Return the minions found by looking via a list
         '''
@@ -224,7 +224,7 @@ class CkMinions(object):
             expr = [m for m in expr.split(',') if m]
         minions = self._pki_minions()
         return {'minions': [x for x in expr if x in minions],
-                'missing': []}
+                'missing': [] if ignore_missing else [x for x in expr if x not in minions]}
 
     def _check_pcre_minions(self, expr, greedy):  # pylint: disable=unused-argument
         '''
@@ -582,6 +582,8 @@ class CkMinions(object):
                         engine_args.append(target_info['delimiter'] or ':')
                     engine_args.append(greedy)
 
+                    # ignore missing minions if we exclude them with a 'not'
+                    engine_args.append(results and results[-1] == '-')
                     _results = engine(*engine_args)
                     results.append(six.text_type(set(_results['minions'])))
                     missing.extend(_results['missing'])
