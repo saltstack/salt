@@ -190,12 +190,14 @@ def generate_mtime_map(opts, path_map):
     file_map = {}
     for saltenv, path_list in six.iteritems(path_map):
         for path in path_list:
-            for directory, dirnames, filenames in salt.utils.path.os_walk(path):
-                # Don't walk any directories that match file_ignore_regex or glob
-                dirnames[:] = [d for d in dirnames if not is_file_ignored(opts, d)]
+            for directory, _, filenames in salt.utils.path.os_walk(path):
                 for item in filenames:
                     try:
                         file_path = os.path.join(directory, item)
+                        # Don't walk any directories that match
+                        # file_ignore_regex or glob
+                        if is_file_ignored(opts, file_path):
+                            continue
                         file_map[file_path] = os.path.getmtime(file_path)
                     except (OSError, IOError):
                         # skip dangling symlinks
