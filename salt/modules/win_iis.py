@@ -173,7 +173,7 @@ def _collection_match_to_index(pspath, colfilter, name, match):
 
 def _prepare_settings(pspath, settings):
     '''
-    Prepare settings before execution wit get or set functions.
+    Prepare settings before execution with get or set functions.
     Removes settings with a match parameter when index is not found.
     '''
     prepared_settings = []
