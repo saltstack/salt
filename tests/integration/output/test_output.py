@@ -7,7 +7,6 @@
 from __future__ import absolute_import, print_function, unicode_literals
 import os
 import traceback
-import yaml
 
 # Import Salt Testing Libs
 from tests.support.case import ShellCase

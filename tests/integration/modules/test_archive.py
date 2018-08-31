@@ -67,7 +67,7 @@ class ArchiveTest(ModuleCase):
             filename = 'file®'
         else:
             filename = 'file'
-        with salt.utils.files.fopen(os.path.join(self.src, filename), 'w') as theorem:
+        with salt.utils.files.fopen(os.path.join(self.src, filename), 'wb') as theorem:
             if six.PY3 and salt.utils.platform.is_windows():
                 encoding = 'utf-8'
             else:
@@ -79,12 +79,12 @@ class ArchiveTest(ModuleCase):
                 Blum complexity measure $Φ$ where a complexity class for a
                 boundary function $f$ is defined as
 
-                    $\mathrm C(f) := \{φ_i ∈ \mathbb R^{(1)} | (∀^∞ x) Φ_i(x) ≤ f(x)\}$.
+                    $\\mathrm C(f) := \\{φ_i ∈ \\mathbb R^{(1)} | (∀^∞ x) Φ_i(x) ≤ f(x)\\}$.
 
                 Then there exists a total computable function $f$ so that for
                 all $i$
 
-                    $\mathrm{Dom}(φ_i) = \mathrm{Dom}(φ_{f(i)})$
+                    $\\mathrm{Dom}(φ_i) = \\mathrm{Dom}(φ_{f(i)})$
 
                 and
 
