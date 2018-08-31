@@ -1440,7 +1440,7 @@ class _policy_info(object):
                     'AllocateDASD': {
                         'Policy': 'Devices: Allowed to format and eject '
                                   'removable media',
-                        'Settings': ["", "0", "1", "2"],
+                        'Settings': ['9999', '0', '1', '2'],
                         'lgpo_section': self.security_options_gpedit_path,
                         'Registry': {
                             'Hive': 'HKEY_LOCAL_MACHINE',
