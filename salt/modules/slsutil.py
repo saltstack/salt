@@ -6,6 +6,7 @@ Utility functions for use with or in SLS files
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import os
 import textwrap
 
 # Import Salt libs
@@ -338,18 +339,18 @@ def banner(
     if blockend is not None:
         block.append(blockend)
 
-    # Convert list to multiline string
-    result = "\n".join(block)
+    # Convert list to multi-line string
+    result = os.linesep.join(block)
 
     # Add a newline character to the end of the banner
     if newline:
-        return result + "\n"
+        return result + os.linesep
 
     return result
 
 
-def boolstr(value, true='true', false='false'):
-    '''
+def boolstr(value, true="true", false="false"):
+    """
     Convert a boolean value into a string. This function is
     intended to be used from within file templates to provide
     an easy way to take boolean values stored in Pillars or
@@ -378,7 +379,7 @@ def boolstr(value, true='true', false='false'):
 
         use_tls: yes
 
-    '''
+    """
 
     if value:
         return true
