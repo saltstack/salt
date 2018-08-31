@@ -1322,7 +1322,7 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
 
     # Remove incomplete/disabled inet blocks
     for (addrfam, opt) in [('inet', 'enable_ipv4'), ('inet6', 'enable_ipv6')]:
-        if not opts.get(opt, None):
+        if opts.get(opt, None) is False:
             iface_data.pop(addrfam)
         elif iface_data[addrfam].get('addrfam', '') != addrfam:
             iface_data.pop(addrfam)
