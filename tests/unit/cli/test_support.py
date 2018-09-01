@@ -16,6 +16,7 @@ import salt.exceptions
 import salt.cli.support.collector
 import os
 import yaml
+import jinja2
 
 try:
     import pytest
@@ -440,3 +441,18 @@ class ProfileIntegrityTestCase(TestCase):
                 parsed = False
 
             assert parsed
+
+    def test_users_template_profile(self):
+        '''
+        Test users template profile.
+
+        :return:
+        '''
+        users_template = open(self.profiles['users']).read()
+        users_data = yaml.load(jinja2.Environment().from_string(users_template).render(
+            salt=MagicMock(return_value=['pokemon'])))
+        assert len(users_data['all-users']) == 5
+        for user_data in users_data['all-users']:
+            for tgt in ['user.list_groups', 'shadow.info', 'cron.raw_cron']:
+                if tgt in user_data:
+                    assert user_data[tgt]['args'] == ['pokemon']
