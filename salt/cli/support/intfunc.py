@@ -19,16 +19,19 @@ def filetree(collector, path):
     :param path: File or directory
     :return:
     '''
-    if os.path.isfile(path):
-        filename = os.path.basename(path)
-        try:
-            file_ref = open(path)
-            out.put('Add {}'.format(filename), indent=2)
-            collector.add(filename)
-            collector.link(title=path, path=file_ref)
-        except Exception as err:
-            out.error(err, ident=4)
+    if not path:
+        out.error('Path not defined', ident=2)
     else:
-        for fname in os.listdir(path):
-            fname = os.path.join(path, fname)
-            filetree(collector, fname)
+        if os.path.isfile(path):
+            filename = os.path.basename(path)
+            try:
+                file_ref = open(path)
+                out.put('Add {}'.format(filename), indent=2)
+                collector.add(filename)
+                collector.link(title=path, path=file_ref)
+            except Exception as err:
+                out.error(err, ident=4)
+        else:
+            for fname in os.listdir(path):
+                fname = os.path.join(path, fname)
+                filetree(collector, fname)
