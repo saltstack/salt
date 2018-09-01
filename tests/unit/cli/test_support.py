@@ -13,6 +13,9 @@ from salt.cli.support.collector import SupportDataCollector, SaltSupport
 from salt.utils.color import get_colors
 from salt.utils.stringutils import to_bytes
 import salt.exceptions
+import salt.cli.support.collector
+import os
+import yaml
 
 try:
     import pytest
@@ -396,4 +399,30 @@ class SaltSupportRunnerTestCase(TestCase):
             self.runner.out = MagicMock()
             assert self.runner._check_existing_archive()
             assert self.runner.out.warning.call_args[0][0] == 'Overwriting existing archive: {}'.format(arch)
+
+
+@skipIf(not bool(pytest), 'Pytest needs to be installed')
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+class ProfileIntegrityTestCase(TestCase):
+    '''
+    Default profile integrity
+    '''
+    def setUp(self):
+        '''
+        Set up test suite.
+
+        :return:
+        '''
+        self.profiles = {}
+        profiles = os.path.join(os.path.dirname(salt.cli.support.collector.__file__), 'profiles')
+        for profile in os.listdir(profiles):
+            self.profiles[profile.split('.')[0]] = os.path.join(profiles, profile)
+
+    def tearDown(self):
+        '''
+        Tear down test suite.
+
+        :return:
+        '''
+        del self.profiles
 
