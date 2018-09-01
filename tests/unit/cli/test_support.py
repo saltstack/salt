@@ -366,3 +366,34 @@ class SaltSupportRunnerTestCase(TestCase):
 
             assert self.runner.out.warning.call_args[0][0] == 'Terminated earlier, cleaning up'
             unlink.assert_called_once_with(arch)
+
+    @patch('os.path.exists', MagicMock(return_value=True))
+    def test_check_existing_archive(self):
+        '''
+        Test check existing archive.
+
+        :return:
+        '''
+        arch = '/tmp/endothermal-recalibration.zip'
+        unlink = MagicMock()
+        with patch('os.unlink', unlink), patch('os.path.exists', MagicMock(return_value=False)):
+            self.runner.config = {'support_archive': '',
+                                  'support_archive_force_overwrite': True}
+            self.runner.out = MagicMock()
+            assert self.runner._check_existing_archive()
+            assert self.runner.out.warning.call_count == 0
+
+        with patch('os.unlink', unlink):
+            self.runner.config = {'support_archive': arch,
+                                  'support_archive_force_overwrite': False}
+            self.runner.out = MagicMock()
+            assert not self.runner._check_existing_archive()
+            assert self.runner.out.warning.call_args[0][0] == 'File {} already exists.'.format(arch)
+
+        with patch('os.unlink', unlink):
+            self.runner.config = {'support_archive': arch,
+                                  'support_archive_force_overwrite': True}
+            self.runner.out = MagicMock()
+            assert self.runner._check_existing_archive()
+            assert self.runner.out.warning.call_args[0][0] == 'Overwriting existing archive: {}'.format(arch)
+
