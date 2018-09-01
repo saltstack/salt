@@ -427,20 +427,21 @@ class ProfileIntegrityTestCase(TestCase):
         '''
         del self.profiles
 
-    def test_default_profile_parseable(self):
+    def test_non_template_profiles_parseable(self):
         '''
         Test shipped default profile is YAML parse-able.
 
         :return:
         '''
-        with open(self.profiles['default']) as ref:
-            try:
-                yaml.load(ref)
-                parsed = True
-            except Exception:
-                parsed = False
+        for t_name in ['default', 'jobs-active', 'jobs-last', 'network', 'postgres', 'salt']:
+            with open(self.profiles[t_name]) as ref:
+                try:
+                    yaml.load(ref)
+                    parsed = True
+                except Exception:
+                    parsed = False
+                assert parsed
 
-            assert parsed
 
     def test_users_template_profile(self):
         '''
