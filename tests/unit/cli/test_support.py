@@ -462,3 +462,14 @@ class ProfileIntegrityTestCase(TestCase):
             for tgt in ['user.list_groups', 'shadow.info', 'cron.raw_cron']:
                 if tgt in user_data:
                     assert user_data[tgt]['args'] == ['pokemon']
+
+    def test_jobs_trace_template_profile(self):
+        '''
+        Test jobs-trace template profile.
+
+        :return:
+        '''
+        jobs_trace = self._render_template_to_yaml('jobs-trace', runners=MagicMock(return_value=['0000']))
+        assert len(jobs_trace['jobs-details']) == 1
+        assert jobs_trace['jobs-details'][0]['run:jobs.list_job']['info'] == 'Details on JID 0000'
+        assert jobs_trace['jobs-details'][0]['run:jobs.list_job']['args'] == [0]
