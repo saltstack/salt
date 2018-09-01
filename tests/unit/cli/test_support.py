@@ -327,3 +327,13 @@ class SaltSupportRunnerTestCase(TestCase):
         action_meta = {'user.info': {'info': 'Information about "usbmux"', 'args': ['usbmux']}}
         assert self.runner._get_action(action_meta) == ('Information about "usbmux"', None,
                                                         {'fun': 'user.info', 'kwargs': {}, 'arg': ['usbmux']})
+
+    def test_extract_return(self):
+        '''
+        Test extract return from the output.
+
+        :return:
+        '''
+        out = {'key': 'value'}
+        assert self.runner._extract_return(out) == out
+        assert self.runner._extract_return({'return': out}) == out
