@@ -405,7 +405,7 @@ class SaltSupport(salt.utils.parsers.SaltSupportOptionParser):
             self.out.warning('Terminated earlier, cleaning up')
             os.unlink(self.config['support_archive'])
 
-    def _check_existing_archive_(self):
+    def _check_existing_archive(self):
         '''
         Check if archive exists or not. If exists and --force was not specified,
         bail out. Otherwise remove it and move on.
@@ -462,7 +462,7 @@ class SaltSupport(salt.utils.parsers.SaltSupportOptionParser):
                     self.print_help()
                     raise SystemExit()
 
-                if self._check_existing_archive_():
+                if self._check_existing_archive():
                     try:
                         self.collector = SupportDataCollector(self.config['support_archive'],
                                                               output=self.config['support_output_format'])
