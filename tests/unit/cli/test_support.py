@@ -349,3 +349,20 @@ class SaltSupportRunnerTestCase(TestCase):
 
         action_meta = {'user.info': {'info': 'Information about "usbmux"', 'args': ['usbmux']}}
         assert self.runner._get_action_type(action_meta) == 'call'
+
+    @patch('os.path.exists', MagicMock(return_value=True))
+    def test_cleanup(self):
+        '''
+        Test cleanup routine.
+
+        :return:
+        '''
+        arch = '/tmp/killme.zip'
+        unlink = MagicMock()
+        with patch('os.unlink', unlink):
+            self.runner.config = {'support_archive': arch}
+            self.runner.out = MagicMock()
+            self.runner._cleanup()
+
+            assert self.runner.out.warning.call_args[0][0] == 'Terminated earlier, cleaning up'
+            unlink.assert_called_once_with(arch)
