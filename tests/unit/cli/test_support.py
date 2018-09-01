@@ -337,3 +337,15 @@ class SaltSupportRunnerTestCase(TestCase):
         out = {'key': 'value'}
         assert self.runner._extract_return(out) == out
         assert self.runner._extract_return({'return': out}) == out
+
+    def test_get_action_type(self):
+        '''
+        Test action meta determines action type.
+
+        :return:
+        '''
+        action_meta = {'run:jobs.list_jobs_filter': {'info': 'List jobs filter', 'args': [1]}}
+        assert self.runner._get_action_type(action_meta) == 'run'
+
+        action_meta = {'user.info': {'info': 'Information about "usbmux"', 'args': ['usbmux']}}
+        assert self.runner._get_action_type(action_meta) == 'call'
