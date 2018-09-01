@@ -306,7 +306,6 @@ test_interfaces = [
 
         # Bond; with address IPv4 and IPv6 address; slaves as string
         {'iface_name': 'bond9', 'iface_type': 'bond', 'enabled': True,
-            'skip_test': True,  # TODO- debian_ip._parse_interfaces() doesn't populate data for IPv6 bond settings
             'build_interface': {
                 'proto': 'static',
                 'ipaddr': '10.1.0.14',
@@ -409,7 +408,6 @@ test_interfaces = [
 
         # Bond; with address IPv4 and IPv6 address; slaves as list
         {'iface_name': 'bond10', 'iface_type': 'bond', 'enabled': True,
-            'skip_test': True,  # TODO- debian_ip._parse_interfaces() doesn't populate data for IPv6 bond settings
             'build_interface': {
                 'proto': 'static',
                 'ipaddr': '10.1.0.14',
@@ -420,13 +418,11 @@ test_interfaces = [
                 'ipv6netmask': '64',
                 'ipv6gateway': '2001:db8:dead:c0::1',
                 'mode': '802.3ad',
-                # TODO: Need to add this support
-                #'slaves': ['eth4', 'eth5'],
-                'slaves': 'eth4 eth5',
+                'slaves': ['eth4', 'eth5'],
                 'enable_ipv6': True,
                 'noifupdown': True,
                 },
-            'get_interface': odict([('bond9', odict([('enabled', True), ('data', odict([
+            'get_interface': odict([('bond10', odict([('enabled', True), ('data', odict([
                 ('inet', odict([
                     ('addrfam', 'inet'),
                     ('proto', 'static'),
@@ -498,7 +494,7 @@ test_interfaces = [
                 '    bond-slaves eth4 eth5\n',
                 '    bond-updelay 0\n',
                 '    bond-use_carrier on\n',
-                'iface bond6 inet6 static\n',
+                'iface bond10 inet6 static\n',
                 '    address 2001:db8:dead:c0::3\n',
                 '    netmask 64\n',
                 '    gateway 2001:db8:dead:c0::1\n',
@@ -786,7 +782,6 @@ test_interfaces = [
                 '    gateway 2001:db8:dead:c0::1\n',
                 '\n']},
         ]
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class DebianIpTestCase(TestCase, LoaderModuleMockMixin):
