@@ -426,3 +426,17 @@ class ProfileIntegrityTestCase(TestCase):
         '''
         del self.profiles
 
+    def test_default_profile_parseable(self):
+        '''
+        Test shipped default profile is YAML parse-able.
+
+        :return:
+        '''
+        with open(self.profiles['default']) as ref:
+            try:
+                yaml.load(ref)
+                parsed = True
+            except Exception:
+                parsed = False
+
+            assert parsed
