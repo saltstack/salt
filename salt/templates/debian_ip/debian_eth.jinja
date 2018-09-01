@@ -29,7 +29,13 @@
 {% elif val is string or val is number       %}    {{ debopt }} {{ val }}
 {% elif val is iterable %}{% for v in val    %}    {{ debopt }} {{ v }}
 {% endfor %}{% endif %}{% endif -%}
-{% endfor %}{% if interface.ethtool %}{% for item in interface.ethtool_keys              %}    {{ item }} {{ interface.ethtool[item] }}
-{% endfor %}{% endif %}{% if interface.bonding  %}{% for item in interface.bonding_keys  %}    bond-{{ item }} {{ interface.bonding[item] }}
-{% endfor %}{% endif %}{% if interface.bridging %}{% for item in interface.bridging_keys %}    bridge_{{ item }} {{ interface.bridging[item] }}
-{% endfor %}{% endif %}{% endif %}{% endif %}{% endfor %}
+{% endfor %}{% if interface.ethtool %}{% for item in interface.ethtool_keys -%}
+{% if interface.ethtool[item] is string      %}    {{ item }} {{ interface.ethtool[item] }}
+{% elif interface.ethtool[item] is iterable  %}    {{ item }} {{ interface.ethtool[item]|join(' ') }}
+{% endif %}{% endfor %}{% endif %}{% if interface.bonding  %}{% for item in interface.bonding_keys  -%}
+{% if interface.bonding[item] is string      %}    bond-{{ item }} {{ interface.bonding[item] }}
+{% elif interface.bonding[item] is iterable  %}    bond-{{ item }} {{ interface.bonding[item]|join(' ') }}
+{% endif %}{% endfor %}{% endif %}{% if interface.bridging %}{% for item in interface.bridging_keys -%}.
+{% if interface.bridging[item] is string     %}    bridge_{{ item }} {{ interface.bridging[item] }}
+{% elif interface.bridging[item] is iterable %}    bridge_{{ item }} {{ interface.bridging[item]|join(' ') }}
+{% endif %}{% endfor %}{% endif %}{% endif %}{% endif %}{% endfor %}
