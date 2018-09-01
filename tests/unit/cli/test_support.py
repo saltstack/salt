@@ -427,6 +427,14 @@ class ProfileIntegrityTestCase(TestCase):
         '''
         del self.profiles
 
+    def _render_template_to_yaml(self, name, *args, **kwargs):
+        '''
+        Get template referene for rendering.
+        :return:
+        '''
+        template = open(self.profiles[name]).read()
+        return yaml.load(jinja2.Environment().from_string(template).render(*args, **kwargs))
+
     def test_non_template_profiles_parseable(self):
         '''
         Test shipped default profile is YAML parse-able.
@@ -441,14 +449,6 @@ class ProfileIntegrityTestCase(TestCase):
                 except Exception:
                     parsed = False
                 assert parsed
-
-    def _render_template_to_yaml(self, name, *args, **kwargs):
-        '''
-        Get template referene for rendering.
-        :return:
-        '''
-        template = open(self.profiles[name]).read()
-        return yaml.load(jinja2.Environment().from_string(template).render(*args, **kwargs))
 
     def test_users_template_profile(self):
         '''
