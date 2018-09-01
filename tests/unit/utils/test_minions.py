@@ -48,7 +48,7 @@ class CkMinionsTestCase(TestCase):
     TestCase for salt.utils.minions.CkMinions class
     '''
     def setUp(self):
-        self.ckminions = salt.utils.minions.CkMinions({})
+        self.ckminions = salt.utils.minions.CkMinions({'minion_data_cache': True})
 
     def test_spec_check(self):
         # Test spec-only rule

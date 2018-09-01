@@ -472,7 +472,7 @@ communication.
 ``enable_gpu_grains``
 ---------------------
 
-Default: ``True``
+Default: ``False``
 
 Enable GPU hardware data for your master. Be aware that the master can
 take a while to start up when lspci and/or dmidecode is used to populate the
@@ -2104,23 +2104,6 @@ following configuration:
 
     master_tops:
       ext_nodes: <Shell command which returns yaml>
-
-.. conf_master:: external_nodes
-
-``external_nodes``
-------------------
-
-Default: None
-
-The external_nodes option allows Salt to gather data that would normally be
-placed in a top file from and external node controller. The external_nodes
-option is the executable that will return the ENC data. Remember that Salt
-will look for external nodes AND top files and combine the results if both
-are enabled and available!
-
-.. code-block:: yaml
-
-    external_nodes: cobbler-ext-nodes
 
 .. conf_master:: renderer
 
