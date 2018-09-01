@@ -442,6 +442,13 @@ class ProfileIntegrityTestCase(TestCase):
                     parsed = False
                 assert parsed
 
+    def _render_template_to_yaml(self, name, *args, **kwargs):
+        '''
+        Get template referene for rendering.
+        :return:
+        '''
+        template = open(self.profiles[name]).read()
+        return yaml.load(jinja2.Environment().from_string(template).render(*args, **kwargs))
 
     def test_users_template_profile(self):
         '''
