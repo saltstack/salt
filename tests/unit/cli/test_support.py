@@ -456,9 +456,7 @@ class ProfileIntegrityTestCase(TestCase):
 
         :return:
         '''
-        users_template = open(self.profiles['users']).read()
-        users_data = yaml.load(jinja2.Environment().from_string(users_template).render(
-            salt=MagicMock(return_value=['pokemon'])))
+        users_data = self._render_template_to_yaml('users', salt=MagicMock(return_value=['pokemon']))
         assert len(users_data['all-users']) == 5
         for user_data in users_data['all-users']:
             for tgt in ['user.list_groups', 'shadow.info', 'cron.raw_cron']:
