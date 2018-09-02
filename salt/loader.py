@@ -756,6 +756,8 @@ def grains(opts, force_refresh=False, proxy=None):
             bkeys = set(ret.keys()).intersection(blist)
             for bkey in bkeys:
                 del ret[bkey]
+            if not ret:
+                continue
         if grains_deep_merge:
             salt.utils.dictupdate.update(grains_data, ret)
         else:
