@@ -736,6 +736,11 @@ def grains(opts, force_refresh=False, proxy=None):
         opts['grains'] = {}
 
     grains_data = {}
+    is_filter = False
+    blist = opts.get('grains_blacklist', None)
+    if isinstance(blist, list):
+        is_filter = True
+        blist = set(blist)
     funcs = grain_funcs(opts, proxy=proxy)
     if force_refresh:  # if we refresh, lets reload grain modules
         funcs.clear()
@@ -747,6 +752,10 @@ def grains(opts, force_refresh=False, proxy=None):
         ret = funcs[key]()
         if not isinstance(ret, dict):
             continue
+        if is_filter:
+            bkeys = set(ret.keys()).intersection(blist)
+            for bkey in bkeys:
+                del ret[bkey]
         if grains_deep_merge:
             salt.utils.dictupdate.update(grains_data, ret)
         else:
@@ -1106,7 +1115,6 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         threadsafety = not opts.get('multiprocessing')
         self.context_dict = salt.utils.context.ContextDict(threadsafe=threadsafety)
         self.opts = self.__prep_mod_opts(opts)
-        self._filter_grains()
 
         self.module_dirs = module_dirs
         self.tag = tag
@@ -1409,17 +1417,6 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                 continue
             mod_opts[key] = val
         return mod_opts
-
-    def _filter_grains(self):
-        '''
-        Grains filter
-        '''
-        grains_blacklist = self.opts.get('grains_blacklist', None)
-        grains_list = self.opts.get('grains', {})
-        if isinstance(grains_blacklist, list):
-            for g in grains_blacklist:
-                if g in grains_list:
-                    del self.opts['grains'][g]
 
     def _iter_files(self, mod_name):
         '''
