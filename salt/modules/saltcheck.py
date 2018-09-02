@@ -67,6 +67,7 @@ Example with jinja:
 Example with setup state including pillar:
 
 .. code-block:: jinja
+
     setup_test_environment:
       module_and_function: saltcheck.state_apply
       args:
@@ -83,12 +84,25 @@ Example with setup state including pillar:
 Example with skip:
 
 .. code-block:: jinja
+
     package_latest:
       module_and_function: pkg.upgrade_available
       args:
         - apache2
       assertion: assertFalse
       skip: True
+
+Example with assertion_section:
+
+.. code-block:: jinja
+
+    check_passwd:
+    module_and_function: file.lstat
+    args:
+        - /etc/passwd
+    assertion: assertEqual
+    expected-return: "0"
+    assertion_section: st_uid
 
 Supported assertions:
 assertEqual assertNotEqual assertTrue assertFalse assertIn assertNotIn assertGreater
