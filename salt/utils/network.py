@@ -1861,7 +1861,7 @@ def dns_check(addr, port, safe=False, ipv6=None):
     family = socket.AF_INET6 if ipv6 else socket.AF_INET if ipv6 is False else socket.AF_UNSPEC
     try:
         refresh_dns()
-        hostnames = socket.getaddrinfo(addr, port, family, socket.SOCK_STREAM)
+        hostnames = socket.getaddrinfo(addr, int(port), family, socket.SOCK_STREAM)
         if not hostnames:
             error = True
         else:
