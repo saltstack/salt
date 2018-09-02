@@ -6,7 +6,13 @@ Minion enabling different transports.
 from __future__ import absolute_import, print_function, unicode_literals
 # Import Python Libs
 import sys
-from collections import namedtuple, Iterable, Sequence, Mapping
+
+if sys.version_info > (3, 7):
+    from collections.abc import Iterable, Sequence, Mapping
+    from collections import namedtuple
+else:
+    from collections import namedtuple, Iterable, Sequence, Mapping
+
 import logging
 
 # Import Salt Libs

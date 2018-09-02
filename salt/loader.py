@@ -18,7 +18,6 @@ import functools
 import threading
 import traceback
 import types
-from collections import MutableMapping
 from zipimport import zipimporter
 
 # Import salt libs
@@ -49,6 +48,11 @@ if sys.version_info[:2] >= (3, 5):
 else:
     import imp
     USE_IMPORTLIB = False
+
+if sys.version_info > (3, 7):
+    from collections.abc import MutableMapping
+else:
+    from collections import MutableMapping
 
 try:
     import pkg_resources

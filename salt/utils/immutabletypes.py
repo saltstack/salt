@@ -11,10 +11,14 @@
 from __future__ import absolute_import, unicode_literals
 
 # Import python libs
-import collections
+import sys
+if sys.version_info > (3, 7):
+    from collections.abc import Mapping, Sequence, Set
+else:
+    from collections import Mapping, Sequence, Set
 
 
-class ImmutableDict(collections.Mapping):
+class ImmutableDict(Mapping):
     '''
     An immutable dictionary implementation
     '''
@@ -35,7 +39,7 @@ class ImmutableDict(collections.Mapping):
         return '<{0} {1}>'.format(self.__class__.__name__, repr(self.__obj))
 
 
-class ImmutableList(collections.Sequence):
+class ImmutableList(Sequence):
     '''
     An immutable list implementation
     '''
@@ -62,7 +66,7 @@ class ImmutableList(collections.Sequence):
         return '<{0} {1}>'.format(self.__class__.__name__, repr(self.__obj))
 
 
-class ImmutableSet(collections.Set):
+class ImmutableSet(Set):
     '''
     An immutable set implementation
     '''

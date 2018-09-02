@@ -14,7 +14,12 @@ from __future__ import absolute_import, print_function, unicode_literals
 # Import python libs
 import copy
 import threading
-import collections
+import sys
+if sys.version_info > (3, 7):
+    from collections.abc import MutableMapping
+else:
+    from collections import MutableMapping
+
 from contextlib import contextmanager
 
 from salt.ext import six
@@ -57,7 +62,7 @@ def func_globals_inject(func, **overrides):
         del func_globals[injected]
 
 
-class ContextDict(collections.MutableMapping):
+class ContextDict(MutableMapping):
     '''
     A context manager that saves some per-thread state globally.
     Intended for use with Tornado's StackContext.
@@ -142,7 +147,7 @@ class ContextDict(collections.MutableMapping):
         return new_obj
 
 
-class ChildContextDict(collections.MutableMapping):
+class ChildContextDict(MutableMapping):
     '''An overrideable child of ContextDict
 
     '''
@@ -190,7 +195,7 @@ class ChildContextDict(collections.MutableMapping):
         self.parent._state.data = self._old_data
 
 
-class NamespacedDictWrapper(collections.MutableMapping, dict):
+class NamespacedDictWrapper(MutableMapping, dict):
     '''
     Create a dict which wraps another dict with a specific prefix of key(s)
 
