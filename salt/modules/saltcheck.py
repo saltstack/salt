@@ -96,13 +96,13 @@ Example with assertion_section:
 
 .. code-block:: jinja
 
-    check_passwd:
-    module_and_function: file.lstat
-    args:
-        - /etc/passwd
-    assertion: assertEqual
-    expected-return: "0"
-    assertion_section: st_uid
+    validate_shell:
+      module_and_function: user.info
+      args:
+        - root
+      assertion: assertEqual
+      expected-return: /bin/bash
+      assertion_section: shell
 
 Supported assertions:
 assertEqual assertNotEqual assertTrue assertFalse assertIn assertNotIn assertGreater
