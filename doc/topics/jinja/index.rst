@@ -1476,6 +1476,15 @@ Returns:
 File filters
 ------------
 
+.. jinja_ref:: connection_check
+
+``connection_check``
+-------------
+
+.. versionadded:: Fluorine
+
+Return the ip resolved by dns. This is an alias of `dns_check`.
+
 .. jinja_ref:: is_text_file
 
 ``is_text_file``
