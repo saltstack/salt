@@ -2007,7 +2007,10 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         _expected = 'This is Æ test!'
         if salt.utils.platform.is_windows():
             # Windows cmd.exe will mangle the output using cmd's codepage.
-            _expected = "'This is ’ test!'"
+            if six.PY2:
+                _expected = "'This is A+ test!'"
+            else:
+                _expected = "'This is ’ test!'"
         self.assertEqual(_expected, ret[key]['changes']['stdout'])
 
     def tearDown(self):

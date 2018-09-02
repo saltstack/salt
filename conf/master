@@ -125,7 +125,7 @@
 # The master can take a while to start up when lspci and/or dmidecode is used
 # to populate the grains for the master. Enable if you want to see GPU hardware
 # data for your master.
-# enable_gpu_grains: False
+# enable_gpu_grains: True
 
 # The master maintains a job cache. While this is a great addition, it can be
 # a burden on the master for larger deployments (over 5000 minions).
@@ -581,12 +581,6 @@
 #   ext_nodes: <Shell command which returns yaml>
 #
 #master_tops: {}
-
-# The external_nodes option allows Salt to gather data that would normally be
-# placed in a top file. The external_nodes option is the executable that will
-# return the ENC data. Remember that Salt will look for external nodes AND top
-# files and combine the results if both are enabled!
-#external_nodes: None
 
 # The renderer to use on the minions to render the state data
 #renderer: jinja|yaml
