@@ -1684,6 +1684,8 @@ class LocalClient(object):
             )
             raise SaltClientError
 
+        self._check_cmd_avail(fun, tgt, expr_form, arg)
+
         payload_kwargs = self._prep_pub(
                 tgt,
                 fun,
@@ -1791,6 +1793,8 @@ class LocalClient(object):
             )
             raise SaltClientError
 
+        self._check_cmd_avail(fun, tgt, expr_form, arg)
+
         payload_kwargs = self._prep_pub(
                 tgt,
                 fun,
@@ -1855,6 +1859,41 @@ class LocalClient(object):
 
         raise tornado.gen.Return({'jid': payload['load']['jid'],
                                   'minions': payload['load']['minions']})
+
+    def _check_cmd_avail(self, fun, tgt, expr_form, arg):
+        '''
+        Check to see if the given command can be run
+        '''
+
+        blist = self.opts.get('cmd_blacklist_regex', [])
+        wlist = self.opts.get('cmd_whitelist_regex', [])
+        wret = False
+
+        if fun.startswith('cmd.') and (blist or wlist):
+            if isinstance(arg, list):
+                arg = ' '.join([str(x) if not isinstance(x, six.string_types) else x
+                                for x in arg])
+
+            for comp in blist:
+                if re.search(comp, arg):
+                    raise EauthAuthenticationError(
+                        'Failed to authenticate! This command is Forbidden. '
+                        'Please check cmd_blacklist_regex.'
+                    )
+
+            if wlist:
+                for comp in wlist:
+                    if re.search(comp, arg):
+                        wret = True
+                        break
+            else:
+                wret = True
+
+            if wret is False:
+                raise EauthAuthenticationError(
+                    'Failed to authenticate! This command is Forbidden. '
+                    'Please check cmd_whitelist_regex.'
+                )
 
     def __del__(self):
         # This IS really necessary!
