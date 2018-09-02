@@ -3602,22 +3602,23 @@ def call_id_function(opts):
         sys.exit(salt.defaults.exitcodes.EX_GENERIC)
 
 
-def remove_domain_from_fqdn(newid):
+def remove_domain_from_fqdn(opts, newid):
     '''
     Depending on the values of `minion_id_remove_domain`,
     remove all domains or a single domain from a FQDN, effectivly generating a hostname.
     '''
-    rem_domain = opts.get('minion_id_remove_domain')
-    if rem_domain is True:
+    opt_domain = opts.get('minion_id_remove_domain')
+    if opt_domain is True:
         if '.' in newid:
-            # Clean away any domain
+            # Remove any domain
             newid, xdomain = newid.split('.', 1)
             log.debug('Removed any domain (%s) from minion id.', xdomain)
     else:
-        if newid.upper().endswith('.' + rem_domain.upper()):
+        # Must be string type
+        if newid.upper().endswith('.' + opt_domain.upper()):
             # Remove single domain
-            newid = newid[:-len('.' + rem_domain)]
-            log.debug('Removed single domain %s from minion id.', rem_domain)
+            newid = newid[:-len('.' + opt_domain)]
+            log.debug('Removed single domain %s from minion id.', opt_domain)
     return newid
 
 
@@ -3675,7 +3676,7 @@ def get_id(opts, cache_minion_id=False):
 
     # Optionally remove one or many domains in a generated minion id
     if opts.get('minion_id_remove_domain'):
-        newid = remove_domain_from_fqdn(newid)
+        newid = remove_domain_from_fqdn(opts, newid)
 
     if '__role' in opts and opts.get('__role') == 'minion':
         if opts.get('id_function'):
