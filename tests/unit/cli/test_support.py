@@ -157,7 +157,7 @@ class SaltSupportCollectorTestCase(TestCase):
             assert (archive.bz2open().addfile.call_args[1]['fileobj'].read()
                     == to_bytes('title\n-----\n\nraw-content: data\n\n\n\n'))
 
-    @patch('salt.cli.support.collector.open', MagicMock(return_value='path=/dev/null'))
+    @patch('salt.utils.files.fopen', MagicMock(return_value='path=/dev/null'))
     def test_archive_addlink(self):
         '''
         Test add to the archive a section and link an external file or directory to it.
@@ -175,7 +175,7 @@ class SaltSupportCollectorTestCase(TestCase):
             assert (archive.bz2open().addfile.call_args[1]['fileobj'].read()
                     == to_bytes('Backup Path\n-----------\n\npath=/dev/null\n\n\n'))
 
-    @patch('salt.cli.support.collector.open', MagicMock(return_value='path=/dev/null'))
+    @patch('salt.utils.files.fopen', MagicMock(return_value='path=/dev/null'))
     def test_archive_discard_section(self):
         '''
         Test discard a section from the archive.
