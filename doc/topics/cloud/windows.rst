@@ -12,7 +12,7 @@ Requirements
 
 .. note::
    Support ``winexe`` and ``impacket`` has been deprecated and will be removed in
-   Fluorine. These dependencies are replaced by ``pypsexec`` and ``smbprotocol``
+   Sodium. These dependencies are replaced by ``pypsexec`` and ``smbprotocol``
    respectivly. These are pure python alternatives that are compatible with all
    supported python versions.
 

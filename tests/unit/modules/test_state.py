@@ -10,6 +10,7 @@ import os
 import shutil
 import tempfile
 import textwrap
+import time
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -28,6 +29,7 @@ from tests.support.mock import (
 import salt.config
 import salt.loader
 import salt.state
+import salt.utils.args
 import salt.utils.files
 import salt.utils.json
 import salt.utils.hashutils
@@ -532,7 +534,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
                 mock = MagicMock(return_value={"test": ""})
                 with patch.object(salt.utils.state, 'get_sls_opts', mock):
                     mock = MagicMock(return_value=True)
-                    with patch.object(salt.utils, 'test_mode', mock):
+                    with patch.object(salt.utils.args, 'test_mode', mock):
                         self.assertRaises(SaltInvocationError,
                                           state.single,
                                           "pkg.installed",
@@ -646,7 +648,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
                 )
                 with patch.object(salt.utils.state, 'get_sls_opts', mock):
                     mock = MagicMock(return_value=True)
-                    with patch.object(salt.utils, 'test_mode', mock):
+                    with patch.object(salt.utils.args, 'test_mode', mock):
                         MockState.State.flag = True
                         MockState.HighState.flag = True
                         self.assertEqual(state.sls_id("apache", "http"), 2)
@@ -695,7 +697,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
                 )
                 with patch.object(salt.utils.state, 'get_sls_opts', mock):
                     mock = MagicMock(return_value=True)
-                    with patch.object(salt.utils, 'test_mode', mock):
+                    with patch.object(salt.utils.args, 'test_mode', mock):
                         self.assertRaises(SaltInvocationError,
                                           state.show_sls,
                                           "foo",
@@ -769,7 +771,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
                     mock = MagicMock(return_value={'test': True})
                     with patch.object(salt.utils.state, 'get_sls_opts', mock):
                         mock = MagicMock(return_value=True)
-                        with patch.object(salt.utils, 'test_mode', mock):
+                        with patch.object(salt.utils.args, 'test_mode', mock):
                             self.assertRaises(SaltInvocationError,
                                               state.top,
                                               "reverse_top.sls",
@@ -930,7 +932,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
                                                        "saltenv": None})
                         with patch.object(salt.utils.state, 'get_sls_opts', mock):
                             mock = MagicMock(return_value=True)
-                            with patch.object(salt.utils,
+                            with patch.object(salt.utils.args,
                                               'test_mode',
                                               mock):
                                 self.assertRaises(
@@ -1365,6 +1367,10 @@ class TopFileMergingCase(TestCase, LoaderModuleMockMixin):
                             - {saltenv}_{env_name}
                         '''.format(env_name=env_name, saltenv=saltenv)))
 
+    def tearDown(self):
+        time.sleep(1)
+        os.remove(self.base_top_file)
+
     def show_top(self, **kwargs):
         local_opts = copy.deepcopy(self.dunder_opts)
         local_opts.update(kwargs)
@@ -1387,6 +1393,7 @@ class TopFileMergingCase(TestCase, LoaderModuleMockMixin):
                   '*':
                     - base_base
                 '''))
+        time.sleep(1)
 
     def test_merge_strategy_merge(self):
         '''

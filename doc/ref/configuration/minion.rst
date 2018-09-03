@@ -286,13 +286,14 @@ to the next master in the list if it finds the existing one is dead.
 ------------------
 
 .. versionadded:: 2014.7.0
+.. deprecated:: Fluorine
 
 Default: ``False``
 
-If :conf_minion:`master` is a list of addresses and :conf_minion`master_type`
-is ``failover``, shuffle them before trying to connect to distribute the
-minions over all available masters. This uses Python's :func:`random.shuffle
-<python2:random.shuffle>` method.
+.. warning::
+
+    This option has been deprecated in Salt ``Fluorine``. Please use
+    :conf_minion:`random_master` instead.
 
 .. code-block:: yaml
 
@@ -303,16 +304,37 @@ minions over all available masters. This uses Python's :func:`random.shuffle
 ``random_master``
 -----------------
 
+.. versionadded:: 2014.7.0
+.. versionchanged:: Fluorine
+    The :conf_minion:`master_failback` option can be used in conjunction with
+    ``random_master`` to force the minion to fail back to the first master in the
+    list if the first master is back online. Note that :conf_minion:`master_type`
+    must be set to ``failover`` in order for the ``master_failback`` setting to
+    work.
+
 Default: ``False``
 
-If :conf_minion:`master` is a list of addresses, and :conf_minion`master_type`
-is set to ``failover`` shuffle them before trying to connect to distribute the
-minions over all available masters. This uses Python's :func:`random.shuffle
-<python2:random.shuffle>` method.
+If :conf_minion:`master` is a list of addresses, shuffle them before trying to
+connect to distribute the minions over all available masters. This uses Python's
+:func:`random.shuffle <python2:random.shuffle>` method.
+
+If multiple masters are specified in the 'master' setting as a list, the default
+behavior is to always try to connect to them in the order they are listed. If
+``random_master`` is set to True, the order will be randomized instead upon Minion
+startup. This can be helpful in distributing the load of many minions executing
+``salt-call`` requests, for example, from a cron job. If only one master is listed,
+this setting is ignored and a warning is logged.
 
 .. code-block:: yaml
 
     random_master: True
+
+.. note::
+
+    When the ``failover``, ``master_failback``, and ``random_master`` options are
+    used together, only the "secondary masters" will be shuffled. The first master
+    in the list is ignored in the :func:`random.shuffle <python2:random.shuffle>`
+    call. See :conf_minion:`master_failback` for more information.
 
 .. conf_minion:: retry_dns
 
@@ -1489,6 +1511,25 @@ Specifies which keys are examined by
         - GlobalIPv6Address
         - IPv6Gateway
 
+.. conf_minion:: optimization_order
+
+``optimization_order``
+----------------------
+
+Default: ``[0, 1, 2]``
+
+In cases where Salt is distributed without .py files, this option determines
+the priority of optimization level(s) Salt's module loader should prefer.
+
+.. note::
+    This option is only supported on Python 3.5+.
+
+.. code-block:: yaml
+
+    optimization_order:
+      - 2
+      - 0
+      - 1
 
 Minion Execution Module Management
 ==================================
@@ -3003,7 +3044,22 @@ at the moment a single state fails
 Include Configuration
 =====================
 
-.. conf_minion:: include
+Configuration can be loaded from multiple files. The order in which this is
+done is:
+
+1. The minion config file itself
+
+2. The files matching the glob in :conf_minion:`default_include`
+
+3. The files matching the glob in :conf_minion:`include` (if defined)
+
+Each successive step overrides any values defined in the previous steps.
+Therefore, any config options defined in one of the
+:conf_minion:`default_include` files would override the same value in the
+minion config file, and any options defined in :conf_minion:`include` would
+override both.
+
+.. conf_minion:: default_include
 
 ``default_include``
 -------------------
@@ -3021,6 +3077,7 @@ file.
     files are prefixed with an underscore. A common example of this is the
     ``_schedule.conf`` file.
 
+.. conf_minion:: include
 
 ``include``
 -----------

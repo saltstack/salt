@@ -21,6 +21,7 @@ from tests.support.mock import (
 # Import Salt Libs
 import salt.utils.files
 import salt.utils.templates as templates
+import salt.utils.platform
 import salt.transport
 import salt.modules.cp as cp
 from salt.exceptions import CommandExecutionError
@@ -132,8 +133,12 @@ class CpTestCase(TestCase, LoaderModuleMockMixin):
         Test if push works with good posix path.
         '''
         filename = '/saltines/test.file'
+        if salt.utils.platform.is_windows():
+            filename = 'c:\\saltines\\test.file'
         with patch('salt.modules.cp.os.path',
                    MagicMock(isfile=Mock(return_value=True), wraps=cp.os.path)), \
+                patch('salt.modules.cp.os.path',
+                      MagicMock(getsize=MagicMock(return_value=10), wraps=cp.os.path)), \
                 patch.multiple('salt.modules.cp',
                                _auth=MagicMock(**{'return_value.gen_token.return_value': 'token'}),
                                __opts__={'id': 'abc', 'file_buffer_size': 10}), \
@@ -151,6 +156,7 @@ class CpTestCase(TestCase, LoaderModuleMockMixin):
                     cmd='_file_recv',
                     tok='token',
                     path=['saltines', 'test.file'],
+                    size=10,
                     data=b'',  # data is empty here because load['data'] is overwritten
                     id='abc'
                 )
