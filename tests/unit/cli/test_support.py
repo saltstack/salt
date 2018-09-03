@@ -441,7 +441,7 @@ class ProfileIntegrityTestCase(TestCase):
 
         :return:
         '''
-        for t_name in ['default', 'jobs-active', 'jobs-last', 'network', 'postgres', 'salt']:
+        for t_name in ['default', 'jobs-active', 'jobs-last', 'network', 'postgres']:
             with open(self.profiles[t_name]) as ref:
                 try:
                     yaml.load(ref)
