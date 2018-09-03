@@ -34,6 +34,8 @@ import salt.cli.support.localrunner
 import salt.output.table_out
 import salt.runner
 from salt.ext import six
+import salt.utils.files
+
 
 salt.output.table_out.__opts__ = {}
 log = logging.getLogger(__name__)
@@ -161,7 +163,7 @@ class SupportDataCollector(object):
         :return:
         '''
         if not isinstance(path, file):
-            path = open(path)
+            path = salt.utils.files.fopen(path)
         self.__current_section.append({title: path})
 
 
