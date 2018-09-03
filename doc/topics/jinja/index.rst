@@ -1483,7 +1483,7 @@ File filters
 
 .. versionadded:: Fluorine
 
-Return the ip resolved by dns. This is an alias of `dns_check`.
+Return the IP resolved by DNS. This is an alias of `dns_check`.
 
 .. jinja_ref:: is_text_file
 
