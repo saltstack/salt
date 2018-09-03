@@ -666,21 +666,12 @@ def _run(cmd,
         except (OSError, IOError) as exc:
             msg = (
                 'Unable to run command \'{0}\' with the context \'{1}\', '
-                'reason: '.format(
+                'reason: {2}'.format(
                     cmd if output_loglevel is not None else 'REDACTED',
-                    new_kwargs
+                    new_kwargs,
+                    exc
                 )
             )
-            try:
-                if exc.filename is None:
-                    msg += 'command not found'
-                else:
-                    msg += '{0}: {1}'.format(exc, exc.filename)
-            except AttributeError:
-                # Both IOError and OSError have the filename attribute, so this
-                # is a precaution in case the exception classes in the previous
-                # try/except are changed.
-                msg += 'unknown'
             raise CommandExecutionError(msg)
 
         try:
