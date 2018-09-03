@@ -2,7 +2,6 @@
 from __future__ import absolute_import, print_function, unicode_literals
 import os
 import sys
-import six
 import copy
 import yaml
 import json
@@ -34,6 +33,7 @@ import salt.cli.support.intfunc
 import salt.cli.support.localrunner
 import salt.output.table_out
 import salt.runner
+from salt.ext import six
 
 salt.output.table_out.__opts__ = {}
 log = logging.getLogger(__name__)
