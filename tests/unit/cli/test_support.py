@@ -79,7 +79,7 @@ class SaltSupportIndentOutputTestCase(TestCase):
 
         conf = {0: 'MAGENTA', 2: 'RED', 4: 'WHITE', 6: 'YELLOW'}
         self.iout = IndentOutput(conf=conf, device=self.device)
-        for indent in sorted(list(conf.keys())):
+        for indent in sorted(list(conf)):
             self.iout.put(self.message, indent=indent)
 
         step = 1
