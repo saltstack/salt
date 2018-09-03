@@ -8,6 +8,7 @@ import json
 import logging
 import tarfile
 import time
+import salt.ext.six as six
 
 if six.PY2:
     import exceptions
@@ -33,7 +34,6 @@ import salt.cli.support.intfunc
 import salt.cli.support.localrunner
 import salt.output.table_out
 import salt.runner
-from salt.ext import six
 import salt.utils.files
 
 
