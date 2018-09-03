@@ -719,7 +719,7 @@ def _wait_for_ip(name, session):
 
 def _run_async_task(task=None, session=None):
     '''
-    Run  XenAPI task in async mode to prevent timeouts
+    Run  XenAPI task in asynchronous mode to prevent timeouts
     '''
     if task is None or session is None:
         return None

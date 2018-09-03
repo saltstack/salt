@@ -99,9 +99,9 @@ def beacon(config):
                 _mount = part.mountpoint
 
                 try:
-                    _current_usage = psutil.disk_usage(mount)
+                    _current_usage = psutil.disk_usage(_mount)
                 except OSError:
-                    log.warning('%s is not a valid mount point.', mount)
+                    log.warning('%s is not a valid mount point.', _mount)
                     continue
 
                 current_usage = _current_usage.percent

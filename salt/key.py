@@ -35,7 +35,7 @@ import salt.utils.user
 
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 from salt.ext import six
-from salt.ext.six.moves import input
+from salt.ext.six.moves import input, zip_longest
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
 
 # Import third party libs
@@ -156,15 +156,24 @@ class KeyCLI(object):
         self.auth = low
 
     def _get_args_kwargs(self, fun, args=None):
+        argspec = salt.utils.args.get_function_argspec(fun)
         if args is None:
-            argspec = salt.utils.args.get_function_argspec(fun)
             args = []
             if argspec.args:
-                for arg in argspec.args:
-                    args.append(self.opts.get(arg))
-        args, kwargs = salt.minion.load_args_and_kwargs(
-            fun,
-            args)
+                # Iterate in reverse order to ensure we get the correct default
+                # value for the positional argument.
+                for arg, default in zip_longest(reversed(argspec.args),
+                                                reversed(argspec.defaults or ())):
+                    args.append(self.opts.get(arg, default))
+            # Reverse the args so that they are in the correct order
+            args = args[::-1]
+
+        if argspec.keywords is None:
+            kwargs = {}
+        else:
+            args, kwargs = salt.minion.load_args_and_kwargs(
+                fun,
+                args)
         return args, kwargs
 
     def _run_cmd(self, cmd, args=None):

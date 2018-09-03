@@ -20,8 +20,15 @@ pipeline {
         }
         stage('setup') {
             steps {
-                sh 'eval "$(pyenv init -)"; pyenv install 2.7.14 || echo "We already have this python."; pyenv local 2.7.14; pyenv shell 2.7.14'
-                sh 'eval "$(pyenv init -)"; pip install tox'
+                sh '''
+                eval "$(pyenv init -)"
+                pyenv --version
+                pyenv install --skip-existing 2.7.14
+                pyenv local 2.7.14
+                pyenv shell 2.7.14
+                python --version
+                pip install tox
+                '''
             }
         }
         stage('linting') {
@@ -29,13 +36,32 @@ pipeline {
             parallel {
                 stage('salt linting') {
                     steps {
-                        sh 'eval "$(pyenv init - --no-rehash)"; tox -e pylint-salt $(find salt/ -name "*.py" -exec git diff --name-only "origin/$CHANGE_TARGET" "origin/$BRANCH_NAME" setup.py {} +) | tee pylint-report.xml'
+                        sh '''
+                        eval "$(pyenv init - --no-rehash)"
+                        _FILES="$(find salt/ -name "*.py" -exec git diff --name-only "origin/$CHANGE_TARGET" "origin/$BRANCH_NAME" {} +)"
+                        _FILES="$_FILES $(git diff --name-only "origin/$CHANGE_TARGET" "origin/$BRANCH_NAME" setup.py)"
+                        if [[ -z ${_FILES} ]]; then
+                            echo "No pylint run, no changes found in the files"
+                            echo "empty" pylint-reports.xml
+                        else
+                            tox -e pylint-salt ${_FILES} | tee pylint-report.xml
+                        fi
+                        '''
                         archiveArtifacts artifacts: 'pylint-report.xml'
                     }
                 }
                 stage('test linting') {
                     steps {
-                        sh 'eval "$(pyenv init - --no-rehash)"; tox -e pylint-tests $(find tests/ -name "*.py" -exec git diff --name-only "origin/$CHANGE_TARGET" "origin/$BRANCH_NAME" {} +) | tee pylint-report-tests.xml'
+                        sh '''
+                        eval "$(pyenv init - --no-rehash)"
+                        _FILES="$(find tests/ -name "*.py" -exec git diff --name-only "origin/$CHANGE_TARGET" "origin/$BRANCH_NAME" setup.py {} +)"
+                        if [[ -z ${_FILES} ]]; then
+                            echo "No pylint run, no changes found in the files"
+                            touch pylint-report-tests.xml
+                        else
+                            tox -e pylint-tests ${_FILES} | tee pylint-report-tests.xml
+                        fi
+                        '''
                         archiveArtifacts artifacts: 'pylint-report-tests.xml'
                     }
                 }
