@@ -10,15 +10,13 @@ salt module execution and yaml. Saltcheck uses salt modules to return data, then
 runs an assertion against that return. This allows for testing with all the
 features included in salt modules.
 
-In order to run state and highstate saltcheck tests a sub-folder of a state must
-be created and named ``saltcheck-tests``.
-
-Tests for a state should be created in files ending in ``*.tst`` and placed in
-the ``saltcheck-tests`` folder. ``tst`` files are run through the salt rendering system,
-enabling tests to be written in yaml (or renderer of choice), and include jinja,
-and the usual grain and pillar information. Like states, multiple tests can be specified
-in a tst file. Multiple ``*.tst`` files can be created in the ``saltcheck-tests`` folder,
-and should be named the same as the associated state. The ``id`` of a test works in the
+In order to run state and highstate saltcheck tests, a sub-folder in the state directory
+must be created and named ``saltcheck-tests``. Tests for a state should be created in files
+ending in ``*.tst`` and placed in the ``saltcheck-tests`` folder. ``tst`` files are run
+through the salt rendering system, enabling tests to be written in yaml (or renderer of choice),
+and include jinja, as well as the usual grain and pillar information. Like states, multiple tests can
+be specified in a ``tst`` file. Multiple ``tst`` files can be created in the ``saltcheck-tests``
+folder, and should be named the same as the associated state. The ``id`` of a test works in the
 same manner as in salt state files and should be unique and descriptive.
 
 Usage
@@ -36,9 +34,10 @@ Example file system layout:
             config.tst
             deployment_validation.tst
 
-Tests can be run for each state, all apache/saltcheck/*.tst tests, or for all states assigned to the minion in top.sls.
-Tests may also be created with no associated state. These tests will be run through the use of ``saltcheck.run_state_tests``,
-but will not be automatically run by ``saltcheck.run_highstate_tests``.
+Tests can be run for each state by name, for all apache/saltcheck/*.tst files, or for all states
+assigned to the minion in top.sls. Tests may also be created with no associated state. These tests
+will be run through the use of ``saltcheck.run_state_tests``, but will not be automatically run
+by ``saltcheck.run_highstate_tests``.
 
 .. code-block:: bash
 
@@ -50,7 +49,7 @@ but will not be automatically run by ``saltcheck.run_highstate_tests``.
 Examples
 --------
 
-Example:
+Basic Example:
 
 .. code-block:: yaml
 
@@ -130,7 +129,13 @@ Supported assertions
 * assertLessEqual
 * assertEmptyassertNotEmpty
 
-.. warning::  The saltcheck.state_apply function is an alias for :py:func:`state.apply <salt.modules.state.apply>`. If using the :ref:`ACL system <acl-eauth>` ``saltcheck.*`` might provide more capability than intended if only ``saltcheck.run_state_tests`` and ``saltcheck.run_highstate_tests`` are needed.
+.. warning::
+
+  The saltcheck.state_apply function is an alias for
+  :py:func:`state.apply <salt.modules.state.apply>`. If using the
+  :ref:`ACL system <acl-eauth>` ``saltcheck.*`` might provide more capability
+  than intended if only ``saltcheck.run_state_tests`` and
+  ``saltcheck.run_highstate_tests`` are needed.
 '''
 
 # Import Python libs
@@ -323,8 +328,8 @@ def _generate_out_list(results):
         out_list.append({key: value})
     out_list.sort()
     out_list.append({'TEST RESULTS': {'Execution Time': round(total_time, 4),
-                     'Passed': passed, 'Failed': failed, 'Skipped': skipped,
-                     'Missing Tests': missing_tests}})
+                                      'Passed': passed, 'Failed': failed, 'Skipped': skipped,
+                                      'Missing Tests': missing_tests}})
     return out_list
 
 
@@ -431,9 +436,9 @@ class SaltCheck(object):
         elif m_and_f in ["saltcheck.state_apply"]:
             required_total = 2
         elif assertion in ["assertEmpty",
-                         "assertNotEmpty",
-                         "assertTrue",
-                         "assertFalse"]:
+                           "assertNotEmpty",
+                           "assertTrue",
+                           "assertFalse"]:
             required_total = 4
         else:
             required_total = 6
@@ -482,7 +487,7 @@ class SaltCheck(object):
             raise
         except Exception:
             raise
-        if type(value) == dict and assertion_section:
+        if isinstance(value, dict) and assertion_section:
             return value.get(assertion_section, False)
         else:
             return value
