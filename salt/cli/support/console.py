@@ -65,7 +65,6 @@ class MessagesOutput(IndentOutput):
 
         self.__colored_output(title, message, title_color, color, ident=ident)
 
-
     def info(self, message, ident=0):
         '''
         Write an info message to the CLI.
