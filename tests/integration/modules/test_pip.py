@@ -53,6 +53,8 @@ class PipModuleTest(ModuleCase):
         del self.pip_temp
         if 'PIP_SOURCE_DIR' in os.environ:
             os.environ.pop('PIP_SOURCE_DIR')
+        if 'PIP_BUILD_DIR' in os.environ:
+            os.environ.pop('PIP_BUILD_DIR')
 
     def _check_download_error(self, ret):
         '''

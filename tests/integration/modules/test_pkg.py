@@ -324,7 +324,10 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
             if ret == '' or ret == {}:
                 self.skipTest('No updates available for this machine.  Skipping pkg.upgrade test.')
             else:
-                ret = self.run_function(func)
+                args = []
+                if os_family == 'Debian':
+                    args = ['dist_upgrade=True']
+                ret = self.run_function(func, args)
                 self.assertNotEqual(ret, {})
 
     @destructiveTest
