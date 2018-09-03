@@ -14,6 +14,7 @@ from salt.utils.color import get_colors
 from salt.utils.stringutils import to_bytes
 import salt.exceptions
 import salt.cli.support.collector
+import salt.utils.files
 import os
 import yaml
 import jinja2
@@ -432,7 +433,7 @@ class ProfileIntegrityTestCase(TestCase):
         Get template referene for rendering.
         :return:
         '''
-        template = open(self.profiles[name]).read()
+        template = salt.utils.files.fopen(self.profiles[name]).read()
         return yaml.load(jinja2.Environment().from_string(template).render(*args, **kwargs))
 
     def test_non_template_profiles_parseable(self):
@@ -442,7 +443,7 @@ class ProfileIntegrityTestCase(TestCase):
         :return:
         '''
         for t_name in ['default', 'jobs-active', 'jobs-last', 'network', 'postgres']:
-            with open(self.profiles[t_name]) as ref:
+            with salt.utils.files.fopen(self.profiles[t_name]) as ref:
                 try:
                     yaml.load(ref)
                     parsed = True
