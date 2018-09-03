@@ -900,7 +900,7 @@ def mod_watch(name,
                     else:
                         func = __salt__['service.restart']
                         verb = 'restart'
-            elif 'service.reload' in __salt__ and reload and not isinstance(reload, dict):
+            elif 'service.reload' in __salt__ and reload:
                 if 'service.force_reload' in __salt__ and force:
                     func = __salt__['service.force_reload']
                     verb = 'forcefully reload'
