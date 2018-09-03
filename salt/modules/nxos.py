@@ -4,7 +4,7 @@ Execution module for Cisco NX OS Switches.
 
 .. versionadded:: 2016.11.0
 
-This modules supports execution using a Proxy Minion or Native Minion:
+This module supports execution using a Proxy Minion or Native Minion:
 1) Proxy Minion: Connect over SSH or NX-API HTTP(S).
    See :mod:`salt.proxy.nxos <salt.proxy.nxos>` for proxy minion setup details.
 2) Native Minion: Connect over NX-API Unix Domain Socket (UDS).
