@@ -519,6 +519,7 @@ def salt_extend(extension, name, description, salt_dir, merge):
                           salt_dir=salt_dir,
                           merge=merge)
 
+
 def salt_support():
     '''
     Run Salt Support that collects system data, logs etc for debug and support purposes.
