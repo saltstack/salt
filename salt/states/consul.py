@@ -3,7 +3,7 @@
 Consul Management
 =================
 
-The consul module is used to create and manage ACL
+The consul module is used to create and manage Consul ACLs
 
 .. code-block:: yaml
 
