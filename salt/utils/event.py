@@ -61,9 +61,9 @@ import logging
 import datetime
 import sys
 
-if sys.version_info > (3, 7):
+try:
     from collections.abc import MutableMapping
-else:
+except ImportError:
     from collections import MutableMapping
 
 from multiprocessing.util import Finalize

@@ -11,10 +11,9 @@
 from __future__ import absolute_import, unicode_literals
 
 # Import python libs
-import sys
-if sys.version_info > (3, 7):
+try:
     from collections.abc import Mapping, Sequence, Set
-else:
+except ImportError:
     from collections import Mapping, Sequence, Set
 
 

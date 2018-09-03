@@ -7,11 +7,12 @@ from __future__ import absolute_import, print_function, unicode_literals
 # Import Python Libs
 import sys
 
-if sys.version_info > (3, 7):
+try:
     from collections.abc import Iterable, Sequence, Mapping
-    from collections import namedtuple
-else:
-    from collections import namedtuple, Iterable, Sequence, Mapping
+except ImportError:
+    from collections import Iterable, Sequence, Mapping
+
+from collections import namedtuple
 
 import logging
 

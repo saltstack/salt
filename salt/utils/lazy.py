@@ -6,12 +6,11 @@ Lazily-evaluated data structures, primarily used by Salt's loader
 # Import Python Libs
 from __future__ import absolute_import, unicode_literals
 import logging
-import sys
 import salt.exceptions
 
-if sys.version_info > (3, 7):
+try:
     from collections.abc import MutableMapping
-else:
+except ImportError:
     from collections import MutableMapping
 
 log = logging.getLogger(__name__)

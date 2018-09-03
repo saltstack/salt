@@ -11,12 +11,11 @@ import copy
 import fnmatch
 import logging
 import re
-import sys
 
-if sys.version_info > (3, 7):
-    from collections.abc import MutableMapping, Mapping
-else:
-    from collections import MutableMapping, Mapping
+try:
+    from collections.abc import Mapping
+except ImportError:
+    from collections import Mapping
 
 # Import Salt libs
 import salt.utils.dictupdate

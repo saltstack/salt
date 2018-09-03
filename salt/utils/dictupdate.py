@@ -6,11 +6,10 @@ http://stackoverflow.com/a/3233356
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
-import sys
 
-if sys.version_info > (3, 7):
+try:
     from collections.abc import Mapping
-else:
+except ImportError:
     from collections import Mapping
 
 # Import 3rd-party libs

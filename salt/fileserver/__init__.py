@@ -24,9 +24,9 @@ import salt.utils.versions
 from salt.utils.args import get_function_argspec as _argspec
 from salt.utils.decorators import ensure_unicode_args
 
-if sys.version_info > (3, 7):
+try:
     from collections.abc import Sequence
-else:
+except ImportError:
     from collections import Sequence
 
 # Import 3rd-party libs

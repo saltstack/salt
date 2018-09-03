@@ -14,10 +14,9 @@ from __future__ import absolute_import, print_function, unicode_literals
 # Import python libs
 import copy
 import threading
-import sys
-if sys.version_info > (3, 7):
+try:
     from collections.abc import MutableMapping
-else:
+except ImportError:
     from collections import MutableMapping
 
 from contextlib import contextmanager

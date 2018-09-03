@@ -23,10 +23,9 @@
 # Import python libs
 from __future__ import absolute_import, unicode_literals, print_function
 
-import sys
-if sys.version_info > (3, 7):
+try:
     from collections.abc import Callable
-else:
+except ImportError:
     from collections import Callable
 
 # Import 3rd-party libs
