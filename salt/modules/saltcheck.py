@@ -6,18 +6,23 @@ A module for testing the logic of states and highstates
 :maturity:      new
 
 Saltcheck provides unittest like functionality requiring only the knowledge of
-salt module execution and yaml.
+salt module execution and yaml. Saltcheck uses salt modules to return data, then
+runs an assertion against that return. This allows for testing with all the
+features included in salt modules.
 
 In order to run state and highstate saltcheck tests a sub-folder of a state must
 be created and named ``saltcheck-tests``.
 
 Tests for a state should be created in files ending in ``*.tst`` and placed in
-the ``saltcheck-tests`` folder.
+the ``saltcheck-tests`` folder. ``tst`` files are run through the salt rendering system,
+enabling tests to be written in yaml (or renderer of choice), and include jinja,
+and the usual grain and pillar information. Like states, multiple tests can be specified
+in a tst file. Multiple ``*.tst`` files can be created in the ``saltcheck-tests`` folder,
+and should be named the same as the associated state. The ``id`` of a test works in the
+same manner as in salt state files and should be unique and descriptive.
 
-Multiple tests can be specified in a file. Multiple ``*.tst`` files can be
-created in the ``saltcheck-tests`` folder. Salt rendering is supported in test
-files (e.g. ``yaml + jinja``). The ``id`` of a test works in the same manner as
-in salt state files. They should be unique and descriptive.
+Usage
+=====
 
 Example file system layout:
 
@@ -29,14 +34,21 @@ Example file system layout:
         saltcheck-tests/
             init.tst
             config.tst
+            deployment_validation.tst
 
-Tests can be run for each state, or all apache tests
+Tests can be run for each state, all apache/saltcheck/*.tst tests, or for all states assigned to the minion in top.sls.
+Tests may also be created with no associated state. These tests will be run through the use of ``saltcheck.run_state_tests``,
+but will not be automatically run by ``saltcheck.run_highstate_tests``.
 
 .. code-block:: bash
 
     salt '*' saltcheck.run_state_tests apache,apache.config
     salt '*' saltcheck.run_state_tests apache check_all=True
     salt '*' saltcheck.run_highstate_tests
+    salt '*' saltcheck.run_state_tests apache.deployment_validation
+
+Examples
+--------
 
 Example:
 
@@ -104,9 +116,21 @@ Example with assertion_section:
       expected-return: /bin/bash
       assertion_section: shell
 
-Supported assertions:
-assertEqual assertNotEqual assertTrue assertFalse assertIn assertNotIn assertGreater
-assertGreaterEqual assertLess assertLessEqual assertEmpty assertNotEmpty
+Supported assertions
+--------------------
+* assertEqual
+* assertNotEqual
+* assertTrue
+* assertFalse
+* assertIn
+* assertNotIn
+* assertGreater
+* assertGreaterEqual
+* assertLess
+* assertLessEqual
+* assertEmptyassertNotEmpty
+
+.. warning::  The saltcheck.state_apply function is an alias for :py:func:`state.apply <salt.modules.state.apply>`. If using the :ref:`ACL system <acl-eauth>` ``saltcheck.*`` might provide more capability than intended if only ``saltcheck.run_state_tests`` and ``saltcheck.run_highstate_tests`` are needed.
 '''
 
 # Import Python libs
@@ -182,10 +206,10 @@ def run_test(**kwargs):
 
 def state_apply(state_name, **kwargs):
     '''
-    Runs `state.apply` with given options to set up test data
+    Runs :py:func:`state.apply <salt.modules.state.apply>` with given options to set up test data.
     Intended to be used for optional test setup or teardown
 
-    Reference the `state.apply` module documentation for arguments and usage options
+    Reference the :py:func:`state.apply <salt.modules.state.apply>` module documentation for arguments and usage options
 
     CLI Example:
 
@@ -239,7 +263,7 @@ def run_state_tests(state, saltenv=None, check_all=False):
 
 def run_highstate_tests(saltenv=None):
     '''
-    Execute all tests for a salt highstate and return results
+    Execute all tests for states assigned to the minion through highstate and return results
 
     CLI Example:
 
