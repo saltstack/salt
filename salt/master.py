@@ -977,7 +977,7 @@ class MWorker(salt.utils.process.SignalHandlingMultiprocessingProcess):
         self.mkey = mkey
         self.key = key
         self.k_mtime = 0
-        self.stats = collections.defaultdict(lambda: {'mean': 0, 'runs': 0})
+        self.stats = collections.defaultdict(lambda: {'mean': 0, 'latency': 0, 'runs': 0})
         self.stat_clock = time.time()
 
     # We need __setstate__ and __getstate__ to also pickle 'SMaster.secrets'.
@@ -1059,18 +1059,31 @@ class MWorker(salt.utils.process.SignalHandlingMultiprocessingProcess):
                'clear': self._handle_clear}[key](load)
         raise tornado.gen.Return(ret)
 
-    def _post_stats(self, start, cmd):
+    def _post_stats(self, start_time, data):
         '''
         Calculate the master stats and fire events with stat info
         '''
-        end = time.time()
-        duration = end - start
+        end_time = time.time()
+        cmd = data['cmd']
+        try:
+            jid = data['jid']
+        except KeyError:
+            jid = None
+
+        if jid:
+            # Only calculate latency if the payload contains a jid
+            create_time = int(time.mktime(time.strptime(jid, '%Y%m%d%H%M%S%f')))
+            latency = start_time - create_time
+            self.stats[cmd]['latency'] = (self.stats[cmd]['latency'] * (self.stats[cmd]['runs'] - 1) + latency) / self.stats[cmd]['runs']
+
+        duration = end_time - start_time
         self.stats[cmd]['mean'] = (self.stats[cmd]['mean'] * (self.stats[cmd]['runs'] - 1) + duration) / self.stats[cmd]['runs']
-        if end - self.stat_clock > self.opts['master_stats_event_iter']:
+
+        if end_time - self.stat_clock > self.opts['master_stats_event_iter']:
             # Fire the event with the stats and wipe the tracker
-            self.aes_funcs.event.fire_event({'time': end - self.stat_clock, 'worker': self.name, 'stats': self.stats}, tagify(self.name, 'stats'))
-            self.stats = collections.defaultdict(lambda: {'mean': 0, 'runs': 0})
-            self.stat_clock = end
+            self.aes_funcs.event.fire_event({'time': end_time - self.stat_clock, 'worker': self.name, 'stats': self.stats}, tagify(self.name, 'stats'))
+            self.stats = collections.defaultdict(lambda: {'mean': 0, 'latency': 0, 'runs': 0})
+            self.stat_clock = end_time
 
     def _handle_clear(self, load):
         '''
@@ -1089,7 +1102,7 @@ class MWorker(salt.utils.process.SignalHandlingMultiprocessingProcess):
             self.stats[cmd]['runs'] += 1
         ret = getattr(self.clear_funcs, cmd)(load), {'fun': 'send_clear'}
         if self.opts['master_stats']:
-            self._post_stats(start, cmd)
+            self._post_stats(start, load)
         return ret
 
     def _handle_aes(self, data):
@@ -1100,6 +1113,7 @@ class MWorker(salt.utils.process.SignalHandlingMultiprocessingProcess):
         :return: The result of passing the load to a function in AESFuncs corresponding to
                  the command specified in the load's 'cmd' key.
         '''
+
         if 'cmd' not in data:
             log.error('Received malformed command %s', data)
             return {}
@@ -1120,7 +1134,7 @@ class MWorker(salt.utils.process.SignalHandlingMultiprocessingProcess):
             ret = run_func(data)
 
         if self.opts['master_stats']:
-            self._post_stats(start, cmd)
+            self._post_stats(start, data)
         return ret
 
     def run(self):
