@@ -30,7 +30,8 @@ from tests.support.helpers import (
     with_tempdir,
     with_tempfile,
     Webserver,
-    destructiveTest
+    destructiveTest,
+    dedent,
 )
 from tests.support.mixins import SaltReturnAssertsMixin
 
@@ -2623,64 +2624,57 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
 class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
     marker_start = '# start'
     marker_end = '# end'
-    content = six.text_type(os.linesep.join([
-        'Line 1 of block',
-        'Line 2 of block',
-        ''
-    ]))
-    without_block = six.text_type(os.linesep.join([
-        'Hello world!',
-        '',
-        '# comment here',
-        ''
-    ]))
-    with_non_matching_block = six.text_type(os.linesep.join([
-        'Hello world!',
-        '',
-        '# start',
-        'No match here',
-        '# end',
-        '# comment here',
-        ''
-    ]))
-    with_non_matching_block_and_marker_end_not_after_newline = six.text_type(os.linesep.join([
-        'Hello world!',
-        '',
-        '# start',
-        'No match here# end',
-        '# comment here',
-        ''
-    ]))
-    with_matching_block = six.text_type(os.linesep.join([
-        'Hello world!',
-        '',
-        '# start',
-        'Line 1 of block',
-        'Line 2 of block',
-        '# end',
-        '# comment here',
-        ''
-    ]))
-    with_matching_block_and_extra_newline = six.text_type(os.linesep.join([
-        'Hello world!',
-        '',
-        '# start',
-        'Line 1 of block',
-        'Line 2 of block',
-        '',
-        '# end',
-        '# comment here',
-        ''
-    ]))
-    with_matching_block_and_marker_end_not_after_newline = six.text_type(os.linesep.join([
-        'Hello world!',
-        '',
-        '# start',
-        'Line 1 of block',
-        'Line 2 of block# end',
-        '# comment here',
-        ''
-    ]))
+    content = dedent(six.text_type('''\
+        Line 1 of block
+        Line 2 of block
+        '''))
+    without_block = dedent(six.text_type('''\
+        Hello world!
+
+        # comment here
+        '''))
+    with_non_matching_block = dedent(six.text_type('''\
+        Hello world!
+
+        # start
+        No match here
+        # end
+        # comment here
+        '''))
+    with_non_matching_block_and_marker_end_not_after_newline = dedent(six.text_type('''\
+        Hello world!
+
+        # start
+        No match here# end
+        # comment here
+        '''))
+    with_matching_block = dedent(six.text_type('''\
+        Hello world!
+
+        # start
+        Line 1 of block
+        Line 2 of block
+        # end
+        # comment here
+        '''))
+    with_matching_block_and_extra_newline = dedent(six.text_type('''\
+        Hello world!
+
+        # start
+        Line 1 of block
+        Line 2 of block
+
+        # end
+        # comment here
+        '''))
+    with_matching_block_and_marker_end_not_after_newline = dedent(six.text_type('''\
+        Hello world!
+
+        # start
+        Line 1 of block
+        Line 2 of block# end
+        # comment here
+        '''))
     content_explicit_posix_newlines = ('Line 1 of block\n'
                                        'Line 2 of block\n')
     content_explicit_windows_newlines = ('Line 1 of block\r\n'

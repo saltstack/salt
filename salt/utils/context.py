@@ -203,10 +203,14 @@ class NamespacedDictWrapper(collections.MutableMapping, dict):
             self.pre_keys = (pre_keys,)
         else:
             self.pre_keys = pre_keys
-        if override_name:
-            self.__class__.__module__ = 'salt'
-            # __name__ can't be assigned a unicode
-            self.__class__.__name__ = str(override_name)  # future lint: disable=blacklisted-function
+        if override_name is not None:
+            import salt.utils.versions
+            salt.utils.versions.warn_until(
+                'Neon',
+                'Overriding the class name is no longer supported. Please '
+                'remove the override_name argument before it is removed in '
+                'Salt Sodium.'
+            )
         super(NamespacedDictWrapper, self).__init__(self._dict())
 
     def _dict(self):
