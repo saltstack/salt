@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
 Management of OpenStack Neutron Security Groups
-=========================================
+===============================================
 
 .. versionadded:: 2018.3.0
 

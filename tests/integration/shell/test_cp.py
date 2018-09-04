@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 
 
     tests.integration.shell.cp
@@ -84,7 +84,7 @@ class CopyTest(ShellCase, ShellCaseCommonTestsMixin):
                 pipes.quote(minion_testfile)
             ))
 
-            data = salt.utils.yaml.safe_load('\n'.join(ret))
+            data = eval('\n'.join(ret), {}, {})  # pylint: disable=eval-used
             for part in six.itervalues(data):
                 self.assertTrue(part[minion_testfile])
 

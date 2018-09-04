@@ -15,22 +15,38 @@ from salt.exceptions import SaltInvocationError
 LOGGER = logging.getLogger(__name__)
 
 
-def set_pause(jid, state_id, duration=None):
+def pause(jid, state_id=None, duration=None):
     '''
     Set up a state id pause, this instructs a running state to pause at a given
     state id. This needs to pass in the jid of the running state and can
     optionally pass in a duration in seconds.
     '''
     minion = salt.minion.MasterMinion(__opts__)
-    minion['state.set_pause'](jid, state_id, duration)
+    minion.functions['state.pause'](jid, state_id, duration)
+
+set_pause = salt.utils.functools.alias_function(pause, 'set_pause')
 
 
-def rm_pause(jid, state_id, duration=None):
+def resume(jid, state_id=None):
     '''
     Remove a pause from a jid, allowing it to continue
     '''
     minion = salt.minion.MasterMinion(__opts__)
-    minion['state.rm_pause'](jid, state_id)
+    minion.functions['state.resume'](jid, state_id)
+
+rm_pause = salt.utils.functools.alias_function(resume, 'rm_pause')
+
+
+def soft_kill(jid, state_id=None):
+    '''
+    Set up a state run to die before executing the given state id,
+    this instructs a running state to safely exit at a given
+    state id. This needs to pass in the jid of the running state.
+    If a state_id is not passed then the jid referenced will be safely exited
+    at the beginning of the next state run.
+    '''
+    minion = salt.minion.MasterMinion(__opts__)
+    minion.functions['state.soft_kill'](jid, state_id)
 
 
 def orchestrate(mods,

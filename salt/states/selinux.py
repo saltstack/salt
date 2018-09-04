@@ -85,8 +85,10 @@ def mode(name):
     '''
     Verifies the mode SELinux is running in, can be set to enforcing,
     permissive, or disabled
-        Note: A change to or from disabled mode requires a system reboot.
-            You will need to perform this yourself.
+
+    .. note::
+        A change to or from disabled mode requires a system reboot. You will
+        need to perform this yourself.
 
     name
         The mode to run SELinux in, permissive, enforcing, or disabled.
@@ -352,8 +354,7 @@ def fcontext_policy_present(name, sel_type, filetype='a', sel_user=None, sel_lev
         if __opts__['test']:
             ret.update({'result': None})
         else:
-            add_ret = __salt__['selinux.fcontext_add_or_delete_policy'](
-                    action='add',
+            add_ret = __salt__['selinux.fcontext_add_policy'](
                     name=name,
                     filetype=filetype,
                     sel_type=sel_type,
@@ -380,8 +381,7 @@ def fcontext_policy_present(name, sel_type, filetype='a', sel_user=None, sel_lev
         if __opts__['test']:
             ret.update({'result': None})
         else:
-            change_ret = __salt__['selinux.fcontext_add_or_delete_policy'](
-                    action='add',
+            change_ret = __salt__['selinux.fcontext_add_policy'](
                     name=name,
                     filetype=filetype,
                     sel_type=sel_type,
@@ -442,8 +442,7 @@ def fcontext_policy_absent(name, filetype='a', sel_type=None, sel_user=None, sel
     if __opts__['test']:
         ret.update({'result': None})
     else:
-        remove_ret = __salt__['selinux.fcontext_add_or_delete_policy'](
-                action='delete',
+        remove_ret = __salt__['selinux.fcontext_delete_policy'](
                 name=name,
                 filetype=filetype,
                 sel_type=sel_type or current_state['sel_type'],
@@ -489,13 +488,13 @@ def port_policy_present(name, sel_type, protocol=None, port=None, sel_range=None
     Makes sure an SELinux port policy for a given port, protocol and SELinux context type is present.
 
     name
-        The protocol and port spec. Can be formatted as (tcp|udp)/(port|port-range).
+        The protocol and port spec. Can be formatted as ``(tcp|udp)/(port|port-range)``.
 
     sel_type
         The SELinux Type.
 
     protocol
-        The protocol for the port (tcp|udp). Required if name is not formatted.
+        The protocol for the port, ``tcp`` or ``udp``. Required if name is not formatted.
 
     port
         The port or port range. Required if name is not formatted.
@@ -518,8 +517,7 @@ def port_policy_present(name, sel_type, protocol=None, port=None, sel_range=None
     if __opts__['test']:
         ret.update({'result': None})
     else:
-        add_ret = __salt__['selinux.port_add_or_delete_policy'](
-            action='add',
+        add_ret = __salt__['selinux.port_add_policy'](
             name=name,
             sel_type=sel_type,
             protocol=protocol,
@@ -545,13 +543,14 @@ def port_policy_absent(name, sel_type=None, protocol=None, port=None):
     Makes sure an SELinux port policy for a given port, protocol and SELinux context type is absent.
 
     name
-        The protocol and port spec. Can be formatted as (tcp|udp)/(port|port-range).
+        The protocol and port spec. Can be formatted as ``(tcp|udp)/(port|port-range)``.
 
     sel_type
-        The SELinux Type. Optional; can be used in determining if policy is present, ignored by semanage port --delete.
+        The SELinux Type. Optional; can be used in determining if policy is present,
+        ignored by ``semanage port --delete``.
 
     protocol
-        The protocol for the port (tcp|udp). Required if name is not formatted.
+        The protocol for the port, ``tcp`` or ``udp``. Required if name is not formatted.
 
     port
         The port or port range. Required if name is not formatted.
@@ -571,8 +570,7 @@ def port_policy_absent(name, sel_type=None, protocol=None, port=None):
     if __opts__['test']:
         ret.update({'result': None})
     else:
-        delete_ret = __salt__['selinux.port_add_or_delete_policy'](
-            action='delete',
+        delete_ret = __salt__['selinux.port_delete_policy'](
             name=name,
             protocol=protocol,
             port=port, )

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Pablo Suárez Hdez. <psuarezhernandez@suse.de>`
+    :codeauthor: Pablo Suárez Hdez. <psuarezhernandez@suse.de>
 '''
 
 # Import Python Libs

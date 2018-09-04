@@ -152,18 +152,18 @@ command:
 CloudStack specific settings
 ============================
 
-security_group
+securitygroup
 ~~~~~~~~~~~~~~
-.. versionadded:: next-release
+.. versionadded:: 2017.7.0
 
 You can specify a list of security groups (by name or id) that should be
-assigned to the VM.
+assigned to the VM:
 
 .. code-block:: yaml
 
     exoscale:
       provider: cloudstack
-      security_group:
+      securitygroup:
         - default
         - salt-master
 

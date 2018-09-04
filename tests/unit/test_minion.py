@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Mike Place <mp@saltstack.com>`
+    :codeauthor: Mike Place <mp@saltstack.com>
 '''
 
 # Import python libs
@@ -19,7 +19,9 @@ import salt.utils.event as event
 from salt.exceptions import SaltSystemExit
 import salt.syspaths
 import tornado
+import tornado.testing
 from salt.ext.six.moves import range
+
 
 __opts__ = {}
 
@@ -101,33 +103,6 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                                                          'master_uri': 'tcp://127.0.0.1:4555',
                                                          'source_ip': '111.1.0.1',
                                                          'master_ip': '127.0.0.1'}
-
-    @skip_if_not_root
-    def test_sock_path_len(self):
-        '''
-        This tests whether or not a larger hash causes the sock path to exceed
-        the system's max sock path length. See the below link for more
-        information.
-
-        https://github.com/saltstack/salt/issues/12172#issuecomment-43903643
-        '''
-        opts = {
-            'id': 'salt-testing',
-            'hash_type': 'sha512',
-            'sock_dir': os.path.join(salt.syspaths.SOCK_DIR, 'minion'),
-            'extension_modules': ''
-        }
-        with patch.dict(__opts__, opts):
-            try:
-                event_publisher = event.AsyncEventPublisher(__opts__)
-                result = True
-            except ValueError:
-                #  There are rare cases where we operate a closed socket, especially in containers.
-                # In this case, don't fail the test because we'll catch it down the road.
-                result = True
-            except SaltSystemExit:
-                result = False
-        self.assertTrue(result)
 
     # Tests for _handle_decoded_payload in the salt.minion.Minion() class: 3
 
@@ -230,10 +205,10 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             try:
 
                 # mock gen.sleep to throw a special Exception when called, so that we detect it
-                class SleepCalledEception(Exception):
+                class SleepCalledException(Exception):
                     """Thrown when sleep is called"""
                     pass
-                tornado.gen.sleep.return_value.set_exception(SleepCalledEception())
+                tornado.gen.sleep.return_value.set_exception(SleepCalledException())
 
                 # up until process_count_max: gen.sleep does not get called, processes are started normally
                 for i in range(process_count_max):
@@ -248,7 +223,7 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 mock_data = {'fun': 'foo.bar',
                              'jid': process_count_max + 1}
 
-                self.assertRaises(SleepCalledEception,
+                self.assertRaises(SleepCalledException,
                                   lambda: io_loop.run_sync(lambda: minion._handle_decoded_payload(mock_data)))
                 self.assertEqual(salt.utils.process.SignalHandlingMultiprocessingProcess.start.call_count,
                                  process_count_max)
@@ -266,7 +241,9 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 patch('salt.utils.process.SignalHandlingMultiprocessingProcess.join', MagicMock(return_value=True)):
             mock_opts = self.get_config('minion', from_scratch=True)
             mock_opts['beacons_before_connect'] = True
-            minion = salt.minion.Minion(mock_opts, io_loop=tornado.ioloop.IOLoop())
+            io_loop = tornado.ioloop.IOLoop()
+            io_loop.make_current()
+            minion = salt.minion.Minion(mock_opts, io_loop=io_loop)
             try:
 
                 try:
@@ -290,7 +267,9 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 patch('salt.utils.process.SignalHandlingMultiprocessingProcess.join', MagicMock(return_value=True)):
             mock_opts = self.get_config('minion', from_scratch=True)
             mock_opts['scheduler_before_connect'] = True
-            minion = salt.minion.Minion(mock_opts, io_loop=tornado.ioloop.IOLoop())
+            io_loop = tornado.ioloop.IOLoop()
+            io_loop.make_current()
+            minion = salt.minion.Minion(mock_opts, io_loop=io_loop)
             try:
                 try:
                     minion.tune_in(start=True)
@@ -302,3 +281,34 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 self.assertTrue('beacons' not in minion.periodic_callbacks)
             finally:
                 minion.destroy()
+
+
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+class MinionAsyncTestCase(TestCase, AdaptedConfigurationTestCaseMixin, tornado.testing.AsyncTestCase):
+
+    @skip_if_not_root
+    def test_sock_path_len(self):
+        '''
+        This tests whether or not a larger hash causes the sock path to exceed
+        the system's max sock path length. See the below link for more
+        information.
+
+        https://github.com/saltstack/salt/issues/12172#issuecomment-43903643
+        '''
+        opts = {
+            'id': 'salt-testing',
+            'hash_type': 'sha512',
+            'sock_dir': os.path.join(salt.syspaths.SOCK_DIR, 'minion'),
+            'extension_modules': ''
+        }
+        with patch.dict(__opts__, opts):
+            try:
+                event_publisher = event.AsyncEventPublisher(__opts__)
+                result = True
+            except ValueError:
+                #  There are rare cases where we operate a closed socket, especially in containers.
+                # In this case, don't fail the test because we'll catch it down the road.
+                result = True
+            except SaltSystemExit:
+                result = False
+        self.assertTrue(result)

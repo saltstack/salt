@@ -25,6 +25,7 @@ import sys
 # Import salt libs
 import salt.utils.files
 import salt.utils.path
+import salt.utils.stringutils
 import salt.exceptions
 from salt.ext import six
 from salt.utils.odict import OrderedDict
@@ -205,9 +206,10 @@ def _get_csr_extensions(csr):
             return ret
 
         for short_name, long_name in six.iteritems(EXT_NAME_MAPPINGS):
-            if csrexts and long_name in csrexts:
-                ret[short_name] = csrexts[long_name]
-
+            if long_name in csrexts:
+                csrexts[short_name] = csrexts[long_name]
+                del csrexts[long_name]
+        ret = csrexts
     return ret
 
 
@@ -376,7 +378,7 @@ def _passphrase_callback(passphrase):
     Returns a callback function used to supply a passphrase for private keys
     '''
     def f(*args):
-        return passphrase
+        return salt.utils.stringutils.to_str(passphrase)
     return f
 
 
@@ -437,8 +439,7 @@ def get_pem_entry(text, pem_type=None):
 
     .. code-block:: bash
 
-        salt '*' x509.get_pem_entry "-----BEGIN CERTIFICATE REQUEST-----\\
-                MIICyzCC Ar8CAQI...-----END CERTIFICATE REQUEST"
+        salt '*' x509.get_pem_entry "-----BEGIN CERTIFICATE REQUEST-----MIICyzCC Ar8CAQI...-----END CERTIFICATE REQUEST"
     '''
     text = _text_or_file(text)
     # Replace encoded newlines
@@ -757,9 +758,7 @@ def write_pem(text, path, overwrite=True, pem_type=None):
 
     .. code-block:: bash
 
-        salt '*' x509.write_pem \\
-            "-----BEGIN CERTIFICATE-----MIIGMzCCBBugA..." \\
-            path=/etc/pki/mycert.crt
+        salt '*' x509.write_pem "-----BEGIN CERTIFICATE-----MIIGMzCCBBugA..." path=/etc/pki/mycert.crt
     '''
     with salt.utils.files.set_umask(0o077):
         text = get_pem_entry(text, pem_type=pem_type)
@@ -925,12 +924,7 @@ def create_crl(  # pylint: disable=too-many-arguments,too-many-locals
 
     .. code-block:: bash
 
-        salt '*' x509.create_crl path=/etc/pki/mykey.key \\
-                signing_private_key=/etc/pki/ca.key \\
-                signing_cert=/etc/pki/ca.crt \\
-                revoked="{'compromized-web-key': \\
-                {'certificate': '/etc/pki/certs/www1.crt', \\
-                'revocation_date': '2015-03-01 00:00:00'}}"
+        salt '*' x509.create_crl path=/etc/pki/mykey.key signing_private_key=/etc/pki/ca.key signing_cert=/etc/pki/ca.crt revoked="{'compromized-web-key': {'certificate': '/etc/pki/certs/www1.crt', 'revocation_date': '2015-03-01 00:00:00'}}"
     '''
     # pyOpenSSL is required for dealing with CSLs. Importing inside these
     # functions because Client operations like creating CRLs shouldn't require
@@ -953,7 +947,8 @@ def create_crl(  # pylint: disable=too-many-arguments,too-many-locals
             rev_item['not_after'] = rev_cert['Not After']
 
         serial_number = rev_item['serial_number'].replace(':', '')
-        serial_number = six.text_type(int(serial_number, 16))
+        # OpenSSL bindings requires this to be a non-unicode string
+        serial_number = salt.utils.stringutils.to_str(serial_number)
 
         if 'not_after' in rev_item and not include_expired:
             not_after = datetime.datetime.strptime(
@@ -974,7 +969,9 @@ def create_crl(  # pylint: disable=too-many-arguments,too-many-locals
         rev.set_rev_date(rev_date)
 
         if 'reason' in rev_item:
-            rev.set_reason(rev_item['reason'])
+            # Same here for OpenSSL bindings and non-unicode strings
+            reason = salt.utils.stringutils.to_str(rev_item['reason'])
+            rev.set_reason(reason)
 
         crl.add_revoked(rev)
 
@@ -1029,8 +1026,7 @@ def sign_remote_certificate(argdic, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' x509.sign_remote_certificate argdic="{'public_key': \\
-                '/etc/pki/www.key', 'signing_policy': 'www'}" __pub_id='www1'
+        salt '*' x509.sign_remote_certificate argdic="{'public_key': '/etc/pki/www.key', 'signing_policy': 'www'}" __pub_id='www1'
     '''
     if 'signing_policy' not in argdic:
         return 'signing_policy must be specified'
@@ -1219,7 +1215,7 @@ def create_certificate(
 
     extensions:
         The following arguments set X509v3 Extension values. If the value
-        starts with ``critical ``, the extension will be marked as critical.
+        starts with ``critical``, the extension will be marked as critical.
 
         Some special extensions are ``subjectKeyIdentifier`` and
         ``authorityKeyIdentifier``.
@@ -1341,12 +1337,18 @@ def create_certificate(
 
         The above signing policy can be invoked with ``signing_policy=www``
 
+    ext_mapping:
+        Provide additional X509v3 extension mappings.  This argument should be
+        in the form of a dictionary and should include both the OID and the
+        friendly name for the extension.
+
+        .. versionadded:: Neon
+
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' x509.create_certificate path=/etc/pki/myca.crt \\
-        signing_private_key='/etc/pki/myca.key' csr='/etc/pki/myca.csr'}
+        salt '*' x509.create_certificate path=/etc/pki/myca.crt signing_private_key='/etc/pki/myca.key' csr='/etc/pki/myca.csr'}
     '''
 
     if not path and not text and \
@@ -1481,6 +1483,9 @@ def create_certificate(
         signing_cert = cert
     cert.set_issuer(signing_cert.get_subject())
 
+    if 'ext_mapping' in kwargs:
+        EXT_NAME_MAPPINGS.update(kwargs['ext_mapping'])
+
     for extname, extlongname in six.iteritems(EXT_NAME_MAPPINGS):
         if (extname in kwargs or extlongname in kwargs or
                 extname in csrexts or extlongname in csrexts) is False:
@@ -1585,12 +1590,18 @@ def create_csr(path=None, text=False, **kwargs):
         :mod:`x509.create_certificate <salt.modules.x509.create_certificate>`
         can be used.
 
+    ext_mapping:
+        Provide additional X509v3 extension mappings.  This argument should be
+        in the form of a dictionary and should include both the OID and the
+        friendly name for the extension.
+
+        .. versionadded:: Neon
+
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' x509.create_csr path=/etc/pki/myca.csr \\
-                public_key='/etc/pki/myca.key' CN='My Cert
+        salt '*' x509.create_csr path=/etc/pki/myca.csr public_key='/etc/pki/myca.key' CN='My Cert'
     '''
 
     if not path and not text:
@@ -1640,12 +1651,15 @@ def create_csr(path=None, text=False, **kwargs):
             setattr(subject, entry, kwargs[entry])
     # pylint: enable=unused-variable
 
+    if 'ext_mapping' in kwargs:
+        EXT_NAME_MAPPINGS.update(kwargs['ext_mapping'])
+
     extstack = M2Crypto.X509.X509_Extension_Stack()
     for extname, extlongname in six.iteritems(EXT_NAME_MAPPINGS):
         if extname not in kwargs and extlongname not in kwargs:
             continue
 
-        extval = kwargs[extname] or kwargs[extlongname]
+        extval = kwargs.get(extname, None) or kwargs.get(extlongname, None)
 
         critical = False
         if extval.startswith('critical '):

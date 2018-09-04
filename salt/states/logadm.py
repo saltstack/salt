@@ -51,7 +51,8 @@ def rotate(name, **kwargs):
 
     name : string
         alias for entryname
-    **kwargs : boolean|string|int
+
+    kwargs : boolean|string|int
         optional additional flags and parameters
 
     '''

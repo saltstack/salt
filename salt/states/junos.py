@@ -286,43 +286,45 @@ def install_config(name, **kwargs):
                     description: Creating interface via SaltStack.
 
 
-    Parameters:
-      Required
-        * name:
-          Path where the configuration/template file is present. If the file has a \
-          '*.conf' extension,
-          the content is treated as text format. If the file has a '*.xml' \
-          extension,
-          the content is treated as XML format. If the file has a '*.set' \
-          extension,
-          the content is treated as Junos OS 'set' commands.(default = None)
-      Optional
-        * kwargs: Keyworded arguments which can be provided like-
-            * template_vars:
-              The dictionary of data for the jinja variables present in the \
-              jinja template
-            * timeout:
-              Set NETCONF RPC timeout. Can be used for commands which
-              take a while to execute. (default = 30 seconds)
-            * overwrite:
-              Set to True if you want this file is to completely replace the\
-               configuration file. (default = False)
-            * replace:
-              Specify whether the configuration file uses "replace:" statements.
-              Those statements under the 'replace' tag will only be changed.\
-               (default = False)
-            * comment:
-              Provide a comment to the commit. (default = None)
-            * confirm:
-              Provide time in minutes for commit confirmation.
-              If this option is specified, the commit will be rollbacked in \
-              the given time unless the commit is confirmed.
-            * diffs_file:
-              Path to the file where the diff (difference in old configuration
-              and the committed configuration) will be stored.(default = None)
-              Note that the file will be stored on the proxy minion. To push the
-              files to the master use the salt's following execution module: \
-              :py:func:`cp.push <salt.modules.cp.push>`
+    name
+        Path where the configuration/template file is present. If the file has
+        a ``*.conf`` extension, the content is treated as text format. If the
+        file has a ``*.xml`` extension, the content is treated as XML format. If
+        the file has a ``*.set`` extension, the content is treated as Junos OS
+        ``set`` commands
+
+    template_vars
+      The dictionary of data for the jinja variables present in the jinja
+      template
+
+    timeout : 30
+      Set NETCONF RPC timeout. Can be used for commands which take a while to
+      execute.
+
+    overwrite : False
+      Set to ``True`` if you want this file is to completely replace the
+       configuration file.
+
+    replace : False
+      Specify whether the configuration file uses "replace:" statements.  Only
+      those statements under the 'replace' tag will be changed.
+
+    comment
+      Provide a comment to the commit. (default = None)
+
+    confirm
+      Provide time in minutes for commit confirmation. If this option is
+      specified, the commit will be rolled back in the given time unless the
+      commit is confirmed.
+
+    diffs_file
+      Path to the file where the diff (difference in old configuration and the
+      committed configuration) will be stored.
+
+      .. note::
+          The file will be stored on the proxy minion. To push the files to the
+          master use :py:func:`cp.push <salt.modules.cp.push>`.
+
     '''
     ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
     ret['changes'] = __salt__['junos.install_config'](name, **kwargs)
@@ -404,7 +406,7 @@ def file_copy(name, dest=None, **kwargs):
 
 
 def lock(name):
-    """
+    '''
     Attempts an exclusive lock on the candidate configuration. This
     is a non-blocking call.
 
@@ -418,14 +420,14 @@ def lock(name):
             lock the config:
               junos.lock
 
-    """
+    '''
     ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
     ret['changes'] = __salt__['junos.lock']()
     return ret
 
 
 def unlock(name):
-    """
+    '''
     Unlocks the candidate configuration.
 
     .. code-block:: yaml
@@ -433,14 +435,14 @@ def unlock(name):
             unlock the config:
               junos.unlock
 
-    """
+    '''
     ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
     ret['changes'] = __salt__['junos.unlock']()
     return ret
 
 
 def load(name, **kwargs):
-    """
+    '''
     Loads the configuration provided onto the junos device.
 
     .. code-block:: yaml
@@ -461,50 +463,47 @@ def load(name, **kwargs):
                     description: Creating interface via SaltStack.
 
 
-    Parameters:
-      Required
-        * name:
-          Path where the configuration/template file is present. If the file has a \
-          '*.conf' extension,
-          the content is treated as text format. If the file has a '*.xml' \
-          extension,
-          the content is treated as XML format. If the file has a '*.set' \
-          extension,
-          the content is treated as Junos OS 'set' commands.(default = None)
-      Optional
-        * kwargs: Keyworded arguments which can be provided like-
-            * overwrite:
-              Set to True if you want this file is to completely replace the\
-              configuration file. (default = False)
-            * replace:
-              Specify whether the configuration file uses "replace:" statements.
-              Those statements under the 'replace' tag will only be changed.\
-               (default = False)
-            * format:
-              Determines the format of the contents.
-            * update:
-              Compare a complete loaded configuration against
-              the candidate configuration. For each hierarchy level or
-              configuration object that is different in the two configurations,
-              the version in the loaded configuration replaces the version in the
-              candidate configuration. When the configuration is later committed,
-              only system processes that are affected by the changed configuration
-              elements parse the new configuration. This action is supported from
-              PyEZ 2.1 (default = False)
-            * template_vars:
-              Variables to be passed into the template processing engine in addition
-              to those present in __pillar__, __opts__, __grains__, etc.
-              You may reference these variables in your template like so:
-              {{ template_vars["var_name"] }}
+    name
+        Path where the configuration/template file is present. If the file has
+        a ``*.conf`` extension, the content is treated as text format. If the
+        file has a ``*.xml`` extension, the content is treated as XML format. If
+        the file has a ``*.set`` extension, the content is treated as Junos OS
+        ``set`` commands.
 
-    """
+    overwrite : False
+        Set to ``True`` if you want this file is to completely replace the
+        configuration file.
+
+    replace : False
+        Specify whether the configuration file uses "replace:" statements.
+        Only those statements under the 'replace' tag will be changed.
+
+    format:
+      Determines the format of the contents.
+
+    update : False
+        Compare a complete loaded configuration against the candidate
+        configuration. For each hierarchy level or configuration object that is
+        different in the two configurations, the version in the loaded
+        configuration replaces the version in the candidate configuration. When
+        the configuration is later committed, only system processes that are
+        affected by the changed configuration elements parse the new
+        configuration. This action is supported from PyEZ 2.1 (default = False)
+
+    template_vars
+      Variables to be passed into the template processing engine in addition
+      to those present in __pillar__, __opts__, __grains__, etc.
+      You may reference these variables in your template like so:
+      {{ template_vars["var_name"] }}
+
+    '''
     ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
     ret['changes'] = __salt__['junos.load'](name, **kwargs)
     return ret
 
 
 def commit_check(name):
-    """
+    '''
 
     Perform a commit check on the configuration.
 
@@ -513,7 +512,7 @@ def commit_check(name):
         perform commit check:
           junos.commit_check
 
-    """
+    '''
     ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
     ret['changes'] = __salt__['junos.commit_check']()
     return ret

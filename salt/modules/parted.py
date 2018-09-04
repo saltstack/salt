@@ -536,7 +536,7 @@ def name(device, partition, name):
                 'Invalid characters passed to partition.name'
             )
 
-    cmd = 'parted -m -s {0} name {1} {2}'.format(device, partition, name)
+    cmd = '''parted -m -s {0} name {1} "'{2}'"'''.format(device, partition, name)
     out = __salt__['cmd.run'](cmd).splitlines()
     return out
 

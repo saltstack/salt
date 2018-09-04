@@ -99,7 +99,10 @@ class BaseCaller(object):
         # be imported as part of the salt api doesn't do  a
         # nasty sys.exit() and tick off our developer users
         try:
-            self.minion = salt.minion.SMinion(opts)
+            if self.opts.get('proxyid'):
+                self.minion = salt.minion.SProxyMinion(opts)
+            else:
+                self.minion = salt.minion.SMinion(opts)
         except SaltClientError as exc:
             raise SystemExit(six.text_type(exc))
 
@@ -120,7 +123,7 @@ class BaseCaller(object):
         '''
         Print out the grains
         '''
-        grains = salt.loader.grains(self.opts)
+        grains = self.minion.opts.get('grains') or salt.loader.grains(self.opts)
         salt.output.display_output({'local': grains}, 'grains', self.opts)
 
     def run(self):
@@ -151,6 +154,8 @@ class BaseCaller(object):
             # _retcode will be available in the kwargs of the outputter function
             if self.opts.get('retcode_passthrough', False):
                 sys.exit(ret['retcode'])
+            elif ret['retcode'] != salt.defaults.exitcodes.EX_OK:
+                sys.exit(salt.defaults.exitcodes.EX_GENERIC)
         except SaltInvocationError as err:
             raise SystemExit(err)
 
@@ -208,8 +213,24 @@ class BaseCaller(object):
                     'Do you have permissions to '
                     'write to {0} ?\n'.format(proc_fn))
             func = self.minion.functions[fun]
+            data = {
+              'arg': args,
+              'fun': fun
+            }
+            data.update(kwargs)
+            executors = getattr(self.minion, 'module_executors', []) or \
+                        self.opts.get('module_executors', ['direct_call'])
+            if isinstance(executors, six.string_types):
+                executors = [executors]
             try:
                 ret['return'] = func(*args, **kwargs)
+                for name in executors:
+                    fname = '{0}.execute'.format(name)
+                    if fname not in self.minion.executors:
+                        raise SaltInvocationError("Executor '{0}' is not available".format(name))
+                    ret['return'] = self.minion.executors[fname](self.opts, data, func, args, kwargs)
+                    if ret['return'] is not None:
+                        break
             except TypeError as exc:
                 sys.stderr.write('\nPassed invalid arguments: {0}.\n\nUsage:\n'.format(exc))
                 salt.utils.stringutils.print_cli(func.__doc__)
@@ -220,10 +241,24 @@ class BaseCaller(object):
                     sys.stderr.write(trace)
                 sys.exit(salt.defaults.exitcodes.EX_GENERIC)
             try:
-                ret['retcode'] = sys.modules[
+                retcode = sys.modules[
                     func.__module__].__context__.get('retcode', 0)
             except AttributeError:
-                ret['retcode'] = 1
+                retcode = salt.defaults.exitcodes.EX_GENERIC
+
+            if retcode == 0:
+                # No nonzero retcode in __context__ dunder. Check if return
+                # is a dictionary with a "result" or "success" key.
+                try:
+                    func_result = all(ret['return'].get(x, True)
+                                      for x in ('result', 'success'))
+                except Exception:
+                    # return data is not a dict
+                    func_result = True
+                if not func_result:
+                    retcode = salt.defaults.exitcodes.EX_GENERIC
+
+            ret['retcode'] = retcode
         except (CommandExecutionError) as exc:
             msg = 'Error running \'{0}\': {1}\n'
             active_level = LOG_LEVELS.get(
@@ -376,10 +411,12 @@ class RAETCaller(BaseCaller):
                     {'local': print_ret},
                     out=ret.get('out', 'nested'),
                     opts=self.opts,
-                    _retcode=ret.get('retcode', 0))
+                    _retcode=ret.get('retcode', salt.defaults.exitcodes.EX_OK))
             # _retcode will be available in the kwargs of the outputter function
             if self.opts.get('retcode_passthrough', False):
                 sys.exit(ret['retcode'])
+            elif ret['retcode'] != salt.defaults.exitcodes.EX_OK:
+                sys.exit(salt.defaults.exitcodes.EX_GENERIC)
 
         except SaltInvocationError as err:
             raise SystemExit(err)

@@ -3,6 +3,7 @@
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 from functools import wraps
+import os
 import io
 import stat
 
@@ -12,6 +13,7 @@ import salt.daemons.masterapi as masterapi
 import salt.utils.platform
 
 # Import Salt Testing Libs
+from tests.support.paths import TMP_CONF_DIR
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     patch,
@@ -568,7 +570,7 @@ class RemoteFuncsTestCase(TestCase):
     '''
 
     def setUp(self):
-        opts = salt.config.master_config(None)
+        opts = salt.config.master_config(os.path.join(TMP_CONF_DIR, 'master'))
         self.funcs = masterapi.RemoteFuncs(opts)
         self.funcs.cache = FakeCache()
 
@@ -604,3 +606,55 @@ class RemoteFuncsTestCase(TestCase):
         This is what minions before Nitrogen would issue.
         '''
         self.test_mine_get(tgt_type_key='expr_form')
+
+    def test_mine_get_dict_str(self, tgt_type_key='tgt_type'):
+        '''
+        Asserts that ``mine_get`` gives the expected results when request
+        is a comma-separated list.
+
+        Actually this only tests that:
+
+        - the correct check minions method is called
+        - the correct cache key is subsequently used
+        '''
+        self.funcs.cache.store('minions/webserver', 'mine',
+                               dict(ip_addr='2001:db8::1:3', ip4_addr='127.0.0.1'))
+        with patch('salt.utils.minions.CkMinions._check_compound_minions',
+                   MagicMock(return_value=(dict(
+                       minions=['webserver'],
+                       missing=[])))):
+            ret = self.funcs._mine_get(
+                {
+                    'id': 'requester_minion',
+                    'tgt': 'G@roles:web',
+                    'fun': 'ip_addr,ip4_addr',
+                    tgt_type_key: 'compound',
+                }
+            )
+        self.assertDictEqual(ret, dict(ip_addr=dict(webserver='2001:db8::1:3'), ip4_addr=dict(webserver='127.0.0.1')))
+
+    def test_mine_get_dict_list(self, tgt_type_key='tgt_type'):
+        '''
+        Asserts that ``mine_get`` gives the expected results when request
+        is a list.
+
+        Actually this only tests that:
+
+        - the correct check minions method is called
+        - the correct cache key is subsequently used
+        '''
+        self.funcs.cache.store('minions/webserver', 'mine',
+                               dict(ip_addr='2001:db8::1:3', ip4_addr='127.0.0.1'))
+        with patch('salt.utils.minions.CkMinions._check_compound_minions',
+                   MagicMock(return_value=(dict(
+                       minions=['webserver'],
+                       missing=[])))):
+            ret = self.funcs._mine_get(
+                {
+                    'id': 'requester_minion',
+                    'tgt': 'G@roles:web',
+                    'fun': ['ip_addr', 'ip4_addr'],
+                    tgt_type_key: 'compound',
+                }
+            )
+        self.assertDictEqual(ret, dict(ip_addr=dict(webserver='2001:db8::1:3'), ip4_addr=dict(webserver='127.0.0.1')))

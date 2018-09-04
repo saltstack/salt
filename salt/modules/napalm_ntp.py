@@ -36,6 +36,7 @@ from salt.utils.napalm import proxy_napalm_wrap
 
 __virtualname__ = 'ntp'
 __proxyenabled__ = ['napalm']
+__virtual_aliases__ = ('napalm_ntp',)
 # uses NAPALM-based proxy to interact with network devices
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -220,9 +221,11 @@ def set_peers(*peers, **options):
     Configures a list of NTP peers on the device.
 
     :param peers: list of IP Addresses/Domain Names
-    :param bool test: discard loaded config. By default `test` is False (will not dicard the changes)
-    :param bool commit: commit loaded config. By default `commit` is True (will commit the changes). Useful when
-    the user does not want to commit after each change, but after a couple.
+    :param test (bool): discard loaded config. By default ``test`` is False
+        (will not dicard the changes)
+    :commit commit (bool): commit loaded config. By default ``commit`` is True
+        (will commit the changes). Useful when the user does not want to commit
+        after each change, but after a couple.
 
     By default this function will commit the config changes (if any). To load without committing, use the `commit`
     option. For dry run use the `test` argument.
@@ -248,14 +251,15 @@ def set_peers(*peers, **options):
 
 @proxy_napalm_wrap
 def set_servers(*servers, **options):
-
     '''
     Configures a list of NTP servers on the device.
 
     :param servers: list of IP Addresses/Domain Names
-    :param bool test: discard loaded config. By default `test` is False (will not dicard the changes)
-    :param bool commit: commit loaded config. By default `commit` is True (will commit the changes). Useful when
-    the user does not want to commit after each change, but after a couple.
+    :param test (bool): discard loaded config. By default ``test`` is False
+        (will not dicard the changes)
+    :commit commit (bool): commit loaded config. By default ``commit`` is True
+        (will commit the changes). Useful when the user does not want to commit
+        after each change, but after a couple.
 
     By default this function will commit the config changes (if any). To load without committing, use the `commit`
     option. For dry run use the `test` argument.
@@ -286,12 +290,15 @@ def delete_peers(*peers, **options):
     Removes NTP peers configured on the device.
 
     :param peers: list of IP Addresses/Domain Names to be removed as NTP peers
-    :param bool test: discard loaded config. By default `test` is False (will not dicard the changes)
-    :param bool commit: commit loaded config. By default `commit` is True (will commit the changes). Useful when
-    the user does not want to commit after each change, but after a couple.
+    :param test (bool): discard loaded config. By default ``test`` is False
+        (will not dicard the changes)
+    :param commit (bool): commit loaded config. By default ``commit`` is True
+        (will commit the changes). Useful when the user does not want to commit
+        after each change, but after a couple.
 
-    By default this function will commit the config changes (if any). To load without committing, use the `commit`
-    option. For dry run use the `test` argument.
+    By default this function will commit the config changes (if any). To load
+    without committing, use the ``commit`` option. For a dry run, use the
+    ``test`` argument.
 
     CLI Example:
 
@@ -318,13 +325,17 @@ def delete_servers(*servers, **options):
     '''
     Removes NTP servers configured on the device.
 
-    :param servers: list of IP Addresses/Domain Names to be removed as NTP servers
-    :param bool test: discard loaded config. By default `test` is False (will not dicard the changes)
-    :param bool commit: commit loaded config. By default `commit` is True (will commit the changes). Useful when
-    the user does not want to commit after each change, but after a couple.
+    :param servers: list of IP Addresses/Domain Names to be removed as NTP
+        servers
+    :param test (bool): discard loaded config. By default ``test`` is False
+        (will not dicard the changes)
+    :param commit (bool): commit loaded config. By default ``commit`` is True
+        (will commit the changes). Useful when the user does not want to commit
+        after each change, but after a couple.
 
-    By default this function will commit the config changes (if any). To load without committing, use the `commit`
-    option. For dry run use the `test` argument.
+    By default this function will commit the config changes (if any). To load
+    without committing, use the ``commit`` option. For dry run use the ``test``
+    argument.
 
     CLI Example:
 

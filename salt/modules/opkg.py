@@ -56,23 +56,32 @@ log = logging.getLogger(__name__)
 # Define the module's virtual name
 __virtualname__ = 'pkg'
 
-NILRT_MODULE_STATE_PATH = '/var/lib/salt/kernel_module_state'
+NILRT_RESTARTCHECK_STATE_PATH = '/var/lib/salt/restartcheck_state'
 
 
-def _update_nilrt_module_dep_info():
+def _update_nilrt_restart_state():
     '''
-    Update modules.dep timestamp & checksum.
+    NILRT systems determine whether to reboot after various package operations
+    including but not limited to kernel module installs/removals by checking
+    specific file md5sums & timestamps. These files are touched/modified by
+    the post-install/post-remove functions of their respective packages.
 
-    NILRT systems determine whether to reboot after kernel module install/
-    removals/etc by checking modules.dep which gets modified/touched by
-    each kernel module on-target dkms-like compilation. This function
-    updates the module.dep data after each opkg kernel module operation
-    which needs a reboot as detected by the salt checkrestart module.
+    The opkg module uses this function to store/update those file timestamps
+    and checksums to be used later by the restartcheck module.
+
     '''
     __salt__['cmd.shell']('stat -c %Y /lib/modules/$(uname -r)/modules.dep >{0}/modules.dep.timestamp'
-                          .format(NILRT_MODULE_STATE_PATH))
+                          .format(NILRT_RESTARTCHECK_STATE_PATH))
     __salt__['cmd.shell']('md5sum /lib/modules/$(uname -r)/modules.dep >{0}/modules.dep.md5sum'
-                          .format(NILRT_MODULE_STATE_PATH))
+                          .format(NILRT_RESTARTCHECK_STATE_PATH))
+
+    # We can't assume nisysapi.ini always exists like modules.dep
+    nisysapi_path = '/usr/local/natinst/share/nisysapi.ini'
+    if os.path.exists(nisysapi_path):
+        __salt__['cmd.shell']('stat -c %Y {0} >{1}/nisysapi.ini.timestamp'
+                              .format(nisysapi_path, NILRT_RESTARTCHECK_STATE_PATH))
+        __salt__['cmd.shell']('md5sum {0} >{1}/nisysapi.ini.md5sum'
+                              .format(nisysapi_path, NILRT_RESTARTCHECK_STATE_PATH))
 
 
 def _get_restartcheck_result(errors):
@@ -94,7 +103,7 @@ def _process_restartcheck_result(rs_result):
         return
     for rstr in rs_result:
         if 'System restart required' in rstr:
-            _update_nilrt_module_dep_info()
+            _update_nilrt_restart_state()
             __salt__['system.set_reboot_required_witnessed']()
         else:
             service = os.path.join('/etc/init.d', rstr)
@@ -108,18 +117,22 @@ def __virtual__():
     '''
     if __grains__.get('os_family') == 'NILinuxRT':
         try:
-            os.makedirs(NILRT_MODULE_STATE_PATH)
+            os.makedirs(NILRT_RESTARTCHECK_STATE_PATH)
         except OSError as exc:
             if exc.errno != errno.EEXIST:
                 return False, 'Error creating {0} (-{1}): {2}'.format(
-                    NILRT_MODULE_STATE_PATH,
+                    NILRT_RESTARTCHECK_STATE_PATH,
                     exc.errno,
                     exc.strerror)
-        if not (os.path.exists(os.path.join(NILRT_MODULE_STATE_PATH, 'modules.dep.timestamp')) and
-                os.path.exists(os.path.join(NILRT_MODULE_STATE_PATH, 'modules.dep.md5sum'))):
-            _update_nilrt_module_dep_info()
+        # modules.dep always exists, make sure it's restart state files also exist
+        if not (os.path.exists(os.path.join(NILRT_RESTARTCHECK_STATE_PATH, 'modules.dep.timestamp')) and
+                os.path.exists(os.path.join(NILRT_RESTARTCHECK_STATE_PATH, 'modules.dep.md5sum'))):
+            _update_nilrt_restart_state()
         return __virtualname__
-    return (False, "Module opkg only works on nilrt based systems")
+
+    if os.path.isdir(OPKG_CONFDIR):
+        return __virtualname__
+    return False, "Module opkg only works on OpenEmbedded based systems"
 
 
 def latest_version(*names, **kwargs):
@@ -496,6 +509,15 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
         A list of packages to delete. Must be passed as a python list. The
         ``name`` parameter will be ignored if this option is passed.
 
+    remove_dependencies
+        Remove package and all dependencies
+
+        .. versionadded:: Fluorine
+
+    auto_remove_deps
+        Remove packages that were installed automatically to satisfy dependencies
+
+        .. versionadded:: Fluorine
 
     Returns a dict containing the changes.
 
@@ -506,6 +528,7 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
         salt '*' pkg.remove <package name>
         salt '*' pkg.remove <package1>,<package2>,<package3>
         salt '*' pkg.remove pkgs='["foo", "bar"]'
+        salt '*' pkg.remove pkgs='["foo", "bar"]' remove_dependencies=True auto_remove_deps=True
     '''
     try:
         pkg_params = __salt__['pkg_resource.parse_targets'](name, pkgs)[0]
@@ -517,6 +540,10 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
     if not targets:
         return {}
     cmd = ['opkg', 'remove']
+    if kwargs.get('remove_dependencies', False):
+        cmd.append('--force-removal-of-dependent-packages')
+    if kwargs.get('auto_remove_deps', False):
+        cmd.append('--autoremove')
     cmd.extend(targets)
 
     out = __salt__['cmd.run_all'](
@@ -1105,7 +1132,7 @@ def version_cmp(pkg1, pkg2, ignore_epoch=False, **kwargs):  # pylint: disable=un
 
 def list_repos(**kwargs):  # pylint: disable=unused-argument
     '''
-    Lists all repos on /etc/opkg/*.conf
+    Lists all repos on ``/etc/opkg/*.conf``
 
     CLI Example:
 
@@ -1143,7 +1170,7 @@ def list_repos(**kwargs):  # pylint: disable=unused-argument
 
 def get_repo(alias, **kwargs):  # pylint: disable=unused-argument
     '''
-    Display a repo from the /etc/opkg/*.conf
+    Display a repo from the ``/etc/opkg/*.conf``
 
     CLI Examples:
 
@@ -1217,7 +1244,7 @@ def _mod_repo_in_file(alias, repostr, filepath):
 
 def del_repo(alias, **kwargs):  # pylint: disable=unused-argument
     '''
-    Delete a repo from /etc/opkg/*.conf
+    Delete a repo from ``/etc/opkg/*.conf``
 
     If the file does not contain any other repo configuration, the file itself
     will be deleted.
@@ -1228,6 +1255,7 @@ def del_repo(alias, **kwargs):  # pylint: disable=unused-argument
 
         salt '*' pkg.del_repo alias
     '''
+    refresh = salt.utils.data.is_true(kwargs.get('refresh', True))
     repos = list_repos()
     if repos:
         deleted_from = dict()
@@ -1253,8 +1281,8 @@ def del_repo(alias, **kwargs):  # pylint: disable=unused-argument
                     except OSError:
                         pass
                 ret += msg.format(alias, repo_file)
-            # explicit refresh after a repo is deleted
-            refresh_db()
+            if refresh:
+                refresh_db()
             return ret
 
     return "Repo {0} doesn't exist in the opkg repo lists".format(alias)

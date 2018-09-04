@@ -36,6 +36,7 @@ import salt.utils.zeromq
 from salt._compat import ipaddress
 from salt.exceptions import SaltClientError, SaltSystemExit
 from salt.utils.decorators.jinja import jinja_filter
+from salt.utils.versions import LooseVersion
 
 # inet_pton does not exist in Windows, this is a workaround
 if salt.utils.platform.is_windows():
@@ -148,14 +149,18 @@ def _generate_minion_id():
                 addr=hosts.first() or 'localhost (N/A)', message=socket.gaierror)
             )
     # Universal method for everywhere (Linux, Slowlaris, Windows etc)
-    for f_name in ['/etc/hostname', '/etc/nodename', '/etc/hosts',
-                   r'{win}\system32\drivers\etc\hosts'.format(win=os.getenv('WINDIR'))]:
-        if not os.path.exists(f_name):
-            continue
-        with salt.utils.files.fopen(f_name) as f_hdl:
-            for hst in (line.strip().split('#')[0].strip().split() or None for line in f_hdl.read().split(os.linesep)):
-                if hst and (hst[0][:4] in ['127.', '::1'] or len(hst) == 1):
-                    hosts.extend(hst)
+    for f_name in ('/etc/hostname', '/etc/nodename', '/etc/hosts',
+                   r'{win}\system32\drivers\etc\hosts'.format(win=os.getenv('WINDIR'))):
+        try:
+            with salt.utils.files.fopen(f_name) as f_hdl:
+                for line in f_hdl:
+                    line = salt.utils.stringutils.to_unicode(line)
+                    hst = line.strip().split('#')[0].strip().split()
+                    if hst:
+                        if hst[0][:4] in ('127.', '::1') or len(hst) == 1:
+                            hosts.extend(hst)
+        except IOError:
+            pass
 
     # include public and private ipaddresses
     return hosts.extend([addr for addr in ip_addrs()
@@ -204,7 +209,7 @@ def get_fqhostname():
         for info in addrinfo:
             # info struct [family, socktype, proto, canonname, sockaddr]
             if len(info) >= 4:
-                l.append(info[3])
+                l = [info[3]]
     except socket.gaierror:
         pass
 
@@ -861,6 +866,85 @@ def linux_interfaces():
     return ifaces
 
 
+def _netbsd_interfaces_ifconfig(out):
+    '''
+    Uses ifconfig to return a dictionary of interfaces with various information
+    about each (up/down state, ip address, netmask, and hwaddr)
+    '''
+    ret = dict()
+
+    piface = re.compile(r'^([^\s:]+)')
+    pmac = re.compile('.*?address: ([0-9a-f:]+)')
+
+    pip = re.compile(r'.*?inet [^\d]*(.*?)/([\d]*)\s')
+    pip6 = re.compile(r'.*?inet6 ([0-9a-f:]+)%([a-zA-Z0-9]*)/([\d]*)\s')
+
+    pupdown = re.compile('UP')
+    pbcast = re.compile(r'.*?broadcast ([\d\.]+)')
+
+    groups = re.compile('\r?\n(?=\\S)').split(out)
+    for group in groups:
+        data = dict()
+        iface = ''
+        updown = False
+        for line in group.splitlines():
+            miface = piface.match(line)
+            mmac = pmac.match(line)
+            mip = pip.match(line)
+            mip6 = pip6.match(line)
+            mupdown = pupdown.search(line)
+            if miface:
+                iface = miface.group(1)
+            if mmac:
+                data['hwaddr'] = mmac.group(1)
+            if mip:
+                if 'inet' not in data:
+                    data['inet'] = list()
+                addr_obj = dict()
+                addr_obj['address'] = mip.group(1)
+                mmask = mip.group(2)
+                if mip.group(2):
+                    addr_obj['netmask'] = cidr_to_ipv4_netmask(mip.group(2))
+                mbcast = pbcast.match(line)
+                if mbcast:
+                    addr_obj['broadcast'] = mbcast.group(1)
+                data['inet'].append(addr_obj)
+            if mupdown:
+                updown = True
+            if mip6:
+                if 'inet6' not in data:
+                    data['inet6'] = list()
+                addr_obj = dict()
+                addr_obj['address'] = mip6.group(1)
+                mmask6 = mip6.group(3)
+                addr_obj['scope'] = mip6.group(2)
+                addr_obj['prefixlen'] = mip6.group(3)
+                data['inet6'].append(addr_obj)
+        data['up'] = updown
+        ret[iface] = data
+        del data
+    return ret
+
+
+def netbsd_interfaces():
+    '''
+    Obtain interface information for NetBSD >= 8 where the ifconfig
+    output diverged from other BSD variants (Netmask is now part of the
+    address)
+    '''
+    # NetBSD versions prior to 8.0 can still use linux_interfaces()
+    if LooseVersion(os.uname()[2]) < LooseVersion('8.0'):
+        return linux_interfaces()
+
+    ifconfig_path = salt.utils.path.which('ifconfig')
+    cmd = subprocess.Popen(
+        '{0} -a'.format(ifconfig_path),
+        shell=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT).communicate()[0]
+    return _netbsd_interfaces_ifconfig(salt.utils.stringutils.to_str(cmd))
+
+
 def _interfaces_ipconfig(out):
     '''
     Returns a dictionary of interfaces with various information about each
@@ -962,6 +1046,8 @@ def interfaces():
     '''
     if salt.utils.platform.is_windows():
         return win_interfaces()
+    elif salt.utils.platform.is_netbsd():
+        return netbsd_interfaces()
     else:
         return linux_interfaces()
 
@@ -1225,7 +1311,11 @@ def hex2ip(hex_ip, invert=False):
             else:
                 ip.append("{0[0]}{0[1]}:{0[2]}{0[3]}".format(ip_part))
         try:
-            return ipaddress.IPv6Address(":".join(ip)).compressed
+            address = ipaddress.IPv6Address(":".join(ip))
+            if address.ipv4_mapped:
+                return str(address.ipv4_mapped)
+            else:
+                return address.compressed
         except ipaddress.AddressValueError as ex:
             log.error('hex2ip - ipv6 address error: {0}'.format(ex))
             return hex_ip
@@ -1278,7 +1368,11 @@ def active_tcp():
                     line = salt.utils.stringutils.to_unicode(line)
                     if line.strip().startswith('sl'):
                         continue
-                    ret.update(_parse_tcp_line(line))
+                    iret = _parse_tcp_line(line)
+                    sl = next(iter(iret))
+                    if iret[sl]['state'] == 1:  # 1 is ESTABLISHED
+                        del iret[sl]['state']
+                        ret[len(ret)] = iret[sl]
     return ret
 
 
@@ -1316,7 +1410,7 @@ def _remotes_on(port, which_end):
                         continue
                     iret = _parse_tcp_line(line)
                     sl = next(iter(iret))
-                    if iret[sl][which_end] == port:
+                    if iret[sl][which_end] == port and iret[sl]['state'] == 1:  # 1 is ESTABLISHED
                         ret.add(iret[sl]['remote_addr'])
 
     if not proc_available:  # Fallback to use OS specific tools
@@ -1352,6 +1446,7 @@ def _parse_tcp_line(line):
     ret[sl]['local_port'] = int(l_port, 16)
     ret[sl]['remote_addr'] = hex2ip(r_addr, True)
     ret[sl]['remote_port'] = int(r_port, 16)
+    ret[sl]['state'] = int(comps[3], 16)
     return ret
 
 
@@ -1783,7 +1878,7 @@ def dns_check(addr, port, safe=False, ipv6=None):
 
                 try:
                     s = socket.socket(h[0], socket.SOCK_STREAM)
-                    s.connect((candidate_addr.strip('[]'), h[1]))
+                    s.connect((candidate_addr.strip('[]'), h[4][1]))
                     s.close()
 
                     resolved = candidate_addr

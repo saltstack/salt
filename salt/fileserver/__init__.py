@@ -129,7 +129,10 @@ def check_file_list_cache(opts, form, list_cache, w_lock):
                 else:
                     # if filelist does not exists yet, mark it as expired
                     age = opts.get('fileserver_list_cache_time', 20) + 1
-                if age < opts.get('fileserver_list_cache_time', 20):
+                if age < 0:
+                    # Cache is from the future! Warn and mark cache invalid.
+                    log.warning('The file list_cache was created in the future!')
+                if 0 <= age < opts.get('fileserver_list_cache_time', 20):
                     # Young enough! Load this sucker up!
                     with salt.utils.files.fopen(list_cache, 'rb') as fp_:
                         log.trace(
@@ -187,12 +190,14 @@ def generate_mtime_map(opts, path_map):
     file_map = {}
     for saltenv, path_list in six.iteritems(path_map):
         for path in path_list:
-            for directory, dirnames, filenames in salt.utils.path.os_walk(path):
-                # Don't walk any directories that match file_ignore_regex or glob
-                dirnames[:] = [d for d in dirnames if not is_file_ignored(opts, d)]
+            for directory, _, filenames in salt.utils.path.os_walk(path):
                 for item in filenames:
                     try:
                         file_path = os.path.join(directory, item)
+                        # Don't walk any directories that match
+                        # file_ignore_regex or glob
+                        if is_file_ignored(opts, file_path):
+                            continue
                         file_map[file_path] = os.path.getmtime(file_path)
                     except (OSError, IOError):
                         # skip dangling symlinks
@@ -235,7 +240,7 @@ def reap_fileserver_cache_dir(cache_base, find_func):
             # if we have an empty directory, lets cleanup
             # This will only remove the directory on the second time
             # "_reap_cache" is called (which is intentional)
-            if len(dirs) == 0 and len(files) == 0:
+            if not dirs and not files:
                 # only remove if empty directory is older than 60s
                 if time.time() - os.path.getctime(root) > 60:
                     os.rmdir(root)
@@ -850,7 +855,8 @@ class FSChan(object):
                 self.opts['__fs_update'] = True
         else:
             self.fs.update()
-        self.cmd_stub = {'master_tops': {}}
+        self.cmd_stub = {'master_tops': {},
+                         'ext_nodes': {}}
 
     def send(self, load, tries=None, timeout=None, raw=False):  # pylint: disable=unused-argument
         '''

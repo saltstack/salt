@@ -141,7 +141,7 @@ targeting to them via a top file will have the key of ``company`` with a value
 of ``Foo Industries``.
 
 Consequently this data can be used from within modules, renderers, State SLS
-files, and more via the shared pillar :ref:`dict <python2:typesmapping>`:
+files, and more via the shared pillar dictionary:
 
 .. code-block:: jinja
 
