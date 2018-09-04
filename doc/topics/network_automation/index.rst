@@ -119,8 +119,8 @@ in :conf_master:`pillar_roots`, pattern your files after the following examples:
       router2:
         - router2
       switch1:
-        - swtich1
-      swtich2:
+        - switch1
+      switch2:
         - switch2
       cpe1:
         - cpe1
@@ -334,8 +334,8 @@ network devices, we can add the following line inside the ``top.sls`` file:
       router2:
         - router2
       switch1:
-        - swtich1
-      swtich2:
+        - switch1
+      switch2:
         - switch2
       cpe1:
         - cpe1
@@ -354,8 +354,8 @@ Or include only where needed:
         - router2
         - ntp
       switch1:
-        - swtich1
-      swtich2:
+        - switch1
+      switch2:
         - switch2
       cpe1:
         - cpe1

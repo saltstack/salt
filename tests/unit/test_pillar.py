@@ -35,6 +35,7 @@ class PillarTestCase(TestCase):
     def test_pillarenv_from_saltenv(self):
         with patch('salt.pillar.compile_template') as compile_template:
             opts = {
+                'optimization_order': [0, 1, 2],
                 'renderer': 'json',
                 'renderer_blacklist': [],
                 'renderer_whitelist': [],
@@ -59,6 +60,7 @@ class PillarTestCase(TestCase):
 
     def test_ext_pillar_no_extra_minion_data_val_dict(self):
         opts = {
+            'optimization_order': [0, 1, 2],
             'renderer': 'json',
             'renderer_blacklist': [],
             'renderer_whitelist': [],
@@ -99,6 +101,7 @@ class PillarTestCase(TestCase):
 
     def test_ext_pillar_no_extra_minion_data_val_list(self):
         opts = {
+            'optimization_order': [0, 1, 2],
             'renderer': 'json',
             'renderer_blacklist': [],
             'renderer_whitelist': [],
@@ -139,6 +142,7 @@ class PillarTestCase(TestCase):
 
     def test_ext_pillar_no_extra_minion_data_val_elem(self):
         opts = {
+            'optimization_order': [0, 1, 2],
             'renderer': 'json',
             'renderer_blacklist': [],
             'renderer_whitelist': [],
@@ -177,6 +181,7 @@ class PillarTestCase(TestCase):
 
     def test_ext_pillar_with_extra_minion_data_val_dict(self):
         opts = {
+            'optimization_order': [0, 1, 2],
             'renderer': 'json',
             'renderer_blacklist': [],
             'renderer_whitelist': [],
@@ -217,6 +222,7 @@ class PillarTestCase(TestCase):
 
     def test_ext_pillar_with_extra_minion_data_val_list(self):
         opts = {
+            'optimization_order': [0, 1, 2],
             'renderer': 'json',
             'renderer_blacklist': [],
             'renderer_whitelist': [],
@@ -257,6 +263,7 @@ class PillarTestCase(TestCase):
 
     def test_ext_pillar_with_extra_minion_data_val_elem(self):
         opts = {
+            'optimization_order': [0, 1, 2],
             'renderer': 'json',
             'renderer_blacklist': [],
             'renderer_whitelist': [],
@@ -297,6 +304,7 @@ class PillarTestCase(TestCase):
 
     def test_dynamic_pillarenv(self):
         opts = {
+            'optimization_order': [0, 1, 2],
             'renderer': 'json',
             'renderer_blacklist': [],
             'renderer_whitelist': [],
@@ -311,6 +319,7 @@ class PillarTestCase(TestCase):
 
     def test_ignored_dynamic_pillarenv(self):
         opts = {
+            'optimization_order': [0, 1, 2],
             'renderer': 'json',
             'renderer_blacklist': [],
             'renderer_whitelist': [],
@@ -326,6 +335,7 @@ class PillarTestCase(TestCase):
     def test_malformed_pillar_sls(self, mock_list_states):
         with patch('salt.pillar.compile_template') as compile_template:
             opts = {
+                'optimization_order': [0, 1, 2],
                 'renderer': 'json',
                 'renderer_blacklist': [],
                 'renderer_whitelist': [],
@@ -437,6 +447,7 @@ class PillarTestCase(TestCase):
 
     def test_includes_override_sls(self):
         opts = {
+            'optimization_order': [0, 1, 2],
             'renderer': 'json',
             'renderer_blacklist': [],
             'renderer_whitelist': [],
@@ -501,6 +512,7 @@ class PillarTestCase(TestCase):
         with patch('salt.pillar.salt.fileclient.get_file_client', autospec=True) as get_file_client, \
                 patch('salt.pillar.salt.minion.Matcher') as Matcher:  # autospec=True disabled due to py3 mock bug
             opts = {
+                'optimization_order': [0, 1, 2],
                 'renderer': 'yaml',
                 'renderer_blacklist': [],
                 'renderer_whitelist': [],
@@ -601,6 +613,7 @@ generic:
         with patch('salt.pillar.salt.fileclient.get_file_client', autospec=True) as get_file_client, \
             patch('salt.pillar.salt.minion.Matcher') as Matcher:  # autospec=True disabled due to py3 mock bug
             opts = {
+                'optimization_order': [0, 1, 2],
                 'renderer': 'yaml',
                 'renderer_blacklist': [],
                 'renderer_whitelist': [],

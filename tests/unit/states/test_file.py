@@ -812,6 +812,8 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
         name = '/etc/testdir'
         user = 'salt'
         group = 'saltstack'
+        if salt.utils.platform.is_windows():
+            name = name.replace('/', '\\')
 
         ret = {'name': name,
                'result': False,
@@ -908,7 +910,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                         else:
                             comt = ('The following files will be changed:\n{0}:'
                                     ' directory - new\n'.format(name))
-                        p_chg = {'/etc/testdir': {'directory': 'new'}}
+                        p_chg = {name: {'directory': 'new'}}
                         ret.update({
                             'comment': comt,
                             'result': None,
@@ -965,6 +967,8 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
         source = 'salt://code/flask'
         user = 'salt'
         group = 'saltstack'
+        if salt.utils.platform.is_windows():
+            name = name.replace('/', '\\')
 
         ret = {'name': name,
                'result': False,

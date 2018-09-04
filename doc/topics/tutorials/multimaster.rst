@@ -95,7 +95,7 @@ redundant master. Both masters are first-class and have rights to the minions.
 .. note::
 
     Minions can automatically detect failed masters and attempt to reconnect
-    to reconnect to them quickly. To enable this functionality, set
+    to them quickly. To enable this functionality, set
     `master_alive_interval` in the minion config and specify a number of
     seconds to poll the masters for connection status.
 

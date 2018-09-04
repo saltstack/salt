@@ -22,7 +22,7 @@ from tests.support.case import ShellCase
 from tests.support.unit import skipIf
 from tests.support.paths import FILES, TMP
 from tests.support.mixins import ShellCaseCommonTestsMixin
-from tests.support.helpers import destructiveTest
+from tests.support.helpers import destructiveTest, flaky
 from tests.integration.utils import testprogram
 
 # Import salt libs
@@ -103,12 +103,10 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
                 log.debug('The pkg: {0} is already installed on the machine'.format(pkg))
 
     @skipIf(sys.platform.startswith('win'), 'This test does not apply on Win')
+    @flaky
     def test_user_delete_kw_output(self):
         ret = self.run_call('-l quiet -d user.delete')
-        self.assertIn(
-            'salt \'*\' user.delete name remove=True force=True',
-            ''.join(ret)
-        )
+        assert 'salt \'*\' user.delete name remove=True force=True' in ''.join(ret)
 
     def test_salt_documentation_too_many_arguments(self):
         '''
@@ -163,6 +161,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
         self.assertTrue(True in ['returnTOmaster' in a for a in master_out])
 
     @skipIf(sys.platform.startswith('win'), 'This test does not apply on Win')
+    @flaky
     def test_issue_2731_masterless(self):
         root_dir = os.path.join(TMP, 'issue-2731')
         config_dir = os.path.join(root_dir, 'conf')
@@ -368,6 +367,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
             if os.path.isdir(config_dir):
                 shutil.rmtree(config_dir)
 
+    @flaky
     def test_issue_15074_output_file_append(self):
         output_file_append = os.path.join(TMP, 'issue-15074')
         try:
@@ -408,7 +408,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
                 self.run_script(
                     'salt-call',
                     '-c {0} --output-file={1} -l trace -g'.format(
-                        self.get_config_dir(),
+                        self.config_dir,
                         output_file
                     ),
                     catch_stderr=True,
