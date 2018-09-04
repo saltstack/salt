@@ -433,7 +433,8 @@ class ProfileIntegrityTestCase(TestCase):
         Get template referene for rendering.
         :return:
         '''
-        template = salt.utils.files.fopen(self.profiles[name]).read()
+        with salt.utils.files.fopen(self.profiles[name]) as t_fh:
+            template = t_fh.read()
         return yaml.load(jinja2.Environment().from_string(template).render(*args, **kwargs))
 
     def test_non_template_profiles_parseable(self):
