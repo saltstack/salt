@@ -1374,9 +1374,9 @@ def create_certificate(
                 pem_type='CERTIFICATE REQUEST').replace('\n', '')
         if 'public_key' in kwargs:
             # Strip newlines to make passing through as cli functions easier
-            kwargs['public_key'] = get_public_key(
+            kwargs['public_key'] = salt.utils.stringutils.to_str(get_public_key(
                 kwargs['public_key'],
-                passphrase=kwargs['public_key_passphrase']).replace('\n', '')
+                passphrase=kwargs['public_key_passphrase'])).replace('\n', '')
 
         # Remove system entries in kwargs
         # Including listen_in and preqreuired because they are not included
