@@ -29,7 +29,7 @@ def filetree(collector, path):
         if os.path.isfile(path):
             filename = os.path.basename(path)
             try:
-                file_ref = salt.utils.files.fopen(path)
+                file_ref = salt.utils.files.fopen(path)  # pylint: disable=W
                 out.put('Add {}'.format(filename), indent=2)
                 collector.add(filename)
                 collector.link(title=path, path=file_ref)
