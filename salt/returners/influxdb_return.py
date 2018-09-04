@@ -70,7 +70,7 @@ except ImportError:
     HAS_INFLUXDB = False
 
 # HTTP API header used to check the InfluxDB version
-influxDBVersionHeader = "X-Influxdb-Version"
+influxdb_version_header = "X-Influxdb-Version"
 
 log = logging.getLogger(__name__)
 
@@ -105,12 +105,16 @@ def _get_options(ret=None):
 
 @memoize
 def _get_version(host, port, user, password):
+    '''
+    Get the InfluxDB server version
+    '''
     version = None
     # check the InfluxDB version via the HTTP API
     try:
-        result = requests.get("http://{0}:{1}/ping".format(host, port), auth=(user, password))
-        if influxDBVersionHeader in result.headers:
-            version = result.headers[influxDBVersionHeader]
+        result = requests.get("http://{0}:{1}/ping".format(host, port),
+                              auth=(user, password))
+        if influxdb_version_header in result.headers:
+            version = result.headers[influxdb_version_header]
     except Exception as ex:
         log.critical(
             'Failed to query InfluxDB version from HTTP API within InfluxDB '
@@ -331,3 +335,55 @@ def prep_jid(nocache=False, passed_jid=None):  # pylint: disable=unused-argument
     Do any work necessary to prepare a JID, including sending a custom id
     '''
     return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid(__opts__)
+
+
+def event_return(events):
+    '''
+    Return a list of events to InfluxDB
+
+    This is largely copied from the mysql event_return function and reading over
+    the following documentation:
+    https://docs.saltstack.com/en/latest/ref/returners/index.html#event-returners
+    https://docs.saltstack.com/en/latest/ref/returners/index.html#event-support
+    https://github.com/influxdata/influxdb-python
+
+    This was tested with pip module influxdb 5.2.0 installed in a Docker
+    container against InfluxDB 1.6.0 (Docker version)
+
+
+    It should be noted that this code is not very robust and is just a start to
+    get this working.
+    '''
+
+    client = _get_serv()
+
+    for event in events:
+        # This should probably be redone to join all the events together
+        # and then send them all at once as long as the server can handle it?
+        # This method may require more handling splitting the data into more
+        # manageable chunks for sending.
+        req = [
+            {
+                'measurement': 'events',
+                'tags': {
+                    'master_id': __opts__.get('id', ''),
+                    'fun': salt.utils.json.dumps(event['data'].get('fun', '')),
+                    'minions': salt.utils.json.dumps(event['data'].get('minions', '') or event['data'].get('id', '')),
+                    'jid': salt.utils.json.dumps(event['data'].get('jid', '')),
+                    'tag': salt.utils.json.dumps(event['tag']),
+                },
+                'fields': {
+
+                    'data': salt.utils.json.dumps(event['data']),
+                    'full_event': salt.utils.json.dumps(event),
+                    'stamp': salt.utils.json.dumps(event['data']['_stamp'])
+                }
+            }
+        ]
+        try:
+            client.write_points(req)
+        except Exception as ex:
+            log.critical(
+                "Failed to store event with InfluxDB event_return: %s", ex)
+        finally:
+            log.debug("Finished processing event %s - %s", event['tag'], event['data'])
