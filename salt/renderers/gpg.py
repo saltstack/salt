@@ -37,6 +37,56 @@ your application. Be sure to back up the ``gpgkeys`` directory someplace safe!
     increasing the system entropy. On virtualised Linux systems, this can often
     be achieved by installing the ``rng-tools`` package.
 
+Import keys to a master
+************************
+
+If the keys already exist and need to be imported to the salt master, run the
+following to import them.
+
+.. code-block:: bash
+
+    gpg --import /path/to/private.key
+    gpg --import /path/to/pubkey.gpg
+
+If the salt master runs as normal user, become this user before importing the
+keys. The default target dir will be ``~/.gnupg``. This can be overridden by
+the ``--homedir`` option. The keys must be at least readable for the runuser.
+
+Adjust trust level of imported keys
+***********************************
+
+In some cases, importing existing keys may not be enough an the trust level of
+the key needs to be adjusted. This can be done by editing the key. The ``key_id``
+and the actual trust level of the key can be seen by listing the already imported
+keys.
+
+.. code-block:: bash
+
+    gpg --list-keys
+    gpg --list-secret-keys
+
+If the trust-level is not ``ultimate`` it needs to be changed by running
+
+.. code-block:: bash
+
+    gpg --edit-key <key_id>
+
+This will open an interactive shell for the management of the GPG encrypted key. Type
+``trust`` to be able to set the trust level for the key and then select
+``5 (I trust ultimately)``. Then quit the shell by typing ``save``.
+
+Enable usage of GPG keys on the master
+**************************************
+
+Generating or importing the keys is not enough to activate the ability to decrypt
+the pillars, especially if the keys are generated/imported in a non-standard dir.
+
+To enable the keys on the salt-master, the following needs to be added to the
+masters configuration.
+
+.. code-block:: bash
+
+    gpg_keydir: <path/to/homedir>
 
 Export the Public Key
 ---------------------
