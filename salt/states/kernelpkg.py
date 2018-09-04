@@ -36,10 +36,10 @@ Chaining can also be achieved using wait/listen requisites:
 .. code-block:: yaml
 
     install-latest-kernel:
-      kernel.latest_installed: []
+      kernelpkg.latest_installed: []
 
     boot-latest-kernel:
-      kernel.latest_wait:
+      kernelpkg.latest_wait:
         - at_time: 1
         - listen:
           - kernel: install-latest-kernel
