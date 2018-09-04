@@ -66,13 +66,14 @@ passed in as a dict, or as a string to pull from pillars or minion config:
 
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
+import logging
 import uuid
 
 # Import Salt Libs
-import salt.utils.dictupdate as dictupdate
-from salt.utils import exactly_one
+import salt.utils.data
+import salt.utils.dictupdate
 from salt.exceptions import SaltInvocationError
-import logging
+
 log = logging.getLogger(__name__)  # pylint: disable=W1699
 
 
@@ -143,7 +144,7 @@ def hosted_zone_present(name, Name=None, PrivateZone=False,
         if not isinstance(VPCs, list):
             raise SaltInvocationError("Parameter 'VPCs' must be a list of dicts.")
         for v in VPCs:
-            if not isinstance(v, dict) or not exactly_one((v.get('VPCId'), v.get('VPCName'))):
+            if not isinstance(v, dict) or not salt.utils.data.exactly_one((v.get('VPCId'), v.get('VPCName'))):
                 raise SaltInvocationError("Parameter 'VPCs' must be a list of dicts, each composed "
                                       "of either a 'VPCId' or a 'VPCName', and optionally a "
                                       "'VPCRegion', to help distinguish between multitple matches.")
@@ -251,7 +252,7 @@ def hosted_zone_present(name, Name=None, PrivateZone=False,
             log.info(msg)
             ret['comment'] = '  '.join([ret['comment'], msg])
             ret['changes']['old'] = zone
-            ret['changes']['new'] = dictupdate.update(ret['changes'].get('new', {}), r)
+            ret['changes']['new'] = salt.utils.dictupdate.update(ret['changes'].get('new', {}), r)
         else:
             ret['comment'] = 'Update of Route 53 {} hosted zone {} comment failed'.format('private'
                     if PrivateZone else 'public', Name)

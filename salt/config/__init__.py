@@ -2585,7 +2585,7 @@ def apply_sdb(opts, sdb_opts=None):
 
 
 # ----- Salt Cloud Configuration Functions ---------------------------------->
-def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
+def cloud_config(path=None, env_var='SALT_CLOUD_CONFIG', defaults=None,
                  master_config_path=None, master_config=None,
                  providers_config_path=None, providers_config=None,
                  profiles_config_path=None, profiles_config=None):
@@ -2613,11 +2613,11 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
 
     # Load cloud configuration from any default or provided includes
     overrides.update(
-        salt.config.include_config(overrides['default_include'], path, verbose=False)
+        salt.config.include_config(overrides['default_include'], config_dir, verbose=False)
     )
     include = overrides.get('include', [])
     overrides.update(
-        salt.config.include_config(include, path, verbose=True)
+        salt.config.include_config(include, config_dir, verbose=True)
     )
 
     # The includes have been evaluated, let's see if master, providers and
@@ -2672,7 +2672,7 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
         if not os.path.isabs(entry):
             # Let's try adding the provided path's directory name turns the
             # entry into a proper directory
-            entry = os.path.join(os.path.dirname(path), entry)
+            entry = os.path.join(config_dir, entry)
 
         if os.path.isdir(entry):
             # Path exists, let's update the entry (its path might have been

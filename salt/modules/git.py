@@ -4919,6 +4919,116 @@ def symbolic_ref(cwd,
                     output_encoding=output_encoding)['stdout']
 
 
+def tag(cwd,
+        name,
+        ref='HEAD',
+        message=None,
+        opts='',
+        git_opts='',
+        user=None,
+        password=None,
+        ignore_retcode=False,
+        output_encoding=None):
+    '''
+    .. versionadded:: 2018.3.4
+
+    Interface to `git-tag(1)`_, adds and removes tags.
+
+    cwd
+        The path to the main git checkout or a linked worktree
+
+    name
+        Name of the tag
+
+    ref : HEAD
+        Which ref to tag (defaults to local clone's HEAD)
+
+        .. note::
+            This argument is ignored when either ``-d`` or ``--delete`` is
+            present in the ``opts`` passed to this function.
+
+    message
+        Optional message to include with the tag. If provided, an annotated tag
+        will be created.
+
+    opts
+        Any additional options to add to the command line, in a single string
+
+        .. note::
+            Additionally, on the Salt CLI, if the opts are preceded with a
+            dash, it is necessary to precede them with ``opts=`` (as in the CLI
+            examples below) to avoid causing errors with Salt's own argument
+            parsing.
+
+    git_opts
+        Any additional options to add to git command itself (not the
+        ``worktree`` subcommand), in a single string. This is useful for
+        passing ``-c`` to run git with temporary changes to the git
+        configuration.
+
+        .. note::
+            This is only supported in git 1.7.2 and newer.
+
+    user
+        User under which to run the git command. By default, the command is run
+        by the user under which the minion is running.
+
+    password
+        Windows only. Required when specifying ``user``. This parameter will be
+        ignored on non-Windows platforms.
+
+    ignore_retcode : False
+        If ``True``, do not log an error to the minion log if the git command
+        returns a nonzero exit status.
+
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
+
+        .. note::
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
+
+    .. _`git-tag(1)`: http://git-scm.com/docs/git-tag
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        # Create an non-annotated tag
+        salt myminion git.tag /path/to/repo v1.2
+        # Create an annotated tag
+        salt myminion git.tag /path/to/repo v1.2 message='Version 1.2'
+        # Delete the tag
+        salt myminion git.tag /path/to/repo v1.2 opts='-d'
+    '''
+    cwd = _expand_path(cwd, user)
+    command = ['git'] + _format_git_opts(git_opts)
+    command.append('tag')
+    # Don't add options for annotated tags, since we'll automatically add them
+    # if a message was passed. This keeps us from blocking on input, as passing
+    # these options without a separate message option would launch an editor.
+    formatted_opts = [x for x in _format_opts(opts) if x not in ('-a', '--annotate')]
+    # Make sure that the message was not passed in the opts
+    if any(x == '-m' or '--message' in x for x in formatted_opts):
+        raise SaltInvocationError(
+            'Tag messages must be passed in the "message" argument'
+        )
+    command.extend(formatted_opts)
+    command.append(name)
+    if '-d' not in formatted_opts and '--delete' not in formatted_opts:
+        command.append(ref)
+    return _git_run(command,
+                    cwd=cwd,
+                    user=user,
+                    password=password,
+                    ignore_retcode=ignore_retcode,
+                    redirect_stderr=True,
+                    output_encoding=output_encoding)['stdout']
+
+
 def version(versioninfo=False):
     '''
     .. versionadded:: 2015.8.0
