@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+r'''
 Proxy Minion for Cisco NX-OS Switches
 
 .. versionadded: 2016.11.0
@@ -166,16 +166,12 @@ the :mod:`salt.modules.nxos<salt.modules.nxos>` execution module.
 from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import multiprocessing
-import re
 import copy
-import inspect
-import difflib
 
 # Import Salt libs
 from salt.utils.vt_helper import SSHConnection
 from salt.utils.vt import TerminalException
 from salt.exceptions import CommandExecutionError
-from salt.ext import six
 
 log = logging.getLogger(__file__)
 
@@ -186,6 +182,7 @@ __virtualname__ = 'nxos'
 DEVICE_DETAILS = {'grains_cache': {}}
 CONNECTION = 'ssh'
 COPY_RS = 'copy running-config startup-config'
+
 
 def __virtual__():
     '''
@@ -364,7 +361,7 @@ def _init_ssh(opts):
             ssh_args=opts['proxy'].get('ssh_args', ''),
             prompt=this_prompt)
         out, err = DEVICE_DETAILS[_worker_name()].sendline('terminal length 0')
-        log.info("SSH session established for process %s" % _worker_name())
+        log.info('SSH session establised for process {}'.format(_worker_name()))
     except TerminalException as e:
         log.error(e)
         return False
@@ -402,6 +399,7 @@ def _sendline_ssh(command):
 def _worker_name():
     return multiprocessing.current_process().name
 
+
 # -----------------------------------------------------------------------------
 # NX-API Transport Functions
 # -----------------------------------------------------------------------------
@@ -431,7 +429,7 @@ def _init_nxapi(opts):
     except CommandExecutionError:
         log.error('Unable to connect to %s', conn_args['host'], exc_info=True)
         raise
-    log.info("nxapi DEVICE_DETAILS info: %s" % DEVICE_DETAILS)
+    log.info('nxapi DEVICE_DETAILS info: {}'.format(DEVICE_DETAILS))
     return True
 
 

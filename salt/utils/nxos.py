@@ -8,13 +8,9 @@ from __future__ import absolute_import, print_function, unicode_literals
 import json
 import logging
 import os
-import sys
 import httplib
 import socket
-import pwd
-import time
-import datetime
-from stat import *
+# from stat import *
 from salt.exceptions import CommandExecutionError
 
 # Import salt libs
@@ -26,6 +22,7 @@ except ImportError:
     from salt.utils import clean_kwargs
 
 log = logging.getLogger(__name__)
+
 
 class UHTTPConnection(httplib.HTTPConnection):
     '''
@@ -83,7 +80,6 @@ class NxapiClient():
             log.info('Connecting over {}'.format(self.nxargs['transport']))
             self.connection = salt.utils.http.query
 
-
     def _use_remote_connection(self, kwargs):
         '''
         Determine if connection is local or remote
@@ -97,7 +93,6 @@ class NxapiClient():
             return False
         else:
             return True
-
 
     def _prepare_conn_args(self, kwargs):
         '''
@@ -120,7 +115,6 @@ class NxapiClient():
             kwargs['connect_over_uds'] = False
         return kwargs
 
-
     def _build_request(self, type, commands):
         '''
         Build NX-API JSON request.
@@ -135,10 +129,10 @@ class NxapiClient():
             request['url'] = self.NXAPI_UDS_URI_PATH
         else:
             request['url'] = '{transport}://{host}:{port}{uri}'.format(
-                transport = self.nxargs['transport'],
-                host = self.nxargs['host'],
-                port = self.nxargs['port'],
-                uri = self.NXAPI_REMOTE_URI_PATH,
+                transport=self.nxargs['transport'],
+                host=self.nxargs['host'],
+                port=self.nxargs['port'],
+                uri=self.NXAPI_REMOTE_URI_PATH,
             )
 
         if isinstance(commands, (list, set, tuple)):
@@ -160,7 +154,6 @@ class NxapiClient():
         log.info('request: {0}'.format(request))
         return request
 
-
     def request(self, type, command_list):
         '''
         Send NX-API JSON request to the NX-OS device.
@@ -171,17 +164,16 @@ class NxapiClient():
             response = self.connection.getresponse()
         else:
             response = self.connection(req['url'],
-                                        method = 'POST',
-                                        opts = req['opts'],
-                                        data = req['payload'],
-                                        header_dict = req['headers'],
-                                        decode = True,
-                                        decode_type = 'json',
-                                        **self.nxargs)
+                                       method='POST',
+                                       opts=req['opts'],
+                                       data=req['payload'],
+                                       header_dict=req['headers'],
+                                       decode=True,
+                                       decode_type='json',
+                                       **self.nxargs)
             response = response['dict']
 
         return self.parse_response(response)
-
 
     def parse_response(self, response):
         '''
@@ -222,8 +214,8 @@ class NxapiClient():
 
 
 def nxapi_request(commands,
-        method='cli_show',
-        **kwargs):
+                  method='cli_show',
+                  **kwargs):
     '''
     Send exec and config commands to the NX-OS device over NX-API.
 
