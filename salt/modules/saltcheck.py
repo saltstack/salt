@@ -115,6 +115,19 @@ Example with assertion_section:
       expected-return: /bin/bash
       assertion_section: shell
 
+Example suppressing print results:
+
+.. code-block:: jinja
+
+    validate_refData_env_nameNode:
+      module_and_function: hadoop.dfs
+      args:
+        - text
+        - /oozie/common/env.properties
+      expected-return: nameNode = hdfs://nameservice2
+      assertion: assertNotIn
+      print_result: False
+
 Supported assertions
 --------------------
 * assertEqual
@@ -520,22 +533,23 @@ class SaltCheck(object):
             else:
                 assertion = test_dict['assertion']
             expected_return = test_dict.get('expected-return', None)
+            assert_print_result = test_dict.get('print_result', None)
             actual_return = self._call_salt_command(mod_and_func, args, kwargs, assertion_section)
             if assertion not in ["assertIn", "assertNotIn", "assertEmpty", "assertNotEmpty",
                                  "assertTrue", "assertFalse"]:
                 expected_return = self._cast_expected_to_returned_type(expected_return, actual_return)
             if assertion == "assertEqual":
-                value = self.__assert_equal(expected_return, actual_return)
+                value = self.__assert_equal(expected_return, actual_return, assert_print_result)
             elif assertion == "assertNotEqual":
-                value = self.__assert_not_equal(expected_return, actual_return)
+                value = self.__assert_not_equal(expected_return, actual_return, assert_print_result)
             elif assertion == "assertTrue":
                 value = self.__assert_true(actual_return)
             elif assertion == "assertFalse":
                 value = self.__assert_false(actual_return)
             elif assertion == "assertIn":
-                value = self.__assert_in(expected_return, actual_return)
+                value = self.__assert_in(expected_return, actual_return, assert_print_result)
             elif assertion == "assertNotIn":
-                value = self.__assert_not_in(expected_return, actual_return)
+                value = self.__assert_not_in(expected_return, actual_return, assert_print_result)
             elif assertion == "assertGreater":
                 value = self.__assert_greater(expected_return, actual_return)
             elif assertion == "assertGreaterEqual":
@@ -579,26 +593,32 @@ class SaltCheck(object):
         return new_expected
 
     @staticmethod
-    def __assert_equal(expected, returned):
+    def __assert_equal(expected, returned, assert_print_result=True):
         '''
         Test if two objects are equal
         '''
         result = "Pass"
 
         try:
-            assert (expected == returned), "{0} is not equal to {1}".format(expected, returned)
+            if assert_print_result:
+                assert (expected == returned), "{0} is not equal to {1}".format(expected, returned)
+            else:
+                assert (expected == returned), "Result is not equal"
         except AssertionError as err:
             result = "Fail: " + six.text_type(err)
         return result
 
     @staticmethod
-    def __assert_not_equal(expected, returned):
+    def __assert_not_equal(expected, returned, assert_print_result=True):
         '''
         Test if two objects are not equal
         '''
         result = "Pass"
         try:
-            assert (expected != returned), "{0} is equal to {1}".format(expected, returned)
+            if assert_print_result:
+                assert (expected != returned), "{0} is equal to {1}".format(expected, returned)
+            else:
+                assert (expected != returned), "Result is equal"
         except AssertionError as err:
             result = "Fail: " + six.text_type(err)
         return result
@@ -633,25 +653,31 @@ class SaltCheck(object):
         return result
 
     @staticmethod
-    def __assert_in(expected, returned):
+    def __assert_in(expected, returned, assert_print_result=True):
         '''
         Test if a value is in the list of returned values
         '''
         result = "Pass"
         try:
-            assert (expected in returned), "{0} not found in {1}".format(expected, returned)
+            if assert_print_result:
+                assert (expected in returned), "{0} not found in {1}".format(expected, returned)
+            else:
+                assert (expected in returned), "Result not found"
         except AssertionError as err:
             result = "Fail: " + six.text_type(err)
         return result
 
     @staticmethod
-    def __assert_not_in(expected, returned):
+    def __assert_not_in(expected, returned, assert_print_result=True):
         '''
         Test if a value is not in the list of returned values
         '''
         result = "Pass"
         try:
-            assert (expected not in returned), "{0} was found in {1}".format(expected, returned)
+            if assert_print_result:
+                assert (expected not in returned), "{0} was found in {1}".format(expected, returned)
+            else:
+                assert (expected not in returned), "Result was found"
         except AssertionError as err:
             result = "Fail: " + six.text_type(err)
         return result

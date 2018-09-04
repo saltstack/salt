@@ -13,6 +13,7 @@ Available since 2018.3, the saltcheck module has been enhanced to:
  * Associate tests with states by naming convention
  * Adds empty and notempty assertions
  * Adds skip keyword
+ * Adds print_result keyword
  * Adds assertion_section keyword
  * Use saltcheck.state_apply to run state.apply for test setup or teardown
  * Changes output to display test time
@@ -88,6 +89,7 @@ Example Tests
       assertion: assertEqual
       expected-return: /bin/bash
       assertion_section: shell
+      print_result: False
 
     skip_test:
       module_and_function: pkg.upgrade_available
