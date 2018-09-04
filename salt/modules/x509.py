@@ -780,12 +780,14 @@ def write_pem(text, path, overwrite=True, pem_type=None):
             _filecontents = _text_or_file(path)
             try:
                 _dhparams = get_pem_entry(_filecontents, 'DH PARAMETERS')
-            except salt.exceptions.SaltInvocationError:
-                pass
+            except salt.exceptions.SaltInvocationError as err:
+                log.debug("Error when getting DH PARAMETERS: %s", err)
+                log.trace(err, exc_info=err)
             try:
                 _private_key = get_pem_entry(_filecontents, '(?:RSA )?PRIVATE KEY')
-            except salt.exceptions.SaltInvocationError:
-                pass
+            except salt.exceptions.SaltInvocationError as err:
+                log.debug("Error when getting PRIVATE KEY: %s", err)
+                log.trace(err, exc_info=err)
         with salt.utils.files.fopen(path, 'w') as _fp:
             if pem_type and pem_type == 'CERTIFICATE' and _private_key:
                 _fp.write(salt.utils.stringutils.to_str(_private_key))
