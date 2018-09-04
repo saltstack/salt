@@ -96,7 +96,6 @@ import re
 from salt.utils.pycrypto import gen_hash, secure_password
 import salt.utils.platform
 import salt.utils.nxos
-from salt.utils.vt import TerminalException
 from salt.ext import six
 from salt.exceptions import CommandExecutionError
 
@@ -106,6 +105,7 @@ log = logging.getLogger(__name__)
 
 DEVICE_DETAILS = {'grains_cache': {}}
 COPY_RS = 'copy running-config startup-config'
+
 
 def __virtual__():
     return __virtualname__
@@ -349,7 +349,7 @@ def show(commands, raw_text=True, **kwargs):
     else:
         method = 'cli_show'
 
-    response_list =  sendline(commands, method, **kwargs)
+    response_list = sendline(commands, method, **kwargs)
     if isinstance(response_list, list):
         ret = [response for response in response_list if response]
         if not ret:
@@ -537,7 +537,6 @@ def config(commands=None,
 
 def _parse_config_result(data):
     command_list = ' ; '.join([x.strip() for x in data[0]])
-    #command_list = ' ; '.join(data[0])
     config_result = data[1]
     if isinstance(config_result, list):
         result = ''
@@ -821,8 +820,8 @@ def _nxapi_config(commands, methods='cli_conf', bsb_arg=None, **kwargs):
 
 
 def _nxapi_request(commands,
-        method='cli_conf',
-        **kwargs):
+                   method='cli_conf',
+                   **kwargs):
     '''
     Helper function to send exec and config requests over NX-API.
 
