@@ -24,6 +24,8 @@ def filetree(collector, path):
     if not path:
         out.error('Path not defined', ident=2)
     else:
+        # The filehandler needs to be explicitly passed here, so PyLint needs to accept that.
+        # pylint: disable=W8470
         if os.path.isfile(path):
             filename = os.path.basename(path)
             try:
@@ -33,6 +35,7 @@ def filetree(collector, path):
                 collector.link(title=path, path=file_ref)
             except Exception as err:
                 out.error(err, ident=4)
+        # pylint: enable=W8470
         else:
             for fname in os.listdir(path):
                 fname = os.path.join(path, fname)

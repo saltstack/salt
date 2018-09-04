@@ -162,9 +162,12 @@ class SupportDataCollector(object):
         :param path:
         :return:
         '''
+        # The filehandler needs to be explicitly passed here, so PyLint needs to accept that.
+        # pylint: disable=W8470
         if not isinstance(path, file):
             path = salt.utils.files.fopen(path)
         self.__current_section.append({title: path})
+        # pylint: enable=W8470
 
 
 class SaltSupport(salt.utils.parsers.SaltSupportOptionParser):
