@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-State module for Cisco NX OS Switches Proxy minions
+State module for Cisco NX-OS Switch Proxy and Native minions
 
 .. versionadded: 2016.11.0
 
