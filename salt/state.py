@@ -1807,8 +1807,8 @@ class State(object):
         use_uptime = False
         if os.path.isfile('/proc/uptime'):
             use_uptime = True
-            with open('/proc/uptime', 'r') as f:
-                start_uptime = float(f.readline().split()[0])
+            with salt.utils.files.fopen('/proc/uptime', 'r') as fp_:
+                start_uptime = float(fp_.readline().split()[0])
         utc_start_time = datetime.datetime.utcnow()
         local_start_time = utc_start_time - (datetime.datetime.utcnow() - datetime.datetime.now())
         log.info('Running state [%s] at time %s',
@@ -1977,8 +1977,8 @@ class State(object):
         format_log(ret)
         self.check_refresh(low, ret)
         if use_uptime:
-            with open('/proc/uptime', 'r') as f:
-                finish_uptime = float(f.readline().split()[0])
+            with salt.utils.files.fopen('/proc/uptime', 'r') as fp_:
+                finish_uptime = float(fp_.readline().split()[0])
         utc_finish_time = datetime.datetime.utcnow()
         timezone_delta = datetime.datetime.utcnow() - datetime.datetime.now()
         local_finish_time = utc_finish_time - timezone_delta
