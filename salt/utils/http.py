@@ -292,6 +292,9 @@ def query(url,
             auth = (username, password)
 
     if agent == USERAGENT:
+        user_agent = opts.get('user_agent', None)
+        if user_agent:
+            agent = user_agent
         agent = '{0} http.query()'.format(agent)
     header_dict['User-agent'] = agent
 
