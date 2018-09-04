@@ -7,9 +7,9 @@ Version 2017.7.8 is a bugfix release for :ref:`2017.7.0 <release-2017-7-0>`.
 Statistics
 ==========
 
-- Total Merges: **230**
-- Total Issue References: **47**
-- Total PR References: **270**
+- Total Merges: **237**
+- Total Issue References: **48**
+- Total PR References: **279**
 
 - Contributors: **52** (`AVeenstra`_, `Ch3LL`_, `Circuitsoft`_, `DmitryKuzmenko`_, `KaiSforza`_, `Martin819`_, `OrlandoArcapix`_, `UtahDave`_, `Vaelatern`_, `abednarik`_, `asnell`_, `b1naryth1ef`_, `baniobloom`_, `basepi`_, `bdrung`_, `beornf`_, `bmcorser`_, `bowmanjd-lms`_, `damon-atkins`_, `darkpixel`_, `discogestalt`_, `doesitblend`_, `dqminh`_, `dubb-b`_, `dwoz`_, `frankiexyz`_, `frogunder`_, `fzipi`_, `garethgreenaway`_, `grokrecursion`_, `gtmanfred`_, `jacksontj`_, `jagguli`_, `lejambon`_, `lomeroe`_, `lordcirth`_, `lusche`_, `mbunkus`_, `meaksh`_, `mirceaulinic`_, `nbraud`_, `pritambaral`_, `ralex`_, `rallytime`_, `rmcintosh`_, `slaws`_, `terminalmage`_, `twangboy`_, `twellspring`_, `wyardley`_, `xetix`_, `zer0def`_)
 
@@ -42,7 +42,67 @@ environment.
 Changelog for v2017.7.7..v2017.7.8
 =================================================================
 
-*Generated at: 2018-08-14 13:42:10 UTC*
+*Generated at: 2018-09-04 21:09:41 UTC*
+
+* **PR** `#49498`_: (`rallytime`_) Pin CherryPy version to < 18.0.0 in requirements files for PY2
+  @ *2018-09-04 17:55:02 UTC*
+
+  * 0d7b173b24 Merge pull request `#49498`_ from rallytime/pin-cherrypy-2017.7.8
+
+  * 81a6155b6b Pin CherryPy version to < 18.0.0 in requirements files for PY2
+
+* **ISSUE** `#47087`_: (`darkpixel`_) How do I stop the prompt "Permission denied for host <hostname>, do you want to deploy the salt-ssh key? (password required):"? (refs: `#47100`_, #`saltstack/salt`#47100`_`_)
+
+  * **PR** `saltstack/salt#47100`_: (`gtmanfred`_) Allow for not being prompted to supply a password to deploy keys to a… (refs: `#49461`_)
+
+* **PR** `#49466`_: (`rallytime`_) Back-port `#49461`_ to 2017.7.8
+  @ *2018-08-31 15:44:11 UTC*
+
+  * **PR** `#49461`_: (`gtmanfred`_) Revert "Allow for not being prompted to supply a password to deploy keys to a…" (refs: `#49466`_)
+
+  * 52ab2c0574 Merge pull request `#49466`_ from rallytime/bp-49461
+
+  * 58428003b1 Revert "Allow for not being prompted to supply a password to deploy keys to a…"
+
+* **PR** `#49284`_: (`twangboy`_) Fix path to libsodium tarball
+  @ *2018-08-23 17:19:24 UTC*
+
+  * 1bbe7df6c4 Merge pull request `#49284`_ from twangboy/fix_installer_osx
+
+  * a112eaa597 Fix path to libsodium tarball
+
+* **PR** `#49272`_: (`twangboy`_) Add 64 bit binaries for KB2999226 to the x86 installer
+  @ *2018-08-23 14:27:09 UTC*
+
+  * e0e8779985 Merge pull request `#49272`_ from twangboy/fix_installer_more
+
+  * a8f054b2d2 Add 64bit binaries for KB2999226 to the x86 installer
+
+* **PR** `#49218`_: (`twangboy`_) Fix Windows and OSX installers
+  @ *2018-08-21 01:10:30 UTC*
+
+  * 0eb6ddf0e8 Merge pull request `#49218`_ from twangboy/fix_installer
+
+  * e8a1d2f772 Add more descriptive error when KB not found
+
+  * 71737ea687 Suppress all ui on vcredist installation
+
+  * 7dae9bb2a1 Fix Windows and OSX installers
+
+* **PR** `#49116`_: (`twangboy`_) Fix windows installer script
+  @ *2018-08-14 17:09:35 UTC*
+
+  * e484f261ee Merge pull request `#49116`_ from twangboy/fix_installer
+
+  * 1227095c5d Add nonfatal switch to VCRedist
+
+* **PR** `#49113`_: (`Ch3LL`_) Add changelog to 2017.7.8 release notes
+  @ *2018-08-14 15:03:16 UTC*
+
+  * 0b9f2f8884 Merge pull request `#49113`_ from Ch3LL/rn_7.8
+
+  * f6b70bb653 Add changelog to 2017.7.8 release notes
+
 
 * **PR** `#49051`_: (`rallytime`_) Back-port `#49046`_ to 2017.7.8
   @ *2018-08-10 17:19:18 UTC*
@@ -2544,6 +2604,14 @@ Changelog for v2017.7.7..v2017.7.8
 .. _`#49044`: https://github.com/saltstack/salt/pull/49044
 .. _`#49046`: https://github.com/saltstack/salt/pull/49046
 .. _`#49051`: https://github.com/saltstack/salt/pull/49051
+.. _`#49113`: https://github.com/saltstack/salt/pull/49113
+.. _`#49116`: https://github.com/saltstack/salt/pull/49116
+.. _`#49218`: https://github.com/saltstack/salt/pull/49218
+.. _`#49272`: https://github.com/saltstack/salt/pull/49272
+.. _`#49284`: https://github.com/saltstack/salt/pull/49284
+.. _`#49461`: https://github.com/saltstack/salt/pull/49461
+.. _`#49466`: https://github.com/saltstack/salt/pull/49466
+.. _`#49498`: https://github.com/saltstack/salt/pull/49498
 .. _`AVeenstra`: https://github.com/AVeenstra
 .. _`Ch3LL`: https://github.com/Ch3LL
 .. _`Circuitsoft`: https://github.com/Circuitsoft
@@ -2614,6 +2682,7 @@ Changelog for v2017.7.7..v2017.7.8
 .. _`ralex`: https://github.com/ralex
 .. _`rallytime`: https://github.com/rallytime
 .. _`rmcintosh`: https://github.com/rmcintosh
+.. _`saltstack/salt#47100`: https://github.com/saltstack/salt/pull/47100
 .. _`saltstack/salt#48525`: https://github.com/saltstack/salt/pull/48525
 .. _`saltstack/salt#48610`: https://github.com/saltstack/salt/pull/48610
 .. _`samilaine`: https://github.com/samilaine
