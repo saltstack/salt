@@ -119,7 +119,7 @@ Example suppressing print results:
 
 .. code-block:: jinja
 
-    validate_refData_env_nameNode:
+    validate_env_nameNode:
       module_and_function: hadoop.dfs
       args:
         - text
