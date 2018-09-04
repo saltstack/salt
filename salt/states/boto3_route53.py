@@ -70,9 +70,10 @@ import logging
 import uuid
 
 # Import Salt Libs
+from salt.ext.six.moves import range
+from salt.exceptions import SaltInvocationError
 import salt.utils.data
 import salt.utils.dictupdate
-from salt.exceptions import SaltInvocationError
 
 log = logging.getLogger(__name__)  # pylint: disable=W1699
 
