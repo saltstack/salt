@@ -22,6 +22,8 @@ from tests.support.paths import TMP
 import salt.utils.files
 import salt.utils.stringutils
 import salt.utils.configparser
+import salt.utils.platform
+from salt.ext import six
 
 # The user.name param here is intentionally indented with spaces instead of a
 # tab to test that we properly load a file with mixed indentation.
@@ -75,7 +77,8 @@ class TestGitConfigParser(TestCase):
                     )
                 )
         self.conf = salt.utils.configparser.GitConfigParser()
-        self.conf.read(self.orig_config)
+        with salt.utils.files.fopen(self.orig_config, 'rb') as fp:
+            self.conf._read(fp, self.orig_config)
 
     @classmethod
     def tearDownClass(cls):
@@ -99,11 +102,14 @@ class TestGitConfigParser(TestCase):
 
     @staticmethod
     def get_lines(path):
-        with salt.utils.files.fopen(path, 'r') as fp_:
+        with salt.utils.files.fopen(path, 'rb') as fp_:
             return salt.utils.stringutils.to_unicode(fp_.read()).splitlines()
 
     def _test_write(self, mode):
-        with salt.utils.files.fopen(self.new_config, mode) as fp_:
+        kwargs = {'mode': mode}
+        if six.PY3 and salt.utils.platform.is_windows() and 'b' not in mode:
+            kwargs['encoding'] = 'utf-8'
+        with salt.utils.files.fopen(self.new_config, **kwargs) as fp_:
             self.conf.write(fp_)
         self.assertEqual(
             self.get_lines(self.new_config),
@@ -182,7 +188,7 @@ class TestGitConfigParser(TestCase):
             [orig_refspec, new_refspec]
         )
         # Write the config object to a file
-        with salt.utils.files.fopen(self.new_config, 'w') as fp_:
+        with salt.utils.files.fopen(self.new_config, 'wb') as fp_:
             self.conf.write(fp_)
         # Confirm that the new file was written correctly
         expected = self.fix_indent(ORIG_CONFIG)
