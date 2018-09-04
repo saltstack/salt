@@ -29,7 +29,7 @@ Example state chaining the install and reboot operations:
       kernelpkg.latest_active:
         - at_time: 1
         - onchanges:
-          - kernel: install-latest-kernel
+          - kernelpkg: install-latest-kernel
 
 Chaining can also be achieved using wait/listen requisites:
 
@@ -42,7 +42,7 @@ Chaining can also be achieved using wait/listen requisites:
       kernelpkg.latest_wait:
         - at_time: 1
         - listen:
-          - kernel: install-latest-kernel
+          - kernelpkg: install-latest-kernel
 '''
 from __future__ import absolute_import, print_function, unicode_literals
 import logging
