@@ -39,7 +39,9 @@ def _acl_changes(name, id=None, type=None, rules=None, consul_url=None, token=No
 
 def _acl_exists(name=None, id=None, token=None, consul_url=None):
     '''
-       If acl exists, return True. Otherwise, return False.
+       Check the acl exists by using the name or the ID,
+       name is ignored if ID is specified,
+       if only Name is used the ID associated with it is returned
     '''
 
     ret = {'result': False, 'id': None}
@@ -48,6 +50,8 @@ def _acl_exists(name=None, id=None, token=None, consul_url=None):
         info = __salt__['consul.acl_info'](id=id, token=token, consul_url=consul_url)
     elif name:
         info = __salt__['consul.acl_list'](token=token, consul_url=consul_url)
+    else:
+        return ret
 
     if info.get('data'):
         for acl in info['data']:
@@ -82,7 +86,6 @@ def acl_present(name, id=None, token=None, type="client", rules="", consul_url='
 
     .. note::
         For more information https://www.consul.io/api/acl.html#create-acl-token, https://www.consul.io/api/acl.html#update-acl-token
-
     '''
 
     ret = {
