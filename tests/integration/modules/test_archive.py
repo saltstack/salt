@@ -17,6 +17,7 @@ from tests.support.helpers import destructiveTest
 # Import salt libs
 import salt.utils.files
 import salt.utils.path
+import salt.utils.platform
 import salt.utils.stringutils
 
 # Import 3rd party libs

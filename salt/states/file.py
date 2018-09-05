@@ -2828,8 +2828,15 @@ def managed(name,
             ret['changes'] = {}
             log.debug(traceback.format_exc())
             salt.utils.files.remove(tmp_filename)
-            if not keep_source and sfn:
-                salt.utils.files.remove(sfn)
+            if not keep_source:
+                if not sfn \
+                        and source \
+                        and _urlparse(source).scheme == 'salt':
+                    # The file would not have been cached until manage_file was
+                    # run, so check again here for a cached copy.
+                    sfn = __salt__['cp.is_cached'](source, __env__)
+                if sfn:
+                    salt.utils.files.remove(sfn)
             return _error(ret, 'Unable to check_cmd file: {0}'.format(exc))
 
         # file being updated to verify using check_cmd
@@ -2901,8 +2908,15 @@ def managed(name,
         finally:
             if tmp_filename:
                 salt.utils.files.remove(tmp_filename)
-            if not keep_source and sfn:
-                salt.utils.files.remove(sfn)
+            if not keep_source:
+                if not sfn \
+                        and source \
+                        and _urlparse(source).scheme == 'salt':
+                    # The file would not have been cached until manage_file was
+                    # run, so check again here for a cached copy.
+                    sfn = __salt__['cp.is_cached'](source, __env__)
+                if sfn:
+                    salt.utils.files.remove(sfn)
 
 
 _RECURSE_TYPES = ['user', 'group', 'mode', 'ignore_files', 'ignore_dirs', 'silent']
@@ -7770,14 +7784,15 @@ def not_cached(name, saltenv='base'):
     '''
     .. versionadded:: 2017.7.3
 
-    Ensures that a file is saved to the minion's cache. This state is primarily
-    invoked by other states to ensure that we do not re-download a source file
-    if we do not need to.
+    Ensures that a file is not present in the minion's cache, deleting it
+    if found. This state is primarily invoked by other states to ensure
+    that a fresh copy is fetched.
 
     name
-        The URL of the file to be cached. To cache a file from an environment
-        other than ``base``, either use the ``saltenv`` argument or include the
-        saltenv in the URL (e.g. ``salt://path/to/file.conf?saltenv=dev``).
+        The URL of the file to be removed from cache. To remove a file from
+        cache in an environment other than ``base``, either use the ``saltenv``
+        argument or include the saltenv in the URL (e.g.
+        ``salt://path/to/file.conf?saltenv=dev``).
 
         .. note::
             A list of URLs is not supported, this must be a single URL. If a

@@ -31,12 +31,12 @@ class ShadowModuleTest(ModuleCase):
         super(self.__class__, self).__init__(arg)
         self._test_user = self.__random_string()
         self._no_user = self.__random_string()
-        self._password = self.run_function('shadow.gen_password', ['Password1234'])
 
     def setUp(self):
         '''
         Get current settings
         '''
+        self._password = self.run_function('shadow.gen_password', ['Password1234'])
         if 'ERROR' in self._password:
             self.fail('Failed to generate password: {0}'.format(self._password))
         super(ShadowModuleTest, self).setUp()
