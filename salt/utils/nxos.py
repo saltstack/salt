@@ -14,14 +14,13 @@ from salt.exceptions import CommandExecutionError
 
 # Import salt libs
 import salt.utils.http
-from salt.ext import six
 try:
     from salt.utils.args import clean_kwargs
 except ImportError:
     from salt.utils import clean_kwargs
 try:
     import httplib
-except ModuleNotFoundError:
+except ImportError:
     import http.client
     httplib = http.client
 
