@@ -44,7 +44,7 @@ class UHTTPConnection(httplib.HTTPConnection):  # pylint: disable=W1699
         self.sock = sock
 
 
-class NxapiClient():
+class NxapiClient(object):
     '''
     Class representing an NX-API client that connects over http(s) or
     unix domain socket (UDS).
