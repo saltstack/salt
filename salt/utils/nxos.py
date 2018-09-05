@@ -18,8 +18,10 @@ try:
     from salt.utils.args import clean_kwargs
 except ImportError:
     from salt.utils import clean_kwargs
+
+# Disable pylint check since httplib is not available in python3
 try:
-    import httplib
+    import httplib  # pylint: disable=W1699
 except ImportError:
     import http.client
     httplib = http.client
@@ -27,7 +29,7 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 
-class UHTTPConnection(httplib.HTTPConnection):
+class UHTTPConnection(httplib.HTTPConnection):  # pylint: disable=W1699
     '''
     Subclass of Python library HTTPConnection that uses a unix-domain socket.
     '''
