@@ -46,10 +46,41 @@ by ``saltcheck.run_highstate_tests``.
     salt '*' saltcheck.run_highstate_tests
     salt '*' saltcheck.run_state_tests apache.deployment_validation
 
-Examples
---------
+Saltcheck Keywords
+==================
 
-Basic Example:
+**module_and_function:**
+    (str) This is the salt module which will be run locally,
+    the same as ``salt-call --local <module>``. The ``saltcheck.state_apply`` module name is
+    special as it bypasses the local option in order to resolve state names when run in
+    master/minion operation.
+**args:**
+    (list) Optional arguments passed to the salt module
+**kwargs:**
+    (dict) Optional keyword arguments to be passwd to the salt module
+**assertion:**
+    (str) One of the supported assertions and required except for ``saltcheck.state_apply``.
+**expected-return:**
+    (str) Required except by ``assertEmpty``, ``assertNotEmpty``, ``assertTrue``,
+    ``assertFalse``. The return of module_and_function is compared to this value in the assertion.
+**assertion_section:**
+    (str) Optional keyword used to parse the module_and_function return. If a salt module
+    returns a dictionary as a result, the ``assertion_section`` value is used to lookup a specific value
+    in that return for the assertion comparison.
+**print_result:**
+    (bool) Optional keyword to show results in the ``assertEqual``, ``assertNotEqual``,
+    ``assertIn``, and ``assertNotIn`` output.
+**pillar-data:**
+    (dict) Optional keyword for passing in pillar data. Intended for use in potential test
+    setup or teardown with the ``saltcheck.state_apply`` function.
+**skip:**
+    (bool) Optional keyword to skip running the individual test
+
+Sample Cases/Examples
+=====================
+
+Basic Example
+-------------
 
 .. code-block:: yaml
 
@@ -61,7 +92,8 @@ Basic Example:
       assertion: assertEqual
       expected-return:  'hello'
 
-Example with jinja:
+Example with jinja
+------------------
 
 .. code-block:: jinja
 
@@ -75,9 +107,10 @@ Example with jinja:
       assertion: assertFalse
     {% endfor %}
 
-Example with setup state including pillar:
+Example with setup state including pillar
+-----------------------------------------
 
-.. code-block:: jinja
+.. code-block:: yaml
 
     setup_test_environment:
       module_and_function: saltcheck.state_apply
@@ -92,9 +125,10 @@ Example with setup state including pillar:
         - vim
       assertion: assertNotEmpty
 
-Example with skip:
+Example with skip
+-----------------
 
-.. code-block:: jinja
+.. code-block:: yaml
 
     package_latest:
       module_and_function: pkg.upgrade_available
@@ -103,9 +137,10 @@ Example with skip:
       assertion: assertFalse
       skip: True
 
-Example with assertion_section:
+Example with assertion_section
+------------------------------
 
-.. code-block:: jinja
+.. code-block:: yaml
 
     validate_shell:
       module_and_function: user.info
@@ -115,9 +150,10 @@ Example with assertion_section:
       expected-return: /bin/bash
       assertion_section: shell
 
-Example suppressing print results:
+Example suppressing print results
+---------------------------------
 
-.. code-block:: jinja
+.. code-block:: yaml
 
     validate_env_nameNode:
       module_and_function: hadoop.dfs
@@ -129,7 +165,8 @@ Example suppressing print results:
       print_result: False
 
 Supported assertions
---------------------
+====================
+
 * assertEqual
 * assertNotEqual
 * assertTrue
@@ -267,7 +304,7 @@ def run_state_tests(state, saltenv=None, check_all=False):
     paths = scheck.get_state_search_path_list(saltenv)
     stl = StateTestLoader(search_paths=paths)
     results = OrderedDict()
-    sls_list = state.split(',')
+    sls_list = salt.utils.args.split_input(state)
     for state_name in sls_list:
         stl.add_test_files_for_sls(state_name, check_all)
         stl.load_test_suite()
@@ -482,7 +519,7 @@ class SaltCheck(object):
                            fun,
                            args,
                            kwargs,
-                           assertion_section):
+                           assertion_section=None):
         '''
         Generic call of salt Caller command
         '''
