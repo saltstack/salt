@@ -8,7 +8,6 @@ from __future__ import absolute_import, print_function, unicode_literals
 import json
 import logging
 import os
-import httplib
 import socket
 # from stat import *
 from salt.exceptions import CommandExecutionError
@@ -20,6 +19,11 @@ try:
     from salt.utils.args import clean_kwargs
 except ImportError:
     from salt.utils import clean_kwargs
+try:
+    import httplib
+except ModuleNotFoundError:
+    import http.client
+    httplib = http.client
 
 log = logging.getLogger(__name__)
 
