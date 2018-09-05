@@ -1479,11 +1479,11 @@ File filters
 .. jinja_ref:: connection_check
 
 ``connection_check``
--------------
+--------------------
 
-.. versionadded:: Fluorine
+.. versionadded:: Neon
 
-Return the IP resolved by DNS. This is an alias of `dns_check`.
+Return the IP resolved by DNS. This is an alias of ``dns_check``.
 
 .. jinja_ref:: is_text_file
 
