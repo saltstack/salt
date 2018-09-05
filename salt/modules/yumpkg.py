@@ -2750,6 +2750,8 @@ def mod_repo(repo, basedir=None, **kwargs):
         the URL for yum to reference
     mirrorlist
         the URL for yum to reference
+    key_url
+        the URL to gather the repo key from
 
     Key/Value pairs may also be removed from a repo's configuration by setting
     a key to a blank value. Bear in mind that a name cannot be deleted, and a
@@ -2847,6 +2849,22 @@ def mod_repo(repo, basedir=None, **kwargs):
             raise SaltInvocationError(
                 'Cannot delete mirrorlist without specifying baseurl'
             )
+
+    # Import gpg key
+    if 'key_url' in repo_opts:
+        key_url = kwargs['key_url']
+        fn_ = __salt__['cp.cache_file'](key_url, saltenv=(kwargs['saltenv'] if 'saltenv' in kwargs else 'base'))
+        if not fn_:
+            raise CommandExecutionError(
+                'Error: file not found: {0}'.format(key_url)
+            )
+        cmd = ['rpm', '--import', fn_]
+        out = __salt__['cmd.retcode'](cmd, python_shell=False, **kwargs)
+        if out != 0:
+            raise CommandExecutionError(
+                'Error: failed to add key from {0}'.format(key_url)
+            )
+        del repo_opts['key_url']
 
     # Delete anything in the todelete list
     for key in todelete:
