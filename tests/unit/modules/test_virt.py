@@ -327,6 +327,25 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         root = ET.fromstring(xml_data)
         self.assertIsNone(root.find('devices/graphics'))
 
+    def test_gen_xml_noloader_default(self):
+        '''
+        Test virt._gen_xml() with default no loader
+        '''
+        diskp = virt._disk_profile('default', 'kvm', [], 'hello')
+        nicp = virt._nic_profile('default', 'kvm')
+        xml_data = virt._gen_xml(
+            'hello',
+            1,
+            512,
+            diskp,
+            nicp,
+            'kvm',
+            'hvm',
+            'x86_64',
+            )
+        root = ET.fromstring(xml_data)
+        self.assertIsNone(root.find('os/loader'))
+
     def test_gen_xml_vnc_default(self):
         '''
         Test virt._gen_xml() with default vnc graphics device
@@ -377,6 +396,49 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(root.find('devices/graphics').attrib['listen'], '0.0.0.0')
         self.assertEqual(root.find('devices/graphics/listen').attrib['type'], 'address')
         self.assertEqual(root.find('devices/graphics/listen').attrib['address'], '0.0.0.0')
+
+    def test_gen_xml_loader_default(self):
+        '''
+        Test virt._gen_xml() with a loder specified
+        '''
+        diskp = virt._disk_profile('default', 'kvm', [], 'hello')
+        nicp = virt._nic_profile('default', 'kvm')
+        xml_data = virt._gen_xml(
+            'hello',
+            1,
+            512,
+            diskp,
+            nicp,
+            'kvm',
+            'hvm',
+            'x86_64',
+            loader={'path': '/foo/bar', 'readonly': 'yes', 'type': 'pflash', 'secure': 'yes'}
+            )
+        root = ET.fromstring(xml_data)
+        self.assertEqual(root.find('os/loader').text, '/foo/bar')
+        self.assertEqual(root.find('os/loader').attrib['type'], 'pflash')
+        self.assertEqual(root.find('os/loader').attrib['readonly'], 'yes')
+        self.assertEqual(root.find('os/loader').attrib['secure'], 'yes')
+
+    def test_gen_xml_loader_invalid(self):
+        '''
+        Test virt._gen_xml() with an invalid loader (missing path) specified
+        '''
+        diskp = virt._disk_profile('default', 'kvm', [], 'hello')
+        nicp = virt._nic_profile('default', 'kvm')
+        xml_data = virt._gen_xml(
+            'hello',
+            1,
+            512,
+            diskp,
+            nicp,
+            'kvm',
+            'hvm',
+            'x86_64',
+            loader={'readonly': 'yes', 'type': 'pflash', 'secure': 'yes'}
+            )
+        root = ET.fromstring(xml_data)
+        self.assertFalse('loader' in root.find('os'))
 
     def test_gen_xml_spice(self):
         '''

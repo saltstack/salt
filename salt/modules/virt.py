@@ -1134,6 +1134,7 @@ def init(name,
          enable_vnc=False,
          enable_qcow=False,
          graphics=None,
+         loader=None,
          os_type=None,
          arch=None,
          **kwargs):
@@ -1200,12 +1201,17 @@ def init(name,
         type of virtualization as found in the ``//os/type`` element of the libvirt definition.
         The default value is taken from the host capabilities, with a preference for ``hvm``.
 
-        .. versionadded:: 2019.2.0
+        .. versionadded:: Fluorine
+    :param os_type:
+        type of virtualization as found in the ``//os/type`` element of the libvirt definition.
+        The default value is taken from the host capabilities, with a preference for ``hvm``.
+
+        .. versionadded:: Neon
     :param arch:
         architecture of the virtual machine. The default value is taken from the host capabilities,
         but ``x86_64`` is prefed over ``i686``.
 
-        .. versionadded:: 2019.2.0
+        .. versionadded:: Neon
     :param enable_qcow:
         ``True`` to create a QCOW2 overlay image, rather than copying the image
         (Default: ``False``).
@@ -1378,23 +1384,22 @@ def init(name,
     .. _graphics element: https://libvirt.org/formatdomain.html#elementsGraphics
     '''
     caps = capabilities(**kwargs)
-    os_types = sorted({guest['os_type'] for guest in caps['guests']})
-    arches = sorted({guest['arch']['name'] for guest in caps['guests']})
-    if not hypervisor:
-        hypervisor = __salt__['config.get']('libvirt:hypervisor', hypervisor)
-        if hypervisor is not None:
-            salt.utils.versions.warn_until(
-                'Sodium',
-                '\'libvirt:hypervisor\' configuration property has been deprecated. '
-                'Rather use the \'virt:connection:uri\' to properly define the libvirt '
-                'URI or alias of the host to connect to. \'libvirt:hypervisor\' will '
-                'stop being used in {version}.'
-            )
-        else:
-            # Use the machine types as possible values
-            # Prefer 'kvm' over the others if available
-            hypervisors = sorted({x for y in [guest['arch']['domains'].keys() for guest in caps['guests']] for x in y})
-            hypervisor = 'kvm' if 'kvm' in hypervisors else hypervisors[0]
+    os_types = sorted(set([guest['os_type'] for guest in caps['guests']]))
+    arches = sorted(set([guest['arch']['name'] for guest in caps['guests']]))
+    hypervisors = sorted(set([x for y in [guest['arch']['domains'].keys() for guest in caps['guests']] for x in y]))
+    hypervisor = __salt__['config.get']('libvirt:hypervisor', hypervisor)
+    if hypervisor is not None:
+        salt.utils.versions.warn_until(
+            'Sodium',
+            '\'libvirt:hypervisor\' configuration property has been deprecated. '
+            'Rather use the \'virt:connection:uri\' to properly define the libvirt '
+            'URI or alias of the host to connect to. \'libvirt:hypervisor\' will '
+            'stop being used in {version}.'
+        )
+    else:
+        # Use the machine types as possible values
+        # Prefer 'kvm' over the others if available
+        hypervisor = 'kvm' if 'kvm' in hypervisors else hypervisors[0]
 
     # esxi used to be a possible value for the hypervisor: map it to vmware since it's the same
     hypervisor = 'vmware' if hypervisor == 'esxi' else hypervisor
@@ -1508,12 +1513,10 @@ def init(name,
             '\'enable_vnc\' will be removed in {version}. ')
         graphics = {'type': 'vnc'}
 
-    if os_type is None:
-        os_type = 'hvm' if 'hvm' in os_types else os_types[0]
-    if arch is None:
-        arch = 'x86_64' if 'x86_64' in arches else arches[0]
+    os_type = 'hvm' if 'hvm' in os_types else os_types[0]
+    arch = 'x86_64' if 'x86_64' in arches else arches[0]
 
-    vm_xml = _gen_xml(name, cpu, mem, diskp, nicp, hypervisor, os_type, arch, graphics, **kwargs)
+    vm_xml = _gen_xml(name, cpu, mem, diskp, nicp, hypervisor, os_type, arch, graphics, loader, **kwargs)
     conn = __get_conn(**kwargs)
     try:
         conn.defineXML(vm_xml)
@@ -2470,7 +2473,7 @@ def get_profiles(hypervisor=None, **kwargs):
     ret = {}
 
     caps = capabilities(**kwargs)
-    hypervisors = sorted({x for y in [guest['arch']['domains'].keys() for guest in caps['guests']] for x in y})
+    hypervisors = sorted(set([x for y in [guest['arch']['domains'].keys() for guest in caps['guests']] for x in y]))
     default_hypervisor = 'kvm' if 'kvm' in hypervisors else hypervisors[0]
 
     if not hypervisor:
