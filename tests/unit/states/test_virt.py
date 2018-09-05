@@ -251,6 +251,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                                               mem=2048,
                                               image='/path/to/img.qcow2'), ret)
             init_mock.assert_called_with('myvm', cpu=2, mem=2048, image='/path/to/img.qcow2',
+                                         os_type=None, arch=None,
                                          disk=None, disks=None, nic=None, interfaces=None,
                                          graphics=None, hypervisor=None,
                                          seed=True, install=True, pub_key=None, priv_key=None)
@@ -286,6 +287,8 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
             self.assertDictEqual(virt.running('myvm',
                                               cpu=2,
                                               mem=2048,
+                                              os_type='linux',
+                                              arch='i686',
                                               vm_type='qemu',
                                               disk_profile='prod',
                                               disks=disks,
@@ -302,6 +305,8 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
             init_mock.assert_called_with('myvm',
                                          cpu=2,
                                          mem=2048,
+                                         os_type='linux',
+                                         arch='i686',
                                          image=None,
                                          disk='prod',
                                          disks=disks,
