@@ -3168,9 +3168,13 @@ def touch(name, atime=None, mtime=None):
     simply update the atime and mtime if it already does.
 
     atime:
-        Access time in Unix epoch time
+        Access time in Unix epoch time. Set it to 0 to set atime of the
+        file with Unix date of birth. If this parameter isn't set, atime
+        will be set with current time.
     mtime:
-        Last modification in Unix epoch time
+        Last modification in Unix epoch time. Set it to 0 to set mtime of
+        the file with Unix date of birth. If this parameter isn't set,
+        mtime will be set with current time.
 
     CLI Example:
 
