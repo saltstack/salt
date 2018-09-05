@@ -53,13 +53,13 @@ Saltcheck Keywords
     (str) This is the salt module which will be run locally,
     the same as ``salt-call --local <module>``. The ``saltcheck.state_apply`` module name is
     special as it bypasses the local option in order to resolve state names when run in
-    master/minion operation.
+    a master/minion environment.
 **args:**
     (list) Optional arguments passed to the salt module
 **kwargs:**
-    (dict) Optional keyword arguments to be passwd to the salt module
+    (dict) Optional keyword arguments to be passed to the salt module
 **assertion:**
-    (str) One of the supported assertions and required except for ``saltcheck.state_apply``.
+    (str) One of the supported assertions and required except for ``saltcheck.state_apply``
 **expected-return:**
     (str) Required except by ``assertEmpty``, ``assertNotEmpty``, ``assertTrue``,
     ``assertFalse``. The return of module_and_function is compared to this value in the assertion.
@@ -69,7 +69,7 @@ Saltcheck Keywords
     in that return for the assertion comparison.
 **print_result:**
     (bool) Optional keyword to show results in the ``assertEqual``, ``assertNotEqual``,
-    ``assertIn``, and ``assertNotIn`` output.
+    ``assertIn``, and ``assertNotIn`` output. Defaults to True.
 **pillar-data:**
     (dict) Optional keyword for passing in pillar data. Intended for use in potential test
     setup or teardown with the ``saltcheck.state_apply`` function.
