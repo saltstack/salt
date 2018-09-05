@@ -243,14 +243,6 @@ def __get_conn(**kwargs):
     return conn
 
 
-def _get_domain_types(**kwargs):
-    '''
-    Return the list of possible values for the <domain> type attribute.
-    '''
-    caps = capabilities(**kwargs)
-    return sorted(set([x for y in [guest['arch']['domains'].keys() for guest in caps['guests']] for x in y]))
-
-
 def _get_domain(conn, *vms, **kwargs):
     '''
     Return a domain object for the named VM or return domain object for all VMs.
@@ -538,6 +530,8 @@ def _gen_xml(name,
              diskp,
              nicp,
              hypervisor,
+             os_type,
+             arch,
              graphics=None,
              **kwargs):
     '''
@@ -606,6 +600,9 @@ def _gen_xml(name,
         context['disks'][disk['name']]['index'] = six.text_type(i)
 
     context['nics'] = nicp
+
+    context['os_type'] = os_type
+    context['arch'] = arch
 
     fn_ = 'libvirt_domain.jinja'
     try:
@@ -1107,6 +1104,8 @@ def init(name,
          enable_vnc=False,
          enable_qcow=False,
          graphics=None,
+         os_type=None,
+         arch=None,
          **kwargs):
     '''
     Initialize a new vm
@@ -1164,6 +1163,16 @@ def init(name,
     :param graphics:
         Dictionary providing details on the graphics device to create. (Default: ``None``)
         See :ref:`init-graphics-def` for more details on the possible values.
+
+        .. versionadded:: Fluorine
+    :param os_type:
+        type of virtualization as found in the ``//os/type`` element of the libvirt definition.
+        The default value is taken from the host capabilities, with a preference for ``hvm``.
+
+        .. versionadded:: Fluorine
+    :param arch:
+        architecture of the virtual machine. The default value is taken from the host capabilities,
+        but ``x86_64`` is prefed over ``i686``.
 
         .. versionadded:: Fluorine
     :param enable_qcow:
@@ -1327,7 +1336,10 @@ def init(name,
         virt:
             images: /data/my/vm/images/
     '''
-    hypervisors = _get_domain_types(**kwargs)
+    caps = capabilities(**kwargs)
+    os_types = sorted(set([guest['os_type'] for guest in caps['guests']]))
+    arches = sorted(set([guest['arch']['name'] for guest in caps['guests']]))
+    hypervisors = sorted(set([x for y in [guest['arch']['domains'].keys() for guest in caps['guests']] for x in y]))
     hypervisor = __salt__['config.get']('libvirt:hypervisor', hypervisor)
     if hypervisor is not None:
         salt.utils.versions.warn_until(
@@ -1448,7 +1460,10 @@ def init(name,
             '\'enable_vnc\' will be removed in {version}. ')
         graphics = {'type': 'vnc'}
 
-    vm_xml = _gen_xml(name, cpu, mem, diskp, nicp, hypervisor, graphics, **kwargs)
+    os_type = 'hvm' if 'hvm' in os_types else os_types[0]
+    arch = 'x86_64' if 'x86_64' in arches else arches[0]
+
+    vm_xml = _gen_xml(name, cpu, mem, diskp, nicp, hypervisor, os_type, arch, graphics, **kwargs)
     conn = __get_conn(**kwargs)
     try:
         conn.defineXML(vm_xml)
@@ -1692,6 +1707,8 @@ def update(name,
                                                _disk_profile(disk_profile, hypervisor, disks, name, **kwargs),
                                                _get_merged_nics(hypervisor, nic_profile, interfaces),
                                                hypervisor,
+                                               domain.OSType(),
+                                               desc.find('.//os/type').get('arch'),
                                                graphics,
                                                **kwargs))
 
@@ -2378,7 +2395,8 @@ def get_profiles(hypervisor=None, **kwargs):
     '''
     ret = {}
 
-    hypervisors = _get_domain_types(**kwargs)
+    caps = capabilities(**kwargs)
+    hypervisors = sorted(set([x for y in [guest['arch']['domains'].keys() for guest in caps['guests']] for x in y]))
     default_hypervisor = 'kvm' if 'kvm' in hypervisors else hypervisors[0]
 
     if not hypervisor:
