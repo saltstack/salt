@@ -681,6 +681,33 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         self.assertEqual(config['id'], 'king_bob')
 
     @with_tempdir()
+    def test_minion_id_remove_domain(self, tempdir):
+        '''
+        This tests that the value of `minion_id_remove_domain` is suppressed in a generated minion id,
+        effectivly generating a hostname minion_id.
+        Example:
+        minion_id_remove_domain: foo.org
+        Fully qualified domain name is king_bob.foo.org
+        result in the generated minion_id king_bob
+        '''
+        minion_config = os.path.join(tempdir, 'minion')
+
+        with salt.utils.files.fopen(minion_config, 'w') as fp_:
+            fp_.write(textwrap.dedent('''\
+                id_function:
+                  test.echo:
+                    text: king_bob.foo.org
+                minion_id_remove_domain: foo.org
+                minion_id_caching: False
+            '''))
+
+        # Let's load the configuration
+        config = sconfig.minion_config(minion_config)
+
+        self.assertEqual(config['minion_id_remove_domain'], 'foo.org')
+        self.assertEqual(config['id'], 'king_bob')
+
+    @with_tempdir()
     def test_backend_rename(self, tempdir):
         '''
         This tests that we successfully rename git, hg, svn, and minion to
