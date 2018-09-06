@@ -1069,7 +1069,10 @@ class MWorker(salt.utils.process.SignalHandlingMultiprocessingProcess):
         try:
             jid = data['jid']
         except KeyError:
-            return
+            try:
+                jid = data['data']['__pub_jid']
+            except KeyError:
+                return
 
         create_time = int(time.mktime(time.strptime(jid, '%Y%m%d%H%M%S%f')))
         latency = start_time - create_time
