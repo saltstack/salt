@@ -210,7 +210,18 @@ def absent(name, acl_type, acl_name='', perms='', recurse=False):
         except (AttributeError, IndexError, StopIteration, KeyError):
             user = None
 
-        if user:
+        need_refresh = False
+        for path in __current_perms:
+            acl_found = False
+            for user_acl in __current_perms[path].get(_acl_type, []):
+                if _search_name in user_acl:
+                    acl_found = True
+                    break
+            if acl_found:
+                need_refresh = True
+                break
+
+        if user or need_refresh:
             ret['comment'] = 'Removing permissions'
 
             if __opts__['test']:

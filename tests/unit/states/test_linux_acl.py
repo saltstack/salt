@@ -234,7 +234,7 @@ class LinuxAclTestCase(TestCase, LoaderModuleMockMixin):
                'changes': {}}
 
         mock = MagicMock(side_effect=[
-            {name: {acl_type: [{acl_name: {'octal': 'rwx'}}]}, name+"/foo": {acl_type: [{acl_name: {'octal': 'A'}}]}}
+            {name: {acl_type: [{acl_name: {'octal': 7}}]}, name+"/foo": {acl_type: [{acl_name: {'octal': 'A'}}]}}
         ])
         with patch.dict(linux_acl.__salt__, {'acl.getfacl': mock}):
             with patch.dict(linux_acl.__opts__, {'test': True}):
