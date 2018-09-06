@@ -685,7 +685,7 @@ class Terminal(object):
                         stdout = None
                     else:
                         if self.stream_stdout:
-                            self.stream_stdout.write(stdout)
+                            self.stream_stdout.write(stdout.encode('utf-8'))
                             self.stream_stdout.flush()
 
                         if self.stdout_logger:
@@ -703,7 +703,7 @@ class Terminal(object):
                     if self.child_fd is not None:
                         fcntl.fcntl(self.child_fd, fcntl.F_SETFL, fd_flags)
             # <---- Process STDOUT -------------------------------------------
-            return stdout, stderr
+            return stdout.encode('utf-8'), stderr.encode('utf-8')
 
         def __detect_parent_terminal_size(self):
             try:
