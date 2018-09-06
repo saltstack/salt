@@ -51,8 +51,14 @@ class LinuxAclTestCase(TestCase, LoaderModuleMockMixin):
                                       {name: {acl_type: [{}]}},
                                       {name: {acl_type: [{}]}},
                                       {name: {acl_type: [{}]}},
-                                      {name: {acl_type: [{acl_name: {'octal': 7}}]}, name+"/foo": {acl_type: [{acl_name: {'octal': 'A'}}]}},
-                                      {name: {acl_type: [{acl_name: {'octal': 7}}]}, name+"/foo": {acl_type: [{acl_name: {'octal': 7}}]}},
+                                      {
+                                          name: {acl_type: [{acl_name: {'octal': 7}}]},
+                                          name+"/foo": {acl_type: [{acl_name: {'octal': 'A'}}]}
+                                      },
+                                      {
+                                          name: {acl_type: [{acl_name: {'octal': 7}}]},
+                                          name+"/foo": {acl_type: [{acl_name: {'octal': 7}}]}
+                                      },
                                       {name: {acl_type: ''}}])
         mock_modfacl = MagicMock(return_value=True)
 
@@ -217,7 +223,6 @@ class LinuxAclTestCase(TestCase, LoaderModuleMockMixin):
             comt = ('ACL Type does not exist')
             ret.update({'comment': comt, 'result': False})
             self.assertDictEqual(linux_acl.absent(name, acl_type, acl_name, perms), ret)
-
 
     def test_absent_recursive(self):
         '''
