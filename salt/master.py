@@ -1059,31 +1059,14 @@ class MWorker(salt.utils.process.SignalHandlingMultiprocessingProcess):
                'clear': self._handle_clear}[key](load)
         raise tornado.gen.Return(ret)
 
-    def _post_stats(self, start_time, data):
+    def _post_stats(self, stats):
         '''
-        Calculate the master stats and fire events with stat info
+        Fire events with stat info if it's time
         '''
         end_time = time.time()
-        cmd = data['cmd']
-        # the jid is used as the create time
-        try:
-            jid = data['jid']
-        except KeyError:
-            try:
-                jid = data['data']['__pub_jid']
-            except KeyError:
-                return
-
-        create_time = int(time.mktime(time.strptime(jid, '%Y%m%d%H%M%S%f')))
-        latency = start_time - create_time
-        self.stats[cmd]['latency'] = (self.stats[cmd]['latency'] * (self.stats[cmd]['runs'] - 1) + latency) / self.stats[cmd]['runs']
-
-        duration = end_time - start_time
-        self.stats[cmd]['mean'] = (self.stats[cmd]['mean'] * (self.stats[cmd]['runs'] - 1) + duration) / self.stats[cmd]['runs']
-
         if end_time - self.stat_clock > self.opts['master_stats_event_iter']:
             # Fire the event with the stats and wipe the tracker
-            self.aes_funcs.event.fire_event({'time': end_time - self.stat_clock, 'worker': self.name, 'stats': self.stats}, tagify(self.name, 'stats'))
+            self.aes_funcs.event.fire_event({'time': end_time - self.stat_clock, 'worker': self.name, 'stats': stats}, tagify(self.name, 'stats'))
             self.stats = collections.defaultdict(lambda: {'mean': 0, 'latency': 0, 'runs': 0})
             self.stat_clock = end_time
 
@@ -1101,10 +1084,10 @@ class MWorker(salt.utils.process.SignalHandlingMultiprocessingProcess):
             return False
         if self.opts['master_stats']:
             start = time.time()
-            self.stats[cmd]['runs'] += 1
         ret = getattr(self.clear_funcs, cmd)(load), {'fun': 'send_clear'}
         if self.opts['master_stats']:
-            self._post_stats(start, load)
+            stats = salt.utils.event.update_stats(self.stats, start, load)
+            self._post_stats(stats)
         return ret
 
     def _handle_aes(self, data):
@@ -1125,7 +1108,6 @@ class MWorker(salt.utils.process.SignalHandlingMultiprocessingProcess):
             return False
         if self.opts['master_stats']:
             start = time.time()
-            self.stats[cmd]['runs'] += 1
 
         def run_func(data):
             return self.aes_funcs.run_func(data['cmd'], data)
@@ -1136,7 +1118,8 @@ class MWorker(salt.utils.process.SignalHandlingMultiprocessingProcess):
             ret = run_func(data)
 
         if self.opts['master_stats']:
-            self._post_stats(start, data)
+            stats = salt.utils.event.update_stats(self.stats, start, data)
+            self._post_stats(stats)
         return ret
 
     def run(self):

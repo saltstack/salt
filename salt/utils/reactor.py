@@ -83,29 +83,14 @@ class Reactor(salt.utils.process.SignalHandlingMultiprocessingProcess, salt.stat
             'log_queue_level': self.log_queue_level
         }
 
-    def _post_stats(self, start_time, data):
+    def _post_stats(self, stats):
         '''
-        Calculate the master stats and fire events with stat info
+        Fire events with stat info if it's time
         '''
         end_time = time.time()
-        cmd = data['cmd']
-        _data = data['data']
-        # the jid is used as the create time
-        try:
-            jid = _data['__pub_jid']
-        except KeyError:
-            return
-
-        create_time = int(time.mktime(time.strptime(jid, '%Y%m%d%H%M%S%f')))
-        latency = start_time - create_time
-        self.stats[cmd]['latency'] = (self.stats[cmd]['latency'] * (self.stats[cmd]['runs'] - 1) + latency) / self.stats[cmd]['runs']
-
-        duration = end_time - start_time
-        self.stats[cmd]['mean'] = (self.stats[cmd]['mean'] * (self.stats[cmd]['runs'] - 1) + duration) / self.stats[cmd]['runs']
-
         if end_time - self.stat_clock > self.opts['master_stats_event_iter']:
             # Fire the event with the stats and wipe the tracker
-            self.event.fire_event({'time': end_time - self.stat_clock, 'worker': self.name, 'stats': self.stats}, tagify(self.name, 'stats'))
+            self.event.fire_event({'time': end_time - self.stat_clock, 'worker': self.name, 'stats': stats}, tagify(self.name, 'stats'))
             self.stats = collections.defaultdict(lambda: {'mean': 0, 'latency': 0, 'runs': 0})
             self.stat_clock = end_time
 
@@ -303,17 +288,15 @@ class Reactor(salt.utils.process.SignalHandlingMultiprocessingProcess, salt.stat
                 if chunks:
                     if self.opts['master_stats']:
                         _data = data['data']
-                        cmd = _data.get('cmd')
                         start = time.time()
-                        self.stats[cmd]['runs'] += 1
-
                     try:
                         self.call_reactions(chunks)
                     except SystemExit:
                         log.warning('Exit ignored by reactor')
 
                     if self.opts['master_stats']:
-                        self._post_stats(start, _data)
+                        stats = salt.utils.event.update_stats(self.stats, start, _data)
+                        self._post_stats(stats)
 
 
 class ReactWrap(object):
