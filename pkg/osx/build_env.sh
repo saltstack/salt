@@ -241,7 +241,7 @@ sudo -H $MAKE install
 ############################################################################
 # upgrade pip
 ############################################################################
-sudo -H $PIP install --upgrade pip --trusted-host pypi.org --trusted-host files.pythonhosted.org
+sudo -H $PIP install --upgrade pip
 
 ############################################################################
 # Download and install salt python dependencies
