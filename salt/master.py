@@ -1098,7 +1098,6 @@ class MWorker(salt.utils.process.SignalHandlingMultiprocessingProcess):
         :return: The result of passing the load to a function in AESFuncs corresponding to
                  the command specified in the load's 'cmd' key.
         '''
-
         if 'cmd' not in data:
             log.error('Received malformed command %s', data)
             return {}
