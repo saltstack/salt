@@ -137,8 +137,7 @@ def _space_delimited_list(value):
 
     if valid:
         return True, 'space-delimited string'
-    else:
-        return False, '{0} is not a valid list.\n'.format(value)
+    return False, '{0} is not a valid list.\n'.format(value)
 
 
 def _validate_ipv4(value):
@@ -812,7 +811,7 @@ def _configure_static_interface(interface, **settings):
     return True
 
 
-def set_static_all(interface, address, netmask, gateway, nameservers):
+def set_static_all(interface, address, netmask, gateway, nameservers=None):
     '''
     Configure specified adapter to use ipv4 manual settings
 
@@ -822,7 +821,7 @@ def set_static_all(interface, address, netmask, gateway, nameservers):
     :param str address: ipv4 address
     :param str netmask: ipv4 netmask
     :param str gateway: ipv4 gateway
-    :param str nameservers: list of nameservers servers separated by spaces
+    :param str nameservers: list of nameservers servers separated by spaces (Optional)
     :return: True if the settings were applied, otherwise an exception will be thrown.
     :rtype: bool
 
@@ -835,11 +834,12 @@ def set_static_all(interface, address, netmask, gateway, nameservers):
     validate, msg = _validate_ipv4([address, netmask, gateway])
     if not validate:
         raise salt.exceptions.CommandExecutionError(msg)
-    validate, msg = _space_delimited_list(nameservers)
-    if not validate:
-        raise salt.exceptions.CommandExecutionError(msg)
-    if not isinstance(nameservers, list):
-        nameservers = nameservers.split(' ')
+    if nameservers:
+        validate, msg = _space_delimited_list(nameservers)
+        if not validate:
+            raise salt.exceptions.CommandExecutionError(msg)
+        if not isinstance(nameservers, list):
+            nameservers = nameservers.split(' ')
     if __grains__['lsb_distrib_id'] == 'nilrt':
         initial_mode = _get_adapter_mode_info(interface)
         _save_config(interface, 'Mode', 'TCPIP')
@@ -858,7 +858,8 @@ def set_static_all(interface, address, netmask, gateway, nameservers):
     service = _interface_to_service(interface)
     if not service:
         if interface in pyiface.getIfaces():
-            return _configure_static_interface(interface, **{'ip': address, 'dns': ','.join(nameservers),
+            return _configure_static_interface(interface, **{'ip': address,
+                                                             'dns': ','.join(nameservers) if nameservers else '',
                                                              'netmask': netmask, 'gateway': gateway})
         raise salt.exceptions.CommandExecutionError('Invalid interface name: {0}'.format(interface))
     service = pyconnman.ConnService(os.path.join(SERVICE_PATH, service))
@@ -869,7 +870,8 @@ def set_static_all(interface, address, netmask, gateway, nameservers):
     ipv4['Gateway'] = dbus.String('{0}'.format(gateway), variant_level=1)
     try:
         service.set_property('IPv4.Configuration', ipv4)
-        service.set_property('Nameservers.Configuration', [dbus.String('{0}'.format(d)) for d in nameservers])
+        if not nameservers:
+            service.set_property('Nameservers.Configuration', [dbus.String('{0}'.format(d)) for d in nameservers])
     except Exception as exc:
         exc_msg = 'Couldn\'t set manual settings for service: {0}\nError: {1}\n'.format(service, exc)
         raise salt.exceptions.CommandExecutionError(exc_msg)
