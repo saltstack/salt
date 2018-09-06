@@ -6,6 +6,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import pkg_resources
 import os.path
+import sys
 
 # Import Salt Libs
 import salt.config
@@ -69,6 +70,7 @@ def _has_required_moto():
 @skipIf(HAS_MOTO is False, 'The moto module must be installed.')
 @skipIf(_has_required_moto() is False, 'The moto module must be >= to {0} for '
                                        'PY2 or {1} for PY3.'.format(required_moto, required_moto_py3))
+@skipIf(sys.version_info > (3, 6), 'Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.')
 class BotoRoute53TestCase(TestCase, LoaderModuleMockMixin):
     '''
     TestCase for salt.modules.boto_route53 module
