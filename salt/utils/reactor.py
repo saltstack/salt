@@ -313,7 +313,6 @@ class Reactor(salt.utils.process.SignalHandlingMultiprocessingProcess, salt.stat
                         log.warning('Exit ignored by reactor')
 
                     if self.opts['master_stats']:
-                        #if cmd is not None:
                         self._post_stats(start, _data)
 
 
