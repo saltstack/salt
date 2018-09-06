@@ -180,7 +180,7 @@ def absent(name, acl_type, acl_name='', perms='', recurse=False):
         ret['result'] = False
         return ret
 
-    __current_perms = __salt__['acl.getfacl'](name, recursive=rescurse)
+    __current_perms = __salt__['acl.getfacl'](name, recursive=recurse)
 
     if acl_type.startswith(('d:', 'default:')):
         _acl_type = ':'.join(acl_type.split(':')[1:])
