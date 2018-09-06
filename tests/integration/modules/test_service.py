@@ -25,6 +25,8 @@ class ServiceModuleTest(ModuleCase):
         os_family = self.run_function('grains.get', ['os_family'])
         os_release = self.run_function('grains.get', ['osrelease'])
         if os_family == 'RedHat':
+            if os_release[0] == '7':
+                self.skipTest('Disabled on CentOS 7 until we can fix SSH connection issues.')
             self.service_name = 'crond'
         elif os_family == 'Arch':
             self.service_name = 'sshd'
