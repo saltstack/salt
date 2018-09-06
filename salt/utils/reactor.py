@@ -6,9 +6,11 @@ Functions which implement running reactor jobs
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
+import collections
 import fnmatch
 import glob
 import logging
+import time
 
 # Import salt libs
 import salt.client
@@ -23,6 +25,7 @@ import salt.utils.process
 import salt.utils.yaml
 import salt.wheel
 import salt.defaults.exitcodes
+from salt.utils.event import tagify
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -56,6 +59,9 @@ class Reactor(salt.utils.process.SignalHandlingMultiprocessingProcess, salt.stat
         local_minion_opts['file_client'] = 'local'
         self.minion = salt.minion.MasterMinion(local_minion_opts)
         salt.state.Compiler.__init__(self, opts, self.minion.rend)
+        self.event = salt.utils.event.get_master_event(opts, opts['sock_dir'], listen=False)
+        self.stats = collections.defaultdict(lambda: {'mean': 0, 'latency': 0, 'runs': 0})
+        self.stat_clock = time.time()
 
     # We need __setstate__ and __getstate__ to avoid pickling errors since
     # 'self.rend' (from salt.state.Compiler) contains a function reference
@@ -76,6 +82,32 @@ class Reactor(salt.utils.process.SignalHandlingMultiprocessingProcess, salt.stat
             'log_queue': self.log_queue,
             'log_queue_level': self.log_queue_level
         }
+
+    def _post_stats(self, start_time, data):
+        '''
+        Calculate the master stats and fire events with stat info
+        '''
+        end_time = time.time()
+        cmd = data['cmd']
+        _data = data['data']
+        # the jid is used as the create time
+        try:
+            jid = _data['__pub_jid']
+        except KeyError:
+            return
+
+        create_time = int(time.mktime(time.strptime(jid, '%Y%m%d%H%M%S%f')))
+        latency = start_time - create_time
+        self.stats[cmd]['latency'] = (self.stats[cmd]['latency'] * (self.stats[cmd]['runs'] - 1) + latency) / self.stats[cmd]['runs']
+
+        duration = end_time - start_time
+        self.stats[cmd]['mean'] = (self.stats[cmd]['mean'] * (self.stats[cmd]['runs'] - 1) + duration) / self.stats[cmd]['runs']
+
+        if end_time - self.stat_clock > self.opts['master_stats_event_iter']:
+            # Fire the event with the stats and wipe the tracker
+            self.event.fire_event({'time': end_time - self.stat_clock, 'worker': self.name, 'stats': self.stats}, tagify(self.name, 'stats'))
+            self.stats = collections.defaultdict(lambda: {'mean': 0, 'latency': 0, 'runs': 0})
+            self.stat_clock = end_time
 
     def render_reaction(self, glob_ref, tag, data):
         '''
@@ -242,10 +274,12 @@ class Reactor(salt.utils.process.SignalHandlingMultiprocessingProcess, salt.stat
                 listen=True)
         self.wrap = ReactWrap(self.opts)
 
+
         for data in self.event.iter_events(full=True):
             # skip all events fired by ourselves
             if data['data'].get('user') == self.wrap.event_user:
                 continue
+
             if data['tag'].endswith('salt/reactors/manage/add'):
                 _data = data['data']
                 res = self.add_reactor(_data['event'], _data['reactors'])
@@ -267,10 +301,20 @@ class Reactor(salt.utils.process.SignalHandlingMultiprocessingProcess, salt.stat
                     continue
                 chunks = self.reactions(data['tag'], data['data'], reactors)
                 if chunks:
+                    if self.opts['master_stats']:
+                        _data = data['data']
+                        cmd = _data.get('cmd')
+                        start = time.time()
+                        self.stats[cmd]['runs'] += 1
+
                     try:
                         self.call_reactions(chunks)
                     except SystemExit:
                         log.warning('Exit ignored by reactor')
+
+                    if self.opts['master_stats']:
+                        #if cmd is not None:
+                        self._post_stats(start, _data)
 
 
 class ReactWrap(object):

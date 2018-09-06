@@ -1065,16 +1065,15 @@ class MWorker(salt.utils.process.SignalHandlingMultiprocessingProcess):
         '''
         end_time = time.time()
         cmd = data['cmd']
+        # the jid is used as the create time
         try:
             jid = data['jid']
         except KeyError:
-            jid = None
+            return
 
-        if jid:
-            # Only calculate latency if the payload contains a jid
-            create_time = int(time.mktime(time.strptime(jid, '%Y%m%d%H%M%S%f')))
-            latency = start_time - create_time
-            self.stats[cmd]['latency'] = (self.stats[cmd]['latency'] * (self.stats[cmd]['runs'] - 1) + latency) / self.stats[cmd]['runs']
+        create_time = int(time.mktime(time.strptime(jid, '%Y%m%d%H%M%S%f')))
+        latency = start_time - create_time
+        self.stats[cmd]['latency'] = (self.stats[cmd]['latency'] * (self.stats[cmd]['runs'] - 1) + latency) / self.stats[cmd]['runs']
 
         duration = end_time - start_time
         self.stats[cmd]['mean'] = (self.stats[cmd]['mean'] * (self.stats[cmd]['runs'] - 1) + duration) / self.stats[cmd]['runs']
