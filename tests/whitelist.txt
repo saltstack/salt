@@ -39,7 +39,7 @@ integration.modules.test_sysmod
 integration.modules.test_system
 integration.modules.test_test
 integration.modules.test_useradd
-integration.modules.test_autoruns
+integration.modules.test_win_autoruns
 integration.modules.test_win_dns_client
 integration.modules.test_win_firewall
 integration.modules.test_win_pkg
