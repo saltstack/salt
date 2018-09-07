@@ -638,7 +638,7 @@ FQDN (for instance, Solaris).
 .. conf_minion:: minion_id_remove_domain
 
 ``minion_id_remove_domain``
----------------------
+---------------------------
 
 .. versionadded:: Neon
 
@@ -658,14 +658,11 @@ Examples:
    - FQDN = king_bob.bar.org --> minion_id = king_bob
 
 
-For more information, please see `Issue #49212`_ and `Pull Request #49378`_.
+For more information, please see :pull:`49378`.
 
 .. code-block:: yaml
 
     minion_id_remove_domain: foo.org
-
-.. _Issue #49212: https://github.com/saltstack/salt/issues/49212
-.. _Pull Request #49378: https://github.com/saltstack/salt/pull/49378
 
 .. conf_minion:: minion_id_lowercase
 
