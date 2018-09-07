@@ -3,7 +3,7 @@
         <vcpu>{{ cpu }}</vcpu>
         <memory unit='KiB'>{{ mem }}</memory>
         <os>
-                <type>hvm</type>
+                <type arch='{{ arch }}'>{{ os_type }}</type>
                 {% for dev in boot_dev %}
                 <boot dev='{{ dev }}' />
                 {% endfor %}

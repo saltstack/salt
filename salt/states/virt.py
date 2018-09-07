@@ -253,7 +253,9 @@ def running(name,
             update=False,
             connection=None,
             username=None,
-            password=None):
+            password=None,
+            os_type=None,
+            arch=None):
     '''
     Starts an existing guest, or defines and starts a new VM with specified arguments.
 
@@ -326,6 +328,17 @@ def running(name,
     :param password: password to connect with, overriding defaults
 
         .. versionadded:: Fluorine
+    :param os_type:
+        type of virtualization as found in the ``//os/type`` element of the libvirt definition.
+        The default value is taken from the host capabilities, with a preference for ``hvm``.
+        Only used when creating a new virtual machine.
+
+        .. versionadded:: Neon
+    :param arch:
+        architecture of the virtual machine. The default value is taken from the host capabilities,
+        but ``x86_64`` is prefed over ``i686``. Only used when creating a new virtual machine.
+
+        .. versionadded:: Neon
 
     .. rubric:: Example States
 
@@ -429,6 +442,8 @@ def running(name,
             __salt__['virt.init'](name,
                                   cpu=cpu,
                                   mem=mem,
+                                  os_type=os_type,
+                                  arch=arch,
                                   image=image,
                                   hypervisor=vm_type,
                                   disk=disk_profile,
