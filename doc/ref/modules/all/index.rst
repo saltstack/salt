@@ -450,6 +450,7 @@ execution modules
     ssh
     ssh_pkg
     ssh_service
+    sslv
     state
     status
     statuspage

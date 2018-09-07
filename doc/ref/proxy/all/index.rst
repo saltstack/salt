@@ -31,4 +31,5 @@ proxy modules
     philips_hue
     rest_sample
     ssh_sample
+    sslv
     vcenter

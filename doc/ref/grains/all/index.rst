@@ -35,4 +35,5 @@ grains modules
     rest_sample
     smartos
     ssh_sample
+    sslv
     zfs
