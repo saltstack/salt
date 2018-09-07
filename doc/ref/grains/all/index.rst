@@ -26,3 +26,4 @@ grains modules
     panos
     philips_hue
     rest_sample
+    sslv

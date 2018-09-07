@@ -420,6 +420,7 @@ execution modules
     ssh
     ssh_package
     ssh_service
+    sslv
     snapper
     state
     status
