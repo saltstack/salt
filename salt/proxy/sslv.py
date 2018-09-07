@@ -72,7 +72,6 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python Libs
 import logging
-import re
 import json
 import requests
 
