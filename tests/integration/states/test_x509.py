@@ -10,7 +10,7 @@ from tests.support.mixins import SaltReturnAssertsMixin
 import salt.utils.files
 
 try:
-    from M2Crypto.RSA import RSAError
+    import M2Crypto  # pylint: disable=W0611
     HAS_M2CRYPTO = True
 except ImportError:
     HAS_M2CRYPTO = False
@@ -30,7 +30,7 @@ class x509Test(ModuleCase, SaltReturnAssertsMixin):
         for path in paths:
             try:
                 os.remove(path)
-            except:
+            except Exception:
                 pass
 
     @staticmethod
@@ -47,7 +47,6 @@ class x509Test(ModuleCase, SaltReturnAssertsMixin):
                 if started:
                     lines.append(line.strip())
         return lines
-
 
     @skipIf(not HAS_M2CRYPTO, 'Skip when no M2Crypto found')
     def test_issue_49027(self):
