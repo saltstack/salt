@@ -70,9 +70,8 @@ TACACS+ set this value to ``tacacs``.
 
 from __future__ import absolute_import, print_function, unicode_literals
 
-import json
-
 # Import Python Libs
+import json
 import logging
 
 import requests

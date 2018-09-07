@@ -58,6 +58,20 @@ def _validate_change_result(response):
     return False
 
 
+def _convert_to_list(response, item_key):
+    full_list = []
+    for item in response["result"][0]:
+        full_list.append(item[item_key])
+    return full_list
+
+
+def _collapse_dict_format(response):
+    decoded = {}
+    for item in response:
+        decoded[item["key"]] = item["value"]
+    return decoded
+
+
 def add_distinguished_name(list_name, item_name):
     """
     Adds a distinguished name to a distinguished name list.
@@ -236,11 +250,7 @@ def get_distinguished_name_list(list_name):
 
     response = __proxy__["sslv.call"](payload, False)
 
-    full_list = []
-    for item in response["result"][0]:
-        full_list.append(item["item_name"])
-
-    return full_list
+    return _convert_to_list(response, "item_name")
 
 
 def get_distinguished_name_lists():
@@ -263,11 +273,7 @@ def get_distinguished_name_lists():
 
     response = __proxy__["sslv.call"](payload, False)
 
-    full_list = []
-    for item in response["result"][0]:
-        full_list.append(item["list_name"])
-
-    return full_list
+    return _convert_to_list(response, "list_name")
 
 
 def get_domain_list(list_name):
@@ -292,11 +298,7 @@ def get_domain_list(list_name):
 
     response = __proxy__["sslv.call"](payload, False)
 
-    full_list = []
-    for item in response["result"][0]:
-        full_list.append(item["item_name"])
-
-    return full_list
+    return _convert_to_list(response, "item_name")
 
 
 def get_domain_lists():
@@ -319,11 +321,7 @@ def get_domain_lists():
 
     response = __proxy__["sslv.call"](payload, False)
 
-    full_list = []
-    for item in response["result"][0]:
-        full_list.append(item["list_name"])
-
-    return full_list
+    return _convert_to_list(response, "list_name")
 
 
 def get_ip_address_list(list_name):
@@ -348,11 +346,7 @@ def get_ip_address_list(list_name):
 
     response = __proxy__["sslv.call"](payload, False)
 
-    full_list = []
-    for item in response["result"][0]:
-        full_list.append(item["item_name"])
-
-    return full_list
+    return _convert_to_list(response, "item_name")
 
 
 def get_ip_address_lists():
@@ -375,11 +369,7 @@ def get_ip_address_lists():
 
     response = __proxy__["sslv.call"](payload, False)
 
-    full_list = []
-    for item in response["result"][0]:
-        full_list.append(item["list_name"])
-
-    return full_list
+    return _convert_to_list(response, "list_name")
 
 
 def get_ipv4_config():
@@ -471,10 +461,7 @@ def get_platform():
 
     response = __proxy__["sslv.call"](payload, False)
 
-    decoded = {}
-    for item in response["result"]:
-        decoded[item["key"]] = item["value"]
-    return decoded
+    return _collapse_dict_format(response["result"])
 
 
 def get_software():
@@ -497,7 +484,4 @@ def get_software():
 
     response = __proxy__["sslv.call"](payload, False)
 
-    decoded = {}
-    for item in response["result"]:
-        decoded[item["key"]] = item["value"]
-    return decoded
+    return _collapse_dict_format(response["result"])
