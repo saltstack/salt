@@ -42,6 +42,7 @@ import salt.utils.json
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
+from salt.utils.versions import LooseVersion as _LooseVersion
 
 HAS_PWD = True
 try:
@@ -3913,6 +3914,16 @@ class RemoteFileTest(ModuleCase, SaltReturnAssertsMixin):
 
 @skipIf(not salt.utils.path.which('patch'), 'patch is not installed')
 class PatchTest(ModuleCase, SaltReturnAssertsMixin):
+    def _check_patch_version(self, min_version):
+        '''
+        patch version check
+        '''
+        if not salt.utils.path.which('patch'):
+            self.skipTest('patch is not installed')
+        version = re.search(r'\d\.\d\.\d', self.run_function('cmd.run', ['patch --version'])).group(0)
+        if _LooseVersion(version) < _LooseVersion(min_version):
+            self.skipTest('Mininum patch version required: {0}.'
+                          'Patch version installed: {1}'.format(min_version, version))
 
     @classmethod
     def setUpClass(cls):
@@ -4036,6 +4047,7 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         Test file.patch using a patch applied to a directory, with changes
         spanning multiple files.
         '''
+        self._check_patch_version('2.6.1')
         ret = self.run_state(
             'file.patch',
             name=self.base_dir,
@@ -4063,6 +4075,7 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         Test that we successfuly parse -p/--strip when included in the options
         '''
+        self._check_patch_version('2.6.1')
         # Run the state using -p1
         ret = self.run_state(
             'file.patch',
@@ -4237,6 +4250,7 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         spanning multiple files, and the patch file coming from a remote
         source.
         '''
+        self._check_patch_version('2.6.1')
         # Try without a source_hash and without skip_verify=True, this should
         # fail with a message about the source_hash
         ret = self.run_state(
@@ -4311,6 +4325,7 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         spanning multiple files, and with jinja templating applied to the patch
         file.
         '''
+        self._check_patch_version('2.6.1')
         ret = self.run_state(
             'file.patch',
             name=self.base_dir,
@@ -4390,6 +4405,7 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         spanning multiple files, and the patch file coming from a remote
         source.
         '''
+        self._check_patch_version('2.6.1')
         # Try without a source_hash and without skip_verify=True, this should
         # fail with a message about the source_hash
         ret = self.run_state(
