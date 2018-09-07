@@ -60,7 +60,12 @@ import hashlib
 import logging
 import datetime
 import sys
-from collections import MutableMapping
+
+try:
+    from collections.abc import MutableMapping
+except ImportError:
+    from collections import MutableMapping
+
 from multiprocessing.util import Finalize
 from salt.ext.six.moves import range
 
