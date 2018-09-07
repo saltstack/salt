@@ -9,6 +9,7 @@ from tests.support.case import ModuleCase
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.helpers import (
     destructiveTest,
+    flaky,
     requires_network,
     requires_salt_modules,
 )
@@ -19,6 +20,7 @@ import salt.utils.pkg
 import salt.utils.platform
 
 
+@flaky
 class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the pkg module
@@ -77,9 +79,9 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         test modifying and deleting a software repository
         '''
         os_grain = self.run_function('grains.item', ['os'])['os']
+        repo = None
 
         try:
-            repo = None
             if os_grain == 'Ubuntu':
                 repo = 'ppa:otto-kesselgulasch/gimp-edge'
                 uri = 'http://ppa.launchpad.net/otto-kesselgulasch/gimp-edge/ubuntu'
@@ -170,15 +172,15 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         test holding and unholding a package
         '''
         os_family = self.run_function('grains.item', ['os_family'])['os_family']
-        os_major_release = self.run_function('grains.item', ['osmajorrelease'])['osmajorrelease']
         available = self.run_function('sys.doc', ['pkg.hold'])
+        version_lock = None
+        lock_pkg = 'yum-plugin-versionlock'
 
         if available:
             self.run_function('pkg.install', [self.pkg])
             if os_family == 'RedHat':
-                lock_pkg = 'yum-versionlock' if os_major_release == '5' else 'yum-plugin-versionlock'
-                versionlock = self.run_function('pkg.version', [lock_pkg])
-                if not versionlock:
+                version_lock = self.run_function('pkg.version', [lock_pkg])
+                if not version_lock:
                     self.run_function('pkg.install', [lock_pkg])
 
             hold_ret = self.run_function('pkg.hold', [self.pkg])
@@ -190,7 +192,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertTrue(unhold_ret[self.pkg]['result'])
 
             if os_family == 'RedHat':
-                if not versionlock:
+                if not version_lock:
                     self.run_function('pkg.remove', [lock_pkg])
             self.run_function('pkg.remove', [self.pkg])
 
@@ -278,9 +280,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
             # Therefore, we'll choose from several packages to make sure we get
             # one that is suitable for this test.
             packages = ('hwinfo', 'avrdude', 'diffoscope', 'vim')
-
             available = self.run_function('pkg.list_repo_pkgs', packages)
-            versions = self.run_function('pkg.version', packages)
 
             for package in packages:
                 try:
@@ -291,7 +291,6 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
                     continue
                 else:
                     target = package
-                    current = versions[target]
                     break
             else:
                 # None of the packages have more than one version available, so
@@ -335,7 +334,8 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
     @skipIf(salt.utils.platform.is_darwin(), 'minion is mac')
     def test_pkg_latest_version(self):
         '''
-        check that pkg.latest_version returns the latest version of the uninstalled package (it does not install the package, just checking the version)
+        Check that pkg.latest_version returns the latest version of the uninstalled package.
+        The package is not installed. Only the package version is checked.
         '''
         grains = self.run_function('grains.items')
         remove = False
@@ -349,8 +349,9 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
 
         # remove package if its installed
         if remove:
-            cmd_remove = self.run_function('pkg.remove', [self.pkg])
+            self.run_function('pkg.remove', [self.pkg])
 
+        cmd_pkg = []
         if grains['os_family'] == 'RedHat':
             cmd_pkg = self.run_function('cmd.run', ['yum list {0}'.format(self.pkg)])
         elif salt.utils.platform.is_windows():

@@ -303,7 +303,7 @@ def _process_requirements(requirements, cmd, cwd, saltenv, user):
                 # In Windows, just being owner of a file isn't enough. You also
                 # need permissions
                 if salt.utils.platform.is_windows():
-                    __utils__['win_dacl.set_permissions'](
+                    __utils__['dacl.set_permissions'](
                         obj_name=treq,
                         principal=user,
                         permissions='read_execute')

@@ -48,8 +48,8 @@ import logging
 
 # Import Salt libs
 import salt.utils.versions
-
-log = logging.getLogger(__name__)
+from salt.ext.six.moves import range
+log = logging.getLogger(__name__)  # pylint: disable=W1699
 
 # Import third party libs
 #pylint: disable=unused-import
@@ -108,10 +108,16 @@ def describe_topic(name, region=None, key=None, keyid=None, profile=None):
     for topic, arn in topics.items():
         if name in (topic, arn):
             ret = {'TopicArn': arn}
-            ret['Subscriptions'] = list_subscriptions_by_topic(arn, region=region, key=key,
-                                                               keyid=keyid, profile=profile)
             ret['Attributes'] = get_topic_attributes(arn, region=region, key=key, keyid=keyid,
-                                                     profile=profile)
+                    profile=profile)
+            ret['Subscriptions'] = list_subscriptions_by_topic(arn, region=region, key=key,
+                    keyid=keyid, profile=profile)
+            # Grab extended attributes for the above subscriptions
+            for sub in range(len(ret['Subscriptions'])):
+                sub_arn = ret['Subscriptions'][sub]['SubscriptionArn']
+                deets = get_subscription_attributes(SubscriptionArn=sub_arn, region=region,
+                        key=key, keyid=keyid, profile=profile)
+                ret['Subscriptions'][sub].update(deets)
     return ret
 
 

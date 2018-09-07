@@ -514,6 +514,15 @@ class Fileserver(object):
             return ret
         return list(ret)
 
+    def file_envs(self, load=None):
+        '''
+        Return environments for all backends for requests from fileclient
+        '''
+        if load is None:
+            load = {}
+        load.pop('cmd', None)
+        return self.envs(**load)
+
     def init(self, back=None):
         '''
         Initialize the backend, only do so if the fs supports an init function

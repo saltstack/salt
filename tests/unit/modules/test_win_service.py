@@ -139,12 +139,16 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock_true = MagicMock(return_value=True)
         mock_false = MagicMock(return_value=False)
-        mock_info = MagicMock(side_effect=[{'Status': 'Running'},
-                                           {'Status': 'Stop Pending'},
-                                           {'Status': 'Stopped'}])
+        mock_info = MagicMock(side_effect=[{'Status': 'Stopped'}])
 
-        with patch.dict(win_service.__salt__, {'cmd.run': MagicMock(return_value="service was stopped")}):
+        with patch.dict(win_service.__salt__, {'cmd.run': MagicMock(return_value="service was stopped")}), \
+                patch.object(win32serviceutil, 'StopService', mock_true), \
+                patch.object(win_service, '_status_wait', mock_info):
             self.assertTrue(win_service.stop('spongebob'))
+
+        mock_info = MagicMock(side_effect=[{'Status': 'Running', 'Status_WaitHint': 0},
+                                           {'Status': 'Stop Pending', 'Status_WaitHint': 0},
+                                           {'Status': 'Stopped'}])
 
         with patch.dict(win_service.__salt__, {'cmd.run': MagicMock(return_value="service was stopped")}), \
                 patch.object(win32serviceutil, 'StopService', mock_true), \
