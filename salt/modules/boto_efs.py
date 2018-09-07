@@ -47,13 +47,16 @@ Connection module for Amazon EFS
 
 :depends: boto3
 '''
-
+# keep lint from choking on Unused argument 'kwargs' (unused-argument).
+# pylint: disable=W0612,W0613
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 
+# Import salt libs
+import salt.utils.versions
 # Import 3rd-party libs
 from salt.ext import six
 try:
@@ -61,9 +64,6 @@ try:
     HAS_BOTO3 = True
 except ImportError:
     HAS_BOTO3 = False
-
-# Import salt libs
-import salt.utils.versions
 
 log = logging.getLogger(__name__)
 
@@ -169,6 +169,9 @@ def create_file_system(name,
     if 'Name' in response:
         response['Name'] = name
 
+    waiter = client.get_waiter('efs_available')
+    waiter.wait(CreationToken=creation_token)
+
     return response
 
 
@@ -222,22 +225,33 @@ def create_mount_target(filesystemid,
     client = _get_conn(key=key, keyid=keyid, profile=profile, region=region)
 
     if ipaddress is None and securitygroups is None:
-        return client.create_mount_target(FileSystemId=filesystemid,
-                                          SubnetId=subnetid)
+        res = client.create_mount_target(
+                FileSystemId=filesystemid,
+                SubnetId=subnetid)
 
-    if ipaddress is None:
-        return client.create_mount_target(FileSystemId=filesystemid,
-                                          SubnetId=subnetid,
-                                          SecurityGroups=securitygroups)
-    if securitygroups is None:
-        return client.create_mount_target(FileSystemId=filesystemid,
-                                          SubnetId=subnetid,
-                                          IpAddress=ipaddress)
+    elif ipaddress is None:
+        res = client.create_mount_target(
+                FileSystemId=filesystemid,
+                SubnetId=subnetid,
+                SecurityGroups=securitygroups)
 
-    return client.create_mount_target(FileSystemId=filesystemid,
-                                      SubnetId=subnetid,
-                                      IpAddress=ipaddress,
-                                      SecurityGroups=securitygroups)
+    elif securitygroups is None:
+        res = client.create_mount_target(
+                FileSystemId=filesystemid,
+                SubnetId=subnetid,
+                IpAddress=ipaddress)
+
+    else:
+        res = client.create_mount_target(
+                FileSystemId=filesystemid,
+                SubnetId=subnetid,
+                IpAddress=ipaddress,
+                SecurityGroups=securitygroups)
+
+    waiter = client.get_waiter('mount_target_available')
+    waiter.wait(MountTargetId=res['MountTargetId'])
+
+    return res
 
 
 def create_tags(filesystemid,
@@ -269,8 +283,8 @@ def create_tags(filesystemid,
     client = _get_conn(key=key, keyid=keyid, profile=profile, region=region)
 
     new_tags = []
-    for k, v in six.iteritems(tags):
-        new_tags.append({'Key': k, 'Value': v})
+    for k__, v__ in six.iteritems(tags):
+        new_tags.append({'Key': k__, 'Value': v__})
 
     client.create_tags(FileSystemId=filesystemid, Tags=new_tags)
 
@@ -299,16 +313,21 @@ def delete_file_system(filesystemid,
     '''
 
     client = _get_conn(key=key, keyid=keyid, profile=profile, region=region)
-
-    client.delete_file_system(FileSystemId=filesystemid)
+    res = client.delete_file_system(FileSystemId=filesystemid)
+    try:
+        waiter = client.get_waiter('efs_deleted')
+        waiter.wait(FileSystemId=filesystemid)
+    except boto3.exceptions.botocore.exceptions.WaiterError:
+        pass
+    return res
 
 
 def delete_mount_target(mounttargetid,
-                       keyid=None,
-                       key=None,
-                       profile=None,
-                       region=None,
-                       **kwargs):
+                        keyid=None,
+                        key=None,
+                        profile=None,
+                        region=None,
+                        **kwargs):
     '''
     Deletes the specified mount target.
 
@@ -334,7 +353,14 @@ def delete_mount_target(mounttargetid,
 
     client = _get_conn(key=key, keyid=keyid, profile=profile, region=region)
 
-    client.delete_mount_target(MountTargetId=mounttargetid)
+    res = client.delete_mount_target(MountTargetId=mounttargetid)
+
+    try:
+        waiter = client.get_waiter('mount_target_deleted')
+        waiter.wait(MountTargetId=mounttargetid)
+    except boto3.exceptions.botocore.exceptions.WaiterError:
+        pass
+    return res['ResponseMetadata']['HTTPStatusCode'] == 204
 
 
 def delete_tags(filesystemid,
@@ -458,8 +484,9 @@ def get_mount_targets(filesystemid=None,
         response = client.describe_mount_targets(FileSystemId=filesystemid)
         result = response["MountTargets"]
         while "NextMarker" in response:
-            response = client.describe_mount_targets(FileSystemId=filesystemid,
-                                                 Marker=response["NextMarker"])
+            response = client.describe_mount_targets(
+                    FileSystemId=filesystemid,
+                    Marker=response["NextMarker"])
             result.extend(response["MountTargets"])
     elif mounttargetid:
         response = client.describe_mount_targets(MountTargetId=mounttargetid)
