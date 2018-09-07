@@ -57,3 +57,11 @@ class x509Test(ModuleCase, SaltReturnAssertsMixin):
         log.warn("ret = %s", repr(ret))
         self.assertSaltTrueReturn(ret)
         self.assertEqual(expected, self.get_cert_lines('/test-49027.crt'))
+
+    @skipIf(not HAS_M2CRYPTO, 'Skip when no M2Crypto found')
+    def test_issue_49008(self):
+        ret = self.run_function('state.sls', ['issue-49008'])
+        log.warn("ret = %s", repr(ret))
+        self.assertSaltTrueReturn(ret)
+        self.assertTrue(os.path.exists('/test-ca-49008.key'))
+        self.assertTrue(os.path.exists('/test-ca-49008.crt'))
