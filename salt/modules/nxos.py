@@ -63,7 +63,7 @@ no_save_config:
     controlled by this option is preserved for backwards compatibility.
 
 
-The api's defined in this execution module can also be executed using
+The APIs defined in this execution module can also be executed using
 salt-call from the GuestShell environment as follows.
 
 .. code-block:: bash
