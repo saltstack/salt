@@ -755,26 +755,26 @@ Statically assigns grains to the minion.
 .. conf_minion:: grains_blacklist
 
 ``grains_blacklist``
-----------
+--------------------
 
 Default: ``[]``
 
-If :conf_minion:`grains_blacklist` is enabled then any core grains will be
-checked against the matches found in the `grains_blacklist` list and any
-matched core grains will be filtered.
+Each grains key will be compared against each of the expressions in this list.
+Any keys which match will be filtered from the grains. Exact matches, glob
+matches, and regular expressions are supported.
 
 .. note::
+    Some states and execution modules depend on grains. Filtering may cause
+    them to be unavailable or run unreliably.
 
-    Some modules may depends on core grains. Filtering may cause
-    the dependent module to run unusual.
-
-.. versionadded:: 2018.11.0
+.. versionadded:: Neon
 
 .. code-block:: yaml
 
     grains_blacklist:
       - cpu_flags
       - zmq*
+      - ipv[46]
 
 .. conf_minion:: grains_cache
 

@@ -750,7 +750,7 @@ def grains(opts, force_refresh=False, proxy=None):
         if not isinstance(ret, dict):
             continue
         if blist:
-            for key in ret.keys():
+            for key in list(ret):
                 for block in blist:
                     if salt.utils.stringutils.expr_match(key, block):
                         del ret[key]
@@ -793,7 +793,7 @@ def grains(opts, force_refresh=False, proxy=None):
         if not isinstance(ret, dict):
             continue
         if blist:
-            for key in ret.keys():
+            for key in list(ret):
                 for block in blist:
                     if salt.utils.stringutils.expr_match(key, block):
                         del ret[key]
