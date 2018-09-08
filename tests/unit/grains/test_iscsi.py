@@ -5,7 +5,6 @@
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 import errno
-import os
 import textwrap
 
 # Import Salt Testing Libs
