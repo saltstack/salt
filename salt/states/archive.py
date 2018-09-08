@@ -15,7 +15,6 @@ import shlex
 import stat
 import string
 import tarfile
-import traceback
 from contextlib import closing
 
 # Import 3rd-party libs
@@ -30,15 +29,10 @@ import salt.utils.hashutils
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.url
+import salt.utils.data
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
 log = logging.getLogger(__name__)
-
-
-def _error(ret, err_msg):
-    ret['result'] = False
-    ret['comment'] = err_msg
-    return ret
 
 
 def _path_is_abs(path):
@@ -176,6 +170,193 @@ def _cleanup_destdir(name):
         os.rmdir(name)
     except OSError:
         pass
+
+
+def _file_lists(src_path, dest_path):
+    '''
+    Return a tuple containing the file lists of given path for files, dirs, links
+    '''
+    ret = {
+        'files': set(),
+        'dirs': set(),
+        'links': set()
+    }
+    for root, dirs, files in salt.utils.path.os_walk(src_path, followlinks=True):
+        for fname in files:
+            src_file = os.path.join(root, fname)
+            dest_file = src_file.replace(src_path, dest_path.rstrip(os.sep))
+            if __salt__['file.is_link'](src_file):
+                src_file_link = __salt__['file.readlink'](src_file, canonicalize=True)
+                dest_file_link = src_file_link.replace(src_path, dest_path.rstrip(os.sep))
+                cur_dest_file_link = __salt__['file.readlink'](dest_file, canonicalize=True)
+                if not __salt__['file.is_link'](dest_file) or cur_dest_file_link != dest_file_link:
+                    ret['links'].add((dest_file, dest_file_link))
+            else:
+                ret['files'].add((dest_file, src_file))
+        src_dir = root
+        dest_dir = root.replace(src_path, dest_path)
+        ret['dirs'].add((dest_dir, src_dir))
+    return ret['files'], ret['dirs'], ret['links']
+
+
+def _extracted_archive(cached,
+                       name,
+                       ret,
+                       password=None,
+                       options=None,
+                       trim_output=False,
+                       use_cmd_unzip=None,
+                       extract_perms=True,
+                       archive_format=None,
+                       **kwargs):
+    try:
+        if archive_format == 'zip':
+            if use_cmd_unzip:
+                try:
+                    files = __salt__['archive.cmd_unzip'](
+                        cached,
+                        name,
+                        options=options,
+                        trim_output=trim_output,
+                        password=password,
+                        **kwargs)
+                except (CommandExecutionError, CommandNotFoundError) as exc:
+                    ret['comment'] = exc.strerror
+                    return ret
+            else:
+                files = __salt__['archive.unzip'](cached,
+                                                  name,
+                                                  options=options,
+                                                  trim_output=trim_output,
+                                                  password=password,
+                                                  extract_perms=extract_perms,
+                                                  **kwargs)
+        elif archive_format == 'rar':
+            try:
+                files = __salt__['archive.unrar'](cached,
+                                                  name,
+                                                  trim_output=trim_output,
+                                                  **kwargs)
+            except (CommandExecutionError, CommandNotFoundError) as exc:
+                ret['comment'] = exc.strerror
+                return ret
+        else:
+            if options is None:
+                try:
+                    with closing(tarfile.open(cached, 'r')) as tar:
+                        tar.extractall(salt.utils.stringutils.to_str(name))
+                        files = tar.getnames()
+                        if trim_output:
+                            files = files[:trim_output]
+                except tarfile.ReadError:
+                    if salt.utils.path.which('xz'):
+                        if __salt__['cmd.retcode'](
+                                ['xz', '-t', cached],
+                                python_shell=False,
+                                ignore_retcode=True) == 0:
+                            # XZ-compressed data
+                            log.debug(
+                                'Tar file is XZ-compressed, attempting '
+                                'decompression and extraction using XZ Utils '
+                                'and the tar command'
+                            )
+                            # Must use python_shell=True here because not
+                            # all tar implementations support the -J flag
+                            # for decompressing XZ-compressed data. We need
+                            # to dump the decompressed data to stdout and
+                            # pipe it to tar for extraction.
+                            cmd = 'xz --decompress --stdout {0} | tar xvf -'
+                            results = __salt__['cmd.run_all'](
+                                cmd.format(_cmd_quote(cached)),
+                                cwd=name,
+                                python_shell=True)
+                            if results['retcode'] != 0:
+                                if created_destdir:
+                                    _cleanup_destdir(name)
+                                ret['result'] = False
+                                ret['changes'] = results
+                                return ret
+                            if _is_bsdtar():
+                                files = results['stderr']
+                            else:
+                                files = results['stdout']
+                        else:
+                            # Failed to open tar archive and it is not
+                            # XZ-compressed, gracefully fail the state
+                            if created_destdir:
+                                _cleanup_destdir(name)
+                            ret['result'] = False
+                            ret['comment'] = (
+                                'Failed to read from tar archive using '
+                                'Python\'s native tar file support. If '
+                                'archive is compressed using something '
+                                'other than gzip or bzip2, the '
+                                '\'options\' argument may be required to '
+                                'pass the correct options to the tar '
+                                'command in order to extract the archive.'
+                            )
+                            return ret
+                    else:
+                        if created_destdir:
+                            _cleanup_destdir(name)
+                        ret['result'] = False
+                        ret['comment'] = (
+                            'Failed to read from tar archive. If it is '
+                            'XZ-compressed, install xz-utils to attempt '
+                            'extraction.'
+                        )
+                        return ret
+            else:
+                if not salt.utils.path.which('tar'):
+                    ret['comment'] = (
+                        'tar command not available, it might not be '
+                        'installed on minion'
+                    )
+                    return ret
+
+                tar_opts = shlex.split(options)
+
+                tar_cmd = ['tar']
+                tar_shortopts = 'x'
+                tar_longopts = []
+
+                for position, opt in enumerate(tar_opts):
+                    if opt.startswith('-'):
+                        tar_longopts.append(opt)
+                    else:
+                        if position > 0:
+                            tar_longopts.append(opt)
+                        else:
+                            append_opt = opt
+                            append_opt = append_opt.replace('x', '')
+                            append_opt = append_opt.replace('f', '')
+                            tar_shortopts = tar_shortopts + append_opt
+
+                if __grains__['os'].lower() == 'openbsd':
+                    tar_shortopts = '-' + tar_shortopts
+
+                tar_cmd.append(tar_shortopts)
+                tar_cmd.extend(tar_longopts)
+                tar_cmd.extend(['-f', cached])
+
+                results = __salt__['cmd.run_all'](tar_cmd,
+                                                  cwd=name,
+                                                  python_shell=False)
+                if results['retcode'] != 0:
+                    ret['result'] = False
+                    ret['changes'] = results
+                    return ret
+                if _is_bsdtar():
+                    files = results['stderr']
+                else:
+                    files = results['stdout']
+                if not files:
+                    files = 'no tar output so far'
+    except CommandExecutionError as exc:
+        ret['comment'] = exc.strerror
+    else:
+        ret['files'] = files
+    return ret
 
 
 def extracted(name,
@@ -1260,195 +1441,39 @@ def extracted(name,
             created_destdir = True
 
         if skip_same_file:
-            origin_name = name
             tmp_filename = salt.utils.hashutils.md5_digest(os.path.basename(cached))
-            name = os.path.join(os.path.dirname(cached), tmp_filename)
+            tmp_name = os.path.join(os.path.dirname(cached), tmp_filename)
             trim_output = False
-            if os.path.exists(name):
-                __salt__['file.remove'](name)
-            __states__['file.directory'](name)
-            log.debug('Extracting %s to temporary directory %s', cached, name)
+            if os.path.exists(tmp_name):
+                __salt__['file.remove'](tmp_name)
+            __states__['file.directory'](tmp_name)
+            log.debug('Extracting %s to temporary directory %s', cached, tmp_name)
+            extracted_name = tmp_name
         else:
-            origin_name = ''
             log.debug('Extracting %s to %s', cached, name)
+            extracted_name = name
 
-        try:
-            if archive_format == 'zip':
-                if use_cmd_unzip:
-                    try:
-                        files = __salt__['archive.cmd_unzip'](
-                            cached,
-                            name,
-                            options=options,
-                            trim_output=trim_output,
-                            password=password,
-                            **kwargs)
-                    except (CommandExecutionError, CommandNotFoundError) as exc:
-                        ret['comment'] = exc.strerror
-                        return ret
-                else:
-                    files = __salt__['archive.unzip'](cached,
-                                                      name,
-                                                      options=options,
-                                                      trim_output=trim_output,
-                                                      password=password,
-                                                      extract_perms=extract_perms,
-                                                      **kwargs)
-            elif archive_format == 'rar':
-                try:
-                    files = __salt__['archive.unrar'](cached,
-                                                      name,
-                                                      trim_output=trim_output,
-                                                      **kwargs)
-                except (CommandExecutionError, CommandNotFoundError) as exc:
-                    ret['comment'] = exc.strerror
-                    return ret
-            else:
-                if options is None:
-                    try:
-                        with closing(tarfile.open(cached, 'r')) as tar:
-                            tar.extractall(salt.utils.stringutils.to_str(name))
-                            files = tar.getnames()
-                            if trim_output:
-                                files = files[:trim_output]
-                    except tarfile.ReadError:
-                        if salt.utils.path.which('xz'):
-                            if __salt__['cmd.retcode'](
-                                    ['xz', '-t', cached],
-                                    python_shell=False,
-                                    ignore_retcode=True) == 0:
-                                # XZ-compressed data
-                                log.debug(
-                                    'Tar file is XZ-compressed, attempting '
-                                    'decompression and extraction using XZ Utils '
-                                    'and the tar command'
-                                )
-                                # Must use python_shell=True here because not
-                                # all tar implementations support the -J flag
-                                # for decompressing XZ-compressed data. We need
-                                # to dump the decompressed data to stdout and
-                                # pipe it to tar for extraction.
-                                cmd = 'xz --decompress --stdout {0} | tar xvf -'
-                                results = __salt__['cmd.run_all'](
-                                    cmd.format(_cmd_quote(cached)),
-                                    cwd=name,
-                                    python_shell=True)
-                                if results['retcode'] != 0:
-                                    if created_destdir:
-                                        _cleanup_destdir(name)
-                                    ret['result'] = False
-                                    ret['changes'] = results
-                                    return ret
-                                if _is_bsdtar():
-                                    files = results['stderr']
-                                else:
-                                    files = results['stdout']
-                            else:
-                                # Failed to open tar archive and it is not
-                                # XZ-compressed, gracefully fail the state
-                                if created_destdir:
-                                    _cleanup_destdir(name)
-                                ret['result'] = False
-                                ret['comment'] = (
-                                    'Failed to read from tar archive using '
-                                    'Python\'s native tar file support. If '
-                                    'archive is compressed using something '
-                                    'other than gzip or bzip2, the '
-                                    '\'options\' argument may be required to '
-                                    'pass the correct options to the tar '
-                                    'command in order to extract the archive.'
-                                )
-                                return ret
-                        else:
-                            if created_destdir:
-                                _cleanup_destdir(name)
-                            ret['result'] = False
-                            ret['comment'] = (
-                                'Failed to read from tar archive. If it is '
-                                'XZ-compressed, install xz-utils to attempt '
-                                'extraction.'
-                            )
-                            return ret
-                else:
-                    if not salt.utils.path.which('tar'):
-                        ret['comment'] = (
-                            'tar command not available, it might not be '
-                            'installed on minion'
-                        )
-                        return ret
+        result = _extracted_archive(
+            cached,
+            extracted_name,
+            ret,
+            password,
+            options,
+            trim_output,
+            use_cmd_unzip,
+            extract_perms,
+            archive_format,
+            **kwargs)
 
-                    tar_opts = shlex.split(options)
-
-                    tar_cmd = ['tar']
-                    tar_shortopts = 'x'
-                    tar_longopts = []
-
-                    for position, opt in enumerate(tar_opts):
-                        if opt.startswith('-'):
-                            tar_longopts.append(opt)
-                        else:
-                            if position > 0:
-                                tar_longopts.append(opt)
-                            else:
-                                append_opt = opt
-                                append_opt = append_opt.replace('x', '')
-                                append_opt = append_opt.replace('f', '')
-                                tar_shortopts = tar_shortopts + append_opt
-
-                    if __grains__['os'].lower() == 'openbsd':
-                        tar_shortopts = '-' + tar_shortopts
-
-                    tar_cmd.append(tar_shortopts)
-                    tar_cmd.extend(tar_longopts)
-                    tar_cmd.extend(['-f', cached])
-
-                    results = __salt__['cmd.run_all'](tar_cmd,
-                                                      cwd=name,
-                                                      python_shell=False)
-                    if results['retcode'] != 0:
-                        ret['result'] = False
-                        ret['changes'] = results
-                        return ret
-                    if _is_bsdtar():
-                        files = results['stderr']
-                    else:
-                        files = results['stdout']
-                    if not files:
-                        files = 'no tar output so far'
-        except CommandExecutionError as exc:
-            ret['comment'] = exc.strerror
-            return ret
-
-    def _file_lists(src_path, dest_path):
-        '''
-        Return a tuple containing the file lists of given path for files, dirs, links
-        '''
-        ret = {
-            'files': set(),
-            'dirs': set(),
-            'links': set()
-        }
-        for root, dirs, files in salt.utils.path.os_walk(src_path, followlinks=True):
-            for fname in files:
-                src_file = os.path.join(root, fname)
-                dest_file = src_file.replace(src_path, dest_path.rstrip(os.sep))
-                if __salt__['file.is_link'](src_file):
-                    src_file_link = __salt__['file.readlink'](src_file, canonicalize=True)
-                    dest_file_link = src_file_link.replace(src_path, dest_path.rstrip(os.sep))
-                    cur_dest_file_link = __salt__['file.readlink'](dest_file, canonicalize=True)
-                    if not __salt__['file.is_link'](dest_file) or cur_dest_file_link != dest_file_link:
-                        ret['links'].add((dest_file, dest_file_link))
-                else:
-                    ret['files'].add((dest_file, src_file))
-            src_dir = root
-            dest_dir = root.replace(src_path, dest_path)
-            ret['dirs'].add((dest_dir, src_dir))
-        return ret['files'], ret['dirs'], ret['links']
+        if 'files' in result:
+            files = result['files']
+        else:
+            return result
 
     if skip_same_file:
         extracted_files = []
-        log.debug('Extracting %s to %s', name, origin_name)
-        mng_files, mng_dirs, mng_links = _file_lists(name, origin_name)
+        log.debug('Extracting %s to %s', tmp_name, name)
+        mng_files, mng_dirs, mng_links = _file_lists(tmp_name, name)
         for dest_dir, src_dir in mng_dirs:
             try:
                 if not os.path.isdir(dest_dir):
@@ -1462,43 +1487,141 @@ def extracted(name,
                         file_mode=stats.get('mode')
                     )
             except Exception as exc:
-                __salt__['file.remove'](name)
-                ret['changes'] = {}
-                log.exception(traceback.format_exc())
-                return _error(ret, 'Unable to manage dir: {0}'.format(exc))
+                __salt__['file.remove'](tmp_name)
+                msg = 'Unable to manage dir: {0}'.format(exc.__str__())
+                log.exception(msg)
+                ret['comment'] = msg
+                return ret
 
         for dest_file, src_file in mng_files:
             try:
+                result = {'changes': False,
+                          'comment': '',
+                          'result': True}
                 stats = __salt__['file.stats'](src_file)
-                ret = __salt__['file.manage_file'](
-                    name=dest_file,
-                    sfn='',
-                    ret=None,
-                    source=src_file,
-                    source_sum={},
-                    user=stats.get('user'),
-                    group=stats.get('group'),
-                    mode=stats.get('mode'),
-                    attrs=None,
-                    saltenv=__env__,
-                    backup=None,
-                    makedirs=True,
-                    follow_symlinks=True,
-                    show_changes=True)
+
+                # Check changes if the target file exists
+                if os.path.isfile(dest_file) or os.path.islink(dest_file):
+                    if os.path.islink(dest_file):
+                        real_name = os.path.realpath(dest_file)
+                    else:
+                        real_name = dest_file
+                    # Check if file needs to be replaced
+                    src_sum = _gen_checksum(src_file)
+                    dest_sum = _gen_checksum(real_name)
+                    if src_sum != dest_sum:
+                        result['changes'] = True
+                        salt.utils.files.copyfile(src_file, dest_file)
+
+                    if salt.utils.platform.is_windows():
+                        # This function resides in win_file.py and will be available
+                        # on Windows. The local function will be overridden
+                        # pylint: disable=E1120,E1121,E1123
+                        result = __salt__['file.check_perms'](
+                            path=dest_file,
+                            ret=None,
+                            owner=kwargs.get('win_owner'),
+                            grant_perms=kwargs.get('win_perms'),
+                            deny_perms=kwargs.get('win_deny_perms'),
+                            inheritance=kwargs.get('win_inheritance', True),
+                            reset=kwargs.get('win_perms_reset', False))
+                        # pylint: enable=E1120,E1121,E1123
+                    else:
+                        result, _ = __salt__['file.check_perms'](
+                            dest_file,
+                            None,
+                            stats.get('user'),
+                            stats.get('group'),
+                            stats.get('mode'))
+
+                    if result['changes']:
+                        result['comment'] = 'File {0} updated'.format(
+                            salt.utils.data.decode(dest_file)
+                        )
+
+                    elif not result['changes'] and result['result']:
+                        result['comment'] = 'File {0} is in the correct state'.format(
+                            salt.utils.data.decode(dest_file)
+                        )
+                else:
+                    contain_dir = os.path.dirname(dest_file)
+
+                    result['changes'] = True
+                    if not os.path.isdir(contain_dir):
+                        # check for existence of windows drive letter
+                        if salt.utils.platform.is_windows():
+                            drive, _ = os.path.splitdrive(dest_file)
+                            if drive and not os.path.exists(drive):
+                                raise
+
+                        mode_list = [x for x in six.text_type(stats.get('mode'))][-3:]
+                        for idx in range(len(mode_list)):
+                            if mode_list[idx] != '0':
+                                mode_list[idx] = six.text_type(int(mode_list[idx]) | 1)
+                        dir_mode = ''.join(mode_list)
+
+                        if salt.utils.platform.is_windows():
+                            # This function resides in win_file.py and will be available
+                            # on Windows. The local function will be overridden
+                            # pylint: disable=E1120,E1121,E1123
+                            __salt__['file.makedirs'](
+                                path=dest_file,
+                                owner=kwargs.get('win_owner'),
+                                grant_perms=kwargs.get('win_perms'),
+                                deny_perms=kwargs.get('win_deny_perms'),
+                                inheritance=kwargs.get('win_inheritance', True),
+                                reset=kwargs.get('win_perms_reset', False))
+                            # pylint: enable=E1120,E1121,E1123
+                        else:
+                            __salt__['file.makedirs'](
+                                dest_file,
+                                user=stats.get('user'),
+                                group=stats.get('group'),
+                                mode=dir_mode)
+
+                    salt.utils.files.copyfile(src_file, dest_file)
+
+                    if salt.utils.platform.is_windows():
+                        # This function resides in win_file.py and will be available
+                        # on Windows. The local function will be overridden
+                        # pylint: disable=E1120,E1121,E1123
+                        result = __salt__['file.check_perms'](
+                            path=dest_file,
+                            ret=None,
+                            owner=kwargs.get('win_owner'),
+                            grant_perms=kwargs.get('win_perms'),
+                            deny_perms=kwargs.get('win_deny_perms'),
+                            inheritance=kwargs.get('win_inheritance', True),
+                            reset=kwargs.get('win_perms_reset', False))
+                        # pylint: enable=E1120,E1121,E1123
+                    else:
+                        result, _ = __salt__['file.check_perms'](
+                            dest_file,
+                            None,
+                            stats.get('user'),
+                            stats.get('group'),
+                            stats.get('mode'))
+
+                    if not result['comment']:
+                        result['comment'] = 'File ' + dest_file + ' updated'
+
+                    if not result['changes'] and result['result']:
+                        result['comment'] = 'File ' + dest_file + ' is in the correct state'
+
             except Exception as exc:
-                __salt__['file.remove'](name)
-                ret['changes'] = {}
-                log.exception(traceback.format_exc())
-                return _error(ret, 'Unable to manage file: {0}'.format(exc))
+                __salt__['file.remove'](tmp_name)
+                msg = 'Unable to manage file: {0}'.format(exc.__str__())
+                log.exception(msg)
+                ret['comment'] = msg
+                return ret
             else:
-                if 'comment' in ret and ret['comment']:
-                    log.debug('The results of comparing %s with %s: %s',
-                        src_file,
-                        dest_file,
-                        ret['comment']
-                    )
-                if 'changes' in ret and ret['changes'] != {}:
-                    extracted_files.append(src_file.replace(name.rstrip(os.sep), '.'))
+                log.debug('The results of comparing %s with %s: %s',
+                    src_file,
+                    dest_file,
+                    result['comment']
+                )
+                if result['changes']:
+                    extracted_files.append(src_file.replace(tmp_name.rstrip(os.sep), '.'))
 
         for link_dest, link_src in mng_links:
             try:
@@ -1506,16 +1629,16 @@ def extracted(name,
                     __salt__['file.remove'](link_dest)
                 __salt__['file.symlink'](link_src, link_dest)
             except Exception as exc:
-                __salt__['file.remove'](name)
-                ret['changes'] = {}
-                log.exception(traceback.format_exc())
-                return _error(ret, 'Unable to manage link: {0}'.format(exc))
+                __salt__['file.remove'](tmp_name)
+                msg = 'Unable to manage link: {0}'.format(exc.__str__())
+                log.exception(msg)
+                ret['comment'] = msg
+                return ret
             else:
                 log.debug('create symlink from %s to %s', link_src, link_dest)
-                extracted_files.append(link_dest.replace(origin_name.rstrip(os.sep), '.'))
+                extracted_files.append(link_dest.replace(tmp_name.rstrip(os.sep), '.'))
 
-        __salt__['file.remove'](name)
-        name = origin_name
+        __salt__['file.remove'](tmp_name)
 
     # Recursively set user and group ownership of files
     enforce_missing = []
