@@ -15,7 +15,6 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import errno
 import logging
-import os
 
 # Import Salt libs
 import salt.modules.cmdmod
