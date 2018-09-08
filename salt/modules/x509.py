@@ -206,9 +206,10 @@ def _get_csr_extensions(csr):
             return ret
 
         for short_name, long_name in six.iteritems(EXT_NAME_MAPPINGS):
-            if csrexts and long_name in csrexts:
-                ret[short_name] = csrexts[long_name]
-
+            if long_name in csrexts:
+                csrexts[short_name] = csrexts[long_name]
+                del csrexts[long_name]
+        ret = csrexts
     return ret
 
 
@@ -1336,6 +1337,13 @@ def create_certificate(
 
         The above signing policy can be invoked with ``signing_policy=www``
 
+    ext_mapping:
+        Provide additional X509v3 extension mappings.  This argument should be
+        in the form of a dictionary and should include both the OID and the
+        friendly name for the extension.
+
+        .. versionadded:: Neon
+
     CLI Example:
 
     .. code-block:: bash
@@ -1475,6 +1483,9 @@ def create_certificate(
         signing_cert = cert
     cert.set_issuer(signing_cert.get_subject())
 
+    if 'ext_mapping' in kwargs:
+        EXT_NAME_MAPPINGS.update(kwargs['ext_mapping'])
+
     for extname, extlongname in six.iteritems(EXT_NAME_MAPPINGS):
         if (extname in kwargs or extlongname in kwargs or
                 extname in csrexts or extlongname in csrexts) is False:
@@ -1579,6 +1590,13 @@ def create_csr(path=None, text=False, **kwargs):
         :mod:`x509.create_certificate <salt.modules.x509.create_certificate>`
         can be used.
 
+    ext_mapping:
+        Provide additional X509v3 extension mappings.  This argument should be
+        in the form of a dictionary and should include both the OID and the
+        friendly name for the extension.
+
+        .. versionadded:: Neon
+
     CLI Example:
 
     .. code-block:: bash
@@ -1633,12 +1651,15 @@ def create_csr(path=None, text=False, **kwargs):
             setattr(subject, entry, kwargs[entry])
     # pylint: enable=unused-variable
 
+    if 'ext_mapping' in kwargs:
+        EXT_NAME_MAPPINGS.update(kwargs['ext_mapping'])
+
     extstack = M2Crypto.X509.X509_Extension_Stack()
     for extname, extlongname in six.iteritems(EXT_NAME_MAPPINGS):
         if extname not in kwargs and extlongname not in kwargs:
             continue
 
-        extval = kwargs[extname] or kwargs[extlongname]
+        extval = kwargs.get(extname, None) or kwargs.get(extlongname, None)
 
         critical = False
         if extval.startswith('critical '):

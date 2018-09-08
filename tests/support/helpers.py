@@ -78,7 +78,10 @@ def no_symlinks():
         return not HAS_SYMLINKS
     output = ''
     try:
-        output = subprocess.check_output('git config --get core.symlinks', shell=True)
+        output = subprocess.Popen(
+            ['git', 'config', '--get', 'core.symlinks'],
+            cwd=TMP,
+            stdout=subprocess.PIPE).communicate()[0]
     except OSError as exc:
         if exc.errno != errno.ENOENT:
             raise
@@ -203,7 +206,7 @@ def flaky(caller=None, condition=True):
             try:
                 return caller(cls)
             except Exception as exc:
-                if attempt == 4:
+                if attempt >= 3:
                     raise exc
                 backoff_time = attempt ** 2
                 log.info('Found Exception. Waiting %s seconds to retry.', backoff_time)
