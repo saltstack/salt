@@ -2973,7 +2973,7 @@ def get_server_id():
                 & 0xFFFFFFFF
             )
         else:
-            log.info(
+            log.debug(
                 "This server_id is computed not by Adler32 nor by CRC32. "
                 'Please use "server_id_use_crc" option and define algorithm you '
                 'prefer (default "Adler32"). Starting with Sodium, the '
