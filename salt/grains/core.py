@@ -2710,10 +2710,10 @@ def get_server_id():
         if bool(use_crc):
             id_hash = getattr(zlib, use_crc, zlib.adler32)(__opts__.get('id', '').encode()) & 0xffffffff
         else:
-            log.info('This server_id is computed not by Adler32 nor by CRC32. '
-                     'Please use "server_id_use_crc" option and define algorithm you '
-                     'prefer (default "Adler32"). Starting with Sodium, the '
-                     'server_id will be computed with Adler32 by default.')
+            log.debug('This server_id is computed not by Adler32 nor by CRC32. '
+                      'Please use "server_id_use_crc" option and define algorithm you '
+                      'prefer (default "Adler32"). Starting with Sodium, the '
+                      'server_id will be computed with Adler32 by default.')
             id_hash = _get_hash_by_shell()
         server_id = {'server_id': id_hash}
 
