@@ -661,8 +661,6 @@ def _get_properties(path="", method="GET", forced_params=None):
         props = sub['info'][method]['parameters']['properties'].keys()
     except KeyError as exc:
         log.error('method not found: "{0}"'.format(str(exc)))
-    except:
-        raise
     for prop in props:
         numerical = re.match(r'(\w+)\[n\]', prop)
         # generate (arbitrarily) 10 properties for duplicatable properties identified by:
