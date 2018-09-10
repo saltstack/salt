@@ -179,9 +179,14 @@ class FileModuleTest(ModuleCase):
 
     def test_cannot_remove(self):
         ret = self.run_function('file.remove', arg=['tty'])
-        self.assertEqual(
-            'ERROR executing \'file.remove\': File path must be absolute: tty', ret
-        )
+        if salt.utils.platform.is_windows():
+            self.assertEqual(
+                'ERROR: Path not found: tty', ret
+            )
+        else:
+            self.assertEqual(
+                'ERROR executing \'file.remove\': File path must be absolute: tty', ret
+            )
 
     def test_source_list_for_single_file_returns_unchanged(self):
         ret = self.run_function('file.source_list', ['salt://http/httpd.conf',
