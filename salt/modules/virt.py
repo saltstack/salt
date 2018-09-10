@@ -1214,9 +1214,9 @@ def init(name,
          enable_vnc=False,
          enable_qcow=False,
          graphics=None,
-         loader=None,
          os_type=None,
          arch=None,
+         loader=None,
          **kwargs):
     '''
     Initialize a new vm
@@ -1280,17 +1280,17 @@ def init(name,
         Dictionary providing details on the BIOS firmware loader. (Default: ``None``)
         See :ref:`init-loader-def` for more details on the possible values.
 
-        .. versionadded:: Fluorine
+        .. versionadded:: Neon
     :param os_type:
         type of virtualization as found in the ``//os/type`` element of the libvirt definition.
         The default value is taken from the host capabilities, with a preference for ``hvm``.
 
-        .. versionadded:: Neon
+        .. versionadded:: Fluorine
     :param arch:
         architecture of the virtual machine. The default value is taken from the host capabilities,
         but ``x86_64`` is prefed over ``i686``.
 
-        .. versionadded:: Neon
+        .. versionadded:: Fluorine
     :param enable_qcow:
         ``True`` to create a QCOW2 overlay image, rather than copying the image
         (Default: ``False``).

@@ -355,6 +355,10 @@ class Fileserver(object):
         if not isinstance(back, list):
             return ret
 
+        # Avoid error logging when performing lookups in the LazyDict by
+        # instead doing the membership check on the result of a call to its
+        # .keys() attribute rather than on the LaztDict itself.
+        server_funcs = self.servers.keys()
         try:
             subtract_only = all((x.startswith('-') for x in back))
         except AttributeError:
@@ -364,16 +368,16 @@ class Fileserver(object):
                 # Only subtracting backends from enabled ones
                 ret = self.opts['fileserver_backend']
                 for sub in back:
-                    if '{0}.envs'.format(sub[1:]) in self.servers:
+                    if '{0}.envs'.format(sub[1:]) in server_funcs:
                         ret.remove(sub[1:])
-                    elif '{0}.envs'.format(sub[1:-2]) in self.servers:
+                    elif '{0}.envs'.format(sub[1:-2]) in server_funcs:
                         ret.remove(sub[1:-2])
                 return ret
 
         for sub in back:
-            if '{0}.envs'.format(sub) in self.servers:
+            if '{0}.envs'.format(sub) in server_funcs:
                 ret.append(sub)
-            elif '{0}.envs'.format(sub[:-2]) in self.servers:
+            elif '{0}.envs'.format(sub[:-2]) in server_funcs:
                 ret.append(sub[:-2])
         return ret
 
