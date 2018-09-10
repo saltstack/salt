@@ -59,6 +59,7 @@ from tests.support.paths import FILES, TMP
 # Import Salt libs
 import salt.utils.files
 import salt.utils.platform
+import salt.utils.stringutils
 
 if salt.utils.platform.is_windows():
     import salt.utils.win_functions
@@ -1611,11 +1612,11 @@ def dedent(text, linesep=os.linesep):
     '''
     A wrapper around textwrap.dedent that also sets line endings.
     '''
-    linesep = salt.utils.to_unicode(linesep)
-    unicode_text = textwrap.dedent(salt.utils.to_unicode(text))
+    linesep = salt.utils.stringutils.to_unicode(linesep)
+    unicode_text = textwrap.dedent(salt.utils.stringutils.to_unicode(text))
     clean_text = linesep.join(unicode_text.splitlines())
     if unicode_text.endswith(u'\n'):
         clean_text += linesep
     if not isinstance(text, six.text_type):
-        return salt.utils.to_bytes(clean_text)
+        return salt.utils.stringutils.to_bytes(clean_text)
     return clean_text
