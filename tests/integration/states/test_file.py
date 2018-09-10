@@ -2246,7 +2246,9 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             if salt.utils.platform.is_windows():
                 import subprocess
                 import win32api
-                p = subprocess.Popen(salt.utils.to_str('type {}'.format(win32api.GetShortPathName(test_file))),
+                p = subprocess.Popen(
+                    salt.utils.stringutils.to_str(
+                        'type {}'.format(win32api.GetShortPathName(test_file))),
                     shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                 p.poll()
                 out = p.stdout.read()
