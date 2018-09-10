@@ -112,7 +112,7 @@ class AsyncRemotePillar(object):
                 load,
                 dictkey='pillar',
             )
-        except:
+        except Exception:
             log.exception('Exception getting pillar:')
             raise SaltClientError('Exception getting pillar.')
 

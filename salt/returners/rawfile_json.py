@@ -59,7 +59,7 @@ def returner(ret):
     try:
         with salt.utils.flopen(opts['filename'], 'a') as logfile:
             logfile.write(json.dumps(ret)+'\n')
-    except:
+    except Exception:
         log.error('Could not write to rawdata_json file {0}'.format(opts['filename']))
         raise
 
@@ -73,6 +73,6 @@ def event_return(event):
         with salt.utils.flopen(opts['filename'], 'a') as logfile:
             for e in event:
                 logfile.write(str(json.dumps(e))+'\n')
-    except:
+    except Exception:
         log.error('Could not write to rawdata_json file {0}'.format(opts['rawfile']))
         raise

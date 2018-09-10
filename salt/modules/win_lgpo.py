@@ -5637,7 +5637,7 @@ def set_(computer_policy=None, user_policy=None,
                             _newModalSetData = dictupdate.update(_existingModalData, _modal_sets[_modal_set])
                             log.debug('NEW MODAL SET = {0}'.format(_newModalSetData))
                             _ret = win32net.NetUserModalsSet(None, _modal_set, _newModalSetData)
-                        except:
+                        except Exception:
                             msg = 'An unhandled exception occurred while attempting to set policy via NetUserModalSet'
                             raise CommandExecutionError(msg)
                 if _admTemplateData:

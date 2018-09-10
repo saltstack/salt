@@ -2686,7 +2686,7 @@ class SyndicManager(MinionBase):
                 yield tornado.gen.sleep(auth_wait)  # TODO: log?
             except KeyboardInterrupt:
                 raise
-            except:  # pylint: disable=W0702
+            except Exception:
                 failed = True
                 log.critical('Unexpected error while connecting to {0}'.format(opts['master']), exc_info=True)
 
@@ -3047,11 +3047,11 @@ class Matcher(object):
         try:
             # Target is an address?
             tgt = ipaddress.ip_address(tgt)
-        except:  # pylint: disable=bare-except
+        except Exception:
             try:
                 # Target is a network?
                 tgt = ipaddress.ip_network(tgt)
-            except:  # pylint: disable=bare-except
+            except Exception:
                 log.error('Invalid IP/CIDR target: {0}'.format(tgt))
                 return []
         proto = 'ipv{0}'.format(tgt.version)

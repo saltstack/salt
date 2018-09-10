@@ -127,7 +127,7 @@ def _delete_resource(name, name_param, desc, res_type, wait=0, status_param=None
     '''
     try:
         wait = int(wait)
-    except:
+    except Exception:
         raise SaltInvocationError("Bad value ('{0}') passed for 'wait' param - must be an "
                                   "int or boolean.".format(wait))
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
@@ -177,7 +177,7 @@ def _create_resource(name, name_param=None, desc=None, res_type=None, wait=0, st
                      **args):
     try:
         wait = int(wait)
-    except:
+    except Exception:
         raise SaltInvocationError("Bad value ('{0}') passed for 'wait' param - must be an "
                                   "int or boolean.".format(wait))
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
@@ -227,7 +227,7 @@ def _modify_resource(name, name_param=None, desc=None, res_type=None, wait=0, st
                      **args):
     try:
         wait = int(wait)
-    except:
+    except Exception:
         raise SaltInvocationError("Bad value ('{0}') passed for 'wait' param - must be an "
                                   "int or boolean.".format(wait))
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
