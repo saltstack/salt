@@ -199,8 +199,8 @@ sudo -H $MAKE install
 ############################################################################
 echo -n -e "\033]0;Build_Env: OpenSSL\007"
 
-PKGURL="http://openssl.org/source/openssl-1.0.2l.tar.gz"
-PKGDIR="openssl-1.0.2l"
+PKGURL="http://openssl.org/source/openssl-1.0.2p.tar.gz"
+PKGDIR="openssl-1.0.2p"
 
 download $PKGURL
 
