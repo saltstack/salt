@@ -48,7 +48,7 @@ class NaclTest(ModuleCase):
         pk = ret['pk']
         sk = ret['sk']
 
-        unencrypted_data = salt.utils.stringutils.to_bytes('hello')
+        unencrypted_data = salt.utils.stringutils.to_str('hello')
 
         # Encrypt with pk
         ret = self.run_function(
