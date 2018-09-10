@@ -47,14 +47,14 @@ class FilesTestCase(TestCase):
         if os.stat(tmp).st_ino == 0:
             self.skipTest('inodes not supported in {0}'.format(tmp))
         os.mkdir(os.path.join(tmp, 'fax'))
-        os.makedirs(os.path.join(tmp, 'foo/bar'))
-        os.symlink('../..', os.path.join(tmp, 'foo/bar/baz'))
+        os.makedirs(os.path.join(tmp, 'foo', 'bar'))
+        os.symlink(os.path.join('..', '..'), os.path.join(tmp, 'foo', 'bar', 'baz'))
         os.symlink('foo', os.path.join(tmp, 'root'))
         expected = [
             (os.path.join(tmp, 'root'), ['bar'], []),
-            (os.path.join(tmp, 'root/bar'), ['baz'], []),
-            (os.path.join(tmp, 'root/bar/baz'), ['fax', 'foo', 'root'], []),
-            (os.path.join(tmp, 'root/bar/baz/fax'), [], []),
+            (os.path.join(tmp, 'root', 'bar'), ['baz'], []),
+            (os.path.join(tmp, 'root', 'bar', 'baz'), ['fax', 'foo', 'root'], []),
+            (os.path.join(tmp, 'root', 'bar', 'baz', 'fax'), [], []),
         ]
         paths = []
         for root, dirs, names in salt.utils.files.safe_walk(os.path.join(tmp, 'root')):
