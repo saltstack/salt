@@ -189,7 +189,7 @@ class JinjaFiltersTest(object):
             self.assertIn('module_|-test_|-test.echo_|-run', ret)
             self.assertEqual(ret['module_|-test_|-test.echo_|-run']['changes'],
                              _expected)
-        except:
+        finally:
             if salt.utils.platform.is_windows():
                 os.remove('c:\\empty_file')
 
