@@ -9,7 +9,6 @@
 
 # Import python libs
 from __future__ import absolute_import
-import getpass
 import os
 import sys
 import re
@@ -25,7 +24,6 @@ from tests.support.mixins import ShellCaseCommonTestsMixin
 from tests.support.helpers import (
     destructiveTest,
     flaky,
-    requires_system_grains,
     skip_if_not_root,
 )
 from tests.integration.utils import testprogram
