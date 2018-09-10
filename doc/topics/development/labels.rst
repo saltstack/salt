@@ -32,20 +32,9 @@ possible solution or implementation.
 
 - ``Blocked`` - The issue is waiting on actions by parties outside of
   SaltStack, such as receiving more information from the submitter or
-  resolution of an upstream issue.  This milestone is usually applied in
-  conjunction with the labels ``Info Needed``, ``Question``, ``Expected
-  Behavior``, ``Won't Fix For Now``, or ``Upstream Bug``.
-
-- ``Under Review`` - The issue is having further validation done by a SaltStack
-  engineer.
-
-- ``<Sprint>`` - The issue is being actively worked on by a SaltStack engineer.
-  Sprint milestones names are constructed from the chemical symbol of the next
-  release's codename and the number of sprints until that release is made.  For
-  example, if the next release codename is ``Neon`` and there are five sprints
-  until that release, the corresponding sprint milestone will be called ``Ne
-  5``.  See :ref:`here <version-numbers>` for a discussion of Salt's release
-  codenames.
+  resolution of an upstream issue. This milestone is usually applied in
+  conjunction with the labels ``Info Needed``, ``Question``,
+  ``Expected Behavior``, ``Won't Fix For Now``, or ``Upstream Bug``.
 
 Labels
 ======
