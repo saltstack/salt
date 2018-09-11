@@ -2619,8 +2619,20 @@ class Minion(MinionBase):
                             log.error('** Master Ping failed. Attempting to restart minion**')
                             delay = self.opts.get('random_reauth_delay', 5)
                             log.info('delaying random_reauth_delay %ss', delay)
-                            # regular sys.exit raises an exception -- which isn't sufficient in a thread
-                            os._exit(salt.defaults.exitcodes.SALT_KEEPALIVE)
+                            try:
+                                self.functions['service.restart'](
+                                    'salt_minion' if 'bsd' in sys.platform
+                                    else 'salt-minion'
+                                )
+                            except KeyError:
+                                # Probably no init system (running in docker?)
+                                log.warning(
+                                    'ping_interval reached without response '
+                                    'from the master, but service.restart '
+                                    'could not be run to restart the minion '
+                                    'daemon. ping_interval requires that the '
+                                    'minion is running under an init system.'
+                                )
 
                     self._fire_master('ping', 'minion_ping', sync=False, timeout_handler=ping_timeout_handler)
                 except Exception:
