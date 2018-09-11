@@ -123,7 +123,7 @@ def start():
                          backlog=mod_opts.get('backlog', 128),
                          )
         http_server.start(mod_opts['num_processes'])
-    except:
+    except Exception:
         logger.error('Rest_tornado unable to bind to port {0}'.format(mod_opts['port']), exc_info=True)
         raise SystemExit(1)
 

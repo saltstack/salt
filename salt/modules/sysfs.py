@@ -66,7 +66,7 @@ def write(key, value):
         with salt.utils.fopen(key, 'w') as twriter:
             twriter.write('{0}\n'.format(value))
             return True
-    except:  # pylint: disable=bare-except
+    except Exception:
         return False
 
 
@@ -125,13 +125,13 @@ def read(key, root=''):
                     return False
                 try:
                     val = int(val)
-                except:  # pylint: disable=bare-except
+                except Exception:
                     try:
                         val = float(val)
-                    except:  # pylint: disable=bare-except
+                    except Exception:
                         pass
                 return val
-        except:  # pylint: disable=bare-except
+        except Exception:
             return False
 
 
