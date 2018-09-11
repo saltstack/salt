@@ -842,7 +842,7 @@ def install(name=None,
         opts += 'x'
     if salt.utils.data.is_true(pcre):
         opts += 'X'
-    if salt.utils.is_true(batch):
+    if salt.utils.data.is_true(batch):
         env = {
                 "BATCH": "true",
                 "ASSUME_ALWAYS_YES": "YES"
