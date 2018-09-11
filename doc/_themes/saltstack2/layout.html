@@ -185,11 +185,7 @@
                     <div class="row">
                         <div class="col-sm-12 col-md-11 col-md-offset-1 col-lg-10 col-lg-offset-1">
 
-                            {% if "topics/releases" in pagename and "0" in pagename and not release in pagename and not "In Progress" in title %}
-
-                                <div class="alert alert-warning dev-notification-text" role="alert"><i class="glyphicon glyphicon-warning-sign"></i> These release notes are for an old release of Salt. This release might contain known security and other issues that are fixed in the <a data-container="body" data-toggle="tooltip" data-placement="bottom" title="Release notes for the latest release" href="{{ release }}.html">latest release</a>.</div>
-
-                            {% elif build_type == "develop" and on_saltstack %}
+                            {% if build_type == "develop" and on_saltstack %}
 
                                 <div class="alert alert-warning dev-notification-text" role="alert"><i class="glyphicon glyphicon-warning-sign"></i> You are viewing docs from the develop branch, some of these features are not yet released.</div>
 
