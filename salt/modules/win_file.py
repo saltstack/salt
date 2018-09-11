@@ -1066,7 +1066,6 @@ def remove(path, force=False):
 
     path = os.path.expanduser(path)
 
-
     if not os.path.isabs(path):
         raise SaltInvocationError('File path must be absolute: {0}'.format(path))
 
