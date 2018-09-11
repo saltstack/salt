@@ -2751,7 +2751,7 @@ def mod_repo(repo, basedir=None, **kwargs):
     mirrorlist
         the URL for yum to reference
     key_url
-        the URL to gather the repo key from
+        the URL to gather the repo key from (salt:// or any other scheme supported by cp.cache_file)
 
     Key/Value pairs may also be removed from a repo's configuration by setting
     a key to a blank value. Bear in mind that a name cannot be deleted, and a
@@ -2850,19 +2850,19 @@ def mod_repo(repo, basedir=None, **kwargs):
                 'Cannot delete mirrorlist without specifying baseurl'
             )
 
-    # Import gpg key
+    # Import repository gpg key
     if 'key_url' in repo_opts:
         key_url = kwargs['key_url']
         fn_ = __salt__['cp.cache_file'](key_url, saltenv=(kwargs['saltenv'] if 'saltenv' in kwargs else 'base'))
         if not fn_:
             raise CommandExecutionError(
-                'Error: file not found: {0}'.format(key_url)
+                'Error: Unable to copy key from URL {0} for repository {1}'.format(key_url, repo_opts['name'])
             )
         cmd = ['rpm', '--import', fn_]
         out = __salt__['cmd.retcode'](cmd, python_shell=False, **kwargs)
         if out != 0:
             raise CommandExecutionError(
-                'Error: failed to add key from {0}'.format(key_url)
+                'Error: Unable to import key from URL {0} for repository {1}'.format(key_url, repo_opts['name'])
             )
         del repo_opts['key_url']
 
