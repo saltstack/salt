@@ -553,8 +553,10 @@ class CkMinions(object):
                         engine_args.append(target_info['delimiter'] or ':')
                     engine_args.append(greedy)
 
-                    # ignore missing minions if we exclude them with a 'not'
-                    engine_args.append(results and results[-1] == '-')
+                    # ignore missing minions for lists if we exclude them with
+                    # a 'not'
+                    if 'L' == target_info['engine']:
+                        engine_args.append(results and results[-1] == '-')
                     _results = engine(*engine_args)
                     results.append(six.text_type(set(_results['minions'])))
                     missing.extend(_results['missing'])
