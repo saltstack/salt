@@ -5,7 +5,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest
+from tests.support.helpers import destructiveTest, flaky
 from tests.support.unit import skipIf
 
 # Import Salt libs
@@ -64,6 +64,7 @@ class ServiceModuleTest(ModuleCase):
                 self.run_function('service.disable', [self.service_name])
         del self.service_name
 
+    @flaky
     def test_service_status_running(self):
         '''
         test service.status execution module

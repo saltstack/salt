@@ -5,12 +5,13 @@ File server pluggable modules and generic backend functions
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
-import collections
+
 import errno
 import fnmatch
 import logging
 import os
 import re
+import sys
 import time
 
 # Import salt libs
@@ -22,6 +23,11 @@ import salt.utils.url
 import salt.utils.versions
 from salt.utils.args import get_function_argspec as _argspec
 from salt.utils.decorators import ensure_unicode_args
+
+try:
+    from collections.abc import Sequence
+except ImportError:
+    from collections import Sequence
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -344,7 +350,7 @@ class Fileserver(object):
                 except AttributeError:
                     back = six.text_type(back).split(',')
 
-        if isinstance(back, collections.Sequence):
+        if isinstance(back, Sequence):
             # The test suite uses an ImmutableList type (based on
             # collections.Sequence) for lists, which breaks this function in
             # the test suite. This normalizes the value from the opts into a
@@ -881,8 +887,6 @@ class FSChan(object):
         cmd = load['cmd'].lstrip('_')
         if cmd in self.cmd_stub:
             return self.cmd_stub[cmd]
-        if cmd == 'file_envs':
-            return self.fs.envs()
         if not hasattr(self.fs, cmd):
             log.error('Malformed request, invalid cmd: %s', load)
             return {}
