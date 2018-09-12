@@ -40,7 +40,6 @@ from salt.ext.six.moves import configparser
 
 # pylint: enable=import-error,redefined-builtin
 
-import salt.defaults.exitcodes
 # Import Salt libs
 import salt.utils.args
 import salt.utils.data
@@ -54,6 +53,7 @@ import salt.utils.pkg
 import salt.utils.pkg.rpm
 import salt.utils.systemd
 import salt.utils.versions
+import salt.defaults.exitcodes
 from salt.utils.versions import LooseVersion as _LooseVersion
 import salt.utils.environment
 from salt.exceptions import (
@@ -2860,7 +2860,7 @@ def mod_repo(repo, basedir=None, **kwargs):
             )
         cmd = ['rpm', '--import', fn_]
         out = __salt__['cmd.retcode'](cmd, python_shell=False, **kwargs)
-        if out != salt.default.exitcodes.EX_OK:
+        if out != salt.defaults.exitcodes.EX_OK:
             raise CommandExecutionError(
                 'Error: Unable to import key from URL {0} for repository {1}'.format(key_url, repo_opts['name'])
             )
