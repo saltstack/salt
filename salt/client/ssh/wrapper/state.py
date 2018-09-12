@@ -182,7 +182,7 @@ def sls(mods, saltenv='base', test=None, exclude=None, **kwargs):
             __context__['fileclient'])
     st_.push_active()
     if isinstance(mods, six.string_types):
-        mods = mods.split(',')
+        mods = [item.strip() for item in mods.split(',')]
     high_data, errors = st_.render_highstate({saltenv: mods})
     if exclude:
         if isinstance(exclude, six.string_types):
@@ -923,7 +923,7 @@ def sls_id(id_, mods, test=None, queue=False, **kwargs):
         return err
 
     if isinstance(mods, six.string_types):
-        split_mods = mods.split(',')
+        split_mods = [item.strip() for item in mods.split(',')]
     st_.push_active()
     high_, errors = st_.render_highstate({opts['saltenv']: split_mods})
     errors += st_.state.verify_high(high_)
@@ -981,7 +981,7 @@ def show_sls(mods, saltenv='base', test=None, **kwargs):
             __context__['fileclient'])
     st_.push_active()
     if isinstance(mods, six.string_types):
-        mods = mods.split(',')
+        mods = [item.strip() for item in mods.split(',')]
     high_data, errors = st_.render_highstate({saltenv: mods})
     high_data, ext_errors = st_.state.reconcile_extend(high_data)
     errors += ext_errors
@@ -1026,7 +1026,7 @@ def show_low_sls(mods, saltenv='base', test=None, **kwargs):
             __context__['fileclient'])
     st_.push_active()
     if isinstance(mods, six.string_types):
-        mods = mods.split(',')
+        mods = [item.strip() for item in mods.split(',')]
     high_data, errors = st_.render_highstate({saltenv: mods})
     high_data, ext_errors = st_.state.reconcile_extend(high_data)
     errors += ext_errors
