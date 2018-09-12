@@ -138,8 +138,8 @@ class JSONTestCase(TestCase):
         Test dumping to and loading from a file handle
         '''
         with salt.utils.files.fopen(json_out, 'wb') as fp_:
-            fp_.write(salt.utils.to_bytes(salt.utils.json.dumps(self.data)))
+            fp_.write(salt.utils.stringutils.to_bytes(salt.utils.json.dumps(self.data)))
         with salt.utils.files.fopen(json_out, 'rb') as fp_:
-            ret = salt.utils.json.loads(salt.utils.to_unicode(fp_.read()))
+            ret = salt.utils.json.loads(salt.utils.stringutils.to_unicode(fp_.read()))
             # Loading should be equal to the original data
             self.assertEqual(ret, self.data)
