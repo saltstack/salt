@@ -100,7 +100,7 @@ def _conf(family='ipv4'):
             return '/etc/iptables/rules.v6'
         else:
             return '/etc/iptables/rules.v4'
-    elif __grains__['os'] == 'Gentoo':
+    elif __grains__['os_family'] == 'Gentoo':
         if family == 'ipv6':
             return '/var/lib/ip6tables/rules-save'
         else:
