@@ -271,7 +271,7 @@ class Loader(BaseLoader):  # pylint: disable=W0232
     def construct_sls_aggregate(self, node):
         try:
             tag, deep = self.resolve_sls_tag(node)
-        except:
+        except Exception:
             raise ConstructorError('unable to build reset')
 
         node = copy.copy(node)
@@ -288,7 +288,7 @@ class Loader(BaseLoader):  # pylint: disable=W0232
     def construct_sls_reset(self, node):
         try:
             tag, deep = self.resolve_sls_tag(node)
-        except:
+        except Exception:
             raise ConstructorError('unable to build reset')
 
         node = copy.copy(node)
