@@ -41,7 +41,7 @@ class BatchTest(ShellCase):
         min_ret = "Executing run on [{0}]".format(repr('minion'))
 
         for item in self.run_salt('minion grains.get os'):
-            if item != 'minion':
+            if item != 'minion:':
                 os_grain = item
 
         os_grain = os_grain.strip()
