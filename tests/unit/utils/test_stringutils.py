@@ -105,6 +105,7 @@ class TestBuildWhitespaceRegex(TestCase):
         regex = salt.utils.stringutils.build_whitespace_split_regex(SINGLE_DOUBLE_SAME_LINE_TXT)
         self.assertTrue(re.search(regex, MATCH))
 
+
 class StringutilsTestCase(TestCase):
     def test_contains_whitespace(self):
         does_contain_whitespace = 'A brown fox jumped over the red hen.'
