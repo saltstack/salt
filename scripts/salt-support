@@ -7,9 +7,5 @@ for support purposes.
 
 from salt.scripts import salt_support
 
-import sys
-sys.argv.append('-c')
-sys.argv.append('/home/bo/work/lab/python/saltdevelop/etc/salt')
-
 if __name__ == '__main__':
     salt_support()
