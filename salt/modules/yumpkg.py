@@ -2860,7 +2860,7 @@ def mod_repo(repo, basedir=None, **kwargs):
             )
         cmd = ['rpm', '--import', fn_]
         out = __salt__['cmd.retcode'](cmd, python_shell=False, **kwargs)
-        if out != 0:
+        if out != salt.default.exitcodes.EX_OK:
             raise CommandExecutionError(
                 'Error: Unable to import key from URL {0} for repository {1}'.format(key_url, repo_opts['name'])
             )
