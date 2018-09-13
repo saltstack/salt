@@ -19,6 +19,7 @@ import struct
 import salt.utils.args
 import salt.utils.platform
 import salt.utils.stringutils
+import salt.syspaths
 from salt.exceptions import CommandNotFoundError
 from salt.utils.decorators import memoize as real_memoize
 from salt.utils.decorators.jinja import jinja_filter
@@ -412,3 +413,58 @@ def os_walk(top, *args, **kwargs):
         top_query = salt.utils.stringutils.to_str(top)
     for item in os.walk(top_query, *args, **kwargs):
         yield salt.utils.data.decode(item, preserve_tuples=True)
+
+
+def prepend_root_dir(path, root_dir=None):
+    '''
+    Prepends 'path' with value of the 'root_dir' option
+    or 'salt.syspaths.ROOT_DIR'.
+    '''
+    if root_dir:
+        root_dir = os.path.abspath(root_dir)
+
+    def_root_dir = salt.syspaths.ROOT_DIR.rstrip(os.sep)
+    tmp_path_def_root_dir = None
+    tmp_path_root_dir = None
+
+    # When running testsuite, salt.syspaths.ROOT_DIR is often empty
+    if path == def_root_dir or path.startswith(def_root_dir + os.sep):
+        # Remove the default root dir prefix
+        tmp_path_def_root_dir = path[len(def_root_dir):]
+
+    if root_dir and (path == root_dir or
+                     path.startswith(root_dir + os.sep)):
+        # Remove the root dir prefix
+        tmp_path_root_dir = path[len(root_dir):]
+
+    if tmp_path_def_root_dir and not tmp_path_root_dir:
+        # Just the default root dir matched
+        path = tmp_path_def_root_dir
+    elif tmp_path_root_dir and not tmp_path_def_root_dir:
+        # Just the root dir matched
+        path = tmp_path_root_dir
+    elif tmp_path_def_root_dir and tmp_path_root_dir:
+        # In this case both the default root dir and the override root
+        # dir matched; this means that either
+        # def_root_dir is a substring of root_dir or vice versa
+        # We must choose the most specific path
+        if def_root_dir in root_dir:
+            path = tmp_path_root_dir
+        else:
+            path = tmp_path_def_root_dir
+    elif salt.utils.platform.is_windows() and not os.path.splitdrive(path)[0]:
+        # In windows, os.path.isabs resolves '/' to 'C:\\' or whatever
+        # the root drive is.  This elif prevents the next from being
+        # hit, so that the root_dir is prefixed in cases where the
+        # drive is not prefixed on a config option
+        pass
+    elif os.path.isabs(path):
+        # Absolute path (not default or overridden root_dir)
+        # No prepending required
+        return path
+
+    if root_dir is None:
+        root_dir = def_root_dir + os.sep
+
+    # Prepending the root dir
+    return join(root_dir, path)
