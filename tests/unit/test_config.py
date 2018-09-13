@@ -262,6 +262,9 @@ def _salt_configuration_error(filename):
 
 class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
+    USER_HOME_PATH = '~/'
+    ABSOLUTE_USER_HOME_PATH = '/mock/home/user'
+
     @with_tempfile()
     def test_sha256_is_default_for_master(self, fpath):
         with salt.utils.files.fopen(fpath, 'w') as wfh:
@@ -553,6 +556,41 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
     @with_tempfile()
     @with_tempdir()
+    def test_master_file_roots_with_custom_root_dir(self, tempdir, fpath):
+        with salt.utils.files.fopen(fpath, 'w') as wfh:
+            wfh.write(
+                'root_dir: {0}\n'
+                'file_roots:\n'
+                '  base:\n'
+                '    - /srv/salt'.format(os.path.join(tempdir))
+            )
+        config = sconfig.master_config(fpath)
+        base = config['file_roots']['base']
+        self.assertEqual(base, [os.path.join(tempdir, 'srv/salt')])
+
+    @with_tempfile()
+    @with_tempdir()
+    def test_master_file_roots_with_root_dir_in_current_user_home_path(self, tempdir, fpath):
+        file_root_dir = os.path.join(tempdir, 'salt')
+        with salt.utils.files.fopen(fpath, 'w') as wfh:
+            wfh.write(
+                'root_dir: {root_dir}\n'
+                'file_roots:\n'
+                '  base:\n'
+                '    - {file_root}'.format(root_dir=self.USER_HOME_PATH,
+                                           file_root=file_root_dir)
+            )
+
+        with patch('os.path.expanduser', return_value=self.ABSOLUTE_USER_HOME_PATH):
+            config = sconfig.master_config(fpath)
+            base = config['file_roots']['base']
+            self.assertEqual(
+                base,
+                [os.path.join(self.ABSOLUTE_USER_HOME_PATH,
+                              file_root_dir.lstrip(os.sep))])
+
+    @with_tempfile()
+    @with_tempdir()
     def test_master_pillar_roots_glob(self, tempdir, fpath):
         # Create some files.
         for f in 'abc':
@@ -573,6 +611,41 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             os.path.join(tempdir, 'b'),
             os.path.join(tempdir, 'c')
         ]))
+
+    @with_tempfile()
+    @with_tempdir()
+    def test_master_pillar_roots_with_custom_root_dir(self, tempdir, fpath):
+        with salt.utils.files.fopen(fpath, 'w') as wfh:
+            wfh.write(
+                'root_dir: {0}\n'
+                'pillar_roots:\n'
+                '  base:\n'
+                '    - /srv/pillar'.format(os.path.join(tempdir))
+            )
+        config = sconfig.master_config(fpath)
+        base = config['pillar_roots']['base']
+        self.assertEqual(base, [os.path.join(tempdir, 'srv/pillar')])
+
+    @with_tempfile()
+    @with_tempdir()
+    def test_master_pillar_roots_with_root_dir_in_current_user_home_path(self, tempdir, fpath):
+        pillar_root_dir = os.path.join(tempdir, 'pillar')
+        with salt.utils.files.fopen(fpath, 'w') as wfh:
+            wfh.write(
+                'root_dir: {root_dir}\n'
+                'pillar_roots:\n'
+                '  base:\n'
+                '    - {pillar_root}'.format(root_dir=self.USER_HOME_PATH,
+                                             pillar_root=pillar_root_dir)
+            )
+
+        with patch('os.path.expanduser', return_value=self.ABSOLUTE_USER_HOME_PATH):
+            config = sconfig.master_config(fpath)
+            base = config['pillar_roots']['base']
+            self.assertEqual(
+                base,
+                [os.path.join(self.ABSOLUTE_USER_HOME_PATH,
+                              pillar_root_dir.lstrip(os.sep))])
 
     @with_tempdir()
     def test_master_id_function(self, tempdir):
@@ -619,6 +692,41 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
     @with_tempfile()
     @with_tempdir()
+    def test_minion_file_roots_with_custom_root_dir(self, tempdir, fpath):
+        with salt.utils.files.fopen(fpath, 'w') as wfh:
+            wfh.write(
+                'root_dir: {0}\n'
+                'file_roots:\n'
+                '  base:\n'
+                '    - /srv/salt'.format(os.path.join(tempdir))
+            )
+        config = sconfig.minion_config(fpath)
+        base = config['file_roots']['base']
+        self.assertEqual(base, [os.path.join(tempdir, 'srv/salt')])
+
+    @with_tempfile()
+    @with_tempdir()
+    def test_minion_file_roots_with_root_dir_in_current_user_home_path(self, tempdir, fpath):
+        file_root_dir = os.path.join(tempdir, 'salt')
+        with salt.utils.files.fopen(fpath, 'w') as wfh:
+            wfh.write(
+                'root_dir: {root_dir}\n'
+                'file_roots:\n'
+                '  base:\n'
+                '    - {file_root}'.format(root_dir=self.USER_HOME_PATH,
+                                           file_root=file_root_dir)
+            )
+
+        with patch('os.path.expanduser', return_value=self.ABSOLUTE_USER_HOME_PATH):
+            config = sconfig.minion_config(fpath)
+            base = config['file_roots']['base']
+            self.assertEqual(
+                base,
+                [os.path.join(self.ABSOLUTE_USER_HOME_PATH,
+                              file_root_dir.lstrip(os.sep))])
+
+    @with_tempfile()
+    @with_tempdir()
     def test_minion_pillar_roots_glob(self, tempdir, fpath):
         # Create some files.
         for f in 'abc':
@@ -639,6 +747,41 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             os.path.join(tempdir, 'b'),
             os.path.join(tempdir, 'c')
         ]))
+
+    @with_tempfile()
+    @with_tempdir()
+    def test_minion_pillar_roots_with_custom_root_dir(self, tempdir, fpath):
+        with salt.utils.files.fopen(fpath, 'w') as wfh:
+            wfh.write(
+                'root_dir: {0}\n'
+                'pillar_roots:\n'
+                '  base:\n'
+                '    - /srv/pillar'.format(os.path.join(tempdir))
+            )
+        config = sconfig.minion_config(fpath)
+        base = config['pillar_roots']['base']
+        self.assertEqual(base, [os.path.join(tempdir, 'srv/pillar')])
+
+    @with_tempfile()
+    @with_tempdir()
+    def test_minion_pillar_roots_with_root_dir_in_current_user_home_path(self, tempdir, fpath):
+        pillar_root_dir = os.path.join(tempdir, 'pillar')
+        with salt.utils.files.fopen(fpath, 'w') as wfh:
+            wfh.write(
+                'root_dir: {root_dir}\n'
+                'pillar_roots:\n'
+                '  base:\n'
+                '    - {pillar_root}'.format(root_dir=self.USER_HOME_PATH,
+                                             pillar_root=pillar_root_dir)
+            )
+
+        with patch('os.path.expanduser', return_value=self.ABSOLUTE_USER_HOME_PATH):
+            config = sconfig.minion_config(fpath)
+            base = config['pillar_roots']['base']
+            self.assertEqual(
+                base,
+                [os.path.join(self.ABSOLUTE_USER_HOME_PATH,
+                              pillar_root_dir.lstrip(os.sep))])
 
     @with_tempdir()
     def test_minion_id_function(self, tempdir):
