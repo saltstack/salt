@@ -2292,27 +2292,28 @@ def include_config(include, orig_path, verbose, exit_on_config_errors=False):
         # When the passed path is None, we just want the configuration
         # defaults, not actually loading the whole configuration.
         return {}
+    else:
+        orig_dir = os.path.dirname(orig_path)
 
     if isinstance(include, six.string_types):
         include = [include]
 
     configuration = {}
     for path in include:
-        # Allow for includes like ~/foo
-        path = os.path.expanduser(path)
-        if not os.path.isabs(path):
-            path = os.path.join(os.path.dirname(orig_path), path)
+        # Allow path like '~/foo' and expand 'foo' or './foo'
+        # relatively to root_dir
+        expanded_paths = salt.utils.path.expand_glob_path(path, orig_dir)
 
         # Catch situation where user typos path in configuration; also warns
         # for empty include directory (which might be by design)
-        if len(glob.glob(path)) == 0:
+        if len(expanded_paths) == 0:
             if verbose:
                 log.warning(
                     'Warning parsing configuration file: "include" path/glob '
                     "'%s' matches no files", path
                 )
 
-        for fn_ in sorted(glob.glob(path)):
+        for fn_ in sorted(expanded_paths):
             log.debug('Including configuration from \'%s\'', fn_)
             try:
                 opts = _read_conf_file(fn_)
