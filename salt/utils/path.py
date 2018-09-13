@@ -8,6 +8,7 @@ lack of support for reading NTFS links.
 from __future__ import absolute_import, print_function, unicode_literals
 import collections
 import errno
+import glob
 import logging
 import os
 import posixpath
@@ -484,3 +485,27 @@ def expand_path(path, root_dir=None):
         path = prepend_root_dir(path, root_dir)
 
     return path
+
+
+def expand_glob_path(path, root_dir=None):
+    '''
+    Resolves user home '~' or prepend the 'root_dir' directory and
+    applies shell globbing, then returns the expanded pathes.
+    '''
+    unglobbed_path = []
+
+    expanded_glob = expand_path(path, root_dir)
+
+    try:
+        if glob.has_magic(expanded_glob) and not urlparse(expanded_glob).scheme:
+            unglobbed_path.extend(glob.glob(expanded_glob))
+        else:
+            unglobbed_path.append(expanded_glob)
+    except Exception as error:
+        log.debug("Unable to unglob the pattern "
+                  "'{0}' expanded as '{1}': {2}".format(expanded_glob,
+                                                        path,
+                                                        error))
+        unglobbed_path.append(expanded_glob)
+
+    return unglobbed_path
