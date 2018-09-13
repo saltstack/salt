@@ -154,7 +154,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             try:
                 os.remove(path)
             except OSError as exc:
-                if exc.errno != os.errno.ENOENT:
+                if exc.errno != errno.ENOENT:
                     log.error('Failed to remove %s: %s', path, exc)
 
     def test_symlink(self):
@@ -872,6 +872,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
 
         initial_mode = '0111'
         changed_mode = '0555'
+        default_mode = '0755'
 
         if not os.path.isdir(subsub):
             os.makedirs(subsub, int(initial_mode, 8))
@@ -888,8 +889,15 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                     self.assertEqual(changed_mode,
                                      _get_oct_mode(changed_dir))
                 for untouched_dir in dirs[depth+1:]:
-                    self.assertEqual(initial_mode,
-                                     _get_oct_mode(untouched_dir))
+                    # Beginning in Python 3.7, os.makedirs no longer sets
+                    # the mode of intermediate directories to the mode that
+                    # is passed.
+                    if sys.version_info >= (3, 7):
+                        self.assertEqual(default_mode,
+                                         _get_oct_mode(untouched_dir))
+                    else:
+                        self.assertEqual(initial_mode,
+                                         _get_oct_mode(untouched_dir))
         finally:
             shutil.rmtree(top)
 

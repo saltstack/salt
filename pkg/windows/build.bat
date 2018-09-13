@@ -113,8 +113,14 @@ if not %errorLevel%==0 (
 :: Remove build and dist directories
 @echo %0 :: Remove build and dist directories...
 @echo ---------------------------------------------------------------------
-rd /s /q "%SrcDir%\build"
-rd /s /q "%SrcDir%\dist"
+"%PyDir%\python.exe" "%SrcDir%\setup.py" clean --all
+if not %errorLevel%==0 (
+    goto eof
+)
+If Exist "%SrcDir%\dist" (
+    @echo removing %SrcDir%\dist
+    rd /S /Q "%SrcDir%\dist"
+)
 @echo.
 
 :: Install Current Version of salt

@@ -47,6 +47,7 @@ integration.renderers.test_pydsl
 integration.returners.test_librato_return
 integration.runners.test_fileserver
 integration.runners.test_jobs
+integration.runners.test_nacl
 integration.runners.test_salt
 integration.sdb.test_env
 integration.states.test_host
