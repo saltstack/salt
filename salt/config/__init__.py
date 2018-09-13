@@ -2347,11 +2347,9 @@ def insert_system_path(opts, paths):
     if isinstance(paths, six.string_types):
         paths = [paths]
     for path in paths:
-        path_options = {'path': path, 'root_dir': opts['root_dir']}
-        prepend_root_dir(path_options, path_options)
-        if (os.path.isdir(path_options['path'])
-                and path_options['path'] not in sys.path):
-            sys.path.insert(0, path_options['path'])
+        path = salt.utils.path.expand_path(path, opts['root_dir'])
+        if os.path.isdir(path) and path not in sys.path:
+            sys.path.insert(0, path)
 
 
 def minion_config(path,
