@@ -1974,7 +1974,7 @@ PROVIDER_CONFIG_DEFAULTS = {
 # <---- Salt Cloud Configuration Defaults ------------------------------------
 
 
-def _validate_file_roots(file_roots):
+def _validate_file_roots(file_roots, root_dir):
     '''
     If the file_roots option has a key that is None then we will error out,
     just replace it with an empty list
@@ -1982,7 +1982,7 @@ def _validate_file_roots(file_roots):
     if not isinstance(file_roots, dict):
         log.warning('The file_roots parameter is not properly formatted,'
                     ' using defaults')
-        return {'base': _expand_glob_path([salt.syspaths.BASE_FILE_ROOTS_DIR])}
+        return {'base': _expand_glob_path([salt.syspaths.BASE_FILE_ROOTS_DIR], root_dir)}
     for saltenv, dirs in six.iteritems(file_roots):
         normalized_saltenv = six.text_type(saltenv)
         if normalized_saltenv != saltenv:
@@ -1990,24 +1990,19 @@ def _validate_file_roots(file_roots):
         if not isinstance(dirs, (list, tuple)):
             file_roots[normalized_saltenv] = []
         file_roots[normalized_saltenv] = \
-                _expand_glob_path(file_roots[normalized_saltenv])
+                _expand_glob_path(file_roots[normalized_saltenv], root_dir)
     return file_roots
 
 
-def _expand_glob_path(file_roots):
+def _expand_glob_path(file_roots, root_dir):
     '''
     Applies shell globbing to a set of directories and returns
     the expanded paths
     '''
     unglobbed_path = []
     for path in file_roots:
-        try:
-            if glob.has_magic(path):
-                unglobbed_path.extend(glob.glob(path))
-            else:
-                unglobbed_path.append(path)
-        except Exception:
-            unglobbed_path.append(path)
+        unglobbed_path.extend(salt.utils.path.expand_glob_path(path, root_dir))
+
     return unglobbed_path
 
 
@@ -3771,8 +3766,8 @@ def apply_minion_config(overrides=None,
     # Enabling open mode requires that the value be set to True, and
     # nothing else!
     opts['open_mode'] = opts['open_mode'] is True
-    opts['file_roots'] = _validate_file_roots(opts['file_roots'])
-    opts['pillar_roots'] = _validate_file_roots(opts['pillar_roots'])
+    opts['file_roots'] = _validate_file_roots(opts['file_roots'], opts['root_dir'])
+    opts['pillar_roots'] = _validate_file_roots(opts['pillar_roots'], opts['root_dir'])
     # Make sure ext_mods gets set if it is an untrue value
     # (here to catch older bad configs)
     opts['extension_modules'] = (
@@ -3997,8 +3992,8 @@ def apply_master_config(overrides=None, defaults=None):
     # nothing else!
     opts['open_mode'] = opts['open_mode'] is True
     opts['auto_accept'] = opts['auto_accept'] is True
-    opts['file_roots'] = _validate_file_roots(opts['file_roots'])
-    opts['pillar_roots'] = _validate_file_roots(opts['pillar_roots'])
+    opts['file_roots'] = _validate_file_roots(opts['file_roots'], opts['root_dir'])
+    opts['pillar_roots'] = _validate_file_roots(opts['pillar_roots'], opts['root_dir'])
 
     if opts['file_ignore_regex']:
         # If file_ignore_regex was given, make sure it's wrapped in a list.
