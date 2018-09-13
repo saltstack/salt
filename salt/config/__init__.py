@@ -2233,13 +2233,20 @@ def load_config(path, env_var, default_path=None, exit_on_config_errors=True):
 
     # Default to the environment variable path, if it exists
     env_path = os.environ.get(env_var, path)
+    if env_path:
+        # Allow path like '~/foo' and expand 'foo' or './foo'
+        # relatively to root_dir
+        env_path = salt.utils.path.expand_path(env_path)
+
     if not env_path or not os.path.isfile(env_path):
         env_path = path
     # If non-default path from `-c`, use that over the env variable
     if path != default_path:
         env_path = path
 
-    path = env_path
+    # Allow path like '~/foo' and expand 'foo' or './foo' relatively
+    # to root_dir
+    path = salt.utils.path.expand_path(env_path)
 
     # If the configuration file is missing, attempt to copy the template,
     # after removing the first header line.
