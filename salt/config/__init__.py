@@ -2270,6 +2270,10 @@ def load_config(path, env_var, default_path=None, exit_on_config_errors=True):
     else:
         log.debug('Missing configuration file: %s', path)
 
+    # The root_dir option must be expanded as early as possible
+    if opts.get('root_dir', None):
+        opts['root_dir'] = salt.utils.path.expand_path(opts['root_dir'])
+
     return opts
 
 
