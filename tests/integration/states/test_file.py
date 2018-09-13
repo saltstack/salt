@@ -806,7 +806,13 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
 
         initial_mode = '0111'
         changed_mode = '0555'
-        default_mode = '0755'
+
+        initial_modes = {0: {sub: '0755',
+                             subsub: '0111'},
+                         1: {sub: '0111',
+                             subsub: '0111'},
+                         2: {sub: '0111',
+                             subsub: '0111'}}
 
         if not os.path.isdir(subsub):
             os.makedirs(subsub, int(initial_mode, 8))
@@ -827,7 +833,8 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                     # the mode of intermediate directories to the mode that
                     # is passed.
                     if sys.version_info >= (3, 7):
-                        self.assertEqual(default_mode,
+                        _mode = initial_modes[depth][untouched_dir]
+                        self.assertEqual(_mode,
                                          _get_oct_mode(untouched_dir))
                     else:
                         self.assertEqual(initial_mode,
