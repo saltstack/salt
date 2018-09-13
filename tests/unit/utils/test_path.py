@@ -601,3 +601,210 @@ class ExpandPathTestCase(TestCase):
             salt.utils.path.expand_path('file://' + self.ABSOLUTE_GLOB_PATH,
                                         self.CUSTOM_ROOT_DIR),
             'file://' + self.ABSOLUTE_GLOB_PATH)
+
+
+@skipIf(salt.utils.platform.is_windows(), '*nix-only test')
+class ExpandGlobPathTestCase(TestCase):
+    '''
+    Test salt.utils.path.expand_glob_path
+    '''
+
+    DEFAULT_ROOT_DIR = salt.syspaths.ROOT_DIR
+    CUSTOM_ROOT_DIR = '/mock/root'
+
+    ABSOLUTE_PATH = '/an/absolute/path'
+    RELATIVE_PATH = 'a/relative/path'
+
+    CURRENT_USER_HOME = '~/'
+    ABSOLUTE_CURRENT_USER_HOME = '/mock/home/user'
+
+    ROOT_USER_HOME = '~root/'
+    ABSOLUTE_ROOT_USER_HOME = '/mock/root'
+
+    ABSOLUTE_GLOB_PATH = '/an/absolute/glob*'
+    ABSOLUTE_UNGLOBBED_PATHS = ['/an/absolute/glob1', '/an/absolute/glob2']
+
+    RELATIVE_GLOB_PATH = 'a/relative/glob/*'
+    RELATIVE_UNGLOBBED_PATHS = ['a/relative/glob/1', 'a/relative/glob/2']
+
+    CURRENT_USER_HOME_GLOB_PATH = '~/.salt/*.conf'
+    ABSOLUTE_CURRENT_USER_HOME_GLOB_PATH = '/mock/home/user/.salt/*.conf'
+    ABSOLUTE_CURRENT_USER_HOME_UNGLOBBED_PATHS = ['/mock/home/user/.salt/1.conf',
+                                                  '/mock/home/user/.salt/2.conf']
+
+    ROOT_USER_HOME_GLOB_PATH = '~root/.salt/*.conf'
+    ABSOLUTE_ROOT_USER_HOME_GLOB_PATH = '/mock/root/.salt/*.conf'
+    ABSOLUTE_ROOT_USER_HOME_UNGLOBBED_PATHS = ['/mock/root/.salt/a.conf',
+                                               '/mock/root/.salt/b.conf']
+
+    ## Test with the default root_dir option
+
+    @skipIf(NO_MOCK, NO_MOCK_REASON)
+    def test_exception_returns_unglobbed_path_expanded_with_default_root_dir(self):
+        with patch('glob.has_magic', side_effect=Exception):
+            self.assertEqual(
+                salt.utils.path.expand_glob_path(self.ABSOLUTE_GLOB_PATH),
+                [salt.utils.path.join(self.DEFAULT_ROOT_DIR,
+                                      self.ABSOLUTE_GLOB_PATH)])
+
+    def test_absolute_path_with_default_root_dir(self):
+        self.assertEqual(
+            salt.utils.path.expand_glob_path(self.ABSOLUTE_PATH),
+            [self.ABSOLUTE_PATH])
+
+    def test_relative_path_with_default_root_dir(self):
+        self.assertEqual(
+            salt.utils.path.expand_glob_path(self.RELATIVE_PATH),
+            [salt.utils.path.join(
+                self.DEFAULT_ROOT_DIR,
+                self.RELATIVE_PATH)])
+
+    @skipIf(NO_MOCK, NO_MOCK_REASON)
+    def test_current_user_home_path_with_default_root_dir(self):
+        with patch('os.path.expanduser', return_value=self.ABSOLUTE_CURRENT_USER_HOME):
+            self.assertEqual(
+                salt.utils.path.expand_glob_path(self.CURRENT_USER_HOME),
+                [self.ABSOLUTE_CURRENT_USER_HOME])
+
+    @skipIf(NO_MOCK, NO_MOCK_REASON)
+    def test_root_user_home_path_with_default_root_dir(self):
+        with patch('os.path.expanduser', return_value=self.ABSOLUTE_ROOT_USER_HOME):
+            self.assertEqual(
+                salt.utils.path.expand_glob_path(self.ROOT_USER_HOME),
+                [self.ABSOLUTE_ROOT_USER_HOME])
+
+    @skipIf(NO_MOCK, NO_MOCK_REASON)
+    def test_absolute_glob_path_with_default_root_dir(self):
+        with patch('glob.glob', return_value=self.ABSOLUTE_UNGLOBBED_PATHS):
+            self.assertEqual(
+                salt.utils.path.expand_glob_path(self.ABSOLUTE_GLOB_PATH),
+                self.ABSOLUTE_UNGLOBBED_PATHS)
+
+    @skipIf(NO_MOCK, NO_MOCK_REASON)
+    def test_relative_glob_path_with_default_root_dir(self):
+        absolute_paths = []
+        for path in self.RELATIVE_UNGLOBBED_PATHS:
+            absolute_paths.append(salt.utils.path.join(self.DEFAULT_ROOT_DIR,
+                                                       path))
+
+        with patch('glob.glob', return_value=absolute_paths):
+            self.assertEqual(
+                salt.utils.path.expand_glob_path(self.RELATIVE_GLOB_PATH),
+                absolute_paths)
+
+    @skipIf(NO_MOCK, NO_MOCK_REASON)
+    def test_current_user_home_with_glob_path_with_default_root_dir(self):
+        with patch('os.path.expanduser',
+                   return_value=self.ABSOLUTE_CURRENT_USER_HOME_GLOB_PATH):
+            with patch('glob.glob',
+                       return_value=self.ABSOLUTE_CURRENT_USER_HOME_UNGLOBBED_PATHS):
+                self.assertEqual(
+                    salt.utils.path.expand_glob_path(self.CURRENT_USER_HOME_GLOB_PATH),
+                    self.ABSOLUTE_CURRENT_USER_HOME_UNGLOBBED_PATHS)
+
+    @skipIf(NO_MOCK, NO_MOCK_REASON)
+    def test_root_user_home_with_glob_path_with_default_root_dir(self):
+        with patch('os.path.expanduser',
+                   return_value=self.ABSOLUTE_ROOT_USER_HOME_GLOB_PATH):
+            with patch('glob.glob',
+                       return_value=self.ABSOLUTE_ROOT_USER_HOME_UNGLOBBED_PATHS):
+                self.assertEqual(
+                    salt.utils.path.expand_glob_path(self.ROOT_USER_HOME_GLOB_PATH),
+                    self.ABSOLUTE_ROOT_USER_HOME_UNGLOBBED_PATHS)
+
+    def test_file_scheme_with_default_root_dir(self):
+        self.assertEqual(
+            salt.utils.path.expand_glob_path('file://' + self.ABSOLUTE_GLOB_PATH),
+            ['file://' + self.ABSOLUTE_GLOB_PATH])
+
+    ## Test with a custom root_dir option
+
+    @skipIf(NO_MOCK, NO_MOCK_REASON)
+    def test_exception_returns_unglobbed_path_expanded_with_custom_root_dir(self):
+        with patch('glob.has_magic', side_effect=Exception):
+            self.assertEqual(
+                salt.utils.path.expand_glob_path(self.ABSOLUTE_GLOB_PATH,
+                                                 self.CUSTOM_ROOT_DIR),
+                [salt.utils.path.join(self.CUSTOM_ROOT_DIR,
+                                      self.ABSOLUTE_GLOB_PATH)])
+
+    def test_absolute_path_with_custom_root_dir(self):
+        self.assertEqual(
+            salt.utils.path.expand_glob_path(self.ABSOLUTE_PATH,
+                                             self.CUSTOM_ROOT_DIR),
+            [salt.utils.path.join(
+                self.CUSTOM_ROOT_DIR,
+                self.ABSOLUTE_PATH)])
+
+    def test_relative_path_with_custom_root_dir(self):
+        self.assertEqual(
+            salt.utils.path.expand_glob_path(self.RELATIVE_PATH,
+                                             self.CUSTOM_ROOT_DIR),
+            [salt.utils.path.join(
+                self.CUSTOM_ROOT_DIR,
+                self.RELATIVE_PATH)])
+
+    @skipIf(NO_MOCK, NO_MOCK_REASON)
+    def test_current_user_home_path_with_custom_root_dir(self):
+        with patch('os.path.expanduser', return_value=self.ABSOLUTE_CURRENT_USER_HOME):
+            self.assertEqual(
+                salt.utils.path.expand_glob_path(self.CURRENT_USER_HOME,
+                                                 self.CUSTOM_ROOT_DIR),
+                [self.ABSOLUTE_CURRENT_USER_HOME])
+
+    @skipIf(NO_MOCK, NO_MOCK_REASON)
+    def test_root_user_home_path_with_custom_root_dir(self):
+        with patch('os.path.expanduser', return_value=self.ABSOLUTE_ROOT_USER_HOME):
+            self.assertEqual(
+                salt.utils.path.expand_glob_path(self.ROOT_USER_HOME,
+                                                 self.CUSTOM_ROOT_DIR),
+                [self.ABSOLUTE_ROOT_USER_HOME])
+
+    @skipIf(NO_MOCK, NO_MOCK_REASON)
+    def test_absolute_glob_path_with_custom_root_dir(self):
+        with patch('glob.glob', return_value=self.ABSOLUTE_UNGLOBBED_PATHS):
+            self.assertEqual(
+                salt.utils.path.expand_glob_path(self.ABSOLUTE_GLOB_PATH,
+                                                 self.CUSTOM_ROOT_DIR),
+                self.ABSOLUTE_UNGLOBBED_PATHS)
+
+    @skipIf(NO_MOCK, NO_MOCK_REASON)
+    def test_relative_glob_path_with_custom_root_dir(self):
+        absolute_paths = []
+        for path in self.RELATIVE_UNGLOBBED_PATHS:
+            absolute_paths.append(salt.utils.path.join(self.CUSTOM_ROOT_DIR,
+                                                       path))
+
+        with patch('glob.glob', return_value=absolute_paths):
+            self.assertEqual(
+                salt.utils.path.expand_glob_path(self.RELATIVE_GLOB_PATH,
+                                                 self.CUSTOM_ROOT_DIR),
+                absolute_paths)
+
+    @skipIf(NO_MOCK, NO_MOCK_REASON)
+    def test_current_user_home_with_glob_path_with_custom_root_dir(self):
+        with patch('os.path.expanduser',
+                   return_value=self.ABSOLUTE_CURRENT_USER_HOME_GLOB_PATH):
+            with patch('glob.glob',
+                       return_value=self.ABSOLUTE_CURRENT_USER_HOME_UNGLOBBED_PATHS):
+                self.assertEqual(
+                    salt.utils.path.expand_glob_path(self.CURRENT_USER_HOME_GLOB_PATH,
+                                                     self.CUSTOM_ROOT_DIR),
+                    self.ABSOLUTE_CURRENT_USER_HOME_UNGLOBBED_PATHS)
+
+    @skipIf(NO_MOCK, NO_MOCK_REASON)
+    def test_root_user_home_with_glob_path_with_custom_root_dir(self):
+        with patch('os.path.expanduser',
+                   return_value=self.ABSOLUTE_ROOT_USER_HOME_GLOB_PATH):
+            with patch('glob.glob',
+                       return_value=self.ABSOLUTE_ROOT_USER_HOME_UNGLOBBED_PATHS):
+                self.assertEqual(
+                    salt.utils.path.expand_glob_path(self.ROOT_USER_HOME_GLOB_PATH,
+                                                     self.CUSTOM_ROOT_DIR),
+                    self.ABSOLUTE_ROOT_USER_HOME_UNGLOBBED_PATHS)
+
+    def test_file_scheme_with_custom_root_dir(self):
+        self.assertEqual(
+            salt.utils.path.expand_glob_path('file://' + self.ABSOLUTE_GLOB_PATH,
+                                             self.CUSTOM_ROOT_DIR),
+            ['file://' + self.ABSOLUTE_GLOB_PATH])
