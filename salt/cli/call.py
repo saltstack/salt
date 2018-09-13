@@ -4,7 +4,7 @@ import os
 
 import salt.utils.parsers
 from salt.utils.verify import verify_log
-from salt.config import _expand_glob_path
+from salt.utils.path import expand_glob_path
 import salt.cli.caller
 import salt.defaults.exitcodes
 
@@ -22,13 +22,13 @@ class SaltCall(salt.utils.parsers.SaltCallOptionParser):
 
         if self.options.file_root:
             # check if the argument is pointing to a file on disk
-            file_root = os.path.abspath(self.options.file_root)
-            self.config['file_roots'] = {'base': _expand_glob_path([file_root])}
+            self.config['file_roots'] = {'base': expand_glob_path(self.options.file_root,
+                                                                  self.options.root_dir)}
 
         if self.options.pillar_root:
             # check if the argument is pointing to a file on disk
-            pillar_root = os.path.abspath(self.options.pillar_root)
-            self.config['pillar_roots'] = {'base': _expand_glob_path([pillar_root])}
+            self.config['pillar_roots'] = {'base': expand_glob_path(self.options.pillar_root,
+                                                                    self.options.root_dir)}
 
         if self.options.states_dir:
             # check if the argument is pointing to a file on disk
