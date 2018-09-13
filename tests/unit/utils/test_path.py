@@ -19,6 +19,7 @@ from tests.support.mock import patch, NO_MOCK, NO_MOCK_REASON
 # Import Salt libs
 import salt.utils.path
 import salt.utils.platform
+import salt.syspaths
 from salt.exceptions import CommandNotFoundError
 
 # Import 3rd-party libs
@@ -274,3 +275,166 @@ class TestWhich(TestCase):
                             salt.utils.path.which('this-binary-exists-under-windows'),
                             os.path.join(os.sep + 'bin', 'this-binary-exists-under-windows.CMD')
                         )
+
+
+@skipIf(salt.utils.platform.is_windows(), '*nix-only test')
+class PrependRootDirTestCase(TestCase):
+    '''
+    Test salt.utils.path.prepend_root_dir
+    '''
+
+    DEFAULT_ROOT_DIR = salt.syspaths.ROOT_DIR
+    CUSTOM_ROOT_DIR = '/mock/root'
+
+    ABSOLUTE_PATH = '/an/absolute/path'
+    RELATIVE_PATH = 'a/relative/path'
+
+    CURRENT_USER_HOME = '~/.salt'
+    ROOT_USER_HOME = '~root/.salt'
+
+    ABSOLUTE_GLOB_PATH = '/an/absolute/glob*'
+    RELATIVE_GLOB_PATH = 'a/relative/glob/*'
+
+    CURRENT_USER_HOME_GLOB_PATH = '~/.salt/*.conf'
+    ROOT_USER_HOME_GLOB_PATH = '~root/.salt/*.conf'
+
+    ## Test with the default root_dir option
+
+    def test_absolute_path_with_default_root_dir(self):
+        self.assertEqual(
+            salt.utils.path.prepend_root_dir(self.ABSOLUTE_PATH),
+            salt.utils.path.join(
+                self.DEFAULT_ROOT_DIR,
+                self.ABSOLUTE_PATH))
+
+    def test_relative_path_with_default_root_dir(self):
+        self.assertEqual(
+            salt.utils.path.prepend_root_dir(self.RELATIVE_PATH),
+            salt.utils.path.join(
+                self.DEFAULT_ROOT_DIR,
+                self.RELATIVE_PATH))
+
+    def test_current_user_home_path_with_default_root_dir(self):
+        self.assertEqual(
+            salt.utils.path.prepend_root_dir(self.CURRENT_USER_HOME),
+            salt.utils.path.join(
+                self.DEFAULT_ROOT_DIR,
+                self.CURRENT_USER_HOME))
+
+    def test_root_user_home_path_with_default_root_dir(self):
+        self.assertEqual(
+            salt.utils.path.prepend_root_dir(self.ROOT_USER_HOME),
+            salt.utils.path.join(
+                self.DEFAULT_ROOT_DIR,
+                self.ROOT_USER_HOME))
+
+    def test_absolute_glob_path_with_default_root_dir(self):
+        self.assertEqual(
+            salt.utils.path.prepend_root_dir(self.ABSOLUTE_GLOB_PATH),
+            salt.utils.path.join(
+                self.DEFAULT_ROOT_DIR,
+                self.ABSOLUTE_GLOB_PATH))
+
+    def test_relative_glob_path_with_default_root_dir(self):
+        self.assertEqual(
+            salt.utils.path.prepend_root_dir(self.RELATIVE_GLOB_PATH),
+            salt.utils.path.join(
+                self.DEFAULT_ROOT_DIR,
+                self.RELATIVE_GLOB_PATH))
+
+    def test_current_user_home_with_glob_path_with_default_root_dir(self):
+        self.assertEqual(
+            salt.utils.path.prepend_root_dir(self.CURRENT_USER_HOME_GLOB_PATH),
+            salt.utils.path.join(
+                self.DEFAULT_ROOT_DIR,
+                self.CURRENT_USER_HOME_GLOB_PATH))
+
+    def test_root_user_home_with_glob_path_with_default_root_dir(self):
+        self.assertEqual(
+            salt.utils.path.prepend_root_dir(self.ROOT_USER_HOME_GLOB_PATH),
+            salt.utils.path.join(
+                self.DEFAULT_ROOT_DIR,
+                self.ROOT_USER_HOME_GLOB_PATH))
+
+    def test_file_scheme_with_default_root_dir(self):
+        self.assertEqual(
+            salt.utils.path.prepend_root_dir('file://' + self.ABSOLUTE_PATH),
+            salt.utils.path.join(
+                self.DEFAULT_ROOT_DIR,
+                'file:',
+                self.ABSOLUTE_PATH))
+
+    ## Test with a custom root_dir option
+
+    def test_absolute_path_with_custom_root_dir(self):
+        self.assertEqual(
+            salt.utils.path.prepend_root_dir(self.ABSOLUTE_PATH,
+                                             self.CUSTOM_ROOT_DIR),
+            salt.utils.path.join(
+                self.CUSTOM_ROOT_DIR,
+                self.ABSOLUTE_PATH))
+
+    def test_relative_path_with_custom_root_dir(self):
+        self.assertEqual(
+            salt.utils.path.prepend_root_dir(self.RELATIVE_PATH,
+                                             self.CUSTOM_ROOT_DIR),
+            salt.utils.path.join(
+                self.CUSTOM_ROOT_DIR,
+                self.RELATIVE_PATH))
+
+    def test_current_user_home_path_with_custom_root_dir(self):
+        self.assertEqual(
+            salt.utils.path.prepend_root_dir(self.CURRENT_USER_HOME,
+                                             self.CUSTOM_ROOT_DIR),
+            salt.utils.path.join(
+                self.CUSTOM_ROOT_DIR,
+                self.CURRENT_USER_HOME))
+
+    def test_root_user_home_path_with_custom_root_dir(self):
+        self.assertEqual(
+            salt.utils.path.prepend_root_dir(self.ROOT_USER_HOME,
+                                             self.CUSTOM_ROOT_DIR),
+            salt.utils.path.join(
+                self.CUSTOM_ROOT_DIR,
+                self.ROOT_USER_HOME))
+
+    def test_absolute_glob_path_with_custom_root_dir(self):
+        self.assertEqual(
+            salt.utils.path.prepend_root_dir(self.ABSOLUTE_GLOB_PATH,
+                                             self.CUSTOM_ROOT_DIR),
+            salt.utils.path.join(
+                self.CUSTOM_ROOT_DIR,
+                self.ABSOLUTE_GLOB_PATH))
+
+    def test_relative_glob_path_with_custom_root_dir(self):
+        self.assertEqual(
+            salt.utils.path.prepend_root_dir(self.RELATIVE_GLOB_PATH,
+                                             self.CUSTOM_ROOT_DIR),
+            salt.utils.path.join(
+                self.CUSTOM_ROOT_DIR,
+                self.RELATIVE_GLOB_PATH))
+
+    def test_current_user_home_with_glob_path_with_custom_root_dir(self):
+        self.assertEqual(
+            salt.utils.path.prepend_root_dir(self.CURRENT_USER_HOME_GLOB_PATH,
+                                             self.CUSTOM_ROOT_DIR),
+            salt.utils.path.join(
+                self.CUSTOM_ROOT_DIR,
+                self.CURRENT_USER_HOME_GLOB_PATH))
+
+    def test_root_user_home_with_glob_path_with_custom_root_dir(self):
+        self.assertEqual(
+            salt.utils.path.prepend_root_dir(self.ROOT_USER_HOME_GLOB_PATH,
+                                             self.CUSTOM_ROOT_DIR),
+            salt.utils.path.join(
+                self.CUSTOM_ROOT_DIR,
+                self.ROOT_USER_HOME_GLOB_PATH))
+
+    def test_file_scheme_with_custom_root_dir(self):
+        self.assertEqual(
+            salt.utils.path.prepend_root_dir('file://' + self.ABSOLUTE_PATH,
+                                             self.CUSTOM_ROOT_DIR),
+            salt.utils.path.join(
+                self.CUSTOM_ROOT_DIR,
+                'file:',
+                self.ABSOLUTE_PATH))
