@@ -25,7 +25,10 @@ from salt.utils.decorators import memoize as real_memoize
 from salt.utils.decorators.jinja import jinja_filter
 
 # Import 3rd-party libs
+# pylint: disable=import-error,no-name-in-module
 from salt.ext import six
+from salt.ext.six.moves.urllib.parse import urlparse
+# pylint: enable=import-error,no-name-in-module
 
 try:
     import win32file
@@ -468,3 +471,16 @@ def prepend_root_dir(path, root_dir=None):
 
     # Prepending the root dir
     return join(root_dir, path)
+
+
+def expand_path(path, root_dir=None):
+    '''
+    Resolves user home '~' or prepend the 'root_dir'
+    directory and returns the expanded 'path'
+    '''
+    if path.startswith('~'):
+        path = os.path.expanduser(path)
+    elif not urlparse(path).scheme:
+        path = prepend_root_dir(path, root_dir)
+
+    return path
