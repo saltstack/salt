@@ -729,6 +729,9 @@ class TestDaemon(object):
         os.makedirs(RUNTIME_VARS.TMP_SUB_MINION_CONF_DIR)
         os.makedirs(RUNTIME_VARS.TMP_SYNDIC_MASTER_CONF_DIR)
         os.makedirs(RUNTIME_VARS.TMP_SYNDIC_MINION_CONF_DIR)
+        if os.path.isdir(RUNTIME_VARS.FILES):
+            shutil.rmtree(RUNTIME_VARS.FILES)
+        shutil.copytree(RUNTIME_VARS.SRC_FILES, RUNTIME_VARS.FILES)
         print(' * Transplanting configuration files to \'{0}\''.format(RUNTIME_VARS.TMP_CONF_DIR))
         tests_known_hosts_file = os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'salt_ssh_known_hosts')
         with salt.utils.files.fopen(tests_known_hosts_file, 'w') as known_hosts:
