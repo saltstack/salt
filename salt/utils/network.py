@@ -7,6 +7,7 @@ Define some generic socket functions for network modules
 from __future__ import absolute_import, unicode_literals, print_function
 import itertools
 import os
+import sys
 import re
 import types
 import socket
@@ -27,6 +28,7 @@ except ImportError:
     pass
 
 # Import salt libs
+import salt.config
 import salt.utils.args
 import salt.utils.files
 import salt.utils.path
@@ -1881,7 +1883,28 @@ def dns_check(addr, port=80, safe=False, ipv6=None):
                     resolved = salt.utils.zeromq.ip_bracket(addr)
                     break
 
-                candidate_addr = salt.utils.zeromq.ip_bracket(h[4][0])
+                #Check for tcp transport in config opts
+                if 'salt-master' in sys.argv[0]:
+                    opts = salt.config.master_config(
+                        os.path.join(salt.syspaths.CONFIG_DIR, 'master')
+                    )
+                elif 'salt-minion' in sys.argv[0]:
+                    opts = salt.config.minion_config(
+                        os.path.join(salt.syspaths.CONFIG_DIR, 'minion')
+                    )
+                elif 'salt-proxy' in sys.argv[0]:
+                    opts = salt.config.minion_config(
+                        os.path.join(salt.syspaths.CONFIG_DIR, 'proxy')
+                    )
+                else:
+                    opts = {}
+
+                #If transport is tcp, don't put brackets around the address
+                if opts['transport'] == 'tcp':
+                    candidate_addr = h[4][0]
+                else:
+                    candidate_addr = salt.utils.zeromq.ip_bracket(h[4][0])
+
                 candidates.append(candidate_addr)
 
                 try:
