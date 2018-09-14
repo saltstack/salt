@@ -105,19 +105,6 @@ class TestBuildWhitespaceRegex(TestCase):
         regex = salt.utils.stringutils.build_whitespace_split_regex(SINGLE_DOUBLE_SAME_LINE_TXT)
         self.assertTrue(re.search(regex, MATCH))
 
-    def test_build_whitespace_split_regex(self):
-        # With 3.7+,  re.escape only escapes special characters, no longer
-        # escaping all characters other than ASCII letters, numbers and
-        # underscores.  This includes commas.
-        if sys.version_info >= (3, 7):
-            expected_regex = '(?m)^(?:[\\s]+)?Lorem(?:[\\s]+)?ipsum(?:[\\s]+)?dolor(?:[\\s]+)?sit(?:[\\s]+)?amet,' \
-                             '(?:[\\s]+)?$'
-        else:
-            expected_regex = '(?m)^(?:[\\s]+)?Lorem(?:[\\s]+)?ipsum(?:[\\s]+)?dolor(?:[\\s]+)?sit(?:[\\s]+)?amet\\,' \
-                             '(?:[\\s]+)?$'
-        ret = salt.utils.stringutils.build_whitespace_split_regex(' '.join(LOREM_IPSUM.split()[:5]))
-        self.assertEqual(ret, expected_regex)
-
 
 class StringutilsTestCase(TestCase):
     def test_contains_whitespace(self):
@@ -260,6 +247,19 @@ class StringutilsTestCase(TestCase):
     def test_to_unicode_multi_encoding(self):
         result = salt.utils.stringutils.to_unicode(LATIN1_BYTES, encoding=('utf-8', 'latin1'))
         assert result == LATIN1_UNICODE
+
+    def test_build_whitespace_split_regex(self):
+        # With 3.7+,  re.escape only escapes special characters, no longer
+        # escaping all characters other than ASCII letters, numbers and
+        # underscores.  This includes commas.
+        if sys.version_info >= (3, 7):
+            expected_regex = '(?m)^(?:[\\s]+)?Lorem(?:[\\s]+)?ipsum(?:[\\s]+)?dolor(?:[\\s]+)?sit(?:[\\s]+)?amet,' \
+                             '(?:[\\s]+)?$'
+        else:
+            expected_regex = '(?m)^(?:[\\s]+)?Lorem(?:[\\s]+)?ipsum(?:[\\s]+)?dolor(?:[\\s]+)?sit(?:[\\s]+)?amet\\,' \
+                             '(?:[\\s]+)?$'
+        ret = salt.utils.stringutils.build_whitespace_split_regex(' '.join(LOREM_IPSUM.split()[:5]))
+        self.assertEqual(ret, expected_regex)
 
     def test_get_context(self):
         expected_context = textwrap.dedent('''\
