@@ -806,7 +806,7 @@ class TCPClientKeepAlive(tornado.tcpclient.TCPClient):
         '''
         # Always connect in plaintext; we'll convert to ssl if necessary
         # after one connection has completed.
-        if self.opts['ipv6'] == True:
+        if self.opts['ipv6']:
             sock = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
         else:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
