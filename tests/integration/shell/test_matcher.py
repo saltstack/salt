@@ -331,6 +331,7 @@ class MatchTest(ShellCase, ShellCaseCommonTestsMixin):
         data = '\n'.join(data)
         self.assertIn('minion', data)
 
+    @flaky
     def test_salt_documentation(self):
         '''
         Test to see if we're supporting --doc

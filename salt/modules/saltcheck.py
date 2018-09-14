@@ -6,18 +6,21 @@ A module for testing the logic of states and highstates
 :maturity:      new
 
 Saltcheck provides unittest like functionality requiring only the knowledge of
-salt module execution and yaml.
+salt module execution and yaml. Saltcheck uses salt modules to return data, then
+runs an assertion against that return. This allows for testing with all the
+features included in salt modules.
 
-In order to run state and highstate saltcheck tests a sub-folder of a state must
-be created and named ``saltcheck-tests``.
+In order to run state and highstate saltcheck tests, a sub-folder in the state directory
+must be created and named ``saltcheck-tests``. Tests for a state should be created in files
+ending in ``*.tst`` and placed in the ``saltcheck-tests`` folder. ``tst`` files are run
+through the salt rendering system, enabling tests to be written in yaml (or renderer of choice),
+and include jinja, as well as the usual grain and pillar information. Like states, multiple tests can
+be specified in a ``tst`` file. Multiple ``tst`` files can be created in the ``saltcheck-tests``
+folder, and should be named the same as the associated state. The ``id`` of a test works in the
+same manner as in salt state files and should be unique and descriptive.
 
-Tests for a state should be created in files ending in ``*.tst`` and placed in
-the ``saltcheck-tests`` folder.
-
-Multiple tests can be specified in a file. Multiple ``*.tst`` files can be
-created in the ``saltcheck-tests`` folder. Salt rendering is supported in test
-files (e.g. ``yaml + jinja``). The ``id`` of a test works in the same manner as
-in salt state files. They should be unique and descriptive.
+Usage
+=====
 
 Example file system layout:
 
@@ -29,16 +32,55 @@ Example file system layout:
         saltcheck-tests/
             init.tst
             config.tst
+            deployment_validation.tst
 
-Tests can be run for each state, or all apache tests
+Tests can be run for each state by name, for all apache/saltcheck/*.tst files, or for all states
+assigned to the minion in top.sls. Tests may also be created with no associated state. These tests
+will be run through the use of ``saltcheck.run_state_tests``, but will not be automatically run
+by ``saltcheck.run_highstate_tests``.
 
 .. code-block:: bash
 
     salt '*' saltcheck.run_state_tests apache,apache.config
     salt '*' saltcheck.run_state_tests apache check_all=True
     salt '*' saltcheck.run_highstate_tests
+    salt '*' saltcheck.run_state_tests apache.deployment_validation
 
-Example 1:
+Saltcheck Keywords
+==================
+
+**module_and_function:**
+    (str) This is the salt module which will be run locally,
+    the same as ``salt-call --local <module>``. The ``saltcheck.state_apply`` module name is
+    special as it bypasses the local option in order to resolve state names when run in
+    a master/minion environment.
+**args:**
+    (list) Optional arguments passed to the salt module
+**kwargs:**
+    (dict) Optional keyword arguments to be passed to the salt module
+**assertion:**
+    (str) One of the supported assertions and required except for ``saltcheck.state_apply``
+**expected-return:**
+    (str) Required except by ``assertEmpty``, ``assertNotEmpty``, ``assertTrue``,
+    ``assertFalse``. The return of module_and_function is compared to this value in the assertion.
+**assertion_section:**
+    (str) Optional keyword used to parse the module_and_function return. If a salt module
+    returns a dictionary as a result, the ``assertion_section`` value is used to lookup a specific value
+    in that return for the assertion comparison.
+**print_result:**
+    (bool) Optional keyword to show results in the ``assertEqual``, ``assertNotEqual``,
+    ``assertIn``, and ``assertNotIn`` output. Defaults to True.
+**pillar-data:**
+    (dict) Optional keyword for passing in pillar data. Intended for use in potential test
+    setup or teardown with the ``saltcheck.state_apply`` function.
+**skip:**
+    (bool) Optional keyword to skip running the individual test
+
+Sample Cases/Examples
+=====================
+
+Basic Example
+-------------
 
 .. code-block:: yaml
 
@@ -50,7 +92,8 @@ Example 1:
       assertion: assertEqual
       expected-return:  'hello'
 
-Example 2:
+Example with jinja
+------------------
 
 .. code-block:: jinja
 
@@ -64,9 +107,85 @@ Example 2:
       assertion: assertFalse
     {% endfor %}
 
-Supported assertions:
-assertEqual assertNotEqual assertTrue assertFalse assertIn assertNotIn assertGreater
-assertGreaterEqual assertLess assertLessEqual assertEmpty assertNotEmpty
+Example with setup state including pillar
+-----------------------------------------
+
+.. code-block:: yaml
+
+    setup_test_environment:
+      module_and_function: saltcheck.state_apply
+      args:
+        - common
+      pillar-data:
+        data: value
+
+    verify_vim:
+      module_and_function: pkg.version
+      args:
+        - vim
+      assertion: assertNotEmpty
+
+Example with skip
+-----------------
+
+.. code-block:: yaml
+
+    package_latest:
+      module_and_function: pkg.upgrade_available
+      args:
+        - apache2
+      assertion: assertFalse
+      skip: True
+
+Example with assertion_section
+------------------------------
+
+.. code-block:: yaml
+
+    validate_shell:
+      module_and_function: user.info
+      args:
+        - root
+      assertion: assertEqual
+      expected-return: /bin/bash
+      assertion_section: shell
+
+Example suppressing print results
+---------------------------------
+
+.. code-block:: yaml
+
+    validate_env_nameNode:
+      module_and_function: hadoop.dfs
+      args:
+        - text
+        - /oozie/common/env.properties
+      expected-return: nameNode = hdfs://nameservice2
+      assertion: assertNotIn
+      print_result: False
+
+Supported assertions
+====================
+
+* assertEqual
+* assertNotEqual
+* assertTrue
+* assertFalse
+* assertIn
+* assertNotIn
+* assertGreater
+* assertGreaterEqual
+* assertLess
+* assertLessEqual
+* assertEmptyassertNotEmpty
+
+.. warning::
+
+  The saltcheck.state_apply function is an alias for
+  :py:func:`state.apply <salt.modules.state.apply>`. If using the
+  :ref:`ACL system <acl-eauth>` ``saltcheck.*`` might provide more capability
+  than intended if only ``saltcheck.run_state_tests`` and
+  ``saltcheck.run_highstate_tests`` are needed.
 '''
 
 # Import Python libs
@@ -82,6 +201,7 @@ import salt.utils.path
 import salt.utils.yaml
 import salt.client
 import salt.exceptions
+from salt.utils.odict import OrderedDict
 from salt.utils.decorators import memoize
 from salt.ext import six
 
@@ -139,6 +259,29 @@ def run_test(**kwargs):
         return "Test must be a dictionary"
 
 
+def state_apply(state_name, **kwargs):
+    '''
+    Runs :py:func:`state.apply <salt.modules.state.apply>` with given options to set up test data.
+    Intended to be used for optional test setup or teardown
+
+    Reference the :py:func:`state.apply <salt.modules.state.apply>` module documentation for arguments and usage options
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' saltcheck.state_apply postfix
+    '''
+    # A new salt client is instantiated with the default configuration because the main module's
+    # client is hardcoded to local
+    # If the minion is running with a master, a non-local client is needed to lookup states
+    caller = salt.client.Caller()
+    if kwargs:
+        return caller.cmd('state.apply', state_name, **kwargs)
+    else:
+        return caller.cmd('state.apply', state_name)
+
+
 def run_state_tests(state, saltenv=None, check_all=False):
     '''
     Execute all tests for a salt state and return results
@@ -160,12 +303,12 @@ def run_state_tests(state, saltenv=None, check_all=False):
     scheck = SaltCheck(saltenv)
     paths = scheck.get_state_search_path_list(saltenv)
     stl = StateTestLoader(search_paths=paths)
-    results = {}
-    sls_list = state.split(',')
+    results = OrderedDict()
+    sls_list = salt.utils.args.split_input(state)
     for state_name in sls_list:
         stl.add_test_files_for_sls(state_name, check_all)
         stl.load_test_suite()
-        results_dict = {}
+        results_dict = OrderedDict()
         for key, value in stl.test_dict.items():
             result = scheck.run_test(value)
             results_dict[key] = result
@@ -175,7 +318,7 @@ def run_state_tests(state, saltenv=None, check_all=False):
 
 def run_highstate_tests(saltenv=None):
     '''
-    Execute all tests for a salt highstate and return results
+    Execute all tests for states assigned to the minion through highstate and return results
 
     CLI Example:
 
@@ -190,7 +333,7 @@ def run_highstate_tests(saltenv=None):
     scheck = SaltCheck(saltenv)
     paths = scheck.get_state_search_path_list(saltenv)
     stl = StateTestLoader(search_paths=paths)
-    results = {}
+    results = OrderedDict()
     sls_list = _get_top_states(saltenv)
     all_states = []
     for state in sls_list:
@@ -200,7 +343,7 @@ def run_highstate_tests(saltenv=None):
     for state_name in all_states:
         stl.add_test_files_for_sls(state_name)
         stl.load_test_suite()
-        results_dict = {}
+        results_dict = OrderedDict()
         for key, value in stl.test_dict.items():
             result = scheck.run_test(value)
             results_dict[key] = result
@@ -235,8 +378,8 @@ def _generate_out_list(results):
         out_list.append({key: value})
     out_list.sort()
     out_list.append({'TEST RESULTS': {'Execution Time': round(total_time, 4),
-                     'Passed': passed, 'Failed': failed, 'Skipped': skipped,
-                     'Missing Tests': missing_tests}})
+                                      'Passed': passed, 'Failed': failed, 'Skipped': skipped,
+                                      'Missing Tests': missing_tests}})
     return out_list
 
 
@@ -340,10 +483,12 @@ class SaltCheck(object):
         log.info("__is_valid_test has test: %s", test_dict)
         if skip:
             required_total = 0
-        if assertion in ["assertEmpty",
-                         "assertNotEmpty",
-                         "assertTrue",
-                         "assertFalse"]:
+        elif m_and_f in ["saltcheck.state_apply"]:
+            required_total = 2
+        elif assertion in ["assertEmpty",
+                           "assertNotEmpty",
+                           "assertTrue",
+                           "assertFalse"]:
             required_total = 4
         else:
             required_total = 6
@@ -373,7 +518,8 @@ class SaltCheck(object):
     def _call_salt_command(self,
                            fun,
                            args,
-                           kwargs):
+                           kwargs,
+                           assertion_section=None):
         '''
         Generic call of salt Caller command
         '''
@@ -391,7 +537,10 @@ class SaltCheck(object):
             raise
         except Exception:
             raise
-        return value
+        if isinstance(value, dict) and assertion_section:
+            return value.get(assertion_section, False)
+        else:
+            return value
 
     def run_test(self, test_dict):
         '''
@@ -403,6 +552,7 @@ class SaltCheck(object):
             if skip:
                 return {'status': 'Skip', 'duration': 0.0}
             mod_and_func = test_dict['module_and_function']
+            assertion_section = test_dict.get('assertion_section', None)
             args = test_dict.get('args', None)
             kwargs = test_dict.get('kwargs', None)
             pillar_data = test_dict.get('pillar-data', None)
@@ -413,26 +563,30 @@ class SaltCheck(object):
             else:
                 # make sure we clean pillar from previous test
                 if kwargs:
-                    kwargs.pop('pillar')
+                    kwargs.pop('pillar', None)
 
-            assertion = test_dict['assertion']
+            if mod_and_func in ["saltcheck.state_apply"]:
+                assertion = "assertNotEmpty"
+            else:
+                assertion = test_dict['assertion']
             expected_return = test_dict.get('expected-return', None)
-            actual_return = self._call_salt_command(mod_and_func, args, kwargs)
+            assert_print_result = test_dict.get('print_result', None)
+            actual_return = self._call_salt_command(mod_and_func, args, kwargs, assertion_section)
             if assertion not in ["assertIn", "assertNotIn", "assertEmpty", "assertNotEmpty",
                                  "assertTrue", "assertFalse"]:
                 expected_return = self._cast_expected_to_returned_type(expected_return, actual_return)
             if assertion == "assertEqual":
-                value = self.__assert_equal(expected_return, actual_return)
+                value = self.__assert_equal(expected_return, actual_return, assert_print_result)
             elif assertion == "assertNotEqual":
-                value = self.__assert_not_equal(expected_return, actual_return)
+                value = self.__assert_not_equal(expected_return, actual_return, assert_print_result)
             elif assertion == "assertTrue":
                 value = self.__assert_true(actual_return)
             elif assertion == "assertFalse":
                 value = self.__assert_false(actual_return)
             elif assertion == "assertIn":
-                value = self.__assert_in(expected_return, actual_return)
+                value = self.__assert_in(expected_return, actual_return, assert_print_result)
             elif assertion == "assertNotIn":
-                value = self.__assert_not_in(expected_return, actual_return)
+                value = self.__assert_not_in(expected_return, actual_return, assert_print_result)
             elif assertion == "assertGreater":
                 value = self.__assert_greater(expected_return, actual_return)
             elif assertion == "assertGreaterEqual":
@@ -476,26 +630,32 @@ class SaltCheck(object):
         return new_expected
 
     @staticmethod
-    def __assert_equal(expected, returned):
+    def __assert_equal(expected, returned, assert_print_result=True):
         '''
         Test if two objects are equal
         '''
         result = "Pass"
 
         try:
-            assert (expected == returned), "{0} is not equal to {1}".format(expected, returned)
+            if assert_print_result:
+                assert (expected == returned), "{0} is not equal to {1}".format(expected, returned)
+            else:
+                assert (expected == returned), "Result is not equal"
         except AssertionError as err:
             result = "Fail: " + six.text_type(err)
         return result
 
     @staticmethod
-    def __assert_not_equal(expected, returned):
+    def __assert_not_equal(expected, returned, assert_print_result=True):
         '''
         Test if two objects are not equal
         '''
         result = "Pass"
         try:
-            assert (expected != returned), "{0} is equal to {1}".format(expected, returned)
+            if assert_print_result:
+                assert (expected != returned), "{0} is equal to {1}".format(expected, returned)
+            else:
+                assert (expected != returned), "Result is equal"
         except AssertionError as err:
             result = "Fail: " + six.text_type(err)
         return result
@@ -530,25 +690,31 @@ class SaltCheck(object):
         return result
 
     @staticmethod
-    def __assert_in(expected, returned):
+    def __assert_in(expected, returned, assert_print_result=True):
         '''
         Test if a value is in the list of returned values
         '''
         result = "Pass"
         try:
-            assert (expected in returned), "{0} not found in {1}".format(expected, returned)
+            if assert_print_result:
+                assert (expected in returned), "{0} not found in {1}".format(expected, returned)
+            else:
+                assert (expected in returned), "Result not found"
         except AssertionError as err:
             result = "Fail: " + six.text_type(err)
         return result
 
     @staticmethod
-    def __assert_not_in(expected, returned):
+    def __assert_not_in(expected, returned, assert_print_result=True):
         '''
         Test if a value is not in the list of returned values
         '''
         result = "Pass"
         try:
-            assert (expected not in returned), "{0} was found in {1}".format(expected, returned)
+            if assert_print_result:
+                assert (expected not in returned), "{0} was found in {1}".format(expected, returned)
+            else:
+                assert (expected not in returned), "Result was found"
         except AssertionError as err:
             result = "Fail: " + six.text_type(err)
         return result
@@ -649,13 +815,13 @@ class StateTestLoader(object):
         self.search_paths = search_paths
         self.path_type = None
         self.test_files = []  # list of file paths
-        self.test_dict = {}
+        self.test_dict = OrderedDict()
 
     def load_test_suite(self):
         '''
         Load tests either from one file, or a set of files
         '''
-        self.test_dict = {}
+        self.test_dict = OrderedDict()
         for myfile in self.test_files:
             self._load_file_salt_rendered(myfile)
         self.test_files = []
@@ -667,7 +833,7 @@ class StateTestLoader(object):
         # use the salt renderer module to interpret jinja and etc
         tests = _render_file(filepath)
         # use json as a convenient way to convert the OrderedDicts from salt renderer
-        mydict = loads(dumps(tests))
+        mydict = loads(dumps(tests), object_pairs_hook=OrderedDict)
         for key, value in mydict.items():
             self.test_dict[key] = value
         return

@@ -63,8 +63,7 @@ Just add the option :conf_minion:`grains` and pass options to it:
       cab_u: 14-15
 
 Then status data specific to your servers can be retrieved via Salt, or used
-inside of the State system for matching. It also makes targeting, in the case
-of the example above, simply based on specific data about your deployment.
+inside of the State system for matching. It also makes it possible to target based on specific data about your deployment, as in the example above.
 
 
 Grains in /etc/salt/grains
@@ -292,7 +291,7 @@ the Salt minion and provides the principal example of how to write grains:
 Syncing Grains
 ==============
 
-Syncing grains can be done a number of ways, they are automatically synced when
+Syncing grains can be done a number of ways. They are automatically synced when
 :mod:`state.highstate <salt.modules.state.highstate>` is called, or (as noted
 above) the grains can be manually synced and reloaded by calling the
 :mod:`saltutil.sync_grains <salt.modules.saltutil.sync_grains>` or

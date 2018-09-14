@@ -1957,29 +1957,29 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         # command in the state. If the comment reads "unless condition is true", or similar,
         # then the unless state run bailed out after the first unless command succeeded,
         # which is the bug we're regression testing for.
-        _expected = {'file_|-unless_false_onlyif_false_|-{0}/test.txt_|-managed'.format(TMP):
+        _expected = {'file_|-unless_false_onlyif_false_|-{0}{1}test.txt_|-managed'.format(TMP, os.path.sep):
                      {'comment': 'onlyif condition is false\nunless condition is false',
-                      'name': '{0}/test.txt'.format(TMP),
+                      'name': '{0}{1}test.txt'.format(TMP, os.path.sep),
                       'skip_watch': True,
                       'changes': {},
                       'result': True},
-                     'file_|-unless_false_onlyif_true_|-{0}/test.txt_|-managed'.format(TMP):
+                     'file_|-unless_false_onlyif_true_|-{0}{1}test.txt_|-managed'.format(TMP, os.path.sep):
                      {'comment': 'Empty file',
                       'pchanges': {},
-                      'name': '{0}/test.txt'.format(TMP),
+                      'name': '{0}{1}test.txt'.format(TMP, os.path.sep),
                       'start_time': '18:10:20.341753',
                       'result': True,
-                      'changes': {'new': 'file {0}/test.txt created'.format(TMP)}},
-                     'file_|-unless_true_onlyif_false_|-{0}/test.txt_|-managed'.format(TMP):
+                      'changes': {'new': 'file {0}{1}test.txt created'.format(TMP, os.path.sep)}},
+                     'file_|-unless_true_onlyif_false_|-{0}{1}test.txt_|-managed'.format(TMP, os.path.sep):
                      {'comment': 'onlyif condition is false\nunless condition is true',
-                      'name': '{0}/test.txt'.format(TMP),
+                      'name': '{0}{1}test.txt'.format(TMP, os.path.sep),
                       'start_time': '18:10:22.936446',
                       'skip_watch': True,
                       'changes': {},
                       'result': True},
-                     'file_|-unless_true_onlyif_true_|-{0}/test.txt_|-managed'.format(TMP):
+                     'file_|-unless_true_onlyif_true_|-{0}{1}test.txt_|-managed'.format(TMP, os.path.sep):
                      {'comment': 'onlyif condition is true\nunless condition is true',
-                      'name': '{0}/test.txt'.format(TMP),
+                      'name': '{0}{1}test.txt'.format(TMP, os.path.sep),
                       'skip_watch': True,
                       'changes': {},
                       'result': True}}

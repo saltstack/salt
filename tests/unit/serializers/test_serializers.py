@@ -102,7 +102,7 @@ class TestSerializers(TestCase):
 
     @skipIf(not yaml.available, SKIP_MESSAGE % 'yaml')
     @skipIf(not yamlex.available, SKIP_MESSAGE % 'sls')
-    @flaky
+    @skipIf(six.PY3, 'Flaky on Python 3.')
     def test_compare_sls_vs_yaml_with_jinja(self):
         tpl = '{{ data }}'
         env = jinja2.Environment()

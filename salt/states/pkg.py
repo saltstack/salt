@@ -2444,7 +2444,7 @@ def latest(
                 log.error(msg)
                 problems.append(msg)
             elif watch_flags \
-                    and __grains__.get('os') == 'Gentoo' \
+                    and __grains__.get('os_family') == 'Gentoo' \
                     and __salt__['portage_config.is_changed_uses'](pkg):
                 # Package is up-to-date, but Gentoo USE flags are changing so
                 # we need to add it to the targets
@@ -2966,7 +2966,7 @@ def uptodate(name, refresh=False, pkgs=None, **kwargs):
         return ret
 
     # emerge --update doesn't appear to support repo notation
-    if 'fromrepo' in kwargs and __grains__['os'] == 'Gentoo':
+    if 'fromrepo' in kwargs and __grains__['os_family'] == 'Gentoo':
         ret['comment'] = '\'fromrepo\' argument not supported on this platform'
         return ret
 

@@ -446,6 +446,9 @@ VALID_OPTS = {
     # Tell the loader to attempt to import *.pyx cython files if cython is available
     'cython_enable': bool,
 
+    # Whether or not to load grains for the GPU
+    'enable_gpu_grains': bool,
+
     # Tell the loader to attempt to import *.zip archives
     'enable_zip_modules': bool,
 
@@ -1093,6 +1096,9 @@ VALID_OPTS = {
     # Useful when a returner is the source of truth for a job result
     'pub_ret': bool,
 
+    # HTTP request settings. Used in tornado fetch functions
+    'user_agent': six.string_types,
+
     # HTTP proxy settings. Used in tornado fetch functions, apt-key etc
     'proxy_host': six.string_types,
     'proxy_username': six.string_types,
@@ -1399,6 +1405,7 @@ DEFAULT_MINION_OPTS = {
     'test': False,
     'ext_job_cache': '',
     'cython_enable': False,
+    'enable_gpu_grains': True,
     'enable_zip_modules': False,
     'state_verbose': True,
     'state_output': 'full',
@@ -1496,6 +1503,7 @@ DEFAULT_MINION_OPTS = {
     'event_match_type': 'startswith',
     'minion_restart_command': [],
     'pub_ret': True,
+    'user_agent': '',
     'proxy_host': '',
     'proxy_username': '',
     'proxy_password': '',
