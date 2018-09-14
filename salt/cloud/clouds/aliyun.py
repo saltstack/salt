@@ -770,7 +770,7 @@ def _compute_signature(parameters, access_key_secret):
     # All aliyun API only support GET method
     stringToSign = 'GET&%2F&' + percent_encode(canonicalizedQueryString[1:])
 
-    h = hmac.new(access_key_secret + "&", stringToSign, sha1)
+    h = hmac.new(bytearray(access_key_secret + "&", 'utf-8'), bytearray(stringToSign, 'utf-8'), sha1)
     signature = base64.encodestring(h.digest()).strip()
     return signature
 
