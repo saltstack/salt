@@ -1865,35 +1865,37 @@ class LocalClient(object):
         Check to see if the given command can be run
         '''
 
-        blist = self.opts.get('cmd_blacklist_regex', [])
-        wlist = self.opts.get('cmd_whitelist_regex', [])
-        wret = False
+        blist = self.opts.get('cmd_blacklist', [])
+        wlist = self.opts.get('cmd_whitelist', [])
 
         if fun.startswith('cmd.') and (blist or wlist):
             if isinstance(arg, list):
                 arg = ' '.join([str(x) if not isinstance(x, six.string_types) else x
                                 for x in arg])
 
-            for comp in blist:
-                if re.search(comp, arg):
+            for cmd in arg.split(';'):
+                cmd = cmd.strip()
+                for comp in blist:
+                    if salt.utils.stringutils.expr_match(cmd, comp):
+                        raise EauthAuthenticationError(
+                            'Failed to authenticate! This command is Forbidden. '
+                            'Please check cmd_blacklist.'
+                        )
+
+                if wlist:
+                    wret = False
+                    for comp in wlist:
+                        if salt.utils.stringutils.expr_match(cmd, comp):
+                            wret = True
+                            break
+                else:
+                    wret = True
+
+                if wret is False:
                     raise EauthAuthenticationError(
                         'Failed to authenticate! This command is Forbidden. '
-                        'Please check cmd_blacklist_regex.'
+                        'Please check cmd_whitelist.'
                     )
-
-            if wlist:
-                for comp in wlist:
-                    if re.search(comp, arg):
-                        wret = True
-                        break
-            else:
-                wret = True
-
-            if wret is False:
-                raise EauthAuthenticationError(
-                    'Failed to authenticate! This command is Forbidden. '
-                    'Please check cmd_whitelist_regex.'
-                )
 
     def __del__(self):
         # This IS really necessary!
