@@ -12,7 +12,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Libs
 import salt.utils.platform
-import salt.modules.nxos
+import salt.utils.nxos
 
 import logging
 log = logging.getLogger(__name__)
@@ -25,14 +25,12 @@ def __virtual__():
     return __virtualname__
 
 
-def proxy_functions(proxy=None):
-    '''
-    The loader will execute functions with one argument and pass
-    a reference to the proxymodules LazyLoader object.  However,
-    grains sometimes get called before the LazyLoader object is setup
-    so `proxy` might be None.
-    '''
-    try:
-        return {'nxos': salt.modules.nxos.grains()}
-    except NameError:
-        return {}
+def system_information(proxy=None):
+    if salt.utils.platform.is_proxy():
+        if proxy is None:
+            return {}
+        if proxy['nxos.initialized']() is False:
+            return {}
+        return {'nxos': proxy['nxos.grains']()}
+    else:
+        return salt.utils.nxos.system_info()

@@ -169,6 +169,7 @@ import multiprocessing
 import copy
 
 # Import Salt libs
+import salt.utils.nxos
 from salt.utils.vt_helper import SSHConnection
 from salt.utils.vt import TerminalException
 from salt.exceptions import CommandExecutionError
@@ -240,6 +241,37 @@ def ping():
         return _ping_ssh()
     elif CONNECTION == 'nxapi':
         return _ping_nxapi()
+
+
+def grains(**kwargs):
+    '''
+    Get grains for minion.
+
+    .. code-block: bash
+
+        salt '*' nxos.cmd grains
+    '''
+    import __main__ as main
+    if not DEVICE_DETAILS['grains_cache']:
+        data = sendline('show version')
+        if CONNECTION == 'nxapi':
+            data = data[0]
+        ret = salt.utils.nxos.system_info(data)
+        log.debug(ret)
+        DEVICE_DETAILS['grains_cache'].update(ret['nxos'])
+    return DEVICE_DETAILS['grains_cache']
+
+
+def grains_refresh(**kwargs):
+    '''
+    Refresh the grains for the NX-OS device.
+
+    .. code-block: bash
+
+        salt '*' nxos.cmd grains_refresh
+    '''
+    DEVICE_DETAILS['grains_cache'] = {}
+    return grains(**kwargs)
 
 
 def shutdown(opts):
