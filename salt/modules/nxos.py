@@ -281,7 +281,7 @@ def grains(**kwargs):
     '''
     import __main__ as main
     if not DEVICE_DETAILS['grains_cache']:
-        ret = system_info(**kwargs)
+        ret = salt.utils.nxos.system_info(show_ver(**kwargs))
         log.debug(ret)
         DEVICE_DETAILS['grains_cache'].update(ret)
     return {'nxos': DEVICE_DETAILS['grains_cache']}
@@ -399,15 +399,7 @@ def system_info(**kwargs):
 
         salt '*' nxos.system_info
     '''
-    data = show_ver(**kwargs)
-    if not data:
-        return {}
-    info = {
-        'software': _parse_software(data),
-        'hardware': _parse_hardware(data),
-        'plugins': _parse_plugins(data),
-    }
-    return info
+    return salt.utils.nxos.system_info(show_ver(**kwargs))['nxos']
 
 
 # -----------------------------------------------------------------------------
@@ -743,48 +735,6 @@ def unset_role(username, role, **kwargs):
 # -----------------------------------------------------------------------------
 # helper functions
 # -----------------------------------------------------------------------------
-def _parser(block):
-    return re.compile('^{block}\n(?:^[ \n].*$\n?)+'.format(block=block), re.MULTILINE)
-
-
-def _parse_software(data):
-    '''
-    Internal helper function to parse sotware grain information.
-    '''
-    ret = {'software': {}}
-    software = _parser('Software').search(data).group(0)
-    matcher = re.compile('^  ([^:]+): *([^\n]+)', re.MULTILINE)
-    for line in matcher.finditer(software):
-        key, val = line.groups()
-        ret['software'][key] = val
-    return ret['software']
-
-
-def _parse_hardware(data):
-    '''
-    Internal helper function to parse hardware grain information.
-    '''
-    ret = {'hardware': {}}
-    hardware = _parser('Hardware').search(data).group(0)
-    matcher = re.compile('^  ([^:\n]+): *([^\n]+)', re.MULTILINE)
-    for line in matcher.finditer(hardware):
-        key, val = line.groups()
-        ret['hardware'][key] = val
-    return ret['hardware']
-
-
-def _parse_plugins(data):
-    '''
-    Internal helper function to parse plugin grain information.
-    '''
-    ret = {'plugins': []}
-    plugins = _parser('plugin').search(data).group(0)
-    matcher = re.compile('^  (?:([^,]+), )+([^\n]+)', re.MULTILINE)
-    for line in matcher.finditer(plugins):
-        ret['plugins'].extend(line.groups())
-    return ret['plugins']
-
-
 def _configure_device(commands, **kwargs):
     '''
     Helper function to send configuration commands to the device over a
