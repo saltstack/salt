@@ -33,4 +33,5 @@ def system_information(proxy=None):
             return {}
         return {'nxos': proxy['nxos.grains']()}
     else:
-        return salt.utils.nxos.system_info()
+        data = salt.utils.nxos.version_info()
+        return salt.utils.nxos.system_info(data)
