@@ -283,8 +283,8 @@ def grains(**kwargs):
     if not DEVICE_DETAILS['grains_cache']:
         ret = salt.utils.nxos.system_info(show_ver(**kwargs))
         log.debug(ret)
-        DEVICE_DETAILS['grains_cache'].update(ret)
-    return {'nxos': DEVICE_DETAILS['grains_cache']}
+        DEVICE_DETAILS['grains_cache'].update(ret['nxos'])
+    return DEVICE_DETAILS['grains_cache']
 
 
 def grains_refresh(**kwargs):
