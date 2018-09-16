@@ -11,6 +11,7 @@ from tests.support.case import ShellCase
 from tests.support.helpers import flaky
 from tests.support.mixins import ShellCaseCommonTestsMixin
 from tests.support.paths import TMP
+from tests.support.unit import skipIf
 
 # Import salt libs
 import salt.utils.files
@@ -92,12 +93,14 @@ class MatchTest(ShellCase, ShellCaseCommonTestsMixin):
         assert minion_in_returns('minion', data) is True
         assert minion_in_returns('sub_minion', data) is True
 
+    @skipIf(True, 'This test is unreliable. Need to investigate why more deeply.')
     @flaky
     def test_compound_pillar(self):
         data = self.run_salt("-C 'I%@companions%three%sarah*' test.ping")
         assert minion_in_returns('minion', data) is True
         assert minion_in_returns('sub_minion', data) is True
 
+    @skipIf(True, 'This test is unreliable. Need to investigate why more deeply.')
     @flaky
     def test_coumpound_pillar_pcre(self):
         data = self.run_salt("-C 'J%@knights%^(Lancelot|Galahad)$' test.ping")

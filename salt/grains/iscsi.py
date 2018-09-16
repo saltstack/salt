@@ -13,8 +13,8 @@ To enable these grains set `iscsi_grains: True`.
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import errno
 import logging
-import os
 
 # Import Salt libs
 import salt.modules.cmdmod
@@ -64,7 +64,7 @@ def _linux_iqn():
                 if line.startswith('InitiatorName='):
                     ret.append(line.split('=', 1)[1])
     except IOError as ex:
-        if ex.errno != os.errno.ENOENT:
+        if ex.errno != errno.ENOENT:
             log.debug("Error while accessing '%s': %s", initiator, ex)
 
     return ret
