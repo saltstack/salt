@@ -7,11 +7,15 @@ and data structures.
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
-import collections
 import copy
 import fnmatch
 import logging
 import re
+
+try:
+    from collections.abc import Mapping
+except ImportError:
+    from collections import Mapping
 
 # Import Salt libs
 import salt.utils.dictupdate
@@ -100,7 +104,7 @@ def decode(data, encoding=None, errors='strict', keep=False,
     _decode_func = salt.utils.stringutils.to_unicode \
         if not to_str \
         else salt.utils.stringutils.to_str
-    if isinstance(data, collections.Mapping):
+    if isinstance(data, Mapping):
         return decode_dict(data, encoding, errors, keep, normalize,
                            preserve_dict_class, preserve_tuples, to_str)
     elif isinstance(data, list):
@@ -166,7 +170,7 @@ def decode_dict(data, encoding=None, errors='strict', keep=False,
                 if preserve_tuples \
                 else decode_list(value, encoding, errors, keep, normalize,
                                  preserve_dict_class, preserve_tuples, to_str)
-        elif isinstance(value, collections.Mapping):
+        elif isinstance(value, Mapping):
             value = decode_dict(value, encoding, errors, keep, normalize,
                                 preserve_dict_class, preserve_tuples, to_str)
         else:
@@ -206,7 +210,7 @@ def decode_list(data, encoding=None, errors='strict', keep=False,
                 if preserve_tuples \
                 else decode_list(item, encoding, errors, keep, normalize,
                                  preserve_dict_class, preserve_tuples, to_str)
-        elif isinstance(item, collections.Mapping):
+        elif isinstance(item, Mapping):
             item = decode_dict(item, encoding, errors, keep, normalize,
                                preserve_dict_class, preserve_tuples, to_str)
         else:
@@ -248,7 +252,7 @@ def encode(data, encoding=None, errors='strict', keep=False,
     can be useful for cases where the data passed to this function is likely to
     contain binary blobs.
     '''
-    if isinstance(data, collections.Mapping):
+    if isinstance(data, Mapping):
         return encode_dict(data, encoding, errors, keep,
                            preserve_dict_class, preserve_tuples)
     elif isinstance(data, list):
@@ -307,7 +311,7 @@ def encode_dict(data, encoding=None, errors='strict', keep=False,
                 if preserve_tuples \
                 else encode_list(value, encoding, errors, keep,
                                  preserve_dict_class, preserve_tuples)
-        elif isinstance(value, collections.Mapping):
+        elif isinstance(value, Mapping):
             value = encode_dict(value, encoding, errors, keep,
                                 preserve_dict_class, preserve_tuples)
         else:
@@ -343,7 +347,7 @@ def encode_list(data, encoding=None, errors='strict', keep=False,
                 if preserve_tuples \
                 else encode_list(item, encoding, errors, keep,
                                  preserve_dict_class, preserve_tuples)
-        elif isinstance(item, collections.Mapping):
+        elif isinstance(item, Mapping):
             item = encode_dict(item, encoding, errors, keep,
                                preserve_dict_class, preserve_tuples)
         else:
@@ -424,15 +428,15 @@ def filter_by(lookup_dict,
         if ret is None:
             ret = base_values
 
-        elif isinstance(base_values, collections.Mapping):
-            if not isinstance(ret, collections.Mapping):
+        elif isinstance(base_values, Mapping):
+            if not isinstance(ret, Mapping):
                 raise SaltException(
                     'filter_by default and look-up values must both be '
                     'dictionaries.')
             ret = salt.utils.dictupdate.update(copy.deepcopy(base_values), ret)
 
     if merge:
-        if not isinstance(merge, collections.Mapping):
+        if not isinstance(merge, Mapping):
             raise SaltException(
                 'filter_by merge argument must be a dictionary.')
 

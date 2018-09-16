@@ -39,7 +39,6 @@ integration.modules.test_sysmod
 integration.modules.test_system
 integration.modules.test_test
 integration.modules.test_useradd
-integration.modules.test_win_autoruns
 integration.modules.test_win_dns_client
 integration.modules.test_win_firewall
 integration.modules.test_win_pkg
@@ -56,6 +55,7 @@ integration.states.test_pkg
 integration.states.test_reg
 integration.states.test_renderers
 integration.states.test_file
+integration.states.test_service
 integration.states.test_user
 integration.utils.testprogram
 integration.wheel.test_client

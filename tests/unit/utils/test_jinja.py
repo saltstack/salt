@@ -386,7 +386,7 @@ class TestGetTemplate(TestCase):
             self.assertEqual(fc.requests[0]['path'], 'salt://macro')
 
             filename = os.path.join(self.template_dir, 'non_ascii')
-            with salt.utils.files.fopen(filename) as fp_:
+            with salt.utils.files.fopen(filename, 'rb') as fp_:
                 out = render_jinja_tmpl(
                     salt.utils.stringutils.to_unicode(fp_.read(), 'utf-8'),
                     dict(opts={'cachedir': self.tempdir, 'file_client': 'remote',
@@ -453,7 +453,7 @@ class TestGetTemplate(TestCase):
             saltenv='test',
             salt=self.local_salt
         )
-        with salt.utils.files.fopen(out['data']) as fp:
+        with salt.utils.files.fopen(out['data'], 'rb') as fp:
             result = salt.utils.stringutils.to_unicode(fp.read(), 'utf-8')
             self.assertEqual(salt.utils.stringutils.to_unicode('Assunção' + os.linesep), result)
 
