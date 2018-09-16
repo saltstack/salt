@@ -264,3 +264,19 @@ class ArgsTestCase(TestCase):
         # the string contains a '#', so we need to test again here.
         self.assertEqual(_yamlify_arg('["foo", "bar"]'), ["foo", "bar"])
         self.assertEqual(_yamlify_arg('{"foo": "bar"}'), {"foo": "bar"})
+
+
+class KwargRegexTest(TestCase):
+    def test_arguments_regex(self):
+        argument_matches = (
+            ('pip=1.1', ('pip', '1.1')),
+            ('pip==1.1', None),
+            ('pip=1.2=1', ('pip', '1.2=1')),
+        )
+        for argument, match in argument_matches:
+            if match is None:
+                self.assertIsNone(salt.utils.args.KWARG_REGEX.match(argument))
+            else:
+                self.assertEqual(
+                    salt.utils.args.KWARG_REGEX.match(argument).groups(), match
+                )

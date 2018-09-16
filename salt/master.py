@@ -8,6 +8,7 @@ involves preparing the three listeners and the workers needed by the master.
 from __future__ import absolute_import, with_statement, print_function, unicode_literals
 import copy
 import ctypes
+import functools
 import os
 import re
 import sys
@@ -89,6 +90,9 @@ try:
     HAS_HALITE = True
 except ImportError:
     HAS_HALITE = False
+
+from tornado.stack_context import StackContext
+from salt.utils.ctx import RequestContext
 
 
 log = logging.getLogger(__name__)
@@ -595,11 +599,19 @@ class Master(SMaster):
                 pass
 
         if self.opts.get('git_pillar_verify_config', True):
-            git_pillars = [
-                x for x in self.opts.get('ext_pillar', [])
-                if 'git' in x
-                and not isinstance(x['git'], six.string_types)
-            ]
+            try:
+                git_pillars = [
+                    x for x in self.opts.get('ext_pillar', [])
+                    if 'git' in x
+                    and not isinstance(x['git'], six.string_types)
+                ]
+            except TypeError:
+                git_pillars = []
+                critical_errors.append(
+                    'Invalid ext_pillar configuration. It is likely that the '
+                    'external pillar type was not specified for one or more '
+                    'external pillars.'
+                )
             if git_pillars:
                 try:
                     new_opts = copy.deepcopy(self.opts)
@@ -1098,7 +1110,15 @@ class MWorker(salt.utils.process.SignalHandlingMultiprocessingProcess):
         if self.opts['master_stats']:
             start = time.time()
             self.stats[cmd]['runs'] += 1
-        ret = self.aes_funcs.run_func(data['cmd'], data)
+
+        def run_func(data):
+            return self.aes_funcs.run_func(data['cmd'], data)
+
+        with StackContext(functools.partial(RequestContext,
+                                            {'data': data,
+                                             'opts': self.opts})):
+            ret = run_func(data)
+
         if self.opts['master_stats']:
             self._post_stats(start, cmd)
         return ret
@@ -1164,7 +1184,7 @@ class AESFuncs(object):
         self._file_list_emptydirs = self.fs_.file_list_emptydirs
         self._dir_list = self.fs_.dir_list
         self._symlink_list = self.fs_.symlink_list
-        self._file_envs = self.fs_.envs
+        self._file_envs = self.fs_.file_envs
 
     def __verify_minion(self, id_, token):
         '''
@@ -1421,18 +1441,16 @@ class AESFuncs(object):
             return False
         if not salt.utils.verify.valid_id(self.opts, load['id']):
             return False
-        file_recv_max_size = 1024*1024 * self.opts['file_recv_max_size']
-
         if 'loc' in load and load['loc'] < 0:
             log.error('Invalid file pointer: load[loc] < 0')
             return False
 
-        if len(load['data']) + load.get('loc', 0) > file_recv_max_size:
+        if len(load['data']) + load.get('loc', 0) > self.opts['file_recv_max_size'] * 0x100000:
             log.error(
                 'file_recv_max_size limit of %d MB exceeded! %s will be '
                 'truncated. To successfully push this file, adjust '
                 'file_recv_max_size to an integer (in MB) large enough to '
-                'accommodate it.', file_recv_max_size, load['path']
+                'accommodate it.', self.opts['file_recv_max_size'], load['path']
             )
             return False
         if 'tok' not in load:
@@ -1915,9 +1933,9 @@ class ClearFuncs(object):
         try:
             fun = clear_load.pop('fun')
             runner_client = salt.runner.RunnerClient(self.opts)
-            return runner_client.async(fun,
-                                       clear_load.get('kwarg', {}),
-                                       username)
+            return runner_client.asynchronous(fun,
+                                              clear_load.get('kwarg', {}),
+                                              username)
         except Exception as exc:
             log.error('Exception occurred while introspecting %s: %s', fun, exc)
             return {'error': {'name': exc.__class__.__name__,

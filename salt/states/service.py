@@ -255,7 +255,12 @@ def _disable(name, started, result=True, **kwargs):
         return ret
 
     # Service can be disabled
-    before_toggle_disable_status = __salt__['service.disabled'](name)
+    if salt.utils.platform.is_windows():
+        # service.disabled in Windows returns True for services that are set to
+        # Manual start, so we need to check specifically for Disabled
+        before_toggle_disable_status = __salt__['service.info'](name)['StartType'] in ['Disabled']
+    else:
+        before_toggle_disable_status = __salt__['service.disabled'](name)
     if before_toggle_disable_status:
         # Service is disabled
         if started is True:
@@ -432,15 +437,14 @@ def running(name,
         ret['comment'] = 'Service {0} is set to start'.format(name)
         return ret
 
-    if salt.utils.platform.is_windows():
-        if enable is True:
-            ret.update(_enable(name, False, result=False, **kwargs))
-
     # Conditionally add systemd-specific args to call to service.start
     start_kwargs, warnings = \
         _get_systemd_only(__salt__['service.start'], locals())
     if warnings:
         ret.setdefault('warnings', []).extend(warnings)
+
+    if salt.utils.platform.is_windows() and kwargs.get('timeout', False):
+        start_kwargs.update({'timeout': kwargs.get('timeout')})
 
     try:
         func_ret = __salt__['service.start'](name, **start_kwargs)
@@ -556,7 +560,12 @@ def dead(name,
     # command, so it is just an indicator but can not be fully trusted
     before_toggle_status = __salt__['service.status'](name, sig)
     if 'service.enabled' in __salt__:
-        before_toggle_enable_status = __salt__['service.enabled'](name)
+        if salt.utils.platform.is_windows():
+            # service.enabled in Windows returns True for services that are set
+            # to Auto start, but services set to Manual can also be disabled
+            before_toggle_enable_status = __salt__['service.info'](name)['StartType'] in ['Auto', 'Manual']
+        else:
+            before_toggle_enable_status = __salt__['service.enabled'](name)
     else:
         before_toggle_enable_status = True
 
@@ -579,6 +588,9 @@ def dead(name,
     stop_kwargs, warnings = _get_systemd_only(__salt__['service.stop'], kwargs)
     if warnings:
         ret.setdefault('warnings', []).extend(warnings)
+
+    if salt.utils.platform.is_windows() and kwargs.get('timeout', False):
+        stop_kwargs.update({'timeout': kwargs.get('timeout')})
 
     func_ret = __salt__['service.stop'](name, **stop_kwargs)
     if not func_ret:

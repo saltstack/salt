@@ -1279,7 +1279,7 @@ def _wait_for_completion(conn, promise, wait_timeout, msg):
             )
 
     raise Exception(
-        'Timed out waiting for async operation {0} "{1}" to complete.'.format(
+        'Timed out waiting for asynchronous operation {0} "{1}" to complete.'.format(
             msg, six.text_type(promise['requestId'])
         )
     )

@@ -203,8 +203,6 @@ import tornado.web
 import tornado.gen
 from tornado.concurrent import Future
 # pylint: enable=import-error
-import salt.utils
-salt.utils.zeromq.install_zmq()
 
 # salt imports
 import salt.ext.six as six
@@ -212,8 +210,9 @@ import salt.netapi
 import salt.utils.args
 import salt.utils.event
 import salt.utils.json
-import salt.utils.yaml
 import salt.utils.minions
+import salt.utils.yaml
+import salt.utils.zeromq
 from salt.utils.event import tagify
 import salt.client
 import salt.runner
@@ -224,6 +223,7 @@ from salt.exceptions import (
     EauthAuthenticationError
 )
 
+salt.utils.zeromq.install_zmq()
 json = salt.utils.json.import_json()
 log = logging.getLogger(__name__)
 
@@ -244,7 +244,7 @@ def _json_dumps(obj, **kwargs):
 
 # # master side
 #  - "runner" (done)
-#  - "wheel" (need async api...)
+#  - "wheel" (need asynchronous api...)
 
 
 AUTH_TOKEN_HEADER = 'X-Auth-Token'
@@ -273,7 +273,7 @@ class Any(Future):
 class EventListener(object):
     '''
     Class responsible for listening to the salt master event bus and updating
-    futures. This is the core of what makes this async, this allows us to do
+    futures. This is the core of what makes this asynchronous, this allows us to do
     non-blocking work in the main processes and "wait" for an event to happen
     '''
 
@@ -336,7 +336,7 @@ class EventListener(object):
                   timeout=None
                   ):
         '''
-        Get an event (async of course) return a future that will get it later
+        Get an event (asynchronous of course) return a future that will get it later
         '''
         # if the request finished, no reason to allow event fetching, since we
         # can't send back to the client
@@ -653,7 +653,7 @@ class SaltAuthHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
 
         self.write(self.serialize(ret))
 
-    # TODO: make async? Underlying library isn't... and we ARE making disk calls :(
+    # TODO: make asynchronous? Underlying library isn't... and we ARE making disk calls :(
     def post(self):
         '''
         :ref:`Authenticate  <rest_tornado-auth>` against Salt's eauth system
@@ -969,14 +969,15 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
 
         # minimum time required for return to complete. By default no waiting, if
         # we are a syndic then we must wait syndic_wait at a minimum
-        min_wait_time = Future().set_result(True)
+        min_wait_time = Future()
+        min_wait_time.set_result(True)
 
         # wait syndic a while to avoid missing published events
         if self.application.opts['order_masters']:
             min_wait_time = tornado.gen.sleep(self.application.opts['syndic_wait'])
 
         # To ensure job_not_running and all_return are terminated by each other, communicate using a future
-        is_finished = tornado.gen.sleep(self.application.opts['gather_job_timeout'])
+        is_finished = Future()
 
         # ping until the job is not running, while doing so, if we see new minions returning
         # that they are running the job, add them to the list
@@ -1058,14 +1059,11 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
                 event = self.application.event_listener.get_event(self,
                                                                   tag=ping_tag,
                                                                   timeout=self.application.opts['gather_job_timeout'])
-                f = yield Any([event, is_finished])
-                # When finished entire routine, cleanup other futures and return result
-                if f is is_finished:
-                    if not event.done():
-                        event.set_result(None)
-                    raise tornado.gen.Return(True)
-                event = f.result()
+                event = yield event
             except TimeoutException:
+                if not event.done():
+                    event.set_result(None)
+
                 if not minion_running:
                     raise tornado.gen.Return(True)
                 else:

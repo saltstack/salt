@@ -586,15 +586,24 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
                 dest=self._loglevel_config_setting_name_,
                 choices=list(log.LOG_LEVELS),
                 help='Console logging log level. One of {0}. Default: \'{1}\'.'.format(
-                     ', '.join([repr(l) for l in log.SORTED_LEVEL_NAMES]),
+                     ', '.join(["'{}'".format(n) for n in log.SORTED_LEVEL_NAMES]),
                      self._default_logging_level_
                 )
             )
+
+        def _logfile_callback(option, opt, value, parser, *args, **kwargs):
+            if not os.path.dirname(value):
+                # if the path is only a file name (no parent directory), assume current directory
+                value = os.path.join(os.path.curdir, value)
+            setattr(parser.values, self._logfile_config_setting_name_, value)
 
         group.add_option(
             '--log-file',
             dest=self._logfile_config_setting_name_,
             default=None,
+            action='callback',
+            type='string',
+            callback=_logfile_callback,
             help='Log file path. Default: \'{0}\'.'.format(
                 self._default_logging_logfile_
             )
@@ -605,7 +614,7 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
             dest=self._logfile_loglevel_config_setting_name_,
             choices=list(log.LOG_LEVELS),
             help='Logfile logging log level. One of {0}. Default: \'{1}\'.'.format(
-                 ', '.join([repr(l) for l in log.SORTED_LEVEL_NAMES]),
+                 ', '.join(["'{}'".format(n) for n in log.SORTED_LEVEL_NAMES]),
                  self._default_logging_level_
             )
         )
@@ -1266,6 +1275,28 @@ class ProxyIdMixIn(six.with_metaclass(MixInMeta, object)):
         )
 
 
+class ExecutorsMixIn(six.with_metaclass(MixInMeta, object)):
+    _mixin_prio = 10
+
+    def _mixin_setup(self):
+        self.add_option(
+            '--module-executors',
+            dest='module_executors',
+            default=None,
+            metavar='EXECUTOR_LIST',
+            help=('Set an alternative list of executors to override the one '
+                  'set in minion config.')
+        )
+        self.add_option(
+            '--executor-opts',
+            dest='executor_opts',
+            default=None,
+            metavar='EXECUTOR_OPTS',
+            help=('Set alternate executor options if supported by executor. '
+                  'Options set by minion config are used by default.')
+        )
+
+
 class CacheDirMixIn(six.with_metaclass(MixInMeta, object)):
     _mixin_prio = 40
 
@@ -1879,6 +1910,7 @@ class SaltCMDOptionParser(six.with_metaclass(OptionParserMeta,
                                              ExtendedTargetOptionsMixIn,
                                              OutputOptionsMixIn,
                                              LogLevelMixIn,
+                                             ExecutorsMixIn,
                                              HardCrashMixin,
                                              SaltfileMixIn,
                                              ArgsStdinMixIn,
@@ -2015,22 +2047,6 @@ class SaltCMDOptionParser(six.with_metaclass(OptionParserMeta,
             default={},
             metavar='RETURNER_KWARGS',
             help=('Set any returner options at the command line.')
-        )
-        self.add_option(
-            '--module-executors',
-            dest='module_executors',
-            default=None,
-            metavar='EXECUTOR_LIST',
-            help=('Set an alternative list of executors to override the one '
-                  'set in minion config.')
-        )
-        self.add_option(
-            '--executor-opts',
-            dest='executor_opts',
-            default=None,
-            metavar='EXECUTOR_OPTS',
-            help=('Set alternate executor options if supported by executor. '
-                  'Options set by minion config are used by default.')
         )
         self.add_option(
             '-d', '--doc', '--documentation',
@@ -2515,7 +2531,7 @@ class SaltKeyOptionParser(six.with_metaclass(OptionParserMeta,
     process_config_dir._mixin_prio_ = ConfigDirMixIn._mixin_prio_
 
     def setup_config(self):
-        keys_config = config.master_config(self.get_config_file_path())
+        keys_config = config.client_config(self.get_config_file_path())
         if self.options.gen_keys:
             # Since we're generating the keys, some defaults can be assumed
             # or tweaked
@@ -2572,7 +2588,9 @@ class SaltKeyOptionParser(six.with_metaclass(OptionParserMeta,
 
 class SaltCallOptionParser(six.with_metaclass(OptionParserMeta,
                                               OptionParser,
+                                              ProxyIdMixIn,
                                               ConfigDirMixIn,
+                                              ExecutorsMixIn,
                                               MergeConfigMixIn,
                                               LogLevelMixIn,
                                               OutputOptionsMixIn,
@@ -2732,8 +2750,13 @@ class SaltCallOptionParser(six.with_metaclass(OptionParserMeta,
             self.config['arg'] = self.args[1:]
 
     def setup_config(self):
-        opts = config.minion_config(self.get_config_file_path(),
-                                    cache_minion_id=True)
+        if self.options.proxyid:
+            opts = config.proxy_config(self.get_config_file_path(configfile='proxy'),
+                                       cache_minion_id=True,
+                                       minion_id=self.options.proxyid)
+        else:
+            opts = config.minion_config(self.get_config_file_path(),
+                                        cache_minion_id=True)
 
         if opts.get('transport') == 'raet':
             if not self._find_raet_minion(opts):  # must create caller minion

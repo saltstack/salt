@@ -11,10 +11,12 @@ import textwrap
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
+from tests.support.helpers import flaky
 from tests.support.paths import TMP_PILLAR_TREE
 
 # Import Salt Libs
 import salt.utils.files
+import salt.utils.stringutils
 
 
 class SaltUtilModuleTest(ModuleCase):
@@ -176,6 +178,7 @@ class SaltUtilSyncPillarTest(ModuleCase):
     Testcase for the saltutil sync pillar module
     '''
 
+    @flaky
     def test_pillar_refresh(self):
         '''
         test pillar refresh module

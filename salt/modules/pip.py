@@ -303,7 +303,7 @@ def _process_requirements(requirements, cmd, cwd, saltenv, user):
                 # In Windows, just being owner of a file isn't enough. You also
                 # need permissions
                 if salt.utils.platform.is_windows():
-                    __utils__['win_dacl.set_permissions'](
+                    __utils__['dacl.set_permissions'](
                         obj_name=treq,
                         principal=user,
                         permissions='read_execute')
@@ -619,12 +619,6 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
                 editable=git+https://github.com/worldcompany/djangoembed.git#egg=djangoembed upgrade=True no_deps=True
 
     '''
-    if 'no_chown' in kwargs:
-        salt.utils.versions.warn_until(
-            'Fluorine',
-            'The no_chown argument has been deprecated and is no longer used. '
-            'Its functionality was removed in Boron.')
-        kwargs.pop('no_chown')
     cmd = _get_pip_bin(bin_env)
     cmd.append('install')
 
@@ -1430,7 +1424,8 @@ def list_all_versions(pkg,
                       include_rc=False,
                       user=None,
                       cwd=None,
-                      index_url=None):
+                      index_url=None,
+                      extra_index_url=None):
     '''
     .. versionadded:: 2017.7.3
 
@@ -1464,6 +1459,10 @@ def list_all_versions(pkg,
         Base URL of Python Package Index
         .. versionadded:: Fluorine
 
+    extra_index_url
+        Additional URL of Python Package Index
+        .. versionadded:: Fluorine
+
     CLI Example:
 
     .. code-block:: bash
@@ -1479,6 +1478,13 @@ def list_all_versions(pkg,
                 '\'{0}\' is not a valid URL'.format(index_url)
             )
         cmd.extend(['--index-url', index_url])
+
+    if extra_index_url:
+        if not salt.utils.url.validate(extra_index_url, VALID_PROTOS):
+            raise CommandExecutionError(
+                '\'{0}\' is not a valid URL'.format(extra_index_url)
+            )
+        cmd.extend(['--extra-index-url', extra_index_url])
 
     cmd_kwargs = dict(cwd=cwd, runas=user, output_loglevel='quiet', redirect_stderr=True)
     if bin_env and os.path.isdir(bin_env):
