@@ -373,6 +373,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
             if os.path.isdir(config_dir):
                 shutil.rmtree(config_dir)
 
+    @skipIf(True, 'This test is unreliable. Need to investigate why more deeply.')
     @flaky
     def test_issue_15074_output_file_append(self):
         output_file_append = os.path.join(TMP, 'issue-15074')
@@ -406,6 +407,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
             if os.path.exists(output_file_append):
                 os.unlink(output_file_append)
 
+    @skipIf(True, 'This test is unreliable. Need to investigate why more deeply.')
     @flaky
     def test_issue_14979_output_file_permissions(self):
         output_file = os.path.join(TMP, 'issue-14979')
