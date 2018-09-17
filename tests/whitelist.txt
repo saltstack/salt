@@ -14,7 +14,6 @@ integration.minion.test_pillar
 integration.minion.test_timeout
 integration.modules.test_aliases
 integration.modules.test_archive
-integration.modules.test_autoruns
 integration.modules.test_beacons
 integration.modules.test_cmdmod
 integration.modules.test_config
@@ -24,7 +23,6 @@ integration.modules.test_decorators
 integration.modules.test_disk
 integration.modules.test_event
 integration.modules.test_file
-integration.modules.test_firewall
 integration.modules.test_gem
 integration.modules.test_gentoolkitmod
 integration.modules.test_git
@@ -40,7 +38,6 @@ integration.modules.test_mysql
 integration.modules.test_nacl
 integration.modules.test_network
 integration.modules.test_nilrt_ip
-integration.modules.test_ntp
 integration.modules.test_pillar
 integration.modules.test_pip
 integration.modules.test_pkg
@@ -57,7 +54,10 @@ integration.modules.test_sysmod
 integration.modules.test_system
 integration.modules.test_test
 integration.modules.test_useradd
+integration.modules.test_win_autoruns
 integration.modules.test_win_dns_client
+integration.modules.test_win_firewall
+integration.modules.test_win_ntp
 integration.modules.test_win_pkg
 integration.modules.test_win_servermanager
 integration.reactor.test_reactor
