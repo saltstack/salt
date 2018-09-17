@@ -259,7 +259,6 @@ class Reactor(salt.utils.process.SignalHandlingMultiprocessingProcess, salt.stat
                 listen=True)
         self.wrap = ReactWrap(self.opts)
 
-
         for data in self.event.iter_events(full=True):
             # skip all events fired by ourselves
             if data['data'].get('user') == self.wrap.event_user:
