@@ -212,6 +212,32 @@ def tagify(suffix='', prefix='', base=SALT):
     return TAGPARTER.join([part for part in parts if part])
 
 
+def update_stats(stats, start_time, data):
+    '''
+    Calculate the master stats and return the updated stat info
+    '''
+    end_time = time.time()
+    cmd = data['cmd']
+    # the jid is used as the create time
+    try:
+        jid = data['jid']
+    except KeyError:
+        try:
+            jid = data['data']['__pub_jid']
+        except KeyError:
+            log.info('jid not found in data, stats not updated')
+            return stats
+    create_time = int(time.mktime(time.strptime(jid, '%Y%m%d%H%M%S%f')))
+    latency = start_time - create_time
+    duration = end_time - start_time
+
+    stats[cmd]['runs'] += 1
+    stats[cmd]['latency'] = (stats[cmd]['latency'] * (stats[cmd]['runs'] - 1) + latency) / stats[cmd]['runs']
+    stats[cmd]['mean'] = (stats[cmd]['mean'] * (stats[cmd]['runs'] - 1) + duration) / stats[cmd]['runs']
+
+    return stats
+
+
 class SaltEvent(object):
     '''
     Warning! Use the get_event function or the code will not be
