@@ -2,6 +2,8 @@
 '''
 Work with virtual machines managed by libvirt
 
+:depends: libvirt Python module
+
 Connection
 ==========
 
@@ -14,8 +16,8 @@ hypervisor driver will be used. This can be overridden like this:
 .. code-block:: yaml
 
     virt:
-        connection:
-            uri: lxc:///
+      connection:
+        uri: lxc:///
 
 If the connection requires an authentication like for ESXi, this can be defined in the
 minion pillar data like this:
@@ -23,11 +25,11 @@ minion pillar data like this:
 .. code-block:: yaml
 
     virt:
-        connection:
-            uri: esx://10.1.1.101/?no_verify=1&auto_answer=1
-            auth:
-                username: user
-                password: secret
+      connection:
+        uri: esx://10.1.1.101/?no_verify=1&auto_answer=1
+        auth:
+          username: user
+          password: secret
 
 Connecting with SSH protocol
 ----------------------------
@@ -62,13 +64,10 @@ The calls not using the libvirt connection setup are:
 - ``is_*hyper``
 - all migration functions
 
-Reference:
-
 - `libvirt ESX URI format <http://libvirt.org/drvesx.html#uriformat>`_
 - `libvirt URI format <http://libvirt.org/uri.html#URI_config>`_
 - `libvirt authentication configuration <http://libvirt.org/auth.html#Auth_client_config>`_
 
-:depends: libvirt Python module
 '''
 # Special Thanks to Michael Dehann, many of the concepts, and a few structures
 # of his in the virt func module have been used
@@ -1282,8 +1281,7 @@ def init(name,
     model
         One of the disk busses allowed by libvirt (Default: depends on hypervisor)
 
-        See `libvirt documentation <https://libvirt.org/formatdomain.html#elementsDisks>`_
-        for the allowed bus types.
+        See the libvirt `disk element`_ documentation for the allowed bus types.
 
     image
         Path to the image to use for the disk. If no image is provided, an empty disk will be created
@@ -1303,8 +1301,7 @@ def init(name,
         Graphics type. The possible values are ``none``, ``'spice'``, ``'vnc'`` and other values
         allowed as a libvirt graphics type (Default: ``None``)
 
-        See `the libvirt documentation <https://libvirt.org/formatdomain.html#elementsGraphics>`_
-        for more details on the possible types
+        See the libvirt `graphics element`_ documentation for more details on the possible types.
 
     port
         Port to export the graphics on for ``vnc``, ``spice`` and ``rdp`` types.
@@ -1336,6 +1333,9 @@ def init(name,
 
         virt:
             images: /data/my/vm/images/
+
+    .. _disk element: https://libvirt.org/formatdomain.html#elementsDisks
+    .. _graphics element: https://libvirt.org/formatdomain.html#elementsGraphics
     '''
     caps = capabilities(**kwargs)
     os_types = sorted(set([guest['os_type'] for guest in caps['guests']]))
@@ -1647,40 +1647,48 @@ def update(name,
     :param mem: Amount of memory to allocate to the virtual machine in MiB.
     :param disk_profile: disk profile to use
     :param disks:
-        disks definitions as documented in the :func:`init` function.
+        Disk definitions as documented in the :func:`init` function.
         If neither the profile nor this parameter are defined, the disk devices
         will not be changed.
+
     :param nic_profile: network interfaces profile to use
     :param interfaces:
-        network interfaces  definitions as documented in the :func:`init` function.
+        Network interface definitions as documented in the :func:`init` function.
         If neither the profile nor this parameter are defined, the interface devices
         will not be changed.
+
     :param graphics:
-        the new graphics definition as defined in :ref:`init-graphics-def`. If not set,
-        the graphics will not be changed. To remove a graphics device set this parameter
-        to ``{'type': 'none'}``
+        The new graphics definition as defined in :ref:`init-graphics-def`. If not set,
+        the graphics will not be changed. To remove a graphics device, set this parameter
+        to ``{'type': 'none'}``.
+
     :param live:
         ``False`` to avoid trying to live update the definition. In such a case, the
         new definition is applied at the next start of the virtual machine. If ``True``,
         not all aspects of the definition can be live updated, but as much as possible
         will be attempted. (Default: ``True``)
+
     :param connection: libvirt connection URI, overriding defaults
     :param username: username to connect with, overriding defaults
     :param password: password to connect with, overriding defaults
 
     :return:
-        dictionary indicating the status of what has been done. It is structured in
+
+        Returns a dictionary indicating the status of what has been done. It is structured in
         the following way:
-        {
-          'definition': True,
-          'cpu': True,
-          'mem': True,
-          'disks': {'attached': [list of actually attached disks],
-                    'detached': [list of actually detached disks]},
-          'nics': {'attached': [list of actually attached nics],
-                   'detached': [list of actually detached nics]},
-          'errors': ['error messages for failures']
-        }
+
+        .. code-block:: python
+
+            {
+              'definition': True,
+              'cpu': True,
+              'mem': True,
+              'disks': {'attached': [list of actually attached disks],
+                        'detached': [list of actually detached disks]},
+              'nics': {'attached': [list of actually attached nics],
+                       'detached': [list of actually detached nics]},
+              'errors': ['error messages for failures']
+            }
 
     .. versionadded:: Fluorine
 
@@ -1689,6 +1697,7 @@ def update(name,
     .. code-block:: bash
 
         salt '*' virt.update domain cpu=2 mem=1024
+
     '''
     status = {
         'definition': False,
