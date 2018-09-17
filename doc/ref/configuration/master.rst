@@ -1474,6 +1474,40 @@ specific file.
 
     permissive_pki_access: False
 
+.. conf_master:: cmd_whitelist
+.. conf_master:: cmd_blacklist
+
+``cmd_whitelist/cmd_blacklist``
+-------------------------------
+
+Default: ``[]``
+
+By using this list, the shell command called over remote execution or
+via salt-call will be compared against each of the expressions in this list.
+Any shell command which match the blacklist will be blocked. If whitelist is SET,
+only the shell command which match the whitelist will be permitted.
+Exact matches, glob matches, and regular expressions are supported.
+
+.. note::
+
+    This whitelist/blacklist is only applied to direct executions made by the `salt`
+    and `salt-call` commands. This does NOT restrict commands called from states or
+    shell commands executed from other modules.
+
+.. versionadded:: Neon
+
+.. code-block:: yaml
+
+    cmd_whitelist:
+      - uptime
+      - ls*
+      - cat\s+.*
+
+    cmd_blacklist:
+      - reboot
+      - reboot*
+      - reboot($|\s+-.*)
+
 .. conf_master:: publisher_acl
 
 ``publisher_acl``

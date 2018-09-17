@@ -1695,6 +1695,8 @@ class LocalClient(object):
             )
             raise SaltClientError
 
+        self._check_cmd_avail(fun, tgt, tgt_type, arg)
+
         payload_kwargs = self._prep_pub(
                 tgt,
                 fun,
@@ -1802,6 +1804,8 @@ class LocalClient(object):
             )
             raise SaltClientError
 
+        self._check_cmd_avail(fun, tgt, tgt_type, arg)
+
         payload_kwargs = self._prep_pub(
                 tgt,
                 fun,
@@ -1866,6 +1870,43 @@ class LocalClient(object):
 
         raise tornado.gen.Return({'jid': payload['load']['jid'],
                                   'minions': payload['load']['minions']})
+
+    def _check_cmd_avail(self, fun, tgt, tgt_type, arg):
+        '''
+        Check to see if the given command can be run
+        '''
+
+        blist = self.opts.get('cmd_blacklist', [])
+        wlist = self.opts.get('cmd_whitelist', [])
+
+        if fun.startswith('cmd.') and (blist or wlist):
+            if isinstance(arg, list):
+                arg = ' '.join([str(x) if not isinstance(x, six.string_types) else x
+                                for x in arg])
+
+            for cmd in arg.split(';'):
+                cmd = cmd.strip()
+                for comp in blist:
+                    if salt.utils.stringutils.expr_match(cmd, comp):
+                        raise EauthAuthenticationError(
+                            'Failed to authenticate! This command is Forbidden. '
+                            'Please check cmd_blacklist.'
+                        )
+
+                if wlist:
+                    wret = False
+                    for comp in wlist:
+                        if salt.utils.stringutils.expr_match(cmd, comp):
+                            wret = True
+                            break
+                else:
+                    wret = True
+
+                if wret is False:
+                    raise EauthAuthenticationError(
+                        'Failed to authenticate! This command is Forbidden. '
+                        'Please check cmd_whitelist.'
+                    )
 
     def __del__(self):
         # This IS really necessary!

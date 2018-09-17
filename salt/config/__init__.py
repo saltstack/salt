@@ -244,6 +244,12 @@ VALID_OPTS = {
     # Rendrerer blacklist. Renderers from this list are disalloed even if specified in whitelist.
     'renderer_blacklist': list,
 
+    # Cmdmod whitelist. The only command from this list are allowed.
+    'cmd_whitelist': list,
+
+    # Cmdmod blacklist. Command from this list are disalloed even if specified in whitelist.
+    'cmd_blacklist': list,
+
     # A flag indicating that a highstate run should immediately cease if a failure occurs.
     'failhard': bool,
 
@@ -1258,6 +1264,8 @@ DEFAULT_MINION_OPTS = {
     'renderer': 'jinja|yaml',
     'renderer_whitelist': [],
     'renderer_blacklist': [],
+    'cmd_whitelist': [],
+    'cmd_blacklist': [],
     'random_startup_delay': 0,
     'failhard': False,
     'autoload_dynamic_modules': True,
