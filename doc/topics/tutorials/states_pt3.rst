@@ -159,7 +159,7 @@ MAC address for eth0:
     salt['network.hw_addr']('eth0')
 
 To examine the possible arguments to each execution module function,
-one can examine the `module reference documentation </ref/modules/all>`:
+one can examine the `module reference documentation </ref/modules/all>`_:
 
 Advanced SLS module syntax
 ==========================
