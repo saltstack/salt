@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Execute a command and read the output as YAMLEX. The YAMLEX data is then
-directly overlaid onto the minion's Pillar data
+Execute a command and read the output as YAMLEX. The YAMLEX data is then directly overlaid onto the minion's Pillar data
 '''
 
 # Don't "fix" the above docstring to put it on two lines, as the sphinx

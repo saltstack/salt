@@ -37,8 +37,8 @@ Example configuration
       pass: strong_pass_phrase
       timeout: 5.0
 
-Complete example
-=================
+Complete Example
+================
 
 .. code-block:: yaml
 
