@@ -353,7 +353,7 @@ def _available_services(refresh=False):
                     if six.PY2:
                         plist = plistlib.readPlist(true_path)
                     else:
-                        with open(true_path, 'rb') as plist_handle:
+                        with salt.utils.files.fopen(true_path, 'rb') as plist_handle:
                             plist = plistlib.load(plist_handle)
 
                 except Exception:
