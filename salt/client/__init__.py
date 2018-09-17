@@ -1684,7 +1684,7 @@ class LocalClient(object):
             )
             raise SaltClientError
 
-        self._check_cmd_avail(fun, tgt, expr_form, arg)
+        self._check_cmd_avail(fun, tgt, tgt_type, arg)
 
         payload_kwargs = self._prep_pub(
                 tgt,
@@ -1793,7 +1793,7 @@ class LocalClient(object):
             )
             raise SaltClientError
 
-        self._check_cmd_avail(fun, tgt, expr_form, arg)
+        self._check_cmd_avail(fun, tgt, tgt_type, arg)
 
         payload_kwargs = self._prep_pub(
                 tgt,
@@ -1860,7 +1860,7 @@ class LocalClient(object):
         raise tornado.gen.Return({'jid': payload['load']['jid'],
                                   'minions': payload['load']['minions']})
 
-    def _check_cmd_avail(self, fun, tgt, expr_form, arg):
+    def _check_cmd_avail(self, fun, tgt, tgt_type, arg):
         '''
         Check to see if the given command can be run
         '''
