@@ -1205,29 +1205,24 @@ def get_pending_domain_join():
 
         salt '*' system.get_pending_domain_join
     '''
-    vname = '(Default)'
     base_key = r'SYSTEM\CurrentControlSet\Services\Netlogon'
     avoid_key = r'{0}\AvoidSpnSet'.format(base_key)
     join_key = r'{0}\JoinDomain'.format(base_key)
 
     # If either the avoid_key or join_key is present,
     # then there is a reboot pending.
-
-    avoid_reg_ret = __salt__['reg.read_value']('HKLM', avoid_key, vname)
-
-    if avoid_reg_ret['success']:
-        log.debug('Found key: %s', avoid_key)
+    if __utils__['reg.key_exists']('HKLM', avoid_key):
+        log.debug('Key exists: %s', avoid_key)
         return True
     else:
-        log.debug('Unable to access key: %s', avoid_key)
+        log.debug('Key does not exist: %s', avoid_key)
 
-    join_reg_ret = __salt__['reg.read_value']('HKLM', join_key, vname)
-
-    if join_reg_ret['success']:
-        log.debug('Found key: %s', join_key)
+    if __utils__['reg.key_exists']('HKLM', join_key):
+        log.debug('Key exists: %s', join_key)
         return True
     else:
-        log.debug('Unable to access key: %s', join_key)
+        log.debug('Key does not exist: %s', join_key)
+
     return False
 
 
