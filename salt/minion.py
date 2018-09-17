@@ -410,6 +410,13 @@ def master_event(type, master=None):
     return event_map.get(type, None)
 
 
+def service_name():
+    '''
+    Return the proper service name based on platform
+    '''
+    return 'salt_minion' if 'bsd' in sys.platform else 'salt-minion'
+
+
 class MinionBase(object):
     def __init__(self, opts):
         self.opts = opts
@@ -2620,10 +2627,7 @@ class Minion(MinionBase):
                             delay = self.opts.get('random_reauth_delay', 5)
                             log.info('delaying random_reauth_delay %ss', delay)
                             try:
-                                self.functions['service.restart'](
-                                    'salt_minion' if 'bsd' in sys.platform
-                                    else 'salt-minion'
-                                )
+                                self.functions['service.restart'](service_name())
                             except KeyError:
                                 # Probably no init system (running in docker?)
                                 log.warning(
