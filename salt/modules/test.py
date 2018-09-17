@@ -119,7 +119,6 @@ def ping():
 
         salt '*' test.ping
     '''
-
     if not salt.utils.platform.is_proxy():
         log.debug('test.ping received for minion \'%s\'', __opts__.get('id'))
         return True
@@ -129,6 +128,36 @@ def ping():
             return __opts__['proxymodule'][ping_cmd]()
         else:
             return __proxy__[ping_cmd]()
+
+
+def master_ping():
+    '''
+    .. versionadded:: Neon
+
+    Used to make sure the minion can talk to the master. Not an ICMP ping. This
+    is designed to be used from the minion as a compliment to
+    :py:func:`test.ping <salt.modules.test.ping>`.
+
+    Returns ``True``.
+
+    .. note::
+        This function will return ``None`` for proxy minions.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-call test.master_ping
+    '''
+    if not salt.utils.platform.is_proxy():
+        if __opts__.get('__cli') != 'salt-call':
+            log.debug(
+                'test.master_ping initiated from master, it should be done '
+                'via salt-call instead.'
+            )
+        return __salt__['event.fire_master']('ping', 'minion_ping')
+    else:
+        return None
 
 
 def sleep(length):
