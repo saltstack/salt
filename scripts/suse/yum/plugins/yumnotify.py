@@ -32,7 +32,7 @@ def _get_checksum():
     Returns:
         hexdigest
     """
-    digest = hashlib.md5()
+    digest = hashlib.sha256()
     with open(RPM_PATH, "rb") as rpm_db_fh:
         while True:
             buff = rpm_db_fh.read(0x1000)
