@@ -17,7 +17,6 @@ from salt.ext.six.moves import cStringIO, StringIO
 
 log = logging.getLogger(__name__)
 
-HAS_XML = True
 try:
     # Python >2.5
     import xml.etree.cElementTree as ElementTree
@@ -35,7 +34,6 @@ except Exception:
                 import elementtree.ElementTree as ElementTree
             except Exception:
                 ElementTree = None
-                HAS_XML = False
 
 
 # True if we are running on Python 3.
@@ -49,7 +47,7 @@ else:
     import exceptions
 
 
-if HAS_XML:
+if ElementTree is not None:
     if not hasattr(ElementTree, 'ParseError'):
         class ParseError(Exception):
             '''
