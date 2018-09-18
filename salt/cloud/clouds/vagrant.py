@@ -25,12 +25,8 @@ import tempfile
 import salt.utils
 import salt.config as config
 import salt.client
-if six.PY3:
-    import ipaddress
-else:
-    import salt.ext.ipaddress as ipaddress
-from salt.exceptions import SaltCloudException, SaltCloudSystemExit, \
-    SaltInvocationError
+from salt._compat import ipaddress
+from salt.exceptions import SaltCloudException, SaltCloudSystemExit, SaltInvocationError
 
 # Get logging started
 log = logging.getLogger(__name__)
