@@ -78,28 +78,21 @@ def bytes_(s, encoding='latin-1', errors='strict'):
     return s
 
 
-if PY3:
-    def ascii_native_(s):
-        '''
-        Python 3 handler.
+def ascii_native_(s):
+    '''
+    Python 2/3 handler.
 
-        :param s:
-        :return:
-        '''
-        if isinstance(s, text_type):
-            s = s.encode('ascii')
-        return str(s, 'ascii', 'strict')
-else:
-    def ascii_native_(s):
-        '''
-        Python 2 handler.
+    :param s:
+    :return:
+    '''
+    if isinstance(s, text_type):
+        s = s.encode('ascii')
+    if PY3:
+        s = str(s, 'ascii', 'strict')
+    else:
+        s = str(s)
+    return s
 
-        :param s:
-        :return:
-        '''
-        if isinstance(s, text_type):
-            s = s.encode('ascii')
-        return str(s)
 
 ascii_native_.__doc__ = '''
 Python 3: If ``s`` is an instance of ``text_type``, return
