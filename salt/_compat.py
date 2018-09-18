@@ -10,6 +10,7 @@ import sys
 import types
 
 # Import 3rd-party libs
+from salt.exceptions import SaltException
 from salt.ext.six import binary_type, string_types, text_type
 from salt.ext.six.moves import cStringIO, StringIO
 
@@ -153,3 +154,64 @@ try:
         import salt.ext.ipaddress as ipaddress
 except ImportError:
     ipaddress = None
+
+
+class IPv6AddressScoped(ipaddress.IPv6Address):
+    '''
+    Represent and manipulate single IPv6 Addresses.
+    Scope-aware version
+    '''
+    def __init__(self, address):
+        '''
+        Instantiate a new IPv6 address object. Scope is moved to an attribute 'scope'.
+
+        Args:
+            address: A string or integer representing the IP
+
+              Additionally, an integer can be passed, so
+              IPv6Address('2001:db8::') == IPv6Address(42540766411282592856903984951653826560)
+              or, more generally
+              IPv6Address(int(IPv6Address('2001:db8::'))) == IPv6Address('2001:db8::')
+
+        Raises:
+            AddressValueError: If address isn't a valid IPv6 address.
+
+        :param address:
+        '''
+        if '%' in address:
+            buff = address.split('%')
+            if len(buff) != 2:
+                raise SaltException('Invalid IPv6 address: "{}"'.format(address))
+            address, self.__scope = buff
+        else:
+            self.__scope = None
+
+        ipaddress._BaseAddress.__init__(self, address)
+        ipaddress._BaseV6.__init__(self, address)
+
+        # Efficient constructor from integer.
+        if isinstance(address, int):
+            self._check_int_address(address)
+            self._ip = address
+            return
+
+        if isinstance(address, bytes):
+            self._check_packed_address(address, 16)
+            self._ip = ipaddress._int_from_bytes(address, 'big')
+            return
+
+        addr_str = str(address)
+        self._ip = self._ip_int_from_string(addr_str)
+
+    @property
+    def scope(self):
+        '''
+        Return scope of IPv6 address.
+
+        :return:
+        '''
+        return self.__scope
+
+
+if ipaddress:
+    ipaddress.IPv6Address = IPv6AddressScoped
