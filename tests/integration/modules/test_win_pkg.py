@@ -35,7 +35,7 @@ class WinPKGTest(ModuleCase):
         '''
         def _check_pkg(pkgs, exists=True):
             self.run_function('pkg.refresh_db')
-            repo_data = self.run_function('pkg.get_repo_data')
+            repo_data = self.run_function('pkg.get_repo_data', timeout=300)
             repo_cache = os.path.join(RUNTIME_VARS.TMP, 'rootdir', 'cache', 'files', 'base', 'win', 'repo-ng')
             for pkg in pkgs:
                 if exists:
