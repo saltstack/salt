@@ -15,7 +15,7 @@ import logging
 log = logging.getLogger(__name__)
 
 
-def mmatch(self, expr, delimiter, greedy):
+def mmatch(expr, delimiter, greedy):
     '''
     Return the minions found by looking via pillar
     '''

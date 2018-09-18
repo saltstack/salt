@@ -15,7 +15,7 @@ import salt.utils.data  # pylint: disable=3rd-party-module-not-gated
 log = logging.getLogger(__name__)
 
 
-def match(self, tgt, delimiter=DEFAULT_TARGET_DELIM):
+def match(tgt, delimiter=DEFAULT_TARGET_DELIM):
     '''
     Matches a grain based on regex
     '''
@@ -25,4 +25,4 @@ def match(self, tgt, delimiter=DEFAULT_TARGET_DELIM):
                   'statement from master')
         return False
     return salt.utils.data.subdict_match(
-        self.opts['grains'], tgt, delimiter=delimiter, regex_match=True)
+        __opts__['grains'], tgt, delimiter=delimiter, regex_match=True)

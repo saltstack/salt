@@ -1,9 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
 This is the default data matcher.
-
-NOTE: These functions are converted to methods on the Matcher class during master and minion startup.
-This is why they all take `self` but are not defined inside a `class:` declaration.
 '''
 from __future__ import absolute_import, print_function, unicode_literals
 
@@ -19,17 +16,17 @@ import salt.loader  # pylint: disable=3rd-party-module-not-gated
 log = logging.getLogger(__name__)
 
 
-def match(self, tgt):
+def match(tgt, functions=None):
     '''
     Match based on the local data store on the minion
     '''
-    if self.functions is None:
-        utils = salt.loader.utils(self.opts)
-        self.functions = salt.loader.minion_mods(self.opts, utils=utils)
+    if functions is None:
+        utils = salt.loader.utils(__opts__)
+        self.functions = salt.loader.minion_mods(__opts__, utils=utils)
     comps = tgt.split(':')
     if len(comps) < 2:
         return False
-    val = self.functions['data.getval'](comps[0])
+    val = functions['data.getval'](comps[0])
     if val is None:
         # The value is not defined
         return False

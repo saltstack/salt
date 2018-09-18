@@ -7,10 +7,12 @@ data matches this minion.
 from __future__ import absolute_import
 import logging
 
+import salt.loader
+
 log = logging.getLogger(__file__)
 
 
-def confirm_top(self, match, data, nodegroups=None):
+def confirm_top(match, data, nodegroups=None):
     '''
     Takes the data passed to a top file environment and determines if the
     data matches this minion
@@ -24,10 +26,13 @@ def confirm_top(self, match, data, nodegroups=None):
         if isinstance(item, dict):
             if 'match' in item:
                 matcher = item['match']
-    if hasattr(self, matcher + '_match'):
-        funcname = '{0}_match'.format(matcher)
-        if matcher == 'nodegroup':
-            return getattr(self, funcname)(match, nodegroups)
-        return getattr(self, funcname)(match)
+
+    matchers = salt.loader.matchers(__opts__)
+    funcname = matcher + '_match.match'
+    if matcher == 'nodegroup':
+        return matchers[funcname](match, nodegroups)
     else:
-        log.error('Attempting to match with unknown matcher: %s', matcher)
+        m = matchers[funcname]
+        return m(match)
+    # except TypeError, KeyError:
+    #     log.error('Attempting to match with unknown matcher: %s', matcher)
