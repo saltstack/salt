@@ -8,8 +8,8 @@ Matchers
 
 Matchers are modules that provide Salt's targeting abilities.  As of the
 Flourine release, matchers can be dynamically loaded.  Currently new matchers
-cannot be created, but existing matchers may have their functionality altered or
-extended.
+cannot be created because the required plumbing for the CLI does not exist yet.
+Existing matchers may have their functionality altered or extended.
 
 For details of targeting methods, see the :ref:`Targeting <targeting>` topic.
 
