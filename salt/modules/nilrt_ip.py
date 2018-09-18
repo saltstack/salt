@@ -871,7 +871,7 @@ def set_static_all(interface, address, netmask, gateway, nameservers=None):
     ipv4['Gateway'] = dbus.String('{0}'.format(gateway), variant_level=1)
     try:
         service.set_property('IPv4.Configuration', ipv4)
-        if not nameservers:
+        if nameservers:
             service.set_property('Nameservers.Configuration', [dbus.String('{0}'.format(d)) for d in nameservers])
     except Exception as exc:
         exc_msg = 'Couldn\'t set manual settings for service: {0}\nError: {1}\n'.format(service, exc)
