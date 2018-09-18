@@ -178,6 +178,10 @@ class IPv6AddressScoped(ipaddress.IPv6Address):
         '''
         return self.__scope
 
+    def __str__(self):
+        return text_type(self._string_from_ip_int(self._ip) +
+                         ('%' + self.scope if self.scope is not None else ''))
+
 
 def ip_address(address):
     """Take an IP string/int and return an object of the correct type.
