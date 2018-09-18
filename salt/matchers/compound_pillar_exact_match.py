@@ -9,7 +9,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
-import salt.utils.minions
+import salt.utils.minions  # pylint: disable=3rd-party-module-not-gated
 
 log = logging.getLogger(__name__)
 
