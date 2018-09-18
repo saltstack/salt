@@ -9,7 +9,7 @@ from __future__ import absolute_import
 import socket
 import ctypes
 import os
-import ipaddress
+from salt._compat import ipaddress
 import salt.ext.six as six
 
 

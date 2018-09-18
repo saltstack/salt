@@ -26,10 +26,7 @@ import salt.cache
 from salt.ext import six
 
 # Import 3rd-party libs
-if six.PY3:
-    import ipaddress
-else:
-    import salt.ext.ipaddress as ipaddress
+from salt._compat import ipaddress
 HAS_RANGE = False
 try:
     import seco.range  # pylint: disable=import-error
