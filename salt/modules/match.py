@@ -21,7 +21,7 @@ __func_alias__ = {
 log = logging.getLogger(__name__)
 
 
-def compound:memoryview(tgt, minion_id=None):
+def compound(tgt, minion_id=None):
     '''
     Return True if the minion ID matches the given compound target
 
