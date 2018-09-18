@@ -8,11 +8,14 @@ Salt compatibility code
 from __future__ import absolute_import, unicode_literals, print_function
 import sys
 import types
+import logging
 
 # Import 3rd-party libs
 from salt.exceptions import SaltException
 from salt.ext.six import binary_type, string_types, text_type, integer_types
 from salt.ext.six.moves import cStringIO, StringIO
+
+log = logging.getLogger(__name__)
 
 HAS_XML = True
 try:
