@@ -217,5 +217,40 @@ class IPv6AddressScoped(ipaddress.IPv6Address):
         return self.__scope
 
 
+def ip_address(address):
+    """Take an IP string/int and return an object of the correct type.
+
+    Args:
+        address: A string or integer, the IP address.  Either IPv4 or
+          IPv6 addresses may be supplied; integers less than 2**32 will
+          be considered to be IPv4 by default.
+
+    Returns:
+        An IPv4Address or IPv6Address object.
+
+    Raises:
+        ValueError: if the *address* passed isn't either a v4 or a v6
+          address
+
+    """
+    try:
+        return ipaddress.IPv4Address(address)
+    except (ipaddress.AddressValueError, ipaddress.NetmaskValueError):
+        log.debug('Error while parsing IPv4 address: %s', address, exc_info=True)
+
+    try:
+        return IPv6AddressScoped(address)
+    except (ipaddress.AddressValueError, ipaddress.NetmaskValueError):
+        log.debug('Error while parsing IPv6 address: %s', address, exc_info=True)
+
+    if isinstance(address, bytes):
+        raise ipaddress.AddressValueError('{} does not appear to be an IPv4 or IPv6 address. '
+                                          'Did you pass in a bytes (str in Python 2) instead '
+                                          'of a unicode object?'.format(repr(address)))
+
+    raise ValueError('{} does not appear to be an IPv4 or IPv6 address'.format(repr(address)))
+
+
 if ipaddress:
     ipaddress.IPv6Address = IPv6AddressScoped
+    ipaddress.ip_address = ip_address
