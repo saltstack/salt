@@ -20,7 +20,6 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.ext import six
 import salt.utils.network
 import salt.utils.path
 import salt.modules.network as network
