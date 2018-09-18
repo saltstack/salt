@@ -75,10 +75,11 @@ def bytes_(s, encoding='latin-1', errors='strict'):
 
 def ascii_native_(s):
     '''
-    Python 2/3 handler.
+    Python 3: If ``s`` is an instance of ``text_type``, return
+    ``s.encode('ascii')``, otherwise return ``str(s, 'ascii', 'strict')``
 
-    :param s:
-    :return:
+    Python 2: If ``s`` is an instance of ``text_type``, return
+    ``s.encode('ascii')``, otherwise return ``str(s)``
     '''
     if isinstance(s, text_type):
         s = s.encode('ascii')
@@ -86,19 +87,13 @@ def ascii_native_(s):
     return str(s, 'ascii', 'strict') if PY3 else s
 
 
-ascii_native_.__doc__ = '''
-Python 3: If ``s`` is an instance of ``text_type``, return
-``s.encode('ascii')``, otherwise return ``str(s, 'ascii', 'strict')``
-
-Python 2: If ``s`` is an instance of ``text_type``, return
-``s.encode('ascii')``, otherwise return ``str(s)``
-'''
-
-
 def native_(s, encoding='latin-1', errors='strict'):
     '''
-    If ``s`` is an instance of ``text_type``, return
-    ``s``, otherwise return ``str(s, encoding, errors)``
+    Python 3: If ``s`` is an instance of ``text_type``, return ``s``, otherwise
+    return ``str(s, encoding, errors)``
+
+    Python 2: If ``s`` is an instance of ``text_type``, return
+    ``s.encode(encoding, errors)``, otherwise return ``str(s)``
     '''
     if PY3:
         out = s if isinstance(s, text_type) else str(s, encoding, errors)
@@ -106,14 +101,6 @@ def native_(s, encoding='latin-1', errors='strict'):
         out = s.encode(encoding, errors) if isinstance(s, text_type) else str(s)
 
     return out
-
-native_.__doc__ = '''
-Python 3: If ``s`` is an instance of ``text_type``, return ``s``, otherwise
-return ``str(s, encoding, errors)``
-
-Python 2: If ``s`` is an instance of ``text_type``, return
-``s.encode(encoding, errors)``, otherwise return ``str(s)``
-'''
 
 
 def string_io(data=None):  # cStringIO can't handle unicode
