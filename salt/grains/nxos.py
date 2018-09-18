@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Grains for Cisco NX OS Switches Proxy minions
+Grains for Cisco NX-OS minions
 
 .. versionadded: 2016.11.0
 
@@ -22,18 +22,17 @@ __virtualname__ = 'nxos'
 
 
 def __virtual__():
-    try:
-        if salt.utils.platform.is_proxy() and __opts__['proxy']['proxytype'] == 'nxos':
-            return __virtualname__
-    except KeyError:
-        pass
-
-    return False
+    return __virtualname__
 
 
 def proxy_functions(proxy=None):
-    if proxy is None:
+    '''
+    The loader will execute functions with one argument and pass
+    a reference to the proxymodules LazyLoader object.  However,
+    grains sometimes get called before the LazyLoader object is setup
+    so `proxy` might be None.
+    '''
+    try:
+        return {'nxos': salt.modules.nxos.grains()}
+    except NameError:
         return {}
-    if proxy['nxos.initialized']() is False:
-        return {}
-    return {'nxos': proxy['nxos.grains']()}

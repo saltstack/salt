@@ -270,7 +270,7 @@ def present(name,
     gid
         The id of the default group to assign to the user. Either a group name
         or gid can be used. If not specified, and the user does not exist, then
-        he next available gid will be assigned.
+        the next available gid will be assigned.
 
     gid_from_name : False
         If ``True``, the default group id will be set to the id of the group
@@ -334,7 +334,7 @@ def present(name,
         Linux, FreeBSD, NetBSD, OpenBSD, and Solaris. If the ``empty_password``
         argument is set to ``True`` then ``password`` is ignored.
         For Windows this is the plain text password.
-        For Linux, the hash can be generated with ``openssl passwd -1``.
+        For Linux, the hash can be generated with ``mkpasswd -m sha-256``.
 
     .. versionchanged:: 0.16.0
        BSD support added.
