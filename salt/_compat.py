@@ -82,11 +82,8 @@ def ascii_native_(s):
     '''
     if isinstance(s, text_type):
         s = s.encode('ascii')
-    if PY3:
-        s = str(s, 'ascii', 'strict')
-    else:
-        s = str(s)
-    return s
+
+    return str(s, 'ascii', 'strict') if PY3 else s
 
 
 ascii_native_.__doc__ = '''
