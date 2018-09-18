@@ -510,6 +510,30 @@ def get_interfaces_details():
     return {'interfaces': list(map(_get_info, _interfaces))}
 
 
+def _change_state_legacy(interface, new_state):
+    '''
+    Enable or disable an interface on a legacy distro
+
+    Change adapter mode to TCP/IP. If previous adapter mode was EtherCAT, the target will need reboot.
+
+    :param interface: interface label
+    :param new_state: up or down
+    :return: True if the service was enabled, otherwise an exception will be thrown.
+    :rtype: bool
+    '''
+    initial_mode = _get_adapter_mode_info(interface)
+    _save_config(interface, 'Mode', 'TCPIP' if new_state == 'up' else 'Disabled')
+    if initial_mode == 'ethercat':
+        __salt__['system.set_reboot_required_witnessed']()
+    else:
+        out = __salt__['cmd.run_all']('ip link set {0} {1}'.format(interface, new_state))
+        if out['retcode'] != 0:
+            msg = 'Couldn\'t {0} interface {1}. Error: {2}'.format('enable' if new_state == 'up' else 'disable',
+                                                                   interface, out['stderr'])
+            raise salt.exceptions.CommandExecutionError(msg)
+    return True
+
+
 def _change_state(interface, new_state):
     '''
     Enable or disable an interface
@@ -522,17 +546,7 @@ def _change_state(interface, new_state):
     :rtype: bool
     '''
     if __grains__['lsb_distrib_id'] == 'nilrt':
-        initial_mode = _get_adapter_mode_info(interface)
-        _save_config(interface, 'Mode', 'TCPIP' if new_state == 'up' else 'Disabled')
-        if initial_mode == 'ethercat':
-            __salt__['system.set_reboot_required_witnessed']()
-        else:
-            out = __salt__['cmd.run_all']('ip link set {0} {1}'.format(interface, new_state))
-            if out['retcode'] != 0:
-                msg = 'Couldn\'t {0} interface {1}. Error: {2}'.format('enable' if new_state == 'up' else 'disable',
-                                                                       interface, out['stderr'])
-                raise salt.exceptions.CommandExecutionError(msg)
-        return True
+        return _change_state_legacy(interface, new_state)
     service = _interface_to_service(interface)
     if not service:
         raise salt.exceptions.CommandExecutionError('Invalid interface name: {0}'.format(interface))
