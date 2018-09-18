@@ -11,7 +11,7 @@ import types
 
 # Import 3rd-party libs
 from salt.exceptions import SaltException
-from salt.ext.six import binary_type, string_types, text_type
+from salt.ext.six import binary_type, string_types, text_type, integer_types
 from salt.ext.six.moves import cStringIO, StringIO
 
 HAS_XML = True
@@ -178,7 +178,7 @@ class IPv6AddressScoped(ipaddress.IPv6Address):
 
         :param address:
         '''
-        if '%' in address:
+        if isinstance(address, string_types) and '%' in address:
             buff = address.split('%')
             if len(buff) != 2:
                 raise SaltException('Invalid IPv6 address: "{}"'.format(address))
@@ -186,11 +186,12 @@ class IPv6AddressScoped(ipaddress.IPv6Address):
         else:
             self.__scope = None
 
-        ipaddress._BaseAddress.__init__(self, address)
-        ipaddress._BaseV6.__init__(self, address)
+        if sys.version_info.major == 2:
+            ipaddress._BaseAddress.__init__(self, address)
+            ipaddress._BaseV6.__init__(self, address)
 
         # Efficient constructor from integer.
-        if isinstance(address, int):
+        if isinstance(address, integer_types):
             self._check_int_address(address)
             self._ip = address
             return
