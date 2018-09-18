@@ -1174,17 +1174,15 @@ def get_pending_component_servicing():
 
         salt '*' system.get_pending_component_servicing
     '''
-    vname = '(Default)'
     key = r'SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\RebootPending'
 
-    reg_ret = __salt__['reg.read_value']('HKLM', key, vname)
-
     # So long as the registry key exists, a reboot is pending.
-    if reg_ret['success']:
-        log.debug('Found key: %s', key)
+    if __utils__['reg.key_exists']('HKLM', key):
+        log.debug('Key exists: %s', key)
         return True
     else:
-        log.debug('Unable to access key: %s', key)
+        log.debug('Key does not exist: %s', key)
+
     return False
 
 
@@ -1316,17 +1314,15 @@ def get_pending_update():
 
         salt '*' system.get_pending_update
     '''
-    vname = '(Default)'
     key = r'SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired'
 
-    reg_ret = __salt__['reg.read_value']('HKLM', key, vname)
-
     # So long as the registry key exists, a reboot is pending.
-    if reg_ret['success']:
-        log.debug('Found key: %s', key)
+    if __utils__['reg.key_exists']('HKLM', key):
+        log.debug('Key exists: %s', key)
         return True
     else:
-        log.debug('Unable to access key: %s', key)
+        log.debug('Key does not exist: %s', key)
+
     return False
 
 
@@ -1416,7 +1412,9 @@ def get_pending_reboot():
     '''
 
     # Order the checks for reboot pending in most to least likely.
-    checks = (get_pending_update, get_pending_file_rename, get_pending_servermanager,
+    checks = (get_pending_update,
+              get_pending_file_rename,
+              get_pending_servermanager,
               get_pending_component_servicing,
               get_reboot_required_witnessed,
               get_pending_computer_name,
