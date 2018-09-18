@@ -53,7 +53,6 @@ if ElementTree is not None:
             '''
             older versions of ElementTree do not have ParseError
             '''
-            pass
 
         ElementTree.ParseError = ParseError
 
