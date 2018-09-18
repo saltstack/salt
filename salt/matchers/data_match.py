@@ -22,7 +22,7 @@ def match(tgt, functions=None):
     '''
     if functions is None:
         utils = salt.loader.utils(__opts__)
-        self.functions = salt.loader.minion_mods(__opts__, utils=utils)
+        functions = salt.loader.minion_mods(__opts__, utils=utils)
     comps = tgt.split(':')
     if len(comps) < 2:
         return False

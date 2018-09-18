@@ -16,4 +16,4 @@ def match(tgt):
         return bool(','+__opts__['id']+',' in tgt
                     or tgt.startswith(__opts__['id']+',')
                     or tgt.endswith(','+__opts__['id']))
-    return bool(self.opts['id'] in tgt)
+    return bool(__opts__['id'] in tgt)
