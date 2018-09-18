@@ -8,16 +8,18 @@ This is why they all take `self` but are not defined inside a `class:` declarati
 from __future__ import absolute_import, print_function, unicode_literals
 
 import salt.utils.minions   # pylint: disable=3rd-party-module-not-gated
+import salt.loader
 
 
-def match(self, tgt, nodegroups):
+def match(tgt, nodegroups):
     '''
     This is a compatibility matcher and is NOT called when using
     nodegroups for remote execution, but is called when the nodegroups
     matcher is used in states
     '''
     if tgt in nodegroups:
-        return self.compound_match(
+        matchers = salt.loader.matchers(__opts__)
+        return matchers['compound_match.match'](
             salt.utils.minions.nodegroup_comp(tgt, nodegroups)
         )
     return False

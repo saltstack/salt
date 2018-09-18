@@ -19,14 +19,14 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 
-def match(self, tgt):
+def match(tgt):
     '''
     Matches based on range cluster
     '''
     if HAS_RANGE:
-        range_ = seco.range.Range(self.opts['range_server'])
+        range_ = seco.range.Range(__opts__['range_server'])
         try:
-            return self.opts['grains']['fqdn'] in range_.expand(tgt)
+            return __opts__['grains']['fqdn'] in range_.expand(tgt)
         except seco.range.RangeException as exc:
             log.debug('Range exception in compound match: %s', exc)
             return False

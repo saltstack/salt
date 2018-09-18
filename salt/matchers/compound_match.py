@@ -1,15 +1,12 @@
 # -*- coding: utf-8 -*-
 '''
 This is the default compound matcher function.
-
-NOTE: These functions are converted to methods on the Matcher class during master and minion startup.
-This is why they all take `self` but are not defined inside a `class:` declaration.
 '''
 from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 from salt.ext import six  # pylint: disable=3rd-party-module-not-gated
-
+import salt.loader
 import salt.utils.minions  # pylint: disable=3rd-party-module-not-gated
 
 HAS_RANGE = False
@@ -22,16 +19,17 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 
-def match(self, tgt):
+def match(tgt):
     '''
     Runs the compound target check
     '''
-    nodegroups = self.opts.get('nodegroups', {})
+    nodegroups = __opts__.get('nodegroups', {})
+    matchers = salt.loader.matchers(__opts__)
 
     if not isinstance(tgt, six.string_types) and not isinstance(tgt, (list, tuple)):
         log.error('Compound target received that is neither string, list nor tuple')
         return False
-    log.debug('compound_match: %s ? %s', self.opts['id'], tgt)
+    log.debug('compound_match: %s ? %s', __opts__['id'], tgt)
     ref = {'G': 'grain',
            'P': 'grain_pcre',
            'I': 'pillar',
@@ -96,15 +94,15 @@ def match(self, tgt):
                 engine_kwargs['delimiter'] = target_info['delimiter']
 
             results.append(
-                six.text_type(getattr(self, '{0}_match'.format(engine))(*engine_args, **engine_kwargs))
+                six.text_type(matchers['{0}_match.match'.format(engine)](*engine_args, **engine_kwargs))
             )
 
         else:
             # The match is not explicitly defined, evaluate it as a glob
-            results.append(six.text_type(self.glob_match(word)))
+            results.append(six.text_type(matchers['glob_match.match'](word)))
 
     results = ' '.join(results)
-    log.debug('compound_match %s ? "%s" => "%s"', self.opts['id'], tgt, results)
+    log.debug('compound_match %s ? "%s" => "%s"', __opts__['id'], tgt, results)
     try:
         return eval(results)  # pylint: disable=W0123
     except Exception:

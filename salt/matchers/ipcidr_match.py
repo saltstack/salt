@@ -1,9 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
 This is the default ipcidr matcher.
-
-NOTE: These functions are converted to methods on the Matcher class during master and minion startup.
-This is why they all take `self` but are not defined inside a `class:` declaration.
 '''
 from __future__ import absolute_import, print_function, unicode_literals
 
@@ -20,7 +17,7 @@ else:
 log = logging.getLogger(__name__)
 
 
-def match(self, tgt):
+def match(tgt):
     '''
     Matches based on IP address or CIDR notation
     '''
@@ -36,7 +33,7 @@ def match(self, tgt):
             return []
     proto = 'ipv{0}'.format(tgt.version)
 
-    grains = self.opts['grains']
+    grains = __opts__['grains']
 
     if proto not in grains:
         match = False

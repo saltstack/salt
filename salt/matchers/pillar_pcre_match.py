@@ -24,5 +24,5 @@ def match(self, tgt, delimiter=DEFAULT_TARGET_DELIM):
                   'statement from master')
         return False
     return salt.utils.data.subdict_match(
-        self.opts['pillar'], tgt, delimiter=delimiter, regex_match=True
+        __opts__['pillar'], tgt, delimiter=delimiter, regex_match=True
     )
