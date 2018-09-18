@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-State module for Cisco NX OS Switches Proxy minions
+State module for Cisco NX-OS Switch Proxy and Native minions
 
 .. versionadded: 2016.11.0
 
@@ -146,7 +146,7 @@ def user_present(name, password=None, roles=None, encrypted=False, crypt_salt=No
     correct_roles = True
     if roles is not None:
         cur_roles = __salt__['nxos.cmd']('get_roles', username=name)
-        correct_roles = set(roles) != set(cur_roles)
+        correct_roles = set(roles) == set(cur_roles)
 
     if not correct_roles:
         ret['comment'] = 'Failed to set correct roles'

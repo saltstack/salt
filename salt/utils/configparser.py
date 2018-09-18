@@ -72,13 +72,7 @@ class GitConfigParser(RawConfigParser, object):  # pylint: disable=undefined-var
         lineno = 0
         e = None                              # None, or an exception
         while True:
-            line = fp.readline()
-            if six.PY2:
-                try:
-                    line = line.decode(__salt_system_encoding__)
-                except UnicodeDecodeError:
-                    # Fall back to UTF-8
-                    line = line.decode('utf-8')
+            line = salt.utils.stringutils.to_unicode(fp.readline())
             if not line:
                 break
             lineno = lineno + 1

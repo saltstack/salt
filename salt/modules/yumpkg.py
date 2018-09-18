@@ -40,7 +40,6 @@ from salt.ext.six.moves import configparser
 
 # pylint: enable=import-error,redefined-builtin
 
-import salt.defaults.exitcodes
 # Import Salt libs
 import salt.utils.args
 import salt.utils.data
@@ -54,6 +53,7 @@ import salt.utils.pkg
 import salt.utils.pkg.rpm
 import salt.utils.systemd
 import salt.utils.versions
+import salt.defaults.exitcodes
 from salt.utils.versions import LooseVersion as _LooseVersion
 import salt.utils.environment
 from salt.exceptions import (
@@ -2750,6 +2750,8 @@ def mod_repo(repo, basedir=None, **kwargs):
         the URL for yum to reference
     mirrorlist
         the URL for yum to reference
+    key_url
+        the URL to gather the repo key from (salt:// or any other scheme supported by cp.cache_file)
 
     Key/Value pairs may also be removed from a repo's configuration by setting
     a key to a blank value. Bear in mind that a name cannot be deleted, and a
@@ -2847,6 +2849,22 @@ def mod_repo(repo, basedir=None, **kwargs):
             raise SaltInvocationError(
                 'Cannot delete mirrorlist without specifying baseurl'
             )
+
+    # Import repository gpg key
+    if 'key_url' in repo_opts:
+        key_url = kwargs['key_url']
+        fn_ = __salt__['cp.cache_file'](key_url, saltenv=(kwargs['saltenv'] if 'saltenv' in kwargs else 'base'))
+        if not fn_:
+            raise CommandExecutionError(
+                'Error: Unable to copy key from URL {0} for repository {1}'.format(key_url, repo_opts['name'])
+            )
+        cmd = ['rpm', '--import', fn_]
+        out = __salt__['cmd.retcode'](cmd, python_shell=False, **kwargs)
+        if out != salt.defaults.exitcodes.EX_OK:
+            raise CommandExecutionError(
+                'Error: Unable to import key from URL {0} for repository {1}'.format(key_url, repo_opts['name'])
+            )
+        del repo_opts['key_url']
 
     # Delete anything in the todelete list
     for key in todelete:
