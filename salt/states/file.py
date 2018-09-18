@@ -1146,7 +1146,9 @@ def _validate_str_list(arg):
     '''
     ensure ``arg`` is a list of strings
     '''
-    if isinstance(arg, six.string_types):
+    if isinstance(arg, six.binary_type):
+        ret = [salt.utils.stringutils.to_unicode(arg)]
+    elif isinstance(arg, six.string_types):
         ret = [arg]
     elif isinstance(arg, Iterable) and not isinstance(arg, Mapping):
         ret = []
@@ -2588,9 +2590,9 @@ def managed(name,
                 .format(contents_id)
             )
 
-        if isinstance(use_contents, bytes) and b'\0' in use_contents:
+        if isinstance(use_contents, six.binary_type) and b'\0' in use_contents:
             contents = use_contents
-        elif isinstance(use_contents, six.string_types) and str('\0') in use_contents:
+        elif isinstance(use_contents, six.text_type) and str('\0') in use_contents:
             contents = use_contents
         else:
             validated_contents = _validate_str_list(use_contents)
