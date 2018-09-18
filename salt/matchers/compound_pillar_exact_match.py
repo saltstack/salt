@@ -18,6 +18,6 @@ def mmatch(expr, delimiter, greedy):
     '''
     Return the minions found by looking via pillar
     '''
-    ckminions = salt.utils.minions.CkMinions()
+    ckminions = salt.utils.minions.CkMinions(__opts__)
     return ckminions._check_compound_minions(expr, delimiter, greedy,
-                                             exact_match=True)
+                                             pillar_exact=True)
