@@ -2,7 +2,7 @@
 '''
 Salt compatibility code
 '''
-# pylint: disable=import-error,unused-import,invalid-name
+# pylint: disable=import-error,unused-import,invalid-name,W0231,W0233
 
 # Import python libs
 from __future__ import absolute_import, unicode_literals, print_function
