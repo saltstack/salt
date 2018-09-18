@@ -194,10 +194,13 @@ def key_exists(hive, key, use_32bit_registry=False):
 
     try:
         handle = win32api.RegOpenKeyEx(hkey, local_key, 0, access_mask)
-        win32api.RegCloseKey(handle)
         return True
-    except pywintypes.error:
-        return False
+    except pywintypes.error as exc:
+        if exc.winerror == 2:
+            return False
+        raise
+    finally:
+        win32api.RegCloseKey(handle)
 
 
 def value_exists(hive, key, vname, use_32bit_registry=False):
@@ -239,22 +242,26 @@ def value_exists(hive, key, vname, use_32bit_registry=False):
 
     try:
         handle = win32api.RegOpenKeyEx(hkey, local_key, 0, access_mask)
-        try:
-            # RegQueryValueEx returns and accepts unicode data
-            _, _ = win32api.RegQueryValueEx(handle, local_vname)
-            win32api.RegCloseKey(handle)
-            # value/data pair exists
+    except pywintypes.error as exc:
+        if exc.winerror == 2:
+            # The key containing the value/data pair does not exist
+            return False
+        raise
+
+    try:
+        # RegQueryValueEx returns and accepts unicode data
+        _, _ = win32api.RegQueryValueEx(handle, local_vname)
+        # value/data pair exists
+        return True
+    except pywintypes.error as exc:
+        if exc.winerror == 2 and vname is None:
+            # value/data pair exists but is empty
             return True
-        except pywintypes.error as exc:
-            if exc.winerror == 2 and vname is None:
-                # value/data pair exists but is empty
-                return True
-            else:
-                # value/data pair not found
-                return False
-    except pywintypes.error:
-        # The key containing the value/data pair does not exist
-        return False
+        else:
+            # value/data pair not found
+            return False
+    finally:
+        win32api.RegCloseKey(handle)
 
 
 def broadcast_change():
