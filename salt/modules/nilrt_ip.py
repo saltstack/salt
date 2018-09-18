@@ -216,12 +216,15 @@ def _get_service_info(service):
         data['ipv4']['dns'] = nameservers
     else:
         data['up'] = False
+        data['ipv4'] = {
+            'requestmode': 'disabled'
+        }
 
-    if 'ipv4' in data:
-        data['ipv4']['supportedrequestmodes'] = [
-            'static',
-            'dhcp_linklocal'
-        ]
+    data['ipv4']['supportedrequestmodes'] = [
+        'static',
+        'dhcp_linklocal',
+        'disabled'
+    ]
     return data
 
 
@@ -355,7 +358,7 @@ def _get_static_info(interface):
         'hwaddr': interface.hwaddr[:-1],
         'up': False,
         'ipv4': {
-            'supportedrequestmodes': ['static', 'dhcp_linklocal'],
+            'supportedrequestmodes': ['static', 'dhcp_linklocal', 'disabled'],
             'requestmode': 'static'
         },
         'wireless': False
