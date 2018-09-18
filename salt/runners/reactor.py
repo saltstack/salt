@@ -109,3 +109,53 @@ def delete(event, saltenv="base", test=None):
 
     res = sevent.get_event(wait=30, tag="salt/reactors/manage/delete-complete")
     return res["result"]
+
+
+def is_leader():
+    """
+    Return whether the running reactor is acting as a leader (responding to events).
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run reactor.is_leader
+    """
+    sevent = salt.utils.event.get_event(
+        "master",
+        __opts__["sock_dir"],
+        __opts__["transport"],
+        opts=__opts__,
+        listen=True,
+    )
+
+    __jid_event__.fire_event({}, "salt/reactors/manage/is_leader")
+
+    res = sevent.get_event(wait=30, tag="salt/reactors/manage/leader/value")
+    return res["result"]
+
+
+def set_leader(value=True):
+    """
+    Set the current reactor to act as a leader (responding to events). Defaults to True
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run reactor.set_leader True
+    """
+    sevent = salt.utils.event.get_event(
+        "master",
+        __opts__["sock_dir"],
+        __opts__["transport"],
+        opts=__opts__,
+        listen=True,
+    )
+
+    __jid_event__.fire_event(
+        {"id": __opts__["id"], "value": value}, "salt/reactors/manage/set_leader"
+    )
+
+    res = sevent.get_event(wait=30, tag="salt/reactors/manage/leader/value")
+    return res["result"]

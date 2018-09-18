@@ -7,9 +7,11 @@ Functions which implement running reactor jobs
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import collections
 import fnmatch
 import glob
 import logging
+import time
 
 # Import salt libs
 import salt.client
@@ -53,6 +55,14 @@ class Reactor(salt.utils.process.SignalHandlingProcess, salt.state.Compiler):
         local_minion_opts["file_client"] = "local"
         self.minion = salt.minion.MasterMinion(local_minion_opts)
         salt.state.Compiler.__init__(self, opts, self.minion.rend)
+        self.event = salt.utils.event.get_master_event(
+            opts, opts["sock_dir"], listen=False
+        )
+        self.stats = collections.defaultdict(
+            lambda: {"mean": 0, "latency": 0, "runs": 0}
+        )
+        self.stat_clock = time.time()
+        self.is_leader = True
 
     # We need __setstate__ and __getstate__ to avoid pickling errors since
     # 'self.rend' (from salt.state.Compiler) contains a function reference
@@ -244,29 +254,43 @@ class Reactor(salt.utils.process.SignalHandlingProcess, salt.state.Compiler):
         ) as event:
             self.wrap = ReactWrap(self.opts)
 
-            for data in event.iter_events(full=True):
+            for data in self.event.iter_events(full=True):
                 # skip all events fired by ourselves
                 if data["data"].get("user") == self.wrap.event_user:
                     continue
+                if data["tag"].endswith("salt/reactors/manage/is_leader"):
+                    self.event.fire_event(
+                        {"result": self.is_leader}, "salt/reactors/manage/leader/value"
+                    )
+                if data["tag"].endswith("salt/reactors/manage/set_leader"):
+                    # we only want to register events from the local master
+                    if data["data"].get("id") == self.opts["id"]:
+                        self.is_leader = data["data"]["value"]
+                    self.event.fire_event(
+                        {"result": self.is_leader}, "salt/reactors/manage/leader/value"
+                    )
                 if data["tag"].endswith("salt/reactors/manage/add"):
                     _data = data["data"]
                     res = self.add_reactor(_data["event"], _data["reactors"])
-                    event.fire_event(
+                    self.event.fire_event(
                         {"reactors": self.list_all(), "result": res},
                         "salt/reactors/manage/add-complete",
                     )
                 elif data["tag"].endswith("salt/reactors/manage/delete"):
                     _data = data["data"]
                     res = self.delete_reactor(_data["event"])
-                    event.fire_event(
+                    self.event.fire_event(
                         {"reactors": self.list_all(), "result": res},
                         "salt/reactors/manage/delete-complete",
                     )
                 elif data["tag"].endswith("salt/reactors/manage/list"):
-                    event.fire_event(
+                    self.event.fire_event(
                         {"reactors": self.list_all()},
                         "salt/reactors/manage/list-results",
                     )
+                # do not handle any reactions if not leader in cluster
+                if not self.is_leader:
+                    continue
                 else:
                     reactors = self.list_reactors(data["tag"])
                     if not reactors:
