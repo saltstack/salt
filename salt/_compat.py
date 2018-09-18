@@ -197,13 +197,15 @@ def ip_address(address):
     """
     try:
         return ipaddress.IPv4Address(address)
-    except (ipaddress.AddressValueError, ipaddress.NetmaskValueError):
-        log.debug('Error while parsing IPv4 address: %s', address, exc_info=True)
+    except (ipaddress.AddressValueError, ipaddress.NetmaskValueError) as err:
+        log.debug('Error while parsing IPv4 address: %s', address)
+        log.debug(err)
 
     try:
         return IPv6AddressScoped(address)
-    except (ipaddress.AddressValueError, ipaddress.NetmaskValueError):
-        log.debug('Error while parsing IPv6 address: %s', address, exc_info=True)
+    except (ipaddress.AddressValueError, ipaddress.NetmaskValueError) as err:
+        log.debug('Error while parsing IPv6 address: %s', address)
+        log.debug(err)
 
     if isinstance(address, bytes):
         raise ipaddress.AddressValueError('{} does not appear to be an IPv4 or IPv6 address. '
