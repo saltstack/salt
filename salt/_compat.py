@@ -197,15 +197,14 @@ class IPv6AddressScoped(ipaddress.IPv6Address):
         if isinstance(address, integer_types):
             self._check_int_address(address)
             self._ip = address
-            return
-
-        if isinstance(address, bytes):
+        elif isinstance(address, bytes):
             self._check_packed_address(address, 16)
             self._ip = ipaddress._int_from_bytes(address, 'big')
-            return
-
-        addr_str = str(address)
-        self._ip = self._ip_int_from_string(addr_str)
+        else:
+            address = str(address)
+            if '/' in address:
+                raise ipaddress.AddressValueError("Unexpected '/' in {}".format(address))
+            self._ip = self._ip_int_from_string(address)
 
     @property
     def scope(self):
