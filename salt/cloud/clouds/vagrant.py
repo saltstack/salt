@@ -25,7 +25,6 @@ import tempfile
 import salt.utils
 import salt.config as config
 import salt.client
-import salt.ext.six as six
 if six.PY3:
     import ipaddress
 else:
