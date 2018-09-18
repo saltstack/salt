@@ -807,6 +807,14 @@ class TestDaemon(object):
                 ],
             }
         )
+        master_opts.setdefault('reactor', []).append(
+            {
+                'salt/test/reactor': [
+                    os.path.join(FILES, 'reactor-test.sls')
+                ],
+
+            }
+        )
         for opts_dict in (master_opts, syndic_master_opts):
             if 'ext_pillar' not in opts_dict:
                 opts_dict['ext_pillar'] = []
