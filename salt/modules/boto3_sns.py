@@ -49,6 +49,7 @@ import logging
 # Import Salt libs
 import salt.utils.versions
 from salt.ext.six.moves import range
+from salt.exceptions import SaltInvocationError
 log = logging.getLogger(__name__)  # pylint: disable=W1699
 
 # Import third party libs
@@ -301,7 +302,7 @@ def set_subscription_attributes(SubscriptionArn, AttributeName, AttributeValue, 
         return False
 
 
-def subscribe(TopicArn, Protocol, Endpoint, region=None, key=None, keyid=None, profile=None):
+def subscribe(region=None, key=None, keyid=None, profile=None, **args):
     '''
     Subscribe to a Topic.
 
@@ -310,16 +311,20 @@ def subscribe(TopicArn, Protocol, Endpoint, region=None, key=None, keyid=None, p
         salt myminion boto3_sns.subscribe mytopic https https://www.example.com/sns-endpoint
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    args = {k: v for k, v in args.items() if not k.startswith('_')}
+    for arg in ('TopicArn', 'Protocol', 'Endpoint'):
+        if arg not in args:
+            raise SaltInvocationError('`{}` is a required parameter.'.format(arg))
     try:
-        ret = conn.subscribe(TopicArn=TopicArn, Protocol=Protocol, Endpoint=Endpoint)
+        ret = conn.subscribe(**args)
         log.info('Subscribed %s %s to topic %s with SubscriptionArn %s',
-                 Protocol, Endpoint, TopicArn, ret['SubscriptionArn'])
+                 args['Protocol'], args['Endpoint'], args['TopicArn'], ret['SubscriptionArn'])
         return ret['SubscriptionArn']
     except botocore.exceptions.ClientError as e:
-        log.error('Failed to create subscription to SNS topic %s: %s', TopicArn, e)
+        log.error('Failed to create subscription to SNS topic %s: %s', args['TopicArn'], e)
         return None
     except KeyError:
-        log.error('Failed to create subscription to SNS topic %s', TopicArn)
+        log.error('Failed to create subscription to SNS topic %s', args['TopicArn'])
         return None
 
 
