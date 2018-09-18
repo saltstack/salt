@@ -340,6 +340,7 @@ class OrchEventTest(ShellCase):
         self.conf.write(salt.utils.yaml.safe_dump(data, default_flow_style=False))
         self.conf.flush()
 
+    @expensiveTest
     def test_jid_in_ret_event(self):
         '''
         Test to confirm that the ret event for the orchestration contains the
