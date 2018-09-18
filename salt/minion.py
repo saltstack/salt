@@ -6,14 +6,12 @@ Routines to set up a minion
 from __future__ import absolute_import, print_function, with_statement, unicode_literals
 import functools
 import os
-import re
 import sys
 import copy
 import time
 import types
 import signal
 import random
-import fnmatch
 import logging
 import threading
 import traceback
