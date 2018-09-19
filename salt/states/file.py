@@ -1107,15 +1107,15 @@ def _get_template_texts(source_list=None,
 
     for (source, source_hash) in source_list:
 
-        tmpctx = defaults if defaults else {}
+        context_dict = defaults if defaults else {}
         if context:
-            tmpctx.update(context)
+            context_dict = salt.utils.dictupdate.merge(context_dict, context)
         rndrd_templ_fn = __salt__['cp.get_template'](
             source,
             '',
             template=template,
             saltenv=__env__,
-            context=tmpctx,
+            context=context_dict,
             **kwargs
         )
         msg = 'cp.get_template returned {0} (Called with: {1})'
