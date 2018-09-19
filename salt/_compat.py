@@ -160,6 +160,11 @@ class IPv6AddressScoped(ipaddress.IPv6Address):
             # and this type is needed to be checked differently
             self._is_packed_binary = lambda p: isinstance(p, bytes)
 
+            # Python 3.4 fix. Versions higher are simply not affected
+            # https://github.com/python/cpython/blob/3.4/Lib/ipaddress.py#L543-L544
+            self._version = 6
+            self._max_prefixlen = ipaddress.IPV6LENGTH
+
         # Efficient constructor from integer.
         if isinstance(address, integer_types):
             self._check_int_address(address)
