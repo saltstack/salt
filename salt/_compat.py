@@ -160,7 +160,8 @@ class IPv6AddressScoped(ipaddress.IPv6Address):
         if isinstance(address, integer_types):
             self._check_int_address(address)
             self._ip = address
-        elif isinstance(address, bytes):
+        elif (sys.version_info.major == 3 and isinstance(address, bytes)            # Python-3 compatibility messes up
+              or sys.version_info.major == 2 and self._is_packed_binary(address)):  # bytes and str types for Python 2.
             self._check_packed_address(address, 16)
             self._ip = ipaddress._int_from_bytes(address, 'big')
         else:
@@ -168,6 +169,22 @@ class IPv6AddressScoped(ipaddress.IPv6Address):
             if '/' in address:
                 raise ipaddress.AddressValueError("Unexpected '/' in {}".format(address))
             self._ip = self._ip_int_from_string(address)
+
+    def _is_packed_binary(self, data):
+        '''
+        Check if data is hexadecimal packed
+
+        :param data:
+        :return:
+        '''
+        packed = False
+        if len(data) == 16 and ':' not in data:
+            try:
+                packed = bool(int(str(bytearray(data)).encode('hex'), 16))
+            except ValueError:
+                pass
+
+        return packed
 
     @property
     def scope(self):
