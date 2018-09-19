@@ -68,7 +68,6 @@ import salt.utils.data
 import salt.utils.files
 import salt.utils.stringutils
 import salt.utils.yaml
-from salt.utils.versions import LooseVersion
 from salt.ext import six
 import salt.version
 from salt.exceptions import (
