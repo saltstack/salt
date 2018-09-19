@@ -575,6 +575,150 @@ def create(vm_):
     if not wait_for_created(data['upid'], timeout=300):
         return {'Error': 'Unable to create {0}, command timed out'.format(name)}
 
+    if 'clone' in vm_ and vm_['clone'] is True and vm_['technology'] == 'qemu':
+        # If we cloned a machine, see if we need to reconfigure any of the options such as net0,
+        # ide2, etc. This enables us to have a different cloud-init ISO mounted for each VM that's
+        # brought up
+
+        # TODO: Support other settings here too as these are not the only ones that can be modified
+        # after a clone operation
+        log.info('Configuring cloned VM')
+
+        # Modify the settings for the VM one at a time so we can see any problems with the values
+        # as quickly as possible
+        for setting in 'sockets', 'cores', 'cpulimit', 'memory', 'onboot', 'agent':
+            if setting in vm_:  # if the property is set, use it for the VM request
+                postParams = {}
+                postParams[setting] = vm_[setting]
+                query('post', 'nodes/{0}/qemu/{1}/config'.format(vm_['host'], vmid), postParams)
+
+        # cloud-init settings
+        for setting in 'ciuser', 'cipassword', 'sshkeys', 'nameserver', 'searchdomain':
+            if setting in vm_:  # if the property is set, use it for the VM request
+                postParams = {}
+                postParams[setting] = vm_[setting]
+                query('post', 'nodes/{0}/qemu/{1}/config'.format(vm_['host'], vmid), postParams)
+
+        for setting_number in range(3):
+            setting = 'ide{0}'.format(setting_number)
+            if setting in vm_:
+                postParams = {}
+                postParams[setting] = vm_[setting]
+                query('post', 'nodes/{0}/qemu/{1}/config'.format(vm_['host'], vmid), postParams)
+
+        for setting_number in range(5):
+            setting = 'sata{0}'.format(setting_number)
+            if setting in vm_:
+                vm_config = query('get', 'nodes/{0}/qemu/{1}/config'.format(vm_['host'], vmid))
+                if setting in vm_config:
+                    setting_params = vm_[setting]
+                    setting_storage = setting_params.split(':')[0]
+                    setting_size = _stringlist_to_dictionary(setting_params)['size']
+                    vm_disk_params = vm_config[setting]
+                    vm_disk_storage = vm_disk_params.split(':')[0]
+                    vm_disk_size = _stringlist_to_dictionary(vm_disk_params)['size']
+                    # if storage is different, move the disk
+                    if setting_storage != vm_disk_storage:
+                        postParams = {}
+                        postParams['disk'] = setting
+                        postParams['storage'] = setting_storage
+                        postParams['delete']  = 1
+                        node = query('post', 'nodes/{0}/qemu/{1}/move_disk'.format(vm_['host'], vmid), postParams)
+                        data = _parse_proxmox_upid(node, vm_)
+                        # wait until the disk has been moved
+                        if not wait_for_task(data['upid'], timeout=300):
+                            return {'Error': 'Unable to move disk {0}, command timed out'.format(setting)}
+                    # if storage is different, move the disk
+                    if setting_size != vm_disk_size:
+                        postParams = {}
+                        postParams['disk'] = setting
+                        postParams['size'] = setting_size
+                        query('put', 'nodes/{0}/qemu/{1}/resize'.format(vm_['host'], vmid), postParams)
+                else:
+                    postParams = {}
+                    postParams[setting] = vm_[setting]
+                    query('post', 'nodes/{0}/qemu/{1}/config'.format(vm_['host'], vmid), postParams)
+
+        for setting_number in range(13):
+            setting = 'scsi{0}'.format(setting_number)
+            if setting in vm_:
+                vm_config = query('get', 'nodes/{0}/qemu/{1}/config'.format(vm_['host'], vmid))
+                if setting in vm_config:
+                    setting_params = vm_[setting]
+                    setting_storage = setting_params.split(':')[0]
+                    setting_size = _stringlist_to_dictionary(setting_params)['size']
+                    vm_disk_params = vm_config[setting]
+                    vm_disk_storage = vm_disk_params.split(':')[0]
+                    vm_disk_size = _stringlist_to_dictionary(vm_disk_params)['size']
+                    # if storage is different, move the disk
+                    if setting_storage != vm_disk_storage:
+                        postParams = {}
+                        postParams['disk'] = setting
+                        postParams['storage'] = setting_storage
+                        postParams['delete']  = 1
+                        node = query('post', 'nodes/{0}/qemu/{1}/move_disk'.format(vm_['host'], vmid), postParams)
+                        data = _parse_proxmox_upid(node, vm_)
+                        # wait until the disk has been moved
+                        if not wait_for_task(data['upid'], timeout=300):
+                            return {'Error': 'Unable to move disk {0}, command timed out'.format(setting)}
+                    # if storage is different, move the disk
+                    if setting_size != vm_disk_size:
+                        postParams = {}
+                        postParams['disk'] = setting
+                        postParams['size'] = setting_size
+                        query('put', 'nodes/{0}/qemu/{1}/resize'.format(vm_['host'], vmid), postParams)
+                else:
+                    postParams = {}
+                    postParams[setting] = vm_[setting]
+                    query('post', 'nodes/{0}/qemu/{1}/config'.format(vm_['host'], vmid), postParams)
+
+        # net strings are a list of comma seperated settings. We need to merge the settings so that
+        # the setting in the profile only changes the settings it touches and the other settings
+        # are left alone. An example of why this is necessary is because the MAC address is set
+        # in here and generally you don't want to alter or have to know the MAC address of the new
+        # instance, but you may want to set the VLAN bridge for example
+        for setting_number in range(20):
+            setting = 'net{0}'.format(setting_number)
+            if setting in vm_:
+                data = query('get', 'nodes/{0}/qemu/{1}/config'.format(vm_['host'], vmid))
+
+                # Generate a dictionary of settings from the existing string
+                new_setting = {}
+                if setting in data:
+                    new_setting.update(_stringlist_to_dictionary(data[setting]))
+
+                # Merge the new settings (as a dictionary) into the existing dictionary to get the
+                # new merged settings
+                new_setting.update(_stringlist_to_dictionary(vm_[setting]))
+
+                # Convert the dictionary back into a string list
+                postParams = {setting: _dictionary_to_stringlist(new_setting)}
+                query('post', 'nodes/{0}/qemu/{1}/config'.format(vm_['host'], vmid), postParams)
+
+        for setting_number in range(20):
+            setting = 'ipconfig{0}'.format(setting_number)
+            if setting in vm_:
+                data = query('get', 'nodes/{0}/qemu/{1}/config'.format(vm_['host'], vmid))
+
+                # Generate a dictionary of settings from the existing string
+                new_setting = {}
+                if setting in data:
+                    new_setting.update(_stringlist_to_dictionary(data[setting]))
+
+                # Merge the new settings (as a dictionary) into the existing dictionary to get the
+                # new merged settings
+                if setting_number == 0 and 'ip_address' in vm_:
+                    if 'gw' in _stringlist_to_dictionary(vm_[setting]):
+                        new_setting.update(_stringlist_to_dictionary("ip=%s/24,gw=%s" % (vm_['ip_address'], _stringlist_to_dictionary(vm_[setting])['gw'])))
+                    else:
+                        new_setting.update(_stringlist_to_dictionary("ip=%s/24" % vm_['ip_address']))
+                else:
+                    new_setting.update(_stringlist_to_dictionary(vm_[setting]))
+
+                # Convert the dictionary back into a string list
+                postParams = {setting: _dictionary_to_stringlist(new_setting)}
+                query('post', 'nodes/{0}/qemu/{1}/config'.format(vm_['host'], vmid), postParams)
+
     # VM has been created. Starting..
     if not start(name, vmid, call='action'):
         log.error('Node %s (%s) failed to start!', name, vmid)
@@ -774,6 +918,13 @@ def create_node(vm_, newid):
             if 'clone_' + prop in vm_:  # if the property is set, use it for the VM request
                 postParams[prop] = vm_['clone_' + prop]
 
+        if 'host' in vm_:
+            postParams['target'] = vm_['host']
+
+        if ':' in vm_['clone_from']:
+            vmhost = vm_['clone_from'].split(':')[0]
+            vm_['clone_from'] =  vm_['clone_from'].split(':')[1]
+
         node = query('post', 'nodes/{0}/qemu/{1}/clone'.format(vmhost, vm_['clone_from']), postParams)
     else:
         node = query('post', 'nodes/{0}/{1}'.format(vmhost, vm_['technology']), newnode)
@@ -856,6 +1007,27 @@ def wait_for_state(vmid, state, timeout=300):
         log.debug('State for %s is: "%s" instead of "%s"',
                   node['name'], node['status'], state)
 
+
+def wait_for_task(upid, timeout=300):
+    '''
+    Wait until a the task has been finished successfully
+    '''
+    start_time = time.time()
+    info = _lookup_proxmox_task(upid)
+    if not info:
+        log.error('wait_for_task: No task information '
+                  'retrieved based on given criteria.')
+        raise SaltCloudExecutionFailure
+
+    while True:
+        if 'status' in info and info['status'] == 'OK':
+            log.debug('Task has been finished!')
+            return True
+        time.sleep(3)  # Little more patience, we're not in a hurry
+        if time.time() - start_time > timeout:
+            log.debug('Timeout reached while waiting for task to be finished')
+            return False
+        info = _lookup_proxmox_task(upid)
 
 def destroy(name, call=None):
     '''
@@ -1044,3 +1216,4 @@ def shutdown(name=None, vmid=None, call=None):
     # xxx: TBD: Check here whether the status was actually changed to 'stopped'
 
     return {'Shutdown': '{0} was shutdown.'.format(name)}
+
