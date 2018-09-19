@@ -51,6 +51,7 @@ execution modules
     bcache
     beacons
     bigip
+    bluecoat_sslv
     bluez_bluetooth
     boto3_elasticache
     boto3_elasticsearch
@@ -450,7 +451,6 @@ execution modules
     ssh
     ssh_pkg
     ssh_service
-    sslv
     state
     status
     statuspage

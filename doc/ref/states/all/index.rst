@@ -31,6 +31,7 @@ state modules
     beacon
     bigip
     blockdev
+    bluecoat_sslv
     boto3_elasticache
     boto3_elasticsearch
     boto3_route53
@@ -295,7 +296,6 @@ state modules
     sqlite3
     ssh_auth
     ssh_known_hosts
-    sslv
     stateconf
     status
     statuspage
