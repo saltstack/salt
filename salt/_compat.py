@@ -144,6 +144,10 @@ class IPv6AddressScoped(ipaddress.IPv6Address):
 
         :param address:
         '''
+        if not hasattr(self, '_is_packed_binary'):
+            # This method (below) won't be around for Python 3 and we need check this differently anyway
+            self._is_packed_binary = lambda p: isinstance(p, bytes)
+
         if isinstance(address, string_types) and '%' in address:
             buff = address.split('%')
             if len(buff) != 2:
@@ -160,8 +164,7 @@ class IPv6AddressScoped(ipaddress.IPv6Address):
         if isinstance(address, integer_types):
             self._check_int_address(address)
             self._ip = address
-        elif (sys.version_info.major == 3 and isinstance(address, bytes)            # Python-3 compatibility messes up
-              or sys.version_info.major == 2 and self._is_packed_binary(address)):  # bytes and str types for Python 2.
+        elif self._is_packed_binary(address):
             self._check_packed_address(address, 16)
             self._ip = ipaddress._int_from_bytes(address, 'big')
         else:
