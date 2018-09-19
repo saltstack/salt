@@ -203,7 +203,7 @@ class IPv6AddressScoped(ipaddress.IPv6Address):
                          ('%' + self.scope if self.scope is not None else ''))
 
 
-class IPv6InterfaceScoped(ipaddress.IPv6Interface):
+class IPv6InterfaceScoped(ipaddress.IPv6Interface, IPv6AddressScoped):
     '''
     Update
     '''
@@ -297,6 +297,6 @@ def ip_interface(address):
 if ipaddress:
     ipaddress.IPv6Address = IPv6AddressScoped
     if sys.version_info.major == 2:
-        ipaddress.IPv6Interface = IPv6AddressScoped
+        ipaddress.IPv6Interface = IPv6InterfaceScoped
     ipaddress.ip_address = ip_address
     ipaddress.ip_interface = ip_interface
