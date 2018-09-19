@@ -41,6 +41,7 @@ execution modules
     bcache
     beacons
     bigip
+    bluecoat_sslv
     bluez
     boto3_elasticache
     boto3_route53
@@ -420,7 +421,6 @@ execution modules
     ssh
     ssh_package
     ssh_service
-    sslv
     snapper
     state
     status

@@ -11,6 +11,7 @@ proxy modules
     :template: autosummary.rst.tmpl
 
     arista_pyeapi
+    bluecoat_sslv
     cimc
     chronos
     cimc
@@ -28,4 +29,3 @@ proxy modules
     philips_hue
     rest_sample
     ssh_sample
-    sslv

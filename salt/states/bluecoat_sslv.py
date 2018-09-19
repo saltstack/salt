@@ -11,10 +11,10 @@ A state module to manage Blue Coat SSL Visibility Devices.
 About
 =====
 This state module was designed to handle connections to a Blue Coat SSL Visibility device. This
-module relies on the SSLV proxy module to interface with the device.
+module relies on the bluecoat_sslv proxy module to interface with the device.
 
 .. seealso::
-    :prox:`SSLV Proxy Module <salt.proxy.sslv>`
+    :prox:`bluecoat_sslv Proxy Module <salt.proxy.bluecoat_sslv>`
 
 '''
 
@@ -29,7 +29,7 @@ log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    return 'sslv.get_management_config' in __salt__
+    return 'bluecoat_sslv.get_management_config' in __salt__
 
 
 def _default_ret(name):
@@ -61,7 +61,7 @@ def distinguished_name_list_exists(name, items):
     .. code-block:: yaml
 
         MyDistinguishedNameList:
-          sslv.distinguished_name_list_exists:
+          bluecoat_sslv.distinguished_name_list_exists:
             items:
               - cn=test.com
               - cn=othersite.com
@@ -70,18 +70,18 @@ def distinguished_name_list_exists(name, items):
     ret = _default_ret(name)
     req_change = False
     try:
-        existing_lists = __salt__['sslv.get_distinguished_name_lists']()
+        existing_lists = __salt__['bluecoat_sslv.get_distinguished_name_lists']()
         if name not in existing_lists:
-            __salt__['sslv.add_distinguished_name_list'](name)
+            __salt__['bluecoat_sslv.add_distinguished_name_list'](name)
             req_change = True
-        list_members = __salt__['sslv.get_distinguished_name_list'](name)
+        list_members = __salt__['bluecoat_sslv.get_distinguished_name_list'](name)
         for item in items:
             if item not in list_members:
-                __salt__['sslv.add_distinguished_name'](name, item)
+                __salt__['bluecoat_sslv.add_distinguished_name'](name, item)
                 req_change = True
         if req_change:
             ret['changes']['before'] = list_members
-            ret['changes']['after'] = __salt__['sslv.get_distinguished_name_list'](name)
+            ret['changes']['after'] = __salt__['bluecoat_sslv.get_distinguished_name_list'](name)
             ret['comment'] = "Updated distinguished name list."
         else:
             ret['comment'] = "No changes required."
@@ -109,7 +109,7 @@ def domain_name_list_exists(name, items):
     .. code-block:: yaml
 
         MyDomainNameList:
-          sslv.domain_name_list_exists:
+          bluecoat_sslv.domain_name_list_exists:
             items:
               - foo.bar.com
               - test.com
@@ -118,18 +118,18 @@ def domain_name_list_exists(name, items):
     ret = _default_ret(name)
     req_change = False
     try:
-        existing_lists = __salt__['sslv.get_domain_lists']()
+        existing_lists = __salt__['bluecoat_sslv.get_domain_lists']()
         if name not in existing_lists:
-            __salt__['sslv.add_domain_name_list'](name)
+            __salt__['bluecoat_sslv.add_domain_name_list'](name)
             req_change = True
-        list_members = __salt__['sslv.get_domain_list'](name)
+        list_members = __salt__['bluecoat_sslv.get_domain_list'](name)
         for item in items:
             if item not in list_members:
-                __salt__['sslv.add_domain_name'](name, item)
+                __salt__['bluecoat_sslv.add_domain_name'](name, item)
                 req_change = True
         if req_change:
             ret['changes']['before'] = list_members
-            ret['changes']['after'] = __salt__['sslv.get_domain_lists'](name)
+            ret['changes']['after'] = __salt__['bluecoat_sslv.get_domain_lists'](name)
             ret['comment'] = "Updated domain name list."
         else:
             ret['comment'] = "No changes required."
@@ -157,7 +157,7 @@ def ip_address_list_exists(name, items):
     .. code-block:: yaml
 
         MyIPAddressList:
-          sslv.ip_address_list_exists:
+          bluecoat_sslv.ip_address_list_exists:
             items:
               - 10.0.0.0/24
               - 192.168.1.134
@@ -166,18 +166,18 @@ def ip_address_list_exists(name, items):
     ret = _default_ret(name)
     req_change = False
     try:
-        existing_lists = __salt__['sslv.get_ip_address_lists']()
+        existing_lists = __salt__['bluecoat_sslv.get_ip_address_lists']()
         if name not in existing_lists:
-            __salt__['sslv.add_ip_address_list'](name)
+            __salt__['bluecoat_sslv.add_ip_address_list'](name)
             req_change = True
-        list_members = __salt__['sslv.get_ip_address_list'](name)
+        list_members = __salt__['bluecoat_sslv.get_ip_address_list'](name)
         for item in items:
             if item not in list_members:
-                __salt__['sslv.add_ip_address'](name, item)
+                __salt__['bluecoat_sslv.add_ip_address'](name, item)
                 req_change = True
         if req_change:
             ret['changes']['before'] = list_members
-            ret['changes']['after'] = __salt__['sslv.get_ip_address_list'](name)
+            ret['changes']['after'] = __salt__['bluecoat_sslv.get_ip_address_list'](name)
             ret['comment'] = "Updated IP address list."
         else:
             ret['comment'] = "No changes required."

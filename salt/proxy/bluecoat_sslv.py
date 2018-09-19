@@ -7,8 +7,8 @@ Proxy Minion interface module for managing Blue Coat SSL Decryption devices
 :depends:    none
 :platform:   unix
 This proxy minion enables Blue Coat SSL Visibility devices (hereafter referred to
-as simply 'sslv') to be treated individually like a Salt Minion.
-The sslv proxy leverages the JSON API functionality on the Blue Coat SSL
+as simply 'bluecoat_sslv') to be treated individually like a Salt Minion.
+The bluecoat_sslv proxy leverages the JSON API functionality on the Blue Coat SSL
 Visibility devices. The Salt proxy must have access to the Blue Coat device on
 HTTPS (tcp/443).
 More in-depth conceptual reading on Proxy Minions can be found in the
@@ -30,7 +30,7 @@ the ID.
 .. code-block:: yaml
 
     proxy:
-      proxytype: sslv
+      proxytype: bluecoat_sslv
       host: <ip or dns name of cimc host>
       username: <cimc username>
       password: <cimc password>
@@ -42,23 +42,23 @@ proxytype
 The ``proxytype`` key and value pair is critical, as it tells Salt which
 interface to load from the ``proxy`` directory in Salt's install hierarchy,
 or from ``/srv/salt/_proxy`` on the Salt Master (if you have created your
-own proxy module, for example). To use this sslv Proxy Module, set this to
-``sslv``.
+own proxy module, for example). To use this bluecoat_sslv Proxy Module, set this to
+``bluecoat_sslv``.
 
 host
 ^^^^
 
-The location, or ip/dns, of the sslv host. Required.
+The location, or ip/dns, of the bluecoat_sslv host. Required.
 
 username
 ^^^^^^^^
 
-The username used to login to the sslv host. Required.
+The username used to login to the bluecoat_sslv host. Required.
 
 password
 ^^^^^^^^
 
-The password used to login to the sslv host. Required.
+The password used to login to the bluecoat_sslv host. Required.
 
 auth
 ^^^^^^^^
@@ -79,7 +79,7 @@ import requests
 import salt.exceptions
 
 # This must be present or the Salt loader won't load this module.
-__proxyenabled__ = ['sslv']
+__proxyenabled__ = ['bluecoat_sslv']
 
 # Variables are scoped to this module so we can have persistent data.
 GRAINS_CACHE = {'vendor': 'Blue Coat'}
@@ -89,7 +89,7 @@ DETAILS = {}
 log = logging.getLogger(__file__)
 
 # Define the module's virtual name
-__virtualname__ = 'sslv'
+__virtualname__ = 'bluecoat_sslv'
 
 
 def __virtual__():
@@ -134,9 +134,9 @@ def init(opts):
     DETAILS['auth'] = opts['proxy'].get('auth')
 
     # Ensure connectivity to the device
-    log.debug("Attempting to connect to sslv proxy host.")
+    log.debug("Attempting to connect to bluecoat_sslv proxy host.")
     session, cookies, csrf_token = logon()
-    log.debug("Successfully connected to sslv proxy host.")
+    log.debug("Successfully connected to bluecoat_sslv proxy host.")
     logout(session, cookies, csrf_token)
 
     DETAILS['initialized'] = True
@@ -169,7 +169,7 @@ def _post_request(session, payload, cookies, csrf_token):
 
 def logon():
     '''
-    Logs into the sslv device and returns the session cookies.
+    Logs into the bluecoat_sslv device and returns the session cookies.
     '''
     session = requests.session()
     payload = {"jsonrpc": "2.0",
@@ -191,7 +191,7 @@ def logon():
                    'sslng_session_id': logon_response.cookies['sslng_session_id']}
         csrf_token = logon_response.cookies['sslng_csrf_token']
     except KeyError:
-        log.error("Unable to authentication to the SSLV proxy.")
+        log.error("Unable to authentication to the bluecoat_sslv proxy.")
         raise salt.exceptions.CommandExecutionError(
             "Did not receive a valid response from host.")
 
@@ -290,4 +290,4 @@ def shutdown():
     Shutdown the connection to the proxy device. For this proxy,
     shutdown is a no-op.
     '''
-    log.debug('SSLV proxy shutdown() called.')
+    log.debug('bluecoat_sslv proxy shutdown() called.')

@@ -15,7 +15,7 @@ parameters, or as configuration settings in pillar as a Salt proxy.
 Options passed into opts will be ignored if options are passed into pillar.
 
 .. seealso::
-    :prox:`Blue Coat SSL Visibility Proxy Module <salt.proxy.sslv>`
+    :prox:`Blue Coat SSL Visibility Proxy Module <salt.proxy.bluecoat_sslv>`
 
 About
 =====
@@ -30,25 +30,25 @@ import logging
 
 # Import Salt Libs
 import salt.utils.platform
-import salt.proxy.sslv
+import salt.proxy.bluecoat_sslv
 
 log = logging.getLogger(__name__)
 
-__virtualname__ = 'sslv'
+__virtualname__ = 'bluecoat_sslv'
 
 
 def __virtual__():
     '''
-    Will load for the sslv proxy minions.
+    Will load for the bluecoat_sslv proxy minions.
     '''
     try:
         if salt.utils.platform.is_proxy() and \
-           __opts__['proxy']['proxytype'] == 'sslv':
+           __opts__['proxy']['proxytype'] == 'bluecoat_sslv':
             return __virtualname__
     except KeyError:
         pass
 
-    return False, 'The sslv execution module can only be loaded for sslv proxy minions.'
+    return False, 'The bluecoat_sslv execution module can only be loaded for bluecoat_sslv proxy minions.'
 
 
 def _validate_change_result(response):
@@ -83,7 +83,7 @@ def add_distinguished_name(list_name, item_name):
 
     .. code-block:: bash
 
-        salt '*' sslv.add_distinguished_name MyDistinguishedList cn=foo.bar.com
+        salt '*' bluecoat_sslv.add_distinguished_name MyDistinguishedList cn=foo.bar.com
 
     '''
     payload = {"jsonrpc": "2.0",
@@ -91,7 +91,7 @@ def add_distinguished_name(list_name, item_name):
                "method": "add_policy_distinguished_names",
                "params": [list_name, {"item_name": item_name}]}
 
-    response = __proxy__['sslv.call'](payload, True)
+    response = __proxy__['bluecoat_sslv.call'](payload, True)
 
     return _validate_change_result(response)
 
@@ -106,7 +106,7 @@ def add_distinguished_name_list(list_name):
 
     .. code-block:: bash
 
-        salt '*' sslv.add_distinguished_name_list MyDistinguishedList
+        salt '*' bluecoat_sslv.add_distinguished_name_list MyDistinguishedList
 
     '''
     payload = {"jsonrpc": "2.0",
@@ -114,7 +114,7 @@ def add_distinguished_name_list(list_name):
                "method": "add_policy_distinguished_names_list",
                "params": [{"list_name": list_name}]}
 
-    response = __proxy__['sslv.call'](payload, True)
+    response = __proxy__['bluecoat_sslv.call'](payload, True)
 
     return _validate_change_result(response)
 
@@ -131,7 +131,7 @@ def add_domain_name(list_name, item_name):
 
     .. code-block:: bash
 
-        salt '*' sslv.add_domain_name MyDomainName foo.bar.com
+        salt '*' bluecoat_sslv.add_domain_name MyDomainName foo.bar.com
 
     '''
     payload = {"jsonrpc": "2.0",
@@ -139,7 +139,7 @@ def add_domain_name(list_name, item_name):
                "method": "add_policy_domain_names",
                "params": [list_name, {"item_name": item_name}]}
 
-    response = __proxy__['sslv.call'](payload, True)
+    response = __proxy__['bluecoat_sslv.call'](payload, True)
 
     return _validate_change_result(response)
 
@@ -154,7 +154,7 @@ def add_domain_name_list(list_name):
 
     .. code-block:: bash
 
-        salt '*' sslv.add_domain_name_list MyDomainNameList
+        salt '*' bluecoat_sslv.add_domain_name_list MyDomainNameList
 
     '''
     payload = {"jsonrpc": "2.0",
@@ -162,7 +162,7 @@ def add_domain_name_list(list_name):
                "method": "add_policy_domain_names_list",
                "params": [{"list_name": list_name}]}
 
-    response = __proxy__['sslv.call'](payload, True)
+    response = __proxy__['bluecoat_sslv.call'](payload, True)
 
     return _validate_change_result(response)
 
@@ -179,7 +179,7 @@ def add_ip_address(list_name, item_name):
 
     .. code-block:: bash
 
-        salt '*' sslv.add_ip_address MyIPAddressList 10.0.0.0/24
+        salt '*' bluecoat_sslv.add_ip_address MyIPAddressList 10.0.0.0/24
 
     '''
     payload = {"jsonrpc": "2.0",
@@ -187,7 +187,7 @@ def add_ip_address(list_name, item_name):
                "method": "add_policy_ip_addresses",
                "params": [list_name, {"item_name": item_name}]}
 
-    response = __proxy__['sslv.call'](payload, True)
+    response = __proxy__['bluecoat_sslv.call'](payload, True)
 
     return _validate_change_result(response)
 
@@ -202,7 +202,7 @@ def add_ip_address_list(list_name):
 
     .. code-block:: bash
 
-        salt '*' sslv.add_ip_address_list MyIPAddressList
+        salt '*' bluecoat_sslv.add_ip_address_list MyIPAddressList
 
     '''
     payload = {"jsonrpc": "2.0",
@@ -210,7 +210,7 @@ def add_ip_address_list(list_name):
                "method": "add_policy_ip_addresses_list",
                "params": [{"list_name": list_name}]}
 
-    response = __proxy__['sslv.call'](payload, True)
+    response = __proxy__['bluecoat_sslv.call'](payload, True)
 
     return _validate_change_result(response)
 
@@ -225,7 +225,7 @@ def get_distinguished_name_list(list_name):
 
     .. code-block:: bash
 
-        salt '*' sslv.get_distinguished_name_list MyDistinguishedList
+        salt '*' bluecoat_sslv.get_distinguished_name_list MyDistinguishedList
 
     '''
     payload = {"jsonrpc": "2.0",
@@ -233,7 +233,7 @@ def get_distinguished_name_list(list_name):
                "method": "get_policy_distinguished_names",
                "params": [list_name, 0, 256]}
 
-    response = __proxy__['sslv.call'](payload, False)
+    response = __proxy__['bluecoat_sslv.call'](payload, False)
 
     return _convert_to_list(response, 'item_name')
 
@@ -246,7 +246,7 @@ def get_distinguished_name_lists():
 
     .. code-block:: bash
 
-        salt '*' sslv.get_distinguished_name_lists
+        salt '*' bluecoat_sslv.get_distinguished_name_lists
 
     '''
     payload = {"jsonrpc": "2.0",
@@ -254,7 +254,7 @@ def get_distinguished_name_lists():
                "method": "get_policy_distinguished_names_list",
                "params": [0, 256]}
 
-    response = __proxy__['sslv.call'](payload, False)
+    response = __proxy__['bluecoat_sslv.call'](payload, False)
 
     return _convert_to_list(response, 'list_name')
 
@@ -269,7 +269,7 @@ def get_domain_list(list_name):
 
     .. code-block:: bash
 
-        salt '*' sslv.get_domain_list MyDomainNameList
+        salt '*' bluecoat_sslv.get_domain_list MyDomainNameList
 
     '''
     payload = {"jsonrpc": "2.0",
@@ -277,7 +277,7 @@ def get_domain_list(list_name):
                "method": "get_policy_domain_names",
                "params": [list_name, 0, 256]}
 
-    response = __proxy__['sslv.call'](payload, False)
+    response = __proxy__['bluecoat_sslv.call'](payload, False)
 
     return _convert_to_list(response, 'item_name')
 
@@ -290,7 +290,7 @@ def get_domain_lists():
 
     .. code-block:: bash
 
-        salt '*' sslv.get_domain_name_lists
+        salt '*' bluecoat_sslv.get_domain_name_lists
 
     '''
     payload = {"jsonrpc": "2.0",
@@ -298,7 +298,7 @@ def get_domain_lists():
                "method": "get_policy_domain_names_list",
                "params": [0, 256]}
 
-    response = __proxy__['sslv.call'](payload, False)
+    response = __proxy__['bluecoat_sslv.call'](payload, False)
 
     return _convert_to_list(response, 'list_name')
 
@@ -313,7 +313,7 @@ def get_ip_address_list(list_name):
 
     .. code-block:: bash
 
-        salt '*' sslv.get_ip_address_list MyIPAddressList
+        salt '*' bluecoat_sslv.get_ip_address_list MyIPAddressList
 
     '''
     payload = {"jsonrpc": "2.0",
@@ -321,7 +321,7 @@ def get_ip_address_list(list_name):
                "method": "get_policy_ip_addresses",
                "params": [list_name, 0, 256]}
 
-    response = __proxy__['sslv.call'](payload, False)
+    response = __proxy__['bluecoat_sslv.call'](payload, False)
 
     return _convert_to_list(response, 'item_name')
 
@@ -334,7 +334,7 @@ def get_ip_address_lists():
 
     .. code-block:: bash
 
-        salt '*' sslv.get_ip_address_lists
+        salt '*' bluecoat_sslv.get_ip_address_lists
 
     '''
     payload = {"jsonrpc": "2.0",
@@ -342,7 +342,7 @@ def get_ip_address_lists():
                "method": "get_policy_ip_addresses_list",
                "params": [0, 256]}
 
-    response = __proxy__['sslv.call'](payload, False)
+    response = __proxy__['bluecoat_sslv.call'](payload, False)
 
     return _convert_to_list(response, 'list_name')
 
@@ -355,7 +355,7 @@ def get_ipv4_config():
 
     .. code-block:: bash
 
-        salt '*' sslv.get_ipv4_config
+        salt '*' bluecoat_sslv.get_ipv4_config
 
     '''
     payload = {"jsonrpc": "2.0",
@@ -363,7 +363,7 @@ def get_ipv4_config():
                "method": "get_platform_config_ipv4",
                "params": []}
 
-    response = __proxy__['sslv.call'](payload, False)
+    response = __proxy__['bluecoat_sslv.call'](payload, False)
 
     return response['result']
 
@@ -376,7 +376,7 @@ def get_ipv6_config():
 
     .. code-block:: bash
 
-        salt '*' sslv.get_ipv6_config
+        salt '*' bluecoat_sslv.get_ipv6_config
 
     '''
     payload = {"jsonrpc": "2.0",
@@ -384,7 +384,7 @@ def get_ipv6_config():
                "method": "get_platform_config_ipv6",
                "params": []}
 
-    response = __proxy__['sslv.call'](payload, False)
+    response = __proxy__['bluecoat_sslv.call'](payload, False)
 
     return response['result']
 
@@ -397,7 +397,7 @@ def get_management_config():
 
     .. code-block:: bash
 
-        salt '*' sslv.get_management_config
+        salt '*' bluecoat_sslv.get_management_config
 
     '''
     payload = {"jsonrpc": "2.0",
@@ -405,7 +405,7 @@ def get_management_config():
                "method": "get_platform_config",
                "params": []}
 
-    response = __proxy__['sslv.call'](payload, False)
+    response = __proxy__['bluecoat_sslv.call'](payload, False)
 
     return response['result']
 
@@ -418,7 +418,7 @@ def get_platform():
 
     .. code-block:: bash
 
-        salt '*' sslv.get_platform
+        salt '*' bluecoat_sslv.get_platform
 
     '''
     payload = {"jsonrpc": "2.0",
@@ -426,7 +426,7 @@ def get_platform():
                "method": "get_platform_information_chassis",
                "params": []}
 
-    response = __proxy__['sslv.call'](payload, False)
+    response = __proxy__['bluecoat_sslv.call'](payload, False)
 
     return _collapse_dict_format(response['result'])
 
@@ -439,7 +439,7 @@ def get_software():
 
     .. code-block:: bash
 
-        salt '*' sslv.get_software
+        salt '*' bluecoat_sslv.get_software
 
     '''
     payload = {"jsonrpc": "2.0",
@@ -447,6 +447,6 @@ def get_software():
                "method": "get_platform_information_sw_rev",
                "params": []}
 
-    response = __proxy__['sslv.call'](payload, False)
+    response = __proxy__['bluecoat_sslv.call'](payload, False)
 
     return _collapse_dict_format(response['result'])

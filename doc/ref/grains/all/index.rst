@@ -10,6 +10,7 @@ grains modules
     :toctree:
     :template: autosummary.rst.tmpl
 
+    bluecoat_sslv
     cimc
     chronos
     core
@@ -26,4 +27,3 @@ grains modules
     panos
     philips_hue
     rest_sample
-    sslv
