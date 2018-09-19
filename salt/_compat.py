@@ -200,6 +200,25 @@ class IPv6AddressScoped(ipaddress.IPv6Address):
                          ('%' + self.scope if self.scope is not None else ''))
 
 
+class IPv6InterfaceScoped(ipaddress.IPv6Interface):
+    '''
+    Update
+    '''
+    def __init__(self, address):
+        if isinstance(address, (bytes, int)):
+            IPv6AddressScoped.__init__(self, address)
+            self.network = ipaddress.IPv6Network(self._ip)
+            self._prefixlen = self._max_prefixlen
+            return
+
+        addr = ipaddress._split_optional_netmask(address)
+        IPv6AddressScoped.__init__(self, addr[0])
+        self.network = ipaddress.IPv6Network(address, strict=False)
+        self.netmask = self.network.netmask
+        self._prefixlen = self.network._prefixlen
+        self.hostmask = self.network.hostmask
+
+
 def ip_address(address):
     """Take an IP string/int and return an object of the correct type.
 
@@ -274,5 +293,7 @@ def ip_interface(address):
 
 if ipaddress:
     ipaddress.IPv6Address = IPv6AddressScoped
+    if sys.version_info.major == 2:
+        ipaddress.IPv6Interface = IPv6AddressScoped
     ipaddress.ip_address = ip_address
     ipaddress.ip_interface = ip_interface
