@@ -42,6 +42,12 @@ import logging
 import salt.utils.json
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
 
+ADDITIONAL_DROP_KEYWORDS = [
+    '__pub_id',
+    '__pub_fun_args',
+    '__pub_schedule'
+]
+
 log = logging.getLogger(__name__)
 
 # name used to refer to this module in __salt__
