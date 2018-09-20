@@ -1171,10 +1171,9 @@ def get_pending_component_servicing():
 
         salt '*' system.get_pending_component_servicing
     '''
-    vname = '(Default)'
     key = r'SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\RebootPending'
 
-    reg_ret = __salt__['reg.read_value']('HKLM', key, vname)
+    reg_ret = __salt__['reg.read_value']('HKLM', key)
 
     # So long as the registry key exists, a reboot is pending.
     if reg_ret['success']:
@@ -1202,7 +1201,6 @@ def get_pending_domain_join():
 
         salt '*' system.get_pending_domain_join
     '''
-    vname = '(Default)'
     base_key = r'SYSTEM\CurrentControlSet\Services\Netlogon'
     avoid_key = r'{0}\AvoidSpnSet'.format(base_key)
     join_key = r'{0}\JoinDomain'.format(base_key)
@@ -1210,7 +1208,7 @@ def get_pending_domain_join():
     # If either the avoid_key or join_key is present,
     # then there is a reboot pending.
 
-    avoid_reg_ret = __salt__['reg.read_value']('HKLM', avoid_key, vname)
+    avoid_reg_ret = __salt__['reg.read_value']('HKLM', avoid_key)
 
     if avoid_reg_ret['success']:
         log.debug('Found key: %s', avoid_key)
@@ -1218,7 +1216,7 @@ def get_pending_domain_join():
     else:
         log.debug('Unable to access key: %s', avoid_key)
 
-    join_reg_ret = __salt__['reg.read_value']('HKLM', join_key, vname)
+    join_reg_ret = __salt__['reg.read_value']('HKLM', join_key)
 
     if join_reg_ret['success']:
         log.debug('Found key: %s', join_key)
@@ -1318,10 +1316,9 @@ def get_pending_update():
 
         salt '*' system.get_pending_update
     '''
-    vname = '(Default)'
     key = r'SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired'
 
-    reg_ret = __salt__['reg.read_value']('HKLM', key, vname)
+    reg_ret = __salt__['reg.read_value']('HKLM', key)
 
     # So long as the registry key exists, a reboot is pending.
     if reg_ret['success']:
@@ -1418,7 +1415,9 @@ def get_pending_reboot():
     '''
 
     # Order the checks for reboot pending in most to least likely.
-    checks = (get_pending_update, get_pending_file_rename, get_pending_servermanager,
+    checks = (get_pending_update,
+              get_pending_file_rename,
+              get_pending_servermanager,
               get_pending_component_servicing,
               get_reboot_required_witnessed,
               get_pending_computer_name,
