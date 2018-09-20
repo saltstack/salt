@@ -29,7 +29,7 @@ import shlex
 import salt.utils.locales
 import salt.utils.path
 import salt.utils.yaml
-from salt.exceptions import SaltInvocationError
+from salt.exceptions import SaltInvocationError, CommandExecutionError
 
 # Import 3rd party libs
 from salt.ext import six
