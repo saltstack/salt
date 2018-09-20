@@ -3402,11 +3402,11 @@ class Matcher(object):
         try:
             # Target is an address?
             tgt = ipaddress.ip_address(tgt)
-        except:  # pylint: disable=bare-except
+        except Exception:
             try:
                 # Target is a network?
                 tgt = ipaddress.ip_network(tgt)
-            except:  # pylint: disable=bare-except
+            except Exception:
                 log.error('Invalid IP/CIDR target: %s', tgt)
                 return []
         proto = 'ipv{0}'.format(tgt.version)
