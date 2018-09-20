@@ -2331,7 +2331,7 @@ def resolve_capabilities(pkgs, refresh, **kwargs):
                 try:
                     result = search(name, provides=True, match='exact')
                     if len(result) == 1:
-                        name = result.keys()[0]
+                        name = next(iter(result.keys()))
                     elif len(result) > 1:
                         log.warn("Found ambiguous match for capability '%s'.", pkg)
                 except CommandExecutionError as exc:
