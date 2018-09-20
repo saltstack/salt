@@ -177,7 +177,7 @@ Saltstack extends `builtin filters`_ with these custom filters:
 
 Converts any time related object into a time based string. It requires valid
 strftime directives. An exhaustive list can be found :ref:`here
-<strftime-strptime-behavior>` in the Python documentation.
+<python:strftime-strptime-behavior>` in the Python documentation.
 
 .. code-block:: jinja
 
