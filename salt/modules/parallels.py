@@ -43,17 +43,6 @@ log = logging.getLogger(__name__)
 GUID_REGEX = re.compile(r'{?([0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12})}?', re.I)
 
 
-def __virtual__():
-    '''
-    Load this module if prlctl is available
-    '''
-    if not salt.utils.path.which('prlctl'):
-        return (False, 'prlctl utility not available')
-    if not salt.utils.path.which('prlsrvctl'):
-        return (False, 'prlsrvctl utility not available')
-    return __virtualname__
-
-
 def _normalize_args(args):
     '''
     Return args as a list of strings
@@ -111,6 +100,9 @@ def prlsrvctl(sub_cmd, args=None, runas=None):
         salt '*' parallels.prlsrvctl usb list runas=macdev
         salt -- '*' parallels.prlsrvctl set '--mem-limit auto' runas=macdev
     '''
+    if not salt.utils.path.which('prlsrvctl'):
+        raise CommandExecutionError('prlsrvctl utility not available')
+
     # Construct command
     cmd = ['prlsrvctl', sub_cmd]
     if args:
@@ -141,6 +133,9 @@ def prlctl(sub_cmd, args=None, runas=None):
         salt '*' parallels.prlctl exec 'macvm uname' runas=macdev
         salt -- '*' parallels.prlctl capture 'macvm --file macvm.display.png' runas=macdev
     '''
+    if not salt.utils.path.which('prlctl'):
+        raise CommandExecutionError('prlctl utility not available')
+
     # Construct command
     cmd = ['prlctl', sub_cmd]
     if args:
