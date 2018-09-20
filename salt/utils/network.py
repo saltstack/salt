@@ -198,9 +198,7 @@ def get_fqhostname():
     '''
     Returns the fully qualified hostname
     '''
-    l = [socket.getfqdn()]
-
-    # try socket.getaddrinfo
+    # try getaddrinfo()
     try:
         addrinfo = socket.getaddrinfo(
             socket.gethostname(), 0, socket.AF_UNSPEC, socket.SOCK_STREAM,
@@ -211,11 +209,15 @@ def get_fqhostname():
             # On Windows `canonname` can be an empty string
             # This can cause the function to return `None`
             if len(info) >= 4 and info[3]:
-                l = [info[3]]
+                return info[3]
     except socket.gaierror:
         pass
-
-    return l and l[0] or None
+    except socket.error:
+        pass
+    # if that fails, try getfqdn()
+    fqdn = socket.getfqdn()
+    if fqdn:
+        return fqdn
 
 
 def ip_to_host(ip):
