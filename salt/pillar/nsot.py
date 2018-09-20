@@ -25,23 +25,23 @@ The following fields are required:
 
 The following fields are optional:
 
-replace_dot: ``str``
+fqdn_separator: ``str``
     This is in case a minion_id contains a dot. Because NSoT
     doesn't allow hostnmes with dots, this option allows you to look up a device
     with this character replacing dots. For example, with this option set to
      '-', the minion rtr1.lax1 would be looked up in NSoT as rtr1-lax1.
 
-all_device_info: ``list``
+all_devices_regex: ``list``
     This is a list of minions that will receive all device
-    information in NSoT. For example, if this list contained the entry
-    'test_min', then the minion 'test_min' would have all devices in NSoT under
-    pillar['nsot']['devices']
+    information in NSoT, given in the form of regular expressions. These minions
+    do not need to be in nsot in order to retrieve all device info from nsot.
 
 minion_regex: ``list``
     This is in case you only want certain minions being looked
     up in NSoT. For example, if you have 500 minions on a single master, you may
-    not want all of them hitting the NSoT endpoint. With this list of regexes,
-    only minions matching the regex will be queried.
+    not want all of them hitting the NSoT endpoint. With this list of regular
+    expressions, only minions that match will be queried. This is
+    assumed to be a network device that exists in nsot.
 
 Here's an example config with all options:
 
@@ -52,10 +52,10 @@ Here's an example config with all options:
         api_url: http://nsot_url.com/api/
         email: 'user@site.com'
         secret_key: abc234
-        replace_dot: '-'
-        all_device_info:
-          - minion_1
-          - minion_2
+        fqdn_separator: '-'
+        all_devices_regex:
+          - 'server*'
+          - '^cent*'
         minion_regex:
           - 'rtr*'
           - 'sw*'
@@ -66,6 +66,10 @@ Here's an example config with all options:
 from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import re
+try:
+    import urlparse
+except ImportError:
+    from urllib import parse as urlparse
 
 # Import Salt libs
 import salt.utils.http
@@ -82,7 +86,7 @@ def _get_token(url, email, secret_key):
     :param secret_key: str
     :return: str
     '''
-    url += 'authenticate/'
+    url = urlparse.urljoin(url, 'authenticate')
     data_dict = {"email": email, "secret_key": secret_key}
     query = salt.utils.http.query(url, data=data_dict, method='POST',
                                   decode=True)
@@ -92,10 +96,10 @@ def _get_token(url, email, secret_key):
         return False
     else:
         log.debug('successfully obtained token from nsot!')
-        return query['dict']['auth_token']
+        return query['dict'].get('auth_token')
 
 
-def _check_minion_regex(minion_id, minion_regex):
+def _check_regex(minion_id, regex):
     '''
     check whether or not this minion should have this external pillar returned
 
@@ -104,24 +108,33 @@ def _check_minion_regex(minion_id, minion_regex):
     :return: bool
     '''
     get_pillar = False
-    for pattern in minion_regex:
-        log.debug('searching %s using %s', minion_id, minion_regex)
+    for pattern in regex:
+        log.debug('nsot external pillar comparing %s with %s', minion_id, regex)
         match = re.search(pattern, minion_id)
         if match and match.string == minion_id:
-            log.debug('found match! %s: regex %s', minion_id, minion_regex)
+            log.debug('nsot external pillar found a match!')
             get_pillar = True
             break
-        log.debug('unable to match %s using regex %s', minion_id, minion_regex)
+        log.debug('nsot external pillar unable to find a match!')
     return get_pillar
 
 
 def _query_nsot(url, headers, device=None):
-    url += 'devices/'
+    '''
+    if a device is given, query nsot for that specific device, otherwise return
+    all devices
+
+    :param url: str
+    :param headers: dict
+    :param device: None or str
+    :return:
+    '''
+    url = urlparse.urljoin(url, 'devices')
     if not device:
         query = salt.utils.http.query(url, header_dict=headers, decode=True)
     else:
-        device += '/'
-        query = salt.utils.http.query(url + device, header_dict=headers,
+        url = urlparse.urljoin(url, device)
+        query = salt.utils.http.query(url, header_dict=headers,
                                       decode=True)
     error = query.get('error')
     if error:
@@ -131,13 +144,51 @@ def _query_nsot(url, headers, device=None):
         return query['dict']
 
 
+def _proxy_info(minion_id, api_url, email, secret_key, fqdn_separator):
+    '''
+    retrieve a dict of a device that exists in nsot
+
+    :param minion_id: str
+    :param api_url: str
+    :param email: str
+    :param secret_key: str
+    :param fqdn_separator: str
+    :return: dict
+    '''
+    if fqdn_separator:
+        minion_id = minion_id.replace('.', fqdn_separator)
+    token = _get_token(api_url, email, secret_key)
+    if not token:
+        return
+    headers = {'Authorization': 'AuthToken {}:{}'.format(email, token)}
+    device_info = _query_nsot(api_url, headers, device=minion_id)
+    return device_info
+
+
+def _all_nsot_devices(api_url, email, secret_key):
+    '''
+    retrieve a list of all devices that exist in nsot
+
+    :param api_url: str
+    :param email: str
+    :param secret_key: str
+    :return: dict
+    '''
+    token = _get_token(api_url, email, secret_key)
+    if not token:
+        return
+    headers = {'Authorization': 'AuthToken {}:{}'.format(email, token)}
+    all_devices = _query_nsot(api_url, headers)
+    return all_devices
+
+
 def ext_pillar(minion_id,
                pillar,
                api_url,
                email,
                secret_key,
-               replace_dot=None,
-               all_device_info=None,
+               fqdn_separator=None,
+               all_devices_regex=None,
                minion_regex=None):
     '''
     Query NSoT API for network devices
@@ -148,34 +199,21 @@ def ext_pillar(minion_id,
         return ret
 
     if minion_regex:
-        get_ext_pillar = _check_minion_regex(minion_id, minion_regex)
-        if not get_ext_pillar:
-            if all_device_info:
-                if minion_id not in all_device_info:
-                    return ret
-            else:
-                return ret
+        get_ext_pillar = _check_regex(minion_id, minion_regex)
+        if get_ext_pillar:
+            ret['nsot'] = _proxy_info(minion_id,
+                                      api_url,
+                                      email,
+                                      secret_key,
+                                      fqdn_separator)
 
-    token = _get_token(api_url, email, secret_key)
-
-    if not token:
-        return ret
-
-    headers = {'Authorization': 'AuthToken {}:{}'.format(email, token)}
-
-    if all_device_info:
-        if minion_id in all_device_info:
-            all_devices = _query_nsot(api_url, headers)
-            if all_devices:
+    if all_devices_regex:
+        get_ext_pillar = _check_regex(minion_id, all_devices_regex)
+        if get_ext_pillar:
+            if not ret.get('nsot'):
                 ret['nsot'] = {}
-                ret['nsot']['devices'] = all_devices
-            return ret
-
-    if replace_dot:
-        minion_id = minion_id.replace('.', replace_dot)
-
-    device_info = _query_nsot(api_url, headers, device=minion_id)
-    if device_info:
-        ret['nsot'] = device_info
+            ret['nsot']['devices'] = _all_nsot_devices(api_url,
+                                                       email,
+                                                       secret_key)
 
     return ret
