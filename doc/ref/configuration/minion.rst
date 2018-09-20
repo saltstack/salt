@@ -658,7 +658,7 @@ Examples:
    - FQDN = king_bob.bar.org --> minion_id = king_bob
 
 
-For more information, please see :pull:`49378`.
+For more information, please see :issue:`49212` and  :pull:`49378`.
 
 .. code-block:: yaml
 
