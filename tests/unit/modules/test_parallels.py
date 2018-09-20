@@ -25,27 +25,6 @@ class ParallelsTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {parallels: {}}
 
-    def test___virtual__(self):
-        '''
-        Test parallels.__virtual__
-        '''
-        mock_true = MagicMock(return_value=True)
-        mock_false = MagicMock(return_value=False)
-
-        # Validate false return
-        with patch('salt.utils.path.which', mock_false):
-            ret = parallels.__virtual__()
-            self.assertTrue(isinstance(ret, tuple))
-            self.assertEqual(len(ret), 2)
-            self.assertFalse(ret[0])
-            self.assertTrue(isinstance(ret[1], six.string_types))
-
-        # Validate true return
-        with patch('salt.utils.path.which', mock_true):
-            ret = parallels.__virtual__()
-            self.assertTrue(ret)
-            self.assertEqual(ret, 'parallels')
-
     def test__normalize_args(self):
         '''
         Test parallels._normalize_args
@@ -97,21 +76,30 @@ class ParallelsTestCase(TestCase, LoaderModuleMockMixin):
         # Validate 'prlsrvctl info'
         info_cmd = ['prlsrvctl', 'info']
         info_fcn = MagicMock()
-        with patch.dict(parallels.__salt__, {'cmd.run': info_fcn}):
+        with patch.dict(
+            parallels.__salt__,
+            {'cmd.run': info_fcn, 'salt.utils.path.which': MagicMock(return_value=True)}
+        ):
             parallels.prlsrvctl('info', runas=runas)
             info_fcn.assert_called_once_with(info_cmd, runas=runas)
 
         # Validate 'prlsrvctl usb list'
         usb_cmd = ['prlsrvctl', 'usb', 'list']
         usb_fcn = MagicMock()
-        with patch.dict(parallels.__salt__, {'cmd.run': usb_fcn}):
+        with patch.dict(
+            parallels.__salt__,
+            {'cmd.run': usb_fcn, 'salt.utils.path.which': MagicMock(return_value=True)}
+        ):
             parallels.prlsrvctl('usb', 'list', runas=runas)
             usb_fcn.assert_called_once_with(usb_cmd, runas=runas)
 
         # Validate 'prlsrvctl set "--mem-limit auto"'
         set_cmd = ['prlsrvctl', 'set', '--mem-limit', 'auto']
         set_fcn = MagicMock()
-        with patch.dict(parallels.__salt__, {'cmd.run': set_fcn}):
+        with patch.dict(
+            parallels.__salt__,
+            {'cmd.run': set_fcn, 'salt.utils.path.which': MagicMock(return_value=True)}
+        ):
             parallels.prlsrvctl('set', '--mem-limit auto', runas=runas)
             set_fcn.assert_called_once_with(set_cmd, runas=runas)
 
@@ -124,21 +112,30 @@ class ParallelsTestCase(TestCase, LoaderModuleMockMixin):
         # Validate 'prlctl user list'
         user_cmd = ['prlctl', 'user', 'list']
         user_fcn = MagicMock()
-        with patch.dict(parallels.__salt__, {'cmd.run': user_fcn}):
+        with patch.dict(
+            parallels.__salt__,
+            {'cmd.run': user_fcn, 'salt.utils.path.which': MagicMock(return_value=True)}
+        ):
             parallels.prlctl('user', 'list', runas=runas)
             user_fcn.assert_called_once_with(user_cmd, runas=runas)
 
         # Validate 'prlctl exec "macvm uname"'
         exec_cmd = ['prlctl', 'exec', 'macvm', 'uname']
         exec_fcn = MagicMock()
-        with patch.dict(parallels.__salt__, {'cmd.run': exec_fcn}):
+        with patch.dict(
+            parallels.__salt__,
+            {'cmd.run': exec_fcn, 'salt.utils.path.which': MagicMock(return_value=True)}
+        ):
             parallels.prlctl('exec', 'macvm uname', runas=runas)
             exec_fcn.assert_called_once_with(exec_cmd, runas=runas)
 
         # Validate 'prlctl capture "macvm --file macvm.display.png"'
         cap_cmd = ['prlctl', 'capture', 'macvm', '--file', 'macvm.display.png']
         cap_fcn = MagicMock()
-        with patch.dict(parallels.__salt__, {'cmd.run': cap_fcn}):
+        with patch.dict(
+            parallels.__salt__,
+            {'cmd.run': cap_fcn, 'salt.utils.path.which': MagicMock(return_value=True)}
+        ):
             parallels.prlctl('capture', 'macvm --file macvm.display.png', runas=runas)
             cap_fcn.assert_called_once_with(cap_cmd, runas=runas)
 
