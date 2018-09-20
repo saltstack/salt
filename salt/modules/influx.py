@@ -76,6 +76,9 @@ def _client(influxdb_user=None, influxdb_password=None, influxdb_host=None, infl
     for ignore in _STATE_INTERNAL_KEYWORDS:
         if ignore in client_args:
             del client_args[ignore]
+    for ignore in ADDITIONAL_DROP_KEYWORDS:
+        if ignore in client_args:
+            del client_args[ignore]
     return influxdb.InfluxDBClient(host=influxdb_host,
                                    port=influxdb_port,
                                    username=influxdb_user,
