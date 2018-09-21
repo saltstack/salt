@@ -39,6 +39,7 @@ try:
     import win32gui
     import win32api
     import win32con
+    import pywintypes
     HAS_WINDOWS_MODULES = True
 except ImportError:
     HAS_WINDOWS_MODULES = False
@@ -161,7 +162,7 @@ class Registry(object):  # pylint: disable=R0903
 def key_exists(hive, key, use_32bit_registry=False):
     '''
     Check that the key is found in the registry. This refers to keys and not
-    value/data pairs.
+    value/data pairs. To check value/data pairs, use ``value_exists``
 
     Args:
 
@@ -193,10 +194,74 @@ def key_exists(hive, key, use_32bit_registry=False):
 
     try:
         handle = win32api.RegOpenKeyEx(hkey, local_key, 0, access_mask)
-        win32api.RegCloseKey(handle)
         return True
-    except Exception:  # pylint: disable=E0602
-        return False
+    except pywintypes.error as exc:
+        if exc.winerror == 2:
+            return False
+        raise
+    finally:
+        win32api.RegCloseKey(handle)
+
+
+def value_exists(hive, key, vname, use_32bit_registry=False):
+    '''
+    Check that the value/data pair is found in the registry.
+
+    .. version-added:: 2018.3.4
+
+    Args:
+
+        hive (str): The hive to connect to
+
+        key (str): The key to check in
+
+        vname (str): The name of the value/data pair you're checking
+
+        use_32bit_registry (bool): Look in the 32bit portion of the registry
+
+    Returns:
+        bool: True if exists, otherwise False
+
+    Usage:
+
+        .. code-block:: python
+
+            import salt.utils.win_reg
+            winreg.key_exists(hive='HKLM', key='SOFTWARE\\Microsoft')
+    '''
+    local_hive = _to_unicode(hive)
+    local_key = _to_unicode(key)
+    local_vname = _to_unicode(vname)
+
+    registry = Registry()
+    try:
+        hkey = registry.hkeys[local_hive]
+    except KeyError:
+        raise CommandExecutionError('Invalid Hive: {0}'.format(local_hive))
+    access_mask = registry.registry_32[use_32bit_registry]
+
+    try:
+        handle = win32api.RegOpenKeyEx(hkey, local_key, 0, access_mask)
+    except pywintypes.error as exc:
+        if exc.winerror == 2:
+            # The key containing the value/data pair does not exist
+            return False
+        raise
+
+    try:
+        # RegQueryValueEx returns and accepts unicode data
+        _, _ = win32api.RegQueryValueEx(handle, local_vname)
+        # value/data pair exists
+        return True
+    except pywintypes.error as exc:
+        if exc.winerror == 2 and vname is None:
+            # value/data pair exists but is empty
+            return True
+        else:
+            # value/data pair not found
+            return False
+    finally:
+        win32api.RegCloseKey(handle)
 
 
 def broadcast_change():
