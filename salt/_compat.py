@@ -181,15 +181,15 @@ class IPv6AddressScoped(ipaddress.IPv6Address):
         :param data:
         :return:
         '''
-        if sys.version_info.major > 2:
-            return isinstance(data, bytes)
-
         packed = False
-        if len(data) == 16 and ':' not in data:
-            try:
-                packed = bool(int(str(bytearray(data)).encode('hex'), 16))
-            except ValueError:
-                pass
+        if sys.version_info.major > 2:
+            packed = isinstance(data, bytes)
+        else:
+            if len(data) == 16 and ':' not in data:
+                try:
+                    packed = bool(int(str(bytearray(data)).encode('hex'), 16))
+                except ValueError:
+                    pass
 
         return packed
 
