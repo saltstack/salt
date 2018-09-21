@@ -37,6 +37,12 @@ from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
 try:
     import pkg_resources
+except ImportError:
+    pkg_resources = None
+
+
+try:
+    import pkg_resources
 
     HAS_PKG_RESOURCES = True
 except ImportError:
@@ -144,11 +150,7 @@ def __virtual__():
     """
     Only load if the pip module is available in __salt__
     """
-    if HAS_PKG_RESOURCES is False:
-        return False, "The pkg_resources python library is not installed"
-    if "pip.list" in __salt__:
-        return __virtualname__
-    return False
+    return "pip.list" in __salt__ and __virtualname__ or False
 
 
 def _fulfills_version_spec(version, version_spec):
