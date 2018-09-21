@@ -53,7 +53,7 @@ def __virtual__():
 
 def present(name,
             password,
-            email,
+            email=None,
             is_admin=False,
             fullname=None,
             theme=None,
