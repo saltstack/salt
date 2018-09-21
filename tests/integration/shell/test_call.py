@@ -92,6 +92,18 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
             return salt.utils.json.loads(''.join(self.run_call(cmd)))['local']
 
         os_family = _run_call('grains.get os_family')
+        if os_family == 'RedHat':
+            # This test errors in odd ways on some distros (namely Fedora, CentOS).
+            # There is a bug somewhere either in the test suite or Python versions
+            # that causes a SyntaxError. This test was skipped entirely long ago,
+            # likely due to this same issue. For now, let's skip the test for these
+            # distros and let the other OSes catch regressions here.
+            # The actual commands work fine, it's the test suite that has problems.
+            # See https://github.com/saltstack/salt-jenkins/issues/1122 and also see
+            # https://github.com/saltstack/salt/pull/49552 for more info.
+            self.skipTest('Test throws SyntaxErrors due to deep bug. Skipping until '
+                          'issue can be resolved.')
+
         try:
             target = _PKG_TARGETS.get(os_family, [])[0]
         except IndexError:
