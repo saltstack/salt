@@ -44,6 +44,7 @@ from salt.utils.dictdiffer import deep_diff
 
 # Import 3rd-party libs
 from salt.ext.six import string_types
+from requests.exceptions import HTTPError
 
 
 def __virtual__():
@@ -114,24 +115,41 @@ def present(name,
     user_data = __salt__['grafana4.get_user_data'](user['id'], profile=profile)
 
     if default_organization:
-        orgid = __salt__['grafana4.get_org'](default_organization, profile)['id']
+        try:
+            orgid = __salt__['grafana4.get_org'](default_organization, profile)['id']
+        except HTTPError as e:
+            ret['comment'] = 'Error while looking up user {}\'s default grafana org {}: {}'.format(
+                    name, default_organization, e)
+            ret['result'] = False
+            return ret
     new_data = _get_json_data(login=name, email=email, name=fullname, theme=theme,
-                        orgId = orgid if default_organization else None,
-                        defaults=user_data)
+                            orgId = orgid if default_organization else None,
+                            defaults=user_data)
     old_data = _get_json_data(login=None, email=None, name=None, theme=None,
-                        orgId=None,
-                        defaults=user_data)
-
+                            orgId=None,
+                            defaults=user_data)
     if organizations:
         for org in organizations:
             for org_name, org_role in org.items():
-                org_users = __salt__['grafana4.get_org_users'](org_name, profile)
+                try:
+                    org_users = __salt__['grafana4.get_org_users'](org_name, profile)
+                except HTTPError as e:
+                    ret['comment'] = 'Error while looking up user {}\'s grafana org {}: {}'.format(
+                            name, org_name, e)
+                    ret['result'] = False
+                    return ret
                 user_found = False
                 for org_user in org_users:
                     if org_user['userId'] == user['id']:
                         if org_user['role'] != org_role:
-                            __salt__['grafana4.update_org_user'](user['id'],
-                                    orgname=org_name, profile=profile, role=org_role)
+                            try:
+                                __salt__['grafana4.update_org_user'](user['id'],
+                                        orgname=org_name, profile=profile, role=org_role)
+                            except HTTPError as e:
+                                ret['comment'] = 'Error while setting role {} for user {} in grafana org {}: {}'.format(
+                                        org_role, name, org_name, e)
+                                ret['result'] = False
+                                return ret
                             ret['changes'][org_name]=org_role
                         user_found = True
                         break;
