@@ -37,7 +37,8 @@ ARCHES = ARCHES_64 + ARCHES_32 + ARCHES_PPC + ARCHES_S390 + \
 QUERYFORMAT = '%{NAME}_|-%{EPOCH}_|-%{VERSION}_|-%{RELEASE}_|-%{ARCH}_|-%{REPOID}_|-%{INSTALLTIME}'
 
 # on some archs, the rpm _host_cpu macro doesn't match the pkg name arch
-ARCHMAP = {'powerpc64le' : 'ppc64le'}
+ARCHMAP = {'powerpc64le': 'ppc64le'}
+
 
 def get_osarch():
     '''
