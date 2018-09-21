@@ -1240,8 +1240,8 @@ def in_subnet(cidr, addr=None):
     if addr is None:
         addr = ip_addrs()
         addr.extend(ip_addrs6())
-    elif not isinstance(addr, list):
-        addr = [addr]
+    elif not isinstance(addr, (list, tuple)):
+        addr = (addr,)
 
     return any(ipaddress.ip_address(item) in cidr for item in addr)
 
