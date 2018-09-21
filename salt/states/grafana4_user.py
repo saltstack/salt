@@ -57,6 +57,8 @@ def present(name,
             is_admin=False,
             fullname=None,
             theme=None,
+            default_organization=None,
+            organizations=None,
             profile='grafana'):
     '''
     Ensure that a user is present.
@@ -78,6 +80,12 @@ def present(name,
 
     theme
         Optional - Selected theme of the user.
+
+    default_organization
+        Optional - Set user's default organization
+
+    organizations
+        Optional - Dictionary of organization names or organization name and role pairs that the user belongs to.
 
     profile
         Configuration profile used to connect to the Grafana instance.
@@ -104,14 +112,40 @@ def present(name,
         ret['changes']['new'] = user
 
     user_data = __salt__['grafana4.get_user_data'](user['id'], profile=profile)
-    data = _get_json_data(login=name, email=email, name=fullname, theme=theme,
-                          defaults=user_data)
-    if data != _get_json_data(login=None, email=None, name=None, theme=None,
-                              defaults=user_data):
+
+    if default_organization:
+        orgid = __salt__['grafana4.get_org'](default_organization, profile)['id']
+        new_data = _get_json_data(login=name, email=email, name=fullname, theme=theme, orgId = orgid,
+                              defaults=user_data)
+        old_data = _get_json_data(login=None, email=None, name=None, theme=None, orgId=None,
+                              defaults=user_data)
+    else:
+        new_data = _get_json_data(login=name, email=email, name=fullname, theme=theme,
+                              defaults=user_data)
+        old_data = _get_json_data(login=None, email=None, name=None, theme=None,
+                              defaults=user_data)
+    if organizations:
+        for org in organizations:
+            for org_name, org_role in org.items():
+                org_users = __salt__['grafana4.get_org_users'](org_name, profile)
+                user_found = False
+                for org_user in org_users:
+                    if org_user['userId'] == user['id']:
+                        if org_user['role'] != org_role:
+                            __salt__['grafana4.update_org_user'](user['id'], orgname=org_name, profile=profile, role=org_role)
+                            ret['changes'][org_name]=org_role
+                        user_found = True
+                        break;
+                if not user_found:
+                    ret['changes'][org_name]=org_role
+                    __salt__['grafana4.create_org_user'](orgname=org_name, profile=profile, role=org_role, loginOrEmail=name)
+
+    if new_data != old_data:
         if __opts__['test']:
             ret['comment'] = 'User {0} will be updated'.format(name)
+            dictupdate.update(ret['changes'], deep_diff(old_data, new_data))
             return ret
-        __salt__['grafana4.update_user'](user['id'], profile=profile, **data)
+        __salt__['grafana4.update_user'](user['id'], profile=profile, orgid=orgid, **new_data)
         dictupdate.update(
             ret['changes'], deep_diff(
                 user_data, __salt__['grafana4.get_user_data'](user['id'])))
