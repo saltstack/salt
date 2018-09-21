@@ -875,7 +875,7 @@ def create(vm_):
                     if "gw" in _stringlist_to_dictionary(vm_[setting]):
                         new_setting.update(
                             _stringlist_to_dictionary(
-                                "ip={}/24,gw={}".format(
+                                "ip={0}/24,gw={1}".format(
                                     vm_["ip_address"],
                                     _stringlist_to_dictionary(vm_[setting])["gw"],
                                 )
@@ -884,7 +884,7 @@ def create(vm_):
                     else:
                         new_setting.update(
                             _stringlist_to_dictionary(
-                                "ip={}/24".format(vm_["ip_address"])
+                                "ip={0}/24".format(vm_["ip_address"])
                             )
                         )
                 else:
