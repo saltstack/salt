@@ -4,7 +4,7 @@ This is the default list matcher.
 '''
 from __future__ import absolute_import, print_function, unicode_literals
 import collections
-import six
+import salt.ext.six as six  # pylint: disable=3rd-party-module-not-gated
 
 
 def match(tgt):
