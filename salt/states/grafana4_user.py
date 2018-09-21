@@ -86,7 +86,7 @@ def present(name,
         Optional - Set user's default organization
 
     organizations
-        Optional - Dictionary of organization names or organization name and role pairs that the user belongs to.
+        Optional - List of viewer member organizations or pairs of organization and role that the user belongs to.
 
     profile
         Configuration profile used to connect to the Grafana instance.
@@ -130,33 +130,39 @@ def present(name,
                             defaults=user_data)
     if organizations:
         for org in organizations:
-            for org_name, org_role in org.items():
-                try:
-                    org_users = __salt__['grafana4.get_org_users'](org_name, profile)
-                except HTTPError as e:
-                    ret['comment'] = 'Error while looking up user {}\'s grafana org {}: {}'.format(
-                            name, org_name, e)
-                    ret['result'] = False
-                    return ret
-                user_found = False
-                for org_user in org_users:
-                    if org_user['userId'] == user['id']:
-                        if org_user['role'] != org_role:
-                            try:
-                                __salt__['grafana4.update_org_user'](user['id'],
-                                        orgname=org_name, profile=profile, role=org_role)
-                            except HTTPError as e:
-                                ret['comment'] = 'Error while setting role {} for user {} in grafana org {}: {}'.format(
-                                        org_role, name, org_name, e)
-                                ret['result'] = False
-                                return ret
-                            ret['changes'][org_name]=org_role
-                        user_found = True
-                        break;
-                if not user_found:
-                    ret['changes'][org_name]=org_role
-                    __salt__['grafana4.create_org_user'](orgname=org_name,
-                            profile=profile, role=org_role, loginOrEmail=name)
+            if isinstance(org, basestring):
+                org_name = org
+                org_role = 'Viewer'
+            else:
+                org_name = org.keys()[0]
+                org_role = org.values()[0]
+
+            try:
+                org_users = __salt__['grafana4.get_org_users'](org_name, profile)
+            except HTTPError as e:
+                ret['comment'] = 'Error while looking up user {}\'s grafana org {}: {}'.format(
+                        name, org_name, e)
+                ret['result'] = False
+                return ret
+            user_found = False
+            for org_user in org_users:
+                if org_user['userId'] == user['id']:
+                    if org_user['role'] != org_role:
+                        try:
+                            __salt__['grafana4.update_org_user'](user['id'],
+                                    orgname=org_name, profile=profile, role=org_role)
+                        except HTTPError as e:
+                            ret['comment'] = 'Error while setting role {} for user {} in grafana org {}: {}'.format(
+                                    org_role, name, org_name, e)
+                            ret['result'] = False
+                            return ret
+                        ret['changes'][org_name]=org_role
+                    user_found = True
+                    break;
+            if not user_found:
+                ret['changes'][org_name]=org_role
+                __salt__['grafana4.create_org_user'](orgname=org_name,
+                        profile=profile, role=org_role, loginOrEmail=name)
 
     if new_data != old_data:
         if __opts__['test']:
