@@ -347,7 +347,6 @@ def list_keys(hive, key=None, use_32bit_registry=False):
             else:
                 subkeys.append(subkey)
 
-
     except Exception:  # pylint: disable=E0602
         log.debug(r'Cannot find key: %s\%s', hive, key, exc_info=True)
         return False, r'Cannot find key: {0}\{1}'.format(hive, key)
