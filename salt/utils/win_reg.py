@@ -192,6 +192,7 @@ def key_exists(hive, key, use_32bit_registry=False):
         raise CommandExecutionError('Invalid Hive: {0}'.format(local_hive))
     access_mask = registry.registry_32[use_32bit_registry]
 
+    handle = None
     try:
         handle = win32api.RegOpenKeyEx(hkey, local_key, 0, access_mask)
         return True
@@ -200,7 +201,8 @@ def key_exists(hive, key, use_32bit_registry=False):
             return False
         raise
     finally:
-        win32api.RegCloseKey(handle)
+        if handle:
+            win32api.RegCloseKey(handle)
 
 
 def value_exists(hive, key, vname, use_32bit_registry=False):
@@ -334,6 +336,7 @@ def list_keys(hive, key=None, use_32bit_registry=False):
     access_mask = registry.registry_32[use_32bit_registry]
 
     subkeys = []
+    handle = None
     try:
         handle = win32api.RegOpenKeyEx(hkey, local_key, 0, access_mask)
 
@@ -344,11 +347,13 @@ def list_keys(hive, key=None, use_32bit_registry=False):
             else:
                 subkeys.append(subkey)
 
-        handle.Close()
 
     except Exception:  # pylint: disable=E0602
         log.debug(r'Cannot find key: %s\%s', hive, key, exc_info=True)
         return False, r'Cannot find key: {0}\{1}'.format(hive, key)
+    finally:
+        if handle:
+            handle.Close()
 
     return subkeys
 
@@ -697,17 +702,20 @@ def set_value(hive,
     else:
         create_options = registry.opttype['REG_OPTION_NON_VOLATILE']
 
+    handle = None
     try:
         handle, _ = win32api.RegCreateKeyEx(hkey, local_key, access_mask,
                                             Options=create_options)
         win32api.RegSetValueEx(handle, local_vname, 0, vtype_value, local_vdata)
         win32api.RegFlushKey(handle)
-        win32api.RegCloseKey(handle)
         broadcast_change()
         return True
     except (win32api.error, SystemError, ValueError, TypeError):  # pylint: disable=E0602
         log.exception('Encountered error setting registry value')
         return False
+    finally:
+        if handle:
+            win32api.RegCloseKey(handle)
 
 
 def cast_vdata(vdata=None, vtype='REG_SZ'):
@@ -922,10 +930,10 @@ def delete_value(hive, key, vname=None, use_32bit_registry=False):
         raise CommandExecutionError('Invalid Hive: {0}'.format(local_hive))
     access_mask = registry.registry_32[use_32bit_registry] | win32con.KEY_ALL_ACCESS
 
+    handle = None
     try:
         handle = win32api.RegOpenKeyEx(hkey, local_key, 0, access_mask)
         win32api.RegDeleteValue(handle, local_vname)
-        win32api.RegCloseKey(handle)
         broadcast_change()
         return True
     except Exception as exc:  # pylint: disable=E0602
@@ -938,3 +946,6 @@ def delete_value(hive, key, vname=None, use_32bit_registry=False):
             log.error('ValueName: %s', local_vname)
             log.error('32bit Reg: %s', use_32bit_registry)
             return False
+    finally:
+        if handle:
+            win32api.RegCloseKey(handle)
