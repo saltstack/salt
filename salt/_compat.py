@@ -156,10 +156,6 @@ class IPv6AddressScoped(ipaddress.IPv6Address):
             ipaddress._BaseAddress.__init__(self, address)
             ipaddress._BaseV6.__init__(self, address)
         else:
-            # This method (below) won't be around for Python 3
-            # and this type is needed to be checked differently
-            self._is_packed_binary = lambda p: isinstance(p, bytes)
-
             # Python 3.4 fix. Versions higher are simply not affected
             # https://github.com/python/cpython/blob/3.4/Lib/ipaddress.py#L543-L544
             self._version = 6
@@ -185,6 +181,9 @@ class IPv6AddressScoped(ipaddress.IPv6Address):
         :param data:
         :return:
         '''
+        if sys.version_info.major > 2:
+            return isinstance(data, bytes)
+
         packed = False
         if len(data) == 16 and ':' not in data:
             try:
