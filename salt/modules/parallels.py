@@ -6,6 +6,9 @@ not all of the options may have been provided yet.  For a complete reference,
 see the `Parallels Desktop Reference Guide
 <http://download.parallels.com/desktop/v9/ga/docs/en_US/Parallels%20Command%20Line%20Reference%20Guide.pdf>`_.
 
+This module requires the prlctl binary to be installed to run most functions.
+To run parallels.prlsrvctl, the prlsrvctl binary is required.
+
 What has not been implemented yet can be accessed through ``parallels.prlctl``
 and ``parallels.prlsrvctl`` (note the preceding double dash ``--`` as
 necessary):
