@@ -302,7 +302,8 @@ def set_subscription_attributes(SubscriptionArn, AttributeName, AttributeValue, 
         return False
 
 
-def subscribe(TopicArn, Protocol, Endpoint, region=None, key=None, keyid=None, profile=None, **kwargs):
+def subscribe(TopicArn=None, Protocol=None, Endpoint=None,
+              region=None, key=None, keyid=None, profile=None, **kwargs):
     '''
     Subscribe to a Topic.
 
