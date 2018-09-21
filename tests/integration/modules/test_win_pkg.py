@@ -39,9 +39,9 @@ class WinPKGTest(ModuleCase):
             repo_cache = os.path.join(RUNTIME_VARS.TMP, 'rootdir', 'cache', 'files', 'base', 'win', 'repo-ng')
             for pkg in pkgs:
                 if exists:
-                    assert pkg in str(repo_data)
+                    assert pkg in str(repo_data), str(repo_data)
                 else:
-                    assert pkg not in str(repo_data)
+                    assert pkg not in str(repo_data), str(repo_data)
 
                 for root, dirs, files in os.walk(repo_cache):
                     if exists:
