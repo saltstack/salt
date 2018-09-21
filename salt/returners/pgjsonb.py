@@ -332,7 +332,7 @@ def save_load(jid, load, minions=None):
                         {'jid': jid, 'load': psycopg2.extras.Json(load)})
         except psycopg2.IntegrityError:
             # https://github.com/saltstack/salt/issues/22171
-            # Without this try:except: we get tons of duplicate entry errors
+            # Without this try/except we get tons of duplicate entry errors
             # which result in job returns not being stored properly
             pass
 
