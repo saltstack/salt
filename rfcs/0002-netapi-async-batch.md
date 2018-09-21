@@ -29,8 +29,8 @@ Please note that the `Batch` class currently works synchronously only - this is 
 We propose to move the handling of batches into `salt-master`, so that long-term there is only one implementation and all clients/NetApi clients get support "for free".
 
 Implementation ideas:
- - a new parameter is added to the [publish method in `ClearFuncs`](https://github.com/saltstack/salt/blob/develop/salt/master.py#L2035) which is the receiving endpoint for commands from clients, or a new method is created (eg. `publish_batch`)
- - new code in `ClearFuncs` will implement the batching and call `publish` multiple times
+ - a new method is added to `ClearFuncs` that is called in place of the [publish](https://github.com/saltstack/salt/blob/develop/salt/master.py#L2035) for asynchronous batched command execution (eg. `publish_batch`). This method will receive batch-specific parameters and use `publish` internally
+ - it is assumed the [publish](https://github.com/saltstack/salt/blob/develop/salt/master.py#L2035) will not be changed. Further, separate discussion might be needed otherwise
  - implementation in principle follows from the existing `cli.Batch` class and makes it nonblocking/Tornado-aware, and removes the dependency from the client implementation
  - long term, all endpoints use this new code and `cli.Batch` is removed. Immediate goal would be to add asynchronous, batching mode to `rest_cherrypy` only (conforming to the now-deleted `rest_tornado` implementation noted above)
 
