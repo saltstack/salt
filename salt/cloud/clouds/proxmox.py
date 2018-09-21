@@ -518,7 +518,8 @@ def create(vm_):
         'event',
         'starting create',
         'salt/cloud/{0}/creating'.format(vm_['name']),
-        args=__utils__['cloud.filter_event']('creating', vm_, ['name', 'profile', 'provider', 'driver']),
+        args=__utils__['cloud.filter_event'](
+            'creating', vm_, ['name', 'profile', 'provider', 'driver']),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -580,8 +581,6 @@ def create(vm_):
         # ide2, etc. This enables us to have a different cloud-init ISO mounted for each VM that's
         # brought up
 
-        # TODO: Support other settings here too as these are not the only ones that can be modified
-        # after a clone operation
         log.info('Configuring cloned VM')
 
         # Modify the settings for the VM one at a time so we can see any problems with the values
@@ -622,18 +621,21 @@ def create(vm_):
                         postParams = {}
                         postParams['disk'] = setting
                         postParams['storage'] = setting_storage
-                        postParams['delete']  = 1
-                        node = query('post', 'nodes/{0}/qemu/{1}/move_disk'.format(vm_['host'], vmid), postParams)
+                        postParams['delete'] = 1
+                        node = query('post', 'nodes/{0}/qemu/{1}/move_disk'.format(
+                            vm_['host'], vmid), postParams)
                         data = _parse_proxmox_upid(node, vm_)
                         # wait until the disk has been moved
                         if not wait_for_task(data['upid'], timeout=300):
-                            return {'Error': 'Unable to move disk {0}, command timed out'.format(setting)}
+                            return {'Error': 'Unable to move disk {0}, command timed out'.format(
+                                setting)}
                     # if storage is different, move the disk
                     if setting_size != vm_disk_size:
                         postParams = {}
                         postParams['disk'] = setting
                         postParams['size'] = setting_size
-                        query('put', 'nodes/{0}/qemu/{1}/resize'.format(vm_['host'], vmid), postParams)
+                        query('put', 'nodes/{0}/qemu/{1}/resize'.format(
+                            vm_['host'], vmid), postParams)
                 else:
                     postParams = {}
                     postParams[setting] = vm_[setting]
@@ -655,18 +657,21 @@ def create(vm_):
                         postParams = {}
                         postParams['disk'] = setting
                         postParams['storage'] = setting_storage
-                        postParams['delete']  = 1
-                        node = query('post', 'nodes/{0}/qemu/{1}/move_disk'.format(vm_['host'], vmid), postParams)
+                        postParams['delete'] = 1
+                        node = query('post', 'nodes/{0}/qemu/{1}/move_disk'.format(
+                            vm_['host'], vmid), postParams)
                         data = _parse_proxmox_upid(node, vm_)
                         # wait until the disk has been moved
                         if not wait_for_task(data['upid'], timeout=300):
-                            return {'Error': 'Unable to move disk {0}, command timed out'.format(setting)}
+                            return {'Error': 'Unable to move disk {0}, command timed out'.format(
+                                setting)}
                     # if storage is different, move the disk
                     if setting_size != vm_disk_size:
                         postParams = {}
                         postParams['disk'] = setting
                         postParams['size'] = setting_size
-                        query('put', 'nodes/{0}/qemu/{1}/resize'.format(vm_['host'], vmid), postParams)
+                        query('put', 'nodes/{0}/qemu/{1}/resize'.format(
+                            vm_['host'], vmid), postParams)
                 else:
                     postParams = {}
                     postParams[setting] = vm_[setting]
@@ -709,9 +714,12 @@ def create(vm_):
                 # new merged settings
                 if setting_number == 0 and 'ip_address' in vm_:
                     if 'gw' in _stringlist_to_dictionary(vm_[setting]):
-                        new_setting.update(_stringlist_to_dictionary("ip=%s/24,gw=%s" % (vm_['ip_address'], _stringlist_to_dictionary(vm_[setting])['gw'])))
+                        new_setting.update(_stringlist_to_dictionary(
+                            "ip=%s/24,gw=%s" % (
+                                vm_['ip_address'], _stringlist_to_dictionary(vm_[setting])['gw'])))
                     else:
-                        new_setting.update(_stringlist_to_dictionary("ip=%s/24" % vm_['ip_address']))
+                        new_setting.update(
+                            _stringlist_to_dictionary("ip=%s/24" % vm_['ip_address']))
                 else:
                     new_setting.update(_stringlist_to_dictionary(vm_[setting]))
 
@@ -755,7 +763,8 @@ def create(vm_):
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
-        args=__utils__['cloud.filter_event']('created', vm_, ['name', 'profile', 'provider', 'driver']),
+        args=__utils__['cloud.filter_event'](
+            'created', vm_, ['name', 'profile', 'provider', 'driver']),
         sock_dir=__opts__['sock_dir'],
     )
 
@@ -853,7 +862,8 @@ def create_node(vm_, newid):
         newnode['ostemplate'] = vm_['image']
 
         # optional VZ settings
-        for prop in 'cpus', 'disk', 'ip_address', 'nameserver', 'password', 'swap', 'poolid', 'storage':
+        for prop in ['cpus', 'disk', 'ip_address', 'nameserver',
+                     'password', 'swap', 'poolid', 'storage']:
             if prop in vm_:  # if the property is set, use it for the VM request
                 newnode[prop] = vm_[prop]
 
@@ -862,8 +872,8 @@ def create_node(vm_, newid):
         newnode['hostname'] = vm_['name']
         newnode['ostemplate'] = vm_['image']
 
-        static_props = ('cpuunits', 'cpulimit', 'rootfs', 'cores', 'description', 'memory', 'onboot', 'net0',
-                        'password', 'nameserver', 'swap', 'storage', 'rootfs')
+        static_props = ('cpuunits', 'cpulimit', 'rootfs', 'cores', 'description', 'memory',
+                        'onboot', 'net0', 'password', 'nameserver', 'swap', 'storage', 'rootfs')
         for prop in _get_properties('/nodes/{node}/lxc',
                                     'POST',
                                     static_props):
@@ -891,7 +901,8 @@ def create_node(vm_, newid):
 
     elif vm_['technology'] == 'qemu':
         # optional Qemu settings
-        static_props = ('acpi', 'cores', 'cpu', 'pool', 'storage', 'sata0', 'ostype', 'ide2', 'net0')
+        static_props = (
+            'acpi', 'cores', 'cpu', 'pool', 'storage', 'sata0', 'ostype', 'ide2', 'net0')
         for prop in _get_properties('/nodes/{node}/qemu',
                                     'POST',
                                     static_props):
@@ -923,9 +934,10 @@ def create_node(vm_, newid):
 
         if ':' in vm_['clone_from']:
             vmhost = vm_['clone_from'].split(':')[0]
-            vm_['clone_from'] =  vm_['clone_from'].split(':')[1]
+            vm_['clone_from'] = vm_['clone_from'].split(':')[1]
 
-        node = query('post', 'nodes/{0}/qemu/{1}/clone'.format(vmhost, vm_['clone_from']), postParams)
+        node = query('post', 'nodes/{0}/qemu/{1}/clone'.format(
+            vmhost, vm_['clone_from']), postParams)
     else:
         node = query('post', 'nodes/{0}/{1}'.format(vmhost, vm_['technology']), newnode)
     return _parse_proxmox_upid(node, vm_)
@@ -1029,6 +1041,7 @@ def wait_for_task(upid, timeout=300):
             return False
         info = _lookup_proxmox_task(upid)
 
+
 def destroy(name, call=None):
     '''
     Destroy a node.
@@ -1080,7 +1093,8 @@ def destroy(name, call=None):
             transport=__opts__['transport']
         )
         if __opts__.get('update_cachedir', False) is True:
-            __utils__['cloud.delete_minion_cachedir'](name, __active_provider_name__.split(':')[0], __opts__)
+            __utils__['cloud.delete_minion_cachedir'](
+                name, __active_provider_name__.split(':')[0], __opts__)
 
         return {'Destroyed': '{0} was destroyed.'.format(name)}
 
@@ -1107,7 +1121,7 @@ def set_vm_status(status, name=None, vmid=None):
 
     log.debug("VM_STATUS: Has desired info (%s). Setting status..", vmobj)
     data = query('post', 'nodes/{0}/{1}/{2}/status/{3}'.format(
-                 vmobj['node'], vmobj['type'], vmobj['vmid'], status))
+        vmobj['node'], vmobj['type'], vmobj['vmid'], status))
 
     result = _parse_proxmox_upid(data, vmobj)
 
@@ -1138,7 +1152,7 @@ def get_vm_status(vmid=None, name=None):
         log.debug("VM_STATUS: Has desired info. Retrieving.. (%s)",
                   vmobj['name'])
         data = query('get', 'nodes/{0}/{1}/{2}/status/current'.format(
-                     vmobj['node'], vmobj['type'], vmobj['vmid']))
+            vmobj['node'], vmobj['type'], vmobj['vmid']))
         return data
 
     log.error('VM or requested status not found..')
@@ -1216,4 +1230,3 @@ def shutdown(name=None, vmid=None, call=None):
     # xxx: TBD: Check here whether the status was actually changed to 'stopped'
 
     return {'Shutdown': '{0} was shutdown.'.format(name)}
-
