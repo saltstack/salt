@@ -442,7 +442,7 @@ def hosted_zone_present(name, domain_name=None, private_zone=False, caller_ref=N
             create = True
         else:
             if private_zone:
-                for v, d in deets.get('VPCs', {}).items():
+                for d in deets.get('VPCs', {}):
                     if (d['VPCId'] == vpc_id
                             and d['VPCRegion'] == vpc_region):
                         create = False

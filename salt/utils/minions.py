@@ -387,11 +387,11 @@ class CkMinions(object):
             try:
                 # Target is an address?
                 tgt = ipaddress.ip_address(tgt)
-            except:  # pylint: disable=bare-except
+            except Exception:
                 try:
                     # Target is a network?
                     tgt = ipaddress.ip_network(tgt)
-                except:  # pylint: disable=bare-except
+                except Exception:
                     log.error('Invalid IP/CIDR target: %s', tgt)
                     return {'minions': [],
                             'missing': []}

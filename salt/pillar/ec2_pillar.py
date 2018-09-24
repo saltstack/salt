@@ -193,8 +193,6 @@ def ext_pillar(minion_id,
     except boto.exception.AWSConnectionError as exc:
         log.error('%s: invalid AWS credentials, %s', __name__, exc)
         return {}
-    except:
-        raise
 
     if conn is None:
         log.error('%s: Could not connect to region %s', __name__, region)
