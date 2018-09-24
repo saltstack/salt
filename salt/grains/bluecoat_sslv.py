@@ -4,7 +4,7 @@ Generate baseline proxy minion grains for bluecoat_sslv hosts.
 """
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
