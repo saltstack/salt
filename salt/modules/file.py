@@ -48,6 +48,7 @@ except ImportError:
 import salt.utils.args
 import salt.utils.atomicfile
 import salt.utils.data
+import salt.utils.dictupdate
 import salt.utils.filebuffer
 import salt.utils.files
 import salt.utils.find
@@ -2404,7 +2405,7 @@ def replace(path,
             except OSError:
                 os.remove(symlink_backup)
                 os.symlink(target_backup, symlink_backup)
-            except:
+            except Exception:
                 raise CommandExecutionError(
                     "Unable create backup symlink '{0}'. "
                     "Target was '{1}'. "
@@ -3168,9 +3169,13 @@ def touch(name, atime=None, mtime=None):
     simply update the atime and mtime if it already does.
 
     atime:
-        Access time in Unix epoch time
+        Access time in Unix epoch time. Set it to 0 to set atime of the
+        file with Unix date of birth. If this parameter isn't set, atime
+        will be set with current time.
     mtime:
-        Last modification in Unix epoch time
+        Last modification in Unix epoch time. Set it to 0 to set mtime of
+        the file with Unix date of birth. If this parameter isn't set,
+        mtime will be set with current time.
 
     CLI Example:
 
@@ -3189,11 +3194,11 @@ def touch(name, atime=None, mtime=None):
             with salt.utils.files.fopen(name, 'a'):
                 pass
 
-        if not atime and not mtime:
+        if atime is None and mtime is None:
             times = None
-        elif not mtime and atime:
+        elif mtime is None and atime is not None:
             times = (atime, time.time())
-        elif not atime and mtime:
+        elif atime is None and mtime is not None:
             times = (time.time(), mtime)
         else:
             times = (atime, mtime)
@@ -4002,7 +4007,7 @@ def apply_template_on_contents(
     if template in salt.utils.templates.TEMPLATE_REGISTRY:
         context_dict = defaults if defaults else {}
         if context:
-            context_dict.update(context)
+            context_dict = salt.utils.dictupdate.merge(context_dict, context)
         # Apply templating
         contents = salt.utils.templates.TEMPLATE_REGISTRY[template](
             contents,
@@ -4205,7 +4210,7 @@ def get_managed(
             if template in salt.utils.templates.TEMPLATE_REGISTRY:
                 context_dict = defaults if defaults else {}
                 if context:
-                    context_dict.update(context)
+                    context_dict = salt.utils.dictupdate.merge(context_dict, context)
                 data = salt.utils.templates.TEMPLATE_REGISTRY[template](
                     sfn,
                     name=name,
@@ -5504,11 +5509,11 @@ def manage_file(name,
             # Write the static contents to a temporary file
             tmp = salt.utils.files.mkstemp(prefix=salt.utils.files.TEMPFILE_PREFIX,
                                            text=True)
-            if salt.utils.platform.is_windows():
-                contents = os.linesep.join(
-                    _splitlines_preserving_trailing_newline(contents))
             with salt.utils.files.fopen(tmp, 'wb') as tmp_:
                 if encoding:
+                    if salt.utils.platform.is_windows():
+                        contents = os.linesep.join(
+                            _splitlines_preserving_trailing_newline(contents))
                     log.debug('File will be encoded with %s', encoding)
                     tmp_.write(contents.encode(encoding=encoding, errors=encoding_errors))
                 else:
@@ -6328,7 +6333,7 @@ def open_files(by_pid=False):
 
         #try:
         #    fd_.append(os.path.realpath('{0}/task/{1}exe'.format(ppath, tid)))
-        #except:
+        #except Exception:
         #    pass
 
         for fpath in os.listdir('{0}/fd'.format(ppath)):

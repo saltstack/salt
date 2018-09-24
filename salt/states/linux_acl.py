@@ -114,7 +114,7 @@ def present(name, acl_type, acl_name='', perms='', recurse=False, force=False):
         ret['result'] = False
         return ret
 
-    __current_perms = __salt__['acl.getfacl'](name)
+    __current_perms = __salt__['acl.getfacl'](name, recursive=recurse)
 
     if acl_type.startswith(('d:', 'default:')):
         _acl_type = ':'.join(acl_type.split(':')[1:])
@@ -145,7 +145,18 @@ def present(name, acl_type, acl_name='', perms='', recurse=False, force=False):
             user = None
 
         if user:
-            if user[_search_name]['octal'] == sum([_octal.get(i, i) for i in perms]):
+            octal_sum = sum([_octal.get(i, i) for i in perms])
+            need_refresh = False
+            for path in __current_perms:
+                acl_found = False
+                for user_acl in __current_perms[path].get(_acl_type, []):
+                    if _search_name in user_acl and user_acl[_search_name]['octal'] == octal_sum:
+                        acl_found = True
+                        break
+                if not acl_found:
+                    need_refresh = True
+                    break
+            if not need_refresh:
                 ret['comment'] = 'Permissions are in the desired state'
             else:
                 changes = {'new': {'acl_name': acl_name,
@@ -238,7 +249,7 @@ def absent(name, acl_type, acl_name='', perms='', recurse=False):
         ret['result'] = False
         return ret
 
-    __current_perms = __salt__['acl.getfacl'](name)
+    __current_perms = __salt__['acl.getfacl'](name, recursive=recurse)
 
     if acl_type.startswith(('d:', 'default:')):
         _acl_type = ':'.join(acl_type.split(':')[1:])
@@ -268,7 +279,18 @@ def absent(name, acl_type, acl_name='', perms='', recurse=False):
         except (AttributeError, IndexError, StopIteration, KeyError):
             user = None
 
-        if user:
+        need_refresh = False
+        for path in __current_perms:
+            acl_found = False
+            for user_acl in __current_perms[path].get(_acl_type, []):
+                if _search_name in user_acl:
+                    acl_found = True
+                    break
+            if acl_found:
+                need_refresh = True
+                break
+
+        if user or need_refresh:
             ret['comment'] = 'Removing permissions'
 
             if __opts__['test']:

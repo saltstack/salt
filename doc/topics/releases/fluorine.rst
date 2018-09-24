@@ -1181,7 +1181,7 @@ instance
 
 Old behavior:
 
-.. code-block:: example user in influxdb
+.. code-block:: yaml
 
     influxdb_user.present:
       - name: exampleuser
@@ -1191,7 +1191,7 @@ Old behavior:
 
 New behavior:
 
-.. code-block:: example user in influxdb
+.. code-block:: yaml
 
     influxdb_user.present:
       - name: exampleuser
