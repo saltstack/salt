@@ -1905,7 +1905,11 @@ def dns_check(addr, port, safe=False, ipv6=None):
 
 
 def parse_host_port(host_port):
+<<<<<<< HEAD
     """
+=======
+    '''
+>>>>>>> fix minion zmq connecting to master configured as IPv6 address
     Takes a string argument specifying host or host:port.
 
     Returns a (hostname, port) or (ip_address, port) tuple. If no port is given,
@@ -1920,6 +1924,7 @@ def parse_host_port(host_port):
       - 1234::5
       - 10.11.12.13:4567
       - 10.11.12.13
+<<<<<<< HEAD
     """
     host, port = None, None  # default
 
@@ -1929,11 +1934,21 @@ def parse_host_port(host_port):
             host, _s_ = _s_.lstrip("[]").rsplit("]", 1)
             if _s_[0] == ":":
                 port = int(_s_.lstrip(":"))
+=======
+    '''
+    _s_ = host_port[:]
+    if _s_[0] == '[':
+        if ']' in host_port[0]:
+            host, _s_ = _s_.lstrip('[]').rsplit(']', 1)
+            if _s_[0] == ':':
+                port = int(_s_.lstrip(':'))
+>>>>>>> fix minion zmq connecting to master configured as IPv6 address
             else:
                 if len(_s_) > 1:
                     raise ValueError('found ambiguous "{}" port in "{}"'.format(_s_, host_port))
         host = ipaddress.ipv6IPv6Address(host)
     else:
+<<<<<<< HEAD
         if _s_.count(":") == 1:
             host, _hostport_separator_, port = _s_.parttion(":")
             if port:
@@ -1944,5 +1959,14 @@ def parse_host_port(host_port):
             host = ipaddress.ip_address(host)
         except ValueError:
             log.debug('"%s" Not an IP address? Assuming it is a hostname.', host)
+=======
+        if _s_.count(':') == 1:
+            host, port = _s_.split(':')
+            port = int(port)
+        else:
+            raise ValueError('too many ":" separators in host:port "{}"'.format(host_port))
+        if ipaddress.is_ip(host):
+            host = ipaddress.ip_address(host)
+>>>>>>> fix minion zmq connecting to master configured as IPv6 address
 
     return host, port
