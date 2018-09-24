@@ -319,6 +319,19 @@ def set_static_dns(iface, *addrs):
     '''
     Set static DNS configuration on a Windows NIC
 
+    Args:
+
+        iface (str): The name of the interface to set
+
+        addrs (*):
+            One or more DNS servers to be added
+
+            .. note::
+                If no DNS servers are passed the list will be cleared.
+
+    Returns:
+        dict: A dictionary containing the new DNS settings
+
     CLI Example:
 
     .. code-block:: bash
@@ -326,6 +339,15 @@ def set_static_dns(iface, *addrs):
         salt -G 'os_family:Windows' ip.set_static_dns 'Local Area Connection' '192.168.1.1'
         salt -G 'os_family:Windows' ip.set_static_dns 'Local Area Connection' '192.168.1.252' '192.168.1.253'
     '''
+    # Clear the list of DNS servers if not passed
+    if not addrs:
+        log.debug('Clearing list of DNS servers')
+        cmd = ['netsh', 'int', 'ip', 'set', 'dns',
+               'name={0}'.format(iface),
+               'source=static',
+               'address=none']
+        __salt__['cmd.run'](cmd, python_shell=False)
+        return {'Interface': iface, 'DNS Server': []}
     addr_index = 1
     for addr in addrs:
         if addr_index == 1:
