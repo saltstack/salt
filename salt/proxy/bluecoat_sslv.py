@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
 Proxy Minion interface module for managing Blue Coat SSL Decryption devices
-=====================================================================
+
 :codeauthor: ``Spencer Ervin <spencer_ervin@hotmail.com>``
 :maturity:   new
 :depends:    none
@@ -12,8 +12,7 @@ The bluecoat_sslv proxy leverages the JSON API functionality on the Blue Coat SS
 Visibility devices. The Salt proxy must have access to the Blue Coat device on
 HTTPS (tcp/443).
 More in-depth conceptual reading on Proxy Minions can be found in the
-:ref:`Proxy Minion <proxy-minion>` section of Salt's
-documentation.
+:ref:`Proxy Minion <proxy-minion>` section of Salt's documentation.
 
 Configuration
 =============
@@ -61,7 +60,7 @@ password
 The password used to login to the bluecoat_sslv host. Required.
 
 auth
-^^^^^^^^
+^^^^
 
 The authentication type used to by the system. Use ``local`` to use the local user database. For
 TACACS+ set this value to ``tacacs``.
