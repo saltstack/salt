@@ -254,7 +254,6 @@ class MacUtilsTestCase(TestCase, LoaderModuleMockMixin):
         else:
             ret = mac_utils._available_services()
 
-
         # Make sure it's a dict with 8 items
         self.assertTrue(isinstance(ret, dict))
         self.assertEqual(len(ret), 8)
