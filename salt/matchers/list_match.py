@@ -32,5 +32,8 @@ def match(tgt):
     # We should never get here based on the return statements in the logic
     # above. If we do, it is because something above changed, and should be
     # considered as a bug. Log a warning to help us catch this.
-    log.warning('List matcher unexpectedly did not return, this is probably a bug')
+    log.warning(
+        'List matcher unexpectedly did not return, for target %s, '
+        'this is probably a bug.', tgt
+    )
     return False
