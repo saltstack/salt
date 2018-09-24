@@ -79,7 +79,10 @@ from __future__ import absolute_import, print_function, unicode_literals
 # Import python libs
 import logging
 import os
-import pkg_resources
+try:
+    import pkg_resources
+except ImportError:
+    pkg_resources = None
 import re
 import shutil
 import sys
@@ -116,7 +119,12 @@ def __virtual__():
     entire filesystem.  If it's not installed in a conventional location, the
     user is required to provide the location of pip each time it is used.
     '''
-    return 'pip'
+    if pkg_resources is None:
+        ret = False, 'Package dependency "pkg_resource" is missing'
+    else:
+        ret = 'pip'
+
+    return ret
 
 
 def _clear_context(bin_env=None):

@@ -5,7 +5,7 @@ unit tests for the localfs cache
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
-import os
+import errno
 import shutil
 import tempfile
 
@@ -53,7 +53,7 @@ class LocalFSTest(TestCase, LoaderModuleMockMixin):
         Tests that a SaltCacheError is raised when the base directory doesn't exist and
         cannot be created.
         '''
-        with patch('os.makedirs', MagicMock(side_effect=OSError(os.errno.EEXIST, ''))):
+        with patch('os.makedirs', MagicMock(side_effect=OSError(errno.EEXIST, ''))):
             with patch('tempfile.mkstemp', MagicMock(side_effect=Exception)):
                 self.assertRaises(Exception, localfs.store, bank='', key='', data='', cachedir='')
 
@@ -73,7 +73,7 @@ class LocalFSTest(TestCase, LoaderModuleMockMixin):
         This test mocks the call to mkstemp, but forces an OSError to be raised when the
         close() function is called on a file descriptor that doesn't exist.
         '''
-        with patch('os.makedirs', MagicMock(side_effect=OSError(os.errno.EEXIST, ''))):
+        with patch('os.makedirs', MagicMock(side_effect=OSError(errno.EEXIST, ''))):
             with patch('tempfile.mkstemp', MagicMock(return_value=(12345, 'foo'))):
                 self.assertRaises(OSError, localfs.store, bank='', key='', data='', cachedir='')
 
@@ -82,7 +82,7 @@ class LocalFSTest(TestCase, LoaderModuleMockMixin):
         Tests that a SaltCacheError is raised when there is a problem writing to the
         cache file.
         '''
-        with patch('os.makedirs', MagicMock(side_effect=OSError(os.errno.EEXIST, ''))):
+        with patch('os.makedirs', MagicMock(side_effect=OSError(errno.EEXIST, ''))):
             with patch('tempfile.mkstemp', MagicMock(return_value=('one', 'two'))):
                 with patch('os.close', MagicMock(return_value=None)):
                     with patch('salt.utils.files.fopen', MagicMock(side_effect=IOError)):

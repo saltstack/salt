@@ -24,7 +24,7 @@ class ReactorTest(ModuleCase, SaltMinionEventAssertsMixin):
     Test Salt's reactor system
     '''
 
-    @flaky()
+    @flaky
     def test_ping_reaction(self):
         '''
         Fire an event on the master and ensure
