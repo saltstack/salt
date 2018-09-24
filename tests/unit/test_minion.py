@@ -29,7 +29,7 @@ __opts__ = {}
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
     def test_invalid_master_address(self):
-        with patch.dict(__opts__, {'ipv6': False, 'master': float('127.0'), 'master_port': '4555', 'retry_dns': False}):
+        with patch.dict(__opts__, {'ipv6': False, 'master': float('127.0'), 'master_port': '4555', 'retry_dns': False, 'transport': None}):
             self.assertRaises(SaltSystemExit, salt.minion.resolve_dns, __opts__)
 
     def test_source_int_name_local(self):
@@ -72,7 +72,8 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                                    'master_port': '4555', 'file_client': 'remote',
                                    'source_interface_name': 'bond0.1234',
                                    'source_ret_port': 49017,
-                                   'source_publish_port': 49018}), \
+                                   'source_publish_port': 49018,
+                                   'transport': None}), \
             patch('salt.utils.network.interfaces',
                   MagicMock(return_value=interfaces)):
             assert salt.minion.resolve_dns(__opts__) == {'master_ip': '127.0.0.1',
@@ -95,7 +96,8 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                                    'source_interface_name': '',
                                    'source_address': '111.1.0.1',
                                    'source_ret_port': 49017,
-                                   'source_publish_port': 49018}), \
+                                   'source_publish_port': 49018,
+                                   'transport': None}), \
             patch('salt.utils.network.interfaces',
                   MagicMock(return_value=interfaces)):
             assert salt.minion.resolve_dns(__opts__) == {'source_publish_port': 49018,

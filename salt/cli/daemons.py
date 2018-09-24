@@ -184,7 +184,10 @@ class Master(salt.utils.parsers.MasterOptionParser, DaemonsMixin):  # pylint: di
                                  self.config['publish_port'],
                                  self.config['ret_port']):
                 self.shutdown(4, 'The ports are not available to bind')
-            self.config['interface'] = ip_bracket(self.config['interface'])
+
+            #Don't use brackets around interface if using tcp transport
+            if not self.config['transport'].lower() == 'tcp':
+                self.config['interface'] = ip_bracket(self.config['interface'])
             migrations.migrate_paths(self.config)
 
             # Late import so logging works correctly

@@ -1705,8 +1705,14 @@ class LocalClient(object):
                 timeout,
                 **kwargs)
 
-        master_uri = 'tcp://' + salt.utils.zeromq.ip_bracket(self.opts['interface']) + \
-                     ':' + six.text_type(self.opts['ret_port'])
+        #Don't use brackets around interface if using tcp transport
+        if self.opts['transport'] == 'tcp':
+            master_uri = 'tcp://' + self.opts['interface'] + \
+                        ':' + six.text_type(self.opts['ret_port'])
+        else:
+            master_uri = 'tcp://' + salt.utils.zeromq.ip_bracket(self.opts['interface']) + \
+                         ':' + six.text_type(self.opts['ret_port'])
+
         channel = salt.transport.Channel.factory(self.opts,
                                                  crypt='clear',
                                                  master_uri=master_uri)
@@ -1812,8 +1818,14 @@ class LocalClient(object):
                 timeout,
                 **kwargs)
 
-        master_uri = 'tcp://' + salt.utils.zeromq.ip_bracket(self.opts['interface']) + \
-                     ':' + six.text_type(self.opts['ret_port'])
+        #Don't use brackets around interface if using tcp transport
+        if self.opts['transport'] == 'tcp':
+            master_uri = 'tcp://' + self.opts['interface'] + \
+                        ':' + six.text_type(self.opts['ret_port'])
+        else:
+            master_uri = 'tcp://' + salt.utils.zeromq.ip_bracket(self.opts['interface']) + \
+                         ':' + six.text_type(self.opts['ret_port'])
+
         channel = salt.transport.client.AsyncReqChannel.factory(self.opts,
                                                                 io_loop=io_loop,
                                                                 crypt='clear',
