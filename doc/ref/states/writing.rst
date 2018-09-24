@@ -193,7 +193,7 @@ functions available in other state modules.
 The variable ``__states__`` is packed into the modules after they are loaded into
 the Salt minion.
 
-The ``__states__`` variable is a :ref:`Python dictionary <typesmapping>`
+The ``__states__`` variable is a :ref:`Python dictionary <python:typesmapping>`
 containing all of the state modules. Dictionary keys are strings representing
 the names of the modules and the values are the functions themselves.
 
