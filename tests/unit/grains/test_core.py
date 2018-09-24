@@ -1832,3 +1832,62 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         exists.return_value = True
         with patch("salt.utils.files.fopen", _fopen):
             self.assertEqual(core._hw_data({"kernel": "Linux"}), {})
+
+    @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
+    def test_kernelparams_return(self):
+        expectations = [
+            (
+                "BOOT_IMAGE=/vmlinuz-3.10.0-693.2.2.el7.x86_64",
+                {
+                    "kernelparams": [
+                        ("BOOT_IMAGE", "/vmlinuz-3.10.0-693.2.2.el7.x86_64")
+                    ]
+                },
+            ),
+            (
+                "root=/dev/mapper/centos_daemon-root",
+                {"kernelparams": [("root", "/dev/mapper/centos_daemon-root")]},
+            ),
+            (
+                "rhgb quiet ro",
+                {"kernelparams": [("rhgb", None), ("quiet", None), ("ro", None)]},
+            ),
+            ('param="value1"', {"kernelparams": [("param", "value1")]}),
+            (
+                'param="value1 value2 value3"',
+                {"kernelparams": [("param", "value1 value2 value3")]},
+            ),
+            (
+                'param="value1 value2 value3" LANG="pl" ro',
+                {
+                    "kernelparams": [
+                        ("param", "value1 value2 value3"),
+                        ("LANG", "pl"),
+                        ("ro", None),
+                    ]
+                },
+            ),
+            ("ipv6.disable=1", {"kernelparams": [("ipv6.disable", "1")]}),
+            (
+                'param="value1:value2:value3"',
+                {"kernelparams": [("param", "value1:value2:value3")]},
+            ),
+            (
+                'param="value1,value2,value3"',
+                {"kernelparams": [("param", "value1,value2,value3")]},
+            ),
+            (
+                'param="value1" param="value2" param="value3"',
+                {
+                    "kernelparams": [
+                        ("param", "value1"),
+                        ("param", "value2"),
+                        ("param", "value3"),
+                    ]
+                },
+            ),
+        ]
+
+        for cmdline, expectation in expectations:
+            with patch("salt.utils.files.fopen", mock_open(read_data=cmdline)):
+                self.assertEqual(core.kernelparams(), expectation)
