@@ -3,8 +3,9 @@
 This is the default list matcher.
 '''
 from __future__ import absolute_import, print_function, unicode_literals
-import collections
-import salt.ext.six as six  # pylint: disable=3rd-party-module-not-gated
+import logging
+
+log = logging.getLogger(__name__)
 
 
 def match(tgt):
@@ -12,14 +13,24 @@ def match(tgt):
     Determines if this host is on the list
     '''
     try:
-        if isinstance(tgt, collections.Sequence) and not isinstance(tgt, six.string_types):
-            result = bool(__opts__['id'] in tgt)
-        else:
-            result = __opts__['id'] == tgt \
-                or ',' + __opts__['id'] + ',' in tgt \
+        if ',' + __opts__['id'] + ',' in tgt \
                 or tgt.startswith(__opts__['id'] + ',') \
-                or tgt.endswith(',' + __opts__['id'])
-        return result
-
+                or tgt.endswith(',' + __opts__['id']):
+            return True
+        # tgt is a string, which we know because the if statement above did not
+        # cause one of the exceptions being caught. Therefore, look for an
+        # exact match. (e.g. salt -L foo test.ping)
+        return __opts__['id'] == tgt
     except (AttributeError, TypeError):
-        return False
+        # tgt is not a string, maybe it's a sequence type?
+        try:
+            return __opts__['id'] in tgt
+        except Exception:
+            # tgt was likely some invalid type
+            return False
+
+    # We should never get here based on the return statements in the logic
+    # above. If we do, it is because something above changed, and should be
+    # considered as a bug. Log a warning to help us catch this.
+    log.warning('List matcher unexpectedly did not return, this is probably a bug')
+    return False
