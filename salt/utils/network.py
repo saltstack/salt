@@ -1906,3 +1906,42 @@ def dns_check(addr, port, safe=False, ipv6=None):
             raise SaltClientError()
         raise SaltSystemExit(code=42, msg=err)
     return resolved
+
+
+def parse_host_port(host_port):
+    '''
+    Takes a string argument specifying host or host:port.
+
+    Returns a (hostname, port) or (ip_address, port) tuple. If no port is given,
+    the second element of the returned tuple will be None.
+
+    host:port argument, for example, is accepted in the forms of:
+      - hostname
+      - hostname:1234
+      - hostname.domain.tld
+      - hostname.domain.tld:5678
+      - [1234::5]:5678
+      - 1234::5
+      - 10.11.12.13:4567
+      - 10.11.12.13
+    '''
+    _s_ = host_port[:]
+    if _s_[0] == '[':
+        if ']' in host_port[0]:
+            host, _s_ = _s_.lstrip('[]').rsplit(']', 1)
+            if _s_[0] == ':':
+                port = int(_s_.lstrip(':'))
+            else:
+                if len(_s_) > 1:
+                    raise ValueError('found ambiguous "{}" port in "{}"'.format(_s_, host_port))
+        host = ipaddress.ipv6IPv6Address(host)
+    else:
+        if _s_.count(':') == 1:
+            host, port = _s_.split(':')
+            port = int(port)
+        else:
+            raise ValueError('too many ":" separators in host:port "{}"'.format(host_port))
+        if ipaddress.is_ip(host):
+            host = ipaddress.ip_address(host)
+
+    return host, port
