@@ -103,10 +103,8 @@ def _validate(dns_proto, dns_servers, ip_proto, ip_addrs, gateway):
                 'set to \'static\'.'
             )
     else:
-        if not dns_servers:
-            errors.append(
-                'The dns_servers param is required to set static DNS servers.'
-            )
+        if dns_servers is None:
+            pass
         elif not isinstance(dns_servers, list):
             errors.append(
                 'The dns_servers param must be formatted as a list.'
@@ -214,31 +212,60 @@ def managed(name,
     '''
     Ensure that the named interface is configured properly.
 
-    name
-        The name of the interface to manage
+    Args:
 
-    dns_proto : None
-        Set to ``static`` and use the ``dns_servers`` parameter to provide a
-        list of DNS nameservers. set to ``dhcp`` to use DHCP to get the DNS
-        servers.
+        name (str):
+            The name of the interface to manage
 
-    dns_servers : None
-        A list of static DNS servers.
+        dns_proto (str): None
+            Set to ``static`` and use the ``dns_servers`` parameter to provide a
+            list of DNS nameservers. set to ``dhcp`` to use DHCP to get the DNS
+            servers.
 
-    ip_proto : None
-        Set to ``static`` and use the ``ip_addrs`` and (optionally) ``gateway``
-        parameters to provide a list of static IP addresses and the default
-        gateway. Set to ``dhcp`` to use DHCP.
+        dns_servers (list): None
+            A list of static DNS servers. To clear the list of DNS servers pass
+            an empty list. ``[]``
 
-    ip_addrs : None
-        A list of static IP addresses.
+        ip_proto (str): None
+            Set to ``static`` and use the ``ip_addrs`` and (optionally) ``gateway``
+            parameters to provide a list of static IP addresses and the default
+            gateway. Set to ``dhcp`` to use DHCP.
 
-    gateway : None
-        A list of static IP addresses.
+        ip_addrs (list): None
+            A list of static IP addresses with netmask flag, ie: 192.168.0.11/24
 
-    enabled : True
-        Set to ``False`` to ensure that this interface is disabled.
+        gateway (str): None
+            The gateway to set for the interface
 
+        enabled (bool): True
+            Set to ``False`` to ensure that this interface is disabled.
+
+    Returns:
+        dict: A dictionary of old and new settings
+
+    Example:
+
+    .. code-block:: yaml
+
+        Ethernet1:
+          network.managed:
+            - dns_proto: static
+            - dns_servers:
+              - 8.8.8.8
+              - 8.8.8.4
+            - ip_proto: static
+            - ip_addrs:
+              - 192.168.0.100/24
+
+    Clear DNS entries example:
+
+    .. code-block:: yaml
+
+        Ethernet1:
+          network.managed:
+            - dns_proto: static
+            - dns_servers: []
+            - ip_proto: dhcp
     '''
     ret = {
         'name': name,
@@ -317,6 +344,12 @@ def managed(name,
                            ip_proto,
                            ip_addrs,
                            gateway)
+
+        # If dns_servers is the default `None` make no changes
+        # To clear the list, pass an empty dict
+        if dns_servers is None:
+            changes.pop('dns_servers')
+
         if not changes:
             return ret
 
@@ -357,9 +390,8 @@ def managed(name,
         if changes.get('dns_proto') == 'dhcp':
             __salt__['ip.set_dhcp_dns'](name)
 
-        elif changes.get('dns_servers'):
-            if changes.get('dns_servers'):
-                __salt__['ip.set_static_dns'](name, *changes['dns_servers'])
+        elif 'dns_servers' in changes:
+            __salt__['ip.set_static_dns'](name, *changes['dns_servers'])
 
         if changes.get('ip_proto') == 'dhcp':
             __salt__['ip.set_dhcp_ip'](name)
