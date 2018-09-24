@@ -34,6 +34,7 @@ class MockFileclient(object):
         if list_states is not None:
             self.list_states = lambda *x, **y: list_states
 
+    # pylint: disable=unused-argument,no-method-argument,method-hidden
     def cache_file(*args, **kwargs):
         raise NotImplementedError()
 
@@ -42,6 +43,7 @@ class MockFileclient(object):
 
     def list_states(*args, **kwargs):
         raise NotImplementedError()
+    # pylint: enable=unused-argument,no-method-argument,method-hidden
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
