@@ -10,6 +10,7 @@ Module to provide Blue Coat SSL Visibility compatibility to Salt.
 
 Configuration
 =============
+
 This module accepts connection configuration details either as
 parameters, or as configuration settings in pillar as a Salt proxy.
 Options passed into opts will be ignored if options are passed into pillar.
@@ -19,13 +20,14 @@ Options passed into opts will be ignored if options are passed into pillar.
 
 About
 =====
+
 This execution module was designed to handle connections to a Blue Coat SSL Visibility server.
 This module adds support to send connections directly to the device through the rest API.
 
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import Salt Libs
