@@ -164,6 +164,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
             test_install()
             test_remove()
 
+    @skipIf(salt.utils.platform.is_windows(), "Skip on windows")
     @requires_salt_modules('pkg.hold', 'pkg.unhold')
     @requires_network()
     @destructiveTest

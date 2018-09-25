@@ -2317,7 +2317,7 @@ def list_provides(**kwargs):
     '''
     ret = __context__.get('pkg.list_provides')
     if not ret:
-        cmd = ['rpm', '-qa', '--queryformat', '[%{PROVIDES}_|-%{NAME}\n]']
+        cmd = ['rpm', '-qa', '--queryformat', '%{PROVIDES}_|-%{NAME}\n']
         ret = dict()
         for line in __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False).splitlines():
             provide, realname = line.split('_|-')
@@ -2382,7 +2382,7 @@ def resolve_capabilities(pkgs, refresh, **kwargs):
                 try:
                     result = search(name, provides=True, match='exact')
                     if len(result) == 1:
-                        name = result.keys()[0]
+                        name = next(iter(result.keys()))
                     elif len(result) > 1:
                         log.warning("Found ambiguous match for capability '%s'.", pkg)
                 except CommandExecutionError as exc:
