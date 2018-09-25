@@ -163,3 +163,14 @@ New output:
               2
           Skipped:
               0
+
+
+Salt Cloud Features
+===================
+
+GCE Driver
+----------
+
+The GCE salt cloud driver can now be used with GCE instance credentials by
+setting the configuration paramaters ``service_account_private_key`` and
+``service_account_private_email`` to an empty string.
