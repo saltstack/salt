@@ -163,7 +163,6 @@ def resolve_dns(opts, fallback=True):
                 while True:
                     if retry_dns_count is not None:
                         if retry_dns_count == 0:
-                            ret['master_ip'] = '127.0.0.1'
                             raise SaltMasterUnresolvableError
                         retry_dns_count -= 1
                     import salt.log
@@ -995,7 +994,6 @@ class MinionManager(MinionBase):
 
             self._connect_minion(minion)
 
-        log.error(self.minions)
         if not self.minions:
             err = ('Minion unable to successfully connect to '
                    'a Salt Master.  Exiting.')
