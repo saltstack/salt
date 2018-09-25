@@ -33,9 +33,8 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
 
     maxDiff = None
 
-    def setUp(self):
-        super(StateModuleTest, self).setUp()
-
+    @classmethod
+    def setUpClass(cls):
         def _reline(path, ending=DEFAULT_ENDING):
             '''
             Normalize the line endings of a file.
@@ -1406,18 +1405,22 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         test state.sls with saltenv using a nonbase environment
         with a salt source
         '''
-        file_name = os.path.join(TMP, 'nonbase_env')
-        state_run = self.run_function(
-            'state.sls',
-            mods='non-base-env',
-            saltenv='prod'
-        )
-        state_id = 'file_|-test_file_|-{0}_|-managed'.format(file_name)
-        self.assertEqual(state_run[state_id]['comment'],
-                         'File {0} updated'.format(file_name))
-        self.assertTrue(
-            state_run['file_|-test_file_|-{0}_|-managed'.format(file_name)]['result'])
-        self.assertTrue(os.path.isfile(file_name))
+        filename = os.path.join(TMP, 'nonbase_env')
+        try:
+            ret = self.run_function(
+                'state.sls',
+                mods='non-base-env',
+                saltenv='prod'
+            )
+            ret = ret[next(iter(ret))]
+            assert ret['result']
+            assert ret['comment'] == 'File {0} updated'.format(filename)
+            assert os.path.isfile(filename)
+        finally:
+            try:
+                os.remove(filename)
+            except OSError:
+                pass
 
     def test_parallel_state_with_long_tag(self):
         '''
@@ -1446,8 +1449,3 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         expected = sorted(['Command "{0}" run'.format(x)
                            for x in (short_command, long_command)])
         assert comments == expected
-
-    def tearDown(self):
-        nonbase_file = os.path.join(TMP, 'nonbase_env')
-        if os.path.isfile(nonbase_file):
-            os.remove(nonbase_file)
