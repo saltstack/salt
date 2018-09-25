@@ -307,6 +307,21 @@ Set to zero if the minion should shutdown and not retry.
 
     retry_dns: 30
 
+.. conf_minion:: retry_dns
+
+``retry_dns_count``
+-------------
+
+Default: ``None``
+
+Set the number of attempts to perform when resolving
+the master hostname if name resolution fails.
+By default the minion will retry indefinitely.
+
+.. code-block:: yaml
+
+    retry_dns_count: 3
+
 .. conf_minion:: master_port
 
 ``master_port``
