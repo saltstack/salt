@@ -92,9 +92,8 @@ def _get_token(url, email, secret_key):
                                   decode=True)
     error = query.get('error')
     if error:
-        log.error('nsot ext pillar: can\'t get auth_token! reason: %s', error)
-        log.error('nsot ext pillar: verify that %s is reachable', url)
-        log.error('nsot ext pillar: verify that %s is a valid email', email)
+        log.error('Cannot obtain NSoT authentication token due to: %s.', error)
+        log.debug('Please verify NSoT URL %s is reachable and email %s is valid', url, email)
         return False
     else:
         log.debug('successfully obtained token from nsot!')
