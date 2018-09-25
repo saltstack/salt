@@ -22,6 +22,11 @@ __virtualname__ = 'nxos'
 
 
 def __virtual__():
+    try:
+        salt.utils.nxos.version_info()
+    except RuntimeError as err:
+        return False, err
+
     return __virtualname__
 
 
