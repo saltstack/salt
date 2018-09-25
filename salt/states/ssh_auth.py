@@ -125,7 +125,7 @@ def _present_test(user, name, enc, comment, options, source, config, fingerprint
     elif check == 'exists':
         result = True
         comment = ('The authorized host key {0} is already present '
-                          'for user {1}'.format(name, user))
+                   'for user {1}'.format(name, user))
 
     return result, comment
 
@@ -291,6 +291,16 @@ def present(
             if len(comps) == 3:
                 comment = comps[2]
 
+    if 'ssh_keys' in kwargs:
+        existing_keys = __salt__['ssh.auth_keys'](user=user).keys()
+        remove_keys = set(existing_keys).difference(kwargs['ssh_keys'])
+        for ssh_key in remove_keys:
+            if __opts__['test']:
+                remove_comment = 'Key set for removal'
+            else:
+                remove_comment = absent(ssh_key, user)['comment']
+            ret['changes'][ssh_key] = remove_comment
+
     if __opts__['test']:
         ret['result'], ret['comment'] = _present_test(
                 user,
@@ -301,14 +311,12 @@ def present(
                 source,
                 config,
                 fingerprint_hash_type)
+        if ret['changes']:
+            # Announce key removals from aggregate
+            ret['comment'] += ''.join('\n{0} {1}'.format(key, val) for key, val in ret['changes'].items())
+            ret['changes'] = {}
+            ret['result'] = None
         return ret
-
-    if 'ssh_keys' in kwargs:
-        existing_keys = __salt__['ssh.auth_keys'](user=user).keys()
-        remove_keys = set(existing_keys).difference(kwargs['ssh_keys'])
-        for ssh_key in remove_keys:
-            remove_comment = absent(ssh_key, user)['comment']
-            ret['changes'][ssh_key] = remove_comment
 
     # Get only the path to the file without env referrences to check if exists
     if source != '':
@@ -518,6 +526,7 @@ def absent(name,
         ret['changes'][name] = 'Removed'
 
     return ret
+
 
 def mod_aggregate(low, chunks, running):
     '''
