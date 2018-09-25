@@ -682,7 +682,6 @@ class MinionBase(object):
                     yield tornado.gen.sleep(opts['acceptance_wait_time'])
                 attempts += 1
                 if tries > 0:
-
                     log.debug(
                         'Connecting to master. Attempt %s of %s',
                         attempts, tries
@@ -972,7 +971,17 @@ class MinionManager(MinionBase):
                       loaded_base_name=loaded_base_name,
                       jid_queue=jid_queue)
 
-    def _spawn_minions(self):
+    def _check_minions(self):
+        '''
+        Check the size of self.minions and raise an error if it's empty
+        '''
+        if not self.minions:
+            err = ('Minion unable to successfully connect to '
+                   'a Salt Master.  Exiting.')
+            log.error(err)
+            raise SaltSystemExit(code=42, msg=err)
+
+    def _spawn_minions(self, timeout=60):
         '''
         Spawn all the coroutines which will sign in to masters
         '''
@@ -993,12 +1002,7 @@ class MinionManager(MinionBase):
                                                )
 
             self._connect_minion(minion)
-
-        if not self.minions:
-            err = ('Minion unable to successfully connect to '
-                   'a Salt Master.  Exiting.')
-            log.error(err)
-            raise SaltSystemExit(code=42, msg=err)
+        self.io_loop.call_later(timeout, self._check_minions)
 
     @tornado.gen.coroutine
     def _connect_minion(self, minion):
