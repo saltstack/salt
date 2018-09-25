@@ -12,46 +12,18 @@ import time
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
-from tests.support.paths import TMP, FILES
+from tests.support.paths import TMP, BASE_FILES
 from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import salt libs
 import salt.utils
+import salt.utils.atomicfile
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 
 # Import 3rd-party libs
 import salt.ext.six as six
 
-
 DEFAULT_ENDING = salt.utils.to_bytes(os.linesep)
-
-
-def trim_line_end(line):
-    '''
-    Remove CRLF or LF from the end of line.
-    '''
-    if line[-2:] == salt.utils.to_bytes('\r\n'):
-        return line[:-2]
-    elif line[-1:] == salt.utils.to_bytes('\n'):
-        return line[:-1]
-    raise Exception("Invalid line ending")
-
-
-def reline(source, dest, force=False, ending=DEFAULT_ENDING):
-    '''
-    Normalize the line endings of a file.
-    '''
-    fp, tmp = tempfile.mkstemp()
-    os.close(fp)
-    with salt.utils.fopen(tmp, 'wb') as tmp_fd:
-        with salt.utils.fopen(source, 'rb') as fd:
-            lines = fd.readlines()
-            for line in lines:
-                line_noend = trim_line_end(line)
-                tmp_fd.write(line_noend + ending)
-    if os.path.exists(dest) and force:
-        os.remove(dest)
-    os.rename(tmp, dest)
 
 
 class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
@@ -63,10 +35,21 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
 
     def setUp(self):
         super(StateModuleTest, self).setUp()
-        destpath = os.path.join(FILES, 'file', 'base', 'testappend', 'firstif')
-        reline(destpath, destpath, force=True)
-        destpath = os.path.join(FILES, 'file', 'base', 'testappend', 'secondif')
-        reline(destpath, destpath, force=True)
+
+        def _reline(path, ending=DEFAULT_ENDING):
+            '''
+            Normalize the line endings of a file.
+            '''
+            with salt.utils.fopen(path, 'rb') as fhr:
+                lines = fhr.read().splitlines()
+            with salt.utils.atomicfile.atomic_open(path, 'wb') as fhw:
+                for line in lines:
+                    fhw.write(line + ending)
+
+        destpath = os.path.join(BASE_FILES, 'testappend', 'firstif')
+        _reline(destpath)
+        destpath = os.path.join(BASE_FILES, 'testappend', 'secondif')
+        _reline(destpath)
 
     def test_show_highstate(self):
         '''
@@ -1435,6 +1418,34 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertTrue(
             state_run['file_|-test_file_|-{0}_|-managed'.format(file_name)]['result'])
         self.assertTrue(os.path.isfile(file_name))
+
+    def test_parallel_state_with_long_tag(self):
+        '''
+        This tests the case where the state being executed has a long ID dec or
+        name and states are being run in parallel. The filenames used for the
+        parallel state cache were previously based on the tag for each chunk,
+        and longer ID decs or name params can cause the cache file to be longer
+        than the operating system's max file name length. To counter this we
+        instead base64-encode the chunk's tag (as this is a bit faster than
+        doing a sha256) and use up to the first 32 characters from that result
+        as the cache filename. This test will ensure that long tags don't cause
+        caching failures.
+
+        See https://github.com/saltstack/salt/issues/49738 for more info.
+        '''
+        short_command = 'helloworld'
+        long_command = short_command * 25
+
+        ret = self.run_function(
+            'state.sls',
+            mods='issue-49738',
+            pillar={'short_command': short_command,
+                    'long_command': long_command}
+        )
+        comments = sorted([x['comment'] for x in six.itervalues(ret)])
+        expected = sorted(['Command "{0}" run'.format(x)
+                           for x in (short_command, long_command)])
+        assert comments == expected
 
     def tearDown(self):
         nonbase_file = os.path.join(TMP, 'nonbase_env')

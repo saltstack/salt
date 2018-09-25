@@ -1732,7 +1732,9 @@ class State(object):
         ret['duration'] = duration
 
         troot = os.path.join(self.opts['cachedir'], self.jid)
-        tfile = os.path.join(troot, _clean_tag(tag))
+        tfile = os.path.join(
+            troot,
+            salt.utils.hashutils.base64_b64encode(tag)[:32])
         if not os.path.isdir(troot):
             try:
                 os.makedirs(troot)
@@ -2091,7 +2093,10 @@ class State(object):
             proc = running[tag].get('proc')
             if proc:
                 if not proc.is_alive():
-                    ret_cache = os.path.join(self.opts['cachedir'], self.jid, _clean_tag(tag))
+                    ret_cache = os.path.join(
+                        self.opts['cachedir'],
+                        self.jid,
+                        salt.utils.hashutils.base64_b64encode(tag)[:32])
                     if not os.path.isfile(ret_cache):
                         ret = {'result': False,
                                'comment': 'Parallel process failed to return',
