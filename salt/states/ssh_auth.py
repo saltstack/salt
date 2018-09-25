@@ -259,6 +259,11 @@ def present(
 
             The default value of the ``fingerprint_hash_type`` will change to
             ``sha256`` in Salt 2017.7.0.
+
+    aggregate
+        Removes any existing ssh keys except for those managed by subsequent ``ssh_auth.present``
+
+        .. versionadded:: Fluorine
     '''
     ret = {'name': name,
            'changes': {},
@@ -297,6 +302,13 @@ def present(
                 config,
                 fingerprint_hash_type)
         return ret
+
+    if 'ssh_keys' in kwargs:
+        existing_keys = __salt__['ssh.auth_keys'](user=user).keys()
+        remove_keys = set(existing_keys).difference(kwargs['ssh_keys'])
+        for ssh_key in remove_keys:
+            remove_comment = absent(ssh_key, user)['comment']
+            ret['changes'][ssh_key] = remove_comment
 
     # Get only the path to the file without env referrences to check if exists
     if source != '':
@@ -506,3 +518,47 @@ def absent(name,
         ret['changes'][name] = 'Removed'
 
     return ret
+
+def mod_aggregate(low, chunks, running):
+    '''
+    The mod_aggregate function which looks up all ssh keys in the available
+    low chunks and merges them into a single ref in the present low data
+    '''
+    ssh_keys = []
+    # What functions should we aggregate?
+    agg_enabled = [
+            'present',
+            ]
+    # The `low` data is just a dict with the state, function (fun) and
+    # arguments passed in from the sls
+    if low.get('fun') not in agg_enabled:
+        return low
+    # Now look into what other things are set to execute
+    for chunk in chunks:
+        # The state runtime uses "tags" to track completed jobs, it may
+        # look familiar with the _|-
+        tag = __utils__['state.gen_tag'](chunk)
+        if tag in running:
+            # Already ran the state, skip aggregation
+            continue
+        if chunk.get('state') == 'ssh_auth':
+            if '__agg__' in chunk:
+                continue
+            # Check for the same function
+            if chunk.get('fun') != low.get('fun'):
+                continue
+            # Check for the same ssh user
+            if chunk.get('user') != low.get('user'):
+                continue
+            # Pull out the ssh name
+            elif 'name' in chunk:
+                ssh_keys.append(chunk['name'])
+                chunk['__agg__'] = True
+    if ssh_keys:
+        if 'ssh_keys' in low:
+            low['ssh_keys'].extend(ssh_keys)
+        else:
+            low['ssh_keys'] = ssh_keys
+    # The low has been modified and needs to be returned to the state
+    # runtime for execution
+    return low
