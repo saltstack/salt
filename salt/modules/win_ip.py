@@ -324,10 +324,9 @@ def set_static_dns(iface, *addrs):
         iface (str): The name of the interface to set
 
         addrs (*):
-            One or more DNS servers to be added
-
-            .. note::
-                If no DNS servers are passed the list will be cleared.
+            One or more DNS servers to be added. To clear the list of DNS
+            servers pass an empty list (``[]``). If undefined or ``None`` no
+            changes will be made.
 
     Returns:
         dict: A dictionary containing the new DNS settings
@@ -339,8 +338,10 @@ def set_static_dns(iface, *addrs):
         salt -G 'os_family:Windows' ip.set_static_dns 'Local Area Connection' '192.168.1.1'
         salt -G 'os_family:Windows' ip.set_static_dns 'Local Area Connection' '192.168.1.252' '192.168.1.253'
     '''
-    # Clear the list of DNS servers if not passed
-    if not addrs:
+    if addrs is () or str(addrs[0]).lower() == 'none':
+        return {'Interface': iface, 'DNS Server': 'No Changes'}
+    # Clear the list of DNS servers if [] is passed
+    if str(addrs[0]).lower() == '[]':
         log.debug('Clearing list of DNS servers')
         cmd = ['netsh', 'int', 'ip', 'set', 'dns',
                'name={0}'.format(iface),
