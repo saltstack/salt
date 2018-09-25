@@ -178,7 +178,9 @@ def enable(iface):
     '''
     if is_enabled(iface):
         return True
-    cmd = ['netsh', 'interface', 'set', 'interface', iface, 'admin=ENABLED']
+    cmd = ['netsh', 'interface', 'set', 'interface',
+           'name={0}'.format(iface),
+           'admin=ENABLED']
     __salt__['cmd.run'](cmd, python_shell=False)
     return is_enabled(iface)
 
@@ -195,7 +197,9 @@ def disable(iface):
     '''
     if is_disabled(iface):
         return True
-    cmd = ['netsh', 'interface', 'set', 'interface', iface, 'admin=DISABLED']
+    cmd = ['netsh', 'interface', 'set', 'interface',
+           'name={0}'.format(iface),
+           'admin=DISABLED']
     __salt__['cmd.run'](cmd, python_shell=False)
     return is_disabled(iface)
 
@@ -343,7 +347,7 @@ def set_static_dns(iface, *addrs):
     # Clear the list of DNS servers if [] is passed
     if str(addrs[0]).lower() == '[]':
         log.debug('Clearing list of DNS servers')
-        cmd = ['netsh', 'int', 'ip', 'set', 'dns',
+        cmd = ['netsh', 'interface', 'ip', 'set', 'dns',
                'name={0}'.format(iface),
                'source=static',
                'address=none']
@@ -352,14 +356,17 @@ def set_static_dns(iface, *addrs):
     addr_index = 1
     for addr in addrs:
         if addr_index == 1:
-            cmd = ['netsh', 'int', 'ip', 'set', 'dns',
-                   iface, 'static', addrs[0], 'primary']
+            cmd = ['netsh', 'interface', 'ip', 'set', 'dns',
+                   'name={0}'.format(iface),
+                   'source=static',
+                   'address={0}'.format(addr),
+                   'register=primary']
             __salt__['cmd.run'](cmd, python_shell=False)
             addr_index = addr_index + 1
         else:
             cmd = ['netsh', 'interface', 'ip', 'add', 'dns',
                    'name={0}'.format(iface),
-                   'addr={0}'.format(addr),
+                   'address={0}'.format(addr),
                    'index={0}'.format(addr_index)]
             __salt__['cmd.run'](cmd, python_shell=False)
             addr_index = addr_index + 1
