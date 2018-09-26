@@ -515,8 +515,8 @@ def subdict_match(data,
     Check for a match in a dictionary using a delimiter character to denote
     levels of subdicts, and also allowing the delimiter character to be
     matched. Thus, 'foo:bar:baz' will match data['foo'] == 'bar:baz' and
-    data['foo']['bar'] == 'baz'. The former would take priority over the
-    latter.
+    data['foo']['bar'] == 'baz'. The latter would take priority over the
+    former, as more deeply-nested matches are tried first.
     '''
     def _match(target, pattern, regex_match=False, exact_match=False):
         if regex_match:
@@ -568,8 +568,15 @@ def subdict_match(data,
                             return True
         return False
 
-    for idx in range(1, expr.count(delimiter) + 1):
-        splits = expr.split(delimiter)
+    splits = expr.split(delimiter)
+    num_splits = len(splits)
+    if num_splits == 1:
+        # Delimiter not present, this can't possibly be a match
+        return False
+
+    # If we have 4 splits, then we have three delimiters. Thus, the indexes we
+    # want to use are 3, 2, and 1, in that order.
+    for idx in range(num_splits - 1, 0, -1):
         key = delimiter.join(splits[:idx])
         matchstr = delimiter.join(splits[idx:])
         log.debug("Attempting to match '%s' in '%s' using delimiter '%s'",
