@@ -53,8 +53,8 @@ import time
 
 # Import salt libs
 import salt.utils.compat
-import salt.utils.versions
-import salt.utils.odict as odict
+import salt.utils.data
+import salt.utils.odict
 import salt.utils.versions
 from salt.exceptions import SaltInvocationError
 
@@ -236,7 +236,6 @@ def list_all_zones_by_id(region=None, key=None, keyid=None, profile=None):
 
 
 def zone_exists(zone, region=None, key=None, keyid=None, profile=None,
-                retry_on_rate_limit=None, rate_limit_retries=None,
                 retry_on_errors=True, error_retries=5):
     '''
     Check for the existence of a Route53 hosted zone.
@@ -251,19 +250,6 @@ def zone_exists(zone, region=None, key=None, keyid=None, profile=None,
         region = 'universal'
 
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-
-    if retry_on_rate_limit or rate_limit_retries is not None:
-        salt.utils.versions.warn_until(
-            'Neon',
-            'The \'retry_on_rate_limit\' and \'rate_limit_retries\' arguments '
-            'have been deprecated in favor of \'retry_on_errors\' and '
-            '\'error_retries\' respectively. Their functionality will be '
-            'removed, as such, their usage is no longer required.'
-        )
-        if retry_on_rate_limit is not None:
-            retry_on_errors = retry_on_rate_limit
-        if rate_limit_retries is not None:
-            error_retries = rate_limit_retries
 
     while error_retries > 0:
         try:
@@ -470,10 +456,19 @@ def _decode_name(name):
     return name.replace(r'\052', '*')
 
 
-def get_record(name, zone, record_type, fetch_all=False, region=None, key=None,
-               keyid=None, profile=None, split_dns=False, private_zone=False,
-               identifier=None, retry_on_rate_limit=None,
-               rate_limit_retries=None, retry_on_errors=True, error_retries=5):
+def get_record(name,
+               zone,
+               record_type,
+               fetch_all=False,
+               region=None,
+               key=None,
+               keyid=None,
+               profile=None,
+               split_dns=False,
+               private_zone=False,
+               identifier=None,
+               retry_on_errors=True,
+               error_retries=5):
     '''
     Get a record from a zone.
 
@@ -486,19 +481,6 @@ def get_record(name, zone, record_type, fetch_all=False, region=None, key=None,
 
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    if retry_on_rate_limit or rate_limit_retries is not None:
-        salt.utils.versions.warn_until(
-            'Neon',
-            'The \'retry_on_rate_limit\' and \'rate_limit_retries\' arguments '
-            'have been deprecated in favor of \'retry_on_errors\' and '
-            '\'error_retries\' respectively. Their functionality will be '
-            'removed, as such, their usage is no longer required.'
-        )
-        if retry_on_rate_limit is not None:
-            retry_on_errors = retry_on_rate_limit
-        if rate_limit_retries is not None:
-            error_retries = rate_limit_retries
-
     while error_retries > 0:
         try:
             if split_dns:
@@ -510,7 +492,7 @@ def get_record(name, zone, record_type, fetch_all=False, region=None, key=None,
                 log.error(msg)
                 return None
             _type = record_type.upper()
-            ret = odict.OrderedDict()
+            ret = salt.utils.odict.OrderedDict()
 
             name = _encode_name(name)
 
@@ -553,7 +535,6 @@ def _munge_value(value, _type):
 def add_record(name, value, zone, record_type, identifier=None, ttl=None,
                region=None, key=None, keyid=None, profile=None,
                wait_for_sync=True, split_dns=False, private_zone=False,
-               retry_on_rate_limit=None, rate_limit_retries=None,
                retry_on_errors=True, error_retries=5):
     '''
     Add a record to a zone.
@@ -566,19 +547,6 @@ def add_record(name, value, zone, record_type, identifier=None, ttl=None,
         region = 'universal'
 
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-
-    if retry_on_rate_limit or rate_limit_retries is not None:
-        salt.utils.versions.warn_until(
-            'Neon',
-            'The \'retry_on_rate_limit\' and \'rate_limit_retries\' arguments '
-            'have been deprecated in favor of \'retry_on_errors\' and '
-            '\'error_retries\' respectively. Their functionality will be '
-            'removed, as such, their usage is no longer required.'
-        )
-        if retry_on_rate_limit is not None:
-            retry_on_errors = retry_on_rate_limit
-        if rate_limit_retries is not None:
-            error_retries = rate_limit_retries
 
     while error_retries > 0:
         try:
@@ -630,7 +598,6 @@ def add_record(name, value, zone, record_type, identifier=None, ttl=None,
 def update_record(name, value, zone, record_type, identifier=None, ttl=None,
                   region=None, key=None, keyid=None, profile=None,
                   wait_for_sync=True, split_dns=False, private_zone=False,
-                  retry_on_rate_limit=None, rate_limit_retries=None,
                   retry_on_errors=True, error_retries=5):
     '''
     Modify a record in a zone.
@@ -653,19 +620,6 @@ def update_record(name, value, zone, record_type, identifier=None, ttl=None,
         log.error(msg)
         return False
     _type = record_type.upper()
-
-    if retry_on_rate_limit or rate_limit_retries is not None:
-        salt.utils.versions.warn_until(
-            'Neon',
-            'The \'retry_on_rate_limit\' and \'rate_limit_retries\' arguments '
-            'have been deprecated in favor of \'retry_on_errors\' and '
-            '\'error_retries\' respectively. Their functionality will be '
-            'removed, as such, their usage is no longer required.'
-        )
-        if retry_on_rate_limit is not None:
-            retry_on_errors = retry_on_rate_limit
-        if rate_limit_retries is not None:
-            error_retries = rate_limit_retries
 
     _value = _munge_value(value, _type)
     while error_retries > 0:
@@ -692,7 +646,6 @@ def update_record(name, value, zone, record_type, identifier=None, ttl=None,
 def delete_record(name, zone, record_type, identifier=None, all_records=False,
                   region=None, key=None, keyid=None, profile=None,
                   wait_for_sync=True, split_dns=False, private_zone=False,
-                  retry_on_rate_limit=None, rate_limit_retries=None,
                   retry_on_errors=True, error_retries=5):
     '''
     Modify a record in a zone.
@@ -715,19 +668,6 @@ def delete_record(name, zone, record_type, identifier=None, all_records=False,
         log.error(msg)
         return False
     _type = record_type.upper()
-
-    if retry_on_rate_limit or rate_limit_retries is not None:
-        salt.utils.versions.warn_until(
-            'Neon',
-            'The \'retry_on_rate_limit\' and \'rate_limit_retries\' arguments '
-            'have been deprecated in favor of \'retry_on_errors\' and '
-            '\'error_retries\' respectively. Their functionality will be '
-            'removed, as such, their usage is no longer required.'
-        )
-        if retry_on_rate_limit is not None:
-            retry_on_errors = retry_on_rate_limit
-        if rate_limit_retries is not None:
-            error_retries = rate_limit_retries
 
     while error_retries > 0:
         try:
@@ -874,7 +814,7 @@ def create_hosted_zone(domain_name, caller_ref=None, comment='', private_zone=Fa
             'private_zone': private_zone}
 
     if private_zone:
-        if not _exactly_one((vpc_name, vpc_id)):
+        if not salt.utils.data.exactly_one((vpc_name, vpc_id)):
             raise SaltInvocationError('Either vpc_name or vpc_id is required '
                                       'when creating a private zone.')
         vpcs = __salt__['boto_vpc.describe_vpcs'](
