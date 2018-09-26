@@ -1448,4 +1448,4 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         comments = sorted([x['comment'] for x in six.itervalues(ret)])
         expected = sorted(['Command "{0}" run'.format(x)
                            for x in (short_command, long_command)])
-        assert comments == expected
+        assert comments == expected, '{0} != {1}'.format(comments, expected)
