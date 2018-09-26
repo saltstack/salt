@@ -160,7 +160,8 @@ class GroupModuleTest(ModuleCase):
         self.run_function('user.add', [self._user])
         self.run_function('user.add', [self._user1])
         m = '{0},{1}'.format(self._user, self._user1)
-        self.assertTrue(self.run_function('group.members', [self._group, m]))
+        self.assertTrue(
+            self.run_function('group.members', [self._group, m])['result'])
         group_info = self.run_function('group.info', [self._group])
         self.assertIn(self._user, str(group_info['members']))
         self.assertIn(self._user1, str(group_info['members']))
