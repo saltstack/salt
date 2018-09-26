@@ -175,7 +175,7 @@ def _get_sk(**kwargs):
     sk_file = config['sk_file']
     if not key and sk_file:
         with salt.utils.files.fopen(sk_file, 'rb') as keyf:
-            key = six.text_type(keyf.read()).rstrip('\n')
+            key = salt.utils.stringutils.to_unicode(keyf.read()).strip('\n')
     if key is None:
         raise Exception('no key or sk_file found')
     return base64.b64decode(key)
@@ -193,7 +193,7 @@ def _get_pk(**kwargs):
             pubkey = six.text_type(keyf.read()).rstrip('\n')
     if pubkey is None:
         raise Exception('no pubkey or pk_file found')
-    pubkey = six.text_type(pubkey)
+    pubkey = salt.utils.stringutils.to_str(pubkey)
     return base64.b64decode(pubkey)
 
 

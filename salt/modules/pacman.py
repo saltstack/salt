@@ -917,7 +917,7 @@ def owner(*paths):
     .. versionadded:: 2014.7.0
 
     Return the name of the package that owns the file. Multiple file paths can
-    be passed. Like :mod:`pkg.version <salt.modules.yumpkg.version`, if a
+    be passed. Like :mod:`pkg.version <salt.modules.yumpkg.version>`, if a
     single path is passed, a string will be returned, and if multiple paths are
     passed, a dictionary of file/package name pairs will be returned.
 

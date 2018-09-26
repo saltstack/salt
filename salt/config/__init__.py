@@ -373,7 +373,7 @@ VALID_OPTS = {
     'ipc_mode': six.string_types,
 
     # Enable ipv6 support for daemons
-    'ipv6': bool,
+    'ipv6': (type(None), bool),
 
     # The chunk size to use when streaming files with the file server
     'file_buffer_size': int,
@@ -441,6 +441,9 @@ VALID_OPTS = {
 
     # Tell the loader to attempt to import *.pyx cython files if cython is available
     'cython_enable': bool,
+
+    # Whether or not to load grains for the GPU
+    'enable_gpu_grains': bool,
 
     # Tell the loader to attempt to import *.zip archives
     'enable_zip_modules': bool,
@@ -1354,7 +1357,7 @@ DEFAULT_MINION_OPTS = {
     'mine_interval': 60,
     'ipc_mode': _DFLT_IPC_MODE,
     'ipc_write_buffer': _DFLT_IPC_WBUFFER,
-    'ipv6': False,
+    'ipv6': None,
     'file_buffer_size': 262144,
     'tcp_pub_port': 4510,
     'tcp_pull_port': 4511,
@@ -1373,6 +1376,7 @@ DEFAULT_MINION_OPTS = {
     'test': False,
     'ext_job_cache': '',
     'cython_enable': False,
+    'enable_gpu_grains': True,
     'enable_zip_modules': False,
     'state_verbose': True,
     'state_output': 'full',
@@ -1679,7 +1683,7 @@ DEFAULT_MASTER_OPTS = {
     'enforce_mine_cache': False,
     'ipc_mode': _DFLT_IPC_MODE,
     'ipc_write_buffer': _DFLT_IPC_WBUFFER,
-    'ipv6': False,
+    'ipv6': None,
     'tcp_master_pub_port': 4512,
     'tcp_master_pull_port': 4513,
     'tcp_master_publish_pull': 4514,

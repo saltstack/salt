@@ -18,7 +18,6 @@ import functools
 import threading
 import traceback
 import types
-from collections import MutableMapping
 from zipimport import zipimporter
 
 # Import salt libs
@@ -49,6 +48,11 @@ if sys.version_info[:2] >= (3, 5):
 else:
     import imp
     USE_IMPORTLIB = False
+
+try:
+    from collections.abc import MutableMapping
+except ImportError:
+    from collections import MutableMapping
 
 try:
     import pkg_resources
@@ -1380,11 +1384,11 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         '''
         if '__grains__' not in self.pack:
             self.context_dict['grains'] = opts.get('grains', {})
-            self.pack['__grains__'] = salt.utils.context.NamespacedDictWrapper(self.context_dict, 'grains', override_name='grains')
+            self.pack['__grains__'] = salt.utils.context.NamespacedDictWrapper(self.context_dict, 'grains')
 
         if '__pillar__' not in self.pack:
             self.context_dict['pillar'] = opts.get('pillar', {})
-            self.pack['__pillar__'] = salt.utils.context.NamespacedDictWrapper(self.context_dict, 'pillar', override_name='pillar')
+            self.pack['__pillar__'] = salt.utils.context.NamespacedDictWrapper(self.context_dict, 'pillar')
 
         mod_opts = {}
         for key, val in list(opts.items()):

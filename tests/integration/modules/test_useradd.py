@@ -102,7 +102,7 @@ class UseraddModuleTestLinux(ModuleCase):
             uid_info = self.run_function('user.info', [name])
             self.assertIn(primary_group, uid_info['groups'])
 
-        except:
+        except Exception:
             self.run_function('user.delete', [name])
             raise
 
@@ -268,8 +268,8 @@ class UseraddModuleTestWindows(ModuleCase):
         self._add_group()
         self.run_function('user.addgroup', [self.user_name, self.group_name])
         self.assertIn(self.group_name, self.run_function('user.list_groups', [self.user_name]))
-        self.run_function('user.removegroup', [self.group_name])
-        self.assertIn(self.group_name, self.run_function('user.list_groups', [self.user_name]))
+        self.run_function('user.removegroup', [self.user_name, self.group_name])
+        self.assertNotIn(self.group_name, self.run_function('user.list_groups', [self.user_name]))
 
     def test_user_rename(self):
         '''

@@ -260,25 +260,26 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         or not logged. If it is None, then the return code of the subprocess
         determines whether or not to log results.
         '''
+
+        import salt.utils
+
         script_path = self.get_script_path(script)
         if not os.path.isfile(script_path):
             return False
 
-        python_path = os.environ.get('PYTHONPATH', None)
-
-        if sys.platform.startswith('win'):
-            cmd = 'set PYTHONPATH='
+        if salt.utils.platform.is_windows():
+            cmd = 'python '
         else:
             cmd = 'PYTHONPATH='
+            python_path = os.environ.get('PYTHONPATH', None)
+            if python_path is not None:
+                cmd += '{0}:'.format(python_path)
 
-        if python_path is not None:
-            cmd += '{0}:'.format(python_path)
-
-        if sys.version_info[0] < 3:
-            cmd += '{0} '.format(':'.join(sys.path[1:]))
-        else:
-            cmd += '{0} '.format(':'.join(sys.path[0:]))
-        cmd += 'python{0}.{1} '.format(*sys.version_info)
+            if sys.version_info[0] < 3:
+                cmd += '{0} '.format(':'.join(sys.path[1:]))
+            else:
+                cmd += '{0} '.format(':'.join(sys.path[0:]))
+            cmd += 'python{0}.{1} '.format(*sys.version_info)
         cmd += '{0} '.format(script_path)
         cmd += '{0} '.format(arg_str)
 
@@ -287,7 +288,7 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         popen_kwargs = {
             'shell': True,
             'stdout': tmp_file,
-            'universal_newlines': True
+            'universal_newlines': True,
         }
 
         if catch_stderr is True:
@@ -780,7 +781,7 @@ class ModuleCase(TestCase, SaltClientTestCaseMixin):
         '''
         return self.run_function(_function, args, **kw)
 
-    def run_function(self, function, arg=(), minion_tgt='minion', timeout=90, **kwargs):
+    def run_function(self, function, arg=(), minion_tgt='minion', timeout=300, **kwargs):
         '''
         Run a single salt function and condition the return down to match the
         behavior of the raw function call

@@ -551,7 +551,7 @@ def certificate_managed(name,
             if not private_ret['result']:
                 return private_ret
 
-    file_args['contents'] += certificate
+    file_args['contents'] += salt.utils.stringutils.to_str(certificate)
 
     if not append_certs:
         append_certs = []
