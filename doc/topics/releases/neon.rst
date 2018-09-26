@@ -181,6 +181,14 @@ Deprecations
 Module Deprecations
 -------------------
 
+- The :py:mod:`boto_vpc <salt.modules.boto_vpc>` module has been
+  changed as follows:
+
+    - Support for the ``boto_vpc.describe_route_table`` function has been removed.
+      Please use the
+      :py:func:`boto_vpc.describe_route_tables <salt.modules.boto_vpc.describe_route_tables>`
+      function instead.
+
 - The :py:mod:`dockermod <salt.modules.dockermod>` module has been
   changed as follows:
 
