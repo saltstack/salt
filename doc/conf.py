@@ -65,6 +65,7 @@ MOCK_MODULES = [
     'user',
 
     # salt core
+    'concurrent',
     'Crypto',
     'Crypto.Signature',
     'Crypto.Cipher',

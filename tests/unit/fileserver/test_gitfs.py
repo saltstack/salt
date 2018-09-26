@@ -31,6 +31,7 @@ import salt.utils.files
 import salt.utils.platform
 import salt.utils.win_functions
 import salt.utils.yaml
+import salt.ext.six
 
 import salt.utils.gitfs
 from salt.utils.gitfs import (
@@ -144,6 +145,9 @@ class GitfsConfigTestCase(TestCase, LoaderModuleMockMixin):
             try:
                 shutil.rmtree(path, onerror=_rmtree_error)
             except OSError as exc:
+                if exc.errno == errno.EACCES:
+                    log.error("Access error removeing file %s", path)
+                    continue
                 if exc.errno != errno.EEXIST:
                     raise
 
@@ -391,7 +395,9 @@ class GitFSTestBase(object):
         try:
             shutil.rmtree(TMP_REPO_DIR)
         except OSError as exc:
-            if exc.errno != errno.ENOENT:
+            if exc.errno == errno.EACCES:
+                log.error("Access error removeing file %s", TMP_REPO_DIR)
+            elif exc.errno != errno.ENOENT:
                 raise
         shutil.copytree(INTEGRATION_BASE_FILES, TMP_REPO_DIR + '/')
 
@@ -443,7 +449,9 @@ class GitFSTestBase(object):
             try:
                 salt.utils.files.rm_rf(path)
             except OSError as exc:
-                if exc.errno != errno.EEXIST:
+                if exc.errno == errno.EACCES:
+                    log.error("Access error removeing file %s", path)
+                elif exc.errno != errno.EEXIST:
                     raise
 
     def setUp(self):
@@ -464,8 +472,14 @@ class GitFSTestBase(object):
             try:
                 salt.utils.files.rm_rf(os.path.join(self.tmp_cachedir, subdir))
             except OSError as exc:
+                if exc.errno == errno.EACCES:
+                    log.warning("Access error removeing file %s", os.path.join(self.tmp_cachedir, subdir))
+                    continue
                 if exc.errno != errno.ENOENT:
                     raise
+        if salt.ext.six.PY3 and salt.utils.platform.is_windows():
+            self.setUpClass()
+            self.setup_loader_modules()
 
 
 @skipIf(not HAS_GITPYTHON, 'GitPython >= {0} required'.format(GITPYTHON_MINVER))

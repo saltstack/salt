@@ -12,7 +12,7 @@ This module is a concrete implementation of the sql_base ext_pillar for MySQL.
 :platform: all
 
 Configuring the mysql ext_pillar
-=====================================
+================================
 
 Use the 'mysql' key under ext_pillar for configuration of queries.
 
@@ -22,7 +22,7 @@ mysql.pass, mysql.port, mysql.host) for database connection info.
 Required python modules: MySQLdb
 
 Complete example
-=====================================
+================
 
 .. code-block:: yaml
 
