@@ -8,7 +8,7 @@ node('kitchen-slave') {
                 'RBENV_VERSION=2.4.2',
                 'TEST_SUITE=py2',
                 'TEST_PLATFORM=ubuntu-1604',
-                'PY_COLORS=1',
+                'PY_COLORS=1',])
             {
                 stage('checkout-scm') {
                     cleanWs notFailBuild: true
