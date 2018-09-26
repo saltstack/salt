@@ -558,6 +558,8 @@ def get_diff(a, b, *args, **kwargs):
     with unicode on PY2.
     '''
     encoding = ('utf-8', 'latin-1', __salt_system_encoding__)
+    if 'lineterm' not in kwargs:
+        kwargs['lineterm'] = os.linesep
     # Late import to avoid circular import
     import salt.utils.data
     return ''.join(
