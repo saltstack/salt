@@ -189,16 +189,16 @@ class MasterPillarUtil(object):
             cret = dict([(minion_id, mcache) for (minion_id, mcache) in six.iteritems(cached_grains) if mcache])
             missed_minions = [minion_id for minion_id in minion_ids if minion_id not in cret]
             log.debug('Missed cached minion grains for: %s', missed_minions)
-            if self.grains_fallback and len(missed_minions) > 0:
+            if self.grains_fallback and missed_minions:
                 lret = self._get_live_minion_grains(missed_minions)
-            ret = dict(list(six.iteritems(dict([(minion_id, {}) for minion_id in minion_ids]))) + list(cret.items()) + list(lret.items()))
+            ret = dict([(minion_id, {}) for minion_id in minion_ids] + list(cret.items()) + list(lret.items()))
         else:
             lret = self._get_live_minion_grains(minion_ids)
             missed_minions = [minion_id for minion_id in minion_ids if minion_id not in lret]
             log.debug('Missed live minion grains for: %s', missed_minions)
-            if self.grains_fallback and len(missed_minions) > 0:
+            if self.grains_fallback and missed_minions:
                 cret = dict([(minion_id, mcache) for (minion_id, mcache) in six.iteritems(cached_grains) if mcache])
-            ret = dict(list(six.iteritems(dict([(minion_id, {}) for minion_id in minion_ids]))) + list(cret.items()) + list(lret.items()))
+            ret = dict([(minion_id, {}) for minion_id in minion_ids] + list(cret.items()) + list(lret.items()))
         return ret
 
     def _get_minion_pillar(self, *minion_ids, **kwargs):
@@ -214,16 +214,16 @@ class MasterPillarUtil(object):
             cret = dict([(minion_id, mcache) for (minion_id, mcache) in six.iteritems(cached_pillar) if mcache])
             missed_minions = [minion_id for minion_id in minion_ids if minion_id not in cret]
             log.debug('Missed cached minion pillars for: %s', missed_minions)
-            if self.pillar_fallback and len(missed_minions) > 0:
+            if self.pillar_fallback and missed_minions:
                 lret = dict([(minion_id, self._get_live_minion_pillar(minion_id, grains.get(minion_id, {}))) for minion_id in missed_minions])
-            ret = dict(list(six.iteritems(dict([(minion_id, {}) for minion_id in minion_ids]))) + list(cret.items()) + list(lret.items()))
+            ret = dict([(minion_id, {}) for minion_id in minion_ids] + list(cret.items()) + list(lret.items()))
         else:
             lret = dict([(minion_id, self._get_live_minion_pillar(minion_id, grains.get(minion_id, {}))) for minion_id in minion_ids])
             missed_minions = [minion_id for minion_id in minion_ids if minion_id not in lret]
             log.debug('Missed live minion pillars for: %s', missed_minions)
-            if self.pillar_fallback and len(missed_minions) > 0:
+            if self.pillar_fallback and missed_minions:
                 cret = dict([(minion_id, mcache) for (minion_id, mcache) in six.iteritems(cached_pillar) if mcache])
-            ret = dict(list(six.iteritems(dict([(minion_id, {}) for minion_id in minion_ids]))) + list(cret.items()) + list(lret.items()))
+            ret = dict([(minion_id, {}) for minion_id in minion_ids] + list(cret.items()) + list(lret.items()))
         return ret
 
     def _tgt_to_list(self):
