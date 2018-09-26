@@ -187,7 +187,15 @@ class _Zypper(object):
 
         :return:
         '''
-        return self.exit_code not in self.SUCCESS_EXIT_CODES
+        if self.exit_code:
+            msg = self.SUCCESS_EXIT_CODES.get(self.exit_code)
+            if msg:
+                log.info(msg)
+            msg = self.WARNING_EXIT_CODES.get(self.exit_code)
+            if msg:
+                log.warning(msg)
+
+        return self.exit_code not in self.SUCCESS_EXIT_CODES and self.exit_code not in self.WARNING_EXIT_CODES
 
     def _is_lock(self):
         '''
