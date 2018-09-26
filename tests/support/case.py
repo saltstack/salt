@@ -778,7 +778,7 @@ class ModuleCase(TestCase, SaltClientTestCaseMixin):
         '''
         return self.run_function(_function, args, **kw)
 
-    def run_function(self, function, arg=(), minion_tgt='minion', timeout=90, **kwargs):
+    def run_function(self, function, arg=(), minion_tgt='minion', timeout=300, **kwargs):
         '''
         Run a single salt function and condition the return down to match the
         behavior of the raw function call
