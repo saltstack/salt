@@ -147,6 +147,16 @@ Module Deprecations
         - :py:func:`dockermod.load <salt.modules.dockermod.load>`
         - :py:func:`dockermod.tag <salt.modules.dockermod.tag_>`
 
+- The :py:mod:`ssh <salt.modules.ssh>` execution module has been
+  changed as follows:
+
+    - Support for the ``ssh.get_known_host`` function has been removed. Please use the
+      :py:func:`ssh.get_known_host_entries <salt.modules.ssh.get_known_host_entries>`
+      function instead.
+    - Support for the ``ssh.recv_known_host`` function has been removed. Please use the
+      :py:func:`ssh.recv_known_host_entries <salt.modules.ssh.recv_known_host_entries>`
+      function instead.
+
 State Deprecations
 ------------------
 
