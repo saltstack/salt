@@ -19,6 +19,7 @@ from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import os
+import re
 import stat
 import string
 import logging
@@ -91,15 +92,15 @@ def _validate_partition_boundary(boundary):
     '''
     Ensure valid partition boundaries are supplied.
     '''
-    try:
-        for unit in VALID_UNITS:
-            if six.text_type(boundary).endswith(unit):
-                return
-        int(boundary)
-    except Exception:
-        raise CommandExecutionError(
-            'Invalid partition boundary passed: "{0}"'.format(boundary)
-        )
+    boundary = six.text_type(boundary)
+    match = re.search(r'^([\d.]+)(\D*)$', boundary)
+    if match:
+        unit = match.group(2)
+        if not unit or unit in VALID_UNITS:
+            return
+    raise CommandExecutionError(
+        'Invalid partition boundary passed: "{0}"'.format(boundary)
+    )
 
 
 def probe(*devices):
