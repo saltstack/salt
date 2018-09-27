@@ -70,7 +70,14 @@ integration.runners.test_manage
 integration.runners.test_runner_returns
 integration.runners.test_nacl
 integration.runners.test_salt
+integration.scheduler.test_eval
+integration.scheduler.test_postpone
+integration.scheduler.test_skip
 integration.sdb.test_env
+integration.shell.test_arguments
+integration.shell.test_auth
+integration.shell.test_call
+integration.shell.test_cloud
 integration.states.test_host
 integration.states.test_pip_state
 integration.states.test_pkg
