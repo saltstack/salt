@@ -590,45 +590,46 @@ def _present(name,
                                            _current_port_fwd],
                                   'new': [fwd.todict() for fwd in port_fwd]}})
 
-    services = services or []
-    try:
-        _current_services = __salt__['firewalld.list_services'](name,
-            permanent=True)
-    except CommandExecutionError as err:
-        ret['comment'] = 'Error: {0}'.format(err)
-        return ret
+    if services or prune_services:
+      services = services or []
+      try:
+          _current_services = __salt__['firewalld.list_services'](name,
+              permanent=True)
+      except CommandExecutionError as err:
+          ret['comment'] = 'Error: {0}'.format(err)
+          return ret
 
-    new_services = set(services) - set(_current_services)
-    old_services = []
+      new_services = set(services) - set(_current_services)
+      old_services = []
 
-    for new_service in new_services:
-        if not __opts__['test']:
-            try:
-                __salt__['firewalld.add_service'](new_service, name,
-                                                  permanent=True)
-            except CommandExecutionError as err:
-                ret['comment'] = 'Error: {0}'.format(err)
-                return ret
+      for new_service in new_services:
+          if not __opts__['test']:
+              try:
+                  __salt__['firewalld.add_service'](new_service, name,
+                                                    permanent=True)
+              except CommandExecutionError as err:
+                  ret['comment'] = 'Error: {0}'.format(err)
+                  return ret
 
-    if prune_services:
-        old_services = set(_current_services) - set(services)
-        for old_service in old_services:
-            if not __opts__['test']:
-                try:
-                    __salt__['firewalld.remove_service'](old_service, name,
-                                                         permanent=True)
-                except CommandExecutionError as err:
-                    ret['comment'] = 'Error: {0}'.format(err)
-                    return ret
+      if prune_services:
+          old_services = set(_current_services) - set(services)
+          for old_service in old_services:
+              if not __opts__['test']:
+                  try:
+                      __salt__['firewalld.remove_service'](old_service, name,
+                                                           permanent=True)
+                  except CommandExecutionError as err:
+                      ret['comment'] = 'Error: {0}'.format(err)
+                      return ret
 
-    if new_services or old_services:
-        # If we're not pruning, include current items in new output so it's clear
-        # that they're still present
-        if not prune_services:
-            services = list(new_services | set(_current_services))
-        ret['changes'].update({'services':
-                                {'old': _current_services,
-                                'new': services}})
+      if new_services or old_services:
+          # If we're not pruning, include current items in new output so it's clear
+          # that they're still present
+          if not prune_services:
+              services = list(new_services | set(_current_services))
+          ret['changes'].update({'services':
+                                  {'old': _current_services,
+                                  'new': services}})
 
     interfaces = interfaces or []
     try:
