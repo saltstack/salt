@@ -49,6 +49,7 @@ import logging
 # Import Salt libs
 import salt.utils.versions
 from salt.ext.six.moves import range
+from salt.exceptions import SaltInvocationError
 log = logging.getLogger(__name__)  # pylint: disable=W1699
 
 # Import third party libs
@@ -301,7 +302,8 @@ def set_subscription_attributes(SubscriptionArn, AttributeName, AttributeValue, 
         return False
 
 
-def subscribe(TopicArn, Protocol, Endpoint, region=None, key=None, keyid=None, profile=None):
+def subscribe(TopicArn=None, Protocol=None, Endpoint=None,
+              region=None, key=None, keyid=None, profile=None, **kwargs):
     '''
     Subscribe to a Topic.
 
@@ -310,16 +312,33 @@ def subscribe(TopicArn, Protocol, Endpoint, region=None, key=None, keyid=None, p
         salt myminion boto3_sns.subscribe mytopic https https://www.example.com/sns-endpoint
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    kwargs = {k: v for k, v in kwargs.items() if not k.startswith('_')}
+    ## Begin warn_until()
+    if any((locals().get('TopicArn'), locals().get('Protocol'), locals().get('Endpoint'))):
+        if all((locals().get('TopicArn'), locals().get('Protocol'), locals().get('Endpoint'))):
+            salt.utils.versions.warn_until('Sodium', 'Passing positional parameters is deprecated.'
+                                           '  Please update code to use keyword style arguments'
+                                           ' instead.  This will become mandatory in salt version'
+                                           ' {version}.')
+            kwargs.update({'TopicArn': TopicArn, 'Protocol': Protocol, 'Endpoint': Endpoint})
+        else:
+            ## Previous function def required EXACTLY three args
+            raise SaltInvocationError('When passed as positional parameters, all three of '
+                                      '`TopicArn`, `Protocol`, and `Endpoint` are required.')
+    ## End warn_until()
+    for arg in ('TopicArn', 'Protocol', 'Endpoint'):
+        if arg not in kwargs:
+            raise SaltInvocationError('`{}` is a required parameter.'.format(arg))
     try:
-        ret = conn.subscribe(TopicArn=TopicArn, Protocol=Protocol, Endpoint=Endpoint)
-        log.info('Subscribed %s %s to topic %s with SubscriptionArn %s',
-                 Protocol, Endpoint, TopicArn, ret['SubscriptionArn'])
+        ret = conn.subscribe(**kwargs)
+        log.info('Subscribed %s %s to topic %s with SubscriptionArn %s', kwargs['Protocol'],
+                 kwargs['Endpoint'], kwargs['TopicArn'], ret['SubscriptionArn'])
         return ret['SubscriptionArn']
     except botocore.exceptions.ClientError as e:
-        log.error('Failed to create subscription to SNS topic %s: %s', TopicArn, e)
+        log.error('Failed to create subscription to SNS topic %s: %s', kwargs['TopicArn'], e)
         return None
     except KeyError:
-        log.error('Failed to create subscription to SNS topic %s', TopicArn)
+        log.error('Failed to create subscription to SNS topic %s', kwargs['TopicArn'])
         return None
 
 

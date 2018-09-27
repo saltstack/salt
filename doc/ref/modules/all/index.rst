@@ -41,6 +41,7 @@ execution modules
     bcache
     beacons
     bigip
+    bluecoat_sslv
     bluez
     boto3_elasticache
     boto3_route53

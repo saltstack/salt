@@ -27,11 +27,7 @@ import salt.utils.cloud
 import salt.config as config
 import salt.client
 import salt.ext.six as six
-if six.PY3:
-    import ipaddress
-else:
-    import salt.ext.ipaddress as ipaddress
-
+from salt._compat import ipaddress
 from salt.exceptions import SaltCloudException, SaltCloudSystemExit
 
 # Get logging started
@@ -304,7 +300,7 @@ def get_configured_provider():
 
 def _verify(vm_):
     '''
-    Verify credentials for an exsiting system
+    Verify credentials for an existing system
     '''
     log.info('Verifying credentials for %s', vm_['name'])
 
