@@ -498,43 +498,44 @@ def _present(name,
                                'new': 'Masquerading successfully '
                                'disabled.'}})
 
-    ports = ports or []
-    try:
-        _current_ports = __salt__['firewalld.list_ports'](name, permanent=True)
-    except CommandExecutionError as err:
-        ret['comment'] = 'Error: {0}'.format(err)
-        return ret
+    if ports or prune_ports:
+      ports = ports or []
+      try:
+          _current_ports = __salt__['firewalld.list_ports'](name, permanent=True)
+      except CommandExecutionError as err:
+          ret['comment'] = 'Error: {0}'.format(err)
+          return ret
 
-    new_ports = set(ports) - set(_current_ports)
-    old_ports = []
+      new_ports = set(ports) - set(_current_ports)
+      old_ports = []
 
-    for port in new_ports:
-        if not __opts__['test']:
-            try:
-                # TODO: force_masquerade to be removed in future release
-                __salt__['firewalld.add_port'](name, port, permanent=True, force_masquerade=False)
-            except CommandExecutionError as err:
-                ret['comment'] = 'Error: {0}'.format(err)
-                return ret
+      for port in new_ports:
+          if not __opts__['test']:
+              try:
+                  # TODO: force_masquerade to be removed in future release
+                  __salt__['firewalld.add_port'](name, port, permanent=True, force_masquerade=False)
+              except CommandExecutionError as err:
+                  ret['comment'] = 'Error: {0}'.format(err)
+                  return ret
 
-    if prune_ports:
-        old_ports = set(_current_ports) - set(ports)
-        for port in old_ports:
-            if not __opts__['test']:
-                try:
-                    __salt__['firewalld.remove_port'](name, port, permanent=True)
-                except CommandExecutionError as err:
-                    ret['comment'] = 'Error: {0}'.format(err)
-                    return ret
+      if prune_ports:
+          old_ports = set(_current_ports) - set(ports)
+          for port in old_ports:
+              if not __opts__['test']:
+                  try:
+                      __salt__['firewalld.remove_port'](name, port, permanent=True)
+                  except CommandExecutionError as err:
+                      ret['comment'] = 'Error: {0}'.format(err)
+                      return ret
 
-    if new_ports or old_ports:
-        # If we're not pruning, include current items in new output so it's clear
-        # that they're still present
-        if not prune_ports:
-            ports = list(new_ports | set(_current_ports))
-        ret['changes'].update({'ports':
-                                {'old': _current_ports,
-                                'new': ports}})
+      if new_ports or old_ports:
+          # If we're not pruning, include current items in new output so it's clear
+          # that they're still present
+          if not prune_ports:
+              ports = list(new_ports | set(_current_ports))
+          ret['changes'].update({'ports':
+                                  {'old': _current_ports,
+                                  'new': ports}})
 
     port_fwd = port_fwd or []
     try:
