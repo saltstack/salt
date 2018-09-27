@@ -392,55 +392,62 @@ def _present(name,
                                 {'old': zones,
                                 'new': name}})
 
-    block_icmp = block_icmp or []
-    new_icmp_types = []
-    old_icmp_types = []
-    try:
-        _valid_icmp_types = __salt__['firewalld.get_icmp_types'](
-            permanent=True)
-        _current_icmp_blocks = __salt__['firewalld.list_icmp_block'](name,
-            permanent=True)
-    except CommandExecutionError as err:
-        ret['comment'] = 'Error: {0}'.format(err)
-        return ret
+    if block_icmp or prune_block_icmp:
+        block_icmp = block_icmp or []
+        new_icmp_types = []
+        old_icmp_types = []
 
-    new_icmp_types = set(block_icmp) - set(_current_icmp_blocks)
-    old_icmp_types = []
+        try:
+            _current_icmp_blocks = __salt__['firewalld.list_icmp_block'](name,
+                permanent=True)
+        except CommandExecutionError as err:
+            ret['comment'] = 'Error: {0}'.format(err)
+            return ret
 
-    for icmp_type in new_icmp_types:
-        if icmp_type in _valid_icmp_types:
-            if not __opts__['test']:
-                try:
-                    __salt__['firewalld.block_icmp'](name, icmp_type,
-                                                     permanent=True)
-                except CommandExecutionError as err:
-                    ret['comment'] = 'Error: {0}'.format(err)
-                    return ret
-        else:
-            log.error('%s is an invalid ICMP type', icmp_type)
+        if block_icmp:
+            new_icmp_types = set(block_icmp) - set(_current_icmp_blocks)
 
-    if prune_block_icmp:
-        old_icmp_types = set(_current_icmp_blocks) - set(block_icmp)
-        for icmp_type in old_icmp_types:
-            # no need to check against _valid_icmp_types here, because all
-            # elements in old_icmp_types are guaranteed to be in
-            # _current_icmp_blocks, whose elements are inherently valid
-            if not __opts__['test']:
-                try:
-                    __salt__['firewalld.allow_icmp'](name, icmp_type,
-                                                     permanent=True)
-                except CommandExecutionError as err:
-                    ret['comment'] = 'Error: {0}'.format(err)
-                    return ret
+            try:
+                _valid_icmp_types = __salt__['firewalld.get_icmp_types'](
+                    permanent=True)
+            except CommandExecutionError as err:
+                ret['comment'] = 'Error: {0}'.format(err)
+                return ret
 
-    if new_icmp_types or old_icmp_types:
-        # If we're not pruning, include current items in new output so it's clear
-        # that they're still present
-        if not prune_block_icmp:
-            block_icmp = list(new_icmp_types | set(_current_icmp_blocks))
-        ret['changes'].update({'icmp_types':
-                                {'old': _current_icmp_blocks,
-                                'new': block_icmp}})
+            for icmp_type in new_icmp_types:
+                if icmp_type in _valid_icmp_types:
+                    if not __opts__['test']:
+                        try:
+                            __salt__['firewalld.block_icmp'](name, icmp_type,
+                                                             permanent=True)
+                        except CommandExecutionError as err:
+                            ret['comment'] = 'Error: {0}'.format(err)
+                            return ret
+                else:
+                    log.error('{0} is an invalid ICMP type'.format(icmp_type))
+
+        if prune_block_icmp:
+            old_icmp_types = set(_current_icmp_blocks) - set(block_icmp)
+            for icmp_type in old_icmp_types:
+                # no need to check against _valid_icmp_types here, because all
+                # elements in old_icmp_types are guaranteed to be in
+                # _current_icmp_blocks, whose elements are inherently valid
+                if not __opts__['test']:
+                    try:
+                        __salt__['firewalld.allow_icmp'](name, icmp_type,
+                                                         permanent=True)
+                    except CommandExecutionError as err:
+                        ret['comment'] = 'Error: {0}'.format(err)
+                        return ret
+
+        if new_icmp_types or old_icmp_types:
+            # If we're not pruning, include current items in new output so it's clear
+            # that they're still present
+            if not prune_block_icmp:
+                block_icmp = list(new_icmp_types | set(_current_icmp_blocks))
+            ret['changes'].update({'icmp_types':
+                                    {'old': _current_icmp_blocks,
+                                    'new': block_icmp}})
 
     # that's the only parameter that can't be permanent or runtime, it's
     # directly both
