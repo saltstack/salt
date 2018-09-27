@@ -3390,7 +3390,7 @@ class BaseHighState(object):
                 def _filter_matches(_match, _data, _opts):
                     if isinstance(_data, six.string_types):
                         _data = [_data]
-                    if self.matcher.confirm_top(
+                    if self.matchers['confirm_top.confirm_top'](
                             _match,
                             _data,
                             _opts
@@ -4079,7 +4079,7 @@ class HighState(BaseHighState):
                            mocked=mocked,
                            loader=loader,
                            initial_pillar=initial_pillar)
-        self.matcher = salt.minion.Matcher(self.opts)
+        self.matchers = salt.loader.matchers(self.opts)
         self.proxy = proxy
 
         # tracks all pydsl state declarations globally across sls files
