@@ -568,9 +568,9 @@ def change(connect_spec, dn, before, after):
     # convert the "iterable of values" to lists in case that's what
     # modifyModlist() expects (also to ensure that the caller's dicts
     # are not modified)
-    before = dict(((attr, salt.utils.data.encode(vals))
+    before = dict(((attr, salt.utils.data.encode(list(vals)))
                    for attr, vals in six.iteritems(before)))
-    after = dict(((attr, salt.utils.data.encode(vals))
+    after = dict(((attr, salt.utils.data.encode(list(vals)))
                   for attr, vals in six.iteritems(after)))
 
     if 'unicodePwd' in after:
