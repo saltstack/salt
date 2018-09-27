@@ -468,43 +468,35 @@ def _present(name,
                                   {'old': default_zone,
                                    'new': name}})
 
-    if masquerade:
-        try:
-            masquerade_ret = __salt__['firewalld.get_masquerade'](name,
-                permanent=True)
-        except CommandExecutionError as err:
-            ret['comment'] = 'Error: {0}'.format(err)
-            return ret
-        if not masquerade_ret:
-            if not __opts__['test']:
-                try:
-                    __salt__['firewalld.add_masquerade'](name, permanent=True)
-                except CommandExecutionError as err:
-                    ret['comment'] = 'Error: {0}'.format(err)
-                    return ret
-            ret['changes'].update({'masquerade':
-                                  {'old': '',
-                                   'new': 'Masquerading successfully set.'}})
+    try:
+        masquerade_ret = __salt__['firewalld.get_masquerade'](name,
+            permanent=True)
+    except CommandExecutionError as err:
+        ret['comment'] = 'Error: {0}'.format(err)
+        return ret
 
-    if not masquerade:
-        try:
-            masquerade_ret = __salt__['firewalld.get_masquerade'](name,
-                permanent=True)
-        except CommandExecutionError as err:
-            ret['comment'] = 'Error: {0}'.format(err)
-            return ret
-        if masquerade_ret:
-            if not __opts__['test']:
-                try:
-                    __salt__['firewalld.remove_masquerade'](name,
-                                                            permanent=True)
-                except CommandExecutionError as err:
-                    ret['comment'] = 'Error: {0}'.format(err)
-                    return ret
-            ret['changes'].update({'masquerade':
-                                  {'old': '',
-                                   'new': 'Masquerading successfully '
-                                   'disabled.'}})
+    if masquerade and not masquerade_ret:
+        if not __opts__['test']:
+            try:
+                __salt__['firewalld.add_masquerade'](name, permanent=True)
+            except CommandExecutionError as err:
+                ret['comment'] = 'Error: {0}'.format(err)
+                return ret
+        ret['changes'].update({'masquerade':
+                              {'old': '',
+                               'new': 'Masquerading successfully set.'}})
+    elif not masquerade and masquerade_ret:
+        if not __opts__['test']:
+            try:
+                __salt__['firewalld.remove_masquerade'](name,
+                                                        permanent=True)
+            except CommandExecutionError as err:
+                ret['comment'] = 'Error: {0}'.format(err)
+                return ret
+        ret['changes'].update({'masquerade':
+                              {'old': '',
+                               'new': 'Masquerading successfully '
+                               'disabled.'}})
 
     ports = ports or []
     try:
