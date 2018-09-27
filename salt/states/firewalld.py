@@ -537,57 +537,58 @@ def _present(name,
                                   {'old': _current_ports,
                                   'new': ports}})
 
-    port_fwd = port_fwd or []
-    try:
-        _current_port_fwd = __salt__['firewalld.list_port_fwd'](name,
-                                                                permanent=True)
-    except CommandExecutionError as err:
-        ret['comment'] = 'Error: {0}'.format(err)
-        return ret
+    if port_fwd or prune_port_fwd:
+      port_fwd = port_fwd or []
+      try:
+          _current_port_fwd = __salt__['firewalld.list_port_fwd'](name,
+                                                                  permanent=True)
+      except CommandExecutionError as err:
+          ret['comment'] = 'Error: {0}'.format(err)
+          return ret
 
-    port_fwd = [_parse_forward(fwd) for fwd in port_fwd]
-    _current_port_fwd = [
-        ForwardingMapping(
-            srcport=fwd['Source port'],
-            destport=fwd['Destination port'],
-            protocol=fwd['Protocol'],
-            destaddr=fwd['Destination address']
-        ) for fwd in _current_port_fwd]
+      port_fwd = [_parse_forward(fwd) for fwd in port_fwd]
+      _current_port_fwd = [
+          ForwardingMapping(
+              srcport=fwd['Source port'],
+              destport=fwd['Destination port'],
+              protocol=fwd['Protocol'],
+              destaddr=fwd['Destination address']
+          ) for fwd in _current_port_fwd]
 
-    new_port_fwd = set(port_fwd) - set(_current_port_fwd)
-    old_port_fwd = []
+      new_port_fwd = set(port_fwd) - set(_current_port_fwd)
+      old_port_fwd = []
 
-    for fwd in new_port_fwd:
-        if not __opts__['test']:
-            try:
-                # TODO: force_masquerade to be removed in future release
-                __salt__['firewalld.add_port_fwd'](name, fwd.srcport,
-                    fwd.destport, fwd.protocol, fwd.destaddr, permanent=True,
-                    force_masquerade=False)
-            except CommandExecutionError as err:
-                ret['comment'] = 'Error: {0}'.format(err)
-                return ret
+      for fwd in new_port_fwd:
+          if not __opts__['test']:
+              try:
+                  # TODO: force_masquerade to be removed in future release
+                  __salt__['firewalld.add_port_fwd'](name, fwd.srcport,
+                      fwd.destport, fwd.protocol, fwd.destaddr, permanent=True,
+                      force_masquerade=False)
+              except CommandExecutionError as err:
+                  ret['comment'] = 'Error: {0}'.format(err)
+                  return ret
 
-    if prune_port_fwd:
-        old_port_fwd = set(_current_port_fwd) - set(port_fwd)
-        for fwd in old_port_fwd:
-            if not __opts__['test']:
-                try:
-                    __salt__['firewalld.remove_port_fwd'](name, fwd.srcport,
-                        fwd.destport, fwd.protocol, fwd.destaddr, permanent=True)
-                except CommandExecutionError as err:
-                    ret['comment'] = 'Error: {0}'.format(err)
-                    return ret
+      if prune_port_fwd:
+          old_port_fwd = set(_current_port_fwd) - set(port_fwd)
+          for fwd in old_port_fwd:
+              if not __opts__['test']:
+                  try:
+                      __salt__['firewalld.remove_port_fwd'](name, fwd.srcport,
+                          fwd.destport, fwd.protocol, fwd.destaddr, permanent=True)
+                  except CommandExecutionError as err:
+                      ret['comment'] = 'Error: {0}'.format(err)
+                      return ret
 
-    if new_port_fwd or old_port_fwd:
-        # If we're not pruning, include current items in new output so it's clear
-        # that they're still present
-        if not prune_port_fwd:
-            port_fwd = list(new_port_fwd | set(_current_port_fwd))
-        ret['changes'].update({'port_fwd':
-                                {'old': [fwd.todict() for fwd in
-                                         _current_port_fwd],
-                                'new': [fwd.todict() for fwd in port_fwd]}})
+      if new_port_fwd or old_port_fwd:
+          # If we're not pruning, include current items in new output so it's clear
+          # that they're still present
+          if not prune_port_fwd:
+              port_fwd = list(new_port_fwd | set(_current_port_fwd))
+          ret['changes'].update({'port_fwd':
+                                  {'old': [fwd.todict() for fwd in
+                                           _current_port_fwd],
+                                  'new': [fwd.todict() for fwd in port_fwd]}})
 
     services = services or []
     try:
