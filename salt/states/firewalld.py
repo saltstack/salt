@@ -712,45 +712,46 @@ def _present(name,
                                   {'old': _current_sources,
                                   'new': sources}})
 
-    rich_rules = rich_rules or []
-    try:
-        _current_rich_rules = __salt__['firewalld.get_rich_rules'](name,
-            permanent=True)
-    except CommandExecutionError as err:
-        ret['comment'] = 'Error: {0}'.format(err)
-        return ret
+    if rich_rules or prune_rich_rules:
+      rich_rules = rich_rules or []
+      try:
+          _current_rich_rules = __salt__['firewalld.get_rich_rules'](name,
+              permanent=True)
+      except CommandExecutionError as err:
+          ret['comment'] = 'Error: {0}'.format(err)
+          return ret
 
-    new_rich_rules = set(rich_rules) - set(_current_rich_rules)
-    old_rich_rules = []
+      new_rich_rules = set(rich_rules) - set(_current_rich_rules)
+      old_rich_rules = []
 
-    for rich_rule in new_rich_rules:
-        if not __opts__['test']:
-            try:
-                __salt__['firewalld.add_rich_rule'](name, rich_rule,
-                                                    permanent=True)
-            except CommandExecutionError as err:
-                ret['comment'] = 'Error: {0}'.format(err)
-                return ret
+      for rich_rule in new_rich_rules:
+          if not __opts__['test']:
+              try:
+                  __salt__['firewalld.add_rich_rule'](name, rich_rule,
+                                                      permanent=True)
+              except CommandExecutionError as err:
+                  ret['comment'] = 'Error: {0}'.format(err)
+                  return ret
 
-    if prune_rich_rules:
-        old_rich_rules = set(_current_rich_rules) - set(rich_rules)
-        for rich_rule in old_rich_rules:
-            if not __opts__['test']:
-                try:
-                    __salt__['firewalld.remove_rich_rule'](name, rich_rule,
-                                                           permanent=True)
-                except CommandExecutionError as err:
-                    ret['comment'] = 'Error: {0}'.format(err)
-                    return ret
+      if prune_rich_rules:
+          old_rich_rules = set(_current_rich_rules) - set(rich_rules)
+          for rich_rule in old_rich_rules:
+              if not __opts__['test']:
+                  try:
+                      __salt__['firewalld.remove_rich_rule'](name, rich_rule,
+                                                             permanent=True)
+                  except CommandExecutionError as err:
+                      ret['comment'] = 'Error: {0}'.format(err)
+                      return ret
 
-    if new_rich_rules or old_rich_rules:
-        # If we're not pruning, include current items in new output so it's clear
-        # that they're still present
-        if not prune_rich_rules:
-            rich_rules = list(new_rich_rules | set(_current_rich_rules))
-        ret['changes'].update({'rich_rules':
-                              {'old': _current_rich_rules,
-                               'new': rich_rules}})
+      if new_rich_rules or old_rich_rules:
+          # If we're not pruning, include current items in new output so it's clear
+          # that they're still present
+          if not prune_rich_rules:
+              rich_rules = list(new_rich_rules | set(_current_rich_rules))
+          ret['changes'].update({'rich_rules':
+                                {'old': _current_rich_rules,
+                                 'new': rich_rules}})
 
     # No changes
     if ret['changes'] == {}:
