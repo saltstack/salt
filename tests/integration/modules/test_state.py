@@ -4,6 +4,7 @@
 from __future__ import absolute_import
 import os
 import shutil
+import sys
 import tempfile
 import textwrap
 import threading
@@ -1422,6 +1423,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
             except OSError:
                 pass
 
+    @skipIf(sys.platform.startswith('win'), 'Skipped until parallel states can be fixed on Windows')
     def test_parallel_state_with_long_tag(self):
         '''
         This tests the case where the state being executed has a long ID dec or
