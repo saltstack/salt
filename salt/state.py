@@ -35,6 +35,7 @@ import salt.fileclient
 import salt.utils.crypt
 import salt.utils.dictupdate
 import salt.utils.event
+import salt.utils.hashutils
 import salt.utils.url
 import salt.utils.process
 import salt.utils.files
