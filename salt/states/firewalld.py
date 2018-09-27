@@ -672,44 +672,45 @@ def _present(name,
                                   {'old': _current_interfaces,
                                   'new': interfaces}})
 
-    sources = sources or []
-    try:
-        _current_sources = __salt__['firewalld.get_sources'](name,
-                                                             permanent=True)
-    except CommandExecutionError as err:
-        ret['comment'] = 'Error: {0}'.format(err)
-        return ret
+    if sources or prune_sources:
+      sources = sources or []
+      try:
+          _current_sources = __salt__['firewalld.get_sources'](name,
+                                                               permanent=True)
+      except CommandExecutionError as err:
+          ret['comment'] = 'Error: {0}'.format(err)
+          return ret
 
-    new_sources = set(sources) - set(_current_sources)
-    old_sources = []
+      new_sources = set(sources) - set(_current_sources)
+      old_sources = []
 
-    for source in new_sources:
-        if not __opts__['test']:
-            try:
-                __salt__['firewalld.add_source'](name, source, permanent=True)
-            except CommandExecutionError as err:
-                ret['comment'] = 'Error: {0}'.format(err)
-                return ret
+      for source in new_sources:
+          if not __opts__['test']:
+              try:
+                  __salt__['firewalld.add_source'](name, source, permanent=True)
+              except CommandExecutionError as err:
+                  ret['comment'] = 'Error: {0}'.format(err)
+                  return ret
 
-    if prune_sources:
-        old_sources = set(_current_sources) - set(sources)
-        for source in old_sources:
-            if not __opts__['test']:
-                try:
-                    __salt__['firewalld.remove_source'](name, source,
-                                                        permanent=True)
-                except CommandExecutionError as err:
-                    ret['comment'] = 'Error: {0}'.format(err)
-                    return ret
+      if prune_sources:
+          old_sources = set(_current_sources) - set(sources)
+          for source in old_sources:
+              if not __opts__['test']:
+                  try:
+                      __salt__['firewalld.remove_source'](name, source,
+                                                          permanent=True)
+                  except CommandExecutionError as err:
+                      ret['comment'] = 'Error: {0}'.format(err)
+                      return ret
 
-    if new_sources or old_sources:
-        # If we're not pruning, include current items in new output so it's clear
-        # that they're still present
-        if not prune_sources:
-            sources = list(new_sources | set(_current_sources))
-        ret['changes'].update({'sources':
-                                {'old': _current_sources,
-                                'new': sources}})
+      if new_sources or old_sources:
+          # If we're not pruning, include current items in new output so it's clear
+          # that they're still present
+          if not prune_sources:
+              sources = list(new_sources | set(_current_sources))
+          ret['changes'].update({'sources':
+                                  {'old': _current_sources,
+                                  'new': sources}})
 
     rich_rules = rich_rules or []
     try:
