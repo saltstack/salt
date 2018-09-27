@@ -307,10 +307,12 @@ Set to zero if the minion should shutdown and not retry.
 
     retry_dns: 30
 
-.. conf_minion:: retry_dns
+.. conf_minion:: retry_dns_count
 
 ``retry_dns_count``
--------------
+-------------------
+
+.. versionadded:: 2018.3.4
 
 Default: ``None``
 
