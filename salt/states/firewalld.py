@@ -631,45 +631,46 @@ def _present(name,
                                   {'old': _current_services,
                                   'new': services}})
 
-    interfaces = interfaces or []
-    try:
-        _current_interfaces = __salt__['firewalld.get_interfaces'](name,
-            permanent=True)
-    except CommandExecutionError as err:
-        ret['comment'] = 'Error: {0}'.format(err)
-        return ret
+    if interfaces or prune_interfaces:
+      interfaces = interfaces or []
+      try:
+          _current_interfaces = __salt__['firewalld.get_interfaces'](name,
+              permanent=True)
+      except CommandExecutionError as err:
+          ret['comment'] = 'Error: {0}'.format(err)
+          return ret
 
-    new_interfaces = set(interfaces) - set(_current_interfaces)
-    old_interfaces = []
+      new_interfaces = set(interfaces) - set(_current_interfaces)
+      old_interfaces = []
 
-    for interface in new_interfaces:
-        if not __opts__['test']:
-            try:
-                __salt__['firewalld.add_interface'](name, interface,
-                                                    permanent=True)
-            except CommandExecutionError as err:
-                ret['comment'] = 'Error: {0}'.format(err)
-                return ret
+      for interface in new_interfaces:
+          if not __opts__['test']:
+              try:
+                  __salt__['firewalld.add_interface'](name, interface,
+                                                      permanent=True)
+              except CommandExecutionError as err:
+                  ret['comment'] = 'Error: {0}'.format(err)
+                  return ret
 
-    if prune_interfaces:
-        old_interfaces = set(_current_interfaces) - set(interfaces)
-        for interface in old_interfaces:
-            if not __opts__['test']:
-                try:
-                    __salt__['firewalld.remove_interface'](name, interface,
-                                                           permanent=True)
-                except CommandExecutionError as err:
-                    ret['comment'] = 'Error: {0}'.format(err)
-                    return ret
+      if prune_interfaces:
+          old_interfaces = set(_current_interfaces) - set(interfaces)
+          for interface in old_interfaces:
+              if not __opts__['test']:
+                  try:
+                      __salt__['firewalld.remove_interface'](name, interface,
+                                                             permanent=True)
+                  except CommandExecutionError as err:
+                      ret['comment'] = 'Error: {0}'.format(err)
+                      return ret
 
-    if new_interfaces or old_interfaces:
-        # If we're not pruning, include current items in new output so it's clear
-        # that they're still present
-        if not prune_interfaces:
-            interfaces = list(new_interfaces | set(_current_interfaces))
-        ret['changes'].update({'interfaces':
-                                {'old': _current_interfaces,
-                                'new': interfaces}})
+      if new_interfaces or old_interfaces:
+          # If we're not pruning, include current items in new output so it's clear
+          # that they're still present
+          if not prune_interfaces:
+              interfaces = list(new_interfaces | set(_current_interfaces))
+          ret['changes'].update({'interfaces':
+                                  {'old': _current_interfaces,
+                                  'new': interfaces}})
 
     sources = sources or []
     try:
