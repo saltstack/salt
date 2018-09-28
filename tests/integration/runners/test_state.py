@@ -93,6 +93,23 @@ class StateRunnerTest(ShellCase):
         assert os.path.exists('/tmp/ewu-2016-12-13') is False
         assert code != 0
 
+    def test_orchestrate_with_mine(self):
+        '''
+        test salt-run state.orchestrate with mine.get call in sls
+        '''
+        fail_time = time.time() + 120
+        self.run_run('mine.update "*"')
+
+        exp_ret = 'Succeeded: 1 (changed=1)'
+        while True:
+            ret = self.run_run('state.orchestrate orch.mine')
+            try:
+                assert exp_ret in ret
+                break
+            except AssertionError:
+                if time.time() > fail_time:
+                    self.fail('"{0}" was not found in the orchestration call'.format(exp_ret))
+
     def test_orchestrate_state_and_function_failure(self):
         '''
         Ensure that returns from failed minions are in the changes dict where
@@ -323,6 +340,7 @@ class OrchEventTest(ShellCase):
         self.conf.write(salt.utils.yaml.safe_dump(data, default_flow_style=False))
         self.conf.flush()
 
+    @expensiveTest
     def test_jid_in_ret_event(self):
         '''
         Test to confirm that the ret event for the orchestration contains the

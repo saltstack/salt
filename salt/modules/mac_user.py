@@ -466,7 +466,8 @@ def list_users():
 
         salt '*' user.list_users
     '''
-    return sorted([user.pw_name for user in pwd.getpwall()])
+    users = _dscl(['/users'], 'list')['stdout']
+    return users.split()
 
 
 def rename(name, new_name):

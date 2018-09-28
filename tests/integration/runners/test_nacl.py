@@ -69,7 +69,7 @@ class NaclTest(ShellCase):
         pk = ret['return']['pk']
         sk = ret['return']['sk']
 
-        unencrypted_data = 'hello'
+        unencrypted_data = b'hello'
 
         # Encrypt with pk
         ret = self.run_run_plus(

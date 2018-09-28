@@ -116,10 +116,14 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             512,
             diskp,
             nicp,
-            'kvm'
+            'kvm',
+            'hvm',
+            'x86_64'
             )
         root = ET.fromstring(xml_data)
         self.assertEqual(root.find('os/boot').attrib['dev'], 'hd')
+        self.assertEqual(root.find('os/type').attrib['arch'], 'x86_64')
+        self.assertEqual(root.find('os/type').text, 'hvm')
 
     def test_boot_custom_dev(self):
         '''
@@ -134,6 +138,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             diskp,
             nicp,
             'kvm',
+            'hvm',
+            'x86_64',
             boot_dev='cdrom'
             )
         root = ET.fromstring(xml_data)
@@ -152,6 +158,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             diskp,
             nicp,
             'kvm',
+            'hvm',
+            'x86_64',
             boot_dev='cdrom network'
             )
         root = ET.fromstring(xml_data)
@@ -171,6 +179,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             diskp,
             nicp,
             'kvm',
+            'hvm',
+            'x86_64',
             serial_type='pty',
             console=True
             )
@@ -191,6 +201,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             diskp,
             nicp,
             'kvm',
+            'hvm',
+            'x86_64',
             serial_type='tcp',
             console=True,
             telnet_port=22223
@@ -213,6 +225,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             diskp,
             nicp,
             'kvm',
+            'hvm',
+            'x86_64',
             serial_type='tcp',
             console=True
             )
@@ -234,6 +248,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             diskp,
             nicp,
             'kvm',
+            'hvm',
+            'x86_64',
             serial_type='pty',
             console=False
             )
@@ -254,6 +270,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             diskp,
             nicp,
             'kvm',
+            'hvm',
+            'x86_64',
             serial_type='tcp',
             console=False,
             )
@@ -273,10 +291,31 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             512,
             diskp,
             nicp,
-            'kvm'
+            'kvm',
+            'hvm',
+            'x86_64'
             )
         root = ET.fromstring(xml_data)
         self.assertIsNone(root.find('devices/graphics'))
+
+    def test_gen_xml_noloader_default(self):
+        '''
+        Test virt._gen_xml() with default no loader
+        '''
+        diskp = virt._disk_profile('default', 'kvm', [], 'hello')
+        nicp = virt._nic_profile('default', 'kvm')
+        xml_data = virt._gen_xml(
+            'hello',
+            1,
+            512,
+            diskp,
+            nicp,
+            'kvm',
+            'hvm',
+            'x86_64',
+            )
+        root = ET.fromstring(xml_data)
+        self.assertIsNone(root.find('os/loader'))
 
     def test_gen_xml_vnc_default(self):
         '''
@@ -291,6 +330,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             diskp,
             nicp,
             'kvm',
+            'hvm',
+            'x86_64',
             graphics={'type': 'vnc', 'port': 1234, 'tlsPort': 5678,
                       'listen': {'type': 'address', 'address': 'myhost'}},
             )
@@ -316,6 +357,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             diskp,
             nicp,
             'kvm',
+            'hvm',
+            'x86_64',
             graphics={'type': 'spice'},
             )
         root = ET.fromstring(xml_data)
@@ -324,6 +367,49 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(root.find('devices/graphics').attrib['listen'], '0.0.0.0')
         self.assertEqual(root.find('devices/graphics/listen').attrib['type'], 'address')
         self.assertEqual(root.find('devices/graphics/listen').attrib['address'], '0.0.0.0')
+
+    def test_gen_xml_loader_default(self):
+        '''
+        Test virt._gen_xml() with a loder specified
+        '''
+        diskp = virt._disk_profile('default', 'kvm', [], 'hello')
+        nicp = virt._nic_profile('default', 'kvm')
+        xml_data = virt._gen_xml(
+            'hello',
+            1,
+            512,
+            diskp,
+            nicp,
+            'kvm',
+            'hvm',
+            'x86_64',
+            loader={'path': '/foo/bar', 'readonly': 'yes', 'type': 'pflash', 'secure': 'yes'}
+            )
+        root = ET.fromstring(xml_data)
+        self.assertEqual(root.find('os/loader').text, '/foo/bar')
+        self.assertEqual(root.find('os/loader').attrib['type'], 'pflash')
+        self.assertEqual(root.find('os/loader').attrib['readonly'], 'yes')
+        self.assertEqual(root.find('os/loader').attrib['secure'], 'yes')
+
+    def test_gen_xml_loader_invalid(self):
+        '''
+        Test virt._gen_xml() with an invalid loader (missing path) specified
+        '''
+        diskp = virt._disk_profile('default', 'kvm', [], 'hello')
+        nicp = virt._nic_profile('default', 'kvm')
+        xml_data = virt._gen_xml(
+            'hello',
+            1,
+            512,
+            diskp,
+            nicp,
+            'kvm',
+            'hvm',
+            'x86_64',
+            loader={'readonly': 'yes', 'type': 'pflash', 'secure': 'yes'}
+            )
+        root = ET.fromstring(xml_data)
+        self.assertFalse('loader' in root.find('os'))
 
     def test_gen_xml_spice(self):
         '''
@@ -338,6 +424,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             diskp,
             nicp,
             'kvm',
+            'hvm',
+            'x86_64',
             graphics={'type': 'spice', 'port': 1234, 'tls_port': 5678, 'listen': {'type': 'none'}},
             )
         root = ET.fromstring(xml_data)
@@ -431,6 +519,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             diskp,
             nicp,
             'kvm',
+            'hvm',
+            'x86_64',
             )
         root = ET.fromstring(xml_data)
         self.assertEqual(root.attrib['type'], 'kvm')
@@ -473,6 +563,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             diskp,
             nicp,
             'vmware',
+            'hvm',
+            'x86_64',
             )
         root = ET.fromstring(xml_data)
         self.assertEqual(root.attrib['type'], 'vmware')
@@ -527,6 +619,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 diskp,
                 nicp,
                 'vmware',
+                'hvm',
+                'x86_64',
                 )
             root = ET.fromstring(xml_data)
             self.assertEqual(root.attrib['type'], 'vmware')
@@ -563,6 +657,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 diskp,
                 nicp,
                 'kvm',
+                'hvm',
+                'x86_64',
                 )
             root = ET.fromstring(xml_data)
             self.assertEqual(root.attrib['type'], 'kvm')
@@ -633,7 +729,9 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             512,
             diskp,
             nicp,
-            'vmware'
+            'vmware',
+            'hvm',
+            'x86_64',
             )
         root = ET.fromstring(xml_data)
         controllers = root.findall('.//devices/controller')
@@ -653,7 +751,9 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             512,
             diskp,
             nicp,
-            'kvm'
+            'kvm',
+            'hvm',
+            'x86_64',
             )
         root = ET.fromstring(xml_data)
         controllers = root.findall('.//devices/controller')
@@ -757,6 +857,9 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
               <memory unit='KiB'>1048576</memory>
               <currentMemory unit='KiB'>1048576</currentMemory>
               <vcpu placement='auto'>1</vcpu>
+              <os>
+                <type arch='x86_64' machine='pc-i440fx-2.6'>hvm</type>
+              </os>
               <devices>
                 <disk type='file' device='disk'>
                   <driver name='qemu' type='qcow2'/>
@@ -802,6 +905,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             </domain>
         '''
         domain_mock = self.set_mock_vm('myvm', xml)
+        domain_mock.OSType = MagicMock(return_value='hvm')
         define_mock = MagicMock(return_value=True)
         self.mock_conn.defineXML = define_mock
 
@@ -979,6 +1083,23 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual('vnc', graphics['type'])
         self.assertEqual('5900', graphics['port'])
         self.assertEqual('0.0.0.0', graphics['listen'])
+
+    def test_get_loader(self):
+        '''
+        Test virt.get_loader()
+        '''
+        xml = '''<domain type='kvm' id='7'>
+              <name>test-vm</name>
+              <os>
+                <loader readonly='yes' type='pflash'>/foo/bar</loader>
+              </os>
+            </domain>
+        '''
+        self.set_mock_vm("test-vm", xml)
+
+        loader = virt.get_loader('test-vm')
+        self.assertEqual('/foo/bar', loader['path'])
+        self.assertEqual('yes', loader['readonly'])
 
     def test_get_nics(self):
         '''

@@ -23,7 +23,10 @@ requisite to a pkg.installed state for the package which provides pip
 from __future__ import absolute_import, print_function, unicode_literals
 import re
 import logging
-import pkg_resources
+try:
+    import pkg_resources
+except ImportError:
+    pkg_resources = None
 
 # Import salt libs
 import salt.utils.versions
@@ -71,9 +74,7 @@ def __virtual__():
     '''
     Only load if the pip module is available in __salt__
     '''
-    if 'pip.list' in __salt__:
-        return __virtualname__
-    return False
+    return 'pip.list' in __salt__ and __virtualname__ or False
 
 
 def _find_key(prefix, pip_list):

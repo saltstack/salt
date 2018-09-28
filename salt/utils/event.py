@@ -60,7 +60,12 @@ import hashlib
 import logging
 import datetime
 import sys
-from collections import MutableMapping
+
+try:
+    from collections.abc import MutableMapping
+except ImportError:
+    from collections import MutableMapping
+
 from multiprocessing.util import Finalize
 from salt.ext.six.moves import range
 
@@ -873,7 +878,7 @@ class SaltEvent(object):
         # shutdown-- where globals start going missing
         try:
             self.destroy()
-        except:  # pylint: disable=W0702
+        except Exception:
             pass
 
 
@@ -931,10 +936,10 @@ class MinionEvent(SaltEvent):
     RAET compatible
     Create a master event management object
     '''
-    def __init__(self, opts, listen=True, io_loop=None, raise_errors=False):
+    def __init__(self, opts, listen=True, io_loop=None, keep_loop=False, raise_errors=False):
         super(MinionEvent, self).__init__(
             'minion', sock_dir=opts.get('sock_dir'),
-            opts=opts, listen=listen, io_loop=io_loop,
+            opts=opts, listen=listen, io_loop=io_loop, keep_loop=keep_loop,
             raise_errors=raise_errors)
 
 

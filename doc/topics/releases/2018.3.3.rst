@@ -5,6 +5,35 @@ In Progress: Salt 2018.3.3 Release Notes
 Version 2018.3.3 is an **unreleased** bugfix release for :ref:`2018.3.0 <release-2018-3-0>`.
 This release is still in progress and has not been released yet.
 
+.. warning::
+    If you are using Jinja to dump lists or dictionaries in your SLS files,
+    this will now cause errors in Python 2 since Jinja does not produce
+    YAML-compatible output when strings in the data structures contain unicode
+    types. The dictionary must be passed through a Jinja filter to produce
+    YAML-compatible strings.
+
+    The below is an example of invalid SLS:
+
+    .. code-block:: yaml
+
+      /etc/foo.conf:
+        file.mangaged:
+          - source: salt://foo.conf
+          - template: jinja
+          - defaults: {{ mydict }}
+
+    To make it valid, use either one of Salt's own ``json`` or ``yaml``
+    filters. Another option would be to use Jinja's :ref:`tojson
+    <release-2018-3-3-tojson-filter>` filter.
+
+    .. code-block:: yaml
+
+      /etc/foo.conf:
+        file.mangaged:
+          - source: salt://foo.conf
+          - template: jinja
+          - defaults: {{ mydict | tojson }}
+
 Changes to win_timezone
 =======================
 
@@ -15,6 +44,8 @@ Improves timezone detection by using the pytz module.
 Adds ``timezone.list`` to list supported timezones in either Windows or Unix
 format.
 
+.. _release-2018-3-3-tojson-filter:
+
 New Jinja Filter
 ================
 
@@ -22,15 +53,15 @@ The :jinja_ref:`tojson` filter (from Jinja 2.9 and later) has been ported to
 Salt, and will be used when this filter is not available. This allows older LTS
 releases such as CentOS 7 and Ubuntu 14.04 to use this filter.
 
-You should use this filter any time you wish to dump a list or dictionary into
-an SLS file, to ensure that the result is able to be loaded by the YAML
-renderer. For example:
+You can use this filter any time you wish to dump a list or dictionary into an
+SLS file, to ensure that the result is able to be loaded by the YAML renderer.
+For example:
 
 .. code-block:: jinja
 
     foo:
       bar.baz:
-        - some_arg: {{ mydict|tojson }}
+        - some_arg: {{ mydict | tojson }}
 
 MacOSX escape characters with runas
 ===================================

@@ -294,6 +294,7 @@ import salt.utils.templates
 import salt.utils.url
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError
+from salt.serializers import DeserializationError
 from salt.state import get_accumulator_dir as _get_accumulator_dir
 
 if salt.utils.platform.is_windows():
@@ -1106,15 +1107,15 @@ def _get_template_texts(source_list=None,
 
     for (source, source_hash) in source_list:
 
-        tmpctx = defaults if defaults else {}
+        context_dict = defaults if defaults else {}
         if context:
-            tmpctx.update(context)
+            context_dict = salt.utils.dictupdate.merge(context_dict, context)
         rndrd_templ_fn = __salt__['cp.get_template'](
             source,
             '',
             template=template,
             saltenv=__env__,
-            context=tmpctx,
+            context=context_dict,
             **kwargs
         )
         msg = 'cp.get_template returned {0} (Called with: {1})'
@@ -1145,7 +1146,9 @@ def _validate_str_list(arg):
     '''
     ensure ``arg`` is a list of strings
     '''
-    if isinstance(arg, six.string_types):
+    if isinstance(arg, six.binary_type):
+        ret = [salt.utils.stringutils.to_unicode(arg)]
+    elif isinstance(arg, six.string_types):
         ret = [arg]
     elif isinstance(arg, Iterable) and not isinstance(arg, Mapping):
         ret = []
@@ -2587,9 +2590,9 @@ def managed(name,
                 .format(contents_id)
             )
 
-        if isinstance(use_contents, bytes) and b'\0' in use_contents:
+        if isinstance(use_contents, six.binary_type) and b'\0' in use_contents:
             contents = use_contents
-        elif isinstance(use_contents, six.string_types) and str('\0') in use_contents:
+        elif isinstance(use_contents, six.text_type) and str('\0') in use_contents:
             contents = use_contents
         else:
             validated_contents = _validate_str_list(use_contents)
@@ -2600,7 +2603,9 @@ def managed(name,
                     'contents_grains is not a string or list of strings, and '
                     'is not binary data. SLS is likely malformed.'
                 )
-            contents = os.linesep.join(validated_contents)
+            contents = os.linesep.join(
+                [line.rstrip('\n').rstrip('\r') for line in validated_contents]
+            )
             if contents_newline and not contents.endswith(os.linesep):
                 contents += os.linesep
         if template:
@@ -2825,8 +2830,15 @@ def managed(name,
             ret['changes'] = {}
             log.debug(traceback.format_exc())
             salt.utils.files.remove(tmp_filename)
-            if not keep_source and sfn:
-                salt.utils.files.remove(sfn)
+            if not keep_source:
+                if not sfn \
+                        and source \
+                        and _urlparse(source).scheme == 'salt':
+                    # The file would not have been cached until manage_file was
+                    # run, so check again here for a cached copy.
+                    sfn = __salt__['cp.is_cached'](source, __env__)
+                if sfn:
+                    salt.utils.files.remove(sfn)
             return _error(ret, 'Unable to check_cmd file: {0}'.format(exc))
 
         # file being updated to verify using check_cmd
@@ -2898,8 +2910,15 @@ def managed(name,
         finally:
             if tmp_filename:
                 salt.utils.files.remove(tmp_filename)
-            if not keep_source and sfn:
-                salt.utils.files.remove(sfn)
+            if not keep_source:
+                if not sfn \
+                        and source \
+                        and _urlparse(source).scheme == 'salt':
+                    # The file would not have been cached until manage_file was
+                    # run, so check again here for a cached copy.
+                    sfn = __salt__['cp.is_cached'](source, __env__)
+                if sfn:
+                    salt.utils.files.remove(sfn)
 
 
 _RECURSE_TYPES = ['user', 'group', 'mode', 'ignore_files', 'ignore_dirs', 'silent']
@@ -3159,7 +3178,7 @@ def directory(name,
                   perms: full_control
             - win_inheritance: False
     '''
-    name = os.path.expanduser(name)
+    name = os.path.normcase(os.path.expanduser(name))
     ret = {'name': name,
            'changes': {},
            'pchanges': {},
@@ -3690,7 +3709,9 @@ def recurse(name,
         # "env" is not supported; Use "saltenv".
         kwargs.pop('env')
 
-    name = salt.utils.data.decode(os.path.expanduser(name))
+    name = salt.utils.data.decode(
+        os.path.normcase(os.path.expanduser(name))
+    )
 
     user = _test_owner(kwargs, user=user)
     if salt.utils.platform.is_windows():
@@ -6522,6 +6543,7 @@ def serialize(name,
               encoding=None,
               encoding_errors='strict',
               serializer_opts=None,
+              deserializer_opts=None,
               **kwargs):
     '''
     Serializes dataset and store it into managed file. Useful for sharing
@@ -6628,6 +6650,41 @@ def serialize(name,
         .. _`json.dumps()`: https://docs.python.org/2/library/json.html#json.dumps
         .. _`pprint.pformat()`: https://docs.python.org/2/library/pprint.html#pprint.pformat
 
+    deserializer_opts
+        Like ``serializer_opts`` above, but only used when merging with an
+        existing file (i.e. when ``merge_if_exists`` is set to ``True``).
+
+        The options specified here will be passed to the deserializer to load
+        the existing data, before merging with the specified data and
+        re-serializing.
+
+        .. code-block:: yaml
+
+           /etc/dummy/package.yaml
+             file.serialize:
+               - formatter: yaml
+               - serializer_opts:
+                 - explicit_start: True
+                 - default_flow_style: True
+                 - indent: 4
+               - deserializer_opts:
+                 - encoding: latin-1
+               - merge_if_exists: True
+
+        The valid opts are the additional opts (i.e. not the data being
+        deserialized) for the function used to deserialize the data.
+        Documentation for the these functions can be found in the list below:
+
+        - For **yaml**: `yaml.load()`_
+        - For **json**: `json.loads()`_
+
+        .. _`yaml.load()`: https://pyyaml.org/wiki/PyYAMLDocumentation
+        .. _`json.loads()`: https://docs.python.org/2/library/json.html#json.loads
+
+        However, note that not all arguments are supported. For example, when
+        deserializing JSON, arguments like ``parse_float`` and ``parse_int``
+        which accept a callable object cannot be handled in an SLS file.
+
         .. versionadded:: Fluorine
 
     For example, this state:
@@ -6668,7 +6725,7 @@ def serialize(name,
     name = os.path.expanduser(name)
 
     # Set some defaults
-    options = {
+    serializer_options = {
         'yaml.serialize': {
             'default_flow_style': False,
         },
@@ -6678,9 +6735,13 @@ def serialize(name,
             'sort_keys': True,
         }
     }
+    deserializer_options = {
+        'yaml.deserialize': {},
+        'json.deserialize': {},
+    }
     if encoding:
-        options['yaml.serialize'].update({'allow_unicode': True})
-        options['json.serialize'].update({'ensure_ascii': False})
+        serializer_options['yaml.serialize'].update({'allow_unicode': True})
+        serializer_options['json.serialize'].update({'ensure_ascii': False})
 
     ret = {'changes': {},
            'comment': '',
@@ -6729,29 +6790,37 @@ def serialize(name,
                 }
 
     if serializer_opts:
-        if not options.get(serializer_name, {}):
-            options[serializer_name] = {}
-
-        options.get(serializer_name, {}).update(
+        serializer_options.setdefault(serializer_name, {}).update(
             salt.utils.data.repack_dictlist(serializer_opts)
+        )
+
+    if deserializer_opts:
+        deserializer_options.setdefault(deserializer_name, {}).update(
+            salt.utils.data.repack_dictlist(deserializer_opts)
         )
 
     if merge_if_exists:
         if os.path.isfile(name):
-            if '{0}.deserialize'.format(formatter) not in __serializers__:
-                return {'changes': {},
-                        'comment': ('{0} format is not supported for merging'
-                                    .format(formatter.capitalize())),
-                        'name': name,
-                        'result': False}
+            if deserializer_name not in __serializers__:
+                return {
+                    'changes': {},
+                    'comment': 'merge_if_exists is not supported for the {0} '
+                               'formatter'.format(formatter),
+                    'name': name,
+                    'result': False
+                }
 
             with salt.utils.files.fopen(name, 'r') as fhr:
                 try:
-                    existing_data = __serializers__[deserializer_name](fhr, **options.get(serializer_name, {}))
-                except (TypeError, salt.serializers.DeserializationError):
-                    log.debug('DeserializationError exception caught, trying to merge without serializer_opts: %s', options.get(serializer_name, {}))
-                    fhr.seek(0)
-                    existing_data = __serializers__[deserializer_name](fhr)
+                    existing_data = __serializers__[deserializer_name](
+                        fhr,
+                        **deserializer_options.get(serializer_name, {})
+                    )
+                except (TypeError, DeserializationError) as exc:
+                    ret['result'] = False
+                    ret['comment'] = \
+                        'Failed to deserialize existing data: {0}'.format(exc)
+                    return False
 
             if existing_data is not None:
                 merged_data = salt.utils.dictupdate.merge_recurse(existing_data, dataset)
@@ -6760,7 +6829,17 @@ def serialize(name,
                     ret['comment'] = 'The file {0} is in the correct state'.format(name)
                     return ret
                 dataset = merged_data
-    contents = __serializers__[serializer_name](dataset, **options.get(serializer_name, {}))
+    else:
+        if deserializer_opts:
+            ret.setdefault('warnings', []).append(
+                'The \'deserializer_opts\' option is ignored unless '
+                'merge_if_exists is set to True.'
+            )
+
+    contents = __serializers__[serializer_name](
+        dataset,
+        **serializer_options.get(serializer_name, {})
+    )
 
     contents += '\n'
 
@@ -7707,14 +7786,15 @@ def not_cached(name, saltenv='base'):
     '''
     .. versionadded:: 2017.7.3
 
-    Ensures that a file is saved to the minion's cache. This state is primarily
-    invoked by other states to ensure that we do not re-download a source file
-    if we do not need to.
+    Ensures that a file is not present in the minion's cache, deleting it
+    if found. This state is primarily invoked by other states to ensure
+    that a fresh copy is fetched.
 
     name
-        The URL of the file to be cached. To cache a file from an environment
-        other than ``base``, either use the ``saltenv`` argument or include the
-        saltenv in the URL (e.g. ``salt://path/to/file.conf?saltenv=dev``).
+        The URL of the file to be removed from cache. To remove a file from
+        cache in an environment other than ``base``, either use the ``saltenv``
+        argument or include the saltenv in the URL (e.g.
+        ``salt://path/to/file.conf?saltenv=dev``).
 
         .. note::
             A list of URLs is not supported, this must be a single URL. If a

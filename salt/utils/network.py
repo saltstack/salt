@@ -1234,19 +1234,16 @@ def in_subnet(cidr, addr=None):
     try:
         cidr = ipaddress.ip_network(cidr)
     except ValueError:
-        log.error('Invalid CIDR \'{0}\''.format(cidr))
+        log.error('Invalid CIDR \'%s\'', cidr)
         return False
 
     if addr is None:
         addr = ip_addrs()
         addr.extend(ip_addrs6())
-    elif isinstance(addr, six.string_types):
-        return ipaddress.ip_address(addr) in cidr
+    elif not isinstance(addr, (list, tuple)):
+        addr = (addr,)
 
-    for ip_addr in addr:
-        if ipaddress.ip_address(ip_addr) in cidr:
-            return True
-    return False
+    return any(ipaddress.ip_address(item) in cidr for item in addr)
 
 
 def _ip_addrs(interface=None, include_loopback=False, interface_data=None, proto='inet'):
@@ -1352,7 +1349,7 @@ def mac2eui64(mac, prefix=None):
             net = ipaddress.ip_network(prefix, strict=False)
             euil = int('0x{0}'.format(eui64), 16)
             return '{0}/{1}'.format(net[euil], net.prefixlen)
-        except:  # pylint: disable=bare-except
+        except Exception:
             return
 
 
@@ -1846,8 +1843,16 @@ def refresh_dns():
         pass
 
 
+@jinja_filter('connection_check')
+def connection_check(addr, port=80, safe=False, ipv6=None):
+    '''
+    Provides a convenient alias for the dns_check filter.
+    '''
+    return dns_check(addr, port, safe, ipv6)
+
+
 @jinja_filter('dns_check')
-def dns_check(addr, port, safe=False, ipv6=None):
+def dns_check(addr, port=80, safe=False, ipv6=None):
     '''
     Return the ip resolved by dns, but do not exit on failure, only raise an
     exception. Obeys system preference for IPv4/6 address resolution - this
