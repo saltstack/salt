@@ -25,7 +25,6 @@ import tempfile
 import salt.utils
 import salt.config as config
 import salt.client
-import salt.ext.six as six
 from salt._compat import ipaddress
 
 from salt.exceptions import SaltCloudException, SaltCloudSystemExit, \
