@@ -424,7 +424,7 @@ def _present(name,
                             ret['comment'] = 'Error: {0}'.format(err)
                             return ret
                 else:
-                    log.error('{0} is an invalid ICMP type'.format(icmp_type))
+                    log.error('%s is an invalid ICMP type', icmp_type)
 
         if prune_block_icmp:
             old_icmp_types = set(_current_icmp_blocks) - set(block_icmp)
