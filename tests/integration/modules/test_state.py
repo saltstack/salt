@@ -1431,10 +1431,9 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         parallel state cache were previously based on the tag for each chunk,
         and longer ID decs or name params can cause the cache file to be longer
         than the operating system's max file name length. To counter this we
-        instead base64-encode the chunk's tag (as this is a bit faster than
-        doing a sha256) and use up to the first 32 characters from that result
-        as the cache filename. This test will ensure that long tags don't cause
-        caching failures.
+        instead generate a SHA1 hash of the chunk's tag to use as the cache
+        filename. This test will ensure that long tags don't cause caching
+        failures.
 
         See https://github.com/saltstack/salt/issues/49738 for more info.
         '''
