@@ -2391,7 +2391,7 @@ class State(object):
             status = 'onchanges'
         elif 'change' in fun_stats:
             status = 'change'
-        else:
+        if any(stat.endswith('met') for stat in fun_stats):
             status = 'met'
 
         return status, reqs
