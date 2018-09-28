@@ -1,4 +1,5 @@
-node('kitchen-slave') {
+timeout(time: 6, unit: 'HOURS') {
+  node('kitchen-slave') {
     timestamps {
         ansiColor('xterm') {
             withEnv([
@@ -69,7 +70,8 @@ node('kitchen-slave') {
                         }
                     }
                 }
-            }
-        }
-    }
+              }
+          }
+      }
+  }
 }
