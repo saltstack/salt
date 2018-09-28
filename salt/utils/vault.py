@@ -123,7 +123,8 @@ def get_vault_connection():
             raise salt.exceptions.CommandExecutionError(errmsg)
 
     if 'vault' in __opts__ and __opts__.get('__role', 'minion') == 'master':
-        return _use_local_config()
+        log.debug('Contacting master for Vault connection details')
+        return _get_token_and_url_from_master()
     elif any((__opts__['local'], __opts__['file_client'] == 'local', __opts__['master_type'] == 'disable')):
         return _use_local_config()
     else:
