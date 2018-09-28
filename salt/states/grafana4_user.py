@@ -71,7 +71,7 @@ def present(name,
         Password of the user.
 
     email
-        Email of the user.
+        Optional - Email of the user.
 
     is_admin
         Optional - Set user as admin user. Default: False
