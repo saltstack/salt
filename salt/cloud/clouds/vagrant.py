@@ -26,9 +26,7 @@ import salt.utils
 import salt.config as config
 import salt.client
 from salt._compat import ipaddress
-
-from salt.exceptions import SaltCloudException, SaltCloudSystemExit, \
-    SaltInvocationError
+from salt.exceptions import SaltCloudException, SaltCloudSystemExit, SaltInvocationError
 
 # Get logging started
 log = logging.getLogger(__name__)
