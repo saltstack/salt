@@ -405,8 +405,6 @@ def _present(name,
             return ret
 
         if block_icmp:
-            new_icmp_types = set(block_icmp) - set(_current_icmp_blocks)
-
             try:
                 _valid_icmp_types = __salt__['firewalld.get_icmp_types'](
                     permanent=True)
@@ -414,17 +412,20 @@ def _present(name,
                 ret['comment'] = 'Error: {0}'.format(err)
                 return ret
 
+            # log errors for invalid ICMP types in block_icmp input
+            for icmp_type in set(block_icmp) - set(_valid_icmp_types):
+                log.error('%s is an invalid ICMP type', icmp_type)
+                block_icmp.remove(icmp_type)
+
+            new_icmp_types = set(block_icmp) - set(_current_icmp_blocks)
             for icmp_type in new_icmp_types:
-                if icmp_type in _valid_icmp_types:
-                    if not __opts__['test']:
-                        try:
-                            __salt__['firewalld.block_icmp'](name, icmp_type,
-                                                             permanent=True)
-                        except CommandExecutionError as err:
-                            ret['comment'] = 'Error: {0}'.format(err)
-                            return ret
-                else:
-                    log.error('%s is an invalid ICMP type', icmp_type)
+                if not __opts__['test']:
+                    try:
+                        __salt__['firewalld.block_icmp'](name, icmp_type,
+                                                         permanent=True)
+                    except CommandExecutionError as err:
+                        ret['comment'] = 'Error: {0}'.format(err)
+                        return ret
 
         if prune_block_icmp:
             old_icmp_types = set(_current_icmp_blocks) - set(block_icmp)
