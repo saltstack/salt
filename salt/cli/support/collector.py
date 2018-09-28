@@ -18,8 +18,6 @@ else:
 
 from io import BytesIO
 
-sys.modules['pkg_resources'] = None
-
 import salt.utils.stringutils
 import salt.utils.parsers
 import salt.utils.verify
