@@ -163,3 +163,52 @@ New output:
               2
           Skipped:
               0
+
+
+Salt Cloud Features
+===================
+
+GCE Driver
+----------
+
+The GCE salt cloud driver can now be used with GCE instance credentials by
+setting the configuration paramaters ``service_account_private_key`` and
+``service_account_private_email`` to an empty string.
+
+Deprecations
+============
+
+Module Deprecations
+-------------------
+
+- The :py:mod:`dockermod <salt.modules.dockermod>` module has been
+  changed as follows:
+
+    - Support for the ``tags`` kwarg has been removed from the
+      :py:func:`dockermod.resolve_tag <salt.modules.dockermod.resolve_tag>`
+      function.
+    - Support for the ``network_id`` kwarg has been removed from the
+      :py:func:`dockermod.connect_container_to_network <salt.modules.dockermod.connect_container_to_network>`
+      function. Please use ``net_id`` instead.
+    - Support for the ``name`` kwarg has been removed from the
+      :py:func:`dockermod.sls_build <salt.modules.dockermod.sls_build>`
+      function. Please use ``repository`` and ``tag`` instead.
+    - Support for the ``image`` kwarg has been removed from the following
+      functions. In all cases, please use both the ``repository`` and ``tag``
+      options instead:
+
+        - :py:func:`dockermod.build <salt.modules.dockermod.build>`
+        - :py:func:`dockermod.commit <salt.modules.dockermod.commit>`
+        - :py:func:`dockermod.import <salt.modules.dockermod.import_>`
+        - :py:func:`dockermod.load <salt.modules.dockermod.load>`
+        - :py:func:`dockermod.tag <salt.modules.dockermod.tag_>`
+
+- The :py:mod:`ssh <salt.modules.ssh>` execution module has been
+  changed as follows:
+
+    - Support for the ``ssh.get_known_host`` function has been removed. Please use the
+      :py:func:`ssh.get_known_host_entries <salt.modules.ssh.get_known_host_entries>`
+      function instead.
+    - Support for the ``ssh.recv_known_host`` function has been removed. Please use the
+      :py:func:`ssh.recv_known_host_entries <salt.modules.ssh.recv_known_host_entries>`
+      function instead.

@@ -26,10 +26,7 @@ import salt.cache
 from salt.ext import six
 
 # Import 3rd-party libs
-if six.PY3:
-    import ipaddress
-else:
-    import salt.ext.ipaddress as ipaddress
+from salt._compat import ipaddress
 HAS_RANGE = False
 try:
     import seco.range  # pylint: disable=import-error
@@ -387,11 +384,11 @@ class CkMinions(object):
             try:
                 # Target is an address?
                 tgt = ipaddress.ip_address(tgt)
-            except:  # pylint: disable=bare-except
+            except Exception:
                 try:
                     # Target is a network?
                     tgt = ipaddress.ip_network(tgt)
-                except:  # pylint: disable=bare-except
+                except Exception:
                     log.error('Invalid IP/CIDR target: %s', tgt)
                     return {'minions': [],
                             'missing': []}

@@ -26,6 +26,33 @@ Statistics
 
 - Contributors: **4** (`cro`_, `garethgreenaway`_, `gtmanfred`_, `rallytime`_)
 
+.. warning::
+    If you are using Jinja to dump lists or dictionaries in your SLS files,
+    this will now cause errors in Python 2 since Jinja does not produce
+    YAML-compatible output when strings in the data structures contain unicode
+    types. The dictionary must be passed through a Jinja filter to produce
+    YAML-compatible strings.
+
+    The below is an example of invalid SLS:
+
+    .. code-block:: yaml
+
+      /etc/foo.conf:
+        file.mangaged:
+          - source: salt://foo.conf
+          - template: jinja
+          - defaults: {{ mydict }}
+
+    To make it valid, use either one of Salt's own ``json`` or ``yaml``
+    filters:
+
+    .. code-block:: yaml
+
+      /etc/foo.conf:
+        file.mangaged:
+          - source: salt://foo.conf
+          - template: jinja
+          - defaults: {{ mydict | json }}
 
 Changelog for v2018.3.1..v2018.3.2
 ==================================

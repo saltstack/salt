@@ -74,7 +74,7 @@ class SSHHighState(salt.state.BaseHighState):
         self.client = fsclient
         salt.state.BaseHighState.__init__(self, opts)
         self.state = SSHState(opts, pillar, wrapper)
-        self.matcher = salt.minion.Matcher(self.opts)
+        self.matchers = salt.loader.matchers(self.opts)
         self.tops = salt.loader.tops(self.opts)
 
         self._pydsl_all_decls = {}
