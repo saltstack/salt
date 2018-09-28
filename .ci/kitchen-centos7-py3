@@ -59,7 +59,8 @@ timeout(time: 6, unit: 'HOURS') {
                             junit 'artifacts/xml-unittests-output/*.xml'
                         } finally {
                             cleanWs notFailBuild: true
-                            if (currentBuild.result == 'SUCCESS') {
+                            def currentResult = currentBuild.result ?: 'SUCCESS'
+                            if (currentResult == 'SUCCESS') {
                                 githubNotify credentialsId: 'test-jenkins-credentials',
                                     description: "The ${TEST_SUITE}-${TEST_PLATFORM} job has passed",
                                     status: 'SUCCESS',
