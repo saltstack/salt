@@ -145,7 +145,11 @@ def string_io(data=None):  # cStringIO can't handle unicode
     except (UnicodeEncodeError, TypeError):
         return StringIO(data)
 
-if PY3:
-    import ipaddress
-else:
-    import salt.ext.ipaddress as ipaddress
+
+try:
+    if PY3:
+        import ipaddress
+    else:
+        import salt.ext.ipaddress as ipaddress
+except ImportError:
+    ipaddress = None
