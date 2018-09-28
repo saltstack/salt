@@ -154,6 +154,13 @@ State Deprecations
   :py:func:`MS Teams <salt.states.msteams>` or
   :py:func:`Slack <salt.states.slack>` may be suitable replacements.
 
+- The :py:mod:`win_servermanager <salt.states.win_servermanager>` state has been
+  changed as follows:
+
+    - Support for the ``force`` kwarg has been removed from the
+      :py:func:`win_servermanager.installed <salt.status.win_servermanager.installed>`
+      function. Please use ``recurse`` instead.
+
 Fileserver Deprecations
 -----------------------
 
