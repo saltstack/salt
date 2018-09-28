@@ -212,3 +212,13 @@ Module Deprecations
     - Support for the ``ssh.recv_known_host`` function has been removed. Please use the
       :py:func:`ssh.recv_known_host_entries <salt.modules.ssh.recv_known_host_entries>`
       function instead.
+
+State Deprecations
+------------------
+
+- The :py:mod:`win_servermanager <salt.states.win_servermanager>` state has been
+  changed as follows:
+
+    - Support for the ``force`` kwarg has been removed from the
+      :py:func:`win_servermanager.installed <salt.statues.win_servermanager.installed>`
+      function. Please use ``recurse`` instead.
