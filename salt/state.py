@@ -1735,7 +1735,7 @@ class State(object):
         troot = os.path.join(self.opts['cachedir'], self.jid)
         tfile = os.path.join(
             troot,
-            salt.utils.hashutils.base64_b64encode(tag)[:32])
+            salt.utils.hashutils.sha1_digest(tag))
         if not os.path.isdir(troot):
             try:
                 os.makedirs(troot)
@@ -2097,7 +2097,7 @@ class State(object):
                     ret_cache = os.path.join(
                         self.opts['cachedir'],
                         self.jid,
-                        salt.utils.hashutils.base64_b64encode(tag)[:32])
+                        salt.utils.hashutils.sha1_digest(tag))
                     if not os.path.isfile(ret_cache):
                         ret = {'result': False,
                                'comment': 'Parallel process failed to return',
