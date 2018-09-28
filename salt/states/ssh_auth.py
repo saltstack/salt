@@ -263,7 +263,7 @@ def present(
     aggregate
         Removes any existing ssh keys except for those managed by subsequent ``ssh_auth.present``
 
-        .. versionadded:: Fluorine
+        .. versionadded:: Neon
     '''
     ret = {'name': name,
            'changes': {},
