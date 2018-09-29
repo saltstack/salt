@@ -388,8 +388,8 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                             with patch('salt.utils.win_functions.get_sid_from_name', return_value='test-sid'):
                                 comt = 'Created new symlink {0} -> {1}'.format(name, target)
                                 ret = return_val({'comment': comt,
-                                            'result': True, 'changes': {'new': '/tmp/testfile.txt'},
-                                            'changes': {'new': name}})
+                                                  'result': True,
+                                                  'changes': {'new': name}})
                                 self.assertDictEqual(filestate.symlink
                                                      (name, target, user=user,
                                                       group=group), ret)
@@ -792,7 +792,6 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
         ret = {'name': name,
                'result': False,
                'comment': '',
-               'changes': {},
                'changes': {}}
 
         comt = ('Must provide name to file.directory')
