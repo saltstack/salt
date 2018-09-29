@@ -3755,10 +3755,8 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
             pillar={'name': name},
         )
         log.error("ret = %s", repr(ret))
-        diff = dedent('''\
-        --- 
-        +++ 
-        @@ -0,0 +1,3 @@
+        diff = '--- \n+++ \n@@ -0,0 +1,3 @@\n'
+        diff += dedent('''\
         +#-- start managed zone --
         +äöü
         +#-- end managed zone --
