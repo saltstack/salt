@@ -839,7 +839,6 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
         ret = {'name': name,
                'result': False,
                'comment': '',
-               'changes': {},
                'changes': {}}
 
         comt = ('Must provide name to file.directory')
