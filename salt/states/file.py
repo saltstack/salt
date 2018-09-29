@@ -950,16 +950,25 @@ def _check_touch(name, atime, mtime):
     '''
     Check to see if a file needs to be updated or created
     '''
+    ret = {
+        'result': None,
+        'comment': '',
+        'changes': {'new': name},
+    }
     if not os.path.exists(name):
-        return None, 'File {0} is set to be created'.format(name)
-    stats = __salt__['file.stats'](name, follow_symlinks=False)
-    if atime is not None:
-        if six.text_type(atime) != six.text_type(stats['atime']):
-            return None, 'Times set to be updated on file {0}'.format(name)
-    if mtime is not None:
-        if six.text_type(mtime) != six.text_type(stats['mtime']):
-            return None, 'Times set to be updated on file {0}'.format(name)
-    return True, 'File {0} exists and has the correct times'.format(name)
+        ret['comment'] = 'File {0} is set to be created'.format(name)
+    else:
+        stats = __salt__['file.stats'](name, follow_symlinks=False)
+        if ((atime is not None
+             and six.text_type(atime) != six.text_type(stats['atime'])) or
+            (mtime is not None
+                and six.text_type(mtime) != six.text_type(stats['mtime']))):
+            ret['comment'] = 'Times set to be updated on file {0}'.format(name)
+            ret['changes'] = {'touched': name}
+        else:
+            ret['result'] = True
+            ret['comment'] = 'File {0} exists and has the correct times'.format(name)
+    return ret
 
 
 def _get_symlink_ownership(path):
@@ -6074,7 +6083,7 @@ def touch(name, atime=None, mtime=None, makedirs=False):
         )
 
     if __opts__['test']:
-        ret['result'], ret['comment'] = _check_touch(name, atime, mtime)
+        ret.update(_check_touch(name, atime, mtime))
         return ret
 
     if makedirs:
