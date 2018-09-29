@@ -27,10 +27,7 @@ import salt.utils.cloud
 import salt.config as config
 import salt.client
 import salt.ext.six as six
-if six.PY3:
-    import ipaddress
-else:
-    import salt.ext.ipaddress as ipaddress
+from salt._compat import ipaddress
 
 from salt.exceptions import SaltCloudException, SaltCloudSystemExit
 
