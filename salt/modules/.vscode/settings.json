@@ -1,0 +1,9 @@
+{
+    "python.pythonPath": "/usr/local/bin/python3",
+    "python.linting.pylintPath": "/usr/local/bin/pylint",
+    "python.linting.pylintArgs": [
+        "--rcfile=/Users/mchughc/work/gits/salt/.pylintrc"
+    ],
+    "python.linting.enabled": true,
+    "python.linting.pylintEnabled": true
+}
