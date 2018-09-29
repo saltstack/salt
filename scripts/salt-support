@@ -1,0 +1,11 @@
+#!/usr/bin/env python
+'''
+Salt support is to collect logs,
+debug data and system information
+for support purposes.
+'''
+
+from salt.scripts import salt_support
+
+if __name__ == '__main__':
+    salt_support()
