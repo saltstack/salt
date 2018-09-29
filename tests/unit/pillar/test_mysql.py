@@ -12,7 +12,7 @@ import salt.pillar.mysql as mysql
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-@skipIf(not mysql.HAS_MYSQL, 'MySQL-python module not installed')
+@skipIf(mysql.MySQLdb is None, 'MySQL-python module not installed')
 class MysqlPillarTestCase(TestCase):
     maxDiff = None
 

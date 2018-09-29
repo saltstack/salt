@@ -31,6 +31,7 @@ execution modules
     apk
     aptpkg
     archive
+    arista_pyeapi
     artifactory
     at
     at_solaris
@@ -40,6 +41,7 @@ execution modules
     bcache
     beacons
     bigip
+    bluecoat_sslv
     bluez
     boto3_elasticache
     boto3_route53
@@ -85,6 +87,8 @@ execution modules
     chef
     chocolatey
     chronos
+    cimc
+    ciscoconfparse_mod
     cisconso
     cloud
     cmdmod
@@ -151,6 +155,7 @@ execution modules
     glanceng
     glusterfs
     gnomedesktop
+    google_chat
     gpg
     grafana4
     grains
@@ -184,6 +189,7 @@ execution modules
     inspectlib.query
     inspector
     introspect
+    iosconfig
     ipmi
     ipset
     iptables
@@ -191,6 +197,7 @@ execution modules
     jboss7
     jboss7_cli
     jenkinsmod
+    jira_mod
     junos
     k8s
     kapacitor
@@ -268,9 +275,10 @@ execution modules
     namecheap_ns
     namecheap_ssl
     namecheap_users
-    napalm
     napalm_acl
     napalm_bgp
+    napalm_formula
+    napalm_mod
     napalm_network
     napalm_ntp
     napalm_probes
@@ -282,6 +290,7 @@ execution modules
     netbox
     netbsd_sysctl
     netbsdservice
+    netmiko_mod
     netscaler
     network
     neutron
@@ -295,6 +304,7 @@ execution modules
     npm
     nspawn
     nxos
+    nxos_api
     omapi
     openbsd_sysctl
     openbsdpkg
@@ -313,11 +323,14 @@ execution modules
     pagerduty
     pagerduty_util
     pam
+    panos
     parallels
     parted
     pcs
     pdbedit
     pecl
+    peeringdb
+    pf
     philips_hue
     pillar
     pip
@@ -335,6 +348,7 @@ execution modules
     publish
     puppet
     purefa
+    purefb
     pushbullet
     pushover_notify
     pw_group
@@ -372,6 +386,7 @@ execution modules
     saltcloudmod
     saltutil
     schedule
+    scp_mod
     scsi
     sdb
     seed
@@ -450,6 +465,7 @@ execution modules
     victorops
     virt
     virtualenv_mod
+    vmctl
     vsphere
     win_autoruns
     win_certutil
@@ -482,7 +498,6 @@ execution modules
     win_system
     win_task
     win_timezone
-    win_update
     win_useradd
     win_wua
     x509

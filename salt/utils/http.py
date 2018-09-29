@@ -61,7 +61,7 @@ import salt.ext.six.moves.http_client
 import salt.ext.six.moves.http_cookiejar
 import salt.ext.six.moves.urllib.request as urllib_request
 from salt.ext.six.moves.urllib.error import URLError
-from salt.ext.six.moves.urllib.parse import splitquery
+from salt.ext.six.moves.urllib.parse import splitquery, urlparse
 from salt.ext.six.moves.urllib.parse import urlencode as _urlencode
 # pylint: enable=import-error,no-name-in-module
 
@@ -292,6 +292,9 @@ def query(url,
             auth = (username, password)
 
     if agent == USERAGENT:
+        user_agent = opts.get('user_agent', None)
+        if user_agent:
+            agent = user_agent
         agent = '{0} http.query()'.format(agent)
     header_dict['User-agent'] = agent
 
@@ -495,6 +498,7 @@ def query(url,
                 req_kwargs['ca_certs'] = salt.utils.stringutils.to_str(ca_bundle)
 
         max_body = opts.get('http_max_body', salt.config.DEFAULT_MINION_OPTS['http_max_body'])
+        connect_timeout = opts.get('http_connect_timeout', salt.config.DEFAULT_MINION_OPTS['http_connect_timeout'])
         timeout = opts.get('http_request_timeout', salt.config.DEFAULT_MINION_OPTS['http_request_timeout'])
 
         client_argspec = None
@@ -512,6 +516,13 @@ def query(url,
         if proxy_password:
             # tornado requires a str, cannot be unicode str in py2
             proxy_password = salt.utils.stringutils.to_str(proxy_password)
+        no_proxy = opts.get('no_proxy', [])
+
+        # Since tornado doesnt support no_proxy, we'll always hand it empty proxies or valid ones
+        # except we remove the valid ones if a url has a no_proxy hostname in it
+        if urlparse(url_full).hostname in no_proxy:
+            proxy_host = None
+            proxy_port = None
 
         # We want to use curl_http if we have a proxy defined
         if proxy_host and proxy_port:
@@ -545,6 +556,7 @@ def query(url,
                 allow_nonstandard_methods=True,
                 streaming_callback=streaming_callback,
                 header_callback=header_callback,
+                connect_timeout=connect_timeout,
                 request_timeout=timeout,
                 proxy_host=proxy_host,
                 proxy_port=proxy_port,
@@ -831,7 +843,7 @@ def _render(template, render, renderer, template_dict, opts):
         if template_dict is None:
             template_dict = {}
         if not renderer:
-            renderer = opts.get('renderer', 'yaml_jinja')
+            renderer = opts.get('renderer', 'jinja|yaml')
         rend = salt.loader.render(opts, {})
         blacklist = opts.get('renderer_blacklist')
         whitelist = opts.get('renderer_whitelist')
@@ -915,6 +927,7 @@ def parse_cookie_header(header):
         for item in list(cookie):
             if item in attribs:
                 continue
+            name = item
             value = cookie.pop(item)
 
         # cookielib.Cookie() requires an epoch

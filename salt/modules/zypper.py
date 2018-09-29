@@ -38,9 +38,11 @@ import salt.utils.files
 import salt.utils.functools
 import salt.utils.path
 import salt.utils.pkg
+import salt.utils.pkg.rpm
 import salt.utils.stringutils
 import salt.utils.systemd
 from salt.utils.versions import LooseVersion
+import salt.utils.environment
 from salt.exceptions import CommandExecutionError, MinionError, SaltInvocationError
 
 log = logging.getLogger(__name__)
@@ -74,7 +76,25 @@ class _Zypper(object):
     Allows serial zypper calls (first came, first won).
     '''
 
-    SUCCESS_EXIT_CODES = [0, 100, 101, 102, 103]
+    SUCCESS_EXIT_CODES = {
+        0: 'Successful run of zypper with no special info.',
+        100: 'Patches are available for installation.',
+        101: 'Security patches are available for installation.',
+        102: 'Installation successful, reboot required.',
+        103: 'Installation succesful, restart of the package manager itself required.',
+    }
+
+    WARNING_EXIT_CODES = {
+        6: 'No repositories are defined.',
+        7: 'The ZYPP library is locked.',
+        106: 'Some repository had to be disabled temporarily because it failed to refresh. '
+             'You should check your repository configuration (e.g. zypper ref -f).',
+        107: 'Installation basically succeeded, but some of the packages %post install scripts returned an error. '
+             'These packages were successfully unpacked to disk and are registered in the rpm database, '
+             'but due to the failed install script they may not work as expected. The failed scripts output might '
+             'reveal what actually went wrong. Any scripts output is also logged to /var/log/zypp/history.'
+    }
+
     LOCK_EXIT_CODE = 7
     XML_DIRECTIVES = ['-x', '--xmlout']
     ZYPPER_LOCK = '/var/run/zypp.pid'
@@ -98,7 +118,7 @@ class _Zypper(object):
         self.__exit_code = 0
         self.__call_result = dict()
         self.__error_msg = ''
-        self.__env = {'SALT_RUNNING': "1"}  # Subject to change
+        self.__env = salt.utils.environment.get_module_environment(globals())
 
         # Call config
         self.__xml = False
@@ -187,7 +207,15 @@ class _Zypper(object):
 
         :return:
         '''
-        return self.exit_code not in self.SUCCESS_EXIT_CODES
+        if self.exit_code:
+            msg = self.SUCCESS_EXIT_CODES.get(self.exit_code)
+            if msg:
+                log.info(msg)
+            msg = self.WARNING_EXIT_CODES.get(self.exit_code)
+            if msg:
+                log.warning(msg)
+
+        return self.exit_code not in self.SUCCESS_EXIT_CODES and self.exit_code not in self.WARNING_EXIT_CODES
 
     def _is_lock(self):
         '''
@@ -470,28 +498,37 @@ def info_installed(*names, **kwargs):
         Valid attributes are:
             ignore, report
 
+    :param all_versions:
+        Include information for all versions of the packages installed on the minion.
+
     CLI example:
 
     .. code-block:: bash
 
         salt '*' pkg.info_installed <package1>
         salt '*' pkg.info_installed <package1> <package2> <package3> ...
-        salt '*' pkg.info_installed <package1> attr=version,vendor
+        salt '*' pkg.info_installed <package1> <package2> <package3> all_versions=True
+        salt '*' pkg.info_installed <package1> attr=version,vendor all_versions=True
         salt '*' pkg.info_installed <package1> <package2> <package3> ... attr=version,vendor
         salt '*' pkg.info_installed <package1> <package2> <package3> ... attr=version,vendor errors=ignore
         salt '*' pkg.info_installed <package1> <package2> <package3> ... attr=version,vendor errors=report
     '''
+    all_versions = kwargs.get('all_versions', False)
     ret = dict()
-    for pkg_name, pkg_nfo in __salt__['lowpkg.info'](*names, **kwargs).items():
-        t_nfo = dict()
-        # Translate dpkg-specific keys to a common structure
-        for key, value in six.iteritems(pkg_nfo):
-            if key == 'source_rpm':
-                t_nfo['source'] = value
+    for pkg_name, pkgs_nfo in __salt__['lowpkg.info'](*names, **kwargs).items():
+        pkg_nfo = pkgs_nfo if all_versions else [pkgs_nfo]
+        for _nfo in pkg_nfo:
+            t_nfo = dict()
+            # Translate dpkg-specific keys to a common structure
+            for key, value in six.iteritems(_nfo):
+                if key == 'source_rpm':
+                    t_nfo['source'] = value
+                else:
+                    t_nfo[key] = value
+            if not all_versions:
+                ret[pkg_name] = t_nfo
             else:
-                t_nfo[key] = value
-        ret[pkg_name] = t_nfo
-
+                ret.setdefault(pkg_name, []).append(t_nfo)
     return ret
 
 
@@ -546,7 +583,7 @@ def info_available(*names, **kwargs):
         if nfo.get('status'):
             nfo['status'] = nfo.get('status')
         if nfo.get('installed'):
-            nfo['installed'] = nfo.get('installed').lower() == 'yes' and True or False
+            nfo['installed'] = nfo.get('installed').lower().startswith('yes')
 
     return ret
 
@@ -707,24 +744,44 @@ def list_pkgs(versions_as_list=False, **kwargs):
     contextkey = 'pkg.list_pkgs'
 
     if contextkey not in __context__:
-
-        cmd = ['rpm', '-qa', '--queryformat', (
-            "%{NAME}_|-%{VERSION}_|-%{RELEASE}_|-%{ARCH}_|-"
-            "%|EPOCH?{%{EPOCH}}:{}|_|-%{INSTALLTIME}\\n")]
         ret = {}
-        for line in __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False).splitlines():
-            name, pkgver, rel, arch, epoch, install_time = line.split('_|-')
-            install_date = datetime.datetime.utcfromtimestamp(int(install_time)).isoformat() + "Z"
-            install_date_time_t = int(install_time)
+        cmd = ['rpm', '-qa', '--queryformat',
+               salt.utils.pkg.rpm.QUERYFORMAT.replace('%{REPOID}', '(none)') + '\n']
+        output = __salt__['cmd.run'](cmd,
+                                     python_shell=False,
+                                     output_loglevel='trace')
+        for line in output.splitlines():
+            pkginfo = salt.utils.pkg.rpm.parse_pkginfo(
+                line,
+                osarch=__grains__['osarch']
+            )
+            if pkginfo:
+                # see rpm version string rules available at https://goo.gl/UGKPNd
+                pkgver = pkginfo.version
+                epoch = ''
+                release = ''
+                if ':' in pkgver:
+                    epoch, pkgver = pkgver.split(":", 1)
+                if '-' in pkgver:
+                    pkgver, release = pkgver.split("-", 1)
+                all_attr = {
+                    'epoch': epoch,
+                    'version': pkgver,
+                    'release': release,
+                    'arch': pkginfo.arch,
+                    'install_date': pkginfo.install_date,
+                    'install_date_time_t': pkginfo.install_date_time_t
+                }
+                __salt__['pkg_resource.add_pkg'](ret, pkginfo.name, all_attr)
 
-            all_attr = {'epoch': epoch, 'version': pkgver, 'release': rel, 'arch': arch,
-                        'install_date': install_date, 'install_date_time_t': install_date_time_t}
-            __salt__['pkg_resource.add_pkg'](ret, name, all_attr)
-
+        _ret = {}
         for pkgname in ret:
-            ret[pkgname] = sorted(ret[pkgname], key=lambda d: d['version'])
+            # Filter out GPG public keys packages
+            if pkgname.startswith('gpg-pubkey'):
+                continue
+            _ret[pkgname] = sorted(ret[pkgname], key=lambda d: d['version'])
 
-        __context__[contextkey] = ret
+        __context__[contextkey] = _ret
 
     return __salt__['pkg_resource.format_pkg_list'](
         __context__[contextkey],
@@ -1343,14 +1400,6 @@ def install(name=None,
 
     _clean_cache()
     new = list_pkgs(attr=diff_attr) if not downloadonly else list_downloaded()
-
-    # Handle packages which report multiple new versions
-    # (affects only kernel packages at this point)
-    for pkg_name in new:
-        pkg_data = new[pkg_name]
-        if isinstance(pkg_data, six.string_types):
-            new[pkg_name] = pkg_data.split(',')[-1]
-
     ret = salt.utils.data.compare_dicts(old, new)
 
     if errors:
@@ -1460,11 +1509,6 @@ def upgrade(refresh=True,
     __zypper__(systemd_scope=_systemd_scope()).noraise.call(*cmd_update)
     _clean_cache()
     new = list_pkgs()
-
-    # Handle packages which report multiple new versions
-    # (affects only kernel packages at this point)
-    for pkg in new:
-        new[pkg] = new[pkg].split(',')[-1]
     ret = salt.utils.data.compare_dicts(old, new)
 
     if __zypper__.exit_code not in __zypper__.SUCCESS_EXIT_CODES:
@@ -1496,7 +1540,14 @@ def _uninstall(name=None, pkgs=None):
         raise CommandExecutionError(exc)
 
     old = list_pkgs()
-    targets = [target for target in pkg_params if target in old]
+    targets = []
+    for target in pkg_params:
+        # Check if package version set to be removed is actually installed:
+        # old[target] contains a comma-separated list of installed versions
+        if target in old and pkg_params[target] in old[target].split(','):
+            targets.append(target + "-" + pkg_params[target])
+        elif target in old and not pkg_params[target]:
+            targets.append(target)
     if not targets:
         return {}
 
@@ -1517,6 +1568,32 @@ def _uninstall(name=None, pkgs=None):
         )
 
     return ret
+
+
+def normalize_name(name):
+    '''
+    Strips the architecture from the specified package name, if necessary.
+    Circumstances where this would be done include:
+
+    * If the arch is 32 bit and the package name ends in a 32-bit arch.
+    * If the arch matches the OS arch, or is ``noarch``.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.normalize_name zsh.x86_64
+    '''
+    try:
+        arch = name.rsplit('.', 1)[-1]
+        if arch not in salt.utils.pkg.rpm.ARCHES + ('noarch',):
+            return name
+    except ValueError:
+        return name
+    if arch in (__grains__['osarch'], 'noarch') \
+            or salt.utils.pkg.rpm.check_32(arch, osarch=__grains__['osarch']):
+        return name[:-(len(arch) + 1)]
+    return name
 
 
 def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
@@ -2266,7 +2343,7 @@ def list_provides(**kwargs):
     '''
     ret = __context__.get('pkg.list_provides')
     if not ret:
-        cmd = ['rpm', '-qa', '--queryformat', '[%{PROVIDES}_|-%{NAME}\n]']
+        cmd = ['rpm', '-qa', '--queryformat', '%{PROVIDES}_|-%{NAME}\n']
         ret = dict()
         for line in __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False).splitlines():
             provide, realname = line.split('_|-')
@@ -2331,9 +2408,9 @@ def resolve_capabilities(pkgs, refresh, **kwargs):
                 try:
                     result = search(name, provides=True, match='exact')
                     if len(result) == 1:
-                        name = result.keys()[0]
+                        name = next(iter(result.keys()))
                     elif len(result) > 1:
-                        log.warn("Found ambiguous match for capability '%s'.", pkg)
+                        log.warning("Found ambiguous match for capability '%s'.", pkg)
                 except CommandExecutionError as exc:
                     # when search throws an exception stay with original name and version
                     log.debug("Search failed with: %s", exc)

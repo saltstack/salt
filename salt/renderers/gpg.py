@@ -218,6 +218,7 @@ from subprocess import Popen, PIPE
 # Import salt libs
 import salt.utils.path
 import salt.utils.stringio
+import salt.utils.stringutils
 import salt.syspaths
 from salt.exceptions import SaltRenderError
 
@@ -226,7 +227,8 @@ from salt.ext import six
 
 log = logging.getLogger(__name__)
 
-GPG_HEADER = re.compile(r'-----BEGIN PGP MESSAGE-----')
+GPG_CIPHERTEXT = re.compile(
+    r'-----BEGIN PGP MESSAGE-----.*?-----END PGP MESSAGE-----', re.DOTALL)
 
 
 def _get_gpg_exec():
@@ -262,18 +264,17 @@ def _get_key_dir():
     return gpg_keydir
 
 
-def _decrypt_ciphertext(cipher, translate_newlines=False):
+def _decrypt_ciphertext(cipher):
     '''
     Given a block of ciphertext as a string, and a gpg object, try to decrypt
     the cipher and return the decrypted string. If the cipher cannot be
     decrypted, log the error, and return the ciphertext back out.
     '''
-    if translate_newlines:
-        try:
-            cipher = salt.utils.stringutils.to_unicode(cipher).replace(r'\n', '\n')
-        except UnicodeDecodeError:
-            # ciphertext is binary
-            pass
+    try:
+        cipher = salt.utils.stringutils.to_unicode(cipher).replace(r'\n', '\n')
+    except UnicodeDecodeError:
+        # ciphertext is binary
+        pass
     cipher = salt.utils.stringutils.to_bytes(cipher)
     cmd = [_get_gpg_exec(), '--homedir', _get_key_dir(), '--status-fd', '2',
            '--no-tty', '-d']
@@ -300,6 +301,19 @@ def _decrypt_ciphertext(cipher, translate_newlines=False):
         return decrypted_data
 
 
+def _decrypt_ciphertexts(cipher, translate_newlines=False):
+    if translate_newlines:
+        cipher = cipher.replace(r'\n', '\n')
+    ret, num = GPG_CIPHERTEXT.subn(lambda m: _decrypt_ciphertext(m.group()), cipher)
+    if num > 0:
+        # Remove trailing newlines. Without if crypted value initially specified as a YAML multiline
+        # it will conain unexpected trailing newline.
+        return ret.rstrip('\n')
+    else:
+        # Possibly just encrypted data without begin/end marks
+        return _decrypt_ciphertext(cipher)
+
+
 def _decrypt_object(obj, translate_newlines=False):
     '''
     Recursively try to decrypt any object. If the object is a six.string_types
@@ -309,11 +323,7 @@ def _decrypt_object(obj, translate_newlines=False):
     if salt.utils.stringio.is_readable(obj):
         return _decrypt_object(obj.getvalue(), translate_newlines)
     if isinstance(obj, six.string_types):
-        if GPG_HEADER.search(obj):
-            return _decrypt_ciphertext(obj,
-                                       translate_newlines=translate_newlines)
-        else:
-            return obj
+        return _decrypt_ciphertexts(obj, translate_newlines=translate_newlines)
     elif isinstance(obj, dict):
         for key, value in six.iteritems(obj):
             obj[key] = _decrypt_object(value,

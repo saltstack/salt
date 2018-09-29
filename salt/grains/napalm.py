@@ -413,10 +413,10 @@ def host_dns(proxy=None):
                 'AAAA': []
             }
         }
-        dns_a = salt.utils.dns.query(device_host_value, 'A')
+        dns_a = salt.utils.dns.lookup(device_host_value, 'A')
         if dns_a:
             host_dns_ret['host_dns']['A'] = dns_a
-        dns_aaaa = salt.utils.dns.query(device_host_value, 'AAAA')
+        dns_aaaa = salt.utils.dns.lookup(device_host_value, 'AAAA')
         if dns_aaaa:
             host_dns_ret['host_dns']['AAAA'] = dns_aaaa
         return host_dns_ret

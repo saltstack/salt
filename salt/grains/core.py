@@ -20,8 +20,16 @@ import platform
 import logging
 import locale
 import uuid
+import zlib
 from errno import EACCES, EPERM
 import datetime
+
+# pylint: disable=import-error
+try:
+    import dateutil.tz
+    _DATEUTIL_TZ = True
+except ImportError:
+    _DATEUTIL_TZ = False
 
 __proxyenabled__ = ['*']
 __FQDN__ = None
@@ -41,11 +49,14 @@ except ImportError:
 # Import salt libs
 import salt.exceptions
 import salt.log
+import salt.utils.args
 import salt.utils.dns
 import salt.utils.files
 import salt.utils.network
 import salt.utils.path
 import salt.utils.platform
+import salt.utils.stringutils
+import salt.utils.versions
 from salt.ext import six
 from salt.ext.six.moves import range
 
@@ -124,6 +135,7 @@ def _linux_cpudata():
     # Parse over the cpuinfo file
     if os.path.isfile(cpuinfo):
         with salt.utils.files.fopen(cpuinfo, 'r') as _fp:
+            grains['num_cpus'] = 0
             for line in _fp:
                 comps = line.split(':')
                 if not len(comps) > 1:
@@ -131,7 +143,7 @@ def _linux_cpudata():
                 key = comps[0].strip()
                 val = comps[1].strip()
                 if key == 'processor':
-                    grains['num_cpus'] = int(val) + 1
+                    grains['num_cpus'] += 1
                 elif key == 'model name':
                     grains['cpu_model'] = val
                 elif key == 'flags':
@@ -186,7 +198,7 @@ def _linux_gpu_data():
         return {}
 
     # dominant gpu vendors to search for (MUST be lowercase for matching below)
-    known_vendors = ['nvidia', 'amd', 'ati', 'intel']
+    known_vendors = ['nvidia', 'amd', 'ati', 'intel', 'cirrus logic', 'vmware', 'matrox', 'aspeed']
     gpu_classes = ('vga compatible controller', '3d controller')
 
     devs = []
@@ -224,7 +236,7 @@ def _linux_gpu_data():
 
     gpus = []
     for gpu in devs:
-        vendor_strings = gpu['Vendor'].lower().split()
+        vendor_strings = re.split('[^A-Za-z0-9]', gpu['Vendor'].lower())
         # default vendor to 'unknown', overwrite if we match a known one
         vendor = 'unknown'
         for name in known_vendors:
@@ -247,7 +259,7 @@ def _netbsd_gpu_data():
       - vendor: nvidia|amd|ati|...
         model: string
     '''
-    known_vendors = ['nvidia', 'amd', 'ati', 'intel', 'cirrus logic', 'vmware']
+    known_vendors = ['nvidia', 'amd', 'ati', 'intel', 'cirrus logic', 'vmware', 'matrox', 'aspeed']
 
     gpus = []
     try:
@@ -676,11 +688,7 @@ def _virtual(osdata):
     if not salt.utils.platform.is_windows() and osdata['kernel'] not in skip_cmds:
         if salt.utils.path.which('virt-what'):
             _cmds = ['virt-what']
-        else:
-            log.debug(
-                'Please install \'virt-what\' to improve results of the '
-                '\'virtual\' grain.'
-            )
+
     # Check if enable_lspci is True or False
     if __opts__.get('enable_lspci', True) is True:
         # /proc/bus/pci does not exists, lspci will fail
@@ -860,14 +868,6 @@ def _virtual(osdata):
         elif command == 'virtinfo':
             grains['virtual'] = 'LDOM'
             break
-    else:
-        if osdata['kernel'] not in skip_cmds:
-            log.debug(
-                'All tools for virtual hardware identification failed to '
-                'execute because they do not exist on the system running this '
-                'instance or the user does not have the necessary permissions '
-                'to execute them. Grains output might not be accurate.'
-            )
 
     choices = ('Linux', 'HP-UX')
     isdir = os.path.isdir
@@ -937,6 +937,10 @@ def _virtual(osdata):
                     fhr_contents = fhr.read()
                 if ':/lxc/' in fhr_contents:
                     grains['virtual_subtype'] = 'LXC'
+                elif ':/kubepods/' in fhr_contents:
+                    grains['virtual_subtype'] = 'kubernetes'
+                elif ':/libpod_parent/' in fhr_contents:
+                    grains['virtual_subtype'] = 'libpod'
                 else:
                     if any(x in fhr_contents
                            for x in (':/system.slice/docker', ':/docker/',
@@ -1051,6 +1055,63 @@ def _virtual(osdata):
     return grains
 
 
+def _virtual_hv(osdata):
+    '''
+    Returns detailed hypervisor information from sysfs
+    Currently this seems to be used only by Xen
+    '''
+    grains = {}
+
+    # Bail early if we're not running on Xen
+    try:
+        if 'xen' not in osdata['virtual']:
+            return grains
+    except KeyError:
+        return grains
+
+    # Try to get the exact hypervisor version from sysfs
+    try:
+        version = {}
+        for fn in ('major', 'minor', 'extra'):
+            with salt.utils.files.fopen('/sys/hypervisor/version/{}'.format(fn), 'r') as fhr:
+                version[fn] = salt.utils.stringutils.to_unicode(fhr.read().strip())
+        grains['virtual_hv_version'] = '{}.{}{}'.format(version['major'], version['minor'], version['extra'])
+        grains['virtual_hv_version_info'] = [version['major'], version['minor'], version['extra']]
+    except (IOError, OSError, KeyError):
+        pass
+
+    # Try to read and decode the supported feature set of the hypervisor
+    # Based on https://github.com/brendangregg/Misc/blob/master/xen/xen-features.py
+    # Table data from include/xen/interface/features.h
+    xen_feature_table = {0: 'writable_page_tables',
+                         1: 'writable_descriptor_tables',
+                         2: 'auto_translated_physmap',
+                         3: 'supervisor_mode_kernel',
+                         4: 'pae_pgdir_above_4gb',
+                         5: 'mmu_pt_update_preserve_ad',
+                         7: 'gnttab_map_avail_bits',
+                         8: 'hvm_callback_vector',
+                         9: 'hvm_safe_pvclock',
+                        10: 'hvm_pirqs',
+                        11: 'dom0',
+                        12: 'grant_map_identity',
+                        13: 'memory_op_vnode_supported',
+                        14: 'ARM_SMCCC_supported'}
+    try:
+        with salt.utils.files.fopen('/sys/hypervisor/properties/features', 'r') as fhr:
+            features = salt.utils.stringutils.to_unicode(fhr.read().strip())
+        enabled_features = []
+        for bit, feat in six.iteritems(xen_feature_table):
+            if int(features, 16) & (1 << bit):
+                enabled_features.append(feat)
+        grains['virtual_hv_features'] = features
+        grains['virtual_hv_features_list'] = enabled_features
+    except (IOError, OSError, KeyError):
+        pass
+
+    return grains
+
+
 def _ps(osdata):
     '''
     Return the ps grain
@@ -1071,6 +1132,8 @@ def _ps(osdata):
         )
     elif osdata['os_family'] == 'AIX':
         grains['ps'] = '/usr/bin/ps auxww'
+    elif osdata['os_family'] == 'NILinuxRT':
+        grains['ps'] = 'ps -o user,pid,ppid,tty,time,comm'
     else:
         grains['ps'] = 'ps -efHww'
     return grains
@@ -1295,7 +1358,6 @@ _OS_NAME_MAP = {
     'scientific': 'ScientificLinux',
     'synology': 'Synology',
     'nilrt': 'NILinuxRT',
-    'nilrt-xfce': 'NILinuxRT-XFCE',
     'poky': 'Poky',
     'manjaro': 'Manjaro',
     'manjarolin': 'Manjaro',
@@ -1370,11 +1432,11 @@ _OS_FAMILY_MAP = {
     'Cumulus': 'Debian',
     'Deepin': 'Debian',
     'NILinuxRT': 'NILinuxRT',
-    'NILinuxRT-XFCE': 'NILinuxRT',
     'KDE neon': 'Debian',
     'Void': 'Void',
     'IDMS': 'Debian',
-    'AIX': 'AIX'
+    'Funtoo': 'Gentoo',
+    'AIX': 'AIX',
 }
 
 # Matches any possible format:
@@ -1575,7 +1637,6 @@ def os_data():
                         buf_size = 262144
                     try:
                         with salt.utils.files.fopen(init_bin, 'rb') as fp_:
-                            buf = True
                             edge = b''
                             buf = fp_.read(buf_size).lower()
                             while buf:
@@ -1596,6 +1657,12 @@ def os_data():
                         )
                 elif salt.utils.path.which('supervisord') in init_cmdline:
                     grains['init'] = 'supervisord'
+                elif salt.utils.path.which('dumb-init') in init_cmdline:
+                    # https://github.com/Yelp/dumb-init
+                    grains['init'] = 'dumb-init'
+                elif salt.utils.path.which('tini') in init_cmdline:
+                    # https://github.com/krallin/tini
+                    grains['init'] = 'tini'
                 elif init_cmdline == ['runit']:
                     grains['init'] = 'runit'
                 elif '/sbin/my_init' in init_cmdline:
@@ -1704,8 +1771,16 @@ def os_data():
                                     comps[3].replace('(', '').replace(')', '')
                 elif os.path.isfile('/etc/centos-release'):
                     log.trace('Parsing distrib info from /etc/centos-release')
-                    # CentOS Linux
-                    grains['lsb_distrib_id'] = 'CentOS'
+                    # Maybe CentOS Linux; could also be SUSE Expanded Support.
+                    # SUSE ES has both, centos-release and redhat-release.
+                    if os.path.isfile('/etc/redhat-release'):
+                        with salt.utils.files.fopen('/etc/redhat-release') as ifile:
+                            for line in ifile:
+                                if "red hat enterprise linux server" in line.lower():
+                                    # This is a SUSE Expanded Support Rhel installation
+                                    grains['lsb_distrib_id'] = 'RedHat'
+                                    break
+                    grains.setdefault('lsb_distrib_id', 'CentOS')
                     with salt.utils.files.fopen('/etc/centos-release') as ifile:
                         for line in ifile:
                             # Need to pull out the version and codename
@@ -1760,7 +1835,11 @@ def os_data():
         # so that linux_distribution() does the /etc/lsb-release parsing, but
         # we do it anyway here for the sake for full portability.
         if 'osfullname' not in grains:
-            grains['osfullname'] = grains.get('lsb_distrib_id', osname).strip()
+            # If NI Linux RT distribution, set the grains['osfullname'] to 'nilrt'
+            if grains.get('lsb_distrib_id', '').lower().startswith('nilrt'):
+                grains['osfullname'] = 'nilrt'
+            else:
+                grains['osfullname'] = grains.get('lsb_distrib_id', osname).strip()
         if 'osrelease' not in grains:
             # NOTE: This is a workaround for CentOS 7 os-release bug
             # https://bugs.centos.org/view.php?id=8359
@@ -1918,6 +1997,7 @@ def os_data():
 
     # Load the virtual machine info
     grains.update(_virtual(grains))
+    grains.update(_virtual_hv(grains))
     grains.update(_ps(grains))
 
     if grains.get('osrelease', ''):
@@ -1966,6 +2046,8 @@ def locale_info():
         grains['locale_info']['defaultlanguage'] = 'unknown'
         grains['locale_info']['defaultencoding'] = 'unknown'
     grains['locale_info']['detectedencoding'] = __salt_system_encoding__
+    if _DATEUTIL_TZ:
+        grains['locale_info']['timezone'] = datetime.datetime.now(dateutil.tz.tzlocal()).tzname()
     return grains
 
 
@@ -2016,6 +2098,38 @@ def append_domain():
     if 'append_domain' in __opts__:
         grain['append_domain'] = __opts__['append_domain']
     return grain
+
+
+def fqdns():
+    '''
+    Return all known FQDNs for the system by enumerating all interfaces and
+    then trying to reverse resolve them (excluding 'lo' interface).
+    '''
+    # Provides:
+    # fqdns
+
+    grains = {}
+    fqdns = set()
+
+    addresses = salt.utils.network.ip_addrs(include_loopback=False,
+                                            interface_data=_INTERFACES)
+    addresses.extend(salt.utils.network.ip_addrs6(include_loopback=False,
+                                                  interface_data=_INTERFACES))
+    err_message = 'Exception during resolving address: %s'
+    for ip in addresses:
+        try:
+            fqdns.add(socket.getfqdn(socket.gethostbyaddr(ip)[0]))
+        except socket.herror as err:
+            if err.errno == 0:
+                # No FQDN for this IP address, so we don't need to know this all the time.
+                log.debug("Unable to resolve address %s: %s", ip, err)
+            else:
+                log.error(err_message, err)
+        except (socket.error, socket.gaierror, socket.timeout) as err:
+            log.error(err_message, err)
+
+    grains['fqdns'] = sorted(list(fqdns))
+    return grains
 
 
 def ip_fqdn():
@@ -2338,6 +2452,7 @@ def _hw_data(osdata):
         hwdata = {
             'manufacturer': 'manufacturer',
             'serialnumber': 'serial#',
+            'productname': 'DeviceDesc',
         }
         for grain_name, cmd_key in six.iteritems(hwdata):
             result = __salt__['cmd.run_all']('fw_printenv {0}'.format(cmd_key))
@@ -2533,7 +2648,52 @@ def _hw_data(osdata):
         else:
             log.error('The \'prtconf\' binary was not found in $PATH.')
 
+    elif osdata['kernel'] == 'AIX':
+        cmd = salt.utils.path.which('prtconf')
+        if data:
+            data = __salt__['cmd.run']('{0}'.format(cmd)) + os.linesep
+            for dest, regstring in (('serialnumber', r'(?im)^\s*Machine\s+Serial\s+Number:\s+(\S+)'),
+                                    ('systemfirmware', r'(?im)^\s*Firmware\s+Version:\s+(.*)')):
+                for regex in [re.compile(r) for r in [regstring]]:
+                    res = regex.search(data)
+                    if res and len(res.groups()) >= 1:
+                        grains[dest] = res.group(1).strip().replace("'", '')
+
+            product_regexes = [re.compile(r'(?im)^\s*System\s+Model:\s+(\S+)')]
+            for regex in product_regexes:
+                res = regex.search(data)
+                if res and len(res.groups()) >= 1:
+                    grains['manufacturer'], grains['productname'] = res.group(1).strip().replace("'", "").split(",")
+                    break
+        else:
+            log.error('The \'prtconf\' binary was not found in $PATH.')
+
     return grains
+
+
+def _get_hash_by_shell():
+    '''
+    Shell-out Python 3 for compute reliable hash
+    :return:
+    '''
+    id_ = __opts__.get('id', '')
+    id_hash = None
+    py_ver = sys.version_info[:2]
+    if py_ver >= (3, 3):
+        # Python 3.3 enabled hash randomization, so we need to shell out to get
+        # a reliable hash.
+        id_hash = __salt__['cmd.run']([sys.executable, '-c', 'print(hash("{0}"))'.format(id_)],
+                                      env={'PYTHONHASHSEED': '0'})
+        try:
+            id_hash = int(id_hash)
+        except (TypeError, ValueError):
+            log.debug('Failed to hash the ID to get the server_id grain. Result of hash command: %s', id_hash)
+            id_hash = None
+    if id_hash is None:
+        # Python < 3.3 or error encountered above
+        id_hash = hash(id_)
+
+    return abs(id_hash % (2 ** 31))
 
 
 def get_server_id():
@@ -2546,30 +2706,20 @@ def get_server_id():
     #   server_id
 
     if salt.utils.platform.is_proxy():
-        return {}
-    id_ = __opts__.get('id', '')
-    id_hash = None
-    py_ver = sys.version_info[:2]
-    if py_ver >= (3, 3):
-        # Python 3.3 enabled hash randomization, so we need to shell out to get
-        # a reliable hash.
-        id_hash = __salt__['cmd.run'](
-            [sys.executable, '-c', 'print(hash("{0}"))'.format(id_)],
-            env={'PYTHONHASHSEED': '0'}
-        )
-        try:
-            id_hash = int(id_hash)
-        except (TypeError, ValueError):
-            log.debug(
-                'Failed to hash the ID to get the server_id grain. Result of '
-                'hash command: %s', id_hash
-            )
-            id_hash = None
-    if id_hash is None:
-        # Python < 3.3 or error encountered above
-        id_hash = hash(id_)
+        server_id = {}
+    else:
+        use_crc = __opts__.get('server_id_use_crc')
+        if bool(use_crc):
+            id_hash = getattr(zlib, use_crc, zlib.adler32)(__opts__.get('id', '').encode()) & 0xffffffff
+        else:
+            log.debug('This server_id is computed not by Adler32 nor by CRC32. '
+                      'Please use "server_id_use_crc" option and define algorithm you '
+                      'prefer (default "Adler32"). Starting with Sodium, the '
+                      'server_id will be computed with Adler32 by default.')
+            id_hash = _get_hash_by_shell()
+        server_id = {'server_id': id_hash}
 
-    return {'server_id': abs(id_hash % (2 ** 31))}
+    return server_id
 
 
 def get_master():
@@ -2625,4 +2775,25 @@ def default_gateway():
                     break
         except Exception:
             continue
+    return grains
+
+
+def kernelparams():
+    '''
+    Return the kernel boot parameters
+    '''
+    try:
+        with salt.utils.files.fopen('/proc/cmdline', 'r') as fhr:
+            cmdline = fhr.read()
+            grains = {'kernelparams': []}
+            for data in [item.split('=') for item in salt.utils.args.shlex_split(cmdline)]:
+                value = None
+                if len(data) == 2:
+                    value = data[1].strip('"')
+
+                grains['kernelparams'] += [(data[0], value)]
+    except IOError as exc:
+        grains = {}
+        log.debug('Failed to read /proc/cmdline: %s', exc)
+
     return grains

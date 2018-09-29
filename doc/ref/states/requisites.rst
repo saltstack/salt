@@ -507,6 +507,15 @@ The ``onfail`` requisite is applied in the same way as ``require`` as ``watch``:
 
 .. note::
 
+    Setting failhard (:ref:`globally <global-failhard>` or in
+    :ref:`the failing state <state-level-failhard>`) to ``True`` will cause
+    ``onfail``, ``onfail_in`` and ``onfail_any`` requisites to be ignored.
+    If you want to combine a global failhard set to True with ``onfail``,
+    ``onfail_in`` or ``onfail_any``, you will have to explicitly set failhard
+    to ``False`` (overriding the global setting) in the state that could fail.
+
+.. note::
+
     Beginning in the ``2016.11.0`` release of Salt, ``onfail`` uses OR logic for
     multiple listed ``onfail`` requisites. Prior to the ``2016.11.0`` release,
     ``onfail`` used AND logic. See `Issue #22370`_ for more information.
@@ -851,6 +860,17 @@ Reload
 ``reload_modules`` is a boolean option that forces salt to reload its modules
 after a state finishes. ``reload_pillar`` and ``reload_grains`` can also be set.
 See :ref:`Reloading Modules <reloading-modules>`.
+
+.. code-block:: yaml
+
+    grains_refresh:
+      module.run:
+       - name: saltutil.refresh_grains
+       - reload_grains: true
+
+    grains_read:
+      module.run:
+       - name: grains.items
 
 .. _unless-requisite:
 

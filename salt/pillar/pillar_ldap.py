@@ -203,6 +203,7 @@ def _result_to_dict(data, result, conf, source):
     '''
     attrs = _config('attrs', conf) or []
     lists = _config('lists', conf) or []
+    dict_key_attr = _config('dict_key_attr', conf) or 'dn'
     # TODO:
     # deprecate the default 'mode: split' and make the more
     # straightforward 'mode: map' the new default
@@ -211,6 +212,9 @@ def _result_to_dict(data, result, conf, source):
         data[source] = []
         for record in result:
             ret = {}
+            if 'dn' in attrs or 'distinguishedName' in attrs:
+                log.debug('dn: %s', record[0])
+                ret['dn'] = record[0]
             record = record[1]
             log.debug('record: %s', record)
             for key in record:
@@ -220,6 +224,30 @@ def _result_to_dict(data, result, conf, source):
                 if key in lists:
                     ret[key] = record.get(key)
             data[source].append(ret)
+    elif mode == 'dict':
+        data[source] = {}
+        for record in result:
+            ret = {}
+            distinguished_name = record[0]
+            log.debug('dn: %s', distinguished_name)
+            if 'dn' in attrs or 'distinguishedName' in attrs:
+                ret['dn'] = distinguished_name
+            record = record[1]
+            log.debug('record: %s', record)
+            for key in record:
+                if key in attrs:
+                    for item in record.get(key):
+                        ret[key] = item
+                if key in lists:
+                    ret[key] = record.get(key)
+            if dict_key_attr in ['dn', 'distinguishedName']:
+                dict_key = distinguished_name
+            else:
+                dict_key = ','.join(sorted(record.get(dict_key_attr, [])))
+            try:
+                data[source][dict_key].append(ret)
+            except KeyError:
+                data[source][dict_key] = [ret]
     elif mode == 'split':
         for key in result[0][1]:
             if key in attrs:
@@ -257,7 +285,8 @@ def _do_search(conf):
     scope = _config('scope', conf)
     _lists = _config('lists', conf) or []
     _attrs = _config('attrs', conf) or []
-    attrs = _lists + _attrs
+    _dict_key_attr = _config('dict_key_attr', conf) or 'dn'
+    attrs = _lists + _attrs + [_dict_key_attr]
     if not attrs:
         attrs = None
     # Perform the search

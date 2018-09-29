@@ -7,11 +7,15 @@ and data structures.
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
-import collections
 import copy
 import fnmatch
 import logging
 import re
+
+try:
+    from collections.abc import Mapping
+except ImportError:
+    from collections import Mapping
 
 # Import Salt libs
 import salt.utils.dictupdate
@@ -100,7 +104,7 @@ def decode(data, encoding=None, errors='strict', keep=False,
     _decode_func = salt.utils.stringutils.to_unicode \
         if not to_str \
         else salt.utils.stringutils.to_str
-    if isinstance(data, collections.Mapping):
+    if isinstance(data, Mapping):
         return decode_dict(data, encoding, errors, keep, normalize,
                            preserve_dict_class, preserve_tuples, to_str)
     elif isinstance(data, list):
@@ -166,7 +170,7 @@ def decode_dict(data, encoding=None, errors='strict', keep=False,
                 if preserve_tuples \
                 else decode_list(value, encoding, errors, keep, normalize,
                                  preserve_dict_class, preserve_tuples, to_str)
-        elif isinstance(value, collections.Mapping):
+        elif isinstance(value, Mapping):
             value = decode_dict(value, encoding, errors, keep, normalize,
                                 preserve_dict_class, preserve_tuples, to_str)
         else:
@@ -206,7 +210,7 @@ def decode_list(data, encoding=None, errors='strict', keep=False,
                 if preserve_tuples \
                 else decode_list(item, encoding, errors, keep, normalize,
                                  preserve_dict_class, preserve_tuples, to_str)
-        elif isinstance(item, collections.Mapping):
+        elif isinstance(item, Mapping):
             item = decode_dict(item, encoding, errors, keep, normalize,
                                preserve_dict_class, preserve_tuples, to_str)
         else:
@@ -248,7 +252,7 @@ def encode(data, encoding=None, errors='strict', keep=False,
     can be useful for cases where the data passed to this function is likely to
     contain binary blobs.
     '''
-    if isinstance(data, collections.Mapping):
+    if isinstance(data, Mapping):
         return encode_dict(data, encoding, errors, keep,
                            preserve_dict_class, preserve_tuples)
     elif isinstance(data, list):
@@ -307,7 +311,7 @@ def encode_dict(data, encoding=None, errors='strict', keep=False,
                 if preserve_tuples \
                 else encode_list(value, encoding, errors, keep,
                                  preserve_dict_class, preserve_tuples)
-        elif isinstance(value, collections.Mapping):
+        elif isinstance(value, Mapping):
             value = encode_dict(value, encoding, errors, keep,
                                 preserve_dict_class, preserve_tuples)
         else:
@@ -343,7 +347,7 @@ def encode_list(data, encoding=None, errors='strict', keep=False,
                 if preserve_tuples \
                 else encode_list(item, encoding, errors, keep,
                                  preserve_dict_class, preserve_tuples)
-        elif isinstance(item, collections.Mapping):
+        elif isinstance(item, Mapping):
             item = encode_dict(item, encoding, errors, keep,
                                preserve_dict_class, preserve_tuples)
         else:
@@ -424,15 +428,15 @@ def filter_by(lookup_dict,
         if ret is None:
             ret = base_values
 
-        elif isinstance(base_values, collections.Mapping):
-            if not isinstance(ret, collections.Mapping):
+        elif isinstance(base_values, Mapping):
+            if not isinstance(ret, Mapping):
                 raise SaltException(
                     'filter_by default and look-up values must both be '
                     'dictionaries.')
             ret = salt.utils.dictupdate.update(copy.deepcopy(base_values), ret)
 
     if merge:
-        if not isinstance(merge, collections.Mapping):
+        if not isinstance(merge, Mapping):
             raise SaltException(
                 'filter_by merge argument must be a dictionary.')
 
@@ -511,8 +515,8 @@ def subdict_match(data,
     Check for a match in a dictionary using a delimiter character to denote
     levels of subdicts, and also allowing the delimiter character to be
     matched. Thus, 'foo:bar:baz' will match data['foo'] == 'bar:baz' and
-    data['foo']['bar'] == 'baz'. The former would take priority over the
-    latter.
+    data['foo']['bar'] == 'baz'. The latter would take priority over the
+    former, as more deeply-nested matches are tried first.
     '''
     def _match(target, pattern, regex_match=False, exact_match=False):
         if regex_match:
@@ -564,8 +568,15 @@ def subdict_match(data,
                             return True
         return False
 
-    for idx in range(1, expr.count(delimiter) + 1):
-        splits = expr.split(delimiter)
+    splits = expr.split(delimiter)
+    num_splits = len(splits)
+    if num_splits == 1:
+        # Delimiter not present, this can't possibly be a match
+        return False
+
+    # If we have 4 splits, then we have three delimiters. Thus, the indexes we
+    # want to use are 3, 2, and 1, in that order.
+    for idx in range(num_splits - 1, 0, -1):
         key = delimiter.join(splits[:idx])
         matchstr = delimiter.join(splits[idx:])
         log.debug("Attempting to match '%s' in '%s' using delimiter '%s'",

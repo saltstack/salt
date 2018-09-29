@@ -88,6 +88,33 @@ by their ``os`` grain:
         - match: grain
         - servers
 
+Pillar definitions can also take a keyword argument ``ignore_missing``.
+When the value of ``ignore_missing`` is ``True``, all errors for missing
+pillar files are ignored. The default value for ``ignore_missing`` is
+``False``.
+
+Here is an example using the ``ignore_missing`` keyword parameter to ignore
+errors for missing pillar files:
+
+.. code-block:: yaml
+
+    base:
+      '*':
+        - servers
+        - systems
+        - ignore_missing: True
+
+Assuming that the pillar ``servers`` exists in the fileserver backend
+and the pillar ``systems`` doesn't, all pillar data from ``servers``
+pillar is delivered to minions and no error for the missing pillar
+``systems`` is noted under the key ``_errors`` in the pillar data
+delivered to minions.
+
+Should the ``ignore_missing`` keyword parameter have the value ``False``,
+an error for the missing pillar ``systems`` would produce the value
+``Specified SLS 'servers' in environment 'base' is not available on the salt master``
+under the key ``_errors`` in the pillar data delivered to minions.
+
 ``/srv/pillar/packages.sls``
 
 .. code-block:: jinja
@@ -433,7 +460,7 @@ module. This module includes several functions, each of them with their own
 use. These functions include:
 
 - :py:func:`pillar.item <salt.modules.pillar.item>` - Retrieves the value of
-  one or more keys from the :ref:`in-memory pillar datj <pillar-in-memory>`.
+  one or more keys from the :ref:`in-memory pillar data <pillar-in-memory>`.
 - :py:func:`pillar.items <salt.modules.pillar.items>` - Compiles a fresh pillar
   dictionary and returns it, leaving the :ref:`in-memory pillar data
   <pillar-in-memory>` untouched. If pillar keys are passed to this function

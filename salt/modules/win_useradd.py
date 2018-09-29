@@ -31,7 +31,7 @@ from datetime import datetime
 
 try:
     from shlex import quote as _cmd_quote  # pylint: disable=E0611
-except:  # pylint: disable=W0702
+except Exception:
     from pipes import quote as _cmd_quote
 
 # Import Salt libs
@@ -167,7 +167,6 @@ def add(name,
     try:
         win32net.NetUserAdd(None, 1, user_info)
     except win32net.error as exc:
-        (number, context, message) = exc
         log.error('Failed to create user %s', name)
         log.error('nbr: %s', exc.winerror)
         log.error('ctx: %s', exc.funcname)
@@ -271,7 +270,6 @@ def update(name,
     try:
         user_info = win32net.NetUserGetInfo(None, name, 4)
     except win32net.error as exc:
-        (number, context, message) = exc
         log.error('Failed to update user %s', name)
         log.error('nbr: %s', exc.winerror)
         log.error('ctx: %s', exc.funcname)
@@ -331,7 +329,6 @@ def update(name,
     try:
         win32net.NetUserSetInfo(None, name, 4, user_info)
     except win32net.error as exc:
-        (number, context, message) = exc
         log.error('Failed to update user %s', name)
         log.error('nbr: %s', exc.winerror)
         log.error('ctx: %s', exc.funcname)
@@ -420,7 +417,7 @@ def delete(name,
             sid = getUserSid(name)
             win32profile.DeleteProfile(sid)
         except pywintypes.error as exc:
-            (number, context, message) = exc
+            (number, context, message) = exc.args
             if number == 2:  # Profile Folder Not Found
                 pass
             else:
@@ -434,7 +431,6 @@ def delete(name,
     try:
         win32net.NetUserDel(None, name)
     except win32net.error as exc:
-        (number, context, message) = exc
         log.error('Failed to delete user %s', name)
         log.error('nbr: %s', exc.winerror)
         log.error('ctx: %s', exc.funcname)

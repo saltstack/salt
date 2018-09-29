@@ -6,7 +6,11 @@ http://stackoverflow.com/a/3233356
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
-import collections
+
+try:
+    from collections.abc import Mapping
+except ImportError:
+    from collections import Mapping
 
 # Import 3rd-party libs
 import copy
@@ -35,8 +39,8 @@ def update(dest, upd, recursive_update=True, merge_lists=False):
         When merging lists, duplicate values are removed. Values already
         present in the ``dest`` list are not added from the ``upd`` list.
     '''
-    if (not isinstance(dest, collections.Mapping)) \
-            or (not isinstance(upd, collections.Mapping)):
+    if (not isinstance(dest, Mapping)) \
+            or (not isinstance(upd, Mapping)):
         raise TypeError('Cannot update using non-dict types in dictupdate.update()')
     updkeys = list(upd.keys())
     if not set(list(dest.keys())) & set(updkeys):
@@ -48,8 +52,8 @@ def update(dest, upd, recursive_update=True, merge_lists=False):
                 dest_subkey = dest.get(key, None)
             except AttributeError:
                 dest_subkey = None
-            if isinstance(dest_subkey, collections.Mapping) \
-                    and isinstance(val, collections.Mapping):
+            if isinstance(dest_subkey, Mapping) \
+                    and isinstance(val, Mapping):
                 ret = update(dest_subkey, val, merge_lists=merge_lists)
                 dest[key] = ret
             elif isinstance(dest_subkey, list) \
@@ -102,7 +106,7 @@ def merge_overwrite(obj_a, obj_b, merge_lists=False):
 
 def merge(obj_a, obj_b, strategy='smart', renderer='yaml', merge_lists=False):
     if strategy == 'smart':
-        if renderer == 'yamlex' or renderer.startswith('yamlex_'):
+        if renderer.split('|')[-1] == 'yamlex' or renderer.startswith('yamlex_'):
             strategy = 'aggregate'
         else:
             strategy = 'recurse'

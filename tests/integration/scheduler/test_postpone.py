@@ -72,7 +72,6 @@ class SchedulerPostponeTest(ModuleCase, SaltReturnAssertsMixin):
         # Postpone the job by 5 minutes
         self.schedule.postpone_job('job1', {'time': run_time.strftime('%Y-%m-%dT%H:%M:%S'),
                                             'new_time': (run_time + datetime.timedelta(seconds=delay)).strftime('%Y-%m-%dT%H:%M:%S')})
-
         # Run at the original time
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status('job1')

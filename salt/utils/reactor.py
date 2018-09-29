@@ -50,8 +50,8 @@ class Reactor(salt.utils.process.SignalHandlingMultiprocessingProcess, salt.stat
         'cmd': 'local',
     }
 
-    def __init__(self, opts, log_queue=None):
-        super(Reactor, self).__init__(log_queue=log_queue)
+    def __init__(self, opts, **kwargs):
+        super(Reactor, self).__init__(**kwargs)
         local_minion_opts = opts.copy()
         local_minion_opts['file_client'] = 'local'
         self.minion = salt.minion.MasterMinion(local_minion_opts)
@@ -66,11 +66,16 @@ class Reactor(salt.utils.process.SignalHandlingMultiprocessingProcess, salt.stat
         self._is_child = True
         Reactor.__init__(
             self, state['opts'],
-            log_queue=state['log_queue'])
+            log_queue=state['log_queue'],
+            log_queue_level=state['log_queue_level']
+        )
 
     def __getstate__(self):
-        return {'opts': self.opts,
-                'log_queue': self.log_queue}
+        return {
+            'opts': self.opts,
+            'log_queue': self.log_queue,
+            'log_queue_level': self.log_queue_level
+        }
 
     def render_reaction(self, glob_ref, tag, data):
         '''
@@ -412,7 +417,16 @@ class ReactWrap(object):
             # and kwargs['kwarg'] contain the positional and keyword arguments
             # that will be passed to the client interface to execute the
             # desired runner/wheel/remote-exec/etc. function.
-            l_fun(*args, **kwargs)
+            ret = l_fun(*args, **kwargs)
+
+            if ret is False:
+                log.error('Reactor \'%s\' failed  to execute %s \'%s\': '
+                            'TaskPool queue is full!'
+                            ' Consider tuning reactor_worker_threads and/or'
+                            ' reactor_worker_hwm',
+                            low['__id__'], low['state'], low['fun']
+                )
+
         except SystemExit:
             log.warning(
                 'Reactor \'%s\' attempted to exit. Ignored.', low['__id__']
@@ -427,13 +441,13 @@ class ReactWrap(object):
         '''
         Wrap RunnerClient for executing :ref:`runner modules <all-salt.runners>`
         '''
-        self.pool.fire_async(self.client_cache['runner'].low, args=(fun, kwargs))
+        return self.pool.fire_async(self.client_cache['runner'].low, args=(fun, kwargs))
 
     def wheel(self, fun, **kwargs):
         '''
         Wrap Wheel to enable executing :ref:`wheel modules <all-salt.wheel>`
         '''
-        self.pool.fire_async(self.client_cache['wheel'].low, args=(fun, kwargs))
+        return self.pool.fire_async(self.client_cache['wheel'].low, args=(fun, kwargs))
 
     def local(self, fun, tgt, **kwargs):
         '''

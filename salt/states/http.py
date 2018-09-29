@@ -24,7 +24,8 @@ def query(name, match=None, match_type='string', status=None, wait_for=None, **k
     '''
     Perform an HTTP query and statefully return the result
 
-    .. versionadded:: 2015.5.0
+    Passes through all the parameters described in the
+    :py:func:`utils.http.query function <salt.utils.http.query>`:
 
     name
         The name of the query.

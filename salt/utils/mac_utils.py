@@ -11,6 +11,11 @@ import subprocess
 import os
 import plistlib
 import time
+try:
+    import pwd
+except ImportError:
+    # The pwd module is not available on all platforms
+    pass
 
 # Import Salt Libs
 import salt.modules.cmdmod
@@ -316,6 +321,15 @@ def _available_services(refresh=False):
         '/System/Library/LaunchAgents',
         '/System/Library/LaunchDaemons',
     ]
+
+    try:
+        for user in os.listdir('/Users/'):
+            agent_path = '/Users/{}/Library/LaunchAgents/'.format(user)
+            if os.path.isdir(agent_path):
+                launchd_paths.append(agent_path)
+    except OSError:
+        pass
+
     _available_services = dict()
     for launch_dir in launchd_paths:
         for root, dirs, files in salt.utils.path.os_walk(launch_dir):
@@ -390,3 +404,37 @@ def available_services(refresh=False):
     '''
     log.debug('Loading available services')
     return _available_services(refresh)
+
+
+def console_user(username=False):
+    '''
+    Gets the UID or Username of the current console user.
+
+    :return: The uid or username of the console user.
+
+    :param bool username: Whether to return the username of the console
+    user instead of the UID. Defaults to False
+
+    :rtype: Interger of the UID, or a string of the username.
+
+    Raises:
+        CommandExecutionError: If we fail to get the UID.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        import salt.utils.mac_service
+        salt.utils.mac_service.console_user()
+    '''
+    try:
+        # returns the 'st_uid' stat from the /dev/console file.
+        uid = os.stat('/dev/console')[4]
+    except (OSError, IndexError):
+        # we should never get here but raise an error if so
+        raise CommandExecutionError('Failed to get a UID for the console user.')
+
+    if username:
+        return pwd.getpwuid(uid)[0]
+
+    return uid

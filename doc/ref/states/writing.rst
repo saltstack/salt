@@ -153,6 +153,9 @@ distributed manually to minions by running :mod:`saltutil.sync_states
 <salt.modules.saltutil.sync_all>`. Alternatively, when running a
 :ref:`highstate <running-highstate>` custom types will automatically be synced.
 
+NOTE: Writing state modules with hyphens in the filename will cause issues
+with !pyobjects routines.  Best practice to stick to underscores.
+
 Any custom states which have been synced to a minion, that are named the same
 as one of Salt's default set of states, will take the place of the default
 state with the same name. Note that a state module's name defaults to one based
@@ -190,7 +193,7 @@ functions available in other state modules.
 The variable ``__states__`` is packed into the modules after they are loaded into
 the Salt minion.
 
-The ``__states__`` variable is a :ref:`Python dictionary <typesmapping>`
+The ``__states__`` variable is a :ref:`Python dictionary <python:typesmapping>`
 containing all of the state modules. Dictionary keys are strings representing
 the names of the modules and the values are the functions themselves.
 

@@ -113,7 +113,7 @@ class FunctionWrapper(object):
                     self.opts,
                     argv,
                     mods=self.mods,
-                    wipe=True,
+                    disable_wipe=True,
                     fsclient=self.fsclient,
                     minion_opts=self.minion_opts,
                     **self.kwargs

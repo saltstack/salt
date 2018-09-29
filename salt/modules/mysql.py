@@ -52,13 +52,14 @@ import salt.utils.stringutils
 from salt.ext import six
 # pylint: disable=import-error
 from salt.ext.six.moves import range, zip  # pylint: disable=no-name-in-module,redefined-builtin
+
 try:
-    # Try to import MySQLdb
+    # Trying to import MySQLdb
     import MySQLdb
     import MySQLdb.cursors
     import MySQLdb.converters
     from MySQLdb.constants import FIELD_TYPE, FLAG
-    HAS_MYSQLDB = True
+    from MySQLdb.connections import OperationalError
 except ImportError:
     try:
         # MySQLdb import failed, try to import PyMySQL
@@ -68,10 +69,9 @@ except ImportError:
         import MySQLdb.cursors
         import MySQLdb.converters
         from MySQLdb.constants import FIELD_TYPE, FLAG
-        HAS_MYSQLDB = True
+        from MySQLdb.err import OperationalError
     except ImportError:
-        # No MySQL Connector installed, return False
-        HAS_MYSQLDB = False
+        MySQLdb = None
 
 log = logging.getLogger(__name__)
 
@@ -196,11 +196,9 @@ And theses could be mixed, in a like query value with args: 'f\_o\%%o`b\'a"r'
 
 def __virtual__():
     '''
-    Only load this module if the mysql libraries exist
+    Confirm that a python mysql client is installed.
     '''
-    if HAS_MYSQLDB:
-        return True
-    return (False, 'The mysql execution module cannot be loaded: neither MySQLdb nor PyMySQL is available.')
+    return bool(MySQLdb), 'No python mysql client installed.' if MySQLdb is None else ''
 
 
 def __mysql_hash_password(password):
@@ -338,7 +336,7 @@ def _connect(**kwargs):
         connargs.pop('passwd')
     try:
         dbc = MySQLdb.connect(**connargs)
-    except MySQLdb.OperationalError as exc:
+    except OperationalError as exc:
         err = 'MySQL Error {0}: {1}'.format(*exc)
         __context__['mysql.error'] = err
         log.error(err)
@@ -654,7 +652,7 @@ def query(database, query, **connection_args):
     log.debug('Using db: %s to run query %s', database, query)
     try:
         affected = _execute(cur, query)
-    except MySQLdb.OperationalError as exc:
+    except OperationalError as exc:
         err = 'MySQL Error {0}: {1}'.format(*exc)
         __context__['mysql.error'] = err
         log.error(err)
@@ -779,7 +777,7 @@ def status(**connection_args):
     qry = 'SHOW STATUS'
     try:
         _execute(cur, qry)
-    except MySQLdb.OperationalError as exc:
+    except OperationalError as exc:
         err = 'MySQL Error {0}: {1}'.format(*exc)
         __context__['mysql.error'] = err
         log.error(err)

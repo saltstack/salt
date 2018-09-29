@@ -69,7 +69,7 @@ class NaclTest(ShellCase):
         pk = ret['return']['pk']
         sk = ret['return']['sk']
 
-        unencrypted_data = 'hello'
+        unencrypted_data = b'hello'
 
         # Encrypt with pk
         ret = self.run_run_plus(
@@ -87,4 +87,66 @@ class NaclTest(ShellCase):
             sk=sk,
         )
         self.assertIn('return', ret)
+        self.assertEqual(unencrypted_data, ret['return'])
+
+    def test_sealedbox_enc_dec(self):
+        '''
+        Generate keys, encrypt, then decrypt.
+        '''
+        # Store the data
+        ret = self.run_run_plus(
+            'nacl.keygen',
+        )
+        self.assertIn('pk', ret['return'])
+        self.assertIn('sk', ret['return'])
+        pk = ret['return']['pk']
+        sk = ret['return']['sk']
+
+        unencrypted_data = 'hello'
+
+        # Encrypt with pk
+        ret = self.run_run_plus(
+            'nacl.sealedbox_encrypt',
+            data=unencrypted_data,
+            pk=pk,
+        )
+        encrypted_data = ret['return']
+
+        # Decrypt with sk
+        ret = self.run_run_plus(
+            'nacl.sealedbox_decrypt',
+            data=encrypted_data,
+            sk=sk,
+        )
+        self.assertEqual(unencrypted_data, ret['return'])
+
+    def test_secretbox_enc_dec(self):
+        '''
+        Generate keys, encrypt, then decrypt.
+        '''
+        # Store the data
+        ret = self.run_run_plus(
+            'nacl.keygen',
+        )
+        self.assertIn('pk', ret['return'])
+        self.assertIn('sk', ret['return'])
+        pk = ret['return']['pk']
+        sk = ret['return']['sk']
+
+        unencrypted_data = 'hello'
+
+        # Encrypt with pk
+        ret = self.run_run_plus(
+            'nacl.secretbox_encrypt',
+            data=unencrypted_data,
+            sk=sk,
+        )
+        encrypted_data = ret['return']
+
+        # Decrypt with sk
+        ret = self.run_run_plus(
+            'nacl.secretbox_decrypt',
+            data=encrypted_data,
+            sk=sk,
+        )
         self.assertEqual(unencrypted_data, ret['return'])

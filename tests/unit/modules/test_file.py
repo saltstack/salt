@@ -227,6 +227,91 @@ class FileReplaceTestCase(TestCase, LoaderModuleMockMixin):
         filemod.replace(self.tfile.name, r'Etiam', 123)
 
 
+class FileCommentLineTestCase(TestCase, LoaderModuleMockMixin):
+    def setup_loader_modules(self):
+        return {
+            filemod: {
+                '__salt__': {
+                    'config.manage_mode': configmod.manage_mode,
+                    'cmd.run': cmdmod.run,
+                    'cmd.run_all': cmdmod.run_all
+                },
+                '__opts__': {
+                    'test': False,
+                    'file_roots': {'base': 'tmp'},
+                    'pillar_roots': {'base': 'tmp'},
+                    'cachedir': 'tmp',
+                    'grains': {},
+                },
+                '__grains__': {'kernel': 'Linux'},
+                '__utils__': {
+                    'files.is_text': MagicMock(return_value=True),
+                    'stringutils.get_diff': salt.utils.stringutils.get_diff,
+                },
+            }
+        }
+
+    MULTILINE_STRING = textwrap.dedent('''\
+        Lorem
+        ipsum
+        #dolor
+        ''')
+
+    MULTILINE_STRING = os.linesep.join(MULTILINE_STRING.splitlines())
+
+    def setUp(self):
+        self.tfile = tempfile.NamedTemporaryFile(delete=False, mode='w+')
+        self.tfile.write(self.MULTILINE_STRING)
+        self.tfile.close()
+
+    def tearDown(self):
+        os.remove(self.tfile.name)
+        del self.tfile
+
+    def test_comment_line(self):
+        filemod.comment_line(self.tfile.name,
+                             '^ipsum')
+
+        with salt.utils.files.fopen(self.tfile.name, 'r') as fp:
+            filecontent = fp.read()
+        self.assertIn('#ipsum', filecontent)
+
+    def test_comment(self):
+        filemod.comment(self.tfile.name,
+                             '^ipsum')
+
+        with salt.utils.files.fopen(self.tfile.name, 'r') as fp:
+            filecontent = fp.read()
+        self.assertIn('#ipsum', filecontent)
+
+    def test_comment_different_character(self):
+        filemod.comment_line(self.tfile.name,
+                             '^ipsum',
+                             '//')
+
+        with salt.utils.files.fopen(self.tfile.name, 'r') as fp:
+            filecontent = fp.read()
+        self.assertIn('//ipsum', filecontent)
+
+    def test_comment_not_found(self):
+        filemod.comment_line(self.tfile.name,
+                             '^sit')
+
+        with salt.utils.files.fopen(self.tfile.name, 'r') as fp:
+            filecontent = fp.read()
+        self.assertNotIn('#sit', filecontent)
+        self.assertNotIn('sit', filecontent)
+
+    def test_uncomment(self):
+        filemod.uncomment(self.tfile.name,
+                          'dolor')
+
+        with salt.utils.files.fopen(self.tfile.name, 'r') as fp:
+            filecontent = fp.read()
+        self.assertIn('dolor', filecontent)
+        self.assertNotIn('#dolor', filecontent)
+
+
 class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {
@@ -348,6 +433,39 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
                     '{0}#-- END BLOCK 2'.format(new_content)])),
                 fp.read())
 
+    def test_replace_insert_after(self):
+        new_content = "Well, I didn't vote for you."
+
+        self.assertRaises(
+            CommandExecutionError,
+            filemod.blockreplace,
+            self.tfile.name,
+            marker_start='#-- START BLOCK 2',
+            marker_end='#-- END BLOCK 2',
+            content=new_content,
+            insert_after_match='not in the text',
+            backup=False
+        )
+        with salt.utils.files.fopen(self.tfile.name, 'r') as fp:
+            self.assertNotIn(
+                '#-- START BLOCK 2' + "\n" + new_content + '#-- END BLOCK 2',
+                salt.utils.stringutils.to_unicode(fp.read())
+            )
+
+        filemod.blockreplace(self.tfile.name,
+                             marker_start='#-- START BLOCK 2',
+                             marker_end='#-- END BLOCK 2',
+                             content=new_content,
+                             backup=False,
+                             insert_after_match='malesuada')
+
+        with salt.utils.files.fopen(self.tfile.name, 'rb') as fp:
+            self.assertIn(salt.utils.stringutils.to_bytes(
+                os.linesep.join([
+                    '#-- START BLOCK 2',
+                    '{0}#-- END BLOCK 2'.format(new_content)])),
+                fp.read())
+
     def test_replace_append_newline_at_eof(self):
         '''
         Check that file.blockreplace works consistently on files with and
@@ -424,6 +542,39 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
                     os.linesep.join([
                         '#-- START BLOCK 2',
                         '{0}#-- END BLOCK 2'.format(new_content)]))))
+
+    def test_replace_insert_before(self):
+        new_content = "Well, I didn't vote for you."
+
+        self.assertRaises(
+            CommandExecutionError,
+            filemod.blockreplace,
+            self.tfile.name,
+            marker_start='#-- START BLOCK 2',
+            marker_end='#-- END BLOCK 2',
+            content=new_content,
+            insert_before_match='not in the text',
+            backup=False
+        )
+        with salt.utils.files.fopen(self.tfile.name, 'r') as fp:
+            self.assertNotIn(
+                '#-- START BLOCK 2' + "\n" + new_content + '#-- END BLOCK 2',
+                salt.utils.stringutils.to_unicode(fp.read())
+            )
+
+        filemod.blockreplace(self.tfile.name,
+                             marker_start='#-- START BLOCK 2',
+                             marker_end='#-- END BLOCK 2',
+                             content=new_content,
+                             backup=False,
+                             insert_before_match='malesuada')
+
+        with salt.utils.files.fopen(self.tfile.name, 'rb') as fp:
+            self.assertIn(salt.utils.stringutils.to_bytes(
+                os.linesep.join([
+                    '#-- START BLOCK 2',
+                    '{0}#-- END BLOCK 2'.format(new_content)])),
+                fp.read())
 
     def test_replace_partial_marked_lines(self):
         filemod.blockreplace(self.tfile.name,
@@ -1508,11 +1659,11 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
 
         isfile_mock = MagicMock(side_effect=lambda x: True if x == name else DEFAULT)
         with patch('os.path.isfile', isfile_mock), \
-                patch('os.stat', MagicMock(return_value=DummyStat())), \
-                patch('salt.utils.files.fopen',
-                      mock_open(read_data=file_content)), \
-                patch('salt.utils.atomicfile.atomic_open',
-                      mock_open()) as atomic_open_mock:
+             patch('os.stat', MagicMock(return_value=DummyStat())), \
+             patch('salt.utils.files.fopen',
+                   mock_open(read_data=file_content)), \
+             patch('salt.utils.atomicfile.atomic_open',
+                   mock_open()) as atomic_open_mock:
             filemod.line(name, content=cfg_content, before='exit 0', mode='ensure')
             handles = atomic_open_mock.filehandles[name]
             # We should only have opened the file once

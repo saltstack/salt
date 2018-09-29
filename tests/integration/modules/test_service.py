@@ -5,7 +5,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest
+from tests.support.helpers import destructiveTest, flaky
 from tests.support.unit import skipIf
 
 # Import Salt libs
@@ -25,10 +25,15 @@ class ServiceModuleTest(ModuleCase):
         os_family = self.run_function('grains.get', ['os_family'])
         os_release = self.run_function('grains.get', ['osrelease'])
         if os_family == 'RedHat':
+            if os_release[0] == '7':
+                self.skipTest('Disabled on CentOS 7 until we can fix SSH connection issues.')
             self.service_name = 'crond'
         elif os_family == 'Arch':
             self.service_name = 'sshd'
             cmd_name = 'systemctl'
+        elif os_family == 'NILinuxRT':
+            self.service_name = 'syslog'
+            cmd_name = 'syslog-ng'
         elif os_family == 'MacOS':
             self.service_name = 'org.ntp.ntpd'
             if int(os_release.split('.')[1]) >= 13:
@@ -59,6 +64,7 @@ class ServiceModuleTest(ModuleCase):
                 self.run_function('service.disable', [self.service_name])
         del self.service_name
 
+    @flaky
     def test_service_status_running(self):
         '''
         test service.status execution module

@@ -252,8 +252,8 @@ def managed(name, ppa=None, **kwargs):
        for.  (e.g. unstable). This option is rarely needed.
 
     keyid
-       The KeyID of the GPG key to install. This option also requires
-       the ``keyserver`` option to be set.
+       The KeyID or a list of KeyIDs of the GPG key to install.
+       This option also requires the ``keyserver`` option to be set.
 
     keyserver
        This is the name of the keyserver to retrieve gpg keys from.  The

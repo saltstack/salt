@@ -189,15 +189,13 @@ def returner(ret):
                  jid, minion_id, fun, alter_time, full_ret, return, success
                ) VALUES (?, ?, ?, ?, ?, ?, ?)'''
 
-    statement_arguments = []
-
-    statement_arguments.append('{0}'.format(ret['jid']))
-    statement_arguments.append('{0}'.format(ret['id']))
-    statement_arguments.append('{0}'.format(ret['fun']))
-    statement_arguments.append(int(time.time() * 1000))
-    statement_arguments.append(salt.utils.json.dumps(ret).replace("'", "''"))
-    statement_arguments.append(salt.utils.json.dumps(ret['return']).replace("'", "''"))
-    statement_arguments.append(ret.get('success', False))
+    statement_arguments = ['{0}'.format(ret['jid']),
+                           '{0}'.format(ret['id']),
+                           '{0}'.format(ret['fun']),
+                           int(time.time() * 1000),
+                           salt.utils.json.dumps(ret).replace("'", "''"),
+                           salt.utils.json.dumps(ret['return']).replace("'", "''"),
+                           ret.get('success', False)]
 
     # cassandra_cql.cql_query may raise a CommandExecutionError
     try:
@@ -218,10 +216,7 @@ def returner(ret):
                  minion_id, last_fun
                ) VALUES (?, ?)'''
 
-    statement_arguments = []
-
-    statement_arguments.append('{0}'.format(ret['id']))
-    statement_arguments.append('{0}'.format(ret['fun']))
+    statement_arguments = ['{0}'.format(ret['id']), '{0}'.format(ret['fun'])]
 
     # cassandra_cql.cql_query may raise a CommandExecutionError
     try:

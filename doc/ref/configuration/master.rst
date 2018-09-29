@@ -472,11 +472,15 @@ communication.
 ``enable_gpu_grains``
 ---------------------
 
-Default: ``True``
+Default: ``False``
 
 Enable GPU hardware data for your master. Be aware that the master can
 take a while to start up when lspci and/or dmidecode is used to populate the
 grains for the master.
+
+.. code-block:: yaml
+
+    enable_gpu_grains: True
 
 .. conf_master:: job_cache
 
@@ -803,8 +807,7 @@ Causes the master to periodically look for actively connected minions.
 :ref:`Presence events <event-master_presence>` are fired on the event bus on a
 regular interval with a list of connected minions, as well as events with lists
 of newly connected or disconnected minions. This is a master-only operation
-that does not send executions to minions. Note, this does not detect minions
-that connect to a master via localhost.
+that does not send executions to minions.
 
 .. code-block:: yaml
 
@@ -1020,6 +1023,40 @@ cache events are fired when a minion requests a minion data cache refresh.
 
     minion_data_cache_events: True
 
+.. conf_master:: http_connect_timeout
+
+``http_connect_timeout``
+------------------------
+
+.. versionadded:: Fluorine
+
+Default: ``20``
+
+HTTP connection timeout in seconds.
+Applied when fetching files using tornado back-end.
+Should be greater than overall download time.
+
+.. code-block:: yaml
+
+    http_connect_timeout: 20
+
+.. conf_master:: http_request_timeout
+
+``http_request_timeout``
+------------------------
+
+.. versionadded:: 2015.8.0
+
+Default: ``3600``
+
+HTTP request timeout in seconds.
+Applied when fetching files using tornado back-end.
+Should be greater than overall download time.
+
+.. code-block:: yaml
+
+    http_request_timeout: 3600
+
 .. _salt-ssh-configuration:
 
 Salt-SSH Configuration
@@ -1102,6 +1139,19 @@ The ssh password to log in with.
 .. code-block:: yaml
 
     ssh_passwd: ''
+
+.. conf_master:: ssh_priv_passwd
+
+``ssh_priv_passwd``
+-------------------
+
+Default: ``''``
+
+Passphrase for ssh private key file.
+
+.. code-block:: yaml
+
+    ssh_priv_passwd: ''
 
 .. conf_master:: ssh_port
 
@@ -2059,35 +2109,18 @@ following configuration:
     master_tops:
       ext_nodes: <Shell command which returns yaml>
 
-.. conf_master:: external_nodes
-
-``external_nodes``
-------------------
-
-Default: None
-
-The external_nodes option allows Salt to gather data that would normally be
-placed in a top file from and external node controller. The external_nodes
-option is the executable that will return the ENC data. Remember that Salt
-will look for external nodes AND top files and combine the results if both
-are enabled and available!
-
-.. code-block:: yaml
-
-    external_nodes: cobbler-ext-nodes
-
 .. conf_master:: renderer
 
 ``renderer``
 ------------
 
-Default: ``yaml_jinja``
+Default: ``jinja|yaml``
 
 The renderer to use on the minions to render the state data.
 
 .. code-block:: yaml
 
-    renderer: yaml_jinja
+    renderer: jinja|json
 
 .. conf_master:: userdata_template
 
@@ -2486,8 +2519,9 @@ on a large number of minions.
 
 .. note::
     Rather than altering this configuration parameter, it may be advisable to
-    use the :mod:`fileserver.clear_list_cache
-    <salt.runners.fileserver.clear_list_cache>` runner to clear these caches.
+    use the :mod:`fileserver.clear_file_list_cache
+    <salt.runners.fileserver.clear_file_list_cache>` runner to clear these
+    caches.
 
 .. code-block:: yaml
 
@@ -4482,6 +4516,11 @@ strategy between different sources. It accepts 5 values:
 * ``smart`` (default):
 
   Guesses the best strategy based on the "renderer" setting.
+
+.. note::
+    In order for yamlex based features such as ``!aggregate`` to work as expected
+    across documents using the default ``smart`` merge strategy, the :conf_master:`renderer`
+    config option must be set to ``jinja|yamlex`` or similar.
 
 .. conf_master:: pillar_merge_lists
 

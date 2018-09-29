@@ -16,7 +16,6 @@ import salt.payload
 import salt.utils.args
 import salt.utils.event
 import salt.utils.network
-import salt.utils.versions
 from salt.exceptions import SaltClientError
 
 # Import 3rd-party libs
@@ -242,8 +241,7 @@ def send(func, *args, **kwargs):
 def get(tgt,
         fun,
         tgt_type='glob',
-        exclude_minion=False,
-        expr_form=None):
+        exclude_minion=False):
     '''
     Get data from the mine based on the target, function and tgt_type
 
@@ -269,6 +267,8 @@ def get(tgt,
     .. code-block:: bash
 
         salt '*' mine.get '*' network.interfaces
+        salt '*' mine.get '*' network.interfaces,network.ipaddrs
+        salt '*' mine.get '*' '["network.interfaces", "network.ipaddrs"]'
         salt '*' mine.get 'os:Fedora' network.interfaces grain
         salt '*' mine.get 'G@os:Fedora and S@192.168.5.0/24' network.ipaddrs compound
 
@@ -288,17 +288,6 @@ def get(tgt,
                 fun='network.ip_addrs',
                 tgt_type='glob') %}
     '''
-    # remember to remove the expr_form argument from this function when
-    # performing the cleanup on this deprecation.
-    if expr_form is not None:
-        salt.utils.versions.warn_until(
-            'Fluorine',
-            'the target type should be passed using the \'tgt_type\' '
-            'argument instead of \'expr_form\'. Support for using '
-            '\'expr_form\' will be removed in Salt Fluorine.'
-        )
-        tgt_type = expr_form
-
     if __opts__['file_client'] == 'local':
         ret = {}
         is_target = {'glob': __salt__['match.glob'],
@@ -313,8 +302,24 @@ def get(tgt,
                      }[tgt_type](tgt)
         if is_target:
             data = __salt__['data.get']('mine_cache')
-            if isinstance(data, dict) and fun in data:
-                ret[__opts__['id']] = data[fun]
+
+            if isinstance(data, dict):
+                if isinstance(fun, six.string_types):
+                    functions = list(set(fun.split(',')))
+                    _ret_dict = len(functions) > 1
+                elif isinstance(fun, list):
+                    functions = fun
+                    _ret_dict = True
+                else:
+                    return {}
+
+                if not _ret_dict and functions and functions[0] in data:
+                    ret[__opts__['id']] = data.get(functions)
+                elif _ret_dict:
+                    for fun in functions:
+                        if fun in data:
+                            ret.setdefault(fun, {})[__opts__['id']] = data.get(fun)
+
         return ret
     load = {
             'cmd': '_mine_get',

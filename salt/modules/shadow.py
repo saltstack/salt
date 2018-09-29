@@ -222,7 +222,7 @@ def lock_password(name):
     pre_info = info(name)
     if pre_info['name'] == '':
         return False
-    if pre_info['passwd'][0] == '!':
+    if pre_info['passwd'].startswith('!'):
         return True
 
     cmd = 'passwd -l {0}'.format(name)
@@ -230,7 +230,7 @@ def lock_password(name):
 
     post_info = info(name)
 
-    return post_info['passwd'][0] == '!'
+    return post_info['passwd'].startswith('!')
 
 
 def unlock_password(name):
@@ -270,7 +270,7 @@ def set_password(name, password, use_usermod=False):
     ``SALTsalt`` is the 8-character crpytographic salt. Valid characters in the
     salt are ``.``, ``/``, and any alphanumeric character.
 
-    Keep in mind that the $7 represents a sha512 hash, if your OS is using a
+    Keep in mind that the $6 represents a sha512 hash, if your OS is using a
     different hashing algorithm this needs to be changed accordingly
 
     CLI Example:

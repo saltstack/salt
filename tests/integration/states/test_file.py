@@ -38,9 +38,11 @@ from tests.support.mixins import SaltReturnAssertsMixin
 # Import Salt libs
 import salt.utils.data
 import salt.utils.files
+import salt.utils.json
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
+from salt.utils.versions import LooseVersion as _LooseVersion
 
 HAS_PWD = True
 try:
@@ -364,7 +366,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         with salt.utils.files.fopen(grain_path, 'r') as fp_:
             file_contents = fp_.readlines()
 
-        if salt.utils.platform.is_windows():
+        if IS_WINDOWS:
             match = '^minion\r\n'
         else:
             match = '^minion\n'
@@ -593,8 +595,8 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         name = os.path.join(TMP, 'local_source_with_source_hash')
         local_path = os.path.join(BASE_FILES, 'grail', 'scene33')
         actual_hash = '567fd840bf1548edc35c48eb66cdd78bfdfcccff'
-        if salt.utils.platform.is_windows():
-            # CRLF vs LF causes a differnt hash on windows
+        if IS_WINDOWS:
+            # CRLF vs LF causes a different hash on windows
             actual_hash = 'f658a0ec121d9c17088795afcc6ff3c43cb9842a'
         # Reverse the actual hash
         bad_hash = actual_hash[::-1]
@@ -667,6 +669,48 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertIn(
                 'does not exist', ret['comment'])
 
+    def test_managed_unicode_jinja_with_tojson_filter(self):
+        '''
+        Using {{ varname }} with a list or dictionary which contains unicode
+        types on Python 2 will result in Jinja rendering the "u" prefix on each
+        string. This tests that using the "tojson" jinja filter will dump them
+        to a format which can be successfully loaded by our YAML loader.
+
+        The two lines that should end up being rendered are meant to test two
+        issues that would trip up PyYAML if the "tojson" filter were not used:
+
+        1. A unicode string type would be loaded as a unicode literal with the
+           leading "u" as well as the quotes, rather than simply being loaded
+           as the proper unicode type which matches the content of the string
+           literal. In other wordss, u'foo' would be loaded literally as
+           u"u'foo'". This test includes actual non-ascii unicode in one of the
+           strings to confirm that this also handles these international
+           characters properly.
+
+        2. Any unicode string type (such as a URL) which contains a colon would
+           cause a ScannerError in PyYAML, as it would be assumed to delimit a
+           mapping node.
+
+        Dumping the data structure to JSON using the "tojson" jinja filter
+        should produce an inline data structure which is valid YAML and will be
+        loaded properly by our YAML loader.
+        '''
+        test_file = os.path.join(TMP, 'test-tojson.txt')
+        ret = self.run_function(
+            'state.apply',
+            mods='tojson',
+            pillar={'tojson-file': test_file})
+        ret = ret[next(iter(ret))]
+        assert ret['result'], ret
+        with salt.utils.files.fopen(test_file) as fp_:
+            managed = salt.utils.stringutils.to_unicode(fp_.read())
+        expected = textwrap.dedent('''\
+            Die Webseite ist https://saltstack.com.
+            Der Zucker ist süß.
+
+            ''')
+        assert managed == expected, '{0!r} != {1!r}'.format(managed, expected)  # pylint: disable=repr-flag-used-in-string
+
     def test_managed_source_hash_indifferent_case(self):
         '''
         Test passing a source_hash as an uppercase hash.
@@ -678,7 +722,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                      '-{0}_|-managed'.format(name)
         local_path = os.path.join(BASE_FILES, 'hello_world.txt')
         actual_hash = 'c98c24b677eff44860afea6f493bbaec5bb1c4cbb209c6fc2bbb47f66ff2ad31'
-        if salt.utils.platform.is_windows():
+        if IS_WINDOWS:
             # CRLF vs LF causes a differnt hash on windows
             actual_hash = '92b772380a3f8e27a93e57e6deeca6c01da07f5aadce78bb2fbb20de10a66925'
         uppercase_hash = actual_hash.upper()
@@ -743,6 +787,29 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         assert ret['result'] is True, ret
         diff_lines = ret['changes']['diff'].split(os.linesep)
         assert '+räksmörgås' in diff_lines, diff_lines
+
+    @with_tempfile()
+    def test_managed_keep_source_false_salt(self, name):
+        '''
+        This test ensures that we properly clean the cached file if keep_source
+        is set to False, for source files using a salt:// URL
+        '''
+        source = 'salt://grail/scene33'
+        saltenv = 'base'
+
+        # Run the state
+        ret = self.run_state(
+            'file.managed',
+            name=name,
+            source=source,
+            saltenv=saltenv,
+            keep_source=False)
+        ret = ret[next(iter(ret))]
+        assert ret['result'] is True
+
+        # Now make sure that the file is not cached
+        result = self.run_function('cp.is_cached', [source, saltenv])
+        assert result == '', 'File is still cached at {0}'.format(result)
 
     def test_directory(self):
         '''
@@ -915,7 +982,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertFalse(os.path.exists(strayfile2))
         self.assertTrue(os.path.exists(keepfile))
 
-    @skipIf(salt.utils.platform.is_windows(), 'Skip on windows')
+    @skipIf(IS_WINDOWS, 'Skip on windows')
     @with_tempdir()
     def test_test_directory_clean_exclude(self, base_dir):
         '''
@@ -1245,7 +1312,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertTrue(os.path.isfile(os.path.join(name, '32', 'scene')))
         self.assertTrue(os.path.isfile(os.path.join(name, 'scene34')))
 
-    @skipIf(salt.utils.platform.is_windows(), 'Skip on windows')
+    @skipIf(IS_WINDOWS, 'Skip on windows')
     @with_tempdir()
     def test_recurse_issue_34945(self, base_dir):
         '''
@@ -1287,7 +1354,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                              name=name,
                              source='salt://соль')
         self.assertSaltTrueReturn(ret)
-        if six.PY2 and salt.utils.platform.is_windows():
+        if six.PY2 and IS_WINDOWS:
             # Providing unicode to os.listdir so that we avoid having listdir
             # try to decode the filenames using the systemencoding on windows
             # python 2.
@@ -1595,10 +1662,11 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                     'finally': 'the last item'},
                 formatter='json')
 
-        with salt.utils.files.fopen(path_test, 'r') as fp_:
-            serialized_file = fp_.read()
+        with salt.utils.files.fopen(path_test, 'rb') as fp_:
+            serialized_file = salt.utils.stringutils.to_unicode(fp_.read())
 
-        expected_file = os.linesep.join([
+        # The JSON serializer uses LF even on OSes where os.path.sep is CRLF.
+        expected_file = '\n'.join([
             '{',
             '  "a_list": [',
             '    "first_element",',
@@ -1611,6 +1679,48 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             '',
         ])
         self.assertEqual(serialized_file, expected_file)
+
+    @with_tempfile(create=False)
+    def test_serializer_deserializer_opts(self, name):
+        '''
+        Test the serializer_opts and deserializer_opts options
+        '''
+        data1 = {'foo': {'bar': 'baz'}}
+        data2 = {'foo': {'abc': 123}}
+        merged = {'foo': {'bar': 'baz', 'abc': 123}}
+
+        ret = self.run_state(
+            'file.serialize',
+            name=name,
+            dataset=data1,
+            formatter='json',
+            deserializer_opts=[{'encoding': 'latin-1'}])
+        ret = ret[next(iter(ret))]
+        assert ret['result'], ret
+        # We should have warned about deserializer_opts being used when
+        # merge_if_exists was not set to True.
+        assert 'warnings' in ret
+
+        # Run with merge_if_exists, as well as serializer and deserializer opts
+        ret = self.run_state(
+            'file.serialize',
+            name=name,
+            dataset=data2,
+            formatter='json',
+            merge_if_exists=True,
+            serializer_opts=[{'indent': 8}],
+            deserializer_opts=[{'encoding': 'latin-1'}])
+        ret = ret[next(iter(ret))]
+        assert ret['result'], ret
+
+        with salt.utils.files.fopen(name) as fp_:
+            serialized_data = salt.utils.json.load(fp_)
+
+        # If this test fails, this debug logging will help tell us how the
+        # serialized data differs from what was serialized.
+        log.debug('serialized_data = %r', serialized_data)
+        log.debug('merged = %r', merged)
+        assert serialized_data == merged
 
     @with_tempdir()
     def test_replace_issue_18841_omit_backup(self, base_dir):
@@ -1903,39 +2013,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             if os.path.exists(tmp_file_append):
                 shutil.copy(tmp_file_append, tmp_file_append + '.bak')
             raise
-
-    def do_patch(self, patch_name='hello', src='Hello\n'):
-        if not self.run_function('cmd.has_exec', ['patch']):
-            self.skipTest('patch is not installed')
-        src_file = os.path.join(TMP, 'src.txt')
-        with salt.utils.files.fopen(src_file, 'w+') as fp:
-            fp.write(src)
-        ret = self.run_state(
-            'file.patch',
-            name=src_file,
-            source='salt://{0}.patch'.format(patch_name),
-            hash='md5=f0ef7081e1539ac00ef5b761b4fb01b3',
-        )
-        return src_file, ret
-
-    def test_patch(self):
-        src_file, ret = self.do_patch()
-        self.assertSaltTrueReturn(ret)
-        with salt.utils.files.fopen(src_file) as fp:
-            self.assertEqual(fp.read(), 'Hello world\n')
-
-    def test_patch_hash_mismatch(self):
-        src_file, ret = self.do_patch('hello_dolly')
-        self.assertSaltFalseReturn(ret)
-        self.assertInSaltComment(
-            'Hash mismatch after patch was applied',
-            ret
-        )
-
-    def test_patch_already_applied(self):
-        src_file, ret = self.do_patch(src='Hello world\n')
-        self.assertSaltTrueReturn(ret)
-        self.assertInSaltComment('Patch is already applied', ret)
 
     @with_tempdir()
     def test_issue_2401_file_comment(self, base_dir):
@@ -2446,6 +2523,46 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
 
         ret = self.run_function('state.sls', mods=state_file)
         self.assertSaltTrueReturn(ret)
+
+    @skip_if_not_root
+    @skipIf(not HAS_PWD, "pwd not available. Skipping test")
+    @skipIf(not HAS_GRP, "grp not available. Skipping test")
+    @with_system_user_and_group('test_setuid_user', 'test_setuid_group',
+                                on_existing='delete', delete=True)
+    def test_owner_after_setuid(self, user, group):
+
+        '''
+        Test to check file user/group after setting setuid or setgid.
+        Because Python os.chown() does reset the setuid/setgid to 0.
+        https://github.com/saltstack/salt/pull/45257
+        '''
+
+        # Desired configuration.
+        desired = {
+            'file': os.path.join(TMP, 'file_with_setuid'),
+            'user': user,
+            'group': group,
+            'mode': '4750'
+        }
+
+        # Run the state.
+        ret = self.run_state(
+            'file.managed', name=desired['file'],
+            user=desired['user'], group=desired['group'], mode=desired['mode']
+        )
+
+        # Check result.
+        file_stat = os.stat(desired['file'])
+        result = {
+            'user': pwd.getpwuid(file_stat.st_uid).pw_name,
+            'group': grp.getgrgid(file_stat.st_gid).gr_name,
+            'mode': oct(stat.S_IMODE(file_stat.st_mode))
+        }
+
+        self.assertSaltTrueReturn(ret)
+        self.assertEqual(desired['user'], result['user'])
+        self.assertEqual(desired['group'], result['group'])
+        self.assertEqual(desired['mode'], result['mode'].lstrip('0Oo'))
 
     def test_binary_contents(self):
         '''
@@ -3516,6 +3633,7 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
         self.assertFalse(ret[next(iter(ret))]['changes'])
         self.assertEqual(self._read(name), self.with_matching_block)
+
         # Pass 1a: Re-run state, no changes should be made
         ret = self.run_state('file.blockreplace',
                              name=name,
@@ -3540,6 +3658,7 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(
             self._read(name),
             self.with_matching_block_and_marker_end_not_after_newline)
+
         # Pass 2a: Re-run state, no changes should be made
         ret = self.run_state('file.blockreplace',
                              name=name,
@@ -3734,8 +3853,8 @@ class RemoteFileTest(ModuleCase, SaltReturnAssertsMixin):
         cls.webserver = Webserver()
         cls.webserver.start()
         cls.source = cls.webserver.url('grail/scene33')
-        if salt.utils.platform.is_windows():
-            # CRLF vs LF causes a differnt hash on windows
+        if IS_WINDOWS:
+            # CRLF vs LF causes a different hash on windows
             cls.source_hash = '21438b3d5fd2c0028bcab92f7824dc69'
         else:
             cls.source_hash = 'd2feb3beb323c79fc7a0f44f1408b4a3'
@@ -3755,6 +3874,11 @@ class RemoteFileTest(ModuleCase, SaltReturnAssertsMixin):
             if exc.errno != errno.ENOENT:
                 raise exc
 
+    def run_state(self, *args, **kwargs):
+        ret = super(RemoteFileTest, self).run_state(*args, **kwargs)
+        log.debug('ret = %s', ret)
+        return ret
+
     def test_file_managed_http_source_no_hash(self):
         '''
         Test a remote file with no hash
@@ -3763,7 +3887,6 @@ class RemoteFileTest(ModuleCase, SaltReturnAssertsMixin):
                              name=self.name,
                              source=self.source,
                              skip_verify=False)
-        log.debug('ret = %s', ret)
         # This should fail because no hash was provided
         self.assertSaltFalseReturn(ret)
 
@@ -3776,7 +3899,6 @@ class RemoteFileTest(ModuleCase, SaltReturnAssertsMixin):
                              source=self.source,
                              source_hash=self.source_hash,
                              skip_verify=False)
-        log.debug('ret = %s', ret)
         self.assertSaltTrueReturn(ret)
 
     def test_file_managed_http_source_skip_verify(self):
@@ -3787,8 +3909,628 @@ class RemoteFileTest(ModuleCase, SaltReturnAssertsMixin):
                              name=self.name,
                              source=self.source,
                              skip_verify=True)
-        log.debug('ret = %s', ret)
         self.assertSaltTrueReturn(ret)
+
+    def test_file_managed_keep_source_false_http(self):
+        '''
+        This test ensures that we properly clean the cached file if keep_source
+        is set to False, for source files using an http:// URL
+        '''
+        # Run the state
+        ret = self.run_state('file.managed',
+                             name=self.name,
+                             source=self.source,
+                             source_hash=self.source_hash,
+                             keep_source=False)
+        ret = ret[next(iter(ret))]
+        assert ret['result'] is True
+
+        # Now make sure that the file is not cached
+        result = self.run_function('cp.is_cached', [self.source])
+        assert result == '', 'File is still cached at {0}'.format(result)
+
+
+@skipIf(not salt.utils.path.which('patch'), 'patch is not installed')
+class PatchTest(ModuleCase, SaltReturnAssertsMixin):
+    def _check_patch_version(self, min_version):
+        '''
+        patch version check
+        '''
+        if not salt.utils.path.which('patch'):
+            self.skipTest('patch is not installed')
+        version = re.search(r'\d\.\d\.\d', self.run_function('cmd.run', ['patch --version'])).group(0)
+        if _LooseVersion(version) < _LooseVersion(min_version):
+            self.skipTest('Mininum patch version required: {0}.'
+                          'Patch version installed: {1}'.format(min_version, version))
+
+    @classmethod
+    def setUpClass(cls):
+        cls.webserver = Webserver()
+        cls.webserver.start()
+
+        cls.numbers_patch_name = 'numbers.patch'
+        cls.math_patch_name = 'math.patch'
+        cls.all_patch_name = 'all.patch'
+        cls.numbers_patch_template_name = cls.numbers_patch_name + '.jinja'
+        cls.math_patch_template_name = cls.math_patch_name + '.jinja'
+        cls.all_patch_template_name = cls.all_patch_name + '.jinja'
+
+        cls.numbers_patch_path = 'patches/' + cls.numbers_patch_name
+        cls.math_patch_path = 'patches/' + cls.math_patch_name
+        cls.all_patch_path = 'patches/' + cls.all_patch_name
+        cls.numbers_patch_template_path = \
+            'patches/' + cls.numbers_patch_template_name
+        cls.math_patch_template_path = \
+            'patches/' + cls.math_patch_template_name
+        cls.all_patch_template_path = \
+            'patches/' + cls.all_patch_template_name
+
+        cls.numbers_patch = 'salt://' + cls.numbers_patch_path
+        cls.math_patch = 'salt://' + cls.math_patch_path
+        cls.all_patch = 'salt://' + cls.all_patch_path
+        cls.numbers_patch_template = 'salt://' + cls.numbers_patch_template_path
+        cls.math_patch_template = 'salt://' + cls.math_patch_template_path
+        cls.all_patch_template = 'salt://' + cls.all_patch_template_path
+
+        cls.numbers_patch_http = cls.webserver.url(cls.numbers_patch_path)
+        cls.math_patch_http = cls.webserver.url(cls.math_patch_path)
+        cls.all_patch_http = cls.webserver.url(cls.all_patch_path)
+        cls.numbers_patch_template_http = \
+            cls.webserver.url(cls.numbers_patch_template_path)
+        cls.math_patch_template_http = \
+            cls.webserver.url(cls.math_patch_template_path)
+        cls.all_patch_template_http = \
+            cls.webserver.url(cls.all_patch_template_path)
+
+        patches_dir = os.path.join(FILES, 'file', 'base', 'patches')
+        cls.numbers_patch_hash = salt.utils.hashutils.get_hash(
+            os.path.join(patches_dir, cls.numbers_patch_name)
+        )
+        cls.math_patch_hash = salt.utils.hashutils.get_hash(
+            os.path.join(patches_dir, cls.math_patch_name)
+        )
+        cls.all_patch_hash = salt.utils.hashutils.get_hash(
+            os.path.join(patches_dir, cls.all_patch_name)
+        )
+        cls.numbers_patch_template_hash = salt.utils.hashutils.get_hash(
+            os.path.join(patches_dir, cls.numbers_patch_template_name)
+        )
+        cls.math_patch_template_hash = salt.utils.hashutils.get_hash(
+            os.path.join(patches_dir, cls.math_patch_template_name)
+        )
+        cls.all_patch_template_hash = salt.utils.hashutils.get_hash(
+            os.path.join(patches_dir, cls.all_patch_template_name)
+        )
+
+        cls.context = {'two': 'two', 'ten': 10}
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.webserver.stop()
+
+    def setUp(self):
+        '''
+        Create a new unpatched set of files
+        '''
+        self.base_dir = tempfile.mkdtemp(dir=TMP)
+        os.makedirs(os.path.join(self.base_dir, 'foo', 'bar'))
+        self.numbers_file = os.path.join(self.base_dir, 'foo', 'numbers.txt')
+        self.math_file = os.path.join(self.base_dir, 'foo', 'bar', 'math.txt')
+        with salt.utils.files.fopen(self.numbers_file, 'w') as fp_:
+            fp_.write(textwrap.dedent('''\
+                one
+                two
+                three
+
+                1
+                2
+                3
+                '''))
+        with salt.utils.files.fopen(self.math_file, 'w') as fp_:
+            fp_.write(textwrap.dedent('''\
+                Five plus five is ten
+
+                Four squared is sixteen
+                '''))
+
+        self.addCleanup(shutil.rmtree, self.base_dir, ignore_errors=True)
+
+    def test_patch_single_file(self):
+        '''
+        Test file.patch using a patch applied to a single file
+        '''
+        ret = self.run_state(
+            'file.patch',
+            name=self.numbers_file,
+            source=self.numbers_patch,
+        )
+        self.assertSaltTrueReturn(ret)
+        ret = ret[next(iter(ret))]
+        self.assertEqual(ret['comment'], 'Patch successfully applied')
+
+        # Re-run the state, should succeed and there should be a message about
+        # a partially-applied hunk.
+        ret = self.run_state(
+            'file.patch',
+            name=self.numbers_file,
+            source=self.numbers_patch,
+        )
+        self.assertSaltTrueReturn(ret)
+        ret = ret[next(iter(ret))]
+        self.assertEqual(ret['comment'], 'Patch was already applied')
+        self.assertEqual(ret['changes'], {})
+
+    def test_patch_directory(self):
+        '''
+        Test file.patch using a patch applied to a directory, with changes
+        spanning multiple files.
+        '''
+        self._check_patch_version('2.6.1')
+        ret = self.run_state(
+            'file.patch',
+            name=self.base_dir,
+            source=self.all_patch,
+            strip=1,
+        )
+        self.assertSaltTrueReturn(ret)
+        ret = ret[next(iter(ret))]
+        self.assertEqual(ret['comment'], 'Patch successfully applied')
+
+        # Re-run the state, should succeed and there should be a message about
+        # a partially-applied hunk.
+        ret = self.run_state(
+            'file.patch',
+            name=self.base_dir,
+            source=self.all_patch,
+            strip=1,
+        )
+        self.assertSaltTrueReturn(ret)
+        ret = ret[next(iter(ret))]
+        self.assertEqual(ret['comment'], 'Patch was already applied')
+        self.assertEqual(ret['changes'], {})
+
+    def test_patch_strip_parsing(self):
+        '''
+        Test that we successfuly parse -p/--strip when included in the options
+        '''
+        self._check_patch_version('2.6.1')
+        # Run the state using -p1
+        ret = self.run_state(
+            'file.patch',
+            name=self.base_dir,
+            source=self.all_patch,
+            options='-p1',
+        )
+        self.assertSaltTrueReturn(ret)
+        ret = ret[next(iter(ret))]
+        self.assertEqual(ret['comment'], 'Patch successfully applied')
+
+        # Re-run the state using --strip=1
+        ret = self.run_state(
+            'file.patch',
+            name=self.base_dir,
+            source=self.all_patch,
+            options='--strip=1',
+        )
+        self.assertSaltTrueReturn(ret)
+        ret = ret[next(iter(ret))]
+        self.assertEqual(ret['comment'], 'Patch was already applied')
+        self.assertEqual(ret['changes'], {})
+
+        # Re-run the state using --strip 1
+        ret = self.run_state(
+            'file.patch',
+            name=self.base_dir,
+            source=self.all_patch,
+            options='--strip 1',
+        )
+        self.assertSaltTrueReturn(ret)
+        ret = ret[next(iter(ret))]
+        self.assertEqual(ret['comment'], 'Patch was already applied')
+        self.assertEqual(ret['changes'], {})
+
+    def test_patch_saltenv(self):
+        '''
+        Test that we attempt to download the patch from a non-base saltenv
+        '''
+        # This state will fail because we don't have a patch file in that
+        # environment, but that is OK, we just want to test that we're looking
+        # in an environment other than base.
+        ret = self.run_state(
+            'file.patch',
+            name=self.math_file,
+            source=self.math_patch,
+            saltenv='prod',
+        )
+        self.assertSaltFalseReturn(ret)
+        ret = ret[next(iter(ret))]
+        self.assertEqual(
+            ret['comment'],
+            "Source file {0} not found in saltenv 'prod'".format(self.math_patch)
+        )
+
+    def test_patch_single_file_failure(self):
+        '''
+        Test file.patch using a patch applied to a single file. This tests a
+        failed patch.
+        '''
+        # Empty the file to ensure that the patch doesn't apply cleanly
+        with salt.utils.files.fopen(self.numbers_file, 'w'):
+            pass
+
+        ret = self.run_state(
+            'file.patch',
+            name=self.numbers_file,
+            source=self.numbers_patch,
+        )
+        self.assertSaltFalseReturn(ret)
+        ret = ret[next(iter(ret))]
+        self.assertIn('Patch would not apply cleanly', ret['comment'])
+
+        # Test the reject_file option and ensure that the rejects are written
+        # to the path specified.
+        reject_file = salt.utils.files.mkstemp()
+        ret = self.run_state(
+            'file.patch',
+            name=self.numbers_file,
+            source=self.numbers_patch,
+            reject_file=reject_file,
+            strip=1,
+        )
+        self.assertSaltFalseReturn(ret)
+        ret = ret[next(iter(ret))]
+        self.assertIn('Patch would not apply cleanly', ret['comment'])
+        self.assertIn(
+            'saving rejects to file {0}'.format(reject_file),
+            ret['comment']
+        )
+
+    def test_patch_directory_failure(self):
+        '''
+        Test file.patch using a patch applied to a directory, with changes
+        spanning multiple files.
+        '''
+        # Empty the file to ensure that the patch doesn't apply
+        with salt.utils.files.fopen(self.math_file, 'w'):
+            pass
+
+        ret = self.run_state(
+            'file.patch',
+            name=self.base_dir,
+            source=self.all_patch,
+            strip=1,
+        )
+        self.assertSaltFalseReturn(ret)
+        ret = ret[next(iter(ret))]
+        self.assertIn('Patch would not apply cleanly', ret['comment'])
+
+        # Test the reject_file option and ensure that the rejects are written
+        # to the path specified.
+        reject_file = salt.utils.files.mkstemp()
+        ret = self.run_state(
+            'file.patch',
+            name=self.base_dir,
+            source=self.all_patch,
+            reject_file=reject_file,
+            strip=1,
+        )
+        self.assertSaltFalseReturn(ret)
+        ret = ret[next(iter(ret))]
+        self.assertIn('Patch would not apply cleanly', ret['comment'])
+        self.assertIn(
+            'saving rejects to file {0}'.format(reject_file),
+            ret['comment']
+        )
+
+    def test_patch_single_file_remote_source(self):
+        '''
+        Test file.patch using a patch applied to a single file, with the patch
+        coming from a remote source.
+        '''
+        # Try without a source_hash and without skip_verify=True, this should
+        # fail with a message about the source_hash
+        ret = self.run_state(
+            'file.patch',
+            name=self.math_file,
+            source=self.math_patch_http,
+        )
+        self.assertSaltFalseReturn(ret)
+        ret = ret[next(iter(ret))]
+        self.assertIn('Unable to verify upstream hash', ret['comment'])
+
+        # Re-run the state with a source hash, it should now succeed
+        ret = self.run_state(
+            'file.patch',
+            name=self.math_file,
+            source=self.math_patch_http,
+            source_hash=self.math_patch_hash,
+        )
+        self.assertSaltTrueReturn(ret)
+        ret = ret[next(iter(ret))]
+        self.assertEqual(ret['comment'], 'Patch successfully applied')
+
+        # Re-run again, this time with no hash and skip_verify=True to test
+        # skipping hash verification
+        ret = self.run_state(
+            'file.patch',
+            name=self.math_file,
+            source=self.math_patch_http,
+            skip_verify=True,
+        )
+        self.assertSaltTrueReturn(ret)
+        ret = ret[next(iter(ret))]
+        self.assertEqual(ret['comment'], 'Patch was already applied')
+        self.assertEqual(ret['changes'], {})
+
+    def test_patch_directory_remote_source(self):
+        '''
+        Test file.patch using a patch applied to a directory, with changes
+        spanning multiple files, and the patch file coming from a remote
+        source.
+        '''
+        self._check_patch_version('2.6.1')
+        # Try without a source_hash and without skip_verify=True, this should
+        # fail with a message about the source_hash
+        ret = self.run_state(
+            'file.patch',
+            name=self.base_dir,
+            source=self.all_patch_http,
+            strip=1,
+        )
+        self.assertSaltFalseReturn(ret)
+        ret = ret[next(iter(ret))]
+        self.assertIn('Unable to verify upstream hash', ret['comment'])
+
+        # Re-run the state with a source hash, it should now succeed
+        ret = self.run_state(
+            'file.patch',
+            name=self.base_dir,
+            source=self.all_patch_http,
+            source_hash=self.all_patch_hash,
+            strip=1,
+        )
+        self.assertSaltTrueReturn(ret)
+        ret = ret[next(iter(ret))]
+        self.assertEqual(ret['comment'], 'Patch successfully applied')
+
+        # Re-run again, this time with no hash and skip_verify=True to test
+        # skipping hash verification
+        ret = self.run_state(
+            'file.patch',
+            name=self.base_dir,
+            source=self.all_patch_http,
+            strip=1,
+            skip_verify=True,
+        )
+        self.assertSaltTrueReturn(ret)
+        ret = ret[next(iter(ret))]
+        self.assertEqual(ret['comment'], 'Patch was already applied')
+        self.assertEqual(ret['changes'], {})
+
+    def test_patch_single_file_template(self):
+        '''
+        Test file.patch using a patch applied to a single file, with jinja
+        templating applied to the patch file.
+        '''
+        ret = self.run_state(
+            'file.patch',
+            name=self.numbers_file,
+            source=self.numbers_patch_template,
+            template='jinja',
+            context=self.context,
+        )
+        self.assertSaltTrueReturn(ret)
+        ret = ret[next(iter(ret))]
+        self.assertEqual(ret['comment'], 'Patch successfully applied')
+
+        # Re-run the state, should succeed and there should be a message about
+        # a partially-applied hunk.
+        ret = self.run_state(
+            'file.patch',
+            name=self.numbers_file,
+            source=self.numbers_patch_template,
+            template='jinja',
+            context=self.context,
+        )
+        self.assertSaltTrueReturn(ret)
+        ret = ret[next(iter(ret))]
+        self.assertEqual(ret['comment'], 'Patch was already applied')
+        self.assertEqual(ret['changes'], {})
+
+    def test_patch_directory_template(self):
+        '''
+        Test file.patch using a patch applied to a directory, with changes
+        spanning multiple files, and with jinja templating applied to the patch
+        file.
+        '''
+        self._check_patch_version('2.6.1')
+        ret = self.run_state(
+            'file.patch',
+            name=self.base_dir,
+            source=self.all_patch_template,
+            template='jinja',
+            context=self.context,
+            strip=1,
+        )
+        self.assertSaltTrueReturn(ret)
+        ret = ret[next(iter(ret))]
+        self.assertEqual(ret['comment'], 'Patch successfully applied')
+
+        # Re-run the state, should succeed and there should be a message about
+        # a partially-applied hunk.
+        ret = self.run_state(
+            'file.patch',
+            name=self.base_dir,
+            source=self.all_patch_template,
+            template='jinja',
+            context=self.context,
+            strip=1,
+        )
+        self.assertSaltTrueReturn(ret)
+        ret = ret[next(iter(ret))]
+        self.assertEqual(ret['comment'], 'Patch was already applied')
+        self.assertEqual(ret['changes'], {})
+
+    def test_patch_single_file_remote_source_template(self):
+        '''
+        Test file.patch using a patch applied to a single file, with the patch
+        coming from a remote source.
+        '''
+        # Try without a source_hash and without skip_verify=True, this should
+        # fail with a message about the source_hash
+        ret = self.run_state(
+            'file.patch',
+            name=self.math_file,
+            source=self.math_patch_template_http,
+            template='jinja',
+            context=self.context,
+        )
+        self.assertSaltFalseReturn(ret)
+        ret = ret[next(iter(ret))]
+        self.assertIn('Unable to verify upstream hash', ret['comment'])
+
+        # Re-run the state with a source hash, it should now succeed
+        ret = self.run_state(
+            'file.patch',
+            name=self.math_file,
+            source=self.math_patch_template_http,
+            source_hash=self.math_patch_template_hash,
+            template='jinja',
+            context=self.context,
+        )
+        self.assertSaltTrueReturn(ret)
+        ret = ret[next(iter(ret))]
+        self.assertEqual(ret['comment'], 'Patch successfully applied')
+
+        # Re-run again, this time with no hash and skip_verify=True to test
+        # skipping hash verification
+        ret = self.run_state(
+            'file.patch',
+            name=self.math_file,
+            source=self.math_patch_template_http,
+            template='jinja',
+            context=self.context,
+            skip_verify=True,
+        )
+        self.assertSaltTrueReturn(ret)
+        ret = ret[next(iter(ret))]
+        self.assertEqual(ret['comment'], 'Patch was already applied')
+        self.assertEqual(ret['changes'], {})
+
+    def test_patch_directory_remote_source_template(self):
+        '''
+        Test file.patch using a patch applied to a directory, with changes
+        spanning multiple files, and the patch file coming from a remote
+        source.
+        '''
+        self._check_patch_version('2.6.1')
+        # Try without a source_hash and without skip_verify=True, this should
+        # fail with a message about the source_hash
+        ret = self.run_state(
+            'file.patch',
+            name=self.base_dir,
+            source=self.all_patch_template_http,
+            template='jinja',
+            context=self.context,
+            strip=1,
+        )
+        self.assertSaltFalseReturn(ret)
+        ret = ret[next(iter(ret))]
+        self.assertIn('Unable to verify upstream hash', ret['comment'])
+
+        # Re-run the state with a source hash, it should now succeed
+        ret = self.run_state(
+            'file.patch',
+            name=self.base_dir,
+            source=self.all_patch_template_http,
+            source_hash=self.all_patch_template_hash,
+            template='jinja',
+            context=self.context,
+            strip=1,
+        )
+        self.assertSaltTrueReturn(ret)
+        ret = ret[next(iter(ret))]
+        self.assertEqual(ret['comment'], 'Patch successfully applied')
+
+        # Re-run again, this time with no hash and skip_verify=True to test
+        # skipping hash verification
+        ret = self.run_state(
+            'file.patch',
+            name=self.base_dir,
+            source=self.all_patch_template_http,
+            template='jinja',
+            context=self.context,
+            strip=1,
+            skip_verify=True,
+        )
+        self.assertSaltTrueReturn(ret)
+        ret = ret[next(iter(ret))]
+        self.assertEqual(ret['comment'], 'Patch was already applied')
+        self.assertEqual(ret['changes'], {})
+
+    def test_patch_test_mode(self):
+        '''
+        Test file.patch using test=True
+        '''
+        # Try without a source_hash and without skip_verify=True, this should
+        # fail with a message about the source_hash
+        ret = self.run_state(
+            'file.patch',
+            name=self.numbers_file,
+            source=self.numbers_patch,
+            test=True,
+        )
+        self.assertSaltNoneReturn(ret)
+        ret = ret[next(iter(ret))]
+        self.assertEqual(ret['comment'], 'The patch would be applied')
+        self.assertTrue(ret['changes'])
+
+        # Apply the patch for real. We'll then be able to test below that we
+        # exit with a True rather than a None result if test=True is used on an
+        # already-applied patch.
+        ret = self.run_state(
+            'file.patch',
+            name=self.numbers_file,
+            source=self.numbers_patch,
+        )
+        self.assertSaltTrueReturn(ret)
+        ret = ret[next(iter(ret))]
+        self.assertEqual(ret['comment'], 'Patch successfully applied')
+        self.assertTrue(ret['changes'])
+
+        # Run again with test=True. Since the pre-check happens before we do
+        # the __opts__['test'] check, we should exit with a True result just
+        # the same as if we try to run this state on an already-patched file
+        # *without* test=True.
+        ret = self.run_state(
+            'file.patch',
+            name=self.numbers_file,
+            source=self.numbers_patch,
+            test=True,
+        )
+        self.assertSaltTrueReturn(ret)
+        ret = ret[next(iter(ret))]
+        self.assertEqual(ret['comment'], 'Patch was already applied')
+        self.assertEqual(ret['changes'], {})
+
+        # Empty the file to ensure that the patch doesn't apply cleanly
+        with salt.utils.files.fopen(self.numbers_file, 'w'):
+            pass
+
+        # Run again with test=True. Similar to the above run, we are testing
+        # that we return before we reach the __opts__['test'] check. In this
+        # case we should return a False result because we should already know
+        # by this point that the patch will not apply cleanly.
+        ret = self.run_state(
+            'file.patch',
+            name=self.numbers_file,
+            source=self.numbers_patch,
+            test=True,
+        )
+        self.assertSaltFalseReturn(ret)
+        ret = ret[next(iter(ret))]
+        self.assertIn('Patch would not apply cleanly', ret['comment'])
+        self.assertEqual(ret['changes'], {})
 
 WIN_TEST_FILE = 'c:/testfile'
 

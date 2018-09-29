@@ -890,7 +890,7 @@ def present(name,
     return ret
 
 
-def absent(name, driver=None):
+def absent(name):
     '''
     Ensure that a network is absent.
 
@@ -908,12 +908,6 @@ def absent(name, driver=None):
            'changes': {},
            'result': False,
            'comment': ''}
-
-    if driver is not None:
-        ret.setdefault('warnings', []).append(
-            'The \'driver\' argument has no function and will be removed in '
-            'the Fluorine release.'
-        )
 
     try:
         network = __salt__['docker.inspect_network'](name)

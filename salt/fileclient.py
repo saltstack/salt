@@ -36,7 +36,6 @@ import salt.utils.stringutils
 import salt.utils.templates
 import salt.utils.url
 import salt.utils.versions
-from salt.utils.locales import sdecode
 from salt.utils.openstack.swift import SaltSwift
 
 # pylint: disable=no-name-in-module,import-error
@@ -225,7 +224,7 @@ class Client(object):
         '''
         ret = []
 
-        path = self._check_proto(sdecode(path))
+        path = self._check_proto(salt.utils.data.decode(path))
         # We want to make sure files start with this *directory*, use
         # '/' explicitly because the master (that's generating the
         # list of files) only runs on POSIX
@@ -238,7 +237,7 @@ class Client(object):
         # go through the list of all files finding ones that are in
         # the target directory and caching them
         for fn_ in self.file_list(saltenv):
-            fn_ = sdecode(fn_)
+            fn_ = salt.utils.data.decode(fn_)
             if fn_.strip() and fn_.startswith(path):
                 if salt.utils.stringutils.check_include_exclude(
                         fn_, include_pat, exclude_pat):
@@ -261,7 +260,7 @@ class Client(object):
 
             dest = salt.utils.path.join(cachedir, 'files', saltenv)
             for fn_ in self.file_list_emptydirs(saltenv):
-                fn_ = sdecode(fn_)
+                fn_ = salt.utils.data.decode(fn_)
                 if fn_.startswith(path):
                     minion_dir = '{0}/{1}'.format(dest, fn_)
                     if not os.path.isdir(minion_dir):
@@ -581,8 +580,9 @@ class Client(object):
                 ftp = ftplib.FTP()
                 ftp.connect(url_data.hostname, url_data.port)
                 ftp.login(url_data.username, url_data.password)
+                remote_file_path = url_data.path.lstrip('/')
                 with salt.utils.files.fopen(dest, 'wb') as fp_:
-                    ftp.retrbinary('RETR {0}'.format(url_data.path), fp_.write)
+                    ftp.retrbinary('RETR {0}'.format(remote_file_path), fp_.write)
                 ftp.quit()
                 return dest
             except Exception as exc:
@@ -858,12 +858,10 @@ class LocalClient(Client):
         fnd = {'path': '',
                'rel': ''}
 
-        if saltenv not in self.opts['file_roots']:
-            return fnd
         if salt.utils.url.is_escaped(path):
             # The path arguments are escaped
             path = salt.utils.url.unescape(path)
-        for root in self.opts['file_roots'][saltenv]:
+        for root in self.opts['file_roots'].get(saltenv, []):
             full = os.path.join(root, path)
             if os.path.isfile(full):
                 fnd['path'] = full
@@ -896,10 +894,8 @@ class LocalClient(Client):
         with optional relative prefix path to limit directory traversal
         '''
         ret = []
-        if saltenv not in self.opts['file_roots']:
-            return ret
         prefix = prefix.strip('/')
-        for path in self.opts['file_roots'][saltenv]:
+        for path in self.opts['file_roots'].get(saltenv, []):
             for root, dirs, files in salt.utils.path.os_walk(
                 os.path.join(path, prefix), followlinks=True
             ):
@@ -907,7 +903,7 @@ class LocalClient(Client):
                 dirs[:] = [d for d in dirs if not salt.fileserver.is_file_ignored(self.opts, d)]
                 for fname in files:
                     relpath = os.path.relpath(os.path.join(root, fname), path)
-                    ret.append(sdecode(relpath))
+                    ret.append(salt.utils.data.decode(relpath))
         return ret
 
     def file_list_emptydirs(self, saltenv='base', prefix=''):
@@ -917,16 +913,14 @@ class LocalClient(Client):
         '''
         ret = []
         prefix = prefix.strip('/')
-        if saltenv not in self.opts['file_roots']:
-            return ret
-        for path in self.opts['file_roots'][saltenv]:
+        for path in self.opts['file_roots'].get(saltenv, []):
             for root, dirs, files in salt.utils.path.os_walk(
                 os.path.join(path, prefix), followlinks=True
             ):
                 # Don't walk any directories that match file_ignore_regex or glob
                 dirs[:] = [d for d in dirs if not salt.fileserver.is_file_ignored(self.opts, d)]
                 if len(dirs) == 0 and len(files) == 0:
-                    ret.append(sdecode(os.path.relpath(root, path)))
+                    ret.append(salt.utils.data.decode(os.path.relpath(root, path)))
         return ret
 
     def dir_list(self, saltenv='base', prefix=''):
@@ -935,14 +929,12 @@ class LocalClient(Client):
         with optional relative prefix path to limit directory traversal
         '''
         ret = []
-        if saltenv not in self.opts['file_roots']:
-            return ret
         prefix = prefix.strip('/')
-        for path in self.opts['file_roots'][saltenv]:
+        for path in self.opts['file_roots'].get(saltenv, []):
             for root, dirs, files in salt.utils.path.os_walk(
                 os.path.join(path, prefix), followlinks=True
             ):
-                ret.append(sdecode(os.path.relpath(root, path)))
+                ret.append(salt.utils.data.decode(os.path.relpath(root, path)))
         return ret
 
     def __get_file_path(self, path, saltenv='base'):
@@ -1033,10 +1025,7 @@ class LocalClient(Client):
         '''
         Return the available environments
         '''
-        ret = []
-        for saltenv in self.opts['file_roots']:
-            ret.append(saltenv)
-        return ret
+        return list(self.opts['file_roots'])
 
     def master_tops(self):
         '''

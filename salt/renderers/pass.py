@@ -3,48 +3,49 @@
 Pass Renderer for Salt
 ======================
 
-[pass](https://www.passwordstore.org/)
+pass_ is an encrypted on-disk password store.
+
+.. _pass: https://www.passwordstore.org/
 
 .. versionadded:: 2017.7.0
 
 Setup
 -----
 
-.. note::
-    ``<user>`` needs to be replaced with the user salt-master will be running
-    as
+*Note*: ``<user>`` needs to be replaced with the user salt-master will be
+running as.
 
-1. Have private gpg loaded into `user`'s gpg keyring. Example:
+Have private gpg loaded into ``user``'s gpg keyring
 
-   .. code-block:: yaml
+.. code-block:: yaml
 
-       load_private_gpg_key:
-         cmd.run:
-           - name: gpg --import <location_of_private_gpg_key>
-           - unless: gpg --list-keys '<gpg_name>'
+    load_private_gpg_key:
+      cmd.run:
+        - name: gpg --import <location_of_private_gpg_key>
+        - unless: gpg --list-keys '<gpg_name>'
 
-2. Said private key's public key should have been used when encrypting pass
-   entries that are of interest for pillar data.
+Said private key's public key should have been used when encrypting pass entries
+that are of interest for pillar data.
 
-3. Fetch and keep local pass git repo up-to-date
+Fetch and keep local pass git repo up-to-date
 
-   .. code-block:: yaml
+.. code-block:: yaml
 
-       update_pass:
-         git.latest:
-           - force_reset: True
-           - name: <git_repo>
-           - target: /<user>/.password-store
-           - identity: <location_of_ssh_private_key>
-           - require:
-             - cmd: load_private_gpg_key
+        update_pass:
+          git.latest:
+            - force_reset: True
+            - name: <git_repo>
+            - target: /<user>/.password-store
+            - identity: <location_of_ssh_private_key>
+            - require:
+              - cmd: load_private_gpg_key
 
-4. Install pass binary
+Install pass binary
 
-   .. code-block:: yaml
+.. code-block:: yaml
 
-       pass:
-         pkg.installed
+        pass:
+          pkg.installed
 '''
 
 # Import python libs

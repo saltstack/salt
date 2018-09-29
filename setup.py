@@ -226,6 +226,7 @@ class GenerateSaltSyspaths(Command):
                 base_thorium_roots_dir=self.distribution.salt_base_thorium_roots_dir,
                 logs_dir=self.distribution.salt_logs_dir,
                 pidfile_dir=self.distribution.salt_pidfile_dir,
+                spm_parent_path=self.distribution.salt_spm_parent_dir,
                 spm_formula_path=self.distribution.salt_spm_formula_dir,
                 spm_pillar_path=self.distribution.salt_spm_pillar_dir,
                 spm_reactor_path=self.distribution.salt_spm_reactor_dir,
@@ -325,28 +326,6 @@ if WITH_SETUPTOOLS:
 
             # Resume normal execution
             develop.run(self)
-
-
-def uri_to_resource(resource_file):
-    # ## Returns the URI for a resource
-    # The basic case is that the resource is on saltstack.com
-    # It could be the case that the resource is cached.
-    salt_uri = 'https://repo.saltstack.com/windows/dependencies/' + resource_file
-    if os.getenv('SALTREPO_LOCAL_CACHE') is None:
-        # if environment variable not set, return the basic case
-        return salt_uri
-    if not os.path.isdir(os.getenv('SALTREPO_LOCAL_CACHE')):
-        # if environment variable is not a directory, return the basic case
-        return salt_uri
-    cached_resource = os.path.join(os.getenv('SALTREPO_LOCAL_CACHE'), resource_file)
-    cached_resource = cached_resource.replace('/', '\\')
-    if not os.path.isfile(cached_resource):
-        # if file does not exist, return the basic case
-        return salt_uri
-    if os.path.getsize(cached_resource) == 0:
-        # if file has zero size, return the basic case
-        return salt_uri
-    return cached_resource
 
 
 class DownloadWindowsDlls(Command):
@@ -622,6 +601,7 @@ BASE_MASTER_ROOTS_DIR = {base_master_roots_dir!r}
 BASE_THORIUM_ROOTS_DIR = {base_thorium_roots_dir!r}
 LOGS_DIR = {logs_dir!r}
 PIDFILE_DIR = {pidfile_dir!r}
+SPM_PARENT_PATH = {spm_parent_path!r}
 SPM_FORMULA_PATH = {spm_formula_path!r}
 SPM_PILLAR_PATH = {spm_pillar_path!r}
 SPM_REACTOR_PATH = {spm_reactor_path!r}
@@ -784,6 +764,7 @@ class SaltDistribution(distutils.dist.Distribution):
         self.salt_base_master_roots_dir = None
         self.salt_logs_dir = None
         self.salt_pidfile_dir = None
+        self.salt_spm_parent_dir = None
         self.salt_spm_formula_dir = None
         self.salt_spm_pillar_dir = None
         self.salt_spm_reactor_dir = None
@@ -1092,7 +1073,7 @@ class SaltDistribution(distutils.dist.Distribution):
             # all these should be safe to force include
             freezer_includes.extend([
                 'cherrypy',
-                'dateutils',
+                'python-dateutil',
                 'pyghmi',
                 'croniter',
                 'mako',

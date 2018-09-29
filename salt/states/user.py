@@ -29,10 +29,10 @@ import os
 import logging
 
 # Import Salt libs
+import salt.utils.data
 import salt.utils.dateutils
 import salt.utils.platform
 import salt.utils.user
-from salt.utils.locales import sdecode, sdecode_if_string
 from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party libs
@@ -156,8 +156,8 @@ def _changes(name,
             change['expire'] = expire
 
     # GECOS fields
-    fullname = sdecode_if_string(fullname)
-    lusr['fullname'] = sdecode_if_string(lusr['fullname'])
+    fullname = salt.utils.data.decode(fullname)
+    lusr['fullname'] = salt.utils.data.decode(lusr['fullname'])
     if fullname is not None and lusr['fullname'] != fullname:
         change['fullname'] = fullname
     if win_homedrive and lusr['homedrive'] != win_homedrive:
@@ -171,24 +171,27 @@ def _changes(name,
 
     # MacOS doesn't have full GECOS support, so check for the "ch" functions
     # and ignore these parameters if these functions do not exist.
-    if 'user.chroomnumber' in __salt__ and roomnumber is not None:
-        roomnumber = sdecode_if_string(roomnumber)
-        lusr['roomnumber'] = sdecode_if_string(lusr['roomnumber'])
+    if 'user.chroomnumber' in __salt__ \
+            and roomnumber is not None:
+        roomnumber = salt.utils.data.decode(roomnumber)
+        lusr['roomnumber'] = salt.utils.data.decode(lusr['roomnumber'])
         if lusr['roomnumber'] != roomnumber:
             change['roomnumber'] = roomnumber
-    if 'user.chworkphone' in __salt__ and workphone is not None:
-        workphone = sdecode_if_string(workphone)
-        lusr['workphone'] = sdecode_if_string(lusr['workphone'])
+    if 'user.chworkphone' in __salt__ \
+            and workphone is not None:
+        workphone = salt.utils.data.decode(workphone)
+        lusr['workphone'] = salt.utils.data.decode(lusr['workphone'])
         if lusr['workphone'] != workphone:
             change['workphone'] = workphone
-    if 'user.chhomephone' in __salt__ and homephone is not None:
-        homephone = sdecode_if_string(homephone)
-        lusr['homephone'] = sdecode_if_string(lusr['homephone'])
+    if 'user.chhomephone' in __salt__ \
+            and homephone is not None:
+        homephone = salt.utils.data.decode(homephone)
+        lusr['homephone'] = salt.utils.data.decode(lusr['homephone'])
         if lusr['homephone'] != homephone:
             change['homephone'] = homephone
     if 'user.chother' in __salt__ and other is not None:
-        other = sdecode_if_string(other)
-        lusr['other'] = sdecode_if_string(lusr['other'])
+        other = salt.utils.data.decode(other)
+        lusr['other'] = salt.utils.data.decode(lusr['other'])
         if lusr['other'] != other:
             change['other'] = other
     # OpenBSD/FreeBSD login class
@@ -267,7 +270,7 @@ def present(name,
     gid
         The id of the default group to assign to the user. Either a group name
         or gid can be used. If not specified, and the user does not exist, then
-        he next available gid will be assigned.
+        the next available gid will be assigned.
 
     gid_from_name : False
         If ``True``, the default group id will be set to the id of the group
@@ -331,7 +334,7 @@ def present(name,
         Linux, FreeBSD, NetBSD, OpenBSD, and Solaris. If the ``empty_password``
         argument is set to ``True`` then ``password`` is ignored.
         For Windows this is the plain text password.
-        For Linux, the hash can be generated with ``openssl passwd -1``.
+        For Linux, the hash can be generated with ``mkpasswd -m sha-256``.
 
     .. versionchanged:: 0.16.0
        BSD support added.
@@ -467,15 +470,15 @@ def present(name,
             password = __salt__['shadow.gen_password'](password)
 
     if fullname is not None:
-        fullname = sdecode(fullname)
+        fullname = salt.utils.data.decode(fullname)
     if roomnumber is not None:
-        roomnumber = sdecode(roomnumber)
+        roomnumber = salt.utils.data.decode(roomnumber)
     if workphone is not None:
-        workphone = sdecode(workphone)
+        workphone = salt.utils.data.decode(workphone)
     if homephone is not None:
-        homephone = sdecode(homephone)
+        homephone = salt.utils.data.decode(homephone)
     if other is not None:
-        other = sdecode(other)
+        other = salt.utils.data.decode(other)
 
     # createhome not supported on Windows or Mac
     if __grains__['kernel'] in ('Darwin', 'Windows'):

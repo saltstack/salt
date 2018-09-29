@@ -6,6 +6,7 @@ Sphinx documentation for Salt
 import functools
 import sys
 import os
+import re
 import types
 import time
 
@@ -65,6 +66,7 @@ MOCK_MODULES = [
     'user',
 
     # salt core
+    'concurrent',
     'Crypto',
     'Crypto.Signature',
     'Crypto.Cipher',
@@ -128,53 +130,56 @@ MOCK_MODULES = [
     # modules, renderers, states, returners, et al
     'ClusterShell',
     'ClusterShell.NodeSet',
-    'django',
-    'libvirt',
     'MySQLdb',
     'MySQLdb.cursors',
-    'nagios_json',
-    'psutil',
-    'pycassa',
-    'pymongo',
-    'rabbitmq_server',
-    'redis',
-    #'requests',
-    #'requests.exceptions',
-    'rpm',
-    'rpmUtils',
-    'rpmUtils.arch',
-    'yum',
     'OpenSSL',
-    'zfs',
-    'salt.ext.six.moves.winreg',
-    'win32security',
-    'ntsecuritycon',
-    'napalm',
+    'avahi',
+    'boto.regioninfo',
+    'concurrent',
+    'dbus',
+    'django',
+    'dns',
+    'dns.resolver',
     'dson',
+    'hjson',
     'jnpr',
-    'json',
-    'lxml',
-    'lxml.etree',
     'jnpr.junos',
     'jnpr.junos.utils',
     'jnpr.junos.utils.config',
     'jnpr.junos.utils.sw',
-    'dns',
-    'dns.resolver',
+    'json',
     'keyring',
+    'libvirt',
+    'lxml',
+    'lxml.etree',
+    'msgpack',
+    'nagios_json',
+    'napalm',
     'netaddr',
     'netaddr.IPAddress',
     'netaddr.core',
     'netaddr.core.AddrFormatError',
+    'ntsecuritycon',
+    'psutil',
+    'pycassa',
+    'pyconnman',
+    'pyiface',
+    'pymongo',
     'pyroute2',
     'pyroute2.ipdb',
-    'avahi',
-    'dbus',
+    'rabbitmq_server',
+    'redis',
+    'rpm',
+    'rpmUtils',
+    'rpmUtils.arch',
+    'salt.ext.six.moves.winreg',
     'twisted',
     'twisted.internet',
     'twisted.internet.protocol',
     'twisted.internet.protocol.DatagramProtocol',
-    'msgpack',
+    'win32security',
+    'yum',
+    'zfs',
 ]
 
 for mod_name in MOCK_MODULES:
@@ -211,6 +216,8 @@ sys.modules['ntsecuritycon'].SYNCHRONIZE = 0
 
 # Define a fake version attribute for the following libs.
 sys.modules['cherrypy'].config = mock_decorator_with_params
+sys.modules['tornado'].version_info = (0, 0, 0)
+sys.modules['boto.regioninfo']._load_json_file = {'endpoints': None}
 
 
 # -- Add paths to PYTHONPATH ---------------------------------------------------
@@ -263,8 +270,8 @@ if on_saltstack:
     copyright = time.strftime("%Y")
 
 # < --- START do not merge these settings to other branches START ---> #
-build_type = 'latest'  # latest, previous, develop, next
-release = latest_release  # version, latest_release, previous_release
+build_type = 'develop'  # latest, previous, develop, next
+release = version  # version, latest_release, previous_release
 # < --- END do not merge these settings to other branches END ---> #
 
 # Set google custom search engine
@@ -316,6 +323,9 @@ modindex_common_prefix = ['salt.']
 
 autosummary_generate = True
 
+# strip git rev as there won't necessarily be a release based on it
+stripped_release = re.sub(r'-\d+-g[0-9a-f]+$', '', release)
+
 # Define a substitution for linking to the latest release tarball
 rst_prolog = """\
 .. |current_release_doc| replace:: :doc:`/topics/releases/{release}`
@@ -352,7 +362,7 @@ rst_prolog = """\
      <p>x86_64: <a href="https://repo.saltstack.com/osx/salt-{release}-py3-x86_64.pkg"><strong>salt-{release}-py3-x86_64.pkg</strong></a>
       | <a href="https://repo.saltstack.com/osx/salt-{release}-py3-x86_64.pkg.md5"><strong>md5</strong></a></p>
 
-""".format(release=release)
+""".format(release=stripped_release)
 
 # A shortcut for linking to tickets on the GitHub issue tracker
 extlinks = {

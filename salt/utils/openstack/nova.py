@@ -68,7 +68,7 @@ def check_nova():
         novaclient_ver = _LooseVersion(novaclient.__version__)
         min_ver = _LooseVersion(NOVACLIENT_MINVER)
         max_ver = _LooseVersion(NOVACLIENT_MAXVER)
-        if novaclient_ver >= min_ver and novaclient_ver <= max_ver:
+        if min_ver <= novaclient_ver <= max_ver:
             return HAS_NOVA
         elif novaclient_ver > max_ver:
             log.debug('Older novaclient version required. Maximum: %s',

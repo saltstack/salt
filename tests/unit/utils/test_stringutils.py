@@ -309,6 +309,10 @@ class StringutilsTestCase(TestCase):
         self.assertTrue(salt.utils.stringutils.expr_match(val, 'foo/*/baz'))
         # Glob non-match
         self.assertFalse(salt.utils.stringutils.expr_match(val, 'foo/*/bar'))
+        # Regex match
+        self.assertTrue(salt.utils.stringutils.expr_match(val, r'foo/\w+/baz'))
+        # Regex non-match
+        self.assertFalse(salt.utils.stringutils.expr_match(val, r'foo/\w/baz'))
 
     def test_check_whitelist_blacklist(self):
         '''

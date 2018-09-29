@@ -68,12 +68,12 @@ A REST API for Salt
     debug : ``False``
         Starts the web server in development mode. It will reload itself when
         the underlying code is changed and will output more debugging info.
-    log_access_file
+    log.access_file
         Path to a file to write HTTP access logs.
 
         .. versionadded:: 2016.11.0
 
-    log_error_file
+    log.error_file
         Path to a file to write HTTP error logs.
 
         .. versionadded:: 2016.11.0
@@ -135,7 +135,7 @@ A REST API for Salt
         This is useful for bootstrapping a single-page JavaScript app.
 
         Warning! If you set this option to a custom web application, anything
-        that uses cookie-based authentcation is vulnerable to XSRF attacks.
+        that uses cookie-based authentication is vulnerable to XSRF attacks.
         Send the custom ``X-Auth-Token`` header instead and consider disabling
         the ``enable_sessions`` setting.
 
@@ -174,7 +174,7 @@ cookie. The latter is far more convenient for clients that support cookies.
           -H 'Accept: application/x-yaml' \\
           -d username=saltdev \\
           -d password=saltdev \\
-          -d eauth=auto
+          -d eauth=pam
 
   Copy the ``token`` value from the output and include it in subsequent requests:
 

@@ -33,7 +33,8 @@ touch /tmp/foo if it does not exist:
       cmd.run:
         - creates: /tmp/foo
 
-``creates`` also accepts a list of files:
+``creates`` also accepts a list of files, in which case this state will
+run if **any** of the files does not exist:
 
 .. code-block:: yaml
 
@@ -410,6 +411,7 @@ def wait(name,
          output_loglevel='debug',
          hide_output=False,
          use_vt=False,
+         success_retcodes=None,
          **kwargs):
     '''
     Run the given command only if the watch statement calls it.
@@ -489,7 +491,9 @@ def wait(name,
         a state. For more information, see the :ref:`stateful-argument` section.
 
     creates
-        Only run if the file or files specified by ``creates`` do not exist.
+        Only run if the file specified by ``creates`` do not exist. If you
+        specify a list of files then this state will only run if **any** of
+        the files does not exist.
 
         .. versionadded:: 2014.7.0
 
@@ -514,6 +518,13 @@ def wait(name,
         Use VT utils (saltstack) to stream the command output more
         interactively to the console and the logs.
         This is experimental.
+
+    success_retcodes: This parameter will be allow a list of
+        non-zero return codes that should be considered a success.  If the
+        return code returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: Fluorine
     '''
     # Ignoring our arguments is intentional.
     return {'name': name,
@@ -646,6 +657,13 @@ def wait_script(name,
             Salt logs to the minion log.
 
         .. versionadded:: 2018.3.0
+
+    success_retcodes: This parameter will be allow a list of
+        non-zero return codes that should be considered a success.  If the
+        return code returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: Fluorine
     '''
     # Ignoring our arguments is intentional.
     return {'name': name,
@@ -670,6 +688,7 @@ def run(name,
         timeout=None,
         ignore_timeout=False,
         use_vt=False,
+        success_retcodes=None,
         **kwargs):
     '''
     Run a command if certain circumstances are met.  Use ``cmd.wait`` if you
@@ -785,7 +804,9 @@ def run(name,
         .. versionadded:: 2015.8.0
 
     creates
-        Only run if the file or files specified by ``creates`` do not exist.
+        Only run if the file specified by ``creates`` do not exist. If you
+        specify a list of files then this state will only run if **any** of
+        the files does not exist.
 
         .. versionadded:: 2014.7.0
 
@@ -799,6 +820,13 @@ def run(name,
         results.
 
         .. versionadded:: 2016.3.6
+
+    success_retcodes: This parameter will be allow a list of
+        non-zero return codes that should be considered a success.  If the
+        return code returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: Fluorine
 
     .. note::
 
@@ -867,7 +895,8 @@ def run(name,
                        'umask': umask,
                        'output_loglevel': output_loglevel,
                        'hide_output': hide_output,
-                       'quiet': quiet})
+                       'quiet': quiet,
+                       'success_retcodes': success_retcodes})
 
     cret = mod_run_check(cmd_kwargs, onlyif, unless, creates)
     if isinstance(cret, dict):
@@ -931,6 +960,7 @@ def script(name,
            hide_output=False,
            defaults=None,
            context=None,
+           success_retcodes=None,
            **kwargs):
     '''
     Download a script and execute it with specified arguments.
@@ -1028,7 +1058,9 @@ def script(name,
         'arg two' arg3"
 
     creates
-        Only run if the file or files specified by ``creates`` do not exist.
+        Only run if the file specified by ``creates`` do not exist. If you
+        specify a list of files then this state will only run if **any** of
+        the files does not exist.
 
         .. versionadded:: 2014.7.0
 
@@ -1063,6 +1095,14 @@ def script(name,
             Salt logs to the minion log.
 
         .. versionadded:: 2018.3.0
+
+    success_retcodes: This parameter will be allow a list of
+        non-zero return codes that should be considered a success.  If the
+        return code returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: Fluorine
+
     '''
     test_name = None
     if not isinstance(stateful, list):
@@ -1111,7 +1151,8 @@ def script(name,
                        'hide_output': hide_output,
                        'use_vt': use_vt,
                        'context': tmpctx,
-                       'saltenv': __env__})
+                       'saltenv': __env__,
+                       'success_retcodes': success_retcodes})
 
     run_check_cmd_kwargs = {
         'cwd': cwd,

@@ -1032,11 +1032,11 @@ example:
 
     {# Extract the relevant subset for the app configured on the current
        machine (configured via a grain in this example). #}
-    {% app = app_defaults.get(salt.grains.get('role') %}
+    {% app = app_defaults.get(salt.grains.get('role')) %}
 
     {# Allow values from Pillar to (optionally) update values from the lookup
        table. #}
-    {% do app_defaults.update(salt.pillar.get('myapp', {}) %}
+    {% do app_defaults.update(salt.pillar.get('myapp', {})) %}
 
     deploy_application:
       git.latest:

@@ -93,11 +93,13 @@ class SaltUtilSyncModuleTest(ModuleCase):
                                        'modules.salttest'],
                            'renderers': [],
                            'log_handlers': [],
+                           'matchers': [],
                            'states': [],
                            'sdb': [],
                            'proxymodules': [],
                            'output': [],
-                           'thorium': []}
+                           'thorium': [],
+                           'serializers': []}
         ret = self.run_function('saltutil.sync_all')
         self.assertEqual(ret, expected_return)
 
@@ -114,11 +116,13 @@ class SaltUtilSyncModuleTest(ModuleCase):
                            'modules': ['modules.salttest'],
                            'renderers': [],
                            'log_handlers': [],
+                           'matchers': [],
                            'states': [],
                            'sdb': [],
                            'proxymodules': [],
                            'output': [],
-                           'thorium': []}
+                           'thorium': [],
+                           'serializers': []}
         ret = self.run_function('saltutil.sync_all', extmod_whitelist={'modules': ['salttest']})
         self.assertEqual(ret, expected_return)
 
@@ -138,11 +142,13 @@ class SaltUtilSyncModuleTest(ModuleCase):
                                        'modules.salttest'],
                            'renderers': [],
                            'log_handlers': [],
+                           'matchers': [],
                            'states': [],
                            'sdb': [],
                            'proxymodules': [],
                            'output': [],
-                           'thorium': []}
+                           'thorium': [],
+                           'serializers': []}
         ret = self.run_function('saltutil.sync_all', extmod_blacklist={'modules': ['runtests_decorators']})
         self.assertEqual(ret, expected_return)
 
@@ -159,11 +165,13 @@ class SaltUtilSyncModuleTest(ModuleCase):
                            'modules': [],
                            'renderers': [],
                            'log_handlers': [],
+                           'matchers': [],
                            'states': [],
                            'sdb': [],
                            'proxymodules': [],
                            'output': [],
-                           'thorium': []}
+                           'thorium': [],
+                           'serializers': []}
         ret = self.run_function('saltutil.sync_all', extmod_whitelist={'modules': ['runtests_decorators']},
                                 extmod_blacklist={'modules': ['runtests_decorators']})
         self.assertEqual(ret, expected_return)

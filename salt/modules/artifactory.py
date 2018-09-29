@@ -223,7 +223,8 @@ def _get_snapshot_url(artifactory_url, repository, group_id, artifact_id, versio
                             version=version)
                 raise ArtifactoryError(error_message)
 
-            if has_classifier and classifier not in snapshot_version_metadata['snapshot_versions']:
+            packaging_with_classifier = packaging if not has_classifier else packaging + ':' + classifier
+            if has_classifier and packaging_with_classifier not in snapshot_version_metadata['snapshot_versions']:
                 error_message = '''Cannot find requested classifier '{classifier}' in the snapshot version metadata.
                           artifactory_url: {artifactory_url}
                           repository: {repository}
@@ -241,7 +242,7 @@ def _get_snapshot_url(artifactory_url, repository, group_id, artifact_id, versio
                             version=version)
                 raise ArtifactoryError(error_message)
 
-            snapshot_version = snapshot_version_metadata['snapshot_versions'][packaging]
+            snapshot_version = snapshot_version_metadata['snapshot_versions'][packaging_with_classifier]
         except CommandExecutionError as err:
             log.error('Could not fetch maven-metadata.xml. Assuming snapshot_version=%s.', version)
             snapshot_version = version
@@ -387,7 +388,11 @@ def _get_snapshot_version_metadata(artifactory_url, repository, group_id, artifa
     for snapshot_version in snapshot_versions:
         extension = snapshot_version.find('extension').text
         value = snapshot_version.find('value').text
-        extension_version_dict[extension] = value
+        if snapshot_version.find('classifier') is not None:
+            classifier = snapshot_version.find('classifier').text
+            extension_version_dict[extension + ':' + classifier] = value
+        else:
+            extension_version_dict[extension] = value
 
     return {
         'snapshot_versions': extension_version_dict
@@ -447,6 +452,7 @@ def __save_artifact(artifact_url, target_file, headers):
         checksum_url = artifact_url + ".sha1"
 
         checksum_success, artifact_sum, checksum_comment = __download(checksum_url, headers)
+        artifact_sum = salt.utils.stringutils.to_str(artifact_sum)
         if checksum_success:
             log.debug("Downloaded SHA1 SUM: %s", artifact_sum)
             file_sum = __salt__['file.get_hash'](path=target_file, form='sha1')

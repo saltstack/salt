@@ -26,10 +26,7 @@ import salt.cache
 from salt.ext import six
 
 # Import 3rd-party libs
-if six.PY3:
-    import ipaddress
-else:
-    import salt.ext.ipaddress as ipaddress
+from salt._compat import ipaddress
 HAS_RANGE = False
 try:
     import seco.range  # pylint: disable=import-error
@@ -387,11 +384,11 @@ class CkMinions(object):
             try:
                 # Target is an address?
                 tgt = ipaddress.ip_address(tgt)
-            except:  # pylint: disable=bare-except
+            except Exception:
                 try:
                     # Target is a network?
                     tgt = ipaddress.ip_network(tgt)
-                except:  # pylint: disable=bare-except
+                except Exception:
                     log.error('Invalid IP/CIDR target: %s', tgt)
                     return {'minions': [],
                             'missing': []}
@@ -475,6 +472,8 @@ class CkMinions(object):
         minions = set(self._pki_minions())
         log.debug('minions: %s', minions)
 
+        nodegroups = self.opts.get('nodegroups', {})
+
         if self.opts.get('minion_data_cache', False):
             ref = {'G': self._check_grain_minions,
                    'P': self._check_grain_pcre_minions,
@@ -497,9 +496,11 @@ class CkMinions(object):
             if isinstance(expr, six.string_types):
                 words = expr.split()
             else:
-                words = expr
+                # we make a shallow copy in order to not affect the passed in arg
+                words = expr[:]
 
-            for word in words:
+            while words:
+                word = words.pop(0)
                 target_info = parse_target(word)
 
                 # Easy check first
@@ -556,9 +557,12 @@ class CkMinions(object):
 
                 elif target_info and target_info['engine']:
                     if 'N' == target_info['engine']:
-                        # Nodegroups should already be expanded/resolved to other engines
-                        log.error('Detected nodegroup expansion failure of "%s"', word)
-                        return {'minions': [], 'missing': []}
+                        # if we encounter a node group, just evaluate it in-place
+                        decomposed = nodegroup_comp(target_info['pattern'], nodegroups)
+                        if decomposed:
+                            words = decomposed + words
+                        continue
+
                     engine = ref.get(target_info['engine'])
                     if not engine:
                         # If an unknown engine is called at any time, fail out
@@ -606,10 +610,23 @@ class CkMinions(object):
         return {'minions': list(minions),
                 'missing': []}
 
-    def connected_ids(self, subset=None, show_ipv4=False, include_localhost=False):
+    def connected_ids(self, subset=None, show_ip=False, show_ipv4=None, include_localhost=None):
         '''
         Return a set of all connected minion ids, optionally within a subset
         '''
+        if include_localhost is not None:
+            salt.utils.versions.warn_until(
+                'Sodium',
+                'The \'include_localhost\' argument is no longer required; any'
+                'connected localhost minion will always be included.'
+            )
+        if show_ipv4 is not None:
+            salt.utils.versions.warn_until(
+                'Sodium',
+                'The \'show_ipv4\' argument has been renamed to \'show_ip\' as'
+                'it now also includes IPv6 addresses for IPv6-connected'
+                'minions.'
+            )
         minions = set()
         if self.opts.get('minion_data_cache', False):
             search = self.cache.list('minions')
@@ -619,7 +636,11 @@ class CkMinions(object):
             if '127.0.0.1' in addrs:
                 # Add in the address of a possible locally-connected minion.
                 addrs.discard('127.0.0.1')
-                addrs.update(set(salt.utils.network.ip_addrs(include_loopback=include_localhost)))
+                addrs.update(set(salt.utils.network.ip_addrs(include_loopback=False)))
+            if '::1' in addrs:
+                # Add in the address of a possible locally-connected minion.
+                addrs.discard('::1')
+                addrs.update(set(salt.utils.network.ip_addrs6(include_loopback=False)))
             if subset:
                 search = subset
             for id_ in search:
@@ -635,13 +656,16 @@ class CkMinions(object):
                     continue
                 grains = mdata.get('grains', {})
                 for ipv4 in grains.get('ipv4', []):
-                    if ipv4 == '127.0.0.1' and not include_localhost:
-                        continue
-                    if ipv4 == '0.0.0.0':
-                        continue
                     if ipv4 in addrs:
-                        if show_ipv4:
+                        if show_ip:
                             minions.add((id_, ipv4))
+                        else:
+                            minions.add(id_)
+                        break
+                for ipv6 in grains.get('ipv6', []):
+                    if ipv6 in addrs:
+                        if show_ip:
+                            minions.add((id_, ipv6))
                         else:
                             minions.add(id_)
                         break
@@ -718,21 +742,11 @@ class CkMinions(object):
         _res = self.check_minions(v_expr, v_matcher)
         return set(_res['minions'])
 
-    def validate_tgt(self, valid, expr, tgt_type, minions=None, expr_form=None):
+    def validate_tgt(self, valid, expr, tgt_type, minions=None):
         '''
         Return a Bool. This function returns if the expression sent in is
         within the scope of the valid expression
         '''
-        # remember to remove the expr_form argument from this function when
-        # performing the cleanup on this deprecation.
-        if expr_form is not None:
-            salt.utils.versions.warn_until(
-                'Fluorine',
-                'the target type should be passed using the \'tgt_type\' '
-                'argument instead of \'expr_form\'. Support for using '
-                '\'expr_form\' will be removed in Salt Fluorine.'
-            )
-            tgt_type = expr_form
 
         v_minions = self._expand_matching(valid)
         if minions is None:
@@ -1138,11 +1152,27 @@ def mine_get(tgt, fun, tgt_type='glob', opts=None):
             tgt_type)
     minions = _res['minions']
     cache = salt.cache.factory(opts)
+
+    if isinstance(fun, six.string_types):
+        functions = list(set(fun.split(',')))
+        _ret_dict = len(functions) > 1
+    elif isinstance(fun, list):
+        functions = fun
+        _ret_dict = True
+    else:
+        return {}
+
     for minion in minions:
         mdata = cache.fetch('minions/{0}'.format(minion), 'mine')
-        if mdata is None:
+
+        if not isinstance(mdata, dict):
             continue
-        fdata = mdata.get(fun)
-        if fdata:
-            ret[minion] = fdata
+
+        if not _ret_dict and functions and functions[0] in mdata:
+            ret[minion] = mdata.get(functions)
+        elif _ret_dict:
+            for fun in functions:
+                if fun in mdata:
+                    ret.setdefault(fun, {})[minion] = mdata.get(fun)
+
     return ret

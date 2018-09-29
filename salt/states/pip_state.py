@@ -23,7 +23,10 @@ requisite to a pkg.installed state for the package which provides pip
 from __future__ import absolute_import, print_function, unicode_literals
 import re
 import logging
-import pkg_resources
+try:
+    import pkg_resources
+except ImportError:
+    pkg_resources = None
 
 # Import salt libs
 import salt.utils.versions
@@ -71,9 +74,7 @@ def __virtual__():
     '''
     Only load if the pip module is available in __salt__
     '''
-    if 'pip.list' in __salt__:
-        return __virtualname__
-    return False
+    return 'pip.list' in __salt__ and __virtualname__ or False
 
 
 def _find_key(prefix, pip_list):
@@ -182,9 +183,20 @@ def _check_pkg_version_format(pkg):
     return ret
 
 
-def _check_if_installed(prefix, state_pkg_name, version_spec, ignore_installed,
-                        force_reinstall, upgrade, user, cwd, bin_env, env_vars,
-                        pip_list=False, **kwargs):
+def _check_if_installed(prefix,
+                        state_pkg_name,
+                        version_spec,
+                        ignore_installed,
+                        force_reinstall,
+                        upgrade,
+                        user,
+                        cwd,
+                        bin_env,
+                        env_vars,
+                        index_url,
+                        extra_index_url,
+                        pip_list=False,
+                        **kwargs):
     '''
     Takes a package name and version specification (if any) and checks it is
     installed
@@ -241,7 +253,7 @@ def _check_if_installed(prefix, state_pkg_name, version_spec, ignore_installed,
             available_versions = __salt__['pip.list_all_versions'](
                 prefix_realname, bin_env=bin_env, include_alpha=include_alpha,
                 include_beta=include_beta, include_rc=include_rc, user=user,
-                cwd=cwd)
+                cwd=cwd, index_url=index_url, extra_index_url=extra_index_url)
             desired_version = ''
             if any(version_spec):
                 for version in reversed(available_versions):
@@ -599,13 +611,6 @@ def installed(name,
 
     .. _`virtualenv`: http://www.virtualenv.org/en/latest/
     '''
-    if 'no_chown' in kwargs:
-        salt.utils.versions.warn_until(
-            'Fluorine',
-            'The no_chown argument has been deprecated and is no longer used. '
-            'Its functionality was removed in Boron.')
-        kwargs.pop('no_chown')
-
     if pip_bin and not bin_env:
         bin_env = pip_bin
 
@@ -746,7 +751,8 @@ def installed(name,
                 out = _check_if_installed(prefix, state_pkg_name, version_spec,
                                           ignore_installed, force_reinstall,
                                           upgrade, user, cwd, bin_env, env_vars,
-                                          pip_list, **kwargs)
+                                          index_url, extra_index_url, pip_list,
+                                          **kwargs)
                 # If _check_if_installed result is None, something went wrong with
                 # the command running. This way we keep stateful output.
                 if out['result'] is None:
