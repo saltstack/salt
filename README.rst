@@ -36,6 +36,10 @@ documentation.
 
 Get SaltStack Support and Help
 ==============================
+**Slack Community** - Join the new Slack community, SaltStack has channels dedicated to
+Cloud, Networking, Enterprise, SaltConf, and many others. Please join in, just help and be helped! 
+Make sure to wait for an answer, sometimes it may take a few moments for someone to reply.
+https://saltstackcommunity.herokuapp.com/
 
 **IRC Chat** - Join the vibrant, helpful and positive SaltStack chat room in
 Freenode at #salt. There is no need to introduce yourself, or ask permission to
