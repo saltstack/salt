@@ -10,6 +10,7 @@ import logging
 import salt.loader
 import salt.utils.event
 import salt.utils.functools
+import salt.utils.jid
 from salt.exceptions import SaltInvocationError
 
 LOGGER = logging.getLogger(__name__)
@@ -110,6 +111,8 @@ def orchestrate(mods,
         pillarenv = __opts__['pillarenv']
     if saltenv is None and 'saltenv' in __opts__:
         saltenv = __opts__['saltenv']
+    if orchestration_jid is None:
+        orchestration_jid = salt.utils.jid.gen_jid(__opts__)
 
     running = minion.functions['state.sls'](
             mods,
