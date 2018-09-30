@@ -101,4 +101,3 @@ def set_attribute(file, element, key, value):
     element.set(key, str(value))
     root.write(file)
     return True
-
