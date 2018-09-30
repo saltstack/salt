@@ -1329,14 +1329,18 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
             with patch.object(os.path, 'exists', mock_f):
                 with patch.dict(filestate.__opts__, {'test': True}):
                     comt = ('File {0} is set to be created'.format(name))
-                    ret.update({'comment': comt, 'result': None})
+                    ret.update({'comment': comt,
+                                'result': None,
+                                'changes': {'new': name}})
                     self.assertDictEqual(filestate.touch(name), ret)
 
             with patch.dict(filestate.__opts__, {'test': False}):
                 with patch.object(os.path, 'isdir', mock_f):
                     comt = ('Directory not present to touch file {0}'
                             .format(name))
-                    ret.update({'comment': comt, 'result': False})
+                    ret.update({'comment': comt,
+                                'result': False,
+                                'changes': {}})
                     self.assertDictEqual(filestate.touch(name), ret)
 
                 with patch.object(os.path, 'isdir', mock_t):
