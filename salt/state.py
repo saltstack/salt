@@ -35,6 +35,7 @@ import salt.fileclient
 import salt.utils.crypt
 import salt.utils.dictupdate
 import salt.utils.event
+import salt.utils.hashutils
 import salt.utils.url
 import salt.utils.process
 import salt.utils.files
@@ -1732,7 +1733,9 @@ class State(object):
         ret['duration'] = duration
 
         troot = os.path.join(self.opts['cachedir'], self.jid)
-        tfile = os.path.join(troot, _clean_tag(tag))
+        tfile = os.path.join(
+            troot,
+            salt.utils.hashutils.sha1_digest(tag))
         if not os.path.isdir(troot):
             try:
                 os.makedirs(troot)
@@ -2091,7 +2094,10 @@ class State(object):
             proc = running[tag].get('proc')
             if proc:
                 if not proc.is_alive():
-                    ret_cache = os.path.join(self.opts['cachedir'], self.jid, _clean_tag(tag))
+                    ret_cache = os.path.join(
+                        self.opts['cachedir'],
+                        self.jid,
+                        salt.utils.hashutils.sha1_digest(tag))
                     if not os.path.isfile(ret_cache):
                         ret = {'result': False,
                                'comment': 'Parallel process failed to return',
