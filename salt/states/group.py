@@ -83,14 +83,13 @@ def _changes(name,
             ret['comment'] = 'Invalid gid'
             return ret
 
-    if members is not None:
-        if members:
-            # -- if new member list if different than the current
-            if set(lgrp['members']).symmetric_difference(members):
-                change['members'] = members
-        else:
-            if set(lgrp['members']).symmetric_difference(members):
-                change['delusers'] = set(lgrp['members'])
+    if members is not None and not members:
+        if set(lgrp['members']).symmetric_difference(members):
+            change['delusers'] = set(lgrp['members'])
+    elif members:
+        # if new member list if different than the current
+        if set(lgrp['members']).symmetric_difference(members):
+            change['members'] = members
 
     if addusers:
         users_2add = [user for user in addusers if user not in lgrp['members']]
