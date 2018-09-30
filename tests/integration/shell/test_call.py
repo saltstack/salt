@@ -77,6 +77,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
         self.assertIn('hello', ''.join(out))
         self.assertIn('Succeeded: 1', ''.join(out))
 
+    @skipIf(True, 'This test causes the test to hang. Skipping until further investigation can occur.')
     @destructiveTest
     @skip_if_not_root
     @skipIf(salt.utils.platform.is_windows(), 'This test does not apply on Windows')
