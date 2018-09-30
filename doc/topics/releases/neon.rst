@@ -212,3 +212,31 @@ Module Deprecations
     - Support for the ``ssh.recv_known_host`` function has been removed. Please use the
       :py:func:`ssh.recv_known_host_entries <salt.modules.ssh.recv_known_host_entries>`
       function instead.
+
+XML Module
+==========
+
+A new execution module for editing XML files is now included. Currently it allows for
+editing values from an xpath query, or editing XML IDs.
+
+.. code-block:: bash
+
+  # salt-call xml.set_attribute /tmp/test.xml ".//actor[@id='3']" editedby "Jane Doe"
+  local:
+      True
+  # salt-call xml.get_attribute /tmp/test.xml ".//actor[@id='3']"
+  local:
+      ----------
+      editedby:
+          Jane Doe
+      id:
+          3
+  # salt-call xml.get_value /tmp/test.xml ".//actor[@id='2']"
+  local:
+      Liam Neeson
+  # salt-call xml.set_value /tmp/test.xml ".//actor[@id='2']" "Patrick Stewart"
+  local:
+      True
+  # salt-call xml.get_value /tmp/test.xml ".//actor[@id='2']"
+  local:
+      Patrick Stewart
