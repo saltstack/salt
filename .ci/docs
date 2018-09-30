@@ -1,8 +1,11 @@
 pipeline {
-    agent { label 'docs' }
+    agent {
+        label 'docs'
+    }
     options {
         timestamps()
         ansiColor('xterm')
+        timeout(time: 2, unit: 'HOURS')
     }
     environment {
         PYENV_ROOT = "/usr/local/pyenv"
