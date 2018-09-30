@@ -7,12 +7,16 @@
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 import logging
-import pwd
-import grp
+try:
+    import pwd
+    import grp
+except ImportError:
+    pwd, grp = None, None
 import random
 
 # Import Salt Testing libs
 from tests.support.case import ShellCase
+from tests.support.unit import skipIf
 from tests.support.helpers import destructiveTest, skip_if_not_root
 
 # Import Salt libs
@@ -44,6 +48,7 @@ def gen_password():
 
 
 @skip_if_not_root
+@skipIf(pwd is None, 'Skip if no pwd module exists')
 @destructiveTest
 class AuthTest(ShellCase):
     '''

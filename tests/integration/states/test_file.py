@@ -355,7 +355,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         file.
         '''
         grain_path = os.path.join(TMP, 'file-grain-test')
-        self.run_function('grains.set', ['grain_path', grain_path])
         state_file = 'file-grainget'
 
         self.run_function('state.sls', [state_file])
@@ -1618,10 +1617,11 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                     'finally': 'the last item'},
                 formatter='json')
 
-        with salt.utils.files.fopen(path_test, 'r') as fp_:
-            serialized_file = fp_.read()
+        with salt.utils.files.fopen(path_test, 'rb') as fp_:
+            serialized_file = salt.utils.stringutils.to_unicode(fp_.read())
 
-        expected_file = os.linesep.join([
+        # The JSON serializer uses LF even on OSes where os.path.sep is CRLF.
+        expected_file = '\n'.join([
             '{',
             '  "a_list": [',
             '    "first_element",',
