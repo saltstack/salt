@@ -1882,11 +1882,7 @@ def dns_check(addr, port=80, safe=False, ipv6=None, transport=None):
                     break
 
                 #Don't use brackets around interface if using tcp transport
-                if transport == 'tcp':
-                    candidate_addr = h[4][0]
-                else:
-                    candidate_addr = salt.utils.zeromq.ip_bracket(h[4][0])
-
+                candidate_addr = h[4][0] if transport == 'tcp' else salt.utils.zeromq.ip_bracket(h[4][0])
                 candidates.append(candidate_addr)
 
                 try:

@@ -213,6 +213,17 @@ class LocalClient(object):
             print('Range server exception: {0}'.format(err))
             return []
 
+    def _get_master_uri(self):
+        if self.opts['transport'] == 'tcp':
+            interface = self.opts['interface']
+        else:
+            interface = salt.utils.zeromq.ip_bracket(self.opts['interface'])
+
+        master_uri = 'tcp://' + interface + \
+                     ':' + six.text_type(self.opts['ret_port'])
+
+        return master_uri
+
     def _get_timeout(self, timeout):
         '''
         Return the timeout to use
@@ -1705,14 +1716,7 @@ class LocalClient(object):
                 timeout,
                 **kwargs)
 
-        #Don't use brackets around interface if using tcp transport
-        if self.opts['transport'] == 'tcp':
-            master_uri = 'tcp://' + self.opts['interface'] + \
-                        ':' + six.text_type(self.opts['ret_port'])
-        else:
-            master_uri = 'tcp://' + salt.utils.zeromq.ip_bracket(self.opts['interface']) + \
-                         ':' + six.text_type(self.opts['ret_port'])
-
+        master_uri = self._get_master_uri()
         channel = salt.transport.Channel.factory(self.opts,
                                                  crypt='clear',
                                                  master_uri=master_uri)
@@ -1818,14 +1822,8 @@ class LocalClient(object):
                 timeout,
                 **kwargs)
 
-        #Don't use brackets around interface if using tcp transport
-        if self.opts['transport'] == 'tcp':
-            master_uri = 'tcp://' + self.opts['interface'] + \
-                        ':' + six.text_type(self.opts['ret_port'])
-        else:
-            master_uri = 'tcp://' + salt.utils.zeromq.ip_bracket(self.opts['interface']) + \
-                         ':' + six.text_type(self.opts['ret_port'])
 
+        master_uri = self._get_master_uri()
         channel = salt.transport.client.AsyncReqChannel.factory(self.opts,
                                                                 io_loop=io_loop,
                                                                 crypt='clear',

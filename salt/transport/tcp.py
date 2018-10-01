@@ -591,12 +591,8 @@ class TCPReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.tra
                 LoadBalancerServer, args=(self.opts, self.socket_queue)
             )
         elif not salt.utils.platform.is_windows():
-            #Need to set ipv6 specific socket opts
-            if self.opts['ipv6']:
-                self._socket = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
-            else:
-                self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
+            self._socket = socket.socket(socket.AF_INET6 if self.opts['ipv6'] else socket.AF_INET,
+                                         socket.SOCKS_TREAM)
             self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             _set_tcp_keepalive(self._socket, self.opts)
             self._socket.setblocking(0)
@@ -812,12 +808,8 @@ class TCPClientKeepAlive(tornado.tcpclient.TCPClient):
         # Always connect in plaintext; we'll convert to ssl if necessary
         # after one connection has completed.
 
-        #Need to set ipv6 specific socket opts
-        if self.opts['ipv6']:
-            sock = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
-        else:
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
+        sock = socket.socket(socket.AF_INET6 if self.opts['ipv6'] else socket.AF_INET,
+                             socket.SOCKS_TREAM)
         _set_tcp_keepalive(sock, self.opts)
         stream = tornado.iostream.IOStream(
             sock,
@@ -1397,12 +1389,8 @@ class TCPPubServerChannel(salt.transport.server.PubServerChannel):
         # Spin up the publisher
         pub_server = PubServer(self.opts, io_loop=self.io_loop)
 
-        #Need to set ipv6 specific socket opts
-        if self.opts['ipv6']:
-            sock = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
-        else:
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
+        sock = socket.socket(socket.AF_INET6 if self.opts['ipv6'] else socket.AF_INET,
+                             socket.SOCKS_TREAM)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         _set_tcp_keepalive(sock, self.opts)
         sock.setblocking(0)
