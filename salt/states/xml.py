@@ -55,7 +55,11 @@ def value_present(name, xpath, value, **kwargs):
         kwargs['test'] = __opts__.get('test', False)
 
     current_value = __salt__['xml.get_value'](name, xpath)
-    log.error('XXXXX current: %s', current_value)
+    if not current_value:
+        ret['result'] = False
+        ret['comment'] = 'xpath query {0} not found in {1}'.format(xpath, name)
+        return ret
+
     if current_value != value:
         if kwargs['test']:
             ret['result'] = None
