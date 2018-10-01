@@ -910,7 +910,7 @@ def create_role(username, password, superuser=False, login=False, contact_points
     .. code-block:: bash
 
         salt 'minion1' cassandra_cql.create_role username=joe password=secret
-        
+
         salt 'minion1' cassandra_cql.create_role username=joe password=secret superuser=True
 
         salt 'minion1' cassandra_cql.create_role username=joe password=secret superuser=True login=True
@@ -918,7 +918,7 @@ def create_role(username, password, superuser=False, login=False, contact_points
         salt 'minion1' cassandra_cql.create_role username=joe password=secret superuser=True login=True contact_points=minion1
     '''
     superuser_cql = 'superuser = true' if superuser else 'superuser = false'
-    login_cql     = 'login = true' if login else 'login = false'
+    login_cql = 'login = true' if login else 'login = false'
     query = '''create role if not exists {0} with password '{1}' and {2} and {3} ;'''.format(username, password, superuser_cql, login_cql)
     log.debug("Attempting to create a new role with username=%s superuser=%s login=%s", username, superuser, login)
 
