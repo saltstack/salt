@@ -78,6 +78,7 @@ integration.shell.test_auth
 integration.shell.test_call
 integration.shell.test_cloud
 integration.shell.test_cp
+integration.shell.test_enabled
 integration.states.test_host
 integration.states.test_pip_state
 integration.states.test_pkg
