@@ -16,7 +16,7 @@ from tests.support.helpers import skip_if_not_root
 # Import salt libs
 import salt.minion
 import salt.utils.event as event
-from salt.exceptions import SaltSystemExit
+from salt.exceptions import SaltSystemExit, SaltMasterUnresolvableError
 import salt.syspaths
 import tornado
 import tornado.testing
@@ -281,6 +281,17 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 self.assertTrue('beacons' not in minion.periodic_callbacks)
             finally:
                 minion.destroy()
+
+    def test_minion_retry_dns_count(self):
+        '''
+        Tests that the resolve_dns will retry dns look ups for a maximum of
+        3 times before raising a SaltMasterUnresolvableError exception.
+        '''
+        with patch.dict(__opts__, {'ipv6': False, 'master': 'dummy',
+                                   'master_port': '4555',
+                                   'retry_dns': 1, 'retry_dns_count': 3}):
+            self.assertRaises(SaltMasterUnresolvableError,
+                              salt.minion.resolve_dns, __opts__)
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
