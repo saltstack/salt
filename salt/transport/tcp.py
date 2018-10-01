@@ -592,7 +592,7 @@ class TCPReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.tra
             )
         elif not salt.utils.platform.is_windows():
             self._socket = socket.socket(socket.AF_INET6 if self.opts['ipv6'] else socket.AF_INET,
-                                         socket.SOCKS_TREAM)
+                                         socket.SOCK_STREAM)
             self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             _set_tcp_keepalive(self._socket, self.opts)
             self._socket.setblocking(0)
@@ -809,7 +809,7 @@ class TCPClientKeepAlive(tornado.tcpclient.TCPClient):
         # after one connection has completed.
 
         sock = socket.socket(socket.AF_INET6 if self.opts['ipv6'] else socket.AF_INET,
-                             socket.SOCKS_TREAM)
+                             socket.SOCK_STREAM)
         _set_tcp_keepalive(sock, self.opts)
         stream = tornado.iostream.IOStream(
             sock,
@@ -1390,7 +1390,7 @@ class TCPPubServerChannel(salt.transport.server.PubServerChannel):
         pub_server = PubServer(self.opts, io_loop=self.io_loop)
 
         sock = socket.socket(socket.AF_INET6 if self.opts['ipv6'] else socket.AF_INET,
-                             socket.SOCKS_TREAM)
+                             socket.SOCK_STREAM)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         _set_tcp_keepalive(sock, self.opts)
         sock.setblocking(0)
