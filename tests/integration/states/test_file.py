@@ -357,7 +357,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         file.
         '''
         grain_path = os.path.join(TMP, 'file-grain-test')
-        self.run_function('grains.set', ['grain_path', grain_path])
         state_file = 'file-grainget'
 
         self.run_function('state.sls', [state_file])
