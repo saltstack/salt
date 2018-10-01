@@ -10,6 +10,7 @@ A state module to manage Blue Coat SSL Visibility Devices.
 
 About
 =====
+
 This state module was designed to handle connections to a Blue Coat SSL Visibility device. This
 module relies on the bluecoat_sslv proxy module to interface with the device.
 
@@ -19,7 +20,7 @@ module relies on the bluecoat_sslv proxy module to interface with the device.
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import Salt Libs
