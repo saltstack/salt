@@ -50,7 +50,7 @@ def set_value(file, element, value):
 
     .. code-block:: bash
 
-        salt '*' xml.set_value /tmp/test.xml "../element" "new value"
+        salt '*' xml.set_value /tmp/test.xml ".//element" "new value"
     '''
     try:
         root = ET.parse(file)
