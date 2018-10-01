@@ -15,9 +15,7 @@ from tests.support.helpers import destructiveTest, flaky
 from tests.support.paths import FILES
 
 # Import Salt Libs
-import salt.modules.vault as vault
 import salt.utils.path
-import salt.utils.stringutils
 
 import logging
 log = logging.getLogger(__name__)
