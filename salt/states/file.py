@@ -5215,7 +5215,9 @@ def append(name,
     check_res, check_msg = _check_file(name)
     if not check_res:
         # Try to create the file
-        touch(name, makedirs=makedirs)
+        touch_ret = touch(name, makedirs=makedirs)
+        if __opts__['test']:
+            return touch_ret
         retry_res, retry_msg = _check_file(name)
         if not retry_res:
             return _error(ret, check_msg)
@@ -5496,7 +5498,9 @@ def prepend(name,
     check_res, check_msg = _check_file(name)
     if not check_res:
         # Try to create the file
-        touch(name, makedirs=makedirs)
+        touch_ret = touch(name, makedirs=makedirs)
+        if __opts__['test']:
+            return touch_ret
         retry_res, retry_msg = _check_file(name)
         if not retry_res:
             return _error(ret, check_msg)
