@@ -215,7 +215,7 @@ def get_convergence_plans(project_dir):
 
     .. code-block:: bash
 
-    salt 'myminion' dockercomposeng.get_convergence_plans /path/to/project/dir
+        salt 'myminion' dockercomposeng.get_convergence_plans /path/to/project/dir
     '''
     project = __get_project(project_dir)
     return __get_convergence_plans(project)
@@ -233,7 +233,7 @@ def get_compose(project_dir):
 
     .. code-block:: bash
 
-    salt 'myminion' dockercomposeng.get_compose /path/to/project/dir
+        salt 'myminion' dockercomposeng.get_compose /path/to/project/dir
     '''
     content = __read_docker_compose(project_dir)
     project = __get_project(project_dir)
@@ -258,7 +258,7 @@ def restart(project_dir, *args, **project_options):
 
     .. code-block:: bash
 
-    salt 'myminion' dockercomposeng.restart /path/to/project/dir [foobar]
+        salt 'myminion' dockercomposeng.restart /path/to/project/dir [foobar]
     '''
     cmd = __docker_compose(project_dir, **project_options)
 
@@ -284,7 +284,7 @@ def stop(project_dir, *args, **project_options):
 
     .. code-block:: bash
 
-    salt 'myminion' dockercomposeng.stop /path/to/project/dir [foobar]
+        salt 'myminion' dockercomposeng.stop /path/to/project/dir [foobar]
     '''
     cmd = __docker_compose(project_dir, **project_options)
 
@@ -311,7 +311,7 @@ def pause(project_dir, *args, **project_options):
 
     .. code-block:: bash
 
-    salt 'myminion' dockercomposeng.pause /path/to/project/dir [foobar]
+        salt 'myminion' dockercomposeng.pause /path/to/project/dir [foobar]
     '''
     cmd = __docker_compose(project_dir, **project_options)
     args = list(args)
@@ -338,7 +338,7 @@ def unpause(project_dir, *args, **project_options):
 
     .. code-block:: bash
 
-    salt 'myminion' dockercomposeng.unpause /path/to/project/dir [foobar]
+        salt 'myminion' dockercomposeng.unpause /path/to/project/dir [foobar]
     '''
     cmd = __docker_compose(project_dir, **project_options)
 
@@ -366,7 +366,7 @@ def start(project_dir, *args, **project_options):
 
     .. code-block:: bash
 
-    salt 'myminion' dockercomposeng.start /path/to/project/dir [foobar]
+        salt 'myminion' dockercomposeng.start /path/to/project/dir [foobar]
     '''
     cmd = __docker_compose(project_dir, **project_options)
 
@@ -393,7 +393,7 @@ def kill(project_dir, *args, **project_options):
 
     .. code-block:: bash
 
-    salt 'myminion' dockercomposeng.kill /path/to/project/dir [foobar]
+        salt 'myminion' dockercomposeng.kill /path/to/project/dir [foobar]
     '''
     cmd = __docker_compose(project_dir, **project_options)
     args = list(args)
@@ -420,7 +420,7 @@ def up(project_dir, *args, **project_options):
 
     .. code-block:: bash
 
-    salt 'myminion' dockercomposeng.up /path/to/project/dir [foobar]
+        salt 'myminion' dockercomposeng.up /path/to/project/dir [foobar]
     '''
     cmd = __docker_compose(project_dir, **project_options)
 
@@ -448,7 +448,7 @@ def config(project_dir, *args, **project_options):
 
     .. code-block:: bash
 
-    salt 'myminion' dockercomposeng.config /path/to/project/dir [foobar]
+        salt 'myminion' dockercomposeng.config /path/to/project/dir [foobar]
     '''
     cmd = __docker_compose(project_dir, True)
 
@@ -479,7 +479,7 @@ def down(project_dir, *args, **project_options):
 
     .. code-block:: bash
 
-    salt 'myminion' dockercomposeng.down /path/to/project/dir [foobar]
+        salt 'myminion' dockercomposeng.down /path/to/project/dir [foobar]
     '''
     cmd = __docker_compose(project_dir, **project_options)
     args = list(args)
@@ -502,7 +502,7 @@ def pull(path, service_names=None):
 
     .. code-block:: bash
 
-    salt 'myminion' dockercomposeng.pull /path/to/project/dir [service_names]
+        salt 'myminion' dockercomposeng.pull /path/to/project/dir [service_names]
     '''
     project = __get_project(path)
 
@@ -532,7 +532,7 @@ def rm(project_dir, service_names=None):
 
     .. code-block:: bash
 
-    salt 'myminion' dockercomposeng.rm /path/to/project/dir [service_names]
+        salt 'myminion' dockercomposeng.rm /path/to/project/dir [service_names]
     '''
     project = __get_project(project_dir)
     if isinstance(project, dict):
@@ -560,7 +560,7 @@ def build(project_dir, service_names=None):
 
     .. code-block:: bash
 
-    salt 'myminion' dockercomposeng.build /path/to/project/dir [service_names]
+        salt 'myminion' dockercomposeng.build /path/to/project/dir [service_names]
     '''
     project = __get_project(project_dir)
     if isinstance(project, dict):
@@ -583,7 +583,7 @@ def ps(project_dir):
 
     .. code-block:: bash
 
-    salt 'myminion' dockercomposeng.ps /path/to/project/dir
+        salt 'myminion' dockercomposeng.ps /path/to/project/dir
     '''
     project = __get_project(project_dir)
 
