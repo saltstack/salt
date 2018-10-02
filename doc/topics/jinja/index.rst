@@ -177,7 +177,7 @@ Saltstack extends `builtin filters`_ with these custom filters:
 
 Converts any time related object into a time based string. It requires valid
 strftime directives. An exhaustive list can be found :ref:`here
-<strftime-strptime-behavior>` in the Python documentation.
+<python:strftime-strptime-behavior>` in the Python documentation.
 
 .. code-block:: jinja
 
@@ -396,6 +396,29 @@ Returns:
 .. code-block:: text
 
   None
+
+
+.. jinja_ref:: regex_replace
+
+``regex_replace``
+-----------------
+
+.. versionadded:: 2017.7.0
+
+Searches for a pattern and replaces with a sequence of characters.
+
+Example:
+
+.. code-block:: jinja
+
+    {% set my_text = 'yes, this is a TEST' %}
+    {{ my_text | regex_replace(' ([a-z])', '__\\1', ignorecase=True) }}
+
+Returns:
+
+.. code-block:: text
+
+    yes,__this__is__a__TEST
 
 
 .. jinja_ref:: uuid
@@ -1148,6 +1171,40 @@ Returns:
     }'
   }
 
+
+.. jinja_ref:: traverse
+
+``traverse``
+------------
+
+.. versionadded:: 2018.3.3
+
+Traverse a dict or list using a colon-delimited target string.
+The target 'foo:bar:0' will return data['foo']['bar'][0] if this value exists,
+and will otherwise return the provided default value.
+
+Example:
+
+.. code-block:: jinja
+
+  {{ {'a1': {'b1': {'c1': 'foo'}}, 'a2': 'bar'} | traverse('a1:b1', 'default') }}
+
+Returns:
+
+.. code-block:: python
+
+  {'c1': 'foo'}
+
+.. code-block:: jinja
+
+  {{ {'a1': {'b1': {'c1': 'foo'}}, 'a2': 'bar'} | traverse('a2:b2', 'default') }}
+
+Returns:
+
+.. code-block:: python
+
+  'default'
+
 .. _`builtin filters`: http://jinja.pocoo.org/docs/templates/#builtin-filters
 .. _`timelib`: https://github.com/pediapress/timelib/
 
@@ -1401,6 +1458,9 @@ Example:
 Return the ip resolved by dns, but do not exit on failure, only raise an
 exception. Obeys system preference for IPv4/6 address resolution.
 
+This function tries to connect to the address/port before considering it
+valid and therefor requires a port to test. The default port tested is 80.
+
 Example:
 
 .. code-block:: jinja
@@ -1415,6 +1475,15 @@ Returns:
 
 File filters
 ------------
+
+.. jinja_ref:: connection_check
+
+``connection_check``
+--------------------
+
+.. versionadded:: Neon
+
+Return the IP resolved by DNS. This is an alias of ``dns_check``.
 
 .. jinja_ref:: is_text_file
 

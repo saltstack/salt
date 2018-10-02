@@ -27,6 +27,7 @@ import string
 import subprocess
 import sys
 import tempfile
+import textwrap
 import threading
 import time
 import tornado.ioloop
@@ -58,6 +59,7 @@ from tests.support.paths import FILES, TMP
 # Import Salt libs
 import salt.utils.files
 import salt.utils.platform
+import salt.utils.stringutils
 
 if salt.utils.platform.is_windows():
     import salt.utils.win_functions
@@ -78,7 +80,10 @@ def no_symlinks():
         return not HAS_SYMLINKS
     output = ''
     try:
-        output = subprocess.check_output('git config --get core.symlinks', shell=True)
+        output = subprocess.Popen(
+            ['git', 'config', '--get', 'core.symlinks'],
+            cwd=TMP,
+            stdout=subprocess.PIPE).communicate()[0]
     except OSError as exc:
         if exc.errno != errno.ENOENT:
             raise
@@ -203,10 +208,13 @@ def flaky(caller=None, condition=True):
             try:
                 return caller(cls)
             except Exception as exc:
-                if attempt == 4:
+                if attempt >= 3:
                     raise exc
                 backoff_time = attempt ** 2
-                log.info('Found Exception. Waiting %s seconds to retry.', backoff_time)
+                log.info(
+                    'Found Exception. Waiting %s seconds to retry.',
+                    backoff_time
+                )
                 time.sleep(backoff_time)
         return cls
     return wrap
@@ -618,7 +626,7 @@ def requires_network(only_local_network=False):
     return decorator
 
 
-def with_system_user(username, on_existing='delete', delete=True, password=None):
+def with_system_user(username, on_existing='delete', delete=True, password=None, groups=None):
     '''
     Create and optionally destroy a system user to be used within a test
     case. The system user is created using the ``user`` salt module.
@@ -651,7 +659,7 @@ def with_system_user(username, on_existing='delete', delete=True, password=None)
 
             # Let's add the user to the system.
             log.debug('Creating system user {0!r}'.format(username))
-            kwargs = {'timeout': 60}
+            kwargs = {'timeout': 60, 'groups': groups}
             if salt.utils.platform.is_windows():
                 kwargs.update({'password': password})
             create_user = cls.run_function('user.add', [username], **kwargs)
@@ -685,7 +693,7 @@ def with_system_user(username, on_existing='delete', delete=True, password=None)
                             username
                         )
                     )
-                    create_user = cls.run_function('user.add', [username])
+                    create_user = cls.run_function('user.add', [username], **kwargs)
                     if not create_user:
                         cls.skipTest(
                             'A user named {0!r} already existed, was deleted '
@@ -1113,7 +1121,7 @@ def requires_salt_modules(*names):
                 )
 
             for name in names:
-                if name not in cls.run_function('sys.doc'):
+                if name not in cls.run_function('sys.doc', [name]):
                     cls.skipTest(
                         'Salt module {0!r} is not available'.format(name)
                     )
@@ -1604,3 +1612,17 @@ def this_user():
     if salt.utils.platform.is_windows():
         return salt.utils.win_functions.get_current_user(with_domain=False)
     return pwd.getpwuid(os.getuid())[0]
+
+
+def dedent(text, linesep=os.linesep):
+    '''
+    A wrapper around textwrap.dedent that also sets line endings.
+    '''
+    linesep = salt.utils.stringutils.to_unicode(linesep)
+    unicode_text = textwrap.dedent(salt.utils.stringutils.to_unicode(text))
+    clean_text = linesep.join(unicode_text.splitlines())
+    if unicode_text.endswith(u'\n'):
+        clean_text += linesep
+    if not isinstance(text, six.text_type):
+        return salt.utils.stringutils.to_bytes(clean_text)
+    return clean_text

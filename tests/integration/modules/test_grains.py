@@ -12,7 +12,7 @@ import time
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
-from tests.support.helpers import destructiveTest
+from tests.support.helpers import destructiveTest, flaky
 
 log = logging.getLogger(__name__)
 
@@ -165,17 +165,25 @@ class GrainsAppendTestCase(ModuleCase):
 
     def test_grains_append_val_already_present(self):
         '''
-        Tests the return of a grains.append call when the value is already present in the grains list.
+        Tests the return of a grains.append call when the value is already
+        present in the grains list.
         '''
-        messaging = 'The val {0} was already in the list salttesting-grain-key'.format(self.GRAIN_VAL)
+        msg = 'The val {0} was already in the list ' \
+              'salttesting-grain-key'.format(self.GRAIN_VAL)
 
         # First, make sure the test grain is present
         self.run_function('grains.append', [self.GRAIN_KEY, self.GRAIN_VAL])
 
         # Now try to append again
         ret = self.run_function('grains.append', [self.GRAIN_KEY, self.GRAIN_VAL])
-        self.assertEqual(messaging, ret)
+        if not ret or isinstance(ret, dict):
+            # Sleep for a bit, sometimes the second "append" runs too quickly
+            time.sleep(5)
+            ret = self.run_function('grains.append', [self.GRAIN_KEY, self.GRAIN_VAL])
 
+        assert msg == ret
+
+    @flaky
     def test_grains_append_val_is_list(self):
         '''
         Tests the return of a grains.append call when val is passed in as a list.

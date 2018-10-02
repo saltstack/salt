@@ -34,6 +34,12 @@ def clean_kwargs(**kwargs):
     functions. These keys are useful for tracking what was used to invoke
     the function call, but they may not be desirable to have if passing the
     kwargs forward wholesale.
+
+    Usage example:
+
+    .. code-block:: python
+
+        kwargs = __utils__['args.clean_kwargs'](**kwargs)
     '''
     ret = {}
     for key, val in six.iteritems(kwargs):

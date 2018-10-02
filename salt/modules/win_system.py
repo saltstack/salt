@@ -304,7 +304,7 @@ def shutdown(message=None, timeout=5, force_close=True, reboot=False,  # pylint:
                                         force_close, reboot)
         return True
     except pywintypes.error as exc:
-        (number, context, message) = exc
+        (number, context, message) = exc.args
         log.error('Failed to shutdown the system')
         log.error('nbr: %s', number)
         log.error('ctx: %s', context)
@@ -347,7 +347,7 @@ def shutdown_abort():
         win32api.AbortSystemShutdown('127.0.0.1')
         return True
     except pywintypes.error as exc:
-        (number, context, message) = exc
+        (number, context, message) = exc.args
         log.error('Failed to abort system shutdown')
         log.error('nbr: %s', number)
         log.error('ctx: %s', context)
@@ -486,7 +486,7 @@ def set_computer_desc(desc=None):
     try:
         win32net.NetServerSetInfo(None, 101, system_info)
     except win32net.error as exc:
-        (number, context, message) = exc
+        (number, context, message) = exc.args
         log.error('Failed to update system')
         log.error('nbr: %s', number)
         log.error('ctx: %s', context)
@@ -1019,7 +1019,7 @@ def set_system_date_time(years=None,
     try:
         date_time = win32api.GetLocalTime()
     except win32api.error as exc:
-        (number, context, message) = exc
+        (number, context, message) = exc.args
         log.error('Failed to get local time')
         log.error('nbr: %s', number)
         log.error('ctx: %s', context)
@@ -1174,17 +1174,15 @@ def get_pending_component_servicing():
 
         salt '*' system.get_pending_component_servicing
     '''
-    vname = '(Default)'
     key = r'SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\RebootPending'
 
-    reg_ret = __salt__['reg.read_value']('HKLM', key, vname)
-
     # So long as the registry key exists, a reboot is pending.
-    if reg_ret['success']:
-        log.debug('Found key: %s', key)
+    if __utils__['reg.key_exists']('HKLM', key):
+        log.debug('Key exists: %s', key)
         return True
     else:
-        log.debug('Unable to access key: %s', key)
+        log.debug('Key does not exist: %s', key)
+
     return False
 
 
@@ -1205,29 +1203,24 @@ def get_pending_domain_join():
 
         salt '*' system.get_pending_domain_join
     '''
-    vname = '(Default)'
     base_key = r'SYSTEM\CurrentControlSet\Services\Netlogon'
     avoid_key = r'{0}\AvoidSpnSet'.format(base_key)
     join_key = r'{0}\JoinDomain'.format(base_key)
 
     # If either the avoid_key or join_key is present,
     # then there is a reboot pending.
-
-    avoid_reg_ret = __salt__['reg.read_value']('HKLM', avoid_key, vname)
-
-    if avoid_reg_ret['success']:
-        log.debug('Found key: %s', avoid_key)
+    if __utils__['reg.key_exists']('HKLM', avoid_key):
+        log.debug('Key exists: %s', avoid_key)
         return True
     else:
-        log.debug('Unable to access key: %s', avoid_key)
+        log.debug('Key does not exist: %s', avoid_key)
 
-    join_reg_ret = __salt__['reg.read_value']('HKLM', join_key, vname)
-
-    if join_reg_ret['success']:
-        log.debug('Found key: %s', join_key)
+    if __utils__['reg.key_exists']('HKLM', join_key):
+        log.debug('Key exists: %s', join_key)
         return True
     else:
-        log.debug('Unable to access key: %s', join_key)
+        log.debug('Key does not exist: %s', join_key)
+
     return False
 
 
@@ -1321,17 +1314,15 @@ def get_pending_update():
 
         salt '*' system.get_pending_update
     '''
-    vname = '(Default)'
     key = r'SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired'
 
-    reg_ret = __salt__['reg.read_value']('HKLM', key, vname)
-
     # So long as the registry key exists, a reboot is pending.
-    if reg_ret['success']:
-        log.debug('Found key: %s', key)
+    if __utils__['reg.key_exists']('HKLM', key):
+        log.debug('Key exists: %s', key)
         return True
     else:
-        log.debug('Unable to access key: %s', key)
+        log.debug('Key does not exist: %s', key)
+
     return False
 
 
@@ -1421,7 +1412,9 @@ def get_pending_reboot():
     '''
 
     # Order the checks for reboot pending in most to least likely.
-    checks = (get_pending_update, get_pending_file_rename, get_pending_servermanager,
+    checks = (get_pending_update,
+              get_pending_file_rename,
+              get_pending_servermanager,
               get_pending_component_servicing,
               get_reboot_required_witnessed,
               get_pending_computer_name,

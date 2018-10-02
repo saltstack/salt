@@ -29,18 +29,13 @@ from salt.ext.six.moves import zip  # pylint: disable=import-error,redefined-bui
 
 log = logging.getLogger(__name__)
 
-DMIDECODER = salt.utils.path.which_bin(['dmidecode', 'smbios'])
-
 
 def __virtual__():
     '''
     Only work when dmidecode is installed.
     '''
-    if DMIDECODER is None:
-        log.debug('SMBIOS: neither dmidecode nor smbios found!')
-        return (False, 'The smbios execution module failed to load: neither dmidecode nor smbios in the path.')
-    else:
-        return True
+    return (bool(salt.utils.path.which_bin(['dmidecode', 'smbios'])),
+            'The smbios execution module failed to load: neither dmidecode nor smbios in the path.')
 
 
 def get(string, clean=True):
@@ -86,16 +81,12 @@ def get(string, clean=True):
 
     val = _dmidecoder('-s {0}'.format(string)).strip()
 
-    # Sometimes dmidecode delivers comments in strings.
-    # Don't.
+    # Cleanup possible comments in strings.
     val = '\n'.join([v for v in val.split('\n') if not v.startswith('#')])
+    if val.startswith('/dev/mem') or clean and not _dmi_isclean(string, val):
+        val = None
 
-    # handle missing /dev/mem
-    if val.startswith('/dev/mem'):
-        return None
-
-    if not clean or _dmi_isclean(string, val):
-        return val
+    return val
 
 
 def records(rec_type=None, fields=None, clean=True):
@@ -280,8 +271,7 @@ def _dmi_cast(key, val, clean=True):
         else:
             try:
                 val = int(val)
-            # pylint: disable=bare-except
-            except:
+            except Exception:
                 pass
 
     return val
@@ -327,7 +317,11 @@ def _dmidecoder(args=None):
     '''
     Call DMIdecode
     '''
-    if args is None:
-        return salt.modules.cmdmod._run_quiet(DMIDECODER)
+    dmidecoder = salt.utils.path.which_bin(['dmidecode', 'smbios'])
+
+    if not args:
+        out = salt.modules.cmdmod._run_quiet(dmidecoder)
     else:
-        return salt.modules.cmdmod._run_quiet('{0} {1}'.format(DMIDECODER, args))
+        out = salt.modules.cmdmod._run_quiet('{0} {1}'.format(dmidecoder, args))
+
+    return out

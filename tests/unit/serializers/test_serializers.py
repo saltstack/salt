@@ -27,7 +27,7 @@ from salt.utils.odict import OrderedDict
 # Import test support libs
 from tests.support.helpers import flaky
 
-SKIP_MESSAGE = '%s is unavailable, do prerequisites have been met?'
+SKIP_MESSAGE = '%s is unavailable, have prerequisites been met?'
 
 
 @flaky(condition=six.PY3)
@@ -102,6 +102,7 @@ class TestSerializers(TestCase):
 
     @skipIf(not yaml.available, SKIP_MESSAGE % 'yaml')
     @skipIf(not yamlex.available, SKIP_MESSAGE % 'sls')
+    @skipIf(six.PY3, 'Flaky on Python 3.')
     def test_compare_sls_vs_yaml_with_jinja(self):
         tpl = '{{ data }}'
         env = jinja2.Environment()

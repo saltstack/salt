@@ -71,9 +71,9 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
     def setUp(self):
         super(StateModuleTest, self).setUp()
         destpath = os.path.join(FILES, 'file', 'base', 'testappend', 'firstif')
-        reline(destpath, destpath, force=True)
         destpath = os.path.join(FILES, 'file', 'base', 'testappend', 'secondif')
-        reline(destpath, destpath, force=True)
+        sls = self.run_function('saltutil.sync_modules')
+        assert isinstance(sls, list)
 
     def test_show_highstate(self):
         '''
@@ -311,6 +311,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
 
         '''
         testfile = os.path.join(TMP, 'issue-1876')
+
         sls = self.run_function('state.sls', mods='issue-1876')
         self.assertIn(
             'ID \'{0}\' in SLS \'issue-1876\' contains multiple state '
@@ -1871,7 +1872,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
 
         for key, val in ret.items():
             self.assertEqual(val['comment'], comment)
-            self.assertEqual(val['changes'], {})
+            self.assertEqual(val['changes'], {'newfile': testfile})
 
     def test_state_sls_id_test_state_test_post_run(self):
         '''
@@ -1904,7 +1905,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertEqual(
                 val['comment'],
                 'The file {0} is set to be changed'.format(file_name))
-            self.assertEqual(val['changes'], {})
+            self.assertEqual(val['changes'], {'newfile': file_name})
 
     def test_state_sls_id_test_true_post_run(self):
         '''
@@ -1954,29 +1955,28 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         # command in the state. If the comment reads "unless condition is true", or similar,
         # then the unless state run bailed out after the first unless command succeeded,
         # which is the bug we're regression testing for.
-        _expected = {'file_|-unless_false_onlyif_false_|-{0}/test.txt_|-managed'.format(TMP):
+        _expected = {'file_|-unless_false_onlyif_false_|-{0}{1}test.txt_|-managed'.format(TMP, os.path.sep):
                      {'comment': 'onlyif condition is false\nunless condition is false',
-                      'name': '{0}/test.txt'.format(TMP),
+                      'name': '{0}{1}test.txt'.format(TMP, os.path.sep),
                       'skip_watch': True,
                       'changes': {},
                       'result': True},
-                     'file_|-unless_false_onlyif_true_|-{0}/test.txt_|-managed'.format(TMP):
+                     'file_|-unless_false_onlyif_true_|-{0}{1}test.txt_|-managed'.format(TMP, os.path.sep):
                      {'comment': 'Empty file',
-                      'pchanges': {},
-                      'name': '{0}/test.txt'.format(TMP),
+                      'name': '{0}{1}test.txt'.format(TMP, os.path.sep),
                       'start_time': '18:10:20.341753',
                       'result': True,
-                      'changes': {'new': 'file {0}/test.txt created'.format(TMP)}},
-                     'file_|-unless_true_onlyif_false_|-{0}/test.txt_|-managed'.format(TMP):
+                      'changes': {'new': 'file {0}{1}test.txt created'.format(TMP, os.path.sep)}},
+                     'file_|-unless_true_onlyif_false_|-{0}{1}test.txt_|-managed'.format(TMP, os.path.sep):
                      {'comment': 'onlyif condition is false\nunless condition is true',
-                      'name': '{0}/test.txt'.format(TMP),
+                      'name': '{0}{1}test.txt'.format(TMP, os.path.sep),
                       'start_time': '18:10:22.936446',
                       'skip_watch': True,
                       'changes': {},
                       'result': True},
-                     'file_|-unless_true_onlyif_true_|-{0}/test.txt_|-managed'.format(TMP):
+                     'file_|-unless_true_onlyif_true_|-{0}{1}test.txt_|-managed'.format(TMP, os.path.sep):
                      {'comment': 'onlyif condition is true\nunless condition is true',
-                      'name': '{0}/test.txt'.format(TMP),
+                      'name': '{0}{1}test.txt'.format(TMP, os.path.sep),
                       'skip_watch': True,
                       'changes': {},
                       'result': True}}
@@ -1992,6 +1992,23 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
 
         _expected = "cmd_|-echo1_|-echo 'This is Æ test!'_|-run"
         self.assertIn(_expected, ret)
+
+    def test_state_sls_unicode_characters_cmd_output(self):
+        '''
+        test the output from running and echo command with non-ascii
+        characters.
+        '''
+        ret = self.run_function('state.sls', ['issue-46672-a'])
+        key = list(ret.keys())[0]
+        log.debug('== ret %s ==', type(ret))
+        _expected = 'This is Æ test!'
+        if salt.utils.platform.is_windows():
+            # Windows cmd.exe will mangle the output using cmd's codepage.
+            if six.PY2:
+                _expected = "'This is A+ test!'"
+            else:
+                _expected = "'This is ’ test!'"
+        self.assertEqual(_expected, ret[key]['changes']['stdout'])
 
     def tearDown(self):
         nonbase_file = os.path.join(TMP, 'nonbase_env')
@@ -2013,3 +2030,19 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         state_file = os.path.join(TMP, 'test.txt')
         if os.path.isfile(state_file):
             os.remove(state_file)
+
+    def test_state_sls_integer_name(self):
+        '''
+        This tests the case where the state file is named
+        only with integers
+        '''
+        state_run = self.run_function(
+            'state.sls',
+            mods='12345'
+        )
+
+        state_id = 'test_|-always-passes_|-always-passes_|-succeed_without_changes'
+        self.assertIn(state_id, state_run)
+        self.assertEqual(state_run[state_id]['comment'],
+                         'Success!')
+        self.assertTrue(state_run[state_id]['result'])

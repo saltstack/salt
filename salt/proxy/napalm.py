@@ -3,6 +3,8 @@
 NAPALM: Network Automation and Programmability Abstraction Layer with Multivendor support
 =========================================================================================
 
+.. versionadded:: 2016.11.0
+
 Proxy minion for managing network devices via NAPALM_ library.
 
 :codeauthor: Mircea Ulinic <mircea@cloudflare.com> & Jerome Fleury <jf@cloudflare.com>
@@ -132,7 +134,28 @@ Example using a user-specific library, extending NAPALM's capabilities, e.g. ``c
     - :mod:`SNMP configuration module <salt.modules.napalm_snmp>`
     - :mod:`Users configuration management <salt.modules.napalm_users>`
 
-.. versionadded:: 2016.11.0
+.. note::
+    Beginning with release codename Fluorine, any NAPALM command executed when
+    running under a NAPALM Proxy Minion supports the ``force_reconnect``
+    magic argument.
+
+    Proxy Minions generally establish a connection with the remote network
+    device at the time of the Minion startup and that connection is going to be
+    used forever.
+
+    If one would need execute a command on the device but connecting using
+    different parameters (due to various causes, e.g., unable to authenticate
+    the user specified in the Pillar as the authentication system - say
+    TACACS+ is not available, or the DNS resolver is currently down and would
+    like to temporarily use the IP address instead, etc.), it implies updating
+    the Pillar data and restarting the Proxy Minion process restart.
+    In particular cases like that, you can pass the ``force_reconnect=True``
+    keyword argument, together with the alternative connection details, to
+    enforce the command to be executed over a separate connection.
+
+    For example, if the usual command is ``salt '*' net.arp``, you can use the
+    following to connect using a different username instead:
+    ``salt '*' net.arp username=my-alt-usr force_reconnect=True``.
 '''
 
 from __future__ import absolute_import, print_function, unicode_literals

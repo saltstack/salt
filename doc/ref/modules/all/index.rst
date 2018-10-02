@@ -41,6 +41,7 @@ execution modules
     bcache
     beacons
     bigip
+    bluecoat_sslv
     bluez
     boto3_elasticache
     boto3_route53
@@ -87,6 +88,7 @@ execution modules
     chocolatey
     chronos
     cimc
+    ciscoconfparse_mod
     cisconso
     cloud
     cmdmod
@@ -153,6 +155,7 @@ execution modules
     glanceng
     glusterfs
     gnomedesktop
+    google_chat
     gpg
     grafana4
     grains
@@ -186,6 +189,7 @@ execution modules
     inspectlib.query
     inspector
     introspect
+    iosconfig
     ipmi
     ipset
     iptables
@@ -193,6 +197,7 @@ execution modules
     jboss7
     jboss7_cli
     jenkinsmod
+    jira_mod
     junos
     k8s
     kapacitor
@@ -270,9 +275,10 @@ execution modules
     namecheap_ns
     namecheap_ssl
     namecheap_users
-    napalm
     napalm_acl
     napalm_bgp
+    napalm_formula
+    napalm_mod
     napalm_network
     napalm_ntp
     napalm_probes
@@ -323,6 +329,7 @@ execution modules
     pcs
     pdbedit
     pecl
+    peeringdb
     pf
     philips_hue
     pillar
@@ -379,6 +386,7 @@ execution modules
     saltcloudmod
     saltutil
     schedule
+    scp_mod
     scsi
     sdb
     seed
@@ -430,7 +438,6 @@ execution modules
     system
     system_profiler
     systemd
-    template
     telegram
     telemetry
     temp
