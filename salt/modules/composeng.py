@@ -85,8 +85,10 @@ def __capture_stdout_stderr():
     finally:
         sys.stdout, sys.stderr = _stdout, _stderr
 
-        stdout and stdout.close()
-        stderr and stderr.close()
+        if stdout:
+            stdout.close()
+        if stderr:
+            stderr.close()
 
 
 def __catch_exception(*exceptions):
@@ -107,9 +109,10 @@ def __catch_exception(*exceptions):
             :param kwargs:
             :return:
             '''
-            for key in kwargs.keys():
-                if key in ['__pub_fun', '__pub_jid', '__pub_pid', '__pub_tgt', '__pub_user', '__pub_arg', '__pub_tgt_type', '__pub_ret']:
+            for key in ['__pub_fun', '__pub_jid', '__pub_pid', '__pub_tgt', '__pub_user', '__pub_arg', '__pub_tgt_type', '__pub_ret']:
+                if key in kwargs:
                     del kwargs[key]
+
             try:
                 return func(*args, **kwargs)
             except exceptions as e:
