@@ -29,10 +29,10 @@ log = logging.getLogger(__name__)
 def _batch_get_opts(
         tgt,
         fun,
-        tgt_type,
         batch,
         parent_opts,
         arg=(),
+        tgt_type='glob',
         ret='',
         kwarg=None,
         **kwargs):
