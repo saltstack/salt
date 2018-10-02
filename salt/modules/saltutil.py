@@ -17,6 +17,7 @@ import signal
 import sys
 import time
 import shutil
+import tornado.gen
 
 # Import 3rd-party libs
 # pylint: disable=import-error
@@ -75,17 +76,17 @@ __proxyenabled__ = ['*']
 log = logging.getLogger(__name__)
 
 
+@tornado.gen.coroutine
 def _get_top_file_envs():
     '''
     Get all environments from the top file
     '''
-    try:
-        return __context__['saltutil._top_file_envs']
-    except KeyError:
+    if 'saltutil._top_file_envs' not in __context__:
         try:
+            log.debug('Calling HghState: %s', (__opts__, __pillar__))
             st_ = salt.state.HighState(__opts__,
                                        initial_pillar=__pillar__)
-            top = st_.get_top()
+            top = yield st_.get_top()
             if top:
                 envs = list(st_.top_matches(top).keys()) or 'base'
             else:
@@ -95,15 +96,17 @@ def _get_top_file_envs():
                 'Unable to render top file(s): {0}'.format(exc)
             )
         __context__['saltutil._top_file_envs'] = envs
-        return envs
+
+    raise tornado.gen.Return(__context__['saltutil._top_file_envs'])
 
 
+@tornado.gen.coroutine
 def _sync(form, saltenv=None, extmod_whitelist=None, extmod_blacklist=None):
     '''
     Sync the given directory in the given environment
     '''
     if saltenv is None:
-        saltenv = _get_top_file_envs()
+        saltenv = yield _get_top_file_envs()
     if isinstance(saltenv, six.string_types):
         saltenv = saltenv.split(',')
     ret, touched = salt.utils.extmods.sync(__opts__, form, saltenv=saltenv, extmod_whitelist=extmod_whitelist,
@@ -120,7 +123,7 @@ def _sync(form, saltenv=None, extmod_whitelist=None, extmod_blacklist=None):
             os.remove(os.path.join(__opts__['cachedir'], 'grains.cache.p'))
         except OSError:
             log.error('Could not remove grains cache!')
-    return ret
+    raise tornado.gen.Return(ret)
 
 
 def update(version=None):
@@ -189,6 +192,7 @@ def update(version=None):
     return ret
 
 
+@tornado.gen.coroutine
 def sync_beacons(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blacklist=None):
     '''
     .. versionadded:: 2015.5.1
@@ -222,12 +226,13 @@ def sync_beacons(saltenv=None, refresh=True, extmod_whitelist=None, extmod_black
         salt '*' saltutil.sync_beacons saltenv=dev
         salt '*' saltutil.sync_beacons saltenv=base,dev
     '''
-    ret = _sync('beacons', saltenv, extmod_whitelist, extmod_blacklist)
+    ret = yield _sync('beacons', saltenv, extmod_whitelist, extmod_blacklist)
     if refresh:
         refresh_beacons()
-    return ret
+    raise tornado.gen.Return(ret)
 
 
+@tornado.gen.coroutine
 def sync_sdb(saltenv=None, extmod_whitelist=None, extmod_blacklist=None):
     '''
     .. versionadded:: 2015.5.8,2015.8.3
@@ -260,10 +265,11 @@ def sync_sdb(saltenv=None, extmod_whitelist=None, extmod_blacklist=None):
         salt '*' saltutil.sync_sdb saltenv=dev
         salt '*' saltutil.sync_sdb saltenv=base,dev
     '''
-    ret = _sync('sdb', saltenv, extmod_whitelist, extmod_blacklist)
-    return ret
+    ret = yield _sync('sdb', saltenv, extmod_whitelist, extmod_blacklist)
+    raise tornado.gen.Return(ret)
 
 
+@tornado.gen.coroutine
 def sync_modules(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blacklist=None):
     '''
     .. versionadded:: 0.10.0
@@ -314,12 +320,13 @@ def sync_modules(saltenv=None, refresh=True, extmod_whitelist=None, extmod_black
         salt '*' saltutil.sync_modules saltenv=dev
         salt '*' saltutil.sync_modules saltenv=base,dev
     '''
-    ret = _sync('modules', saltenv, extmod_whitelist, extmod_blacklist)
+    ret = yield _sync('modules', saltenv, extmod_whitelist, extmod_blacklist)
     if refresh:
         refresh_modules()
-    return ret
+    raise tornado.gen.Return(ret)
 
 
+@tornado.gen.coroutine
 def sync_states(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blacklist=None):
     '''
     .. versionadded:: 0.10.0
@@ -353,10 +360,10 @@ def sync_states(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blackl
         salt '*' saltutil.sync_states saltenv=dev
         salt '*' saltutil.sync_states saltenv=base,dev
     '''
-    ret = _sync('states', saltenv, extmod_whitelist, extmod_blacklist)
+    ret = yield _sync('states', saltenv, extmod_whitelist, extmod_blacklist)
     if refresh:
         refresh_modules()
-    return ret
+    raise tornado.gen.Return(ret)
 
 
 def refresh_grains(**kwargs):
@@ -392,6 +399,7 @@ def refresh_grains(**kwargs):
     return True
 
 
+@tornado.gen.coroutine
 def sync_grains(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blacklist=None):
     '''
     .. versionadded:: 0.10.0
@@ -426,13 +434,14 @@ def sync_grains(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blackl
         salt '*' saltutil.sync_grains saltenv=dev
         salt '*' saltutil.sync_grains saltenv=base,dev
     '''
-    ret = _sync('grains', saltenv, extmod_whitelist, extmod_blacklist)
+    ret = yield _sync('grains', saltenv, extmod_whitelist, extmod_blacklist)
     if refresh:
         refresh_modules()
         refresh_pillar()
-    return ret
+    raise tornado.gen.Return(ret)
 
 
+@tornado.gen.coroutine
 def sync_renderers(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blacklist=None):
     '''
     .. versionadded:: 0.10.0
@@ -467,12 +476,13 @@ def sync_renderers(saltenv=None, refresh=True, extmod_whitelist=None, extmod_bla
         salt '*' saltutil.sync_renderers saltenv=dev
         salt '*' saltutil.sync_renderers saltenv=base,dev
     '''
-    ret = _sync('renderers', saltenv, extmod_whitelist, extmod_blacklist)
+    ret = yield _sync('renderers', saltenv, extmod_whitelist, extmod_blacklist)
     if refresh:
         refresh_modules()
-    return ret
+    raise tornado.gen.Return(ret)
 
 
+@tornado.gen.coroutine
 def sync_returners(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blacklist=None):
     '''
     .. versionadded:: 0.10.0
@@ -505,12 +515,13 @@ def sync_returners(saltenv=None, refresh=True, extmod_whitelist=None, extmod_bla
         salt '*' saltutil.sync_returners
         salt '*' saltutil.sync_returners saltenv=dev
     '''
-    ret = _sync('returners', saltenv, extmod_whitelist, extmod_blacklist)
+    ret = yield _sync('returners', saltenv, extmod_whitelist, extmod_blacklist)
     if refresh:
         refresh_modules()
-    return ret
+    raise tornado.gen.Return(ret)
 
 
+@tornado.gen.coroutine
 def sync_proxymodules(saltenv=None, refresh=False, extmod_whitelist=None, extmod_blacklist=None):
     '''
     .. versionadded:: 2015.8.2
@@ -544,12 +555,13 @@ def sync_proxymodules(saltenv=None, refresh=False, extmod_whitelist=None, extmod
         salt '*' saltutil.sync_proxymodules saltenv=dev
         salt '*' saltutil.sync_proxymodules saltenv=base,dev
     '''
-    ret = _sync('proxy', saltenv, extmod_whitelist, extmod_blacklist)
+    ret = yield _sync('proxy', saltenv, extmod_whitelist, extmod_blacklist)
     if refresh:
         refresh_modules()
-    return ret
+    raise tornado.gen.Return(ret)
 
 
+@tornado.gen.coroutine
 def sync_matchers(saltenv=None, refresh=False, extmod_whitelist=None, extmod_blacklist=None):
     '''
     .. versionadded:: Flourine
@@ -582,12 +594,13 @@ def sync_matchers(saltenv=None, refresh=False, extmod_whitelist=None, extmod_bla
         salt '*' saltutil.sync_matchers
         salt '*' saltutil.sync_matchers saltenv=base,dev
     '''
-    ret = _sync('matchers', saltenv, extmod_whitelist, extmod_blacklist)
+    ret = yield _sync('matchers', saltenv, extmod_whitelist, extmod_blacklist)
     if refresh:
         refresh_modules()
-    return ret
+    raise tornado.gen.Return(ret)
 
 
+@tornado.gen.coroutine
 def sync_engines(saltenv=None, refresh=False, extmod_whitelist=None, extmod_blacklist=None):
     '''
     .. versionadded:: 2016.3.0
@@ -620,12 +633,13 @@ def sync_engines(saltenv=None, refresh=False, extmod_whitelist=None, extmod_blac
         salt '*' saltutil.sync_engines
         salt '*' saltutil.sync_engines saltenv=base,dev
     '''
-    ret = _sync('engines', saltenv, extmod_whitelist, extmod_blacklist)
+    ret = yield _sync('engines', saltenv, extmod_whitelist, extmod_blacklist)
     if refresh:
         refresh_modules()
-    return ret
+    raise tornado.gen.Return(ret)
 
 
+@tornado.gen.coroutine
 def sync_thorium(saltenv=None, refresh=False, extmod_whitelist=None, extmod_blacklist=None):
     '''
     .. versionadded:: 2018.3.0
@@ -658,12 +672,13 @@ def sync_thorium(saltenv=None, refresh=False, extmod_whitelist=None, extmod_blac
         salt '*' saltutil.sync_thorium
         salt '*' saltutil.sync_thorium saltenv=base,dev
     '''
-    ret = _sync('thorium', saltenv, extmod_whitelist, extmod_blacklist)
+    ret = yield _sync('thorium', saltenv, extmod_whitelist, extmod_blacklist)
     if refresh:
         refresh_modules()
-    return ret
+    raise tornado.gen.Return(ret)
 
 
+@tornado.gen.coroutine
 def sync_output(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blacklist=None):
     '''
     Sync outputters from ``salt://_output`` to the minion
@@ -695,15 +710,16 @@ def sync_output(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blackl
         salt '*' saltutil.sync_output saltenv=dev
         salt '*' saltutil.sync_output saltenv=base,dev
     '''
-    ret = _sync('output', saltenv, extmod_whitelist, extmod_blacklist)
+    ret = yield _sync('output', saltenv, extmod_whitelist, extmod_blacklist)
     if refresh:
         refresh_modules()
-    return ret
+    raise tornado.gen.Return(ret)
 
 
 sync_outputters = salt.utils.functools.alias_function(sync_output, 'sync_outputters')
 
 
+@tornado.gen.coroutine
 def sync_clouds(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blacklist=None):
     '''
     .. versionadded:: 2017.7.0
@@ -733,12 +749,13 @@ def sync_clouds(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blackl
         salt '*' saltutil.sync_clouds saltenv=dev
         salt '*' saltutil.sync_clouds saltenv=base,dev
     '''
-    ret = _sync('clouds', saltenv, extmod_whitelist, extmod_blacklist)
+    ret = yield _sync('clouds', saltenv, extmod_whitelist, extmod_blacklist)
     if refresh:
         refresh_modules()
-    return ret
+    raise tornado.gen.Return(ret)
 
 
+@tornado.gen.coroutine
 def sync_utils(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blacklist=None):
     '''
     .. versionadded:: 2014.7.0
@@ -772,12 +789,13 @@ def sync_utils(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blackli
         salt '*' saltutil.sync_utils saltenv=dev
         salt '*' saltutil.sync_utils saltenv=base,dev
     '''
-    ret = _sync('utils', saltenv, extmod_whitelist, extmod_blacklist)
+    ret = yield _sync('utils', saltenv, extmod_whitelist, extmod_blacklist)
     if refresh:
         refresh_modules()
-    return ret
+    raise tornado.gen.Return(ret)
 
 
+@tornado.gen.coroutine
 def sync_serializers(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blacklist=None):
     '''
     .. versionadded:: Fluorine
@@ -811,10 +829,10 @@ def sync_serializers(saltenv=None, refresh=True, extmod_whitelist=None, extmod_b
         salt '*' saltutil.sync_serializers saltenv=dev
         salt '*' saltutil.sync_serializers saltenv=base,dev
     '''
-    ret = _sync('serializers', saltenv, extmod_whitelist, extmod_blacklist)
+    ret = yield _sync('serializers', saltenv, extmod_whitelist, extmod_blacklist)
     if refresh:
         refresh_modules()
-    return ret
+    raise tornado.gen.Return(ret)
 
 
 def list_extmods():
@@ -841,6 +859,7 @@ def list_extmods():
     return ret
 
 
+@tornado.gen.coroutine
 def sync_log_handlers(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blacklist=None):
     '''
     .. versionadded:: 2015.8.0
@@ -874,12 +893,13 @@ def sync_log_handlers(saltenv=None, refresh=True, extmod_whitelist=None, extmod_
         salt '*' saltutil.sync_log_handlers saltenv=dev
         salt '*' saltutil.sync_log_handlers saltenv=base,dev
     '''
-    ret = _sync('log_handlers', saltenv, extmod_whitelist, extmod_blacklist)
+    ret = yield _sync('log_handlers', saltenv, extmod_whitelist, extmod_blacklist)
     if refresh:
         refresh_modules()
-    return ret
+    raise tornado.gen.Return(ret)
 
 
+@tornado.gen.coroutine
 def sync_pillar(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blacklist=None):
     '''
     .. versionadded:: 2015.8.11,2016.3.2
@@ -914,13 +934,14 @@ def sync_pillar(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blackl
         raise CommandExecutionError(
             'Pillar modules can only be synced to masterless minions'
         )
-    ret = _sync('pillar', saltenv, extmod_whitelist, extmod_blacklist)
+    ret = yield _sync('pillar', saltenv, extmod_whitelist, extmod_blacklist)
     if refresh:
         refresh_modules()
         refresh_pillar()
-    return ret
+    raise tornado.gen.Return(ret)
 
 
+@tornado.gen.coroutine
 def sync_all(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blacklist=None):
     '''
     .. versionchanged:: 2015.8.11,2016.3.2
@@ -970,28 +991,28 @@ def sync_all(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blacklist
     '''
     log.debug('Syncing all')
     ret = {}
-    ret['clouds'] = sync_clouds(saltenv, False, extmod_whitelist, extmod_blacklist)
-    ret['beacons'] = sync_beacons(saltenv, False, extmod_whitelist, extmod_blacklist)
-    ret['modules'] = sync_modules(saltenv, False, extmod_whitelist, extmod_blacklist)
-    ret['states'] = sync_states(saltenv, False, extmod_whitelist, extmod_blacklist)
-    ret['sdb'] = sync_sdb(saltenv, extmod_whitelist, extmod_blacklist)
-    ret['grains'] = sync_grains(saltenv, False, extmod_whitelist, extmod_blacklist)
-    ret['renderers'] = sync_renderers(saltenv, False, extmod_whitelist, extmod_blacklist)
-    ret['returners'] = sync_returners(saltenv, False, extmod_whitelist, extmod_blacklist)
-    ret['output'] = sync_output(saltenv, False, extmod_whitelist, extmod_blacklist)
-    ret['utils'] = sync_utils(saltenv, False, extmod_whitelist, extmod_blacklist)
-    ret['log_handlers'] = sync_log_handlers(saltenv, False, extmod_whitelist, extmod_blacklist)
-    ret['proxymodules'] = sync_proxymodules(saltenv, False, extmod_whitelist, extmod_blacklist)
-    ret['engines'] = sync_engines(saltenv, False, extmod_whitelist, extmod_blacklist)
-    ret['thorium'] = sync_thorium(saltenv, False, extmod_whitelist, extmod_blacklist)
-    ret['serializers'] = sync_serializers(saltenv, False, extmod_whitelist, extmod_blacklist)
-    ret['matchers'] = sync_matchers(saltenv, False, extmod_whitelist, extmod_blacklist)
+    ret['clouds'] = yield sync_clouds(saltenv, False, extmod_whitelist, extmod_blacklist)
+    ret['beacons'] = yield sync_beacons(saltenv, False, extmod_whitelist, extmod_blacklist)
+    ret['modules'] = yield sync_modules(saltenv, False, extmod_whitelist, extmod_blacklist)
+    ret['states'] = yield sync_states(saltenv, False, extmod_whitelist, extmod_blacklist)
+    ret['sdb'] = yield sync_sdb(saltenv, extmod_whitelist, extmod_blacklist)
+    ret['grains'] = yield sync_grains(saltenv, False, extmod_whitelist, extmod_blacklist)
+    ret['renderers'] = yield sync_renderers(saltenv, False, extmod_whitelist, extmod_blacklist)
+    ret['returners'] = yield sync_returners(saltenv, False, extmod_whitelist, extmod_blacklist)
+    ret['output'] = yield sync_output(saltenv, False, extmod_whitelist, extmod_blacklist)
+    ret['utils'] = yield sync_utils(saltenv, False, extmod_whitelist, extmod_blacklist)
+    ret['log_handlers'] = yield sync_log_handlers(saltenv, False, extmod_whitelist, extmod_blacklist)
+    ret['proxymodules'] = yield sync_proxymodules(saltenv, False, extmod_whitelist, extmod_blacklist)
+    ret['engines'] = yield sync_engines(saltenv, False, extmod_whitelist, extmod_blacklist)
+    ret['thorium'] = yield sync_thorium(saltenv, False, extmod_whitelist, extmod_blacklist)
+    ret['serializers'] = yield sync_serializers(saltenv, False, extmod_whitelist, extmod_blacklist)
+    ret['matchers'] = yield sync_matchers(saltenv, False, extmod_whitelist, extmod_blacklist)
     if __opts__['file_client'] == 'local':
-        ret['pillar'] = sync_pillar(saltenv, False, extmod_whitelist, extmod_blacklist)
+        ret['pillar'] = yield sync_pillar(saltenv, False, extmod_whitelist, extmod_blacklist)
     if refresh:
         refresh_modules()
         refresh_pillar()
-    return ret
+    raise tornado.gen.Return(ret)
 
 
 def refresh_beacons():

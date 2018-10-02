@@ -54,7 +54,6 @@ except ImportError:
 
 # Import salt libs
 import salt.crypt
-import salt.client
 import salt.config
 import salt.loader
 import salt.template
@@ -1832,12 +1831,6 @@ def deploy_script(host,
                 queuereturn = queue.get()
                 process.join()
                 if queuereturn and start_action:
-                    # client = salt.client.LocalClient(conf_file)
-                    # output = client.cmd_iter(
-                    # host, 'state.highstate', timeout=timeout
-                    # )
-                    # for line in output:
-                    #    print(line)
                     log.info('Executing %s on the salt-minion', start_action)
                     root_cmd(
                         'salt-call {0}'.format(start_action),

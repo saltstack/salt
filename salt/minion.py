@@ -1553,7 +1553,7 @@ class Minion(MinionBase):
         else:
             pull_uri = os.path.join(self.opts['sock_dir'], 'worker_pull.ipc')
         client = salt.transport.ipc.IPCMessageClient(pull_uri, singleton=False)
-        yield client.send({'tag': 'minion_pub', 'data': data, 'connected': self.connected})
+        client.send({'tag': 'minion_pub', 'data': data, 'connected': self.connected})
         #multiprocessing_enabled = self.opts.get('multiprocessing', True)
         #if multiprocessing_enabled:
             #if sys.platform.startswith('win'):
@@ -2386,7 +2386,7 @@ class Minion(MinionBase):
         '''
         if self.connected:
             log.debug('Forwarding master event tag=%s', data['tag'])
-            self._fire_master(data['data'], data['tag'], data['events'], data['pretag'])
+            self._fire_master(data['data'], data['tag'], data['events'], data['pretag'], sync=False)
 
     def _handle_tag_master_disconnected_failback(self, tag, data):
         '''
@@ -2660,7 +2660,7 @@ class Minion(MinionBase):
                 except Exception:
                     log.critical('The beacon errored: ', exc_info=True)
                 if beacons and self.connected:
-                    self._fire_master(events=beacons)
+                    self._fire_master(events=beacons, sync=False)
 
             new_periodic_callbacks['beacons'] = tornado.ioloop.PeriodicCallback(
                     handle_beacons, loop_interval * 1000)
@@ -3597,7 +3597,17 @@ class Worker(SignalHandlingMultiprocessingProcess):
         install_zmq()
         io_loop = ZMQDefaultLoop.current()
         self.req_chan.post_fork(payload_handler=self.handle_payload)
-        io_loop.spawn_callback(self.handle_payload, {'tag': 'minion_pub', 'connected': False}, None)
+        #io_loop.spawn_callback(self.handle_payload, {'tag': 'minion_pub', 'connected': False}, None)
+        self._minion = WorkerMinion._target(None, self.opts, None, False)
+        self.event = salt.utils.event.get_event('minion', opts=self.opts, sync=False)
+        self.event.subscribe('')
+        self.event.set_event_handler(self._minion.handle_event)
+        self._schedule = salt.utils.schedule.Schedule(
+            self._minion.opts,
+            self._minion.functions,
+            self._minion.returners,
+            utils=self._minion.utils,
+            cleanup=[master_event(type='alive')])
         try:
             io_loop.start()
         except (KeyboardInterrupt, SystemExit):
@@ -3614,17 +3624,17 @@ class Worker(SignalHandlingMultiprocessingProcess):
             if connected is not None and self._minion:
                 self._minion.connected = connected
             minion = WorkerMinion._target(self._minion, self.opts, data, connected)
-            if not self._minion:
-                self._minion = minion
-                self.event = salt.utils.event.get_event('minion', opts=self.opts, sync=False)
-                self.event.subscribe('')
-                self.event.set_event_handler(minion.handle_event)
-                self._schedule = salt.utils.schedule.Schedule(
-                    minion.opts,
-                    minion.functions,
-                    minion.returners,
-                    utils=minion.utils,
-                    cleanup=[master_event(type='alive')])
+            #if not self._minion:
+                #self._minion = minion
+                #self.event = salt.utils.event.get_event('minion', opts=self.opts, sync=False)
+                #self.event.subscribe('')
+                #self.event.set_event_handler(minion.handle_event)
+                #self._schedule = salt.utils.schedule.Schedule(
+                    #minion.opts,
+                    #minion.functions,
+                    #minion.returners,
+                    #utils=minion.utils,
+                    #cleanup=[master_event(type='alive')])
         elif tag == 'schedule_job':
             data = payload.get('data')
             func = payload.get('func')

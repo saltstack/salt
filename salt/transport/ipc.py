@@ -412,15 +412,10 @@ class IPCMessageClient(IPCClient):
         :param dict msg: The message to be sent
         :param int timeout: Timeout when sending message (Currently unimplemented)
         '''
-        log.debug('IPCMessageClient: send start')
         if not self.connected():
-            log.debug('IPCMessageClient: connecting')
             yield self.connect()
-            log.debug('IPCMessageClient: connected')
         pack = salt.transport.frame.frame_msg_ipc(msg, raw_body=True)
-        log.debug('IPCMessageClient: sending')
         yield self.stream.write(pack)
-        log.debug('IPCMessageClient: send done')
 
 
 class IPCMessageServer(IPCServer):

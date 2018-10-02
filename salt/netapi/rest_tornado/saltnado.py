@@ -285,7 +285,6 @@ class EventListener(object):
             opts['transport'],
             opts=opts,
             listen=True,
-            io_loop=tornado.ioloop.IOLoop.current()
         )
 
         # tag -> list of futures
@@ -1124,12 +1123,12 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
 
     # salt.utils.args.format_call doesn't work for functions having the
     # annotation tornado.gen.coroutine
+    # DK: Now it can! So sometime we can update this code.
     def _format_call_run_job_async(self, chunk):
         f_call = salt.utils.args.format_call(
             salt.client.LocalClient.run_job,
             chunk,
             is_class_method=True)
-        f_call.get('kwargs', {})['io_loop'] = tornado.ioloop.IOLoop.current()
         return f_call
 
 

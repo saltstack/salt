@@ -700,7 +700,6 @@ class SaltEvent(object):
 
         The default is 1000 ms
         '''
-        log.debug('FIRING EVENT %s: %s', tag, data)
         if not six.text_type(tag):  # no empty tags allowed
             raise ValueError('Empty tag.')
 
@@ -742,14 +741,9 @@ class SaltEvent(object):
             serialized_data])
         msg = salt.utils.stringutils.to_bytes(event, 'utf-8')
         if self._run_io_loop_sync:
-            try:
-                tornado.ioloop.IOLoop.current().run_sync(lambda: self.pusher.send(msg))
-            except Exception as ex:
-                log.debug(ex)
-                raise
+            tornado.ioloop.IOLoop.current().run_sync(lambda: self.pusher.send(msg))
         else:
             tornado.ioloop.IOLoop.current().spawn_callback(self.pusher.send, msg)
-        log.debug('FIRE EVENT done')
         return True
 
     def fire_master(self, data, tag, timeout=1000):

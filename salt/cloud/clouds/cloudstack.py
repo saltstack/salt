@@ -510,7 +510,6 @@ def destroy(name, conn=None, call=None):
         return False
     log.info('Destroyed VM: %s', name)
     # Fire destroy action
-    event = salt.utils.event.SaltEvent('master', __opts__['sock_dir'])
     __utils__['cloud.fire_event'](
         'event',
         'destroyed instance',

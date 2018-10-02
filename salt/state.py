@@ -25,6 +25,7 @@ import traceback
 import re
 import time
 import random
+import tornado.gen
 
 # Import salt libs
 import salt.loader
@@ -733,12 +734,26 @@ class State(object):
             except AttributeError:
                 pillar_enc = six.text_type(pillar_enc).lower()
         self._pillar_enc = pillar_enc
+        self._initial_pillar = initial_pillar
+        self.state_con = context or {}
+        self.active = set()
+        self.mod_init = set()
+        self.pre = {}
+        self.__run_num = 0
+        self.jid = jid
+        self.instance_id = six.text_type(id(self))
+        self.inject_globals = {}
+        self.mocked = mocked
+        self._initialized = False
+
+    @tornado.gen.coroutine
+    def lazy_init(self):
         log.debug('Gathering pillar data for state run')
-        if initial_pillar and not self._pillar_override:
-            self.opts['pillar'] = initial_pillar
+        if self._initial_pillar and not self._pillar_override:
+            self.opts['pillar'] = self._initial_pillar
         else:
             # Compile pillar data
-            self.opts['pillar'] = self._gather_pillar()
+            self.opts['pillar'] = yield self._gather_pillar()
             # Reapply overrides on top of compiled pillar
             if self._pillar_override:
                 self.opts['pillar'] = salt.utils.dictupdate.merge(
@@ -748,17 +763,10 @@ class State(object):
                     self.opts.get('renderer', 'yaml'),
                     self.opts.get('pillar_merge_lists', False))
         log.debug('Finished gathering pillar data for state run')
-        self.state_con = context or {}
         self.load_modules()
-        self.active = set()
-        self.mod_init = set()
-        self.pre = {}
-        self.__run_num = 0
-        self.jid = jid
-        self.instance_id = six.text_type(id(self))
-        self.inject_globals = {}
-        self.mocked = mocked
+        self._initialized = True
 
+    @tornado.gen.coroutine
     def _gather_pillar(self):
         '''
         Whenever a state run starts, gather the pillar data fresh
@@ -793,14 +801,15 @@ class State(object):
                 log.error('Pillar override was not passed as a dictionary')
                 self._pillar_override = None
 
-        pillar = salt.pillar.get_pillar(
+        pillar = salt.pillar.get_async_pillar(
                 self.opts,
                 self.opts['grains'],
                 self.opts['id'],
                 self.opts['saltenv'],
                 pillar_override=self._pillar_override,
                 pillarenv=self.opts.get('pillarenv'))
-        return pillar.compile_pillar()
+        ret = yield pillar.compile_pillar()
+        raise tornado.gen.Return(ret)
 
     def _mod_init(self, low):
         '''
@@ -1012,6 +1021,7 @@ class State(object):
         if not self.opts.get('local', False) and self.opts.get('multiprocessing', True):
             self.functions['saltutil.refresh_modules']()
 
+    @tornado.gen.coroutine
     def check_refresh(self, data, ret):
         '''
         Check to see if the modules for this state instance need to be updated,
@@ -1028,7 +1038,7 @@ class State(object):
 
         if data.get('reload_pillar', False):
             log.debug('Refreshing pillar...')
-            self.opts['pillar'] = self._gather_pillar()
+            self.opts['pillar'] = yield self._gather_pillar()
             _reload_modules = True
 
         if not ret['changes']:
@@ -2943,6 +2953,7 @@ class State(object):
         '''
         Enforce the states in a template, pass the template as a string
         '''
+        assert self._initialized
         high = compile_template_str(template,
                                     self.rend,
                                     self.opts['renderer'],
@@ -2967,16 +2978,25 @@ class BaseHighState(object):
     def __init__(self, opts):
         self.opts = self.__gen_opts(opts)
         self.iorder = 10000
-        self.avail = self.__gather_avail()
+        self._avail = None
         self.serial = salt.payload.Serial(self.opts)
         self.building_highstate = OrderedDict()
 
+    @property
+    @tornado.gen.coroutine
+    def avail(self):
+        if not self._avail:
+            self._avail = yield self.__gather_avail()
+        raise tornado.gen.Return(self._avail)
+
+    @tornado.gen.coroutine
     def __gather_avail(self):
         '''
         Gather the lists of available sls data from the master
         '''
         avail = {}
-        for saltenv in self._get_envs():
+        envs = yield self._get_envs()
+        for saltenv in envs:
             avail[saltenv] = self.client.list_states(saltenv)
         return avail
 
@@ -3027,6 +3047,7 @@ class BaseHighState(object):
             opts['jinja_trim_blocks'] = mopts.get('jinja_trim_blocks', False)
         return opts
 
+    @tornado.gen.coroutine
     def _get_envs(self):
         '''
         Pull the file server environments out of the master options
@@ -3039,16 +3060,18 @@ class BaseHighState(object):
         # Remove duplicates while preserving the order
         members = set()
         env_order = [env for env in env_order if not (env in members or members.add(env))]
-        client_envs = self.client.envs()
+        client_envs = yield self.client.envs()
         if env_order and client_envs:
-            return [env for env in env_order if env in client_envs]
+            ret = [env for env in env_order if env in client_envs]
 
         elif env_order:
-            return env_order
+            ret = env_order
         else:
             envs.extend([env for env in client_envs if env not in envs])
-            return envs
+            ret = envs
+        raise tornado.gen.Return(ret)
 
+    @tornado.gen.coroutine
     def get_tops(self):
         '''
         Gather the top files
@@ -3093,8 +3116,11 @@ class BaseHighState(object):
                     and not isinstance(state_top_saltenv, six.string_types):
                 state_top_saltenv = six.text_type(state_top_saltenv)
 
-            for saltenv in [state_top_saltenv] if state_top_saltenv \
-                    else self._get_envs():
+            if state_top_saltenv:
+                envs = [state_top_saltenv]
+            else:
+                envs = yield self._get_envs()
+            for saltenv in envs:
                 contents = self.client.cache_file(
                     self.opts['state_top'],
                     saltenv
@@ -3169,7 +3195,7 @@ class BaseHighState(object):
             for saltenv in pops:
                 if saltenv in include:
                     include.pop(saltenv)
-        return tops
+        raise tornado.gen.Return(tops)
 
     def merge_tops(self, tops):
         '''
@@ -3394,16 +3420,17 @@ class BaseHighState(object):
 
         return errors
 
+    @tornado.gen.coroutine
     def get_top(self):
         '''
         Returns the high data derived from the top file
         '''
         try:
-            tops = self.get_tops()
+            tops = yield self.get_tops()
         except SaltRenderError as err:
             log.error('Unable to render top file: %s', err.error)
-            return {}
-        return self.merge_tops(tops)
+            raise tornado.gen.Return({})
+        raise tornado.gen.Return(self.merge_tops(tops))
 
     def top_matches(self, top):
         '''
@@ -4197,7 +4224,6 @@ class RemoteHighState(object):
         self.opts = opts
         self.grains = grains
         self.serial = salt.payload.Serial(self.opts)
-        # self.auth = salt.crypt.SAuth(opts)
         self.channel = salt.transport.Channel.factory(self.opts['master_uri'])
 
     def compile_master(self):

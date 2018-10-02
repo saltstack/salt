@@ -478,7 +478,7 @@ class ReactWrap(object):
         '''
         Wrap LocalClient for running :ref:`execution modules <all-salt.modules>`
         '''
-        self.client_cache['local'].cmd_async(tgt, fun, **kwargs)
+        self.client_cache['local'].run_job_async(tgt, fun, **kwargs)
 
     def caller(self, fun, **kwargs):
         '''

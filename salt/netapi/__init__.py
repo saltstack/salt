@@ -6,6 +6,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 # Import Python libs
 import inspect
 import os
+import tornado.gen
 
 # Import Salt libs
 import salt.log  # pylint: disable=W0611
@@ -105,7 +106,7 @@ class NetapiClient(object):
         :return: Returns the result from the execution module
         '''
         local = salt.client.get_local_client(mopts=self.opts)
-        return local.cmd(*args, **kwargs)
+        return tornado.ioloop.IOLoop.current().run_sync(lambda: local.cmd(*args, **kwargs))
 
     def local_subset(self, *args, **kwargs):
         '''
