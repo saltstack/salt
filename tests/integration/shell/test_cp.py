@@ -93,9 +93,7 @@ class CopyTest(ShellCase, ShellCaseCommonTestsMixin):
                 quote(minion),
                 quote(testfile),
                 quote(minion_testfile),
-                '-l debug',
             ))
-            log.error("RET = %s", ret)
 
             data = salt.utils.yaml.safe_load('\n'.join(ret))
             for part in six.itervalues(data):
