@@ -43,8 +43,8 @@ class ProxyCallerSimpleTestCase(ShellCase):
 
     def test_upgrade(self):
         ret = self._load_return(self.run_call('--proxyid proxytest --out=json pkg.upgrade'))
-        self.assertEqual(ret['local']['coreutils']['new'], '3.0')
-        self.assertEqual(ret['local']['redbull']['new'], '1001.99')
+        self.assertEqual(ret['local']['coreutils']['new'], '2.0')
+        self.assertEqual(ret['local']['redbull']['new'], '1000.99')
 
     def test_service_list(self):
         ret = self._load_return(self.run_call('--proxyid proxytest --out=json service.list'))
