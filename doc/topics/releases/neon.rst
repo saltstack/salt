@@ -165,6 +165,15 @@ New output:
               0
 
 
+State Changes
+=============
+
+- The :py:func:`file.rename <salt.states.file.rename>` state will now return a
+  ``True`` result (and make no changes) when the destination file already
+  exists, and ``Force`` is not set to ``True``. In previous releases, a
+  ``False`` result would be returned, but this meant that subsequent runs of
+  the state would fail due to the destination file being present.
+
 Salt Cloud Features
 ===================
 
