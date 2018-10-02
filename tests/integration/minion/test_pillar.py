@@ -212,11 +212,9 @@ class BasePillarTest(ModuleCase):
         with salt.utils.files.fopen(os.path.join(PILLAR_BASE, 'ng2.sls'), 'w') as fp_:
             fp_.write('pillar_from_nodegroup_with_ghost: True')
 
-
     @classmethod
     def tearDownClass(cls):
         shutil.rmtree(PILLAR_BASE)
-
 
     def _build_opts(self, opts):
         ret = copy.deepcopy(DEFAULT_OPTS)
@@ -224,7 +222,6 @@ class BasePillarTest(ModuleCase):
             ret[item] = self.master_opts[item]
         ret.update(opts)
         return ret
-
 
     def test_pillar_top_compound_match(self, grains=None):
         '''
@@ -234,7 +231,7 @@ class BasePillarTest(ModuleCase):
         if not grains:
             grains = {}
         grains['os'] = 'Fedora'
-        nodegroup_opts  = salt.utils.yaml.safe_load(textwrap.dedent('''\
+        nodegroup_opts = salt.utils.yaml.safe_load(textwrap.dedent('''\
             nodegroups:
               min: minion
               sub_min: sub_minion
