@@ -92,7 +92,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         verify that scheduled job runs
         '''
-	job_name = 'test_eval_multiple_whens'
+        job_name = 'test_eval_multiple_whens'
         job = {
           'schedule': {
             job_name: {
@@ -105,7 +105,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
           }
         }
         if salt.utils.platform.is_darwin():
-          job['schedule'][job_name]['dry_run'] = True
+            job['schedule'][job_name]['dry_run'] = True
 
         run_time1 = dateutil_parser.parse('11/29/2017 4:00pm')
         run_time2 = dateutil_parser.parse('11/29/2017 5:00pm')
@@ -191,7 +191,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
           }
         }
         if salt.utils.platform.is_darwin():
-          job['schedule'][job_name]['dry_run'] = True
+            job['schedule'][job_name]['dry_run'] = True
 
         # 30 second loop interval
         LOOP_INTERVAL = random.randint(30, 59)
@@ -335,7 +335,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         }
 
         if salt.utils.platform.is_darwin():
-          job['schedule'][job_name]['dry_run'] = True
+            job['schedule'][job_name]['dry_run'] = True
 
         # Add job to schedule
         self.schedule.delete_job('test_eval_until')
@@ -631,7 +631,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         }
 
         if salt.utils.platform.is_darwin():
-          job['schedule'][job_name]['dry_run'] = True
+            job['schedule'][job_name]['dry_run'] = True
 
         # Add job to schedule
         self.schedule.opts.update(job)
@@ -689,7 +689,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         }
 
         if salt.utils.platform.is_darwin():
-          job['schedule'][job_name]['dry_run'] = True
+            job['schedule'][job_name]['dry_run'] = True
 
         # Add job to schedule
         self.schedule.opts.update(job)
@@ -741,7 +741,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         }
 
         if salt.utils.platform.is_darwin():
-          job['schedule'][job_name]['dry_run'] = True
+            job['schedule'][job_name]['dry_run'] = True
 
         # Add job to schedule
         self.schedule.opts.update(job)
@@ -794,7 +794,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         }
 
         if salt.utils.platform.is_darwin():
-          job['schedule'][job_name]['dry_run'] = True
+            job['schedule'][job_name]['dry_run'] = True
 
         # Add job to schedule
         self.schedule.opts.update(job)
