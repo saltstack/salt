@@ -15,6 +15,8 @@ Docker-compose method supported
 - ps
 - pull
 - build
+
+:depends: docker-compose
 '''
 
 from __future__ import absolute_import
@@ -24,20 +26,21 @@ import sys
 import traceback
 import os
 import salt.utils
-from collections import namedtuple
-from contextlib import contextmanager
-from operator import attrgetter
-
+import collections
+import contextlib
+import operator
 import yaml
-from docopt import docopt
+import docopt
+
 from salt.exceptions import CommandExecutionError
-from salt.ext import six
+import salt.ext.six as six
 
 try:
-    from compose.cli.command import get_project
-    from compose.service import ConvergenceStrategy
-    from compose.config.errors import ConfigurationError
-    from compose.project import OneOffFilter
+    import compose.cli.main
+    import compose.cli.command
+    import compose.service
+    import compose.config.errors
+    import compose.project
 
     HAS_COMPOSE = True
 except ImportError as e:
@@ -45,9 +48,7 @@ except ImportError as e:
 
 DC_FILENAME = 'docker-compose.yml'
 
-__virtualname__ = 'composeng'
-
-from compose.cli.main import TopLevelCommand, project_from_options
+__virtualname__ = 'dockercomposeng'
 
 log = logging.getLogger(__name__)
 
@@ -59,14 +60,14 @@ def __virtual__():
     return __virtualname__
 
 
-@contextmanager
+@contextlib.contextmanager
 def __capture_stdout_stderr():
     '''
     Point stdout and stderr to an in memory buffer to capture the output. Reverts streams on exit or error.
 
     :return:
     '''
-    Buffer = namedtuple('Buffer', 'stdout stderr')
+    Buffer = collections.namedtuple('Buffer', 'stdout stderr')
 
     def read(stream):
         def decode():
@@ -153,7 +154,7 @@ def __get_project(*args, **kwargs):
     :param kwargs:
     :return:
     '''
-    return get_project(*args, **kwargs)
+    return compose.cli.command.get_project(*args, **kwargs)
 
 
 def __docker_compose(project_dir, proj_less=False, **project_options):
@@ -167,8 +168,8 @@ def __docker_compose(project_dir, proj_less=False, **project_options):
     '''
     project_options = __kwarg_to_options(**project_options)
 
-    project = None if proj_less else project_from_options(project_dir, project_options)
-    cmd = TopLevelCommand(project, project_dir)
+    project = None if proj_less else compose.cli.main.project_from_options(project_dir, project_options)
+    cmd = compose.cli.main.TopLevelCommand(project, project_dir)
     cmd.project_dir = project_dir
 
     return cmd
@@ -184,7 +185,7 @@ def __get_convergence_plans(project, service_names=None):
     '''
     ret = {}
     plans = project._get_convergence_plans(project.get_services(service_names),
-                                           ConvergenceStrategy.changed)
+                                           compose.service.ConvergenceStrategy.changed)
     for cont in plans:
         (action, container) = plans[cont]
         ret[cont] = action
@@ -209,6 +210,12 @@ def get_convergence_plans(project_dir):
 
     :param project_dir:
     :return:
+
+    CLI Example:
+
+    .. code-block:: bash
+
+    salt 'myminion' dockercomposeng.get_convergence_plans /path/to/project/dir
     '''
     project = __get_project(project_dir)
     return __get_convergence_plans(project)
@@ -221,6 +228,12 @@ def get_compose(project_dir):
 
     :param project_dir:
     :return:
+
+    CLI Example:
+
+    .. code-block:: bash
+
+    salt 'myminion' dockercomposeng.get_compose /path/to/project/dir
     '''
     content = __read_docker_compose(project_dir)
     project = __get_project(project_dir)
@@ -240,11 +253,17 @@ def restart(project_dir, *args, **project_options):
     :param args:
     :param project_options:
     :return:
+
+    CLI Example:
+
+    .. code-block:: bash
+
+    salt 'myminion' dockercomposeng.restart /path/to/project/dir [foobar]
     '''
     cmd = __docker_compose(project_dir, **project_options)
 
     args = list(args)
-    _options = docopt(cmd.restart.__doc__, args or [])
+    _options = docopt.docopt(cmd.restart.__doc__, args or [])
     with __capture_stdout_stderr():
         cmd.restart(_options)
 
@@ -260,12 +279,18 @@ def stop(project_dir, *args, **project_options):
     :param args:
     :param project_options:
     :return:
+
+    CLI Example:
+
+    .. code-block:: bash
+
+    salt 'myminion' dockercomposeng.stop /path/to/project/dir [foobar]
     '''
     cmd = __docker_compose(project_dir, **project_options)
 
     args = list(args)
 
-    _options = docopt(cmd.stop.__doc__, args or [])
+    _options = docopt.docopt(cmd.stop.__doc__, args or [])
     with __capture_stdout_stderr():
         cmd.stop(_options)
 
@@ -281,10 +306,16 @@ def pause(project_dir, *args, **project_options):
     :param args:
     :param project_options:
     :return:
+
+    CLI Example:
+
+    .. code-block:: bash
+
+    salt 'myminion' dockercomposeng.pause /path/to/project/dir [foobar]
     '''
     cmd = __docker_compose(project_dir, **project_options)
     args = list(args)
-    _options = docopt(cmd.pause.__doc__, args or [])
+    _options = docopt.docopt(cmd.pause.__doc__, args or [])
     with __capture_stdout_stderr():
         cmd.pause(_options)
 
@@ -301,12 +332,18 @@ def unpause(project_dir, *args, **project_options):
     :param string project_dir: Path to Docker Compose directory.
     :param args:
     :param project_options:
+    :return:
 
+    CLI Example:
+
+    .. code-block:: bash
+
+    salt 'myminion' dockercomposeng.unpause /path/to/project/dir [foobar]
     '''
     cmd = __docker_compose(project_dir, **project_options)
 
     args = list(args)
-    _options = docopt(cmd.unpause.__doc__, args or [])
+    _options = docopt.docopt(cmd.unpause.__doc__, args or [])
     with __capture_stdout_stderr():
         cmd.unpause(_options)
 
@@ -324,10 +361,16 @@ def start(project_dir, *args, **project_options):
     :param args:
     :param project_options:
     :return:
+
+    CLI Example:
+
+    .. code-block:: bash
+
+    salt 'myminion' dockercomposeng.start /path/to/project/dir [foobar]
     '''
     cmd = __docker_compose(project_dir, **project_options)
 
-    _options = docopt(cmd.start.__doc__, args or [])
+    _options = docopt.docopt(cmd.start.__doc__, args or [])
     with __capture_stdout_stderr():
         cmd.start(_options)
 
@@ -345,17 +388,23 @@ def kill(project_dir, *args, **project_options):
     :param args:
     :param project_options:
     :return:
+
+    CLI Example:
+
+    .. code-block:: bash
+
+    salt 'myminion' dockercomposeng.kill /path/to/project/dir [foobar]
     '''
     cmd = __docker_compose(project_dir, **project_options)
     args = list(args)
-    _options = docopt(cmd.kill.__doc__, args or [])
+    _options = docopt.docopt(cmd.kill.__doc__, args or [])
     with __capture_stdout_stderr():
         cmd.kill(_options)
 
     return True
 
 
-@__catch_exception(ConfigurationError)
+@__catch_exception(compose.config.errors.ConfigurationError)
 def up(project_dir, *args, **project_options):
     '''
     Bring up Compose project.
@@ -366,18 +415,24 @@ def up(project_dir, *args, **project_options):
     :param args:
     :param project_options:
     :return:
+
+    CLI Example:
+
+    .. code-block:: bash
+
+    salt 'myminion' dockercomposeng.up /path/to/project/dir [foobar]
     '''
     cmd = __docker_compose(project_dir, **project_options)
 
     args = list(args) + ['-d']
-    _options = docopt(cmd.up.__doc__, args or [])
+    _options = docopt.docopt(cmd.up.__doc__, args or [])
     with __capture_stdout_stderr():
         cmd.up(_options)
 
     return True
 
 
-@__catch_exception(ConfigurationError)
+@__catch_exception(compose.config.errors.ConfigurationError)
 def config(project_dir, *args, **project_options):
     '''
     Validates and returns a Compose file.
@@ -388,10 +443,16 @@ def config(project_dir, *args, **project_options):
     :param string args: Arguments for the config command.
     :param project_options:
     :return dict: Valid Docker Compose.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+    salt 'myminion' dockercomposeng.config /path/to/project/dir [foobar]
     '''
     cmd = __docker_compose(project_dir, True)
 
-    _options = docopt(cmd.config.__doc__, args or [])
+    _options = docopt.docopt(cmd.config.__doc__, args or [])
     with __capture_stdout_stderr() as buf:
         cmd.config(__kwarg_to_options(**project_options), _options)
         stdout = buf.stdout()
@@ -413,10 +474,16 @@ def down(project_dir, *args, **project_options):
     :param args:
     :param project_options:
     :return:
+
+    CLI Example:
+
+    .. code-block:: bash
+
+    salt 'myminion' dockercomposeng.down /path/to/project/dir [foobar]
     '''
     cmd = __docker_compose(project_dir, **project_options)
     args = list(args)
-    _options = docopt(cmd.down.__doc__, args or [])
+    _options = docopt.docopt(cmd.down.__doc__, args or [])
     with __capture_stdout_stderr():
         cmd.down(_options)
 
@@ -430,8 +497,13 @@ def pull(path, service_names=None):
 
     :param string project_dir: Path to Docker Compose directory.
     :param list|None service_names: If specified will remove only the specified stopped services
-    '''
 
+    CLI Example:
+
+    .. code-block:: bash
+
+    salt 'myminion' dockercomposeng.pull /path/to/project/dir [service_names]
+    '''
     project = __get_project(path)
 
     if isinstance(project, dict):
@@ -455,6 +527,12 @@ def rm(project_dir, service_names=None):
     :param string project_dir: Path to Docker Compose directory.
     :param list|None service_names: If specified will remove only the specified stopped services
     :return:
+
+    CLI Example:
+
+    .. code-block:: bash
+
+    salt 'myminion' dockercomposeng.rm /path/to/project/dir [service_names]
     '''
     project = __get_project(project_dir)
     if isinstance(project, dict):
@@ -477,8 +555,13 @@ def build(project_dir, service_names=None):
 
     :param string project_dir: Path to Docker Compose directory.
     :param list|None service_names: If specified will remove only the specified stopped services
-    '''
 
+    CLI Example:
+
+    .. code-block:: bash
+
+    salt 'myminion' dockercomposeng.build /path/to/project/dir [service_names]
+    '''
     project = __get_project(project_dir)
     if isinstance(project, dict):
         raise CommandExecutionError('Unable to load project, docker-compose.yaml file is invalid')
@@ -495,8 +578,13 @@ def ps(project_dir):
 
     :param string project_dir: Path to Docker Compose directory.
     :return string
-    '''
 
+    CLI Example:
+
+    .. code-block:: bash
+
+    salt 'myminion' dockercomposeng.ps /path/to/project/dir
+    '''
     project = __get_project(project_dir)
 
     if isinstance(project, dict):
@@ -505,8 +593,8 @@ def ps(project_dir):
     result = {}
     containers = sorted(
         project.containers(None, stopped=True) +
-        project.containers(None, OneOffFilter.only),
-        key=attrgetter('name'))
+        project.containers(None, compose.project.OneOffFilter.only),
+        key=operator.attrgetter('name'))
 
     for container in containers:
         command = container.human_readable_command

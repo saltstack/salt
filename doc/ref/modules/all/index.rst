@@ -119,6 +119,7 @@ execution modules
     dnsmasq
     dnsutil
     dockercompose
+    dockercomposeng
     dockermod
     dpkg
     drac
