@@ -7,7 +7,7 @@ Matchers
 .. versionadded:: Neon
 
 Matchers are modules that provide Salt's targeting abilities.  As of the
-Flourine release, matchers can be dynamically loaded.  Currently new matchers
+Neon release, matchers can be dynamically loaded.  Currently new matchers
 cannot be created because the required plumbing for the CLI does not exist yet.
 Existing matchers may have their functionality altered or extended.
 
@@ -22,7 +22,7 @@ take a ``delimiter`` argument and should default to ``DEFAULT_TARGET_DELIM``.
 Like other Salt loadable modules, modules that override built-in functionality
 can be placed in ``file_roots`` in a special directory and then copied to the
 minion through the normal sync process.  :py:func:`saltutil.sync_all <salt.modules.saltutil.sync_all>`
-will transfer all loadable modules, and the Flourine release introduces
+will transfer all loadable modules, and the Neon release introduces
 :py:func:`saltutil.sync_matchers <salt.modules.saltutil.sync_matchers>`.  For matchers, the directory is
 ``/srv/salt/_matchers`` (assuming your ``file_roots`` is set to the default
 ``/srv/salt``).
@@ -75,7 +75,7 @@ Salt CLI Switch  Match Type              Filename
 -R               Range                   range_match.py
 -I               Pillar                  pillar_match.py
 -J               Pillar Perl-Compatible  pillar_pcre.py
-                 Regular Expressions    
+                 Regular Expressions
 -S               IP-Classless Internet   ipcidr_match.py
                  Domain Routing
 ===============  ======================  ===================
