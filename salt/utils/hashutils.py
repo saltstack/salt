@@ -97,7 +97,7 @@ def sha1_digest(instr):
     Generate an sha1 hash of a given string.
     '''
     if six.PY3:
-        b = salt.utils.to_bytes(instr)
+        b = salt.utils.stringutils.to_bytes(instr)
         return hashlib.sha1(b).hexdigest()
     return hashlib.sha1(instr).hexdigest()
 

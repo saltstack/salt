@@ -76,7 +76,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
             '''
             Normalize the line endings of a file.
             '''
-            with salt.utils.fopen(path, 'rb') as fhr:
+            with salt.utils.files.fopen(path, 'rb') as fhr:
                 lines = fhr.read().splitlines()
             with salt.utils.atomicfile.atomic_open(path, 'wb') as fhw:
                 for line in lines:
