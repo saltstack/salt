@@ -17,6 +17,7 @@ Docker-compose method supported
 - build
 '''
 
+from __future__ import absolute_import
 import io
 import logging
 import sys
@@ -33,9 +34,7 @@ from salt.exceptions import CommandExecutionError
 from salt.ext import six
 
 try:
-    from compose.config import config as compose_config
-    from compose.config.environment import Environment
-    from compose.cli.command import get_project, get_config_from_options
+    from compose.cli.command import get_project
     from compose.service import ConvergenceStrategy
     from compose.config.errors import ConfigurationError
     from compose.project import OneOffFilter
@@ -197,7 +196,7 @@ def __kwarg_to_options(**kwargs):
     :param kwargs:
     :return:
     '''
-    return {'--{}'.format(k): v for k, v in kwargs.iteritems()}
+    return {'--{}'.format(k): v for k, v in six.iteritems(kwargs)}
 
 
 @__catch_exception()
