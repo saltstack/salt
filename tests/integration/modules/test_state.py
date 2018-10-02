@@ -71,9 +71,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
     def setUp(self):
         super(StateModuleTest, self).setUp()
         destpath = os.path.join(FILES, 'file', 'base', 'testappend', 'firstif')
-        reline(destpath, destpath, force=True)
         destpath = os.path.join(FILES, 'file', 'base', 'testappend', 'secondif')
-        reline(destpath, destpath, force=True)
         sls = self.run_function('saltutil.sync_modules')
         assert isinstance(sls, list)
 
@@ -1874,7 +1872,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
 
         for key, val in ret.items():
             self.assertEqual(val['comment'], comment)
-            self.assertEqual(val['changes'], {})
+            self.assertEqual(val['changes'], {'newfile': testfile})
 
     def test_state_sls_id_test_state_test_post_run(self):
         '''
@@ -1907,7 +1905,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertEqual(
                 val['comment'],
                 'The file {0} is set to be changed'.format(file_name))
-            self.assertEqual(val['changes'], {})
+            self.assertEqual(val['changes'], {'newfile': file_name})
 
     def test_state_sls_id_test_true_post_run(self):
         '''
@@ -1965,7 +1963,6 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
                       'result': True},
                      'file_|-unless_false_onlyif_true_|-{0}{1}test.txt_|-managed'.format(TMP, os.path.sep):
                      {'comment': 'Empty file',
-                      'pchanges': {},
                       'name': '{0}{1}test.txt'.format(TMP, os.path.sep),
                       'start_time': '18:10:20.341753',
                       'result': True,
