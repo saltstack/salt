@@ -21,14 +21,8 @@ from tests.support.case import ShellCase
 from tests.support.unit import skipIf
 from tests.support.paths import FILES, TMP
 from tests.support.mixins import ShellCaseCommonTestsMixin
-from tests.support.helpers import (
-    destructiveTest,
-    flaky,
-    skip_if_not_root,
-    with_tempfile,
-)
+from tests.support.helpers import flaky, with_tempfile
 from tests.integration.utils import testprogram
-from tests.integration.states.test_pkg import _PKG_TARGETS
 
 # Import salt libs
 import salt.utils.files
