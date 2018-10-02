@@ -1891,6 +1891,7 @@ def managed(name,
             follow_symlinks=True,
             check_cmd=None,
             skip_verify=False,
+            selinux=None,
             win_owner=None,
             win_perms=None,
             win_deny_perms=None,
@@ -2387,6 +2388,22 @@ def managed(name,
 
         .. versionadded:: 2016.3.0
 
+    selinux : None
+        Allows setting the selinux user, role, type, and range of a managed file
+
+        .. code-block:: yaml
+
+            /tmp/selinux.test
+              file.managed:
+                - user: root
+                - selinux:
+                  seuser:  system_u
+                  serole: object_r
+                  setype: system_conf_t
+                  seranage: s0
+
+        .. versionadded:: Neon
+
     win_owner : None
         The owner of the directory. If this is not passed, user will be used. If
         user is not passed, the account under which Salt is running will be
@@ -2470,6 +2487,9 @@ def managed(name,
 
     if attrs is not None and salt.utils.platform.is_windows():
         return _error(ret, 'The \'attrs\' option is not supported on Windows')
+
+    if selinux is not None and salt.utils.platform.is_windows():
+        return _error(ret, 'The \'selinux\' option is not supported on Windows')
 
     try:
         keep_mode = mode.lower() == 'keep'
@@ -2669,6 +2689,40 @@ def managed(name,
     if defaults and not isinstance(defaults, dict):
         return _error(
             ret, 'Defaults must be formed as a dict')
+
+    log.error('XXXXXX selinux is {0}'.format(selinux))
+    if selinux:
+        current_seuser, current_serole, current_setype, current_serange = __salt__[
+            'file.get_selinux_context'](name).split(':')
+        log.error('XXXX got user: {0} role {1} type {2} range {3}'.format(current_seuser, current_serole, current_setype, current_serange))
+        requested_seuser = selinux.get('seuser', None)
+        requested_serole = selinux.get('serole', None)
+        requested_setype = selinux.get('setype', None)
+        requested_serange = selinux.get('serange', None)
+        if selinux.get('seuser', None) and selinux['seuser'] != current_seuser:
+            requested_seuser = selinux['seuser']
+        if selinux.get('serole', None) and selinux['role'] != current_serole:
+            requested_serole = selinux['serole']
+        if selinux.get('setype', None) and selinux['setype'] != current_setype:
+            requested_setype = selinux['setype']
+        if selinux.get('serange', None) and selinux['serange'] != current_serange:
+            requested_serange = selinux['serange']
+        log.error('XXXX again got user: {0} role: {1} type: {2} range: {3}'.format(requested_seuser, requested_serole, requested_setype, requested_serange))
+
+
+        if requested_seuser or requested_serole or requested_setype or requested_serange:
+            log.error('XXXXXXX updating selinux context')
+            if __opts__['test']:
+                ret['comment'] = 'File {0} selinux context to be updated'.format(name)
+                ret['result'] = None
+                ret['changes'] = {'selinux context': {'Old': '{0} {1} {2} {3}'.format(current_seuser or requested_seuser, current_serole or requested_serole, current_setype, current_serange),
+                                    'New': '{0} {1} {2} {3}'.format(requested_seuser, requested_serole, requested_setype, requested_serange)
+                                    }}
+            else:
+                current_seuser, current_serole, current_setype, current_serange = __salt__[
+                'file.set_selinux_context'](name, requested_seuser, requested_serole, requested_setype, requested_serange).split(':')
+                log.error('XXXX after edit got user: {0} role {1} type {2} range {3}'.format(current_seuser, current_serole, current_setype, current_serange))
+
 
     if not replace and os.path.exists(name):
         # Check and set the permissions if necessary
