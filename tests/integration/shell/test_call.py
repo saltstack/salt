@@ -21,13 +21,8 @@ from tests.support.case import ShellCase
 from tests.support.unit import skipIf
 from tests.support.paths import FILES, TMP
 from tests.support.mixins import ShellCaseCommonTestsMixin
-from tests.support.helpers import (
-    destructiveTest,
-    flaky,
-    skip_if_not_root,
-)
+from tests.support.helpers import flaky, with_tempfile
 from tests.integration.utils import testprogram
-from tests.integration.states.test_pkg import _PKG_TARGETS
 
 # Import salt libs
 import salt.utils.files
@@ -77,52 +72,26 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
         self.assertIn('hello', ''.join(out))
         self.assertIn('Succeeded: 1', ''.join(out))
 
-    @skipIf(True, 'This test causes the test to hang. Skipping until further investigation can occur.')
-    @destructiveTest
-    @skip_if_not_root
-    @skipIf(salt.utils.platform.is_windows(), 'This test does not apply on Windows')
-    def test_local_pkg_install(self):
+    @with_tempfile()
+    def test_local_salt_call(self, name):
         '''
-        Test to ensure correct output when installing package
-
-        This also tests to make sure that salt call does not execute the
+        This tests to make sure that salt-call does not execute the
         function twice, see https://github.com/saltstack/salt/pull/49552
         '''
         def _run_call(cmd):
             cmd = '--out=json --local ' + cmd
             return salt.utils.json.loads(''.join(self.run_call(cmd)))['local']
 
-        os_family = _run_call('grains.get os_family')
-        if os_family == 'RedHat':
-            # This test errors in odd ways on some distros (namely Fedora, CentOS).
-            # There is a bug somewhere either in the test suite or Python versions
-            # that causes a SyntaxError. This test was skipped entirely long ago,
-            # likely due to this same issue. For now, let's skip the test for these
-            # distros and let the other OSes catch regressions here.
-            # The actual commands work fine, it's the test suite that has problems.
-            # See https://github.com/saltstack/salt-jenkins/issues/1122 and also see
-            # https://github.com/saltstack/salt/pull/49552 for more info.
-            self.skipTest('Test throws SyntaxErrors due to deep bug. Skipping until '
-                          'issue can be resolved.')
+        ret = _run_call('state.single file.append name={0} text="foo"'.format(name))
+        ret = ret[next(iter(ret))]
 
-        try:
-            target = _PKG_TARGETS.get(os_family, [])[0]
-        except IndexError:
-            self.skipTest(
-                'No package targets for os_family {0}'.format(os_family))
+        # Make sure we made changes
+        assert ret['changes']
 
-        cur_pkgs = _run_call('pkg.list_pkgs')
-        if target in cur_pkgs:
-            self.fail('Target package \'{0}\' already installed'.format(target))
-
-        try:
-            out = ''.join(self.run_call('--local pkg.install {0}'.format(target)))
-            self.assertIn('local:    ----------', out)
-            self.assertIn('{0}:        ----------'.format(target), out)
-            self.assertIn('new:', out)
-            self.assertIn('old:', out)
-        finally:
-            self.run_call('--local pkg.remove {0}'.format(target))
+        # 2nd sanity check: make sure that "foo" only exists once in the file
+        with salt.utils.files.fopen(name) as fp_:
+            contents = fp_.read()
+        assert contents.count('foo') == 1, contents
 
     @skipIf(sys.platform.startswith('win'), 'This test does not apply on Win')
     @flaky
