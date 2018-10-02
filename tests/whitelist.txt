@@ -86,6 +86,7 @@ integration.shell.test_matcher
 integration.shell.test_minion
 integration.shell.test_proxy
 integration.shell.test_runner
+integration.shell.test_spm
 integration.states.test_host
 integration.states.test_pip_state
 integration.states.test_pkg
