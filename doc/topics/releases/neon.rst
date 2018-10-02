@@ -174,6 +174,9 @@ State Changes
   ``False`` result would be returned, but this meant that subsequent runs of
   the state would fail due to the destination file being present.
 
+- The ``onchanges`` and ``prereq`` :ref:`requisites <requisites>` now behave
+  properly in test mode.
+
 Salt Cloud Features
 ===================
 
