@@ -3645,6 +3645,14 @@ def recurse(name,
 
         .. versionchanged:: Neon
 
+            List patterns are now supported
+
+        .. code-block:: text
+
+            - include_pat:
+                - hello01
+                - hello02
+
     exclude_pat
         Exclude this pattern, or list of patterns, from the source when copying.
          If both `include_pat` and `exclude_pat` are supplied, then it will apply
@@ -3663,6 +3671,13 @@ def recurse(name,
                                                    or TEMPDATA for exclusion
 
         .. versionchanged:: Neon
+            List patterns are now supported
+
+        .. code-block:: text
+
+            - exclude_pat:
+                - APPDATA.01
+                - APPDATA.02
 
     maxdepth
         When copying, only copy paths which are of depth `maxdepth` from the
