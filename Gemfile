@@ -13,7 +13,7 @@ end
 
 group :windows do
   gem 'winrm', '~>2.0'
-  gem 'winrm-fs', '~>1.2.1'
+  gem 'winrm-fs', :git => 'https://github.com/dwoz/winrm-fs.git', :branch => 'chunked_downloads'
 end
 
 group :ec2 do
