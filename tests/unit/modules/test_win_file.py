@@ -58,6 +58,7 @@ class WinFileTestCase(TestCase):
 
 @destructiveTest
 @skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(not salt.utils.platform.is_windows(), 'Requires Pywin32 libraries')
 class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for the check_perms function in salt.modules.win_file
