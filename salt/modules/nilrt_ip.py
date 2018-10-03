@@ -488,14 +488,12 @@ def _dict_to_string(dictionary):
 
 def _get_info(interface):
     """
-    Return information about an interface even if it's not associated with a service.
+    Return information about an interface if it's associated with a service.
 
     :param interface: interface label
     """
     service = _interface_to_service(interface.name)
-    if service is not None:
-        return _get_service_info(service)
-    return _get_static_info(interface)
+    return _get_service_info(service)
 
 
 def get_interfaces_details():
@@ -518,6 +516,12 @@ def get_interfaces_details():
     ]
     if __grains__["lsb_distrib_id"] == "nilrt":
         return {"interfaces": list(map(_get_interface_info, _interfaces))}
+    # filter just the services
+    _interfaces = [
+        interface
+        for interface in _interfaces
+        if _interface_to_service(interface.name) is not None
+    ]
     return {"interfaces": list(map(_get_info, _interfaces))}
 
 
