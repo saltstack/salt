@@ -35,7 +35,7 @@ import fnmatch  # do not remove, used in imported file.py functions
 import mmap  # do not remove, used in imported file.py functions
 import glob  # do not remove, used in imported file.py functions
 # do not remove, used in imported file.py functions
-import salt.ext.six as six  # pylint: disable=import-error,no-name-in-module
+from salt.ext import six
 from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=import-error,no-name-in-module
 import salt.utils.atomicfile  # do not remove, used in imported file.py functions
 from salt.exceptions import CommandExecutionError, SaltInvocationError
@@ -1934,7 +1934,7 @@ def check_perms(path,
         for user_name in cur_perms:
             if grant_perms is not None and \
                     user_name.lower() not in dict(
-                        (k.lower(), v) for k, v in grant_perms.iteritems()):
+                        (k.lower(), v) for k, v in six.iteritems(grant_perms)):
                 if 'grant' in cur_perms[user_name] and \
                         not cur_perms[user_name]['grant']['inherited']:
                     if __opts__['test'] is True:
@@ -1953,7 +1953,7 @@ def check_perms(path,
                             {user_name: cur_perms[user_name]})
             if deny_perms is not None and \
                     user_name.lower() not in dict(
-                        (k.lower(), v) for k, v in deny_perms.iteritems()):
+                        (k.lower(), v) for k, v in six.iteritems(deny_perms)):
                 if 'deny' in cur_perms[user_name] and \
                         not cur_perms[user_name]['deny']['inherited']:
                     if __opts__['test'] is True:
