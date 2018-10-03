@@ -10,6 +10,8 @@ from __future__ import absolute_import, print_function, unicode_literals
 import tests.integration as integration
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import patch, NO_MOCK, NO_MOCK_REASON
+from tornado.concurrent import Future
+
 
 # Import Salt libs
 from salt import client
@@ -126,3 +128,45 @@ class LocalClientTestCase(TestCase,
                 self.assertRaises(SaltInvocationError,
                                   self.client.pub,
                                   'non_existent_group', 'test.ping', tgt_type='nodegroup')
+
+    # all of these parse_input test wrapper tests can be replaced by
+    # parameterize if/when we switch to pytest runner
+    #@pytest.mark.parametrize('method', [('run_job', 'cmd', ...)])
+    def _test_parse_input(self, method, asynchronous=False):
+        if asynchronous:
+            target = 'salt.client.LocalClient.pub_async'
+            pub_ret = Future()
+            pub_ret.set_result({'jid': '123456789', 'minions': ['m1']})
+        else:
+            target = 'salt.client.LocalClient.pub'
+            pub_ret = {'jid': '123456789', 'minions': ['m1']}
+
+        with patch(target, return_value=pub_ret) as pub_mock:
+            with patch('salt.client.LocalClient.get_cli_event_returns', return_value=[{'m1': {'ret': ['test.arg']}}]):
+                with patch('salt.client.LocalClient.get_iter_returns', return_value=[{'m1': {'ret': True}}]):
+                    ret = getattr(self.client, method)('*',
+                            'test.arg',
+                            arg=['a', 5, "yaml_arg={qux: Qux}", "another_yaml={bax: 12345}"],
+                            jid='123456789')
+
+                    # iterate generator if needed
+                    if asynchronous:
+                        pass
+                    else:
+                        ret = list(ret)
+
+                    # main test here is that yaml_arg is getting deserialized properly
+                    parsed_args = ['a', 5, {'yaml_arg': {'qux': 'Qux'}, 'another_yaml': {'bax': 12345}, '__kwarg__': True}]
+                    self.assertTrue(any(parsed_args in call[0] for call in pub_mock.call_args_list))
+
+    def test_parse_input_is_called(self):
+        self._test_parse_input('run_job')
+        self._test_parse_input('cmd')
+        self._test_parse_input('cmd_subset')
+        self._test_parse_input('cmd_batch')
+        self._test_parse_input('cmd_cli')
+        self._test_parse_input('cmd_full_return')
+        self._test_parse_input('cmd_iter')
+        self._test_parse_input('cmd_iter_no_block')
+        self._test_parse_input('cmd_async')
+        self._test_parse_input('run_job_async', asynchronous=True)
