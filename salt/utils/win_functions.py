@@ -123,6 +123,12 @@ def get_current_user(with_domain=True):
     '''
     Gets the user executing the process
 
+    Args:
+
+        with_domain (bool):
+            ``True`` will prepend the user name with the machine name or domain
+            separated by a backslash
+
     Returns:
         str: The user name
     '''

@@ -1935,8 +1935,8 @@ def check_perms(path,
             if grant_perms is not None and \
                     user_name.lower() not in dict(
                         (k.lower(), v) for k, v in grant_perms.iteritems()):
-                if 'grant' in cur_perms[user_name] and not \
-                        cur_perms[user_name]['grant']['inherited']:
+                if 'grant' in cur_perms[user_name] and \
+                        not cur_perms[user_name]['grant']['inherited']:
                     if __opts__['test'] is True:
                         if 'remove_perms' not in ret['pchanges']:
                             ret['pchanges']['remove_perms'] = {}
@@ -1954,8 +1954,8 @@ def check_perms(path,
             if deny_perms is not None and \
                     user_name.lower() not in dict(
                         (k.lower(), v) for k, v in deny_perms.iteritems()):
-                if 'deny' in cur_perms[user_name] and not \
-                        cur_perms[user_name]['deny']['inherited']:
+                if 'deny' in cur_perms[user_name] and \
+                        not cur_perms[user_name]['deny']['inherited']:
                     if __opts__['test'] is True:
                         if 'remove_perms' not in ret['pchanges']:
                             ret['pchanges']['remove_perms'] = {}
