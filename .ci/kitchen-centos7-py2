@@ -54,6 +54,8 @@ timeout(time: 6, unit: 'HOURS') {
                                 archiveArtifacts artifacts: 'artifacts/logs/salt-runtests.log'
                             }
                         }
+                    } catch (Exception e) {
+                        currentBuild.result = 'FAILURE'
                     } finally {
                         try {
                             junit 'artifacts/xml-unittests-output/*.xml'
