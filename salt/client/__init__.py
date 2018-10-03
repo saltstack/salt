@@ -454,6 +454,7 @@ class LocalClient(object):
         pub_data = self.run_job(
             tgt, fun, arg, tgt_type, ret, jid=jid, listen=False, **kwargs
         )
+
         try:
             return pub_data["jid"]
         except KeyError:
@@ -704,6 +705,7 @@ class LocalClient(object):
             function name.
         """
         arg = salt.utils.args.condition_input(arg, kwarg)
+
         was_listening = self.event.cpub
 
         try:
@@ -759,6 +761,7 @@ class LocalClient(object):
         :returns: A generator
         """
         arg = salt.utils.args.condition_input(arg, kwarg)
+
         was_listening = self.event.cpub
 
         try:
@@ -833,6 +836,7 @@ class LocalClient(object):
             {'stewart': {'ret': True}}
         """
         arg = salt.utils.args.condition_input(arg, kwarg)
+
         was_listening = self.event.cpub
 
         try:
@@ -897,6 +901,7 @@ class LocalClient(object):
             {'stewart': {'ret': True}}
         """
         arg = salt.utils.args.condition_input(arg, kwarg)
+
         was_listening = self.event.cpub
 
         try:
@@ -942,6 +947,7 @@ class LocalClient(object):
         Execute a salt command and return
         """
         arg = salt.utils.args.condition_input(arg, kwarg)
+
         was_listening = self.event.cpub
 
         try:
