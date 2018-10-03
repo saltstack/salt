@@ -4056,7 +4056,8 @@ class HighState(BaseHighState):
             mocked=False,
             loader='states',
             initial_pillar=None):
-        self.opts = opts
+        self.opts = copy.deepcopy(opts)
+        self.opts['file_client'] = 'local' if self.opts['__role'] == 'master' else self.opts['file_client']
         self.client = salt.fileclient.get_file_client(self.opts)
         BaseHighState.__init__(self, opts)
         self.state = State(self.opts,
