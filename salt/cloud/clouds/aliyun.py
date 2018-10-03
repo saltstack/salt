@@ -50,6 +50,7 @@ from salt.exceptions import (
     SaltCloudExecutionFailure,
     SaltCloudExecutionTimeout
 )
+from salt.utils.stringutils import to_bytes
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -770,7 +771,7 @@ def _compute_signature(parameters, access_key_secret):
     # All aliyun API only support GET method
     stringToSign = 'GET&%2F&' + percent_encode(canonicalizedQueryString[1:])
 
-    h = hmac.new(access_key_secret + "&", stringToSign, sha1)
+    h = hmac.new(to_bytes(access_key_secret + "&"), stringToSign, sha1)
     signature = base64.encodestring(h.digest()).strip()
     return signature
 
