@@ -77,6 +77,12 @@ integration.shell.test_arguments
 integration.shell.test_auth
 integration.shell.test_call
 integration.shell.test_cloud
+integration.spm.test_build
+integration.spm.test_files
+integration.spm.test_info
+integration.spm.test_install
+integration.spm.test_remove
+integration.spm.test_repo
 integration.states.test_host
 integration.states.test_pip_state
 integration.states.test_pkg
