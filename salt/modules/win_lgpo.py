@@ -3094,9 +3094,15 @@ def _getAdmlPresentationRefId(adml_data, ref_id):
                         else:
                             if etree.QName(p_item.tag).localname == 'text':
                                 if prepended_text:
-                                    prepended_text = ' '.join([prepended_text, p_item.text.rstrip()])
+                                    if getattr(p_item, 'text', ''):
+                                        prepended_text = ' '.join([prepended_text, getattr(p_item, 'text', '').rstrip()])
+                                    else:
+                                        prepended_text = ''
                                 else:
-                                    prepended_text = p_item.text.rstrip()
+                                    if getattr(p_item, 'text', ''):
+                                        prepended_text = getattr(p_item, 'text', '').rstrip()
+                                    else:
+                                        prepended_text = ''
                             else:
                                 prepended_text = ''
                     if prepended_text.endswith('.'):
@@ -4832,12 +4838,14 @@ def _lookup_admin_template(policy_name,
             suggested_policies = ''
             adml_to_remove = []
             if len(adml_search_results) > 1:
+                log.debug('multiple ADML entries found matching the policy name %s', policy_name)
                 multiple_adml_entries = True
                 for adml_search_result in adml_search_results:
                     if not getattr(adml_search_result, 'text', '').strip() == policy_name:
                         adml_to_remove.append(adml_search_result)
                     else:
                         if hierarchy:
+                            log.debug('we have hierarchy of %s', hierarchy)
                             display_name_searchval = '$({0}.{1})'.format(
                                     adml_search_result.tag.split('}')[1],
                                     adml_search_result.attrib['id'])
@@ -4847,8 +4855,8 @@ def _lookup_admin_template(policy_name,
                                 display_name_searchval,
                                 policy_class)
                             admx_results = []
-                            admx_search_results = admx_policy_definitions.xpath(policy_search_string, namespaces=adml_search_result.nsmap)
-                            for search_result in admx_search_results:
+                            these_admx_search_results = admx_policy_definitions.xpath(policy_search_string, namespaces=adml_search_result.nsmap)
+                            for search_result in these_admx_search_results:
                                 log.debug('policy_name == %s', policy_name)
                                 this_hierarchy = _build_parent_list(search_result,
                                                                     admx_policy_definitions,
@@ -4856,11 +4864,17 @@ def _lookup_admin_template(policy_name,
                                                                     adml_policy_resources)
                                 this_hierarchy.reverse()
                                 if hierarchy != this_hierarchy:
-                                    adml_to_remove.append(adml_search_result)
+                                    msg = 'hierarchy %s does not match this item\'s hierarchy of %s'
+                                    log.debug(msg, hierarchy, this_hierarchy)
+                                    if len(these_admx_search_results) == 1:
+                                        log.debug('only 1 admx was found and it does not match this adml, it is safe to remove from the list')
+                                        adml_to_remove.append(adml_search_result)
                                 else:
+                                    log.debug('hierarchy %s matches item\'s hierarchy of %s', hierarchy, this_hierarchy)
+                                    log.debug('search_result %s added to results', search_result)
                                     admx_results.append(search_result)
                             if len(admx_results) == 1:
-                                admx_search_results = admx_results
+                                admx_search_results.append(admx_results[0])
             for adml in adml_to_remove:
                 if adml in adml_search_results:
                     adml_search_results.remove(adml)
@@ -4875,12 +4889,15 @@ def _lookup_admin_template(policy_name,
                         adml_search_result.attrib['id'])
                 log.debug('searching for displayName == %s', display_name_searchval)
                 if not admx_search_results:
+                    log.debug('search for an admx entry matching display_name %s and registry_class %s', display_name_searchval, policy_class)
                     admx_search_results = ADMX_DISPLAYNAME_SEARCH_XPATH(
                             admx_policy_definitions,
                             display_name=display_name_searchval,
                             registry_class=policy_class)
                 if admx_search_results:
-                    if len(admx_search_results) == 1 or hierarchy and not multiple_adml_entries:
+                    log.debug('processing admx_search_results of {0}'.format(admx_search_results))
+                    log.debug('multiple_adml_entries is {0}'.format(multiple_adml_entries))
+                    if (len(admx_search_results) == 1 or hierarchy) and not multiple_adml_entries:
                         found = False
                         for search_result in admx_search_results:
                             found = False
