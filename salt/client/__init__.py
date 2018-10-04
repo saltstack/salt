@@ -1822,7 +1822,6 @@ class LocalClient(object):
                 timeout,
                 **kwargs)
 
-
         master_uri = self._get_master_uri()
         channel = salt.transport.client.AsyncReqChannel.factory(self.opts,
                                                                 io_loop=io_loop,
