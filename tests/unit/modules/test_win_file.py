@@ -64,9 +64,10 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
     Test cases for the check_perms function in salt.modules.win_file
     '''
     temp_file = ''
-    current_user = salt.utils.win_functions.get_current_user(False)
+    current_user = ''
 
     def setup_loader_modules(self):
+        self.current_user = salt.utils.win_functions.get_current_user(False)
         return {
             win_file: {
                 '__opts__': {
