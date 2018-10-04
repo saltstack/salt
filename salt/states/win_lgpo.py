@@ -289,10 +289,13 @@ def set_(name,
                         ) == {}
 
                     if not policies_are_equal:
+                        additional_policy_comments = []
                         if policy_data['policy_lookup'][policy_name]['rights_assignment'] and cumulative_rights_assignments:
                             for user in policy_data['requested_policy'][policy_name]:
                                 if user not in current_policy[policy_data['output_section']][pol_id]:
                                     changes = True
+                                else:
+                                    additional_policy_comments.append('"{0}" is already granted the right'.format(user))
                         else:
                             changes = True
                         if changes:
@@ -303,6 +306,11 @@ def set_(name,
                                 requested_policy_json, current_policy_json
                             )
                             policy_changes.append(policy_name)
+                        else:
+                            if additional_policy_comments:
+                                ret['comment'] = '"{0}" is already set ({1}).\n'.format(policy_name, ', '.join(additional_policy_comments))
+                            else:
+                                ret['comment'] = '"{0}" is already set.\n'.format(policy_name) + ret['comment']
                     else:
                         log.debug('%s current setting matches '
                                   'the requested setting', policy_name)
