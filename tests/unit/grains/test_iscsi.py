@@ -4,7 +4,7 @@
 '''
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
-import os
+import errno
 import textwrap
 
 # Import Salt Testing Libs
@@ -68,7 +68,7 @@ class IscsiGrainsTestCase(TestCase):
         assert len(iqn) == 1
         assert iqn == ['iqn.1993-08.org.debian:01:d12f7aba36']
 
-    @patch('salt.utils.files.fopen', MagicMock(side_effect=IOError(os.errno.EPERM,
+    @patch('salt.utils.files.fopen', MagicMock(side_effect=IOError(errno.EPERM,
                                                                    'The cables are not the same length.')))
     @patch('salt.grains.iscsi.log', MagicMock())
     def test_linux_iqn_non_root(self):
@@ -81,10 +81,10 @@ class IscsiGrainsTestCase(TestCase):
         iscsi.log.debug.assert_called()
         assert 'Error while accessing' in iscsi.log.debug.call_args[0][0]
         assert 'cables are not the same' in iscsi.log.debug.call_args[0][2].strerror
-        assert iscsi.log.debug.call_args[0][2].errno == os.errno.EPERM
+        assert iscsi.log.debug.call_args[0][2].errno == errno.EPERM
         assert iscsi.log.debug.call_args[0][1] == '/etc/iscsi/initiatorname.iscsi'
 
-    @patch('salt.utils.files.fopen', MagicMock(side_effect=IOError(os.errno.ENOENT, '')))
+    @patch('salt.utils.files.fopen', MagicMock(side_effect=IOError(errno.ENOENT, '')))
     @patch('salt.grains.iscsi.log', MagicMock())
     def test_linux_iqn_no_iscsii_initiator(self):
         '''

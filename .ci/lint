@@ -3,6 +3,7 @@ pipeline {
     options {
         timestamps()
         ansiColor('xterm')
+        timeout(time: 1, unit: 'HOURS') 
     }
     environment {
         PYENV_ROOT = "/usr/local/pyenv"

@@ -2732,7 +2732,7 @@ def cloned(name,
            https_pass=None,
            output_encoding=None):
     '''
-    .. versionadded:: 2018.3.3, Fluorine
+    .. versionadded:: 2018.3.3,Fluorine
 
     Ensure that a repository has been cloned to the specified target directory.
     If not, clone that repository. No fetches will be performed once cloned.

@@ -667,4 +667,4 @@ class CPModuleTest(ModuleCase):
             os.unlink(tgt_cache_file)
 
     def test_envs(self):
-        self.assertEqual(self.run_function('cp.envs'), ['base', 'prod'])
+        self.assertEqual(sorted(self.run_function('cp.envs')), sorted(['base', 'prod']))

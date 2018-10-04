@@ -1118,7 +1118,7 @@ def _get_template_texts(source_list=None,
             tmplines = None
             with salt.utils.files.fopen(rndrd_templ_fn, 'rb') as fp_:
                 tmplines = fp_.read()
-                tmplines = tmplines.decode(__salt_system_encoding__)
+                tmplines = salt.utils.stringutils.to_unicode(tmplines)
                 tmplines = tmplines.splitlines(True)
             if not tmplines:
                 msg = 'Failed to read rendered template file {0} ({1})'
@@ -1140,7 +1140,9 @@ def _validate_str_list(arg):
     '''
     ensure ``arg`` is a list of strings
     '''
-    if isinstance(arg, six.string_types):
+    if isinstance(arg, six.binary_type):
+        ret = [salt.utils.stringutils.to_unicode(arg)]
+    elif isinstance(arg, six.string_types):
         ret = [arg]
     elif isinstance(arg, Iterable) and not isinstance(arg, Mapping):
         ret = []
@@ -2416,9 +2418,9 @@ def managed(name,
                 .format(contents_id)
             )
 
-        if isinstance(use_contents, bytes) and b'\0' in use_contents:
+        if isinstance(use_contents, six.binary_type) and b'\0' in use_contents:
             contents = use_contents
-        elif isinstance(use_contents, six.string_types) and str('\0') in use_contents:
+        elif isinstance(use_contents, six.text_type) and str('\0') in use_contents:
             contents = use_contents
         else:
             validated_contents = _validate_str_list(use_contents)
@@ -5039,7 +5041,9 @@ def append(name,
     check_res, check_msg = _check_file(name)
     if not check_res:
         # Try to create the file
-        touch(name, makedirs=makedirs)
+        touch_ret = touch(name, makedirs=makedirs)
+        if __opts__['test']:
+            return touch_ret
         retry_res, retry_msg = _check_file(name)
         if not retry_res:
             return _error(ret, check_msg)
@@ -5320,7 +5324,9 @@ def prepend(name,
     check_res, check_msg = _check_file(name)
     if not check_res:
         # Try to create the file
-        touch(name, makedirs=makedirs)
+        touch_ret = touch(name, makedirs=makedirs)
+        if __opts__['test']:
+            return touch_ret
         retry_res, retry_msg = _check_file(name)
         if not retry_res:
             return _error(ret, check_msg)

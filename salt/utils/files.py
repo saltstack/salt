@@ -791,10 +791,10 @@ def backup_minion(path, bkroot):
 def get_encoding(path):
     '''
     Detect a file's encoding using the following:
-    - Check for ascii
     - Check for Byte Order Marks (BOM)
     - Check for UTF-8 Markers
     - Check System Encoding
+    - Check for ascii
 
     Args:
 
@@ -867,10 +867,6 @@ def get_encoding(path):
     except os.error:
         raise CommandExecutionError('Failed to open file')
 
-    # Check for ASCII first
-    if check_ascii(data):
-        return 'ASCII'
-
     # Check for Unicode BOM
     encoding = check_bom(data)
     if encoding:
@@ -883,5 +879,9 @@ def get_encoding(path):
     # Check system encoding
     if check_system_encoding(data):
         return __salt_system_encoding__
+
+    # Check for ASCII first
+    if check_ascii(data):
+        return 'ASCII'
 
     raise CommandExecutionError('Could not detect file encoding')

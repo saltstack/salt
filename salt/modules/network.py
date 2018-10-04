@@ -26,10 +26,7 @@ from salt.exceptions import CommandExecutionError
 # Import 3rd-party libs
 from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,no-name-in-module,redefined-builtin
-if six.PY3:
-    import ipaddress
-else:
-    import salt.ext.ipaddress as ipaddress
+from salt._compat import ipaddress
 
 
 log = logging.getLogger(__name__)
@@ -1150,7 +1147,7 @@ def convert_cidr(cidr):
     ret = {'network': None,
            'netmask': None}
     cidr = calc_net(cidr)
-    network_info = salt.ext.ipaddress.ip_network(cidr)
+    network_info = ipaddress.ip_network(cidr)
     ret['network'] = six.text_type(network_info.network_address)
     ret['netmask'] = six.text_type(network_info.netmask)
     return ret

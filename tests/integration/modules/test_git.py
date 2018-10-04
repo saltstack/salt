@@ -697,7 +697,8 @@ class GitModuleTest(ModuleCase):
         second_rev = self.run_function(
             'git.revision',
             [self.repo],
-            rev=self.branches[1]
+            rev=self.branches[1],
+            timeout=120
         )
         # Make sure revision is a 40-char string
         self.assertTrue(len(second_rev) == 40)

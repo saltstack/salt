@@ -153,7 +153,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             try:
                 os.remove(path)
             except OSError as exc:
-                if exc.errno != os.errno.ENOENT:
+                if exc.errno != errno.ENOENT:
                     log.error('Failed to remove %s: %s', path, exc)
 
     def test_symlink(self):
@@ -355,7 +355,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         file.
         '''
         grain_path = os.path.join(TMP, 'file-grain-test')
-        self.run_function('grains.set', ['grain_path', grain_path])
         state_file = 'file-grainget'
 
         self.run_function('state.sls', [state_file])
@@ -830,6 +829,13 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         initial_mode = '0111'
         changed_mode = '0555'
 
+        initial_modes = {0: {sub: '0755',
+                             subsub: '0111'},
+                         1: {sub: '0111',
+                             subsub: '0111'},
+                         2: {sub: '0111',
+                             subsub: '0111'}}
+
         if not os.path.isdir(subsub):
             os.makedirs(subsub, int(initial_mode, 8))
 
@@ -845,8 +851,16 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                     self.assertEqual(changed_mode,
                                      _get_oct_mode(changed_dir))
                 for untouched_dir in dirs[depth+1:]:
-                    self.assertEqual(initial_mode,
-                                     _get_oct_mode(untouched_dir))
+                    # Beginning in Python 3.7, os.makedirs no longer sets
+                    # the mode of intermediate directories to the mode that
+                    # is passed.
+                    if sys.version_info >= (3, 7):
+                        _mode = initial_modes[depth][untouched_dir]
+                        self.assertEqual(_mode,
+                                         _get_oct_mode(untouched_dir))
+                    else:
+                        self.assertEqual(initial_mode,
+                                         _get_oct_mode(untouched_dir))
         finally:
             shutil.rmtree(top)
 
@@ -1603,10 +1617,11 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                     'finally': 'the last item'},
                 formatter='json')
 
-        with salt.utils.files.fopen(path_test, 'r') as fp_:
-            serialized_file = fp_.read()
+        with salt.utils.files.fopen(path_test, 'rb') as fp_:
+            serialized_file = salt.utils.stringutils.to_unicode(fp_.read())
 
-        expected_file = os.linesep.join([
+        # The JSON serializer uses LF even on OSes where os.path.sep is CRLF.
+        expected_file = '\n'.join([
             '{',
             '  "a_list": [',
             '    "first_element",',
@@ -2269,7 +2284,9 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             if salt.utils.platform.is_windows():
                 import subprocess
                 import win32api
-                p = subprocess.Popen(salt.utils.stringutils.to_str('type {}'.format(win32api.GetShortPathName(test_file))),
+                p = subprocess.Popen(
+                    salt.utils.stringutils.to_str(
+                        'type {}'.format(win32api.GetShortPathName(test_file))),
                     shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                 p.poll()
                 out = p.stdout.read()
@@ -3728,6 +3745,25 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(
             self._read(name),
             self.with_matching_block_and_marker_end_not_after_newline)
+
+    @with_tempfile()
+    def test_issue_49043(self, name):
+        ret = self.run_function(
+            'state.sls',
+            mods='issue-49043',
+            pillar={'name': name},
+        )
+        log.error("ret = %s", repr(ret))
+        diff = '--- \n+++ \n@@ -0,0 +1,3 @@\n'
+        diff += dedent('''\
+        +#-- start managed zone --
+        +äöü
+        +#-- end managed zone --
+        ''')
+        job = 'file_|-somefile-blockreplace_|-{}_|-blockreplace'.format(name)
+        self.assertEqual(
+            ret[job]['changes']['diff'],
+            diff)
 
 
 class RemoteFileTest(ModuleCase, SaltReturnAssertsMixin):
