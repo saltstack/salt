@@ -193,6 +193,28 @@ Deprecations
 Module Deprecations
 -------------------
 
+- The :py:mod:`boto_route53 <salt.modules.boto_route53>` module has been
+  changed as follows:
+
+    - Support for the ``retry_on_rate_limit`` and the ``rate_limit_retries``
+      kwargs has been removed from the following functions. In all cases, please
+      use the ``retry_on_errors`` and ``error_retries`` options, respectively,
+      instead:
+
+      - :py:func:`boto_route53.add_record <salt.modules.boto_route53.add_record>`
+      - :py:func:`boto_route53.delete_record <salt.modules.boto_route53.delete_record>`
+      - :py:func:`boto_route53.get_record <salt.modules.boto_route53.get_record>`
+      - :py:func:`boto_route53.update_record <salt.modules.boto_route53.update_record>`
+      - :py:func:`boto_route53.zone_exists <salt.modules.boto_route53.zone_exists>`
+
+- The :py:mod:`boto_vpc <salt.modules.boto_vpc>` module has been
+  changed as follows:
+
+    - Support for the ``boto_vpc.describe_route_table`` function has been removed.
+      Please use the
+      :py:func:`boto_vpc.describe_route_tables <salt.modules.boto_vpc.describe_route_tables>`
+      function instead.
+
 - The :py:mod:`dockermod <salt.modules.dockermod>` module has been
   changed as follows:
 

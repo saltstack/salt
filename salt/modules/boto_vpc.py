@@ -2468,71 +2468,14 @@ def replace_route(route_table_id=None, destination_cidr_block=None,
         return {'replaced': False, 'error': __utils__['boto.get_error'](e)}
 
 
-def describe_route_table(route_table_id=None, route_table_name=None,
-                         tags=None, region=None, key=None, keyid=None,
-                         profile=None):
-    '''
-    Given route table properties, return route table details if matching table(s) exist.
-
-    .. versionadded:: 2015.8.0
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt myminion boto_vpc.describe_route_table route_table_id='rtb-1f382e7d'
-
-    '''
-    salt.utils.versions.warn_until(
-        'Neon',
-         'The \'describe_route_table\' method has been deprecated and '
-         'replaced by \'describe_route_tables\'.'
-    )
-    if not any((route_table_id, route_table_name, tags)):
-        raise SaltInvocationError('At least one of the following must be specified: '
-                                  'route table id, route table name, or tags.')
-
-    try:
-        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-        filter_parameters = {'filters': {}}
-
-        if route_table_id:
-            filter_parameters['route_table_ids'] = route_table_id
-
-        if route_table_name:
-            filter_parameters['filters']['tag:Name'] = route_table_name
-
-        if tags:
-            for tag_name, tag_value in six.iteritems(tags):
-                filter_parameters['filters']['tag:{0}'.format(tag_name)] = tag_value
-
-        route_tables = conn.get_all_route_tables(**filter_parameters)
-
-        if not route_tables:
-            return {}
-
-        route_table = {}
-        keys = ['id', 'vpc_id', 'tags', 'routes', 'associations']
-        route_keys = ['destination_cidr_block', 'gateway_id', 'instance_id', 'interface_id', 'vpc_peering_connection_id']
-        assoc_keys = ['id', 'main', 'route_table_id', 'subnet_id']
-        for item in route_tables:
-            for key in keys:
-                if hasattr(item, key):
-                    route_table[key] = getattr(item, key)
-                    if key == 'routes':
-                        route_table[key] = _key_iter(key, route_keys, item)
-                    if key == 'associations':
-                        route_table[key] = _key_iter(key, assoc_keys, item)
-        return route_table
-
-    except BotoServerError as e:
-        return {'error': __utils__['boto.get_error'](e)}
-
-
-def describe_route_tables(route_table_id=None, route_table_name=None,
-                         vpc_id=None,
-                         tags=None, region=None, key=None, keyid=None,
-                         profile=None):
+def describe_route_tables(route_table_id=None,
+                          route_table_name=None,
+                          vpc_id=None,
+                          tags=None,
+                          region=None,
+                          key=None,
+                          keyid=None,
+                          profile=None):
     '''
     Given route table properties, return details of all matching route tables.
 

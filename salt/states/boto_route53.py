@@ -180,9 +180,14 @@ def present(name, value, zone, record_type, ttl=None, identifier=None, region=No
 
     try:
         record = __salt__['boto_route53.get_record'](name, zone, record_type,
-                                                     False, region, key, keyid,
-                                                     profile, split_dns,
-                                                     private_zone, identifier)
+                                                     fetch_all=False,
+                                                     region=region,
+                                                     key=key,
+                                                     keyid=keyid,
+                                                     profile=profile,
+                                                     split_dns=split_dns,
+                                                     private_zone=private_zone,
+                                                     identifier=identifier)
     except SaltInvocationError as err:
         ret['comment'] = 'Error: {0}'.format(err)
         ret['result'] = False
@@ -194,10 +199,16 @@ def present(name, value, zone, record_type, ttl=None, identifier=None, region=No
             ret['result'] = None
             return ret
         added = __salt__['boto_route53.add_record'](name, value, zone,
-                                                    record_type, identifier,
-                                                    ttl, region, key, keyid,
-                                                    profile, wait_for_sync,
-                                                    split_dns, private_zone)
+                                                    record_type,
+                                                    identifier=identifier,
+                                                    ttl=ttl,
+                                                    region=region,
+                                                    key=key,
+                                                    keyid=keyid,
+                                                    profile=profile,
+                                                    wait_for_sync=wait_for_sync,
+                                                    split_dns=split_dns,
+                                                    private_zone=private_zone)
         if added:
             ret['changes']['old'] = None
             ret['changes']['new'] = {'name': name,
@@ -234,12 +245,15 @@ def present(name, value, zone, record_type, ttl=None, identifier=None, region=No
                 return ret
             updated = __salt__['boto_route53.update_record'](name, value, zone,
                                                              record_type,
-                                                             identifier, ttl,
-                                                             region, key,
-                                                             keyid, profile,
-                                                             wait_for_sync,
-                                                             split_dns,
-                                                             private_zone)
+                                                             identifier=identifier,
+                                                             ttl=ttl,
+                                                             region=region,
+                                                             key=key,
+                                                             keyid=keyid,
+                                                             profile=profile,
+                                                             wait_for_sync=wait_for_sync,
+                                                             split_dns=split_dns,
+                                                             private_zone=private_zone)
             if updated:
                 ret['changes']['old'] = record
                 ret['changes']['new'] = {'name': name,
@@ -313,9 +327,14 @@ def absent(
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
     record = __salt__['boto_route53.get_record'](name, zone, record_type,
-                                                 False, region, key, keyid,
-                                                 profile, split_dns,
-                                                 private_zone, identifier)
+                                                 fetch_all=False,
+                                                 region=region,
+                                                 key=key,
+                                                 keyid=keyid,
+                                                 profile=profile,
+                                                 split_dns=split_dns,
+                                                 private_zone=private_zone,
+                                                 identifier=identifier)
     if record:
         if __opts__['test']:
             ret['comment'] = 'Route53 record {0} set to be deleted.'.format(name)
@@ -323,12 +342,15 @@ def absent(
             return ret
         deleted = __salt__['boto_route53.delete_record'](name, zone,
                                                          record_type,
-                                                         identifier, False,
-                                                         region, key, keyid,
-                                                         profile,
-                                                         wait_for_sync,
-                                                         split_dns,
-                                                         private_zone)
+                                                         identifier=identifier,
+                                                         all_records=False,
+                                                         region=region,
+                                                         key=key,
+                                                         keyid=keyid,
+                                                         profile=profile,
+                                                         wait_for_sync=wait_for_sync,
+                                                         split_dns=split_dns,
+                                                         private_zone=private_zone)
         if deleted:
             ret['changes']['old'] = record
             ret['changes']['new'] = None

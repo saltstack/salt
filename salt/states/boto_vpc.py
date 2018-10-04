@@ -589,14 +589,16 @@ def subnet_present(name, cidr_block, vpc_name=None, vpc_id=None,
                 if rt['exists']:
                     if route_table_id:
                         route_table_found = True
-                        route_table_desc = __salt__['boto_vpc.describe_route_table'](route_table_id=route_table_id,
-                                                                                     region=region, key=key, keyid=keyid,
-                                                                                     profile=profile)
+                        route_table_desc = __salt__['boto_vpc.describe_route_tables'](
+                            route_table_id=route_table_id,
+                            region=region, key=key, keyid=keyid,
+                            profile=profile)
                     elif route_table_name:
                         route_table_found = True
-                        route_table_desc = __salt__['boto_vpc.describe_route_table'](route_table_name=route_table_name,
-                                                                                     region=region, key=key, keyid=keyid,
-                                                                                     profile=profile)
+                        route_table_desc = __salt__['boto_vpc.describe_route_tables'](
+                            route_table_name=route_table_name,
+                            region=region, key=key, keyid=keyid,
+                            profile=profile)
         if not route_table_found:
             ret['result'] = False
             ret['comment'] = 'The specified route table {0} could not be found.'.format(rtid)
@@ -676,7 +678,7 @@ def _verify_subnet_association(route_table_desc, subnet_id):
     Helper function verify a subnet's route table association
 
     route_table_desc
-        the description of a route table, as returned from boto_vpc.describe_route_table
+        the description of a route table, as returned from boto_vpc.describe_route_tables
 
     subnet_id
         the subnet id to verify
@@ -1179,8 +1181,9 @@ def _subnets_present(route_table_name, subnet_ids=None, subnet_names=None, tags=
             subnet_ids.append(r['id'])
 
     # Describe routing table
-    route_table = __salt__['boto_vpc.describe_route_table'](route_table_name=route_table_name, tags=tags, region=region,
-                                                            key=key, keyid=keyid, profile=profile)
+    route_table = __salt__['boto_vpc.describe_route_tables'](
+        route_table_name=route_table_name, tags=tags, region=region,
+        key=key, keyid=keyid, profile=profile)
     if not route_table:
         msg = 'Could not retrieve configuration for route table {0}.'.format(route_table_name)
         ret['comment'] = msg
@@ -1226,8 +1229,9 @@ def _subnets_present(route_table_name, subnet_ids=None, subnet_names=None, tags=
                     return ret
                 ret['comment'] = 'Associated subnet {0} with route table {1}.'.format(sn, route_table_name)
         ret['changes']['old'] = {'subnets_associations': route_table['associations']}
-        new_sub = __salt__['boto_vpc.describe_route_table'](route_table_name=route_table_name, tags=tags, region=region, key=key,
-                                                            keyid=keyid, profile=profile)
+        new_sub = __salt__['boto_vpc.describe_route_tables'](
+            route_table_name=route_table_name, tags=tags, region=region, key=key,
+            keyid=keyid, profile=profile)
         ret['changes']['new'] = {'subnets_associations': new_sub['associations']}
     return ret
 
