@@ -70,7 +70,7 @@ class ConsulPillarTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(consul_pillar.__salt__, {'grains.get': MagicMock(return_value=({}))}):
             with patch.object(consul_pillar, 'consul_fetch', MagicMock(return_value=('2232', PILLAR_DATA))):
                 pillar_data = consul_pillar.ext_pillar(
-                    'testminion', {}, 'consul_config root=test-shared/ pillar_root=nested-key/'
+                    'testminion', {}, 'consul_config pillar_root=nested-key/ root=test-shared/ '
                 )
                 assert sorted(pillar_data['nested-key']) == ['sites', 'user']
                 self.assertNotIn('blankvalue', pillar_data['nested-key']['user'])
