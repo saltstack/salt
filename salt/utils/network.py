@@ -1868,8 +1868,10 @@ def dns_check(addr, port=80, safe=False, ipv6=None):
     hostnames = []
     try:
         refresh_dns()
-        hostnames = socket.getaddrinfo(addr, port,
-                                       family, socket.SOCK_STREAM)
+        hostnames = socket.getaddrinfo(addr, port, family, socket.SOCK_STREAM)
+    except TypeError:
+        err = ('Attempt to resolve address \'{0}\' failed. Invalid or unresolveable address').format(lookup)
+        raise SaltSystemExit(code=42, msg=err)
     except socket.error:
         error = True
 
@@ -1882,6 +1884,9 @@ def dns_check(addr, port=80, safe=False, ipv6=None):
             hostnames = socket.getaddrinfo(addr, port,
                                            socket.AF_INET,
                                            socket.SOCK_STREAM)
+        except TypeError:
+            err = ('Attempt to resolve address \'{0}\' failed. Invalid or unresolveable address').format(lookup)
+            raise SaltSystemExit(code=42, msg=err)
         except socket.error:
             error = True
 
