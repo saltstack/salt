@@ -249,7 +249,7 @@ class SPMClient(object):
             if pkg.endswith('.spm'):
                 if self._pkgfiles_fun('path_exists', pkg):
                     comps = pkg.split('-')
-                    comps = '-'.join(comps[:-2]).split(os.path.sep)
+                    comps = os.path.split('-'.join(comps[:-2]))
                     pkg_name = comps[-1]
 
                     formula_tar = tarfile.open(pkg, 'r:bz2')
