@@ -156,8 +156,10 @@ def default_vsan_policy_configured(name, policy):
              '\'{1}\''.format(name, vcenter))
     log.trace('policy = {0}'.format(policy))
     changes_required = False
-    ret = {'name': name, 'changes': {}, 'result': None, 'comment': None,
-           'pchanges': {}}
+    ret = {'name': name,
+           'changes': {},
+           'result': None,
+           'comment': None}
     comments = []
     changes = {}
     changes_required = False
@@ -266,13 +268,11 @@ def default_vsan_policy_configured(name, policy):
                                 'Nothing to be done.'.format(vcenter)),
                     'result': True})
     else:
-        ret.update({'comment': '\n'.join(comments)})
-        if __opts__['test']:
-            ret.update({'pchanges': changes,
-                        'result': None})
-        else:
-            ret.update({'changes': changes,
-                        'result': True})
+        ret.update({
+            'comment': '\n'.join(comments),
+            'changes': changes,
+            'result': None if __opts__['test'] else True,
+        })
     return ret
 
 
@@ -286,8 +286,10 @@ def storage_policies_configured(name, policies):
     comments = []
     changes = []
     changes_required = False
-    ret = {'name': name, 'changes': {}, 'result': None, 'comment': None,
-           'pchanges': {}}
+    ret = {'name': name,
+           'changes': {},
+           'result': None,
+           'comment': None}
     log.trace('policies = {0}'.format(policies))
     si = None
     try:
@@ -430,13 +432,11 @@ def storage_policies_configured(name, policies):
                                 'Nothing to be done.'.format(vcenter)),
                     'result': True})
     else:
-        ret.update({'comment': '\n'.join(comments)})
-        if __opts__['test']:
-            ret.update({'pchanges': {'storage_policies': changes},
-                        'result': None})
-        else:
-            ret.update({'changes': {'storage_policies': changes},
-                        'result': True})
+        ret.update({
+            'comment': '\n'.join(comments),
+            'changes': {'storage_policies': changes},
+            'result': None if __opts__['test'] else True,
+        })
     return ret
 
 
@@ -454,8 +454,10 @@ def default_storage_policy_assigned(name, policy, datastore):
              ''.format(name, policy, datastore))
     changes = {}
     changes_required = False
-    ret = {'name': name, 'changes': {}, 'result': None, 'comment': None,
-           'pchanges': {}}
+    ret = {'name': name,
+           'changes': {},
+           'result': None,
+           'comment': None}
     si = None
     try:
         si = __salt__['vsphere.get_service_instance_via_proxy']()
@@ -488,14 +490,13 @@ def default_storage_policy_assigned(name, policy, datastore):
         ret.update({'comment': exc.strerror,
                     'result': False if not __opts__['test'] else None})
         return ret
+
     ret['comment'] = comment
     if changes_required:
-        if __opts__['test']:
-            ret.update({'result': None,
-                        'pchanges': changes})
-        else:
-            ret.update({'result': True,
-                        'changes': changes})
+        ret.update({
+            'changes': changes,
+            'result': None if __opts__['test'] else True,
+        })
     else:
         ret['result'] = True
     return ret
