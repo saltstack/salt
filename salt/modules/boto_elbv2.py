@@ -354,9 +354,9 @@ def deregister_targets(name,
 
 def describe_load_balancers(names=None,
                             load_balancer_arns=None,
-                            region=None, 
-                            key=None, 
-                            keyid=None, 
+                            region=None,
+                            key=None,
+                            keyid=None,
                             profile=None):
     '''
     Describes the specified load balancer or all of your load balancers.
@@ -414,17 +414,17 @@ def describe_load_balancers(names=None,
         return False
 
 
-def describe_target_groups(names=None, 
-                           target_group_arns=None, 
+def describe_target_groups(names=None,
+                           target_group_arns=None,
                            load_balancer_arn=None,
-                           region=None, 
-                           key=None, 
-                           keyid=None, 
+                           region=None,
+                           key=None,
+                           keyid=None,
                            profile=None):
     '''
-    Describes the specified target groups or all of your target groups. By default, 
-    all target groups are described. Alternatively, you can specify one of the 
-    following to filter the results: the ARN of the load balancer, the names of 
+    Describes the specified target groups or all of your target groups. By default,
+    all target groups are described. Alternatively, you can specify one of the
+    following to filter the results: the ARN of the load balancer, the names of
     one or more target groups, or the ARNs of one or more target groups.
 
     Returns: list
