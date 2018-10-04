@@ -43,9 +43,9 @@ class WinPKGTest(ModuleCase):
                         self.assertEqual(0, refresh['failed'],
                              msg='failed returned {0}. Expected return: 0'.format(refresh['failed']))
                         self.assertEqual(check_refresh, refresh['total'],
-                             msg='total returned {0}. Expected return {1}'.format(check_refresh, refresh['total']))
+                             msg='total returned {0}. Expected return {1}'.format(refresh['total'], check_refresh))
                         self.assertEqual(check_refresh, refresh['success'],
-                             msg='success returned {0}. Expected return {1}'.format(check_refresh, refresh['success']))
+                             msg='success returned {0}. Expected return {1}'.format(refresh['success'], check_refresh))
                         count = 0
                     except AssertionError as err:
                         if count == 1:
