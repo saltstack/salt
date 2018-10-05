@@ -2733,7 +2733,8 @@ def managed(name,
                                     }}
             else:
                 current_seuser, current_serole, current_setype, current_serange = __salt__[
-                    'file.set_selinux_context'](name, requested_seuser, requested_serole, requested_setype, requested_serange).split(':')
+                    'file.set_selinux_context'](name, user=requested_seuser, role=requested_serole,
+                    type=requested_setype, range=requested_serange, persist=True).split(':')
                 ret['comment'] = 'The file {0} is set to be changed'.format(name)
 
                 if requested_seuser:

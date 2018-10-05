@@ -3831,7 +3831,8 @@ def set_selinux_context(path,
                         user=None,
                         role=None,
                         type=None,    # pylint: disable=W0622
-                        range=None):  # pylint: disable=W0622
+                        range=None,   # pylint: disable=W0622
+                        persist=False):
     '''
     Set a specific SELinux label on a given path
 
@@ -3841,9 +3842,22 @@ def set_selinux_context(path,
 
         salt '*' file.set_selinux_context path <user> <role> <type> <range>
         salt '*' file.set_selinux_context /etc/yum.repos.d/epel.repo system_u object_r system_conf_t s0
+
+    .. versionchanged:: Neon
+
+        Added persist option
     '''
     if not any((user, role, type, range)):
         return False
+
+    if persist:
+        fcontext_result = __salt__['selinux.fcontext_add_policy'](path,
+            sel_type=type, sel_user=user, sel_level=range)
+        if fcontext_result.get('retcode', None) is not 0:
+            # Problem setting fcontext policy
+            raise CommandExecutionError(
+                'Problem setting fcontext: {0}'.format(fcontext_result)
+            )
 
     cmd = ['chcon']
     if user:
