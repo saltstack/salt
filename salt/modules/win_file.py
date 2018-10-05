@@ -35,7 +35,7 @@ import fnmatch  # do not remove, used in imported file.py functions
 import mmap  # do not remove, used in imported file.py functions
 import glob  # do not remove, used in imported file.py functions
 # do not remove, used in imported file.py functions
-import salt.ext.six as six  # pylint: disable=import-error,no-name-in-module
+from salt.ext import six
 from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=import-error,no-name-in-module
 import salt.utils.atomicfile  # do not remove, used in imported file.py functions
 from salt.exceptions import CommandExecutionError, SaltInvocationError
@@ -1700,7 +1700,7 @@ def check_perms(path,
                 if isinstance(deny_perms[user]['perms'], six.string_types):
                     if not salt.utils.win_dacl.has_permission(
                             obj_name=path,
-                            principal=user,
+                            principal=user_name,
                             permission=deny_perms[user]['perms'],
                             access_mode='deny',
                             exact=False):
@@ -1708,7 +1708,11 @@ def check_perms(path,
                 else:
                     for perm in deny_perms[user]['perms']:
                         if not salt.utils.win_dacl.has_permission(
-                                path, user, perm, 'deny', exact=False):
+                                obj_name=path,
+                                principal=user_name,
+                                permission=perm,
+                                access_mode='deny',
+                                exact=False):
                             if user not in changes:
                                 changes[user] = {'perms': []}
                             changes[user]['perms'].append(deny_perms[user]['perms'])
@@ -1775,7 +1779,7 @@ def check_perms(path,
                 try:
                     salt.utils.win_dacl.set_permissions(
                         obj_name=path,
-                        principal=user,
+                        principal=user_name,
                         permissions=perms,
                         access_mode='deny',
                         applies_to=applies_to)
@@ -1819,7 +1823,7 @@ def check_perms(path,
                 if isinstance(grant_perms[user]['perms'], six.string_types):
                     if not salt.utils.win_dacl.has_permission(
                             obj_name=path,
-                            principal=user,
+                            principal=user_name,
                             permission=grant_perms[user]['perms'],
                             access_mode='grant'):
                         changes[user] = {'perms': grant_perms[user]['perms']}
@@ -1827,7 +1831,7 @@ def check_perms(path,
                     for perm in grant_perms[user]['perms']:
                         if not salt.utils.win_dacl.has_permission(
                                 obj_name=path,
-                                principal=user,
+                                principal=user_name,
                                 permission=perm,
                                 access_mode='grant',
                                 exact=False):
@@ -1894,7 +1898,7 @@ def check_perms(path,
                 try:
                     salt.utils.win_dacl.set_permissions(
                         obj_name=path,
-                        principal=user,
+                        principal=user_name,
                         permissions=perms,
                         access_mode='grant',
                         applies_to=applies_to)
@@ -1925,10 +1929,14 @@ def check_perms(path,
     # Check reset
     # If reset=True, which users will be removed as a result
     if reset:
+        # Reload perms so you can reset them
+        cur_perms = salt.utils.win_dacl.get_permissions(obj_name=path)
         for user_name in cur_perms:
-            if user_name not in grant_perms:
-                if 'grant' in cur_perms[user_name] and not \
-                cur_perms[user_name]['grant']['inherited']:
+            if grant_perms is not None and \
+                    user_name.lower() not in dict(
+                        (k.lower(), v) for k, v in six.iteritems(grant_perms)):
+                if 'grant' in cur_perms[user_name] and \
+                        not cur_perms[user_name]['grant']['inherited']:
                     if __opts__['test'] is True:
                         if 'remove_perms' not in ret['pchanges']:
                             ret['pchanges']['remove_perms'] = {}
@@ -1943,9 +1951,11 @@ def check_perms(path,
                             ace_type='grant')
                         ret['changes']['remove_perms'].update(
                             {user_name: cur_perms[user_name]})
-            if user_name not in deny_perms:
-                if 'deny' in cur_perms[user_name] and not \
-                cur_perms[user_name]['deny']['inherited']:
+            if deny_perms is not None and \
+                    user_name.lower() not in dict(
+                        (k.lower(), v) for k, v in six.iteritems(deny_perms)):
+                if 'deny' in cur_perms[user_name] and \
+                        not cur_perms[user_name]['deny']['inherited']:
                     if __opts__['test'] is True:
                         if 'remove_perms' not in ret['pchanges']:
                             ret['pchanges']['remove_perms'] = {}
