@@ -2690,73 +2690,6 @@ def managed(name,
         return _error(
             ret, 'Defaults must be formed as a dict')
 
-    if selinux:
-        current_seuser, current_serole, current_setype, current_serange = __salt__[
-            'file.get_selinux_context'](name).split(':')
-        log.debug('Current selinux context user:{0} role:{1} type:{2} range:{3}'.format(current_seuser, current_serole, current_setype, current_serange))
-        requested_seuser = None
-        requested_serole = None
-        requested_setype = None
-        requested_serange = None
-        # Only set new selinux variables if updates are needed
-        if selinux.get('seuser', None) and selinux['seuser'] != current_seuser:
-            requested_seuser = selinux['seuser']
-        if selinux.get('serole', None) and selinux['serole'] != current_serole:
-            requested_serole = selinux['serole']
-        if selinux.get('setype', None) and selinux['setype'] != current_setype:
-            requested_setype = selinux['setype']
-        if selinux.get('serange', None) and selinux['serange'] != current_serange:
-            requested_serange = selinux['serange']
-
-        if requested_seuser or requested_serole or requested_setype or requested_serange:
-            # selinux updates needed, prep changes output
-            selinux_change_new = ''
-            selinux_change_orig = ''
-            if requested_seuser:
-                selinux_change_new += "User: {0} ".format(requested_seuser)
-                selinux_change_orig += "User: {0} ".format(current_seuser)
-            if requested_serole:
-                selinux_change_new += "Role: {0} ".format(requested_serole)
-                selinux_change_orig += "Role: {0} ".format(current_serole)
-            if requested_setype:
-                selinux_change_new += "Type: {0} ".format(requested_setype)
-                selinux_change_orig += "Type: {0} ".format(current_setype)
-            if requested_serange:
-                selinux_change_new += "Range: {0} ".format(requested_serange)
-                selinux_change_orig += "Range: {0} ".format(current_serange)
-
-            if __opts__['test']:
-                ret['comment'] = 'File {0} selinux context to be updated'.format(name)
-                ret['result'] = None
-                ret['changes'] = {'selinux context': {'Old': selinux_change_orig,
-                                    'New': selinux_change_new
-                                    }}
-            else:
-                current_seuser, current_serole, current_setype, current_serange = __salt__[
-                    'file.set_selinux_context'](name, user=requested_seuser, role=requested_serole,
-                    type=requested_setype, range=requested_serange, persist=True).split(':')
-                ret['comment'] = 'The file {0} is set to be changed'.format(name)
-
-                if requested_seuser:
-                    if current_seuser != requested_seuser:
-                        ret['comment'] = "Unable to update seuser context"
-                        ret['result'] = False
-                if requested_serole:
-                    if current_serole != requested_serole:
-                        ret['comment'] = "Unable to update serole context"
-                        ret['result'] = False
-                if requested_setype:
-                    if current_setype != requested_setype:
-                        ret['comment'] = "Unable to update setype context"
-                        ret['result'] = False
-                if requested_serange:
-                    if current_serange != requested_serange:
-                        ret['comment'] = "Unable to update serange context"
-                        ret['result'] = False
-                ret['changes'] = {'selinux context': {'Old': selinux_change_orig,
-                    'New': selinux_change_new
-                    }}
-
     if not replace and os.path.exists(name):
         # Check and set the permissions if necessary
         if salt.utils.platform.is_windows():
@@ -2770,7 +2703,11 @@ def managed(name,
                 reset=win_perms_reset)
         else:
             ret, _ = __salt__['file.check_perms'](
-                name, ret, user, group, mode, attrs, follow_symlinks)
+                name, ret, user, group, mode, attrs, follow_symlinks,
+                seuser=selinux.get('seuser', None),
+                serole=selinux.get('serole', None),
+                setype=selinux.get('setype', None),
+                serange=selinux.get('serange', None))
         if __opts__['test']:
             ret['comment'] = 'File {0} not updated'.format(name)
         elif not ret['changes'] and ret['result']:
@@ -2803,6 +2740,10 @@ def managed(name,
                     contents,
                     skip_verify,
                     keep_mode,
+                    seuser=selinux.get('seuser', None),
+                    serole=selinux.get('serole', None),
+                    setype=selinux.get('setype', None),
+                    serange=selinux.get('serange', None),
                     **kwargs
                 )
 
@@ -2912,6 +2853,10 @@ def managed(name,
                 win_perms_reset=win_perms_reset,
                 encoding=encoding,
                 encoding_errors=encoding_errors,
+                seuser=selinux.get('seuser', None),
+                serole=selinux.get('serole', None),
+                setype=selinux.get('setype', None),
+                serange=selinux.get('serange', None),
                 **kwargs)
         except Exception as exc:
             ret['changes'] = {}
@@ -2989,6 +2934,10 @@ def managed(name,
                 win_perms_reset=win_perms_reset,
                 encoding=encoding,
                 encoding_errors=encoding_errors,
+                seuser=selinux.get('seuser', None),
+                serole=selinux.get('serole', None),
+                setype=selinux.get('setype', None),
+                serange=selinux.get('serange', None),
                 **kwargs)
         except Exception as exc:
             ret['changes'] = {}
