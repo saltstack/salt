@@ -34,24 +34,10 @@ class WinPKGTest(ModuleCase):
         Test add and removing a new pkg sls
         in the windows software repository
         '''
-        def _check_pkg(pkgs, exists=True, check_refresh=None):
+        def _check_pkg(pkgs, check_refresh, exists=True):
             refresh = self.run_function('pkg.refresh_db')
-            if check_refresh:
-                count = 2
-                while count != 0:
-                    try:
-                        self.assertEqual(0, refresh['failed'],
-                             msg='failed returned {0}. Expected return: 0'.format(refresh['failed']))
-                        self.assertEqual(check_refresh, refresh['total'],
-                             msg='total returned {0}. Expected return {1}'.format(refresh['total'], check_refresh))
-                        self.assertEqual(check_refresh, refresh['success'],
-                             msg='success returned {0}. Expected return {1}'.format(refresh['success'], check_refresh))
-                        count = 0
-                    except AssertionError as err:
-                        if count == 1:
-                            raise AssertionError(err)
-                        count = count -1
-                        refresh = self.run_function('pkg.refresh_db')
+            self.assertEqual(check_refresh, refresh['total'],
+                 msg='total returned {0}. Expected return {1}'.format(refresh['total'], check_refresh))
             repo_data = self.run_function('pkg.get_repo_data', timeout=300)
             repo_cache = os.path.join(RUNTIME_VARS.TMP, 'rootdir', 'cache', 'files', 'base', 'win', 'repo-ng')
             for pkg in pkgs:
@@ -68,7 +54,7 @@ class WinPKGTest(ModuleCase):
 
         pkgs = ['putty', '7zip']
         # check putty and 7zip are in cache and repo query
-        _check_pkg(pkgs)
+        _check_pkg(pkgs, 2)
 
         # now add new sls
         with salt.utils.files.fopen(CURL, 'w') as fp_:
@@ -89,15 +75,16 @@ class WinPKGTest(ModuleCase):
                     locale: en_US
                     reboot: False
                 '''))
+            fp_.flush()
         # now check if curl is also in cache and repo query
         pkgs.append('curl')
         for pkg in pkgs:
             self.assertIn(pkg + '.sls', os.listdir(REPO_DIR))
-        _check_pkg(pkgs, check_refresh=3)
+        _check_pkg(pkgs, 3)
 
         # remove curl sls and check its not in cache and repo query
         os.remove(CURL)
-        _check_pkg(['curl'], exists=False)
+        _check_pkg(['curl'], 2, exists=False)
 
     def tearDown(self):
         if os.path.isfile(CURL):
