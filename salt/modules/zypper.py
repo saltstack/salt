@@ -1396,6 +1396,7 @@ def upgrade(refresh=True,
             fromrepo=None,
             novendorchange=False,
             skip_verify=False,
+            downloadonly=None,
             **kwargs):  # pylint: disable=unused-argument
     '''
     .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
@@ -1435,6 +1436,10 @@ def upgrade(refresh=True,
     skip_verify
         Skip the GPG verification check (e.g., ``--no-gpg-checks``)
 
+    downloadonly
+        Only download packages, but do not upgrade. Cached in ``/var/cache/zypp``.
+        Allows for pre-caching of packages before upgrade.
+
     Returns a dictionary containing the changes:
 
     .. code-block:: python
@@ -1451,6 +1456,9 @@ def upgrade(refresh=True,
         salt '*' pkg.upgrade dist-upgrade=True dryrun=True
     '''
     cmd_update = (['dist-upgrade'] if dist_upgrade else ['update']) + ['--auto-agree-with-licenses']
+
+    if downloadonly:
+        cmd_update.append('--download-only')
 
     if skip_verify:
         # The '--no-gpg-checks' needs to be placed before the Zypper command.
