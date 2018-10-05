@@ -62,7 +62,7 @@ timeout(time: 6, unit: 'HOURS') {
                         } finally {
                             cleanWs notFailBuild: true
                             def currentResult = currentBuild.result ?: 'SUCCESS'
-                            if ( currentResult == 'SUCCESS') {
+                            if (currentResult == 'SUCCESS') {
                                 githubNotify credentialsId: 'test-jenkins-credentials',
                                     description: "The ${TEST_SUITE}-${TEST_PLATFORM} job has passed",
                                     status: 'SUCCESS',
