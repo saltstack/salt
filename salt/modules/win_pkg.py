@@ -693,12 +693,13 @@ def refresh_db(**kwargs):
 
     # Cache repo-ng locally
     log.info('Fetching *.sls files from {0}'.format(repo_details.winrepo_source_dir))
-    __salt__['cp.cache_dir'](
+    ret = __salt__['cp.cache_dir'](
         path=repo_details.winrepo_source_dir,
         saltenv=saltenv,
         include_pat='*.sls',
         exclude_pat=r'E@\/\..*?\/'  # Exclude all hidden directories (.git)
     )
+    log.debug("refresh_db - Return from cache_dir %s", repr(ret))
 
     return genrepo(saltenv=saltenv, verbose=verbose, failhard=failhard)
 
