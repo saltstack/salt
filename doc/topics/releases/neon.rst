@@ -165,6 +165,31 @@ New output:
               0
 
 
+State Changes
+=============
+
+- The :py:func:`file.rename <salt.states.file.rename>` state will now return a
+  ``True`` result (and make no changes) when the destination file already
+  exists, and ``Force`` is not set to ``True``. In previous releases, a
+  ``False`` result would be returned, but this meant that subsequent runs of
+  the state would fail due to the destination file being present.
+
+- The ``onchanges`` and ``prereq`` :ref:`requisites <requisites>` now behave
+  properly in test mode.
+
+Module Changes
+==============
+
+- The :py:func:`debian_ip <salt.modules.debian_ip>` module used by the
+  :py:func:`network.managed <salt.states.network.managed>` state has been
+  heavily refactored. The order that options appear in inet/inet6 blocks may
+  produce cosmetic changes. Many options without an 'ipvX' prefix will now be
+  shared between inet and inet6 blocks. The options ``enable_ipv4`` and
+  ``enabled_ipv6`` will now fully remove relevant inet/inet6 blocks. Overriding
+  options by prefixing them with 'ipvX' will now work with most options (i.e.
+  ``dns`` can be overriden by ``ipv4dns`` or ``ipv6dns``). The ``proto`` option
+  is now required.
+
 Salt Cloud Features
 ===================
 
@@ -212,3 +237,13 @@ Module Deprecations
     - Support for the ``ssh.recv_known_host`` function has been removed. Please use the
       :py:func:`ssh.recv_known_host_entries <salt.modules.ssh.recv_known_host_entries>`
       function instead.
+
+State Deprecations
+------------------
+
+- The :py:mod:`win_servermanager <salt.states.win_servermanager>` state has been
+  changed as follows:
+
+    - Support for the ``force`` kwarg has been removed from the
+      :py:func:`win_servermanager.installed <salt.statues.win_servermanager.installed>`
+      function. Please use ``recurse`` instead.

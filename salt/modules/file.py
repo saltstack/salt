@@ -4511,7 +4511,7 @@ def check_perms(name, ret, user, group, mode, attrs=None, follow_symlinks=False)
         try:
             lattrs = lsattr(name)
         except SaltInvocationError:
-            lsattrs = None
+            lattrs = None
         if lattrs is not None:
             # List attributes on file
             perms['lattrs'] = ''.join(lattrs.get(name, ''))
