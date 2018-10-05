@@ -49,7 +49,7 @@ def get_osarch():
         shell=True,
         close_fds=True,
         stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE).communicate()[0]
+        stderr=subprocess.PIPE).communicate()[0].decode().rstrip()
     return ret or 'unknown'
 
 
