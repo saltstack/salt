@@ -267,7 +267,8 @@ def fetch_tree(client, path, expand_keys):
     are folders. Take the remaining data and send it to be formatted
     in such a way as to be used as pillar data.
     '''
-    _, items = consul_fetch(client, path + '/')
+    absolute_path = path.rstrip('/') + '/'
+    _, items = consul_fetch(client, absolute_path)
     ret = {}
     has_children = re.compile(r'/$')
 
@@ -276,9 +277,9 @@ def fetch_tree(client, path, expand_keys):
     if items is None:
         return ret
     for item in reversed(items):
-        key = re.sub(r'^' + re.escape(path) + '/?', '', item['Key'])
+        key = re.sub(r'^' + re.escape(absolute_path), '', item['Key'])
         if key != '':
-            log.debug('path/key - %s: %s', path, key)
+            log.debug('path/key - %s: %s', absolute_path, key)
             log.debug('has_children? %r', has_children.search(key))
         if has_children.search(key) is None:
             ret = pillar_format(ret, key.split('/'), item['Value'], expand_keys)
