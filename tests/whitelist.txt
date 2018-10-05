@@ -89,6 +89,12 @@ integration.shell.test_runner
 integration.shell.test_saltcli
 integration.shell.test_spm
 integration.shell.test_syndic
+integration.spm.test_build
+integration.spm.test_files
+integration.spm.test_info
+integration.spm.test_install
+integration.spm.test_remove
+integration.spm.test_repo
 integration.states.test_host
 integration.states.test_pip_state
 integration.states.test_pkg

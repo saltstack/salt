@@ -95,6 +95,8 @@ class SPMClient(object):
         self.files_prov = self.opts.get('spm_files_provider', 'local')
         self._prep_pkgdb()
         self._prep_pkgfiles()
+        self.db_conn = None
+        self.files_conn = None
         self._init()
 
     def _prep_pkgdb(self):
@@ -104,8 +106,14 @@ class SPMClient(object):
         self.pkgfiles = salt.loader.pkgfiles(self.opts)
 
     def _init(self):
-        self.db_conn = self._pkgdb_fun('init')
-        self.files_conn = self._pkgfiles_fun('init')
+        if not self.db_conn:
+            self.db_conn = self._pkgdb_fun('init')
+        if not self.files_conn:
+            self.files_conn = self._pkgfiles_fun('init')
+
+    def _close(self):
+        if self.db_conn:
+            self.db_conn.close()
 
     def run(self, args):
         '''
@@ -133,6 +141,8 @@ class SPMClient(object):
                 self._info(args)
             elif command == 'list':
                 self._list(args)
+            elif command == 'close':
+                self._close()
             else:
                 raise SPMInvocationError('Invalid command \'{0}\''.format(command))
         except SPMException as exc:
@@ -265,6 +275,7 @@ class SPMClient(object):
                     to_install.extend(to_)
                     optional.extend(op_)
                     recommended.extend(re_)
+                    formula_tar.close()
                 else:
                     raise SPMInvocationError('Package file {0} not found'.format(pkg))
             else:
@@ -901,6 +912,7 @@ class SPMClient(object):
         formula_def = salt.utils.yaml.safe_load(formula_ref)
 
         self.ui.status(self._get_info(formula_def))
+        formula_tar.close()
 
     def _info(self, args):
         '''
