@@ -203,12 +203,6 @@ def __virtual__():
     return (False, 'The mysql execution module cannot be loaded: neither MySQLdb nor PyMySQL is available.')
 
 
-def __mysql_hash_password(password):
-    _password = hashlib.sha1(password).digest()
-    _password = '*{0}'.format(hashlib.sha1(_password).hexdigest().upper())
-    return _password
-
-
 def __check_table(name, table, **connection_args):
     dbc = _connect(**connection_args)
     if dbc is None:
