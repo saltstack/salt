@@ -86,7 +86,7 @@ def installed(name,          # pylint: disable=C0103
     gems = __salt__['gem.list'](name, ruby, gem_bin=gem_bin, runas=user)
 
     if name in gems:
-        versions = list(map(lambda x: x.replace('default: ', ''), gems[name]))
+        versions = list([x.replace('default: ', '') for x in gems[name]])
         if version is not None and str(version) in versions:
             ret['result'] = True
             ret['comment'] = 'Gem is already installed.'
