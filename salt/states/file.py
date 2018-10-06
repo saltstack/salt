@@ -2488,8 +2488,8 @@ def managed(name,
     if attrs is not None and salt.utils.platform.is_windows():
         return _error(ret, 'The \'attrs\' option is not supported on Windows')
 
-    if selinux is not None and salt.utils.platform.is_windows():
-        return _error(ret, 'The \'selinux\' option is not supported on Windows')
+    if selinux is not None and not salt.utils.platform.is_linux():
+        return _error(ret, 'The \'selinux\' option is only supported on Linux')
 
     if selinux:
         seuser = selinux.get('seuser', None)

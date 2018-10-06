@@ -2035,3 +2035,55 @@ class FileBasicsTestCase(TestCase, LoaderModuleMockMixin):
             ret = filemod.source_list(
                 [{'file://' + self.myfile: ''}], 'filehash', 'base')
             self.assertEqual(list(ret), ['file://' + self.myfile, 'filehash'])
+
+
+@skipIf(salt.modules.selinux.getenforce() != 'Enforcing', 'Skip if selinux not enabled')
+class FileSelinuxTestCase(TestCase, LoaderModuleMockMixin):
+    def setup_loader_modules(self):
+        return {
+            filemod: {
+                '__salt__': {
+                    'config.manage_mode': configmod.manage_mode,
+                    'cmd.run': cmdmod.run,
+                    'cmd.run_all': cmdmod.run_all,
+                    'cmd.retcode': cmdmod.retcode
+                },
+                '__opts__': {
+                    'test': False,
+                    'file_roots': {'base': 'tmp'},
+                    'pillar_roots': {'base': 'tmp'},
+                    'cachedir': 'tmp',
+                    'grains': {},
+                },
+                '__grains__': {'kernel': 'Linux'},
+                '__utils__': {
+                    'files.is_text': MagicMock(return_value=True),
+                    'stringutils.get_diff': salt.utils.stringutils.get_diff,
+                },
+            }
+        }
+
+    def setUp(self):
+        self.tfile = tempfile.NamedTemporaryFile(delete=False, mode='w+')
+        self.tfile.write("")
+        self.tfile.close()
+
+    def tearDown(self):
+        os.remove(self.tfile.name)
+        del self.tfile
+
+    def test_selinux_getcontext(self):
+        '''
+            Test get selinux context
+            Assumes default selinux attributes on temporary files
+        '''
+        result = filemod.get_selinux_context(self.tfile.name)
+        self.assertEqual(result, "unconfined_u:object_r:user_tmp_t:s0")
+
+    def test_selinux_setcontext(self):
+        '''
+            Test set selinux context
+            Assumes default selinux attributes on temporary files
+        '''
+        result = filemod.set_selinux_context(self.tfile.name, user="system_u")
+        self.assertEqual(result, "system_u:object_r:user_tmp_t:s0")
