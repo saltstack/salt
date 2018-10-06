@@ -5233,10 +5233,10 @@ def append(name,
     .. versionadded:: 0.9.5
     '''
     ret = {'name': name,
-            'changes': {},
-            'pchanges': {},
-            'result': False,
-            'comment': ''}
+           'changes': {},
+           'pchanges': {},
+           'result': False,
+           'comment': ''}
 
     if not name:
         return _error(ret, 'Must provide name to file.append')
@@ -7048,7 +7048,7 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode='0600'):
                 ret['comment'] = (
                     'Character device {0} exists and has a different '
                     'major/minor {1}/{2}. Refusing to continue'
-                        .format(name, devmaj, devmin)
+                    .format(name, devmaj, devmin)
                 )
             # Check the perms
             else:
@@ -7181,10 +7181,10 @@ def mod_run_check_cmd(cmd, filename, **check_cmd_opts):
 
 
 def decode(name,
-        encoded_data=None,
-        contents_pillar=None,
-        encoding_type='base64',
-        checksum='md5'):
+           encoded_data=None,
+           contents_pillar=None,
+           encoding_type='base64',
+           checksum='md5'):
     '''
     Decode an encoded file and write it to disk
 
@@ -7244,10 +7244,10 @@ def decode(name,
 
     if not (encoded_data or contents_pillar):
         raise CommandExecutionError("Specify either the 'encoded_data' or "
-            "'contents_pillar' argument.")
+                                    "'contents_pillar' argument.")
     elif encoded_data and contents_pillar:
         raise CommandExecutionError("Specify only one 'encoded_data' or "
-            "'contents_pillar' argument.")
+                                    "'contents_pillar' argument.")
     elif encoded_data:
         content = encoded_data
     elif contents_pillar:
@@ -7273,7 +7273,6 @@ def decode(name,
         if not ret['changes']:
             ret['comment'] = 'File is in the correct state.'
             ret['result'] = True
-
             return ret
 
     if __opts__['test'] is True:
