@@ -1230,7 +1230,6 @@ def user_exists(user,
         password_column = __password_column(**connection_args)
 
     cur = dbc.cursor()
-
     qry = ('SELECT User,Host FROM mysql.user WHERE User = %(user)s AND '
            'Host = %(host)s')
     args = {}
