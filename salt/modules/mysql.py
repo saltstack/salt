@@ -1487,8 +1487,8 @@ def user_chpass(user,
             salt.utils.data.is_true(unix_socket):
         if host == 'localhost':
             if salt.utils.versions.version_cmp(server_version, '8.0.11') >= 0:
-                qry = ("ALTER USER %(user)s@%(host)s "
-                       "IDENTIFIED BY %(password)s;")
+                qry = ("ALTER USER '" + user + "'@'" + host + "'"
+                       " IDENTIFIED BY '" + password + "';")
                 args = {}
             else:
                 qry = ('UPDATE mysql.user SET ' + password_column + '='
@@ -1497,6 +1497,8 @@ def user_chpass(user,
                 args['unix_socket'] = 'unix_socket'
         else:
             log.error('Auth via unix_socket can be set only for host=localhost')
+    log.debug('=== qry %s ===', qry)
+    log.debug('=== args %s ===', args)
     try:
         result = _execute(cur, qry, args)
     except MySQLdb.OperationalError as exc:
