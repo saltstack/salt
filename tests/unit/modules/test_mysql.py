@@ -85,7 +85,6 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
                         ret = mysql.user_create('testuser')
                         self.assertEqual(False, ret)
 
-
     def test_user_create(self):
         '''
         Test the creation of a MySQL user in mysql exec module

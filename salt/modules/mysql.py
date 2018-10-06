@@ -35,7 +35,6 @@ Module to provide MySQL compatibility to salt.
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
-import hashlib
 import time
 import logging
 import re
@@ -1238,7 +1237,7 @@ def user_exists(user,
             qry += ' AND ' + password_column + ' = \'\''
     elif password:
         if salt.utils.versions.version_cmp(server_version, '8.0.11') >= 0:
-           run_verify = True
+            run_verify = True
         else:
             _password = password
             qry += ' AND ' + password_column + ' = PASSWORD(%(password)s)'
