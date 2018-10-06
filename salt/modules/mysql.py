@@ -1496,8 +1496,6 @@ def user_chpass(user,
                 args['unix_socket'] = 'unix_socket'
         else:
             log.error('Auth via unix_socket can be set only for host=localhost')
-    log.debug('=== qry %s ===', qry)
-    log.debug('=== args %s ===', args)
     try:
         result = _execute(cur, qry, args)
     except MySQLdb.OperationalError as exc:
