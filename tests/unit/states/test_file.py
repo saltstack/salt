@@ -229,8 +229,8 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                         comt = ('Symlink {0} to {1}'
                                 ' is set for creation').format(name, target)
                         ret = return_val({'comment': comt,
-                                    'result': None,
-                                    'pchanges': {'new': name}})
+                                          'result': None,
+                                          'pchanges': {'new': name}})
                     self.assertDictEqual(filestate.symlink(name, target,
                                                            user=user,
                                                            group=group), ret)

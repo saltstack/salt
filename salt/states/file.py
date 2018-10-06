@@ -2491,6 +2491,14 @@ def managed(name,
     if selinux is not None and salt.utils.platform.is_windows():
         return _error(ret, 'The \'selinux\' option is not supported on Windows')
 
+    if selinux:
+        seuser = selinux.get('seuser', None)
+        serole = selinux.get('serole', None)
+        setype = selinux.get('setype', None)
+        serange = selinux.get('serange', None)
+    else:
+        seuser = serole = setype = serange = None
+
     try:
         keep_mode = mode.lower() == 'keep'
         if keep_mode:
@@ -2704,10 +2712,10 @@ def managed(name,
         else:
             ret, _ = __salt__['file.check_perms'](
                 name, ret, user, group, mode, attrs, follow_symlinks,
-                seuser=selinux.get('seuser', None),
-                serole=selinux.get('serole', None),
-                setype=selinux.get('setype', None),
-                serange=selinux.get('serange', None))
+                seuser=seuser,
+                serole=serole,
+                setype=setype,
+                serange=serange)
         if __opts__['test']:
             ret['comment'] = 'File {0} not updated'.format(name)
         elif not ret['changes'] and ret['result']:
@@ -2740,13 +2748,12 @@ def managed(name,
                     contents,
                     skip_verify,
                     keep_mode,
-                    seuser=selinux.get('seuser', None),
-                    serole=selinux.get('serole', None),
-                    setype=selinux.get('setype', None),
-                    serange=selinux.get('serange', None),
+                    seuser=seuser,
+                    serole=serole,
+                    setype=setype,
+                    serange=serange,
                     **kwargs
                 )
-
                 if salt.utils.platform.is_windows():
                     try:
                         ret = __salt__['file.check_perms'](
@@ -2853,10 +2860,10 @@ def managed(name,
                 win_perms_reset=win_perms_reset,
                 encoding=encoding,
                 encoding_errors=encoding_errors,
-                seuser=selinux.get('seuser', None),
-                serole=selinux.get('serole', None),
-                setype=selinux.get('setype', None),
-                serange=selinux.get('serange', None),
+                seuser=seuser,
+                serole=serole,
+                setype=setype,
+                serange=serange,
                 **kwargs)
         except Exception as exc:
             ret['changes'] = {}
@@ -2934,10 +2941,10 @@ def managed(name,
                 win_perms_reset=win_perms_reset,
                 encoding=encoding,
                 encoding_errors=encoding_errors,
-                seuser=selinux.get('seuser', None),
-                serole=selinux.get('serole', None),
-                setype=selinux.get('setype', None),
-                serange=selinux.get('serange', None),
+                seuser=seuser,
+                serole=serole,
+                setype=setype,
+                serange=serange,
                 **kwargs)
         except Exception as exc:
             ret['changes'] = {}
