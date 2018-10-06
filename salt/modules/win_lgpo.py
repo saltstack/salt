@@ -3562,15 +3562,6 @@ def _get_policy_resources(path='c:\\Windows\\PolicyDefinitions',
     return __context__['lgpo.policy_resources']
 
 
-def _processPolicyDefinitions(policy_def_path='c:\\Windows\\PolicyDefinitions',
-                              display_language='en-US'):
-    policy_definitions = _get_policy_definitions(path=policy_def_path,
-                                                 language=display_language)
-    policy_resources = _get_policy_resources(path=policy_def_path,
-                                             language=display_language)
-    return policy_definitions, policy_resources
-
-
 def _buildElementNsmap(using_elements):
     '''
     build a namespace map for an ADMX element
