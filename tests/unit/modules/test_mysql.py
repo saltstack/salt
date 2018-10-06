@@ -41,10 +41,23 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(mysql, 'version', return_value='8.0.10'):
             self._test_call(mysql.user_exists,
                             {'sql': ('SELECT User,Host FROM mysql.user WHERE '
-                                      'User = %(user)s AND Host = %(host)s AND '
-                                      'Password = PASSWORD(%(password)s)'),
+                                     'User = %(user)s AND Host = %(host)s AND '
+                                     'Password = PASSWORD(%(password)s)'),
                              'sql_args': {'host': 'localhost',
                                           'password': 'BLUECOW',
+                                          'user': 'mytestuser'
+                                         }
+                            },
+                            user='mytestuser',
+                            host='localhost',
+                            password='BLUECOW'
+            )
+
+        with patch.object(mysql, 'version', return_value='8.0.11'):
+            self._test_call(mysql.user_exists,
+                            {'sql': ('SELECT User,Host FROM mysql.user WHERE '
+                                     'User = %(user)s AND Host = %(host)s'),
+                             'sql_args': {'host': 'localhost',
                                           'user': 'mytestuser'
                                          }
                             },
@@ -61,6 +74,16 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.dict(mysql.__salt__, {'config.option': MagicMock()}):
                     ret = mysql.user_create('testuser')
                     self.assertEqual(False, ret)
+
+        # test_user_create_when_user_exists(self):
+        # ensure we don't try to create a user when one already exists
+        # mock the version of MySQL
+        with patch.object(mysql, 'version', return_value='8.0.11'):
+            with patch.object(mysql, 'user_exists', MagicMock(return_value=True)):
+                with patch.object(mysql, 'verify_login', MagicMock(return_value=True)):
+                    with patch.dict(mysql.__salt__, {'config.option': MagicMock()}):
+                        ret = mysql.user_create('testuser')
+                        self.assertEqual(False, ret)
 
 
     def test_user_create(self):
@@ -94,6 +117,19 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
                              'user': 'testuser',
                              'host': 'localhost',
                             }
+                        ),
+                        call().cursor().execute('FLUSH PRIVILEGES;'),
+                    )
+                    connect_mock.assert_has_calls(calls, any_order=True)
+
+        connect_mock = MagicMock()
+        with patch.object(mysql, '_connect', connect_mock):
+            with patch.object(mysql, 'version', return_value='8.0.11'):
+                with patch.dict(mysql.__salt__, {'config.option': MagicMock()}):
+                    mysql.user_chpass('testuser', password='BLUECOW')
+                    calls = (
+                        call().cursor().execute(
+                            "ALTER USER 'testuser'@'localhost' IDENTIFIED BY 'BLUECOW';"
                         ),
                         call().cursor().execute('FLUSH PRIVILEGES;'),
                     )
