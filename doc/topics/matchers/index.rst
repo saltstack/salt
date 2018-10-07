@@ -4,7 +4,7 @@
 Matchers
 ========
 
-.. versionadded:: Flourine
+.. versionadded:: Neon
 
 Matchers are modules that provide Salt's targeting abilities.  As of the
 Flourine release, matchers can be dynamically loaded.  Currently new matchers
