@@ -30,6 +30,7 @@ import salt.utils.stringutils
 import salt.modules.file as filemod
 import salt.modules.config as configmod
 import salt.modules.cmdmod as cmdmod
+import salt.modules.selinux as selinuxmod
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.utils.jinja import SaltCacheLoader
 
@@ -2046,7 +2047,8 @@ class FileSelinuxTestCase(TestCase, LoaderModuleMockMixin):
                     'config.manage_mode': configmod.manage_mode,
                     'cmd.run': cmdmod.run,
                     'cmd.run_all': cmdmod.run_all,
-                    'cmd.retcode': cmdmod.retcode
+                    'cmd.retcode': cmdmod.retcode,
+                    'selinux.fcontext_add_policy': selinuxmod.fcontext_add_policy
                 },
                 '__opts__': {
                     'test': False,
@@ -2064,20 +2066,29 @@ class FileSelinuxTestCase(TestCase, LoaderModuleMockMixin):
         }
 
     def setUp(self):
-        self.tfile = tempfile.NamedTemporaryFile(delete=False, mode='w+')
-        self.tfile.write("")
-        self.tfile.close()
+        # Read copy 1
+        self.tfile1 = tempfile.NamedTemporaryFile(delete=False, mode='w+')
+
+        # Edit copy 2
+        self.tfile2 = tempfile.NamedTemporaryFile(delete=False, mode='w+')
+
+        # Edit copy 3
+        self.tfile3 = tempfile.NamedTemporaryFile(delete=False, mode='w+')
 
     def tearDown(self):
-        os.remove(self.tfile.name)
-        del self.tfile
+        os.remove(self.tfile1.name)
+        del self.tfile1
+        os.remove(self.tfile2.name)
+        del self.tfile2
+        os.remove(self.tfile3.name)
+        del self.tfile3
 
     def test_selinux_getcontext(self):
         '''
             Test get selinux context
             Assumes default selinux attributes on temporary files
         '''
-        result = filemod.get_selinux_context(self.tfile.name)
+        result = filemod.get_selinux_context(self.tfile1.name)
         self.assertEqual(result, "unconfined_u:object_r:user_tmp_t:s0")
 
     def test_selinux_setcontext(self):
@@ -2085,5 +2096,15 @@ class FileSelinuxTestCase(TestCase, LoaderModuleMockMixin):
             Test set selinux context
             Assumes default selinux attributes on temporary files
         '''
-        result = filemod.set_selinux_context(self.tfile.name, user="system_u")
+        result = filemod.set_selinux_context(self.tfile2.name, user="system_u")
         self.assertEqual(result, "system_u:object_r:user_tmp_t:s0")
+
+    def test_file_check_perms(self):
+        expected_result = {'comment': 'The file {0} is set to be changed'.format(self.tfile3.name),
+                           'changes': {'selinux': {'New': 'Type: lost_found_t ', 'Old': 'Type: user_tmp_t '},
+                           'mode': '0644'}, 'name': self.tfile3.name, 'result': True}, {
+                           'luser': 'root', 'lmode': '0600', 'lgroup': 'root'}
+
+        result = filemod.check_perms(self.tfile3.name, {}, 'root', 'root', 644, seuser=None,
+                                     serole=None, setype='lost_found_t', serange=None)
+        self.assertEqual(result, expected_result)

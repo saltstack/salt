@@ -4671,12 +4671,12 @@ def check_perms(name, ret, user, group, mode, attrs=None, follow_symlinks=False,
                             ret['changes']['attrs'] = attrs
 
     # Set selinux attributes if needed
-    if not salt.utils.platform.is_windows() and (seuser or serole or setype or serange):
+    if salt.utils.platform.is_linux() and (seuser or serole or setype or serange):
         selinux_error = False
         try:
-            current_seuser, current_serole, current_setype, current_serange = __salt__[
-            'file.get_selinux_context'](name).split(':')
-            log.debug('Current selinux context user:{0} role:{1} type:{2} range:{3}'.format(current_seuser, current_serole, current_setype, current_serange))
+            current_seuser, current_serole, current_setype, current_serange = get_selinux_context(name).split(':')
+            log.debug('Current selinux context user:{0} role:{1} type:{2} range:{3}'.format(
+                current_seuser, current_serole, current_setype, current_serange))
         except:
             log.warning('Unable to get current selinux attributes')
             ret['result'] = False
@@ -4724,14 +4724,15 @@ def check_perms(name, ret, user, group, mode, attrs=None, follow_symlinks=False,
                                                  'New': selinux_change_new}
                 else:
                     try:
-                        current_seuser, current_serole, current_setype, current_serange = __salt__[
-                            'file.set_selinux_context'](name, user=requested_seuser, role=requested_serole,
-                            type=requested_setype, range=requested_serange, persist=True).split(':')
+                        result = set_selinux_context(name, user=requested_seuser, role=requested_serole,
+                                type=requested_setype, range=requested_serange, persist=True)
+                        log.debug("selinux set result: {0}".format(result))
+                        current_seuser, current_serole, current_setype, current_serange = result.split(':')
                     except:
                         log.warning('Unable to set current selinux attributes')
                         ret['result'] = False
                         ret['comment'].append(
-                            'Failed to get selinux attributes'
+                            'Failed to set selinux attributes'
                         )
                         selinux_error = True
 
@@ -5096,8 +5097,7 @@ def check_file_meta(
         # Check selinux
         if seuser or serole or setype or serange:
             try:
-                current_seuser, current_serole, current_setype, current_serange = __salt__[
-                'file.get_selinux_context'](name).split(':')
+                current_seuser, current_serole, current_setype, current_serange = get_selinux_context(name).split(':')
                 log.debug('Current selinux context user:{0} role:{1} type:{2} range:{3}'.format(current_seuser, current_serole, current_setype, current_serange))
             except:
                 log.warning('Unable to get current selinux attributes')
