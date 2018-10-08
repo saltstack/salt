@@ -1683,6 +1683,7 @@ class State(object):
         )
         extend = {}
         errors = []
+        disabled = self.opts.get("disabled_requisites", [])
         for id_, body in six.iteritems(high):
             if not isinstance(body, dict):
                 continue
@@ -1700,6 +1701,10 @@ class State(object):
                         # Split out the components
                         key = next(iter(arg))
                         if key not in req_in:
+                            continue
+                        log.debug("=== self %s ===", self.opts)
+                        if key in disabled:
+                            log.info("=== %s disabled ===", key)
                             continue
                         rkey = key.split("_")[0]
                         items = arg[key]
