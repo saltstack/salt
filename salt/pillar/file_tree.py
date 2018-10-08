@@ -158,6 +158,7 @@ import salt.utils.path
 import salt.utils.stringio
 import salt.template
 from salt.ext import six
+from salt.utils.stringutils import to_str
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -251,7 +252,7 @@ def _construct_pillar(top_dir,
             else:
                 data = contents
                 if template is True:
-                    data = salt.template.compile_template_str(template=contents,
+                    data = salt.template.compile_template_str(template=to_str(contents),
                                                               renderers=renderers,
                                                               default=render_default,
                                                               blacklist=renderer_blacklist,
