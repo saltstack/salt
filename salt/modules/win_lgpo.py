@@ -4809,7 +4809,6 @@ def _admx_policy_parent_walk(path,
     hierarchy for the policy
     '''
     admx_policy_definitions = _get_policy_definitions(language=adml_language)
-    adml_policy_resources = _get_policy_resources(language=adml_language)
     category_xpath_string = '/policyDefinitions/categories/{0}:category[@name="{1}"]'
     using_xpath_string = '/policyDefinitions/policyNamespaces/{0}:using'
     if parent_category.find(':') >= 0:
