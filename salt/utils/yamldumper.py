@@ -17,7 +17,7 @@ except ImportError:
 
 import yaml  # pylint: disable=blacklisted-import
 import collections
-
+import salt.utils.context
 from salt.utils.odict import OrderedDict
 
 try:
@@ -75,6 +75,14 @@ OrderedDumper.add_representer(
 )
 SafeOrderedDumper.add_representer(
     collections.defaultdict,
+    yaml.representer.SafeRepresenter.represent_dict
+)
+OrderedDumper.add_representer(
+    salt.utils.context.NamespacedDictWrapper,
+    yaml.representer.SafeRepresenter.represent_dict
+)
+SafeOrderedDumper.add_representer(
+    salt.utils.context.NamespacedDictWrapper,
     yaml.representer.SafeRepresenter.represent_dict
 )
 

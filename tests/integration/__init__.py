@@ -742,6 +742,7 @@ class TestDaemon(object):
         master_opts['config_dir'] = RUNTIME_VARS.TMP_CONF_DIR
         master_opts['root_dir'] = os.path.join(TMP, 'rootdir')
         master_opts['pki_dir'] = os.path.join(TMP, 'rootdir', 'pki', 'master')
+        master_opts['syndic_master'] = 'localhost'
 
         # This is the syndic for master
         # Let's start with a copy of the syndic master configuration
@@ -1126,7 +1127,10 @@ class TestDaemon(object):
         for dirname in (TMP, RUNTIME_VARS.TMP_STATE_TREE,
                         RUNTIME_VARS.TMP_PILLAR_TREE, RUNTIME_VARS.TMP_PRODENV_STATE_TREE):
             if os.path.isdir(dirname):
-                shutil.rmtree(six.text_type(dirname), onerror=remove_readonly)
+                try:
+                    shutil.rmtree(six.text_type(dirname), onerror=remove_readonly)
+                except Exception:
+                    log.exception('Failed to remove directory: %s', dirname)
 
     def wait_for_jid(self, targets, jid, timeout=120):
         time.sleep(1)  # Allow some time for minions to accept jobs

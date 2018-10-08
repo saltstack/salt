@@ -41,7 +41,7 @@ def _handle_sigusr1(sig, stack):
         filename = 'salt-debug-{0}.log'.format(int(time.time()))
         destfile = os.path.join(tempfile.gettempdir(), filename)
         with salt.utils.files.fopen(destfile, 'w') as output:
-            _makepretty(output, salt.utils.stringutils.to_str(stack))
+            _makepretty(output, stack)
 
 
 def _handle_sigusr2(sig, stack):

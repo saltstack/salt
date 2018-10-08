@@ -102,7 +102,7 @@ There are many ways to participate in and communicate with the Salt community.
 Salt has an active IRC channel and a mailing list.
 
 Mailing List
-============
+------------
 
 Join the `salt-users mailing list`_. It is the best place to ask questions
 about Salt and see whats going on with Salt development! The Salt mailing list
@@ -112,12 +112,12 @@ is hosted by Google Groups. It is open to new members.
 
 
 IRC
-===
+---
 
 The ``#salt`` IRC channel is hosted on the popular `Freenode`_ network. You
 can use the `Freenode webchat client`_ right from your browser.
 
-`Logs of the IRC channel activity`_ are being collected courtesy of Moritz Lenz.
+Logs of the IRC channel activity are no longer available due to new GDPR regulations.
 
 .. _Freenode: http://freenode.net/irc_servers.shtml
 .. _`Freenode webchat client`: http://webchat.freenode.net/?channels=salt&uio=Mj10cnVlJjk9dHJ1ZSYxMD10cnVl83
@@ -128,7 +128,7 @@ If you wish to discuss the development of Salt itself join us in
 
 
 Follow on Github
-================
+----------------
 
 The Salt code is developed via Github. Follow Salt for constant updates on what
 is happening in Salt development:
@@ -136,8 +136,8 @@ is happening in Salt development:
 |saltrepo|
 
 
-Blogs
-=====
+Blog
+----
 
 SaltStack Inc. keeps a `blog`_ with recent news and advancements:
 
@@ -145,6 +145,21 @@ http://www.saltstack.com/blog/
 
 .. _`blog`: http://www.saltstack.com/blog/
 
+Follow on ohloh
+---------------
+
+https://www.ohloh.net/p/salt
+
+Other community links
+---------------------
+
+- `Salt Stack Inc. <http://www.saltstack.com>`_
+- `Subreddit <http://www.reddit.com/r/saltstack>`_
+- `Google+ <https://plus.google.com/114449193225626631691/posts>`_
+- `YouTube <http://www.youtube.com/user/SaltStack>`_
+- `Facebook <https://www.facebook.com/SaltStack>`_
+- `Twitter <https://twitter.com/SaltStackInc>`_
+- `Wikipedia page <http://en.wikipedia.org/wiki/Salt_(software)>`_
 
 Example Salt States
 ===================
@@ -162,22 +177,6 @@ A few examples of salt states from the community:
 * https://github.com/brutasse/states
 * https://github.com/bclermont/states
 * https://github.com/pcrews/salt-data
-
-Follow on ohloh
-===============
-
-https://www.ohloh.net/p/salt
-
-Other community links
-=====================
-
-- `Salt Stack Inc. <http://www.saltstack.com>`_
-- `Subreddit <http://www.reddit.com/r/saltstack>`_
-- `Google+ <https://plus.google.com/114449193225626631691/posts>`_
-- `YouTube <http://www.youtube.com/user/SaltStack>`_
-- `Facebook <https://www.facebook.com/SaltStack>`_
-- `Twitter <https://twitter.com/SaltStackInc>`_
-- `Wikipedia page <http://en.wikipedia.org/wiki/Salt_(software)>`_
 
 Hack the Source
 ===============

@@ -26,6 +26,7 @@ state modules
     beacon
     bigip
     blockdev
+    bluecoat_sslv
     boto3_elasticache
     boto3_route53
     boto_apigateway
@@ -68,6 +69,7 @@ state modules
     cloud
     cmd
     composer
+    consul
     cron
     csf
     cyg

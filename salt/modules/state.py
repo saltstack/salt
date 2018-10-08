@@ -626,6 +626,13 @@ def apply_(mods=None, **kwargs):
     test
         Run states in test-only (dry-run) mode
 
+    mock
+        The mock option allows for the state run to execute without actually
+        calling any states. This then returns a mocked return which will show
+        the requisite ordering as well as fully validate the state run.
+
+        .. versionadded:: 2015.8.4
+
     pillar
         Custom Pillar values, passed as a dictionary of key-value pairs
 
@@ -685,6 +692,13 @@ def apply_(mods=None, **kwargs):
 
     test
         Run states in test-only (dry-run) mode
+
+    mock
+        The mock option allows for the state run to execute without actually
+        calling any states. This then returns a mocked return which will show
+        the requisite ordering as well as fully validate the state run.
+
+        .. versionadded:: 2015.8.4
 
     pillar
         Custom Pillar values, passed as a dictionary of key-value pairs

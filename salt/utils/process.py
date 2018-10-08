@@ -71,7 +71,7 @@ def daemonize(redirect_out=True):
         if pid > 0:
             # exit first parent
             salt.utils.crypt.reinit_crypto()
-            sys.exit(salt.defaults.exitcodes.EX_OK)
+            os._exit(salt.defaults.exitcodes.EX_OK)
     except OSError as exc:
         log.error('fork #1 failed: %s (%s)', exc.errno, exc)
         sys.exit(salt.defaults.exitcodes.EX_GENERIC)

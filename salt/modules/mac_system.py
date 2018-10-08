@@ -50,7 +50,7 @@ def _atrun_enabled():
     Check to see if atrun is enabled on the system
     '''
     name = 'com.apple.atrun'
-    services = salt.utils.mac_utils.available_services()
+    services = __utils__['mac_utils.available_services']()
     label = None
 
     if name in services:

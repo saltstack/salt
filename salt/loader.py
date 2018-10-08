@@ -19,7 +19,6 @@ import functools
 import threading
 import traceback
 import types
-from collections import MutableMapping
 from zipimport import zipimporter
 
 # Import salt libs
@@ -37,6 +36,7 @@ import salt.utils.odict
 import salt.utils.platform
 import salt.utils.thread_local_proxy
 import salt.utils.versions
+import salt.utils.stringutils
 from salt.exceptions import LoaderError
 from salt.template import check_render_pipe_str
 from salt.utils.decorators import Depends
@@ -52,6 +52,11 @@ if sys.version_info[:2] >= (3, 5):
 else:
     import imp
     USE_IMPORTLIB = False
+
+try:
+    from collections.abc import MutableMapping
+except ImportError:
+    from collections import MutableMapping
 
 try:
     import pkg_resources
@@ -290,6 +295,17 @@ def raw_mod(opts, name, functions, mod='modules'):
 
     loader._load_module(name)  # load a single module (the one passed in)
     return dict(loader._dict)  # return a copy of *just* the funcs for `name`
+
+
+def matchers(opts):
+    '''
+    Return the matcher services plugins
+    '''
+    return LazyLoader(
+        _module_dirs(opts, 'matchers'),
+        opts,
+        tag='matchers'
+    )
 
 
 def engines(opts, functions, runners, utils, proxy=None):
@@ -734,6 +750,7 @@ def grains(opts, force_refresh=False, proxy=None):
         opts['grains'] = {}
 
     grains_data = {}
+    blist = opts.get('grains_blacklist', [])
     funcs = grain_funcs(opts, proxy=proxy)
     if force_refresh:  # if we refresh, lets reload grain modules
         funcs.clear()
@@ -745,6 +762,14 @@ def grains(opts, force_refresh=False, proxy=None):
         ret = funcs[key]()
         if not isinstance(ret, dict):
             continue
+        if blist:
+            for key in list(ret):
+                for block in blist:
+                    if salt.utils.stringutils.expr_match(key, block):
+                        del ret[key]
+                        log.trace('Filtering %s grain', key)
+            if not ret:
+                continue
         if grains_deep_merge:
             salt.utils.dictupdate.update(grains_data, ret)
         else:
@@ -780,6 +805,14 @@ def grains(opts, force_refresh=False, proxy=None):
             continue
         if not isinstance(ret, dict):
             continue
+        if blist:
+            for key in list(ret):
+                for block in blist:
+                    if salt.utils.stringutils.expr_match(key, block):
+                        del ret[key]
+                        log.trace('Filtering %s grain', key)
+            if not ret:
+                continue
         if grains_deep_merge:
             salt.utils.dictupdate.update(grains_data, ret)
         else:
@@ -1464,11 +1497,11 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         '''
         if '__grains__' not in self.pack:
             self.context_dict['grains'] = opts.get('grains', {})
-            self.pack['__grains__'] = salt.utils.context.NamespacedDictWrapper(self.context_dict, 'grains', override_name='grains')
+            self.pack['__grains__'] = salt.utils.context.NamespacedDictWrapper(self.context_dict, 'grains')
 
         if '__pillar__' not in self.pack:
             self.context_dict['pillar'] = opts.get('pillar', {})
-            self.pack['__pillar__'] = salt.utils.context.NamespacedDictWrapper(self.context_dict, 'pillar', override_name='pillar')
+            self.pack['__pillar__'] = salt.utils.context.NamespacedDictWrapper(self.context_dict, 'pillar')
 
         mod_opts = {}
         for key, val in list(opts.items()):

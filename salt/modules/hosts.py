@@ -212,19 +212,21 @@ def rm_host(ip, alias):
             continue
         if tmpline.startswith(b'#'):
             continue
-        comps = salt.utils.stringutils.to_unicode(tmpline).split()
-        if comps[0] == ip:
-            newline = '{0}\t\t'.format(comps[0])
+        comps = tmpline.split()
+        b_ip = salt.utils.stringutils.to_bytes(ip)
+        b_alias = salt.utils.stringutils.to_bytes(alias)
+        if comps[0] == b_ip:
+            newline = comps[0] + b'\t\t'
             for existing in comps[1:]:
-                if existing == alias:
+                if existing == b_alias:
                     continue
-                newline += ' {0}'.format(existing)
-            if newline.strip() == ip:
+                newline += existing + b' '
+            if newline.strip() == b_ip:
                 # No aliases exist for the line, make it empty
                 lines[ind] = b''
             else:
                 # Only an alias was removed
-                lines[ind] = newline + os.linesep
+                lines[ind] = newline + salt.utils.stringutils.to_bytes(os.linesep)
     with salt.utils.files.fopen(hfn, 'wb') as ofile:
         ofile.writelines(lines)
     return True

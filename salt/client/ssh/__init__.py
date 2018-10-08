@@ -446,7 +446,7 @@ class SSH(object):
             if target.get('passwd', False) or self.opts['ssh_passwd']:
                 self._key_deploy_run(host, target, False)
             return ret
-        if (ret[host].get('stderr') or '').count('Permission denied'):
+        if ret[host].get('stderr', '').count('Permission denied'):
             target = self.targets[host]
             # permission denied, attempt to auto deploy ssh key
             print(('Permission denied for host {0}, do you want to deploy '
@@ -703,7 +703,7 @@ class SSH(object):
         '''
         Execute the overall routine, print results via outputters
         '''
-        if self.opts['list_hosts']:
+        if self.opts.get('list_hosts'):
             self._get_roster()
             ret = {}
             for roster_file in self.__parsed_rosters:

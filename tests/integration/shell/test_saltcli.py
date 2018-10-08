@@ -197,7 +197,7 @@ class RetcodeTestCase(ShellCase):
                 'salt',
                 '-c {0} -t 5 minion2 test.ping'.format(self.config_dir),
                 with_retcode=True,
-                timeout=20)[1]
+                timeout=60)[1]
             assert retcode == salt.defaults.exitcodes.EX_GENERIC, retcode
         finally:
             # Now get rid of it

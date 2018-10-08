@@ -446,6 +446,9 @@ VALID_OPTS = {
     # Tell the loader to attempt to import *.pyx cython files if cython is available
     'cython_enable': bool,
 
+    # Whether or not to load grains for the GPU
+    'enable_gpu_grains': bool,
+
     # Tell the loader to attempt to import *.zip archives
     'enable_zip_modules': bool,
 
@@ -915,6 +918,9 @@ VALID_OPTS = {
     # Set a hard limit for the amount of memory modules can consume on a minion.
     'modules_max_memory': int,
 
+    # Blacklist specific core grains to be filtered
+    'grains_blacklist': list,
+
     # The number of minutes between the minion refreshing its cache of grains
     'grains_refresh_every': int,
 
@@ -1093,6 +1099,9 @@ VALID_OPTS = {
     # Useful when a returner is the source of truth for a job result
     'pub_ret': bool,
 
+    # HTTP request settings. Used in tornado fetch functions
+    'user_agent': six.string_types,
+
     # HTTP proxy settings. Used in tornado fetch functions, apt-key etc
     'proxy_host': six.string_types,
     'proxy_username': six.string_types,
@@ -1242,6 +1251,7 @@ DEFAULT_MINION_OPTS = {
     'cachedir': os.path.join(salt.syspaths.CACHE_DIR, 'minion'),
     'append_minionid_config_dirs': [],
     'cache_jobs': False,
+    'grains_blacklist': [],
     'grains_cache': False,
     'grains_cache_expiration': 300,
     'grains_deep_merge': False,
@@ -1399,6 +1409,7 @@ DEFAULT_MINION_OPTS = {
     'test': False,
     'ext_job_cache': '',
     'cython_enable': False,
+    'enable_gpu_grains': True,
     'enable_zip_modules': False,
     'state_verbose': True,
     'state_output': 'full',
@@ -1496,6 +1507,7 @@ DEFAULT_MINION_OPTS = {
     'event_match_type': 'startswith',
     'minion_restart_command': [],
     'pub_ret': True,
+    'user_agent': '',
     'proxy_host': '',
     'proxy_username': '',
     'proxy_password': '',
@@ -2585,7 +2597,7 @@ def apply_sdb(opts, sdb_opts=None):
 
 
 # ----- Salt Cloud Configuration Functions ---------------------------------->
-def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
+def cloud_config(path=None, env_var='SALT_CLOUD_CONFIG', defaults=None,
                  master_config_path=None, master_config=None,
                  providers_config_path=None, providers_config=None,
                  profiles_config_path=None, profiles_config=None):
@@ -2613,11 +2625,11 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
 
     # Load cloud configuration from any default or provided includes
     overrides.update(
-        salt.config.include_config(overrides['default_include'], path, verbose=False)
+        salt.config.include_config(overrides['default_include'], config_dir, verbose=False)
     )
     include = overrides.get('include', [])
     overrides.update(
-        salt.config.include_config(include, path, verbose=True)
+        salt.config.include_config(include, config_dir, verbose=True)
     )
 
     # The includes have been evaluated, let's see if master, providers and
@@ -2672,7 +2684,7 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
         if not os.path.isabs(entry):
             # Let's try adding the provided path's directory name turns the
             # entry into a proper directory
-            entry = os.path.join(os.path.dirname(path), entry)
+            entry = os.path.join(config_dir, entry)
 
         if os.path.isdir(entry):
             # Path exists, let's update the entry (its path might have been

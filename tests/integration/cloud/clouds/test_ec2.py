@@ -12,6 +12,7 @@ import yaml
 from salt.config import cloud_providers_config
 import salt.utils.cloud
 import salt.utils.files
+import salt.utils.yaml
 
 # Import Salt Testing Libs
 from tests.support.case import ShellCase
@@ -123,7 +124,7 @@ class EC2Test(ShellCase):
             conf = yaml.safe_load(fp)
         conf[name].update(data)
         with salt.utils.files.fopen(conf_path, 'w') as fp:
-            yaml.dump(conf, fp)
+            salt.utils.yaml.safe_dump(conf, fp)
 
     def copy_file(self, name):
         '''

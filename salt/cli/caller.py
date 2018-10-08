@@ -223,7 +223,6 @@ class BaseCaller(object):
             if isinstance(executors, six.string_types):
                 executors = [executors]
             try:
-                ret['return'] = func(*args, **kwargs)
                 for name in executors:
                     fname = '{0}.execute'.format(name)
                     if fname not in self.minion.executors:

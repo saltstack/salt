@@ -103,6 +103,7 @@ import string
 import time
 
 # Salt libs
+from salt.ext import six
 import salt.cache
 import salt.config as config
 import salt.loader
@@ -110,7 +111,6 @@ import salt.utils.cloud
 import salt.utils.files
 import salt.utils.stringutils
 import salt.utils.yaml
-import salt.ext.six as six
 import salt.version
 from salt.exceptions import (
     SaltCloudConfigError,

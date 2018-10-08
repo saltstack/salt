@@ -28,6 +28,7 @@ from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 
 @skipIf(salt.utils.path.which_bin(KNOWN_BINARY_NAMES) is None, 'virtualenv not installed')
 class VirtualenvTest(ModuleCase, SaltReturnAssertsMixin):
+    @skipIf(salt.utils.platform.is_darwin(), 'Test is flaky on macosx')
     @destructiveTest
     @skip_if_not_root
     def test_issue_1959_virtualenv_runas(self):

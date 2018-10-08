@@ -752,6 +752,30 @@ Statically assigns grains to the minion.
       cabinet: 13
       cab_u: 14-15
 
+.. conf_minion:: grains_blacklist
+
+``grains_blacklist``
+--------------------
+
+Default: ``[]``
+
+Each grains key will be compared against each of the expressions in this list.
+Any keys which match will be filtered from the grains. Exact matches, glob
+matches, and regular expressions are supported.
+
+.. note::
+    Some states and execution modules depend on grains. Filtering may cause
+    them to be unavailable or run unreliably.
+
+.. versionadded:: Neon
+
+.. code-block:: yaml
+
+    grains_blacklist:
+      - cpu_flags
+      - zmq*
+      - ipv[46]
+
 .. conf_minion:: grains_cache
 
 ``grains_cache``
@@ -935,6 +959,22 @@ The directory where Unix sockets will be kept.
 .. code-block:: yaml
 
     sock_dir: /var/run/salt/minion
+
+.. conf_minion:: enable_gpu_grains
+
+``enable_gpu_grains``
+---------------------
+
+Default: ``True``
+
+Enable GPU hardware data for your master. Be aware that the minion can
+take a while to start up when lspci and/or dmidecode is used to populate the
+grains for the minion, so this can be set to ``False`` if you do not need these
+grains.
+
+.. code-block:: yaml
+
+    enable_gpu_grains: False
 
 .. conf_minion:: outputter_dirs
 
