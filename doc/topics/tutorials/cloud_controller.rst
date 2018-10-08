@@ -52,7 +52,7 @@ to set up the libvirt pki keys.
 
 .. note::
 
-    Package names and setup used is Red Hat specific Different package names
+    Package names and setup used is Red Hat specific. Different package names
     will be required for different platforms.
 
 .. code-block:: yaml
@@ -259,7 +259,7 @@ arguments to ``seed.apply``.
     installed will GREATLY speed up virtual machine deployment.
 
 You can also deploy an image on a particular minion by directly calling the
-`virt` execution module with an absolute image path. This can be quite handy for
+``virt`` execution module with an absolute image path. This can be quite handy for
 testing:
 
 .. code-block:: bash
