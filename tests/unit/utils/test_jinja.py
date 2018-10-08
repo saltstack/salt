@@ -984,6 +984,10 @@ class TestCustomExtensions(TestCase):
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
         self.assertEqual(rendered, 'False')
 
+        rendered = render_jinja_tmpl("{{ 'fe80::20d:b9ff:fe01:ea8%eth0' | is_ipv6 }}",
+                                     dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
+        self.assertEqual(rendered, 'True')
+
         rendered = render_jinja_tmpl("{{ 'FE80::' | is_ipv6 }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
         self.assertEqual(rendered, 'True')
@@ -996,6 +1000,10 @@ class TestCustomExtensions(TestCase):
         '''
         Test the `ipaddr` Jinja filter.
         '''
+        rendered = render_jinja_tmpl("{{ '::' | ipaddr }}",
+                                     dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
+        self.assertEqual(rendered, '::')
+
         rendered = render_jinja_tmpl("{{ '192.168.0.1' | ipaddr }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
         self.assertEqual(rendered, '192.168.0.1')

@@ -455,13 +455,14 @@ def traverse_dict(data, key, default=None, delimiter=DEFAULT_TARGET_DELIM):
     data['foo']['bar']['baz'] if this value exists, and will otherwise return
     the dict in the default argument.
     '''
+    ptr = data
     try:
         for each in key.split(delimiter):
-            data = data[each]
+            ptr = ptr[each]
     except (KeyError, IndexError, TypeError):
         # Encountered a non-indexable value in the middle of traversing
         return default
-    return data
+    return ptr
 
 
 @jinja_filter('traverse')
@@ -476,16 +477,17 @@ def traverse_dict_and_list(data, key, default=None, delimiter=DEFAULT_TARGET_DEL
     {'foo':{'bar':['baz']}} , if data like {'foo':{'bar':{'0':'baz'}}}
     then return data['foo']['bar']['0']
     '''
+    ptr = data
     for each in key.split(delimiter):
-        if isinstance(data, list):
+        if isinstance(ptr, list):
             try:
                 idx = int(each)
             except ValueError:
                 embed_match = False
                 # Index was not numeric, lets look at any embedded dicts
-                for embedded in (x for x in data if isinstance(x, dict)):
+                for embedded in (x for x in ptr if isinstance(x, dict)):
                     try:
-                        data = embedded[each]
+                        ptr = embedded[each]
                         embed_match = True
                         break
                     except KeyError:
@@ -495,15 +497,15 @@ def traverse_dict_and_list(data, key, default=None, delimiter=DEFAULT_TARGET_DEL
                     return default
             else:
                 try:
-                    data = data[idx]
+                    ptr = ptr[idx]
                 except IndexError:
                     return default
         else:
             try:
-                data = data[each]
+                ptr = ptr[each]
             except (KeyError, TypeError):
                 return default
-    return data
+    return ptr
 
 
 def subdict_match(data,
@@ -515,20 +517,37 @@ def subdict_match(data,
     Check for a match in a dictionary using a delimiter character to denote
     levels of subdicts, and also allowing the delimiter character to be
     matched. Thus, 'foo:bar:baz' will match data['foo'] == 'bar:baz' and
-    data['foo']['bar'] == 'baz'. The former would take priority over the
-    latter.
+    data['foo']['bar'] == 'baz'. The latter would take priority over the
+    former, as more deeply-nested matches are tried first.
     '''
     def _match(target, pattern, regex_match=False, exact_match=False):
+        # The reason for using six.text_type first and _then_ using
+        # to_unicode as a fallback is because we want to eventually have
+        # unicode types for comparison below. If either value is numeric then
+        # six.text_type will turn it into a unicode string. However, if the
+        # value is a PY2 str type with non-ascii chars, then the result will be
+        # a UnicodeDecodeError. In those cases, we simply use to_unicode to
+        # decode it to unicode. The reason we can't simply use to_unicode to
+        # begin with is that (by design) to_unicode will raise a TypeError if a
+        # non-string/bytestring/bytearray value is passed.
+        try:
+            target = six.text_type(target).lower()
+        except UnicodeDecodeError:
+            target = salt.utils.stringutils.to_unicode(target).lower()
+        try:
+            pattern = six.text_type(pattern).lower()
+        except UnicodeDecodeError:
+            pattern = salt.utils.stringutils.to_unicode(pattern).lower()
+
         if regex_match:
             try:
-                return re.match(pattern.lower(), six.text_type(target).lower())
+                return re.match(pattern, target)
             except Exception:
                 log.error('Invalid regex \'%s\' in match', pattern)
                 return False
-        elif exact_match:
-            return six.text_type(target).lower() == pattern.lower()
         else:
-            return fnmatch.fnmatch(six.text_type(target).lower(), pattern.lower())
+            return target == pattern if exact_match \
+                else fnmatch.fnmatch(target, pattern)
 
     def _dict_match(target, pattern, regex_match=False, exact_match=False):
         wildcard = pattern.startswith('*:')
@@ -548,11 +567,6 @@ def subdict_match(data,
             return True
         if wildcard:
             for key in target:
-                if _match(key,
-                          pattern,
-                          regex_match=regex_match,
-                          exact_match=exact_match):
-                    return True
                 if isinstance(target[key], dict):
                     if _dict_match(target[key],
                                    pattern,
@@ -566,15 +580,39 @@ def subdict_match(data,
                                   regex_match=regex_match,
                                   exact_match=exact_match):
                             return True
+                elif _match(target[key],
+                            pattern,
+                            regex_match=regex_match,
+                            exact_match=exact_match):
+                    return True
         return False
 
-    for idx in range(1, expr.count(delimiter) + 1):
-        splits = expr.split(delimiter)
+    splits = expr.split(delimiter)
+    num_splits = len(splits)
+    if num_splits == 1:
+        # Delimiter not present, this can't possibly be a match
+        return False
+
+    splits = expr.split(delimiter)
+    num_splits = len(splits)
+    if num_splits == 1:
+        # Delimiter not present, this can't possibly be a match
+        return False
+
+    # If we have 4 splits, then we have three delimiters. Thus, the indexes we
+    # want to use are 3, 2, and 1, in that order.
+    for idx in range(num_splits - 1, 0, -1):
         key = delimiter.join(splits[:idx])
-        matchstr = delimiter.join(splits[idx:])
+        if key == '*':
+            # We are matching on everything under the top level, so we need to
+            # treat the match as the entire data being passed in
+            matchstr = expr
+            match = data
+        else:
+            matchstr = delimiter.join(splits[idx:])
+            match = traverse_dict_and_list(data, key, {}, delimiter=delimiter)
         log.debug("Attempting to match '%s' in '%s' using delimiter '%s'",
                   matchstr, key, delimiter)
-        match = traverse_dict_and_list(data, key, {}, delimiter=delimiter)
         if match == {}:
             continue
         if isinstance(match, dict):

@@ -398,6 +398,7 @@ class WinSystemModuleTest(ModuleCase):
         now = datetime.datetime.now()
         self.assertEqual(now.strftime("%I:%M"), ret.rsplit(':', 1)[0])
 
+    @flaky
     @destructiveTest
     def test_set_system_time(self):
         '''

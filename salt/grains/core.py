@@ -49,6 +49,7 @@ except ImportError:
 # Import salt libs
 import salt.exceptions
 import salt.log
+import salt.utils.args
 import salt.utils.dns
 import salt.utils.files
 import salt.utils.network
@@ -235,7 +236,7 @@ def _linux_gpu_data():
 
     gpus = []
     for gpu in devs:
-        vendor_strings = gpu['Vendor'].lower().split()
+        vendor_strings = re.split('[^A-Za-z0-9]', gpu['Vendor'].lower())
         # default vendor to 'unknown', overwrite if we match a known one
         vendor = 'unknown'
         for name in known_vendors:
@@ -2774,4 +2775,25 @@ def default_gateway():
                     break
         except Exception:
             continue
+    return grains
+
+
+def kernelparams():
+    '''
+    Return the kernel boot parameters
+    '''
+    try:
+        with salt.utils.files.fopen('/proc/cmdline', 'r') as fhr:
+            cmdline = fhr.read()
+            grains = {'kernelparams': []}
+            for data in [item.split('=') for item in salt.utils.args.shlex_split(cmdline)]:
+                value = None
+                if len(data) == 2:
+                    value = data[1].strip('"')
+
+                grains['kernelparams'] += [(data[0], value)]
+    except IOError as exc:
+        grains = {}
+        log.debug('Failed to read /proc/cmdline: %s', exc)
+
     return grains
