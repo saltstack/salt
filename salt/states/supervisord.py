@@ -361,7 +361,16 @@ def mod_watch(name,
               conf_file=None,
               bin_env=None,
               **kwargs):
-    # Always restart on watch
+    '''
+    The supervisord watcher, called to invoke the watch command.
+    Always restart on watch
+
+    .. note::
+        This state exists to support special handling of the ``watch``
+        :ref:`requisite <requisites>`. It should not be called directly.
+
+        Parameters for this function should be set by the state being triggered.
+    '''
     return running(
         name,
         restart=restart,
