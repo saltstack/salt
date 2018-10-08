@@ -699,6 +699,13 @@ def refresh_db(**kwargs):
         include_pat='*.sls',
         exclude_pat=r'E@\/\..*?\/'  # Exclude all hidden directories (.git)
     )
+    log.debug(
+        "MEH %s %s %s %s",
+        repo_details.winrepo_source_dir,
+        saltenv,
+        '*.sls',
+        r'E@\/\..*?\/',
+    )
     log.debug("refresh_db - Return from cache_dir %s", repr(ret))
 
     return genrepo(saltenv=saltenv, verbose=verbose, failhard=failhard)

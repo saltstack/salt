@@ -311,6 +311,7 @@ def _file_lists(load, form):
         )
     if cache_match is not None:
         return cache_match
+    log.error("REFRESH CACHE IS TRUE %s", refresh_cache)
     if refresh_cache:
         ret = {
             'files': set(),
