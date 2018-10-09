@@ -2604,10 +2604,12 @@ class State(object):
         if pre:
             reqs["prerequired"] = []
         for r_state in reqs:
-            if r_state in disabled_reqs:
-                log.warning("The %s requisite has been disabled, Ignoring.", r_state)
-                continue
             if r_state in low and low[r_state] is not None:
+                if r_state in disabled_reqs:
+                    log.warning(
+                        "The %s requisite has been disabled, Ignoring.", r_state
+                    )
+                    continue
                 for req in low[r_state]:
                     if isinstance(req, six.string_types):
                         req = {"id": req}
