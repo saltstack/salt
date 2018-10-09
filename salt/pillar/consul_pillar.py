@@ -258,7 +258,13 @@ def consul_fetch(client, path):
     '''
     Query consul for all keys/values within base path
     '''
-    return client.kv.get(path, recurse=True)
+    # Unless the root path is blank, it needs a trailing slash for
+    # the kv get from Consul to work as expected
+    if not path:
+        absolute_path = path
+    else:
+        absolute_path = path.rstrip('/') + '/'
+    return client.kv.get(absolute_path, recurse=True)
 
 
 def fetch_tree(client, path, expand_keys):
@@ -267,14 +273,7 @@ def fetch_tree(client, path, expand_keys):
     are folders. Take the remaining data and send it to be formatted
     in such a way as to be used as pillar data.
     '''
-    # Unless the root path is blank, it needs a trailing slash for
-    # the kv get from Consul to work as expected
-    if not path:
-        absolute_path = path
-    else:
-        absolute_path = path.rstrip('/') + '/'
-
-    _, items = consul_fetch(client, absolute_path)
+    _, items = consul_fetch(client, path)
     ret = {}
     has_children = re.compile(r'/$')
 
@@ -283,9 +282,9 @@ def fetch_tree(client, path, expand_keys):
     if items is None:
         return ret
     for item in reversed(items):
-        key = re.sub(r'^' + re.escape(absolute_path), '', item['Key'])
+        key = re.sub(r'^' + re.escape(path) + '/?', '', item['Key'])
         if key != '':
-            log.debug('path/key - %s: %s', absolute_path, key)
+            log.debug('path/key - %s: %s', path, key)
             log.debug('has_children? %r', has_children.search(key))
         if has_children.search(key) is None:
             ret = pillar_format(ret, key.split('/'), item['Value'], expand_keys)
