@@ -7,13 +7,12 @@ Requisites and Other Global State Arguments
 Requisites
 ==========
 
-The Salt requisite system is used to create relationships between states. The
-core idea being that, when one state is dependent somehow on another, that
-inter-dependency can be easily defined. These dependencies are expressed by
-declaring the relationships using state names and ID's or names.  The
-generalized form of a requisite target is ``<state name> : <ID or name>``.
-The specific form is defined as a :ref:`Requisite Reference
-<requisite-reference>`
+The Salt requisite system is used to create relationships between states. This
+provides a method to easily define inter-dependencies between states. These
+dependencies are expressed by declaring the relationships using state names
+and ID's or names. The generalized form of a requisite target is ``<state name>:
+<ID or name>``. The specific form is defined as a :ref:`Requisite Reference
+<requisite-reference>`.
 
 Requisites come in two types: Direct requisites (such as ``require``),
 and requisite_ins (such as ``require_in``). The relationships are
