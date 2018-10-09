@@ -1842,8 +1842,7 @@ def os_data():
                         r'((?:Open|Oracle )?Solaris|OpenIndiana|OmniOS) (Development)?'
                         r'\s*(\d+\.?\d*|v\d+)\s?[A-Z]*\s?(r\d+|\d+\/\d+|oi_\S+|snv_\S+)?'
                     )
-                    osname, development, osmajorrelease, osminorrelease = \
-                        release_re.search(rel_data).groups()
+                    osname, development, osmajorrelease, osminorrelease = release_re.search(rel_data).groups()
                 except AttributeError:
                     # Set a blank osrelease grain and fallback to 'Solaris'
                     # as the 'os' grain.
