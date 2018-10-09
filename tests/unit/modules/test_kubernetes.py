@@ -176,7 +176,7 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(kubernetes.__salt__, {'config.option': Mock(side_effect=self.settings)}):
                 mock_kubernetes_lib.config.load_kube_config = Mock()
                 config = kubernetes._setup_conn(kubeconfig_data='MTIzNDU2Nzg5MAo=', context='newcontext')
-                check_path = os.path.join(os.environ.get('temp'), 'salt-kubeconfig-')
+                check_path = os.path.join(os.environ.get('TMP'), 'salt-kubeconfig-')
                 self.assertTrue(config['kubeconfig'].startswith(check_path.lower()))
                 self.assertTrue(os.path.exists(config['kubeconfig']))
                 with salt.utils.files.fopen(config['kubeconfig'], 'r') as kcfg:
