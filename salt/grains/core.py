@@ -1475,14 +1475,21 @@ def _parse_cpe_name(cpe):
     :param cpe:
     :return:
     '''
+    part = {
+        'o': 'operating system',
+        'h': 'hardware',
+        'a': 'application',
+    }
     ret = {}
     cpe = (cpe or '').split(':')
     if len(cpe) > 4 and cpe[0] == 'cpe':
-        if cpe[1].startswith('/'):  # WFN
+        if cpe[1].startswith('/'):  # WFN to URI
             ret['vendor'], ret['product'], ret['version'] = cpe[2:5]
             ret['phase'] = cpe[5] if len(cpe) > 5 else None
-        elif len(cpe) == 13 and cpe[1] == '2.3':  # v2.3
+            ret['part'] = part.get(cpe[1][1:])
+        elif len(cpe) == 13 and cpe[1] == '2.3':  # WFN to a string
             ret['vendor'], ret['product'], ret['version'], ret['phase'] = [x if x != '*' else None for x in cpe[3:7]]
+            ret['part'] = part.get(cpe[2])
 
     return ret
 
