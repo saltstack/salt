@@ -1466,6 +1466,27 @@ def _parse_os_release(*os_release_files):
     return ret
 
 
+def _parse_cpe_name(cpe):
+    '''
+    Parse CPE_NAME data from the os-release
+
+    Info: https://csrc.nist.gov/projects/security-content-automation-protocol/scap-specifications/cpe
+
+    :param cpe:
+    :return:
+    '''
+    ret = {}
+    cpe = (cpe or '').split(':')
+    if len(cpe) > 4 and cpe[0] == 'cpe':
+        if cpe[1].startswith('/'):  # WFN
+            ret['vendor'], ret['product'], ret['version'] = cpe[2:5]
+            ret['phase'] = cpe[5] if len(cpe) > 5 else None
+        elif len(cpe) == 13 and cpe[1] == '2.3':  # v2.3
+            ret['vendor'], ret['product'], ret['version'], ret['phase'] = [x if x != '*' else None for x in cpe[3:7]]
+
+    return ret
+
+
 def os_data():
     '''
     Return grains pertaining to the operating system
