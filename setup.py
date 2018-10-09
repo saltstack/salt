@@ -907,7 +907,8 @@ class SaltDistribution(distutils.dist.Distribution):
             return data_files
 
         if IS_WINDOWS_PLATFORM:
-            data_files[0][1].extend(['doc/man/salt-cp.1',
+            data_files[0][1].extend(['doc/man/salt-api.1',
+                                     'doc/man/salt-cp.1',
                                      'doc/man/salt-key.1',
                                      'doc/man/salt-master.1',
                                      'doc/man/salt-minion.1',
@@ -963,6 +964,7 @@ class SaltDistribution(distutils.dist.Distribution):
 
         if IS_WINDOWS_PLATFORM:
             scripts.extend(['scripts/salt',
+                            'scripts/salt-api',
                             'scripts/salt-cp',
                             'scripts/salt-key',
                             'scripts/salt-master',
@@ -1000,6 +1002,7 @@ class SaltDistribution(distutils.dist.Distribution):
 
         if IS_WINDOWS_PLATFORM:
             scripts.extend(['salt = salt.scripts:salt_main',
+                            'salt-api = salt.scripts:salt_api',
                             'salt-cp = salt.scripts:salt_cp',
                             'salt-key = salt.scripts:salt_key',
                             'salt-master = salt.scripts:salt_master',
