@@ -1679,7 +1679,9 @@ def os_data():
                         grains['lsb_distrib_codename'] = codename
                     if 'CPE_NAME' in os_release:
                         cpe = _parse_cpe_name(os_release['CPE_NAME'])
-                        if cpe['vendor'].lower() in ['suse', 'opensuse']:
+                        if not cpe:
+                            log.error('Broken CPE_NAME format in /etc/os-release!')
+                        elif cpe.get('vendor', '').lower() in ['suse', 'opensuse']:
                             grains['os'] = "SUSE"
                             # openSUSE `osfullname` grain normalization
                             if os_release.get("NAME") == "openSUSE Leap":
