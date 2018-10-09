@@ -1678,13 +1678,18 @@ def os_data():
                                 codename = codename_match.group(1)
                         grains['lsb_distrib_codename'] = codename
                     if 'CPE_NAME' in os_release:
-                        if ":suse:" in os_release['CPE_NAME'] or ":opensuse:" in os_release['CPE_NAME']:
+                        cpe = _parse_cpe_name(os_release['CPE_NAME'])
+                        if cpe['vendor'].lower() in ['suse', 'opensuse']:
                             grains['os'] = "SUSE"
                             # openSUSE `osfullname` grain normalization
                             if os_release.get("NAME") == "openSUSE Leap":
                                 grains['osfullname'] = "Leap"
                             elif os_release.get("VERSION") == "Tumbleweed":
                                 grains['osfullname'] = os_release["VERSION"]
+                        # Override VERSION_ID, if CPE_NAME around
+                        if cpe.get('version'):
+                            grains['lsb_distrib_release'] = cpe['version']
+
                 elif os.path.isfile('/etc/SuSE-release'):
                     log.trace('Parsing distrib info from /etc/SuSE-release')
                     grains['lsb_distrib_id'] = 'SUSE'
