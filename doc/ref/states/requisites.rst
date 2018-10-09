@@ -249,7 +249,7 @@ will not execute. In the first example above, the file ``/etc/vimrc`` will only
 execute after the vim package is installed successfully.
 
 Require an Entire SLS File
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+++++++++++++++++++++++++++
 
 As of Salt 0.16.0, it is possible to require an entire sls file. Do this first by
 including the sls file and then setting a state to ``require`` the included sls file:
