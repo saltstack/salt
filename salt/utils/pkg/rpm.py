@@ -9,6 +9,7 @@ import collections
 import datetime
 import logging
 import subprocess
+import salt.utils.stringutils
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -47,7 +48,7 @@ def get_osarch():
         close_fds=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE).communicate()[0]
-    return ret or 'unknown'
+    return salt.utils.stringutils.to_str(ret).strip() or 'unknown'
 
 
 def check_32(arch, osarch=None):
