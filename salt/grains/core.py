@@ -1790,8 +1790,7 @@ def os_data():
             # Commit introducing this comment should be reverted after the upstream bug is released.
             if 'CentOS Linux 7' in grains.get('lsb_distrib_codename', ''):
                 grains.pop('lsb_distrib_release', None)
-            grains['osrelease'] = \
-                grains.get('lsb_distrib_release', osrelease).strip()
+            grains['osrelease'] = grains.get('lsb_distrib_release', osrelease).strip()
         grains['oscodename'] = grains.get('lsb_distrib_codename', '').strip() or oscodename
         if 'Red Hat' in grains['oscodename']:
             grains['oscodename'] = oscodename
