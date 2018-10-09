@@ -423,7 +423,8 @@ class _IsDeprecated(_DeprecationDecorator):
                                                                     version_name=self._exp_version_name)]
                 if self._successor:
                     msg.append('Use successor "{successor}" instead.'.format(successor=self._successor))
-                log.warning(' '.join(msg))
+                if not self._ignore_deprecation_warnings:
+                    log.warning(' '.join(msg))
             else:
                 msg = ['The lifetime of the function "{f_name}" expired.'.format(f_name=self._function.__name__)]
                 if self._successor:
@@ -606,7 +607,8 @@ class _WithDeprecated(_DeprecationDecorator):
                         msg.append('The function "{f_name}" is using its deprecated version and will '
                                    'expire in version "{version_name}".'.format(f_name=func_path,
                                                                                 version_name=self._exp_version_name))
-                    log.warning(' '.join(msg))
+                    if not self._ignore_deprecation_warnings:
+                        log.warning(' '.join(msg))
                 else:
                     msg_patt = 'The lifetime of the function "{f_name}" expired.'
                     if '_' + self._orig_f_name == self._function.__name__:
