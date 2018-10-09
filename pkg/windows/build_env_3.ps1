@@ -276,14 +276,12 @@ Write-Output "   - $script_name :: Copying DLLs . . ."
 Write-Output " ----------------------------------------------------------------"
 # Architecture Specific DLL's
 ForEach($key in $ini[$bitDLLs].Keys) {
-    If ($arrInstalled -notcontains $key) {
-        Write-Output "   - $key . . ."
-        $file = "$($ini[$bitDLLs][$key])"
-        $url  = "$($ini['Settings']['SaltRepo'])/$bitFolder/$file"
-        $file = "$($ini['Settings']['DownloadDir'])\$bitFolder\$file"
-        DownloadFileWithProgress $url $file
-        Copy-Item $file  -destination $($ini['Settings']['Python3Dir'])
-    }
+    Write-Output "   - $key . . ."
+    $file = "$($ini[$bitDLLs][$key])"
+    $url  = "$($ini['Settings']['SaltRepo'])/$bitFolder/$file"
+    $file = "$($ini['Settings']['DownloadDir'])\$bitFolder\$file"
+    DownloadFileWithProgress $url $file
+    Copy-Item $file  -destination $($ini['Settings']['Python3Dir'])
 }
 
 #------------------------------------------------------------------------------
