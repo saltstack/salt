@@ -208,7 +208,9 @@ def get_fqhostname():
         )
         for info in addrinfo:
             # info struct [family, socktype, proto, canonname, sockaddr]
-            if len(info) >= 4:
+            # On Windows `canonname` can be an empty string
+            # This can cause the function to return `None`
+            if len(info) >= 4 and info[3]:
                 l = [info[3]]
     except socket.gaierror:
         pass
