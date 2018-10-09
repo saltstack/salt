@@ -180,10 +180,12 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Tests return when runas user is not available
         '''
-        with patch('salt.modules.cmdmod._is_valid_shell', MagicMock(return_value=True)):
-            with patch('os.path.isfile', MagicMock(return_value=True)):
-                with patch('os.access', MagicMock(return_value=True)):
-                    self.assertRaises(CommandExecutionError, cmdmod._run, 'foo', 'bar', runas='baz')
+        mock_true = MagicMock(return_value=True)
+        with patch('salt.modules.cmdmod._is_valid_shell', mock_true), \
+                patch('os.path.isfile', mock_true), \
+                patch('os.access', mock_true):
+            self.assertRaises(CommandExecutionError,
+                              cmdmod._run, 'foo', 'bar', runas='baz')
 
     def test_run_zero_umask(self):
         '''
@@ -355,9 +357,11 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
 
         # stdout with the non-decodable bits replaced with the unicode
         # replacement character U+FFFD.
-        stdout_unicode = '\ufffd\x1b\ufffd\ufffd\n'
-        stderr_bytes = b'1+0 records in\n1+0 records out\n' \
-                       b'4 bytes copied, 9.1522e-05 s, 43.7 kB/s\n'
+        stdout_unicode = '\ufffd\x1b\ufffd\ufffd' + os.linesep
+        stderr_bytes = os.linesep.join([
+            b'1+0 records in',
+            b'1+0 records out',
+            b'4 bytes copied, 9.1522e-05 s, 43.7 kB/s']) + os.linesep
         stderr_unicode = stderr_bytes.decode()
 
         proc = MagicMock(
