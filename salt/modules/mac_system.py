@@ -85,7 +85,7 @@ def _enable_atrun():
     Enable and start the atrun daemon
     '''
     name = 'com.apple.atrun'
-    services = salt.utils.mac_utils.available_services()
+    services = __utils__['mac_utils.available_services']()
     label = None
     path = None
 
