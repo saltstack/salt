@@ -321,7 +321,9 @@ class Maintenance(salt.utils.process.SignalHandlingMultiprocessingProcess):
         '''
         Fire presence events if enabled
         '''
-        if self.presence_events:
+        # On the first run it may need more time for the EventPublisher
+        # to come up and be ready. Set the timeout to account for this.
+        if self.presence_events and self.event.connect_pull(timeout=3):
             present = self.ckminions.connected_ids()
             new = present.difference(old_present)
             lost = old_present.difference(present)
@@ -331,9 +333,7 @@ class Maintenance(salt.utils.process.SignalHandlingMultiprocessingProcess):
                         'lost': list(lost)}
                 self.event.fire_event(data, tagify('change', 'presence'))
             data = {'present': list(present)}
-            # On the first run it may need more time for the EventPublisher
-            # to come up and be ready. Set the timeout to account for this.
-            self.event.fire_event(data, tagify('present', 'presence'), timeout=3)
+            self.event.fire_event(data, tagify('present', 'presence'))
             old_present.clear()
             old_present.update(present)
 
