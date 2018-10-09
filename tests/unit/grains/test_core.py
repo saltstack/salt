@@ -84,6 +84,19 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
             "UBUNTU_CODENAME": "artful",
         })
 
+    def test_parse_cpe_name_wfn(self):
+        '''
+        Parse correct CPE_NAME data WFN formatted
+        :return:
+        '''
+        for cpe, cpe_ret in [('cpe:/o:opensuse:leap:15.0',
+                              {'phase': None, 'version': '15.0', 'product': 'leap', 'vendor': 'opensuse'}),
+                             ('cpe:/o:vendor:product:42:beta',
+                              {'phase': 'beta', 'version': '42', 'product': 'product', 'vendor': 'vendor'})]:
+            ret = core._parse_cpe_name(cpe)
+            for key in cpe_ret:
+                assert key in ret
+                assert cpe_ret[key] == ret[key]
     def test_missing_os_release(self):
         with patch('salt.utils.files.fopen', mock_open(read_data={})):
             os_release = core._parse_os_release('/etc/os-release', '/usr/lib/os-release')
