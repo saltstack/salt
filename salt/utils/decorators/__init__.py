@@ -267,6 +267,7 @@ class _DeprecationDecorator(object):
 
     OPT_IN = 1
     OPT_OUT = 2
+    CFG_IGNORE_DEPRECATION_WARNINGS = 'ignore_deprecation_warnings'
 
     def __init__(self, globals, version):
         '''
@@ -284,6 +285,7 @@ class _DeprecationDecorator(object):
         self._raise_later = None
         self._function = None
         self._orig_f_name = None
+        self._ignore_deprecation_warnings = None
 
     def _get_args(self, kwargs):
         '''
@@ -336,6 +338,7 @@ class _DeprecationDecorator(object):
         '''
         self._function = function
         self._orig_f_name = self._function.__name__
+        self._ignore_deprecation_warnings = self._orig_f_name in opts.get(self.CFG_IGNORE_DEPRECATION_WARNINGS, list())
 
 
 class _IsDeprecated(_DeprecationDecorator):
