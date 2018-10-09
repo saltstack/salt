@@ -97,6 +97,20 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
             for key in cpe_ret:
                 assert key in ret
                 assert cpe_ret[key] == ret[key]
+
+    def test_parse_cpe_name_v23(self):
+        '''
+        Parse correct CPE_NAME data v2.3 formatted
+        :return:
+        '''
+        for cpe, cpe_ret in [('cpe:2.3:a:microsoft:windows_xp:5.1.601:beta:*:*:*:*:*:*',
+                              {'phase': 'beta', 'version': '5.1.601', 'product': 'windows_xp', 'vendor': 'microsoft'}),
+                             ('cpe:2.3:x:corellian:millenium_falcon:1.0:*:*:*:*:*:*:*',
+                              {'phase': None, 'version': '1.0', 'product': 'millenium_falcon', 'vendor': 'corellian'})]:
+            ret = core._parse_cpe_name(cpe)
+            for key in cpe_ret:
+                assert key in ret
+                assert cpe_ret[key] == ret[key]
     def test_missing_os_release(self):
         with patch('salt.utils.files.fopen', mock_open(read_data={})):
             os_release = core._parse_os_release('/etc/os-release', '/usr/lib/os-release')
