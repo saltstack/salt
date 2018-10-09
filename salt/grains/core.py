@@ -1695,9 +1695,9 @@ def os_data():
                                 grains['osfullname'] = "Leap"
                             elif os_release.get("VERSION") == "Tumbleweed":
                                 grains['osfullname'] = os_release["VERSION"]
-                        # Override VERSION_ID, if CPE_NAME around
-                        if cpe.get('version'):
-                            grains['lsb_distrib_release'] = cpe['version']
+                            # Override VERSION_ID, if CPE_NAME around
+                            if cpe.get('version') and cpe.get('vendor') == 'opensuse':  # Keep VERSION_ID for SLES
+                                grains['lsb_distrib_release'] = cpe['version']
 
                 elif os.path.isfile('/etc/SuSE-release'):
                     log.trace('Parsing distrib info from /etc/SuSE-release')
