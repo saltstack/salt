@@ -177,6 +177,9 @@ State Changes
 - The ``onchanges`` and ``prereq`` :ref:`requisites <requisites>` now behave
   properly in test mode.
 
+- Adding a new option for the State compiler, ``disabled_requisites`` will allow
+  requisites to be disabled during State runs.
+
 Module Changes
 ==============
 

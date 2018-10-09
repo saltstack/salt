@@ -1197,6 +1197,9 @@ VALID_OPTS = {
     # Use Adler32 hashing algorithm for server_id (default False until Sodium, "adler32" after)
     # Possible values are: False, adler32, crc32
     'server_id_use_crc': (bool, six.string_types),
+
+    # Disable requisites during State runs
+    'disabled_requisites': (six.string_types, list),
 }
 
 # default configurations
@@ -1494,6 +1497,7 @@ DEFAULT_MINION_OPTS = {
     'schedule': {},
     'ssh_merge_pillar': True,
     'server_id_use_crc': False,
+    'disabled_requisites': [],
 }
 
 DEFAULT_MASTER_OPTS = {

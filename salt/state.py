@@ -1521,7 +1521,9 @@ class State(object):
         req_in_all = req_in.union({'require', 'watch', 'onfail', 'onfail_stop', 'onchanges'})
         extend = {}
         errors = []
-        disabled = self.opts.get('disabled_requisites', [])
+        disabled_reqs = self.opts.get('disabled_requisites', [])
+        if not isinstance(disabled_reqs, list):
+            disabled_reqs = [disabled_reqs]
         for id_, body in six.iteritems(high):
             if not isinstance(body, dict):
                 continue
@@ -1540,9 +1542,8 @@ class State(object):
                         key = next(iter(arg))
                         if key not in req_in:
                             continue
-                        log.debug('=== self %s ===', self.opts)
-                        if key in disabled:
-                            log.info('=== %s disabled ===', key)
+                        if key in disabled_reqs:
+                            log.warning('The %s requisite has been disabled, Ignoring.', key)
                             continue
                         rkey = key.split('_')[0]
                         items = arg[key]
@@ -2259,6 +2260,9 @@ class State(object):
         Look into the running data to check the status of all requisite
         states
         '''
+        disabled_reqs = self.opts.get('disabled_requisites', [])
+        if not isinstance(disabled_reqs, list):
+            disabled_reqs = [disabled_reqs]
         present = False
         # If mod_watch is not available make it a require
         if 'watch' in low:
@@ -2309,6 +2313,9 @@ class State(object):
         if pre:
             reqs['prerequired'] = []
         for r_state in reqs:
+            if r_state in disabled_reqs:
+                log.warning('The %s requisite has been disabled, Ignoring.', r_state)
+                continue
             if r_state in low and low[r_state] is not None:
                 for req in low[r_state]:
                     if isinstance(req, six.string_types):
