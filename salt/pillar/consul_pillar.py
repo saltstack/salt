@@ -267,7 +267,13 @@ def fetch_tree(client, path, expand_keys):
     are folders. Take the remaining data and send it to be formatted
     in such a way as to be used as pillar data.
     '''
-    absolute_path = path.rstrip('/') + '/'
+    # Unless the root path is blank, it needs a trailing slash for
+    # the kv get from Consul to work as expected
+    if not path:
+        absolute_path = path
+    else:
+        absolute_path = path.rstrip('/') + '/'
+
     _, items = consul_fetch(client, absolute_path)
     ret = {}
     has_children = re.compile(r'/$')
