@@ -90,9 +90,11 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         :return:
         '''
         for cpe, cpe_ret in [('cpe:/o:opensuse:leap:15.0',
-                              {'phase': None, 'version': '15.0', 'product': 'leap', 'vendor': 'opensuse'}),
+                              {'phase': None, 'version': '15.0', 'product': 'leap',
+                               'vendor': 'opensuse', 'part': 'operating system'}),
                              ('cpe:/o:vendor:product:42:beta',
-                              {'phase': 'beta', 'version': '42', 'product': 'product', 'vendor': 'vendor'})]:
+                              {'phase': 'beta', 'version': '42', 'product': 'product',
+                               'vendor': 'vendor', 'part': 'operating system'})]:
             ret = core._parse_cpe_name(cpe)
             for key in cpe_ret:
                 assert key in ret
