@@ -366,7 +366,7 @@ class Pillar(object):
         else:
             self.functions = functions
 
-        self.matcher = salt.minion.Matcher(self.opts, self.functions)
+        self.matchers = salt.loader.matchers(self.opts)
         self.rend = salt.loader.render(self.opts, self.functions)
         ext_pillar_opts = copy.deepcopy(self.opts)
         # Fix self.opts['file_roots'] so that ext_pillars know the real
@@ -649,7 +649,7 @@ class Pillar(object):
                 if saltenv != self.opts['pillarenv']:
                     continue
             for match, data in six.iteritems(body):
-                if self.matcher.confirm_top(
+                if self.matchers['confirm_top.confirm_top'](
                         match,
                         data,
                         self.opts.get('nodegroups', {}),

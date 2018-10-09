@@ -165,6 +165,31 @@ New output:
               0
 
 
+State Changes
+=============
+
+- The :py:func:`file.rename <salt.states.file.rename>` state will now return a
+  ``True`` result (and make no changes) when the destination file already
+  exists, and ``Force`` is not set to ``True``. In previous releases, a
+  ``False`` result would be returned, but this meant that subsequent runs of
+  the state would fail due to the destination file being present.
+
+- The ``onchanges`` and ``prereq`` :ref:`requisites <requisites>` now behave
+  properly in test mode.
+
+Module Changes
+==============
+
+- The :py:func:`debian_ip <salt.modules.debian_ip>` module used by the
+  :py:func:`network.managed <salt.states.network.managed>` state has been
+  heavily refactored. The order that options appear in inet/inet6 blocks may
+  produce cosmetic changes. Many options without an 'ipvX' prefix will now be
+  shared between inet and inet6 blocks. The options ``enable_ipv4`` and
+  ``enabled_ipv6`` will now fully remove relevant inet/inet6 blocks. Overriding
+  options by prefixing them with 'ipvX' will now work with most options (i.e.
+  ``dns`` can be overriden by ``ipv4dns`` or ``ipv6dns``). The ``proto`` option
+  is now required.
+
 Salt Cloud Features
 ===================
 
@@ -174,3 +199,51 @@ GCE Driver
 The GCE salt cloud driver can now be used with GCE instance credentials by
 setting the configuration paramaters ``service_account_private_key`` and
 ``service_account_private_email`` to an empty string.
+
+Deprecations
+============
+
+Module Deprecations
+-------------------
+
+- The :py:mod:`dockermod <salt.modules.dockermod>` module has been
+  changed as follows:
+
+    - Support for the ``tags`` kwarg has been removed from the
+      :py:func:`dockermod.resolve_tag <salt.modules.dockermod.resolve_tag>`
+      function.
+    - Support for the ``network_id`` kwarg has been removed from the
+      :py:func:`dockermod.connect_container_to_network <salt.modules.dockermod.connect_container_to_network>`
+      function. Please use ``net_id`` instead.
+    - Support for the ``name`` kwarg has been removed from the
+      :py:func:`dockermod.sls_build <salt.modules.dockermod.sls_build>`
+      function. Please use ``repository`` and ``tag`` instead.
+    - Support for the ``image`` kwarg has been removed from the following
+      functions. In all cases, please use both the ``repository`` and ``tag``
+      options instead:
+
+        - :py:func:`dockermod.build <salt.modules.dockermod.build>`
+        - :py:func:`dockermod.commit <salt.modules.dockermod.commit>`
+        - :py:func:`dockermod.import <salt.modules.dockermod.import_>`
+        - :py:func:`dockermod.load <salt.modules.dockermod.load>`
+        - :py:func:`dockermod.tag <salt.modules.dockermod.tag_>`
+
+- The :py:mod:`ssh <salt.modules.ssh>` execution module has been
+  changed as follows:
+
+    - Support for the ``ssh.get_known_host`` function has been removed. Please use the
+      :py:func:`ssh.get_known_host_entries <salt.modules.ssh.get_known_host_entries>`
+      function instead.
+    - Support for the ``ssh.recv_known_host`` function has been removed. Please use the
+      :py:func:`ssh.recv_known_host_entries <salt.modules.ssh.recv_known_host_entries>`
+      function instead.
+
+State Deprecations
+------------------
+
+- The :py:mod:`win_servermanager <salt.states.win_servermanager>` state has been
+  changed as follows:
+
+    - Support for the ``force`` kwarg has been removed from the
+      :py:func:`win_servermanager.installed <salt.statues.win_servermanager.installed>`
+      function. Please use ``recurse`` instead.
