@@ -429,7 +429,7 @@ class _IsDeprecated(_DeprecationDecorator):
                 msg = ['The lifetime of the function "{f_name}" expired.'.format(f_name=self._function.__name__)]
                 if self._successor:
                     msg.append('Please use its successor "{successor}" instead.'.format(successor=self._successor))
-                log.warning(' '.join(msg))
+                log.error(' '.join(msg))
                 raise CommandExecutionError(' '.join(msg))
             return self._call_function(kwargs)
         return _decorate
