@@ -115,14 +115,6 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
                 'Unaccepted Keys:',
                 'Rejected Keys:'
             ]
-        elif self.master_opts['transport'] == 'raet':
-            expect = [
-                'Accepted Keys:',
-                'minion',
-                'sub_minion',
-                'Unaccepted Keys:',
-                'Rejected Keys:'
-            ]
         self.assertEqual(data, expect)
 
     def test_list_json_out(self):
@@ -143,10 +135,6 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
                       'minions_denied': [],
                       'minions_pre': [],
                       'minions': ['minion', 'sub_minion']}
-        elif self.master_opts['transport'] == 'raet':
-            expect = {'accepted': ['minion', 'sub_minion'],
-                      'rejected': [],
-                      'pending': []}
         self.assertEqual(ret, expect)
 
     def test_list_yaml_out(self):
@@ -167,10 +155,6 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
                       'minions_denied': [],
                       'minions_pre': [],
                       'minions': ['minion', 'sub_minion']}
-        elif self.master_opts['transport'] == 'raet':
-            expect = {'accepted': ['minion', 'sub_minion'],
-                      'rejected': [],
-                      'pending': []}
         self.assertEqual(ret, expect)
 
     def test_list_raw_out(self):
@@ -193,10 +177,6 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
                       'minions_denied': [],
                       'minions_pre': [],
                       'minions': ['minion', 'sub_minion']}
-        elif self.master_opts['transport'] == 'raet':
-            expect = {'accepted': ['minion', 'sub_minion'],
-                      'rejected': [],
-                      'pending': []}
         self.assertEqual(ret, expect)
 
     def test_list_acc(self):
@@ -251,8 +231,6 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
             key_names = None
             if self.master_opts['transport'] in ('zeromq', 'tcp'):
                 key_names = ('minibar.pub', 'minibar.pem')
-            elif self.master_opts['transport'] == 'raet':
-                key_names = ('minibar.key',)
             for fname in key_names:
                 self.assertTrue(os.path.isfile(os.path.join(tempdir, fname)))
         finally:
