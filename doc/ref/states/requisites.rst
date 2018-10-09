@@ -14,43 +14,24 @@ and ID's or names. The generalized form of a requisite target is ``<state name>:
 <ID or name>``. The specific form is defined as a :ref:`Requisite Reference
 <requisite-reference>`.
 
-Requisites come in two types: Direct requisites (such as ``require``),
-and requisite_ins (such as ``require_in``). The relationships are
-directional: a direct requisite requires something from another state.
-However, a requisite_in inserts a requisite into the targeted state pointing to
-the targeting state. The following example demonstrates a direct requisite:
+A common use-case for requisites is ensuring a package has been installed before
+trying to ensure the service is running. In the following example, Salt will
+ensure nginx has been installed before trying to manage the service. If the
+package could not be installed, Salt will not try to manage the service.
 
 .. code-block:: yaml
 
-    vim:
-      pkg.installed
-
-    /etc/vimrc:
-      file.managed:
-        - source: salt://edit/vimrc
-        - require:
-          - pkg: vim
-
-In the example above, the file ``/etc/vimrc`` depends on the vim package.
-
-Requisite_in statements are the opposite. Instead of saying "I depend on
-something", requisite_ins say "Someone depends on me":
-
-.. code-block:: yaml
-
-    vim:
+    nginx:
       pkg.installed:
-        - require_in:
-          - file: /etc/vimrc
+        - name: nginx-light
+      service.running:
+        - enable: True
+        - require:
+          - pkg: nginx
 
-    /etc/vimrc:
-      file.managed:
-        - source: salt://edit/vimrc
-
-So here, with a requisite_in, the same thing is accomplished as in the first
-example, but the other way around. The vim package is saying "/etc/vimrc depends
-on me". This will result in a ``require`` being inserted into the
-``/etc/vimrc`` state which targets the ``vim`` state.
+Direct requisites always form a dependency in a single direction. It is possible
+to establish dependencies in a reverse direction using the :ref:`requisite_in
+<requisites-in>` form.
 
 In the end, a single dependency map is created and everything is executed in a
 finite and predictable order.
@@ -140,7 +121,7 @@ Identifier matching
 Requisites match on both the ID Declaration and the ``name`` parameter.
 This means that, in the "Deploy server package" example above, a ``require``
 requisite would match with ``Deploy server package`` *or* ``/usr/local/share/myapp.tar.xz``,
-so either of the following versions for "Extract server package" works:
+so either of the following versions for "Extract server package" would work:
 
 .. code-block:: yaml
 
@@ -786,6 +767,7 @@ is specified. It will be set when ``runas_password`` is defined in the state.
 In the above state, the Powershell script run by ``cmd.run`` will be run by the
 frank user with the password ``supersecret``.
 
+.. _requisites-in:
 .. _requisites-require-in:
 .. _requisites-watch-in:
 .. _requisites-onchanges-in:
@@ -793,20 +775,14 @@ frank user with the password ``supersecret``.
 The _in versions of requisites
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-All of the requisites also have corresponding requisite_in versions, which do
-the reverse of their normal counterparts. The examples below all use
-``require_in`` as the example, but note that all of the ``_in`` requisites work
-the same way: They result in a normal requisite in the targeted state, which
-targets the state which has defines the requisite_in. Thus, a ``require_in``
-causes the target state to ``require`` the targeting state. Similarly, a
-``watch_in`` causes the target state to ``watch`` the targeting state. This
-pattern continues for the rest of the requisites.
+Direct requisites form a dependency in a single direction. This makes it possible
+for Salt to detect cyclical dependencies and helps prevent faulty logic. In some
+cases, often in loops, it is desirable to establish a dependency in the opposite
+direction.
 
-If a state declaration needs to be required by another state declaration then
-``require_in`` can accommodate it. Therefore, these two sls files would be the
-same in the end:
-
-Using ``require``
+All direct requisites have an ``_in`` counterpart that behaves the same but forms
+the dependency in the opposite direction. The following sls examples will produce
+the exact same dependency mapping.
 
 .. code-block:: yaml
 
@@ -815,8 +791,6 @@ Using ``require``
       service.running:
         - require:
           - pkg: httpd
-
-Using ``require_in``
 
 .. code-block:: yaml
 
@@ -826,20 +800,19 @@ Using ``require_in``
           - service: httpd
       service.running: []
 
-The ``require_in`` statement is particularly useful when assigning a require
-in a separate sls file. For instance it may be common for httpd to require
-components used to set up PHP or mod_python, but the HTTP state does not need
-to be aware of the additional components that require it when it is set up:
-
-http.sls
+In the following example, Salt will not try to manage the nginx service or any
+configuration files unless the nginx package is installed because of the ``pkg:
+nginx`` requisite.
 
 .. code-block:: yaml
 
-    httpd:
+    nginx:
       pkg.installed: []
       service.running:
+        - enable: True
+        - reload: True
         - require:
-          - pkg: httpd
+          - pkg: nginx
 
 php.sls
 
@@ -868,6 +841,19 @@ mod_python.sls
 Now the httpd server will only start if both php and mod_python are first verified to
 be installed. Thus allowing for a requisite to be defined "after the fact".
 
+    {% for cfile in salt.pillar.get('nginx:config_files') %}
+    /etc/nginx/conf.d/{{ cfile }}:
+      file.managed:
+        - source: salt://nginx/configs/{{ cfile }}
+        - require:
+          - pkg: nginx
+        - listen_in:
+          - service: nginx
+    {% endfor %}
+
+In this scenario, ``listen_in`` is a better choice than ``require_in`` because the
+``listen`` requisite will trigger ``mod_wait`` behavior which will wait until the
+end of state execution and then reload the service.
 
 .. _requisites-fire-event:
 
