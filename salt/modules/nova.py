@@ -223,9 +223,7 @@ def volume_list(search_opts=None, profile=None):
 
     .. code-block:: bash
 
-        salt '*' nova.volume_list \
-                search_opts='{"display_name": "myblock"}' \
-                profile=openstack
+        salt '*' nova.volume_list search_opts='{"display_name": "myblock"}' profile=openstack
 
     '''
     conn = _auth(profile)
@@ -364,8 +362,7 @@ def volume_attach(name,
     .. code-block:: bash
 
         salt '*' nova.volume_attach myblock slice.example.com profile=openstack
-        salt '*' nova.volume_attach myblock server.example.com \
-                device='/dev/xvdb' profile=openstack
+        salt '*' nova.volume_attach myblock server.example.com device='/dev/xvdb' profile=openstack
 
     '''
     conn = _auth(profile)
@@ -488,8 +485,7 @@ def flavor_create(name,      # pylint: disable=C0103
 
     .. code-block:: bash
 
-        salt '*' nova.flavor_create myflavor flavor_id=6 \
-                ram=4096 disk=10 vcpus=1
+        salt '*' nova.flavor_create myflavor flavor_id=6 ram=4096 disk=10 vcpus=1
     '''
     conn = _auth(profile)
     return conn.flavor_create(
@@ -556,7 +552,7 @@ def keypair_delete(name, profile=None):
 
     .. code-block:: bash
 
-        salt '*' nova.keypair_delete mykey'
+        salt '*' nova.keypair_delete mykey
     '''
     conn = _auth(profile)
     return conn.keypair_delete(name)
@@ -589,8 +585,7 @@ def image_meta_set(image_id=None,
 
     .. code-block:: bash
 
-        salt '*' nova.image_meta_set 6f52b2ff-0b31-4d84-8fd1-af45b84824f6 \
-                cheese=gruyere
+        salt '*' nova.image_meta_set 6f52b2ff-0b31-4d84-8fd1-af45b84824f6 cheese=gruyere
         salt '*' nova.image_meta_set name=myimage salad=pasta beans=baked
     '''
     conn = _auth(profile)
@@ -613,8 +608,7 @@ def image_meta_delete(image_id=None,     # pylint: disable=C0103
 
     .. code-block:: bash
 
-        salt '*' nova.image_meta_delete \
-                6f52b2ff-0b31-4d84-8fd1-af45b84824f6 keys=cheese
+        salt '*' nova.image_meta_delete 6f52b2ff-0b31-4d84-8fd1-af45b84824f6 keys=cheese
         salt '*' nova.image_meta_delete name=myimage keys=salad,beans
     '''
     conn = _auth(profile)
