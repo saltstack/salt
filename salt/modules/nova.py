@@ -345,7 +345,7 @@ def volume_attach(name,
     .. code-block:: bash
 
         salt '*' nova.volume_attach myblock slice.example.com profile=openstack
-        salt '*' nova.volume_attach myblock server.example.com device=/dev/xvdb profile=openstack
+        salt '*' nova.volume_attach myblock server.example.com device='/dev/xvdb' profile=openstack
 
     '''
     conn = _auth(profile)
