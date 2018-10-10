@@ -48,7 +48,7 @@ first line in the stanza) or the ``- name`` parameter.
     - require:
       - pkg: vim
 
-Glog matching in requisites
+Glob matching in requisites
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. versionadded:: 0.9.8
@@ -157,15 +157,15 @@ module they are using.
 Requisites Types
 ----------------
 
-* ``require``: Require success from another state
-* ``watch``: Similar to require, but invokes ``mod_watch`` behavior
-* ``listen``: Similar to require, but invokes ``mod_wait`` behavior
-* ``onchanges``: Execute if target has changes
-* ``prereq``: Similar to onchanges with reversed execution order
-* ``onfail``: Execute if target state fails
-* ``use``: Copy arguments from another state
+* `require <requisites-require>`: Require success from another state
+* `watch <requisites-watch>`: Similar to require, but invokes ``mod_watch`` behavior
+* `listen <requisites-listen>`: Similar to require, but invokes ``mod_wait`` behavior
+* `onchanges <requisites-onchanges>`: Execute if target has changes
+* `prereq <requisites-prereq>`: Similar to onchanges with reversed execution order
+* `onfail <requisites-onfail>`: Execute if target state fails
+* `use <requisites-use>`: Copy arguments from another state
 
-There are several corresponding requisite_any statements:
+There are several corresponding `requisite_any <requisites-any>` statements:
 
 * ``require_any``
 * ``watch_any``
@@ -378,7 +378,7 @@ exactly like the ``require`` requisite (the watching state will execute if
 In this example, the service will be reloaded/restarted if either of the
 file.managed states has a result of True and has changes.
 
-.. _requisites-prereq:
+.. _requisites-listen:
 
 listen
 ~~~~~~
@@ -423,6 +423,8 @@ changed, but the apache2 restart will happen at the end of the state run.
 
 This example does the same as the above example, but puts the state argument
 on the file resource, rather than the service resource.
+
+.. _requisites-prereq:
 
 prereq
 ~~~~~~
@@ -656,6 +658,8 @@ In this example, the `cmd.run` would be run only if either of the
 `file.managed` states generated changes and at least one of the
 watched state's "result" is ``True``.
 
+.. _requisites-use:
+
 use
 ~~~
 
@@ -687,45 +691,6 @@ multiple network interfaces.
 The ``use`` statement does not inherit the requisites arguments of the
 targeted state. This means also a chain of ``use`` requisites would not
 inherit inherited options.
-
-runas
-~~~~~
-
-.. versionadded:: 2017.7.0
-
-The ``runas`` global option is used to set the user which will be used to run
-the command in the ``cmd.run`` module.
-
-.. code-block:: yaml
-
-    django:
-      pip.installed:
-        - name: django >= 1.6, <= 1.7
-        - runas: daniel
-        - require:
-          - pkg: python-pip
-
-In the above state, the pip command run by ``cmd.run`` will be run by the daniel user.
-
-runas_password
-~~~~~~~~~~~~~~
-
-.. versionadded:: 2017.7.2
-
-The ``runas_password`` global option is used to set the password used by the
-runas global option. This is required by ``cmd.run`` on Windows when ``runas``
-is specified. It will be set when ``runas_password`` is defined in the state.
-
-.. code-block:: yaml
-
-    run_script:
-      cmd.run:
-        - name: Powershell -NonInteractive -ExecutionPolicy Bypass -File C:\\Temp\\script.ps1
-        - runas: frank
-        - runas_password: supersecret
-
-In the above state, the Powershell script run by ``cmd.run`` will be run by the
-frank user with the password ``supersecret``.
 
 .. _requisites-in:
 .. _requisites-require-in:
@@ -815,10 +780,17 @@ In this scenario, ``listen_in`` is a better choice than ``require_in`` because t
 ``listen`` requisite will trigger ``mod_wait`` behavior which will wait until the
 end of state execution and then reload the service.
 
+.. _requisites-any:
+
+The _any versions of requisites
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# TODO
+
 .. _requisites-fire-event:
 
 Altering States
-===============
+---------------
 
 The state altering system is used to make sure that states are evaluated exactly
 as the user expects. It can be used to double check that a state preformed
@@ -827,8 +799,8 @@ under certain conditions. The use of unless or onlyif options help make states
 even more stateful. The ``check_cmd`` option helps ensure that the result of a
 state is evaluated correctly.
 
-Reload
-------
+reload
+~~~~~~
 
 ``reload_modules`` is a boolean option that forces salt to reload its modules
 after a state finishes. ``reload_pillar`` and ``reload_grains`` can also be set.
@@ -847,8 +819,8 @@ See :ref:`Reloading Modules <reloading-modules>`.
 
 .. _unless-requisite:
 
-Unless
-------
+unless
+~~~~~~
 
 .. versionadded:: 2014.7.0
 
@@ -925,8 +897,8 @@ In the above case, ``some_check`` will be run prior to _each_ name -- once for
 
 .. _onlyif-requisite:
 
-Onlyif
-------
+onlyif
+~~~~~~
 
 .. versionadded:: 2014.7.0
 
@@ -999,49 +971,44 @@ if the gluster commands return a 0 ret value.
 runas
 ~~~~~
 
-.. versionadded:: 2014.7.0
+.. versionadded:: 2017.7.0
 
-listen and its counterpart listen_in trigger mod_wait functions for states,
-when those states succeed and result in changes, similar to how watch its
-counterpart watch_in. Unlike watch and watch_in, listen, and listen_in will
-not modify the order of states and can be used to ensure your states are
-executed in the order they are defined. All listen/listen_in actions will occur
-at the end of a state run, after all states have completed.
+The ``runas`` global option is used to set the user which will be used to run
+the command in the ``cmd.run`` module.
 
 .. code-block:: yaml
 
- restart-apache2:
-   service.running:
-     - name: apache2
-     - listen:
-       - file: /etc/apache2/apache2.conf
+    django:
+      pip.installed:
+        - name: django >= 1.6, <= 1.7
+        - runas: daniel
+        - require:
+          - pkg: python-pip
 
- configure-apache2:
-   file.managed:
-     - name: /etc/apache2/apache2.conf
-     - source: salt://apache2/apache2.conf
+In the above state, the pip command run by ``cmd.run`` will be run by the daniel user.
 
-This example will cause apache2 to be restarted when the apache2.conf file is
-changed, but the apache2 restart will happen at the end of the state run.
+runas_password
+~~~~~~~~~~~~~~
+
+.. versionadded:: 2017.7.2
+
+The ``runas_password`` global option is used to set the password used by the
+runas global option. This is required by ``cmd.run`` on Windows when ``runas``
+is specified. It will be set when ``runas_password`` is defined in the state.
 
 .. code-block:: yaml
 
- restart-apache2:
-   service.running:
-     - name: apache2
+    run_script:
+      cmd.run:
+        - name: Powershell -NonInteractive -ExecutionPolicy Bypass -File C:\\Temp\\script.ps1
+        - runas: frank
+        - runas_password: supersecret
 
- configure-apache2:
-   file.managed:
-     - name: /etc/apache2/apache2.conf
-     - source: salt://apache2/apache2.conf
-     - listen_in:
-       - service: apache2
-
-This example does the same as the above example, but puts the state argument
-on the file resource, rather than the service resource.
+In the above state, the Powershell script run by ``cmd.run`` will be run by the
+frank user with the password ``supersecret``.
 
 check_cmd
----------
+~~~~~~~~~
 
 .. versionadded:: 2014.7.0
 
@@ -1075,7 +1042,7 @@ declaring the function succeeded.
 of the ``file.managed`` state.
 
 Overriding Checks
------------------
+~~~~~~~~~~~~~~~~~
 
 There are two commands used for the above checks.
 
