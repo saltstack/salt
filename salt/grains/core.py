@@ -2516,7 +2516,7 @@ def _hw_data(osdata):
                     break
     elif osdata['kernel'] == 'AIX':
         cmd = salt.utils.path.which('prtconf')
-        if data:
+        if cmd:
             data = __salt__['cmd.run']('{0}'.format(cmd)) + os.linesep
             for dest, regstring in (('serialnumber', r'(?im)^\s*Machine\s+Serial\s+Number:\s+(\S+)'),
                                     ('systemfirmware', r'(?im)^\s*Firmware\s+Version:\s+(.*)')):
