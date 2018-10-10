@@ -12,7 +12,6 @@
 
 # Python libs
 from __future__ import absolute_import
-import sys
 
 # Salt libs
 import salt.config
