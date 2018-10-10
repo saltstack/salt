@@ -178,7 +178,7 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
                 mock_kubernetes_lib.config.load_kube_config = Mock()
                 config = kubernetes._setup_conn(kubeconfig_data='MTIzNDU2Nzg5MAo=', context='newcontext')
                 check_path = os.path.join('/tmp', 'salt-kubeconfig-')
-                if salt.utils.platform.is_windows()
+                if salt.utils.platform.is_windows():
                     check_path = os.path.join(os.environ.get('TMP'), 'salt-kubeconfig-')
                 self.assertTrue(config['kubeconfig'].lower().startswith(check_path.lower()))
                 self.assertTrue(os.path.exists(config['kubeconfig']))
