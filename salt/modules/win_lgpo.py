@@ -2925,8 +2925,8 @@ def _findOptionValueInSeceditFile(option):
                     return True, _line.split('=')[1].strip()
         return True, 'Not Defined'
     # TODO: This needs to be more specific
-    except Exception:
-        log.exception('error occurred while trying to get secedit data')
+    except Exception as e:
+        log.exception('error %s occurred while trying to get secedit data', e)
         return False, None
 
 
@@ -4185,7 +4185,7 @@ def _regexSearchKeyValueCombo(policy_data, policy_regpath, policy_regkey):
                                b'\00;'])
         match = re.search(_thisSearch, policy_data, re.IGNORECASE)
         if match:
-            return policy_data[match.start():(policy_data.index(']', match.end())) + 1]
+            return policy_data[match.start():(policy_data.index(b']', match.end())) + 2]
 
     return None
 
@@ -4689,8 +4689,8 @@ def _writeAdminTemplateRegPolFile(admtemplate_data,
                            policy_data.admx_registry_classes[registry_class]['gpt_extension_location'],
                            policy_data.admx_registry_classes[registry_class]['gpt_extension_guid'])
     # TODO: This needs to be more specific or removed
-    except Exception:
-        log.exception('Unhandled exception %s occurred while attempting to write Adm Template Policy File')
+    except Exception as e:
+        log.exception('Unhandled exception %s occurred while attempting to write Adm Template Policy File', e)
         return False
     return True
 
