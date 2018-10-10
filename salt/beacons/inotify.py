@@ -11,7 +11,6 @@ Watch files and translate the changes into salt events
             the beacon configuration.
 
 :note: The `inotify` beacon only works on OSes that have `inotify` kernel support.
-       Currently this excludes FreeBSD, macOS, and Windows.
 
 '''
 # Import Python libs
