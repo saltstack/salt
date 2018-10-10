@@ -17,6 +17,7 @@ from datetime import datetime
 
 # Import Salt libs
 import salt.utils.platform
+import salt.exceptions
 
 # Import 3rd-party libraries
 try:
@@ -567,7 +568,8 @@ def create_task_from_xml(name,
         not working.
 
     :return: True if successful, False if unsuccessful, A string with the error message if there is an error
-    :rtype: bool or str
+    :rtype: bool
+    :raises: CommandExecutionError
 
     CLI Example:
 
@@ -581,7 +583,7 @@ def create_task_from_xml(name,
         return '{0} already exists'.format(name)
 
     if not xml_text and not xml_path:
-        return 'Must specify either xml_text or xml_path'
+        raise salt.exceptions.ArgumentValueError('Must specify either xml_text or xml_path')
 
     # Create the task service object
     pythoncom.CoInitialize()
@@ -647,10 +649,10 @@ def create_task_from_xml(name,
         try:
             failure_code = fc[error_code]
         except KeyError:
-            failure_code = 'Unknown Failure: {0}'.format(error_code)
+            failure_code = 'CommandExecutionErrUnknown Failure: {0}'.format(error_code)
         finally:
             log.debug('Failed to create task: %s', failure_code)
-        return failure_code
+        raise salt.exceptions.CommandExecutionError(failure_code)
 
     # Verify creation
     return name in list_tasks(location)
