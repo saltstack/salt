@@ -10,7 +10,7 @@ It exposes a python ABC that can be subclassed for new database providers.
 :platform: all
 
 Theory of sql_base ext_pillar
-=====================================
+=============================
 
 Ok, here's the theory for how this works...
 
@@ -32,7 +32,7 @@ You can retrieve as many fields as you like, how they get used depends on the
 exact settings.
 
 Configuring a sql_base ext_pillar
-=====================================
+=================================
 
 The sql_base ext_pillar cannot be used directly, but shares query configuration
 with its implementations. These examples use a fake 'sql_base' adapter, which

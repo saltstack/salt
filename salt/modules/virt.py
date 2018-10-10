@@ -2,6 +2,8 @@
 '''
 Work with virtual machines managed by libvirt
 
+:depends: libvirt Python module
+
 Connection
 ==========
 
@@ -14,8 +16,8 @@ hypervisor driver will be used. This can be overridden like this:
 .. code-block:: yaml
 
     virt:
-        connection:
-            uri: lxc:///
+      connection:
+        uri: lxc:///
 
 If the connection requires an authentication like for ESXi, this can be defined in the
 minion pillar data like this:
@@ -23,11 +25,11 @@ minion pillar data like this:
 .. code-block:: yaml
 
     virt:
-        connection:
-            uri: esx://10.1.1.101/?no_verify=1&auto_answer=1
-            auth:
-                username: user
-                password: secret
+      connection:
+        uri: esx://10.1.1.101/?no_verify=1&auto_answer=1
+        auth:
+          username: user
+          password: secret
 
 Connecting with SSH protocol
 ----------------------------
@@ -62,13 +64,10 @@ The calls not using the libvirt connection setup are:
 - ``is_*hyper``
 - all migration functions
 
-Reference:
-
 - `libvirt ESX URI format <http://libvirt.org/drvesx.html#uriformat>`_
 - `libvirt URI format <http://libvirt.org/uri.html#URI_config>`_
 - `libvirt authentication configuration <http://libvirt.org/auth.html#Auth_client_config>`_
 
-:depends: libvirt Python module
 '''
 # Special Thanks to Michael Dehann, many of the concepts, and a few structures
 # of his in the virt func module have been used
@@ -242,14 +241,6 @@ def __get_conn(**kwargs):
             )
         )
     return conn
-
-
-def _get_domain_types(**kwargs):
-    '''
-    Return the list of possible values for the <domain> type attribute.
-    '''
-    caps = capabilities(**kwargs)
-    return sorted(set([x for y in [guest['arch']['domains'].keys() for guest in caps['guests']] for x in y]))
 
 
 def _get_domain(conn, *vms, **kwargs):
@@ -557,6 +548,8 @@ def _gen_xml(name,
              diskp,
              nicp,
              hypervisor,
+             os_type,
+             arch,
              graphics=None,
              loader=None,
              **kwargs):
@@ -621,22 +614,26 @@ def _gen_xml(name,
             context['console'] = True
 
     context['disks'] = {}
+    disk_bus_map = {'virtio': 'vd', 'xen': 'xvd', 'fdc': 'fd', 'ide': 'hd'}
     for i, disk in enumerate(diskp):
         context['disks'][disk['name']] = {}
         context['disks'][disk['name']]['file_name'] = disk['filename']
         context['disks'][disk['name']]['source_file'] = disk['source_file']
-        if hypervisor in ['qemu', 'kvm', 'bhyve']:
-            context['disks'][disk['name']]['target_dev'] = 'vd{0}'.format(string.ascii_lowercase[i])
+        prefix = disk_bus_map.get(disk['model'], 'sd')
+        context['disks'][disk['name']]['target_dev'] = '{0}{1}'.format(prefix, string.ascii_lowercase[i])
+        if hypervisor in ['qemu', 'kvm', 'bhyve', 'xen']:
             context['disks'][disk['name']]['address'] = False
             context['disks'][disk['name']]['driver'] = True
         elif hypervisor in ['esxi', 'vmware']:
-            context['disks'][disk['name']]['target_dev'] = 'sd{0}'.format(string.ascii_lowercase[i])
             context['disks'][disk['name']]['address'] = True
             context['disks'][disk['name']]['driver'] = False
         context['disks'][disk['name']]['disk_bus'] = disk['model']
         context['disks'][disk['name']]['type'] = disk['format']
         context['disks'][disk['name']]['index'] = six.text_type(i)
     context['nics'] = nicp
+
+    context['os_type'] = os_type
+    context['arch'] = arch
 
     fn_ = 'libvirt_domain.jinja'
     try:
@@ -1216,6 +1213,8 @@ def init(name,
          enable_vnc=False,
          enable_qcow=False,
          graphics=None,
+         os_type=None,
+         arch=None,
          loader=None,
          **kwargs):
     '''
@@ -1279,6 +1278,16 @@ def init(name,
     :param loader:
         Dictionary providing details on the BIOS firmware loader. (Default: ``None``)
         See :ref:`init-loader-def` for more details on the possible values.
+
+        .. versionadded:: Neon
+    :param os_type:
+        type of virtualization as found in the ``//os/type`` element of the libvirt definition.
+        The default value is taken from the host capabilities, with a preference for ``hvm``.
+
+        .. versionadded:: Fluorine
+    :param arch:
+        architecture of the virtual machine. The default value is taken from the host capabilities,
+        but ``x86_64`` is prefed over ``i686``.
 
         .. versionadded:: Fluorine
     :param enable_qcow:
@@ -1387,8 +1396,7 @@ def init(name,
     model
         One of the disk busses allowed by libvirt (Default: depends on hypervisor)
 
-        See `libvirt documentation <https://libvirt.org/formatdomain.html#elementsDisks>`_
-        for the allowed bus types.
+        See the libvirt `disk element`_ documentation for the allowed bus types.
 
     image
         Path to the image to use for the disk. If no image is provided, an empty disk will be created
@@ -1434,8 +1442,7 @@ def init(name,
         Graphics type. The possible values are ``none``, ``'spice'``, ``'vnc'`` and other values
         allowed as a libvirt graphics type (Default: ``None``)
 
-        See `the libvirt documentation <https://libvirt.org/formatdomain.html#elementsGraphics>`_
-        for more details on the possible types
+        See the libvirt `graphics element`_ documentation for more details on the possible types.
 
     port
         Port to export the graphics on for ``vnc``, ``spice`` and ``rdp`` types.
@@ -1477,8 +1484,14 @@ def init(name,
 
         virt:
             images: /data/my/vm/images/
+
+    .. _disk element: https://libvirt.org/formatdomain.html#elementsDisks
+    .. _graphics element: https://libvirt.org/formatdomain.html#elementsGraphics
     '''
-    hypervisors = _get_domain_types(**kwargs)
+    caps = capabilities(**kwargs)
+    os_types = sorted(set([guest['os_type'] for guest in caps['guests']]))
+    arches = sorted(set([guest['arch']['name'] for guest in caps['guests']]))
+    hypervisors = sorted(set([x for y in [guest['arch']['domains'].keys() for guest in caps['guests']] for x in y]))
     hypervisor = __salt__['config.get']('libvirt:hypervisor', hypervisor)
     if hypervisor is not None:
         salt.utils.versions.warn_until(
@@ -1610,7 +1623,10 @@ def init(name,
             '\'enable_vnc\' will be removed in {version}. ')
         graphics = {'type': 'vnc'}
 
-    vm_xml = _gen_xml(name, cpu, mem, diskp, nicp, hypervisor, graphics, loader, **kwargs)
+    os_type = 'hvm' if 'hvm' in os_types else os_types[0]
+    arch = 'x86_64' if 'x86_64' in arches else arches[0]
+
+    vm_xml = _gen_xml(name, cpu, mem, diskp, nicp, hypervisor, os_type, arch, graphics, loader, **kwargs)
     conn = __get_conn(**kwargs)
     try:
         conn.defineXML(vm_xml)
@@ -1793,40 +1809,48 @@ def update(name,
     :param mem: Amount of memory to allocate to the virtual machine in MiB.
     :param disk_profile: disk profile to use
     :param disks:
-        disks definitions as documented in the :func:`init` function.
+        Disk definitions as documented in the :func:`init` function.
         If neither the profile nor this parameter are defined, the disk devices
         will not be changed.
+
     :param nic_profile: network interfaces profile to use
     :param interfaces:
-        network interfaces  definitions as documented in the :func:`init` function.
+        Network interface definitions as documented in the :func:`init` function.
         If neither the profile nor this parameter are defined, the interface devices
         will not be changed.
+
     :param graphics:
-        the new graphics definition as defined in :ref:`init-graphics-def`. If not set,
-        the graphics will not be changed. To remove a graphics device set this parameter
-        to ``{'type': 'none'}``
+        The new graphics definition as defined in :ref:`init-graphics-def`. If not set,
+        the graphics will not be changed. To remove a graphics device, set this parameter
+        to ``{'type': 'none'}``.
+
     :param live:
         ``False`` to avoid trying to live update the definition. In such a case, the
         new definition is applied at the next start of the virtual machine. If ``True``,
         not all aspects of the definition can be live updated, but as much as possible
         will be attempted. (Default: ``True``)
+
     :param connection: libvirt connection URI, overriding defaults
     :param username: username to connect with, overriding defaults
     :param password: password to connect with, overriding defaults
 
     :return:
-        dictionary indicating the status of what has been done. It is structured in
+
+        Returns a dictionary indicating the status of what has been done. It is structured in
         the following way:
-        {
-          'definition': True,
-          'cpu': True,
-          'mem': True,
-          'disks': {'attached': [list of actually attached disks],
-                    'detached': [list of actually detached disks]},
-          'nics': {'attached': [list of actually attached nics],
-                   'detached': [list of actually detached nics]},
-          'errors': ['error messages for failures']
-        }
+
+        .. code-block:: python
+
+            {
+              'definition': True,
+              'cpu': True,
+              'mem': True,
+              'disks': {'attached': [list of actually attached disks],
+                        'detached': [list of actually detached disks]},
+              'nics': {'attached': [list of actually attached nics],
+                       'detached': [list of actually detached nics]},
+              'errors': ['error messages for failures']
+            }
 
     .. versionadded:: Fluorine
 
@@ -1835,6 +1859,7 @@ def update(name,
     .. code-block:: bash
 
         salt '*' virt.update domain cpu=2 mem=1024
+
     '''
     status = {
         'definition': False,
@@ -1854,6 +1879,8 @@ def update(name,
                                                _disk_profile(disk_profile, hypervisor, disks, name, **kwargs),
                                                _get_merged_nics(hypervisor, nic_profile, interfaces),
                                                hypervisor,
+                                               domain.OSType(),
+                                               desc.find('.//os/type').get('arch'),
                                                graphics,
                                                **kwargs))
 
@@ -2564,7 +2591,8 @@ def get_profiles(hypervisor=None, **kwargs):
     '''
     ret = {}
 
-    hypervisors = _get_domain_types(**kwargs)
+    caps = capabilities(**kwargs)
+    hypervisors = sorted(set([x for y in [guest['arch']['domains'].keys() for guest in caps['guests']] for x in y]))
     default_hypervisor = 'kvm' if 'kvm' in hypervisors else hypervisors[0]
 
     if not hypervisor:

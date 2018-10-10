@@ -478,6 +478,10 @@ Enable GPU hardware data for your master. Be aware that the master can
 take a while to start up when lspci and/or dmidecode is used to populate the
 grains for the master.
 
+.. code-block:: yaml
+
+    enable_gpu_grains: True
+
 .. conf_master:: job_cache
 
 ``job_cache``
@@ -846,9 +850,8 @@ Default: ``zeromq``
 
 Changes the underlying transport layer. ZeroMQ is the recommended transport
 while additional transport layers are under development. Supported values are
-``zeromq``, ``raet`` (experimental), and ``tcp`` (experimental). This setting has
-a significant impact on performance and should not be changed unless you know
-what you are doing!
+``zeromq`` and ``tcp`` (experimental). This setting has a significant impact on
+performance and should not be changed unless you know what you are doing!
 
 .. code-block:: yaml
 
@@ -883,8 +886,8 @@ Default: False
 
 Turning on the master stats enables runtime throughput and statistics events
 to be fired from the master event bus. These events will report on what
-functions have been run on the master and how long these runs have, on
-average, taken over a given period of time.
+functions have been run on the master along with their average latency and
+duration, taken over a given period of time.
 
 .. conf_master:: master_stats_event_iter
 

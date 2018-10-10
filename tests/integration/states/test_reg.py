@@ -55,7 +55,10 @@ class RegTest(ModuleCase, SaltReturnAssertsMixin):
             'reg': {
                 'Added': {
                     'Entry': 'test_reg_sz',
+                    'Inheritance': True,
                     'Key': 'HKLM\\{0}'.format(FAKE_KEY),
+                    'Owner': None,
+                    'Perms': {'Deny': None, 'Grant': None},
                     'Value': 'fake string data'}}}
         self.assertSaltStateChangesEqual(ret, expected)
 
@@ -85,7 +88,10 @@ class RegTest(ModuleCase, SaltReturnAssertsMixin):
             'reg': {
                 'Added': {
                     'Entry': 'test_reg_sz',
+                    'Inheritance': True,
                     'Key': 'HKLM\\{0}'.format(FAKE_KEY),
+                    'Owner': None,
+                    'Perms': {'Deny': None, 'Grant': None},
                     'Value': UNICODE_VALUE}}}
         self.assertSaltStateChangesEqual(ret, expected)
 
@@ -114,7 +120,10 @@ class RegTest(ModuleCase, SaltReturnAssertsMixin):
             'reg': {
                 'Added': {
                     'Entry': '(Default)',
+                    'Inheritance': True,
                     'Key': 'HKLM\\{0}'.format(FAKE_KEY),
+                    'Owner': None,
+                    'Perms': {'Deny': None, 'Grant': None},
                     'Value': UNICODE_VALUE}}}
         self.assertSaltStateChangesEqual(ret, expected)
 
@@ -145,7 +154,10 @@ class RegTest(ModuleCase, SaltReturnAssertsMixin):
             'reg': {
                 'Added': {
                     'Entry': UNICODE_VALUE_NAME,
+                    'Inheritance': True,
                     'Key': 'HKLM\\{0}'.format(FAKE_KEY),
+                    'Owner': None,
+                    'Perms': {'Deny': None, 'Grant': None},
                     'Value': 'fake string data'}}}
         self.assertSaltStateChangesEqual(ret, expected)
 
@@ -178,7 +190,10 @@ class RegTest(ModuleCase, SaltReturnAssertsMixin):
             'reg': {
                 'Added': {
                     'Entry': 'test_reg_binary',
+                    'Inheritance': True,
                     'Key': 'HKLM\\{0}'.format(FAKE_KEY),
+                    'Owner': None,
+                    'Perms': {'Deny': None, 'Grant': None},
                     'Value': test_data}}}
         self.assertSaltStateChangesEqual(ret, expected)
 
@@ -209,7 +224,10 @@ class RegTest(ModuleCase, SaltReturnAssertsMixin):
             'reg': {
                 'Added': {
                     'Entry': 'test_reg_multi_sz',
+                    'Inheritance': True,
                     'Key': 'HKLM\\{0}'.format(FAKE_KEY),
+                    'Owner': None,
+                    'Perms': {'Deny': None, 'Grant': None},
                     'Value': ['item1', 'item2']}}}
         self.assertSaltStateChangesEqual(ret, expected)
 
@@ -243,7 +261,10 @@ class RegTest(ModuleCase, SaltReturnAssertsMixin):
             'reg': {
                 'Added': {
                     'Entry': 'test_reg_sz',
+                    'Inheritance': True,
                     'Key': 'HKLM\\{0}'.format(FAKE_KEY),
+                    'Owner': None,
+                    'Perms': {'Deny': None, 'Grant': None},
                     'Value': 'fake string data'}}}
         self.assertSaltStateChangesEqual(ret, expected)
 
