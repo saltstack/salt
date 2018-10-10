@@ -140,70 +140,30 @@ so either of the following versions for "Extract server package" would work:
           - file: /usr/local/share/myapp.tar.xz
 
 
-Requisite overview
-~~~~~~~~~~~~~~~~~~
+Omitting state module in requisites
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+.. versionadded:: 2016.3.0
 
-+------------+-------------------+---------------+------------+--------------------+
-| name       | state is only     | state is only | order      | comment            |
-|  of        | executed if       | executed if   |            |  or                |
-|            | target execution  | target has    | 1.target   |                    |
-|            |                   |               | 2.state    |                    |
-| requisite  | result is         | changes       | (default)  | description        |
-+============+===================+===============+============+====================+
-| require    | success           |               | default    | state will always  |
-|            |                   |               |            | execute unless     |
-|            |                   |               |            | target fails       |
-+------------+-------------------+---------------+------------+--------------------+
-| watch      | success           |               | default    | like require,      |
-|            |                   |               |            | but adds additional|
-|            |                   |               |            | behaviour          |
-|            |                   |               |            | (mod_watch)        |
-+------------+-------------------+---------------+------------+--------------------+
-| prereq     | success           | has changes   | switched   | like onchanges,    |
-|            |                   | (run          |            | except order       |
-|            |                   | individually  |            |                    |
-|            |                   | as dry-run)   |            |                    |
-+------------+-------------------+---------------+------------+--------------------+
-| onchanges  | success           | has changes   | default    | execute state if   |
-|            |                   |               |            | target execution   |
-|            |                   |               |            | result is success  |
-|            |                   |               |            | and target has     |
-|            |                   |               |            | changes            |
-+------------+-------------------+---------------+------------+--------------------+
-| onfail     | failed            |               | default    | Only requisite     |
-|            |                   |               |            | where state exec.  |
-|            |                   |               |            | if target fails    |
-+------------+-------------------+---------------+------------+--------------------+
+In version 2016.3.0, the state module name was made optional. If the state module
+is omitted, all states matching the ID will be required, regardless of which
+module they are using.
 
+.. code-block:: yaml
 
-In this table, the following short form of terms is used:
+    - require:
+      - vim
 
-* **state** (= dependent state): state containing requisite
-* **target** (= state target) : state referenced by requisite
+Requisites Types
+----------------
 
-
-
-Direct Requisite and Requisite_in types
----------------------------------------
-
-There are several direct requisite statements that can be used in Salt:
-
-* ``require``
-* ``watch``
-* ``prereq``
-* ``use``
-* ``onchanges``
-* ``onfail``
-
-Each direct requisite also has a corresponding requisite_in:
-
-* ``require_in``
-* ``watch_in``
-* ``prereq_in``
-* ``use_in``
-* ``onchanges_in``
-* ``onfail_in``
+* ``require``: Require success from another state
+* ``watch``: Similar to require, but invokes ``mod_watch`` behavior
+* ``listen``: Similar to require, but invokes ``mod_wait`` behavior
+* ``onchanges``: Execute if target has changes
+* ``prereq``: Similar to onchanges with reversed execution order
+* ``onfail``: Execute if target state fails
+* ``use``: Copy arguments from another state
 
 There are several corresponding requisite_any statements:
 
@@ -857,38 +817,6 @@ end of state execution and then reload the service.
 
 .. _requisites-fire-event:
 
-Fire Event Notifications
-========================
-
-.. versionadded:: 2015.8.0
-
-The `fire_event` option in a state will cause the minion to send an event to
-the Salt Master upon completion of that individual state.
-
-The following example will cause the minion to send an event to the Salt Master
-with a tag of `salt/state_result/20150505121517276431/dasalt/nano` and the
-result of the state will be the data field of the event. Notice that the `name`
-of the state gets added to the tag.
-
-.. code-block:: yaml
-
-    nano_stuff:
-      pkg.installed:
-        - name: nano
-        - fire_event: True
-
-In the following example instead of setting `fire_event` to `True`,
-`fire_event` is set to an arbitrary string, which will cause the event to be
-sent with this tag:
-`salt/state_result/20150505121725642845/dasalt/custom/tag/nano/finished`
-
-.. code-block:: yaml
-
-    nano_stuff:
-      pkg.installed:
-        - name: nano
-        - fire_event: custom/tag/nano/finished
-
 Altering States
 ===============
 
@@ -1157,6 +1085,38 @@ salt/states/ file.
 
 ``mod_run_check_cmd`` is used to check for the check_cmd options. To override
 this one, include a ``mod_run_check_cmd`` in the states file for the state.
+
+Fire Event Notifications
+========================
+
+.. versionadded:: 2015.8.0
+
+The `fire_event` option in a state will cause the minion to send an event to
+the Salt Master upon completion of that individual state.
+
+The following example will cause the minion to send an event to the Salt Master
+with a tag of `salt/state_result/20150505121517276431/dasalt/nano` and the
+result of the state will be the data field of the event. Notice that the `name`
+of the state gets added to the tag.
+
+.. code-block:: yaml
+
+    nano_stuff:
+      pkg.installed:
+        - name: nano
+        - fire_event: True
+
+In the following example instead of setting `fire_event` to `True`,
+`fire_event` is set to an arbitrary string, which will cause the event to be
+sent with this tag:
+`salt/state_result/20150505121725642845/dasalt/custom/tag/nano/finished`
+
+.. code-block:: yaml
+
+    nano_stuff:
+      pkg.installed:
+        - name: nano
+        - fire_event: custom/tag/nano/finished
 
 Retrying States
 ===============
