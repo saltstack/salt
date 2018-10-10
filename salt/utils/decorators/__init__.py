@@ -338,6 +338,7 @@ class _DeprecationDecorator(object):
         '''
         self._function = function
         self._orig_f_name = self._function.__name__
+        opts = self._globals.get('__opts__', '{}')
         self._ignore_deprecation_warnings = self._orig_f_name in opts.get(self.CFG_IGNORE_DEPRECATION_WARNINGS, list())
 
 
