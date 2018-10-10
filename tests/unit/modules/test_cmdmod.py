@@ -358,10 +358,10 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
         # stdout with the non-decodable bits replaced with the unicode
         # replacement character U+FFFD.
         stdout_unicode = '\ufffd\x1b\ufffd\ufffd' + os.linesep
-        stderr_bytes = os.linesep.join([
+        stderr_bytes = os.linesep.encode().join([
             b'1+0 records in',
             b'1+0 records out',
-            b'4 bytes copied, 9.1522e-05 s, 43.7 kB/s']) + os.linesep
+            b'4 bytes copied, 9.1522e-05 s, 43.7 kB/s']) + os.linesep.encode()
         stderr_unicode = stderr_bytes.decode()
 
         proc = MagicMock(
