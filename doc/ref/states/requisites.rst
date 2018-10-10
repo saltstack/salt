@@ -208,44 +208,6 @@ This will add all of the state declarations found in the given sls file. This me
 that every state in sls `foo` will be required. This makes it very easy to batch
 large groups of states easily in any requisite statement.
 
-.. _requisites-require_any:
-
-require_any
-~~~~~~~~~~~
-
-.. versionadded:: 2018.3.0
-
-The use of ``require_any`` demands that one of the required states executes before the
-dependent state. The state containing the ``require_any`` requisite is defined as the
-dependent state. The states specified in the ``require_any`` statement are defined as the
-required states. If at least one of the required state's execution succeeds, the dependent state
-will then execute.  If all of the executions by the required states fail, the dependent state
-will not execute.
-
-.. code-block:: yaml
-
-    A:
-      cmd.run:
-        - name: echo A
-        - require_any:
-          - cmd: B
-          - cmd: C
-          - cmd: D
-    B:
-      cmd.run:
-        - name: echo B
-
-    C:
-      cmd.run:
-        - name: /bin/false
-
-    D:
-      cmd.run:
-        - name: echo D
-
-In this example `A` will run because at least one of the requirements specified,
-`B`, `C`, or `D` will succeed.
-
 .. _requisites-watch:
 
 watch
@@ -332,51 +294,6 @@ to Salt ensuring that the service is running.
       file.managed:
         - name: /etc/ntp.conf
         - source: salt://ntp/files/ntp.conf
-
-watch_any
-~~~~~~~~~
-
-.. versionadded:: 2018.3.0
-
-The state containing the ``watch_any`` requisite is defined as the watching
-state. The states specified in the ``watch_any`` statement are defined as the watched
-states. When the watched states execute, they will return a dictionary containing
-a key named "changes".
-
-If the "result" of any of the watched states is ``True``, the watching state *will
-execute normally*, and if all of them are ``False``, the watching state will never run.
-This part of ``watch`` mirrors the functionality of the ``require`` requisite.
-
-If the "result" of any of the watched states is ``True`` *and* the "changes"
-key contains a populated dictionary (changes occurred in the watched state),
-then the ``watch`` requisite can add additional behavior. This additional
-behavior is defined by the ``mod_watch`` function within the watching state
-module. If the ``mod_watch`` function exists in the watching state module, it
-will be called *in addition to* the normal watching state. The return data
-from the ``mod_watch`` function is what will be returned to the master in this
-case; the return data from the main watching function is discarded.
-
-If the "changes" key contains an empty dictionary, the ``watch`` requisite acts
-exactly like the ``require`` requisite (the watching state will execute if
-"result" is ``True``, and fail if "result" is ``False`` in the watched state).
-
-.. code-block:: yaml
-
-    apache2:
-      service.running:
-        - watch_any:
-          - file: /etc/apache2/sites-available/site1.conf
-          - file: apache2-site2
-      file.managed:
-        - name: /etc/apache2/sites-available/site1.conf
-        - source: salt://apache2/files/site1.conf
-    apache2-site2:
-      file.managed:
-        - name: /etc/apache2/sites-available/site2.conf
-        - source: salt://apache2/files/site2.conf
-
-In this example, the service will be reloaded/restarted if either of the
-file.managed states has a result of True and has changes.
 
 .. _requisites-listen:
 
@@ -524,48 +441,6 @@ The ``onfail`` requisite is applied in the same way as ``require`` as ``watch``:
 
 .. _Issue #22370: https://github.com/saltstack/salt/issues/22370
 
-.. _requisites-onfail_any:
-
-onfail_any
-~~~~~~~~~~
-
-.. versionadded:: 2018.3.0
-
-The ``onfail_any`` requisite allows for reactions to happen strictly as a response
-to the failure of at least one other state. This can be used in a number of ways, such as
-executing a second attempt to set up a service or begin to execute a separate
-thread of states because of a failure.
-
-The ``onfail_any`` requisite is applied in the same way as ``require_any`` and ``watch_any``:
-
-.. code-block:: yaml
-
-    primary_mount:
-      mount.mounted:
-        - name: /mnt/share
-        - device: 10.0.0.45:/share
-        - fstype: nfs
-
-    secondary_mount:
-      mount.mounted:
-        - name: /mnt/code
-        - device: 10.0.0.45:/code
-        - fstype: nfs
-
-    backup_mount:
-      mount.mounted:
-        - name: /mnt/share
-        - device: 192.168.40.34:/share
-        - fstype: nfs
-        - onfail_any:
-          - mount: primary_mount
-          - mount: secondary_mount
-
-In this example, the `backup_mount` will be mounted if either of the
-`primary_mount` or `secondary_mount` states results in a failure.
-
-.. _requisites-onchanges:
-
 onchanges
 ~~~~~~~~~
 
@@ -623,41 +498,6 @@ if any of the watched states changes.
             - onchanges:
               - file: /etc/myservice/myservice.conf
 
-.. _requisites-onchanges_any:
-
-onchanges_any
-~~~~~~~~~~~~~
-
-.. versionadded:: 2018.3.0
-
-The ``onchanges_any`` requisite makes a state only apply one of the required states
-generates changes, and if one of the watched state's "result" is ``True``. This can be
-a useful way to execute a post hook after changing aspects of a system.
-
-.. code-block:: yaml
-
-    myservice:
-      pkg.installed:
-        - name: myservice
-        - name: yourservice
-      file.managed:
-        - name: /etc/myservice/myservice.conf
-        - source: salt://myservice/files/myservice.conf
-        - mode: 600
-      file.managed:
-        - name: /etc/yourservice/yourservice.conf
-        - source: salt://yourservice/files/yourservice.conf
-        - mode: 600
-      cmd.run:
-        - name: /usr/libexec/myservice/post-changes-hook.sh
-        - onchanges_any:
-          - file: /etc/myservice/myservice.conf
-          - file: /etc/your_service/yourservice.conf
-
-In this example, the `cmd.run` would be run only if either of the
-`file.managed` states generated changes and at least one of the
-watched state's "result" is ``True``.
-
 .. _requisites-use:
 
 use
@@ -697,8 +537,8 @@ inherit inherited options.
 .. _requisites-watch-in:
 .. _requisites-onchanges-in:
 
-The _in versions of requisites
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+The _in version of requisites
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Direct requisites form a dependency in a single direction. This makes it possible
 for Salt to detect cyclical dependencies and helps prevent faulty logic. In some
@@ -781,11 +621,62 @@ In this scenario, ``listen_in`` is a better choice than ``require_in`` because t
 end of state execution and then reload the service.
 
 .. _requisites-any:
+.. _requisites-onchanges_any:
+.. _requisites-require_any:
+.. _requisites-onfail_any:
 
-The _any versions of requisites
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+The _any version of requisites
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-# TODO
+.. versionadded:: 2018.3.0
+
+Some requisites have an ``_any`` counterpart that changes the requisite behavior
+from ``all()`` to ``any()``.
+
+.. code-block:: yaml
+
+    A:
+      cmd.run:
+        - name: echo A
+        - require_any:
+          - cmd: B
+          - cmd: C
+
+    B:
+      cmd.run:
+        - name: echo B
+
+    C:
+      cmd.run:
+        - name: /bin/false
+
+In this example `A` will run because at least one of the requirements specified,
+`B` or `C`, will succeed.
+
+.. code-block:: yaml
+
+    myservice:
+      pkg.installed
+
+    /etc/myservice/myservice.conf:
+      file.managed:
+        - source: salt://myservice/files/myservice.conf
+
+    /etc/yourservice/yourservice.conf:
+      file.managed:
+        - source: salt://yourservice/files/yourservice.conf
+
+    /usr/local/sbin/myservice/post-changes-hook.sh
+      cmd.run:
+        - onchanges_any:
+          - file: /etc/myservice/myservice.conf
+          - file: /etc/your_service/yourservice.conf
+        - require:
+          - pkg: myservice
+
+In this example, `cmd.run` would be run only if either of the `file.managed`
+states generated changes and at least one of the watched state's "result" is
+``True``.
 
 .. _requisites-fire-event:
 
