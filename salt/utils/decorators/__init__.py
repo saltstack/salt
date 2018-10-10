@@ -267,6 +267,7 @@ class _DeprecationDecorator(object):
 
     OPT_IN = 1
     OPT_OUT = 2
+    CFG_IGNORE_DEPRECATION_WARNINGS = 'ignore_deprecation_warnings'
 
     def __init__(self, globals, version):
         '''
@@ -284,6 +285,7 @@ class _DeprecationDecorator(object):
         self._raise_later = None
         self._function = None
         self._orig_f_name = None
+        self._ignore_deprecation_warnings = None
 
     def _get_args(self, kwargs):
         '''
@@ -336,6 +338,8 @@ class _DeprecationDecorator(object):
         '''
         self._function = function
         self._orig_f_name = self._function.__name__
+        opts = self._globals.get('__opts__', '{}')
+        self._ignore_deprecation_warnings = self._orig_f_name in opts.get(self.CFG_IGNORE_DEPRECATION_WARNINGS, list())
 
 
 class _IsDeprecated(_DeprecationDecorator):
@@ -420,12 +424,13 @@ class _IsDeprecated(_DeprecationDecorator):
                                                                     version_name=self._exp_version_name)]
                 if self._successor:
                     msg.append('Use successor "{successor}" instead.'.format(successor=self._successor))
-                log.warning(' '.join(msg))
+                if not self._ignore_deprecation_warnings:
+                    log.warning(' '.join(msg))
             else:
                 msg = ['The lifetime of the function "{f_name}" expired.'.format(f_name=self._function.__name__)]
                 if self._successor:
                     msg.append('Please use its successor "{successor}" instead.'.format(successor=self._successor))
-                log.warning(' '.join(msg))
+                log.error(' '.join(msg))
                 raise CommandExecutionError(' '.join(msg))
             return self._call_function(kwargs)
         return _decorate
@@ -603,7 +608,8 @@ class _WithDeprecated(_DeprecationDecorator):
                         msg.append('The function "{f_name}" is using its deprecated version and will '
                                    'expire in version "{version_name}".'.format(f_name=func_path,
                                                                                 version_name=self._exp_version_name))
-                    log.warning(' '.join(msg))
+                    if not self._ignore_deprecation_warnings:
+                        log.warning(' '.join(msg))
                 else:
                     msg_patt = 'The lifetime of the function "{f_name}" expired.'
                     if '_' + self._orig_f_name == self._function.__name__:
