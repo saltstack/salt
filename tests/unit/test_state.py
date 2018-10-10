@@ -274,6 +274,89 @@ class StateCompilerTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             with patch.object(state_obj, "_run_check", return_value=mock):
                 self.assertDictContainsSubset(expected_result, state_obj.call(low_data))
 
+    def test_render_requisite_require_disabled(self):
+        """
+        Test that the state compiler correctly deliver a rendering
+        exception when a requisite cannot be resolved
+        """
+        with patch("salt.state.State._gather_pillar") as state_patch:
+            high_data = {
+                "step_one": OrderedDict(
+                    [
+                        (
+                            "test",
+                            [
+                                OrderedDict(
+                                    [("require", [OrderedDict([("test", "step_two")])])]
+                                ),
+                                "succeed_with_changes",
+                                {"order": 10000},
+                            ],
+                        ),
+                        ("__sls__", "test.disable_require"),
+                        ("__env__", "base"),
+                    ]
+                ),
+                "step_two": {
+                    "test": ["succeed_with_changes", {"order": 10001}],
+                    "__env__": "base",
+                    "__sls__": "test.disable_require",
+                },
+            }
+
+            minion_opts = self.get_temp_config("minion")
+            minion_opts["disabled_requisites"] = ["require"]
+            state_obj = salt.state.State(minion_opts)
+            ret = state_obj.call_high(high_data)
+            run_num = ret["test_|-step_one_|-step_one_|-succeed_with_changes"][
+                "__run_num__"
+            ]
+            self.assertEqual(run_num, 0)
+
+    def test_render_requisite_require_in_disabled(self):
+        """
+        Test that the state compiler correctly deliver a rendering
+        exception when a requisite cannot be resolved
+        """
+        with patch("salt.state.State._gather_pillar") as state_patch:
+            high_data = {
+                "step_one": {
+                    "test": ["succeed_with_changes", {"order": 10000}],
+                    "__env__": "base",
+                    "__sls__": "test.disable_require_in",
+                },
+                "step_two": OrderedDict(
+                    [
+                        (
+                            "test",
+                            [
+                                OrderedDict(
+                                    [
+                                        (
+                                            "require_in",
+                                            [OrderedDict([("test", "step_one")])],
+                                        )
+                                    ]
+                                ),
+                                "succeed_with_changes",
+                                {"order": 10001},
+                            ],
+                        ),
+                        ("__sls__", "test.disable_require_in"),
+                        ("__env__", "base"),
+                    ]
+                ),
+            }
+
+            minion_opts = self.get_temp_config("minion")
+            minion_opts["disabled_requisites"] = ["require_in"]
+            state_obj = salt.state.State(minion_opts)
+            ret = state_obj.call_high(high_data)
+            run_num = ret["test_|-step_one_|-step_one_|-succeed_with_changes"][
+                "__run_num__"
+            ]
+            self.assertEqual(run_num, 0)
+
 
 class HighStateTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
     def setUp(self):
