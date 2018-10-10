@@ -192,12 +192,12 @@ class TestSaltCacheLoader(TestCase):
         issue-13889
         '''
         fc, jinja = self.get_test_saltenv()
-        tmpl = jinja.get_template('relative/rhello')
+        tmpl = jinja.get_template(os.path.join('relative', 'rhello'))
         result = tmpl.render()
         self.assertEqual(result, 'Hey world !a b !')
         assert len(fc.requests) == 3
-        self.assertEqual(fc.requests[0]['path'], 'salt://relative/rhello')
-        self.assertEqual(fc.requests[1]['path'], 'salt://relative/rmacro')
+        self.assertEqual(fc.requests[0]['path'], os.path.join('salt://relative', 'rhello'))
+        self.assertEqual(fc.requests[1]['path'], os.path.join('salt://relative', 'rmacro'))
         self.assertEqual(fc.requests[2]['path'], 'salt://macro')
         # This must fail when rendered: attempts to import from outside file root
         template = jinja.get_template('relative/rescape')
