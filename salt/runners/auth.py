@@ -15,7 +15,11 @@ import salt.auth
 import salt.exceptions
 import salt.netapi
 
+# Import third party libs
+import tornado.gen
 
+
+@tornado.gen.coroutine
 def mk_token(**load):
     r'''
     Create an eauth token using provided credentials
@@ -47,7 +51,8 @@ def mk_token(**load):
                 'Salt Master must be running.')
 
     auth = salt.auth.Resolver(__opts__)
-    return auth.mk_token(load)
+    ret = yield auth.mk_token_async(load)
+    raise tornado.gen.Return(ret)
 
 
 def del_token(token):

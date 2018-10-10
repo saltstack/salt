@@ -20,6 +20,9 @@ from salt.client import mixins
 from salt.output import display_output
 from salt.utils.lazy import verify_fun
 
+# Import third party libs
+import tornado.gen
+
 log = logging.getLogger(__name__)
 
 
@@ -175,8 +178,17 @@ class Runner(RunnerClient):
             display_output('{0}:'.format(fun), 'text', self.opts)
             print(docs[fun])
 
+    def run(self, asynchronous=False):
+        if asynchronous:
+            return self.__run()
+        else:
+            ret = self.__run()
+            assert ret.done()
+            return ret.result()
+
     # TODO: move to mixin whenever we want a salt-wheel cli
-    def run(self):
+    @tornado.gen.coroutine
+    def __run(self, asynchronous=False):
         '''
         Execute the runner sequence
         '''
@@ -218,15 +230,15 @@ class Runner(RunnerClient):
                         resolver = salt.auth.Resolver(self.opts)
                         res = resolver.cli(self.opts['eauth'])
                         if self.opts['mktoken'] and res:
-                            tok = resolver.token_cli(
-                                    self.opts['eauth'],
-                                    res
-                                    )
+                            if asynchronous:
+                                tok = resolver.token_cli(self.opts['eauth'], res)
+                            else:
+                                tok = yield resolver.token(self.opts['eauth'], res)
                             if tok:
                                 low['token'] = tok.get('token', '')
                         if not res:
                             log.error('Authentication failed')
-                            return ret
+                            raise tornado.gen.Return(ret)
                         low.update(res)
                         low['eauth'] = self.opts['eauth']
                 else:
@@ -251,7 +263,7 @@ class Runner(RunnerClient):
                         'by examing the master job cache, if configured. '
                         'This execution is running under tag %s', async_pub['tag']
                     )
-                    return async_pub['jid']  # return the jid
+                    raise tornado.gen.Return(async_pub['jid'])  # return the jid
 
                 # otherwise run it in the main process
                 if self.opts.get('eauth'):
@@ -293,4 +305,4 @@ class Runner(RunnerClient):
             else:
                 log.debug('Runner return: %s', ret)
 
-            return ret
+            raise tornado.gen.Return(ret)

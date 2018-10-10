@@ -50,6 +50,7 @@ from salt.pillar import git_pillar
 
 # Import 3rd-party libs
 from salt.ext import six
+import tornado.gen
 
 try:
     import pwd
@@ -833,16 +834,17 @@ class RemoteFuncs(object):
                 ret['out'] = load['out']
             self._return(ret)
 
+    @tornado.gen.coroutine
     def minion_runner(self, load):
         '''
         Execute a runner from a minion, return the runner's function data
         '''
         if 'peer_run' not in self.opts:
-            return {}
+            raise tornado.gen.Return({})
         if not isinstance(self.opts['peer_run'], dict):
-            return {}
+            raise tornado.gen.Return({})
         if any(key not in load for key in ('fun', 'arg', 'id')):
-            return {}
+            raise tornado.gen.Return({})
         perms = set()
         for match in self.opts['peer_run']:
             if re.match(match, load['id']):
@@ -857,7 +859,7 @@ class RemoteFuncs(object):
             # The minion is not who it says it is!
             # We don't want to listen to it!
             log.warning('Minion id %s is not who it says it is!', load['id'])
-            return {}
+            raise tornado.gen.Return({})
         # Prepare the runner object
         opts = {}
         opts.update(self.opts)
@@ -869,7 +871,8 @@ class RemoteFuncs(object):
                 'doc': False,
                 'conf_file': self.opts['conf_file']})
         runner = salt.runner.Runner(opts)
-        return runner.run()
+        ret = yield runner.run(asynchronous=True)
+        raise tornado.gen.Return(ret)
 
     def pub_ret(self, load, skip_verify=False):
         '''

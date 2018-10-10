@@ -36,6 +36,9 @@ import salt.utils.versions
 import salt.utils.zeromq
 import salt.payload
 
+# Import third party libs
+import tornado.gen
+
 log = logging.getLogger(__name__)
 
 AUTH_INTERNAL_KEYWORDS = frozenset([
@@ -679,6 +682,16 @@ class Resolver(object):
                                                            master_uri=master_uri)
         return channel.send(load)
 
+    @tornado.gen.coroutine
+    def _send_token_request_async(self, load):
+        master_uri = 'tcp://' + salt.utils.zeromq.ip_bracket(self.opts['interface']) + \
+                     ':' + six.text_type(self.opts['ret_port'])
+        channel = salt.transport.client.AsyncReqChannel.factory(self.opts,
+                                                                crypt='clear',
+                                                                master_uri=master_uri)
+        ret = yield channel.send(load)
+        raise tornado.gen.Return(ret)
+
     def cli(self, eauth):
         '''
         Execute the CLI options to fill in the extra data needed for the
@@ -733,6 +746,24 @@ class Resolver(object):
             pass
         return tdata
 
+    @tornado.gen.coroutine
+    def token(self, eauth, load):
+        '''
+        Create the token from the CLI and request the correct data to
+        authenticate via the passed authentication mechanism
+        '''
+        load['cmd'] = 'mk_token'
+        load['eauth'] = eauth
+        tdata = yield self._send_token_request_async(load)
+        if 'token' in tdata:
+            try:
+                with salt.utils.files.set_umask(0o177):
+                    with salt.utils.files.fopen(self.opts['token_file'], 'w+') as fp_:
+                        fp_.write(tdata['token'])
+            except (IOError, OSError):
+                pass
+        raise tornado.gen.Return(tdata)
+
     def mk_token(self, load):
         '''
         Request a token from the master
@@ -740,6 +771,15 @@ class Resolver(object):
         load['cmd'] = 'mk_token'
         tdata = self._send_token_request(load)
         return tdata
+
+    @tornado.gen.coroutine
+    def mk_token_async(self, load):
+        '''
+        Request a token from the master
+        '''
+        load['cmd'] = 'mk_token'
+        tdata = yield self._send_token_request_async(load)
+        raise tornado.gen.Return(tdata)
 
     def get_token(self, token):
         '''

@@ -1054,8 +1054,8 @@ class MWorker(salt.utils.process.SignalHandlingMultiprocessingProcess):
         '''
         key = payload['enc']
         load = payload['load']
-        ret = {'aes': self._handle_aes,
-               'clear': self._handle_clear}[key](load)
+        ret = yield {'aes': self._handle_aes,
+                     'clear': self._handle_clear}[key](load)
         raise tornado.gen.Return(ret)
 
     def _post_stats(self, stats):
@@ -1069,6 +1069,7 @@ class MWorker(salt.utils.process.SignalHandlingMultiprocessingProcess):
             self.stats = collections.defaultdict(lambda: {'mean': 0, 'latency': 0, 'runs': 0})
             self.stat_clock = end_time
 
+    @tornado.gen.coroutine
     def _handle_clear(self, load):
         '''
         Process a cleartext command
@@ -1080,15 +1081,18 @@ class MWorker(salt.utils.process.SignalHandlingMultiprocessingProcess):
         log.trace('Clear payload received with command %s', load['cmd'])
         cmd = load['cmd']
         if cmd.startswith('__'):
-            return False
+            raise tornado.gen.Return(False)
         if self.opts['master_stats']:
             start = time.time()
         ret = getattr(self.clear_funcs, cmd)(load), {'fun': 'send_clear'}
+        if isinstance(ret, tornado.gen.Future):
+            ret = yield ret
         if self.opts['master_stats']:
             stats = salt.utils.event.update_stats(self.stats, start, load)
             self._post_stats(stats)
-        return ret
+        raise tornado.gen.Return((ret, {'fun': 'send_clear'}))
 
+    @tornado.gen.coroutine
     def _handle_aes(self, data):
         '''
         Process a command sent via an AES key
@@ -1099,26 +1103,23 @@ class MWorker(salt.utils.process.SignalHandlingMultiprocessingProcess):
         '''
         if 'cmd' not in data:
             log.error('Received malformed command %s', data)
-            return {}
+            raise tornado.gen.Return({})
         cmd = data['cmd']
         log.trace('AES payload received with command %s', data['cmd'])
         if cmd.startswith('__'):
-            return False
+            raise tornado.gen.Return(False)
         if self.opts['master_stats']:
             start = time.time()
-
-        def run_func(data):
-            return self.aes_funcs.run_func(data['cmd'], data)
 
         with StackContext(functools.partial(RequestContext,
                                             {'data': data,
                                              'opts': self.opts})):
-            ret = run_func(data)
+            ret = yield self.aes_funcs.run_func(data['cmd'], data)
 
         if self.opts['master_stats']:
             stats = salt.utils.event.update_stats(self.stats, start, data)
             self._post_stats(stats)
-        return ret
+        raise tornado.gen.Return(ret)
 
     def run(self):
         '''
@@ -1673,6 +1674,7 @@ class AESFuncs(object):
                     ret['sig'] = load['sig']
                 self._return(ret)
 
+    @tornado.gen.coroutine
     def minion_runner(self, clear_load):
         '''
         Execute a runner from a minion, return the runner's function data
@@ -1684,9 +1686,10 @@ class AESFuncs(object):
         '''
         load = self.__verify_load(clear_load, ('fun', 'arg', 'id', 'tok'))
         if load is False:
-            return {}
+            ret = {}
         else:
-            return self.masterapi.minion_runner(clear_load)
+            ret = yield self.masterapi.minion_runner(clear_load)
+        raise tornado.gen.Return(ret)
 
     def pub_ret(self, load):
         '''
@@ -1810,6 +1813,7 @@ class AESFuncs(object):
         else:
             return self.masterapi.revoke_auth(load)
 
+    @tornado.gen.coroutine
     def run_func(self, func, load):
         '''
         Wrapper for running functions executed with AES encryption
@@ -1817,15 +1821,14 @@ class AESFuncs(object):
         :param function func: The function to run
         :return: The result of the master function that was called
         '''
-        # Don't honor private functions
-        if func.startswith('__'):
-            # TODO: return some error? Seems odd to return {}
-            return {}, {'fun': 'send'}
-        # Run the func
-        if hasattr(self, func):
+        if not func.startswith('__') and hasattr(self, func):
+            # Run the func
             try:
                 start = time.time()
                 ret = getattr(self, func)(load)
+                # If that was an coroutine, wait for the actual return
+                if isinstance(ret, tornado.gen.Future):
+                    ret = yield ret
                 log.trace(
                     'Master function call %s took %s seconds',
                     func, time.time() - start
@@ -1838,18 +1841,13 @@ class AESFuncs(object):
                 'Received function %s which is unavailable on the master, '
                 'returning False', func
             )
-            return False, {'fun': 'send'}
-        # Don't encrypt the return value for the _return func
-        # (we don't care about the return value, so why encrypt it?)
-        if func == '_return':
-            return ret, {'fun': 'send'}
-        if func == '_pillar' and 'id' in load:
-            if load.get('ver') != '2' and self.opts['pillar_version'] == 1:
-                # Authorized to return old pillar proto
-                return ret, {'fun': 'send'}
-            return ret, {'fun': 'send_private', 'key': 'pillar', 'tgt': load['id']}
-        # Encrypt the return
-        return ret, {'fun': 'send'}
+            ret = False
+        if func == '_pillar' and 'id' in load and \
+                (load.get('ver') == '2' or self.opts['pillar_version'] != 1):
+            ret = (ret, {'fun': 'send_private', 'key': 'pillar', 'tgt': load['id']})
+        else:
+            ret = (ret, {'fun': 'send'})
+        raise tornado.gen.Return(ret)
 
 
 class ClearFuncs(object):
