@@ -4354,6 +4354,8 @@ def network_info(name=None, **kwargs):
 
     If no name is provided, return the infos for all defined virtual networks.
 
+    .. versionadded:: Fluorine
+
     .. versionadded:: 2019.2.0
 
     CLI Example:
