@@ -252,7 +252,7 @@ def _construct_pillar(top_dir,
             else:
                 data = contents
                 if template is True:
-                    data = salt.template.compile_template_str(template=salt.utils.stringutils.to_str(contents),
+                    data = salt.template.compile_template_str(template=salt.utils.stringutils.to_unicode(contents),
                                                               renderers=renderers,
                                                               default=render_default,
                                                               blacklist=renderer_blacklist,
