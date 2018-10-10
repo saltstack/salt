@@ -795,8 +795,7 @@ def _zfs_image_create(vm_name,
             .format(destination_fs, existing_disk['error'])
         )
     elif destination_fs in existing_disk:
-        log.info('ZFS filesystem {0} already exists. Skipping creation'
-                 .format(destination_fs))
+        log.info('ZFS filesystem %s already exists. Skipping creation', destination_fs)
         blockdevice_path = os.path.join('/dev/zvol', pool, vm_name)
         return blockdevice_path
 
@@ -3308,7 +3307,7 @@ def purge(vm_, dirs=False, removables=None, **kwargs):
             # TODO create solution for 'dataset is busy'
             time.sleep(3)
             fs_name = disks[disk]['file'][len('/dev/zvol/'):]
-            log.info('Destroying VM ZFS volume {0}'.format(fs_name))
+            log.info('Destroying VM ZFS volume %s', fs_name)
             __salt__['zfs.destroy'](
                     name=fs_name,
                     force=True)
@@ -3322,7 +3321,7 @@ def purge(vm_, dirs=False, removables=None, **kwargs):
         # This one is only in 1.2.8+
         try:
             dom.undefineFlags(libvirt.VIR_DOMAIN_UNDEFINE_NVRAM)
-        except Exception:
+        except libvirt.libvirtError:
             dom.undefine()
     else:
         dom.undefine()
@@ -3444,6 +3443,9 @@ def get_hypervisor():
 
 
 def _is_bhyve_hyper():
+    '''
+    Returns a bool whether or not this node is a bhyve hypervisor
+    '''
     sysctl_cmd = 'sysctl hw.vmm.create'
     vmm_enabled = False
     try:
