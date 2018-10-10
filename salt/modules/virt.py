@@ -4270,7 +4270,7 @@ def list_networks(**kwargs):
         conn.close()
 
 
-def network_info(name, **kwargs):
+def network_info(name=None, **kwargs):
     '''
     Return informations on a virtual network provided its name.
 
@@ -4278,6 +4278,8 @@ def network_info(name, **kwargs):
     :param connection: libvirt connection URI, overriding defaults
     :param username: username to connect with, overriding defaults
     :param password: password to connect with, overriding defaults
+
+    If no name is provided, return the infos for all defined virtual networks.
 
     .. versionadded:: Fluorine
 
@@ -4289,8 +4291,11 @@ def network_info(name, **kwargs):
     '''
     result = {}
     conn = __get_conn(**kwargs)
-    try:
-        net = conn.networkLookupByName(name)
+
+    def _net_get_leases(net):
+        '''
+        Get all DHCP leases for a network
+        '''
         leases = net.DHCPLeases()
         for lease in leases:
             if lease['type'] == libvirt.VIR_IP_ADDR_TYPE_IPV4:
@@ -4299,15 +4304,17 @@ def network_info(name, **kwargs):
                 lease['type'] = 'ipv6'
             else:
                 lease['type'] = 'unknown'
+        return leases
 
-        result = {
-            'uuid': net.UUIDString(),
-            'bridge': net.bridgeName(),
-            'autostart': net.autostart(),
-            'active': net.isActive(),
-            'persistent': net.isPersistent(),
-            'leases': leases
-        }
+    try:
+        nets = [net for net in conn.listAllNetworks() if name is None or net.name() == name]
+        result = {net.name(): {
+                       'uuid': net.UUIDString(),
+                       'bridge': net.bridgeName(),
+                       'autostart': net.autostart(),
+                       'active': net.isActive(),
+                       'persistent': net.isPersistent(),
+                       'leases': _net_get_leases(net)} for net in nets}
     except libvirt.libvirtError as err:
         log.debug('Silenced libvirt error: %s', str(err))
     finally:
