@@ -3,6 +3,7 @@ from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
 from tests.support.helpers import destructiveTest
 
+import salt.exceptions
 import salt.utils.platform
 
 @skipIf(not salt.utils.platform.is_windows(), 'windows test only')
@@ -71,6 +72,5 @@ class WinTasksTest(ModuleCase):
         Test adding a task using xml
         '''
         xml_text = r"""<Malformed"""
-        self.assertEquals(
-            self.assertEquals(
-                self.run_function('task.create_task_from_xml', 'foo', xml_text=xml_text), "The task XML is malformed"))
+        with self.assertRaises(salt.exceptions.CommandExecutionError):
+            self.run_function('task.create_task_from_xml', 'foo', xml_text=xml_text)
