@@ -566,8 +566,8 @@ def create_task_from_xml(name,
         the task to run whether the user is logged in or not, but is currently
         not working.
 
-    :return: True if successful, False if unsuccessful
-    :rtype: bool
+    :return: True if successful, False if unsuccessful, A string with the error message if there is an error
+    :rtype: bool or str
 
     CLI Example:
 
@@ -609,6 +609,7 @@ def create_task_from_xml(name,
                 logon_type = TASK_LOGON_INTERACTIVE_TOKEN
     else:
         password = None
+        logon_type = TASK_LOGON_NONE
 
     # Save the task
     try:
