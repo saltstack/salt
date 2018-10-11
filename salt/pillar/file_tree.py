@@ -156,6 +156,7 @@ import salt.utils.files
 import salt.utils.minions
 import salt.utils.path
 import salt.utils.stringio
+import salt.utils.stringutils
 import salt.template
 from salt.ext import six
 
@@ -251,7 +252,7 @@ def _construct_pillar(top_dir,
             else:
                 data = contents
                 if template is True:
-                    data = salt.template.compile_template_str(template=contents,
+                    data = salt.template.compile_template_str(template=salt.utils.stringutils.to_unicode(contents),
                                                               renderers=renderers,
                                                               default=render_default,
                                                               blacklist=renderer_blacklist,
