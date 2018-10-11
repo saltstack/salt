@@ -77,7 +77,7 @@ def check_nova():
                   NOVACLIENT_MINVER)
     return False
 
-if check_nova:
+if check_nova():
     try:
         import novaclient.auth_plugin
     except ImportError:
