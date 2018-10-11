@@ -1377,7 +1377,7 @@ def init(name,
 
     Disk dictionaries can contain the following properties:
 
-    disk_name
+    name
         Name of the disk. This is mostly used in the name of the disk image and as a key to merge
         with the profile data.
 
