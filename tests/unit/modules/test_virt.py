@@ -2066,6 +2066,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         '''
         # pylint: disable=no-member
         pool_mock = MagicMock()
+        pool_mock.name.return_value = 'foo'
         pool_mock.UUIDString.return_value = 'some-uuid'
         pool_mock.info.return_value = [0, 1234, 5678, 123]
         pool_mock.autostart.return_value = True
@@ -2087,11 +2088,11 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
     </permissions>
   </target>
 </pool>'''
-        self.mock_conn.storagePoolLookupByName.return_value = pool_mock
+        self.mock_conn.listAllStoragePools.return_value = [pool_mock]
         # pylint: enable=no-member
 
         pool = virt.pool_info('foo')
-        self.assertEqual({
+        self.assertEqual({'foo': {
             'uuid': 'some-uuid',
             'state': 'inactive',
             'capacity': 1234,
@@ -2100,7 +2101,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             'autostart': True,
             'persistent': True,
             'type': 'dir',
-            'target_path': '/srv/vms'}, pool)
+            'target_path': '/srv/vms'}}, pool)
 
     def test_pool_info_notarget(self):
         '''
@@ -2108,6 +2109,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         '''
         # pylint: disable=no-member
         pool_mock = MagicMock()
+        pool_mock.name.return_value = 'ceph'
         pool_mock.UUIDString.return_value = 'some-uuid'
         pool_mock.info.return_value = [0, 0, 0, 0]
         pool_mock.autostart.return_value = True
@@ -2127,11 +2129,11 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
     </auth>
   </source>
 </pool>'''
-        self.mock_conn.storagePoolLookupByName.return_value = pool_mock
+        self.mock_conn.listAllStoragePools.return_value = [pool_mock]
         # pylint: enable=no-member
 
         pool = virt.pool_info('ceph')
-        self.assertEqual({
+        self.assertEqual({'ceph': {
             'uuid': 'some-uuid',
             'state': 'inactive',
             'capacity': 0,
@@ -2140,18 +2142,77 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             'autostart': True,
             'persistent': True,
             'type': 'rbd',
-            'target_path': None}, pool)
+            'target_path': None}}, pool)
 
     def test_pool_info_notfound(self):
         '''
         Test virt.pool_info() when the pool can't be found
         '''
         # pylint: disable=no-member
-        self.mock_conn.storagePoolLookupByName.side_effect = \
-            self.mock_libvirt.libvirtError("Pool not found")
+        self.mock_conn.listAllStoragePools.return_value = []
         # pylint: enable=no-member
         pool = virt.pool_info('foo')
         self.assertEqual({}, pool)
+
+    def test_pool_info_all(self):
+        '''
+        Test virt.pool_info()
+        '''
+        # pylint: disable=no-member
+        pool_mocks = []
+        for i in range(2):
+            pool_mock = MagicMock()
+            pool_mock.name.return_value = 'pool{0}'.format(i)
+            pool_mock.UUIDString.return_value = 'some-uuid-{0}'.format(i)
+            pool_mock.info.return_value = [0, 1234, 5678, 123]
+            pool_mock.autostart.return_value = True
+            pool_mock.isPersistent.return_value = True
+            pool_mock.XMLDesc.return_value = '''<pool type='dir'>
+  <name>default</name>
+  <uuid>d92682d0-33cf-4e10-9837-a216c463e158</uuid>
+  <capacity unit='bytes'>854374301696</capacity>
+  <allocation unit='bytes'>596275986432</allocation>
+  <available unit='bytes'>258098315264</available>
+  <source>
+  </source>
+  <target>
+    <path>/srv/vms</path>
+    <permissions>
+      <mode>0755</mode>
+      <owner>0</owner>
+      <group>0</group>
+    </permissions>
+  </target>
+</pool>'''
+            pool_mocks.append(pool_mock)
+        self.mock_conn.listAllStoragePools.return_value = pool_mocks
+        # pylint: enable=no-member
+
+        pool = virt.pool_info()
+        self.assertEqual({
+            'pool0':
+            {
+                'uuid': 'some-uuid-0',
+                'state': 'inactive',
+                'capacity': 1234,
+                'allocation': 5678,
+                'free': 123,
+                'autostart': True,
+                'persistent': True,
+                'type': 'dir',
+                'target_path': '/srv/vms'
+            }, 'pool1': {
+                'uuid': 'some-uuid-1',
+                'state': 'inactive',
+                'capacity': 1234,
+                'allocation': 5678,
+                'free': 123,
+                'autostart': True,
+                'persistent': True,
+                'type': 'dir',
+                'target_path': '/srv/vms'
+            }
+        }, pool)
 
     def test_pool_list_volumes(self):
         '''

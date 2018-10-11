@@ -4611,7 +4611,7 @@ def list_pools(**kwargs):
         conn.close()
 
 
-def pool_info(name, **kwargs):
+def pool_info(name=None, **kwargs):
     '''
     Return informations on a storage pool provided its name.
 
@@ -4619,6 +4619,8 @@ def pool_info(name, **kwargs):
     :param connection: libvirt connection URI, overriding defaults
     :param username: username to connect with, overriding defaults
     :param password: password to connect with, overriding defaults
+
+    If no name is provided, return the infos for all defined storage pools.
 
     .. versionadded:: Fluorine
 
@@ -4630,14 +4632,19 @@ def pool_info(name, **kwargs):
     '''
     result = {}
     conn = __get_conn(**kwargs)
-    try:
-        pool = conn.storagePoolLookupByName(name)
-        infos = pool.info()
+
+    def _pool_extract_infos(pool):
+        '''
+        Format the pool info dictionary
+
+        :param pool: the libvirt pool object
+        '''
         states = ['inactive', 'building', 'running', 'degraded', 'inaccessible']
+        infos = pool.info()
         state = states[infos[0]] if infos[0] < len(states) else 'unknown'
         desc = ElementTree.fromstring(pool.XMLDesc())
         path_node = desc.find('target/path')
-        result = {
+        return {
             'uuid': pool.UUIDString(),
             'state': state,
             'capacity': infos[1],
@@ -4648,6 +4655,10 @@ def pool_info(name, **kwargs):
             'target_path': path_node.text if path_node is not None else None,
             'type': desc.get('type')
         }
+
+    try:
+        pools = [pool for pool in conn.listAllStoragePools() if name is None or pool.name() == name]
+        result = {pool.name(): _pool_extract_infos(pool) for pool in pools}
     except libvirt.libvirtError as err:
         log.debug('Silenced libvirt error: %s', str(err))
     finally:
