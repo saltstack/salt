@@ -854,7 +854,7 @@ def create_network_interface(call=None, kwargs=None):
                 )
                 if pub_ip_data.ip_address:  # pylint: disable=no-member
                     ip_kwargs['public_ip_address'] = PublicIPAddress(
-                        six.text_type(pub_ip_data.id),  # pylint: disable=no-member
+                        id=six.text_type(pub_ip_data.id),  # pylint: disable=no-member
                     )
                     ip_configurations = [
                         NetworkInterfaceIPConfiguration(
