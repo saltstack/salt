@@ -2605,8 +2605,8 @@ class _policy_info(object):
                     userSid = '{0}'.format(userSid[0])
             # TODO: This needs to be more specific
             except Exception:
-                log.exception('Handle this explicitly')
                 userSid = win32security.ConvertSidToStringSid(_sid)
+                log.warning('Unable to convert SID "%s" to a friendly name.  The SID will be disaplayed instead of a user/group name.', userSid)
             usernames.append(userSid)
         return usernames
 
