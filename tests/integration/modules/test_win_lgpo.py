@@ -31,7 +31,7 @@ class WinLgpoTest(ModuleCase):
         for use in validating the registry.pol files
         '''
         ret = self.run_function('archive.unzip',
-                                'https://www.microsoft.com/en-us/download/confirmation.aspx?id=55319&6B49FDFB-8E5B-4B07-BC31-15695C5A2143=1'
+                                'https://www.microsoft.com/en-us/download/confirmation.aspx?id=55319&6B49FDFB-8E5B-4B07-BC31-15695C5A2143=1',
                                 dest='c:\\windows\\system32')
 
     @destructiveTest
