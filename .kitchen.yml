@@ -222,6 +222,7 @@ verifier:
   name: runtests
   sudo: true
   run_destructive: true
+  enable_filenames: true
   transport: zeromq
   types:
     - ssh
