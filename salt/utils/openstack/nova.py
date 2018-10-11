@@ -262,6 +262,7 @@ class SaltNova(object):
     def _new_init(self, username, project_id, auth_url, region_name, password, os_auth_plugin, auth=None, verify=True, **kwargs):
         if auth is None:
             auth = {}
+        verify = kwargs.get('verify', False)
 
         loader = keystoneauth1.loading.get_plugin_loader(os_auth_plugin or 'password')
 
