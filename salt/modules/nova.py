@@ -96,6 +96,9 @@ __func_alias__ = {
     'list_': 'list'
 }
 
+# Define the module's virtual name
+__virtualname__ = 'nova'
+
 
 def __virtual__():
     '''

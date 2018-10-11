@@ -297,6 +297,7 @@ class SaltNova(object):
     def _new_init(self, username, project_id, auth_url, region_name, password, os_auth_plugin, auth=None, **kwargs):
         if auth is None:
             auth = {}
+        verify = kwargs.get('verify', False)
 
         ks_version = self._get_version_from_url(auth_url)
         if not ks_version:
