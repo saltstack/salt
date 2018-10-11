@@ -287,7 +287,7 @@ def returner(ret):
         # not in a dict as expected. This prevents elasticsearch from
         # complaining about a mapping error
         elif not isinstance(ret['data'], dict):
-            ret['data'] = { job_fun_escaped: { 'return': ret['data'] } }
+            ret['data'] = {job_fun_escaped: {'return': ret['data']}}
 
         # Need to count state successes and failures
         if options['states_count']:
@@ -385,12 +385,12 @@ def save_load(jid, load, minions=None):
 
     _ensure_index(index)
 
-    # addressing multiple types (bool, string, dict, ...) issue in master_job_cache index for return key (#20826) 
-    if not load.get('return', None) is None: 
+    # addressing multiple types (bool, string, dict, ...) issue in master_job_cache index for return key (#20826)
+    if not load.get('return', None) is None:
         # if load.return is not a dict, moving the result to load.return.<job_fun_escaped>.return
         if not isinstance(load['return'], dict):
             job_fun_escaped = load['fun'].replace('.', '_')
-            load['return'] = { job_fun_escaped: { 'return': load['return'] } }
+            load['return'] = {job_fun_escaped: {'return': load['return']}}
         # rename load.return to load.data in order to have the same key in all indices (master_job_cache, job)
         load['data'] = load.pop('return')
 
