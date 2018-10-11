@@ -9,15 +9,14 @@ from __future__ import absolute_import, print_function, unicode_literals
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
-    PropertyMock,
     NO_MOCK,
     NO_MOCK_REASON,
-    mock_open,
     patch)
 
 # Import Salt Libs
 import salt.engines.script as script
 from salt.exceptions import CommandExecutionError
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class EngineScriptTestCase(TestCase, LoaderModuleMockMixin):
@@ -30,11 +29,10 @@ class EngineScriptTestCase(TestCase, LoaderModuleMockMixin):
             script: {
                 '__opts__': {
                     '__role': '',
-                    'extension_modules' : ''
+                    'extension_modules': ''
                 }
              }
         }
-
 
     def test__get_serializer(self):
         '''
@@ -45,7 +43,6 @@ class EngineScriptTestCase(TestCase, LoaderModuleMockMixin):
 
         with self.assertRaises(CommandExecutionError):
             script._get_serializer('bad')
-
 
     def test__read_stdout(self):
         '''
