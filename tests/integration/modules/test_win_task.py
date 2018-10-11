@@ -1,10 +1,14 @@
 # -*- coding: utf-8 -*-
+from __future__ import absolute_import, unicode_literals
+
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
 from tests.support.helpers import destructiveTest
 
-import salt.exceptions
+import salt.modules.win_task as task
+from salt.exceptions import CommandExecutionError
 import salt.utils.platform
+
 
 @skipIf(not salt.utils.platform.is_windows(), 'windows test only')
 class WinTasksTest(ModuleCase):
@@ -69,8 +73,8 @@ class WinTasksTest(ModuleCase):
     @destructiveTest
     def test_adding_task_with_invalid_xml(self):
         '''
-        Test adding a task using xml
+        Test adding a task using a malformed xml
         '''
         xml_text = r"""<Malformed"""
-        with self.assertRaises(salt.exceptions.CommandExecutionError):
-            self.run_function('task.create_task_from_xml', 'foo', xml_text=xml_text)
+        with self.assertRaises(CommandExecutionError):
+            task.create_task_from_xml('foo', xml_text=xml_text)
