@@ -87,6 +87,8 @@ try:
     HAS_NOVA = True
 except NameError as exc:
     HAS_NOVA = False
+# Define the module's virtual name
+__virtualname__ = 'nova'
 
 
 def __virtual__():
