@@ -78,6 +78,12 @@ def check_nova():
                   NOVACLIENT_MINVER)
     return False
 
+if check_nova():
+    try:
+        import novaclient.auth_plugin
+    except ImportError:
+        log.debug('Using novaclient version 7.0.0 or newer. Authentication '
+                  'plugin auth_plugin.py is not available anymore.')
 
 # kwargs has to be an object instead of a dictionary for the __post_parse_arg__
 class KwargsStruct(object):
