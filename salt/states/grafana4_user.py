@@ -105,9 +105,9 @@ def present(name,
                 - fullname: 'Test User'
                 - default_organization: TestOrg
                 - organizations:
-		  - ReadonlyOrg
+                  - ReadonlyOrg
                   - TestOrg: Editor
-		  - Staging: Admin
+                  - Staging: Admin
     '''
     if isinstance(profile, string_types):
         profile = __salt__['config.option'](profile)
@@ -140,14 +140,14 @@ def present(name,
             ret['result'] = False
             return ret
     new_data = _get_json_data(login=name, email=email, name=fullname, theme=theme,
-                            orgId = orgid if default_organization else None,
+                            orgId=orgid if default_organization else None,
                             defaults=user_data)
     old_data = _get_json_data(login=None, email=None, name=None, theme=None,
                             orgId=None,
                             defaults=user_data)
     if organizations:
         for org in organizations:
-            if isinstance(org, basestring):
+            if isinstance(org, string_types):
                 org_name = org
                 org_role = 'Viewer'
             else:
@@ -173,11 +173,11 @@ def present(name,
                                     org_role, name, org_name, e)
                             ret['result'] = False
                             return ret
-                        ret['changes'][org_name]=org_role
+                        ret['changes'][org_name] = org_role
                     user_found = True
-                    break;
+                    break
             if not user_found:
-                ret['changes'][org_name]=org_role
+                ret['changes'][org_name] = org_role
                 __salt__['grafana4.create_org_user'](orgname=org_name,
                         profile=profile, role=org_role, loginOrEmail=name)
 
