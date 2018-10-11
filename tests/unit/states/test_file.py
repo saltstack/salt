@@ -249,7 +249,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                 comt = 'Directory {0} for symlink is not present'.format(test_dir)
                 ret = return_val({'comment': comt,
                                   'result': False,
-                                  'changes': {'new': name}})
+                                  'changes': {}})
             self.assertDictEqual(filestate.symlink(name, target,
                                                    user=user,
                                                    group=group), ret)
@@ -292,7 +292,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                    '{1} - backup: {2}'.format(name, target, os.path.join(test_dir, 'SALT'))
             ret.update({'comment': comt,
                         'result': False,
-                        'changes': {'new': name}})
+                        'changes': {}})
             self.assertDictEqual(
                 filestate.symlink(name, target, user=user, group=group,
                                   backupname='SALT'),
@@ -312,7 +312,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
             comt = 'Backupname must be an absolute path or a file name: {0}'.format('tmp/SALT')
             ret.update({'comment': comt,
                         'result': False,
-                        'changes': {'new': name}})
+                        'changes': {}})
             self.assertDictEqual(
                 filestate.symlink(name, target, user=user, group=group, backupname='tmp/SALT'),
                 ret)
@@ -331,7 +331,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                 patch('salt.utils.win_functions.get_sid_from_name', return_value='test-sid'):
             comt = 'File exists where the symlink {0} should be'.format(name)
             ret = return_val({'comment': comt,
-                              'changes': {'new': name},
+                              'changes': {},
                               'result': False})
             self.assertDictEqual(
                 filestate.symlink(name, target, user=user, group=group),
@@ -353,7 +353,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
             comt = 'File exists where the symlink {0} should be'.format(name)
             ret = return_val({'comment': comt,
                               'result': False,
-                              'changes': {'new': name}})
+                              'changes': {}})
             self.assertDictEqual(
                 filestate.symlink(name, target, user=user, group=group),
                 ret)
@@ -374,7 +374,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
             comt = 'Directory exists where the symlink {0} should be'.format(name)
             ret = return_val({'comment': comt,
                               'result': False,
-                              'changes': {'new': name}})
+                              'changes': {}})
             self.assertDictEqual(
                 filestate.symlink(name, target, user=user, group=group),
                 ret)
@@ -394,7 +394,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
             comt = 'Unable to create new symlink {0} -> {1}: '.format(name, target)
             ret = return_val({'comment': comt,
                               'result': False,
-                              'changes': {'new': name}})
+                              'changes': {}})
             self.assertDictEqual(
                 filestate.symlink(name, target, user=user, group=group),
                 ret)
