@@ -751,10 +751,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
                                      python_shell=False,
                                      output_loglevel='trace')
         for line in output.splitlines():
-            pkginfo = salt.utils.pkg.rpm.parse_pkginfo(
-                line,
-                osarch=__grains__['osarch']
-            )
+            pkginfo = salt.utils.pkg.rpm.parse_pkginfo(line)
             if pkginfo:
                 # see rpm version string rules available at https://goo.gl/UGKPNd
                 pkgver = pkginfo.version
@@ -1590,8 +1587,8 @@ def normalize_name(name):
             return name
     except ValueError:
         return name
-    if arch in (__grains__['osarch'], 'noarch') \
-            or salt.utils.pkg.rpm.check_32(arch, osarch=__grains__['osarch']):
+    if arch in (salt.utils.pkg.rpm.getosarch(), 'noarch') \
+            or salt.utils.pkg.rpm.check_32(arch):
         return name[:-(len(arch) + 1)]
     return name
 
