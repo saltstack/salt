@@ -147,7 +147,7 @@ def present(name,
                             defaults=user_data)
     if organizations:
         ret = _update_user_organizations(name, user['id'], organizations, ret, profile)
-        if 'result' in ret and ret['result'] == False:
+        if 'result' in ret and ret['result'] is False:
             return ret
 
     if new_data != old_data:
@@ -236,14 +236,15 @@ def _get_json_data(defaults=None, **kwargs):
             kwargs[k] = defaults.get(k)
     return kwargs
 
+
 def _update_user_organizations(user_name, user_id, organizations, ret, profile):
     for org in organizations.items():
-        org_name, org_role = org if isinstance(org, tuple) and len(org)==2 else (org, 'Viewer')
+        org_name, org_role = org if isinstance(org, tuple) and len(org) == 2 else (org, 'Viewer')
         try:
             org_users = __salt__['grafana4.get_org_users'](org_name, profile)
         except HTTPError as e:
             ret['comment'] = 'Error while looking up user {}\'s grafana org {}: {}'.format(
-                    name, org_name, e)
+                    user_name, org_name, e)
             ret['result'] = False
             return ret
         user_found = False
@@ -255,7 +256,7 @@ def _update_user_organizations(user_name, user_id, organizations, ret, profile):
                                 orgname=org_name, profile=profile, role=org_role)
                     except HTTPError as e:
                         ret['comment'] = 'Error while setting role {} for user {} in grafana org {}: {}'.format(
-                                org_role, name, org_name, e)
+                                org_role, user_name, org_name, e)
                         ret['result'] = False
                         return ret
                     ret['changes'][org_name] = org_role
