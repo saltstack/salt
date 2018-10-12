@@ -62,10 +62,17 @@ general-health:
   - ps.top:
       info: Top CPU consuming processes
 
+boot_log:
+  - filetree:
+      info: Collect boot logs
+      args:
+        - /var/log/boot.*
+
 system.log:
   # This works on any file system object.
   - filetree:
       info: Add system log
       args:
         - /var/log/syslog
+        - /var/log/messages
 
