@@ -56,16 +56,12 @@ set the reload value to True:
     :ref:`Requisites <requisites>` documentation.
 
 """
-# Import Python libs
 
 import time
 
-# Import Salt libs
 import salt.utils.data
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError
-
-# Import 3rd-party libs
 from salt.utils.args import get_function_argspec as _argspec
 from salt.utils.systemd import booted
 
@@ -127,20 +123,21 @@ def _enabled_used_error(ret):
     return ret
 
 
-def _enable(name, started, result=True, **kwargs):
+def _enable(name, started, result=True, skip_verify=False, **kwargs):
     """
     Enable the service
     """
     ret = {}
 
-    # is service available?
-    try:
-        if not _available(name, ret):
+    if not skip_verify:
+        # is service available?
+        try:
+            if not _available(name, ret):
+                return ret
+        except CommandExecutionError as exc:
+            ret["result"] = False
+            ret["comment"] = exc.strerror
             return ret
-    except CommandExecutionError as exc:
-        ret["result"] = False
-        ret["comment"] = exc.strerror
-        return ret
 
     # Set default expected result
     ret["result"] = result
@@ -238,21 +235,21 @@ def _enable(name, started, result=True, **kwargs):
     return ret
 
 
-def _disable(name, started, result=True, **kwargs):
+def _disable(name, started, result=True, skip_verify=False, **kwargs):
     """
     Disable the service
     """
     ret = {}
-
-    # is service available?
-    try:
-        if not _available(name, ret):
-            ret["result"] = True
+    if not skip_verify:
+        # is service available?
+        try:
+            if not _available(name, ret):
+                ret["result"] = True
+                return ret
+        except CommandExecutionError as exc:
+            ret["result"] = False
+            ret["comment"] = exc.strerror
             return ret
-    except CommandExecutionError as exc:
-        ret["result"] = False
-        ret["comment"] = exc.strerror
-        return ret
 
     # Set default expected result
     ret["result"] = result
@@ -741,7 +738,7 @@ def dead(name, enable=None, sig=None, init_delay=None, **kwargs):
     return ret
 
 
-def enabled(name, **kwargs):
+def enabled(name, skip_verify=False, **kwargs):
     """
     Ensure that the service is enabled on boot, only use this state if you
     don't want to manage the running process, remember that if you want to
@@ -750,17 +747,25 @@ def enabled(name, **kwargs):
 
     name
         The name of the init or rc script used to manage the service
+
+    skip_verify
+        Skip verifying that the service is available before enabling it.
+        ``True`` will skip the verification. The default is ``False``,
+        which will ensure the service is available before enabling it.
+
+        .. versionadded:: Aluminum
+
     """
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
 
     # used to let execution modules know which service state is being run.
     __context__["service.state"] = "enabled"
 
-    ret.update(_enable(name, None, **kwargs))
+    ret.update(_enable(name, None, skip_verify=skip_verify, **kwargs))
     return ret
 
 
-def disabled(name, **kwargs):
+def disabled(name, skip_verify=False, **kwargs):
     """
     Ensure that the service is disabled on boot, only use this state if you
     don't want to manage the running process, remember that if you want to
@@ -769,13 +774,20 @@ def disabled(name, **kwargs):
 
     name
         The name of the init or rc script used to manage the service
+
+    skip_verify
+        Skip verifying that the service is available before disabling it.
+        ``True`` will skip the verification. The default is ``False``,
+        which will ensure the service is available before disabling it.
+
+        .. versionadded:: Aluminum
     """
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
 
     # used to let execution modules know which service state is being run.
     __context__["service.state"] = "disabled"
 
-    ret.update(_disable(name, None, **kwargs))
+    ret.update(_disable(name, None, skip_verify=skip_verify, **kwargs))
     return ret
 
 
