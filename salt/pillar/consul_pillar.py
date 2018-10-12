@@ -260,11 +260,7 @@ def consul_fetch(client, path):
     '''
     # Unless the root path is blank, it needs a trailing slash for
     # the kv get from Consul to work as expected
-    if not path:
-        absolute_path = ''
-    else:
-        absolute_path = path.rstrip('/') + '/'
-    return client.kv.get(absolute_path, recurse=True)
+    return client.kv.get('' if not path else path.rstrip('/') + '/', recurse=True)
 
 
 def fetch_tree(client, path, expand_keys):
