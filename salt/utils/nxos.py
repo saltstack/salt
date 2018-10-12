@@ -9,7 +9,7 @@ import json
 import logging
 import os
 import socket
-# from stat import *
+import re
 from salt.exceptions import CommandExecutionError
 
 # Import salt libs
@@ -268,3 +268,67 @@ def ping(**kwargs):
     Verify connection to the NX-OS device over UDS.
     '''
     return NxapiClient(**kwargs).nxargs['connect_over_uds']
+
+# Grains Functions
+
+
+def _parser(block):
+    return re.compile('^{block}\n(?:^[ \n].*$\n?)+'.format(block=block), re.MULTILINE)
+
+
+def _parse_software(data):
+    '''
+    Internal helper function to parse sotware grain information.
+    '''
+    ret = {'software': {}}
+    software = _parser('Software').search(data).group(0)
+    matcher = re.compile('^  ([^:]+): *([^\n]+)', re.MULTILINE)
+    for line in matcher.finditer(software):
+        key, val = line.groups()
+        ret['software'][key] = val
+    return ret['software']
+
+
+def _parse_hardware(data):
+    '''
+    Internal helper function to parse hardware grain information.
+    '''
+    ret = {'hardware': {}}
+    hardware = _parser('Hardware').search(data).group(0)
+    matcher = re.compile('^  ([^:\n]+): *([^\n]+)', re.MULTILINE)
+    for line in matcher.finditer(hardware):
+        key, val = line.groups()
+        ret['hardware'][key] = val
+    return ret['hardware']
+
+
+def _parse_plugins(data):
+    '''
+    Internal helper function to parse plugin grain information.
+    '''
+    ret = {'plugins': []}
+    plugins = _parser('plugin').search(data).group(0)
+    matcher = re.compile('^  (?:([^,]+), )+([^\n]+)', re.MULTILINE)
+    for line in matcher.finditer(plugins):
+        ret['plugins'].extend(line.groups())
+    return ret['plugins']
+
+
+def version_info():
+    client = NxapiClient()
+    return client.request('cli_show_ascii', 'show version')[0]
+
+
+def system_info(data):
+    '''
+    Helper method to return parsed system_info
+    from the 'show version' command.
+    '''
+    if not data:
+        return {}
+    info = {
+        'software': _parse_software(data),
+        'hardware': _parse_hardware(data),
+        'plugins': _parse_plugins(data),
+    }
+    return {'nxos': info}

@@ -1066,12 +1066,12 @@ def remove(path, force=False):
 
     path = os.path.expanduser(path)
 
+    if not os.path.isabs(path):
+        raise SaltInvocationError('File path must be absolute: {0}'.format(path))
+
     # Does the file/folder exists
     if not os.path.exists(path):
         raise CommandExecutionError('Path not found: {0}'.format(path))
-
-    if not os.path.isabs(path):
-        raise SaltInvocationError('File path must be absolute.')
 
     # Remove ReadOnly Attribute
     if force:

@@ -20,20 +20,11 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.ext import six
 import salt.utils.network
 import salt.utils.path
 import salt.modules.network as network
 from salt.exceptions import CommandExecutionError
-if six.PY2:
-    import salt.ext.ipaddress as ipaddress
-    HAS_IPADDRESS = True
-else:
-    try:
-        import ipaddress
-        HAS_IPADDRESS = True
-    except ImportError:
-        HAS_IPADDRESS = False
+from salt._compat import ipaddress
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -276,7 +267,7 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
                     self.assertDictEqual(network.connect('host', 'port'),
                                          {'comment': ret, 'result': True})
 
-    @skipIf(HAS_IPADDRESS is False, 'unable to import \'ipaddress\'')
+    @skipIf(not bool(ipaddress), 'unable to import \'ipaddress\'')
     def test_is_private(self):
         '''
         Test for Check if the given IP address is a private address
@@ -288,7 +279,7 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
                           return_value=True):
             self.assertTrue(network.is_private('::1'))
 
-    @skipIf(HAS_IPADDRESS is False, 'unable to import \'ipaddress\'')
+    @skipIf(not bool(ipaddress), 'unable to import \'ipaddress\'')
     def test_is_loopback(self):
         '''
         Test for Check if the given IP address is a loopback address
