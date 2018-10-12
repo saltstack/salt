@@ -183,7 +183,7 @@ def rpc(cmd=None, dest=None, **kwargs):
                 op[key] = value
     else:
         op.update(kwargs)
-    op['dev_timeout'] = six.text_type(op.pop('timeout', conn.timeout))
+    op['dev_timeout'] = six.text_type(op.pop('dev_timeout', conn.timeout))
 
     if cmd in ['get-config', 'get_config']:
         filter_reply = None
@@ -249,9 +249,6 @@ def set_hostname(hostname=None, **kwargs):
     hostname
         The name to be set
 
-    dev_timeout : 30
-        The NETCONF RPC timeout (in seconds)
-
     comment
         Provide a comment to the commit
 
@@ -280,6 +277,9 @@ def set_hostname(hostname=None, **kwargs):
                 op.update(kwargs['__pub_arg'][-1])
     else:
         op.update(kwargs)
+
+    # Setting timeout parameter
+    op['timeout'] = op.get('dev_timeout', 30)
 
     # Added to recent versions of JunOs
     # Use text format instead
@@ -370,6 +370,11 @@ def commit(**kwargs):
         op.update(kwargs)
 
     op['detail'] = op.get('detail', False)
+    # Caching value to revert back
+    prev_timeout = conn.timeout
+    # If timeout is given
+    if 'dev_timeout' in op:
+        conn.timeout = op['dev_timeout']
 
     try:
         commit_ok = conn.cu.commit_check()
@@ -400,6 +405,10 @@ def commit(**kwargs):
         ret['out'] = False
         ret['message'] = 'Pre-commit check failed.'
         conn.cu.rollback()
+
+    # Reverting timeout back to previous value
+    conn.timeout = prev_timeout
+
     return ret
 
 
@@ -409,9 +418,6 @@ def rollback(**kwargs):
 
     id : 0
         The rollback ID value (0-49)
-
-    dev_timeout : 30
-        The NETCONF RPC timeout (in seconds)
 
     comment
       Provide a comment for the commit
@@ -597,9 +603,6 @@ def cli(command=None, **kwargs):
     format : text
         Format in which to get the CLI output (either ``text`` or ``xml``)
 
-    dev_timeout : 30
-        The NETCONF RPC timeout (in seconds)
-
     dest
         Destination file where the RPC output is stored. Note that the file
         will be stored on the proxy minion. To push the files to the master use
@@ -610,7 +613,6 @@ def cli(command=None, **kwargs):
     .. code-block:: bash
 
         salt 'device_name' junos.cli 'show system commit'
-        salt 'device_name' junos.cli 'show version' dev_timeout=40
         salt 'device_name' junos.cli 'show system alarms' format=xml dest=/home/user/cli_output.txt
     '''
     conn = __proxy__['junos.conn']()
@@ -634,7 +636,7 @@ def cli(command=None, **kwargs):
         op.update(kwargs)
 
     try:
-        result = conn.cli(command, format_, warning=False)
+        result = conn.cli(command, format_, op, warning=False)
     except Exception as exception:
         ret['message'] = 'Execution failed due to "{0}"'.format(exception)
         ret['out'] = False
@@ -820,6 +822,12 @@ def install_config(path=None, **kwargs):
     else:
         op.update(kwargs)
 
+    # Caching value to revert back
+    prev_timeout = conn.timeout
+    # If timeout is given
+    if 'dev_timeout' in op:
+        conn.timeout = op['dev_timeout']
+
     template_vars = dict()
     if "template_vars" in op:
         template_vars = op["template_vars"]
@@ -927,6 +935,9 @@ def install_config(path=None, **kwargs):
                 exception)
             ret['out'] = False
 
+    # Reverting timeout back to previous value
+    conn.timeout = prev_timeout
+
     return ret
 
 
@@ -963,7 +974,11 @@ def install_os(path=None, **kwargs):
         Path where the image file is present on the proxy minion
 
     dev_timeout : 30
-        The NETCONF RPC timeout (in seconds)
+        The NETCONF RPC timeout (in seconds). This argument was added since most of
+        the time the "package add" RPC takes a significant amount of time.  The default
+        RPC timeout is 30 seconds.  So this :timeout: value will be
+        used in the context of the SW installation process.  Defaults to
+        30 minutes (30*60=1800)
 
     reboot : False
         Whether to reboot after installation
@@ -1009,6 +1024,10 @@ def install_os(path=None, **kwargs):
                 op.update(kwargs['__pub_arg'][-1])
     else:
         op.update(kwargs)
+
+    # If timeout is given
+    if 'dev_timeout' in op:
+        conn.timeout = op['dev_timeout']
 
     try:
         conn.sw.install(path, progress=True)
