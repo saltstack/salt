@@ -795,8 +795,7 @@ def _zfs_image_create(vm_name,
             .format(destination_fs, existing_disk['error'])
         )
     elif destination_fs in existing_disk:
-        log.info('ZFS filesystem {0} already exists. Skipping creation'
-                 .format(destination_fs))
+        log.info('ZFS filesystem %s already exists. Skipping creation', destination_fs)
         blockdevice_path = os.path.join('/dev/zvol', pool, vm_name)
         return blockdevice_path
 
@@ -1378,7 +1377,7 @@ def init(name,
 
     Disk dictionaries can contain the following properties:
 
-    disk_name
+    name
         Name of the disk. This is mostly used in the name of the disk image and as a key to merge
         with the profile data.
 
@@ -3308,7 +3307,7 @@ def purge(vm_, dirs=False, removables=None, **kwargs):
             # TODO create solution for 'dataset is busy'
             time.sleep(3)
             fs_name = disks[disk]['file'][len('/dev/zvol/'):]
-            log.info('Destroying VM ZFS volume {0}'.format(fs_name))
+            log.info('Destroying VM ZFS volume %s', fs_name)
             __salt__['zfs.destroy'](
                     name=fs_name,
                     force=True)
@@ -3322,7 +3321,7 @@ def purge(vm_, dirs=False, removables=None, **kwargs):
         # This one is only in 1.2.8+
         try:
             dom.undefineFlags(libvirt.VIR_DOMAIN_UNDEFINE_NVRAM)
-        except Exception:
+        except libvirt.libvirtError:
             dom.undefine()
     else:
         dom.undefine()
@@ -3444,6 +3443,9 @@ def get_hypervisor():
 
 
 def _is_bhyve_hyper():
+    '''
+    Returns a bool whether or not this node is a bhyve hypervisor
+    '''
     sysctl_cmd = 'sysctl hw.vmm.create'
     vmm_enabled = False
     try:
@@ -4481,7 +4483,7 @@ def list_networks(**kwargs):
         conn.close()
 
 
-def network_info(name, **kwargs):
+def network_info(name=None, **kwargs):
     '''
     Return informations on a virtual network provided its name.
 
@@ -4489,6 +4491,8 @@ def network_info(name, **kwargs):
     :param connection: libvirt connection URI, overriding defaults
     :param username: username to connect with, overriding defaults
     :param password: password to connect with, overriding defaults
+
+    If no name is provided, return the infos for all defined virtual networks.
 
     .. versionadded:: Fluorine
 
@@ -4500,8 +4504,11 @@ def network_info(name, **kwargs):
     '''
     result = {}
     conn = __get_conn(**kwargs)
-    try:
-        net = conn.networkLookupByName(name)
+
+    def _net_get_leases(net):
+        '''
+        Get all DHCP leases for a network
+        '''
         leases = net.DHCPLeases()
         for lease in leases:
             if lease['type'] == libvirt.VIR_IP_ADDR_TYPE_IPV4:
@@ -4510,15 +4517,17 @@ def network_info(name, **kwargs):
                 lease['type'] = 'ipv6'
             else:
                 lease['type'] = 'unknown'
+        return leases
 
-        result = {
-            'uuid': net.UUIDString(),
-            'bridge': net.bridgeName(),
-            'autostart': net.autostart(),
-            'active': net.isActive(),
-            'persistent': net.isPersistent(),
-            'leases': leases
-        }
+    try:
+        nets = [net for net in conn.listAllNetworks() if name is None or net.name() == name]
+        result = {net.name(): {
+                       'uuid': net.UUIDString(),
+                       'bridge': net.bridgeName(),
+                       'autostart': net.autostart(),
+                       'active': net.isActive(),
+                       'persistent': net.isPersistent(),
+                       'leases': _net_get_leases(net)} for net in nets}
     except libvirt.libvirtError as err:
         log.debug('Silenced libvirt error: %s', str(err))
     finally:
@@ -4815,7 +4824,7 @@ def list_pools(**kwargs):
         conn.close()
 
 
-def pool_info(name, **kwargs):
+def pool_info(name=None, **kwargs):
     '''
     Return informations on a storage pool provided its name.
 
@@ -4823,6 +4832,8 @@ def pool_info(name, **kwargs):
     :param connection: libvirt connection URI, overriding defaults
     :param username: username to connect with, overriding defaults
     :param password: password to connect with, overriding defaults
+
+    If no name is provided, return the infos for all defined storage pools.
 
     .. versionadded:: Fluorine
 
@@ -4834,14 +4845,19 @@ def pool_info(name, **kwargs):
     '''
     result = {}
     conn = __get_conn(**kwargs)
-    try:
-        pool = conn.storagePoolLookupByName(name)
-        infos = pool.info()
+
+    def _pool_extract_infos(pool):
+        '''
+        Format the pool info dictionary
+
+        :param pool: the libvirt pool object
+        '''
         states = ['inactive', 'building', 'running', 'degraded', 'inaccessible']
+        infos = pool.info()
         state = states[infos[0]] if infos[0] < len(states) else 'unknown'
         desc = ElementTree.fromstring(pool.XMLDesc())
         path_node = desc.find('target/path')
-        result = {
+        return {
             'uuid': pool.UUIDString(),
             'state': state,
             'capacity': infos[1],
@@ -4852,6 +4868,10 @@ def pool_info(name, **kwargs):
             'target_path': path_node.text if path_node is not None else None,
             'type': desc.get('type')
         }
+
+    try:
+        pools = [pool for pool in conn.listAllStoragePools() if name is None or pool.name() == name]
+        result = {pool.name(): _pool_extract_infos(pool) for pool in pools}
     except libvirt.libvirtError as err:
         log.debug('Silenced libvirt error: %s', str(err))
     finally:

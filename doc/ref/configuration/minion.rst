@@ -635,6 +635,35 @@ FQDN (for instance, Solaris).
 
     append_domain: foo.org
 
+.. conf_minion:: minion_id_remove_domain
+
+``minion_id_remove_domain``
+---------------------------
+
+.. versionadded:: Neon
+
+Default: ``False``
+
+Remove a domain when the minion id is generated as a fully qualified domain
+name (either by the user provided ``id_function``, or by Salt). This is useful
+when the minions shall be named like hostnames. Can be a single domain (to
+prevent name clashes), or True, to remove all domains.
+
+Examples:
+ - minion_id_remove_domain = foo.org
+   - FQDN = king_bob.foo.org --> minion_id = king_bob
+   - FQDN = king_bob.bar.org --> minion_id = king_bob.bar.org
+ - minion_id_remove_domain = True
+   - FQDN = king_bob.foo.org --> minion_id = king_bob
+   - FQDN = king_bob.bar.org --> minion_id = king_bob
+
+
+For more information, please see :issue:`49212` and  :pull:`49378`.
+
+.. code-block:: yaml
+
+    minion_id_remove_domain: foo.org
+
 .. conf_minion:: minion_id_lowercase
 
 ``minion_id_lowercase``
@@ -1357,9 +1386,8 @@ Default: ``zeromq``
 
 Changes the underlying transport layer. ZeroMQ is the recommended transport
 while additional transport layers are under development. Supported values are
-``zeromq``, ``raet`` (experimental), and ``tcp`` (experimental). This setting has
-a significant impact on performance and should not be changed unless you know
-what you are doing!
+``zeromq`` and ``tcp`` (experimental). This setting has a significant impact
+on performance and should not be changed unless you know what you are doing!
 
 .. code-block:: yaml
 
