@@ -541,9 +541,9 @@ class SSHThinTestCase(TestCase):
         files = []
         for py in ('py2', 'py2', 'py3', 'pyall'):
             for i in range(1, 4):
-                files.append(os.path.join(py, 'root', 'r%s' % i))
+                files.append(os.path.join(py, 'root', 'r{0}'.format(i)))
             for i in range(4, 7):
-                files.append(os.path.join(py, 'root2', 'r%s' % i))
+                files.append(os.path.join(py, 'root2', 'r{0}'.format(i)))
         for cl in thin.tarfile.open().method_calls[:-6]:
             arcname = cl[2].get('arcname')
             self.assertIn(arcname, files)
@@ -591,9 +591,11 @@ class SSHThinTestCase(TestCase):
         files = []
         for py in ('pyall', 'pyall', 'py2'):
             for i in range(1, 4):
-                files.append(os.path.join('namespace', py, 'root', 'r%s' % i))
+                files.append(
+                    os.path.join('namespace', py, 'root', 'r{0}'.format(i)))
             for i in range(4, 7):
-                files.append(os.path.join('namespace', py, 'root2', 'r%s' % i))
+                files.append(
+                    os.path.join('namespace', py, 'root2', 'r{0}'.format(i)))
 
         for idx, cl in enumerate(thin.tarfile.open().method_calls[12:-6]):
             arcname = cl[2].get('arcname')
