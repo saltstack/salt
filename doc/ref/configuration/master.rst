@@ -1847,40 +1847,6 @@ The listen queue size of the ZeroMQ backlog.
 
     zmq_backlog: 1000
 
-.. conf_master:: salt_event_pub_hwm
-.. conf_master:: event_publisher_pub_hwm
-
-``salt_event_pub_hwm`` and ``event_publisher_pub_hwm``
-------------------------------------------------------
-
-These two ZeroMQ High Water Mark settings, ``salt_event_pub_hwm`` and
-``event_publisher_pub_hwm`` are significant for masters with thousands of
-minions. When these are insufficiently high it will manifest in random
-responses missing in the CLI and even missing from the job cache. Masters
-that have fast CPUs and many cores with appropriate ``worker_threads``
-will not need these set as high.
-
-The ZeroMQ high-water-mark for the ``SaltEvent`` pub socket default is:
-
-.. code-block:: yaml
-
-    salt_event_pub_hwm: 20000
-
-The ZeroMQ high-water-mark for the ``EventPublisher`` pub socket default is:
-
-.. code-block:: yaml
-
-    event_publisher_pub_hwm: 10000
-
-As an example, on single master deployment with 8,000 minions, 2.4GHz CPUs,
-24 cores, and 32GiB memory has these settings:
-
-.. code-block:: yaml
-
-    salt_event_pub_hwm: 128000
-    event_publisher_pub_hwm: 64000
-
-
 .. _master-module-management:
 
 Master Module Management
