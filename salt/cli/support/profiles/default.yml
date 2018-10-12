@@ -66,8 +66,7 @@ boot_log:
   - filetree:
       info: Collect boot logs
       args:
-        - /var/log/boot.log
-        - /var/log/boot.msg
+        - /var/log/boot.*
 
 system.log:
   # This works on any file system object.
@@ -75,8 +74,5 @@ system.log:
       info: Add system log
       args:
         - /var/log/syslog
-  - filetree:
-      info: Add messages log
-      args:
         - /var/log/messages
 
