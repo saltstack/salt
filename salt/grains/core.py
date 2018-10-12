@@ -2782,18 +2782,22 @@ def kernelparams():
     '''
     Return the kernel boot parameters
     '''
-    try:
-        with salt.utils.files.fopen('/proc/cmdline', 'r') as fhr:
-            cmdline = fhr.read()
-            grains = {'kernelparams': []}
-            for data in [item.split('=') for item in salt.utils.args.shlex_split(cmdline)]:
-                value = None
-                if len(data) == 2:
-                    value = data[1].strip('"')
+    if salt.utils.platform.is_windows():
+        # TODO: add grains using `bcdedit /enum {current}`
+        return {}
+    else:
+        try:
+            with salt.utils.files.fopen('/proc/cmdline', 'r') as fhr:
+                cmdline = fhr.read()
+                grains = {'kernelparams': []}
+                for data in [item.split('=') for item in salt.utils.args.shlex_split(cmdline)]:
+                    value = None
+                    if len(data) == 2:
+                        value = data[1].strip('"')
 
-                grains['kernelparams'] += [(data[0], value)]
-    except IOError as exc:
-        grains = {}
-        log.debug('Failed to read /proc/cmdline: %s', exc)
+                    grains['kernelparams'] += [(data[0], value)]
+        except IOError as exc:
+            grains = {}
+            log.debug('Failed to read /proc/cmdline: %s', exc)
 
-    return grains
+        return grains

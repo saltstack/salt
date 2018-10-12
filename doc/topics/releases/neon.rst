@@ -203,6 +203,12 @@ setting the configuration paramaters ``service_account_private_key`` and
 Deprecations
 ============
 
+RAET Transport
+--------------
+
+Support for RAET has been removed. Please use the ``zeromq`` or ``tcp`` transport
+instead of ``raet``.
+
 Module Deprecations
 -------------------
 
