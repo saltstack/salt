@@ -238,13 +238,7 @@ def _get_json_data(defaults=None, **kwargs):
 
 def _update_user_organizations(user_name, user_id, organizations, ret, profile):
     for org in organizations.items():
-        if isinstance(org, tuple):
-            org_name = org[0]
-            org_role = org[1]
-        else:
-            org_name = org
-            org_role = 'Viewer'
-
+        org_name, org_role = org if isinstance(org, tuple) and len(org)==2 else (org, 'Viewer')
         try:
             org_users = __salt__['grafana4.get_org_users'](org_name, profile)
         except HTTPError as e:
