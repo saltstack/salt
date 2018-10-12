@@ -13,7 +13,7 @@ import salt.utils.files
 out = MessagesOutput()
 
 
-def filetree(collector, path):
+def filetree(collector, *paths):
     '''
     Add all files in the tree. If the "path" is a file,
     only that file will be added.
@@ -21,24 +21,28 @@ def filetree(collector, path):
     :param path: File or directory
     :return:
     '''
-    if not path:
-        out.error('Path not defined', ident=2)
-    else:
-        # The filehandler needs to be explicitly passed here, so PyLint needs to accept that.
-        # pylint: disable=W8470
-        if os.path.isfile(path):
-            filename = os.path.basename(path)
-            try:
-                file_ref = salt.utils.files.fopen(path)  # pylint: disable=W
-                out.put('Add {}'.format(filename), indent=2)
-                collector.add(filename)
-                collector.link(title=path, path=file_ref)
-            except Exception as err:
-                out.error(err, ident=4)
-        # pylint: enable=W8470
-        elif os.path.exists(path):
-            for fname in os.listdir(path):
-                fname = os.path.join(path, fname)
-                filetree(collector, fname)
+    for path in paths:
+        if not path:
+            out.error('Path not defined', ident=2)
         else:
-            out.warning('Path {} does not exists'.format(path))
+            # The filehandler needs to be explicitly passed here, so PyLint needs to accept that.
+            # pylint: disable=W8470
+            if os.path.isfile(path):
+                filename = os.path.basename(path)
+                try:
+                    file_ref = salt.utils.files.fopen(path)  # pylint: disable=W
+                    out.put('Add {}'.format(filename), indent=2)
+                    collector.add(filename)
+                    collector.link(title=path, path=file_ref)
+                except Exception as err:
+                    out.error(err, ident=4)
+            # pylint: enable=W8470
+            elif os.path.exists(path):
+                try:
+                    for fname in os.listdir(path):
+                        fname = os.path.join(path, fname)
+                        filetree(collector, [fname])
+                except Exception as err:
+                    out.error(err, ident=4)
+            else:
+                out.warning('Path {} does not exists'.format(path))
