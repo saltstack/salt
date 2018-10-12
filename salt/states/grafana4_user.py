@@ -146,7 +146,7 @@ def present(name,
                             orgId=None,
                             defaults=user_data)
     if organizations:
-        ret = _update_user_organizations(user['id'], organizations, ret, profile)
+        ret = _update_user_organizations(name, user['id'], organizations, ret, profile)
         if 'result' in ret and ret['result'] == False:
             return ret
 
@@ -236,14 +236,14 @@ def _get_json_data(defaults=None, **kwargs):
             kwargs[k] = defaults.get(k)
     return kwargs
 
-def _update_user_organizations(user_id, organizations, ret, profile):
-    for org in organizations:
-        if isinstance(org, string_types):
+def _update_user_organizations(user_name, user_id, organizations, ret, profile):
+    for org in organizations.items():
+        if isinstance(org, tuple):
+            org_name = org[0]
+            org_role = org[1]
+        else:
             org_name = org
             org_role = 'Viewer'
-        else:
-            org_name = org.keys()[0]
-            org_role = org.values()[0]
 
         try:
             org_users = __salt__['grafana4.get_org_users'](org_name, profile)
@@ -270,5 +270,5 @@ def _update_user_organizations(user_id, organizations, ret, profile):
         if not user_found:
             ret['changes'][org_name] = org_role
             __salt__['grafana4.create_org_user'](orgname=org_name,
-                    profile=profile, role=org_role, loginOrEmail=name)
+                    profile=profile, role=org_role, loginOrEmail=user_name)
     return ret
