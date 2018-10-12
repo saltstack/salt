@@ -1430,7 +1430,7 @@ class Minion(MinionBase):
 
         sdata = {'pid': os.getpid()}
         sdata.update(data)
-        log.info('Starting a new job with PID {0}'.format(sdata['pid']))
+        log.info('Starting a new job %s with PID %s', data['jid'], sdata['pid'])
         with salt.utils.fopen(fn_, 'w+b') as fp_:
             fp_.write(minion_instance.serial.dumps(sdata))
         ret = {'success': False}
