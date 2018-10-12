@@ -36,7 +36,9 @@ def filetree(collector, path):
             except Exception as err:
                 out.error(err, ident=4)
         # pylint: enable=W8470
-        else:
+        elif os.path.exists(path):
             for fname in os.listdir(path):
                 fname = os.path.join(path, fname)
                 filetree(collector, fname)
+        else:
+            out.warning('Path {} does not exists'.format(path))
