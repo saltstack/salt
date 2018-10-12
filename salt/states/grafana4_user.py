@@ -146,40 +146,9 @@ def present(name,
                             orgId=None,
                             defaults=user_data)
     if organizations:
-        for org in organizations:
-            if isinstance(org, string_types):
-                org_name = org
-                org_role = 'Viewer'
-            else:
-                org_name = org.keys()[0]
-                org_role = org.values()[0]
-
-            try:
-                org_users = __salt__['grafana4.get_org_users'](org_name, profile)
-            except HTTPError as e:
-                ret['comment'] = 'Error while looking up user {}\'s grafana org {}: {}'.format(
-                        name, org_name, e)
-                ret['result'] = False
-                return ret
-            user_found = False
-            for org_user in org_users:
-                if org_user['userId'] == user['id']:
-                    if org_user['role'] != org_role:
-                        try:
-                            __salt__['grafana4.update_org_user'](user['id'],
-                                    orgname=org_name, profile=profile, role=org_role)
-                        except HTTPError as e:
-                            ret['comment'] = 'Error while setting role {} for user {} in grafana org {}: {}'.format(
-                                    org_role, name, org_name, e)
-                            ret['result'] = False
-                            return ret
-                        ret['changes'][org_name] = org_role
-                    user_found = True
-                    break
-            if not user_found:
-                ret['changes'][org_name] = org_role
-                __salt__['grafana4.create_org_user'](orgname=org_name,
-                        profile=profile, role=org_role, loginOrEmail=name)
+        ret = _update_user_organizations(user['id'], organizations, ret, profile)
+        if 'result' in ret and ret['result'] == False:
+            return ret
 
     if new_data != old_data:
         if __opts__['test']:
@@ -266,3 +235,40 @@ def _get_json_data(defaults=None, **kwargs):
         if v is None:
             kwargs[k] = defaults.get(k)
     return kwargs
+
+def _update_user_organizations(user_id, organizations, ret, profile):
+    for org in organizations:
+        if isinstance(org, string_types):
+            org_name = org
+            org_role = 'Viewer'
+        else:
+            org_name = org.keys()[0]
+            org_role = org.values()[0]
+
+        try:
+            org_users = __salt__['grafana4.get_org_users'](org_name, profile)
+        except HTTPError as e:
+            ret['comment'] = 'Error while looking up user {}\'s grafana org {}: {}'.format(
+                    name, org_name, e)
+            ret['result'] = False
+            return ret
+        user_found = False
+        for org_user in org_users:
+            if org_user['userId'] == user_id:
+                if org_user['role'] != org_role:
+                    try:
+                        __salt__['grafana4.update_org_user'](user_id,
+                                orgname=org_name, profile=profile, role=org_role)
+                    except HTTPError as e:
+                        ret['comment'] = 'Error while setting role {} for user {} in grafana org {}: {}'.format(
+                                org_role, name, org_name, e)
+                        ret['result'] = False
+                        return ret
+                    ret['changes'][org_name] = org_role
+                user_found = True
+                break
+        if not user_found:
+            ret['changes'][org_name] = org_role
+            __salt__['grafana4.create_org_user'](orgname=org_name,
+                    profile=profile, role=org_role, loginOrEmail=name)
+    return ret
