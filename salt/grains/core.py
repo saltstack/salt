@@ -445,6 +445,8 @@ def _windows_virtual(osdata):
     grains = dict()
     if osdata['kernel'] != 'Windows':
         return grains
+    
+    grains['virtual'] = 'physical'
 
     # It is possible that the 'manufacturer' and/or 'productname' grains
     # exist but have a value of None.
