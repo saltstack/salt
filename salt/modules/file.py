@@ -5108,15 +5108,14 @@ def check_file_meta(
                 ret['comment'].append(
                     'Failed to get selinux attributes'
                 )
-                selinux_error = True
             if seuser and seuser != current_seuser:
-                changes['selinux'].append(seuser)
+                changes['selinux'] = {"user": seuser}
             if serole and serole != current_serole:
-                changes['selinux'].append(serole)
+                changes['selinux']= {"role": serole}
             if setype and setype != current_setype:
-                changes['selinux'].append(setype)
+                changes['selinux'] = {"type": setype}
             if serange and serange != current_serange:
-                changes['selinux'].append(serange)
+                changes['selinux'] = {"range": serange}
 
     return changes
 
