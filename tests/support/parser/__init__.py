@@ -213,7 +213,10 @@ class SaltTestingParser(optparse.OptionParser):
                   'unit/integration test module which corresponds to the '
                   'specified file(s) will be run. For example, a path of '
                   'salt/modules/git.py would result in unit.modules.test_git '
-                  'and integration.modules.test_git being run.')
+                  'and integration.modules.test_git being run. Absolute paths '
+                  'are assumed to be files containing relative paths, one per '
+                  'line. Providing the paths in a file can help get around '
+                  'shell character limits when the list of files is long.')
         )
         self.test_selection_group.add_option(
             '--filename-map',
@@ -345,10 +348,25 @@ class SaltTestingParser(optparse.OptionParser):
         '''
         ret = set()
         for path in paths:
-            if ',' in path:
-                ret.update([x.strip() for x in path.split(',')])
-            else:
-                ret.add(path.strip())
+            for item in [x.strip() for x in path.split(',')]:
+                if not item:
+                    continue
+                elif os.path.isabs(item):
+                    try:
+                        with salt.utils.files.fopen(item, 'rb') as fp_:
+                            for line in fp_:
+                                line = salt.utils.stringutils.to_unicode(line.strip())
+                                if os.path.isabs(line):
+                                    log.warning(
+                                        'Invalid absolute path %s in %s, '
+                                        'ignoring', line, item
+                                    )
+                                else:
+                                    ret.add(line)
+                    except (IOError, OSError) as exc:
+                        log.error('Failed to read from %s: %s', item, exc)
+                else:
+                    ret.add(item)
         return ret
 
     @property
