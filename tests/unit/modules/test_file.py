@@ -30,7 +30,6 @@ import salt.utils.stringutils
 import salt.modules.file as filemod
 import salt.modules.config as configmod
 import salt.modules.cmdmod as cmdmod
-import salt.modules.selinux as selinuxmod
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.utils.jinja import SaltCacheLoader
 
@@ -862,6 +861,7 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
         with salt.utils.files.fopen(tfile.name) as tfile2:
             new_file = salt.utils.stringutils.to_unicode(tfile2.read())
         self.assertEqual(new_file, expected)
+        os.remove(tfile.name)
 
         # File not ending with a newline
         with tempfile.NamedTemporaryFile(mode='wb', delete=False) as tfile:
@@ -871,6 +871,7 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
         with salt.utils.files.fopen(tfile.name) as tfile2:
             self.assertEqual(
                 salt.utils.stringutils.to_unicode(tfile2.read()), expected)
+        os.remove(tfile.name)
 
         # A newline should be added in empty files
         with tempfile.NamedTemporaryFile(mode='wb', delete=False) as tfile:
@@ -880,6 +881,7 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
                 salt.utils.stringutils.to_unicode(tfile2.read()),
                 'bar' + os.linesep
             )
+        os.remove(tfile.name)
 
     def test_extract_hash(self):
         '''
@@ -967,6 +969,7 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
                 'hash_type': 'sha1'
             } if hash_type != 'sha256' else None
             self.assertEqual(result, expected)
+        os.remove(tfile.name)
 
         # Hash only, no file name (Maven repo checksum format)
         # Since there is no name match, the first checksum in the file will
@@ -984,6 +987,7 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
                 'hash_type': 'sha1'
             } if hash_type != 'sha256' else None
             self.assertEqual(result, expected)
+        os.remove(tfile.name)
 
     def test_user_to_uid_int(self):
         '''
@@ -2044,24 +2048,13 @@ class FileSelinuxTestCase(TestCase, LoaderModuleMockMixin):
         return {
             filemod: {
                 '__salt__': {
-                    'config.manage_mode': configmod.manage_mode,
                     'cmd.run': cmdmod.run,
-                    'cmd.run_all': cmdmod.run_all,
                     'cmd.retcode': cmdmod.retcode,
-                    'selinux.fcontext_add_policy': selinuxmod.fcontext_add_policy
+                    'selinux.fcontext_add_policy': MagicMock(return_value={'retcode': 0, 'stdout': ''})
                 },
                 '__opts__': {
-                    'test': False,
-                    'file_roots': {'base': 'tmp'},
-                    'pillar_roots': {'base': 'tmp'},
-                    'cachedir': 'tmp',
-                    'grains': {},
-                },
-                '__grains__': {'kernel': 'Linux'},
-                '__utils__': {
-                    'files.is_text': MagicMock(return_value=True),
-                    'stringutils.get_diff': salt.utils.stringutils.get_diff,
-                },
+                    'test': False
+                }
             }
         }
 
@@ -2097,6 +2090,14 @@ class FileSelinuxTestCase(TestCase, LoaderModuleMockMixin):
             Assumes default selinux attributes on temporary files
         '''
         result = filemod.set_selinux_context(self.tfile2.name, user="system_u")
+        self.assertEqual(result, "system_u:object_r:user_tmp_t:s0")
+
+    def test_selinux_setcontext_persist(self):
+        '''
+            Test set selinux context with persist=True
+            Assumes default selinux attributes on temporary files
+        '''
+        result = filemod.set_selinux_context(self.tfile2.name, user="system_u", persist=True)
         self.assertEqual(result, "system_u:object_r:user_tmp_t:s0")
 
     def test_file_check_perms(self):

@@ -4720,10 +4720,13 @@ def check_perms(name, ret, user, group, mode, attrs=None, follow_symlinks=False,
                 if __opts__['test']:
                     ret['comment'] = 'File {0} selinux context to be updated'.format(name)
                     ret['result'] = None
-                    ret['changes']['selinux'] = {'Old': selinux_change_orig,
-                                                 'New': selinux_change_new}
+                    ret['changes']['selinux'] = {'Old': selinux_change_orig.strip(),
+                                                 'New': selinux_change_new.strip()}
                 else:
                     try:
+                        # set_selinux_context requires type to be set on any other change
+                        if (requested_seuser or rquested_serole or requested_serange) and not requested_setype:
+                            requested_setype = current_setype
                         result = set_selinux_context(name, user=requested_seuser, role=requested_serole,
                                 type=requested_setype, range=requested_serange, persist=True)
                         log.debug("selinux set result: {0}".format(result))
@@ -4755,8 +4758,8 @@ def check_perms(name, ret, user, group, mode, attrs=None, follow_symlinks=False,
                             if current_serange != requested_serange:
                                 ret['comment'].append("Unable to update serange context")
                                 ret['result'] = False
-                        ret['changes']['selinux'] = {'Old': selinux_change_orig,
-                                                    'New': selinux_change_new}
+                        ret['changes']['selinux'] = {'Old': selinux_change_orig.strip(),
+                                                    'New': selinux_change_new.strip()}
 
     # Only combine the comment list into a string
     # after all comments are added above
