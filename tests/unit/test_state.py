@@ -129,6 +129,7 @@ class StateCompilerTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             run_num = ret['test_|-step_one_|-step_one_|-succeed_with_changes']['__run_num__']
             self.assertEqual(run_num, 0)
 
+
 class HighStateTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
     def setUp(self):
         root_dir = tempfile.mkdtemp(dir=integration.TMP)
