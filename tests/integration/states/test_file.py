@@ -155,6 +155,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             except OSError as exc:
                 if exc.errno != errno.ENOENT:
                     log.error('Failed to remove %s: %s', path, exc)
+        salt.utils.files.rm_rf('/tmp/salt-tests-tmpdir')
 
     def test_symlink(self):
         '''
@@ -354,10 +355,18 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         Test to ensure we can render grains data into a managed
         file.
         '''
-        grain_path = os.path.join(TMP, 'file-grain-test')
+        grain_path = '/tmp/salt-tests-tmpdir/file-grain-test'
+        try:
+            os.makedirs(os.path.dirname(grain_path))
+        except OSError as exc:
+            log.exception(
+                "Exception creating test dir %s",
+                os.path.dirname(grain_path),
+            )
         state_file = 'file-grainget'
 
-        self.run_function('state.sls', [state_file])
+        ret = self.run_function('state.sls', [state_file])
+        log.debug("RET is %s", ret)
         self.assertTrue(os.path.exists(grain_path))
 
         with salt.utils.files.fopen(grain_path, 'r') as fp_:
