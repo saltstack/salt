@@ -767,6 +767,9 @@ def cast_vdata(vdata=None, vtype='REG_SZ'):
     # Make sure REG_MULTI_SZ is a list of strings
     elif vtype_value == win32con.REG_MULTI_SZ:
         return [_to_unicode(i) for i in vdata]
+    # Make sure REG_QWORD is a 64 bit integer
+    elif vtype_value == win32con.REG_QWORD:
+        return vdata if six.PY3 else long(vdata)
     # Everything else is int
     else:
         return int(vdata)
