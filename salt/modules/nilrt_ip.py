@@ -567,13 +567,12 @@ def _remove_interface_section(interface):
     return True
 
 
-def _change_connman_blacklist(interface, add=True, enable_dhcp=True):
+def _change_connman_backlist(interface, add=True):
     '''
     Remove or add an interface to connman blacklist
 
     :param interface: interface label
     :param add: True to add interface to blacklist, False otherwise. Default is True.
-    :param enable_dhcp: True to enable dhcp for an interface after removing from blacklist
     '''
     parser = configparser.ConfigParser()
     parser.optionxform = str
@@ -601,7 +600,7 @@ def _change_connman_blacklist(interface, add=True, enable_dhcp=True):
         parser.write(config_file)
     if add:
         return _remove_interface_section(interface)
-    return _enable_dhcp(interface) if enable_dhcp else True
+    return _enable_dhcp(interface)
 
 
 def _enable_dhcp(interface):
@@ -626,7 +625,7 @@ def _enable_dhcp(interface):
     parser.add_section('service_{0}'.format(hwaddr_section_number))
     parser.set('service_{0}'.format(hwaddr_section_number), 'MAC', hwaddr)
     parser.set('service_{0}'.format(hwaddr_section_number), 'Name', 'ethernet_cable_{0}'.format(hwaddr_section_number))
-    parser.set('service_{0}'.format(hwaddr_section_number), 'IPv4.Method', 'dhcp')
+    parser.set('service_{0}'.format(hwaddr_section_number), 'IPv4.method', 'dhcp')
     parser.set('service_{0}'.format(hwaddr_section_number), 'AutoConnect', 'true')
     with salt.utils.files.fopen(INTERFACES_CONFIG, 'w') as config_file:
         parser.write(config_file)
@@ -646,10 +645,23 @@ def _change_state(interface, new_state):
     '''
     if __grains__['lsb_distrib_id'] == 'nilrt':
         return _change_state_legacy(interface, new_state)
-    if interface in map(lambda x: x.name, pyiface.getIfaces()):
-        ret = _change_connman_blacklist(interface, add=new_state == 'down')
-        return ret and __salt__['cmd.run_all']('/etc/init.d/connman restart')['retcode'] == 0
-    raise salt.exceptions.CommandExecutionError('Invalid interface name: {0}'.format(interface))
+    service = _interface_to_service(interface)
+    if not service:
+        if interface in map(lambda x: x.name, pyiface.getIfaces()):
+            ret = _change_connman_backlist(interface, add=new_state == 'down')
+            return ret and __salt__['cmd.run_all']('/etc/init.d/connman restart')['retcode'] == 0
+        raise salt.exceptions.CommandExecutionError('Invalid interface name: {0}'.format(interface))
+    connected = _connected(service)
+    if (not connected and new_state == 'up') or (connected and new_state == 'down'):
+        service = pyconnman.ConnService(os.path.join(SERVICE_PATH, service))
+        try:
+            state = service.connect() if new_state == 'up' else service.disconnect()
+            _change_connman_backlist(interface, add=new_state == 'down')
+            return state is None
+        except Exception:
+            raise salt.exceptions.CommandExecutionError('Couldn\'t {0} service: {1}\n'
+                                                        .format('enable' if new_state == 'up' else 'disable', service))
+    return True
 
 
 def up(interface, iface_type=None):  # pylint: disable=invalid-name,unused-argument
@@ -798,19 +810,24 @@ def set_dhcp_linklocal_all(interface):
         else:
             _restart(interface)
         return True
-    if interface in map(lambda x: x.name, pyiface.getIfaces()):
-        need_connman_restart = False
-        information = _load_config('General', ['NetworkInterfaceBlacklist'], filename=CONNMAN_MAIN_CONFIG)
-        if interface in information['NetworkInterfaceBlacklist']:
-            ret_value = _change_connman_blacklist(interface, add=False)
-            need_connman_restart = True
-        else:
-            ret_value = _enable_dhcp(interface)
-        service = _interface_to_service(interface)
-        if service is not None or need_connman_restart:
-            ret_value = ret_value and __salt__['cmd.run_all']('/etc/init.d/connman restart')['retcode'] == 0
-        return ret_value
-    raise salt.exceptions.CommandExecutionError('Invalid interface name: {0}'.format(interface))
+    service = _interface_to_service(interface)
+    if not service:
+        if interface in map(lambda x: x.name, pyiface.getIfaces()):
+            return _enable_dhcp(interface)
+        raise salt.exceptions.CommandExecutionError('Invalid interface name: {0}'.format(interface))
+    service = pyconnman.ConnService(os.path.join(SERVICE_PATH, service))
+    ipv4 = service.get_property('IPv4.Configuration')
+    ipv4['Method'] = dbus.String('dhcp', variant_level=1)
+    ipv4['Address'] = dbus.String('', variant_level=1)
+    ipv4['Netmask'] = dbus.String('', variant_level=1)
+    ipv4['Gateway'] = dbus.String('', variant_level=1)
+    try:
+        service.set_property('IPv4.Configuration', ipv4)
+        service.set_property('Nameservers.Configuration', [''])  # reset nameservers list
+    except Exception as exc:
+        exc_msg = 'Couldn\'t set dhcp linklocal for service: {0}\nError: {1}\n'.format(service, exc)
+        raise salt.exceptions.CommandExecutionError(exc_msg)
+    return True
 
 
 def set_dhcp_only_all(interface):
@@ -961,16 +978,11 @@ def set_static_all(interface, address, netmask, gateway, nameservers=None):
             _restart(interface)
         return True
     if interface in map(lambda x: x.name, pyiface.getIfaces()):
-        need_connman_restart = False
-        information = _load_config('General', ['NetworkInterfaceBlacklist'], filename=CONNMAN_MAIN_CONFIG)
-        if interface in information['NetworkInterfaceBlacklist']:
-            _change_connman_blacklist(interface, add=False, enable_dhcp=False)
-            need_connman_restart = True
         ret_value = _configure_static_interface(interface, **{'ip': address,
                                                               'dns': ','.join(nameservers) if nameservers else '',
                                                               'netmask': netmask, 'gateway': gateway})
         service = _interface_to_service(interface)
-        if service is not None or need_connman_restart:
+        if service:
             ret_value = ret_value and __salt__['cmd.run_all']('/etc/init.d/connman restart')['retcode'] == 0
         return ret_value
     raise salt.exceptions.CommandExecutionError('Invalid interface name: {0}'.format(interface))
