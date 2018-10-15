@@ -141,6 +141,16 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the file state
     '''
+
+    def setUp(self):
+        try:
+            os.makedirs('/tmp/salt-tests-tmpdir')
+        except OSError as exc:
+            log.exception(
+                "Exception creating test tmp dir %s",
+                os.path.dirname(grain_path),
+            )
+
     def tearDown(self):
         '''
         remove files created in previous tests
@@ -356,13 +366,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         file.
         '''
         grain_path = '/tmp/salt-tests-tmpdir/file-grain-test'
-        try:
-            os.makedirs(os.path.dirname(grain_path))
-        except OSError as exc:
-            log.exception(
-                "Exception creating test dir %s",
-                os.path.dirname(grain_path),
-            )
         state_file = 'file-grainget'
 
         ret = self.run_function('state.sls', [state_file])
