@@ -2402,6 +2402,12 @@ Master will not be returned to the Minion.
 ------------------------------
 
 .. versionadded:: 2014.1.0
+.. deprecated:: 2018.3.4
+   This option is now ignored. Firstly, it only traversed
+   :conf_master:`file_roots`, which means it did not work for the other
+   fileserver backends. Secondly, since this option was added we have added
+   caching to the code that traverses the file_roots (and gitfs, etc.), which
+   greatly reduces the amount of traversal that is done.
 
 Default: ``False``
 
