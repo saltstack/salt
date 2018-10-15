@@ -25,6 +25,7 @@ execution modules
     aix_group
     aliases
     alternatives
+    ansiblegate
     apache
     apcups
     apf
@@ -41,6 +42,7 @@ execution modules
     bcache
     beacons
     bigip
+    bluecoat_sslv
     bluez
     boto3_elasticache
     boto3_route53
@@ -357,7 +359,6 @@ execution modules
     qemu_nbd
     quota
     rabbitmq
-    raet_publish
     rallydev
     random_org
     rbac_solaris
