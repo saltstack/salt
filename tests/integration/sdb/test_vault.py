@@ -90,7 +90,9 @@ class VaultTestCase(ModuleCase, ShellCase):
         TearDown vault container
         '''
         def count_tests(funcobj):
-            return inspect.ismethod(funcobj) and funcobj.__name__.startswith('test_')
+            return inspect.ismethod(funcobj) or \
+                inspect.isfunction(funcobj) and \
+                funcobj.__name__.startswith('test_')
         numtests = len(inspect.getmembers(VaultTestCase, predicate=count_tests))
         if VaultTestCase.count >= numtests:
             self.run_state('docker_container.stopped', name='vault')
