@@ -89,10 +89,11 @@ def beacon(config):
 
     latest_update_id = 0
     for update in updates:
+
         if update.message:
-          message = update.message
+            message = update.message
         else:
-          message = update.edited_message
+            message = update.edited_message
 
         if update.update_id > latest_update_id:
             latest_update_id = update.update_id
