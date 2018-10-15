@@ -66,9 +66,9 @@ def __virtual__():
 def ext_pillar(minion_id,
                pillar,  # pylint: disable=W0613
                url,
+               with_grains=False,
                username=None,
-               password=None,
-               with_grains=False):
+               password=None):
     '''
     Read pillar data from HTTP response.
 
