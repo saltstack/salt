@@ -252,6 +252,9 @@ def set_hostname(hostname=None, **kwargs):
     comment
         Provide a comment to the commit
 
+    dev_timeout : 30
+        The NETCONF RPC timeout (in seconds)
+
     confirm
       Provide time in minutes for commit confirmation. If this option is
       specified, the commit will be rolled back in the specified amount of time
@@ -278,8 +281,11 @@ def set_hostname(hostname=None, **kwargs):
     else:
         op.update(kwargs)
 
-    # Setting timeout parameter
-    op['timeout'] = op.get('dev_timeout', 30)
+    # Caching value to revert back
+    prev_timeout = conn.timeout
+    # If timeout is given
+    if 'dev_timeout' in op:
+        conn.timeout = op['dev_timeout']
 
     # Added to recent versions of JunOs
     # Use text format instead
@@ -315,6 +321,10 @@ def set_hostname(hostname=None, **kwargs):
         ret[
             'message'] = 'Successfully loaded host-name but pre-commit check failed.'
         conn.cu.rollback()
+
+    # Reverting timeout back to previous value
+    conn.timeout = prev_timeout
+
     return ret
 
 
@@ -636,7 +646,7 @@ def cli(command=None, **kwargs):
         op.update(kwargs)
 
     try:
-        result = conn.cli(command, format_, op, warning=False)
+        result = conn.cli(command, format_, warning=False)
     except Exception as exception:
         ret['message'] = 'Execution failed due to "{0}"'.format(exception)
         ret['out'] = False
