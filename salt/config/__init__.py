@@ -950,13 +950,16 @@ VALID_OPTS = {
     # Always generate minion id in lowercase.
     'minion_id_lowercase': bool,
 
+    # Remove either a single domain (foo.org), or all (True) from a generated minion id.
+    'minion_id_remove_domain': (six.string_types, bool),
+
     # If set, the master will sign all publications before they are sent out
     'sign_pub_messages': bool,
 
     # The size of key that should be generated when creating new keys
     'keysize': int,
 
-    # The transport system for this daemon. (i.e. zeromq, raet, etc)
+    # The transport system for this daemon. (i.e. zeromq, tcp, detect, etc)
     'transport': six.string_types,
 
     # The number of seconds to wait when the client is requesting information about running jobs
@@ -1006,31 +1009,8 @@ VALID_OPTS = {
     'ssh_config_file': six.string_types,
     'ssh_merge_pillar': bool,
 
-    # Enable ioflo verbose logging. Warning! Very verbose!
-    'ioflo_verbose': int,
-
-    'ioflo_period': float,
-
-    # Set ioflo to realtime. Useful only for testing/debugging to simulate many ioflo periods very
-    # quickly
-    'ioflo_realtime': bool,
-
-    # Location for ioflo logs
-    'ioflo_console_logdir': six.string_types,
-
-    # The port to bind to when bringing up a RAET daemon
-    'raet_port': int,
-    'raet_alt_port': int,
-    'raet_mutable': bool,
-    'raet_main': bool,
-    'raet_clear_remotes': bool,
-    'raet_clear_remote_masters': bool,
-    'raet_road_bufcnt': int,
-    'raet_lane_bufcnt': int,
     'cluster_mode': bool,
-    'cluster_masters': list,
     'sqlite_queue_dir': six.string_types,
-
     'queue_dirs': list,
 
     # Instructs the minion to ping its master(s) every n number of minutes. Used
@@ -1060,9 +1040,6 @@ VALID_OPTS = {
 
     # Can be set to override the python_shell=False default in the cmd module
     'cmd_safe': bool,
-
-    # Used strictly for performance testing in RAET.
-    'dummy_publisher': bool,
 
     # Used by salt-api for master requests timeout
     'rest_timeout': int,
@@ -1468,6 +1445,7 @@ DEFAULT_MINION_OPTS = {
     'grains_refresh_every': 0,
     'minion_id_caching': True,
     'minion_id_lowercase': False,
+    'minion_id_remove_domain': False,
     'keysize': 2048,
     'transport': 'zeromq',
     'auth_timeout': 5,
@@ -1476,22 +1454,7 @@ DEFAULT_MINION_OPTS = {
     'master_tops_first': False,
     'auth_safemode': False,
     'random_master': False,
-    'minion_floscript': os.path.join(FLO_DIR, 'minion.flo'),
-    'caller_floscript': os.path.join(FLO_DIR, 'caller.flo'),
-    'ioflo_verbose': 0,
-    'ioflo_period': 0.1,
-    'ioflo_realtime': True,
-    'ioflo_console_logdir': '',
-    'raet_port': 4510,
-    'raet_alt_port': 4511,
-    'raet_mutable': False,
-    'raet_main': False,
-    'raet_clear_remotes': True,
-    'raet_clear_remote_masters': True,
-    'raet_road_bufcnt': 2,
-    'raet_lane_bufcnt': 100,
     'cluster_mode': False,
-    'cluster_masters': [],
     'restart_on_error': False,
     'ping_interval': 0,
     'username': None,
@@ -1816,23 +1779,7 @@ DEFAULT_MASTER_OPTS = {
     'ssh_identities_only': False,
     'ssh_log_file': os.path.join(salt.syspaths.LOGS_DIR, 'ssh'),
     'ssh_config_file': os.path.join(salt.syspaths.HOME_DIR, '.ssh', 'config'),
-    'master_floscript': os.path.join(FLO_DIR, 'master.flo'),
-    'worker_floscript': os.path.join(FLO_DIR, 'worker.flo'),
-    'maintenance_floscript': os.path.join(FLO_DIR, 'maint.flo'),
-    'ioflo_verbose': 0,
-    'ioflo_period': 0.01,
-    'ioflo_realtime': True,
-    'ioflo_console_logdir': '',
-    'raet_port': 4506,
-    'raet_alt_port': 4511,
-    'raet_mutable': False,
-    'raet_main': True,
-    'raet_clear_remotes': False,
-    'raet_clear_remote_masters': True,
-    'raet_road_bufcnt': 2,
-    'raet_lane_bufcnt': 100,
     'cluster_mode': False,
-    'cluster_masters': [],
     'sqlite_queue_dir': os.path.join(salt.syspaths.CACHE_DIR, 'master', 'queues'),
     'queue_dirs': [],
     'cli_summary': False,
@@ -2110,16 +2057,6 @@ def _validate_opts(opts):
     # Convert list to comma-delimited string for 'return' config option
     if isinstance(opts.get('return'), list):
         opts['return'] = ','.join(opts['return'])
-
-    # RAET on Windows uses 'win32file.CreateMailslot()' for IPC. Due to this,
-    # sock_dirs must start with '\\.\mailslot\' and not contain any colons.
-    # We don't expect the user to know this, so we will fix up their path for
-    # them if it isn't compliant.
-    if (salt.utils.platform.is_windows() and opts.get('transport') == 'raet' and
-            'sock_dir' in opts and
-            not opts['sock_dir'].startswith('\\\\.\\mailslot\\')):
-        opts['sock_dir'] = (
-                '\\\\.\\mailslot\\' + opts['sock_dir'].replace(':', ''))
 
     for error in errors:
         log.warning(error)
@@ -3615,6 +3552,26 @@ def call_id_function(opts):
         sys.exit(salt.defaults.exitcodes.EX_GENERIC)
 
 
+def remove_domain_from_fqdn(opts, newid):
+    '''
+    Depending on the values of `minion_id_remove_domain`,
+    remove all domains or a single domain from a FQDN, effectivly generating a hostname.
+    '''
+    opt_domain = opts.get('minion_id_remove_domain')
+    if opt_domain is True:
+        if '.' in newid:
+            # Remove any domain
+            newid, xdomain = newid.split('.', 1)
+            log.debug('Removed any domain (%s) from minion id.', xdomain)
+    else:
+        # Must be string type
+        if newid.upper().endswith('.' + opt_domain.upper()):
+            # Remove single domain
+            newid = newid[:-len('.' + opt_domain)]
+            log.debug('Removed single domain %s from minion id.', opt_domain)
+    return newid
+
+
 def get_id(opts, cache_minion_id=False):
     '''
     Guess the id of the minion.
@@ -3666,6 +3623,11 @@ def get_id(opts, cache_minion_id=False):
     if opts.get('minion_id_lowercase'):
         newid = newid.lower()
         log.debug('Changed minion id %s to lowercase.', newid)
+
+    # Optionally remove one or many domains in a generated minion id
+    if opts.get('minion_id_remove_domain'):
+        newid = remove_domain_from_fqdn(opts, newid)
+
     if '__role' in opts and opts.get('__role') == 'minion':
         if opts.get('id_function'):
             log.debug(
@@ -3918,8 +3880,6 @@ def master_config(path, env_var='SALT_MASTER_CONFIG', defaults=None, exit_on_con
         opts['nodegroups'] = DEFAULT_MASTER_OPTS.get('nodegroups', {})
     if salt.utils.data.is_dictlist(opts['nodegroups']):
         opts['nodegroups'] = salt.utils.data.repack_dictlist(opts['nodegroups'])
-    if opts.get('transport') == 'raet' and 'aes' in opts:
-        opts.pop('aes')
     apply_sdb(opts)
     return opts
 

@@ -20,17 +20,16 @@ from salt.ext import six
 from salt.ext.six.moves.urllib.request import urlopen as _urlopen  # pylint: disable=no-name-in-module,import-error
 
 # Import salt libs
+import salt.client
+import salt.client.ssh
 import salt.key
 import salt.utils.compat
 import salt.utils.files
 import salt.utils.minions
 import salt.utils.path
-import salt.utils.raetevent
-import salt.client
-import salt.client.ssh
+import salt.utils.versions
 import salt.wheel
 import salt.version
-from salt.utils.event import tagify
 from salt.exceptions import SaltClientError, SaltSystemExit
 FINGERPRINT_REGEX = re.compile(r'^([a-f0-9]{2}:){15}([a-f0-9]{2})$')
 
@@ -213,7 +212,7 @@ def _show_ip_migration(show_ip, show_ipv4):
     return show_ip
 
 
-def list_state(subset=None, show_ip=False, show_ipv4=None, state=None):
+def list_state(subset=None, show_ip=False, show_ipv4=None):
     '''
     .. versionadded:: 2015.8.0
     .. versionchanged:: Fluorine
@@ -229,10 +228,6 @@ def list_state(subset=None, show_ip=False, show_ipv4=None, state=None):
     show_ip : False
         Also show the IP address each minion is connecting from.
 
-    state : 'available'
-        Show minions being in specific state that is one of 'available', 'joined',
-        'allowed', 'alived' or 'reaped'.
-
     CLI Example:
 
     .. code-block:: bash
@@ -240,30 +235,18 @@ def list_state(subset=None, show_ip=False, show_ipv4=None, state=None):
         salt-run manage.list_state
     '''
     show_ip = _show_ip_migration(show_ip, show_ipv4)
-    conf_file = __opts__['conf_file']
-    opts = salt.config.client_config(conf_file)
-    if opts['transport'] == 'raet':
-        event = salt.utils.raetevent.PresenceEvent(__opts__, __opts__['sock_dir'], state=state)
-        data = event.get_event(wait=60, tag=tagify('present', 'presence'))
-        key = 'present' if state is None else state
-        if not data or key not in data:
-            minions = []
-        else:
-            minions = data[key]
-            if subset:
-                minions = [m for m in minions if m in subset]
-    else:
-        # Always return 'present' for 0MQ for now
-        # TODO: implement other states support for 0MQ
-        ckminions = salt.utils.minions.CkMinions(__opts__)
-        minions = ckminions.connected_ids(show_ip=show_ip, subset=subset)
+
+    # Always return 'present' for 0MQ for now
+    # TODO: implement other states support for 0MQ
+    ckminions = salt.utils.minions.CkMinions(__opts__)
+    minions = ckminions.connected_ids(show_ip=show_ip, subset=subset)
 
     connected = dict(minions) if show_ip else sorted(minions)
 
     return connected
 
 
-def list_not_state(subset=None, show_ip=False, show_ipv4=None, state=None):
+def list_not_state(subset=None, show_ip=False, show_ipv4=None):
     '''
     .. versionadded:: 2015.8.0
     .. versionchanged:: Fluorine
@@ -279,10 +262,6 @@ def list_not_state(subset=None, show_ip=False, show_ipv4=None, state=None):
     show_ip : False
         Also show the IP address each minion is connecting from.
 
-    state : 'available'
-        Show minions being in specific state that is one of 'available', 'joined',
-        'allowed', 'alived' or 'reaped'.
-
     CLI Example:
 
     .. code-block:: bash
@@ -290,20 +269,13 @@ def list_not_state(subset=None, show_ip=False, show_ipv4=None, state=None):
         salt-run manage.list_not_state
     '''
     show_ip = _show_ip_migration(show_ip, show_ipv4)
-    connected = list_state(subset=None, show_ip=show_ip, state=state)
+    connected = list_state(subset=None, show_ip=show_ip)
 
     key = salt.key.get_key(__opts__)
     keys = key.list_keys()
 
-    # TODO: Need better way to handle key/node name difference for raet
-    # In raet case node name is '<name>_<kind>' meanwhile the key name
-    # is just '<name>'. So append '_minion' to the name to match.
-    appen_kind = isinstance(key, salt.key.RaetKey)
-
     not_connected = []
     for minion in keys[key.ACC]:
-        if appen_kind:
-            minion += '_minion'
         if minion not in connected and (subset is None or minion in subset):
             not_connected.append(minion)
 
@@ -384,7 +356,7 @@ def joined(subset=None, show_ip=False, show_ipv4=None):
         salt-run manage.joined
     '''
     show_ip = _show_ip_migration(show_ip, show_ipv4)
-    return list_state(subset=subset, show_ip=show_ip, state='joined')
+    return list_state(subset=subset, show_ip=show_ip)
 
 
 def not_joined(subset=None, show_ip=False, show_ipv4=None):
@@ -410,7 +382,7 @@ def not_joined(subset=None, show_ip=False, show_ipv4=None):
         salt-run manage.not_joined
     '''
     show_ip = _show_ip_migration(show_ip, show_ipv4)
-    return list_not_state(subset=subset, show_ip=show_ip, state='joined')
+    return list_not_state(subset=subset, show_ip=show_ip)
 
 
 def allowed(subset=None, show_ip=False, show_ipv4=None):
@@ -436,7 +408,7 @@ def allowed(subset=None, show_ip=False, show_ipv4=None):
         salt-run manage.allowed
     '''
     show_ip = _show_ip_migration(show_ip, show_ipv4)
-    return list_state(subset=subset, show_ip=show_ip, state='allowed')
+    return list_state(subset=subset, show_ip=show_ip)
 
 
 def not_allowed(subset=None, show_ip=False, show_ipv4=None):
@@ -462,7 +434,7 @@ def not_allowed(subset=None, show_ip=False, show_ipv4=None):
         salt-run manage.not_allowed
     '''
     show_ip = _show_ip_migration(show_ip, show_ipv4)
-    return list_not_state(subset=subset, show_ip=show_ip, state='allowed')
+    return list_not_state(subset=subset, show_ip=show_ip)
 
 
 def alived(subset=None, show_ip=False, show_ipv4=None):
@@ -488,7 +460,7 @@ def alived(subset=None, show_ip=False, show_ipv4=None):
         salt-run manage.alived
     '''
     show_ip = _show_ip_migration(show_ip, show_ipv4)
-    return list_state(subset=subset, show_ip=show_ip, state='alived')
+    return list_state(subset=subset, show_ip=show_ip)
 
 
 def not_alived(subset=None, show_ip=False, show_ipv4=None):
@@ -514,7 +486,7 @@ def not_alived(subset=None, show_ip=False, show_ipv4=None):
         salt-run manage.not_alived
     '''
     show_ip = _show_ip_migration(show_ip, show_ipv4)
-    return list_not_state(subset=subset, show_ip=show_ip, state='alived')
+    return list_not_state(subset=subset, show_ip=show_ip)
 
 
 def reaped(subset=None, show_ip=False, show_ipv4=None):
@@ -540,7 +512,7 @@ def reaped(subset=None, show_ip=False, show_ipv4=None):
         salt-run manage.reaped
     '''
     show_ip = _show_ip_migration(show_ip, show_ipv4)
-    return list_state(subset=subset, show_ip=show_ip, state='reaped')
+    return list_state(subset=subset, show_ip=show_ip)
 
 
 def not_reaped(subset=None, show_ip=False, show_ipv4=None):
@@ -566,69 +538,7 @@ def not_reaped(subset=None, show_ip=False, show_ipv4=None):
         salt-run manage.not_reaped
     '''
     show_ip = _show_ip_migration(show_ip, show_ipv4)
-    return list_not_state(subset=subset, show_ip=show_ip, state='reaped')
-
-
-def get_stats(estate=None, stack='road'):
-    '''
-    Print the stack stats
-
-    estate : None
-        The name of the target estate. Master stats would be requested by default
-
-    stack : 'road'
-        Show stats on either road or lane stack
-        Allowed values are 'road' or 'lane'.
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt-run manage.get_stats [estate=alpha_minion] [stack=lane]
-    '''
-    conf_file = __opts__['conf_file']
-    opts = salt.config.client_config(conf_file)
-    if opts['transport'] == 'raet':
-        tag = tagify(stack, 'stats')
-        event = salt.utils.raetevent.StatsEvent(__opts__, __opts__['sock_dir'], tag=tag, estate=estate)
-        stats = event.get_event(wait=60, tag=tag)
-    else:
-        # TODO: implement 0MQ analog
-        stats = 'Not implemented'
-
-    return stats
-
-
-def road_stats(estate=None):
-    '''
-    Print the estate road stack stats
-
-    estate : None
-        The name of the target estate. Master stats would be requested by default
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt-run manage.road_stats [estate=alpha_minion]
-    '''
-    return get_stats(estate=estate, stack='road')
-
-
-def lane_stats(estate=None):
-    '''
-    Print the estate manor lane stack stats
-
-    estate : None
-        The name of the target estate. Master stats would be requested by default
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt-run manage.lane_stats [estate=alpha_minion]
-    '''
-    return get_stats(estate=estate, stack='lane')
+    return list_not_state(subset=subset, show_ip=show_ip)
 
 
 def safe_accept(target, tgt_type='glob'):
