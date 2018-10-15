@@ -101,13 +101,13 @@ from salt.utils.gitfs import (
 # Check for requisite components
 try:
     HAS_GITPYTHON = GITPYTHON_VERSION >= GITPYTHON_MINVER
-except ImportError:
+except Exception:
     HAS_GITPYTHON = False
 
 try:
     HAS_PYGIT2 = PYGIT2_VERSION >= PYGIT2_MINVER \
         and LIBGIT2_VERSION >= LIBGIT2_MINVER
-except AttributeError:
+except Exception:
     HAS_PYGIT2 = False
 
 HAS_SSHD = bool(salt.utils.path.which('sshd'))
