@@ -118,14 +118,14 @@ def present(name,
             return ret
 
     # already exists, make sure it's got the right config
-    if tblspaces[name]['Location'] != directory and not __opts__['test']:
+    if name in tblspaces and tblspaces[name]['Location'] != directory and not __opts__['test']:
         ret['comment'] = """Tablespace {0} is not at the right location. This is
             unfixable without dropping and recreating the tablespace.""".format(
                 name)
         ret['result'] = False
         return ret
 
-    if owner and not tblspaces[name]['Owner'] == owner:
+    if owner and name in tblspaces and not tblspaces[name]['Owner'] == owner:
         if __opts__['test']:
             ret['result'] = None
             ret['comment'] = 'Tablespace {0} owner to be altered'.format(name)
