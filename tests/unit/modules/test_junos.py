@@ -7,7 +7,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Import test libs
 from tests.support.mixins import LoaderModuleMockMixin, XMLEqualityMixin
-from tests.support.mock import patch, mock_open
+from tests.support.mock import patch, mock_open, ANY
 from tests.support.unit import skipIf, TestCase
 
 # Import 3rd-party libs
@@ -20,7 +20,7 @@ try:
     from jnpr.junos.utils.config import Config
     from jnpr.junos.utils.sw import SW
     from jnpr.junos.device import Device
-    from jnpr.junos.device import Device
+    from jnpr.junos.exception import RpcTimeoutError
     import jxmlease  # pylint: disable=unused-import
     HAS_JUNOS = True
 except ImportError:
@@ -129,6 +129,13 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
                                   'type': 'I'},
                  'virtual': True}
         return facts
+
+    def raise_timeout_exception(self):
+        dev = Device(host='1.1.1.1',
+                     user='test',
+                     password='test123')
+        ex = RpcTimeoutError(dev, "TestRPC", 30)
+        return ex
 
     def test_facts_refresh(self):
         with patch('salt.modules.saltutil.sync_grains') as mock_sync_grains:
@@ -366,6 +373,16 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret['out'] = False
             self.assertEqual(junos.set_hostname('test-name'), ret)
 
+    def test_set_hostname_raise_timeout_exception_for_commit(self):
+        with patch('jnpr.junos.utils.config.Config.commit') as mock_commit:
+            mock_commit.side_effect = self.raise_timeout_exception()
+            ret = dict()
+            ret['message'] = 'Successfully loaded host-name but commit failed with ' \
+                             '"RpcTimeoutError(host: 1.1.1.1, cmd: TestRPC, timeout: 30)"'
+            ret['out'] = False
+            self.assertEqual(junos.set_hostname('test-name', dev_timeout=30), ret)
+            mock_commit.assert_called_with(dev_timeout=30)
+
     def test_set_hostname_fail_commit_check(self):
         with patch('jnpr.junos.utils.config.Config.commit_check') as mock_commit_check, \
                 patch('salt.modules.junos.rollback') as mock_rollback:
@@ -403,6 +420,19 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret['message'] = \
                 'Commit check succeeded but actual commit failed with "Test exception"'
             self.assertEqual(junos.commit(), ret)
+
+    def test_commit_raise_commit_timeout_exception(self):
+        with patch('jnpr.junos.utils.config.Config.commit_check') as mock_commit_check, \
+                patch('jnpr.junos.utils.config.Config.commit') as mock_commit:
+            mock_commit_check.return_value = True
+            mock_commit.side_effect = self.raise_timeout_exception()
+            ret = dict()
+            ret['out'] = False
+            ret['message'] = \
+                'Commit check succeeded but actual commit failed with' \
+                ' "RpcTimeoutError(host: 1.1.1.1, cmd: TestRPC, timeout: 30)"'
+            self.assertEqual(junos.commit(dev_timeout=30), ret)
+            mock_commit.assert_called_with(detail=False, dev_timeout=30)
 
     def test_commit_with_single_argument(self):
         with patch('jnpr.junos.utils.config.Config.commit_check') as mock_commit_check, \
@@ -695,6 +725,15 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret['message'] = 'Execution failed due to "Test exception"'
             ret['out'] = False
             self.assertEqual(junos.ping('1.1.1.1'), ret)
+
+    def test_ping_timeout_exception(self):
+        with patch('jnpr.junos.device.Device.execute') as mock_execute:
+            mock_execute.side_effect = self.raise_timeout_exception()
+            ret = dict()
+            ret['message'] = 'Execution failed due to "RpcTimeoutError(host: 1.1.1.1, cmd: TestRPC, timeout: 30)"'
+            ret['out'] = False
+            self.assertEqual(junos.ping('1.1.1.1', dev_timeout=30), ret)
+            mock_execute.assert_called_with(ANY, dev_timeout=30)
 
     def test_cli_without_args(self):
         ret = dict()
@@ -1213,6 +1252,28 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret['out'] = False
             self.assertEqual(junos.install_config('actual/path/config'), ret)
 
+    def test_install_config_commit_timeout_exception(self):
+        with patch('jnpr.junos.utils.config.Config.commit') as mock_commit, \
+                patch('jnpr.junos.utils.config.Config.commit_check') as mock_commit_check, \
+                patch('jnpr.junos.utils.config.Config.diff') as mock_diff, \
+                patch('jnpr.junos.utils.config.Config.load') as mock_load, \
+                patch('salt.utils.files.safe_rm') as mock_safe_rm, \
+                patch('salt.utils.files.mkstemp') as mock_mkstemp, \
+                patch('os.path.isfile') as mock_isfile, \
+                patch('os.path.getsize') as mock_getsize:
+            mock_isfile.return_value = True
+            mock_getsize.return_value = 10
+            mock_mkstemp.return_value = 'test/path/config'
+            mock_diff.return_value = 'diff'
+            mock_commit_check.return_value = True
+            mock_commit.side_effect = self.raise_timeout_exception()
+            ret = dict()
+            ret['message'] = \
+                'Commit check successful but commit failed with ' \
+                '"RpcTimeoutError(host: 1.1.1.1, cmd: TestRPC, timeout: 30)"'
+            ret['out'] = False
+            self.assertEqual(junos.install_config('actual/path/config', dev_timeout=30), ret)
+
     def test_zeroize(self):
         with patch('jnpr.junos.device.Device.cli') as mock_cli:
             result = junos.zeroize()
@@ -1301,6 +1362,20 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret['message'] = 'Installation failed due to: "Test exception"'
             ret['out'] = False
             self.assertEqual(junos.install_os('path'), ret)
+
+    def test_install_os_pyez_install_timeout_exception(self):
+        with patch('jnpr.junos.utils.sw.SW.install') as mock_install, \
+                patch('salt.utils.files.safe_rm') as mock_safe_rm, \
+                patch('salt.utils.files.mkstemp') as mock_mkstemp, \
+                patch('os.path.isfile') as mock_isfile, \
+                patch('os.path.getsize') as mock_getsize:
+            mock_getsize.return_value = 10
+            mock_isfile.return_value = True
+            mock_install.side_effect = self.raise_timeout_exception()
+            ret = dict()
+            ret['message'] = 'Installation failed due to: "RpcTimeoutError(host: 1.1.1.1, cmd: TestRPC, timeout: 30)"'
+            ret['out'] = False
+            self.assertEqual(junos.install_os('path', dev_timeout=30), ret)
 
     def test_install_os_with_reboot_raises_exception(self):
         with patch('jnpr.junos.utils.sw.SW.install') as mock_install, \
@@ -1496,3 +1571,12 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
                 junos.rpc('get-chassis-inventory', '/path/to/file')
                 writes = m_open.write_calls()
                 assert writes == ['xml rpc reply'], writes
+
+    def test_rpc_get_interface_information_timeout_exception(self):
+        with patch('jnpr.junos.device.Device.execute') as mock_execute:
+            mock_execute.side_effect = self.raise_timeout_exception()
+            ret = dict()
+            ret['message'] = 'RPC execution failed due to "RpcTimeoutError(host: 1.1.1.1, cmd: TestRPC, timeout: 30)"'
+            ret['out'] = False
+            self.assertEqual(junos.rpc('get_interface_information', dev_timout='30'), ret)
+            mock_execute.assert_called_with(ANY, dev_timeout=30)
