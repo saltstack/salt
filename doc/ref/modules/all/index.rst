@@ -25,6 +25,7 @@ execution modules
     aix_group
     aliases
     alternatives
+    ansiblegate
     apache
     apcups
     apf
