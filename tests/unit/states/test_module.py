@@ -324,3 +324,25 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
             self.assertIn(comment, ret['comment'])
             self.assertIn('world', ret['comment'])
             self.assertIn('hello', ret['comment'])
+
+    def test_call_function_named_args(self):
+        '''
+        Test _call_function routine when params are named. Their position ordering should not matter.
+
+        :return:
+        '''
+        def testfunc(a, b, c, *args, **kwargs):
+            '''
+            Test func for signature check.
+            :param a:
+            :param b:
+            :param c:
+            :param args:
+            :param kwargs:
+            :return:
+            '''
+            return a, b, c, args, kwargs
+
+        with patch.dict(module.__salt__, {'testfunc': testfunc}, clear=True):
+            assert module._call_function('testfunc', func_args=[{'a': 1}, {'b': 2}, {'c': 3}]) == (1, 2, 3, (), {})
+            assert module._call_function('testfunc', func_args=[{'c': 3}, {'a': 1}, {'b': 2}]) == (1, 2, 3, (), {})
