@@ -26,11 +26,7 @@ from salt.exceptions import CommandExecutionError
 # Import 3rd-party libs
 from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,no-name-in-module,redefined-builtin
-if six.PY3:
-    import ipaddress
-else:
-    import salt.ext.ipaddress as ipaddress
-
+from salt._compat import ipaddress
 
 log = logging.getLogger(__name__)
 

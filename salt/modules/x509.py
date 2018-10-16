@@ -26,6 +26,7 @@ import sys
 import salt.utils.files
 import salt.utils.path
 import salt.utils.stringutils
+import salt.utils.platform
 import salt.exceptions
 from salt.ext import six
 from salt.utils.odict import OrderedDict
@@ -308,12 +309,24 @@ def _dec2hex(decval):
     return _pretty_hex('{0:X}'.format(decval))
 
 
+def _isfile(path):
+    '''
+    A wrapper around os.path.isfile that ignores ValueError exceptions which
+    can be raised if the input to isfile is too long.
+    '''
+    try:
+        return os.path.isfile(path)
+    except ValueError:
+        pass
+    return False
+
+
 def _text_or_file(input_):
     '''
     Determines if input is a path to a file, or a string with the
     content to be parsed.
     '''
-    if os.path.isfile(input_):
+    if _isfile(input_):
         with salt.utils.files.fopen(input_) as fp_:
             out = salt.utils.stringutils.to_str(fp_.read())
     else:
@@ -1426,12 +1439,18 @@ def create_certificate(
         kwargs['serial_number'] = _dec2hex(
             random.getrandbits(kwargs['serial_bits']))
     serial_number = int(kwargs['serial_number'].replace(':', ''), 16)
-    # With Python3 we occasionally end up with an INT
-    # that is too large because Python3 no longer supports long INTs.
-    # If we're larger than the maxsize value
-    # then we adjust the serial number.
-    if serial_number > sys.maxsize:
-        serial_number = serial_number - sys.maxsize
+    # With Python3 we occasionally end up with an INT that is greater than a C
+    # long max_value. This causes an overflow error due to a bug in M2Crypto.
+    # See issue: https://gitlab.com/m2crypto/m2crypto/issues/232
+    # Remove this after M2Crypto fixes the bug.
+    if six.PY3:
+        if salt.utils.platform.is_windows():
+            INT_MAX = 2147483647
+            if serial_number >= INT_MAX:
+                serial_number -= int(serial_number / INT_MAX) * INT_MAX
+        else:
+            if serial_number >= sys.maxsize:
+                serial_number -= int(serial_number / sys.maxsize) * sys.maxsize
     cert.set_serial_number(serial_number)
 
     # Set validity dates

@@ -102,7 +102,7 @@ class UseraddModuleTestLinux(ModuleCase):
             uid_info = self.run_function('user.info', [name])
             self.assertIn(primary_group, uid_info['groups'])
 
-        except:
+        except Exception:
             self.run_function('user.delete', [name])
             raise
 

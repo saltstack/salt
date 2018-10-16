@@ -48,6 +48,7 @@ except ImportError:
 import salt.utils.args
 import salt.utils.atomicfile
 import salt.utils.data
+import salt.utils.dictupdate
 import salt.utils.filebuffer
 import salt.utils.files
 import salt.utils.find
@@ -2404,7 +2405,7 @@ def replace(path,
             except OSError:
                 os.remove(symlink_backup)
                 os.symlink(target_backup, symlink_backup)
-            except:
+            except Exception:
                 raise CommandExecutionError(
                     "Unable create backup symlink '{0}'. "
                     "Target was '{1}'. "
@@ -4006,7 +4007,7 @@ def apply_template_on_contents(
     if template in salt.utils.templates.TEMPLATE_REGISTRY:
         context_dict = defaults if defaults else {}
         if context:
-            context_dict.update(context)
+            context_dict = salt.utils.dictupdate.merge(context_dict, context)
         # Apply templating
         contents = salt.utils.templates.TEMPLATE_REGISTRY[template](
             contents,
@@ -4209,7 +4210,7 @@ def get_managed(
             if template in salt.utils.templates.TEMPLATE_REGISTRY:
                 context_dict = defaults if defaults else {}
                 if context:
-                    context_dict.update(context)
+                    context_dict = salt.utils.dictupdate.merge(context_dict, context)
                 data = salt.utils.templates.TEMPLATE_REGISTRY[template](
                     sfn,
                     name=name,
@@ -4510,7 +4511,7 @@ def check_perms(name, ret, user, group, mode, attrs=None, follow_symlinks=False)
         try:
             lattrs = lsattr(name)
         except SaltInvocationError:
-            lsattrs = None
+            lattrs = None
         if lattrs is not None:
             # List attributes on file
             perms['lattrs'] = ''.join(lattrs.get(name, ''))
@@ -5508,11 +5509,11 @@ def manage_file(name,
             # Write the static contents to a temporary file
             tmp = salt.utils.files.mkstemp(prefix=salt.utils.files.TEMPFILE_PREFIX,
                                            text=True)
-            if salt.utils.platform.is_windows():
-                contents = os.linesep.join(
-                    _splitlines_preserving_trailing_newline(contents))
             with salt.utils.files.fopen(tmp, 'wb') as tmp_:
                 if encoding:
+                    if salt.utils.platform.is_windows():
+                        contents = os.linesep.join(
+                            _splitlines_preserving_trailing_newline(contents))
                     log.debug('File will be encoded with %s', encoding)
                     tmp_.write(contents.encode(encoding=encoding, errors=encoding_errors))
                 else:
@@ -6332,7 +6333,7 @@ def open_files(by_pid=False):
 
         #try:
         #    fd_.append(os.path.realpath('{0}/task/{1}exe'.format(ppath, tid)))
-        #except:
+        #except Exception:
         #    pass
 
         for fpath in os.listdir('{0}/fd'.format(ppath)):
