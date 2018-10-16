@@ -192,12 +192,12 @@ class TestSaltCacheLoader(TestCase):
         issue-13889
         '''
         fc, jinja = self.get_test_saltenv()
-        tmpl = jinja.get_template('relative/rhello')
+        tmpl = jinja.get_template(os.path.join('relative', 'rhello'))
         result = tmpl.render()
         self.assertEqual(result, 'Hey world !a b !')
         assert len(fc.requests) == 3
-        self.assertEqual(fc.requests[0]['path'], 'salt://relative/rhello')
-        self.assertEqual(fc.requests[1]['path'], 'salt://relative/rmacro')
+        self.assertEqual(fc.requests[0]['path'], os.path.join('salt://relative', 'rhello'))
+        self.assertEqual(fc.requests[1]['path'], os.path.join('salt://relative', 'rmacro'))
         self.assertEqual(fc.requests[2]['path'], 'salt://macro')
         # This must fail when rendered: attempts to import from outside file root
         template = jinja.get_template('relative/rescape')
@@ -386,7 +386,7 @@ class TestGetTemplate(TestCase):
             self.assertEqual(fc.requests[0]['path'], 'salt://macro')
 
             filename = os.path.join(self.template_dir, 'non_ascii')
-            with salt.utils.files.fopen(filename) as fp_:
+            with salt.utils.files.fopen(filename, 'rb') as fp_:
                 out = render_jinja_tmpl(
                     salt.utils.stringutils.to_unicode(fp_.read(), 'utf-8'),
                     dict(opts={'cachedir': self.tempdir, 'file_client': 'remote',
@@ -453,7 +453,7 @@ class TestGetTemplate(TestCase):
             saltenv='test',
             salt=self.local_salt
         )
-        with salt.utils.files.fopen(out['data']) as fp:
+        with salt.utils.files.fopen(out['data'], 'rb') as fp:
             result = salt.utils.stringutils.to_unicode(fp.read(), 'utf-8')
             self.assertEqual(salt.utils.stringutils.to_unicode('Assunção' + os.linesep), result)
 
@@ -984,6 +984,10 @@ class TestCustomExtensions(TestCase):
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
         self.assertEqual(rendered, 'False')
 
+        rendered = render_jinja_tmpl("{{ 'fe80::20d:b9ff:fe01:ea8%eth0' | is_ipv6 }}",
+                                     dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
+        self.assertEqual(rendered, 'True')
+
         rendered = render_jinja_tmpl("{{ 'FE80::' | is_ipv6 }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
         self.assertEqual(rendered, 'True')
@@ -996,6 +1000,10 @@ class TestCustomExtensions(TestCase):
         '''
         Test the `ipaddr` Jinja filter.
         '''
+        rendered = render_jinja_tmpl("{{ '::' | ipaddr }}",
+                                     dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
+        self.assertEqual(rendered, '::')
+
         rendered = render_jinja_tmpl("{{ '192.168.0.1' | ipaddr }}",
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
         self.assertEqual(rendered, '192.168.0.1')

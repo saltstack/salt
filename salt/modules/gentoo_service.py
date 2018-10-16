@@ -31,7 +31,7 @@ def __virtual__():
     '''
     Only work on systems which default to OpenRC
     '''
-    if __grains__['os'] == 'Gentoo' and not salt.utils.systemd.booted(__context__):
+    if __grains__['os_family'] == 'Gentoo' and not salt.utils.systemd.booted(__context__):
         return __virtualname__
     if __grains__['os'] == 'Alpine':
         return __virtualname__

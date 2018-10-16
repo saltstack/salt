@@ -6,12 +6,13 @@ from __future__ import absolute_import
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
-from tests.support.helpers import destructiveTest
+from tests.support.helpers import destructiveTest, flaky
 
 # Import Salt Libs
 import salt.utils.platform
 
 
+@flaky
 @skipIf(not salt.utils.platform.is_windows(), 'Tests for only Windows')
 class NTPTest(ModuleCase):
     '''

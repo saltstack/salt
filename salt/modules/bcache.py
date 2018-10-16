@@ -75,7 +75,7 @@ def uuid(dev=None):
         else:
             # basename of the /sys/block/{dev}/bcache/cache symlink target
             return os.path.basename(_bcsys(dev, 'cache'))
-    except:  # pylint: disable=bare-except
+    except Exception:
         return False
 
 
@@ -492,7 +492,7 @@ def device(dev, stats=False, config=False, internals=False, superblock=False):
 
         try:
             result['dev'] = os.path.basename(_bcsys(dev, 'dev'))
-        except:  # pylint: disable=bare-except
+        except Exception:
             pass
         result['bdev'] = _bdev(dev)
 
@@ -604,10 +604,10 @@ def super_(dev):
 
         try:
             rval = int(rval)
-        except:  # pylint: disable=bare-except
+        except Exception:
             try:
                 rval = float(rval)
-            except:  # pylint: disable=bare-except
+            except Exception:
                 if rval == 'yes':
                     rval = True
                 elif rval == 'no':
@@ -800,10 +800,10 @@ def _sysfs_parse(path, base_attr=None, stats=False, config=False, internals=Fals
                 val = val.strip()
                 try:
                     val = int(val)
-                except:  # pylint: disable=bare-except
+                except Exception:
                     try:
                         val = float(val)
-                    except:  # pylint: disable=bare-except
+                    except Exception:
                         pass
                 listres[key.strip()] = val
             result[strlist] = listres
@@ -846,7 +846,7 @@ def _size_map(size):
                 size = 1024**2 * float(re.sub(r'[Mm]', '', size))
             size = int(size)
         return size
-    except:  # pylint: disable=bare-except
+    except Exception:
         return None
 
 
