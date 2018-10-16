@@ -88,6 +88,9 @@ def syncdb(settings_module,
     minion the ``migrate`` option can be passed as ``True`` calling the
     migrations to run after the syncdb completes
 
+    NOTE: The syncdb command was deprecated in Django 1.7 and removed in Django 1.9.
+    For Django versions 1.9 or higher use the `migrate` command instead.
+
     CLI Example:
 
     .. code-block:: bash
@@ -105,6 +108,51 @@ def syncdb(settings_module,
 
     return command(settings_module,
                   'syncdb',
+                   bin_env,
+                   pythonpath,
+                   env,
+                   runas,
+                   *args, **kwargs)
+
+
+def migrate(settings_module,
+           app_label=None,
+           migration_name=None,
+           bin_env=None,
+           database=None,
+           pythonpath=None,
+           env=None,
+           noinput=True,
+           runas=None):
+    '''
+    Run migrate
+
+    Execute the Django-Admin migrate command (requires Django 1.7 or higher).
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' django.migrate <settings_module>
+        salt '*' django.migrate <settings_module> <app_label>
+        salt '*' django.migrate <settings_module> <app_label> <migration_name>
+    '''
+    args = []
+    kwargs = {}
+    if database:
+        kwargs['database'] = database
+    if noinput:
+        args.append('noinput')
+
+    if app_label and migration_name:
+        cmd = "migrate {0} {1}".format(app_label, migration_name)
+    elif app_label:
+        cmd = "migrate {0}".format(app_label)
+    else:
+        cmd = 'migrate'
+
+    return command(settings_module,
+                   cmd,
                    bin_env,
                    pythonpath,
                    env,
