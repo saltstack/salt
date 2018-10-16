@@ -331,23 +331,13 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
 
         :return:
         '''
-        def testfunc(a, b, c, *args, **kwargs):
-            '''
-            Test func for signature check.
-            '''
-            return a, b, c, args, kwargs
-
-        with patch.dict(module.__salt__, {'testfunc': testfunc}, clear=True):
+        with patch.dict(module.__salt__,
+                        {'testfunc': lambda a, b, c, *args, **kwargs: (a, b, c, args, kwargs)}, clear=True):
             assert module._call_function('testfunc', func_args=[{'a': 1}, {'b': 2}, {'c': 3}]) == (1, 2, 3, (), {})
             assert module._call_function('testfunc', func_args=[{'c': 3}, {'a': 1}, {'b': 2}]) == (1, 2, 3, (), {})
 
-        def testfunc_b(b, c, a, *args, **kwargs):
-            '''
-            Test func for signature check.
-            '''
-            return a, b, c, args, kwargs
-
-        with patch.dict(module.__salt__, {'testfunc': testfunc_b}, clear=True):
+        with patch.dict(module.__salt__,
+                        {'testfunc': lambda c, a, b, *args, **kwargs: (a, b, c, args, kwargs)}, clear=True):
             assert module._call_function('testfunc', func_args=[{'a': 1}, {'b': 2}, {'c': 3}]) == (1, 2, 3, (), {})
             assert module._call_function('testfunc', func_args=[{'c': 3}, {'a': 1}, {'b': 2}]) == (1, 2, 3, (), {})
 
@@ -357,12 +347,7 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
 
         :return:
         '''
-        def testfunc(a, b, c, *args, **kwargs):
-            '''
-            Test func for signature check.
-            '''
-            return a, b, c, args, kwargs
-
-        with patch.dict(module.__salt__, {'testfunc': testfunc}, clear=True):
+        with patch.dict(module.__salt__,
+                        {'testfunc': lambda a, b, c, *args, **kwargs: (a, b, c, args, kwargs)}, clear=True):
             assert module._call_function('testfunc', func_args=[1, 2, 3]) == (1, 2, 3, (), {})
             assert module._call_function('testfunc', func_args=[3, 1, 2]) == (3, 1, 2, (), {})
