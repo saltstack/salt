@@ -161,7 +161,7 @@ def update():
     old_mtime_map = {}
     # if you have an old map, load that
     if os.path.exists(mtime_map_path):
-        with salt.utils.files.fopen(mtime_map_path, 'r') as fp_:
+        with salt.utils.files.fopen(mtime_map_path, 'rb') as fp_:
             for line in fp_:
                 line = salt.utils.stringutils.to_unicode(line)
                 try:
@@ -189,10 +189,10 @@ def update():
     mtime_map_path_dir = os.path.dirname(mtime_map_path)
     if not os.path.exists(mtime_map_path_dir):
         os.makedirs(mtime_map_path_dir)
-    with salt.utils.files.fopen(mtime_map_path, 'w') as fp_:
+    with salt.utils.files.fopen(mtime_map_path, 'wb') as fp_:
         for file_path, mtime in six.iteritems(new_mtime_map):
             fp_.write(
-                salt.utils.stringutils.to_str(
+                salt.utils.stringutils.to_bytes(
                     '{0}:{1}\n'.format(file_path, mtime)
                 )
             )
@@ -240,7 +240,7 @@ def file_hash(load, fnd):
     # if we have a cache, serve that if the mtime hasn't changed
     if os.path.exists(cache_path):
         try:
-            with salt.utils.files.fopen(cache_path, 'r') as fp_:
+            with salt.utils.files.fopen(cache_path, 'rb') as fp_:
                 try:
                     hsum, mtime = salt.utils.stringutils.to_unicode(fp_.read()).split(':')
                 except ValueError:

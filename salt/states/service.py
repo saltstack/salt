@@ -3,10 +3,10 @@
 Starting or restarting of services and daemons
 ==============================================
 
-Services are defined as system daemons typically started with system init or
-rc scripts. The service state uses whichever service module that is loaded on
-the minion with the virtualname of ``service``. Services can be defined as
-running or dead.
+Services are defined as system daemons and are typically launched using system
+init or rc scripts. This service state uses whichever service module is loaded
+on the minion with the virtualname of ``service``. Services can be defined as
+either running or dead.
 
 If you need to know if your init system is supported, see the list of supported
 :mod:`service modules <salt.modules.service.py>` for your desired init system
@@ -30,7 +30,7 @@ section of Salt's module documentation to work around possible errors.
     httpd:
       service.running: []
 
-The service can also be set to be started at runtime via the enable option:
+The service can also be set to start at runtime via the enable option:
 
 .. code-block:: yaml
 
@@ -39,8 +39,8 @@ The service can also be set to be started at runtime via the enable option:
         - enable: True
 
 By default if a service is triggered to refresh due to a watch statement the
-service is by default restarted. If the desired behavior is to reload the
-service, then set the reload value to True:
+service is restarted. If the desired behavior is to reload the service, then
+set the reload value to True:
 
 .. code-block:: yaml
 
@@ -832,6 +832,14 @@ def mod_watch(name,
               **kwargs):
     '''
     The service watcher, called to invoke the watch command.
+    When called, it will restart or reload the named service.
+
+    .. note::
+        This state exists to support special handling of the ``watch``
+        :ref:`requisite <requisites>`. It should not be called directly.
+
+        Parameters for this function should be set by the watching service.
+        (i.e. ``service.running``)
 
     name
         The name of the init or rc script used to manage the service
@@ -844,11 +852,13 @@ def mod_watch(name,
         The string to search for when looking for the service process with ps
 
     reload
-        Use reload instead of the default restart (exclusive option with full_restart,
-        defaults to reload if both are used)
+        When set, reload the service instead of restarting it.
+        (i.e. ``service nginx reload``)
 
     full_restart
-        Use service.full_restart instead of restart (exclusive option with reload)
+        Perform a full stop/start of a service by passing ``--full-restart``.
+        This option is ignored if ``reload`` is set and is supported by only a few
+        :py:func:`service modules <salt.modules.service>`.
 
     force
         Use service.force_reload instead of reload (needs reload to be set to True)

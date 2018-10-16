@@ -31,7 +31,7 @@ from datetime import datetime
 
 try:
     from shlex import quote as _cmd_quote  # pylint: disable=E0611
-except:  # pylint: disable=W0702
+except Exception:
     from pipes import quote as _cmd_quote
 
 # Import Salt libs

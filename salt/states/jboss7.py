@@ -283,6 +283,8 @@ def deployed(name, jboss_config, salt_source=None):
                 (optional) File on salt master (e.g. salt://application-web-0.39.war).  If absent, no files will be retrieved and the artifact in target_file will be used for the deployment.
             undeploy:
                 (optional) Regular expression to match against existing deployments.  When present, if there is a deployment that matches the regular expression, it will be undeployed before the new artifact is deployed.
+            undeploy_force:
+                (optional) If True, the artifact will be undeployed although it has not changed.
 
     Examples:
 
@@ -335,7 +337,7 @@ def deployed(name, jboss_config, salt_source=None):
     if not validate_success:
         return _error(ret, validate_comment)
 
-    resolved_source, get_artifact_comment = __get_artifact(salt_source)
+    resolved_source, get_artifact_comment, changed = __get_artifact(salt_source)
     log.debug('resolved_source=%s', resolved_source)
     log.debug('get_artifact_comment=%s', get_artifact_comment)
 
@@ -347,22 +349,40 @@ def deployed(name, jboss_config, salt_source=None):
     if not find_success:
         return _error(ret, find_comment)
 
+    require_deployment = True
+
     log.debug('deployment=%s', deployment)
     if deployment is not None:
-        __salt__['jboss7.undeploy'](jboss_config, deployment)
-        ret['changes']['undeployed'] = deployment
+        if 'undeploy_force' in salt_source:
+            if salt_source['undeploy_force']:
+                ret['changes']['undeployed'] = __undeploy(jboss_config, deployment)
+            else:
+                if changed:
+                    ret['changes']['undeployed'] = __undeploy(jboss_config, deployment)
+                else:
+                    require_deployment = False
+                    comment = __append_comment(new_comment='The artifact {} was already deployed'.format(deployment), current_comment=comment)
+        else:
+            ret['changes']['undeployed'] = __undeploy(jboss_config, deployment)
 
-    deploy_result = __salt__['jboss7.deploy'](jboss_config=jboss_config, source_file=resolved_source)
-    log.debug('deploy_result=%s', deploy_result)
-    if deploy_result['success']:
-        comment = __append_comment(new_comment='Deployment completed.', current_comment=comment)
-        ret['comment'] = comment
-        ret['changes']['deployed'] = resolved_source
-    else:
-        comment = __append_comment(new_comment='''Deployment failed\nreturn code={retcode}\nstdout='{stdout}'\nstderr='{stderr}'''.format(**deploy_result), current_comment=comment)
-        return _error(ret, comment)
+    if require_deployment:
+        deploy_result = __salt__['jboss7.deploy'](jboss_config=jboss_config, source_file=resolved_source)
+        log.debug('deploy_result=%s', str(deploy_result))
+        if deploy_result['success']:
+            comment = __append_comment(new_comment='Deployment completed.', current_comment=comment)
+            ret['changes']['deployed'] = resolved_source
+        else:
+            comment = __append_comment(new_comment='''Deployment failed\nreturn code={retcode}\nstdout='{stdout}'\nstderr='{stderr}'''.format(**deploy_result), current_comment=comment)
+            _error(ret, comment)
+
+    ret['comment'] = comment
 
     return ret
+
+
+def __undeploy(jboss_config, deployment):
+    __salt__['jboss7.undeploy'](jboss_config, deployment)
+    return deployment
 
 
 def __validate_arguments(jboss_config, salt_source):
@@ -397,6 +417,7 @@ def __find_deployment(jboss_config, salt_source=None):
 def __get_artifact(salt_source):
     resolved_source = None
     comment = None
+    changed = False
 
     if salt_source is None:
         log.debug('salt_source == None')
@@ -446,6 +467,9 @@ def __get_artifact(salt_source):
                 else:
                     comment = manage_result['comment']
 
+                if manage_result['changes']:
+                    changed = True
+
             except Exception as e:
                 log.debug(traceback.format_exc())
                 comment = 'Unable to manage file: {0}'.format(e)
@@ -454,7 +478,7 @@ def __get_artifact(salt_source):
             resolved_source = salt_source['target_file']
             comment = ''
 
-    return resolved_source, comment
+    return resolved_source, comment, changed
 
 
 def reloaded(name, jboss_config, timeout=60, interval=5):
