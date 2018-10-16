@@ -850,9 +850,8 @@ Default: ``zeromq``
 
 Changes the underlying transport layer. ZeroMQ is the recommended transport
 while additional transport layers are under development. Supported values are
-``zeromq``, ``raet`` (experimental), and ``tcp`` (experimental). This setting has
-a significant impact on performance and should not be changed unless you know
-what you are doing!
+``zeromq`` and ``tcp`` (experimental). This setting has a significant impact on
+performance and should not be changed unless you know what you are doing!
 
 .. code-block:: yaml
 
@@ -4598,7 +4597,7 @@ Default: ``3600``
 
 If and only if a master has set ``pillar_cache: True``, the cache TTL controls the amount
 of time, in seconds, before the cache is considered invalid by a master and a fresh
-pillar is recompiled and stored.
+pillar is recompiled and stored. A value of 0 will cause the cache to always be valid.
 
 .. conf_master:: pillar_cache_backend
 
