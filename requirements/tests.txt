@@ -31,7 +31,6 @@ strict_rfc3339
 rfc3987
 jinja2
 pyOpenSSL
-ioflo
 dnspython
 SaltTesting==2017.6.1
 junos-eznc
