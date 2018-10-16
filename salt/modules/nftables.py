@@ -61,7 +61,7 @@ def _conf(family='ip'):
         return '/etc/nftables'
     elif __grains__['os_family'] == 'Debian':
         return '/etc/nftables'
-    elif __grains__['os'] == 'Gentoo':
+    elif __grains__['os_family'] == 'Gentoo':
         return '/etc/nftables'
     else:
         return False

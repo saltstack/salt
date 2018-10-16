@@ -1,15 +1,12 @@
 # -*- coding: utf-8 -*-
 '''
-Execute a command and read the output as YAMLEX. The YAMLEX data is then
-directly overlaid onto the minion's Pillar data
+Execute a command and read the output as YAMLEX.
+
+The YAMLEX data is then directly overlaid onto the minion's Pillar data
 '''
 
-# Don't "fix" the above docstring to put it on two lines, as the sphinx
-# autosummary pulls only the first line for its description.
-
-from __future__ import absolute_import, print_function, unicode_literals
-
 # Import python libs
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import salt libs

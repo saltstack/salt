@@ -99,7 +99,7 @@ up in pillar after all merging was complete:
         - baz
 
 MakoStack configuration files
--------------------------------
+-----------------------------
 
 The config files that are referenced in the above ``ext_pillar`` configuration are mako templates,
 which must (eventually) render as a single, simple, flat ordered list of ``yaml`` files which will

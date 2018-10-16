@@ -181,7 +181,7 @@ def defaults(model,
     model
         The OpenConfig model to apply the defaults to.
 
-    defaults_
+    defaults
         The dictionary of defaults. This argument must equally be structured
         with respect to the OpenConfig standards.
 
@@ -346,7 +346,7 @@ def render_fields(dictionary,
     .. code-block:: jinja
 
         {%- set config={'mtu': 68, 'description': 'Interface description'} %}
-        {{ salt.napalm_formula.render_fields(config, 'mtu', 'description', quotes=True) %}
+        {{ salt.napalm_formula.render_fields(config, 'mtu', 'description', quotes=True) }}
 
     The Jinja example above would generate the following configuration:
 

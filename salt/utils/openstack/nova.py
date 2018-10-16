@@ -8,6 +8,8 @@ from __future__ import absolute_import, with_statement, unicode_literals, print_
 import inspect
 import logging
 import time
+import re
+import json
 
 # Import third party libs
 from salt.ext import six
@@ -18,7 +20,6 @@ try:
     from novaclient import client
     from novaclient.shell import OpenStackComputeShell
     import novaclient.utils
-    import novaclient.auth_plugin
     import novaclient.exceptions
     import novaclient.extension
     import novaclient.base
@@ -64,19 +65,24 @@ CLIENT_BDM2_KEYS = {
 
 
 def check_nova():
+    '''
+    Check version of novaclient
+    '''
     if HAS_NOVA:
         novaclient_ver = _LooseVersion(novaclient.__version__)
         min_ver = _LooseVersion(NOVACLIENT_MINVER)
-        max_ver = _LooseVersion(NOVACLIENT_MAXVER)
-        if min_ver <= novaclient_ver <= max_ver:
+        if min_ver <= novaclient_ver:
             return HAS_NOVA
-        elif novaclient_ver > max_ver:
-            log.debug('Older novaclient version required. Maximum: %s',
-                      NOVACLIENT_MAXVER)
-            return False
         log.debug('Newer novaclient version required.  Minimum: %s',
                   NOVACLIENT_MINVER)
     return False
+
+if check_nova():
+    try:
+        import novaclient.auth_plugin
+    except ImportError:
+        log.debug('Using novaclient version 7.0.0 or newer. Authentication '
+                  'plugin auth_plugin.py is not available anymore.')
 
 
 # kwargs has to be an object instead of a dictionary for the __post_parse_arg__
@@ -199,7 +205,7 @@ def get_endpoint_url_v3(catalog, service_type, region_name):
         if service_entry['type'] == service_type:
             for endpoint_entry in service_entry['endpoints']:
                 if (endpoint_entry['region'] == region_name and
-                            endpoint_entry['interface'] == 'public'):
+                        endpoint_entry['interface'] == 'public'):
                     return endpoint_entry['url']
     return None
 
@@ -259,9 +265,44 @@ class SaltNova(object):
                            os_auth_plugin=os_auth_plugin,
                            **kwargs)
 
-    def _new_init(self, username, project_id, auth_url, region_name, password, os_auth_plugin, auth=None, verify=True, **kwargs):
+    def _get_version_from_url(self, url):
+        '''
+        Exctract API version from provided URL
+        '''
+        regex = re.compile(r"^https?:\/\/.*\/(v[0-9])(\.[0-9])?(\/)?$")
+        try:
+            ver = regex.match(url)
+            if ver.group(1):
+                retver = ver.group(1)
+                if ver.group(2):
+                    retver = retver + ver.group(2)
+            return retver
+        except AttributeError:
+            return ''
+
+    def _discover_ks_version(self, url):
+        '''
+        Keystone API version discovery
+        '''
+        result = salt.utils.http.query(url, backend='requests', status=True, decode=True, decode_type='json')
+        versions = json.loads(result['body'])
+        try:
+            links = [ver['links'] for ver in versions['versions']['values'] if ver['status'] == 'stable'][0] \
+                    if result['status'] == 300 else versions['version']['links']
+            resurl = [link['href'] for link in links if link['rel'] == 'self'][0]
+            return self._get_version_from_url(resurl)
+        except KeyError as exc:
+            raise SaltCloudSystemExit('KeyError: key {0} not found in API response: {1}'.format(exc, versions))
+
+    def _new_init(self, username, project_id, auth_url, region_name, password, os_auth_plugin, auth=None, **kwargs):
         if auth is None:
             auth = {}
+        verify = kwargs.get('verify', False)
+
+        ks_version = self._get_version_from_url(auth_url)
+        if not ks_version:
+            ks_version = self._discover_ks_version(auth_url)
+            auth_url = '{0}/{1}'.format(auth_url, ks_version)
 
         loader = keystoneauth1.loading.get_plugin_loader(os_auth_plugin or 'password')
 
@@ -278,6 +319,7 @@ class SaltNova(object):
 
         self.kwargs['username'] = username
         self.kwargs['project_name'] = project_id
+        self.kwargs['project_id'] = project_id
         self.kwargs['auth_url'] = auth_url
         self.kwargs['password'] = password
         if auth_url.endswith('3'):
@@ -303,8 +345,16 @@ class SaltNova(object):
         conn = client.Client(version=self.version, session=self.session, **self.client_kwargs)
         self.kwargs['auth_token'] = conn.client.session.get_token()
         identity_service_type = kwargs.get('identity_service_type', 'identity')
-        self.catalog = conn.client.session.get('/auth/catalog', endpoint_filter={'service_type': identity_service_type}).json().get('catalog', [])
-        if conn.client.get_endpoint(service_type=identity_service_type).endswith('v3'):
+        self.catalog = conn.client.session.get('/' + ks_version + '/auth/catalog',
+                                               endpoint_filter={'service_type': identity_service_type}
+                                               ).json().get('catalog', [])
+        for ep_type in self.catalog:
+            if ep_type['type'] == identity_service_type:
+                for ep_id in ep_type['endpoints']:
+                    ep_ks_version = self._get_version_from_url(ep_id['url'])
+                    if not ep_ks_version:
+                        ep_id['url'] = '{0}/{1}'.format(ep_id['url'], ks_version)
+        if ks_version == 'v3':
             self._v3_setup(region_name)
         else:
             self._v2_setup(region_name)
