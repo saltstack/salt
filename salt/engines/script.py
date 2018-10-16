@@ -53,11 +53,9 @@ def _get_serializer(output):
     '''
     serializers = salt.loader.serializers(__opts__)
     try:
-        serializer = getattr(serializers, output)
+        return getattr(serializers, output)
     except AttributeError:
         raise CommandExecutionError("Unknown serializer '%s' found for output option", output)
-
-    return serializer
 
 
 def start(cmd, output='json', interval=1):
@@ -86,7 +84,6 @@ def start(cmd, output='json', interval=1):
     :param output: How to deserialize stdout of the script
     :param interval: How often to execute the script.
     '''
-
     try:
         cmd = shlex.split(cmd)
     except AttributeError:
