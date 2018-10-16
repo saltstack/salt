@@ -9,19 +9,23 @@ Manage groups on Windows
     <module-provider-override>`.
 '''
 from __future__ import absolute_import, unicode_literals, print_function
+import logging
 
-# Import Salt libs
+# Import salt libs
 import salt.utils.platform
 import salt.utils.win_functions
-
+from salt.exceptions import CommandExecutionError
 
 try:
+    import win32api
     import win32com.client
     import pythoncom
     import pywintypes
     HAS_DEPENDENCIES = True
 except ImportError:
     HAS_DEPENDENCIES = False
+
+log = logging.getLogger(__name__)
 
 # Define the module's virtual name
 __virtualname__ = 'group'
@@ -387,7 +391,10 @@ def members(name, members_list, **kwargs):
             contain only the users specified in this list.
 
     Returns:
-        dict: A dictionary of results
+        bool: ``True`` if successful, otherwise ``False``
+
+    Raises:
+        CommandExecutionError: If the group does not exist
 
     CLI Example:
 
@@ -395,70 +402,56 @@ def members(name, members_list, **kwargs):
 
         salt '*' group.members foo 'user1,user2,user3'
     '''
-
-    ret = {'name': name,
-           'result': True,
-           'changes': {'Users Added': [], 'Users Removed': []},
-           'comment': []}
-
     members_list = [salt.utils.win_functions.get_sam_name(m) for m in members_list.split(",")]
     if not isinstance(members_list, list):
-        ret['result'] = False
-        ret['comment'].append('Members is not a list object')
-        return ret
+        log.debug('member_list is not a list')
+        return False
 
     try:
-        groupObj = _get_group_object(name)
-    except pywintypes.com_error as com_err:
-        if len(com_err.excepinfo) >= 2:
-            friendly_error = com_err.excepinfo[2].rstrip('\r\n')
-        ret['result'] = False
-        ret['comment'].append((
-                'Failure accessing group {0}.  {1}'
-                ).format(name, friendly_error))
-        return ret
-    existingMembers = [_get_username(x) for x in groupObj.members()]
-    existingMembers.sort()
+        obj_group = _get_group_object(name)
+    except pywintypes.com_error as exc:
+        # Group probably doesn't exist, but we'll log the error
+        log.debug('Failed to access group {0}. {1}'
+                  ''.format(name, win32api.FormatMessage(exc.excepinfo[5])))
+        raise CommandExecutionError('Failed to access group {0}'.format(name),
+                                    info=exc)
+
+    existing_members = [_get_username(x) for x in obj_group.members()]
+    existing_members.sort()
     members_list.sort()
 
-    if existingMembers == members_list:
-        ret['result'] = None
-        ret['comment'].append(('{0} membership is correct').format(name))
-        return ret
+    if existing_members == members_list:
+        log.debug('{0} membership is correct'.format(name))
+        return True
 
     # add users
+    success = True
     for member in members_list:
-        if member not in existingMembers:
+        if member not in existing_members:
             try:
                 if not __opts__['test']:
-                    groupObj.Add('WinNT://' + member.replace('\\', '/'))
-                ret['changes']['Users Added'].append(member)
-            except pywintypes.com_error as com_err:
-                if len(com_err.excepinfo) >= 2:
-                    friendly_error = com_err.excepinfo[2].rstrip('\r\n')
-                ret['result'] = False
-                ret['comment'].append((
-                        'Failed to add {0} to {1}.  {2}'
-                        ).format(member, name, friendly_error))
-                #return ret
+                    obj_group.Add('WinNT://' + member.replace('\\', '/'))
+                log.debug('User added: {0}'.format(member))
+            except pywintypes.com_error as exc:
+                success = False
+                log.debug('Failed to add {0} to {1}. {2}'
+                          ''.format(member, name,
+                                    win32api.FormatMessage(exc.excepinfo[5])))
 
     # remove users not in members_list
-    for member in existingMembers:
+    for member in existing_members:
         if member not in members_list:
             try:
                 if not __opts__['test']:
-                    groupObj.Remove('WinNT://' + member.replace('\\', '/'))
-                ret['changes']['Users Removed'].append(member)
-            except pywintypes.com_error as com_err:
-                if len(com_err.excepinfo) >= 2:
-                    friendly_error = com_err.excepinfo[2].rstrip('\r\n')
-                ret['result'] = False
-                ret['comment'].append((
-                        'Failed to remove {0} from {1}.  {2}'
-                        ).format(member, name, friendly_error))
-                #return ret
+                    obj_group.Remove('WinNT://' + member.replace('\\', '/'))
+                log.debug('User removed: {0}'.format(member))
+            except pywintypes.com_error as exc:
+                success = False
+                log.debug('Failed to remove {0} from {1}. {2}'
+                          ''.format(member, name,
+                                    win32api.FormatMessage(exc.excepinfo[5])))
 
-    return ret
+    return success
 
 
 def list_groups(refresh=False):
