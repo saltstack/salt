@@ -3834,6 +3834,10 @@ def set_selinux_context(path,
                         range=None,   # pylint: disable=W0622
                         persist=False):
     '''
+    .. versionchanged:: Neon
+
+        Added persist option
+
     Set a specific SELinux label on a given path
 
     CLI Example:
@@ -3842,10 +3846,6 @@ def set_selinux_context(path,
 
         salt '*' file.set_selinux_context path <user> <role> <type> <range>
         salt '*' file.set_selinux_context /etc/yum.repos.d/epel.repo system_u object_r system_conf_t s0
-
-    .. versionchanged:: Neon
-
-        Added persist option
     '''
     if not any((user, role, type, range)):
         return False
@@ -4489,6 +4489,10 @@ def extract_hash(hash_fn,
 def check_perms(name, ret, user, group, mode, attrs=None, follow_symlinks=False, seuser=None,
                 serole=None, setype=None, serange=None):
     '''
+    .. versionchanged:: Neon
+
+        Added selinux options
+
     Check the permissions on files, modify attributes and chown if needed. File
     attributes are only verified if lsattr(1) is installed.
 
@@ -4500,10 +4504,6 @@ def check_perms(name, ret, user, group, mode, attrs=None, follow_symlinks=False,
 
     .. versionchanged:: 2014.1.3
         ``follow_symlinks`` option added
-
-    .. versionchanged:: Neon
-
-        Added selinux options
     '''
     name = os.path.expanduser(name)
 
