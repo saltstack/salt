@@ -133,7 +133,7 @@ Identifier matching
 Requisites match on both the ID Declaration and the ``name`` parameter.
 This means that, in the "Deploy server package" example above, a ``require``
 requisite would match with ``Deploy server package`` *or* ``/usr/local/share/myapp.tar.xz``,
-so either of the following versions for "Extract server package" would work:
+so either of the following versions for "Extract server package" is correct:
 
 .. code-block:: yaml
 
@@ -170,12 +170,12 @@ Requisites Types
 
 All requisite types have a corresponding `<requisite>_in <requisites-in>` form:
 
-* `require <requisites-require>`: Require success from another state
-* `onchanges <requisites-onchanges>`: Execute if target has changes
-* `watch <requisites-watch>`: Similar to require, but invokes ``mod_watch`` behavior
-* `listen <requisites-listen>`: Similar to require, but invokes ``mod_wait`` behavior
-* `prereq <requisites-prereq>`: Similar to onchanges with reversed execution order
-* `onfail <requisites-onfail>`: Execute if target state fails
+* `require <requisites-require>`: Requires that a list of target states succeed before execution
+* `onchanges <requisites-onchanges>`: Execute if any target states succeed with changes
+* `watch <requisites-watch>`: Similar to ``onchanges``; modifies state behavior using ``mod_watch``
+* `listen <requisites-listen>`: Similar to ``onchanges``; delays execution to end of state run using ``mod_wait``
+* `prereq <requisites-prereq>`: Execute prior to target state if target state expects to produce changes
+* `onfail <requisites-onfail>`: Execute only if a target state fails
 * `use <requisites-use>`: Copy arguments from another state
 
 Several requisite types have a corresponding `requisite_any <requisites-any>` form:
@@ -494,7 +494,7 @@ to the failure of another state. This can be used in a number of ways, such as
 sending a notification or attempting an alternate task or thread of tasks when
 an important state fails.
 
-The ``onfail`` requisite is applied in the same way as ``require`` as ``watch``:
+The ``onfail`` requisite is applied in the same way as ``require`` and ``watch``:
 
 .. code-block:: yaml
 
