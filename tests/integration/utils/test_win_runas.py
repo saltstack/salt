@@ -20,6 +20,8 @@ import time
 
 import yaml
 from tests.support.case import ModuleCase
+from tests.support.helpers import with_system_user
+from tests.support.mock import Mock
 from tests.support.paths import CODE_DIR
 
 from tests.support.helpers import (
@@ -28,6 +30,18 @@ from tests.support.helpers import (
 import salt.utils.files
 import salt.utils.win_runas
 import salt.ext.six
+
+try:
+    import win32service
+    import win32serviceutil
+    import win32event
+    import servicemanager
+    HAS_WIN32 = True
+except ImportError:
+    # Mock win32serviceutil object to avoid
+    # a stacktrace in the _ServiceManager class
+    win32serviceutil = Mock()
+    HAS_WIN32 = False
 
 try:
     import win32api
@@ -204,7 +218,8 @@ def service_class_factory(cls_name, name, target=default_target, display_name=''
     )
 
 
-test_service = service_class_factory('test_service', 'test service')
+if HAS_WIN32:
+    test_service = service_class_factory('test_service', 'test service')
 
 
 SERVICE_SOURCE = '''
@@ -272,6 +287,7 @@ def wait_for_service(name, timeout=200):
         time.sleep(.3)
 
 
+@skipIf(not HAS_WIN32, 'This test runs only on windows.')
 class RunAsTest(ModuleCase):
 
     @classmethod
