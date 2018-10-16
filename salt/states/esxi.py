@@ -1070,8 +1070,10 @@ def diskgroups_configured(name, diskgroups, erase_disks=False):
                else proxy_details['esxi_host']
     log.info('Running state {0} for host \'{1}\''.format(name, hostname))
     # Variable used to return the result of the invocation
-    ret = {'name': name, 'result': None, 'changes': {},
-           'pchanges': {}, 'comments': None}
+    ret = {'name': name,
+           'result': None,
+           'changes': {},
+           'comments': None}
     # Signals if errors have been encountered
     errors = False
     # Signals if changes are required
@@ -1294,12 +1296,8 @@ def diskgroups_configured(name, diskgroups, erase_disks=False):
               None if __opts__['test'] else  # running in test mode
               False if errors else True)  # found errors; defaults to True
     ret.update({'result': result,
-                'comment': '\n'.join(comments)})
-    if changes:
-        if __opts__['test']:
-            ret['pchanges'] = diskgroup_changes
-        elif changes:
-            ret['changes'] = diskgroup_changes
+                'comment': '\n'.join(comments),
+                'changes': diskgroup_changes})
     return ret
 
 
@@ -1387,8 +1385,10 @@ def host_cache_configured(name, enabled, datastore, swap_size='100%',
                else proxy_details['esxi_host']
     log.trace('hostname = %s', hostname)
     log.info('Running host_cache_swap_configured for host \'%s\'', hostname)
-    ret = {'name': hostname, 'comment': 'Default comments',
-           'result': None, 'changes': {}, 'pchanges': {}}
+    ret = {'name': hostname,
+           'comment': 'Default comments',
+           'result': None,
+           'changes': {}}
     result = None if __opts__['test'] else True  # We assume success
     needs_setting = False
     comments = []
@@ -1582,11 +1582,8 @@ def host_cache_configured(name, enabled, datastore, swap_size='100%',
         __salt__['vsphere.disconnect'](si)
         log.info(comments[-1])
         ret.update({'comment': '\n'.join(comments),
-                    'result': result})
-        if __opts__['test']:
-            ret['pchanges'] = changes
-        else:
-            ret['changes'] = changes
+                    'result': result,
+                    'changes': changes})
         return ret
     except CommandExecutionError as err:
         log.error('Error: %s.', err)

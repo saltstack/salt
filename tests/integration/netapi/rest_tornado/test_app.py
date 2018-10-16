@@ -279,7 +279,7 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
                               request_timeout=30,
                               )
         response_obj = salt.utils.json.loads(response.body)
-        self.assertEqual(response_obj['return'], [{'localhost': True, 'minion': True, 'sub_minion': True}])
+        self.assertEqual(response_obj['return'], [{'minion': True, 'sub_minion': True}])
 
     # runner tests
     def test_simple_local_runner_post(self):

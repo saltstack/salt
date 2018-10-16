@@ -53,7 +53,7 @@ import logging
 
 # Import Salt libs
 import salt.utils.http
-import salt.ext.ipaddress as ipaddress
+from salt._compat import ipaddress
 
 log = logging.getLogger(__name__)
 

@@ -21,13 +21,8 @@ from tests.support.case import ShellCase
 from tests.support.unit import skipIf
 from tests.support.paths import FILES, TMP
 from tests.support.mixins import ShellCaseCommonTestsMixin
-from tests.support.helpers import (
-    destructiveTest,
-    flaky,
-    skip_if_not_root,
-)
+from tests.support.helpers import flaky, with_tempfile
 from tests.integration.utils import testprogram
-from tests.integration.states.test_pkg import _PKG_TARGETS
 
 # Import salt libs
 import salt.utils.files
@@ -77,36 +72,26 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
         self.assertIn('hello', ''.join(out))
         self.assertIn('Succeeded: 1', ''.join(out))
 
-    @destructiveTest
-    @skip_if_not_root
-    @skipIf(salt.utils.platform.is_windows(), 'This test does not apply on Windows')
-    def test_local_pkg_install(self):
+    @with_tempfile()
+    def test_local_salt_call(self, name):
         '''
-        Test to ensure correct output when installing package
-
-        This also tests to make sure that salt call does not execute the
+        This tests to make sure that salt-call does not execute the
         function twice, see https://github.com/saltstack/salt/pull/49552
         '''
         def _run_call(cmd):
             cmd = '--out=json --local ' + cmd
             return salt.utils.json.loads(''.join(self.run_call(cmd)))['local']
 
-        os_family = _run_call('grains.get os_family')
-        try:
-            target = _PKG_TARGETS.get(os_family, [])[0]
-        except IndexError:
-            self.skipTest(
-                'No package targets for os_family {0}'.format(os_family))
+        ret = _run_call('state.single file.append name={0} text="foo"'.format(name))
+        ret = ret[next(iter(ret))]
 
-        cur_pkgs = _run_call('pkg.list_pkgs')
-        if target in cur_pkgs:
-            self.fail('Target package \'{0}\' already installed'.format(target))
+        # Make sure we made changes
+        assert ret['changes']
 
-        out = ''.join(self.run_call('--local pkg.install {0}'.format(target)))
-        self.assertIn('local:    ----------', out)
-        self.assertIn('{0}:        ----------'.format(target), out)
-        self.assertIn('new:', out)
-        self.assertIn('old:', out)
+        # 2nd sanity check: make sure that "foo" only exists once in the file
+        with salt.utils.files.fopen(name) as fp_:
+            contents = fp_.read()
+        assert contents.count('foo') == 1, contents
 
     @skipIf(sys.platform.startswith('win'), 'This test does not apply on Win')
     @flaky
@@ -295,6 +280,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
             if os.path.isfile(this_minion_key):
                 os.unlink(this_minion_key)
 
+    @skipIf(salt.utils.platform.is_windows(), 'Skip on Windows')
     def test_issue_7754(self):
         old_cwd = os.getcwd()
         config_dir = os.path.join(TMP, 'issue-7754')
@@ -331,6 +317,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
             if os.path.isdir(config_dir):
                 shutil.rmtree(config_dir)
 
+    @skipIf(salt.utils.platform.is_windows(), 'Skip on Windows')
     def test_syslog_file_not_found(self):
         '''
         test when log_file is set to a syslog file that does not exist
