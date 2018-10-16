@@ -310,6 +310,7 @@ def _file_lists(load, form):
             __opts__, form, list_cache, w_lock
         )
     if cache_match is not None:
+        log.debug("Returning file list from cache")
         return cache_match
     if refresh_cache:
         ret = {
