@@ -193,7 +193,7 @@ class SaltTestingParser(optparse.OptionParser):
             '--name',
             dest='name',
             action='append',
-            default=None,
+            default=[],
             help=('Specific test name to run. A named test is the module path '
                   'relative to the tests directory')
         )
@@ -213,7 +213,10 @@ class SaltTestingParser(optparse.OptionParser):
                   'unit/integration test module which corresponds to the '
                   'specified file(s) will be run. For example, a path of '
                   'salt/modules/git.py would result in unit.modules.test_git '
-                  'and integration.modules.test_git being run.')
+                  'and integration.modules.test_git being run. Absolute paths '
+                  'are assumed to be files containing relative paths, one per '
+                  'line. Providing the paths in a file can help get around '
+                  'shell character limits when the list of files is long.')
         )
         self.test_selection_group.add_option(
             '--filename-map',
@@ -345,10 +348,25 @@ class SaltTestingParser(optparse.OptionParser):
         '''
         ret = set()
         for path in paths:
-            if ',' in path:
-                ret.update([x.strip() for x in path.split(',')])
-            else:
-                ret.add(path.strip())
+            for item in [x.strip() for x in path.split(',')]:
+                if not item:
+                    continue
+                elif os.path.isabs(item):
+                    try:
+                        with salt.utils.files.fopen(item, 'rb') as fp_:
+                            for line in fp_:
+                                line = salt.utils.stringutils.to_unicode(line.strip())
+                                if os.path.isabs(line):
+                                    log.warning(
+                                        'Invalid absolute path %s in %s, '
+                                        'ignoring', line, item
+                                    )
+                                else:
+                                    ret.add(line)
+                    except (IOError, OSError) as exc:
+                        log.error('Failed to read from %s: %s', item, exc)
+                else:
+                    ret.add(item)
         return ret
 
     @property
@@ -439,27 +457,23 @@ class SaltTestingParser(optparse.OptionParser):
     def parse_args(self, args=None, values=None):
         self.options, self.args = optparse.OptionParser.parse_args(self, args, values)
 
+        file_names = []
         if self.options.names_file:
             with open(self.options.names_file, 'rb') as fp_:  # pylint: disable=resource-leakage
-                lines = []
                 for line in fp_.readlines():
                     if six.PY2:
-                        lines.append(line.strip())
+                        file_names.append(line.strip())
                     else:
-                        lines.append(
+                        file_names.append(
                             line.decode(__salt_system_encoding__).strip())
-            if self.options.name:
-                self.options.name.extend(lines)
-            else:
-                self.options.name = lines
+
         if self.args:
-            if not self.options.name:
-                self.options.name = []
             for fpath in self.args:
                 if os.path.isfile(fpath) and \
                         fpath.endswith('.py') and \
                         os.path.basename(fpath).startswith('test_'):
-                    self.options.name.append(fpath)
+                    if fpath in file_names:
+                        self.options.name.append(fpath)
                     continue
                 self.exit(status=1, msg='\'{}\' is not a valid test module\n'.format(fpath))
 
@@ -473,11 +487,12 @@ class SaltTestingParser(optparse.OptionParser):
                     'filename_map.yml'
                 )
 
-            mapped_mods = self._map_files(self.options.from_filenames)
-            if mapped_mods:
-                if self.options.name is None:
-                    self.options.name = []
-                self.options.name.extend(mapped_mods)
+            self.options.name.extend(self._map_files(self.options.from_filenames))
+
+        if self.options.name and file_names:
+            self.options.name = list(set(self.options.name).intersection(file_names))
+        elif file_names:
+            self.options.name = file_names
 
         print_header(u'', inline=True, width=self.options.output_columns)
         self.pre_execution_cleanup()
