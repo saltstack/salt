@@ -131,6 +131,7 @@ def _query_nsot(url, headers, device=None):
     :return:
     '''
     url = urlparse.urljoin(url, 'devices')
+    ret = {}
     if not device:
         query = salt.utils.http.query(url, header_dict=headers, decode=True)
     else:
@@ -140,9 +141,10 @@ def _query_nsot(url, headers, device=None):
     error = query.get('error')
     if error:
         log.error('can\'t get device(s) from nsot! reason: %s', error)
-        return {}
     else:
-        return query['dict']
+        ret = query['dict']
+
+    return ret
 
 
 def _proxy_info(minion_id, api_url, email, secret_key, fqdn_separator):
@@ -156,13 +158,14 @@ def _proxy_info(minion_id, api_url, email, secret_key, fqdn_separator):
     :param fqdn_separator: str
     :return: dict
     '''
+    device_info = {}
     if fqdn_separator:
         minion_id = minion_id.replace('.', fqdn_separator)
     token = _get_token(api_url, email, secret_key)
-    if not token:
-        return
-    headers = {'Authorization': 'AuthToken {}:{}'.format(email, token)}
-    device_info = _query_nsot(api_url, headers, device=minion_id)
+    if token:
+        headers = {'Authorization': 'AuthToken {}:{}'.format(email, token)}
+        device_info = _query_nsot(api_url, headers, device=minion_id)
+
     return device_info
 
 
@@ -176,10 +179,11 @@ def _all_nsot_devices(api_url, email, secret_key):
     :return: dict
     '''
     token = _get_token(api_url, email, secret_key)
-    if not token:
-        return
-    headers = {'Authorization': 'AuthToken {}:{}'.format(email, token)}
-    all_devices = _query_nsot(api_url, headers)
+    all_devices = {}
+    if token:
+        headers = {'Authorization': 'AuthToken {}:{}'.format(email, token)}
+        all_devices = _query_nsot(api_url, headers)
+
     return all_devices
 
 
