@@ -38,7 +38,7 @@ class WinPKGTest(ModuleCase):
             refresh = self.run_function('pkg.refresh_db')
             self.assertEqual(check_refresh, refresh['total'],
                  msg='total returned {0}. Expected return {1}'.format(refresh['total'], check_refresh))
-            repo_data = self.run_function('pkg.get_repo_data', timeout=300)
+            repo_data = self.run_function('pkg.get_repo_data')
             repo_cache = os.path.join(RUNTIME_VARS.TMP, 'rootdir', 'cache', 'files', 'base', 'win', 'repo-ng')
             for pkg in pkgs:
                 if exists:
@@ -75,6 +75,8 @@ class WinPKGTest(ModuleCase):
                     locale: en_US
                     reboot: False
                 '''))
+            fp_.flush()
+            os.fsync(fp_.fileno())
         # now check if curl is also in cache and repo query
         pkgs.append('curl')
         for pkg in pkgs:
