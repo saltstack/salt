@@ -334,12 +334,6 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
         def testfunc(a, b, c, *args, **kwargs):
             '''
             Test func for signature check.
-            :param a:
-            :param b:
-            :param c:
-            :param args:
-            :param kwargs:
-            :return:
             '''
             return a, b, c, args, kwargs
 
@@ -356,12 +350,6 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
         def testfunc(a, b, c, *args, **kwargs):
             '''
             Test func for signature check.
-            :param a:
-            :param b:
-            :param c:
-            :param args:
-            :param kwargs:
-            :return:
             '''
             return a, b, c, args, kwargs
 
