@@ -341,6 +341,16 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
             assert module._call_function('testfunc', func_args=[{'a': 1}, {'b': 2}, {'c': 3}]) == (1, 2, 3, (), {})
             assert module._call_function('testfunc', func_args=[{'c': 3}, {'a': 1}, {'b': 2}]) == (1, 2, 3, (), {})
 
+        def testfunc_b(b, c, a, *args, **kwargs):
+            '''
+            Test func for signature check.
+            '''
+            return a, b, c, args, kwargs
+
+        with patch.dict(module.__salt__, {'testfunc': testfunc_b}, clear=True):
+            assert module._call_function('testfunc', func_args=[{'a': 1}, {'b': 2}, {'c': 3}]) == (1, 2, 3, (), {})
+            assert module._call_function('testfunc', func_args=[{'c': 3}, {'a': 1}, {'b': 2}]) == (1, 2, 3, (), {})
+
     def test_call_function_ordered_args(self):
         '''
         Test _call_function routine when params are not named. Their position should matter.
