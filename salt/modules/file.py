@@ -61,7 +61,6 @@ import salt.utils.stringutils
 import salt.utils.templates
 import salt.utils.url
 import salt.utils.user
-import salt.utils.data
 from salt.exceptions import CommandExecutionError, MinionError, SaltInvocationError, get_error_message as _get_error_message
 from salt.utils.files import HASHES, HASHES_REVMAP
 
@@ -1238,7 +1237,7 @@ def psed(path,
     after = six.text_type(after)
     before = _sed_esc(before, escape_all)
     # The pattern to replace with does not need to be escaped!!!
-    #after = _sed_esc(after, escape_all)
+    # after = _sed_esc(after, escape_all)
     limit = _sed_esc(limit, escape_all)
 
     shutil.copy2(path, '{0}{1}'.format(path, backup))
@@ -1473,8 +1472,8 @@ def comment_line(path,
     try:
         # Use a read-only handle to open the file
         with salt.utils.files.fopen(path,
-                              mode='rb',
-                              buffering=bufsize) as r_file:
+                                    mode='rb',
+                                    buffering=bufsize) as r_file:
             # Loop through each line of the file and look for a match
             for line in r_file:
                 # Is it in this line
@@ -1512,13 +1511,13 @@ def comment_line(path,
         # Open the file in write mode
         mode = 'wb' if six.PY2 and salt.utils.platform.is_windows() else 'w'
         with salt.utils.files.fopen(path,
-                              mode=mode,
-                              buffering=bufsize) as w_file:
+                                    mode=mode,
+                                    buffering=bufsize) as w_file:
             try:
                 # Open the temp file in read mode
                 with salt.utils.files.fopen(temp_file,
-                                      mode='rb',
-                                      buffering=bufsize) as r_file:
+                                            mode='rb',
+                                            buffering=bufsize) as r_file:
                     # Loop through each line of the file and look for a match
                     for line in r_file:
                         line = salt.utils.stringutils.to_unicode(line)
@@ -2074,7 +2073,7 @@ def replace(path,
             ignore_if_missing=False,
             preserve_inode=True,
             backslash_literal=False,
-        ):
+            ):
     '''
     .. versionadded:: 0.17.0
 
@@ -2262,8 +2261,8 @@ def replace(path,
         r_data = None
         # Use a read-only handle to open the file
         with salt.utils.files.fopen(path,
-                              mode='rb',
-                              buffering=bufsize) as r_file:
+                                    mode='rb',
+                                    buffering=bufsize) as r_file:
             try:
                 # mmap throws a ValueError if the file is empty.
                 r_data = mmap.mmap(r_file.fileno(),
@@ -4677,8 +4676,8 @@ def check_perms(name, ret, user, group, mode, attrs=None, follow_symlinks=False,
             current_seuser, current_serole, current_setype, current_serange = get_selinux_context(name).split(':')
             log.debug('Current selinux context user:{0} role:{1} type:{2} range:{3}'.format(
                 current_seuser, current_serole, current_setype, current_serange))
-        except:
-            log.warning('Unable to get current selinux attributes')
+        except ValueError:
+            log.error('Unable to get current selinux attributes')
             ret['result'] = False
             ret['comment'].append(
                 'Failed to get selinux attributes'
@@ -4725,14 +4724,14 @@ def check_perms(name, ret, user, group, mode, attrs=None, follow_symlinks=False,
                 else:
                     try:
                         # set_selinux_context requires type to be set on any other change
-                        if (requested_seuser or rquested_serole or requested_serange) and not requested_setype:
+                        if (requested_seuser or requested_serole or requested_serange) and not requested_setype:
                             requested_setype = current_setype
                         result = set_selinux_context(name, user=requested_seuser, role=requested_serole,
-                                type=requested_setype, range=requested_serange, persist=True)
+                                                     type=requested_setype, range=requested_serange, persist=True)
                         log.debug("selinux set result: {0}".format(result))
                         current_seuser, current_serole, current_setype, current_serange = result.split(':')
-                    except:
-                        log.warning('Unable to set current selinux attributes')
+                    except ValueError:
+                        log.error('Unable to set current selinux attributes')
                         ret['result'] = False
                         ret['comment'].append(
                             'Failed to set selinux attributes'
@@ -4759,7 +4758,7 @@ def check_perms(name, ret, user, group, mode, attrs=None, follow_symlinks=False,
                                 ret['comment'].append("Unable to update serange context")
                                 ret['result'] = False
                         ret['changes']['selinux'] = {'Old': selinux_change_orig.strip(),
-                                                    'New': selinux_change_new.strip()}
+                                                     'New': selinux_change_new.strip()}
 
     # Only combine the comment list into a string
     # after all comments are added above
@@ -5101,17 +5100,18 @@ def check_file_meta(
         if seuser or serole or setype or serange:
             try:
                 current_seuser, current_serole, current_setype, current_serange = get_selinux_context(name).split(':')
-                log.debug('Current selinux context user:{0} role:{1} type:{2} range:{3}'.format(current_seuser, current_serole, current_setype, current_serange))
-            except:
-                log.warning('Unable to get current selinux attributes')
-                ret['result'] = False
-                ret['comment'].append(
-                    'Failed to get selinux attributes'
-                )
+                log.debug('Current selinux context user:{0} role:{1} type:{2} range:{3}'.format(current_seuser,
+                                                                                                current_serole,
+                                                                                                current_setype,
+                                                                                                current_serange))
+            except ValueError as exc:
+                log.error('Unable to get current selinux attributes')
+                changes['selinux'] = exc.strerror
+
             if seuser and seuser != current_seuser:
                 changes['selinux'] = {"user": seuser}
             if serole and serole != current_serole:
-                changes['selinux']= {"role": serole}
+                changes['selinux'] = {"role": serole}
             if setype and setype != current_setype:
                 changes['selinux'] = {"type": setype}
             if serange and serange != current_serange:
@@ -5482,9 +5482,9 @@ def manage_file(name,
             # Pre requisites are met, and the file needs to be replaced, do it
             try:
                 salt.utils.files.copyfile(sfn,
-                                    real_name,
-                                    __salt__['config.backup_mode'](backup),
-                                    __opts__['cachedir'])
+                                          real_name,
+                                          __salt__['config.backup_mode'](backup),
+                                          __opts__['cachedir'])
             except IOError as io_error:
                 __clean_tmp(sfn)
                 return _error(
@@ -5521,9 +5521,9 @@ def manage_file(name,
                 # Pre requisites are met, the file needs to be replaced, do it
                 try:
                     salt.utils.files.copyfile(tmp,
-                                        real_name,
-                                        __salt__['config.backup_mode'](backup),
-                                        __opts__['cachedir'])
+                                              real_name,
+                                              __salt__['config.backup_mode'](backup),
+                                              __opts__['cachedir'])
                 except IOError as io_error:
                     __clean_tmp(tmp)
                     return _error(
@@ -5572,7 +5572,7 @@ def manage_file(name,
             # on Windows. The local function will be overridden
             # pylint: disable=E1120,E1121,E1123
             ret = check_perms(
-               path=name,
+                path=name,
                 ret=ret,
                 owner=kwargs.get('win_owner'),
                 grant_perms=kwargs.get('win_perms'),

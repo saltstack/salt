@@ -1973,7 +1973,8 @@ class TestFileTidied(TestCase):
         }
         assert filestate.tidied(name='/bad-directory-name/') == exp
 
-@skipIf(not salt.utils.platform.is_linux(), 'Skip if selinux not supported')
+
+@skipIf(not salt.utils.platform.is_linux(), 'Selinux only supported on linux')
 class TestSelinux(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {
