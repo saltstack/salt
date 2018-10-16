@@ -131,7 +131,10 @@ def check_file_list_cache(opts, form, list_cache, w_lock):
                 if os.path.exists(list_cache):
                     # calculate filelist age is possible
                     cache_stat = os.stat(list_cache)
-                    age = time.time() - cache_stat.st_mtime
+                    # st_time can have a greater precision than time, removing
+                    # float precision makes sure age will never be a negative
+                    # number.
+                    age = int(time.time()) - int(cache_stat.st_mtime)
                 else:
                     # if filelist does not exists yet, mark it as expired
                     age = opts.get('fileserver_list_cache_time', 20) + 1

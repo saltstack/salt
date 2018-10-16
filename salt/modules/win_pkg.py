@@ -723,7 +723,6 @@ def refresh_db(**kwargs):
         include_pat='*.sls',
         exclude_pat=r'E@\/\..*?\/'  # Exclude all hidden directories (.git)
     )
-
     return genrepo(saltenv=saltenv, verbose=verbose, failhard=failhard)
 
 
