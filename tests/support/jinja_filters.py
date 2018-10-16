@@ -2,6 +2,12 @@
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+import os
+
+from tests.support.unit import skipIf
+
+import salt.utils.platform
+import salt.utils.files
 
 
 class JinjaFiltersTest(object):
@@ -173,12 +179,19 @@ class JinjaFiltersTest(object):
         '''
         test jinja filter files.is_empty
         '''
-        _expected = {'ret': True}
-        ret = self.run_function('state.sls',
-                                ['jinja_filters.files_is_empty'])
-        self.assertIn('module_|-test_|-test.echo_|-run', ret)
-        self.assertEqual(ret['module_|-test_|-test.echo_|-run']['changes'],
-                         _expected)
+        try:
+            if salt.utils.platform.is_windows():
+                with salt.utils.files.fopen('c:\\empty_file', 'w') as fp:
+                    pass
+            _expected = {'ret': True}
+            ret = self.run_function('state.sls',
+                                    ['jinja_filters.files_is_empty'])
+            self.assertIn('module_|-test_|-test.echo_|-run', ret)
+            self.assertEqual(ret['module_|-test_|-test.echo_|-run']['changes'],
+                             _expected)
+        finally:
+            if salt.utils.platform.is_windows():
+                os.remove('c:\\empty_file')
 
     def test_files_is_text(self):
         '''
@@ -198,8 +211,12 @@ class JinjaFiltersTest(object):
         ret = self.run_function('state.sls',
                                 ['jinja_filters.files_list_files'])
         self.assertIn('module_|-test_|-test.echo_|-run', ret)
-        self.assertIn('/bin/ls',
-                      ret['module_|-test_|-test.echo_|-run']['changes']['ret'])
+        if salt.utils.platform.is_windows():
+            self.assertIn('c:\\\\salt\\\\conf\\\\minion',
+                          ret['module_|-test_|-test.echo_|-run']['changes']['ret'])
+        else:
+            self.assertIn('/bin/ls',
+                          ret['module_|-test_|-test.echo_|-run']['changes']['ret'])
 
     def test_hashutils_base4_64decode(self):
         '''
@@ -591,7 +608,7 @@ class JinjaFiltersTest(object):
         '''
         test jinja filter path.join
         '''
-        _expected = {'ret': '/a/b/c/d'}
+        _expected = {'ret': os.path.sep + os.path.join('a', 'b', 'c', 'd')}
         ret = self.run_function('state.sls',
                                 ['jinja_filters.path_join'])
         self.assertIn('module_|-test_|-test.echo_|-run', ret)
@@ -670,6 +687,7 @@ class JinjaFiltersTest(object):
         self.assertEqual(ret['module_|-test_|-test.echo_|-run']['changes'],
                          _expected)
 
+    @skipIf(salt.utils.platform.is_windows(), 'Skip on windows')
     def test_user_get_uid(self):
         '''
         test jinja filter user.get_uid

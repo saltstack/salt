@@ -5,6 +5,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import random
 import string
 import os.path
+import sys
 
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -133,6 +134,7 @@ class BotoVpcTestCase(BotoVpcStateTestCaseBase, BotoVpcTestCaseMixin):
     TestCase for salt.states.boto_vpc state.module
     '''
 
+    @skipIf(sys.version_info > (3, 6), 'Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.')
     @mock_ec2_deprecated
     def test_present_when_vpc_does_not_exist(self):
         '''
@@ -144,6 +146,7 @@ class BotoVpcTestCase(BotoVpcStateTestCaseBase, BotoVpcTestCaseMixin):
         self.assertTrue(vpc_present_result['result'])
         self.assertEqual(vpc_present_result['changes']['new']['vpc']['state'], 'available')
 
+    @skipIf(sys.version_info > (3, 6), 'Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.')
     @mock_ec2_deprecated
     def test_present_when_vpc_exists(self):
         vpc = self._create_vpc(name='test')
@@ -159,6 +162,7 @@ class BotoVpcTestCase(BotoVpcStateTestCaseBase, BotoVpcTestCaseMixin):
             self.assertFalse(vpc_present_result['result'])
             self.assertTrue('Mocked error' in vpc_present_result['comment'])
 
+    @skipIf(sys.version_info > (3, 6), 'Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.')
     @mock_ec2_deprecated
     def test_absent_when_vpc_does_not_exist(self):
         '''
@@ -169,6 +173,7 @@ class BotoVpcTestCase(BotoVpcStateTestCaseBase, BotoVpcTestCaseMixin):
         self.assertTrue(vpc_absent_result['result'])
         self.assertEqual(vpc_absent_result['changes'], {})
 
+    @skipIf(sys.version_info > (3, 6), 'Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.')
     @mock_ec2_deprecated
     def test_absent_when_vpc_exists(self):
         vpc = self._create_vpc(name='test')
@@ -197,6 +202,7 @@ class BotoVpcResourceTestCaseMixin(BotoVpcTestCaseMixin):
         _create = getattr(self, '_create_' + self.resource_type)
         _create(vpc_id=vpc_id, name=name, **self.extra_kwargs)
 
+    @skipIf(sys.version_info > (3, 6), 'Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.')
     @mock_ec2_deprecated
     def test_present_when_resource_does_not_exist(self):
         '''
@@ -212,6 +218,7 @@ class BotoVpcResourceTestCaseMixin(BotoVpcTestCaseMixin):
         exists = self.funcs['boto_vpc.resource_exists'](self.resource_type, 'test').get('exists')
         self.assertTrue(exists)
 
+    @skipIf(sys.version_info > (3, 6), 'Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.')
     @mock_ec2_deprecated
     def test_present_when_resource_exists(self):
         vpc = self._create_vpc(name='test')
@@ -233,6 +240,7 @@ class BotoVpcResourceTestCaseMixin(BotoVpcTestCaseMixin):
             self.assertFalse(resource_present_result['result'])
             self.assertTrue('Mocked error' in resource_present_result['comment'])
 
+    @skipIf(sys.version_info > (3, 6), 'Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.')
     @mock_ec2_deprecated
     def test_absent_when_resource_does_not_exist(self):
         '''
@@ -243,6 +251,7 @@ class BotoVpcResourceTestCaseMixin(BotoVpcTestCaseMixin):
         self.assertTrue(resource_absent_result['result'])
         self.assertEqual(resource_absent_result['changes'], {})
 
+    @skipIf(sys.version_info > (3, 6), 'Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.')
     @mock_ec2_deprecated
     def test_absent_when_resource_exists(self):
         vpc = self._create_vpc(name='test')

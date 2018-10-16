@@ -152,6 +152,11 @@
 # Set the directory used to hold unix sockets.
 #sock_dir: /var/run/salt/minion
 
+# The minion can take a while to start up when lspci and/or dmidecode is used
+# to populate the grains for the minion. Set this to False if you do not need
+# GPU hardware grains for your minion.
+# enable_gpu_grains: True
+
 # Set the default outputter used by the salt-call command. The default is
 # "nested".
 #output: nested

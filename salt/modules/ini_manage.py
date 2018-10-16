@@ -25,6 +25,9 @@ from salt.utils.odict import OrderedDict
 # Import 3rd-party libs
 from salt.ext import six
 
+import logging
+log = logging.getLogger(__name__)
+
 __virtualname__ = 'ini'
 
 
@@ -432,11 +435,14 @@ class _Ini(_Section):
         # the ini file).
         super(_Ini, self).refresh(inicontents.pop())
         for section_name, sect_ini in self._gen_tuples(inicontents):
-            sect_obj = _Section(
-                section_name, sect_ini, separator=self.sep
-            )
-            sect_obj.refresh()
-            self.update({sect_obj.name: sect_obj})
+            try:
+                sect_obj = _Section(
+                    section_name, sect_ini, separator=self.sep
+                )
+                sect_obj.refresh()
+                self.update({sect_obj.name: sect_obj})
+            except StopIteration:
+                pass
 
     def flush(self):
         try:
@@ -463,6 +469,6 @@ class _Ini(_Section):
                 key = list_object.pop()
                 value = list_object.pop()
             except IndexError:
-                raise StopIteration
+                return
             else:
                 yield key, value

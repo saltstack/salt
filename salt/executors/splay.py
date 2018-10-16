@@ -7,6 +7,8 @@ from __future__ import absolute_import, print_function, unicode_literals
 import time
 import logging
 
+import salt.utils.stringutils
+
 log = logging.getLogger(__name__)
 
 _DEFAULT_SPLAYTIME = 300
@@ -28,7 +30,7 @@ def _get_hash():
     bitmask = 0xffffffff
     h = 0
 
-    for i in bytearray(__grains__['id']):
+    for i in bytearray(salt.utils.stringutils.to_bytes(__grains__['id'])):
         h = (h + i) & bitmask
         h = (h + (h << 10)) & bitmask
         h = (h ^ (h >> 6)) & bitmask

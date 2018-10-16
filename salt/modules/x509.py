@@ -26,6 +26,7 @@ import sys
 import salt.utils.files
 import salt.utils.path
 import salt.utils.stringutils
+import salt.utils.platform
 import salt.exceptions
 from salt.ext import six
 from salt.utils.odict import OrderedDict
@@ -308,12 +309,24 @@ def _dec2hex(decval):
     return _pretty_hex('{0:X}'.format(decval))
 
 
+def _isfile(path):
+    '''
+    A wrapper around os.path.isfile that ignores ValueError exceptions which
+    can be raised if the input to isfile is too long.
+    '''
+    try:
+        return os.path.isfile(path)
+    except ValueError:
+        pass
+    return False
+
+
 def _text_or_file(input_):
     '''
     Determines if input is a path to a file, or a string with the
     content to be parsed.
     '''
-    if os.path.isfile(input_):
+    if _isfile(input_):
         with salt.utils.files.fopen(input_) as fp_:
             out = salt.utils.stringutils.to_str(fp_.read())
     else:
@@ -651,7 +664,7 @@ def read_crl(crl):
     text = get_pem_entry(text, pem_type='X509 CRL')
 
     crltempfile = tempfile.NamedTemporaryFile()
-    crltempfile.write(text)
+    crltempfile.write(salt.utils.stringutils.to_str(text))
     crltempfile.flush()
     crlparsed = _parse_openssl_crl(crltempfile.name)
     crltempfile.close()
@@ -756,21 +769,22 @@ def write_pem(text, path, overwrite=True, pem_type=None):
         text = get_pem_entry(text, pem_type=pem_type)
         _dhparams = ''
         _private_key = ''
-        if pem_type and pem_type == 'CERTIFICATE' and os.path.isfile(path) and \
-                not overwrite:
+        if pem_type and pem_type == 'CERTIFICATE' and os.path.isfile(path) and not overwrite:
             _filecontents = _text_or_file(path)
             try:
                 _dhparams = get_pem_entry(_filecontents, 'DH PARAMETERS')
-            except salt.exceptions.SaltInvocationError:
-                pass
+            except salt.exceptions.SaltInvocationError as err:
+                log.debug("Error when getting DH PARAMETERS: %s", err)
+                log.trace(err, exc_info=err)
             try:
                 _private_key = get_pem_entry(_filecontents, '(?:RSA )?PRIVATE KEY')
-            except salt.exceptions.SaltInvocationError:
-                pass
+            except salt.exceptions.SaltInvocationError as err:
+                log.debug("Error when getting PRIVATE KEY: %s", err)
+                log.trace(err, exc_info=err)
         with salt.utils.files.fopen(path, 'w') as _fp:
             if pem_type and pem_type == 'CERTIFICATE' and _private_key:
                 _fp.write(salt.utils.stringutils.to_str(_private_key))
-            _fp.write(text)
+            _fp.write(salt.utils.stringutils.to_str(text))
             if pem_type and pem_type == 'CERTIFICATE' and _dhparams:
                 _fp.write(salt.utils.stringutils.to_str(_dhparams))
     return 'PEM written to {0}'.format(path)
@@ -1363,9 +1377,9 @@ def create_certificate(
                 pem_type='CERTIFICATE REQUEST').replace('\n', '')
         if 'public_key' in kwargs:
             # Strip newlines to make passing through as cli functions easier
-            kwargs['public_key'] = get_public_key(
+            kwargs['public_key'] = salt.utils.stringutils.to_str(get_public_key(
                 kwargs['public_key'],
-                passphrase=kwargs['public_key_passphrase']).replace('\n', '')
+                passphrase=kwargs['public_key_passphrase'])).replace('\n', '')
 
         # Remove system entries in kwargs
         # Including listen_in and preqreuired because they are not included
@@ -1425,12 +1439,18 @@ def create_certificate(
         kwargs['serial_number'] = _dec2hex(
             random.getrandbits(kwargs['serial_bits']))
     serial_number = int(kwargs['serial_number'].replace(':', ''), 16)
-    # With Python3 we occasionally end up with an INT
-    # that is too large because Python3 no longer supports long INTs.
-    # If we're larger than the maxsize value
-    # then we adjust the serial number.
-    if serial_number > sys.maxsize:
-        serial_number = serial_number - sys.maxsize
+    # With Python3 we occasionally end up with an INT that is greater than a C
+    # long max_value. This causes an overflow error due to a bug in M2Crypto.
+    # See issue: https://gitlab.com/m2crypto/m2crypto/issues/232
+    # Remove this after M2Crypto fixes the bug.
+    if six.PY3:
+        if salt.utils.platform.is_windows():
+            INT_MAX = 2147483647
+            if serial_number >= INT_MAX:
+                serial_number -= int(serial_number / INT_MAX) * INT_MAX
+        else:
+            if serial_number >= sys.maxsize:
+                serial_number -= int(serial_number / sys.maxsize) * sys.maxsize
     cert.set_serial_number(serial_number)
 
     # Set validity dates
@@ -1759,13 +1779,13 @@ def verify_crl(crl, cert):
     crltext = _text_or_file(crl)
     crltext = get_pem_entry(crltext, pem_type='X509 CRL')
     crltempfile = tempfile.NamedTemporaryFile()
-    crltempfile.write(crltext)
+    crltempfile.write(salt.utils.stringutils.to_str(crltext))
     crltempfile.flush()
 
     certtext = _text_or_file(cert)
     certtext = get_pem_entry(certtext, pem_type='CERTIFICATE')
     certtempfile = tempfile.NamedTemporaryFile()
-    certtempfile.write(certtext)
+    certtempfile.write(salt.utils.stringutils.to_str(certtext))
     certtempfile.flush()
 
     cmd = ('openssl crl -noout -in {0} -CAfile {1}'.format(

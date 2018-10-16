@@ -25,6 +25,8 @@ from salt.exceptions import CommandExecutionError
 
 # Import third party libs
 from salt.ext import six
+# pylint: disable=import-error
+from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 
 
 # pylint: disable=invalid-name,protected-access,attribute-defined-outside-init,too-many-public-methods,unused-argument
@@ -116,10 +118,14 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             512,
             diskp,
             nicp,
-            'kvm'
+            'kvm',
+            'hvm',
+            'x86_64'
             )
         root = ET.fromstring(xml_data)
         self.assertEqual(root.find('os/boot').attrib['dev'], 'hd')
+        self.assertEqual(root.find('os/type').attrib['arch'], 'x86_64')
+        self.assertEqual(root.find('os/type').text, 'hvm')
 
     def test_boot_custom_dev(self):
         '''
@@ -134,6 +140,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             diskp,
             nicp,
             'kvm',
+            'hvm',
+            'x86_64',
             boot_dev='cdrom'
             )
         root = ET.fromstring(xml_data)
@@ -152,6 +160,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             diskp,
             nicp,
             'kvm',
+            'hvm',
+            'x86_64',
             boot_dev='cdrom network'
             )
         root = ET.fromstring(xml_data)
@@ -171,6 +181,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             diskp,
             nicp,
             'kvm',
+            'hvm',
+            'x86_64',
             serial_type='pty',
             console=True
             )
@@ -191,6 +203,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             diskp,
             nicp,
             'kvm',
+            'hvm',
+            'x86_64',
             serial_type='tcp',
             console=True,
             telnet_port=22223
@@ -213,6 +227,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             diskp,
             nicp,
             'kvm',
+            'hvm',
+            'x86_64',
             serial_type='tcp',
             console=True
             )
@@ -234,6 +250,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             diskp,
             nicp,
             'kvm',
+            'hvm',
+            'x86_64',
             serial_type='pty',
             console=False
             )
@@ -254,6 +272,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             diskp,
             nicp,
             'kvm',
+            'hvm',
+            'x86_64',
             serial_type='tcp',
             console=False,
             )
@@ -273,7 +293,9 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             512,
             diskp,
             nicp,
-            'kvm'
+            'kvm',
+            'hvm',
+            'x86_64'
             )
         root = ET.fromstring(xml_data)
         self.assertIsNone(root.find('devices/graphics'))
@@ -290,7 +312,9 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             512,
             diskp,
             nicp,
-            'kvm'
+            'kvm',
+            'hvm',
+            'x86_64',
             )
         root = ET.fromstring(xml_data)
         self.assertIsNone(root.find('os/loader'))
@@ -308,6 +332,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             diskp,
             nicp,
             'kvm',
+            'hvm',
+            'x86_64',
             graphics={'type': 'vnc', 'port': 1234, 'tlsPort': 5678,
                       'listen': {'type': 'address', 'address': 'myhost'}},
             )
@@ -333,6 +359,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             diskp,
             nicp,
             'kvm',
+            'hvm',
+            'x86_64',
             graphics={'type': 'spice'},
             )
         root = ET.fromstring(xml_data)
@@ -355,6 +383,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             diskp,
             nicp,
             'kvm',
+            'hvm',
+            'x86_64',
             loader={'path': '/foo/bar', 'readonly': 'yes', 'type': 'pflash', 'secure': 'yes'}
             )
         root = ET.fromstring(xml_data)
@@ -376,6 +406,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             diskp,
             nicp,
             'kvm',
+            'hvm',
+            'x86_64',
             loader={'readonly': 'yes', 'type': 'pflash', 'secure': 'yes'}
             )
         root = ET.fromstring(xml_data)
@@ -394,6 +426,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             diskp,
             nicp,
             'kvm',
+            'hvm',
+            'x86_64',
             graphics={'type': 'spice', 'port': 1234, 'tls_port': 5678, 'listen': {'type': 'none'}},
             )
         root = ET.fromstring(xml_data)
@@ -487,6 +521,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             diskp,
             nicp,
             'kvm',
+            'hvm',
+            'x86_64',
             )
         root = ET.fromstring(xml_data)
         self.assertEqual(root.attrib['type'], 'kvm')
@@ -529,6 +565,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             diskp,
             nicp,
             'vmware',
+            'hvm',
+            'x86_64',
             )
         root = ET.fromstring(xml_data)
         self.assertEqual(root.attrib['type'], 'vmware')
@@ -583,6 +621,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 diskp,
                 nicp,
                 'vmware',
+                'hvm',
+                'x86_64',
                 )
             root = ET.fromstring(xml_data)
             self.assertEqual(root.attrib['type'], 'vmware')
@@ -619,6 +659,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 diskp,
                 nicp,
                 'kvm',
+                'hvm',
+                'x86_64',
                 )
             root = ET.fromstring(xml_data)
             self.assertEqual(root.attrib['type'], 'kvm')
@@ -689,7 +731,9 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             512,
             diskp,
             nicp,
-            'vmware'
+            'vmware',
+            'hvm',
+            'x86_64',
             )
         root = ET.fromstring(xml_data)
         controllers = root.findall('.//devices/controller')
@@ -709,7 +753,9 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             512,
             diskp,
             nicp,
-            'kvm'
+            'kvm',
+            'hvm',
+            'x86_64',
             )
         root = ET.fromstring(xml_data)
         controllers = root.findall('.//devices/controller')
@@ -813,6 +859,9 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
               <memory unit='KiB'>1048576</memory>
               <currentMemory unit='KiB'>1048576</currentMemory>
               <vcpu placement='auto'>1</vcpu>
+              <os>
+                <type arch='x86_64' machine='pc-i440fx-2.6'>hvm</type>
+              </os>
               <devices>
                 <disk type='file' device='disk'>
                   <driver name='qemu' type='qcow2'/>
@@ -858,6 +907,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             </domain>
         '''
         domain_mock = self.set_mock_vm('myvm', xml)
+        domain_mock.OSType = MagicMock(return_value='hvm')
         define_mock = MagicMock(return_value=True)
         self.mock_conn.defineXML = define_mock
 
@@ -1851,6 +1901,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         net_mock = MagicMock()
 
         # pylint: disable=no-member
+        net_mock.name.return_value = 'foo'
         net_mock.UUIDString.return_value = 'some-uuid'
         net_mock.bridgeName.return_value = 'br0'
         net_mock.autostart.return_value = True
@@ -1869,11 +1920,11 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 'iaid': None
             }
         ]
-        self.mock_conn.networkLookupByName.return_value = net_mock
+        self.mock_conn.listAllNetworks.return_value = [net_mock]
         # pylint: enable=no-member
 
         net = virt.network_info('foo')
-        self.assertEqual({
+        self.assertEqual({'foo': {
             'uuid': 'some-uuid',
             'bridge': 'br0',
             'autostart': True,
@@ -1891,15 +1942,58 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                     'clientid': '01:52:54:00:01:71:bd',
                     'iaid': None
                 }
-            ]}, net)
+            ]}}, net)
+
+    def test_network_info_all(self):
+        '''
+        Test virt.network_info()
+        '''
+        self.mock_libvirt.VIR_IP_ADDR_TYPE_IPV4 = 0
+        self.mock_libvirt.VIR_IP_ADDR_TYPE_IPV6 = 1
+
+        net_mocks = []
+        for i in range(2):
+            net_mock = MagicMock()
+
+            # pylint: disable=no-member
+            net_mock.name.return_value = 'net{0}'.format(i)
+            net_mock.UUIDString.return_value = 'some-uuid'
+            net_mock.bridgeName.return_value = 'br{0}'.format(i)
+            net_mock.autostart.return_value = True
+            net_mock.isActive.return_value = False
+            net_mock.isPersistent.return_value = True
+            net_mock.DHCPLeases.return_value = []
+            net_mocks.append(net_mock)
+        self.mock_conn.listAllNetworks.return_value = net_mocks
+        # pylint: enable=no-member
+
+        net = virt.network_info()
+        self.assertEqual({
+            'net0':
+            {
+                'uuid': 'some-uuid',
+                'bridge': 'br0',
+                'autostart': True,
+                'active': False,
+                'persistent': True,
+                'leases': []
+            }, 'net1':
+            {
+                'uuid': 'some-uuid',
+                'bridge': 'br1',
+                'autostart': True,
+                'active': False,
+                'persistent': True,
+                'leases': []
+            }
+        }, net)
 
     def test_network_info_notfound(self):
         '''
         Test virt.network_info() when the network can't be found
         '''
         # pylint: disable=no-member
-        self.mock_conn.networkLookupByName.side_effect = \
-            self.mock_libvirt.libvirtError("Network not found")
+        self.mock_conn.listAllNetworks.return_value = []
         # pylint: enable=no-member
         net = virt.network_info('foo')
         self.assertEqual({}, net)
@@ -2051,6 +2145,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         '''
         # pylint: disable=no-member
         pool_mock = MagicMock()
+        pool_mock.name.return_value = 'foo'
         pool_mock.UUIDString.return_value = 'some-uuid'
         pool_mock.info.return_value = [0, 1234, 5678, 123]
         pool_mock.autostart.return_value = True
@@ -2072,11 +2167,11 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
     </permissions>
   </target>
 </pool>'''
-        self.mock_conn.storagePoolLookupByName.return_value = pool_mock
+        self.mock_conn.listAllStoragePools.return_value = [pool_mock]
         # pylint: enable=no-member
 
         pool = virt.pool_info('foo')
-        self.assertEqual({
+        self.assertEqual({'foo': {
             'uuid': 'some-uuid',
             'state': 'inactive',
             'capacity': 1234,
@@ -2085,7 +2180,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             'autostart': True,
             'persistent': True,
             'type': 'dir',
-            'target_path': '/srv/vms'}, pool)
+            'target_path': '/srv/vms'}}, pool)
 
     def test_pool_info_notarget(self):
         '''
@@ -2093,6 +2188,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         '''
         # pylint: disable=no-member
         pool_mock = MagicMock()
+        pool_mock.name.return_value = 'ceph'
         pool_mock.UUIDString.return_value = 'some-uuid'
         pool_mock.info.return_value = [0, 0, 0, 0]
         pool_mock.autostart.return_value = True
@@ -2112,11 +2208,11 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
     </auth>
   </source>
 </pool>'''
-        self.mock_conn.storagePoolLookupByName.return_value = pool_mock
+        self.mock_conn.listAllStoragePools.return_value = [pool_mock]
         # pylint: enable=no-member
 
         pool = virt.pool_info('ceph')
-        self.assertEqual({
+        self.assertEqual({'ceph': {
             'uuid': 'some-uuid',
             'state': 'inactive',
             'capacity': 0,
@@ -2125,18 +2221,77 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             'autostart': True,
             'persistent': True,
             'type': 'rbd',
-            'target_path': None}, pool)
+            'target_path': None}}, pool)
 
     def test_pool_info_notfound(self):
         '''
         Test virt.pool_info() when the pool can't be found
         '''
         # pylint: disable=no-member
-        self.mock_conn.storagePoolLookupByName.side_effect = \
-            self.mock_libvirt.libvirtError("Pool not found")
+        self.mock_conn.listAllStoragePools.return_value = []
         # pylint: enable=no-member
         pool = virt.pool_info('foo')
         self.assertEqual({}, pool)
+
+    def test_pool_info_all(self):
+        '''
+        Test virt.pool_info()
+        '''
+        # pylint: disable=no-member
+        pool_mocks = []
+        for i in range(2):
+            pool_mock = MagicMock()
+            pool_mock.name.return_value = 'pool{0}'.format(i)
+            pool_mock.UUIDString.return_value = 'some-uuid-{0}'.format(i)
+            pool_mock.info.return_value = [0, 1234, 5678, 123]
+            pool_mock.autostart.return_value = True
+            pool_mock.isPersistent.return_value = True
+            pool_mock.XMLDesc.return_value = '''<pool type='dir'>
+  <name>default</name>
+  <uuid>d92682d0-33cf-4e10-9837-a216c463e158</uuid>
+  <capacity unit='bytes'>854374301696</capacity>
+  <allocation unit='bytes'>596275986432</allocation>
+  <available unit='bytes'>258098315264</available>
+  <source>
+  </source>
+  <target>
+    <path>/srv/vms</path>
+    <permissions>
+      <mode>0755</mode>
+      <owner>0</owner>
+      <group>0</group>
+    </permissions>
+  </target>
+</pool>'''
+            pool_mocks.append(pool_mock)
+        self.mock_conn.listAllStoragePools.return_value = pool_mocks
+        # pylint: enable=no-member
+
+        pool = virt.pool_info()
+        self.assertEqual({
+            'pool0':
+            {
+                'uuid': 'some-uuid-0',
+                'state': 'inactive',
+                'capacity': 1234,
+                'allocation': 5678,
+                'free': 123,
+                'autostart': True,
+                'persistent': True,
+                'type': 'dir',
+                'target_path': '/srv/vms'
+            }, 'pool1': {
+                'uuid': 'some-uuid-1',
+                'state': 'inactive',
+                'capacity': 1234,
+                'allocation': 5678,
+                'free': 123,
+                'autostart': True,
+                'persistent': True,
+                'type': 'dir',
+                'target_path': '/srv/vms'
+            }
+        }, pool)
 
     def test_pool_list_volumes(self):
         '''
