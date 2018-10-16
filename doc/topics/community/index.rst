@@ -1,3 +1,5 @@
+.. _salt-community:
+
 ========================
 Salt Community Resources
 ========================
