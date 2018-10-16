@@ -14,6 +14,7 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
+import salt.config
 import salt.engines.script as script
 from salt.exceptions import CommandExecutionError
 
@@ -25,12 +26,11 @@ class EngineScriptTestCase(TestCase, LoaderModuleMockMixin):
     '''
 
     def setup_loader_modules(self):
+
+        opts = salt.config.DEFAULT_MASTER_OPTS
         return {
-            script: {
-                '__opts__': {
-                    '__role': '',
-                    'extension_modules': ''
-                }
+            script: { 
+                '__opts__': opts
              }
         }
 
@@ -39,7 +39,8 @@ class EngineScriptTestCase(TestCase, LoaderModuleMockMixin):
         Test known serializer is returned or exception is raised
         if unknown serializer
         '''
-        self.assertTrue(script._get_serializer('yaml'))
+        for serializers in ('json', 'yaml', 'msgpack'):
+            self.assertTrue(script._get_serializer(serializers))
 
         with self.assertRaises(CommandExecutionError):
             script._get_serializer('bad')
