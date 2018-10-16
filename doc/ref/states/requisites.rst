@@ -10,7 +10,7 @@ Requisites
 The Salt requisite system is used to create relationships between states. This
 provides a method to easily define inter-dependencies between states. These
 dependencies are expressed by declaring the relationships using state names
-and ID's or names. The generalized form of a requisite target is ``<state name>:
+and IDs or names. The generalized form of a requisite target is ``<state name>:
 <ID or name>``. The specific form is defined as a :ref:`Requisite Reference
 <requisite-reference>`.
 
@@ -194,8 +194,8 @@ require
 ~~~~~~~
 
 The use of ``require`` builds a dependency that prevents a state from executing
-until all ``require``\d states execute successfully. If any ``require``\d state
-fails, then the state will fail due to requisites.
+until all required states execute successfully. If any required state fails,
+then the state will fail due to requisites.
 
 In the following example, the ``service`` state will not be checked unless both
 ``file`` states execute without failure.
@@ -291,7 +291,7 @@ watch
 
 A ``watch`` requisite is used to add additional behavior when there are changes
 in other states. This is done using the ``mod_watch`` function available from
-the execution module and will execute any time a ``watch``\ed state changes.
+the execution module and will execute any time a watched state changes.
 
 .. note::
 
