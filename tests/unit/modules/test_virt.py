@@ -7,6 +7,7 @@ virt execution module unit tests
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
+import os
 import re
 import datetime
 
@@ -21,6 +22,7 @@ import salt.modules.virt as virt
 import salt.modules.config as config
 from salt._compat import ElementTree as ET
 import salt.config
+import salt.syspaths
 from salt.exceptions import CommandExecutionError
 
 # Import third party libs
@@ -86,6 +88,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test virt._disk_profile() when merging with user-defined disks
         '''
+        root_dir = os.path.join(salt.syspaths.ROOT_DIR, 'srv', 'salt-images')
         userdisks = [{'name': 'data', 'size': 16384, 'format': 'raw'}]
 
         disks = virt._disk_profile('default', 'kvm', userdisks, 'myvm', image='/path/to/image')
@@ -96,13 +99,13 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
               'model': 'virtio',
               'filename': 'myvm_system.qcow2',
               'image': '/path/to/image',
-              'source_file': '/srv/salt-images/myvm_system.qcow2'},
+              'source_file': '{0}{1}myvm_system.qcow2'.format(root_dir, os.sep)},
              {'name': 'data',
               'size': 16384,
               'format': 'raw',
               'model': 'virtio',
               'filename': 'myvm_data.raw',
-              'source_file': '/srv/salt-images/myvm_data.raw'}],
+              'source_file': '{0}{1}myvm_data.raw'.format(root_dir, os.sep)}],
             disks
         )
 
@@ -608,7 +611,10 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             self.assertTrue(len(root.findall('.//disk')) == 2)
             self.assertTrue(len(root.findall('.//interface')) == 2)
 
-    @patch('salt.modules.virt.pool_info', return_value={'target_path': '/pools/default'})
+    @patch('salt.modules.virt.pool_info',
+           return_value={'target_path': os.path.join(salt.syspaths.ROOT_DIR,
+                                                     'pools',
+                                                     'default')})
     def test_disk_profile_kvm_disk_pool(self, mock_poolinfo):
         '''
         Test virt._gen_xml(), KVM case with pools defined.
@@ -619,13 +625,19 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 {'second': {'size': 4096}}
             ]
         }
-        with patch.dict(virt.__salt__, {'config.get': MagicMock(side_effect=[  # pylint: disable=no-member
-                disks, "/default/path/"])}):
+        with patch.dict(virt.__salt__, {'config.get': MagicMock(side_effect=[
+                disks,
+                os.path.join(salt.syspaths.ROOT_DIR, 'default', 'path')])}):
             diskp = virt._disk_profile('noeffect', 'kvm', [], 'hello')
 
+            pools_path = os.path.join(
+                salt.syspaths.ROOT_DIR, 'pools', 'default') + os.sep
+            default_path = os.path.join(
+                salt.syspaths.ROOT_DIR, 'default', 'path') + os.sep
+
             self.assertEqual(len(diskp), 2)
-            self.assertTrue(diskp[0]['source_file'].startswith('/pools/default/'))
-            self.assertTrue(diskp[1]['source_file'].startswith('/default/path/'))
+            self.assertTrue(diskp[0]['source_file'].startswith(pools_path))
+            self.assertTrue(diskp[1]['source_file'].startswith(default_path))
 
     @patch('salt.modules.virt.pool_info', return_value={})
     def test_disk_profile_kvm_disk_pool_notfound(self, mock_poolinfo):
@@ -791,6 +803,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test virt.update()
         '''
+        root_dir = os.path.join(salt.syspaths.ROOT_DIR, 'srv', 'salt-images')
         xml = '''
             <domain type='kvm' id='7'>
               <name>myvm</name>
@@ -803,7 +816,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
               <devices>
                 <disk type='file' device='disk'>
                   <driver name='qemu' type='qcow2'/>
-                  <source file='/srv/salt-images/myvm_system.qcow2'/>
+                  <source file='{0}{1}myvm_system.qcow2'/>
                   <backingStore/>
                   <target dev='vda' bus='virtio'/>
                   <alias name='virtio-disk0'/>
@@ -811,7 +824,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 </disk>
                 <disk type='file' device='disk'>
                   <driver name='qemu' type='qcow2'/>
-                  <source file='/srv/salt-images/myvm_data.qcow2'/>
+                  <source file='{0}{1}myvm_data.qcow2'/>
                   <backingStore/>
                   <target dev='vda' bus='virtio'/>
                   <alias name='virtio-disk1'/>
@@ -843,7 +856,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 </video>
               </devices>
             </domain>
-        '''
+        '''.format(root_dir, os.sep)
         domain_mock = self.set_mock_vm('myvm', xml)
         domain_mock.OSType = MagicMock(return_value='hvm')
         define_mock = MagicMock(return_value=True)
@@ -883,10 +896,13 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         domain_mock.attachDevice = devattach_mock
         domain_mock.detachDevice = devdetach_mock
         ret = virt.update('myvm', disk_profile='default', disks=[{'name': 'added', 'size': 2048}])
-        self.assertEqual(['/srv/salt-images/myvm_added.qcow2'],
-                         [ET.fromstring(disk).find('source').get('file') for disk in ret['disk']['attached']])
-        self.assertEqual(['/srv/salt-images/myvm_data.qcow2'],
-                         [ET.fromstring(disk).find('source').get('file') for disk in ret['disk']['detached']])
+        self.assertListEqual(
+            [os.path.join(root_dir, 'myvm_added.qcow2')],
+            [ET.fromstring(disk).find('source').get('file') for disk in ret['disk']['attached']])
+
+        self.assertListEqual(
+            [os.path.join(root_dir, 'myvm_data.qcow2')],
+            [ET.fromstring(disk).find('source').get('file') for disk in ret['disk']['detached']])
         devattach_mock.assert_called_once()
         devdetach_mock.assert_called_once()
 
