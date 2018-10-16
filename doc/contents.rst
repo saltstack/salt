@@ -8,7 +8,7 @@ Salt Table of Contents
     :maxdepth: 2
 
     topics/index
-	topic/community
+    topics/community
     topics/installation/index
     topics/configuration/index
     topics/using_salt
