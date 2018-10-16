@@ -34,10 +34,12 @@ then attempt to manage the service even if the installation failed.
 
 These requisites always form dependencies in a predictable single direction.
 Each requisite has an alternate :ref:`<requisite>_in <requisites-in>` form that
-can be used to establish a "reverse" dependency.
+can be used to establish a "reverse" dependency--useful in for loops.
 
 In the end, a single dependency map is created and everything is executed in a
 finite and predictable order.
+
+.. _requisites-matching:
 
 Requisite matching
 ------------------
@@ -169,9 +171,9 @@ Requisites Types
 All requisite types have a corresponding `<requisite>_in <requisites-in>` form:
 
 * `require <requisites-require>`: Require success from another state
+* `onchanges <requisites-onchanges>`: Execute if target has changes
 * `watch <requisites-watch>`: Similar to require, but invokes ``mod_watch`` behavior
 * `listen <requisites-listen>`: Similar to require, but invokes ``mod_wait`` behavior
-* `onchanges <requisites-onchanges>`: Execute if target has changes
 * `prereq <requisites-prereq>`: Similar to onchanges with reversed execution order
 * `onfail <requisites-onfail>`: Execute if target state fails
 * `use <requisites-use>`: Copy arguments from another state
@@ -184,7 +186,7 @@ Several requisite types have a corresponding `requisite_any <requisites-any>` fo
 * ``onfail_any``
 
 All requisites define specific relationships and always work with the dependency
-logic defined above.
+logic defined `above <requisites-matching>`.
 
 .. _requisites-require:
 
@@ -227,6 +229,60 @@ This will add a ``require`` to all of the state declarations found in the given
 sls file. This means that ``bar`` will ``require`` every state within ``foo``.
 This makes it very easy to batch large groups of states easily in any requisite
 statement.
+
+.. _requisites-onchanges:
+
+onchanges
+~~~~~~~~~
+
+.. versionadded:: 2014.7.0
+
+The ``onchanges`` requisite makes a state only apply if the required states
+generate changes, and if the watched state's "result" is ``True`` (does not fail).
+This can be a useful way to execute a post hook after changing aspects of a system.
+
+If a state has multiple ``onchanges`` requisites then the state will trigger
+if any of the watched states changes.
+
+.. code-block:: yaml
+
+    myservice:
+      file.managed:
+        - name: /etc/myservice/myservice.conf
+        - source: salt://myservice/files/myservice.conf
+      cmd.run:
+        - name: /usr/local/sbin/run-build
+        - onchanges:
+          - file: /etc/myservice/myservice.conf
+
+In the example above, ``cmd.run`` will run only if there are changes in the
+``file.managed`` state.
+
+An easy mistake to make is using ``onchanges_in`` when ``onchanges`` is the
+correct choice, as seen in this next example.
+
+.. code-block:: yaml
+
+    myservice:
+      file.managed:
+        - name: /etc/myservice/myservice.conf
+        - source: salt://myservice/files/myservice.conf
+      cmd.run:
+        - name: /usr/local/sbin/run-build
+        - onchanges_in:  # <-- broken logic
+          - file: /etc/myservice/myservice.conf
+
+
+This will set up a requisite relationship in which the ``cmd.run`` state
+always executes, and the ``file.managed`` state only executes if the
+``cmd.run`` state has changes (which it always will, since the ``cmd.run``
+state includes the command results as changes).
+
+It may semantically seem like the ``cmd.run`` state should only run
+when there are changes in the file state, but remember that requisite
+relationships involve one state watching another state, and a
+:ref:`requisite_in <requisites-onchanges-in>` does the opposite: it forces
+the specified state to watch the state with the ``requisite_in``.
 
 .. _requisites-watch:
 
@@ -341,7 +397,7 @@ listen
 
 A ``listen`` requisite is used to trigger the ``mod_wait`` function of an
 execution module. Rather than modifying execution order, the ``mod_wait`` state
-created my ``listen`` will execute at the end of the state run.
+created by ``listen`` will execute at the end of the state run.
 
 .. code-block:: yaml
 
@@ -483,58 +539,6 @@ The ``onfail`` requisite is applied in the same way as ``require`` as ``watch``:
     ``onfail`` used AND logic. See `Issue #22370`_ for more information.
 
 .. _Issue #22370: https://github.com/saltstack/salt/issues/22370
-
-onchanges
-~~~~~~~~~
-
-.. versionadded:: 2014.7.0
-
-The ``onchanges`` requisite makes a state only apply if the required states
-generate changes, and if the watched state's "result" is ``True`` (does not fail).
-This can be a useful way to execute a post hook after changing aspects of a system.
-
-If a state has multiple ``onchanges`` requisites then the state will trigger
-if any of the watched states changes.
-
-.. code-block:: yaml
-
-    myservice:
-      file.managed:
-        - name: /etc/myservice/myservice.conf
-        - source: salt://myservice/files/myservice.conf
-      cmd.run:
-        - name: /usr/local/sbin/run-build
-        - onchanges:
-          - file: /etc/myservice/myservice.conf
-
-In the example above, ``cmd.run`` will run only if there are changes in the
-``file.managed`` state.
-
-An easy mistake to make is using ``onchanges_in`` when ``onchanges`` is the
-correct choice, as seen in this next example.
-
-.. code-block:: yaml
-
-    myservice:
-      file.managed:
-        - name: /etc/myservice/myservice.conf
-        - source: salt://myservice/files/myservice.conf
-      cmd.run:
-        - name: /usr/local/sbin/run-build
-        - onchanges_in:  # <-- broken logic
-          - file: /etc/myservice/myservice.conf
-
-
-This will set up a requisite relationship in which the ``cmd.run`` state
-always executes, and the ``file.managed`` state only executes if the
-``cmd.run`` state has changes (which it always will, since the ``cmd.run``
-state includes the command results as changes).
-
-It may semantically seem like the ``cmd.run`` state should only run
-when there are changes in the file state, but remember that requisite
-relationships involve one state watching another state, and a
-:ref:`requisite_in <requisites-onchanges-in>` does the opposite: it forces
-the specified state to watch the state with the ``requisite_in``.
 
 .. _requisites-use:
 
