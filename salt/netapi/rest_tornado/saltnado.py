@@ -1100,13 +1100,15 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
         '''
         Disbatch runner client commands
         '''
+        full_return = chunk.pop('full_return', False)
         pub_data = self.saltclients['runner'](chunk)
         tag = pub_data['tag'] + '/ret'
         try:
             event = yield self.application.event_listener.get_event(self, tag=tag)
 
             # only return the return data
-            raise tornado.gen.Return(event['data']['return'])
+            ret = event if full_return else event['data']['return']
+            raise tornado.gen.Return(ret)
         except TimeoutException:
             raise tornado.gen.Return('Timeout waiting for runner to execute')
 
