@@ -134,7 +134,17 @@ def check_file_list_cache(opts, form, list_cache, w_lock):
                     # st_time can have a greater precision than time, removing
                     # float precision makes sure age will never be a negative
                     # number.
-                    age = int(time.time()) - int(cache_stat.st_mtime)
+                    current_time = int(time.time())
+                    file_mtime = int(cache_stat.st_mtime)
+                    if file_mtime > current_time:
+                        log.debug(
+                            'Cache file modified time is in the future, ignoring. '
+                            'file=%s mtime=%s current_time=%s',
+                            list_cache, current_time, file_mtime
+                        )
+                        age = 0
+                    else:
+                        age = current_time - file_mtime
                 else:
                     # if filelist does not exists yet, mark it as expired
                     age = opts.get('fileserver_list_cache_time', 20) + 1
