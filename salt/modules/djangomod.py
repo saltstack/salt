@@ -129,6 +129,25 @@ def migrate(settings_module,
 
     Execute the Django-Admin migrate command (requires Django 1.7 or higher).
 
+    .. versionadded:: Neon
+
+    app_label
+        Specific app to run migrations for, instead of all apps.
+        This may involve running other apps’ migrations too, due to dependencies.
+
+    migration_name
+        Named migration to be applied to a specific app.
+        Brings the database schema to a state where the named migration is applied,
+        but no later migrations in the same app are applied. This may involve
+        unapplying migrations if you have previously migrated past the named migration.
+        Use the name zero to unapply all migrations for an app.
+
+    database
+        Database to migrate. Defaults to 'default'.
+
+    noinput
+        Suppresses all user prompts. Defaults to True.
+
     CLI Example:
 
     .. code-block:: bash
