@@ -142,7 +142,7 @@ class WinLgpoTest(ModuleCase):
         if not os.path.exists(r'c:\windows\system32\lgpo.exe'):
             log.debug('lgpo.exe does not exist, attempting to download/extract')
             ret = cls().run_function('state.single',
-                                     ('archive.extracted', 'c:\\windows\\system32'),
+                                     ('archive.extracted', r'c:\windows\system32'),
                                      source='https://download.microsoft.com/download/8/5/C/85C25433-A1B0-4FFA-9429-7E023E7DA8D8/LGPO.zip',
                                      archive_format='zip',
                                      source_hash='sha256=6ffb6416366652993c992280e29faea3507b5b5aa661c33ba1af31f48acea9c4',
@@ -243,7 +243,7 @@ class WinLgpoTest(ModuleCase):
                                          r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU[\s]*AllowMUUpdateService[\s]*DELETE'
                                  ])
         # set Configure Automatic Updates to 'Not Configured'
-        self._testComputerAdmxPolicy('Windows Components\Windows Update\Configure Automatic Updates',
+        self._testComputerAdmxPolicy(r'Windows Components\Windows Update\Configure Automatic Updates',
                                      'Not Configured',
                                      [r'; Source file:  c:\\windows\\system32\\grouppolicy\\machine\\registry.pol[\s]*; PARSING COMPLETED.'])
 
