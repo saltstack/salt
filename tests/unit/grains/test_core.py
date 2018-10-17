@@ -583,6 +583,27 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         }
         self._run_os_grains_tests("ubuntu-17.10", _os_release_map, expectation)
 
+    @skipIf(not salt.utils.platform.is_windows(), 'System is not Windows')
+    def test_windows_platform_data(self):
+        '''
+        Test the _windows_platform_data function
+        '''
+        grains = ['biosversion', 'kernelrelease', 'kernelversion',
+                  'manufacturer', 'motherboard', 'osfullname', 'osmanufacturer',
+                  'osrelease', 'osservicepack', 'osversion', 'productname',
+                  'serialnumber', 'timezone', 'virtual', 'windowsdomain',
+                  'windowsdomaintype']
+        returned_grains = core._windows_platform_data()
+        for grain in grains:
+            self.assertIn(grain, returned_grains)
+
+        valid_types = ['Unknown', 'Unjoined', 'Workgroup', 'Domain']
+        self.assertIn(returned_grains['windowsdomaintype'], valid_types)
+        valid_releases = ['Vista', '7', '8', '8.1', '10', '2008Server',
+                          '2008ServerR2', '2012Server', '2012ServerR2',
+                          '2016Server']
+        self.assertIn(returned_grains['osrelease'], valid_releases)
+
     @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
     def test_linux_memdata(self):
         '''

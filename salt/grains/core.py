@@ -1203,6 +1203,7 @@ def _windows_platform_data():
     #    osfullname
     #    timezone
     #    windowsdomain
+    #    windowsdomaintype
     #    motherboard.productname
     #    motherboard.serialnumber
     #    virtual
