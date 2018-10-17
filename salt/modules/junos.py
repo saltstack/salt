@@ -70,29 +70,16 @@ def __virtual__():
                        'junos-eznc or jxmlease or proxy could not be loaded.')
 
 
-def timeoutDecorator(function):
+def resultdecorator(function):
     @wraps(function)
     def wrapper(*args, **kwargs):
-        if 'dev_timeout' in kwargs:
-            conn = __proxy__['junos.conn']()
-            restore_timeout = conn.timeout
-            conn.timeout = kwargs.pop('dev_timeout', None)
-            try:
-                result = function(*args, **kwargs)
-                conn.timeout = restore_timeout
-                return result
-            except Exception:
-                conn.timeout = restore_timeout
-                raise
-        else:
-            try:
-                return function(*args, **kwargs)
-            except Exception:
-                raise
+        ret = function(*args, **kwargs)
+        ret['result'] = ret['out']
+        return ret
 
     return wrapper
 
-
+@resultdecorator
 def facts_refresh():
     '''
     Reload the facts dictionary from the device. Usually only needed if,
@@ -108,11 +95,13 @@ def facts_refresh():
     conn = __proxy__['junos.conn']()
     ret = dict()
     ret['out'] = True
+    ret['result'] = False
     try:
         conn.facts_refresh()
     except Exception as exception:
         ret['message'] = 'Execution failed due to "{0}"'.format(exception)
         ret['out'] = False
+        ret['result'] = False
         return ret
 
     ret['facts'] = __proxy__['junos.get_serialized_facts']()
@@ -121,9 +110,9 @@ def facts_refresh():
         __salt__['saltutil.sync_grains']()
     except Exception as exception:
         log.error('Grains could not be updated due to "%s"', exception)
-    return ret
+    return ret.transform()
 
-
+@resultdecorator
 def facts():
     '''
     Displays the facts gathered during the connection.
@@ -145,8 +134,7 @@ def facts():
         ret['out'] = False
     return ret
 
-
-@timeoutDecorator
+@resultdecorator
 def rpc(cmd=None, dest=None, **kwargs):
     '''
     This function executes the RPC provided as arguments on the junos device.
@@ -208,6 +196,7 @@ def rpc(cmd=None, dest=None, **kwargs):
                 op[key] = value
     else:
         op.update(kwargs)
+    op['dev_timeout'] = six.text_type(op.pop('dev_timeout', conn.timeout))
 
     if cmd in ['get-config', 'get_config']:
         filter_reply = None
@@ -228,6 +217,7 @@ def rpc(cmd=None, dest=None, **kwargs):
             ret['out'] = False
             return ret
     else:
+        op['dev_timeout'] = int(op['dev_timeout'])
         if 'filter' in op:
             log.warning(
                 'Filter ignored as it is only used with "get-config" rpc')
@@ -264,8 +254,7 @@ def rpc(cmd=None, dest=None, **kwargs):
             fp.write(salt.utils.stringutils.to_str(write_response))
     return ret
 
-
-@timeoutDecorator
+@resultdecorator
 def set_hostname(hostname=None, **kwargs):
     '''
     Set the device's hostname
@@ -275,9 +264,6 @@ def set_hostname(hostname=None, **kwargs):
 
     comment
         Provide a comment to the commit
-
-    dev_timeout : 30
-        The NETCONF RPC timeout (in seconds)
 
     confirm
       Provide time in minutes for commit confirmation. If this option is
@@ -304,6 +290,9 @@ def set_hostname(hostname=None, **kwargs):
                 op.update(kwargs['__pub_arg'][-1])
     else:
         op.update(kwargs)
+
+    # Setting timeout parameter
+    op['timeout'] = op.get('dev_timeout', 30)
 
     # Added to recent versions of JunOs
     # Use text format instead
@@ -339,11 +328,9 @@ def set_hostname(hostname=None, **kwargs):
         ret[
             'message'] = 'Successfully loaded host-name but pre-commit check failed.'
         conn.cu.rollback()
-
     return ret
 
-
-@timeoutDecorator
+@resultdecorator
 def commit(**kwargs):
     '''
     To commit the changes loaded in the candidate configuration.
@@ -396,6 +383,11 @@ def commit(**kwargs):
         op.update(kwargs)
 
     op['detail'] = op.get('detail', False)
+    # Caching value to revert back
+    prev_timeout = conn.timeout
+    # If timeout is given
+    if 'dev_timeout' in op:
+        conn.timeout = op['dev_timeout']
 
     try:
         commit_ok = conn.cu.commit_check()
@@ -427,19 +419,18 @@ def commit(**kwargs):
         ret['message'] = 'Pre-commit check failed.'
         conn.cu.rollback()
 
+    # Reverting timeout back to previous value
+    conn.timeout = prev_timeout
+
     return ret
 
-
-@timeoutDecorator
+@resultdecorator
 def rollback(**kwargs):
     '''
     Roll back the last committed configuration changes and commit
 
     id : 0
         The rollback ID value (0-49)
-
-    dev_timeout : 30
-        The NETCONF RPC timeout (in seconds)
 
     comment
       Provide a comment for the commit
@@ -520,7 +511,7 @@ def rollback(**kwargs):
         ret['out'] = False
     return ret
 
-
+@resultdecorator
 def diff(**kwargs):
     '''
     Returns the difference between the candidate and the current configuration
@@ -551,8 +542,7 @@ def diff(**kwargs):
 
     return ret
 
-
-@timeoutDecorator
+@resultdecorator
 def ping(dest_ip=None, **kwargs):
     '''
     Send a ping RPC to a device
@@ -614,8 +604,7 @@ def ping(dest_ip=None, **kwargs):
         ret['out'] = False
     return ret
 
-
-@timeoutDecorator
+@resultdecorator
 def cli(command=None, **kwargs):
     '''
     Executes the CLI commands and returns the output in specified format. \
@@ -626,9 +615,6 @@ def cli(command=None, **kwargs):
 
     format : text
         Format in which to get the CLI output (either ``text`` or ``xml``)
-
-    dev_timeout : 30
-        The NETCONF RPC timeout (in seconds)
 
     dest
         Destination file where the RPC output is stored. Note that the file
@@ -663,7 +649,7 @@ def cli(command=None, **kwargs):
         op.update(kwargs)
 
     try:
-        result = conn.cli(command, format_, warning=False)
+        result = conn.cli(command, format_, op, warning=False)
     except Exception as exception:
         ret['message'] = 'Execution failed due to "{0}"'.format(exception)
         ret['out'] = False
@@ -682,7 +668,7 @@ def cli(command=None, **kwargs):
     ret['out'] = True
     return ret
 
-
+@resultdecorator
 def shutdown(**kwargs):
     '''
     Shut down (power off) or reboot a device running Junos OS. This includes
@@ -757,8 +743,7 @@ def shutdown(**kwargs):
         ret['out'] = False
     return ret
 
-
-@timeoutDecorator
+@resultdecorator
 def install_config(path=None, **kwargs):
     '''
     Installs the given configuration file into the candidate configuration.
@@ -849,6 +834,12 @@ def install_config(path=None, **kwargs):
                 op.update(kwargs['__pub_arg'][-1])
     else:
         op.update(kwargs)
+
+    # Caching value to revert back
+    prev_timeout = conn.timeout
+    # If timeout is given
+    if 'dev_timeout' in op:
+        conn.timeout = op['dev_timeout']
 
     template_vars = dict()
     if "template_vars" in op:
@@ -957,9 +948,12 @@ def install_config(path=None, **kwargs):
                 exception)
             ret['out'] = False
 
+    # Reverting timeout back to previous value
+    conn.timeout = prev_timeout
+
     return ret
 
-
+@resultdecorator
 def zeroize():
     '''
     Resets the device to default factory settings
@@ -982,8 +976,7 @@ def zeroize():
 
     return ret
 
-
-@timeoutDecorator
+@resultdecorator
 def install_os(path=None, **kwargs):
     '''
     Installs the given image on the device. After the installation is complete\
@@ -1045,6 +1038,10 @@ def install_os(path=None, **kwargs):
     else:
         op.update(kwargs)
 
+    # If timeout is given
+    if 'dev_timeout' in op:
+        conn.timeout = op['dev_timeout']
+
     try:
         conn.sw.install(path, progress=True)
         ret['message'] = 'Installed the os.'
@@ -1065,10 +1062,9 @@ def install_os(path=None, **kwargs):
             ret['out'] = False
             return ret
         ret['message'] = 'Successfully installed and rebooted!'
-
     return ret
 
-
+@resultdecorator
 def file_copy(src=None, dest=None):
     '''
     Copies the file from the local device to the junos device
@@ -1113,10 +1109,9 @@ def file_copy(src=None, dest=None):
     except Exception as exception:
         ret['message'] = 'Could not copy file : "{0}"'.format(exception)
         ret['out'] = False
-
     return ret
 
-
+@resultdecorator
 def lock():
     '''
     Attempts an exclusive lock on the candidate configuration. This
@@ -1146,7 +1141,7 @@ def lock():
 
     return ret
 
-
+@resultdecorator
 def unlock():
     '''
     Unlocks the candidate configuration.
@@ -1170,7 +1165,7 @@ def unlock():
 
     return ret
 
-
+@resultdecorator
 def load(path=None, **kwargs):
     '''
     Loads the configuration from the file provided onto the device.
@@ -1289,7 +1284,7 @@ def load(path=None, **kwargs):
     except Exception as exception:
         ret['message'] = 'Could not load configuration due to : "{0}"'.format(
             exception)
-        ret['format'] = op['format']
+        ret['format'] = template_format
         ret['out'] = False
         return ret
     finally:
@@ -1297,7 +1292,7 @@ def load(path=None, **kwargs):
 
     return ret
 
-
+@resultdecorator
 def commit_check():
     '''
     Perform a commit check on the configuration
