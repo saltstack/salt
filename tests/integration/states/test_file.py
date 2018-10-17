@@ -3841,6 +3841,25 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
             self._read(name),
             self.with_matching_block_and_marker_end_not_after_newline)
 
+    @with_tempfile()
+    def test_issue_49043(self, name):
+        ret = self.run_function(
+            'state.sls',
+            mods='issue-49043',
+            pillar={'name': name},
+        )
+        log.error("ret = %s", repr(ret))
+        diff = '--- \n+++ \n@@ -0,0 +1,3 @@\n'
+        diff += dedent('''\
+        +#-- start managed zone --
+        +äöü
+        +#-- end managed zone --
+        ''')
+        job = 'file_|-somefile-blockreplace_|-{}_|-blockreplace'.format(name)
+        self.assertEqual(
+            ret[job]['changes']['diff'],
+            diff)
+
 
 class RemoteFileTest(ModuleCase, SaltReturnAssertsMixin):
     '''

@@ -440,7 +440,8 @@ class SaltTestingParser(optparse.OptionParser):
         if self.options.tests_logfile:
             filehandler = logging.FileHandler(
                 mode='w',           # Not preserved between re-runs
-                filename=self.options.tests_logfile
+                filename=self.options.tests_logfile,
+                encoding='utf-8',
             )
             # The logs of the file are the most verbose possible
             filehandler.setLevel(logging.DEBUG)
