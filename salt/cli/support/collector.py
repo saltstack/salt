@@ -125,6 +125,31 @@ class SupportDataCollector(object):
         self.__current_section = []
         self.__current_section_name = name
 
+    def _printout(self, data, output):
+        '''
+        Use salt outputter to printout content.
+
+        :return:
+        '''
+        opts = {'extension_modules': '', 'color': False}
+        try:
+            printout = salt.output.get_printout(output, opts)(data)
+            if printout is not None:
+                return printout.rstrip()
+        except (KeyError, AttributeError, TypeError) as err:
+            log.debug(err, exc_info=True)
+            try:
+                printout = salt.output.get_printout('nested', opts)(data)
+                if printout is not None:
+                    return printout.rstrip()
+            except (KeyError, AttributeError, TypeError) as err:
+                log.debug(err, exc_info=True)
+                printout = salt.output.get_printout('raw', opts)(data)
+                if printout is not None:
+                    return printout.rstrip()
+
+        return salt.output.try_printout(data, output, opts)
+
     def write(self, title, data, output=None):
         '''
         Add a data to the current opened section.
@@ -138,7 +163,7 @@ class SupportDataCollector(object):
             try:
                 if isinstance(data, dict) and 'return' in data:
                     data = data['return']
-                content = salt.output.try_printout(data, output, {'extension_modules': '', 'color': False})
+                content = self._printout(data, output)
             except Exception:  # Fall-back to just raw YAML
                 content = None
         else:
