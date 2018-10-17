@@ -97,6 +97,7 @@ class _Zypper(object):
 
     LOCK_EXIT_CODE = 7
     XML_DIRECTIVES = ['-x', '--xmlout']
+    # ZYPPER_LOCK is not affected by --root
     ZYPPER_LOCK = '/var/run/zypp.pid'
     TAG_RELEASED = 'zypper/released'
     TAG_BLOCKED = 'zypper/blocked'
@@ -127,6 +128,7 @@ class _Zypper(object):
         self.__refresh = False
         self.__ignore_repo_failure = False
         self.__systemd_scope = False
+        self.__root = None
 
     def __call__(self, *args, **kwargs):
         '''
@@ -139,6 +141,8 @@ class _Zypper(object):
             self.__ignore_repo_failure = kwargs['no_repo_failure']
         if 'systemd_scope' in kwargs:
             self.__systemd_scope = kwargs['systemd_scope']
+        if 'root' in kwargs:
+            self.__root = kwargs['root']
         return self
 
     def __getattr__(self, item):
@@ -282,6 +286,8 @@ class _Zypper(object):
             self.__cmd.append('--xmlout')
         if not self.__refresh:
             self.__cmd.append('--no-refresh')
+        if self.__root:
+            self.__cmd.extend(['--root', self.__root])
 
         self.__cmd.extend(args)
         kwargs['output_loglevel'] = 'trace'
