@@ -250,7 +250,7 @@ class GroupModuleTest(ModuleCase):
         self.run_function('user.add', [self._user1])
         m = '{0},{1}'.format(self._user, self._user1)
         ret = self.run_function('group.members', [self._group, m])
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             self.assertTrue(ret['result'])
         else:
             self.assertTrue(ret)
