@@ -4856,6 +4856,9 @@ def _lookup_admin_template(policy_name,
                                 policy_class)
                             admx_results = []
                             these_admx_search_results = admx_policy_definitions.xpath(policy_search_string, namespaces=adml_search_result.nsmap)
+                            if not these_admx_search_results:
+                                log.debug('No admx was found for the adml entry %s, it will be removed', display_name_searchval)
+                                adml_to_remove.append(adml_search_result)
                             for search_result in these_admx_search_results:
                                 log.debug('policy_name == %s', policy_name)
                                 this_hierarchy = _build_parent_list(search_result,
