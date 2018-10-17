@@ -3,7 +3,6 @@
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 import os
-import textwrap
 import re
 import io
 import logging
@@ -20,6 +19,7 @@ import salt.utils.platform
 import salt.utils.win_reg as reg
 
 log = logging.getLogger(__name__)
+
 
 @skipIf(not salt.utils.platform.is_windows(), 'windows test only')
 class WinLgpoTest(ModuleCase):
@@ -58,13 +58,12 @@ class WinLgpoTest(ModuleCase):
                 registry_value_hive,
                 registry_value_path,
                 registry_value_vname)
+        self.assertTrue(val['success'], msg='Failed to obtain the registry data for policy {0}'.format(policy_name))
         if val['success']:
-            assert val['vdata'] == expected_value_data, 'The registry value data {0} does not match the expected value {1} for policy {2}'.format(
+            self.assertEqual(val['vdata'], expected_value_data, 'The registry value data {0} does not match the expected value {1} for policy {2}'.format(
                         val['vdata'],
                         expected_value_data,
-                        policy_name)
-        else:
-            self.assertTrue(False, msg='Failed to obtain the registry data for policy {0}'.format(policy_name))
+                        policy_name))
 
     def _testSeceditPolicy(self,
                            policy_name,
@@ -99,8 +98,8 @@ class WinLgpoTest(ModuleCase):
             match = re.search(
                     expected_regex,
                     secedit_file_content,
-                    re.IGNORECASE|re.MULTILINE)
-            assert match != None, 'Failed validating policy "{0}" configuration, regex "{1}" not found in secedit output'.format(policy_name, expected_regex)
+                    re.IGNORECASE | re.MULTILINE)
+            self.assertIsNotNone(match, 'Failed validating policy "{0}" configuration, regex "{1}" not found in secedit output'.format(policy_name, expected_regex))
 
     def _testComputerAdmxPolicy(self,
                                 policy_name,
@@ -130,7 +129,7 @@ class WinLgpoTest(ModuleCase):
                     expected_regex,
                     lgpo_output,
                     re.IGNORECASE)
-            assert match != None, 'Failed validating policy "{0}" configuration, regex "{1}" not found in lgpo output'.format(policy_name, expected_regex)
+            self.assertIsNotNone(match, 'Failed validating policy "{0}" configuration, regex "{1}" not found in lgpo output'.format(policy_name, expected_regex))
 
     @classmethod
     def setUpClass(cls):
@@ -140,7 +139,7 @@ class WinLgpoTest(ModuleCase):
         downloads and extracts the lgpo.exe tool into c:\windows\system32
         for use in validating the registry.pol files
         '''
-        if not os.path.exists('c:\\windows\\system32\\lgpo.exe'):
+        if not os.path.exists(r'c:\windows\system32\lgpo.exe'):
             log.debug('lgpo.exe does not exist, attempting to download/extract')
             ret = cls().run_function('state.single',
                                      ('archive.extracted', 'c:\\windows\\system32'),
@@ -156,7 +155,7 @@ class WinLgpoTest(ModuleCase):
         Test setting/unsetting/changing NTP Client policies
         '''
         # Disable Configure NTP Client
-        self._testComputerAdmxPolicy('System\Windows Time Service\Time Providers\Configure Windows NTP Client',
+        self._testComputerAdmxPolicy(r'System\Windows Time Service\Time Providers\Configure Windows NTP Client',
                                      'Disabled',
                                      [
                                          r'Computer[\s]*Software\\Policies\\Microsoft\\W32time\\Parameters[\s]*NtpServer[\s]*DELETE',
@@ -168,7 +167,7 @@ class WinLgpoTest(ModuleCase):
                                          r'Computer[\s]*Software\\Policies\\Microsoft\\W32time\\TimeProviders\\NtpClient[\s]*EventLogFlags[\s]*DELETE'
                                      ])
         # Enable Configure NTP Client
-        self._testComputerAdmxPolicy('System\Windows Time Service\Time Providers\Configure Windows NTP Client',
+        self._testComputerAdmxPolicy(r'System\Windows Time Service\Time Providers\Configure Windows NTP Client',
                                      {
                                          'NtpServer': 'time.windows.com,0x9',
                                          'Type': 'NT5DS',
@@ -188,7 +187,7 @@ class WinLgpoTest(ModuleCase):
                                          r'Computer[\s]*Software\\Policies\\Microsoft\\W32time\\TimeProviders\\NtpClient[\s]*EventLogFlags[\s]*DWORD:0',
                                      ])
         # set Configure NTP Client to 'Not Configured'
-        self._testComputerAdmxPolicy('System\Windows Time Service\Time Providers\Configure Windows NTP Client',
+        self._testComputerAdmxPolicy(r'System\Windows Time Service\Time Providers\Configure Windows NTP Client',
                                      'Not Configured',
                                      [r'; Source file:  c:\\windows\\system32\\grouppolicy\\machine\\registry.pol[\s]*; PARSING COMPLETED.'])
 
@@ -233,7 +232,7 @@ class WinLgpoTest(ModuleCase):
         Test setting/unsetting/changing WindowsUpdate policy
         '''
         # disable Configure Automatic Updates
-        self._testComputerAdmxPolicy('Windows Components\Windows Update\Configure Automatic Updates',
+        self._testComputerAdmxPolicy(r'Windows Components\Windows Update\Configure Automatic Updates',
                                      'Disabled',
                                      [
                                          r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU[\s]*NoAutoUpdate[\s]*DWORD:1',
@@ -254,13 +253,13 @@ class WinLgpoTest(ModuleCase):
         Test setting/unsetting/changing ClipboardRedirection policy
         '''
         # Enable/Disable/Not Configured "Do not allow Clipboard redirection"
-        self._testComputerAdmxPolicy('Windows Components\Remote Desktop Services\Remote Desktop Session Host\Device and Resource Redirection\Do not allow Clipboard redirection',
+        self._testComputerAdmxPolicy(r'Windows Components\Remote Desktop Services\Remote Desktop Session Host\Device and Resource Redirection\Do not allow Clipboard redirection',
                                      'Enabled',
                                      [r'Computer[\s]*Software\\Policies\\Microsoft\\Windows NT\\Terminal Services[\s]*fDisableClip[\s]*DWORD:1'])
-        self._testComputerAdmxPolicy('Windows Components\Remote Desktop Services\Remote Desktop Session Host\Device and Resource Redirection\Do not allow Clipboard redirection',
+        self._testComputerAdmxPolicy(r'Windows Components\Remote Desktop Services\Remote Desktop Session Host\Device and Resource Redirection\Do not allow Clipboard redirection',
                                      'Disabled',
                                      [r'Computer[\s]*Software\\Policies\\Microsoft\\Windows NT\\Terminal Services[\s]*fDisableClip[\s]*DWORD:0'])
-        self._testComputerAdmxPolicy('Windows Components\Remote Desktop Services\Remote Desktop Session Host\Device and Resource Redirection\Do not allow Clipboard redirection',
+        self._testComputerAdmxPolicy(r'Windows Components\Remote Desktop Services\Remote Desktop Session Host\Device and Resource Redirection\Do not allow Clipboard redirection',
                                      'Not Configured',
                                      [r'; Source file:  c:\\windows\\system32\\grouppolicy\\machine\\registry.pol[\s]*; PARSING COMPLETED.'])
 
@@ -313,7 +312,7 @@ class WinLgpoTest(ModuleCase):
         Tests setting several ADMX policies in succession and validating the configuration w/lgop
         '''
         # set one policy
-        self._testComputerAdmxPolicy('Windows Components\Remote Desktop Services\Remote Desktop Session Host\Device and Resource Redirection\Do not allow Clipboard redirection',
+        self._testComputerAdmxPolicy(r'Windows Components\Remote Desktop Services\Remote Desktop Session Host\Device and Resource Redirection\Do not allow Clipboard redirection',
                                      'Disabled',
                                      [r'Computer[\s]*Software\\Policies\\Microsoft\\Windows NT\\Terminal Services[\s]*fDisableClip[\s]*DWORD:0'])
 
@@ -332,7 +331,7 @@ class WinLgpoTest(ModuleCase):
                                          r'Computer[\s]*Software\\policies\\Microsoft\\Windows NT\\Terminal Services[\s]*fAllowUnsolicitedFullControl[\s]*DWORD:1',
                                      ])
         # Configure Automatic Updates and validate everything is still okay
-        self._testComputerAdmxPolicy('Windows Components\Windows Update\Configure Automatic Updates',
+        self._testComputerAdmxPolicy(r'Windows Components\Windows Update\Configure Automatic Updates',
                                      'Disabled',
                                      [
                                          r'Computer[\s]*Software\\Policies\\Microsoft\\Windows NT\\Terminal Services[\s]*fDisableClip[\s]*DWORD:0',
