@@ -75,8 +75,6 @@ class WinPKGTest(ModuleCase):
                     locale: en_US
                     reboot: False
                 '''))
-            fp_.flush()
-            os.fsync(fp_.fileno())
         # now check if curl is also in cache and repo query
         pkgs.append('curl')
         for pkg in pkgs:
