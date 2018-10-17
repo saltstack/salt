@@ -110,7 +110,7 @@ def facts_refresh():
         __salt__['saltutil.sync_grains']()
     except Exception as exception:
         log.error('Grains could not be updated due to "%s"', exception)
-    return ret.transform()
+    return ret
 
 @resultdecorator
 def facts():
