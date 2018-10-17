@@ -141,9 +141,9 @@ def check_file_list_cache(opts, form, list_cache, w_lock):
                 if age < opts.get('fileserver_list_cache_time', 20):
                     # Young enough! Load this sucker up!
                     with salt.utils.files.fopen(list_cache, 'rb') as fp_:
-                        log.trace(
-                            'Returning file_lists cache data from %s',
-                            list_cache
+                        log.debug(
+                            "Returning file list from cache: age=%s cache_time=%s %s",
+                            age, opts.get('fileserver_list_cache_time', 20), list_cache
                         )
                         return salt.utils.data.decode(serial.load(fp_).get(form, [])), False, False
                 elif _lock_cache(w_lock):
