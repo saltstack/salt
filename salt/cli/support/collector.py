@@ -406,7 +406,10 @@ class SaltSupport(salt.utils.parsers.SaltSupportOptionParser):
            and self.config.get('support_archive')
            and os.path.exists(self.config['support_archive'])):
             self.out.warning('Terminated earlier, cleaning up')
-            os.unlink(self.config['support_archive'])
+            try:
+                os.unlink(self.config['support_archive'])
+            except Exception as err:
+                log.error(err)
 
     def _check_existing_archive(self):
         '''
