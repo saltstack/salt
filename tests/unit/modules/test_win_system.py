@@ -294,3 +294,41 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
             ret = win_system.get_hostname()
             self.assertEqual(ret, "MINION")
         cmd_run_mock.assert_called_once_with(cmd="hostname")
+
+    def test_get_system_info(self):
+        fields = ['bios_caption', 'bios_description', 'bios_details',
+                  'bios_manufacturer', 'bios_version', 'bootup_state',
+                  'caption', 'chassis_bootup_state', 'chassis_sku_number',
+                  'description', 'dns_hostname', 'domain', 'domain_role',
+                  'hardware_manufacturer', 'hardware_model', 'hardware_serial',
+                  'install_date', 'last_boot', 'name',
+                  'network_server_mode_enabled', 'organization',
+                  'os_architecture', 'os_manufacturer', 'os_name', 'os_type',
+                  'os_version', 'part_of_domain', 'pc_system_type',
+                  'power_state', 'primary', 'processor_cores',
+                  'processor_cores_enabled', 'processor_manufacturer',
+                  'processor_max_clock_speed', 'processors',
+                  'processors_logical', 'registered_user', 'status',
+                  'system_directory', 'system_drive', 'system_type',
+                  'thermal_state', 'total_physical_memory',
+                  'total_physical_memory_raw', 'users', 'windows_directory',
+                  'workgroup']
+        ret = win_system.get_system_info()
+        # Make sure all the fields are in the return
+        for field in fields:
+            self.assertIn(field, ret)
+        # os_type
+        os_types = ['Work Station', 'Domain Controller', 'Server']
+        self.assertIn(ret['os_type'], os_types)
+        domain_roles = ['Standalone Workstation', 'Member Workstation',
+                        'Standalone Server', 'Member Server',
+                        'Backup Domain Controller', 'Primary Domain Controller']
+        self.assertIn(ret['domain_role'], domain_roles)
+        system_types = ['Unspecified', 'Desktop', 'Mobile', 'Workstation',
+                        'Enterprise Server', 'SOHO Server', 'Appliance PC',
+                        'Performance Server', 'Slate', 'Maximum']
+        self.assertIn(ret['pc_system_type'], system_types)
+        warning_states = ['Other', 'Unknown', 'Safe', 'Warning', 'Critical',
+                          'Non-recoverable']
+        self.assertIn(ret['chassis_bootup_state'], warning_states)
+        self.assertIn(ret['thermal_state'], warning_states)
