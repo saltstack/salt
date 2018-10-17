@@ -31,6 +31,7 @@ from salt.ext import six
 # Import salt libs
 import salt.utils.files
 import salt.utils.yaml
+import salt.utils.platform
 
 log = logging.getLogger(__name__)
 
@@ -271,9 +272,12 @@ class MinionTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMix
             for minion in minions:
                 minion.shutdown()
 
+    @skipIf(salt.utils.platform.is_windows(), 'Skip on Windows OS')
     def test_exit_status_unknown_user(self):
         '''
         Ensure correct exit status when the minion is configured to run as an unknown user.
+
+        Skipped on windows because daemonization not supported
         '''
 
         minion = testprogram.TestDaemonSaltMinion(
@@ -302,6 +306,7 @@ class MinionTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMix
             minion.shutdown()
 
     # pylint: disable=invalid-name
+#    @skipIf(salt.utils.platform.is_windows(), 'Skip on Windows OS')
     def test_exit_status_unknown_argument(self):
         '''
         Ensure correct exit status when an unknown argument is passed to salt-minion.
@@ -331,9 +336,12 @@ class MinionTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMix
             # cause timeout exceptions and respective traceback
             minion.shutdown()
 
+    @skipIf(salt.utils.platform.is_windows(), 'Skip on Windows OS')
     def test_exit_status_correct_usage(self):
         '''
         Ensure correct exit status when salt-minion starts correctly.
+
+        Skipped on windows because daemonization not supported
         '''
 
         minion = testprogram.TestDaemonSaltMinion(

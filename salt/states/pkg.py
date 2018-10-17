@@ -3264,6 +3264,12 @@ def mod_aggregate(low, chunks, running):
 def mod_watch(name, **kwargs):
     '''
     Install/reinstall a package based on a watch requisite
+
+    .. note::
+        This state exists to support special handling of the ``watch``
+        :ref:`requisite <requisites>`. It should not be called directly.
+
+        Parameters for this function should be set by the state being triggered.
     '''
     sfun = kwargs.pop('sfun', None)
     mapfun = {'purged': purged,

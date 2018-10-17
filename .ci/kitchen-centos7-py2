@@ -72,6 +72,9 @@ timeout(time: 6, unit: 'HOURS') {
                                     description: "The ${TEST_SUITE}-${TEST_PLATFORM} job has failed",
                                     status: 'FAILURE',
                                     context: "jenkins/pr/${TEST_SUITE}-${TEST_PLATFORM}"
+                                slackSend channel: "#jenkins-prod-pr", 
+                                    color: '#FF0000', 
+                                    message: "FAILED: PR-Job: '${env.JOB_NAME} [${env.BUILD_NUMBER}]' (${env.BUILD_URL})"
                             }
                         }
                     }

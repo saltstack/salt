@@ -52,6 +52,7 @@ import salt.utils.dns
 import salt.utils.files
 import salt.utils.network
 import salt.utils.path
+import salt.utils.pkg.rpm
 import salt.utils.platform
 import salt.utils.stringutils
 from salt.ext import six
@@ -1523,6 +1524,34 @@ def _parse_os_release(*os_release_files):
     return ret
 
 
+def _parse_cpe_name(cpe):
+    '''
+    Parse CPE_NAME data from the os-release
+
+    Info: https://csrc.nist.gov/projects/security-content-automation-protocol/scap-specifications/cpe
+
+    :param cpe:
+    :return:
+    '''
+    part = {
+        'o': 'operating system',
+        'h': 'hardware',
+        'a': 'application',
+    }
+    ret = {}
+    cpe = (cpe or '').split(':')
+    if len(cpe) > 4 and cpe[0] == 'cpe':
+        if cpe[1].startswith('/'):  # WFN to URI
+            ret['vendor'], ret['product'], ret['version'] = cpe[2:5]
+            ret['phase'] = cpe[5] if len(cpe) > 5 else None
+            ret['part'] = part.get(cpe[1][1:])
+        elif len(cpe) == 13 and cpe[1] == '2.3':  # WFN to a string
+            ret['vendor'], ret['product'], ret['version'], ret['phase'] = [x if x != '*' else None for x in cpe[3:7]]
+            ret['part'] = part.get(cpe[2])
+
+    return ret
+
+
 def os_data():
     '''
     Return grains pertaining to the operating system
@@ -1719,13 +1748,20 @@ def os_data():
                                 codename = codename_match.group(1)
                         grains['lsb_distrib_codename'] = codename
                     if 'CPE_NAME' in os_release:
-                        if ":suse:" in os_release['CPE_NAME'] or ":opensuse:" in os_release['CPE_NAME']:
+                        cpe = _parse_cpe_name(os_release['CPE_NAME'])
+                        if not cpe:
+                            log.error('Broken CPE_NAME format in /etc/os-release!')
+                        elif cpe.get('vendor', '').lower() in ['suse', 'opensuse']:
                             grains['os'] = "SUSE"
                             # openSUSE `osfullname` grain normalization
                             if os_release.get("NAME") == "openSUSE Leap":
                                 grains['osfullname'] = "Leap"
                             elif os_release.get("VERSION") == "Tumbleweed":
                                 grains['osfullname'] = os_release["VERSION"]
+                            # Override VERSION_ID, if CPE_NAME around
+                            if cpe.get('version') and cpe.get('vendor') == 'opensuse':  # Keep VERSION_ID for SLES
+                                grains['lsb_distrib_release'] = cpe['version']
+
                 elif os.path.isfile('/etc/SuSE-release'):
                     log.trace('Parsing distrib info from /etc/SuSE-release')
                     grains['lsb_distrib_id'] = 'SUSE'
@@ -1835,8 +1871,7 @@ def os_data():
             # Commit introducing this comment should be reverted after the upstream bug is released.
             if 'CentOS Linux 7' in grains.get('lsb_distrib_codename', ''):
                 grains.pop('lsb_distrib_release', None)
-            grains['osrelease'] = \
-                grains.get('lsb_distrib_release', osrelease).strip()
+            grains['osrelease'] = grains.get('lsb_distrib_release', osrelease).strip()
         grains['oscodename'] = grains.get('lsb_distrib_codename', '').strip() or oscodename
         if 'Red Hat' in grains['oscodename']:
             grains['oscodename'] = oscodename
@@ -1874,8 +1909,7 @@ def os_data():
                         r'((?:Open|Oracle )?Solaris|OpenIndiana|OmniOS) (Development)?'
                         r'\s*(\d+\.?\d*|v\d+)\s?[A-Z]*\s?(r\d+|\d+\/\d+|oi_\S+|snv_\S+)?'
                     )
-                    osname, development, osmajorrelease, osminorrelease = \
-                        release_re.search(rel_data).groups()
+                    osname, development, osmajorrelease, osminorrelease = release_re.search(rel_data).groups()
                 except AttributeError:
                     # Set a blank osrelease grain and fallback to 'Solaris'
                     # as the 'os' grain.
@@ -1962,8 +1996,8 @@ def os_data():
     # architecture.
     if grains.get('os_family') == 'Debian':
         osarch = __salt__['cmd.run']('dpkg --print-architecture').strip()
-    elif grains.get('os_family') == 'RedHat':
-        osarch = __salt__['cmd.run']('rpm --eval %{_host_cpu}').strip()
+    elif grains.get('os_family') in ['RedHat', 'Suse']:
+        osarch = salt.utils.pkg.rpm.get_osarch()
     elif grains.get('os_family') in ('NILinuxRT', 'Poky'):
         archinfo = {}
         for line in __salt__['cmd.run']('opkg print-architecture').splitlines():
@@ -2617,7 +2651,7 @@ def _hw_data(osdata):
                     break
     elif osdata['kernel'] == 'AIX':
         cmd = salt.utils.path.which('prtconf')
-        if data:
+        if cmd:
             data = __salt__['cmd.run']('{0}'.format(cmd)) + os.linesep
             for dest, regstring in (('serialnumber', r'(?im)^\s*Machine\s+Serial\s+Number:\s+(\S+)'),
                                     ('systemfirmware', r'(?im)^\s*Firmware\s+Version:\s+(.*)')):
