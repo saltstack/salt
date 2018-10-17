@@ -409,7 +409,8 @@ class SaltSupport(salt.utils.parsers.SaltSupportOptionParser):
             try:
                 os.unlink(self.config['support_archive'])
             except Exception as err:
-                log.error(err)
+                log.debug(err)
+                self.out.error('{} while cleaning up.'.format(err))
 
     def _check_existing_archive(self):
         '''
