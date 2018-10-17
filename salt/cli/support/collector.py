@@ -422,7 +422,11 @@ class SaltSupport(salt.utils.parsers.SaltSupportOptionParser):
         if os.path.exists(self.config['support_archive']):
             if self.config['support_archive_force_overwrite']:
                 self.out.warning('Overwriting existing archive: {}'.format(self.config['support_archive']))
-                os.unlink(self.config['support_archive'])
+                try:
+                    os.unlink(self.config['support_archive'])
+                except Exception as err:
+                    log.debug(err)
+                    self.out.error('{} while trying to overwrite existing archive.'.format(err))
                 ret = True
             else:
                 self.out.warning('File {} already exists.'.format(self.config['support_archive']))
