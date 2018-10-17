@@ -18,6 +18,7 @@ Refer to :mod:`junos <salt.proxy.junos>` for information on connecting to junos 
 from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
+from functools import wraps
 
 try:
     from lxml import etree
@@ -69,6 +70,16 @@ def __virtual__():
                        'junos-eznc or jxmlease or proxy could not be loaded.')
 
 
+def resultdecorator(function):
+    @wraps(function)
+    def wrapper(*args, **kwargs):
+        ret = function(*args, **kwargs)
+        ret['result'] = ret['out']
+        return ret
+
+    return wrapper
+
+@resultdecorator
 def facts_refresh():
     '''
     Reload the facts dictionary from the device. Usually only needed if,
@@ -84,11 +95,13 @@ def facts_refresh():
     conn = __proxy__['junos.conn']()
     ret = dict()
     ret['out'] = True
+    ret['result'] = False
     try:
         conn.facts_refresh()
     except Exception as exception:
         ret['message'] = 'Execution failed due to "{0}"'.format(exception)
         ret['out'] = False
+        ret['result'] = False
         return ret
 
     ret['facts'] = __proxy__['junos.get_serialized_facts']()
@@ -97,9 +110,9 @@ def facts_refresh():
         __salt__['saltutil.sync_grains']()
     except Exception as exception:
         log.error('Grains could not be updated due to "%s"', exception)
-    return ret
+    return ret.transform()
 
-
+@resultdecorator
 def facts():
     '''
     Displays the facts gathered during the connection.
@@ -121,7 +134,7 @@ def facts():
         ret['out'] = False
     return ret
 
-
+@resultdecorator
 def rpc(cmd=None, dest=None, **kwargs):
     '''
     This function executes the RPC provided as arguments on the junos device.
@@ -241,7 +254,7 @@ def rpc(cmd=None, dest=None, **kwargs):
             fp.write(salt.utils.stringutils.to_str(write_response))
     return ret
 
-
+@resultdecorator
 def set_hostname(hostname=None, **kwargs):
     '''
     Set the device's hostname
@@ -317,7 +330,7 @@ def set_hostname(hostname=None, **kwargs):
         conn.cu.rollback()
     return ret
 
-
+@resultdecorator
 def commit(**kwargs):
     '''
     To commit the changes loaded in the candidate configuration.
@@ -411,7 +424,7 @@ def commit(**kwargs):
 
     return ret
 
-
+@resultdecorator
 def rollback(**kwargs):
     '''
     Roll back the last committed configuration changes and commit
@@ -498,7 +511,7 @@ def rollback(**kwargs):
         ret['out'] = False
     return ret
 
-
+@resultdecorator
 def diff(**kwargs):
     '''
     Returns the difference between the candidate and the current configuration
@@ -529,7 +542,7 @@ def diff(**kwargs):
 
     return ret
 
-
+@resultdecorator
 def ping(dest_ip=None, **kwargs):
     '''
     Send a ping RPC to a device
@@ -591,7 +604,7 @@ def ping(dest_ip=None, **kwargs):
         ret['out'] = False
     return ret
 
-
+@resultdecorator
 def cli(command=None, **kwargs):
     '''
     Executes the CLI commands and returns the output in specified format. \
@@ -655,7 +668,7 @@ def cli(command=None, **kwargs):
     ret['out'] = True
     return ret
 
-
+@resultdecorator
 def shutdown(**kwargs):
     '''
     Shut down (power off) or reboot a device running Junos OS. This includes
@@ -730,7 +743,7 @@ def shutdown(**kwargs):
         ret['out'] = False
     return ret
 
-
+@resultdecorator
 def install_config(path=None, **kwargs):
     '''
     Installs the given configuration file into the candidate configuration.
@@ -940,7 +953,7 @@ def install_config(path=None, **kwargs):
 
     return ret
 
-
+@resultdecorator
 def zeroize():
     '''
     Resets the device to default factory settings
@@ -963,7 +976,7 @@ def zeroize():
 
     return ret
 
-
+@resultdecorator
 def install_os(path=None, **kwargs):
     '''
     Installs the given image on the device. After the installation is complete\
@@ -1051,7 +1064,7 @@ def install_os(path=None, **kwargs):
         ret['message'] = 'Successfully installed and rebooted!'
     return ret
 
-
+@resultdecorator
 def file_copy(src=None, dest=None):
     '''
     Copies the file from the local device to the junos device
@@ -1098,7 +1111,7 @@ def file_copy(src=None, dest=None):
         ret['out'] = False
     return ret
 
-
+@resultdecorator
 def lock():
     '''
     Attempts an exclusive lock on the candidate configuration. This
@@ -1128,7 +1141,7 @@ def lock():
 
     return ret
 
-
+@resultdecorator
 def unlock():
     '''
     Unlocks the candidate configuration.
@@ -1152,7 +1165,7 @@ def unlock():
 
     return ret
 
-
+@resultdecorator
 def load(path=None, **kwargs):
     '''
     Loads the configuration from the file provided onto the device.
@@ -1279,7 +1292,7 @@ def load(path=None, **kwargs):
 
     return ret
 
-
+@resultdecorator
 def commit_check():
     '''
     Perform a commit check on the configuration
