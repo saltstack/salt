@@ -132,6 +132,31 @@ class SupportDataCollector(object):
         self.__current_section = []
         self.__current_section_name = name
 
+    def _printout(self, data, output):
+        """
+        Use salt outputter to printout content.
+
+        :return:
+        """
+        opts = {"extension_modules": "", "color": False}
+        try:
+            printout = salt.output.get_printout(output, opts)(data)
+            if printout is not None:
+                return printout.rstrip()
+        except (KeyError, AttributeError, TypeError) as err:
+            log.debug(err, exc_info=True)
+            try:
+                printout = salt.output.get_printout("nested", opts)(data)
+                if printout is not None:
+                    return printout.rstrip()
+            except (KeyError, AttributeError, TypeError) as err:
+                log.debug(err, exc_info=True)
+                printout = salt.output.get_printout("raw", opts)(data)
+                if printout is not None:
+                    return printout.rstrip()
+
+        return salt.output.try_printout(data, output, opts)
+
     def write(self, title, data, output=None):
         """
         Add a data to the current opened section.
@@ -145,11 +170,8 @@ class SupportDataCollector(object):
             try:
                 if isinstance(data, dict) and "return" in data:
                     data = data["return"]
-                content = salt.output.try_printout(
-                    data, output, {"extension_modules": "", "color": False}
-                )
+                content = self._printout(data, output)
             except Exception:  # pylint: disable=broad-except
-                # Fall-back to just raw YAML
                 content = None
         else:
             content = None
@@ -444,7 +466,11 @@ class SaltSupport(salt.utils.parsers.SaltSupportOptionParser):
             and os.path.exists(self.config["support_archive"])
         ):
             self.out.warning("Terminated earlier, cleaning up")
-            os.unlink(self.config["support_archive"])
+            try:
+                os.unlink(self.config["support_archive"])
+            except Exception as err:
+                log.debug(err)
+                self.out.error("{} while cleaning up.".format(err))
 
     def _check_existing_archive(self):
         """
@@ -460,7 +486,13 @@ class SaltSupport(salt.utils.parsers.SaltSupportOptionParser):
                         self.config["support_archive"]
                     )
                 )
-                os.unlink(self.config["support_archive"])
+                try:
+                    os.unlink(self.config["support_archive"])
+                except Exception as err:
+                    log.debug(err)
+                    self.out.error(
+                        "{} while trying to overwrite existing archive.".format(err)
+                    )
                 ret = True
             else:
                 self.out.warning(
