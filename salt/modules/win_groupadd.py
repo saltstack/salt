@@ -378,7 +378,7 @@ def members(name, members_list, **kwargs):
                 obj_group.Add('WinNT://' + member.replace('\\', '/'))
                 log.debug('User added: {0}'.format(member))
             except pywintypes.com_error as exc:
-                msg ='Failed to add {0} to {1}. {2}'.format(
+                msg = 'Failed to add {0} to {1}. {2}'.format(
                     member, name, win32api.FormatMessage(exc.excepinfo[5]))
                 log.debug(msg)
                 success = False
@@ -390,7 +390,7 @@ def members(name, members_list, **kwargs):
                 obj_group.Remove('WinNT://' + member.replace('\\', '/'))
                 log.debug('User removed: {0}'.format(member))
             except pywintypes.com_error as exc:
-                msg ='Failed to remove {0} from {1}. {2}'.format(
+                msg = 'Failed to remove {0} from {1}. {2}'.format(
                     member, name, win32api.FormatMessage(exc.excepinfo[5]))
                 log.debug(msg)
                 success = False
