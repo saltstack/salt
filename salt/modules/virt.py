@@ -868,19 +868,21 @@ def _disk_profile(profile, hypervisor, disks=None, vm_name=None, image=None, poo
         overlay = {}
 
     # Get the disks from the profile
-    disklist = copy.deepcopy(
-        __salt__['config.get']('virt:disk', {}).get(profile, default))
+    disklist = []
+    if profile:
+        disklist = copy.deepcopy(
+            __salt__['config.get']('virt:disk', {}).get(profile, default))
 
-    # Transform the list to remove one level of dictionnary and add the name as a property
-    disklist = [dict(d, name=name) for disk in disklist for name, d in disk.items()]
+        # Transform the list to remove one level of dictionnary and add the name as a property
+        disklist = [dict(d, name=name) for disk in disklist for name, d in disk.items()]
 
-    # Add the image to the first disk if there is one
-    if image:
-        # If image is specified in module arguments, then it will be used
-        # for the first disk instead of the image from the disk profile
-        log.debug('%s image from module arguments will be used for disk "%s"'
-                  ' instead of %s', image, disklist[0]['name'], disklist[0].get('image', ""))
-        disklist[0]['image'] = image
+        # Add the image to the first disk if there is one
+        if image:
+            # If image is specified in module arguments, then it will be used
+            # for the first disk instead of the image from the disk profile
+            log.debug('%s image from module arguments will be used for disk "%s"'
+                      ' instead of %s', image, disklist[0]['name'], disklist[0].get('image', ""))
+            disklist[0]['image'] = image
 
     # Merge with the user-provided disks definitions
     if disks:
@@ -1071,7 +1073,7 @@ def _get_merged_nics(hypervisor, profile, interfaces=None, dmac=None):
     '''
     Get network devices from the profile and merge uer defined ones with them.
     '''
-    nicp = _nic_profile(profile, hypervisor, dmac=dmac)
+    nicp = _nic_profile(profile, hypervisor, dmac=dmac) if profile else []
     log.debug('NIC profile is %s', nicp)
     if interfaces:
         users_nics = _complete_nics(interfaces, hypervisor)
@@ -1126,6 +1128,7 @@ def init(name,
 
     :param nic: NIC profile to use (Default: ``'default'``).
                 The profile interfaces can be customized / extended with the interfaces parameter.
+                If set to ``None``, no profile will be used.
     :param interfaces:
         List of dictionaries providing details on the network interfaces to create.
         These data are merged with the ones from the nic profile. The structure of
@@ -1135,7 +1138,7 @@ def init(name,
     :param hypervisor: the virtual machine type. By default the value will be computed according
                        to the virtual host capabilities.
     :param start: ``True`` to start the virtual machine after having defined it (Default: ``True``)
-    :param disk: Disk profile to use (Default: ``'default'``).
+    :param disk: Disk profile to use (Default: ``'default'``). If set to ``None``, no profile will be used.
     :param disks: List of dictionaries providing details on the disk devices to create.
                   These data are merged with the ones from the disk profile. The structure of
                   each dictionary is documented in :ref:`init-disk-def`.
@@ -1649,13 +1652,14 @@ def update(name,
     :param disks:
         Disk definitions as documented in the :func:`init` function.
         If neither the profile nor this parameter are defined, the disk devices
-        will not be changed.
+        will not be changed. However to clear disks set this parameter to empty list.
 
     :param nic_profile: network interfaces profile to use
     :param interfaces:
         Network interface definitions as documented in the :func:`init` function.
         If neither the profile nor this parameter are defined, the interface devices
-        will not be changed.
+        will not be changed. However to clear network interfaces set this parameter
+        to empty list.
 
     :param graphics:
         The new graphics definition as defined in :ref:`init-graphics-def`. If not set,
@@ -1745,7 +1749,7 @@ def update(name,
     for dev_type in parameters:
         changes[dev_type] = {}
         func_locals = locals()
-        if [param for param in parameters[dev_type] if func_locals.get(param, None)]:
+        if [param for param in parameters[dev_type] if func_locals.get(param, None) is not None]:
             old = devices_node.findall(dev_type)
             new = new_desc.findall('devices/{0}'.format(dev_type))
             changes[dev_type] = globals()['_diff_{0}_lists'.format(dev_type)](old, new)

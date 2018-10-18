@@ -171,6 +171,28 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         devs = root.findall('.//boot')
         self.assertTrue(len(devs) == 2)
 
+    def test_gen_xml_no_nic(self):
+        '''
+        Test virt._gen_xml() serial console
+        '''
+        diskp = virt._disk_profile('default', 'kvm', [], 'hello')
+        nicp = virt._nic_profile('default', 'kvm')
+        xml_data = virt._gen_xml(
+            'hello',
+            1,
+            512,
+            diskp,
+            nicp,
+            'kvm',
+            'hvm',
+            'x86_64',
+            serial_type='pty',
+            console=True
+            )
+        root = ET.fromstring(xml_data)
+        self.assertEqual(root.find('devices/serial').attrib['type'], 'pty')
+        self.assertEqual(root.find('devices/console').attrib['type'], 'pty')
+
     def test_gen_xml_for_serial_console(self):
         '''
         Test virt._gen_xml() serial console
@@ -799,6 +821,144 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual([nic.find('mac').get('address') for nic in ret['deleted']],
                          ['52:54:00:39:02:b2'])
 
+    def test_init_no_nics_disks(self):
+        '''
+        Ensure the init() function allows creating VM without NIC and disk
+        '''
+        xml = '''
+<capabilities>
+  <host>
+    <uuid>44454c4c-3400-105a-8033-b3c04f4b344a</uuid>
+    <cpu>
+      <arch>x86_64</arch>
+      <model>Nehalem</model>
+      <vendor>Intel</vendor>
+      <microcode version='25'/>
+      <topology sockets='1' cores='4' threads='2'/>
+      <feature name='vme'/>
+      <feature name='ds'/>
+      <feature name='acpi'/>
+      <pages unit='KiB' size='4'/>
+      <pages unit='KiB' size='2048'/>
+    </cpu>
+    <power_management>
+      <suspend_mem/>
+      <suspend_disk/>
+      <suspend_hybrid/>
+    </power_management>
+    <migration_features>
+      <live/>
+      <uri_transports>
+        <uri_transport>tcp</uri_transport>
+        <uri_transport>rdma</uri_transport>
+      </uri_transports>
+    </migration_features>
+    <topology>
+      <cells num='1'>
+        <cell id='0'>
+          <memory unit='KiB'>12367120</memory>
+          <pages unit='KiB' size='4'>3091780</pages>
+          <pages unit='KiB' size='2048'>0</pages>
+          <distances>
+            <sibling id='0' value='10'/>
+          </distances>
+          <cpus num='8'>
+            <cpu id='0' socket_id='0' core_id='0' siblings='0,4'/>
+            <cpu id='1' socket_id='0' core_id='1' siblings='1,5'/>
+            <cpu id='2' socket_id='0' core_id='2' siblings='2,6'/>
+            <cpu id='3' socket_id='0' core_id='3' siblings='3,7'/>
+            <cpu id='4' socket_id='0' core_id='0' siblings='0,4'/>
+            <cpu id='5' socket_id='0' core_id='1' siblings='1,5'/>
+            <cpu id='6' socket_id='0' core_id='2' siblings='2,6'/>
+            <cpu id='7' socket_id='0' core_id='3' siblings='3,7'/>
+          </cpus>
+        </cell>
+      </cells>
+    </topology>
+    <cache>
+      <bank id='0' level='3' type='both' size='8' unit='MiB' cpus='0-7'/>
+    </cache>
+    <secmodel>
+      <model>apparmor</model>
+      <doi>0</doi>
+    </secmodel>
+    <secmodel>
+      <model>dac</model>
+      <doi>0</doi>
+      <baselabel type='kvm'>+487:+486</baselabel>
+      <baselabel type='qemu'>+487:+486</baselabel>
+    </secmodel>
+  </host>
+
+  <guest>
+    <os_type>hvm</os_type>
+    <arch name='i686'>
+      <wordsize>32</wordsize>
+      <emulator>/usr/bin/qemu-system-i386</emulator>
+      <machine maxCpus='255'>pc-i440fx-2.6</machine>
+      <machine canonical='pc-i440fx-2.6' maxCpus='255'>pc</machine>
+      <machine maxCpus='255'>pc-0.12</machine>
+      <domain type='qemu'/>
+      <domain type='kvm'>
+        <emulator>/usr/bin/qemu-kvm</emulator>
+        <machine maxCpus='255'>pc-i440fx-2.6</machine>
+        <machine canonical='pc-i440fx-2.6' maxCpus='255'>pc</machine>
+        <machine maxCpus='255'>pc-0.12</machine>
+      </domain>
+    </arch>
+    <features>
+      <cpuselection/>
+      <deviceboot/>
+      <disksnapshot default='on' toggle='no'/>
+      <acpi default='on' toggle='yes'/>
+      <apic default='on' toggle='no'/>
+      <pae/>
+      <nonpae/>
+    </features>
+  </guest>
+
+  <guest>
+    <os_type>hvm</os_type>
+    <arch name='x86_64'>
+      <wordsize>64</wordsize>
+      <emulator>/usr/bin/qemu-system-x86_64</emulator>
+      <machine maxCpus='255'>pc-i440fx-2.6</machine>
+      <machine canonical='pc-i440fx-2.6' maxCpus='255'>pc</machine>
+      <machine maxCpus='255'>pc-0.12</machine>
+      <domain type='qemu'/>
+      <domain type='kvm'>
+        <emulator>/usr/bin/qemu-kvm</emulator>
+        <machine maxCpus='255'>pc-i440fx-2.6</machine>
+        <machine canonical='pc-i440fx-2.6' maxCpus='255'>pc</machine>
+        <machine maxCpus='255'>pc-0.12</machine>
+      </domain>
+    </arch>
+    <features>
+      <cpuselection/>
+      <deviceboot/>
+      <disksnapshot default='on' toggle='no'/>
+      <acpi default='on' toggle='yes'/>
+      <apic default='on' toggle='no'/>
+    </features>
+  </guest>
+
+</capabilities>
+        '''
+        self.mock_conn.getCapabilities.return_value = xml  # pylint: disable=no-member
+        defineMock = MagicMock(return_value=1)
+        self.mock_conn.defineXML = defineMock
+        with patch.dict(virt.__salt__, {'cmd.run': MagicMock()}):  # pylint: disable=no-member
+            virt.init('testvm',
+                      2,
+                      1234,
+                      nic=None,
+                      disk=None,
+                      seed=False,
+                      start=False)
+            definition = defineMock.call_args_list[0][0][0]
+            self.assertFalse('<interface' in definition)
+            self.assertFalse('<disk' in definition)
+
     def test_update(self):
         '''
         Test virt.update()
@@ -927,6 +1087,24 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                              [ET.fromstring(nic).find('source').get('network') for nic in ret['interface']['detached']])
             devattach_mock.assert_called_once()
             devdetach_mock.assert_called_once()
+
+        # Remove nics case
+        devattach_mock.reset_mock()
+        devdetach_mock.reset_mock()
+        ret = virt.update('myvm', nic_profile=None, interfaces=[])
+        self.assertEqual([], ret['interface']['attached'])
+        self.assertEqual(2, len(ret['interface']['detached']))
+        devattach_mock.assert_not_called()
+        devdetach_mock.assert_called()
+
+        # Remove disks case (yeah, it surely is silly)
+        devattach_mock.reset_mock()
+        devdetach_mock.reset_mock()
+        ret = virt.update('myvm', disk_profile=None, disks=[])
+        self.assertEqual([], ret['disk']['attached'])
+        self.assertEqual(2, len(ret['disk']['detached']))
+        devattach_mock.assert_not_called()
+        devdetach_mock.assert_called()
 
         # Graphics change test case
         self.assertEqual({
