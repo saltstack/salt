@@ -174,7 +174,9 @@ class BotoApiGatewayTestCaseBase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
         self.opts = opts = salt.config.DEFAULT_MINION_OPTS
-        utils = salt.loader.utils(opts, whitelist=['boto3'])
+        utils = salt.loader.utils(
+            opts,
+            whitelist=['boto3', 'args', 'systemd', 'path', 'platform'])
         return {
             boto_apigateway: {
                 '__opts__': opts,
