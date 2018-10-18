@@ -4100,37 +4100,10 @@ def _parse_caps_loader(node):
     return result
 
 
-def domain_capabilities(emulator=None, arch=None, machine=None, domain=None, **kwargs):
+def _parse_domain_caps(caps):
     '''
-    Return the domain capabilities given an emulator, architecture, machine or virtualization type.
-
-    .. versionadded:: 2019.2.0
-
-    :param emulator: return the capabilities for the given emulator binary
-    :param arch: return the capabilities for the given CPU architecture
-    :param machine: return the capabilities for the given emulated machine type
-    :param domain: return the capabilities for the given virtualization type.
-    :param connection: libvirt connection URI, overriding defaults
-    :param username: username to connect with, overriding defaults
-    :param password: password to connect with, overriding defaults
-
-    The list of the possible emulator, arch, machine and domain can be found in
-    the host capabilities output.
-
-    If none of the parameters is provided the libvirt default domain capabilities
-    will be returned.
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' virt.domain_capabilities arch='x86_64' domain='kvm'
-
+    Parse the XML document of domain capabilities into a structure.
     '''
-    conn = __get_conn(**kwargs)
-    caps = ElementTree.fromstring(conn.getDomainCapabilities(emulator, arch, machine, domain, 0))
-    conn.close()
-
     result = {
         'emulator': caps.find('path').text if caps.find('path') is not None else None,
         'domain': caps.find('domain').text if caps.find('domain') is not None else None,
@@ -4166,6 +4139,82 @@ def domain_capabilities(emulator=None, arch=None, machine=None, domain=None, **k
             features = _parse_caps_devices_features(child)
             if features:
                 result['features'] = features
+
+    return result
+
+
+def domain_capabilities(emulator=None, arch=None, machine=None, domain=None, **kwargs):
+    '''
+    Return the domain capabilities given an emulator, architecture, machine or virtualization type.
+
+    .. versionadded:: Fluorine
+
+    :param emulator: return the capabilities for the given emulator binary
+    :param arch: return the capabilities for the given CPU architecture
+    :param machine: return the capabilities for the given emulated machine type
+    :param domain: return the capabilities for the given virtualization type.
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
+
+    The list of the possible emulator, arch, machine and domain can be found in
+    the host capabilities output.
+
+    If none of the parameters is provided, the libvirt default one is returned.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.domain_capabilities arch='x86_64' domain='kvm'
+
+    '''
+    conn = __get_conn(**kwargs)
+    result = []
+    try:
+        caps = ElementTree.fromstring(conn.getDomainCapabilities(emulator, arch, machine, domain, 0))
+        result = _parse_domain_caps(caps)
+    finally:
+        conn.close()
+
+    return result
+
+
+def all_capabilities(**kwargs):
+    '''
+    Return the host and domain capabilities in a single call.
+
+    .. versionadded:: Neon
+
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.all_capabilities
+
+    '''
+    conn = __get_conn(**kwargs)
+    result = {}
+    try:
+        host_caps = ElementTree.fromstring(conn.getCapabilities())
+        domains = [[(guest.get('arch', {}).get('name', None), key)
+                    for key in guest.get('arch', {}).get('domains', {}).keys()]
+                   for guest in [_parse_caps_guest(guest) for guest in host_caps.findall('guest')]]
+        flattened = [pair for item in (x for x in domains) for pair in item]
+        result = {
+                'host': {
+                    'host': _parse_caps_host(host_caps.find('host')),
+                    'guests': [_parse_caps_guest(guest) for guest in host_caps.findall('guest')]
+                },
+                'domains': [_parse_domain_caps(ElementTree.fromstring(
+                                conn.getDomainCapabilities(None, arch, None, domain)))
+                            for (arch, domain) in flattened]}
+    finally:
+        conn.close()
 
     return result
 
