@@ -25,7 +25,7 @@ of salt itself are necessary.
 All operations will be gated behind a configuration option called `job_retry` which will default to being
 disabled.
 
-We propose a `job_retry` engine be created which can run on the master. It is the job of this engine to detect
+We propose a `job_retry` engine be created which can run on the master. The purpose of this engine is to detect
 minion "start" events and then to check a master cache for any jobs which might be enqueued and, if found,
 pull those pending jobs from the queue and publish them to the minion.
 
