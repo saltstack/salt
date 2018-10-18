@@ -12,7 +12,7 @@ the job is published to that minion.
 # Motivation
 [motivation]: #motivation
 
-For a long time, people have complained that Salt has no way to send a job to a minion that was not availalble
+For a long time, people have complained that Salt has no way to send a job to a minion that was not available
 to receive it at the time that it was published. Doing so would allow Salt administrators to publish a job and
 not worry about whether or not a minion that was down at the time did not receive the job.
 
