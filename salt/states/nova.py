@@ -49,8 +49,9 @@ def flavor_present(name, params=None, **kwargs):
         params = {}
 
     try:
+        kwargs.update({'filter': {'is_public': None}})
         object_list = __salt__['nova.flavor_list'](**kwargs)
-        object_exists = object_list[name]
+        object_exists = True if object_list[name]['name'] == name else False
     except KeyError:
         object_exists = False
 
