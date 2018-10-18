@@ -48,7 +48,7 @@ def present(name,
         The keyId or keyIds to add to the GPG keychain.
 
     user
-        Add GPG keys to the user's keychain
+        Add GPG keys to the specified user's keychain
 
     keyserver
         The keyserver to retrieve the keys from.
@@ -151,7 +151,7 @@ def absent(name,
         The keyId or keyIds to add to the GPG keychain.
 
     user
-        Add GPG keys to the user's keychain
+        Remove GPG keys from the specified user's keychain
 
     gnupghome
         Override GNUPG Home directory

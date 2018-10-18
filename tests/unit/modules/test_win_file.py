@@ -5,19 +5,24 @@
 # Import Python Libs
 from __future__ import absolute_import, unicode_literals, print_function
 import os
+import tempfile
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     patch,
     NO_MOCK,
     NO_MOCK_REASON
 )
+from tests.support.helpers import destructiveTest
 
 # Import Salt Libs
 import salt.modules.win_file as win_file
 from salt.exceptions import CommandExecutionError
 import salt.utils.platform
+import salt.utils.win_functions
+import salt.utils.win_dacl
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
