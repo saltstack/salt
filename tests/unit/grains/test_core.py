@@ -36,10 +36,7 @@ import salt.grains.core as core
 
 # Import 3rd-party libs
 from salt.ext import six
-if six.PY3:
-    import ipaddress
-else:
-    import salt.ext.ipaddress as ipaddress
+from salt._compat import ipaddress
 
 log = logging.getLogger(__name__)
 
@@ -963,3 +960,73 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
             ret = core._osx_memdata()
             assert ret['swap_total'] == 0
             assert ret['mem_total'] == 4096
+
+    @patch('salt.utils.path.which', MagicMock(return_value='/usr/sbin/lspci'))
+    def test_linux_gpus(self):
+        '''
+        Test GPU detection on Linux systems
+        '''
+        def _cmd_side_effect(cmd):
+            ret = ''
+            for device in devices:
+                ret += textwrap.dedent('''
+                                          Class:	{0}
+                                          Vendor:	{1}
+                                          Device:	{2}
+                                          SVendor:	Evil Corp.
+                                          SDevice:	Graphics XXL
+                                          Rev:	c1
+                                          NUMANode:	0''').format(*device)
+                ret += '\n'
+            return ret.strip()
+        devices = [["VGA compatible controller", "Advanced Micro Devices, Inc. [AMD/ATI]",
+                    "Vega [Radeon RX Vega]]", "amd"],  # AMD
+                   ["Audio device", "Advanced Micro Devices, Inc. [AMD/ATI]",
+                    "Device aaf8", None],  # non-GPU device
+                   ["VGA compatible controller", "NVIDIA Corporation",
+                    "GK208 [GeForce GT 730]", "nvidia"],  # Nvidia
+                   ["VGA compatible controller", "Intel Corporation",
+                    "Device 5912", "intel"],  # Intel
+                   ["VGA compatible controller", "ATI Technologies Inc",
+                    "RC410 [Radeon Xpress 200M]", "ati"],  # ATI
+                   ["3D controller", "NVIDIA Corporation",
+                    "GeForce GTX 950M", "nvidia"]  # 3D controller
+                  ]
+        with patch.dict(core.__salt__, {'cmd.run': MagicMock(side_effect=_cmd_side_effect)}):
+            ret = core._linux_gpu_data()['gpus']
+            count = 0
+            for device in devices:
+                if device[3] is None:
+                    continue
+                assert ret[count]['model'] == device[2]
+                assert ret[count]['vendor'] == device[3]
+                count += 1
+
+    @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
+    def test_kernelparams_return(self):
+        expectations = [
+            ('BOOT_IMAGE=/vmlinuz-3.10.0-693.2.2.el7.x86_64',
+             {'kernelparams': [('BOOT_IMAGE', '/vmlinuz-3.10.0-693.2.2.el7.x86_64')]}),
+            ('root=/dev/mapper/centos_daemon-root',
+             {'kernelparams': [('root', '/dev/mapper/centos_daemon-root')]}),
+            ('rhgb quiet ro',
+             {'kernelparams': [('rhgb', None), ('quiet', None), ('ro', None)]}),
+            ('param="value1"',
+             {'kernelparams': [('param', 'value1')]}),
+            ('param="value1 value2 value3"',
+             {'kernelparams': [('param', 'value1 value2 value3')]}),
+            ('param="value1 value2 value3" LANG="pl" ro',
+             {'kernelparams': [('param', 'value1 value2 value3'), ('LANG', 'pl'), ('ro', None)]}),
+            ('ipv6.disable=1',
+             {'kernelparams': [('ipv6.disable', '1')]}),
+            ('param="value1:value2:value3"',
+             {'kernelparams': [('param', 'value1:value2:value3')]}),
+            ('param="value1,value2,value3"',
+             {'kernelparams': [('param', 'value1,value2,value3')]}),
+            ('param="value1" param="value2" param="value3"',
+             {'kernelparams': [('param', 'value1'), ('param', 'value2'), ('param', 'value3')]}),
+        ]
+
+        for cmdline, expectation in expectations:
+            with patch('salt.utils.files.fopen', mock_open(read_data=cmdline)):
+                self.assertEqual(core.kernelparams(), expectation)

@@ -841,28 +841,24 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
             Test to clear out the state execution request without executing it
         '''
         mock = MagicMock(return_value=True)
-        with patch.object(os.path, 'join', mock):
-            mock = MagicMock(return_value=True)
-            with patch.object(salt.payload, 'Serial', mock):
-                mock = MagicMock(side_effect=[False, True, True])
-                with patch.object(os.path, 'isfile', mock):
-                    self.assertTrue(state.clear_request("A"))
+        with patch.object(salt.payload, 'Serial', mock):
+            mock = MagicMock(side_effect=[False, True, True])
+            with patch.object(os.path, 'isfile', mock):
+                self.assertTrue(state.clear_request("A"))
 
-                    mock = MagicMock(return_value=True)
-                    with patch.object(os, 'remove', mock):
-                        self.assertTrue(state.clear_request())
+                mock = MagicMock(return_value=True)
+                with patch.object(os, 'remove', mock):
+                    self.assertTrue(state.clear_request())
 
-                    mock = MagicMock(return_value={})
-                    with patch.object(state, 'check_request', mock):
-                        self.assertFalse(state.clear_request("A"))
+                mock = MagicMock(return_value={})
+                with patch.object(state, 'check_request', mock):
+                    self.assertFalse(state.clear_request("A"))
 
     def test_check_request(self):
         '''
             Test to return the state request information
         '''
-        mock = MagicMock(return_value=True)
-        with patch.object(os.path, 'join', mock), \
-                patch('salt.modules.state.salt.payload', MockSerial):
+        with patch('salt.modules.state.salt.payload', MockSerial):
             mock = MagicMock(side_effect=[True, True, False])
             with patch.object(os.path, 'isfile', mock):
                 with patch('salt.utils.files.fopen', mock_open()):

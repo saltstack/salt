@@ -12,7 +12,7 @@ import time
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
-from tests.support.helpers import destructiveTest
+from tests.support.helpers import destructiveTest, flaky
 
 log = logging.getLogger(__name__)
 
@@ -183,6 +183,7 @@ class GrainsAppendTestCase(ModuleCase):
 
         assert msg == ret
 
+    @flaky
     def test_grains_append_val_is_list(self):
         '''
         Tests the return of a grains.append call when val is passed in as a list.

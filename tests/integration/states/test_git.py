@@ -57,11 +57,13 @@ def __check_git_version(caller, min_version, skip_msg):
     return wrapper
 
 
-def ensure_min_git(caller):
+def ensure_min_git(caller=None, min_version='1.6.5'):
     '''
     Skip test if minimum supported git version is not installed
     '''
-    min_version = '1.6.5'
+    if caller is None:
+        return functools.partial(ensure_min_git, min_version=min_version)
+
     return __check_git_version(
         caller,
         min_version,
@@ -729,6 +731,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         )
 
     @with_tempdir(create=False)
+    @ensure_min_git(min_version='1.7.10')
     def test_cloned_with_nonexistant_branch(self, target):
         '''
         Test git.cloned state with a nonexistant branch provided

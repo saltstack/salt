@@ -1555,7 +1555,7 @@ class _policy_info(object):
                     'AllocateDASD': {
                         'Policy': 'Devices: Allowed to format and eject '
                                   'removable media',
-                        'Settings': ["", "0", "1", "2"],
+                        'Settings': ['9999', '0', '1', '2'],
                         'lgpo_section': self.security_options_gpedit_path,
                         'Registry': {
                             'Hive': 'HKEY_LOCAL_MACHINE',
@@ -5610,7 +5610,7 @@ def _lookup_admin_template(policy_name,
 def get_policy_info(policy_name,
                     policy_class,
                     adml_language='en-US'):
-    '''
+    r'''
     Returns information about a specified policy
 
     Args:
@@ -5629,6 +5629,124 @@ def get_policy_info(policy_name,
     .. code-block:: bash
 
         salt '*' lgpo.get_policy_info 'Maximum password age' machine
+
+    You can use ``lgpo.get_policy_info`` to get all the possible names that
+    could be used in a state file or from the command line (along with elements
+    that need to be set/etc). The key is to match the text you see in the
+    ``gpedit.msc`` gui exactly, including quotes around words or phrases. The
+    "full path" style is really only needed when there are multiple policies
+    that use the same base name. For example, ``Access data sources across
+    domains`` exists in ~10 different paths. If you put that through
+    ``get_policy_info`` you'll get back a message that it is used for multiple
+    policies and you need to be more specific.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-call --local lgpo.get_policy_info ShellRemoveOrderPrints_2 machine
+
+        local:
+            ----------
+            message:
+            policy_aliases:
+                - Turn off the "Order Prints" picture task
+                - ShellRemoveOrderPrints_2
+                - System\Internet Communication Management\Internet Communication settings\Turn off the "Order Prints" picture task
+            policy_class:
+                machine
+            policy_elements:
+            policy_found:
+                True
+            policy_name:
+                ShellRemoveOrderPrints_2
+            rights_assignment:
+                False
+
+    Escaping can get tricky in cmd/Powershell. The following is an example of
+    escaping in Powershell using backquotes:
+
+    .. code-block:: bash
+
+        PS>salt-call --local lgpo.get_policy_info "Turn off the `\`"Order Prints`\`" picture task" machine
+
+        local:
+            ----------
+            message:
+            policy_aliases:
+                - Turn off the "Order Prints" picture task
+                - ShellRemoveOrderPrints_2
+                - System\Internet Communication Management\Internet Communication settings\Turn off the "Order Prints" picture task
+            policy_class:
+                machine
+            policy_elements:
+            policy_found:
+                True
+            policy_name:
+                Turn off the "Order Prints" picture task
+            rights_assignment:
+                False
+
+    This function can then be used to get the options available for specifying
+    Group Policy Objects to be used in state files. Based on the above any of
+    these *should* be usable:
+
+    .. code-block:: bash
+
+        internet_communications_settings:
+          lgpo.set:
+            - computer_policy:
+                Turn off the "Order Prints" picture task: Enabled
+
+    .. code-block:: bash
+
+        internet_communications_settings:
+          lgpo.set:
+            - computer_policy:
+                ShellRemoveOrderPrints_2: Enabled
+
+    When using the full path, it might be a good idea to use single quotes
+    around the path:
+
+    .. code-block:: bash
+
+        internet_communications_settings:
+          lgpo.set:
+            - computer_policy:
+                'System\Internet Communication Management\Internet Communication settings\Turn off the "Order Prints" picture task': 'Enabled'
+
+    If you struggle to find the policy from ``get_policy_info`` using the name
+    as you see in ``gpedit.msc``, the names such as "ShellRemoveOrderPrints_2"
+    come from the ``.admx`` files. If you know nothing about ``.admx/.adml``
+    relationships (ADML holds what you see in the GUI, ADMX holds the more
+    technical details), then this may be a little bit too much info, but here is
+    an example with the above policy using Powershell:
+
+
+    .. code-block:: bash
+
+        PS>Get-ChildItem -Path C:\Windows\PolicyDefinitions -Recurse -Filter *.adml | Select-String "Order Prints"
+
+        C:\windows\PolicyDefinitions\en-US\ICM.adml:152:      <string id="ShellRemoveOrderPrints">Turn off the "Order Prints" picture task</string>
+        C:\windows\PolicyDefinitions\en-US\ICM.adml:153:      <string id="ShellRemoveOrderPrints_Help">This policy setting specifies whether the "Order Prints Online" task is available from Picture Tasks in Windows folders.
+        C:\windows\PolicyDefinitions\en-US\ICM.adml:155:The Order Prints Online Wizard is used to download a list of providers and allow users to order prints online.
+        C:\windows\PolicyDefinitions\en-US\ICM.adml:157:If you enable this policy setting, the task "Order Prints Online" is removed from Picture Tasks in File Explorer folders.
+
+    From this grep, we can see id "ShellRemoveOrderPrints" is the ID of the
+    string used to describe this policy, then we search for it in the ADMX:
+
+    .. code-block:: bash
+
+        PS>Get-ChildItem -Path C:\Windows\PolicyDefinitions -Recurse -Filter *.admx | Select-String "ShellRemoveOrderPrints"
+
+        C:\windows\PolicyDefinitions\ICM.admx:661:    <policy name="ShellRemoveOrderPrints_1" class="User" displayName="$(string.ShellRemoveOrderPrints)" explainText="$(string.ShellRemoveOrderPrints_Help)" key="Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" valueName="NoOnlinePrintsWizard">
+        C:\windows\PolicyDefinitions\ICM.admx:671:    <policy name="ShellRemoveOrderPrints_2" class="Machine" displayName="$(string.ShellRemoveOrderPrints)" explainText="$(string.ShellRemoveOrderPrints_Help)" key="Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" valueName="NoOnlinePrintsWizard">
+
+    Now we have two to pick from. And if you notice the ``class="Machine"`` and
+    ``class="User"`` (which details if it is a computer policy or user policy
+    respectively) the ``ShellRemoveOrderPrints_2`` is the "short name" we could
+    use to pass through ``get_policy_info`` to see what the module itself is
+    expecting.
     '''
     # return the possible policy names and element names
     ret = {'policy_name': policy_name,

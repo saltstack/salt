@@ -98,7 +98,7 @@ def cert(name,
         window = None
         try:
             window = int(renew)
-        except:  # pylint: disable=bare-except
+        except Exception:
             pass
 
         comment = 'Certificate {0} '.format(name)

@@ -27,6 +27,7 @@ import string
 import subprocess
 import sys
 import tempfile
+import textwrap
 import threading
 import time
 import tornado.ioloop
@@ -58,6 +59,7 @@ from tests.support.paths import FILES, TMP
 # Import Salt libs
 import salt.utils.files
 import salt.utils.platform
+import salt.utils.stringutils
 
 if salt.utils.platform.is_windows():
     import salt.utils.win_functions
@@ -209,7 +211,10 @@ def flaky(caller=None, condition=True):
                 if attempt >= 3:
                     raise exc
                 backoff_time = attempt ** 2
-                log.info('Found Exception. Waiting %s seconds to retry.', backoff_time)
+                log.info(
+                    'Found Exception. Waiting %s seconds to retry.',
+                    backoff_time
+                )
                 time.sleep(backoff_time)
         return cls
     return wrap
@@ -1607,3 +1612,17 @@ def this_user():
     if salt.utils.platform.is_windows():
         return salt.utils.win_functions.get_current_user(with_domain=False)
     return pwd.getpwuid(os.getuid())[0]
+
+
+def dedent(text, linesep=os.linesep):
+    '''
+    A wrapper around textwrap.dedent that also sets line endings.
+    '''
+    linesep = salt.utils.stringutils.to_unicode(linesep)
+    unicode_text = textwrap.dedent(salt.utils.stringutils.to_unicode(text))
+    clean_text = linesep.join(unicode_text.splitlines())
+    if unicode_text.endswith(u'\n'):
+        clean_text += linesep
+    if not isinstance(text, six.text_type):
+        return salt.utils.stringutils.to_bytes(clean_text)
+    return clean_text

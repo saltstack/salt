@@ -11,10 +11,12 @@ import textwrap
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
+from tests.support.helpers import flaky
 from tests.support.paths import TMP_PILLAR_TREE
 
 # Import Salt Libs
 import salt.utils.files
+import salt.utils.stringutils
 
 
 class SaltUtilModuleTest(ModuleCase):
@@ -91,6 +93,7 @@ class SaltUtilSyncModuleTest(ModuleCase):
                                        'modules.salttest'],
                            'renderers': [],
                            'log_handlers': [],
+                           'matchers': [],
                            'states': [],
                            'sdb': [],
                            'proxymodules': [],
@@ -113,6 +116,7 @@ class SaltUtilSyncModuleTest(ModuleCase):
                            'modules': ['modules.salttest'],
                            'renderers': [],
                            'log_handlers': [],
+                           'matchers': [],
                            'states': [],
                            'sdb': [],
                            'proxymodules': [],
@@ -138,6 +142,7 @@ class SaltUtilSyncModuleTest(ModuleCase):
                                        'modules.salttest'],
                            'renderers': [],
                            'log_handlers': [],
+                           'matchers': [],
                            'states': [],
                            'sdb': [],
                            'proxymodules': [],
@@ -160,6 +165,7 @@ class SaltUtilSyncModuleTest(ModuleCase):
                            'modules': [],
                            'renderers': [],
                            'log_handlers': [],
+                           'matchers': [],
                            'states': [],
                            'sdb': [],
                            'proxymodules': [],
@@ -176,6 +182,7 @@ class SaltUtilSyncPillarTest(ModuleCase):
     Testcase for the saltutil sync pillar module
     '''
 
+    @flaky
     def test_pillar_refresh(self):
         '''
         test pillar refresh module
