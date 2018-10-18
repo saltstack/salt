@@ -42,12 +42,6 @@ import logging
 import salt.utils.json
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
 
-ADDITIONAL_DROP_KEYWORDS = [
-    '__pub_id',
-    '__pub_fun_args',
-    '__pub_schedule'
-]
-
 log = logging.getLogger(__name__)
 
 # name used to refer to this module in __salt__
@@ -74,9 +68,6 @@ def _client(influxdb_user=None, influxdb_password=None, influxdb_host=None, infl
     if not influxdb_port:
         influxdb_port = __salt__['config.option']('influxdb.port', 8086)
     for ignore in _STATE_INTERNAL_KEYWORDS:
-        if ignore in client_args:
-            del client_args[ignore]
-    for ignore in ADDITIONAL_DROP_KEYWORDS:
         if ignore in client_args:
             del client_args[ignore]
     return influxdb.InfluxDBClient(host=influxdb_host,
