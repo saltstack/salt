@@ -2102,7 +2102,7 @@ class FileSelinuxTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_file_check_perms(self):
         expected_result = {'comment': 'The file {0} is set to be changed'.format(self.tfile3.name),
-                           'changes': {'selinux': {'New': 'Type: lost_found_t ', 'Old': 'Type: user_tmp_t '},
+                           'changes': {'selinux': {'New': 'Type: lost_found_t', 'Old': 'Type: user_tmp_t'},
                            'mode': '0644'}, 'name': self.tfile3.name, 'result': True}, {
                            'luser': 'root', 'lmode': '0600', 'lgroup': 'root'}
 
