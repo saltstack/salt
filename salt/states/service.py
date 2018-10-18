@@ -881,7 +881,7 @@ def mod_watch(name,
                     if __running__[_gen_tag(watch_item)]['changes']:
                         match_found = False
                         for this_reload in reload:
-                            for state, id in this_reload.items():
+                            for state, id in six.iteritems(this_reload):
                                 if state == watch_item['state'] and id == watch_item['__id__']:
                                     match_found = True
                         if not match_found:
