@@ -2067,10 +2067,10 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.mock_libvirt.VIR_IP_ADDR_TYPE_IPV6 = 1
 
         net_mocks = []
+        # pylint: disable=no-member
         for i in range(2):
             net_mock = MagicMock()
 
-            # pylint: disable=no-member
             net_mock.name.return_value = 'net{0}'.format(i)
             net_mock.UUIDString.return_value = 'some-uuid'
             net_mock.bridgeName.return_value = 'br{0}'.format(i)
