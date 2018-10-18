@@ -320,15 +320,19 @@ class PillarCache(object):
                 log.debug('Pillar cache hit for minion %s and pillarenv %s', self.minion_id, self.pillarenv)
                 return self.cache[self.minion_id][self.pillarenv]
             else:
-                # We found the minion but not the env. Store it.
+                # We found the minion but not the env. Store it based on pillar_cache_env.
                 fresh_pillar = self.fetch_pillar()
-                self.cache[self.minion_id][self.pillarenv] = fresh_pillar
+                if self.pillarenv == self.opts['pillar_cache_env']:
+                    log.debug('Pillar cache store for pillarenv {0} for minion {1}'.format(self.pillarenv, self.minion_id))
+                    self.cache[self.minion_id][self.pillarenv] = fresh_pillar
                 log.debug('Pillar cache miss for pillarenv %s for minion %s', self.pillarenv, self.minion_id)
                 return fresh_pillar
         else:
-            # We haven't seen this minion yet in the cache. Store it.
+            # We haven't seen this minion yet in the cache. Store it based on pillar_cache_env.
             fresh_pillar = self.fetch_pillar()
-            self.cache[self.minion_id] = {self.pillarenv: fresh_pillar}
+            if self.pillarenv == self.opts['pillar_cache_env']:
+                log.debug('Pillar cache store for pillarenv {0} for minion {1}'.format(self.pillarenv, self.minion_id))
+                self.cache[self.minion_id] = {self.pillarenv: fresh_pillar}
             log.debug('Pillar cache miss for minion %s', self.minion_id)
             log.debug('Current pillar cache: %s', self.cache._dict)  # FIXME hack!
             return fresh_pillar

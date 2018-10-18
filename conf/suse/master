@@ -960,6 +960,10 @@ syndic_user: salt
 # pillar is recompiled and stored. A value of 0 will cause the cache to always be valid.
 #pillar_cache_ttl: 3600
 
+# If and only if a master has set ``pillar_cache: True``, the cache env controls the
+# pillarenv of pillar data, before the cache is considered stored by a master.
+#pillar_cache_env: 'base'
+
 # If and only if a master has set `pillar_cache: True`, one of several storage providers
 # can be utililzed.
 #

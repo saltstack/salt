@@ -4599,6 +4599,18 @@ If and only if a master has set ``pillar_cache: True``, the cache TTL controls t
 of time, in seconds, before the cache is considered invalid by a master and a fresh
 pillar is recompiled and stored. A value of 0 will cause the cache to always be valid.
 
+.. conf_master:: pillar_cache_env
+
+``pillar_cache_env``
+********************
+
+.. versionadded:: Neon
+
+Default: ``base``
+
+If and only if a master has set ``pillar_cache: True``, the cache env controls the
+pillarenv of pillar data, before the cache is considered stored by a master.
+
 .. conf_master:: pillar_cache_backend
 
 ``pillar_cache_backend``

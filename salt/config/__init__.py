@@ -738,6 +738,9 @@ VALID_OPTS = {
     # Pillar cache backend. Defaults to `disk` which stores caches in the master cache
     'pillar_cache_backend': six.string_types,
 
+    # The master will not store pillar cache unless `pillarenv` is meet. Defaults to `base`
+    'pillar_cache_env': str,
+
     'pillar_safe_render_error': bool,
 
     # When creating a pillar, there are several strategies to choose from when
@@ -1251,11 +1254,12 @@ DEFAULT_MINION_OPTS = {
     'pillar_source_merging_strategy': 'smart',
     'pillar_merge_lists': False,
     'pillar_includes_override_sls': False,
-    # ``pillar_cache``, ``pillar_cache_ttl`` and ``pillar_cache_backend``
+    # ``pillar_cache``, ``pillar_cache_ttl``, ``pillar_cache_env`` and ``pillar_cache_backend``
     # are not used on the minion but are unavoidably in the code path
     'pillar_cache': False,
     'pillar_cache_ttl': 3600,
     'pillar_cache_backend': 'disk',
+    'pillar_cache_env': 'base',
     'extension_modules': os.path.join(salt.syspaths.CACHE_DIR, 'minion', 'extmods'),
     'state_top': 'top.sls',
     'state_top_saltenv': None,
@@ -1630,6 +1634,7 @@ DEFAULT_MASTER_OPTS = {
     'pillar_cache': False,
     'pillar_cache_ttl': 3600,
     'pillar_cache_backend': 'disk',
+    'pillar_cache_env': 'base',
     'ping_on_rotate': False,
     'peer': {},
     'preserve_minion_cache': False,
