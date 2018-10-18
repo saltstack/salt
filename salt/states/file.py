@@ -2403,7 +2403,7 @@ def managed(name,
               file.managed:
                 - user: root
                 - selinux:
-                    seuser:  system_u
+                    seuser: system_u
                     serole: object_r
                     setype: system_conf_t
                     seranage: s0
