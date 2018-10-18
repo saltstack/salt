@@ -131,6 +131,12 @@ def migrate(settings_module,
 
     .. versionadded:: Neon
 
+    settings_module
+        Specifies the settings module to use.
+        The settings module should be in Python package syntax, e.g. mysite.settings.
+        If this isn’t provided, django-admin will use the DJANGO_SETTINGS_MODULE
+        environment variable.
+
     app_label
         Specific app to run migrations for, instead of all apps.
         This may involve running other apps’ migrations too, due to dependencies.
@@ -142,11 +148,37 @@ def migrate(settings_module,
         unapplying migrations if you have previously migrated past the named migration.
         Use the name zero to unapply all migrations for an app.
 
+    bin_env
+        Path to pip (or to a virtualenv). This can be used to specify the path
+        to the pip to use when more than one Python release is installed (e.g.
+        ``/usr/bin/pip-2.7`` or ``/usr/bin/pip-2.6``. If a directory path is
+        specified, it is assumed to be a virtualenv.
+
     database
         Database to migrate. Defaults to 'default'.
 
+    pythonpath
+        Adds the given filesystem path to the Python import search path.
+        If this isn’t provided, django-admin will use the PYTHONPATH environment variable.
+
+    env
+        A list of environment variables to be set prior to execution.
+
+        Example:
+
+        .. code-block:: yaml
+
+            module.run:
+              - name: django.migrate
+              - settings_module: my_django_app.settings
+              - env:
+                - DATABASE_USER: 'mydbuser'
+
     noinput
         Suppresses all user prompts. Defaults to True.
+
+    runas
+        The user name to run the command as.
 
     CLI Example:
 
