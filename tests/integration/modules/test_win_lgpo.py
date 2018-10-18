@@ -26,6 +26,7 @@ class WinLgpoTest(ModuleCase):
     '''
     Tests for salt.modules.win_lgpo
     '''
+    osrelease = None
 
     def _testRegistryPolicy(self,
                             policy_name,
@@ -104,7 +105,8 @@ class WinLgpoTest(ModuleCase):
     def _testComputerAdmxPolicy(self,
                                 policy_name,
                                 policy_config,
-                                expected_regexes):
+                                expected_regexes,
+                                assert_true=True):
         '''
         Takes a ADMX policy name and config and validates that the expected
         output is returned from lgpo looking at the Registry.pol file
@@ -115,30 +117,51 @@ class WinLgpoTest(ModuleCase):
             the configuration of the policy
         expected_regexes
             the expected regexes to be found in the lgpo parse output
+        assert_true
+            set to false if expecting the module run to fail
         '''
         ret = self.run_function('lgpo.set_computer_policy',
                                 (policy_name, policy_config))
         log.debug('lgpo set_computer_policy ret == %s', ret)
-        self.assertTrue(ret)
-        lgpo_output = self.run_function(
-                'cmd.run',
-                (),
-                cmd='lgpo.exe /parse /m c:\\Windows\\System32\\GroupPolicy\\Machine\\Registry.pol')
-        for expected_regex in expected_regexes:
-            match = re.search(
-                    expected_regex,
+        if assert_true:
+            self.assertTrue(ret)
+            lgpo_output = self.run_function(
+                    'cmd.run',
+                    (),
+                    cmd='lgpo.exe /parse /m c:\\Windows\\System32\\GroupPolicy\\Machine\\Registry.pol')
+            # validate that the lgpo output doesn't say the format is invalid
+            self.assertIsNone(
+                re.search(
+                    r'Invalid file format\.',
                     lgpo_output,
-                    re.IGNORECASE)
-            self.assertIsNotNone(match, 'Failed validating policy "{0}" configuration, regex "{1}" not found in lgpo output'.format(policy_name, expected_regex))
+                    re.IGNORECASE), 'Failed validating Registry.pol file format')
+            # validate that the regexes we expect are in the output
+            for expected_regex in expected_regexes:
+                match = re.search(
+                        expected_regex,
+                        lgpo_output,
+                        re.IGNORECASE)
+                self.assertIsNotNone(match, 'Failed validating policy "{0}" configuration, regex "{1}" not found in lgpo output'.format(policy_name, expected_regex))
+        else:
+            # expecting it to fail
+            self.assertNotEqual(ret, True)
 
     @classmethod
     def setUpClass(cls):
         '''
-        setup function
+        class setup function, only runs once
 
         downloads and extracts the lgpo.exe tool into c:\windows\system32
         for use in validating the registry.pol files
+
+        gets osrelease grain for tests that are only applicable to certain
+        windows versions
         '''
+        osrelease_grains = cls().run_function('grains.item', ['osrelease'])
+        if 'osrelease' in osrelease_grains:
+            cls.osrelease = osrelease_grains['osrelease']
+        else:
+            log.debug('Unable to get osrelease grain')
         if not os.path.exists(r'c:\windows\system32\lgpo.exe'):
             log.debug('lgpo.exe does not exist, attempting to download/extract')
             ret = cls().run_function('state.single',
@@ -385,7 +408,50 @@ class WinLgpoTest(ModuleCase):
                 'ForceGuest',
                 0)
 
+    @destructiveTest
+    def test_set_computer_policy_DisableUXWUAccess(self):
+        '''
+        Tests changing DisableUXWUAccess
+        #50079 shows using the 'Remove access to use all Windows Update features' failed
+        Policy only exists on 2016
+        '''
+        valid_osreleases = ['2016Server']
+        if self.osrelease not in valid_osreleases:
+            self.skipTest('DisableUXWUAccess policy is only applicable if the osrelease grain is {0}'.format(' or '.join(valid_osreleases)))
+        else:
+            self._testComputerAdmxPolicy(r'DisableUXWUAccess',
+                                         'Enabled',
+                                         [r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate[\s]*SetDisableUXWUAccess[\s]*DWORD:1'])
+            self._testComputerAdmxPolicy(r'Remove access to use all Windows Update features',
+                                         'Disabled',
+                                         [r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate[\s]*SetDisableUXWUAccess[\s]*DWORD:0'])
+            self._testComputerAdmxPolicy(r'Windows Components\Windows Update\Remove access to use all Windows Update features',
+                                         'Not Configured',
+                                         [r'; Source file:  c:\\windows\\system32\\grouppolicy\\machine\\registry.pol[\s]*; PARSING COMPLETED.'])
+
+    @destructiveTest
+    def test_set_computer_policy_Access_data_sources_across_domains(self):
+        '''
+        Tests that a policy that has multiple names
+        '''
+        self._testComputerAdmxPolicy(r'Access data sources across domains',
+                                     'Enabled',
+                                     [],
+                                     assert_true=False)
+        self._testComputerAdmxPolicy(r'Windows Components\Internet Explorer\Internet Control Panel\Security Page\Internet Zone\Access data sources across domains',
+                                     {'Access data sources across domains': 'Prompt'},
+                                     [r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\CurrentVersion\\Internet Settings\\Zones\\3[\s]*1406[\s]*DWORD:1'])
+        self._testComputerAdmxPolicy(r'Windows Components\Internet Explorer\Internet Control Panel\Security Page\Internet Zone\Access data sources across domains',
+                                     {'Access data sources across domains': 'Enable'},
+                                     [r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\CurrentVersion\\Internet Settings\\Zones\\3[\s]*1406[\s]*DWORD:0'])
+        self._testComputerAdmxPolicy(r'Windows Components\Internet Explorer\Internet Control Panel\Security Page\Internet Zone\Access data sources across domains',
+                                     'Disabled',
+                                     [r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\CurrentVersion\\Internet Settings\\Zones\\3[\s]*1406[\s]*DELETE'])
+
     def tearDown(self):
+        '''
+        tearDown method, runs after each test
+        '''
         ret = self.run_function('state.single',
                                 ('file.absent', 'c:\\windows\\system32\\grouppolicy\\machine\\registry.pol'))
         ret = self.run_function('state.single',
