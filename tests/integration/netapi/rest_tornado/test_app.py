@@ -43,6 +43,7 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
 
         application.event_listener = saltnado.EventListener({}, self.opts)
         self.application = application
+
         return application
 
     def test_root(self):
@@ -121,8 +122,30 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
         response_obj = salt.utils.json.loads(response.body)
         self.assertEqual(response_obj['return'], ["No minions matched the target. No command was sent, no jid was assigned."])
 
-    # local client request body test
+    # arg/kwarg parsing test
+    def test_simple_arg_kwarg_parsing(self):
+        '''
+        POST job to test arg/kwarg parsing
+        '''
+        low = {'client': 'local',
+                'tgt': 'minion',
+                'fun': 'test.arg_clean',
+                'arg': [1, '2', 'yaml={bar: baz}'],
+                'kwarg': {'a': 'b'}
+                }
+        response = self.fetch('/',
+                              method='POST',
+                              body=salt.utils.json.dumps(low),
+                              headers={'Content-Type': self.content_type_map['json'],
+                                       saltnado.AUTH_TOKEN_HEADER: self.token['token']},
+                              connect_timeout=30,
+                              request_timeout=30,
+                              )
+        response_obj = salt.utils.json.loads(response.body)
+        self.assertEqual(response_obj['return'][0]['minion']['args'], [1, 2])
+        self.assertEqual(response_obj['return'][0]['minion']['kwargs'], {'a': 'b', 'yaml': {'bar': 'baz'}})
 
+    # local client request body test
     @skipIf(True, 'Undetermined race condition in test. Temporarily disabled.')
     def test_simple_local_post_only_dictionary_request(self):
         '''

@@ -159,7 +159,7 @@ class TestArgKwarg(cptc.BaseRestCherryPyTest):
         ('client', 'runner'),
         ('fun', 'test.arg'),
         # use singular form for arg and kwarg
-        ('arg', [1234]),
+        ('arg', [1234, '56', 'yaml={baz: bar}']),
         ('kwarg', {'ext_source': 'redis'}),
     )
 
@@ -197,9 +197,8 @@ class TestArgKwarg(cptc.BaseRestCherryPyTest):
             }
         )
         resp = salt.utils.json.loads(salt.utils.stringutils.to_str(response.body[0]))
-        self.assertEqual(resp['return'][0]['args'], [1234])
-        self.assertEqual(resp['return'][0]['kwargs'],
-                         {'ext_source': 'redis'})
+        self.assertEqual(resp['return'][0]['args'], [1234, 56])
+        self.assertEqual(resp['return'][0]['kwargs'], {'ext_source': 'redis', 'yaml': {'baz': 'bar'}})
 
 
 class TestJobs(cptc.BaseRestCherryPyTest):

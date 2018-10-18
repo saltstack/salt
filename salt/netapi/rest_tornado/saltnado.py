@@ -559,11 +559,21 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler):  # pylint: disable=W0223
         '''
         if not self.request.body:
             return
+
         data = self.deserialize(self.request.body)
         self.request_payload = copy(data)
 
-        if data and 'arg' in data and not isinstance(data['arg'], list):
-            data['arg'] = [data['arg']]
+        if data and 'arg' in data:
+            if not isinstance(data['arg'], list):
+                data['arg'] = [data['arg']]
+
+            # Run name=value args through parse_input
+            _arg, _kwarg = salt.utils.args.parse_input(data.pop('arg', []), condition=False)
+            data['arg'] = _arg
+            if 'kwarg' in data and isinstance(data['kwarg'], dict):
+                data['kwarg'].update(_kwarg)
+            else:
+                data['kwarg'] = _kwarg
 
         if not isinstance(data, list):
             lowstate = [data]

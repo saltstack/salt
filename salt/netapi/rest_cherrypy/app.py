@@ -612,6 +612,7 @@ except ImportError:
 import salt
 import salt.auth
 import salt.exceptions
+import salt.utils.args
 import salt.utils.event
 import salt.utils.json
 import salt.utils.stringutils
@@ -1172,8 +1173,14 @@ class LowDataAdapter(object):
 
             # Make any 'arg' params a list if not already.
             # This is largely to fix a deficiency in the urlencoded format.
-            if 'arg' in chunk and not isinstance(chunk['arg'], list):
-                chunk['arg'] = [chunk['arg']]
+            if 'arg' in chunk:
+                if not isinstance(chunk['arg'], list):
+                    chunk['arg'] = [chunk['arg']]
+
+                # Run name=value args through parse_input
+                _arg, _kwarg = salt.utils.args.parse_input(chunk.pop('arg', []), condition=False)
+                chunk['arg'] = _arg
+                chunk.update(_kwarg)
 
             ret = self.api.run(chunk)
 
