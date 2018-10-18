@@ -42,7 +42,7 @@ def __virtual__():
 
 def pv_present(name, **kwargs):
     '''
-    Set a physical device to be used as an LVM physical volume
+    Set a Physical Device to be used as an LVM Physical Volume
 
     name
         The device name to initialize.
@@ -106,13 +106,13 @@ def pv_absent(name):
 
 def vg_present(name, devices=None, **kwargs):
     '''
-    Create an LVM volume group
+    Create an LVM Volume Group
 
     name
-        The volume group name to create
+        The Volume Group name to create
 
     devices
-        A list of devices that will be added to the volume group
+        A list of devices that will be added to the Volume Group
 
     kwargs
         Any supported options to vgcreate. See
@@ -214,16 +214,16 @@ def lv_present(name,
                force=False,
                **kwargs):
     '''
-    Create a new logical volume
+    Create a new Logical Volume
 
     name
-        The name of the logical volume
+        The name of the Logical Volume
 
     vgname
-        The volume group name for this logical volume
+        The name of the Volume Group on which the Logical Volume resides
 
     size
-        The initial size of the logical volume
+        The initial size of the Logical Volume
 
     extents
         The number of logical extents to allocate
@@ -232,7 +232,7 @@ def lv_present(name,
         The name of the snapshot
 
     pv
-        The physical volume to use
+        The Physical Volume to use
 
     kwargs
         Any supported options to lvcreate. See
@@ -241,10 +241,10 @@ def lv_present(name,
     .. versionadded:: to_complete
 
     thinvolume
-        Logical volume is thinly provisioned
+        Logical Volume is thinly provisioned
 
     thinpool
-        Logical volume is a thin pool
+        Logical Volume is a thin pool
 
     .. versionadded:: 2018.3.0
 
@@ -297,13 +297,13 @@ def lv_present(name,
 
 def lv_absent(name, vgname=None):
     '''
-    Remove a given existing logical volume from a named existing volume group
+    Remove a given existing Logical Volume from a named existing volume group
 
     name
-        The logical volume to remove
+        The Logical Volume to remove
 
     vgname
-        The volume group name
+        The name of the Volume Group on which the Logical Volume resides
     '''
     ret = {'changes': {},
            'comment': '',
