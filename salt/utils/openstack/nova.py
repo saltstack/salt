@@ -1075,7 +1075,7 @@ class SaltNova(object):
         except AttributeError:
             raise SaltCloudSystemExit('Corrupt server in server_list_detailed. Remove corrupt servers.')
         for server_name, server in six.iteritems(servers):
-            if str(server['id']) == server_id:
+            if six.text_type(server['id']) == server_id:
                 ret[server_name] = server
         return ret
 
