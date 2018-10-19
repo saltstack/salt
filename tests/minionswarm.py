@@ -166,7 +166,6 @@ class Swarm(object):
     '''
     def __init__(self, opts):
         self.opts = opts
-        self.raet_port = 4550
 
         # If given a temp_dir, use it for temporary files
         if opts['temp_dir']:
@@ -329,12 +328,6 @@ class MinionSwarm(Swarm):
                 shutil.copy(minion_pem, minion_pkidir)
                 shutil.copy(minion_pub, minion_pkidir)
             data['pki_dir'] = minion_pkidir
-        elif self.opts['transport'] == 'raet':
-            data['transport'] = 'raet'
-            data['sock_dir'] = os.path.join(dpath, 'sock')
-            data['raet_port'] = self.raet_port
-            data['pki_dir'] = os.path.join(dpath, 'pki')
-            self.raet_port += 1
         elif self.opts['transport'] == 'tcp':
             data['transport'] = 'tcp'
 
