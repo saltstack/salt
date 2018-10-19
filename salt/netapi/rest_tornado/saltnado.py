@@ -584,7 +584,7 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler):  # pylint: disable=W0223
 
     def set_default_headers(self):
         '''
-        Set default CORS headers
+        Set default headers
         '''
         mod_opts = self.application.mod_opts
 
@@ -595,6 +595,8 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler):  # pylint: disable=W0223
 
             if allowed_origin:
                 self.set_header("Access-Control-Allow-Origin", allowed_origin)
+
+        self.set_header('X-Salt-Version', str(salt.version.__saltstack_version__))
 
     def options(self, *args, **kwargs):
         '''

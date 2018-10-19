@@ -242,7 +242,7 @@ class TestBaseSaltAPIHandler(SaltnadoTestCase):
                 "client": "local",
                 "tgt": "*",
                 "fun": "test.fib",
-                "arg": ["10"]
+                "arg": [10]
             },
             {
                 "client": "runner",
@@ -305,7 +305,7 @@ class TestBaseSaltAPIHandler(SaltnadoTestCase):
         self.assertEqual(returned_lowstate['client'], 'local')
         self.assertEqual(returned_lowstate['tgt'], '*')
         self.assertEqual(returned_lowstate['fun'], 'test.fib')
-        self.assertEqual(returned_lowstate['arg'], ['10', 'foo'])
+        self.assertEqual(returned_lowstate['arg'], [10, 'foo'])
 
         # Send json with utf8 charset
         response = self.fetch('/',
@@ -318,11 +318,20 @@ class TestBaseSaltAPIHandler(SaltnadoTestCase):
         '''
         Test transformations low data of the function _get_lowstate
         '''
-        valid_lowstate = [{
+        valid_arg_lowstate = [{
                 u"client": u"local",
                 u"tgt": u"*",
                 u"fun": u"test.fib",
-                u"arg": [u"10"]
+                u"arg": [10],
+                u"kwarg": {},
+            }]
+
+        valid_arg_kwarg_lowstate = [{
+                u"client": u"local",
+                u"tgt": u"*",
+                u"fun": u"test.fib",
+                u"arg": [10],
+                u"kwarg": {u"yaml": {u"foo": u"bar"}}
             }]
 
         # Case 1. dictionary type of lowstate
@@ -330,7 +339,7 @@ class TestBaseSaltAPIHandler(SaltnadoTestCase):
                 "client": "local",
                 "tgt": "*",
                 "fun": "test.fib",
-                "arg": ["10"]
+                u"arg": ["10", "yaml={foo: bar}"]
             }
 
         response = self.fetch('/',
@@ -338,14 +347,14 @@ class TestBaseSaltAPIHandler(SaltnadoTestCase):
                               body=salt.utils.json.dumps(request_lowstate),
                               headers={'Content-Type': self.content_type_map['json']})
 
-        self.assertEqual(valid_lowstate, salt.utils.json.loads(response.body)['lowstate'])
+        self.assertEqual(valid_arg_kwarg_lowstate, salt.utils.json.loads(response.body)['lowstate'])
 
         # Case 2. string type of arg
         request_lowstate = {
                 "client": "local",
                 "tgt": "*",
                 "fun": "test.fib",
-                "arg": "10"
+                u"arg": "10"
             }
 
         response = self.fetch('/',
@@ -353,14 +362,14 @@ class TestBaseSaltAPIHandler(SaltnadoTestCase):
                               body=salt.utils.json.dumps(request_lowstate),
                               headers={'Content-Type': self.content_type_map['json']})
 
-        self.assertEqual(valid_lowstate, salt.utils.json.loads(response.body)['lowstate'])
+        self.assertEqual(valid_arg_lowstate, salt.utils.json.loads(response.body)['lowstate'])
 
         # Case 3. Combine Case 1 and Case 2.
         request_lowstate = {
                 "client": "local",
                 "tgt": "*",
                 "fun": "test.fib",
-                "arg": "10"
+                u"arg": ["10", "yaml={foo: bar}"]
             }
 
         # send as json
@@ -369,21 +378,21 @@ class TestBaseSaltAPIHandler(SaltnadoTestCase):
                               body=salt.utils.json.dumps(request_lowstate),
                               headers={'Content-Type': self.content_type_map['json']})
 
-        self.assertEqual(valid_lowstate, salt.utils.json.loads(response.body)['lowstate'])
+        self.assertEqual(valid_arg_kwarg_lowstate, salt.utils.json.loads(response.body)['lowstate'])
 
         # send as yaml
         response = self.fetch('/',
                               method='POST',
                               body=salt.utils.yaml.safe_dump(request_lowstate),
                               headers={'Content-Type': self.content_type_map['yaml']})
-        self.assertEqual(valid_lowstate, salt.utils.json.loads(response.body)['lowstate'])
+        self.assertEqual(valid_arg_kwarg_lowstate, salt.utils.json.loads(response.body)['lowstate'])
 
         # send as plain text
         response = self.fetch('/',
                               method='POST',
                               body=salt.utils.json.dumps(request_lowstate),
                               headers={'Content-Type': self.content_type_map['text']})
-        self.assertEqual(valid_lowstate, salt.utils.json.loads(response.body)['lowstate'])
+        self.assertEqual(valid_arg_kwarg_lowstate, salt.utils.json.loads(response.body)['lowstate'])
 
         # send as form-urlencoded
         request_form_lowstate = (
@@ -397,7 +406,7 @@ class TestBaseSaltAPIHandler(SaltnadoTestCase):
                               method='POST',
                               body=urlencode(request_form_lowstate),
                               headers={'Content-Type': self.content_type_map['form']})
-        self.assertEqual(valid_lowstate, salt.utils.json.loads(response.body)['lowstate'])
+        self.assertEqual(valid_arg_lowstate, salt.utils.json.loads(response.body)['lowstate'])
 
     def test_cors_origin_wildcard(self):
         '''

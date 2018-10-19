@@ -1092,6 +1092,15 @@ def lowdata_fmt():
         cherrypy.serving.request.lowstate = data
 
 
+def default_headers():
+    '''
+    set default headers that should be attached to every request
+    '''
+
+    headers = cherrypy.response.headers
+    headers['X-Salt-Version'] = str(salt.version.__saltstack_version__)
+
+
 tools_config = {
     'on_start_resource': [
         ('html_override', html_override_tool),
@@ -1106,6 +1115,9 @@ tools_config = {
         ('lowdata_fmt', lowdata_fmt),
         ('hypermedia_out', hypermedia_out),
         ('salt_ip_verify', salt_ip_verify_tool),
+    ],
+    'before_finalize': [
+        ('default_headers', default_headers),
     ],
 }
 
@@ -2862,6 +2874,7 @@ class API(object):
 
                 'tools.html_override.on': True,
                 'tools.cors_tool.on': True,
+                'tools.default_headers.on': True,
             },
         }
 

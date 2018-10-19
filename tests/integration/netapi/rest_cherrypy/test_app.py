@@ -6,6 +6,7 @@ from __future__ import absolute_import
 # Import salt libs
 import salt.utils.json
 import salt.utils.stringutils
+import salt.version
 
 # Import test support libs
 import tests.support.cherrypy_testclasses as cptc
@@ -61,6 +62,7 @@ class TestLogin(cptc.BaseRestCherryPyTest):
                 'content-type': 'application/x-www-form-urlencoded'
         })
         self.assertEqual(response.status, '200 OK')
+        self.assertTrue(salt.version.SaltStackVersion.parse(response.headers['X-Salt-Version']))
         return response
 
     def test_bad_login(self):
@@ -72,6 +74,7 @@ class TestLogin(cptc.BaseRestCherryPyTest):
             headers={
                 'content-type': 'application/x-www-form-urlencoded'
         })
+        self.assertTrue(salt.version.SaltStackVersion.parse(response.headers['X-Salt-Version']))
         self.assertEqual(response.status, '401 Unauthorized')
 
     def test_logout(self):

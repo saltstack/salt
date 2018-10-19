@@ -8,6 +8,7 @@ import threading
 # Import Salt Libs
 import salt.utils.json
 import salt.utils.stringutils
+import salt.version
 from salt.netapi.rest_tornado import saltnado
 from salt.utils.versions import StrictVersion
 
@@ -59,6 +60,7 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
         self.assertEqual(sorted(response_obj['clients']),
                          ['local', 'local_async', 'runner', 'runner_async'])
         self.assertEqual(response_obj['return'], 'Welcome')
+        self.assertTrue(salt.version.SaltStackVersion.parse(response.headers['X-Salt-Version']))
 
     def test_post_no_auth(self):
         '''
