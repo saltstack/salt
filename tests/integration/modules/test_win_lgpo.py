@@ -151,7 +151,7 @@ class WinLgpoTest(ModuleCase):
         '''
         class setup function, only runs once
 
-        downloads and extracts the lgpo.exe tool into c:\windows\system32
+        downloads and extracts the lgpo.exe tool into c:/windows/system32
         for use in validating the registry.pol files
 
         gets osrelease grain for tests that are only applicable to certain
