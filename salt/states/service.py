@@ -826,7 +826,6 @@ def unmasked(name, runtime=False):
 def mod_watch(name,
               sfun=None,
               sig=None,
-              reload=False,
               full_restart=False,
               init_delay=None,
               force=False,
@@ -873,6 +872,7 @@ def mod_watch(name,
     init_delay
         Add a sleep command (in seconds) before the service is restarted/reloaded
     '''
+    reload_ = kwargs.pop('reload', False)
     ret = {'name': name,
            'changes': {},
            'result': True,
@@ -890,38 +890,40 @@ def mod_watch(name,
             return ret
     elif sfun == 'running':
         if __salt__['service.status'](name, sig):
-            if 'service.reload' in __salt__ and reload and isinstance(reload, list):
-                only_reload_needed = True
-                for watch_item in kwargs['__reqs__']['watch']:
-                    if __running__[_gen_tag(watch_item)]['changes']:
-                        match_found = False
-                        for this_reload in reload:
-                            for state, id in six.iteritems(this_reload):
-                                if state == watch_item['state'] and id == watch_item['__id__']:
-                                    match_found = True
-                        if not match_found:
-                            only_reload_needed = False
-                if only_reload_needed:
+            if 'service.reload' in __salt__ and reload_:
+                if isinstance(reload_, list):
+                    only_reload_needed = True
+                    for watch_item in kwargs['__reqs__']['watch']:
+                        if __running__[_gen_tag(watch_item)]['changes']:
+                            match_found = False
+                            for this_reload in reload_:
+                                for state, id_ in six.iteritems(this_reload):
+                                    if state == watch_item['state'] \
+                                            and id_ == watch_item['__id__']:
+                                        match_found = True
+                            if not match_found:
+                                only_reload_needed = False
+                    if only_reload_needed:
+                        if 'service.force_reload' in __salt__ and force:
+                            func = __salt__['service.force_reload']
+                            verb = 'forcefully reload'
+                        else:
+                            func = __salt__['service.reload']
+                            verb = 'reload'
+                    else:
+                        if 'service.full_restart' in __salt__ and full_restart:
+                            func = __salt__['service.full_restart']
+                            verb = 'fully restart'
+                        else:
+                            func = __salt__['service.restart']
+                            verb = 'restart'
+                else:
                     if 'service.force_reload' in __salt__ and force:
                         func = __salt__['service.force_reload']
                         verb = 'forcefully reload'
                     else:
                         func = __salt__['service.reload']
                         verb = 'reload'
-                else:
-                    if 'service.full_restart' in __salt__ and full_restart:
-                        func = __salt__['service.full_restart']
-                        verb = 'fully restart'
-                    else:
-                        func = __salt__['service.restart']
-                        verb = 'restart'
-            elif 'service.reload' in __salt__ and reload:
-                if 'service.force_reload' in __salt__ and force:
-                    func = __salt__['service.force_reload']
-                    verb = 'forcefully reload'
-                else:
-                    func = __salt__['service.reload']
-                    verb = 'reload'
             elif 'service.full_restart' in __salt__ and full_restart:
                 func = __salt__['service.full_restart']
                 verb = 'fully restart'
