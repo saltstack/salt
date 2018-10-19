@@ -18,6 +18,7 @@ from tests.support.mock import (
 import salt.modules.win_file as win_file
 from salt.exceptions import CommandExecutionError
 import salt.utils.platform
+import salt.utils.win_dacl
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)

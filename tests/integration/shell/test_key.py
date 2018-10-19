@@ -256,6 +256,9 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
             for fname in key_names:
                 self.assertTrue(os.path.isfile(os.path.join(tempdir, fname)))
         finally:
+            for dirname, dirs, files in os.walk(tempdir):
+                for filename in files:
+                    os.chmod(os.path.join(dirname, filename), 0o700)
             shutil.rmtree(tempdir)
 
     def test_keys_generation_keysize_minmax(self):
