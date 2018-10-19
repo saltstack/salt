@@ -563,22 +563,23 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler):  # pylint: disable=W0223
         data = self.deserialize(self.request.body)
         self.request_payload = copy(data)
 
-        if data and 'arg' in data:
-            if not isinstance(data['arg'], list):
-                data['arg'] = [data['arg']]
-
-            # Run name=value args through parse_input
-            _arg, _kwarg = salt.utils.args.parse_input(data.pop('arg', []), condition=False)
-            data['arg'] = _arg
-            if 'kwarg' in data and isinstance(data['kwarg'], dict):
-                data['kwarg'].update(_kwarg)
-            else:
-                data['kwarg'] = _kwarg
-
         if not isinstance(data, list):
             lowstate = [data]
         else:
             lowstate = data
+
+        for chunk in lowstate:
+            if chunk and 'arg' in chunk:
+                if not isinstance(chunk['arg'], list):
+                    chunk['arg'] = [chunk['arg']]
+
+                # Run name=value args through parse_input
+                _arg, _kwarg = salt.utils.args.parse_input(chunk.pop('arg', []), condition=False)
+                chunk['arg'] = _arg
+                if 'kwarg' in chunk and isinstance(chunk['kwarg'], dict):
+                    chunk['kwarg'].update(_kwarg)
+                else:
+                    chunk['kwarg'] = _kwarg
 
         return lowstate
 

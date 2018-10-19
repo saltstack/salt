@@ -242,7 +242,8 @@ class TestBaseSaltAPIHandler(SaltnadoTestCase):
                 "client": "local",
                 "tgt": "*",
                 "fun": "test.fib",
-                "arg": [10]
+                "arg": [10],
+                "kwarg": {},
             },
             {
                 "client": "runner",
