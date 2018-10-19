@@ -54,6 +54,8 @@ class SchedulerMaxRunningTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         verify that scheduled job runs
         '''
+        self.schedule.opts['__role'] = 'minion'
+
         job = {
           'schedule': {
             'maxrunning_minion': {
