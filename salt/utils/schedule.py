@@ -32,6 +32,7 @@ import salt.utils.error
 import salt.utils.event
 import salt.utils.files
 import salt.utils.jid
+import salt.utils.master
 import salt.utils.minion
 import salt.utils.platform
 import salt.utils.process
@@ -177,7 +178,11 @@ class Schedule(object):
         data['run'] = True
         if 'jid_include' not in data or data['jid_include']:
             jobcount = 0
-            for job in salt.utils.minion.running(self.opts):
+            if self.opts['__role'] == 'master':
+                current_jobs = salt.utils.master.running(self.opts)
+            else:
+                current_jobs = salt.utils.minion.running(self.opts)
+            for job in current_jobs:
                 if 'schedule' in job:
                     log.debug(
                         'schedule.handle_func: Checking job against fun '
