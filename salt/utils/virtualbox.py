@@ -139,7 +139,15 @@ def vb_get_manager():
             pass
 
         # Reloading the API extends sys.paths for subprocesses of multiprocessing, since they seem to share contexts
-        reload(vboxapi)
+        try:
+            reload(vboxapi)
+        except NameError:
+            try:
+                from importlib import reload
+                reload(vboxapi)
+            except ImportError:
+                from imp import reload
+                reload(vboxapi)
         _virtualboxManager = vboxapi.VirtualBoxManager(None, None)
 
     return _virtualboxManager

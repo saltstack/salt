@@ -61,13 +61,29 @@ def __virtual__():
 
 def _vartree():
     import portage  # pylint: disable=3rd-party-module-not-gated
-    portage = reload(portage)
+    try:
+        reload(portage)
+    except NameError:
+        try:
+            from importlib import reload
+            reload(portage)
+        except ImportError:
+            from imp import reload
+            reload(portage)
     return portage.db[portage.root]['vartree']
 
 
 def _porttree():
     import portage  # pylint: disable=3rd-party-module-not-gated
-    portage = reload(portage)
+    try:
+        reload(portage)
+    except NameError:
+        try:
+            from importlib import reload
+            reload(portage)
+        except ImportError:
+            from imp import reload
+            reload(portage)
     return portage.db[portage.root]['porttree']
 
 
