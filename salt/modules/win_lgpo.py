@@ -2527,19 +2527,6 @@ class _policy_info(object):
                             'Put': '_string_put_transform'
                         }
                     },
-                    'AddPrinterDrivers': {
-                        'Policy': 'Devices: Prevent users from installing printer drivers',
-                        'Settings': self.enabled_one_disabled_zero.keys(),
-                        'lgpo_section': self.security_options_gpedit_path,
-                        'Registry': {
-                            'Hive': 'HKEY_LOCAL_MACHINE',
-                            'Path': 'SYSTEM\\CurrentControlSet\\Control\\Print\\'
-                                    'Providers\\LanMan Print Services\\Servers',
-                            'Value': 'AddPrinterDrivers',
-                            'Type': 'REG_DWORD',
-                        },
-                        'Transform': self.enabled_one_disabled_zero_transform,
-                    },
                     'UseMachineId': {
                         'Policy': 'Network security: Allow Local System to use computer '
                                   'identity for NTLM',
