@@ -190,6 +190,17 @@ Module Changes
   ``dns`` can be overriden by ``ipv4dns`` or ``ipv6dns``). The ``proto`` option
   is now required.
 
+Salt-API Changes
+================
+
+- (cherrypy, tornado) when handling lowstate from requests, all inputs are now passed
+  through :py:func:`args.parse_input <salt.util.args.parse_input>` function to make
+  arg parsing equivalent to what happens on the cli. This means you can now provide
+  'yaml={foo: bar}' style kwargs in the arg list and it will be deserialized
+  appropriately.
+- (cherrypy, tornado) a new X-Salt-Version response header has been added for simple
+  introspection of available features for consumers (pepper).
+
 Salt Cloud Features
 ===================
 
