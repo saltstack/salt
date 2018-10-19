@@ -19,6 +19,14 @@ from __future__ import absolute_import
 import copy
 import logging
 import re
+try:
+    if globals()['__builtins__'].reload:
+        pass
+except AttributeError:
+    try:
+        from importlib import reload
+    except ImportError:
+        from imp import reload
 
 # Import salt libs
 import salt.utils
@@ -61,29 +69,13 @@ def __virtual__():
 
 def _vartree():
     import portage  # pylint: disable=3rd-party-module-not-gated
-    try:
-        reload(portage)
-    except NameError:
-        try:
-            from importlib import reload
-            reload(portage)
-        except ImportError:
-            from imp import reload
-            reload(portage)
+    reload(portage)
     return portage.db[portage.root]['vartree']
 
 
 def _porttree():
     import portage  # pylint: disable=3rd-party-module-not-gated
-    try:
-        reload(portage)
-    except NameError:
-        try:
-            from importlib import reload
-            reload(portage)
-        except ImportError:
-            from imp import reload
-            reload(portage)
+    reload(portage)
     return portage.db[portage.root]['porttree']
 
 
