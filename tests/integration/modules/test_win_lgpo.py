@@ -448,6 +448,48 @@ class WinLgpoTest(ModuleCase):
                                      'Disabled',
                                      [r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\CurrentVersion\\Internet Settings\\Zones\\3[\s]*1406[\s]*DELETE'])
 
+    @destructiveTest
+    def test_set_computer_policy_ActiveHours(self):
+        '''
+        Test configuring the ActiveHours policy, #47784
+        Only applies to 2016Server
+        # activehours.sls
+            active_hours_policy:
+              lgpo.set:
+                - computer_policy:
+                    'ActiveHours':
+                        'ActiveHoursStartTime': '8 AM'
+                        'ActiveHoursEndTime': '7 PM'
+        '''
+        valid_osreleases = ['2016Server']
+        if self.osrelease not in valid_osreleases:
+            self.skipTest('ActiveHours policy is only applicable if the osrelease grain is {0}'.format(' or '.join(valid_osreleases)))
+        else:
+            self._testComputerAdmxPolicy(r'ActiveHours',
+                                         {'ActiveHoursStartTime': '8 AM', 'ActiveHoursEndTime': '7 PM'},
+                                         [
+                                            r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate[\s]*SetActiveHours[\s]*DWORD:1',
+                                            r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate[\s]*ActiveHoursStart[\s]*DWORD:8',
+                                            r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate[\s]*ActiveHoursEnd[\s]*DWORD:19'
+                                         ])
+            self._testComputerAdmxPolicy(r'ActiveHours',
+                                         {'ActiveHoursStartTime': '5 AM', 'ActiveHoursEndTime': '10 PM'},
+                                         [
+                                            r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate[\s]*SetActiveHours[\s]*DWORD:1',
+                                            r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate[\s]*ActiveHoursStart[\s]*DWORD:5',
+                                            r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate[\s]*ActiveHoursEnd[\s]*DWORD:22'
+                                         ])
+            self._testComputerAdmxPolicy('Turn off auto-restart for updates during active hours',
+                                         'Disabled',
+                                         [
+                                            r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate[\s]*SetActiveHours[\s]*DWORD:0',
+                                            r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate[\s]*ActiveHoursStart[\s]*DELETE',
+                                            r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate[\s]*ActiveHoursEnd[\s]*DELETE'
+                                         ])
+            self._testComputerAdmxPolicy(r'Windows Components\Windows Update\Turn off auto-restart for updates during active hours',
+                                         'Not Configured',
+                                         [r'; Source file:  c:\\windows\\system32\\grouppolicy\\machine\\registry.pol[\s]*; PARSING COMPLETED.'])
+
     def tearDown(self):
         '''
         tearDown method, runs after each test
