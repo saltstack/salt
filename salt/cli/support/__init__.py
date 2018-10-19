@@ -1,4 +1,4 @@
-# coding=utf-8
+# -*- coding: utf-8 -*-
 """
 Get default scenario of the support.
 """
@@ -50,7 +50,7 @@ def get_profile(profile, caller, runner):
         if os.path.exists(profile_path):
             try:
                 rendered_template = _render_profile(profile_path, caller, runner)
-                log.trace(
+                log.debug(
                     "\n%(d)s\n%(t)s\n%(d)s\n", {"d": "-" * 80, "t": rendered_template}
                 )
                 data.update(yaml.load(rendered_template))
