@@ -2,8 +2,10 @@
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+import logging
 import os
 import shutil
+import sys
 import tempfile
 import textwrap
 import threading
@@ -13,10 +15,11 @@ import time
 from tests.support.case import ModuleCase
 from tests.support.helpers import with_tempdir
 from tests.support.unit import skipIf
-from tests.support.paths import FILES, TMP, TMP_PILLAR_TREE
+from tests.support.paths import BASE_FILES, TMP, TMP_PILLAR_TREE
 from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import Salt libs
+import salt.utils.atomicfile
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
@@ -26,7 +29,6 @@ from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 # Import 3rd-party libs
 from salt.ext import six
 
-import logging
 log = logging.getLogger(__name__)
 
 
@@ -68,14 +70,22 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
 
     maxDiff = None
 
-    def setUp(self):
-        super(StateModuleTest, self).setUp()
-        destpath = os.path.join(FILES, 'file', 'base', 'testappend', 'firstif')
-        reline(destpath, destpath, force=True)
-        destpath = os.path.join(FILES, 'file', 'base', 'testappend', 'secondif')
-        reline(destpath, destpath, force=True)
-        sls = self.run_function('saltutil.sync_modules')
-        assert isinstance(sls, list)
+    @classmethod
+    def setUpClass(cls):
+        def _reline(path, ending=DEFAULT_ENDING):
+            '''
+            Normalize the line endings of a file.
+            '''
+            with salt.utils.files.fopen(path, 'rb') as fhr:
+                lines = fhr.read().splitlines()
+            with salt.utils.atomicfile.atomic_open(path, 'wb') as fhw:
+                for line in lines:
+                    fhw.write(line + ending)
+
+        destpath = os.path.join(BASE_FILES, 'testappend', 'firstif')
+        _reline(destpath)
+        destpath = os.path.join(BASE_FILES, 'testappend', 'secondif')
+        _reline(destpath)
 
     def test_show_highstate(self):
         '''
@@ -1830,18 +1840,50 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         test state.sls with saltenv using a nonbase environment
         with a salt source
         '''
-        file_name = os.path.join(TMP, 'nonbase_env')
-        state_run = self.run_function(
+        filename = os.path.join(TMP, 'nonbase_env')
+        try:
+            ret = self.run_function(
+                'state.sls',
+                mods='non-base-env',
+                saltenv='prod'
+            )
+            ret = ret[next(iter(ret))]
+            assert ret['result']
+            assert ret['comment'] == 'File {0} updated'.format(filename)
+            assert os.path.isfile(filename)
+        finally:
+            try:
+                os.remove(filename)
+            except OSError:
+                pass
+
+    @skipIf(sys.platform.startswith('win'), 'Skipped until parallel states can be fixed on Windows')
+    def test_parallel_state_with_long_tag(self):
+        '''
+        This tests the case where the state being executed has a long ID dec or
+        name and states are being run in parallel. The filenames used for the
+        parallel state cache were previously based on the tag for each chunk,
+        and longer ID decs or name params can cause the cache file to be longer
+        than the operating system's max file name length. To counter this we
+        instead generate a SHA1 hash of the chunk's tag to use as the cache
+        filename. This test will ensure that long tags don't cause caching
+        failures.
+
+        See https://github.com/saltstack/salt/issues/49738 for more info.
+        '''
+        short_command = 'helloworld'
+        long_command = short_command * 25
+
+        ret = self.run_function(
             'state.sls',
-            mods='non-base-env',
-            saltenv='prod'
+            mods='issue-49738',
+            pillar={'short_command': short_command,
+                    'long_command': long_command}
         )
-        state_id = 'file_|-test_file_|-{0}_|-managed'.format(file_name)
-        self.assertEqual(state_run[state_id]['comment'],
-                         'File {0} updated'.format(file_name))
-        self.assertTrue(
-            state_run['file_|-test_file_|-{0}_|-managed'.format(file_name)]['result'])
-        self.assertTrue(os.path.isfile(file_name))
+        comments = sorted([x['comment'] for x in six.itervalues(ret)])
+        expected = sorted(['Command "{0}" run'.format(x)
+                           for x in (short_command, long_command)])
+        assert comments == expected, '{0} != {1}'.format(comments, expected)
 
     def _add_runtime_pillar(self, pillar):
         '''
@@ -1874,7 +1916,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
 
         for key, val in ret.items():
             self.assertEqual(val['comment'], comment)
-            self.assertEqual(val['changes'], {})
+            self.assertEqual(val['changes'], {'newfile': testfile})
 
     def test_state_sls_id_test_state_test_post_run(self):
         '''
@@ -1907,7 +1949,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertEqual(
                 val['comment'],
                 'The file {0} is set to be changed'.format(file_name))
-            self.assertEqual(val['changes'], {})
+            self.assertEqual(val['changes'], {'newfile': file_name})
 
     def test_state_sls_id_test_true_post_run(self):
         '''
@@ -1965,7 +2007,6 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
                       'result': True},
                      'file_|-unless_false_onlyif_true_|-{0}{1}test.txt_|-managed'.format(TMP, os.path.sep):
                      {'comment': 'Empty file',
-                      'pchanges': {},
                       'name': '{0}{1}test.txt'.format(TMP, os.path.sep),
                       'start_time': '18:10:20.341753',
                       'result': True,

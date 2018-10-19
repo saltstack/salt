@@ -319,7 +319,7 @@ class PipModuleTest(ModuleCase):
             f.write('pep8')
 
         ret = self.run_function(
-            'pip.install', requirements=req1_filename, bin_env=self.venv_dir)
+            'pip.install', requirements=req1_filename, bin_env=self.venv_dir, timeout=300)
         if self._check_download_error(ret['stdout']):
             self.skipTest('Test skipped due to pip download error')
         try:

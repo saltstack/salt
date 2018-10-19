@@ -7,6 +7,7 @@ virt execution module unit tests
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
+import os
 import re
 import datetime
 
@@ -21,10 +22,13 @@ import salt.modules.virt as virt
 import salt.modules.config as config
 from salt._compat import ElementTree as ET
 import salt.config
+import salt.syspaths
 from salt.exceptions import CommandExecutionError
 
 # Import third party libs
 from salt.ext import six
+# pylint: disable=import-error
+from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 
 
 # pylint: disable=invalid-name,protected-access,attribute-defined-outside-init,too-many-public-methods,unused-argument
@@ -84,6 +88,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test virt._disk_profile() when merging with user-defined disks
         '''
+        root_dir = os.path.join(salt.syspaths.ROOT_DIR, 'srv', 'salt-images')
         userdisks = [{'name': 'data', 'size': 16384, 'format': 'raw'}]
 
         disks = virt._disk_profile('default', 'kvm', userdisks, 'myvm', image='/path/to/image')
@@ -94,13 +99,13 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
               'model': 'virtio',
               'filename': 'myvm_system.qcow2',
               'image': '/path/to/image',
-              'source_file': '/srv/salt-images/myvm_system.qcow2'},
+              'source_file': '{0}{1}myvm_system.qcow2'.format(root_dir, os.sep)},
              {'name': 'data',
               'size': 16384,
               'format': 'raw',
               'model': 'virtio',
               'filename': 'myvm_data.raw',
-              'source_file': '/srv/salt-images/myvm_data.raw'}],
+              'source_file': '{0}{1}myvm_data.raw'.format(root_dir, os.sep)}],
             disks
         )
 
@@ -668,7 +673,10 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             self.assertTrue(len(root.findall('.//disk')) == 2)
             self.assertTrue(len(root.findall('.//interface')) == 2)
 
-    @patch('salt.modules.virt.pool_info', return_value={'target_path': '/pools/default'})
+    @patch('salt.modules.virt.pool_info',
+           return_value={'target_path': os.path.join(salt.syspaths.ROOT_DIR,
+                                                     'pools',
+                                                     'default')})
     def test_disk_profile_kvm_disk_pool(self, mock_poolinfo):
         '''
         Test virt._gen_xml(), KVM case with pools defined.
@@ -679,13 +687,19 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 {'second': {'size': 4096}}
             ]
         }
-        with patch.dict(virt.__salt__, {'config.get': MagicMock(side_effect=[  # pylint: disable=no-member
-                disks, "/default/path/"])}):
+        with patch.dict(virt.__salt__, {'config.get': MagicMock(side_effect=[
+                disks,
+                os.path.join(salt.syspaths.ROOT_DIR, 'default', 'path')])}):
             diskp = virt._disk_profile('noeffect', 'kvm', [], 'hello')
 
+            pools_path = os.path.join(
+                salt.syspaths.ROOT_DIR, 'pools', 'default') + os.sep
+            default_path = os.path.join(
+                salt.syspaths.ROOT_DIR, 'default', 'path') + os.sep
+
             self.assertEqual(len(diskp), 2)
-            self.assertTrue(diskp[0]['source_file'].startswith('/pools/default/'))
-            self.assertTrue(diskp[1]['source_file'].startswith('/default/path/'))
+            self.assertTrue(diskp[0]['source_file'].startswith(pools_path))
+            self.assertTrue(diskp[1]['source_file'].startswith(default_path))
 
     @patch('salt.modules.virt.pool_info', return_value={})
     def test_disk_profile_kvm_disk_pool_notfound(self, mock_poolinfo):
@@ -851,6 +865,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test virt.update()
         '''
+        root_dir = os.path.join(salt.syspaths.ROOT_DIR, 'srv', 'salt-images')
         xml = '''
             <domain type='kvm' id='7'>
               <name>myvm</name>
@@ -863,7 +878,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
               <devices>
                 <disk type='file' device='disk'>
                   <driver name='qemu' type='qcow2'/>
-                  <source file='/srv/salt-images/myvm_system.qcow2'/>
+                  <source file='{0}{1}myvm_system.qcow2'/>
                   <backingStore/>
                   <target dev='vda' bus='virtio'/>
                   <alias name='virtio-disk0'/>
@@ -871,7 +886,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 </disk>
                 <disk type='file' device='disk'>
                   <driver name='qemu' type='qcow2'/>
-                  <source file='/srv/salt-images/myvm_data.qcow2'/>
+                  <source file='{0}{1}myvm_data.qcow2'/>
                   <backingStore/>
                   <target dev='vda' bus='virtio'/>
                   <alias name='virtio-disk1'/>
@@ -903,7 +918,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 </video>
               </devices>
             </domain>
-        '''
+        '''.format(root_dir, os.sep)
         domain_mock = self.set_mock_vm('myvm', xml)
         domain_mock.OSType = MagicMock(return_value='hvm')
         define_mock = MagicMock(return_value=True)
@@ -943,10 +958,13 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         domain_mock.attachDevice = devattach_mock
         domain_mock.detachDevice = devdetach_mock
         ret = virt.update('myvm', disk_profile='default', disks=[{'name': 'added', 'size': 2048}])
-        self.assertEqual(['/srv/salt-images/myvm_added.qcow2'],
-                         [ET.fromstring(disk).find('source').get('file') for disk in ret['disk']['attached']])
-        self.assertEqual(['/srv/salt-images/myvm_data.qcow2'],
-                         [ET.fromstring(disk).find('source').get('file') for disk in ret['disk']['detached']])
+        self.assertListEqual(
+            [os.path.join(root_dir, 'myvm_added.qcow2')],
+            [ET.fromstring(disk).find('source').get('file') for disk in ret['disk']['attached']])
+
+        self.assertListEqual(
+            [os.path.join(root_dir, 'myvm_data.qcow2')],
+            [ET.fromstring(disk).find('source').get('file') for disk in ret['disk']['detached']])
         devattach_mock.assert_called_once()
         devdetach_mock.assert_called_once()
 
@@ -1899,6 +1917,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         net_mock = MagicMock()
 
         # pylint: disable=no-member
+        net_mock.name.return_value = 'foo'
         net_mock.UUIDString.return_value = 'some-uuid'
         net_mock.bridgeName.return_value = 'br0'
         net_mock.autostart.return_value = True
@@ -1917,11 +1936,11 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 'iaid': None
             }
         ]
-        self.mock_conn.networkLookupByName.return_value = net_mock
+        self.mock_conn.listAllNetworks.return_value = [net_mock]
         # pylint: enable=no-member
 
         net = virt.network_info('foo')
-        self.assertEqual({
+        self.assertEqual({'foo': {
             'uuid': 'some-uuid',
             'bridge': 'br0',
             'autostart': True,
@@ -1939,15 +1958,58 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                     'clientid': '01:52:54:00:01:71:bd',
                     'iaid': None
                 }
-            ]}, net)
+            ]}}, net)
+
+    def test_network_info_all(self):
+        '''
+        Test virt.network_info()
+        '''
+        self.mock_libvirt.VIR_IP_ADDR_TYPE_IPV4 = 0
+        self.mock_libvirt.VIR_IP_ADDR_TYPE_IPV6 = 1
+
+        net_mocks = []
+        for i in range(2):
+            net_mock = MagicMock()
+
+            # pylint: disable=no-member
+            net_mock.name.return_value = 'net{0}'.format(i)
+            net_mock.UUIDString.return_value = 'some-uuid'
+            net_mock.bridgeName.return_value = 'br{0}'.format(i)
+            net_mock.autostart.return_value = True
+            net_mock.isActive.return_value = False
+            net_mock.isPersistent.return_value = True
+            net_mock.DHCPLeases.return_value = []
+            net_mocks.append(net_mock)
+        self.mock_conn.listAllNetworks.return_value = net_mocks
+        # pylint: enable=no-member
+
+        net = virt.network_info()
+        self.assertEqual({
+            'net0':
+            {
+                'uuid': 'some-uuid',
+                'bridge': 'br0',
+                'autostart': True,
+                'active': False,
+                'persistent': True,
+                'leases': []
+            }, 'net1':
+            {
+                'uuid': 'some-uuid',
+                'bridge': 'br1',
+                'autostart': True,
+                'active': False,
+                'persistent': True,
+                'leases': []
+            }
+        }, net)
 
     def test_network_info_notfound(self):
         '''
         Test virt.network_info() when the network can't be found
         '''
         # pylint: disable=no-member
-        self.mock_conn.networkLookupByName.side_effect = \
-            self.mock_libvirt.libvirtError("Network not found")
+        self.mock_conn.listAllNetworks.return_value = []
         # pylint: enable=no-member
         net = virt.network_info('foo')
         self.assertEqual({}, net)
@@ -2099,6 +2161,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         '''
         # pylint: disable=no-member
         pool_mock = MagicMock()
+        pool_mock.name.return_value = 'foo'
         pool_mock.UUIDString.return_value = 'some-uuid'
         pool_mock.info.return_value = [0, 1234, 5678, 123]
         pool_mock.autostart.return_value = True
@@ -2120,11 +2183,11 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
     </permissions>
   </target>
 </pool>'''
-        self.mock_conn.storagePoolLookupByName.return_value = pool_mock
+        self.mock_conn.listAllStoragePools.return_value = [pool_mock]
         # pylint: enable=no-member
 
         pool = virt.pool_info('foo')
-        self.assertEqual({
+        self.assertEqual({'foo': {
             'uuid': 'some-uuid',
             'state': 'inactive',
             'capacity': 1234,
@@ -2133,7 +2196,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             'autostart': True,
             'persistent': True,
             'type': 'dir',
-            'target_path': '/srv/vms'}, pool)
+            'target_path': '/srv/vms'}}, pool)
 
     def test_pool_info_notarget(self):
         '''
@@ -2141,6 +2204,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         '''
         # pylint: disable=no-member
         pool_mock = MagicMock()
+        pool_mock.name.return_value = 'ceph'
         pool_mock.UUIDString.return_value = 'some-uuid'
         pool_mock.info.return_value = [0, 0, 0, 0]
         pool_mock.autostart.return_value = True
@@ -2160,11 +2224,11 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
     </auth>
   </source>
 </pool>'''
-        self.mock_conn.storagePoolLookupByName.return_value = pool_mock
+        self.mock_conn.listAllStoragePools.return_value = [pool_mock]
         # pylint: enable=no-member
 
         pool = virt.pool_info('ceph')
-        self.assertEqual({
+        self.assertEqual({'ceph': {
             'uuid': 'some-uuid',
             'state': 'inactive',
             'capacity': 0,
@@ -2173,18 +2237,77 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             'autostart': True,
             'persistent': True,
             'type': 'rbd',
-            'target_path': None}, pool)
+            'target_path': None}}, pool)
 
     def test_pool_info_notfound(self):
         '''
         Test virt.pool_info() when the pool can't be found
         '''
         # pylint: disable=no-member
-        self.mock_conn.storagePoolLookupByName.side_effect = \
-            self.mock_libvirt.libvirtError("Pool not found")
+        self.mock_conn.listAllStoragePools.return_value = []
         # pylint: enable=no-member
         pool = virt.pool_info('foo')
         self.assertEqual({}, pool)
+
+    def test_pool_info_all(self):
+        '''
+        Test virt.pool_info()
+        '''
+        # pylint: disable=no-member
+        pool_mocks = []
+        for i in range(2):
+            pool_mock = MagicMock()
+            pool_mock.name.return_value = 'pool{0}'.format(i)
+            pool_mock.UUIDString.return_value = 'some-uuid-{0}'.format(i)
+            pool_mock.info.return_value = [0, 1234, 5678, 123]
+            pool_mock.autostart.return_value = True
+            pool_mock.isPersistent.return_value = True
+            pool_mock.XMLDesc.return_value = '''<pool type='dir'>
+  <name>default</name>
+  <uuid>d92682d0-33cf-4e10-9837-a216c463e158</uuid>
+  <capacity unit='bytes'>854374301696</capacity>
+  <allocation unit='bytes'>596275986432</allocation>
+  <available unit='bytes'>258098315264</available>
+  <source>
+  </source>
+  <target>
+    <path>/srv/vms</path>
+    <permissions>
+      <mode>0755</mode>
+      <owner>0</owner>
+      <group>0</group>
+    </permissions>
+  </target>
+</pool>'''
+            pool_mocks.append(pool_mock)
+        self.mock_conn.listAllStoragePools.return_value = pool_mocks
+        # pylint: enable=no-member
+
+        pool = virt.pool_info()
+        self.assertEqual({
+            'pool0':
+            {
+                'uuid': 'some-uuid-0',
+                'state': 'inactive',
+                'capacity': 1234,
+                'allocation': 5678,
+                'free': 123,
+                'autostart': True,
+                'persistent': True,
+                'type': 'dir',
+                'target_path': '/srv/vms'
+            }, 'pool1': {
+                'uuid': 'some-uuid-1',
+                'state': 'inactive',
+                'capacity': 1234,
+                'allocation': 5678,
+                'free': 123,
+                'autostart': True,
+                'persistent': True,
+                'type': 'dir',
+                'target_path': '/srv/vms'
+            }
+        }, pool)
 
     def test_pool_list_volumes(self):
         '''

@@ -239,7 +239,7 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
         self.assertEqual(len(ret), 3)  # make sure we got 3 responses
         self.assertIn('jid', ret[0])  # the first 2 are regular returns
         self.assertIn('jid', ret[1])
-        self.assertIn('Authentication error occurred.', ret[2])  # bad auth
+        self.assertIn('Failed to authenticate', ret[2])  # bad auth
         self.assertEqual(ret[0]['minions'], sorted(['minion', 'sub_minion']))
         self.assertEqual(ret[1]['minions'], sorted(['minion', 'sub_minion']))
 
@@ -279,7 +279,7 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
                               request_timeout=30,
                               )
         response_obj = salt.utils.json.loads(response.body)
-        self.assertEqual(response_obj['return'], [{'localhost': True, 'minion': True, 'sub_minion': True}])
+        self.assertEqual(response_obj['return'], [{'minion': True, 'sub_minion': True}])
 
     # runner tests
     def test_simple_local_runner_post(self):

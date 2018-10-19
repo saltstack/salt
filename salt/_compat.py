@@ -192,7 +192,7 @@ class IPv6AddressScoped(ipaddress.IPv6Address):
         if len(data) == 16 and ':' not in data:
             try:
                 packed = bool(int(str(bytearray(data)).encode('hex'), 16))
-            except ValueError:
+            except (ValueError, TypeError):
                 pass
 
         return packed
