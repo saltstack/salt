@@ -63,6 +63,9 @@ def running(opts):
 
 
 def cache_jobs(opts, jid, ret):
+    '''
+    Write job information to cache
+    '''
     serial = salt.payload.Serial(opts=opts)
 
     fn_ = os.path.join(
@@ -92,7 +95,7 @@ def _read_proc_file(path, opts):
             try:
                 os.remove(path)
             except IOError:
-                pass
+                log.debug('Unable to remove proc file %s.', path)
             return None
     if not isinstance(data, dict):
         # Invalid serial object
@@ -103,7 +106,7 @@ def _read_proc_file(path, opts):
         try:
             os.remove(path)
         except IOError:
-            pass
+            log.debug('Unable to remove proc file %s.', path)
         return None
 
     if not _check_cmdline(data):
@@ -115,7 +118,7 @@ def _read_proc_file(path, opts):
         try:
             os.remove(path)
         except IOError:
-            pass
+            log.debug('Unable to remove proc file %s.', path)
         return None
     return data
 
