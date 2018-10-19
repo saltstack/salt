@@ -267,7 +267,7 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
                     self.assertDictEqual(network.connect('host', 'port'),
                                          {'comment': ret, 'result': True})
 
-    @skipIf(bool(ipaddress) is False, 'unable to import \'ipaddress\'')
+    @skipIf(not bool(ipaddress), 'unable to import \'ipaddress\'')
     def test_is_private(self):
         '''
         Test for Check if the given IP address is a private address
@@ -279,7 +279,7 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
                           return_value=True):
             self.assertTrue(network.is_private('::1'))
 
-    @skipIf(bool(ipaddress) is False, 'unable to import \'ipaddress\'')
+    @skipIf(not bool(ipaddress), 'unable to import \'ipaddress\'')
     def test_is_loopback(self):
         '''
         Test for Check if the given IP address is a loopback address

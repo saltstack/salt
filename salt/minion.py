@@ -109,6 +109,7 @@ from salt.exceptions import (
     SaltSystemExit,
     SaltDaemonNotRunning,
     SaltException,
+    SaltMasterUnresolvableError
 )
 
 
@@ -148,8 +149,13 @@ def resolve_dns(opts, fallback=True):
                 True,
                 opts['ipv6'])
         except SaltClientError:
+            retry_dns_count = opts.get('retry_dns_count', None)
             if opts['retry_dns']:
                 while True:
+                    if retry_dns_count is not None:
+                        if retry_dns_count == 0:
+                            raise SaltMasterUnresolvableError
+                        retry_dns_count -= 1
                     import salt.log
                     msg = ('Master hostname: \'{0}\' not found or not responsive. '
                            'Retrying in {1} seconds').format(opts['master'], opts['retry_dns'])
@@ -964,7 +970,17 @@ class MinionManager(MinionBase):
                       loaded_base_name=loaded_base_name,
                       jid_queue=jid_queue)
 
-    def _spawn_minions(self):
+    def _check_minions(self):
+        '''
+        Check the size of self.minions and raise an error if it's empty
+        '''
+        if not self.minions:
+            err = ('Minion unable to successfully connect to '
+                   'a Salt Master.  Exiting.')
+            log.error(err)
+            raise SaltSystemExit(code=42, msg=err)
+
+    def _spawn_minions(self, timeout=60):
         '''
         Spawn all the coroutines which will sign in to masters
         '''
@@ -983,8 +999,9 @@ class MinionManager(MinionBase):
                                                 loaded_base_name='salt.loader.{0}'.format(s_opts['master']),
                                                 jid_queue=self.jid_queue,
                                                )
-            self.minions.append(minion)
-            self.io_loop.spawn_callback(self._connect_minion, minion)
+
+            self._connect_minion(minion)
+        self.io_loop.call_later(timeout, self._check_minions)
 
     @tornado.gen.coroutine
     def _connect_minion(self, minion):
@@ -1002,6 +1019,7 @@ class MinionManager(MinionBase):
                     minion.setup_scheduler(before_connect=True)
                 yield minion.connect_master(failed=failed)
                 minion.tune_in(start=False)
+                self.minions.append(minion)
                 break
             except SaltClientError as exc:
                 failed = True
@@ -1013,6 +1031,11 @@ class MinionManager(MinionBase):
                 if auth_wait < self.max_auth_wait:
                     auth_wait += self.auth_wait
                 yield tornado.gen.sleep(auth_wait)  # TODO: log?
+            except SaltMasterUnresolvableError:
+                err = 'Master address: \'{0}\' could not be resolved. Invalid or unresolveable address. ' \
+                      'Set \'master\' value in minion config.'.format(minion.opts['master'])
+                log.error(err)
+                break
             except Exception as e:
                 failed = True
                 log.critical(
@@ -2393,7 +2416,8 @@ class Minion(MinionBase):
                 else:
                     # delete the scheduled job to don't interfere with the failover process
                     if self.opts['transport'] != 'tcp':
-                        self.schedule.delete_job(name=master_event(type='alive'))
+                        self.schedule.delete_job(name=master_event(type='alive', master=self.opts['master']),
+                                                 persist=True)
 
                     log.info('Trying to tune in to next master from master-list')
 

@@ -104,7 +104,6 @@ def present(name, acl_type, acl_name='', perms='', recurse=False, force=False):
     ret = {'name': name,
            'result': True,
            'changes': {},
-           'pchanges': {},
            'comment': ''}
 
     _octal = {'r': 4, 'w': 2, 'x': 1, '-': 0}
@@ -172,7 +171,7 @@ def present(name, acl_type, acl_name='', perms='', recurse=False, force=False):
                         acl_name,
                         six.text_type(user[_search_name]['octal']),
                         perms),
-                        'result': None, 'pchanges': changes})
+                        'result': None, 'changes': changes})
                     return ret
                 try:
                     if force:
@@ -195,7 +194,7 @@ def present(name, acl_type, acl_name='', perms='', recurse=False, force=False):
             if __opts__['test']:
                 ret.update({'comment': 'New permissions will be applied for '
                                        '{0}: {1}'.format(acl_name, perms),
-                            'result': None, 'pchanges': changes})
+                            'result': None, 'changes': changes})
                 ret['result'] = None
                 return ret
 
@@ -337,7 +336,6 @@ def list_present(name, acl_type, acl_names=None, perms='', recurse=False, force=
     ret = {'name': name,
            'result': True,
            'changes': {},
-           'pchanges': {},
            'comment': ''}
 
     _octal = {'r': 4, 'w': 2, 'x': 1, '-': 0}
@@ -381,7 +379,6 @@ def list_present(name, acl_type, acl_names=None, perms='', recurse=False, force=
             ret = {'name': name,
                    'result': True,
                    'changes': {},
-                   'pchanges': {},
                    'comment': 'Permissions and {}s are in the desired state'.format(acl_type)}
             return ret
     # The getfacl execution module lists default with empty names as being
@@ -425,7 +422,7 @@ def list_present(name, acl_type, acl_names=None, perms='', recurse=False, force=
                                 acl_names,
                                 six.text_type(users[search_name]['octal']),
                                 perms),
-                                'result': None, 'pchanges': changes})
+                                'result': None, 'changes': changes})
                             return ret
                         try:
                             if force:
@@ -449,7 +446,7 @@ def list_present(name, acl_type, acl_names=None, perms='', recurse=False, force=
                     if __opts__['test']:
                         ret.update({'comment': 'New permissions will be applied for '
                                                '{0}: {1}'.format(acl_names, perms),
-                                    'result': None, 'pchanges': changes})
+                                    'result': None, 'changes': changes})
                         ret['result'] = None
                         return ret
 
@@ -476,7 +473,7 @@ def list_present(name, acl_type, acl_names=None, perms='', recurse=False, force=
             if __opts__['test']:
                 ret.update({'comment': 'New permissions will be applied for '
                                        '{0}: {1}'.format(acl_names, perms),
-                            'result': None, 'pchanges': changes})
+                            'result': None, 'changes': changes})
                 ret['result'] = None
                 return ret
 
