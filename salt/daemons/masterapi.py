@@ -275,6 +275,7 @@ class AutoKey(object):
     Implement the methods to run auto key acceptance and rejection
     '''
     def __init__(self, opts):
+        self.signing_files = {}
         self.opts = opts
 
     def check_permissions(self, filename):
@@ -314,15 +315,15 @@ class AutoKey(object):
             log.warning('Wrong permissions for %s, ignoring content', signing_file)
             return False
 
-        with salt.utils.files.fopen(signing_file, 'r') as fp_:
-            for line in fp_:
-                line = line.strip()
-                if line.startswith('#'):
-                    continue
-                else:
-                    if salt.utils.stringutils.expr_match(keyid, line):
-                        return True
-        return False
+        mtime = os.path.getmtime(signing_file)
+        if self.signing_files.get(signing_file, {}).get('mtime') != mtime:
+            self.signing_files.setdefault(signing_file, {})['mtime'] = mtime
+            with salt.utils.files.fopen(signing_file, 'r') as fp_:
+                self.signing_files[signing_file]['data'] = [
+                    entry for entry in [line.strip() for line in fp_] if not entry.strip().startswith('#')
+                ]
+        return any(salt.utils.stringutils.expr_match(keyid, line) for line
+                   in self.signing_files[signing_file].get('data', []))
 
     def check_autosign_dir(self, keyid):
         '''
