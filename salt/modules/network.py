@@ -1704,7 +1704,7 @@ def get_route(ip):
     if __grains__['kernel'] == 'Linux':
         cmd = 'ip route get {0}'.format(ip)
         out = __salt__['cmd.run'](cmd, python_shell=True)
-        regexp = re.compile(r'(via\s+(?P<gateway>[\w\.:]+))?\s+dev\s+(?P<interface>[\w\.\:]+)\s+.*src\s+(?P<source>[\w\.:]+)')
+        regexp = re.compile(r'(via\s+(?P<gateway>[\w\.:]+))?\s+dev\s+(?P<interface>[\w\.\:\-]+)\s+.*src\s+(?P<source>[\w\.:]+)')
         m = regexp.search(out.splitlines()[0])
         ret = {
             'destination': ip,
