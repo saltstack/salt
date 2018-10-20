@@ -4,7 +4,10 @@ Module to run salt-support within Salt
 '''
 from __future__ import unicode_literals, print_function, absolute_import
 
-from salt.cli.support.collector import SaltSupport
+from salt.cli.support.collector import SaltSupport, SupportDataCollector
+import tempfile
+import os
+import time
 import logging
 
 
