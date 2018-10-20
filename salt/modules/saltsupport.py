@@ -99,7 +99,7 @@ class SaltSupportModule(SaltSupport):
 
         :return:
         '''
-        self.config = __opts__
+        self.config = self.setup_config()
         self.config['support_profile'] = 'default'
         self.out = LogCollector()
         self.collector = SupportDataCollector(archive or self._get_default_archive_name(), output)
