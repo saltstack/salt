@@ -64,7 +64,7 @@ class _Util(object):  # This might get moved elsewhere in a future.
         return exportable
 
 
-class SaltSupportModule(SaltSupport):
+class SaltSupportModule(SaltSupport, _Util):
     '''
     Salt Support module class.
     '''
@@ -81,7 +81,6 @@ class SaltSupportModule(SaltSupport):
 
         :return:
         '''
-        host = None
         for grain in ['fqdn', 'host', 'localhost', 'nodename']:
             host = __grains__.get(grain)
             if host:
@@ -96,8 +95,7 @@ class SaltSupportModule(SaltSupport):
     @salt.utils.decorators.external
     def run(self, archive=None, output='nested'):
         '''
-
-        :return:
+        Something
         '''
         self.config = self.setup_config()
         self.config['support_profile'] = 'default'
@@ -114,12 +112,8 @@ class SaltSupportModule(SaltSupport):
 
 
 def __virtual__():
-    return True
-
-
-def run():
     '''
-
+    Set method references as module functions aliases
     :return:
     '''
     support = SaltSupportModule()
@@ -147,4 +141,3 @@ def run():
         setattr(sys.modules[__name__], method_name, _set_function(obj))
 
     return True
-    return support.run()
