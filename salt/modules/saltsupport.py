@@ -56,7 +56,6 @@ class SaltSupportModule(SaltSupport):
         return __opts__
 
     def _get_default_archive_name(self):
-    def run(self):
         '''
         Create default archive name.
 
@@ -73,6 +72,25 @@ class SaltSupportModule(SaltSupport):
         return os.path.join(tempfile.gettempdir(),
                             '{hostname}-support-{date}-{time}.bz2'.format(
                                 hostname=host, date=time.strftime('%Y%m%d'), time=time.strftime('%H%M%S')))
+
+    def run(self, archive=None, output='nested'):
+        '''
+
+        :return:
+        '''
+        self.config = __opts__
+        self.config['support_profile'] = 'default'
+        self.out = LogCollector()
+        self.collector = SupportDataCollector(archive or self._get_default_archive_name(), output)
+
+        self.collector.open()
+        self.collect_local_data()
+        #self.collect_internal_data()
+        #self.collect_targets_data()
+        self.collector.close()
+
+        return {'archive': self.collector.archive_path,
+                'messages': self.out.messages}
 
 
 def __virtual__():
