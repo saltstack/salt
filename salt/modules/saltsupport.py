@@ -11,6 +11,36 @@ import logging
 log = logging.getLogger(__name__)
 
 
+class LogCollector(object):
+    '''
+    Output collector.
+    '''
+    INFO = 'info'
+    WARNING = 'warning'
+    ERROR = 'error'
+
+    def __init__(self):
+        self.messages = []
+
+    def msg(self, message, *args, **kwargs):
+        self.messages.append({self.INFO: message})
+
+    def info(self, message, *args, **kwargs):
+        self.msg(message)
+
+    def warning(self, message, *args, **kwargs):
+        self.messages.append({self.WARNING: message})
+
+    def error(self, message, *args, **kwargs):
+        self.messages.append({self.ERROR: message})
+
+    def put(self, message, *args, **kwargs):
+        self.messages.append({self.INFO: message})
+
+    def highlight(self, message, *args, **kwargs):
+        self.msg(message)
+
+
 class SaltSupportModule(SaltSupport):
     '''
     Salt Support module class.
