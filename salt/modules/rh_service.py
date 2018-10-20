@@ -81,20 +81,11 @@ def __virtual__():
 
         osrelease_major = __grains__.get('osrelease_info', [0])[0]
 
-        if __grains__['os'] == 'XenServer':
+        if __grains__['os'] in ('XenServer', 'XCP-ng'):
             if osrelease_major >= 7:
                 return (
                     False,
-                    'XenServer >= 7 uses systemd, will not load rh_service.py '
-                    'as virtual \'service\''
-                )
-            return __virtualname__
-        
-        if __grains__['os'] == 'XCP-ng':
-            if osrelease_major >= 7:
-                return (
-                    False,
-                    'XCP-ng >= 7 uses systemd, will not load rh_service.py '
+                    'XenServer and XCP-ng >= 7 use systemd, will not load rh_service.py '
                     'as virtual \'service\''
                 )
             return __virtualname__
