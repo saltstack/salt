@@ -142,18 +142,15 @@ def __virtual__():
         '''
         Create a Salt function for the SaltSupport class.
         '''
-        def _cmd(*args, **kw):
+        def _cmd(*args, **kwargs):
             '''
             Call support method as a function from the Salt.
             '''
-            kwargs = {}
-            if kw.get('__pub_arg'):
-                for _kw in kw.get('__pub_arg', []):
-                    if isinstance(_kw, dict):
-                        kwargs = _kw
-                        break
-
-            return obj(*args, **kwargs)
+            _kwargs = {}
+            for kw in kwargs:
+                if not kw.startswith('__'):
+                    _kwargs[kw] = kwargs[kw]
+            return obj(*args, **_kwargs)
         _cmd.__doc__ = obj.__doc__
         return _cmd
 
