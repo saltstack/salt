@@ -85,8 +85,7 @@ class SaltSupportModule(SaltSupport):
 
         self.collector.open()
         self.collect_local_data()
-        #self.collect_internal_data()
-        #self.collect_targets_data()
+        self.collect_internal_data()
         self.collector.close()
 
         return {'archive': self.collector.archive_path,

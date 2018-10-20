@@ -415,13 +415,6 @@ class SaltSupport(salt.utils.parsers.SaltSupportOptionParser):
 
         return action_name.split(':')[0] or None
 
-    def collect_targets_data(self):
-        '''
-        Collects minion targets data
-        :return:
-        '''
-        # TODO: remote collector?
-
     def _cleanup(self):
         '''
         Cleanup if crash/exception
@@ -511,7 +504,6 @@ class SaltSupport(salt.utils.parsers.SaltSupportOptionParser):
                             self.collector.open()
                             self.collect_local_data()
                             self.collect_internal_data()
-                            self.collect_targets_data()
                             self.collector.close()
 
                             archive_path = self.collector.archive_path
