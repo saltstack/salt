@@ -13,6 +13,7 @@ import time
 import logging
 
 
+__virtualname__ = 'support'
 log = logging.getLogger(__name__)
 
 
@@ -124,4 +125,4 @@ def __virtual__():
         if getattr(obj, 'external', False):
             setattr(sys.modules[__name__], m_name, _set_function(obj))
 
-    return True
+    return __virtualname__
