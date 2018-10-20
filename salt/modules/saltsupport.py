@@ -52,12 +52,24 @@ class SaltSupportModule(SaltSupport):
         '''
         return __opts__
 
+    def _get_default_archive_name(self):
     def run(self):
         '''
+        Create default archive name.
 
         :return:
         '''
-        return 'stub'
+        host = None
+        for grain in ['fqdn', 'host', 'localhost', 'nodename']:
+            host = __grains__.get(grain)
+            if host:
+                break
+        if not host:
+            host = 'localhost'
+
+        return os.path.join(tempfile.gettempdir(),
+                            '{hostname}-support-{date}-{time}.bz2'.format(
+                                hostname=host, date=time.strftime('%Y%m%d'), time=time.strftime('%H%M%S')))
 
 
 def __virtual__():
