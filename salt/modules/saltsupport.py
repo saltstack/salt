@@ -100,6 +100,21 @@ class SaltSupportModule(SaltSupport):
         }
 
     @salt.utils.decorators.external
+    def archives(self):
+        '''
+        Get list of existing archives.
+        :return:
+        '''
+        arc_files = []
+        tmpdir = tempfile.gettempdir()
+        for filename in os.listdir(tmpdir):
+            mtc = re.match('\w+-\w+-\d+-\d+\.bz2', filename)
+            if mtc and len(filename) == mtc.span()[-1]:
+                arc_files.append(os.path.join(tmpdir, filename))
+
+        return arc_files
+
+    @salt.utils.decorators.external
     def run(self, profile='default', archive=None, output='nested'):
         '''
         Something
