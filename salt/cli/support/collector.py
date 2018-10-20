@@ -354,7 +354,7 @@ class SaltSupport(salt.utils.parsers.SaltSupportOptionParser):
 
         return data
 
-    def collect_local_data(self):
+    def collect_local_data(self, profile=None):
         '''
         Collects master system data.
         :return:
@@ -375,7 +375,7 @@ class SaltSupport(salt.utils.parsers.SaltSupportOptionParser):
             '''
             return self._extract_return(self._local_run({'fun': func, 'arg': args, 'kwarg': kwargs}))
 
-        scenario = salt.cli.support.get_profile(self.config['support_profile'], call, run)
+        scenario = salt.cli.support.get_profile(profile or self.config['support_profile'], call, run)
         for category_name in scenario:
             self.out.put(category_name)
             self.collector.add(category_name)
