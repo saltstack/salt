@@ -140,7 +140,7 @@ class SaltSupportModule(SaltSupport):
             _archives.append(os.path.basename(archive))
         archives = _archives[:]
 
-        ret = {'failed': {}, 'deleted': {}}
+        ret = {'failed': 0, 'deleted': 0, 'errors': {}}
         for archive in self.archives():
             arc_dir = os.path.dirname(archive)
             archive = os.path.basename(archive)
@@ -148,9 +148,10 @@ class SaltSupportModule(SaltSupport):
                 archive = os.path.join(arc_dir, archive)
                 try:
                     os.unlink(archive)
-                    ret['deleted'][archive] = True
+                    ret['deleted'] += 1
                 except Exception as err:
-                    ret['failed'][archive] = str(err)
+                    ret['errors'][archive] = str(err)
+                    ret['failed'] += 1
 
         return ret
 
