@@ -15,7 +15,6 @@ import sys
 import time
 import logging
 
-
 __virtualname__ = 'support'
 log = logging.getLogger(__name__)
 
