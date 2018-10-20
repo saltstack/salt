@@ -265,14 +265,7 @@ def present(
 
     fingerprint_hash_type
         The public key fingerprint hash type that the public key fingerprint
-        was originally hashed with. This defaults to ``md5`` if not specified.
-
-        .. versionadded:: 2016.11.7
-
-        .. note::
-
-            The default value of the ``fingerprint_hash_type`` will change to
-            ``sha256`` in Salt 2017.7.0.
+        was originally hashed with. This defaults to ``sha256`` if not specified.
     '''
     ret = {'name': name,
            'changes': {},
@@ -437,15 +430,9 @@ def absent(name,
 
     fingerprint_hash_type
         The public key fingerprint hash type that the public key fingerprint
-        was originally hashed with. This defaults to ``md5`` if not specified.
+        was originally hashed with. This defaults to ``sha256`` if not specified.
 
         .. versionadded:: 2016.11.7
-
-        .. note::
-
-            The default value of the ``fingerprint_hash_type`` will change to
-            ``sha256`` in Salt 2017.7.0.
-
     '''
     ret = {'name': name,
            'changes': {},
@@ -578,12 +565,7 @@ def manage(
 
     fingerprint_hash_type
         The public key fingerprint hash type that the public key fingerprint
-        was originally hashed with. This defaults to ``md5`` if not specified.
-
-        .. note::
-
-            The default value of the ``fingerprint_hash_type`` will change to
-            ``sha256`` in Salt 2017.7.0.
+        was originally hashed with. This defaults to ``sha256`` if not specified.
     '''
     ret = {'name': '',
            'changes': {},
