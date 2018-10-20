@@ -57,6 +57,7 @@ def __virtual__():
     # Enable on these platforms only.
     enable = set((
         'XenServer',
+        'XCP-ng', 
         'RedHat',
         'CentOS',
         'ScientificLinux',
@@ -85,6 +86,15 @@ def __virtual__():
                 return (
                     False,
                     'XenServer >= 7 uses systemd, will not load rh_service.py '
+                    'as virtual \'service\''
+                )
+            return __virtualname__
+        
+        if __grains__['os'] == 'XCP-ng':
+            if osrelease_major >= 7:
+                return (
+                    False,
+                    'XCP-ng >= 7 uses systemd, will not load rh_service.py '
                     'as virtual \'service\''
                 )
             return __virtualname__
