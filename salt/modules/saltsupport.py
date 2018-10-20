@@ -119,9 +119,8 @@ class SaltSupportModule(SaltSupport):
         '''
         Something
         '''
-        #self.config['support_profile'] = profile
         self.out = LogCollector()
-        self.collector = SupportDataCollector(archive or self._get_default_archive_name(), output)
+        self.collector = SupportDataCollector(archive or self._get_archive_name(archname=archive), output)
 
         self.collector.open()
         self.collect_local_data(profile=profile)
