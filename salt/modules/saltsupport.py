@@ -9,6 +9,7 @@ from salt.cli.support.collector import SaltSupport, SupportDataCollector
 import salt.utils.decorators
 import salt.cli.support
 import tempfile
+import re
 import os
 import sys
 import time
@@ -66,12 +67,13 @@ class SaltSupportModule(SaltSupport):
         '''
         return __opts__
 
-    def _get_default_archive_name(self):
+    def _get_archive_name(self, archname=None):
         '''
         Create default archive name.
 
         :return:
         '''
+        archname = re.sub('[^a-z0-9]', '', (archname or '').lower()) or 'support'
         for grain in ['fqdn', 'host', 'localhost', 'nodename']:
             host = __grains__.get(grain)
             if host:
@@ -80,8 +82,10 @@ class SaltSupportModule(SaltSupport):
             host = 'localhost'
 
         return os.path.join(tempfile.gettempdir(),
-                            '{hostname}-support-{date}-{time}.bz2'.format(
-                                hostname=host, date=time.strftime('%Y%m%d'), time=time.strftime('%H%M%S')))
+                            '{hostname}-{archname}-{date}-{time}.bz2'.format(archname=archname,
+                                                                             hostname=host,
+                                                                             date=time.strftime('%Y%m%d'),
+                                                                             time=time.strftime('%H%M%S')))
 
     @salt.utils.decorators.external
     def profiles(self):
