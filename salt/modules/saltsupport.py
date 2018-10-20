@@ -121,4 +121,28 @@ def run():
     :return:
     '''
     support = SaltSupportModule()
+
+    def _set_function(obj):
+        '''
+        Create a Salt function for the SaltSupport class.
+        '''
+        def _cmd(*args, **kw):
+            '''
+            Call support method as a function from the Salt.
+            '''
+            kwargs = {}
+            if kw.get('__pub_arg'):
+                for _kw in kw.get('__pub_arg', []):
+                    if isinstance(_kw, dict):
+                        kwargs = _kw
+                        break
+
+            return obj(*args, **kwargs)
+        _cmd.__doc__ = obj.__doc__
+        return _cmd
+
+    for method_name, obj in support.get_exportable_methods():
+        setattr(sys.modules[__name__], method_name, _set_function(obj))
+
+    return True
     return support.run()
