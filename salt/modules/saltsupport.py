@@ -5,7 +5,9 @@ Module to run salt-support within Salt
 from __future__ import unicode_literals, print_function, absolute_import
 
 from salt.cli.support.collector import SaltSupport, SupportDataCollector
+
 import salt.utils.decorators
+import salt.cli.support
 import tempfile
 import os
 import sys
@@ -82,6 +84,17 @@ class SaltSupportModule(SaltSupport):
                                 hostname=host, date=time.strftime('%Y%m%d'), time=time.strftime('%H%M%S')))
 
     @salt.utils.decorators.external
+    def profiles(self):
+        '''
+        Get list of profiles.
+
+        :return:
+        '''
+        return {
+            'standard': salt.cli.support.get_profiles(self.config),
+            'custom': [],
+        }
+
     def run(self, archive=None, output='nested'):
         '''
         Something
