@@ -141,15 +141,15 @@ class SaltSupportModule(SaltSupport):
         return ret
 
     @salt.utils.decorators.external
-    def run(self, profile='default', archive=None, output='nested'):
+    def run(self, profile='default', pillar=None, archive=None, output='nested'):
         '''
         Something
         '''
         self.out = LogCollector()
-        self.collector = SupportDataCollector(archive or self._get_archive_name(archname=archive), output)
 
+        self.collector = SupportDataCollector(archive or self._get_archive_name(archname=archive), output)
         self.collector.open()
-        self.collect_local_data(profile=profile)
+        self.collect_local_data(profile=profile, profile_source=__pillar__.get(pillar))
         self.collect_internal_data()
         self.collector.close()
 
