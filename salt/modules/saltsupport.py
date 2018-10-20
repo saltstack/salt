@@ -115,6 +115,32 @@ class SaltSupportModule(SaltSupport):
         return arc_files
 
     @salt.utils.decorators.external
+    def delete_archives(self, *archives):
+        '''
+        Delete archives
+        :return:
+        '''
+        # Remove paths
+        _archives = []
+        for archive in archives:
+            _archives.append(os.path.basename(archive))
+        archives = _archives[:]
+
+        ret = {'failed': {}, 'deleted': {}}
+        for archive in self.archives():
+            arc_dir = os.path.dirname(archive)
+            archive = os.path.basename(archive)
+            if archives and archive in archives or not archives:
+                archive = os.path.join(arc_dir, archive)
+                try:
+                    os.unlink(archive)
+                    ret['deleted'][archive] = True
+                except Exception as err:
+                    ret['failed'][archive] = str(err)
+
+        return ret
+
+    @salt.utils.decorators.external
     def run(self, profile='default', archive=None, output='nested'):
         '''
         Something
