@@ -51,6 +51,12 @@ class SaltSupportModule(SaltSupport):
     '''
     Salt Support module class.
     '''
+    def __init__(self):
+        '''
+        Constructor
+        '''
+        self.config = self.setup_config()
+
     def setup_config(self):
         '''
         Return current configuration
