@@ -46,25 +46,7 @@ class LogCollector(object):
         self.msg(message)
 
 
-class _Util(object):  # This might get moved elsewhere in a future.
-    '''
-    Utility class.
-    '''
-    def get_exportable_methods(self):
-        '''
-        Get exportable methods that are not marked as internal in __doc__.
-        :return:
-        '''
-        exportable = []
-        for obj_name in dir(self):
-            obj = getattr(self, obj_name)
-            if getattr(obj, 'external', False):
-                exportable.append((obj_name, obj))
-
-        return exportable
-
-
-class SaltSupportModule(SaltSupport, _Util):
+class SaltSupportModule(SaltSupport):
     '''
     Salt Support module class.
     '''
@@ -137,7 +119,9 @@ def __virtual__():
         _cmd.__doc__ = obj.__doc__
         return _cmd
 
-    for method_name, obj in support.get_exportable_methods():
-        setattr(sys.modules[__name__], method_name, _set_function(obj))
+    for m_name in dir(support):
+        obj = getattr(support, m_name)
+        if getattr(obj, 'external', False):
+            setattr(sys.modules[__name__], m_name, _set_function(obj))
 
     return True
