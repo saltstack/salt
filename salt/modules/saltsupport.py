@@ -95,17 +95,17 @@ class SaltSupportModule(SaltSupport):
             'custom': [],
         }
 
-    def run(self, archive=None, output='nested'):
+    @salt.utils.decorators.external
+    def run(self, profile='default', archive=None, output='nested'):
         '''
         Something
         '''
-        self.config = self.setup_config()
-        self.config['support_profile'] = 'default'
+        #self.config['support_profile'] = profile
         self.out = LogCollector()
         self.collector = SupportDataCollector(archive or self._get_default_archive_name(), output)
 
         self.collector.open()
-        self.collect_local_data()
+        self.collect_local_data(profile=profile)
         self.collect_internal_data()
         self.collector.close()
 
