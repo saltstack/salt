@@ -91,6 +91,7 @@ class SaltSupportModule(SaltSupport):
                             '{hostname}-support-{date}-{time}.bz2'.format(
                                 hostname=host, date=time.strftime('%Y%m%d'), time=time.strftime('%H%M%S')))
 
+    @salt.utils.decorators.external
     def run(self, archive=None, output='nested'):
         '''
 
