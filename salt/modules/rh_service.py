@@ -57,7 +57,7 @@ def __virtual__():
     # Enable on these platforms only.
     enable = set((
         'XenServer',
-        'XCP-ng', 
+        'XCP-ng',
         'RedHat',
         'CentOS',
         'ScientificLinux',
