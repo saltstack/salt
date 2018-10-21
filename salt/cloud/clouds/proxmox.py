@@ -726,6 +726,9 @@ def create_node(vm_, newid):
             if prop in vm_:  # if the property is set, use it for the VM request
                 newnode[prop] = vm_[prop]
 
+        if 'pubkey' in vm_:
+            newnode['ssh-public-keys'] = vm_['pubkey']
+
         # inform user the "disk" option is not supported for LXC hosts
         if 'disk' in vm_:
             log.warning('The "disk" option is not supported for LXC hosts and was ignored')
