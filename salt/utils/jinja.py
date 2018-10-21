@@ -636,6 +636,11 @@ def symmetric_difference(lst1, lst2):
     return unique([ele for ele in union(lst1, lst2) if ele not in intersect(lst1, lst2)])
 
 
+@jinja_filter('method_call')
+def method_call(obj, f_name, *f_args, **f_kwargs):
+    return getattr(obj, f_name, lambda *args, **kwargs: None)(*f_args, **f_kwargs)
+
+
 @jinja2.contextfunction
 def show_full_context(ctx):
     return salt.utils.data.simple_types_filter({key: value for key, value in ctx.items()})
