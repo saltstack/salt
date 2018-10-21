@@ -154,8 +154,6 @@ class SaltSupportModule(SaltSupport):
 
         return archives[max(archives)]
 
-
-
     @salt.utils.decorators.external
     def delete_archives(self, *archives):
         '''
