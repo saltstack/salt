@@ -143,6 +143,20 @@ class SaltSupportModule(SaltSupport):
         return arc_files
 
     @salt.utils.decorators.external
+    def last_archive(self):
+        '''
+        Get the last available archive
+        :return:
+        '''
+        archives = {}
+        for archive in self.archives():
+            archives[int(archive.split('.')[0].split('-')[-1])] = archive
+
+        return archives[max(archives)]
+
+
+
+    @salt.utils.decorators.external
     def delete_archives(self, *archives):
         '''
         Delete archives
