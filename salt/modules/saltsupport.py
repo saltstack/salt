@@ -28,6 +28,7 @@ import re
 import os
 import sys
 import time
+import datetime
 import logging
 
 __virtualname__ = 'support'
@@ -42,30 +43,35 @@ class LogCollector(object):
     WARNING = 'warning'
     ERROR = 'error'
 
+    class MessagesList(list):
+        def append(self, obj):
+            list.append(self, '{} - {}'.format(datetime.datetime.utcnow().strftime('%T.%f')[:-3], obj))
+        __call__ = append
+
     def __init__(self):
         self.messages = {
-            self.INFO: [],
-            self.WARNING: [],
-            self.ERROR: [],
+            self.INFO: self.MessagesList(),
+            self.WARNING: self.MessagesList(),
+            self.ERROR: self.MessagesList(),
         }
 
     def msg(self, message, *args, **kwargs):
         title = kwargs.get('title')
         if title:
             message = '{}: {}'.format(title, message)
-        self.messages[self.INFO].append(message)
+        self.messages[self.INFO](message)
 
     def info(self, message, *args, **kwargs):
         self.msg(message)
 
     def warning(self, message, *args, **kwargs):
-        self.messages[self.WARNING].append(message)
+        self.messages[self.WARNING](message)
 
     def error(self, message, *args, **kwargs):
-        self.messages[self.ERROR].append(message)
+        self.messages[self.ERROR](message)
 
     def put(self, message, *args, **kwargs):
-        self.messages[self.INFO].append(message)
+        self.messages[self.INFO](message)
 
     def highlight(self, message, *values, **kwargs):
         self.msg(message.format(*values))
