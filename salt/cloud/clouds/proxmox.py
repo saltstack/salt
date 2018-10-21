@@ -894,7 +894,7 @@ def destroy(name, call=None):
 
         # required to wait a bit here, otherwise the VM is sometimes
         # still locked and destroy fails.
-        time.sleep(1)
+        time.sleep(3)
 
         query('delete', 'nodes/{0}/{1}'.format(
             vmobj['node'], vmobj['id']
