@@ -43,25 +43,32 @@ class LogCollector(object):
     ERROR = 'error'
 
     def __init__(self):
-        self.messages = []
+        self.messages = {
+            self.INFO: [],
+            self.WARNING: [],
+            self.ERROR: [],
+        }
 
     def msg(self, message, *args, **kwargs):
-        self.messages.append({self.INFO: message})
+        title = kwargs.get('title')
+        if title:
+            message = '{}: {}'.format(title, message)
+        self.messages[self.INFO].append(message)
 
     def info(self, message, *args, **kwargs):
         self.msg(message)
 
     def warning(self, message, *args, **kwargs):
-        self.messages.append({self.WARNING: message})
+        self.messages[self.WARNING].append(message)
 
     def error(self, message, *args, **kwargs):
-        self.messages.append({self.ERROR: message})
+        self.messages[self.ERROR].append(message)
 
     def put(self, message, *args, **kwargs):
-        self.messages.append({self.INFO: message})
+        self.messages[self.INFO].append(message)
 
-    def highlight(self, message, *args, **kwargs):
-        self.msg(message)
+    def highlight(self, message, *values, **kwargs):
+        self.msg(message.format(*values))
 
 
 class SaltSupportModule(SaltSupport):
