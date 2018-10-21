@@ -214,6 +214,9 @@ State Changes
 - The ``onchanges`` and ``prereq`` :ref:`requisites <requisites>` now behave
   properly in test mode.
 
+- Added new :py:func:`ssh_auth.manage <salt.states.ssh_auth.manage>` state to
+  ensure only the specified ssh keys are present for the specified user.
+
 Module Changes
 ==============
 
