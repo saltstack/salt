@@ -5,6 +5,7 @@
 
 # Import Python Libs
 from __future__ import absolute_import, unicode_literals, print_function
+import logging
 import socket
 import os.path
 
@@ -26,7 +27,6 @@ import salt.modules.network as network
 from salt.exceptions import CommandExecutionError
 from salt._compat import ipaddress
 
-import logging
 log = logging.getLogger(__name__)
 
 
