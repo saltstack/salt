@@ -24,11 +24,10 @@ pipeline {
                 sh '''
                 # Need -M to detect renames otherwise they are reported as Delete and Add, need -C to detect copies, -C includes -M
                 # -M is on by default in git 2.9+
-                git diff --name-status -C "origin/$CHANGE_TARGET" "origin/$BRANCH_NAME" > file-list-status.log
-                # '--diff-filter=ACMRTUXB' can be changed to '--diff-filter=d' when git version >=1.8.5 is available
-                # on renames --name-only outputs the destination only
-                git diff --name-only '--diff-filter=ACMRTUXB' -C "origin/$CHANGE_TARGET" "origin/$BRANCH_NAME" > file-list-changed.log
-                git diff --name-only '--diff-filter=D' -C "origin/$CHANGE_TARGET" "origin/$BRANCH_NAME" > file-list-deleted.log
+                git diff --name-status -l99999 -C "origin/$CHANGE_TARGET" "origin/$BRANCH_NAME" > file-list-status.log
+                # the -l increase the search limit, lets use awk so we do not need to repeat the search above.
+                gawk 'BEGIN {FS="\\t"} {if ($1 != "D") {print $NF}}' file-list-status.log > file-list-changed.log
+                gawk 'BEGIN {FS="\\t"} {if ($1 == "D") {print $NF}}' file-list-status.log > file-list-deleted.log
                 touch pylint-report-salt.log pylint-report-tests.log
                 eval "$(pyenv init -)"
                 pyenv --version
