@@ -2,7 +2,6 @@
 """
 Tests for salt.utils.jinja
 """
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import ast
@@ -13,7 +12,6 @@ import pprint
 import re
 import tempfile
 
-# Import Salt libs
 import salt.config
 import salt.loader
 
@@ -39,12 +37,9 @@ from salt.utils.templates import JINJA, render_jinja_tmpl
 from tests.support.case import ModuleCase
 from tests.support.helpers import flaky
 from tests.support.mock import MagicMock, Mock, patch
-
-# Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
 
-# Import 3rd party libs
 try:
     import timelib  # pylint: disable=W0611
 
