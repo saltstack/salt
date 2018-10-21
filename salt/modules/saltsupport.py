@@ -174,13 +174,29 @@ class SaltSupportModule(SaltSupport):
         '''
         Something
         '''
-        self.out = LogCollector()
+        class outputswitch(object):
+            '''
+            Output switcher on context
+            '''
+            def __init__(self, output_device):
+                self._tmp_out = output_device
+                self._orig_out = None
 
-        self.collector = SupportDataCollector(archive or self._get_archive_name(archname=archive), output)
-        self.collector.open()
-        self.collect_local_data(profile=profile, profile_source=__pillar__.get(pillar))
-        self.collect_internal_data()
-        self.collector.close()
+            def __enter__(self):
+                self._orig_out = salt.cli.support.intfunc.out
+                salt.cli.support.intfunc.out = self._tmp_out
+
+            def __exit__(self, *args):
+                salt.cli.support.intfunc.out = self._orig_out
+
+        self.out = LogCollector()
+        with outputswitch(self.out):
+            self.collector = SupportDataCollector(archive or self._get_archive_name(archname=archive), output)
+            self.collector.out = self.out
+            self.collector.open()
+            self.collect_local_data(profile=profile, profile_source=__pillar__.get(pillar))
+            self.collect_internal_data()
+            self.collector.close()
 
         return {'archive': self.collector.archive_path,
                 'messages': self.out.messages}
