@@ -19,10 +19,6 @@ Module to run salt-support within Salt.
 '''
 from __future__ import unicode_literals, print_function, absolute_import
 
-from salt.cli.support.collector import SaltSupport, SupportDataCollector
-
-import salt.utils.decorators
-import salt.cli.support
 import tempfile
 import re
 import os
@@ -30,6 +26,11 @@ import sys
 import time
 import datetime
 import logging
+
+import salt.cli.support.intfunc
+import salt.utils.decorators
+import salt.cli.support
+from salt.cli.support.collector import SaltSupport, SupportDataCollector
 
 __virtualname__ = 'support'
 log = logging.getLogger(__name__)
