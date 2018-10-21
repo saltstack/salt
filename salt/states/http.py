@@ -124,11 +124,11 @@ def query(name, match=None, match_type='string', status=None, status_type='strin
     if status is not None:
         if status_type == 'string':
             if data.get('status', '') == str(status):
-                ret['comment'] += 'Status {0} was found.'.format(status)
+                ret['comment'] += ' Status {0} was found.'.format(status)
                 if ret['result'] is None:
                     ret['result'] = True
             else:
-                ret['comment'] += 'Status {0} was not found.'.format(status)
+                ret['comment'] += ' Status {0} was not found.'.format(status)
                 ret['result'] = False
         elif status_type == 'pcre':
             if re.search(str(status), str(data.get('status', ''))):
@@ -138,6 +138,9 @@ def query(name, match=None, match_type='string', status=None, status_type='strin
             else:
                 ret['comment'] += ' Status pattern "{0}" was not found.'.format(status)
                 ret['result'] = False
+
+    # cleanup spaces in comment
+    ret['comment'] = ret['comment'].strip()
 
     if __opts__['test'] is True:
         ret['result'] = None
