@@ -2,7 +2,7 @@
 '''
 dockercomposeng exposes a more accurate and direct interface to the original Compose library.
 
-As the `compose` package from Docker is [intentionally undocumented](https://github.com/docker/compose/issues/4542),
+As the `compose` package from Docker is intentionally undocumented (https://github.com/docker/compose/issues/4542),
 the new module chose to interface with Compose through the same code it's CLI interface uses via docopt (the argument
 parser). This should mean this new module will be more resilient to internal changes in the Compose library. New
 parameters and options to any `docker-compose` command we have already wraped will be supported with no code changes
