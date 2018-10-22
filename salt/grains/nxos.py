@@ -13,7 +13,6 @@ from __future__ import absolute_import, print_function, unicode_literals
 # Import Salt Libs
 import salt.utils.platform
 import salt.utils.nxos
-from salt.exceptions import NxosClientError
 
 import logging
 log = logging.getLogger(__name__)
@@ -25,7 +24,7 @@ __virtualname__ = 'nxos'
 def __virtual__():
     try:
         salt.utils.nxos.version_info()
-    except NxosClientError as err:
+    except RuntimeError as err:
         return False, err
 
     return __virtualname__
