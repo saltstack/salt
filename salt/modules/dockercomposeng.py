@@ -46,6 +46,11 @@ try:
 except ImportError as e:
     HAS_COMPOSE = e
 
+try:
+    from StringIO import StringIO
+except ImportError:
+    from io import StringIO
+
 DC_FILENAME = 'docker-compose.yml'
 
 __virtualname__ = 'dockercomposeng'
@@ -76,15 +81,14 @@ def __capture_stdout_stderr():
         return decode
 
     stdout, stderr = None, None
-    _stdout, _stderr = sys.stdout, sys.stderr
 
     try:
-        sys.stdout, sys.stderr = stdout, stderr = io.BytesIO(), io.BytesIO()
+        sys.stdout, sys.stderr = stdout, stderr = StringIO(), StringIO()
         yield Buffer(stdout=read(stdout), stderr=read(stderr))
     except Exception:
         raise
     finally:
-        sys.stdout, sys.stderr = _stdout, _stderr
+        sys.stdout, sys.stderr = sys.__stdout__, sys.__stderr__
 
         if stdout:
             stdout.close()
@@ -491,12 +495,14 @@ def down(project_dir, *args, **project_options):
 
 
 @__catch_exception()
-def pull(path, service_names=None):
+def pull(project_dir, *args, **project_options):
     '''
     Pull image for containers in the docker-compose file, service_names is a python list, if omitted pull all images
 
     :param string project_dir: Path to Docker Compose directory.
-    :param list|None service_names: If specified will remove only the specified stopped services
+    :param args:
+    :param project_options:
+    :return:
 
     CLI Example:
 
@@ -504,21 +510,17 @@ def pull(path, service_names=None):
 
         salt 'myminion' dockercomposeng.pull /path/to/project/dir [service_names]
     '''
-    project = __get_project(path)
-
-    if isinstance(project, dict):
-        raise CommandExecutionError('Unable to load project, docker-compose.yaml file is invalid')
-
-    try:
-        project.pull(service_names)
-    except Exception:
-        raise CommandExecutionError('Pulling containers images via docker-compose failed')
+    cmd = __docker_compose(project_dir, **project_options)
+    args = list(args)
+    _options = docopt.docopt(cmd.pull.__doc__, args or [])
+    with __capture_stdout_stderr():
+        cmd.pull(_options)
 
     return True
 
 
 @__catch_exception()
-def rm(project_dir, service_names=None):
+def rm(project_dir, *args, **project_options):
     '''
     Remove containers
 
@@ -534,20 +536,19 @@ def rm(project_dir, service_names=None):
 
         salt 'myminion' dockercomposeng.rm /path/to/project/dir [service_names]
     '''
-    project = __get_project(project_dir)
-    if isinstance(project, dict):
-        raise CommandExecutionError('Unable to load project, docker-compose.yaml file is invalid')
-
-    project.remove_stopped(service_names)
+    cmd = __docker_compose(project_dir, **project_options)
+    args = list(args) + ['-f']
+    _options = docopt.docopt(cmd.rm.__doc__, args or [])
+    with __capture_stdout_stderr():
+        cmd.rm(_options)
 
     return True
 
 
 @__catch_exception()
-def build(project_dir, service_names=None):
+def build(project_dir, *args, **project_options):
     '''
-    Build image for containers in the docker-compose file, service_names is a
-    python list, if omitted build images for all containers. Please note
+    Build image for containers in the docker-compose file, Please note
     that at the moment the module does not allow you to upload your Dockerfile,
     nor any other file you could need with your docker-compose.yml, you will
     have to make sure the files you need are actually in the directory specified
@@ -555,6 +556,7 @@ def build(project_dir, service_names=None):
 
     :param string project_dir: Path to Docker Compose directory.
     :param list|None service_names: If specified will remove only the specified stopped services
+    :return:
 
     CLI Example:
 
@@ -562,11 +564,11 @@ def build(project_dir, service_names=None):
 
         salt 'myminion' dockercomposeng.build /path/to/project/dir [service_names]
     '''
-    project = __get_project(project_dir)
-    if isinstance(project, dict):
-        raise CommandExecutionError('Unable to load project, docker-compose.yaml file is invalid')
-
-    project.build(service_names)
+    cmd = __docker_compose(project_dir, **project_options)
+    args = list(args)
+    _options = docopt.docopt(cmd.build.__doc__, args or [])
+    with __capture_stdout_stderr():
+        cmd.build(_options)
 
     return True
 
