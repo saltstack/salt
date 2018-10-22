@@ -183,7 +183,7 @@ def to_none(text):
     '''
     Convert a string to None if the string is empty or contains only spaces.
     '''
-    if six.tex_type(text).strip():
+    if six.text_type(text).strip():
         return text
     return None
 
