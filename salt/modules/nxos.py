@@ -91,7 +91,6 @@ from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import difflib
 import re
-import ast
 
 # Import Salt libs
 from salt.utils.pycrypto import gen_hash, secure_password
@@ -320,7 +319,7 @@ def sendline(command, method='cli_show_ascii', **kwargs):
         salt '*' nxos.cmd sendline 'show run | include "^username admin password"'
     '''
     if salt.utils.platform.is_proxy():
-        return __proxy__['nxos.sendline'](command, method, **kwargs)
+        return __proxy__['nxos.sendline'](command, method)
     else:
         return _nxapi_request(command, method, **kwargs)
 
@@ -565,15 +564,7 @@ def delete_config(lines, **kwargs):
         lines = [lines]
     for i, _ in enumerate(lines):
         lines[i] = 'no ' + lines[i]
-    result = None
-    try:
-        result = config(lines, **kwargs)
-    except CommandExecutionError as e:
-        # Some commands will generate error code 400 if they do not exist
-        # and we try to remove them.  These can be ignored.
-        if ast.literal_eval(e.message)['code'] != '400':
-            raise
-    return result
+    return config(lines, **kwargs)
 
 
 def remove_user(username, **kwargs):
