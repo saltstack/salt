@@ -10,8 +10,7 @@ import logging
 import os
 import socket
 import re
-from salt.exceptions import (NxosClientError, NxosCliError, NxosError,
-                             NxosRequestNotSupported, CommandExecutionError)
+from salt.exceptions import CommandExecutionError
 
 # Import salt libs
 import salt.utils.http
@@ -72,18 +71,17 @@ class NxapiClient(object):
         parameters must be provided.
         '''
         self.nxargs = self._prepare_conn_args(clean_kwargs(**nxos_kwargs))
+        log.info('nxapi connection arguments: {0}'.format(self.nxargs))
         # Default: Connect to unix domain socket on localhost.
         if self.nxargs['connect_over_uds']:
             if not os.path.exists(self.NXAPI_UDS):
-                raise NxosClientError("No host specified and no UDS found at {0}\n".format(self.NXAPI_UDS))
+                raise RuntimeError("No host specified and no UDS found at {0}\n".format(self.NXAPI_UDS))
 
             # Create UHTTPConnection object for NX-API communication over UDS.
-            log.info('Nxapi connection arguments: {0}'.format(self.nxargs))
             log.info('Connecting over unix domain socket')
             self.connection = UHTTPConnection(self.NXAPI_UDS)
         else:
             # Remote connection - Proxy Minion, connect over http(s)
-            log.info('Nxapi connection arguments: {0}'.format(self.nxargs))
             log.info('Connecting over {}'.format(self.nxargs['transport']))
             self.connection = salt.utils.http.query
 
@@ -180,9 +178,9 @@ class NxapiClient(object):
                                        **self.nxargs)
             response = response['dict']
 
-        return self.parse_response(response, command_list)
+        return self.parse_response(response)
 
-    def parse_response(self, response, command_list):
+    def parse_response(self, response):
         '''
         Parse NX-API JSON response from the NX-OS device.
         '''
@@ -194,49 +192,28 @@ class NxapiClient(object):
         # Don't just return body['ins_api']['outputs']['output'] directly.
         output = body.get('ins_api')
         if output is None:
-            raise NxosClientError('Unexpected JSON output\n{0}'.format(body))
+            raise RuntimeError('Unexpected JSON output\n{0}'.format(body))
         if output.get('outputs'):
             output = output['outputs']
         if output.get('output'):
             output = output['output']
 
-        # The result list stores results for each command that was sent to
-        # nxapi.
-        result = []
-        # Keep track of successful commands using previous_commands list so
-        # they can be displayed if a specific command fails in a chain of
-        # commands.
-        previous_commands = []
-
-        # Make sure output and command_list lists to be processed in the
-        # subesequent loop.
-        if not isinstance(output, list):
-            output = [output]
-        if isinstance(command_list, basestring):
-            command_list = [cmd.strip() for cmd in command_list.split(';')]
-        if not isinstance(command_list, list):
-            command_list = [command_list]
-
-        for cmd_result, cmd in zip(output, command_list):
-            code = cmd_result.get('code')
-            msg = cmd_result.get('msg')
-            log.info('command {}:'.format(cmd))
-            log.info('PARSE_RESPONSE: {0} {1}'.format(code, msg))
-            if code == '400':
-                raise CommandExecutionError({
-                    'rejected_input': cmd,
-                    'code': code,
-                    'message': msg,
-                    'cli_error': cmd_result.get('clierror'),
-                    'previous_commands': previous_commands,
-                })
-            elif code == '413':
-                raise NxosRequestNotSupported('Error 413: {}'.format(msg))
-            elif code != '200':
-                raise NxosError('Unknown Error: {}, Code: {}'.format(msg, code))
+        result = list()
+        if isinstance(output, list):
+            for each in output:
+                log.info('PARSE_RESPONSE: {0} {1}'.format(each.get('code'), each.get('msg')))
+                if each.get('code') != '200':
+                    msg = '{0} {1}'.format(each.get('code'), each.get('msg'))
+                    raise CommandExecutionError(msg)
+                else:
+                    result.append(each['body'])
+        else:
+            log.info('PARSE_RESPONSE: {0} {1}'.format(output.get('code'), output.get('msg')))
+            if output.get('code') != '200':
+                msg = '{0} {1}'.format(output.get('code'), output.get('msg'))
+                raise CommandExecutionError(msg)
             else:
-                previous_commands.append(cmd)
-                result.append(cmd_result['body'])
+                result.append(output['body'])
 
         return result
 

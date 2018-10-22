@@ -572,30 +572,3 @@ class MissingSmb(SaltException):
     '''
     Raised when no smb library is found.
     '''
-
-
-class NxosError(SaltException):
-    '''
-    NX-OS Base Exception class
-    '''
-
-
-class NxosCliError(NxosError):
-    '''
-    NX-OS Cli Error raised when Cli command rejected by the NX-OS device
-    '''
-    def __init___(self, dErrorArguments):
-        Exception.__init__(self, "NxosCliError raised with arguments {0}".format(dErrArguments))
-        self.dErrorArguments = dErrorArguements
-
-
-class NxosClientError(NxosError):
-    '''
-    NX-OS Client Error there is a problem connecting to the NX-OS device
-    '''
-
-
-class NxosRequestNotSupported(NxosError):
-    '''
-    Raised for unssuported client requests
-    '''
