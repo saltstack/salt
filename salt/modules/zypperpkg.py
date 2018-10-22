@@ -112,7 +112,6 @@ class _Zypper(object):
         """
         Constructor
         """
-        self.__called = False
         self._reset()
 
     def _reset(self):
@@ -136,12 +135,19 @@ class _Zypper(object):
         self.__systemd_scope = False
         self.__root = None
 
+        # Call status
+        self.__called = False
+
     def __call__(self, *args, **kwargs):
         """
         :param args:
         :param kwargs:
         :return:
         """
+        # Reset after the call
+        if self.__called:
+            self._reset()
+
         # Ignore exit code for 106 (repo is not available)
         if "no_repo_failure" in kwargs:
             self.__ignore_repo_failure = kwargs["no_repo_failure"]
@@ -161,7 +167,6 @@ class _Zypper(object):
         # Reset after the call
         if self.__called:
             self._reset()
-            self.__called = False
 
         if item == "xml":
             self.__xml = True
