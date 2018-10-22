@@ -1388,6 +1388,7 @@ _OS_FAMILY_MAP = {
     'OVS': 'RedHat',
     'OEL': 'RedHat',
     'XCP': 'RedHat',
+    'XCP-ng': 'RedHat',
     'XenServer': 'RedHat',
     'RES': 'RedHat',
     'Sangoma': 'RedHat',
