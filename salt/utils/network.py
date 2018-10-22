@@ -1909,6 +1909,7 @@ def dns_check(addr, port=80, safe=False, ipv6=None):
 
                 try:
                     s = socket.socket(h[0], socket.SOCK_STREAM)
+                    s.settimeout(2)
                     s.connect((candidate_addr.strip('[]'), h[4][1]))
                     s.close()
 
