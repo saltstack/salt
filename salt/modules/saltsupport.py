@@ -152,7 +152,7 @@ class SaltSupportModule(SaltSupport):
         for archive in self.archives():
             archives[int(archive.split('.')[0].split('-')[-1])] = archive
 
-        return archives[max(archives)]
+        return archives and archives[max(archives)] or None
 
     @salt.utils.decorators.external
     def delete_archives(self, *archives):
