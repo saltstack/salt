@@ -1571,6 +1571,33 @@ class TestCustomExtensions(TestCase):
         )
         self.assertEqual(rendered, "1, 4")
 
+    def test_method_call(self):
+        '''
+        Test the `method_call` Jinja filter.
+        '''
+        rendered = render_jinja_tmpl("{{ 6|method_call('bit_length') }}",
+                                     dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
+        self.assertEqual(rendered, "3")
+        rendered = render_jinja_tmpl("{{ 6.7|method_call('is_integer') }}",
+                                     dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
+        self.assertEqual(rendered, "False")
+        rendered = render_jinja_tmpl("{{ 'absaltba'|method_call('strip', 'ab') }}",
+                                     dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
+        self.assertEqual(rendered, "salt")
+        rendered = render_jinja_tmpl("{{ [1, 2, 1, 3, 4]|method_call('index', 1, 1, 3) }}",
+                                     dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
+        self.assertEqual(rendered, "2")
+
+        # have to use `dictsort` to keep test result deterministic
+        rendered = render_jinja_tmpl("{{ {}|method_call('fromkeys', ['a', 'b', 'c'], 0)|dictsort }}",
+                                     dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
+        self.assertEqual(rendered, "[('a', 0), ('b', 0), ('c', 0)]")
+
+        # missing object method test
+        rendered = render_jinja_tmpl("{{ 6|method_call('bit_width') }}",
+                                     dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
+        self.assertEqual(rendered, "None")
+
     def test_md5(self):
         """
         Test the `md5` Jinja filter.
