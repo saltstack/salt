@@ -5010,6 +5010,7 @@ def _writeAdminTemplateRegPolFile(admtemplate_data,
                                   adml_policy_resources=None,
                                   display_language='en-US',
                                   registry_class='Machine'):
+    # pylint: disable=null-byte-unicode-literal
     u'''
     helper function to prep/write adm template data to the Registry.pol file
 
