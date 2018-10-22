@@ -1026,11 +1026,8 @@ def _parse_conf(conf_file=None, in_mem=False, family='ipv4'):
             if args[-1].startswith('-'):
                 args.append('')
             parsed_args = []
-            if sys.version.startswith('2.6'):
-                (opts, leftover_args) = parser.parse_args(args)
-                parsed_args = vars(opts)
-            else:
-                parsed_args = vars(parser.parse_args(args))
+            opts, _ = parser.parse_known_args(args)
+            parsed_args = vars(opts)
             ret_args = {}
             chain = parsed_args['append']
             for arg in parsed_args:
