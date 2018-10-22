@@ -151,7 +151,7 @@ def list_pkgs(*packages, **kwargs):
     """
     pkgs = {}
     cmd = ["rpm"]
-    if "root" in kwargs:
+    if kwargs.get("root"):
         cmd.extend(["--root", kwargs["root"]])
     cmd.extend(["-q" if packages else "-qa", "--queryformat", r"%{NAME} %{VERSION}\n"])
     if packages:
@@ -211,7 +211,7 @@ def verify(*packages, **kwargs):
             ]
 
     cmd = ["rpm"]
-    if "root" in kwargs:
+    if kwargs.get("root"):
         cmd.extend(["--root", kwargs["root"]])
     cmd.extend(["--" + x for x in verify_options])
     if packages:
@@ -283,7 +283,7 @@ def modified(*packages, **flags):
         salt '*' lowpkg.modified
     """
     cmd = ["rpm"]
-    if "root" in flags:
+    if flags.get("root"):
         cmd.extend(["--root", flags.pop("root")])
     cmd.append("-Va")
     cmd.extend(packages)
@@ -368,7 +368,7 @@ def file_list(*packages, **kwargs):
         salt '*' lowpkg.file_list
     """
     cmd = ["rpm"]
-    if "root" in kwargs:
+    if kwargs.get("root"):
         cmd.extend(["--root", kwargs["root"]])
 
     cmd.append("-ql" if packages else "-qla")
@@ -403,7 +403,7 @@ def file_dict(*packages, **kwargs):
     ret = {}
     pkgs = {}
     cmd = ["rpm"]
-    if "root" in kwargs:
+    if kwargs.get("root"):
         cmd.extend(["--root", kwargs["root"]])
     cmd.extend(["-q" if packages else "-qa", "--queryformat", r"%{NAME} %{VERSION}\n"])
     if packages:
@@ -417,10 +417,12 @@ def file_dict(*packages, **kwargs):
         pkgs[comps[0]] = {"version": comps[1]}
     for pkg in pkgs:
         cmd = ["rpm"]
-        if "root" in kwargs:
+        if kwargs.get("root"):
             cmd.extend(["--root", kwargs["root"]])
         cmd.extend(["-ql", pkg])
-        out = __salt__["cmd.run"](cmd, output_loglevel="trace", python_shell=False)
+        out = __salt__["cmd.run"](
+            ["rpm", "-ql", pkg], output_loglevel="trace", python_shell=False
+        )
         ret[pkg] = out.splitlines()
     return {"errors": errors, "packages": ret}
 
@@ -450,7 +452,7 @@ def owner(*paths, **kwargs):
     ret = {}
     for path in paths:
         cmd = ["rpm"]
-        if "root" in kwargs:
+        if kwargs.get("root"):
             cmd.extend(["--root", kwargs["root"]])
         cmd.extend(["-qf", "--queryformat", "%{name}", path])
         ret[path] = __salt__["cmd.run_stdout"](
@@ -538,7 +540,7 @@ def info(*packages, **kwargs):
         size_tag = "%{SIZE}"
 
     cmd = ["rpm"]
-    if "root" in kwargs:
+    if kwargs.get("root"):
         cmd.extend(["--root", kwargs["root"]])
     if packages:
         cmd.append("-q")
@@ -824,7 +826,7 @@ def checksum(*paths, **kwargs):
         raise CommandExecutionError("No package files has been specified.")
 
     cmd = ["rpm"]
-    if "root" in kwargs:
+    if kwargs.get("root"):
         cmd.extend(["--root", kwargs["root"]])
     cmd.extend(["-K", "--quiet"])
     for package_file in paths:
