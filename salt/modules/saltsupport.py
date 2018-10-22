@@ -29,8 +29,10 @@ import logging
 
 import salt.cli.support.intfunc
 import salt.utils.decorators
+import salt.utils.path
 import salt.cli.support
 from salt.cli.support.collector import SaltSupport, SupportDataCollector
+import salt.exceptions
 
 __virtualname__ = 'support'
 log = logging.getLogger(__name__)
@@ -180,6 +182,49 @@ class SaltSupportModule(SaltSupport):
                     ret['files'][archive] = 'left'
 
         return ret
+
+    @salt.utils.decorators.depends('rsync')
+    @salt.utils.decorators.external
+    def sync(self, group, name=None, host=None, location=None, cleanup=False, all=False):
+        '''
+        Sync the latest archive to the host on given location.
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' support.sync group=test
+            salt '*' support.sync group=test name=/tmp/myspecial-12345-67890.bz2
+            salt '*' support.sync group=test name=/tmp/myspecial-12345-67890.bz2 host=allmystuff.lan
+            salt '*' support.sync group=test name=/tmp/myspecial-12345-67890.bz2 host=allmystuff.lan location=/opt/
+
+        :param group: name of the local directory to which sync is going to put the result files
+        :param name: name of the archive. Latest, if not specified.
+        :param host: name of the destination host for rsync. Default is master, if not specified.
+        :param location: local destination directory, default temporary if not specified
+        :return:
+        '''
+        import salt.utils.dictupdate
+        ret = {}
+        for name in [name] if name else self.archives() if all else [self.last_archive()]:
+            err = None
+            if not name:
+                err = 'No support archive has been found.'
+            elif not os.path.exists(name):
+                err = 'Support archive "{}" was not found'.format(name)
+
+            if err:
+                log.error(err)
+                raise salt.exceptions.SaltInvocationError(err)
+
+            uri = '{host}:{loc}'.format(host=host or __opts__['master'],
+                                        loc=os.path.join(location or tempfile.gettempdir(),
+                                                         group, os.path.basename(name)))
+            log.debug('Syncing {filename} to {uri}'.format(filename=name, uri=uri))
+
+            salt.utils.dictupdate.update(ret, __salt__['rsync.rsync'](src=name, dst=uri))
+            if cleanup:
+                salt.utils.dictupdate.update(ret, self.delete_archives(name))
 
         return ret
 
