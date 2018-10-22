@@ -89,7 +89,10 @@ class BotoElasticsearchDomainTestCaseBase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
         self.opts = salt.config.DEFAULT_MINION_OPTS
-        utils = salt.loader.utils(self.opts, whitelist=['boto3'], context={})
+        utils = salt.loader.utils(
+            self.opts,
+            whitelist=['boto3', 'args', 'systemd', 'path', 'platform'],
+            context={})
         return {boto_elasticsearch_domain: {'__utils__': utils}}
 
     def setUp(self):
