@@ -87,7 +87,7 @@ the context into the included file is required:
 .. code-block:: jinja
 
     {% from 'lib.sls' import test with context %}
-    
+
 Includes must use full paths, like so:
 
 .. code-block:: jinja
@@ -654,7 +654,7 @@ Returns:
 ``method_call``
 ---------------
 
-.. versionadded:: develop
+.. versionadded:: Sodium
 
 Returns a result of object's method call.
 
