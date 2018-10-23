@@ -33,6 +33,7 @@ import salt.utils.path
 import salt.cli.support
 from salt.cli.support.collector import SaltSupport, SupportDataCollector
 import salt.exceptions
+import salt.utils.stringutils
 
 __virtualname__ = 'support'
 log = logging.getLogger(__name__)
@@ -205,7 +206,10 @@ class SaltSupportModule(SaltSupport):
         :return:
         '''
         import salt.utils.dictupdate
-        ret = {}
+        tfh, tfn = tempfile.mkstemp()
+        cleanup_archives = []
+        src_uri = uri = None
+
         for name in [name] if name else self.archives() if all else [self.last_archive()]:
             err = None
             if not name:
@@ -217,16 +221,29 @@ class SaltSupportModule(SaltSupport):
                 log.error(err)
                 raise salt.exceptions.SaltInvocationError(err)
 
-            uri = '{host}:{loc}'.format(host=host or __opts__['master'],
-                                        loc=os.path.join(location or tempfile.gettempdir(),
-                                                         group, os.path.basename(name)))
+            if not uri:
+                src_uri = os.path.dirname(name)
+                uri = '{host}:{loc}'.format(host=host or __opts__['master'],
+                                            loc=os.path.join(location or tempfile.gettempdir(), group))
+
+            os.write(tfh, salt.utils.stringutils.to_bytes(os.path.basename(name)))
+            os.write(tfh, salt.utils.stringutils.to_bytes(os.linesep))
+            if cleanup:
+                cleanup_archives.append(name)
             log.debug('Syncing {filename} to {uri}'.format(filename=name, uri=uri))
 
-            salt.utils.dictupdate.update(ret, __salt__['rsync.rsync'](src=name, dst=uri))
-            if cleanup:
-                salt.utils.dictupdate.update(ret, self.delete_archives(name))
+        os.close(tfh)
+        ret = __salt__['rsync.rsync'](src=src_uri, dst=uri, additional_opts=['--stats', '--files-from={}'.format(tfn)])
+        for name in cleanup_archives:
+            salt.utils.dictupdate.update(ret, self.delete_archives(name))
+            log.debug('Deleting {filename}'.format(filename=name))
 
-        return ret
+        try:
+            os.unlink(tfn)
+        except (OSError, IOError) as err:
+            log.error('Cannot remove temporary rsync file {fn}: {err}'.format(fn=tfn, err=err))
+
+        return self.format_sync_stats(ret)
 
     @salt.utils.decorators.external
     def run(self, profile='default', pillar=None, archive=None, output='nested'):
