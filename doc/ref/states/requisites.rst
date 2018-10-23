@@ -806,7 +806,7 @@ mod_python.sls
         - require_in:
           - service: httpd
 
-Now the httpd server will only start if php or mod_python are first verified to
+Now the httpd server will only start if both php and mod_python are first verified to
 be installed. Thus allowing for a requisite to be defined "after the fact".
 
 
