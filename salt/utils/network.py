@@ -213,7 +213,7 @@ def get_fqhostname():
                 fqdn = info[3]
                 break
     except socket.gaierror:
-        pass # NOTE: this used to log.error() but it was later disabled
+        pass  # NOTE: this used to log.error() but it was later disabled
     except socket.error as err:
         log.debug('socket.getaddrinfo() failure while finding fqdn: %s', err)
     if fqdn is not None:
