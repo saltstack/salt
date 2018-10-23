@@ -238,7 +238,7 @@ class SaltSupportModule(SaltSupport):
         '''
         import salt.utils.dictupdate
         tfh, tfn = tempfile.mkstemp()
-        cleanup_archives = []
+        processed_archives = []
         src_uri = uri = None
 
         for name in [name] if name else self.archives() if all else [self.last_archive()]:
@@ -259,15 +259,19 @@ class SaltSupportModule(SaltSupport):
 
             os.write(tfh, salt.utils.stringutils.to_bytes(os.path.basename(name)))
             os.write(tfh, salt.utils.stringutils.to_bytes(os.linesep))
-            if cleanup:
-                cleanup_archives.append(name)
+            processed_archives.append(name)
             log.debug('Syncing {filename} to {uri}'.format(filename=name, uri=uri))
 
         os.close(tfh)
         ret = __salt__['rsync.rsync'](src=src_uri, dst=uri, additional_opts=['--stats', '--files-from={}'.format(tfn)])
-        for name in cleanup_archives:
-            salt.utils.dictupdate.update(ret, self.delete_archives(name))
-            log.debug('Deleting {filename}'.format(filename=name))
+        ret['files'] = {}
+        for name in processed_archives:
+            if move:
+                salt.utils.dictupdate.update(ret, self.delete_archives(name))
+                log.debug('Deleting {filename}'.format(filename=name))
+                ret['files'][name] = 'moved'
+            else:
+                ret['files'][name] = 'copied'
 
         try:
             os.unlink(tfn)
