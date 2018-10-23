@@ -216,7 +216,7 @@ def get_fqhostname():
         pass  # NOTE: this used to log.error() but it was later disabled
     except socket.error as err:
         log.debug('socket.getaddrinfo() failure while finding fqdn: %s', err)
-    if fqdn is not None:
+    if fqdn is None:
         fqdn = socket.getfqdn()
     return fqdn
 
