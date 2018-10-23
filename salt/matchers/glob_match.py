@@ -8,11 +8,14 @@ import fnmatch
 from salt.ext import six  # pylint: disable=3rd-party-module-not-gated
 
 
-def match(tgt):
+def match(tgt, opts=None):
     '''
     Returns true if the passed glob matches the id
     '''
     if not isinstance(tgt, six.string_types):
         return False
 
-    return fnmatch.fnmatch(__opts__['id'], tgt)
+    if not opts:
+        return fnmatch.fnmatch(__opts__['id'], tgt)
+    else:
+        return fnmatch.fnmatch(opts['id'], tgt)

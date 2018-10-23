@@ -294,6 +294,17 @@ def raw_mod(opts, name, functions, mod='modules'):
     loader._load_module(name)  # load a single module (the one passed in)
     return dict(loader._dict)  # return a copy of *just* the funcs for `name`
 
+def metaproxy(opts):
+    '''
+    Return functions used in the meta proxy
+    '''
+
+    return LazyLoader(
+        _module_dirs(opts, 'metaproxy'),
+        opts,
+        tag='metaproxy'
+    )
+
 
 def matchers(opts):
     '''

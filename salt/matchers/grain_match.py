@@ -12,7 +12,7 @@ import salt.utils.data  # pylint: disable=3rd-party-module-not-gated
 log = logging.getLogger(__name__)
 
 
-def match(tgt, delimiter=DEFAULT_TARGET_DELIM):
+def match(tgt, delimiter=DEFAULT_TARGET_DELIM, opts=None):
     '''
     Reads in the grains glob match
     '''
@@ -21,6 +21,12 @@ def match(tgt, delimiter=DEFAULT_TARGET_DELIM):
         log.error('Got insufficient arguments for grains match '
                   'statement from master')
         return False
-    return salt.utils.data.subdict_match(
-        __opts__['grains'], tgt, delimiter=delimiter
-    )
+    if not opts:
+        return salt.utils.data.subdict_match(
+            __opts__['grains'], tgt, delimiter=delimiter
+        )
+    else:
+        return salt.utils.data.subdict_match(
+            opts['grains'], tgt, delimiter=delimiter
+        )
+

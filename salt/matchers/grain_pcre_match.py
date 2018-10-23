@@ -12,7 +12,7 @@ import salt.utils.data  # pylint: disable=3rd-party-module-not-gated
 log = logging.getLogger(__name__)
 
 
-def match(tgt, delimiter=DEFAULT_TARGET_DELIM):
+def match(tgt, delimiter=DEFAULT_TARGET_DELIM, opts=None):
     '''
     Matches a grain based on regex
     '''
@@ -21,5 +21,9 @@ def match(tgt, delimiter=DEFAULT_TARGET_DELIM):
         log.error('Got insufficient arguments for grains pcre match '
                   'statement from master')
         return False
-    return salt.utils.data.subdict_match(
-        __opts__['grains'], tgt, delimiter=delimiter, regex_match=True)
+    if not opts:
+        return salt.utils.data.subdict_match(
+            __opts__['grains'], tgt, delimiter=delimiter, regex_match=True)
+    else:
+        return salt.utils.data.subdict_match(
+            opts['grains'], tgt, delimiter=delimiter, regex_match=True)

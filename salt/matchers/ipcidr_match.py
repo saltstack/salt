@@ -17,7 +17,7 @@ else:
 log = logging.getLogger(__name__)
 
 
-def match(tgt):
+def match(tgt, opts=None):
     '''
     Matches based on IP address or CIDR notation
     '''
@@ -33,7 +33,10 @@ def match(tgt):
             return []
     proto = 'ipv{0}'.format(tgt.version)
 
-    grains = __opts__['grains']
+    if not opts:
+        grains = __opts__['grains']
+    else:
+        grains = opts['grains']
 
     if proto not in grains:
         match = False
