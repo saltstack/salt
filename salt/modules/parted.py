@@ -184,8 +184,8 @@ def list_(device, unit=None):
                     'start': cols[1],
                     'end': cols[2],
                     'size': cols[3],
-                    'type': cols[4],
-                    'file system': cols[5],
+                    'file system': cols[4],
+                    'name': cols[5],
                     'flags': cols[6]}
             else:
                 raise CommandExecutionError(
