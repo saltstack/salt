@@ -245,11 +245,10 @@ class SaltSupportModule(SaltSupport):
         for name in [name] if name else self.archives() if all else [self.last_archive()]:
             err = None
             if not name:
-                err = 'No support archive has been found.'
+                err = 'No support archive has been defined.'
             elif not os.path.exists(name):
                 err = 'Support archive "{}" was not found'.format(name)
-
-            if err:
+            if err is not None:
                 log.error(err)
                 raise salt.exceptions.SaltInvocationError(err)
 
@@ -262,8 +261,11 @@ class SaltSupportModule(SaltSupport):
             os.write(tfh, salt.utils.stringutils.to_bytes(os.linesep))
             processed_archives.append(name)
             log.debug('Syncing {filename} to {uri}'.format(filename=name, uri=uri))
-
         os.close(tfh)
+
+        if not processed_archives:
+            raise salt.exceptions.SaltInvocationError('No archives found to transfer.')
+
         ret = __salt__['rsync.rsync'](src=src_uri, dst=uri, additional_opts=['--stats', '--files-from={}'.format(tfn)])
         ret['files'] = {}
         for name in processed_archives:
