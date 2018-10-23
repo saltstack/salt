@@ -1459,6 +1459,7 @@ class Schedule(object):
                             if multiprocessing_enabled:
                                 proc.join()
             finally:
+                log.debug('=== run %s data %s ===', run, data)
                 if run:
                     data['_last_run'] = now
                     data['_splay'] = None
