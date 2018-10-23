@@ -1030,7 +1030,7 @@ def refresh_pillar(**kwargs):
     '''
     Signal the minion to refresh the pillar data.
 
-    .. versionchanged:: 2018.11.0
+    .. versionchanged:: Neon
         The ``async`` argument has been added. The default value is True.
 
     CLI Example:

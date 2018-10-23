@@ -201,7 +201,6 @@ class SaltUtilSyncPillarTest(ModuleCase):
         def is_complete(self):
             return self.__event_complete
 
-
     @flaky
     def test_pillar_refresh(self):
         '''
@@ -240,7 +239,6 @@ class SaltUtilSyncPillarTest(ModuleCase):
 
         post_pillar = self.run_function('pillar.raw')
         self.assertIn(pillar_key, post_pillar.get(pillar_key, 'didnotwork'))
-
 
     def test_pillar_refresh_sync(self):
         '''
@@ -288,7 +286,6 @@ class SaltUtilSyncPillarTest(ModuleCase):
         post_pillar = self.run_function('pillar.raw')
         self.assertIn(pillar_key, post_pillar.get(
             pillar_key, 'didnotwork_sync'))
-
 
     def tearDown(self):
         for filename in os.listdir(TMP_PILLAR_TREE):
