@@ -14,6 +14,7 @@ import threading
 from tests.support.case import ModuleCase
 from tests.support.helpers import flaky
 from tests.support.paths import TMP_PILLAR_TREE
+from tests.support.unit import skipIf
 
 # Import Salt Libs
 import salt.config
@@ -182,6 +183,7 @@ class SaltUtilSyncModuleTest(ModuleCase):
         self.assertEqual(ret, expected_return)
 
 
+@skipIf(True, 'Pillar refresh test is flaky. Skipping for now.')
 class SaltUtilSyncPillarTest(ModuleCase):
     '''
     Testcase for the saltutil sync pillar module

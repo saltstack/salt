@@ -1074,7 +1074,7 @@ class LocalClient(object):
                 # stop the iteration, since the jid is invalid
                 raise StopIteration()
         except Exception as exc:
-            log.warning('Returner unavailable: %s', exc)
+            log.warning('Returner unavailable: %s', exc, exc_info_on_loglevel=logging.DEBUG)
         # Wait for the hosts to check in
         last_time = False
         # iterator for this job's return
