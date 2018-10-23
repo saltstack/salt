@@ -4763,7 +4763,7 @@ def shutdown_host(kwargs=None, call=None):
 
     if not host_ref.capability.rebootSupported:
         raise SaltCloudSystemExit(
-            'Specified host system does not support reboot.'
+            'Specified host system does not support shutdown.'
         )
 
     if not host_ref.runtime.inMaintenanceMode and not force:
