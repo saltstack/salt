@@ -38,7 +38,6 @@ def running(opts):
             # the minion process that is executing the JID in question, so
             # we must ignore ENOENT during this process
             pass
-    log.debug('=== ret %s ===', ret)
     return ret
 
 
