@@ -4627,7 +4627,7 @@ def reboot_host(kwargs=None, call=None):
     if not host_ref.capability.rebootSupported:
         raise SaltCloudSystemExit("Specified host system does not support reboot.")
 
-    if not host_ref.runtime.inMaintenanceMode:
+    if not host_ref.runtime.inMaintenanceMode and not force:
         raise SaltCloudSystemExit(
             "Specified host system is not in maintenance mode. Specify force=True to "
             "force reboot even if there are virtual machines running or other operations "
