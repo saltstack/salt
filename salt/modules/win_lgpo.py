@@ -5010,7 +5010,7 @@ def _writeAdminTemplateRegPolFile(admtemplate_data,
                                   adml_policy_resources=None,
                                   display_language='en-US',
                                   registry_class='Machine'):
-    u'''
+    r'''
     helper function to prep/write adm template data to the Registry.pol file
 
     each file begins with REGFILE_SIGNATURE (u'\u5250\u6765') and

@@ -420,7 +420,9 @@ def get_url(path, dest='', saltenv='base', makedirs=False, source_hash=None):
         result = _client().get_url(
             path, None, makedirs, saltenv, no_cache=True, source_hash=source_hash)
     if not result:
-        log.error('Unable to fetch file %s from saltenv %s.', path, saltenv)
+        log.error('Unable to fetch file %s from saltenv %s.',
+                  salt.utils.url.redact_http_basic_auth(path),
+                  saltenv)
     return result
 
 

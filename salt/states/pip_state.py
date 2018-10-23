@@ -25,8 +25,9 @@ import re
 import logging
 try:
     import pkg_resources
+    HAS_PKG_RESOURCES = True
 except ImportError:
-    pkg_resources = None
+    HAS_PKG_RESOURCES = False
 
 # Import salt libs
 import salt.utils.versions
@@ -74,7 +75,11 @@ def __virtual__():
     '''
     Only load if the pip module is available in __salt__
     '''
-    return 'pip.list' in __salt__ and __virtualname__ or False
+    if HAS_PKG_RESOURCES is False:
+        return False, 'The pkg_resources python library is not installed'
+    if 'pip.list' in __salt__:
+        return __virtualname__
+    return False
 
 
 def _find_key(prefix, pip_list):
