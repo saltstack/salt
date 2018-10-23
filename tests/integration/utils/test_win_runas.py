@@ -11,10 +11,6 @@ import sys
 import os
 import logging
 import threading
-import win32service
-import win32serviceutil
-import win32event
-import servicemanager
 import traceback
 import time
 
@@ -36,19 +32,14 @@ try:
     import win32serviceutil
     import win32event
     import servicemanager
+    import win32api
+    CODE_DIR = win32api.GetLongPathName(CODE_DIR)
     HAS_WIN32 = True
 except ImportError:
     # Mock win32serviceutil object to avoid
     # a stacktrace in the _ServiceManager class
     win32serviceutil = Mock()
     HAS_WIN32 = False
-
-try:
-    import win32api
-    CODE_DIR = win32api.GetLongPathName(CODE_DIR)
-except ImportError:
-    pass
-
 
 logger = logging.getLogger(__name__)
 
