@@ -207,7 +207,7 @@ class SaltSupportModule(SaltSupport):
         # Remove empty
         empty_sections = []
         for section in cnt:
-            if not cnt[section]:
+            if not cnt[section] and section != 'retcode':
                 empty_sections.append(section)
         for section in empty_sections:
             del cnt[section]
