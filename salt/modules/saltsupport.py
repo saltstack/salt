@@ -207,7 +207,7 @@ class SaltSupportModule(SaltSupport):
 
     @salt.utils.decorators.depends('rsync')
     @salt.utils.decorators.external
-    def sync(self, group, name=None, host=None, location=None, cleanup=False, all=False):
+    def sync(self, group, name=None, host=None, location=None, move=False, all=False):
         '''
         Sync the latest archive to the host on given location.
 
@@ -224,6 +224,9 @@ class SaltSupportModule(SaltSupport):
         :param name: name of the archive. Latest, if not specified.
         :param host: name of the destination host for rsync. Default is master, if not specified.
         :param location: local destination directory, default temporary if not specified
+        :param move: move archive file[s]. Default is False.
+        :param all: work with all available archives. Default is False (i.e. latest available)
+
         :return:
         '''
         import salt.utils.dictupdate
