@@ -4,26 +4,28 @@ Manage Grafana v4.0 orgs
 
 .. versionadded:: 2017.7.0
 
-Token auth setup
+:configuration: This state requires a configuration profile to be configured
+    in the minion config, minion pillar, or master config. The module will use
+    the 'grafana' key by default, if defined.
 
-.. code-block:: yaml
+    Example configuration using basic authentication:
 
-    grafana_version: 4
-    grafana:
-      grafana_timeout: 5
-      grafana_token: qwertyuiop
-      grafana_url: 'https://url.com'
+    .. code-block:: yaml
 
-Basic auth setup
+        grafana:
+          grafana_url: http://grafana.localhost
+          grafana_user: admin
+          grafana_password: admin
+          grafana_timeout: 3
 
-.. code-block:: yaml
+    Example configuration using token based authentication:
 
-    grafana_version: 4
-    grafana:
-      grafana_timeout: 5
-      grafana_org: grafana
-      grafana_password: qwertyuiop
-      grafana_url: 'https://url.com'
+    .. code-block:: yaml
+
+        grafana:
+          grafana_url: http://grafana.localhost
+          grafana_token: token
+          grafana_timeout: 3
 
 .. code-block:: yaml
 
@@ -40,7 +42,7 @@ Basic auth setup
         - state: ""
         - country: ""
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 import salt.utils.dictupdate as dictupdate
 from salt.utils.dictdiffer import deep_diff
@@ -75,9 +77,12 @@ def present(name,
 
     users
         Optional - Dict of user/role associated with the org. Example:
-        users:
-          foo: Viewer
-          bar: Editor
+
+        .. code-block:: yaml
+
+            users:
+              foo: Viewer
+              bar: Editor
 
     theme
         Optional - Selected theme for the org.
@@ -124,6 +129,9 @@ def present(name,
             raise
 
     if create:
+        if __opts__['test']:
+            ret['comment'] = 'Org {0} will be created'.format(name)
+            return ret
         __salt__['grafana4.create_org'](profile=profile, name=name)
         org = __salt__['grafana4.get_org'](name, profile)
         ret['changes'] = org
@@ -133,6 +141,9 @@ def present(name,
         city=city, zipCode=zip_code, state=address_state, country=country,
         defaults=org['address'])
     if data != org['address']:
+        if __opts__['test']:
+            ret['comment'] = 'Org {0} address will be updated'.format(name)
+            return ret
         __salt__['grafana4.update_org_address'](name, profile=profile, **data)
         if create:
             dictupdate.update(ret['changes']['address'], data)
@@ -143,6 +154,9 @@ def present(name,
     data = _get_json_data(theme=theme, homeDashboardId=home_dashboard_id,
         timezone=timezone, defaults=prefs)
     if data != prefs:
+        if __opts__['test']:
+            ret['comment'] = 'Org {0} prefs will be updated'.format(name)
+            return ret
         __salt__['grafana4.update_org_prefs'](name, profile=profile, **data)
         if create:
             dictupdate.update(ret['changes'], data)
@@ -159,13 +173,25 @@ def present(name,
         for username, role in users.items():
             if username in db_users:
                 if role is False:
+                    if __opts__['test']:
+                        ret['comment'] = 'Org {0} user {1} will be ' \
+                                'deleted'.format(name, username)
+                        return ret
                     __salt__['grafana4.delete_org_user'](
                         db_users[username]['userId'], profile=profile)
                 elif role != db_users[username]['role']:
+                    if __opts__['test']:
+                        ret['comment'] = 'Org {0} user {1} role will be ' \
+                                'updated'.format(name, username)
+                        return ret
                     __salt__['grafana4.update_org_user'](
                         db_users[username]['userId'], loginOrEmail=username,
                         role=role, profile=profile)
             elif role:
+                if __opts__['test']:
+                    ret['comment'] = 'Org {0} user {1} will be created'.format(
+                            name, username)
+                    return ret
                 __salt__['grafana4.create_org_user'](
                     loginOrEmail=username, role=role, profile=profile)
 
@@ -185,7 +211,7 @@ def present(name,
         if ret['changes']:
             ret['comment'] = 'Org {0} updated'.format(name)
         else:
-            ret['changes'] = None
+            ret['changes'] = {}
             ret['comment'] = 'Org {0} already up-to-date'.format(name)
 
     return ret
@@ -213,6 +239,9 @@ def absent(name, profile='grafana'):
         ret['comment'] = 'Org {0} already absent'.format(name)
         return ret
 
+    if __opts__['test']:
+        ret['comment'] = 'Org {0} will be deleted'.format(name)
+        return ret
     __salt__['grafana4.delete_org'](org['id'], profile=profile)
 
     ret['result'] = True

@@ -41,6 +41,8 @@ then a new cron job will be added to the user's crontab.
 .. versionadded:: 0.17.0
 
 '''
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 
 
 def _check_cron(user,

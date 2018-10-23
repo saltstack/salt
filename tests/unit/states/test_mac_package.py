@@ -1,20 +1,22 @@
 # -*- coding: utf-8 -*-
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
+import sys
 
 # Import Salt Libs
 import salt.states.mac_package as macpackage
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
     patch
 )
 
 
+@skipIf(sys.platform.startswith('win'), "Not a Windows test")
 class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {macpackage: {}}
@@ -335,7 +337,7 @@ class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
         '''
         expected = {
             'changes': {},
-            'comment': 'onlyif execution failed',
+            'comment': 'onlyif condition is false',
             'skip_watch': True,
             'result': True,
             'name': '/path/to/file.pkg',
@@ -353,7 +355,7 @@ class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
         '''
         expected = {
             'changes': {},
-            'comment': 'unless execution succeeded',
+            'comment': 'unless condition is true',
             'skip_watch': True,
             'result': True,
             'name': '/path/to/file.pkg',

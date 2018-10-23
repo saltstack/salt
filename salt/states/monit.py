@@ -7,21 +7,21 @@ Manage monit states
 
 .. code-block:: yaml
 
-monit_enable_service_monitoring:
-  monit.monitor:
-    - name: service
+    monit_enable_service_monitoring:
+      monit.monitor:
+        - name: service
 
-monit_disable_service_monitoring:
-  monit.unmonitor:
-    - name: service
+    monit_disable_service_monitoring:
+      monit.unmonitor:
+        - name: service
 
 .. note::
     Use of these states require that the :mod:`monit <salt.modules.monit>`
     execution module is available.
 '''
 
-
-from __future__ import absolute_import
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 
 
 def __virtual__():

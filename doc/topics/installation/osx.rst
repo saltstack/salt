@@ -8,7 +8,8 @@ Installation from the Official SaltStack Repository
 ===================================================
 
 **Latest stable build from the selected branch**:
-|osxdownload|
+|osxdownloadpy2|
+|osxdownloadpy3|
 
 The output of ``md5 <salt pkg>`` should match the contents of the
 corresponding md5 file.
@@ -33,9 +34,24 @@ It should be noted that Homebrew explicitly discourages the `use of sudo`_:
 Installation from MacPorts
 ==========================
 
+Macports isolates its dependencies from the OS, and installs salt in /opt/local by default, with config files under /opt/local/etc/salt. For best results, add /opt/local/bin to your PATH.
+
 .. code-block:: bash
 
     sudo port install salt
+
+Variants allow selection of python version used to run salt, defaulting to python27, but also supporting python34, python35, and python36. To install salt with Python 3.6, use the python36 variant, for example:
+
+.. code-block:: bash
+
+    sudo port install salt @python36
+
+Startup items (for master, minion, and rest-cherrypy API gateway, respectively) are installed by subport targets. These will register launchd LaunchDaemons as org.macports.salt-minion, for example, to trigger automatic startup of the salt-minion through launchd. LaunchDaemons for salt can be started and stopped without reboot using the macprots load and unload commands.
+
+.. code-block:: bash
+
+    sudo port install salt-master salt-minion salt-api
+    sudo port load salt-master salt-minion salt-api
 
 Installation from Pip
 =====================

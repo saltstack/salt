@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Jayesh Kariya <jayeshk@saltstack.com>`
+    :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -44,12 +44,14 @@ class ServerdensityDeviceTestCase(TestCase, LoaderModuleMockMixin):
         mock_t = MagicMock(side_effect=[True, {'agentKey': True},
                                         [{'agentKey': True}]])
         mock_sd = MagicMock(side_effect=[['sd-agent'], [], True])
-        with patch.dict(serverdensity_device.__salt__,
-                        {'status.all_status': mock_dict,
-                         'grains.items': mock_dict,
-                         'serverdensity_device.ls': mock_t,
-                         'pkg.list_pkgs': mock_sd,
-                         'serverdensity_device.install_agent': mock_sd}):
+        with patch.multiple(serverdensity_device,
+            __salt__={'status.all_status': mock_dict,
+                      'grains.items': mock_dict,
+                      'serverdensity_device.ls': mock_t,
+                      'pkg.list_pkgs': mock_sd,
+                      'serverdensity_device.install_agent': mock_sd},
+            __opts__={'test': False},
+        ):
             comt = ('Such server name already exists in this'
                     ' Server Density account. And sd-agent is installed')
             ret.update({'comment': comt})

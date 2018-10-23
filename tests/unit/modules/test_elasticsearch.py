@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Lukas Raska <lukas@raska.me>`
+    :codeauthor: Lukas Raska <lukas@raska.me>
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing Libs
 from tests.support.unit import TestCase, skipIf
@@ -64,13 +64,13 @@ class ElasticsearchTestCase(TestCase):
         Test if status fetch succeeds
         '''
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             def info(self):
-                """
+                '''
                 Mock of info method
-                """
+                '''
                 return [{"test": "key"}]
 
         with patch.object(elasticsearch, '_get_instance',
@@ -82,13 +82,13 @@ class ElasticsearchTestCase(TestCase):
         Test if status fetch fails with CommandExecutionError
         '''
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             def info(self):
-                """
+                '''
                 Mock of info method
-                """
+                '''
                 raise TransportError("custom error", 123)
 
         with patch.object(elasticsearch, '_get_instance',
@@ -102,19 +102,19 @@ class ElasticsearchTestCase(TestCase):
         Test if node status fetch succeeds
         '''
         class MockElasticNodes(object):
-            """
+            '''
             Mock of Elasticsearch NodesClient
-            """
+            '''
             def info(self, node_id=None, flat_settings=None):
-                """
+                '''
                 Mock of info method
-                """
+                '''
                 return [{"test": "key"}]
 
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             nodes = MockElasticNodes()
 
         with patch.object(elasticsearch, '_get_instance',
@@ -126,19 +126,19 @@ class ElasticsearchTestCase(TestCase):
         Test if node status fetch fails with CommandExecutionError
         '''
         class MockElasticNodes(object):
-            """
+            '''
             Mock of Elasticsearch NodesClient
-            """
+            '''
             def info(self, node_id=None, flat_settings=None):
-                """
+                '''
                 Mock of info method
-                """
+                '''
                 raise TransportError("custom error", 123)
 
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             nodes = MockElasticNodes()
 
         with patch.object(elasticsearch, '_get_instance',
@@ -152,19 +152,19 @@ class ElasticsearchTestCase(TestCase):
         Test if cluster status health fetch succeeds
         '''
         class MockElasticCluster(object):
-            """
+            '''
             Mock of Elasticsearch ClusterClient
-            """
+            '''
             def health(self, index=None, level=None, local=None):
-                """
+                '''
                 Mock of health method
-                """
+                '''
                 return [{"test": "key"}]
 
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             cluster = MockElasticCluster()
 
         with patch.object(elasticsearch, '_get_instance',
@@ -176,19 +176,19 @@ class ElasticsearchTestCase(TestCase):
         Test if cluster status health fetch fails with CommandExecutionError
         '''
         class MockElasticCluster(object):
-            """
+            '''
             Mock of Elasticsearch ClusterClient
-            """
+            '''
             def health(self, index=None, level=None, local=None):
-                """
+                '''
                 Mock of health method
-                """
+                '''
                 raise TransportError("custom error", 123)
 
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             cluster = MockElasticCluster()
 
         with patch.object(elasticsearch, '_get_instance',
@@ -202,19 +202,19 @@ class ElasticsearchTestCase(TestCase):
         Test if cluster stats fetch succeeds
         '''
         class MockElasticCluster(object):
-            """
+            '''
             Mock of Elasticsearch ClusterClient
-            """
+            '''
             def stats(self, node_id=None):
-                """
+                '''
                 Mock of health method
-                """
+                '''
                 return [{"test": "key"}]
 
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             cluster = MockElasticCluster()
 
         with patch.object(elasticsearch, '_get_instance',
@@ -226,19 +226,19 @@ class ElasticsearchTestCase(TestCase):
         Test if cluster stats fetch fails with CommandExecutionError
         '''
         class MockElasticCluster(object):
-            """
+            '''
             Mock of Elasticsearch ClusterClient
-            """
+            '''
             def stats(self, node_id=None):
-                """
+                '''
                 Mock of health method
-                """
+                '''
                 raise TransportError("custom error", 123)
 
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             cluster = MockElasticCluster()
 
         with patch.object(elasticsearch, '_get_instance',
@@ -252,19 +252,19 @@ class ElasticsearchTestCase(TestCase):
         Test if alias is created
         '''
         class MockElasticIndices(object):
-            """
+            '''
             Mock of Elasticsearch IndicesClient
-            """
+            '''
             def put_alias(self, index=None, name=None, body=None):
-                """
+                '''
                 Mock of put_alias method
-                """
+                '''
                 return {"acknowledged": True}
 
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             indices = MockElasticIndices()
 
         with patch.object(elasticsearch, '_get_instance',
@@ -276,19 +276,19 @@ class ElasticsearchTestCase(TestCase):
         Test if alias creation is not acked
         '''
         class MockElasticIndices(object):
-            """
+            '''
             Mock of Elasticsearch IndicesClient
-            """
+            '''
             def put_alias(self, index=None, name=None, body=None):
-                """
+                '''
                 Mock of put_alias method
-                """
+                '''
                 return {"acknowledged": False}
 
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             indices = MockElasticIndices()
 
         with patch.object(elasticsearch, '_get_instance',
@@ -300,19 +300,19 @@ class ElasticsearchTestCase(TestCase):
         Test if alias creation fails with CommandExecutionError
         '''
         class MockElasticIndices(object):
-            """
+            '''
             Mock of Elasticsearch IndicesClient
-            """
+            '''
             def put_alias(self, index=None, name=None, body=None):
-                """
+                '''
                 Mock of put_alias method
-                """
+                '''
                 raise TransportError("custom message", 123)
 
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             indices = MockElasticIndices()
 
         with patch.object(elasticsearch, '_get_instance',
@@ -326,19 +326,19 @@ class ElasticsearchTestCase(TestCase):
         Test if alias is deleted
         '''
         class MockElasticIndices(object):
-            """
+            '''
             Mock of Elasticsearch IndicesClient
-            """
+            '''
             def delete_alias(self, index=None, name=None):
-                """
+                '''
                 Mock of delete_alias method
-                """
+                '''
                 return {"acknowledged": True}
 
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             indices = MockElasticIndices()
 
         with patch.object(elasticsearch, '_get_instance',
@@ -350,19 +350,19 @@ class ElasticsearchTestCase(TestCase):
         Test if alias deletion is not acked
         '''
         class MockElasticIndices(object):
-            """
+            '''
             Mock of Elasticsearch IndicesClient
-            """
+            '''
             def delete_alias(self, index=None, name=None):
-                """
+                '''
                 Mock of delete_alias method
-                """
+                '''
                 return {"acknowledged": False}
 
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             indices = MockElasticIndices()
 
         with patch.object(elasticsearch, '_get_instance',
@@ -374,19 +374,19 @@ class ElasticsearchTestCase(TestCase):
         Test if alias deletion fails with CommandExecutionError
         '''
         class MockElasticIndices(object):
-            """
+            '''
             Mock of Elasticsearch IndicesClient
-            """
+            '''
             def delete_alias(self, index=None, name=None):
-                """
+                '''
                 Mock of delete_alias method
-                """
+                '''
                 raise TransportError("custom message", 123)
 
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             indices = MockElasticIndices()
 
         with patch.object(elasticsearch, '_get_instance',
@@ -400,19 +400,19 @@ class ElasticsearchTestCase(TestCase):
         Test if alias exists
         '''
         class MockElasticIndices(object):
-            """
+            '''
             Mock of Elasticsearch IndicesClient
-            """
+            '''
             def exists_alias(self, index=None, name=None):
-                """
+                '''
                 Mock of exists_alias method
-                """
+                '''
                 return {"acknowledged": True}
 
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             indices = MockElasticIndices()
 
         with patch.object(elasticsearch, '_get_instance',
@@ -424,19 +424,19 @@ class ElasticsearchTestCase(TestCase):
         Test if alias doesn't exist
         '''
         class MockElasticIndices(object):
-            """
+            '''
             Mock of Elasticsearch IndicesClient
-            """
+            '''
             def exists_alias(self, index=None, name=None):
-                """
+                '''
                 Mock of exists_alias method
-                """
+                '''
                 raise NotFoundError
 
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             indices = MockElasticIndices()
 
         with patch.object(elasticsearch, '_get_instance',
@@ -448,19 +448,19 @@ class ElasticsearchTestCase(TestCase):
         Test if alias status obtain fails with CommandExecutionError
         '''
         class MockElasticIndices(object):
-            """
+            '''
             Mock of Elasticsearch IndicesClient
-            """
+            '''
             def exists_alias(self, index=None, name=None):
-                """
+                '''
                 Mock of exists_alias method
-                """
+                '''
                 raise TransportError("custom message", 123)
 
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             indices = MockElasticIndices()
 
         with patch.object(elasticsearch, '_get_instance',
@@ -474,19 +474,19 @@ class ElasticsearchTestCase(TestCase):
         Test if alias can be obtained
         '''
         class MockElasticIndices(object):
-            """
+            '''
             Mock of Elasticsearch IndicesClient
-            """
+            '''
             def get_alias(self, index=None, name=None):
-                """
+                '''
                 Mock of get_alias method
-                """
+                '''
                 return {"test": "key"}
 
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             indices = MockElasticIndices()
 
         with patch.object(elasticsearch, '_get_instance',
@@ -498,19 +498,19 @@ class ElasticsearchTestCase(TestCase):
         Test if alias doesn't exist
         '''
         class MockElasticIndices(object):
-            """
+            '''
             Mock of Elasticsearch IndicesClient
-            """
+            '''
             def get_alias(self, index=None, name=None):
-                """
+                '''
                 Mock of get_alias method
-                """
+                '''
                 raise NotFoundError
 
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             indices = MockElasticIndices()
 
         with patch.object(elasticsearch, '_get_instance',
@@ -522,19 +522,19 @@ class ElasticsearchTestCase(TestCase):
         Test if alias obtain fails with CommandExecutionError
         '''
         class MockElasticIndices(object):
-            """
+            '''
             Mock of Elasticsearch IndicesClient
-            """
+            '''
             def get_alias(self, index=None, name=None):
-                """
+                '''
                 Mock of get_alias method
-                """
+                '''
                 raise TransportError("custom message", 123)
 
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             indices = MockElasticIndices()
 
         with patch.object(elasticsearch, '_get_instance',
@@ -548,13 +548,13 @@ class ElasticsearchTestCase(TestCase):
         Test if document can be created
         '''
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             def index(self, index=None, doc_type=None, body=None, id=None):
-                """
+                '''
                 Mock of index method
-                """
+                '''
                 return {"test": "key"}
 
         with patch.object(elasticsearch, '_get_instance',
@@ -566,13 +566,13 @@ class ElasticsearchTestCase(TestCase):
         Test if document creation fails with CommandExecutionError
         '''
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             def index(self, index=None, doc_type=None, body=None, id=None):
-                """
+                '''
                 Mock of index method
-                """
+                '''
                 raise TransportError("custom message", 123)
 
         with patch.object(elasticsearch, '_get_instance',
@@ -586,13 +586,13 @@ class ElasticsearchTestCase(TestCase):
         Test if document can be deleted
         '''
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             def delete(self, index=None, doc_type=None, id=None):
-                """
+                '''
                 Mock of index method
-                """
+                '''
                 return {"test": "key"}
 
         with patch.object(elasticsearch, '_get_instance',
@@ -604,13 +604,13 @@ class ElasticsearchTestCase(TestCase):
         Test if document deletion fails with CommandExecutionError
         '''
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             def delete(self, index=None, doc_type=None, id=None):
-                """
+                '''
                 Mock of index method
-                """
+                '''
                 raise TransportError("custom message", 123)
 
         with patch.object(elasticsearch, '_get_instance',
@@ -624,13 +624,13 @@ class ElasticsearchTestCase(TestCase):
         Test if document status can be obtained
         '''
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             def exists(self, index=None, doc_type=None, id=None):
-                """
+                '''
                 Mock of index method
-                """
+                '''
                 return True
 
         with patch.object(elasticsearch, '_get_instance',
@@ -642,13 +642,13 @@ class ElasticsearchTestCase(TestCase):
         Test if document doesn't exist
         '''
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             def exists(self, index=None, doc_type=None, id=None):
-                """
+                '''
                 Mock of index method
-                """
+                '''
                 return False
 
         with patch.object(elasticsearch, '_get_instance',
@@ -660,13 +660,13 @@ class ElasticsearchTestCase(TestCase):
         Test if document exist state fails with CommandExecutionError
         '''
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             def exists(self, index=None, doc_type=None, id=None):
-                """
+                '''
                 Mock of index method
-                """
+                '''
                 raise TransportError("custom message", 123)
 
         with patch.object(elasticsearch, '_get_instance',
@@ -680,13 +680,13 @@ class ElasticsearchTestCase(TestCase):
         Test if document exists
         '''
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             def get(self, index=None, doc_type=None, id=None):
-                """
+                '''
                 Mock of index method
-                """
+                '''
                 return {"test": "key"}
 
         with patch.object(elasticsearch, '_get_instance',
@@ -698,13 +698,13 @@ class ElasticsearchTestCase(TestCase):
         Test if document doesn't exit
         '''
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             def get(self, index=None, doc_type=None, id=None):
-                """
+                '''
                 Mock of index method
-                """
+                '''
                 raise NotFoundError
 
         with patch.object(elasticsearch, '_get_instance',
@@ -716,13 +716,13 @@ class ElasticsearchTestCase(TestCase):
         Test if document obtain fails with CommandExecutionError
         '''
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             def get(self, index=None, doc_type=None, id=None):
-                """
+                '''
                 Mock of index method
-                """
+                '''
                 raise TransportError("custom message", 123)
 
         with patch.object(elasticsearch, '_get_instance',
@@ -736,19 +736,19 @@ class ElasticsearchTestCase(TestCase):
         Test if index can be created
         '''
         class MockElasticIndices(object):
-            """
+            '''
             Mock of Elasticsearch IndicesClient
-            """
+            '''
             def create(self, index=None, body=None):
-                """
+                '''
                 Mock of index method
-                """
+                '''
                 return {"acknowledged": True, "shards_acknowledged": True}
 
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             indices = MockElasticIndices()
 
         with patch.object(elasticsearch, '_get_instance',
@@ -760,19 +760,19 @@ class ElasticsearchTestCase(TestCase):
         Test if index is created and no shards info is returned
         '''
         class MockElasticIndices(object):
-            """
+            '''
             Mock of Elasticsearch IndicesClient
-            """
+            '''
             def create(self, index=None, body=None):
-                """
+                '''
                 Mock of index method
-                """
+                '''
                 return {"acknowledged": True}
 
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             indices = MockElasticIndices()
 
         with patch.object(elasticsearch, '_get_instance',
@@ -784,19 +784,19 @@ class ElasticsearchTestCase(TestCase):
         Test if index is created and shards didn't acked
         '''
         class MockElasticIndices(object):
-            """
+            '''
             Mock of Elasticsearch IndicesClient
-            """
+            '''
             def create(self, index=None, body=None):
-                """
+                '''
                 Mock of index method
-                """
+                '''
                 return {"acknowledged": True, "shards_acknowledged": False}
 
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             indices = MockElasticIndices()
 
         with patch.object(elasticsearch, '_get_instance',
@@ -808,19 +808,19 @@ class ElasticsearchTestCase(TestCase):
         Test if index is created and shards didn't acked
         '''
         class MockElasticIndices(object):
-            """
+            '''
             Mock of Elasticsearch IndicesClient
-            """
+            '''
             def create(self, index=None, body=None):
-                """
+                '''
                 Mock of index method
-                """
+                '''
                 return {"acknowledged": False, "shards_acknowledged": False}
 
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             indices = MockElasticIndices()
 
         with patch.object(elasticsearch, '_get_instance',
@@ -832,19 +832,19 @@ class ElasticsearchTestCase(TestCase):
         Test if index creation fails with CommandExecutionError
         '''
         class MockElasticIndices(object):
-            """
+            '''
             Mock of Elasticsearch IndicesClient
-            """
+            '''
             def create(self, index=None, body=None):
-                """
+                '''
                 Mock of index method
-                """
+                '''
                 raise TransportError("custom message", 123)
 
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             indices = MockElasticIndices()
 
         with patch.object(elasticsearch, '_get_instance',
@@ -858,19 +858,19 @@ class ElasticsearchTestCase(TestCase):
         Test if index can be deleted
         '''
         class MockElasticIndices(object):
-            """
+            '''
             Mock of Elasticsearch IndicesClient
-            """
+            '''
             def delete(self, index=None):
-                """
+                '''
                 Mock of index method
-                """
+                '''
                 return {"acknowledged": True}
 
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             indices = MockElasticIndices()
 
         with patch.object(elasticsearch, '_get_instance',
@@ -882,19 +882,19 @@ class ElasticsearchTestCase(TestCase):
         Test if index is deleted and shards didn't acked
         '''
         class MockElasticIndices(object):
-            """
+            '''
             Mock of Elasticsearch IndicesClient
-            """
+            '''
             def delete(self, index=None):
-                """
+                '''
                 Mock of index method
-                """
+                '''
                 return {"acknowledged": False}
 
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             indices = MockElasticIndices()
 
         with patch.object(elasticsearch, '_get_instance',
@@ -906,19 +906,19 @@ class ElasticsearchTestCase(TestCase):
         Test if index deletion fails with CommandExecutionError
         '''
         class MockElasticIndices(object):
-            """
+            '''
             Mock of Elasticsearch IndicesClient
-            """
+            '''
             def delete(self, index=None):
-                """
+                '''
                 Mock of index method
-                """
+                '''
                 raise TransportError("custom message", 123)
 
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             indices = MockElasticIndices()
 
         with patch.object(elasticsearch, '_get_instance',
@@ -932,19 +932,19 @@ class ElasticsearchTestCase(TestCase):
         Test if index exists
         '''
         class MockElasticIndices(object):
-            """
+            '''
             Mock of Elasticsearch IndicesClient
-            """
+            '''
             def exists(self, index=None):
-                """
+                '''
                 Mock of index method
-                """
+                '''
                 return True
 
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             indices = MockElasticIndices()
 
         with patch.object(elasticsearch, '_get_instance',
@@ -956,19 +956,19 @@ class ElasticsearchTestCase(TestCase):
         Test if index doesn't exist
         '''
         class MockElasticIndices(object):
-            """
+            '''
             Mock of Elasticsearch IndicesClient
-            """
+            '''
             def exists(self, index=None):
-                """
+                '''
                 Mock of index method
-                """
+                '''
                 raise NotFoundError
 
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             indices = MockElasticIndices()
 
         with patch.object(elasticsearch, '_get_instance',
@@ -980,19 +980,19 @@ class ElasticsearchTestCase(TestCase):
         Test if alias exist state fails with CommandExecutionError
         '''
         class MockElasticIndices(object):
-            """
+            '''
             Mock of Elasticsearch IndicesClient
-            """
+            '''
             def exists(self, index=None):
-                """
+                '''
                 Mock of index method
-                """
+                '''
                 raise TransportError("custom message", 123)
 
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             indices = MockElasticIndices()
 
         with patch.object(elasticsearch, '_get_instance',
@@ -1006,19 +1006,19 @@ class ElasticsearchTestCase(TestCase):
         Test if index can be obtained
         '''
         class MockElasticIndices(object):
-            """
+            '''
             Mock of Elasticsearch IndicesClient
-            """
+            '''
             def get(self, index=None):
-                """
+                '''
                 Mock of index method
-                """
+                '''
                 return {"test": "key"}
 
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             indices = MockElasticIndices()
 
         with patch.object(elasticsearch, '_get_instance',
@@ -1030,19 +1030,19 @@ class ElasticsearchTestCase(TestCase):
         Test if index doesn't exist
         '''
         class MockElasticIndices(object):
-            """
+            '''
             Mock of Elasticsearch IndicesClient
-            """
+            '''
             def get(self, index=None):
-                """
+                '''
                 Mock of index method
-                """
+                '''
                 raise NotFoundError
 
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             indices = MockElasticIndices()
 
         with patch.object(elasticsearch, '_get_instance',
@@ -1054,19 +1054,19 @@ class ElasticsearchTestCase(TestCase):
         Test if index obtain fails with CommandExecutionError
         '''
         class MockElasticIndices(object):
-            """
+            '''
             Mock of Elasticsearch IndicesClient
-            """
+            '''
             def get(self, index=None):
-                """
+                '''
                 Mock of index method
-                """
+                '''
                 raise TransportError("custom message", 123)
 
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             indices = MockElasticIndices()
 
         with patch.object(elasticsearch, '_get_instance',
@@ -1080,19 +1080,19 @@ class ElasticsearchTestCase(TestCase):
         Test if index can be opened
         '''
         class MockElasticIndices(object):
-            """
+            '''
             Mock of Elasticsearch IndicesClient
-            """
+            '''
             def open(self, index=None, allow_no_indices=None, expand_wildcards=None, ignore_unavailable=None):
-                """
+                '''
                 Mock of index method
-                """
+                '''
                 return {"acknowledged": True}
 
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             indices = MockElasticIndices()
 
         with patch.object(elasticsearch, '_get_instance',
@@ -1104,19 +1104,19 @@ class ElasticsearchTestCase(TestCase):
         Test if index open isn't acked
         '''
         class MockElasticIndices(object):
-            """
+            '''
             Mock of Elasticsearch IndicesClient
-            """
+            '''
             def open(self, index=None, allow_no_indices=None, expand_wildcards=None, ignore_unavailable=None):
-                """
+                '''
                 Mock of index method
-                """
+                '''
                 return {"acknowledged": False}
 
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             indices = MockElasticIndices()
 
         with patch.object(elasticsearch, '_get_instance',
@@ -1128,19 +1128,19 @@ class ElasticsearchTestCase(TestCase):
         Test if alias opening fails with CommandExecutionError
         '''
         class MockElasticIndices(object):
-            """
+            '''
             Mock of Elasticsearch IndicesClient
-            """
+            '''
             def open(self, index=None, allow_no_indices=None, expand_wildcards=None, ignore_unavailable=None):
-                """
+                '''
                 Mock of index method
-                """
+                '''
                 raise TransportError("custom message", 123)
 
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             indices = MockElasticIndices()
 
         with patch.object(elasticsearch, '_get_instance',
@@ -1154,19 +1154,19 @@ class ElasticsearchTestCase(TestCase):
         Test if index can be closed
         '''
         class MockElasticIndices(object):
-            """
+            '''
             Mock of Elasticsearch IndicesClient
-            """
+            '''
             def close(self, index=None, allow_no_indices=None, expand_wildcards=None, ignore_unavailable=None):
-                """
+                '''
                 Mock of index method
-                """
+                '''
                 return {"acknowledged": True}
 
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             indices = MockElasticIndices()
 
         with patch.object(elasticsearch, '_get_instance',
@@ -1178,19 +1178,19 @@ class ElasticsearchTestCase(TestCase):
         Test if index close isn't acked
         '''
         class MockElasticIndices(object):
-            """
+            '''
             Mock of Elasticsearch IndicesClient
-            """
+            '''
             def close(self, index=None, allow_no_indices=None, expand_wildcards=None, ignore_unavailable=None):
-                """
+                '''
                 Mock of index method
-                """
+                '''
                 return {"acknowledged": False}
 
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             indices = MockElasticIndices()
 
         with patch.object(elasticsearch, '_get_instance',
@@ -1202,19 +1202,19 @@ class ElasticsearchTestCase(TestCase):
         Test if index closing fails with CommandExecutionError
         '''
         class MockElasticIndices(object):
-            """
+            '''
             Mock of Elasticsearch IndicesClient
-            """
+            '''
             def close(self, index=None, allow_no_indices=None, expand_wildcards=None, ignore_unavailable=None):
-                """
+                '''
                 Mock of index method
-                """
+                '''
                 raise TransportError("custom message", 123)
 
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             indices = MockElasticIndices()
 
         with patch.object(elasticsearch, '_get_instance',
@@ -1228,19 +1228,19 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping can be created
         '''
         class MockElasticIndices(object):
-            """
+            '''
             Mock of Elasticsearch IndicesClient
-            """
+            '''
             def put_mapping(self, index=None, doc_type=None, body=None):
-                """
+                '''
                 Mock of put_mapping method
-                """
+                '''
                 return {"acknowledged": True}
 
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             indices = MockElasticIndices()
 
         with patch.object(elasticsearch, '_get_instance',
@@ -1252,19 +1252,19 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping creation didn't ack
         '''
         class MockElasticIndices(object):
-            """
+            '''
             Mock of Elasticsearch IndicesClient
-            """
+            '''
             def put_mapping(self, index=None, doc_type=None, body=None):
-                """
+                '''
                 Mock of put_mapping method
-                """
+                '''
                 return {"acknowledged": False}
 
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             indices = MockElasticIndices()
 
         with patch.object(elasticsearch, '_get_instance',
@@ -1276,19 +1276,19 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping creation fails
         '''
         class MockElasticIndices(object):
-            """
+            '''
             Mock of Elasticsearch IndicesClient
-            """
+            '''
             def put_mapping(self, index=None, doc_type=None, body=None):
-                """
+                '''
                 Mock of put_mapping method
-                """
+                '''
                 raise TransportError("custom message", 123)
 
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             indices = MockElasticIndices()
 
         with patch.object(elasticsearch, '_get_instance',
@@ -1302,19 +1302,19 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping can be created
         '''
         class MockElasticIndices(object):
-            """
+            '''
             Mock of Elasticsearch IndicesClient
-            """
+            '''
             def delete_mapping(self, index=None, doc_type=None):
-                """
+                '''
                 Mock of put_mapping method
-                """
+                '''
                 return {"acknowledged": True}
 
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             indices = MockElasticIndices()
 
         with patch.object(elasticsearch, '_get_instance',
@@ -1326,19 +1326,19 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping creation didn't ack
         '''
         class MockElasticIndices(object):
-            """
+            '''
             Mock of Elasticsearch IndicesClient
-            """
+            '''
             def delete_mapping(self, index=None, doc_type=None):
-                """
+                '''
                 Mock of put_mapping method
-                """
+                '''
                 return {"acknowledged": False}
 
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             indices = MockElasticIndices()
 
         with patch.object(elasticsearch, '_get_instance',
@@ -1350,19 +1350,19 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping creation fails
         '''
         class MockElasticIndices(object):
-            """
+            '''
             Mock of Elasticsearch IndicesClient
-            """
+            '''
             def delete_mapping(self, index=None, doc_type=None):
-                """
+                '''
                 Mock of put_mapping method
-                """
+                '''
                 raise TransportError("custom message", 123)
 
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             indices = MockElasticIndices()
 
         with patch.object(elasticsearch, '_get_instance',
@@ -1376,19 +1376,19 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping can be created
         '''
         class MockElasticIndices(object):
-            """
+            '''
             Mock of Elasticsearch IndicesClient
-            """
+            '''
             def get_mapping(self, index=None, doc_type=None):
-                """
+                '''
                 Mock of get_mapping method
-                """
+                '''
                 return {"test": "key"}
 
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             indices = MockElasticIndices()
 
         with patch.object(elasticsearch, '_get_instance',
@@ -1400,19 +1400,19 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping creation didn't ack
         '''
         class MockElasticIndices(object):
-            """
+            '''
             Mock of Elasticsearch IndicesClient
-            """
+            '''
             def get_mapping(self, index=None, doc_type=None):
-                """
+                '''
                 Mock of get_mapping method
-                """
+                '''
                 raise NotFoundError
 
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             indices = MockElasticIndices()
 
         with patch.object(elasticsearch, '_get_instance',
@@ -1424,19 +1424,19 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping creation fails
         '''
         class MockElasticIndices(object):
-            """
+            '''
             Mock of Elasticsearch IndicesClient
-            """
+            '''
             def get_mapping(self, index=None, doc_type=None):
-                """
+                '''
                 Mock of get_mapping method
-                """
+                '''
                 raise TransportError("custom message", 123)
 
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             indices = MockElasticIndices()
 
         with patch.object(elasticsearch, '_get_instance',
@@ -1450,19 +1450,19 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping can be created
         '''
         class MockElasticIndices(object):
-            """
+            '''
             Mock of Elasticsearch IndicesClient
-            """
+            '''
             def put_template(self, name=None, body=None):
-                """
+                '''
                 Mock of put_template method
-                """
+                '''
                 return {"acknowledged": True}
 
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             indices = MockElasticIndices()
 
         with patch.object(elasticsearch, '_get_instance',
@@ -1474,19 +1474,19 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping creation didn't ack
         '''
         class MockElasticIndices(object):
-            """
+            '''
             Mock of Elasticsearch IndicesClient
-            """
+            '''
             def put_template(self, name=None, body=None):
-                """
+                '''
                 Mock of put_template method
-                """
+                '''
                 return {"acknowledged": False}
 
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             indices = MockElasticIndices()
 
         with patch.object(elasticsearch, '_get_instance',
@@ -1498,19 +1498,19 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping creation fails
         '''
         class MockElasticIndices(object):
-            """
+            '''
             Mock of Elasticsearch IndicesClient
-            """
+            '''
             def put_template(self, name=None, body=None):
-                """
+                '''
                 Mock of put_template method
-                """
+                '''
                 raise TransportError("custom message", 123)
 
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             indices = MockElasticIndices()
 
         with patch.object(elasticsearch, '_get_instance',
@@ -1524,19 +1524,19 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping can be created
         '''
         class MockElasticIndices(object):
-            """
+            '''
             Mock of Elasticsearch IndicesClient
-            """
+            '''
             def delete_template(self, name=None):
-                """
+                '''
                 Mock of delete_template method
-                """
+                '''
                 return {"acknowledged": True}
 
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             indices = MockElasticIndices()
 
         with patch.object(elasticsearch, '_get_instance',
@@ -1548,19 +1548,19 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping creation didn't ack
         '''
         class MockElasticIndices(object):
-            """
+            '''
             Mock of Elasticsearch IndicesClient
-            """
+            '''
             def delete_template(self, name=None):
-                """
+                '''
                 Mock of delete_template method
-                """
+                '''
                 return {"acknowledged": False}
 
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             indices = MockElasticIndices()
 
         with patch.object(elasticsearch, '_get_instance',
@@ -1572,19 +1572,19 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping creation fails
         '''
         class MockElasticIndices(object):
-            """
+            '''
             Mock of Elasticsearch IndicesClient
-            """
+            '''
             def delete_template(self, name=None):
-                """
+                '''
                 Mock of delete_template method
-                """
+                '''
                 raise TransportError("custom message", 123)
 
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             indices = MockElasticIndices()
 
         with patch.object(elasticsearch, '_get_instance',
@@ -1598,19 +1598,19 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping can be created
         '''
         class MockElasticIndices(object):
-            """
+            '''
             Mock of Elasticsearch IndicesClient
-            """
+            '''
             def exists_template(self, name=None):
-                """
+                '''
                 Mock of exists_template method
-                """
+                '''
                 return True
 
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             indices = MockElasticIndices()
 
         with patch.object(elasticsearch, '_get_instance',
@@ -1622,19 +1622,19 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping creation didn't ack
         '''
         class MockElasticIndices(object):
-            """
+            '''
             Mock of Elasticsearch IndicesClient
-            """
+            '''
             def exists_template(self, name=None):
-                """
+                '''
                 Mock of exists_template method
-                """
+                '''
                 return False
 
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             indices = MockElasticIndices()
 
         with patch.object(elasticsearch, '_get_instance',
@@ -1646,19 +1646,19 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping creation fails
         '''
         class MockElasticIndices(object):
-            """
+            '''
             Mock of Elasticsearch IndicesClient
-            """
+            '''
             def exists_template(self, name=None):
-                """
+                '''
                 Mock of exists_template method
-                """
+                '''
                 raise TransportError("custom message", 123)
 
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             indices = MockElasticIndices()
 
         with patch.object(elasticsearch, '_get_instance',
@@ -1672,19 +1672,19 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping can be created
         '''
         class MockElasticIndices(object):
-            """
+            '''
             Mock of Elasticsearch IndicesClient
-            """
+            '''
             def get_template(self, name=None):
-                """
+                '''
                 Mock of get_template method
-                """
+                '''
                 return {"test": "key"}
 
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             indices = MockElasticIndices()
 
         with patch.object(elasticsearch, '_get_instance',
@@ -1696,19 +1696,19 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping creation didn't ack
         '''
         class MockElasticIndices(object):
-            """
+            '''
             Mock of Elasticsearch IndicesClient
-            """
+            '''
             def get_template(self, name=None):
-                """
+                '''
                 Mock of get_template method
-                """
+                '''
                 raise NotFoundError
 
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             indices = MockElasticIndices()
 
         with patch.object(elasticsearch, '_get_instance',
@@ -1720,19 +1720,19 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping creation fails
         '''
         class MockElasticIndices(object):
-            """
+            '''
             Mock of Elasticsearch IndicesClient
-            """
+            '''
             def get_template(self, name=None):
-                """
+                '''
                 Mock of get_template method
-                """
+                '''
                 raise TransportError("custom message", 123)
 
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             indices = MockElasticIndices()
 
         with patch.object(elasticsearch, '_get_instance',
@@ -1746,19 +1746,19 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping can be created
         '''
         class MockElasticIngest(object):
-            """
+            '''
             Mock of Elasticsearch IndicesClient
-            """
+            '''
             def get_pipeline(self, id=None):
-                """
+                '''
                 Mock of get_pipeline method
-                """
+                '''
                 return {"test": "key"}
 
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             ingest = MockElasticIngest()
 
         with patch.object(elasticsearch, '_get_instance',
@@ -1770,19 +1770,19 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping creation didn't ack
         '''
         class MockElasticIngest(object):
-            """
+            '''
             Mock of Elasticsearch IndicesClient
-            """
+            '''
             def get_pipeline(self, id=None):
-                """
+                '''
                 Mock of get_pipeline method
-                """
+                '''
                 raise NotFoundError
 
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             ingest = MockElasticIngest()
 
         with patch.object(elasticsearch, '_get_instance',
@@ -1794,19 +1794,19 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping creation fails
         '''
         class MockElasticIngest(object):
-            """
+            '''
             Mock of Elasticsearch IndicesClient
-            """
+            '''
             def get_pipeline(self, id=None):
-                """
+                '''
                 Mock of get_pipeline method
-                """
+                '''
                 raise TransportError("custom message", 123)
 
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             ingest = MockElasticIngest()
 
         with patch.object(elasticsearch, '_get_instance',
@@ -1821,9 +1821,9 @@ class ElasticsearchTestCase(TestCase):
             pass
 
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             ingest = MockElasticIngest()
 
         with patch.object(elasticsearch, '_get_instance',
@@ -1837,19 +1837,19 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping can be created
         '''
         class MockElasticIngest(object):
-            """
+            '''
             Mock of Elasticsearch IndicesClient
-            """
+            '''
             def delete_pipeline(self, id=None):
-                """
+                '''
                 Mock of delete_pipeline method
-                """
+                '''
                 return {"acknowledged": True}
 
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             ingest = MockElasticIngest()
 
         with patch.object(elasticsearch, '_get_instance',
@@ -1861,19 +1861,19 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping creation didn't ack
         '''
         class MockElasticIngest(object):
-            """
+            '''
             Mock of Elasticsearch IndicesClient
-            """
+            '''
             def delete_pipeline(self, id=None):
-                """
+                '''
                 Mock of delete_pipeline method
-                """
+                '''
                 return {"acknowledged": False}
 
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             ingest = MockElasticIngest()
 
         with patch.object(elasticsearch, '_get_instance',
@@ -1885,19 +1885,19 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping creation fails
         '''
         class MockElasticIngest(object):
-            """
+            '''
             Mock of Elasticsearch IndicesClient
-            """
+            '''
             def delete_pipeline(self, id=None):
-                """
+                '''
                 Mock of delete_pipeline method
-                """
+                '''
                 raise TransportError("custom message", 123)
 
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             ingest = MockElasticIngest()
 
         with patch.object(elasticsearch, '_get_instance',
@@ -1912,9 +1912,9 @@ class ElasticsearchTestCase(TestCase):
             pass
 
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             ingest = MockElasticIngest()
 
         with patch.object(elasticsearch, '_get_instance',
@@ -1928,19 +1928,19 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping can be created
         '''
         class MockElasticIngest(object):
-            """
+            '''
             Mock of Elasticsearch IndicesClient
-            """
+            '''
             def put_pipeline(self, id=None, body=None):
-                """
+                '''
                 Mock of put_pipeline method
-                """
+                '''
                 return {"acknowledged": True}
 
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             ingest = MockElasticIngest()
 
         with patch.object(elasticsearch, '_get_instance',
@@ -1952,19 +1952,19 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping creation didn't ack
         '''
         class MockElasticIngest(object):
-            """
+            '''
             Mock of Elasticsearch IndicesClient
-            """
+            '''
             def put_pipeline(self, id=None, body=None):
-                """
+                '''
                 Mock of put_pipeline method
-                """
+                '''
                 return {"acknowledged": False}
 
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             ingest = MockElasticIngest()
 
         with patch.object(elasticsearch, '_get_instance',
@@ -1976,19 +1976,19 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping creation fails
         '''
         class MockElasticIngest(object):
-            """
+            '''
             Mock of Elasticsearch IndicesClient
-            """
+            '''
             def put_pipeline(self, id=None, body=None):
-                """
+                '''
                 Mock of put_pipeline method
-                """
+                '''
                 raise TransportError("custom message", 123)
 
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             ingest = MockElasticIngest()
 
         with patch.object(elasticsearch, '_get_instance',
@@ -2003,9 +2003,9 @@ class ElasticsearchTestCase(TestCase):
             pass
 
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             ingest = MockElasticIngest()
 
         with patch.object(elasticsearch, '_get_instance',
@@ -2019,19 +2019,19 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping can be created
         '''
         class MockElasticIngest(object):
-            """
+            '''
             Mock of Elasticsearch IndicesClient
-            """
+            '''
             def simulate(self, id=None, body=None, verbose=None):
-                """
+                '''
                 Mock of simulate method
-                """
+                '''
                 return {"test": "key"}
 
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             ingest = MockElasticIngest()
 
         with patch.object(elasticsearch, '_get_instance',
@@ -2043,19 +2043,19 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping creation fails
         '''
         class MockElasticIngest(object):
-            """
+            '''
             Mock of Elasticsearch IndicesClient
-            """
+            '''
             def simulate(self, id=None, body=None, verbose=None):
-                """
+                '''
                 Mock of simulate method
-                """
+                '''
                 raise TransportError("custom message", 123)
 
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             ingest = MockElasticIngest()
 
         with patch.object(elasticsearch, '_get_instance',
@@ -2070,9 +2070,9 @@ class ElasticsearchTestCase(TestCase):
             pass
 
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             ingest = MockElasticIngest()
 
         with patch.object(elasticsearch, '_get_instance',
@@ -2086,13 +2086,13 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping can be created
         '''
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             def get_template(self, id=None):
-                """
+                '''
                 Mock of get_template method
-                """
+                '''
                 return {"test": "key"}
 
         with patch.object(elasticsearch, '_get_instance',
@@ -2104,13 +2104,13 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping can be created
         '''
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             def get_template(self, id=None):
-                """
+                '''
                 Mock of get_template method
-                """
+                '''
                 raise NotFoundError
 
         with patch.object(elasticsearch, '_get_instance',
@@ -2122,13 +2122,13 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping creation fails
         '''
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             def get_template(self, id=None):
-                """
+                '''
                 Mock of get_template method
-                """
+                '''
                 raise TransportError("custom message", 123)
 
         with patch.object(elasticsearch, '_get_instance',
@@ -2142,13 +2142,13 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping can be created
         '''
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             def put_template(self, id=None, body=None):
-                """
+                '''
                 Mock of put_template method
-                """
+                '''
                 return {"acknowledged": True}
 
         with patch.object(elasticsearch, '_get_instance',
@@ -2160,13 +2160,13 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping can be created
         '''
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             def put_template(self, id=None, body=None):
-                """
+                '''
                 Mock of put_template method
-                """
+                '''
                 return {"acknowledged": False}
 
         with patch.object(elasticsearch, '_get_instance',
@@ -2178,13 +2178,13 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping creation fails
         '''
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             def put_template(self, id=None, body=None):
-                """
+                '''
                 Mock of put_template method
-                """
+                '''
                 raise TransportError("custom message", 123)
 
         with patch.object(elasticsearch, '_get_instance',
@@ -2198,13 +2198,13 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping can be deleted
         '''
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             def delete_template(self, id=None):
-                """
+                '''
                 Mock of delete_template method
-                """
+                '''
                 return {"acknowledged": True}
 
         with patch.object(elasticsearch, '_get_instance',
@@ -2216,13 +2216,13 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping can be deleted but not acked
         '''
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             def delete_template(self, id=None):
-                """
+                '''
                 Mock of delete_template method
-                """
+                '''
                 return {"acknowledged": False}
 
         with patch.object(elasticsearch, '_get_instance',
@@ -2234,13 +2234,13 @@ class ElasticsearchTestCase(TestCase):
         Test if deleting mapping doesn't exist
         '''
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             def delete_template(self, id=None):
-                """
+                '''
                 Mock of delete_template method
-                """
+                '''
                 raise NotFoundError
 
         with patch.object(elasticsearch, '_get_instance',
@@ -2252,13 +2252,13 @@ class ElasticsearchTestCase(TestCase):
         Test if mapping deletion fails
         '''
         class MockElastic(object):
-            """
+            '''
             Mock of Elasticsearch client
-            """
+            '''
             def delete_template(self, id=None):
-                """
+                '''
                 Mock of delete_template method
-                """
+                '''
                 raise TransportError("custom message", 123)
 
         with patch.object(elasticsearch, '_get_instance',

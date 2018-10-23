@@ -5,12 +5,13 @@ Module to provide Postgres compatibility to salt for debian family specific tool
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import pipes
 
 # Import salt libs
 import salt.utils.path
+from salt.ext import six
 
 # Import 3rd-party libs
 
@@ -54,7 +55,7 @@ def cluster_create(version,
     '''
     cmd = [salt.utils.path.which('pg_createcluster')]
     if port:
-        cmd += ['--port', str(port)]
+        cmd += ['--port', six.text_type(port)]
     if locale:
         cmd += ['--locale', locale]
     if encoding:

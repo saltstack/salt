@@ -79,22 +79,12 @@ from the ``kevinopenstack`` profile above, you would use:
 
     salt-call sdb.get sdb://kevinopenstack/password
 
-Some drivers use slightly more complex URIs. For instance, the ``vault`` driver
-requires the full path to where the key is stored, followed by a question mark,
-followed by the key to be retrieved.  If you were using a profile called
-``myvault``, you would use a URI that looks like:
-
-.. code-block:: bash
-
-    salt-call sdb.get 'sdb://myvault/secret/salt?saltstack'
-
 Setting a value uses the same URI as would be used to retrieve it, followed
-by the value as another argument. For the above ``myvault`` URI, you would set
-a new value using a command like:
+by the value as another argument.
 
 .. code-block:: bash
 
-    salt-call sdb.set 'sdb://myvault/secret/salt?saltstack' 'super awesome'
+    salt-call sdb.set 'sdb://myvault/secret/salt/saltstack' 'super awesome'
 
 Deleting values (if supported by the driver) is done pretty much the same way as
 getting them. Provided that you have a profile called ``mykvstore`` that uses
@@ -109,8 +99,8 @@ the runner system:
 
 .. code-block:: bash
 
-    salt-run sdb.get 'sdb://myvault/secret/salt?saltstack'
-    salt-run sdb.set 'sdb://myvault/secret/salt?saltstack' 'super awesome'
+    salt-run sdb.get 'sdb://myvault/secret/salt/saltstack'
+    salt-run sdb.set 'sdb://myvault/secret/salt/saltstack' 'super awesome'
     salt-run sdb.delete 'sdb://mykvstore/foobar'
 
 

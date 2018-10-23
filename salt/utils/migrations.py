@@ -2,7 +2,7 @@
 '''
 Migration tools
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 
 # Import python libs
 import os.path

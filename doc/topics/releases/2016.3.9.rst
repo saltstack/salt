@@ -1,0 +1,30 @@
+===========================
+Salt 2016.3.9 Release Notes
+===========================
+
+Version 2016.3.9 is a bugfix release for :ref:`2016.3.0 <release-2016-3-0>`.
+
+Master Changes
+==============
+
+The following options have been added to the master config file:
+
+- :conf_master:`allow_minion_key_revoke` - This option controls whether a
+  minion can request that the master revoke its key. When ``True``, a minion
+  can request a key revocation and the master will comply. If it is ``False``,
+  the key will not be revoked by the msater.
+
+- :conf_master:`require_minion_sign_messages` - This requires that minions
+  cryptographically sign the messages they publish to the master. If minions
+  are not signing, then log this information at loglevel ``INFO`` and drop the
+  message without acting on it.
+
+- :conf_master:`drop_messages_signature_fail` - Drop messages from minions when
+  their signatures do not validate. Note that when this option is ``False`` but
+  `require_minion_sign_messages` is ``True``, minions *MUST* sign their
+  messages, but the validity of their signatures is ignored.
+
+- :conf_master:`minion_sign_messages` - Causes the minion to cryptographically
+  sign the payload of messages it places on the event bus for the master. The
+  payloads are signed with the minion's private key so the master can verify
+  the signature with its public key.

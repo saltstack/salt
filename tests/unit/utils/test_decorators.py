@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Bo Maryniuk (bo@suse.de)`
+    :codeauthor: Bo Maryniuk (bo@suse.de)
     unit.utils.decorators_test
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt libs
 import salt.utils.decorators as decorators

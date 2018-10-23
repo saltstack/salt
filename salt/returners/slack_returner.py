@@ -14,6 +14,7 @@ The following fields can be set in the minion conf file:
     slack.as_user (required to see the profile picture of your bot)
     slack.profile (optional)
     slack.changes(optional, only show changes and failed states)
+    slack.only_show_failed(optional, only show failed states)
     slack.yaml_format(optional, format the json in yaml format)
 
 
@@ -76,10 +77,9 @@ To override individual configuration items, append --return_kwargs '{"key:": "va
     salt '*' test.ping --return slack --return_kwargs '{"channel": "#random"}'
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
-import yaml
 import pprint
 import logging
 
@@ -91,7 +91,7 @@ from salt.ext.six.moves.urllib.parse import urlencode as _urlencode
 # Import Salt Libs
 import salt.returners
 import salt.utils.slack
-from salt.utils.yamldumper import SafeOrderedDumper
+import salt.utils.yaml
 
 log = logging.getLogger(__name__)
 
@@ -111,6 +111,7 @@ def _get_options(ret=None):
              'as_user': 'as_user',
              'api_key': 'api_key',
              'changes': 'changes',
+             'only_show_failed': 'only_show_failed',
              'yaml_format': 'yaml_format',
              }
 
@@ -170,7 +171,7 @@ def _post_message(channel,
                                     header_dict={'Content-Type': 'application/x-www-form-urlencoded'},
                                     data=_urlencode(parameters))
 
-    log.debug('result {0}'.format(result))
+    log.debug('Slack message post result: %s', result)
     if result:
         return True
     else:
@@ -189,6 +190,7 @@ def returner(ret):
     as_user = _options.get('as_user')
     api_key = _options.get('api_key')
     changes = _options.get('changes')
+    only_show_failed = _options.get('only_show_failed')
     yaml_format = _options.get('yaml_format')
 
     if not channel:
@@ -207,12 +209,19 @@ def returner(ret):
         log.error('slack.api_key not defined in salt config')
         return
 
+    if only_show_failed and changes:
+        log.error('cannot define both slack.changes and slack.only_show_failed in salt config')
+        return
+
     returns = ret.get('return')
     if changes is True:
-        returns = dict((key, value) for key, value in returns.items() if value['result'] is not True or value['changes'])
+        returns = {(key, value) for key, value in returns.items() if value['result'] is not True or value['changes']}
+
+    if only_show_failed is True:
+        returns = {(key, value) for key, value in returns.items() if value['result'] is not True}
 
     if yaml_format is True:
-        returns = yaml.dump(returns, Dumper=SafeOrderedDumper)
+        returns = salt.utils.yaml.safe_dump(returns)
     else:
         returns = pprint.pformat(returns)
 

@@ -10,7 +10,11 @@ proxy modules
     :toctree:
     :template: autosummary.rst.tmpl
 
+    arista_pyeapi
+    bluecoat_sslv
+    cimc
     chronos
+    cimc
     cisconso
     dummy
     esxi
@@ -18,7 +22,10 @@ proxy modules
     junos
     marathon
     napalm
+    netmiko_px
     nxos
+    nxos_api
+    panos
     philips_hue
     rest_sample
     ssh_sample

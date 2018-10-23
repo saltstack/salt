@@ -2,7 +2,7 @@
 '''
 Print a stacktrace when sent a SIGUSR1 for debugging
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import os
@@ -15,6 +15,7 @@ import inspect
 
 # Import salt libs
 import salt.utils.files
+import salt.utils.stringutils
 
 
 def _makepretty(printout, stack):

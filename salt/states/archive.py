@@ -6,13 +6,14 @@ Extract an archive
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import errno
 import logging
 import os
 import re
 import shlex
 import stat
+import string
 import tarfile
 from contextlib import closing
 
@@ -22,9 +23,9 @@ from salt.ext.six.moves import shlex_quote as _cmd_quote
 from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=no-name-in-module
 
 # Import Salt libs
-import salt.utils
 import salt.utils.args
 import salt.utils.files
+import salt.utils.hashutils
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.url
@@ -60,19 +61,35 @@ def _add_explanation(ret, source_hash_trigger, contents_missing):
 
 
 def _gen_checksum(path):
-    return {'hsum': salt.utils.get_hash(path, form=__opts__['hash_type']),
+    return {'hsum': salt.utils.hashutils.get_hash(path, form=__opts__['hash_type']),
             'hash_type': __opts__['hash_type']}
 
 
 def _checksum_file_path(path):
-    relpath = '.'.join((os.path.relpath(path, __opts__['cachedir']), 'hash'))
-    if re.match(r'..[/\\]', relpath):
-        # path is a local file
-        relpath = salt.utils.path.join(
-            'local',
-            os.path.splitdrive(path)[-1].lstrip('/\\'),
-        )
-    return salt.utils.path.join(__opts__['cachedir'], 'archive_hash', relpath)
+    try:
+        relpath = '.'.join((os.path.relpath(path, __opts__['cachedir']), 'hash'))
+        if re.match(r'..[/\\]', relpath):
+            # path is a local file
+            relpath = salt.utils.path.join(
+                'local',
+                os.path.splitdrive(path)[-1].lstrip('/\\'),
+            )
+    except ValueError as exc:
+        # The path is on a different drive (Windows)
+        if six.text_type(exc).startswith('path is on'):
+            drive, path = os.path.splitdrive(path)
+            relpath = salt.utils.path.join(
+                'local',
+                drive.rstrip(':'),
+                path.lstrip('/\\'),
+            )
+        elif str(exc).startswith('Cannot mix UNC'):
+            relpath = salt.utils.path.join('unc', path)
+        else:
+            raise
+    ret = salt.utils.path.join(__opts__['cachedir'], 'archive_hash', relpath)
+    log.debug('Using checksum file %s for cached archive file %s', ret, path)
+    return ret
 
 
 def _update_checksum(path):
@@ -414,7 +431,7 @@ def extracted(name,
         .. versionadded:: 2017.7.3
 
     keep : True
-        Same as ``keep_source``.
+        Same as ``keep_source``, kept for backward-compatibility.
 
         .. note::
             If both ``keep_source`` and ``keep`` are used, ``keep`` will be
@@ -436,7 +453,7 @@ def extracted(name,
 
         If this argument is not used, then the minion will attempt to use
         Python's native tarfile_/zipfile_ support to extract it. For zip
-        archives, this argument is mostly used to overwrite exsiting files with
+        archives, this argument is mostly used to overwrite existing files with
         ``o``.
 
         Using this argument means that the ``tar`` or ``unzip`` command will be
@@ -680,7 +697,7 @@ def extracted(name,
         # True
         # >>> os.path.isfile('/tmp/foo.txt/')
         # False
-        name = name.rstrip('/')
+        name = name.rstrip(os.sep)
         if os.path.isfile(name):
             ret['comment'] = '{0} exists and is not a directory'.format(name)
             return ret
@@ -712,6 +729,11 @@ def extracted(name,
                     .format(name)
                 )
                 return ret
+
+    if if_missing is not None and os.path.exists(if_missing):
+        ret['result'] = True
+        ret['comment'] = 'Path {0} exists'.format(if_missing)
+        return ret
 
     if user or group:
         if salt.utils.platform.is_windows():
@@ -756,14 +778,27 @@ def extracted(name,
         return ret
 
     urlparsed_source = _urlparse(source_match)
-    source_hash_basename = urlparsed_source.path or urlparsed_source.netloc
+    urlparsed_scheme = urlparsed_source.scheme
+    urlparsed_path = os.path.join(
+        urlparsed_source.netloc,
+        urlparsed_source.path).rstrip(os.sep)
 
-    source_is_local = urlparsed_source.scheme in salt.utils.files.LOCAL_PROTOS
+    # urlparsed_scheme will be the drive letter if this is a Windows file path
+    # This checks for a drive letter as the scheme and changes it to file
+    if urlparsed_scheme and \
+            urlparsed_scheme.lower() in string.ascii_lowercase:
+        urlparsed_path = ':'.join([urlparsed_scheme, urlparsed_path])
+        urlparsed_scheme = 'file'
+
+    source_hash_basename = urlparsed_path or urlparsed_source.netloc
+
+    source_is_local = urlparsed_scheme in salt.utils.files.LOCAL_PROTOS
     if source_is_local:
         # Get rid of "file://" from start of source_match
-        source_match = os.path.realpath(os.path.expanduser(urlparsed_source.path))
+        source_match = os.path.realpath(os.path.expanduser(urlparsed_path))
         if not os.path.isfile(source_match):
-            ret['comment'] = 'Source file \'{0}\' does not exist'.format(source_match)
+            ret['comment'] = 'Source file \'{0}\' does not exist'.format(
+                                salt.utils.url.redact_http_basic_auth(source_match))
             return ret
 
     valid_archive_formats = ('tar', 'rar', 'zip')
@@ -792,7 +827,7 @@ def extracted(name,
         return ret
 
     if options is not None and not isinstance(options, six.string_types):
-        options = str(options)
+        options = six.text_type(options)
 
     strip_components = None
     if options and archive_format == 'tar':
@@ -914,7 +949,7 @@ def extracted(name,
             # file states would be unavailable.
             ret['comment'] = (
                 'Unable to cache {0}, file.cached state not available'.format(
-                    source_match
+                    salt.utils.url.redact_http_basic_auth(source_match)
                 )
             )
             return ret
@@ -926,16 +961,18 @@ def extracted(name,
                                                skip_verify=skip_verify,
                                                saltenv=__env__)
         except Exception as exc:
-            msg = 'Failed to cache {0}: {1}'.format(source_match, exc.__str__())
+            msg = 'Failed to cache {0}: {1}'.format(
+                    salt.utils.url.redact_http_basic_auth(source_match),
+                    exc.__str__())
             log.exception(msg)
             ret['comment'] = msg
             return ret
         else:
-            log.debug('file.cached: {0}'.format(result))
+            log.debug('file.cached: %s', result)
 
         if result['result']:
             # Get the path of the file in the minion cache
-            cached = __salt__['cp.is_cached'](source_match)
+            cached = __salt__['cp.is_cached'](source_match, saltenv=__env__)
         else:
             log.debug(
                 'failed to download %s',
@@ -1069,7 +1106,7 @@ def extracted(name,
                                          and not stat.S_ISDIR(x)),
                      (contents['links'], stat.S_ISLNK)):
                 for path in path_list:
-                    full_path = os.path.join(name, path)
+                    full_path = salt.utils.path.join(name, path)
                     try:
                         path_mode = os.lstat(full_path.rstrip(os.sep)).st_mode
                         if not func(path_mode):
@@ -1157,7 +1194,8 @@ def extracted(name,
             if not ret['result']:
                 ret['comment'] = \
                     '{0} does not match the desired source_hash {1}'.format(
-                        source_match, source_sum['hsum']
+                        salt.utils.url.redact_http_basic_auth(source_match),
+                        source_sum['hsum']
                     )
                 return ret
 
@@ -1201,7 +1239,7 @@ def extracted(name,
             __states__['file.directory'](name, user=user, makedirs=True)
             created_destdir = True
 
-        log.debug('Extracting {0} to {1}'.format(cached, name))
+        log.debug('Extracting %s to %s', cached, name)
         try:
             if archive_format == 'zip':
                 if use_cmd_unzip:
@@ -1237,7 +1275,7 @@ def extracted(name,
                 if options is None:
                     try:
                         with closing(tarfile.open(cached, 'r')) as tar:
-                            tar.extractall(name)
+                            tar.extractall(salt.utils.stringutils.to_str(name))
                             files = tar.getnames()
                             if trim_output:
                                 files = files[:trim_output]
@@ -1393,25 +1431,19 @@ def extracted(name,
                 dir_result = __states__['file.directory'](full_path,
                                                           user=user,
                                                           group=group,
-                                                          recurse=recurse,
-                                                          test=__opts__['test'])
+                                                          recurse=recurse)
                 log.debug('file.directory: %s', dir_result)
 
-                if __opts__['test']:
-                    if dir_result.get('pchanges'):
-                        ret['changes']['updated ownership'] = True
-                else:
-                    try:
-                        if dir_result['result']:
-                            if dir_result['changes']:
-                                ret['changes']['updated ownership'] = True
-                        else:
-                            enforce_failed.append(full_path)
-                    except (KeyError, TypeError):
-                        log.warning(
-                            'Bad state return %s for file.directory state on %s',
-                            dir_result, dirname
-                        )
+                if dir_result.get('changes'):
+                    ret['changes']['updated ownership'] = True
+                try:
+                    if not dir_result['result']:
+                        enforce_failed.append(full_path)
+                except (KeyError, TypeError):
+                    log.warning(
+                        'Bad state return %s for file.directory state on %s',
+                        dir_result, dirname
+                    )
 
         for filename in enforce_files + enforce_links:
             full_path = os.path.join(name, filename)
@@ -1479,7 +1511,7 @@ def extracted(name,
         if not if_missing:
             # If is_missing was used, and both a) the archive had never been
             # extracted, and b) the path referred to by if_missing exists, then
-            # enforce_missing would contain paths of top_levle dirs/files that
+            # enforce_missing would contain paths of top_level dirs/files that
             # _would_ have been extracted. Since if_missing can be used as a
             # semaphore to conditionally extract, we don't want to make this a
             # case where the state fails, so we only fail the state if

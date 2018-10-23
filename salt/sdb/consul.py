@@ -13,6 +13,7 @@ be configured in either the minion or master configuration file. This profile
 requires very little. For example:
 
 .. code-block:: yaml
+
     myconsul:
       driver: consul
       host: 127.0.0.1
@@ -26,7 +27,7 @@ requires very little. For example:
 The ``driver`` refers to the Consul module, all other options are optional.
 For option details see: https://python-consul.readthedocs.io/en/latest/#consul
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 from salt.exceptions import CommandExecutionError
 

@@ -8,6 +8,7 @@
 }
 
 /var/log/salt/minion {
+	su root root
 	weekly
 	missingok
 	rotate 7
@@ -17,6 +18,15 @@
 
 /var/log/salt/key {
 	su salt salt
+	weekly
+	missingok
+	rotate 7
+	compress
+	notifempty
+}
+
+/var/log/salt/api {
+        su salt salt
 	weekly
 	missingok
 	rotate 7

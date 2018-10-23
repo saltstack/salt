@@ -26,9 +26,9 @@ type manor.
     salt 'exsi-proxy' esxi.cmd get_service_policy service_name='ssh'
 
 '''
-from __future__ import absolute_import
 
-# Import python libs
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import Salt libs
@@ -56,3 +56,7 @@ def cmd(command, *args, **kwargs):
     proxy_cmd = proxy_prefix + '.ch_config'
 
     return __proxy__[proxy_cmd](command, *args, **kwargs)
+
+
+def get_details():
+    return __proxy__['esxi.get_details']()

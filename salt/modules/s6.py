@@ -14,9 +14,9 @@ so it can be used to maintain services using the ``provider`` argument:
 
 Note that the ``enabled`` argument is not available with this provider.
 
-:codeauthor: :email:`Marek Skrobacki <skrobul@skrobul.com>`
+:codeauthor: Marek Skrobacki <skrobul@skrobul.com>
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import os

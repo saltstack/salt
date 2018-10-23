@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Jayesh Kariya <jayeshk@saltstack.com>`
+    :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -54,7 +54,8 @@ class ZncTestCase(TestCase, LoaderModuleMockMixin):
         Tests write the active configuration state to config file
         '''
         mock = MagicMock(return_value='SALT')
-        with patch.dict(znc.__salt__, {'ps.pkill': mock}):
+        with patch.dict(znc.__salt__, {'ps.pkill': mock}), \
+                patch.object(znc, 'signal', MagicMock()):
             self.assertEqual(znc.dumpconf(), 'SALT')
 
     # 'rehashconf' function tests: 1
@@ -64,7 +65,8 @@ class ZncTestCase(TestCase, LoaderModuleMockMixin):
         Tests rehash the active configuration state from config file
         '''
         mock = MagicMock(return_value='SALT')
-        with patch.dict(znc.__salt__, {'ps.pkill': mock}):
+        with patch.dict(znc.__salt__, {'ps.pkill': mock}), \
+                patch.object(znc, 'signal', MagicMock()):
             self.assertEqual(znc.rehashconf(), 'SALT')
 
     # 'version' function tests: 1

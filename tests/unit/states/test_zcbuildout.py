@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import os
 
 # Import Salt Testing libs
@@ -20,7 +20,7 @@ ROOT = os.path.join(FILES, 'file/base/buildout')
 
 
 @skipIf(salt.utils.path.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES) is None,
-        'The \'virtualenv\' packaged needs to be installed')
+        "The 'virtualenv' packaged needs to be installed")
 class BuildoutTestCase(Base):
 
     def setup_loader_modules(self):
@@ -64,14 +64,14 @@ class BuildoutTestCase(Base):
         ret = buildout.installed(b_dir,
                                  python=self.py_st,
                                  onlyif='/bin/false')
-        self.assertEqual(ret['comment'], '\nonlyif execution failed')
+        self.assertEqual(ret['comment'], '\nonlyif condition is false')
         self.assertEqual(ret['result'], True)
         self.assertTrue('/b' in ret['name'])
         b_dir = os.path.join(self.tdir, 'b')
         ret = buildout.installed(b_dir,
                                  python=self.py_st,
                                  unless='/bin/true')
-        self.assertEqual(ret['comment'], '\nunless execution succeeded')
+        self.assertEqual(ret['comment'], '\nunless condition is true')
         self.assertEqual(ret['result'], True)
         self.assertTrue('/b' in ret['name'])
         ret = buildout.installed(b_dir, python=self.py_st)

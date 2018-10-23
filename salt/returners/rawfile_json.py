@@ -18,13 +18,12 @@ to restrict the events that are written.
 '''
 
 # Import python libs
-from __future__ import absolute_import, print_function, with_statement
+from __future__ import absolute_import, print_function, with_statement, unicode_literals
 import logging
-import json
 
 import salt.returners
-import salt.utils
 import salt.utils.files
+import salt.utils.json
 
 log = logging.getLogger(__name__)
 
@@ -59,9 +58,10 @@ def returner(ret):
     opts = _get_options({})  # Pass in empty ret, since this is a list of events
     try:
         with salt.utils.files.flopen(opts['filename'], 'a') as logfile:
-            logfile.write(json.dumps(ret)+'\n')
-    except:
-        log.error('Could not write to rawdata_json file {0}'.format(opts['filename']))
+            salt.utils.json.dump(ret, logfile)
+            logfile.write(str('\n'))  # future lint: disable=blacklisted-function
+    except Exception:
+        log.error('Could not write to rawdata_json file %s', opts['filename'])
         raise
 
 
@@ -77,8 +77,8 @@ def event_return(events):
     try:
         with salt.utils.files.flopen(opts['filename'], 'a') as logfile:
             for event in events:
-                json.dump(event, logfile)
-                logfile.write('\n')
-    except:
-        log.error('Could not write to rawdata_json file {0}'.format(opts['filename']))
+                salt.utils.json.dump(event, logfile)
+                logfile.write(str('\n'))  # future lint: disable=blacklisted-function
+    except Exception:
+        log.error('Could not write to rawdata_json file %s', opts['filename'])
         raise

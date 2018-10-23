@@ -4,7 +4,7 @@ Module for managing container and VM images
 
 .. versionadded:: 2014.7.0
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import os
@@ -21,6 +21,7 @@ import salt.syspaths
 import salt.utils.kickstart
 import salt.utils.path
 import salt.utils.preseed
+import salt.utils.stringutils
 import salt.utils.validate.path
 import salt.utils.yast
 from salt.exceptions import SaltInvocationError
@@ -155,7 +156,7 @@ def bootstrap(
             try:
                 __salt__['file.mkdir'](root)
             except Exception as exc:
-                return {'Error': pprint.pformat(exc)}
+                return {'Error': salt.utils.stringutils.to_unicode(pprint.pformat(exc))}
     elif img_format == 'sparse':
         if not img_size:
             raise SaltInvocationError('An img_size must be specified for a sparse file')
@@ -170,7 +171,7 @@ def bootstrap(
         __salt__['cmd.run']('losetup {0} {1}'.format(loop1, root))
         loop2 = __salt__['cmd.run']('losetup -f')
         log.debug('Second loop device is {0}'.format(loop2))
-        start = str(2048 * 2048)
+        start = six.text_type(2048 * 2048)
         __salt__['cmd.run']('losetup -o {0} {1} {2}'.format(start, loop2, loop1))
         __salt__['mount.mount'](mount_dir, loop2)
 
@@ -234,7 +235,7 @@ def _mkpart(root, fs_format, fs_opts, mount_dir):
     log.debug('First loop device is {0}'.format(loop1))
     __salt__['cmd.run']('losetup {0} {1}'.format(loop1, root))
     part_info = __salt__['partition.list'](loop1)
-    start = str(2048 * 2048) + 'B'
+    start = six.text_type(2048 * 2048) + 'B'
     end = part_info['info']['size']
     __salt__['partition.mkpart'](loop1, 'primary', start=start, end=end)
     __salt__['partition.set'](loop1, '1', 'boot', 'on')
@@ -306,7 +307,7 @@ def _bootstrap_yum(
 
     root
         The root of the image to install to. Will be created as a directory if
-        if does not exist. (e.x.: /root/arch)
+        it does not exist. (e.x.: /root/arch)
 
     pkg_confs
         The location of the conf files to copy into the image, to point yum
@@ -374,7 +375,7 @@ def _bootstrap_deb(
 
     root
         The root of the image to install to. Will be created as a directory if
-        if does not exist. (e.x.: /root/wheezy)
+        it does not exist. (e.x.: /root/wheezy)
 
     arch
         Architecture of the target image. (e.x.: amd64)
@@ -472,7 +473,7 @@ def _bootstrap_pacman(
 
     root
         The root of the image to install to. Will be created as a directory if
-        if does not exist. (e.x.: /root/arch)
+        it does not exist. (e.x.: /root/arch)
 
     pkg_confs
         The location of the conf files to copy into the image, to point pacman
@@ -480,7 +481,7 @@ def _bootstrap_pacman(
 
     img_format
         The image format to be used. The ``dir`` type needs no special
-        treatment, but others need special treatement.
+        treatment, but others need special treatment.
 
     pkgs
         A list of packages to be installed on this image. For Arch Linux, this
@@ -623,7 +624,7 @@ def _tar(name, root, path=None, compress='bzip2'):
         try:
             __salt__['file.mkdir'](path)
         except Exception as exc:
-            return {'Error': pprint.pformat(exc)}
+            return {'Error': salt.utils.stringutils.to_unicode(pprint.pformat(exc))}
 
     compression, ext = _compress(compress)
 
@@ -650,7 +651,7 @@ def _untar(name, dest=None, path=None, compress='bz2'):
         try:
             __salt__['file.mkdir'](dest)
         except Exception as exc:
-            return {'Error': pprint.pformat(exc)}
+            return {'Error': salt.utils.stringutils.to_unicode(pprint.pformat(exc))}
 
     compression, ext = _compress(compress)
 

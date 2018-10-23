@@ -9,7 +9,7 @@
     allowing users to programmatically execute commands on a remote server using
     Salt VT.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging
@@ -94,7 +94,7 @@ class SSHConnection(object):
                 # Connecting to this server for the first time
                 # and need to accept key
                 if key_accept:
-                    log.info('Adding {0} to known_hosts'.format(host))
+                    log.info('Adding %s to known_hosts', host)
                     self.conn.sendline('yes')
                     continue
                 else:

@@ -39,13 +39,15 @@ Salt interface to LDAP commands
     to the same LDAP server. It's easy enough to override this behavior, but
     badness may ensue - you have been warned.
 '''
-from __future__ import absolute_import
 
-# Import python libs
-import time
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
+import time
 
-# Import salt libs
+# Import Salt libs
+import salt.utils.data
+from salt.ext import six
 from salt.exceptions import CommandExecutionError
 
 # Import third party libs
@@ -84,7 +86,7 @@ def _config(name, key=None, **kwargs):
         value = kwargs[name]
     else:
         value = __salt__['config.option']('ldap.{0}'.format(key))
-    return value
+    return salt.utils.data.decode(value, to_str=True)
 
 
 def _connect(**kwargs):
@@ -143,22 +145,20 @@ def search(filter,      # pylint: disable=C0103
     _ldap = _connect(**kwargs)
     start = time.time()
     log.debug(
-        'Running LDAP search with filter:{0}, dn:{1}, scope:{2}, '
-        'attrs:{3}'.format(
-            filter, dn, scope, attrs
-        )
+        'Running LDAP search with filter:%s, dn:%s, scope:%s, '
+        'attrs:%s', filter, dn, scope, attrs
     )
     results = _ldap.search_s(dn, int(scope), filter, attrs)
     elapsed = (time.time() - start)
     if elapsed < 0.200:
-        elapsed_h = str(round(elapsed * 1000, 1)) + 'ms'
+        elapsed_h = six.text_type(round(elapsed * 1000, 1)) + 'ms'
     else:
-        elapsed_h = str(round(elapsed, 2)) + 's'
+        elapsed_h = six.text_type(round(elapsed, 2)) + 's'
 
     ret = {
         'results': results,
         'count': len(results),
-        'time': {'human': elapsed_h, 'raw': str(round(elapsed, 5))},
+        'time': {'human': elapsed_h, 'raw': six.text_type(round(elapsed, 5))},
     }
     return ret
 

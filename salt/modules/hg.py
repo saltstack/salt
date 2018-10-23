@@ -4,12 +4,12 @@ Support for the Mercurial SCM
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import salt libs
 from salt.exceptions import CommandExecutionError
-import salt.utils
+import salt.utils.data
 import salt.utils.path
 
 log = logging.getLogger(__name__)
@@ -323,7 +323,7 @@ def status(cwd, opts=None, user=None):
             ret[t].append(f)
         return ret
 
-    if salt.utils.is_iter(cwd):
+    if salt.utils.data.is_iter(cwd):
         return dict((cwd, _status(cwd)) for cwd in cwd)
     else:
         return _status(cwd)

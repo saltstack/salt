@@ -5,17 +5,17 @@ Wrapper around uptime API
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
+
+# Import Salt libs
+from salt.exceptions import CommandExecutionError
 
 try:
     import requests
     ENABLED = True
 except ImportError:
     ENABLED = False
-
-
-from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
 
@@ -93,10 +93,9 @@ def _get_application_url():
     '''
     application_url = __salt__['pillar.get']('uptime:application_url')
     if application_url is None:
-        log.error('Could not load {0} pillar'.format('uptime:application_url'))
-        msg = '{0} pillar is required for authentication'
+        log.error('Could not load uptime:application_url pillar')
         raise CommandExecutionError(
-            msg.format('uptime:application_url')
+            'uptime:application_url pillar is required for authentication'
         )
     return application_url
 
@@ -128,6 +127,6 @@ def check_exists(name):
         salt '*' uptime.check_exists http://example.org
     '''
     if name in checks_list():
-        log.debug('[uptime] found {0} in checks'.format(name))
+        log.debug('[uptime] found %s in checks', name)
         return True
     return False

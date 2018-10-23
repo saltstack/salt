@@ -47,6 +47,7 @@ Available in
 - State Modules
 - Returners
 - Runners
+- SDB Modules
 
 ``__salt__`` contains the execution module functions. This allows for all
 functions to be called as they have been set up by the salt loader.
@@ -89,6 +90,8 @@ Available in
 - Returners
 
 The ``__pillar__`` dictionary contains the pillar for the respective minion.
+
+.. _dunder-context:
 
 __context__
 -----------

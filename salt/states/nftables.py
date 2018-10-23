@@ -101,7 +101,7 @@ at some point be deprecated in favor of a more generic `firewall` state.
 
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import salt libs
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS

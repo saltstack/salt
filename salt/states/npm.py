@@ -20,10 +20,11 @@ for the package which provides npm (simply ``npm`` in most cases). Example:
 '''
 
 # Import salt libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
 # Import 3rd-party libs
+import re
 from salt.ext import six
 
 
@@ -138,8 +139,14 @@ def installed(name,
                     pass
         return False
     for pkg in pkg_list:
-        pkg_name, _, pkg_ver = pkg.partition('@')
-        pkg_name = pkg_name.strip()
+        # Valid:
+        #
+        # @google-cloud/bigquery@^0.9.6
+        # @foobar
+        # buffer-equal-constant-time@1.0.1
+        # coffee-script
+        matches = re.search(r'^(@?[^@\s]+)(?:@(\S+))?', pkg)
+        pkg_name, pkg_ver = matches.group(1), matches.group(2) or None
 
         if force_reinstall is True:
             pkgs_to_install.append(pkg)
@@ -275,9 +282,13 @@ def bootstrap(name, user=None, silent=True):
     if __opts__['test']:
         try:
             call = __salt__['npm.install'](dir=name, runas=user, pkg=None, silent=silent, dry_run=True)
-            ret['result'] = None
-            ret['changes'] = {'old': [], 'new': call}
-            ret['comment'] = '{0} is set to be bootstrapped'.format(name)
+            if call:
+                ret['result'] = None
+                ret['changes'] = {'old': [], 'new': call}
+                ret['comment'] = '{0} is set to be bootstrapped'.format(name)
+            else:
+                ret['result'] = True
+                ret['comment'] = '{0} is already bootstrapped'.format(name)
         except (CommandNotFoundError, CommandExecutionError) as err:
             ret['result'] = False
             ret['comment'] = 'Error Bootstrapping \'{0}\': {1}'.format(name, err)

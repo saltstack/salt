@@ -141,7 +141,7 @@ If the master seems to be unresponsive, a SIGUSR1 can be passed to the
 salt-master threads to display what piece of code is executing. This debug
 information can be invaluable in tracking down bugs.
 
-To pass a SIGUSR1 to the master, first make sure the minion is running in the
+To pass a SIGUSR1 to the master, first make sure the master is running in the
 foreground. Stop the service if it is running as a daemon, and start it in the
 foreground like so:
 

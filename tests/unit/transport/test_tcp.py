@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Thomas Jackson <jacksontj.89@gmail.com>`
+    :codeauthor: Thomas Jackson <jacksontj.89@gmail.com>
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import threading
 
 import tornado.gen

@@ -2,7 +2,7 @@
 '''
     Detect disks
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import glob
@@ -116,7 +116,7 @@ def _freebsd_geom():
 
         ret['disks'][name] = tmp
         if tmp.get(_geomconsts.ROTATIONRATE) == 0:
-            log.trace('Device {0} reports itself as an SSD'.format(device))
+            log.trace('Device %s reports itself as an SSD', device)
             ret['SSDs'].append(name)
 
     for device in devices:
@@ -132,18 +132,23 @@ def _linux_disks():
     ret = {'disks': [], 'SSDs': []}
 
     for entry in glob.glob('/sys/block/*/queue/rotational'):
-        with salt.utils.files.fopen(entry) as entry_fp:
-            device = entry.split('/')[3]
-            flag = entry_fp.read(1)
-            if flag == '0':
-                ret['SSDs'].append(device)
-                log.trace('Device {0} reports itself as an SSD'.format(device))
-            elif flag == '1':
-                ret['disks'].append(device)
-                log.trace('Device {0} reports itself as an HDD'.format(device))
-            else:
-                log.trace('Unable to identify device {0} as an SSD or HDD.'
-                          ' It does not report 0 or 1'.format(device))
+        try:
+            with salt.utils.files.fopen(entry) as entry_fp:
+                device = entry.split('/')[3]
+                flag = entry_fp.read(1)
+                if flag == '0':
+                    ret['SSDs'].append(device)
+                    log.trace('Device %s reports itself as an SSD', device)
+                elif flag == '1':
+                    ret['disks'].append(device)
+                    log.trace('Device %s reports itself as an HDD', device)
+                else:
+                    log.trace(
+                        'Unable to identify device %s as an SSD or HDD. It does '
+                        'not report 0 or 1', device
+                    )
+        except IOError:
+            pass
     return ret
 
 
@@ -171,13 +176,15 @@ def _windows_disks():
             device = r'\\.\PhysicalDrive{0}'.format(info[0])
             mediatype = info[1]
             if mediatype == '3':
-                log.trace('Device {0} reports itself as an HDD'.format(device))
+                log.trace('Device %s reports itself as an HDD', device)
                 ret['disks'].append(device)
             elif mediatype == '4':
-                log.trace('Device {0} reports itself as an SSD'.format(device))
+                log.trace('Device %s reports itself as an SSD', device)
                 ret['SSDs'].append(device)
             else:
-                log.trace('Unable to identify device {0} as an SSD or HDD.'
-                          'It does not report 3 or 4'.format(device))
+                log.trace(
+                    'Unable to identify device %s as an SSD or HDD. It does '
+                    'not report 3 or 4', device
+                )
 
     return ret

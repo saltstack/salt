@@ -2,14 +2,14 @@
 
 # Import python libs
 from __future__ import absolute_import
-import json
 
 # Import salt libs
-import salt.utils
+import salt.utils.json
 import salt.utils.stringutils
 
 # Import test support libs
 import tests.support.cherrypy_testclasses as cptc
+from tests.support.helpers import flaky
 
 # Import 3rd-party libs
 from salt.ext.six.moves.urllib.parse import urlencode  # pylint: disable=no-name-in-module,import-error
@@ -184,7 +184,7 @@ class TestArgKwarg(cptc.BaseRestCherryPyTest):
         are supported by runners.
         '''
         cmd = dict(self.low)
-        body = json.dumps(cmd)
+        body = salt.utils.json.dumps(cmd)
 
         request, response = self.request(
             '/',
@@ -196,7 +196,7 @@ class TestArgKwarg(cptc.BaseRestCherryPyTest):
                 'Accept': 'application/json',
             }
         )
-        resp = json.loads(salt.utils.stringutils.to_str(response.body[0]))
+        resp = salt.utils.json.loads(salt.utils.stringutils.to_str(response.body[0]))
         self.assertEqual(resp['return'][0]['args'], [1234])
         self.assertEqual(resp['return'][0]['kwargs'],
                          {'ext_source': 'redis'})
@@ -242,6 +242,7 @@ class TestJobs(cptc.BaseRestCherryPyTest):
         })
         self.assertEqual(response.status, '200 OK')
 
+    @flaky
     def test_all_jobs(self):
         '''
         test query to /jobs returns job data
@@ -254,6 +255,6 @@ class TestJobs(cptc.BaseRestCherryPyTest):
                 'X-Auth-Token': self._token(),
         })
 
-        resp = json.loads(salt.utils.stringutils.to_str(response.body[0]))
+        resp = salt.utils.json.loads(salt.utils.stringutils.to_str(response.body[0]))
         self.assertIn('test.ping', str(resp['return']))
         self.assertEqual(response.status, '200 OK')

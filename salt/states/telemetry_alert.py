@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
-.. versionadded:: 2016.3.0.
-
 Manage Telemetry alert configurations
 =====================================
+
+.. versionadded:: 2016.3.0
 
 Create, Update and destroy Mongo Telemetry alert configurations.
 
@@ -25,8 +25,11 @@ Example:
                escalate_to: "example@pagerduty.com"
             - name: "**MANAGED BY ORCA DO NOT EDIT BY HAND** manages alarm on testMetric"
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 from salt._compat import string_types
+
+# import 3rd party libs
+from salt.ext import six
 
 
 def __virtual__():
@@ -98,7 +101,7 @@ def present(name, deployment_id, metric_name, alert_config, api_key=None, profil
 
             if v == v2:
                 continue
-            if isinstance(v, string_types) and str(v) == str(v2):
+            if isinstance(v, string_types) and six.text_type(v) == six.text_type(v2):
                 continue
             if isinstance(v, float) and v == float(v2):
                 continue

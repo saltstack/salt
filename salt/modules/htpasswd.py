@@ -7,9 +7,9 @@ Support for htpasswd command. Requires the apache2-utils package for Debian-base
 The functions here will load inside the webutil module. This allows other
 functions that don't use htpasswd to use the webutil module name.
 '''
-from __future__ import absolute_import
 
-# Import python libs
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import logging
 
@@ -143,7 +143,6 @@ def verify(pwfile, user, password, opts='', runas=None):
 
     cmd = ['htpasswd', '-bv{0}'.format(opts), pwfile, user, password]
     ret = __salt__['cmd.run_all'](cmd, runas=runas, python_shell=False)
-    log.debug('Result of verifying htpasswd for user {0}: {1}'.format(
-        user, ret))
+    log.debug('Result of verifying htpasswd for user %s: %s', user, ret)
 
     return ret['retcode'] == 0

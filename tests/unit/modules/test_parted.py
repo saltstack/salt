@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Dave Rawks (dave@pandora.com)`
+    :codeauthor: Dave Rawks (dave@pandora.com)
 
 
     tests.unit.modules.parted_test
@@ -8,7 +8,7 @@
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -207,17 +207,17 @@ class PartedTestCase(TestCase, LoaderModuleMockMixin):
                         'end': '150MB',
                         'number': '1',
                         'start': '17.4kB',
-                        'file system': '',
+                        'file system': 'ext3',
                         'flags': 'boot',
-                        'type': 'ext3',
+                        'name': '',
                         'size': '150MB'},
                     '2': {
                         'end': '4000GB',
                         'number': '2',
                         'start': '3921GB',
-                        'file system': '',
+                        'file system': 'linux-swap(v1)',
                         'flags': '',
-                        'type': 'linux-swap(v1)',
+                        'name': '',
                         'size': '79.3GB'
                     }
                 }
@@ -245,17 +245,17 @@ class PartedTestCase(TestCase, LoaderModuleMockMixin):
                         'end': '150MB',
                         'number': '1',
                         'start': '17.4kB',
-                        'file system': '',
+                        'file system': 'ext3',
                         'flags': 'boot',
-                        'type': 'ext3',
+                        'name': '',
                         'size': '150MB'},
                     '2': {
                         'end': '4000GB',
                         'number': '2',
                         'start': '3921GB',
-                        'file system': '',
+                        'file system': 'linux-swap(v1)',
                         'flags': '',
-                        'type': 'linux-swap(v1)',
+                        'name': '',
                         'size': '79.3GB'
                     }
                 }
@@ -282,17 +282,17 @@ class PartedTestCase(TestCase, LoaderModuleMockMixin):
                         'end': '150MB',
                         'number': '1',
                         'start': '17.4kB',
-                        'file system': '',
+                        'file system': 'ext3',
                         'flags': 'boot',
-                        'type': 'ext3',
+                        'name': '',
                         'size': '150MB'},
                     '2': {
                         'end': '4000GB',
                         'number': '2',
                         'start': '3921GB',
-                        'file system': '',
+                        'file system': 'linux-swap(v1)',
                         'flags': '',
-                        'type': 'linux-swap(v1)',
+                        'name': '',
                         'size': '79.3GB'
                     }
                 }
@@ -319,17 +319,17 @@ class PartedTestCase(TestCase, LoaderModuleMockMixin):
                         'end': '150MB',
                         'number': '1',
                         'start': '17.4kB',
-                        'file system': '',
+                        'file system': 'ext3',
                         'flags': 'boot',
-                        'type': 'ext3',
+                        'name': '',
                         'size': '150MB'},
                     '2': {
                         'end': '4000GB',
                         'number': '2',
                         'start': '3921GB',
-                        'file system': '',
+                        'file system': 'linux-swap(v1)',
                         'flags': '',
-                        'type': 'linux-swap(v1)',
+                        'name': '',
                         'size': '79.3GB'
                     }
                 }

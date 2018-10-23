@@ -6,6 +6,12 @@ Management of Zabbix mediatypes.
 
 '''
 
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
+
+# Import Salt libs
+from salt.ext import six
+
 
 def __virtual__():
     '''
@@ -62,7 +68,7 @@ def present(name, mediatype, **kwargs):
         if isinstance(kwargs['exec_params'], list):
             kwargs['exec_params'] = '\n'.join(kwargs['exec_params'])+'\n'
         else:
-            kwargs['exec_params'] = str(kwargs['exec_params'])+'\n'
+            kwargs['exec_params'] = six.text_type(kwargs['exec_params'])+'\n'
 
     mediatype_exists = __salt__['zabbix.mediatype_get'](name, **connection_args)
 
@@ -302,13 +308,13 @@ def present(name, mediatype, **kwargs):
             ret['changes'] = changes_mediatype_created
         else:
             ret['result'] = False
-            ret['comment'] = comment_mediatype_notcreated + str(mediatype_create['error'])
+            ret['comment'] = comment_mediatype_notcreated + six.text_type(mediatype_create['error'])
 
     # error detected
     if error:
         ret['changes'] = {}
         ret['result'] = False
-        ret['comment'] = str(error)
+        ret['comment'] = six.text_type(error)
 
     return ret
 
@@ -375,6 +381,6 @@ def absent(name, **kwargs):
             ret['changes'] = changes_mediatype_deleted
         else:
             ret['result'] = False
-            ret['comment'] = comment_mediatype_notdeleted + str(mediatype_delete['error'])
+            ret['comment'] = comment_mediatype_notdeleted + six.text_type(mediatype_delete['error'])
 
     return ret

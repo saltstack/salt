@@ -20,11 +20,13 @@ Its output may be stored in a file or in a grain.
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os.path
 
 # Import Salt libs
+from salt.ext import six
 import salt.utils.files
+import salt.utils.stringutils
 
 
 def __virtual__():
@@ -103,7 +105,7 @@ def generate_ticket(name, output=None, grain=None, key=None, overwrite=True):
     # Executing the command.
     ticket = __salt__['icinga2.generate_ticket'](name).strip()
     if ticket:
-        ret['comment'] = str(ticket)
+        ret['comment'] = six.text_type(ticket)
 
     if output == 'grain':
         if grain and not key:
@@ -120,7 +122,7 @@ def generate_ticket(name, output=None, grain=None, key=None, overwrite=True):
     elif output:
         ret['changes']['ticket'] = "Executed. Output into {0}".format(output)
         with salt.utils.files.fopen(output, 'w') as output_file:
-            output_file.write(str(ticket))
+            output_file.write(salt.utils.stringutils.to_str(ticket))
     else:
         ret['changes']['ticket'] = "Executed"
 

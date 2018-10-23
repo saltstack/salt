@@ -1,0 +1,102 @@
+pipeline {
+    agent { label 'pr-lint-slave' }
+    options {
+        timestamps()
+        ansiColor('xterm')
+        timeout(time: 1, unit: 'HOURS') 
+    }
+    environment {
+        PYENV_ROOT = "/usr/local/pyenv"
+        PATH = "$PYENV_ROOT/bin:$PATH"
+        PY_COLORS = 1
+    }
+    stages {
+        stage('github-pending') {
+            steps {
+                githubNotify credentialsId: 'test-jenkins-credentials',
+                    description: 'Testing lint...',
+                    status: 'PENDING',
+                    context: "jenkins/pr/lint"
+            }
+        }
+        stage('setup') {
+            steps {
+                sh '''
+                eval "$(pyenv init -)"
+                pyenv --version
+                pyenv install --skip-existing 2.7.14
+                pyenv local 2.7.14
+                pyenv shell 2.7.14
+                python --version
+                pip install tox
+                '''
+            }
+        }
+        stage('linting') {
+            failFast false
+            parallel {
+                stage('salt linting') {
+                    steps {
+                        sh '''
+                        eval "$(pyenv init - --no-rehash)"
+                        _FILES="$(find salt/ -name "*.py" -exec git diff --name-only "origin/$CHANGE_TARGET" "origin/$BRANCH_NAME" {} +)"
+                        _FILES="$_FILES $(git diff --name-only "origin/$CHANGE_TARGET" "origin/$BRANCH_NAME" setup.py)"
+                        if [[ -z ${_FILES} ]]; then
+                            echo "No pylint run, no changes found in the files"
+                            echo "empty" pylint-reports.xml
+                        else
+                            tox -e pylint-salt ${_FILES} | tee pylint-report.xml
+                        fi
+                        '''
+                        archiveArtifacts artifacts: 'pylint-report.xml'
+                    }
+                }
+                stage('test linting') {
+                    steps {
+                        sh '''
+                        eval "$(pyenv init - --no-rehash)"
+                        _FILES="$(find tests/ -name "*.py" -exec git diff --name-only "origin/$CHANGE_TARGET" "origin/$BRANCH_NAME" setup.py {} +)"
+                        if [[ -z ${_FILES} ]]; then
+                            echo "No pylint run, no changes found in the files"
+                            touch pylint-report-tests.xml
+                        else
+                            tox -e pylint-tests ${_FILES} | tee pylint-report-tests.xml
+                        fi
+                        '''
+                        archiveArtifacts artifacts: 'pylint-report-tests.xml'
+                    }
+                }
+            }
+        }
+    }
+    post {
+        always {
+            step([$class: 'WarningsPublisher',
+                parserConfigurations: [[
+                    parserName: 'PyLint',
+                    pattern: 'pylint-report*.xml'
+                ]],
+                failedTotalAll: '0',
+                useDeltaValues: false,
+                canRunOnFailed: true,
+                usePreviousBuildAsReference: true
+            ])
+            cleanWs()
+        }
+        success {
+            githubNotify credentialsId: 'test-jenkins-credentials',
+                description: 'The lint job has passed',
+                status: 'SUCCESS',
+                context: "jenkins/pr/lint"
+        }
+        failure {
+            githubNotify credentialsId: 'test-jenkins-credentials',
+                description: 'The lint job has failed',
+                status: 'FAILURE',
+                context: "jenkins/pr/lint"
+            slackSend channel: "#jenkins-prod-pr", 
+                color: '#FF0000', 
+                message: "FAILED: PR-Job: '${env.JOB_NAME} [${env.BUILD_NUMBER}]' (${env.BUILD_URL})"
+        }
+    }
+}

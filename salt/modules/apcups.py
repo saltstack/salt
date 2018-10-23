@@ -2,13 +2,12 @@
 '''
 Module for apcupsd
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
 import logging
 
 # Import Salt libs
-import salt.utils
 import salt.utils.path
 import salt.utils.decorators as decorators
 

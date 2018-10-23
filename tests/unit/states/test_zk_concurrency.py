@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Jayesh Kariya <jayeshk@saltstack.com>`
+    :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -21,14 +21,14 @@ import salt.states.zk_concurrency as zk_concurrency
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class ZkConcurrencyTestCase(TestCase, LoaderModuleMockMixin):
     '''
-        Validate the zk_concurrency state
+    Validate the zk_concurrency state
     '''
     def setup_loader_modules(self):
         return {zk_concurrency: {}}
 
     def test_lock(self):
         '''
-            Test to block state execution until you are able to get the lock
+        Test to block state execution until you are able to get the lock
         '''
         ret = {'name': 'salt',
                'changes': {},
@@ -49,7 +49,7 @@ class ZkConcurrencyTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_unlock(self):
         '''
-            Test to remove lease from semaphore
+        Test to remove lease from semaphore
         '''
         ret = {'name': 'salt',
                'changes': {},
@@ -72,7 +72,7 @@ class ZkConcurrencyTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_min_party(self):
         '''
-            Test to ensure min party of nodes and the blocking behavior
+        Test to ensure min party of nodes and the blocking behavior
         '''
         ret = {'name': 'salt',
                'changes': {},

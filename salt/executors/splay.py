@@ -3,9 +3,11 @@
 Splay function calls across targeted minions
 '''
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import time
 import logging
+
+import salt.utils.stringutils
 
 log = logging.getLogger(__name__)
 
@@ -28,7 +30,7 @@ def _get_hash():
     bitmask = 0xffffffff
     h = 0
 
-    for i in bytearray(__grains__['id']):
+    for i in bytearray(salt.utils.stringutils.to_bytes(__grains__['id'])):
         h = (h + i) & bitmask
         h = (h + (h << 10)) & bitmask
         h = (h ^ (h >> 6)) & bitmask
@@ -76,7 +78,7 @@ def execute(opts, data, func, args, kwargs):
         raise ValueError('splaytime must be a positive integer')
     fun_name = data.get('fun')
     my_delay = _calc_splay(splaytime)
-    log.debug("Splay is sleeping {0} secs on {1}".format(my_delay, fun_name))
+    log.debug("Splay is sleeping %s secs on %s", my_delay, fun_name)
 
     time.sleep(my_delay)
     return None

@@ -15,7 +15,7 @@ be in the :conf_master:`fileserver_backend` list to enable this backend.
 Fileserver environments are defined using the :conf_master:`file_roots`
 configuration option.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import os
@@ -24,11 +24,13 @@ import logging
 
 # Import salt libs
 import salt.fileserver
-import salt.utils  # Can be removed once is_bin_file and get_hash are moved
 import salt.utils.event
 import salt.utils.files
 import salt.utils.gzip_util
+import salt.utils.hashutils
 import salt.utils.path
+import salt.utils.platform
+import salt.utils.stringutils
 import salt.utils.versions
 from salt.ext import six
 
@@ -104,7 +106,7 @@ def envs():
     '''
     Return the file server environments
     '''
-    return list(__opts__['file_roots'].keys())
+    return sorted(__opts__['file_roots'])
 
 
 def serve_file(load, fnd):
@@ -127,8 +129,6 @@ def serve_file(load, fnd):
     with salt.utils.files.fopen(fpath, 'rb') as fp_:
         fp_.seek(load['loc'])
         data = fp_.read(__opts__['file_buffer_size'])
-        if data and six.PY3 and not salt.utils.is_bin_file(fpath):
-            data = data.decode(__salt_system_encoding__)
         if gzip and data:
             data = salt.utils.gzip_util.compress(data, gzip)
             ret['gzip'] = gzip
@@ -142,14 +142,14 @@ def update():
     '''
     try:
         salt.fileserver.reap_fileserver_cache_dir(
-            os.path.join(__opts__['cachedir'], 'roots/hash'),
+            os.path.join(__opts__['cachedir'], 'roots', 'hash'),
             find_file
         )
     except (IOError, OSError):
         # Hash file won't exist if no files have yet been served up
         pass
 
-    mtime_map_path = os.path.join(__opts__['cachedir'], 'roots/mtime_map')
+    mtime_map_path = os.path.join(__opts__['cachedir'], 'roots', 'mtime_map')
     # data to send on event
     data = {'changed': False,
             'files': {'changed': []},
@@ -161,17 +161,20 @@ def update():
     old_mtime_map = {}
     # if you have an old map, load that
     if os.path.exists(mtime_map_path):
-        with salt.utils.files.fopen(mtime_map_path, 'r') as fp_:
+        with salt.utils.files.fopen(mtime_map_path, 'rb') as fp_:
             for line in fp_:
+                line = salt.utils.stringutils.to_unicode(line)
                 try:
                     file_path, mtime = line.replace('\n', '').split(':', 1)
                     old_mtime_map[file_path] = mtime
-                    if mtime != str(new_mtime_map.get(file_path, mtime)):
+                    if mtime != new_mtime_map.get(file_path, mtime):
                         data['files']['changed'].append(file_path)
                 except ValueError:
                     # Document the invalid entry in the log
-                    log.warning('Skipped invalid cache mtime entry in {0}: {1}'
-                                .format(mtime_map_path, line))
+                    log.warning(
+                        'Skipped invalid cache mtime entry in %s: %s',
+                        mtime_map_path, line
+                    )
 
     # compare the maps, set changed to the return value
     data['changed'] = salt.fileserver.diff_mtime_map(old_mtime_map, new_mtime_map)
@@ -186,10 +189,13 @@ def update():
     mtime_map_path_dir = os.path.dirname(mtime_map_path)
     if not os.path.exists(mtime_map_path_dir):
         os.makedirs(mtime_map_path_dir)
-    with salt.utils.files.fopen(mtime_map_path, 'w') as fp_:
+    with salt.utils.files.fopen(mtime_map_path, 'wb') as fp_:
         for file_path, mtime in six.iteritems(new_mtime_map):
-            fp_.write('{file_path}:{mtime}\n'.format(file_path=file_path,
-                                                     mtime=mtime))
+            fp_.write(
+                salt.utils.stringutils.to_bytes(
+                    '{0}:{1}\n'.format(file_path, mtime)
+                )
+            )
 
     if __opts__.get('fileserver_events', False):
         # if there is a change, fire an event
@@ -226,16 +232,17 @@ def file_hash(load, fnd):
     # check if the hash is cached
     # cache file's contents should be "hash:mtime"
     cache_path = os.path.join(__opts__['cachedir'],
-                              'roots/hash',
+                              'roots',
+                              'hash',
                               load['saltenv'],
-                              u'{0}.hash.{1}'.format(fnd['rel'],
+                              '{0}.hash.{1}'.format(fnd['rel'],
                               __opts__['hash_type']))
     # if we have a cache, serve that if the mtime hasn't changed
     if os.path.exists(cache_path):
         try:
-            with salt.utils.files.fopen(cache_path, 'r') as fp_:
+            with salt.utils.files.fopen(cache_path, 'rb') as fp_:
                 try:
-                    hsum, mtime = fp_.read().split(':')
+                    hsum, mtime = salt.utils.stringutils.to_unicode(fp_.read()).split(':')
                 except ValueError:
                     log.debug('Fileserver attempted to read incomplete cache file. Retrying.')
                     # Delete the file since its incomplete (either corrupted or incomplete)
@@ -244,7 +251,7 @@ def file_hash(load, fnd):
                     except OSError:
                         pass
                     return file_hash(load, fnd)
-                if os.path.getmtime(path) == mtime:
+                if str(os.path.getmtime(path)) == mtime:
                     # check if mtime changed
                     ret['hsum'] = hsum
                     return ret
@@ -258,7 +265,7 @@ def file_hash(load, fnd):
             return file_hash(load, fnd)
 
     # if we don't have a cache entry-- lets make one
-    ret['hsum'] = salt.utils.get_hash(path, __opts__['hash_type'])
+    ret['hsum'] = salt.utils.hashutils.get_hash(path, __opts__['hash_type'])
     cache_dir = os.path.dirname(cache_path)
     # make cache directory if it doesn't exist
     if not os.path.exists(cache_dir):
@@ -294,7 +301,7 @@ def _file_lists(load, form):
         try:
             os.makedirs(list_cachedir)
         except os.error:
-            log.critical('Unable to make cachedir {0}'.format(list_cachedir))
+            log.critical('Unable to make cachedir %s', list_cachedir)
             return []
     list_cache = os.path.join(list_cachedir, '{0}.p'.format(load['saltenv']))
     w_lock = os.path.join(list_cachedir, '.{0}.w'.format(load['saltenv']))
@@ -351,6 +358,16 @@ def _file_lists(load, form):
                         'roots: %s symlink destination is %s',
                         abs_path, link_dest
                     )
+                    if salt.utils.platform.is_windows() \
+                            and link_dest.startswith('\\\\'):
+                        # Symlink points to a network path. Since you can't
+                        # join UNC and non-UNC paths, just assume the original
+                        # path.
+                        log.trace(
+                            'roots: %s is a UNC path, using %s instead',
+                            link_dest, abs_path
+                        )
+                        link_dest = abs_path
                     if link_dest.startswith('..'):
                         joined = os.path.join(abs_path, link_dest)
                     else:
@@ -374,7 +391,7 @@ def _file_lists(load, form):
                         ret['links'][rel_path] = link_dest
 
         for path in __opts__['file_roots'][load['saltenv']]:
-            for root, dirs, files in os.walk(
+            for root, dirs, files in salt.utils.path.os_walk(
                     path,
                     followlinks=__opts__['fileserver_followsymlinks']):
                 _add_to(ret['dirs'], path, root, dirs)

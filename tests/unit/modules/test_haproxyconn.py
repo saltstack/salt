@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Jayesh Kariya <jayeshk@saltstack.com>`
+    :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -16,42 +16,42 @@ import salt.modules.haproxyconn as haproxyconn
 
 
 class Mockcmds(object):
-    """
+    '''
     Mock of cmds
-    """
+    '''
     def __init__(self):
         self.backend = None
         self.server = None
         self.weight = None
 
     def listServers(self, backend):
-        """
+        '''
         Mock of listServers method
-        """
+        '''
         self.backend = backend
         return 'Name: server01 Status: UP Weight: 1 bIn: 22 bOut: 12\n' \
                'Name: server02 Status: MAINT Weight: 2 bIn: 0 bOut: 0'
 
     def enableServer(self, server, backend):
-        """
+        '''
         Mock of enableServer method
-        """
+        '''
         self.backend = backend
         self.server = server
         return 'server enabled'
 
     def disableServer(self, server, backend):
-        """
+        '''
         Mock of disableServer method
-        """
+        '''
         self.backend = backend
         self.server = server
         return 'server disabled'
 
     def getWeight(self, server, backend, weight=0):
-        """
+        '''
         Mock of getWeight method
-        """
+        '''
         self.backend = backend
         self.server = server
         self.weight = weight
@@ -59,42 +59,42 @@ class Mockcmds(object):
 
     @staticmethod
     def showFrontends():
-        """
+        '''
         Mock of showFrontends method
-        """
+        '''
         return 'frontend-alpha\n' \
                'frontend-beta\n' \
                'frontend-gamma'
 
     @staticmethod
     def showBackends():
-        """
+        '''
         Mock of showBackends method
-        """
+        '''
         return 'backend-alpha\n' \
                'backend-beta\n' \
                'backend-gamma'
 
 
 class Mockhaproxy(object):
-    """
+    '''
     Mock of haproxy
-    """
+    '''
     def __init__(self):
         self.cmds = Mockcmds()
 
 
 class MockHaConn(object):
-    """
+    '''
     Mock of HaConn
-    """
+    '''
     def __init__(self, socket=None):
         self.ha_cmd = None
 
     def sendCmd(self, ha_cmd, objectify=False):
-        """
+        '''
         Mock of sendCmd method
-        """
+        '''
         self.ha_cmd = ha_cmd
         self.objectify = objectify
         return ha_cmd

@@ -4,7 +4,7 @@ Return config information
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import copy
 import re
 import os
@@ -12,7 +12,9 @@ import logging
 
 # Import salt libs
 import salt.config
-import salt.utils
+import salt.utils.data
+import salt.utils.dictupdate
+import salt.utils.files
 import salt.utils.platform
 try:
     # Gated for salt-ssh (salt.utils.cloud imports msgpack)
@@ -40,7 +42,6 @@ __proxyenabled__ = ['*']
 
 # Set up the default values for all systems
 DEFAULTS = {'mongo.db': 'salt',
-            'mongo.host': 'salt',
             'mongo.password': '',
             'mongo.port': 27017,
             'mongo.user': '',
@@ -74,8 +75,8 @@ DEFAULTS = {'mongo.db': 'salt',
             'ldap.bindpw': '',
             'hosts.file': _HOSTS_FILE,
             'aliases.file': '/etc/aliases',
-            'virt.images': os.path.join(syspaths.SRV_ROOT_DIR, 'salt-images'),
-            'virt.tunnel': False,
+            'virt': {'tunnel': False,
+                     'images': os.path.join(syspaths.SRV_ROOT_DIR, 'salt-images')},
             }
 
 
@@ -107,7 +108,7 @@ def manage_mode(mode):
     # config.manage_mode should no longer be invoked from the __salt__ dunder
     # in Salt code, this function is only being left here for backwards
     # compatibility.
-    return salt.utils.normalize_mode(mode)
+    return salt.utils.files.normalize_mode(mode)
 
 
 def valid_fileproto(uri):
@@ -212,7 +213,8 @@ def merge(value,
     return ret
 
 
-def get(key, default='', delimiter=':', merge=None):
+def get(key, default='', delimiter=':', merge=None, omit_opts=False,
+        omit_pillar=False, omit_master=False, omit_grains=False):
     '''
     .. versionadded: 0.14.0
 
@@ -352,31 +354,48 @@ def get(key, default='', delimiter=':', merge=None):
         salt '*' config.get lxc.container_profile:centos merge=recurse
     '''
     if merge is None:
-        ret = salt.utils.traverse_dict_and_list(__opts__,
-                                                key,
-                                                '_|-',
-                                                delimiter=delimiter)
-        if ret != '_|-':
-            return sdb.sdb_get(ret, __opts__)
+        if not omit_opts:
+            ret = salt.utils.data.traverse_dict_and_list(
+                __opts__,
+                key,
+                '_|-',
+                delimiter=delimiter)
+            if ret != '_|-':
+                return sdb.sdb_get(ret, __opts__)
 
-        ret = salt.utils.traverse_dict_and_list(__grains__,
-                                                key,
-                                                '_|-',
-                                                delimiter)
-        if ret != '_|-':
-            return sdb.sdb_get(ret, __opts__)
+        if not omit_grains:
+            ret = salt.utils.data.traverse_dict_and_list(
+                __grains__,
+                key,
+                '_|-',
+                delimiter)
+            if ret != '_|-':
+                return sdb.sdb_get(ret, __opts__)
 
-        ret = salt.utils.traverse_dict_and_list(__pillar__,
-                                                key,
-                                                '_|-',
-                                                delimiter=delimiter)
-        if ret != '_|-':
-            return sdb.sdb_get(ret, __opts__)
+        if not omit_pillar:
+            ret = salt.utils.data.traverse_dict_and_list(
+                __pillar__,
+                key,
+                '_|-',
+                delimiter=delimiter)
+            if ret != '_|-':
+                return sdb.sdb_get(ret, __opts__)
 
-        ret = salt.utils.traverse_dict_and_list(__pillar__.get('master', {}),
-                                                key,
-                                                '_|-',
-                                                delimiter=delimiter)
+        if not omit_master:
+            ret = salt.utils.data.traverse_dict_and_list(
+                __pillar__.get('master', {}),
+                key,
+                '_|-',
+                delimiter=delimiter)
+            if ret != '_|-':
+                return sdb.sdb_get(ret, __opts__)
+
+        ret = salt.utils.data.traverse_dict_and_list(
+            DEFAULTS,
+            key,
+            '_|-',
+            delimiter=delimiter)
+        log.debug("key: %s, ret: %s", key, ret)
         if ret != '_|-':
             return sdb.sdb_get(ret, __opts__)
     else:
@@ -387,14 +406,16 @@ def get(key, default='', delimiter=':', merge=None):
 
         merge_lists = salt.config.master_config('/etc/salt/master').get('pillar_merge_lists')
 
-        data = copy.copy(__pillar__.get('master', {}))
+        data = copy.copy(DEFAULTS)
+        data = salt.utils.dictupdate.merge(data, __pillar__.get('master', {}), strategy=merge, merge_lists=merge_lists)
         data = salt.utils.dictupdate.merge(data, __pillar__, strategy=merge, merge_lists=merge_lists)
         data = salt.utils.dictupdate.merge(data, __grains__, strategy=merge, merge_lists=merge_lists)
         data = salt.utils.dictupdate.merge(data, __opts__, strategy=merge, merge_lists=merge_lists)
-        ret = salt.utils.traverse_dict_and_list(data,
-                                                key,
-                                                '_|-',
-                                                delimiter=delimiter)
+        ret = salt.utils.data.traverse_dict_and_list(
+            data,
+            key,
+            '_|-',
+            delimiter=delimiter)
         if ret != '_|-':
             return sdb.sdb_get(ret, __opts__)
 
@@ -440,3 +461,17 @@ def gather_bootstrap_script(bootstrap=None):
     ret = salt.utils.cloud.update_bootstrap(__opts__, url=bootstrap)
     if 'Success' in ret and len(ret['Success']['Files updated']) > 0:
         return ret['Success']['Files updated'][0]
+
+
+def items():
+    '''
+    Return the complete config from the currently running minion process.
+    This includes defaults for values not set in the config file.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' config.items
+    '''
+    return __opts__

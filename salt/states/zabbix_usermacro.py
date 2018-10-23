@@ -5,6 +5,12 @@ Management of Zabbix usermacros.
 
 '''
 
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
+
+# Import Salt libs
+from salt.ext import six
+
 
 def __virtual__():
     '''
@@ -69,7 +75,7 @@ def present(name, value, hostid=None, **kwargs):
         if isinstance(kwargs['exec_params'], list):
             kwargs['exec_params'] = '\n'.join(kwargs['exec_params'])+'\n'
         else:
-            kwargs['exec_params'] = str(kwargs['exec_params'])+'\n'
+            kwargs['exec_params'] = six.text_type(kwargs['exec_params'])+'\n'
     if hostid:
         usermacro_exists = __salt__['zabbix.usermacro_get'](name, hostids=hostid, **connection_args)
     else:
@@ -83,7 +89,7 @@ def present(name, value, hostid=None, **kwargs):
             usermacroid = int(usermacroobj['globalmacroid'])
         update_value = False
 
-        if str(value) != usermacroobj['value']:
+        if six.text_type(value) != usermacroobj['value']:
             update_value = True
 
     # Dry run, test=true mode
@@ -135,13 +141,13 @@ def present(name, value, hostid=None, **kwargs):
             ret['changes'] = changes_usermacro_created
         else:
             ret['result'] = False
-            ret['comment'] = comment_usermacro_notcreated + str(usermacro_create['error'])
+            ret['comment'] = comment_usermacro_notcreated + six.text_type(usermacro_create['error'])
 
     # error detected
     if error:
         ret['changes'] = {}
         ret['result'] = False
-        ret['comment'] = str(error)
+        ret['comment'] = six.text_type(error)
 
     return ret
 
@@ -226,6 +232,6 @@ def absent(name, hostid=None, **kwargs):
             ret['changes'] = changes_usermacro_deleted
         else:
             ret['result'] = False
-            ret['comment'] = comment_usermacro_notdeleted + str(usermacro_delete['error'])
+            ret['comment'] = comment_usermacro_notdeleted + six.text_type(usermacro_delete['error'])
 
     return ret

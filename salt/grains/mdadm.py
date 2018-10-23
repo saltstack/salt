@@ -2,7 +2,7 @@
 '''
 Detect MDADM RAIDs
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging
@@ -21,6 +21,7 @@ def mdadm():
     try:
         with salt.utils.files.fopen('/proc/mdstat', 'r') as mdstat:
             for line in mdstat:
+                line = salt.utils.stringutils.to_unicode(line)
                 if line.startswith('Personalities : '):
                     continue
                 if line.startswith('unused devices:'):
@@ -32,8 +33,6 @@ def mdadm():
 
     devices = sorted(devices)
     if devices:
-        log.trace(
-            'mdadm devices detected: {0}'.format(', '.join(devices))
-        )
+        log.trace('mdadm devices detected: %s', ', '.join(devices))
 
     return {'mdadm': devices}

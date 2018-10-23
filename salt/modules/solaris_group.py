@@ -8,13 +8,13 @@ Manage groups on Solaris
     *'group.info' is not available*), see :ref:`here
     <module-provider-override>`.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import logging
 
 # Import salt libs
-import salt.utils
+import salt.utils.data
 
 
 log = logging.getLogger(__name__)
@@ -49,7 +49,7 @@ def add(name, gid=None, **kwargs):
 
         salt '*' group.add foo 3456
     '''
-    if salt.utils.is_true(kwargs.pop('system', False)):
+    if salt.utils.data.is_true(kwargs.pop('system', False)):
         log.warning('solaris_group module does not support the \'system\' '
                     'argument')
     if kwargs:

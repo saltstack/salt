@@ -17,4 +17,4 @@ For example, to install the develop version of salt:
 
 .. note::
 
-    SaltStack does offer commerical support for Solaris which includes packages.
+    SaltStack does offer commercial support for Solaris which includes packages.

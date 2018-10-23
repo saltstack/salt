@@ -4,7 +4,7 @@ Swift utility class
 ===================
 Author: Anthony Stanton <anthony.stanton@gmail.com>
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import logging
@@ -15,6 +15,7 @@ from errno import EEXIST
 
 # Import Salt libs
 import salt.utils.files
+from salt.ext import six
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -103,8 +104,8 @@ class SaltSwift(object):
         except Exception as exc:
             log.error('There was an error::')
             if hasattr(exc, 'code') and hasattr(exc, 'msg'):
-                log.error('    Code: {0}: {1}'.format(exc.code, exc.msg))
-            log.error('    Content: \n{0}'.format(getattr(exc, 'read', lambda: str(exc))()))
+                log.error('    Code: %s: %s', exc.code, exc.msg)
+            log.error('    Content: \n%s', getattr(exc, 'read', lambda: six.text_type(exc))())
             return False
 
     def get_container(self, cont):
@@ -117,8 +118,8 @@ class SaltSwift(object):
         except Exception as exc:
             log.error('There was an error::')
             if hasattr(exc, 'code') and hasattr(exc, 'msg'):
-                log.error('    Code: {0}: {1}'.format(exc.code, exc.msg))
-            log.error('    Content: \n{0}'.format(getattr(exc, 'read', lambda: str(exc))()))
+                log.error('    Code: %s: %s', exc.code, exc.msg)
+            log.error('    Content: \n%s', getattr(exc, 'read', lambda: six.text_type(exc))())
             return False
 
     def put_container(self, cont):
@@ -131,8 +132,8 @@ class SaltSwift(object):
         except Exception as exc:
             log.error('There was an error::')
             if hasattr(exc, 'code') and hasattr(exc, 'msg'):
-                log.error('    Code: {0}: {1}'.format(exc.code, exc.msg))
-            log.error('    Content: \n{0}'.format(getattr(exc, 'read', lambda: str(exc))()))
+                log.error('    Code: %s: %s', exc.code, exc.msg)
+            log.error('    Content: \n%s', getattr(exc, 'read', lambda: six.text_type(exc))())
             return False
 
     def delete_container(self, cont):
@@ -145,8 +146,8 @@ class SaltSwift(object):
         except Exception as exc:
             log.error('There was an error::')
             if hasattr(exc, 'code') and hasattr(exc, 'msg'):
-                log.error('    Code: {0}: {1}'.format(exc.code, exc.msg))
-            log.error('    Content: \n{0}'.format(getattr(exc, 'read', lambda: str(exc))()))
+                log.error('    Code: %s: %s', exc.code, exc.msg)
+            log.error('    Content: \n%s', getattr(exc, 'read', lambda: six.text_type(exc))())
             return False
 
     def post_container(self, cont, metadata=None):
@@ -191,8 +192,8 @@ class SaltSwift(object):
         except Exception as exc:
             log.error('There was an error::')
             if hasattr(exc, 'code') and hasattr(exc, 'msg'):
-                log.error('    Code: {0}: {1}'.format(exc.code, exc.msg))
-            log.error('    Content: \n{0}'.format(getattr(exc, 'read', lambda: str(exc))()))
+                log.error('    Code: %s: %s', exc.code, exc.msg)
+            log.error('    Content: \n%s', getattr(exc, 'read', lambda: six.text_type(exc))())
             return False
 
     def put_object(self, cont, obj, local_file):
@@ -206,8 +207,8 @@ class SaltSwift(object):
         except Exception as exc:
             log.error('There was an error::')
             if hasattr(exc, 'code') and hasattr(exc, 'msg'):
-                log.error('    Code: {0}: {1}'.format(exc.code, exc.msg))
-            log.error('    Content: \n{0}'.format(getattr(exc, 'read', lambda: str(exc))()))
+                log.error('    Code: %s: %s', exc.code, exc.msg)
+            log.error('    Content: \n%s', getattr(exc, 'read', lambda: six.text_type(exc))())
             return False
 
     def delete_object(self, cont, obj):
@@ -220,8 +221,8 @@ class SaltSwift(object):
         except Exception as exc:
             log.error('There was an error::')
             if hasattr(exc, 'code') and hasattr(exc, 'msg'):
-                log.error('    Code: {0}: {1}'.format(exc.code, exc.msg))
-            log.error('    Content: \n{0}'.format(getattr(exc, 'read', lambda: str(exc))()))
+                log.error('    Code: %s: %s', exc.code, exc.msg)
+            log.error('    Content: \n%s', getattr(exc, 'read', lambda: six.text_type(exc))())
             return False
 
     def head_object(self, cont, obj):

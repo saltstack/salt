@@ -11,7 +11,7 @@ profile=no
 
 # Add files or directories to the blacklist. They should be base names, not
 # paths.
-ignore=CVS
+ignore=CVS,ext
 
 # Pickle collected data for later comparisons.
 persistent=yes
@@ -170,6 +170,7 @@ additional-builtins=__opts__,
   __proxy__,
   __serializers__,
   __reg__,
+  __executors__,
   __events__
 
 # List of strings which can identify a callback function by name. A callback
@@ -258,8 +259,8 @@ ignore-imports=no
 
 
 [BASIC]
-# Required attributes for module, separated by a comma
-required-attributes=
+# Required attributes for module, separated by a comma (will be removed in Pylint 2.0)
+#required-attributes=
 
 # List of builtins function names that should not be used, separated by a comma
 bad-functions=map,filter,apply,input
@@ -365,7 +366,8 @@ spelling-store-unknown-words=no
 [CLASSES]
 # List of interface methods to ignore, separated by a comma. This is used for
 # instance to not check methods defines in Zope's Interface base class.
-ignore-iface-methods=isImplementedBy,deferred,extends,names,namesAndDescriptions,queryDescriptionFor,getBases,getDescriptionFor,getDoc,getName,getTaggedValue,getTaggedValueTags,isEqualOrExtendedBy,setTaggedValue,isImplementedByInstancesOf,adaptWith,is_implemented_by
+# Will be removed in Pylint 2.0
+#ignore-iface-methods=isImplementedBy,deferred,extends,names,namesAndDescriptions,queryDescriptionFor,getBases,getDescriptionFor,getDoc,getName,getTaggedValue,getTaggedValueTags,isEqualOrExtendedBy,setTaggedValue,isImplementedByInstancesOf,adaptWith,is_implemented_by
 
 # List of method names used to declare (i.e. assign) instance attributes.
 defining-attr-methods=__init__,__new__,setUp

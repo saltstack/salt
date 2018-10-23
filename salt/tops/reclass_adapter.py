@@ -46,7 +46,7 @@ If you want to run reclass from source, rather than installing it, you can
 either let the master know via the ``PYTHONPATH`` environment variable, or by
 setting the configuration option, like in the example above.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # This file cannot be called reclass.py, because then the module import would
 # not work. Thanks to the __virtual__ function, however, the plugin still
@@ -60,6 +60,7 @@ from salt.utils.reclass import (
 )
 
 from salt.exceptions import SaltInvocationError
+from salt.ext import six
 
 # Define the module's virtual name
 __virtualname__ = 'reclass'
@@ -117,7 +118,7 @@ def top(**kwargs):
         return reclass_top(minion_id, **reclass_opts)
 
     except ImportError as e:
-        if 'reclass' in str(e):
+        if 'reclass' in six.text_type(e):
             raise SaltInvocationError(
                 'master_tops.reclass: cannot find reclass module '
                 'in {0}'.format(sys.path)
@@ -126,8 +127,8 @@ def top(**kwargs):
             raise
 
     except TypeError as e:
-        if 'unexpected keyword argument' in str(e):
-            arg = str(e).split()[-1]
+        if 'unexpected keyword argument' in six.text_type(e):
+            arg = six.text_type(e).split()[-1]
             raise SaltInvocationError(
                 'master_tops.reclass: unexpected option: {0}'.format(arg)
             )
@@ -135,11 +136,11 @@ def top(**kwargs):
             raise
 
     except KeyError as e:
-        if 'reclass' in str(e):
+        if 'reclass' in six.text_type(e):
             raise SaltInvocationError('master_tops.reclass: no configuration '
                                       'found in master config')
         else:
             raise
 
     except ReclassException as e:
-        raise SaltInvocationError('master_tops.reclass: {0}'.format(str(e)))
+        raise SaltInvocationError('master_tops.reclass: {0}'.format(six.text_type(e)))

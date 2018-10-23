@@ -11,9 +11,10 @@
 
   Added the ability to recursively compare dictionaries
 '''
-from __future__ import absolute_import
-from copy import deepcopy
+from __future__ import absolute_import, print_function, unicode_literals
+import copy
 from collections import Mapping
+from salt.ext import six
 
 
 def diff(current_dict, past_dict):
@@ -21,15 +22,13 @@ def diff(current_dict, past_dict):
 
 
 class DictDiffer(object):
-    """
+    '''
     Calculate the difference between two dictionaries as:
     (1) items added
     (2) items removed
     (3) keys same in both but changed values
     (4) keys same in both and unchanged values
-
-
-    """
+    '''
     def __init__(self, current_dict, past_dict):
         self.current_dict, self.past_dict = current_dict, past_dict
         self.set_current, self.set_past = set(list(current_dict)), set(list(past_dict))
@@ -51,8 +50,8 @@ class DictDiffer(object):
 def deep_diff(old, new, ignore=None):
     ignore = ignore or []
     res = {}
-    old = deepcopy(old)
-    new = deepcopy(new)
+    old = copy.deepcopy(old)
+    new = copy.deepcopy(new)
     stack = [(old, new, False)]
 
     while len(stack) > 0:
@@ -217,13 +216,13 @@ class RecursiveDictDiffer(DictDiffer):
         Each inner difference is tabulated two space deeper
         '''
         changes_strings = []
-        for p in diff_dict.keys():
+        for p in sorted(diff_dict.keys()):
             if sorted(diff_dict[p].keys()) == ['new', 'old']:
                 # Some string formatting
                 old_value = diff_dict[p]['old']
                 if diff_dict[p]['old'] == cls.NONE_VALUE:
                     old_value = 'nothing'
-                elif isinstance(diff_dict[p]['old'], str):
+                elif isinstance(diff_dict[p]['old'], six.string_types):
                     old_value = '\'{0}\''.format(diff_dict[p]['old'])
                 elif isinstance(diff_dict[p]['old'], list):
                     old_value = '\'{0}\''.format(
@@ -231,7 +230,7 @@ class RecursiveDictDiffer(DictDiffer):
                 new_value = diff_dict[p]['new']
                 if diff_dict[p]['new'] == cls.NONE_VALUE:
                     new_value = 'nothing'
-                elif isinstance(diff_dict[p]['new'], str):
+                elif isinstance(diff_dict[p]['new'], six.string_types):
                     new_value = '\'{0}\''.format(diff_dict[p]['new'])
                 elif isinstance(diff_dict[p]['new'], list):
                     new_value = '\'{0}\''.format(', '.join(diff_dict[p]['new']))
@@ -267,7 +266,7 @@ class RecursiveDictDiffer(DictDiffer):
                         keys.append('{0}{1}'.format(prefix, key))
             return keys
 
-        return _added(self._diffs, prefix='')
+        return sorted(_added(self._diffs, prefix=''))
 
     def removed(self):
         '''
@@ -290,7 +289,7 @@ class RecursiveDictDiffer(DictDiffer):
                                  prefix='{0}{1}.'.format(prefix, key)))
             return keys
 
-        return _removed(self._diffs, prefix='')
+        return sorted(_removed(self._diffs, prefix=''))
 
     def changed(self):
         '''
@@ -338,7 +337,7 @@ class RecursiveDictDiffer(DictDiffer):
 
             return keys
 
-        return _changed(self._diffs, prefix='')
+        return sorted(_changed(self._diffs, prefix=''))
 
     def unchanged(self):
         '''
@@ -363,7 +362,7 @@ class RecursiveDictDiffer(DictDiffer):
                                        prefix='{0}{1}.'.format(prefix, key)))
 
             return keys
-        return _unchanged(self.current_dict, self._diffs, prefix='')
+        return sorted(_unchanged(self.current_dict, self._diffs, prefix=''))
 
     @property
     def diffs(self):

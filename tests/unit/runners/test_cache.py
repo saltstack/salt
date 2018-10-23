@@ -4,7 +4,7 @@ unit tests for the cache runner
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -18,7 +18,7 @@ from tests.support.mock import (
 
 # Import Salt Libs
 import salt.runners.cache as cache
-import salt.utils
+import salt.utils.master
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)

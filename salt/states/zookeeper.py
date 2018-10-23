@@ -25,6 +25,10 @@ The following options can be included in the acl dictionary:
     :param all: All permissions.
     :type all: bool
 '''
+
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
+
 __virtualname__ = 'zookeeper'
 
 
@@ -154,7 +158,7 @@ def present(name, value, acls=None, ephemeral=False, sequence=False, makepath=Fa
                 value_result = new_value == value
                 changes.setdefault('new', {}).setdefault('value', new_value)
                 changes.setdefault('old', {}).setdefault('value', cur_value)
-            if not _check_acls(chk_acls, cur_acls):
+            if chk_acls and not _check_acls(chk_acls, cur_acls):
                 __salt__['zookeeper.set_acls'](name, acls, version, **connkwargs)
                 new_acls = __salt__['zookeeper.get_acls'](name, **connkwargs)
                 acl_result = _check_acls(new_acls, chk_acls)

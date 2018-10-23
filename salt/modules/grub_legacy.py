@@ -2,7 +2,7 @@
 '''
 Support for GRUB Legacy
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import os
@@ -70,6 +70,7 @@ def conf():
     try:
         with salt.utils.files.fopen(_detect_conf(), 'r') as _fp:
             for line in _fp:
+                line = salt.utils.stringutils.to_unicode(line)
                 if line.startswith('#'):
                     continue
                 if line.startswith('\n'):
@@ -102,7 +103,7 @@ def conf():
                 stanzas.append(stanza)
     except (IOError, OSError) as exc:
         msg = "Could not read grub config: {0}"
-        raise CommandExecutionError(msg.format(str(exc)))
+        raise CommandExecutionError(msg.format(exc))
 
     ret['stanzas'] = []
     for stanza in stanzas:

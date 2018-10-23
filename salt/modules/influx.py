@@ -22,12 +22,12 @@ version 0.9+)
     Most functions in this module allow you to override or provide some or all
     of these settings via keyword arguments::
 
-        salt '*' influxdb.foo_function user='influxadmin' password='s3cr1t'
+        salt '*' influxdb.foo_function user='influxadmin' passwd='s3cr1t'
 
     would override ``user`` and ``password`` while still using the defaults for
     ``host`` and ``port``.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 try:
     import influxdb
@@ -36,8 +36,11 @@ except ImportError:
     HAS_INFLUXDB = False
 
 import collections
-import json
 import logging
+
+# Import salt libs
+import salt.utils.json
+from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
 
 log = logging.getLogger(__name__)
 
@@ -55,19 +58,23 @@ def __virtual__():
                     'influxdb library not available.'))
 
 
-def _client(user=None, password=None, host=None, port=None, **client_args):
-    if not user:
-        user = __salt__['config.option']('influxdb.user', 'root')
-    if not password:
-        password = __salt__['config.option']('influxdb.password', 'root')
-    if not host:
-        host = __salt__['config.option']('influxdb.host', 'localhost')
-    if not port:
-        port = __salt__['config.option']('influxdb.port', 8086)
-    return influxdb.InfluxDBClient(host=host,
-                                   port=port,
-                                   username=user,
-                                   password=password)
+def _client(influxdb_user=None, influxdb_password=None, influxdb_host=None, influxdb_port=None, **client_args):
+    if not influxdb_user:
+        influxdb_user = __salt__['config.option']('influxdb.user', 'root')
+    if not influxdb_password:
+        influxdb_password = __salt__['config.option']('influxdb.password', 'root')
+    if not influxdb_host:
+        influxdb_host = __salt__['config.option']('influxdb.host', 'localhost')
+    if not influxdb_port:
+        influxdb_port = __salt__['config.option']('influxdb.port', 8086)
+    for ignore in _STATE_INTERNAL_KEYWORDS:
+        if ignore in client_args:
+            del client_args[ignore]
+    return influxdb.InfluxDBClient(host=influxdb_host,
+                                   port=influxdb_port,
+                                   username=influxdb_user,
+                                   password=influxdb_password,
+                                   **client_args)
 
 
 def list_dbs(**client_args):
@@ -118,7 +125,7 @@ def create_db(name, **client_args):
         salt '*' influxdb.create_db <name>
     '''
     if db_exists(name, **client_args):
-        log.info('DB \'{0}\' already exists'.format(name))
+        log.info('DB \'%s\' already exists', name)
         return False
 
     client = _client(**client_args)
@@ -141,7 +148,7 @@ def drop_db(name, **client_args):
         salt '*' influxdb.drop_db <name>
     '''
     if not db_exists(name, **client_args):
-        log.info('DB \'{0}\' does not exist'.format(name))
+        log.info('DB \'%s\' does not exist', name)
         return False
 
     client = _client(**client_args)
@@ -206,14 +213,14 @@ def user_info(name, **client_args):
         pass
 
 
-def create_user(name, password, admin=False, **client_args):
+def create_user(name, passwd, admin=False, **client_args):
     '''
     Create a user.
 
     name
         Name of the user to create.
 
-    password
+    passwd
         Password of the new user.
 
     admin : False
@@ -228,23 +235,23 @@ def create_user(name, password, admin=False, **client_args):
         salt '*' influxdb.create_user <name> <password> admin=True
     '''
     if user_exists(name, **client_args):
-        log.info("User '{0}' already exists".format(name))
+        log.info("User '%s' already exists", name)
         return False
 
     client = _client(**client_args)
-    client.create_user(name, password, admin)
+    client.create_user(name, passwd, admin)
 
     return True
 
 
-def set_user_password(name, password, **client_args):
+def set_user_password(name, passwd, **client_args):
     '''
     Change password of a user.
 
     name
         Name of the user for whom to set the password.
 
-    password
+    passwd
         New password of the user.
 
     CLI Example:
@@ -254,11 +261,11 @@ def set_user_password(name, password, **client_args):
         salt '*' influxdb.set_user_password <name> <password>
     '''
     if not user_exists(name, **client_args):
-        log.info('User \'{0}\' does not exist'.format(name))
+        log.info('User \'%s\' does not exist', name)
         return False
 
     client = _client(**client_args)
-    client.set_user_password(name, password)
+    client.set_user_password(name, passwd)
 
     return True
 
@@ -315,7 +322,7 @@ def remove_user(name, **client_args):
         salt '*' influxdb.remove_user <name>
     '''
     if not user_exists(name, **client_args):
-        log.info('User \'{0}\' does not exist'.format(name))
+        log.info('User \'%s\' does not exist', name)
         return False
 
     client = _client(**client_args)
@@ -671,7 +678,7 @@ def _pull_query_results(resultset):
     for _header, _values in resultset.items():
         _header, _group_tags = _header
         if _group_tags:
-            _results[_header][json.dumps(_group_tags)] = [_value for _value in _values]
+            _results[_header][salt.utils.json.dumps(_group_tags)] = [_value for _value in _values]
         else:
             _results[_header] = [_value for _value in _values]
     return dict(sorted(_results.items()))

@@ -3,12 +3,12 @@
     :synopsis: Unit Tests for 'module.yumkernelpkg'
     :platform: Linux
     :maturity: develop
-    versionadded:: oxygen
+    .. versionadded:: 2018.3.0
 '''
 # pylint: disable=invalid-name,no-member
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 try:
     # Import Salt Testing Libs
@@ -17,7 +17,7 @@ try:
     from tests.support.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
 
     # Import Salt Libs
-    from tests.unit.modules.test_kernelpkg import KernelPkgTestCase
+    from tests.support.kernelpkg import KernelPkgTestCase
     import salt.modules.kernelpkg_linux_yum as kernelpkg
     import salt.modules.yumpkg as pkg
     from salt.exceptions import CommandExecutionError

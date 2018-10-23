@@ -15,7 +15,7 @@
 # limitations under the License.
 
 '''
-    :codeauthor: :email:`Bo Maryniuk <bo@suse.de>`
+    :codeauthor: Bo Maryniuk <bo@suse.de>
 '''
 
 from __future__ import absolute_import, with_statement

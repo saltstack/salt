@@ -58,18 +58,21 @@ pillars or minion config:
 # Keep pylint from chocking on ret
 # pylint: disable=undefined-variable
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 log = logging.getLogger(__name__)
+
+__virtualname__ = 'boto_kinesis'
 
 
 def __virtual__():
     '''
     Only load if boto_kinesis is available.
     '''
-    ret = 'boto_kinesis' if 'boto_kinesis.exists' in __salt__ else False
-    return ret
+    if 'boto_kinesis.exists' in __salt__:
+        return __virtualname__
+    return False, 'The boto_kinesis module could not be loaded: boto libraries not found.'
 
 
 def present(name,
@@ -342,8 +345,10 @@ def present(name,
                 comments.append('Kinesis stream {0}: would be resharded from {1} to {2} shards'
                                 .format(name, old_num_shards, num_shards))
             else:
-                log.info("Resharding stream from {0} to {1} shards, this could take a while"
-                         .format(old_num_shards, num_shards))
+                log.info(
+                    'Resharding stream from %s to %s shards, this could take '
+                    'a while', old_num_shards, num_shards
+                )
                 # reshard returns True when a split/merge action is taken,
                 # or False when no more actions are required
                 continue_reshard = True

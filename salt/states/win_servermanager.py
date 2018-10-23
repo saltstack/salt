@@ -8,10 +8,10 @@ remove roles/features.
 :depends:       win_servermanager.install
 :depends:       win_servermanager.remove
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import salt modules
-import salt.utils
+import salt.utils.data
 import salt.utils.versions
 
 
@@ -27,8 +27,7 @@ def installed(name,
               recurse=False,
               restart=False,
               source=None,
-              exclude=None,
-              **kwargs):
+              exclude=None):
     '''
     Install the windows feature. To install a single feature, use the ``name``
     parameter. To install multiple features, use the ``features`` parameter.
@@ -53,7 +52,7 @@ def installed(name,
             A list of features to install. If this is passed it will be used
             instead of the ``name`` parameter.
 
-            .. versionadded:: Oxygen
+            .. versionadded:: 2018.3.0
 
         recurse (Optional[bool]):
             Install all sub-features as well. If the feature is installed but
@@ -111,17 +110,8 @@ def installed(name,
               - XPS-Viewer
               - SNMP-Service
             - exclude:
-              - Web-Service
+              - Web-Server
     '''
-    if 'force' in kwargs:
-        salt.utils.versions.warn_until(
-            'Flourine',
-            'Parameter \'force\' has been detected in the argument list. This'
-            'parameter is no longer used and has been replaced by \'recurse\''
-            'as of Salt Oxygen. This warning will be removed in Salt Flourine.'
-        )
-        kwargs.pop('force')
-
     ret = {'name': name,
            'result': True,
            'changes': {},
@@ -194,7 +184,7 @@ def installed(name,
 
     # Get the changes
     new = __salt__['win_servermanager.list_installed']()
-    ret['changes'] = salt.utils.compare_dicts(old, new)
+    ret['changes'] = salt.utils.data.compare_dicts(old, new)
 
     return ret
 
@@ -219,7 +209,7 @@ def removed(name, features=None, remove_payload=False, restart=False):
             A list of features to remove. If this is passed it will be used
             instead of the ``name`` parameter.
 
-            .. versionadded:: Oxygen
+            .. versionadded:: 2018.3.0
 
         remove_payload (Optional[bool]):
             True will cause the feature to be removed from the side-by-side
@@ -325,6 +315,6 @@ def removed(name, features=None, remove_payload=False, restart=False):
 
     # Get the changes
     new = __salt__['win_servermanager.list_installed']()
-    ret['changes'] = salt.utils.compare_dicts(old, new)
+    ret['changes'] = salt.utils.data.compare_dicts(old, new)
 
     return ret

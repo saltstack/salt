@@ -24,7 +24,7 @@ for this the :mod:`module.wait <salt.states.module.wait>` state can be used:
 
     fetch_out_of_band:
       module.run:
-        git.fetch:
+        - git.fetch:
           - cwd: /path/to/my/repo
           - user: myuser
           - opts: '--all'
@@ -35,7 +35,7 @@ Another example:
 
     mine.send:
       module.run:
-        network.ip_addrs:
+        - network.ip_addrs:
           - interface: eth0
 
 And more complex example:
@@ -44,7 +44,7 @@ And more complex example:
 
     eventsviewer:
       module.run:
-        task.create_task:
+        - task.create_task:
           - name: events-viewer
           - user_name: System
           - action_type: Execute
@@ -158,7 +158,7 @@ functions at once the following way:
 
     call_something:
       module.run:
-        git.fetch:
+        - git.fetch:
           - cwd: /path/to/my/repo
           - user: myuser
           - opts: '--all'
@@ -172,12 +172,14 @@ configuration to the minion:
       - module.run
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import salt libs
 import salt.loader
-import salt.utils
+import salt.utils.args
+import salt.utils.functools
 import salt.utils.jid
+from salt.ext import six
 from salt.ext.six.moves import range
 from salt.ext.six.moves import zip
 from salt.exceptions import SaltInvocationError
@@ -212,7 +214,7 @@ def wait(name, **kwargs):
             'comment': ''}
 
 # Alias module.watch to module.wait
-watch = salt.utils.alias_function(wait, 'watch')
+watch = salt.utils.functools.alias_function(wait, 'watch')
 
 
 @with_deprecated(globals(), "Sodium", policy=with_deprecated.OPT_IN)
@@ -252,7 +254,7 @@ def run(**kwargs):
     if 'name' in kwargs:
         kwargs.pop('name')
     ret = {
-        'name': kwargs.keys(),
+        'name': list(kwargs),
         'changes': {},
         'comment': '',
         'result': None,
@@ -314,22 +316,34 @@ def _call_function(name, returner=None, **kwargs):
     :return:
     '''
     argspec = salt.utils.args.get_function_argspec(__salt__[name])
+
+    # func_kw is initialized to a dictionary of keyword arguments the function to be run accepts
     func_kw = dict(zip(argspec.args[-len(argspec.defaults or []):],  # pylint: disable=incompatible-py3-code
                    argspec.defaults or []))
-    arg_type, na_type, kw_type = [], {}, False
+
+    # func_args is initialized to a list of positional arguments that the function to be run accepts
+    func_args = argspec.args[:len(argspec.args or []) - len(argspec.defaults or [])]
+    arg_type, kw_to_arg_type, na_type, kw_type = [], {}, {}, False
     for funcset in reversed(kwargs.get('func_args') or []):
         if not isinstance(funcset, dict):
-            kw_type = True
-        if kw_type:
-            if isinstance(funcset, dict):
-                arg_type += funcset.values()
-                na_type.update(funcset)
-            else:
-                arg_type.append(funcset)
+            # We are just receiving a list of args to the function to be run, so just append
+            # those to the arg list that we will pass to the func.
+            arg_type.append(funcset)
         else:
-            func_kw.update(funcset)
+            for kwarg_key in six.iterkeys(funcset):
+                # We are going to pass in a keyword argument. The trick here is to make certain
+                # that if we find that in the *args* list that we pass it there and not as a kwarg
+                if kwarg_key in func_args:
+                    kw_to_arg_type[kwarg_key] = funcset[kwarg_key]
+                    continue
+                else:
+                    # Otherwise, we're good and just go ahead and pass the keyword/value pair into
+                    # the kwargs list to be run.
+                    func_kw.update(funcset)
     arg_type.reverse()
-
+    for arg in func_args:
+        if arg in kw_to_arg_type:
+            arg_type.append(kw_to_arg_type[arg])
     _exp_prm = len(argspec.args or []) - len(argspec.defaults or [])
     _passed_prm = len(arg_type)
     missing = []
@@ -520,7 +534,25 @@ def _get_result(func_ret, changes):
                 res = changes_ret.get('result', {})
             elif changes_ret.get('retcode', 0) != 0:
                 res = False
+            # Explore dict in depth to determine if there is a
+            # 'result' key set to False which sets the global
+            # state result.
+            else:
+                res = _get_dict_result(changes_ret)
 
     return res
 
-mod_watch = salt.utils.alias_function(run, 'mod_watch')
+
+def _get_dict_result(node):
+    ret = True
+    for key, val in six.iteritems(node):
+        if key == 'result' and val is False:
+            ret = False
+            break
+        elif isinstance(val, dict):
+            ret = _get_dict_result(val)
+            if ret is False:
+                break
+    return ret
+
+mod_watch = salt.utils.functools.alias_function(run, 'mod_watch')

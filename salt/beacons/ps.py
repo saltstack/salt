@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 '''
-Send events covering service status
+Send events covering process status
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 import logging
 
 # Import third party libs

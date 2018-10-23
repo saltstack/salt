@@ -7,7 +7,7 @@ Apache Traffic Server execution module.
 ``traffic_ctl`` is used to execute individual Traffic Server commands and to
 script multiple commands in a shell.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import logging
@@ -16,7 +16,6 @@ import subprocess
 # Import salt libs
 import salt.utils.path
 import salt.utils.stringutils
-import salt.utils.versions
 
 __virtualname__ = 'trafficserver'
 
@@ -35,11 +34,11 @@ _TRAFFICCTL = salt.utils.path.which('traffic_ctl')
 
 
 def _traffic_ctl(*args):
-    return ' '.join([_TRAFFICCTL] + args)
+    return [_TRAFFICCTL] + list(args)
 
 
 def _traffic_line(*args):
-    return ' '.join([_TRAFFICLINE] + args)
+    return [_TRAFFICLINE] + list(args)
 
 
 def _statuscmd():
@@ -48,7 +47,6 @@ def _statuscmd():
     else:
         cmd = _traffic_line('--status')
 
-    log.debug('Running: %s', cmd)
     return _subprocess(cmd)
 
 
@@ -57,9 +55,10 @@ def _subprocess(cmd):
     Function to standardize the subprocess call
     '''
 
+    log.debug('Running: "%s"', ' '.join(cmd))
     try:
-        proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
-        ret = salt.utils.stringutils.to_str(proc.communicate()[0]).strip()
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+        ret = salt.utils.stringutils.to_unicode(proc.communicate()[0]).strip()
         retcode = proc.wait()
 
         if ret:
@@ -87,7 +86,7 @@ def bounce_cluster():
         cmd = _traffic_ctl('cluster', 'restart')
     else:
         cmd = _traffic_line('-B')
-    log.debug('Running: %s', cmd)
+
     return _subprocess(cmd)
 
 
@@ -114,9 +113,8 @@ def bounce_local(drain=False):
         cmd = _traffic_line('-b')
 
     if drain:
-        cmd = '{0} {1}'.format(cmd, '--drain')
+        cmd = cmd + ['--drain']
 
-    log.debug('Running: %s', cmd)
     return _subprocess(cmd)
 
 
@@ -134,7 +132,6 @@ def clear_cluster():
     else:
         cmd = _traffic_line('-C')
 
-    log.debug('Running: %s', cmd)
     return _subprocess(cmd)
 
 
@@ -152,7 +149,6 @@ def clear_node():
     else:
         cmd = _traffic_line('-c')
 
-    log.debug('Running: %s', cmd)
     return _subprocess(cmd)
 
 
@@ -171,7 +167,6 @@ def restart_cluster():
     else:
         cmd = _traffic_line('-M')
 
-    log.debug('Running: %s', cmd)
     return _subprocess(cmd)
 
 
@@ -197,31 +192,8 @@ def restart_local(drain=False):
         cmd = _traffic_line('-L')
 
     if drain:
-        cmd = '{0} {1}'.format(cmd, '--drain')
+        cmd = cmd + ['--drain']
 
-    log.debug('Running: %s', cmd)
-    return _subprocess(cmd)
-
-
-def match_var(regex):
-    '''
-    Display the current values of all performance statistics or configuration
-    variables whose names match the given regular expression.
-
-    .. deprecated:: Fluorine
-        Use ``match_metric`` or ``match_config`` instead.
-
-    .. code-block:: bash
-
-        salt '*' trafficserver.match_var regex
-    '''
-    salt.utils.versions.warn_until(
-        'Fluorine',
-        'The \'match_var\' function has been deprecated and will be removed in Salt '
-        '{version}. Please use \'match_metric\' or \'match_config\' instead.'
-    )
-    cmd = _traffic_line('-m', regex)
-    log.debug('Running: %s', cmd)
     return _subprocess(cmd)
 
 
@@ -241,7 +213,6 @@ def match_metric(regex):
     else:
         cmd = _traffic_ctl('-m', regex)
 
-    log.debug('Running: %s', cmd)
     return _subprocess(cmd)
 
 
@@ -261,7 +232,6 @@ def match_config(regex):
     else:
         cmd = _traffic_line('-m', regex)
 
-    log.debug('Running: %s', cmd)
     return _subprocess(cmd)
 
 
@@ -285,7 +255,7 @@ def read_config(*args):
     try:
         for arg in args:
             log.debug('Querying: %s', arg)
-            ret[arg] = _subprocess('{0} {1}'.format(cmd, arg))
+            ret[arg] = _subprocess(cmd + [arg])
     except KeyError:
         pass
 
@@ -312,7 +282,7 @@ def read_metric(*args):
     try:
         for arg in args:
             log.debug('Querying: %s', arg)
-            ret[arg] = _subprocess('{0} {1}'.format(cmd, arg))
+            ret[arg] = _subprocess(cmd + [arg])
     except KeyError:
         pass
 
@@ -345,55 +315,6 @@ def set_config(variable, value):
     return _subprocess(cmd)
 
 
-def read_var(*args):
-    '''
-    Read variable definitions from the traffic_line command.
-
-    .. deprecated:: Fluorine
-        Use ``read_metric`` or ``read_config`` instead. Note that this
-        function does not work for Traffic Server versions >= 7.0.
-
-    .. code-block:: bash
-
-        salt '*' trafficserver.read_var proxy.process.http.tcp_hit_count_stat
-    '''
-    salt.utils.versions.warn_until(
-        'Fluorine',
-        'The \'read_var\' function has been deprecated and will be removed in Salt '
-        '{version}. Please use \'read_metric\' or \'read_config\' instead.'
-    )
-
-    ret = {}
-
-    try:
-        for arg in args:
-            log.debug('Querying: %s', arg)
-            cmd = '{0} {1} {2}'.format(_TRAFFICLINE, '-r', arg)
-            ret[arg] = _subprocess(cmd)
-    except KeyError:
-        pass
-
-    return ret
-
-
-def set_var(variable, value):
-    '''
-    .. code-block:: bash
-
-    .. deprecated:: Fluorine
-        Use ``set_config`` instead. Note that this function does
-        not work for Traffic Server versions >= 7.0.
-
-        salt '*' trafficserver.set_var proxy.config.http.server_ports
-    '''
-    salt.utils.versions.warn_until(
-        'Fluorine',
-        'The \'set_var\' function has been deprecated and will be removed in Salt '
-        '{version}. Please use \'set_config\' instead.'
-    )
-    return set_config(variable, value)
-
-
 def shutdown():
     '''
     Shut down Traffic Server on the local node.
@@ -410,7 +331,6 @@ def shutdown():
     else:
         cmd = _traffic_ctl('server', 'stop')
 
-    log.debug('Running: %s', cmd)
     _subprocess(cmd)
     return _statuscmd()
 
@@ -431,7 +351,6 @@ def startup():
     else:
         cmd = _traffic_ctl('server', 'start')
 
-    log.debug('Running: %s', cmd)
     _subprocess(cmd)
     return _statuscmd()
 
@@ -454,7 +373,6 @@ def refresh():
     else:
         cmd = _traffic_line('-x')
 
-    log.debug('Running: %s', cmd)
     return _subprocess(cmd)
 
 
@@ -471,7 +389,6 @@ def zero_cluster():
     else:
         cmd = _traffic_line('-Z')
 
-    log.debug('Running: %s', cmd)
     return _subprocess(cmd)
 
 
@@ -488,7 +405,6 @@ def zero_node():
     else:
         cmd = _traffic_line('-z')
 
-    log.debug('Running: %s', cmd)
     return _subprocess(cmd)
 
 
@@ -511,7 +427,6 @@ def offline(path):
     else:
         cmd = _traffic_line('--offline', path)
 
-    log.debug('Running: %s', cmd)
     return _subprocess(cmd)
 
 
@@ -529,7 +444,6 @@ def alarms():
     else:
         cmd = _traffic_line('--alarms')
 
-    log.debug('Running: %s', cmd)
     return _subprocess(cmd)
 
 
@@ -549,7 +463,6 @@ def clear_alarms(alarm):
     else:
         cmd = _traffic_line('--clear_alarms', alarm)
 
-    log.debug('Running: %s', cmd)
     return _subprocess(cmd)
 
 

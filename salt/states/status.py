@@ -4,6 +4,7 @@ Minion status monitoring
 
 Maps to the `status` execution module.
 '''
+from __future__ import absolute_import, print_function, unicode_literals
 
 __monitor__ = [
         'loadavg',
@@ -66,7 +67,7 @@ def process(name):
            'data': {}}  # Data field for monitoring state
 
     data = __salt__['status.pid'](name)
-    if name not in data:
+    if not data:
         ret['result'] = False
         ret['comment'] += 'Process signature "{0}" not found '.format(
             name

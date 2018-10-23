@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Rupesh Tare <rupesht@saltstack.com>`
+    :codeauthor: Rupesh Tare <rupesht@saltstack.com>
 '''
-# Import python libs
-from __future__ import absolute_import
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -46,12 +46,6 @@ class EventTestCase(TestCase, LoaderModuleMockMixin):
 
             preload = {'id': 'id', 'tag': 'tag', 'data': 'data',
                        'tok': 'salt', 'cmd': '_minion_event'}
-
-            with patch.dict(event.__opts__, {'transport': 'raet',
-                                             'local': False}):
-                with patch.object(salt_transport_channel_factory, 'send',
-                                  return_value=None):
-                    self.assertTrue(event.fire_master('data', 'tag'))
 
             with patch.dict(event.__opts__, {'transport': 'A',
                                              'master_uri': 'localhost',

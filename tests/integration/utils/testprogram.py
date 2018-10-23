@@ -14,21 +14,23 @@ import logging
 import os
 import shutil
 import signal
+import socket
 import subprocess
 import sys
 import tempfile
 import time
 
-import yaml
-
 import salt.utils.files
+import salt.utils.platform
 import salt.utils.process
 import salt.utils.psutil_compat as psutils
+import salt.utils.yaml
 import salt.defaults.exitcodes as exitcodes
 from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 from tests.support.unit import TestCase
+from tests.support.helpers import win32_kill_process_tree
 from tests.support.paths import CODE_DIR
 from tests.support.processes import terminate_process, terminate_process_list
 
@@ -389,7 +391,10 @@ class TestProgram(six.with_metaclass(TestProgramMeta, object)):
             # Always ensure that the test tree is searched first for python modules
             if CODE_DIR != env_pypath[0]:
                 env_pypath.insert(0, CODE_DIR)
-            env_delta['PYTHONPATH'] = ':'.join(env_pypath)
+            if salt.utils.platform.is_windows():
+                env_delta['PYTHONPATH'] = ';'.join(env_pypath)
+            else:
+                env_delta['PYTHONPATH'] = ':'.join(env_pypath)
 
         cmd_env = dict(os.environ)
         cmd_env.update(env_delta)
@@ -414,10 +419,10 @@ class TestProgram(six.with_metaclass(TestProgramMeta, object)):
 
             popen_kwargs['preexec_fn'] = detach_from_parent_group
 
-        elif sys.platform.lower().startswith('win') and timeout is not None:
-            raise RuntimeError('Timeout is not supported under windows')
-
-        self.argv = [self.program]
+        if salt.utils.platform.is_windows():
+            self.argv = ['python.exe', self.program]
+        else:
+            self.argv = [self.program]
         self.argv.extend(args)
         log.debug('TestProgram.run: %s Environment %s', self.argv, env_delta)
         process = subprocess.Popen(self.argv, **popen_kwargs)
@@ -431,16 +436,26 @@ class TestProgram(six.with_metaclass(TestProgramMeta, object)):
 
                 if datetime.now() > stop_at:
                     if term_sent is False:
-                        # Kill the process group since sending the term signal
-                        # would only terminate the shell, not the command
-                        # executed in the shell
-                        os.killpg(os.getpgid(process.pid), signal.SIGINT)
-                        term_sent = True
-                        continue
+                        if salt.utils.platform.is_windows():
+                            _, alive = win32_kill_process_tree(process.pid)
+                            if alive:
+                                log.error("Child processes still alive: %s", alive)
+                        else:
+                            # Kill the process group since sending the term signal
+                            # would only terminate the shell, not the command
+                            # executed in the shell
+                            os.killpg(os.getpgid(process.pid), signal.SIGINT)
+                            term_sent = True
+                            continue
 
                     try:
-                        # As a last resort, kill the process group
-                        os.killpg(os.getpgid(process.pid), signal.SIGKILL)
+                        if salt.utils.platform.is_windows():
+                            _, alive = win32_kill_process_tree(process.pid)
+                            if alive:
+                                log.error("Child processes still alive: %s", alive)
+                        else:
+                            # As a last resort, kill the process group
+                            os.killpg(os.getpgid(process.pid), signal.SIGKILL)
                         process.wait()
                     except OSError as exc:
                         if exc.errno != errno.ESRCH:
@@ -582,8 +597,24 @@ class TestSaltProgram(six.with_metaclass(TestSaltProgramMeta, TestProgram)):
         'log_dir',
         'script_dir',
     ])
+
+    pub_port = 4505
+    ret_port = 4506
+    for port in [pub_port, ret_port]:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        try:
+            connect = sock.bind(('localhost', port))
+        except (socket.error, OSError):
+            # these ports are already in use, use different ones
+            pub_port = 4606
+            ret_port = 4607
+            break
+        sock.close()
+
     config_base = {
         'root_dir': '{test_dir}',
+        'publish_port': pub_port,
+        'ret_port': ret_port,
     }
     configs = {}
     config_dir = os.path.join('etc', 'salt')
@@ -600,7 +631,7 @@ class TestSaltProgram(six.with_metaclass(TestSaltProgramMeta, TestProgram)):
 
     @staticmethod
     def config_caster(cfg):
-        return yaml.safe_load(cfg)
+        return salt.utils.yaml.safe_load(cfg)
 
     def __init__(self, *args, **kwargs):
         if len(args) < 2 and 'program' not in kwargs:
@@ -649,8 +680,7 @@ class TestSaltProgram(six.with_metaclass(TestSaltProgramMeta, TestProgram)):
                 cfg[key] = val.format(**subs)
             else:
                 cfg[key] = val
-        scfg = yaml.safe_dump(cfg, default_flow_style=False)
-        return scfg
+        return salt.utils.yaml.safe_dump(cfg, default_flow_style=False)
 
     def setup(self, *args, **kwargs):
         super(TestSaltProgram, self).setup(*args, **kwargs)

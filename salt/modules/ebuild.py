@@ -13,16 +13,19 @@ Support for Portage
 For now all package names *MUST* include the package category,
 i.e. ``'vim'`` will not work, ``'app-editors/vim'`` will.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
+import os
 import copy
 import logging
 import re
+import datetime
 
 # Import salt libs
-import salt.utils
 import salt.utils.args
+import salt.utils.data
+import salt.utils.functools
 import salt.utils.path
 import salt.utils.pkg
 import salt.utils.systemd
@@ -57,7 +60,7 @@ def __virtual__():
     '''
     Confirm this module is on a Gentoo based system
     '''
-    if HAS_PORTAGE and __grains__['os'] == 'Gentoo':
+    if HAS_PORTAGE and __grains__['os_family'] == 'Gentoo':
         return __virtualname__
     return (False, 'The ebuild execution module cannot be loaded: either the system is not Gentoo or the portage python library is not available.')
 
@@ -89,6 +92,13 @@ def _p_to_cp(p):
     except portage.exception.InvalidAtom:
         pass
 
+    try:
+        ret = _porttree().dbapi.xmatch("match-all", p)
+        if ret:
+            return portage.cpv_getkey(ret[0])
+    except portage.exception.InvalidAtom:
+        pass
+
     return None
 
 
@@ -104,6 +114,13 @@ def _allnodes():
 def _cpv_to_cp(cpv):
     try:
         ret = portage.dep_getkey(cpv)
+        if ret:
+            return ret
+    except portage.exception.InvalidAtom:
+        pass
+
+    try:
+        ret = portage.cpv_getkey(cpv)
         if ret:
             return ret
     except portage.exception.InvalidAtom:
@@ -236,7 +253,7 @@ def latest_version(*names, **kwargs):
         salt '*' pkg.latest_version <package name>
         salt '*' pkg.latest_version <package1> <package2> <package3> ...
     '''
-    refresh = salt.utils.is_true(kwargs.pop('refresh', True))
+    refresh = salt.utils.data.is_true(kwargs.pop('refresh', True))
 
     if len(names) == 0:
         return ''
@@ -260,7 +277,7 @@ def latest_version(*names, **kwargs):
     return ret
 
 # available_version is being deprecated
-available_version = salt.utils.alias_function(latest_version, 'available_version')
+available_version = salt.utils.functools.alias_function(latest_version, 'available_version')
 
 
 def _get_upgradable(backtrack=3):
@@ -333,7 +350,7 @@ def list_upgrades(refresh=True, backtrack=3, **kwargs):  # pylint: disable=W0613
 
         salt '*' pkg.list_upgrades
     '''
-    if salt.utils.is_true(refresh):
+    if salt.utils.data.is_true(refresh):
         refresh_db()
     return _get_upgradable(backtrack)
 
@@ -393,9 +410,9 @@ def list_pkgs(versions_as_list=False, **kwargs):
 
         salt '*' pkg.list_pkgs
     '''
-    versions_as_list = salt.utils.is_true(versions_as_list)
+    versions_as_list = salt.utils.data.is_true(versions_as_list)
     # not yet implemented or not applicable
-    if any([salt.utils.is_true(kwargs.get(x))
+    if any([salt.utils.data.is_true(kwargs.get(x))
             for x in ('removed', 'purge_desired')]):
         return {}
 
@@ -422,7 +439,21 @@ def list_pkgs(versions_as_list=False, **kwargs):
 
 def refresh_db():
     '''
-    Updates the portage tree (emerge --sync). Uses eix-sync if available.
+    Update the portage tree using the first available method from the following
+    list:
+
+    - emaint sync
+    - eix-sync
+    - emerge-webrsync
+    - emerge --sync
+
+    To prevent the portage tree from being synced within one day of the
+    previous sync, add the following pillar data for this minion:
+
+    .. code-block:: yaml
+
+        portage:
+          sync_wait_one_day: True
 
     CLI Example:
 
@@ -430,28 +461,37 @@ def refresh_db():
 
         salt '*' pkg.refresh_db
     '''
+    has_emaint = os.path.isdir('/etc/portage/repos.conf')
+    has_eix = True if 'eix.sync' in __salt__ else False
+    has_webrsync = True if __salt__['makeconf.features_contains']('webrsync-gpg') else False
+
     # Remove rtag file to keep multiple refreshes from happening in pkg states
     salt.utils.pkg.clear_rtag(__opts__)
-    if 'eix.sync' in __salt__:
-        return __salt__['eix.sync']()
+    # Option to prevent syncing package tree if done in the last 24 hours
+    if __salt__['pillar.get']('portage:sync_wait_one_day', False):
+        main_repo_root = __salt__['cmd.run']('portageq get_repo_path / gentoo')
+        day = datetime.timedelta(days=1)
+        now = datetime.datetime.now()
+        timestamp = datetime.datetime.fromtimestamp(os.path.getmtime(main_repo_root))
+        if now - timestamp < day:
+            log.info('Did not sync package tree since last sync was done at'
+                     ' {0}, less than 1 day ago'.format(timestamp))
+            return False
 
-    if 'makeconf.features_contains'in __salt__ and __salt__['makeconf.features_contains']('webrsync-gpg'):
-        # GPG sign verify is supported only for "webrsync"
+    if has_emaint:
+        return __salt__['cmd.retcode']('emaint sync -a') == 0
+    elif has_eix:
+        return __salt__['eix.sync']()
+    elif has_webrsync:
+        # GPG sign verify is supported only for 'webrsync'
         cmd = 'emerge-webrsync -q'
-        # We prefer 'delta-webrsync' to 'webrsync'
+        # Prefer 'delta-webrsync' to 'webrsync'
         if salt.utils.path.which('emerge-delta-webrsync'):
             cmd = 'emerge-delta-webrsync -q'
-        return __salt__['cmd.retcode'](cmd, python_shell=False) == 0
+        return __salt__['cmd.retcode'](cmd) == 0
     else:
-        if __salt__['cmd.retcode']('emerge --ask n --quiet --sync',
-                                   python_shell=False) == 0:
-            return True
-        # We fall back to "webrsync" if "rsync" fails for some reason
-        cmd = 'emerge-webrsync -q'
-        # We prefer 'delta-webrsync' to 'webrsync'
-        if salt.utils.path.which('emerge-delta-webrsync'):
-            cmd = 'emerge-delta-webrsync -q'
-        return __salt__['cmd.retcode'](cmd, python_shell=False) == 0
+        # Default to deprecated `emerge --sync` form
+        return __salt__['cmd.retcode']('emerge --ask n --quiet --sync') == 0
 
 
 def _flags_changed(inst_flags, conf_flags):
@@ -596,7 +636,7 @@ def install(name=None,
             'binhost': binhost,
         }
     ))
-    if salt.utils.is_true(refresh):
+    if salt.utils.data.is_true(refresh):
         refresh_db()
 
     try:
@@ -711,7 +751,7 @@ def install(name=None,
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    changes.update(salt.utils.compare_dicts(old, new))
+    changes.update(salt.utils.data.compare_dicts(old, new))
 
     if needed_changes:
         raise CommandExecutionError(
@@ -763,7 +803,7 @@ def update(pkg, slot=None, fromrepo=None, refresh=False, binhost=None):
 
         salt '*' pkg.update <package name>
     '''
-    if salt.utils.is_true(refresh):
+    if salt.utils.data.is_true(refresh):
         refresh_db()
 
     full_atom = pkg
@@ -804,7 +844,7 @@ def update(pkg, slot=None, fromrepo=None, refresh=False, binhost=None):
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    ret = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.data.compare_dicts(old, new)
 
     if needed_changes:
         raise CommandExecutionError(
@@ -863,7 +903,7 @@ def upgrade(refresh=True, binhost=None, backtrack=3):
            'result': True,
            'comment': ''}
 
-    if salt.utils.is_true(refresh):
+    if salt.utils.data.is_true(refresh):
         refresh_db()
 
     if binhost == 'try':
@@ -894,7 +934,7 @@ def upgrade(refresh=True, binhost=None, backtrack=3):
                                      python_shell=False)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    ret = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.data.compare_dicts(old, new)
 
     if result['retcode'] != 0:
         raise CommandExecutionError(
@@ -993,7 +1033,7 @@ def remove(name=None, slot=None, fromrepo=None, pkgs=None, **kwargs):
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    ret = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.data.compare_dicts(old, new)
 
     if errors:
         raise CommandExecutionError(
@@ -1106,7 +1146,7 @@ def depclean(name=None, slot=None, fromrepo=None, pkgs=None):
                             python_shell=False)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    return salt.utils.compare_dicts(old, new)
+    return salt.utils.data.compare_dicts(old, new)
 
 
 def version_cmp(pkg1, pkg2, **kwargs):

@@ -2,7 +2,7 @@
 '''
 Provide authentication using local files
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 The `file` auth module allows simple authentication via local files. Different
 filetypes are supported, including:
@@ -96,7 +96,7 @@ When using ``htdigest`` the ``^realm`` must be set:
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
 
@@ -136,8 +136,8 @@ def _get_file_auth_config():
         return False
 
     if not os.path.exists(config['filename']):
-        log.error('salt.auth.file: The configured external_auth:file:^filename ({0})'
-                  'does not exist on the filesystem'.format(config['filename']))
+        log.error('salt.auth.file: The configured external_auth:file:^filename (%s)'
+                  'does not exist on the filesystem', config['filename'])
         return False
 
     config['username_field'] = int(config['username_field'])
@@ -166,14 +166,14 @@ def _text(username, password, **kwargs):
             try:
                 this_username = fields[username_field]
             except IndexError:
-                log.error('salt.auth.file: username field ({0}) does not exist '
-                          'in file {1}'.format(username_field, filename))
+                log.error('salt.auth.file: username field (%s) does not exist '
+                          'in file %s', username_field, filename)
                 return False
             try:
                 this_password = fields[password_field]
             except IndexError:
-                log.error('salt.auth.file: password field ({0}) does not exist '
-                          'in file {1}'.format(password_field, filename))
+                log.error('salt.auth.file: password field (%s) does not exist '
+                          'in file %s', password_field, filename)
                 return False
 
             if this_username == username:
@@ -240,7 +240,7 @@ def _htfile(username, password, **kwargs):
         kwargs['passlib_version'] = passlib.__version__
     except ImportError:
         log.error('salt.auth.file: The python-passlib library is required '
-                  'for {0} filetype'.format(filetype))
+                  'for %s filetype', filetype)
         return False
 
     if filetype == 'htdigest':

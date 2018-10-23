@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Daniel Mizyrycki (mzdaniel@glidelink.net)`
+    :codeauthor: Daniel Mizyrycki (mzdaniel@glidelink.net)
 
 
     tests.integration.cli.custom_module
@@ -35,7 +35,7 @@
     $ python tests/runtests.py -C --ssh
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import test Libs
 from tests.support.case import SSHCase

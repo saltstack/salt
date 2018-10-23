@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Rupesh Tare <rupesht@saltstack.com>`
+    :codeauthor: Rupesh Tare <rupesht@saltstack.com>
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
+
+import sys
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -32,12 +34,17 @@ class GenesisTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test for Create an image for a specific platform.
         '''
+        # Changed in 3.7.0 pformat no longer includes the comma
+        if sys.version_info >= (3, 7):
+            exception_string = 'Exception({0})'.format(repr('foo'))
+        else:
+            exception_string = 'Exception({0},)'.format(repr('foo'))
         mock = MagicMock(return_value=False)
         with patch.dict(genesis.__salt__, {'file.directory_exists': mock}):
             mock = MagicMock(side_effect=Exception('foo'))
             with patch.dict(genesis.__salt__, {'file.mkdir': mock}):
                 self.assertEqual(genesis.bootstrap('platform', 'root'),
-                                 {'Error': "Exception('foo',)"})
+                                 {'Error': exception_string})
 
         with patch.object(genesis, '_bootstrap_yum', return_value='A'):
             with patch.dict(genesis.__salt__, {'mount.umount': MagicMock(),

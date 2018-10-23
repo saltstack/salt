@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Ryan Lewis (ryansname@gmail.com)`
+    :codeauthor: Ryan Lewis (ryansname@gmail.com)
 
     tests.unit.modules.portage_flags
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import re
 
 # Import Salt Testing libs

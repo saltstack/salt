@@ -4,7 +4,7 @@ A script to start the CherryPy WSGI server
 
 This is run by ``salt-api`` and started in a multiprocess.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 # pylint: disable=C0103
 
 # Import Python libs

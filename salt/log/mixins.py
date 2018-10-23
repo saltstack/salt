@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 
 
     salt.log.mixins
@@ -10,7 +10,7 @@
 
     Some mix-in classes to be used in salt's logging
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import sys

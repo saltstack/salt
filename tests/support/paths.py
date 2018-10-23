@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
     :copyright: Copyright 2017 by the SaltStack Team, see AUTHORS for more details.
     :license: Apache 2.0, see LICENSE for more details.
 
@@ -14,10 +14,13 @@
 # Import python libs
 from __future__ import absolute_import
 import os
+import re
 import sys
 import stat
 import logging
 import tempfile
+
+import salt.utils.path
 
 log = logging.getLogger(__name__)
 
@@ -28,6 +31,9 @@ if TESTS_DIR.startswith('//'):
 if sys.platform.startswith('win'):
     TESTS_DIR = os.path.normcase(TESTS_DIR)
 CODE_DIR = os.path.dirname(TESTS_DIR)
+if sys.platform.startswith('win'):
+    CODE_DIR = CODE_DIR.replace('\\', '\\\\')
+UNIT_TEST_DIR = os.path.join(TESTS_DIR, 'unit')
 INTEGRATION_TEST_DIR = os.path.join(TESTS_DIR, 'integration')
 
 # Let's inject CODE_DIR so salt is importable if not there already
@@ -48,10 +54,13 @@ SYS_TMP_DIR = os.path.abspath(os.path.realpath(
 ))
 TMP = os.path.join(SYS_TMP_DIR, 'salt-tests-tmpdir')
 FILES = os.path.join(INTEGRATION_TEST_DIR, 'files')
+BASE_FILES = os.path.join(INTEGRATION_TEST_DIR, 'files', 'file', 'base')
+PROD_FILES = os.path.join(INTEGRATION_TEST_DIR, 'files', 'file', 'prod')
 PYEXEC = 'python{0}.{1}'.format(*sys.version_info)
 MOCKBIN = os.path.join(INTEGRATION_TEST_DIR, 'mockbin')
 SCRIPT_DIR = os.path.join(CODE_DIR, 'scripts')
 TMP_STATE_TREE = os.path.join(SYS_TMP_DIR, 'salt-temp-state-tree')
+TMP_PILLAR_TREE = os.path.join(SYS_TMP_DIR, 'salt-temp-pillar-tree')
 TMP_PRODENV_STATE_TREE = os.path.join(SYS_TMP_DIR, 'salt-temp-prodenv-state-tree')
 TMP_CONF_DIR = os.path.join(TMP, 'config')
 TMP_SUB_MINION_CONF_DIR = os.path.join(TMP_CONF_DIR, 'sub-minion')
@@ -94,6 +103,24 @@ SCRIPT_TEMPLATES = {
 }
 
 
+def test_mods():
+    '''
+    A generator which returns all of the test files
+    '''
+    test_re = re.compile(r'^test_.+\.py$')
+    for dirname in (UNIT_TEST_DIR, INTEGRATION_TEST_DIR):
+        test_type = os.path.basename(dirname)
+        for root, _, files in salt.utils.path.os_walk(dirname):
+            parent_mod = root[len(dirname):].lstrip(os.sep).replace(os.sep, '.')
+            for filename in files:
+                if test_re.match(filename):
+                    mod_name = test_type
+                    if parent_mod:
+                        mod_name += '.' + parent_mod
+                    mod_name += '.' + filename[:-3]
+                    yield mod_name
+
+
 class ScriptPathMixin(object):
 
     def get_script_path(self, script_name):
@@ -126,7 +153,7 @@ class ScriptPathMixin(object):
                 sfh.write(
                     '#!{0}\n\n'.format(sys.executable) +
                     'import sys\n' +
-                    'CODE_DIR="{0}"\n'.format(CODE_DIR) +
+                    'CODE_DIR = r"{0}"\n'.format(CODE_DIR) +
                     'if CODE_DIR not in sys.path:\n' +
                     '    sys.path.insert(0, CODE_DIR)\n\n' +
                     '\n'.join(script_template).format(script_name.replace('salt-', ''))

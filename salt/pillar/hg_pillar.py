@@ -19,7 +19,7 @@ This external Pillar source can be configured in the master config file as such:
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import copy
 import hashlib
 import logging
@@ -27,7 +27,6 @@ import os
 
 # Import Salt Libs
 import salt.pillar
-import salt.utils
 import salt.utils.stringutils
 
 # Import Third Party Libs

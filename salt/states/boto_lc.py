@@ -98,7 +98,7 @@ and autoscale groups are completely dependent on each other.
             key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
             region: us-east-1
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 from salt.exceptions import SaltInvocationError
 
 
@@ -122,6 +122,7 @@ def present(
         kernel_id=None,
         ramdisk_id=None,
         block_device_mappings=None,
+        delete_on_termination=None,
         instance_monitoring=False,
         spot_price=None,
         instance_profile_name=None,
@@ -164,8 +165,9 @@ def present(
         The user data available to launched EC2 instances.
 
     cloud_init
-        A dict of cloud_init configuration. Currently supported values:
-        scripts, cloud-config. Mutually exclusive with user_data.
+        A dict of cloud_init configuration. Currently supported keys:
+        boothooks, scripts and cloud-config.
+        Mutually exclusive with user_data.
 
     instance_type
         The instance type. ex: m1.small.
@@ -186,8 +188,10 @@ def present(
             Default is standard.
 
         delete_on_termination
-            Indicates whether to delete the volume on instance termination (true) or
-            not (false).
+            Whether the volume should be explicitly marked for deletion when its instance is
+            terminated (True), or left around (False).  If not provided, or None is explicitly passed,
+            the default AWS behaviour is used, which is True for ROOT volumes of instances, and
+            False for all others.
 
         iops
             For Provisioned IOPS (SSD) volumes only. The number of I/O operations per
@@ -268,6 +272,7 @@ def present(
             kernel_id=kernel_id,
             ramdisk_id=ramdisk_id,
             block_device_mappings=block_device_mappings,
+            delete_on_termination=delete_on_termination,
             instance_monitoring=instance_monitoring,
             spot_price=spot_price,
             instance_profile_name=instance_profile_name,

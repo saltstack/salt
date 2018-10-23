@@ -36,28 +36,32 @@ authenticated against.  This defaults to `login`
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 from ctypes import CDLL, POINTER, Structure, CFUNCTYPE, cast, pointer, sizeof
 from ctypes import c_void_p, c_uint, c_char_p, c_char, c_int
 from ctypes.util import find_library
 
 # Import Salt libs
-import salt.utils  # Can be removed once get_group_list is moved
+import salt.utils.user
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 # Import 3rd-party libs
 from salt.ext import six
 
-LIBPAM = CDLL(find_library('pam'))
-LIBC = CDLL(find_library('c'))
+try:
+    LIBC = CDLL(find_library('c'))
 
-CALLOC = LIBC.calloc
-CALLOC.restype = c_void_p
-CALLOC.argtypes = [c_uint, c_uint]
+    CALLOC = LIBC.calloc
+    CALLOC.restype = c_void_p
+    CALLOC.argtypes = [c_uint, c_uint]
 
-STRDUP = LIBC.strdup
-STRDUP.argstypes = [c_char_p]
-STRDUP.restype = POINTER(c_char)  # NOT c_char_p !!!!
+    STRDUP = LIBC.strdup
+    STRDUP.argstypes = [c_char_p]
+    STRDUP.restype = POINTER(c_char)  # NOT c_char_p !!!!
+except AttributeError:
+    HAS_LIBC = False
+else:
+    HAS_LIBC = True
 
 # Various constants
 PAM_PROMPT_ECHO_OFF = 1
@@ -121,6 +125,7 @@ class PamConv(Structure):
 
 
 try:
+    LIBPAM = CDLL(find_library('pam'))
     PAM_START = LIBPAM.pam_start
     PAM_START.restype = c_int
     PAM_START.argtypes = [c_char_p, c_char_p, POINTER(PamConv),
@@ -147,7 +152,7 @@ def __virtual__():
     '''
     Only load on Linux systems
     '''
-    return HAS_PAM
+    return HAS_LIBC and HAS_PAM
 
 
 def authenticate(username, password):
@@ -214,4 +219,4 @@ def groups(username, *args, **kwargs):
 
     Uses system groups
     '''
-    return salt.utils.get_group_list(username)
+    return salt.utils.user.get_group_list(username)

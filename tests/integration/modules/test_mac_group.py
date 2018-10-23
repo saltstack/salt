@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Nicole Thomas <nicole@saltstack.com>`
+    :codeauthor: Nicole Thomas <nicole@saltstack.com>
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import random
 import string
 
@@ -17,6 +17,7 @@ from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party libs
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
+from salt.ext import six
 
 
 def __random_string(size=6):
@@ -27,6 +28,7 @@ def __random_string(size=6):
         random.choice(string.ascii_uppercase + string.digits)
         for x in range(size)
     )
+
 
 # Create group name strings for tests
 ADD_GROUP = __random_string()
@@ -150,8 +152,8 @@ class MacGroupModuleTest(ModuleCase):
 
         # ensure new user is added to group and previous user is removed
         group_info = self.run_function('group.info', [ADD_GROUP])
-        self.assertIn(REP_USER_GROUP, str(group_info['members']))
-        self.assertNotIn(ADD_USER, str(group_info['members']))
+        self.assertIn(REP_USER_GROUP, six.text_type(group_info['members']))
+        self.assertNotIn(ADD_USER, six.text_type(group_info['members']))
 
     def test_mac_getent(self):
         '''
@@ -166,8 +168,8 @@ class MacGroupModuleTest(ModuleCase):
 
         getinfo = self.run_function('group.getent')
         self.assertTrue(getinfo)
-        self.assertIn(ADD_GROUP, str(getinfo))
-        self.assertIn(ADD_USER, str(getinfo))
+        self.assertIn(ADD_GROUP, six.text_type(getinfo))
+        self.assertIn(ADD_USER, six.text_type(getinfo))
 
     def tearDown(self):
         '''

@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Jayesh Kariya <jayeshk@saltstack.com>`
+    :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -20,6 +20,7 @@ from tests.support.mock import (
 # Import Salt Libs
 import salt.modules.apache as apache
 from salt.ext.six.moves.urllib.error import URLError  # pylint: disable=import-error,no-name-in-module
+from salt.utils.odict import OrderedDict
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -40,7 +41,7 @@ class ApacheTestCase(TestCase, LoaderModuleMockMixin):
                    MagicMock(return_value='apachectl')):
             mock = MagicMock(return_value="Server version: Apache/2.4.7")
             with patch.dict(apache.__salt__, {'cmd.run': mock}):
-                self.assertEqual(apache.version(), 'Apache/2.4.7')
+                assert apache.version() == 'Apache/2.4.7'
 
     # 'fullversion' function tests: 1
 
@@ -52,9 +53,8 @@ class ApacheTestCase(TestCase, LoaderModuleMockMixin):
                    MagicMock(return_value='apachectl')):
             mock = MagicMock(return_value="Server version: Apache/2.4.7")
             with patch.dict(apache.__salt__, {'cmd.run': mock}):
-                self.assertEqual(apache.fullversion(),
-                                 {'compiled_with': [],
-                                  'server_version': 'Apache/2.4.7'})
+                assert apache.fullversion() == {'compiled_with': [],
+                                                'server_version': 'Apache/2.4.7'}
 
     # 'modules' function tests: 1
 
@@ -68,9 +68,8 @@ class ApacheTestCase(TestCase, LoaderModuleMockMixin):
                              "unixd_module (static)\n \
                              access_compat_module (shared)")
             with patch.dict(apache.__salt__, {'cmd.run': mock}):
-                self.assertEqual(apache.modules(),
-                                 {'shared': ['access_compat_module'],
-                                  'static': ['unixd_module']})
+                assert apache.modules() == {'shared': ['access_compat_module'],
+                                            'static': ['unixd_module']}
 
     # 'servermods' function tests: 1
 
@@ -82,7 +81,7 @@ class ApacheTestCase(TestCase, LoaderModuleMockMixin):
                    MagicMock(return_value='apachectl')):
             mock = MagicMock(return_value="core.c\nmod_so.c")
             with patch.dict(apache.__salt__, {'cmd.run': mock}):
-                self.assertEqual(apache.servermods(), ['core.c', 'mod_so.c'])
+                assert apache.servermods() == ['core.c', 'mod_so.c']
 
     # 'directives' function tests: 1
 
@@ -94,7 +93,7 @@ class ApacheTestCase(TestCase, LoaderModuleMockMixin):
                    MagicMock(return_value='apachectl')):
             mock = MagicMock(return_value="Salt")
             with patch.dict(apache.__salt__, {'cmd.run': mock}):
-                self.assertEqual(apache.directives(), {'Salt': ''})
+                assert apache.directives() == {'Salt': ''}
 
     # 'vhosts' function tests: 1
 
@@ -106,7 +105,7 @@ class ApacheTestCase(TestCase, LoaderModuleMockMixin):
                    MagicMock(return_value='apachectl')):
             mock = MagicMock(return_value='')
             with patch.dict(apache.__salt__, {'cmd.run': mock}):
-                self.assertEqual(apache.vhosts(), {})
+                assert apache.vhosts() == {}
 
     # 'signal' function tests: 2
 
@@ -118,7 +117,7 @@ class ApacheTestCase(TestCase, LoaderModuleMockMixin):
                    MagicMock(return_value='apachectl')):
             mock = MagicMock(return_value='')
             with patch.dict(apache.__salt__, {'cmd.run': mock}):
-                self.assertEqual(apache.signal(None), None)
+                assert apache.signal(None) is None
 
     def test_signal_args(self):
         '''
@@ -131,25 +130,25 @@ class ApacheTestCase(TestCase, LoaderModuleMockMixin):
                                            'stderr': '',
                                            'stdout': ''})
             with patch.dict(apache.__salt__, {'cmd.run_all': mock}):
-                self.assertEqual(apache.signal('start'), ret)
+                assert apache.signal('start') == ret
 
             mock = MagicMock(return_value={'retcode': 1,
                                            'stderr': 'Syntax OK',
                                            'stdout': ''})
             with patch.dict(apache.__salt__, {'cmd.run_all': mock}):
-                self.assertEqual(apache.signal('start'), 'Syntax OK')
+                assert apache.signal('start') == 'Syntax OK'
 
             mock = MagicMock(return_value={'retcode': 0,
                                            'stderr': 'Syntax OK',
                                            'stdout': ''})
             with patch.dict(apache.__salt__, {'cmd.run_all': mock}):
-                self.assertEqual(apache.signal('start'), 'Syntax OK')
+                assert apache.signal('start') == 'Syntax OK'
 
             mock = MagicMock(return_value={'retcode': 1,
                                            'stderr': '',
                                            'stdout': 'Salt'})
             with patch.dict(apache.__salt__, {'cmd.run_all': mock}):
-                self.assertEqual(apache.signal('start'), 'Salt')
+                assert apache.signal('start') == 'Salt'
 
     # 'useradd' function tests: 1
 
@@ -159,7 +158,7 @@ class ApacheTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value=True)
         with patch.dict(apache.__salt__, {'webutil.useradd': mock}):
-            self.assertTrue(apache.useradd('htpasswd', 'salt', 'badpassword'))
+            assert apache.useradd('htpasswd', 'salt', 'badpassword') is True
 
     # 'userdel' function tests: 1
 
@@ -169,7 +168,7 @@ class ApacheTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value=True)
         with patch.dict(apache.__salt__, {'webutil.userdel': mock}):
-            self.assertTrue(apache.userdel('htpasswd', 'salt'))
+            assert apache.userdel('htpasswd', 'salt') is True
 
     # 'server_status' function tests: 2
 
@@ -180,7 +179,7 @@ class ApacheTestCase(TestCase, LoaderModuleMockMixin):
         with patch('salt.modules.apache.server_status', MagicMock(return_value={})):
             mock = MagicMock(return_value='')
             with patch.dict(apache.__salt__, {'config.get': mock}):
-                self.assertEqual(apache.server_status(), {})
+                assert apache.server_status() == {}
 
     def test_server_status_error(self):
         '''
@@ -190,7 +189,7 @@ class ApacheTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(apache, '_urlopen', mock):
             mock = MagicMock(return_value='')
             with patch.dict(apache.__salt__, {'config.get': mock}):
-                self.assertEqual(apache.server_status(), 'error')
+                assert apache.server_status() == 'error'
 
     # 'config' function tests: 1
 
@@ -201,5 +200,100 @@ class ApacheTestCase(TestCase, LoaderModuleMockMixin):
         with patch('salt.modules.apache._parse_config',
                    MagicMock(return_value='Listen 22')):
             with patch('salt.utils.files.fopen', mock_open()):
-                self.assertEqual(apache.config('/ports.conf',
-                                               [{'Listen': '22'}]), 'Listen 22')
+                assert apache.config('/ports.conf', [{'Listen': '22'}]) == 'Listen 22'
+
+    # '_parse_config' function tests: 2
+
+    def test__parse_config_dict(self):
+        '''
+        Test parsing function which creates configs from dict like (legacy way):
+            - VirtualHost:
+              this: '*:80'
+              ServerName: website.com
+              ServerAlias:
+                - www
+                - dev
+              Directory:
+                  this: /var/www/vhosts/website.com
+                  Order: Deny,Allow
+                  Allow from:
+                    - 127.0.0.1
+                    - 192.168.100.0/24
+
+        '''
+        data_in = OrderedDict([
+            ('Directory', OrderedDict([
+                ('this', '/var/www/vhosts/website.com'),
+                ('Order', 'Deny,Allow'),
+                ('Allow from', ['127.0.0.1', '192.168.100.0/24'])])),
+            ('this', '*:80'),
+            ('ServerName', 'website.com'),
+            ('ServerAlias', ['www', 'dev'])
+        ])
+        dataout = '<VirtualHost *:80>\n' \
+                  '<Directory /var/www/vhosts/website.com>\n' \
+                  'Order Deny,Allow\n' \
+                  'Allow from 127.0.0.1\n' \
+                  'Allow from 192.168.100.0/24\n\n' \
+                  '</Directory>\n\n' \
+                  'ServerName website.com\n' \
+                  'ServerAlias www\n' \
+                  'ServerAlias dev\n\n' \
+                  '</VirtualHost>\n'
+        # pylint: disable=protected-access
+        parse = apache._parse_config(data_in, 'VirtualHost')
+        assert parse == dataout
+
+    def test__parse_config_list(self):
+        '''
+        Test parsing function which creates configs from variable structure (list of dicts or
+        list of dicts of dicts/lists) like:
+            - VirtualHost:
+              - this: '*:80'
+              - ServerName: website.com
+              - ServerAlias:
+                - www
+                - dev
+              - Directory:
+                  this: /var/www/vhosts/website.com
+                  Order: Deny,Allow
+                  Allow from:
+                    - 127.0.0.1
+                    - 192.168.100.0/24
+              - Directory:
+                - this: /var/www/vhosts/website.com/private
+                - Order: Deny,Allow
+                - Allow from:
+                  - 127.0.0.1
+                  - 192.168.100.0/24
+                - If:
+                    this: some condition
+                    do: something
+        '''
+        data_in = [OrderedDict([
+            ('ServerName', 'website.com'),
+            ('ServerAlias', ['www', 'dev']),
+            ('Directory', [OrderedDict([
+                ('this', '/var/www/vhosts/website.com/private'),
+                ('Order', 'Deny,Allow'),
+                ('Allow from', ['127.0.0.1', '192.168.100.0/24']),
+                ('If', {'this': 'some condition', 'do': 'something'})
+            ])]),
+            ('this', '*:80')
+        ])]
+        dataout = '<VirtualHost *:80>\n' \
+                  'ServerName website.com\n' \
+                  'ServerAlias www\n' \
+                  'ServerAlias dev\n\n' \
+                  '<Directory /var/www/vhosts/website.com/private>\n' \
+                  'Order Deny,Allow\n' \
+                  'Allow from 127.0.0.1\n' \
+                  'Allow from 192.168.100.0/24\n\n' \
+                  '<If some condition>\n' \
+                  'do something\n' \
+                  '</If>\n\n' \
+                  '</Directory>\n\n' \
+                  '</VirtualHost>\n'
+        # pylint: disable=protected-access
+        parse = apache._parse_config(data_in, 'VirtualHost')
+        assert parse == dataout

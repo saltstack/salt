@@ -1,21 +1,28 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 import sys
 sys.modules['pkg_resources'] = None
 import os
 
 # Import Salt libs
-import salt.utils  # Can be removed once print_cli is moved
+import salt.defaults.exitcodes
+import salt.utils.job
 import salt.utils.parsers
+import salt.utils.stringutils
+import salt.log
 from salt.utils.args import yamlify_arg
 from salt.utils.verify import verify_log
 from salt.exceptions import (
-        SaltClientError,
-        SaltInvocationError,
-        EauthAuthenticationError
-        )
+    AuthenticationError,
+    AuthorizationError,
+    EauthAuthenticationError,
+    LoaderError,
+    SaltClientError,
+    SaltInvocationError,
+    SaltSystemExit
+)
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -33,9 +40,10 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
         import salt.client
         self.parse_args()
 
-        # Setup file logging!
-        self.setup_logfile_logger()
-        verify_log(self.config)
+        if self.config['log_level'] not in ('quiet', ):
+            # Setup file logging!
+            self.setup_logfile_logger()
+            verify_log(self.config)
 
         try:
             # We don't need to bail on config file permission errors
@@ -93,7 +101,7 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
         # potentially switch to batch execution
         if self.options.batch_safe_limit > 1:
             if len(self._preview_target()) >= self.options.batch_safe_limit:
-                salt.utils.print_cli('\nNOTICE: Too many minions targeted, switching to batch execution.')
+                salt.utils.stringutils.print_cli('\nNOTICE: Too many minions targeted, switching to batch execution.')
                 self.options.batch = self.options.batch_safe_size
                 self._run_batch()
                 return
@@ -140,7 +148,7 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
 
         if self.config['async']:
             jid = self.local_client.cmd_async(**kwargs)
-            salt.utils.print_cli('Executed command with job ID: {0}'.format(jid))
+            salt.utils.stringutils.print_cli('Executed command with job ID: {0}'.format(jid))
             return
 
         # local will be None when there was an error
@@ -166,8 +174,8 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
                     out = 'progress'
                     try:
                         self._progress_ret(progress, out)
-                    except salt.exceptions.LoaderError as exc:
-                        raise salt.exceptions.SaltSystemExit(exc)
+                    except LoaderError as exc:
+                        raise SaltSystemExit(exc)
                     if 'return_count' not in progress:
                         ret.update(progress)
                 self._progress_end(out)
@@ -178,7 +186,7 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
                 for full_ret in self.local_client.cmd_cli(**kwargs):
                     ret_, out, retcode = self._format_ret(full_ret)
                     ret.update(ret_)
-                self._output_ret(ret, out)
+                self._output_ret(ret, out, retcode=retcode)
             else:
                 if self.options.verbose:
                     kwargs['verbose'] = True
@@ -187,7 +195,7 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
                     try:
                         ret_, out, retcode = self._format_ret(full_ret)
                         retcodes.append(retcode)
-                        self._output_ret(ret_, out)
+                        self._output_ret(ret_, out, retcode=retcode)
                         ret.update(full_ret)
                     except KeyError:
                         errors.append(full_ret)
@@ -203,13 +211,17 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
             # returned 'ok' with a retcode of 0.
             # This is the final point before the 'salt' cmd returns,
             # which is why we set the retcode here.
-            if retcodes.count(0) < len(retcodes):
+            if not all(exit_code == salt.defaults.exitcodes.EX_OK for exit_code in retcodes):
                 sys.stderr.write('ERROR: Minions returned with non-zero exit code\n')
-                sys.exit(11)
+                sys.exit(salt.defaults.exitcodes.EX_GENERIC)
 
-        except (SaltInvocationError, EauthAuthenticationError, SaltClientError) as exc:
-            ret = str(exc)
-            self._output_ret(ret, '')
+        except (AuthenticationError,
+                AuthorizationError,
+                SaltInvocationError,
+                EauthAuthenticationError,
+                SaltClientError) as exc:
+            ret = six.text_type(exc)
+            self._output_ret(ret, '', retcode=1)
 
     def _preview_target(self):
         '''
@@ -250,7 +262,7 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
 
             try:
                 batch = salt.cli.batch.Batch(self.config, eauth=eauth, quiet=True)
-            except salt.exceptions.SaltClientError as exc:
+            except SaltClientError:
                 sys.exit(2)
 
             ret = {}
@@ -264,7 +276,7 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
             try:
                 self.config['batch'] = self.options.batch
                 batch = salt.cli.batch.Batch(self.config, eauth=eauth, parser=self.options)
-            except salt.exceptions.SaltClientError as exc:
+            except SaltClientError:
                 # We will print errors to the console further down the stack
                 sys.exit(1)
             # Printing the output is already taken care of in run() itself
@@ -279,12 +291,12 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
 
     def _print_errors_summary(self, errors):
         if errors:
-            salt.utils.print_cli('\n')
-            salt.utils.print_cli('---------------------------')
-            salt.utils.print_cli('Errors')
-            salt.utils.print_cli('---------------------------')
+            salt.utils.stringutils.print_cli('\n')
+            salt.utils.stringutils.print_cli('---------------------------')
+            salt.utils.stringutils.print_cli('Errors')
+            salt.utils.stringutils.print_cli('---------------------------')
             for error in errors:
-                salt.utils.print_cli(self._format_error(error))
+                salt.utils.stringutils.print_cli(self._format_error(error))
 
     def _print_returns_summary(self, ret):
         '''
@@ -314,22 +326,22 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
                 return_counter += 1
                 if self._get_retcode(ret[each_minion]):
                     failed_minions.append(each_minion)
-        salt.utils.print_cli('\n')
-        salt.utils.print_cli('-------------------------------------------')
-        salt.utils.print_cli('Summary')
-        salt.utils.print_cli('-------------------------------------------')
-        salt.utils.print_cli('# of minions targeted: {0}'.format(return_counter + not_return_counter))
-        salt.utils.print_cli('# of minions returned: {0}'.format(return_counter))
-        salt.utils.print_cli('# of minions that did not return: {0}'.format(not_return_counter))
-        salt.utils.print_cli('# of minions with errors: {0}'.format(len(failed_minions)))
+        salt.utils.stringutils.print_cli('\n')
+        salt.utils.stringutils.print_cli('-------------------------------------------')
+        salt.utils.stringutils.print_cli('Summary')
+        salt.utils.stringutils.print_cli('-------------------------------------------')
+        salt.utils.stringutils.print_cli('# of minions targeted: {0}'.format(return_counter + not_return_counter))
+        salt.utils.stringutils.print_cli('# of minions returned: {0}'.format(return_counter))
+        salt.utils.stringutils.print_cli('# of minions that did not return: {0}'.format(not_return_counter))
+        salt.utils.stringutils.print_cli('# of minions with errors: {0}'.format(len(failed_minions)))
         if self.options.verbose:
             if not_connected_minions:
-                salt.utils.print_cli('Minions not connected: {0}'.format(" ".join(not_connected_minions)))
+                salt.utils.stringutils.print_cli('Minions not connected: {0}'.format(" ".join(not_connected_minions)))
             if not_response_minions:
-                salt.utils.print_cli('Minions not responding: {0}'.format(" ".join(not_response_minions)))
+                salt.utils.stringutils.print_cli('Minions not responding: {0}'.format(" ".join(not_response_minions)))
             if failed_minions:
-                salt.utils.print_cli('Minions with failures: {0}'.format(" ".join(failed_minions)))
-        salt.utils.print_cli('-------------------------------------------')
+                salt.utils.stringutils.print_cli('Minions with failures: {0}'.format(" ".join(failed_minions)))
+        salt.utils.stringutils.print_cli('-------------------------------------------')
 
     def _progress_end(self, out):
         import salt.output
@@ -344,12 +356,12 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
         if not hasattr(self, 'progress_bar'):
             try:
                 self.progress_bar = salt.output.get_progress(self.config, out, progress)
-            except Exception as exc:
-                raise salt.exceptions.LoaderError('\nWARNING: Install the `progressbar` python package. '
-                                                  'Requested job was still run but output cannot be displayed.\n')
+            except Exception:
+                raise LoaderError('\nWARNING: Install the `progressbar` python package. '
+                                  'Requested job was still run but output cannot be displayed.\n')
         salt.output.update_progress(self.config, progress, self.progress_bar, out)
 
-    def _output_ret(self, ret, out):
+    def _output_ret(self, ret, out, retcode=0):
         '''
         Print the output from a single return to the terminal
         '''
@@ -359,7 +371,10 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
             self._print_docs(ret)
         else:
             # Determine the proper output method and run it
-            salt.output.display_output(ret, out, self.config)
+            salt.output.display_output(ret,
+                                       out=out,
+                                       opts=self.config,
+                                       _retcode=retcode)
         if not ret:
             sys.stderr.write('ERROR: No return received\n')
             sys.exit(2)
@@ -387,6 +402,8 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
         retcode = 0
         # if there is a dict with retcode, use that
         if isinstance(ret, dict) and ret.get('retcode', 0) != 0:
+            if isinstance(ret.get('retcode', 0), dict):
+                return max(six.itervalues(ret.get('retcode', {0: 0})))
             return ret['retcode']
         # if its a boolean, False means 1
         elif isinstance(ret, bool) and not ret:
@@ -411,7 +428,7 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
         for host in ret:
             if isinstance(ret[host], six.string_types) \
                     and (ret[host].startswith("Minion did not return")
-                         or ret[host] == 'VALUE TRIMMED'):
+                         or ret[host] == 'VALUE_TRIMMED'):
                 continue
             for fun in ret[host]:
                 if fun not in docs and ret[host][fun]:
@@ -421,6 +438,6 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
                 salt.output.display_output({fun: docs[fun]}, 'nested', self.config)
         else:
             for fun in sorted(docs):
-                salt.utils.print_cli('{0}:'.format(fun))
-                salt.utils.print_cli(docs[fun])
-                salt.utils.print_cli('')
+                salt.utils.stringutils.print_cli('{0}:'.format(fun))
+                salt.utils.stringutils.print_cli(docs[fun])
+                salt.utils.stringutils.print_cli('')

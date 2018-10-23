@@ -10,7 +10,7 @@ The service module for OpenBSD
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import fnmatch
 import logging
@@ -20,6 +20,7 @@ from salt.ext import six
 from salt.ext.six.moves import map  # pylint: disable=import-error,redefined-builtin
 
 # Import Salt libs
+import salt.utils.data
 import salt.utils.files
 
 log = logging.getLogger(__name__)
@@ -98,7 +99,7 @@ def status(name, sig=None):
     If the name contains globbing, a dict mapping service name to True/False
     values is returned.
 
-    .. versionchanged:: Oxygen
+    .. versionchanged:: 2018.3.0
         The service name can now be a glob (e.g. ``salt*``)
 
     Args:
@@ -169,7 +170,7 @@ def _get_rc():
         # now read the system startup script /etc/rc
         # to know what are the system enabled daemons
         with salt.utils.files.fopen('/etc/rc', 'r') as handle:
-            lines = handle.readlines()
+            lines = salt.utils.data.decode(handle.readlines())
     except IOError:
         log.error('Unable to read /etc/rc')
     else:

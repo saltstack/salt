@@ -6,8 +6,6 @@ This system allows for authentication to be managed in a module pluggable way
 so that any external authentication system can be used inside of Salt
 '''
 
-from __future__ import absolute_import
-
 # 1. Create auth loader instance
 # 2. Accept arguments as a dict
 # 3. Verify with function introspection
@@ -16,23 +14,26 @@ from __future__ import absolute_import
 # 6. Interface to verify tokens
 
 # Import python libs
-from __future__ import print_function
+from __future__ import absolute_import, print_function, unicode_literals
 import collections
 import time
 import logging
 import random
 import getpass
 from salt.ext.six.moves import input
+from salt.ext import six
 
 # Import salt libs
 import salt.config
 import salt.loader
 import salt.transport.client
-import salt.utils
 import salt.utils.args
+import salt.utils.dictupdate
 import salt.utils.files
 import salt.utils.minions
+import salt.utils.user
 import salt.utils.versions
+import salt.utils.zeromq
 import salt.payload
 
 log = logging.getLogger(__name__)
@@ -42,8 +43,12 @@ AUTH_INTERNAL_KEYWORDS = frozenset([
     'cmd',
     'eauth',
     'fun',
+    'gather_job_timeout',
     'kwarg',
-    'match'
+    'match',
+    'print_event',
+    'raw',
+    'yield_pub_data'
 ])
 
 
@@ -87,16 +92,17 @@ class LoadAuth(object):
         fstr = '{0}.auth'.format(load['eauth'])
         if fstr not in self.auth:
             return False
-        fcall = salt.utils.format_call(self.auth[fstr],
-                                       load,
-                                       expected_extra_kws=AUTH_INTERNAL_KEYWORDS)
+        fcall = salt.utils.args.format_call(
+            self.auth[fstr],
+            load,
+            expected_extra_kws=AUTH_INTERNAL_KEYWORDS)
         try:
             if 'kwargs' in fcall:
                 return self.auth[fstr](*fcall['args'], **fcall['kwargs'])
             else:
                 return self.auth[fstr](*fcall['args'])
         except Exception as e:
-            log.debug('Authentication module threw {0}'.format(e))
+            log.debug('Authentication module threw %s', e)
             return False
 
     def time_auth(self, load):
@@ -133,13 +139,14 @@ class LoadAuth(object):
         fstr = '{0}.acl'.format(mod)
         if fstr not in self.auth:
             return None
-        fcall = salt.utils.format_call(self.auth[fstr],
-                                       load,
-                                       expected_extra_kws=AUTH_INTERNAL_KEYWORDS)
+        fcall = salt.utils.args.format_call(
+            self.auth[fstr],
+            load,
+            expected_extra_kws=AUTH_INTERNAL_KEYWORDS)
         try:
             return self.auth[fstr](*fcall['args'], **fcall['kwargs'])
         except Exception as e:
-            log.debug('Authentication module threw {0}'.format(e))
+            log.debug('Authentication module threw %s', e)
             return None
 
     def __process_acl(self, load, auth_list):
@@ -155,7 +162,7 @@ class LoadAuth(object):
         try:
             return self.auth[fstr](auth_list, self.opts)
         except Exception as e:
-            log.debug('Authentication module threw {0}'.format(e))
+            log.debug('Authentication module threw %s', e)
             return auth_list
 
     def get_groups(self, load):
@@ -168,9 +175,10 @@ class LoadAuth(object):
         fstr = '{0}.groups'.format(load['eauth'])
         if fstr not in self.auth:
             return False
-        fcall = salt.utils.format_call(self.auth[fstr],
-                                       load,
-                                       expected_extra_kws=AUTH_INTERNAL_KEYWORDS)
+        fcall = salt.utils.args.format_call(
+            self.auth[fstr],
+            load,
+            expected_extra_kws=AUTH_INTERNAL_KEYWORDS)
         try:
             return self.auth[fstr](*fcall['args'], **fcall['kwargs'])
         except IndexError:
@@ -279,7 +287,7 @@ class LoadAuth(object):
             return False
 
         if load['eauth'] not in self.opts['external_auth']:
-            # The eauth system is not enabled, fail
+            log.debug('The eauth system "%s" is not enabled', load['eauth'])
             log.warning('Authentication failure of type "eauth" occurred.')
             return False
 
@@ -333,7 +341,7 @@ class LoadAuth(object):
                     log.warning(error_msg)
                     return False
         else:
-            if auth_key != key[salt.utils.get_user()]:
+            if auth_key != key[salt.utils.user.get_user()]:
                 log.warning(error_msg)
                 return False
         return True
@@ -357,6 +365,7 @@ class LoadAuth(object):
         eauth = token['eauth'] if token else load['eauth']
         if eauth not in self.opts['external_auth']:
             # No matching module is allowed in config
+            log.debug('The eauth system "%s" is not enabled', eauth)
             log.warning('Authorization failure occurred.')
             return None
 
@@ -367,58 +376,28 @@ class LoadAuth(object):
             name = self.load_name(load)  # The username we are attempting to auth with
             groups = self.get_groups(load)  # The groups this user belongs to
         eauth_config = self.opts['external_auth'][eauth]
+        if not eauth_config:
+            log.debug('eauth "%s" configuration is empty', eauth)
+
         if not groups:
             groups = []
-        group_perm_keys = [item for item in eauth_config if item.endswith('%')]  # The configured auth groups
-
-        # First we need to know if the user is allowed to proceed via any of their group memberships.
-        group_auth_match = False
-        for group_config in group_perm_keys:
-            if group_config.rstrip('%') in groups:
-                group_auth_match = True
-                break
-        # If a group_auth_match is set it means only that we have a
-        # user which matches at least one or more of the groups defined
-        # in the configuration file.
-
-        external_auth_in_db = False
-        for entry in eauth_config:
-            if entry.startswith('^'):
-                external_auth_in_db = True
-                break
-
-        # If neither a catchall, a named membership or a group
-        # membership is found, there is no need to continue. Simply
-        # deny the user access.
-        if not ((name in eauth_config) |
-                ('*' in eauth_config) |
-                group_auth_match | external_auth_in_db):
-            # Auth successful, but no matching user found in config
-            log.warning('Authorization failure occurred.')
-            return None
 
         # We now have an authenticated session and it is time to determine
         # what the user has access to.
-        auth_list = []
-        if name in eauth_config:
-            auth_list = eauth_config[name]
-        elif '*' in eauth_config:
-            auth_list = eauth_config['*']
-        if group_auth_match:
-            auth_list = self.ckminions.fill_auth_list_from_groups(
-                    eauth_config,
-                    groups,
-                    auth_list)
+        auth_list = self.ckminions.fill_auth_list(
+                eauth_config,
+                name,
+                groups)
 
         auth_list = self.__process_acl(load, auth_list)
 
-        log.trace("Compiled auth_list: {0}".format(auth_list))
+        log.trace('Compiled auth_list: %s', auth_list)
 
         return auth_list
 
     def check_authentication(self, load, auth_type, key=None, show_username=False):
         '''
-        .. versionadded:: Oxygen
+        .. versionadded:: 2018.3.0
 
         Go through various checks to see if the token/eauth/user can be authenticated.
 
@@ -458,13 +437,28 @@ class LoadAuth(object):
 
             auth_list = self.get_auth_list(load)
         elif auth_type == 'user':
-            if not self.authenticate_key(load, key):
+            auth_ret = self.authenticate_key(load, key)
+            msg = 'Authentication failure of type "user" occurred'
+            if not auth_ret:  # auth_ret can be a boolean or the effective user id
                 if show_username:
-                    msg = 'Authentication failure of type "user" occurred for user {0}.'.format(username)
-                else:
-                    msg = 'Authentication failure of type "user" occurred'
+                    msg = '{0} for user {1}.'.format(msg, username)
                 ret['error'] = {'name': 'UserAuthenticationError', 'message': msg}
                 return ret
+
+            # Verify that the caller has root on master
+            if auth_ret is not True:
+                if AuthUser(load['user']).is_sudo():
+                    if not self.opts['sudo_acl'] or not self.opts['publisher_acl']:
+                        auth_ret = True
+
+            if auth_ret is not True:
+                # Avoid a circular import
+                import salt.utils.master
+                auth_list = salt.utils.master.get_values_of_matching_keys(
+                    self.opts['publisher_acl'], auth_ret)
+                if not auth_list:
+                    ret['error'] = {'name': 'UserAuthenticationError', 'message': msg}
+                    return ret
         else:
             ret['error'] = {'name': 'SaltInvocationError',
                             'message': 'Authentication type not supported.'}
@@ -564,11 +558,7 @@ class Authorize(object):
         try:
             token = self.loadauth.get_tok(load['token'])
         except Exception as exc:
-            log.error(
-                'Exception occurred when generating auth token: {0}'.format(
-                    exc
-                )
-            )
+            log.error('Exception occurred when generating auth token: %s', exc)
             yield {}
         if not token:
             log.warning('Authentication failure of type "token" occurred.')
@@ -598,9 +588,7 @@ class Authorize(object):
                 if not self.loadauth.time_auth(load):
                     continue
             except Exception as exc:
-                log.error(
-                    'Exception occurred while authenticating: {0}'.format(exc)
-                )
+                log.error('Exception occurred while authenticating: %s', exc)
                 continue
             yield {'sub_auth': sub_auth, 'name': name}
         yield {}
@@ -684,18 +672,12 @@ class Resolver(object):
         self.auth = salt.loader.auth(opts)
 
     def _send_token_request(self, load):
-        if self.opts['transport'] in ('zeromq', 'tcp'):
-            master_uri = 'tcp://' + salt.utils.ip_bracket(self.opts['interface']) + \
-                         ':' + str(self.opts['ret_port'])
-            channel = salt.transport.client.ReqChannel.factory(self.opts,
-                                                                crypt='clear',
-                                                                master_uri=master_uri)
-            return channel.send(load)
-
-        elif self.opts['transport'] == 'raet':
-            channel = salt.transport.client.ReqChannel.factory(self.opts)
-            channel.dst = (None, None, 'local_cmd')
-            return channel.send(load)
+        master_uri = 'tcp://' + salt.utils.zeromq.ip_bracket(self.opts['interface']) + \
+                     ':' + six.text_type(self.opts['ret_port'])
+        channel = salt.transport.client.ReqChannel.factory(self.opts,
+                                                           crypt='clear',
+                                                           master_uri=master_uri)
+        return channel.send(load)
 
     def cli(self, eauth):
         '''
@@ -710,6 +692,7 @@ class Resolver(object):
         if fstr not in self.auth:
             print(('The specified external authentication system "{0}" is '
                    'not available').format(eauth))
+            print("Available eauth types: {0}".format(", ".join(self.auth.file_mapping.keys())))
             return ret
 
         args = salt.utils.args.arg_lookup(self.auth[fstr])
@@ -728,7 +711,7 @@ class Resolver(object):
 
         # Use current user if empty
         if 'username' in ret and not ret['username']:
-            ret['username'] = salt.utils.get_user()
+            ret['username'] = salt.utils.user.get_user()
 
         return ret
 
@@ -799,7 +782,7 @@ class AuthUser(object):
         Returns True if the user is the same user as the one running
         this process and False if not.
         '''
-        return self.user == salt.utils.get_user()
+        return self.user == salt.utils.user.get_user()
 
     def sudo_name(self):
         '''

@@ -41,10 +41,11 @@ or clusters are available.
     as this makes all master configuration settings available in all minion's
     pillars.
 
-Etcd profile configuration can be overriden using following arguments: ``host``,
+Etcd profile configuration can be overridden using following arguments: ``host``,
 ``port``, ``username``, ``password``, ``ca``, ``client_key`` and ``client_cert``.
 
 .. code-block:: yaml
+
     my-value:
       etcd.set:
         - name: /path/to/key
@@ -117,8 +118,7 @@ Available Functions
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
-
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Define the module's virtual name
 __virtualname__ = 'etcd'
@@ -334,7 +334,14 @@ def wait_rm(name, recurse=False, profile=None, **kwargs):
 
 def mod_watch(name, **kwargs):
     '''
-    Execute a etcd function based on a watch call requisite.
+    The etcd watcher, called to invoke the watch command.
+    When called, execute a etcd function based on a watch call requisite.
+
+    .. note::
+        This state exists to support special handling of the ``watch``
+        :ref:`requisite <requisites>`. It should not be called directly.
+
+        Parameters for this function should be set by the state being triggered.
     '''
 
     # Watch to set etcd key

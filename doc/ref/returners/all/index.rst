@@ -46,5 +46,6 @@ returner modules
     splunk
     sqlite3_return
     syslog_return
+    telegram_return
     xmpp_return
     zabbix_return

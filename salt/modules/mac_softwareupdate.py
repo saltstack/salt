@@ -2,7 +2,7 @@
 '''
 Support for the softwareupdate command on MacOS.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 
 # Import python libs
@@ -10,8 +10,9 @@ import re
 import os
 
 # import salt libs
-import salt.utils
+import salt.utils.data
 import salt.utils.files
+import salt.utils.path
 import salt.utils.mac_utils
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError, SaltInvocationError
@@ -48,7 +49,7 @@ def _get_available(recommended=False, restart=False):
     rexp = re.compile('(?m)^   [*|-] '
                       r'([^ ].*)[\r\n].*\(([^\)]+)')
 
-    if salt.utils.is_true(recommended):
+    if salt.utils.data.is_true(recommended):
         # rexp parses lines that look like the following:
         #    * Safari6.1.2MountainLion-6.1.2
         #         Safari (6.1.2), 51679K [recommended]
@@ -66,7 +67,7 @@ def _get_available(recommended=False, restart=False):
         version_num = _get(line, 'version')
         ret[name] = version_num
 
-    if not salt.utils.is_true(restart):
+    if not salt.utils.data.is_true(restart):
         return ret
 
     # rexp parses lines that look like the following:
@@ -185,8 +186,7 @@ def schedule_enabled():
     Check the status of automatic update scheduling.
 
     :return: True if scheduling is enabled, False if disabled
-        - ``True``: Automatic checking is on,
-        - ``False``: Automatic checking is off,
+
     :rtype: bool
 
     CLI Example:
@@ -207,9 +207,10 @@ def schedule_enable(enable):
     '''
     Enable/disable automatic update scheduling.
 
-    :param enable: True/On/Yes/1 to turn on automatic updates. False/No/Off/0 to
-    turn off automatic updates. If this value is empty, the current status will
-    be returned.
+    :param enable: True/On/Yes/1 to turn on automatic updates. False/No/Off/0
+        to turn off automatic updates. If this value is empty, the current
+        status will be returned.
+
     :type: bool str
 
     :return: True if scheduling is enabled, False if disabled
@@ -237,17 +238,16 @@ def update_all(recommended=False, restart=True):
     of the update and the status of its installation.
 
     :param bool recommended: If set to True, only install the recommended
-    updates. If set to False (default) all updates are installed.
+        updates. If set to False (default) all updates are installed.
 
     :param bool restart: Set this to False if you do not want to install updates
-    that require a restart. Default is True
+        that require a restart. Default is True
 
     :return: A dictionary containing the updates that were installed and the
-    status of its installation. If no updates were installed an empty dictionary
-    is returned.
+        status of its installation. If no updates were installed an empty
+        dictionary is returned.
+
     :rtype: dict
-    - ``True``: The update was installed.
-    - ``False``: The update was not installed.
 
     CLI Example:
 
@@ -330,7 +330,7 @@ def list_downloads():
        salt '*' softwareupdate.list_downloads
     '''
     outfiles = []
-    for root, subFolder, files in os.walk('/Library/Updates'):
+    for root, subFolder, files in salt.utils.path.os_walk('/Library/Updates'):
         for f in files:
             outfiles.append(os.path.join(root, f))
 
@@ -343,7 +343,7 @@ def list_downloads():
     for update in _get_available():
         for f in dist_files:
             with salt.utils.files.fopen(f) as fhr:
-                if update.rsplit('-', 1)[0] in fhr.read():
+                if update.rsplit('-', 1)[0] in salt.utils.stringutils.to_unicode(fhr.read()):
                     ret.append(update)
 
     return ret
@@ -384,10 +384,10 @@ def download_all(recommended=False, restart=True):
     are now downloaded.
 
     :param bool recommended: If set to True, only install the recommended
-    updates. If set to False (default) all updates are installed.
+        updates. If set to False (default) all updates are installed.
 
     :param bool restart: Set this to False if you do not want to install updates
-    that require a restart. Default is True
+        that require a restart. Default is True
 
     :return: A list containing all downloaded updates on the system.
     :rtype: list

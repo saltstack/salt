@@ -4,7 +4,7 @@ integration tests for mac_service
 '''
 
 # Import Python libs
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
@@ -40,8 +40,10 @@ class MacServiceModuleTest(ModuleCase):
         '''
         if self.SERVICE_ENABLED:
             self.run_function('service.start', [self.SERVICE_NAME])
+            self.run_function('service.enable', [self.SERVICE_NAME])
         else:
             self.run_function('service.stop', [self.SERVICE_NAME])
+            self.run_function('service.disable', [self.SERVICE_NAME])
 
     def test_show(self):
         '''
@@ -198,11 +200,12 @@ class MacServiceModuleTest(ModuleCase):
         self.assertFalse(
             self.run_function('service.disabled', [SERVICE_NAME]))
 
-        self.assertTrue(self.run_function('service.stop', [SERVICE_NAME]))
+        self.assertTrue(self.run_function('service.disable', [SERVICE_NAME]))
         self.assertTrue(
             self.run_function('service.disabled', [SERVICE_NAME]))
+        self.assertTrue(self.run_function('service.enable', [SERVICE_NAME]))
 
-        self.assertTrue(self.run_function('service.disabled', ['spongebob']))
+        self.assertFalse(self.run_function('service.disabled', ['spongebob']))
 
     def test_get_all(self):
         '''

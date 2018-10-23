@@ -4,7 +4,7 @@ Manage Dell DRAC
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import Salt libs
@@ -465,5 +465,5 @@ def server_pxe():
             log.warning('failed to set boot order')
             return False
 
-    log.warning('failed to to configure PXE boot')
+    log.warning('failed to configure PXE boot')
     return False

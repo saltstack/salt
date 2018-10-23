@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Rupesh Tare <rupesht@saltstack.com>`
+    :codeauthor: Rupesh Tare <rupesht@saltstack.com>
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os.path
 
 # Import Salt Testing Libs
@@ -290,10 +290,13 @@ class LinuxLVMTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test to return information about the logical volume(s)
         '''
-        mock = MagicMock(return_value={'retcode': 1})
-        with patch.dict(linux_lvm.__salt__, {'cmd.run_all': mock}):
-            self.assertDictEqual(linux_lvm.lvresize(1, 'a'), {})
+        self.assertEqual(linux_lvm.lvresize(1, None, 1),
+                         {})
 
-        mock = MagicMock(return_value={'retcode': 0})
-        with patch.dict(linux_lvm.__salt__, {'cmd.run_all': mock}):
-            self.assertDictEqual(linux_lvm.lvresize(1, 'a'), {})
+        self.assertEqual(linux_lvm.lvresize(None, None, None),
+                         {})
+
+        mock = MagicMock(return_value='A')
+        with patch.dict(linux_lvm.__salt__, {'cmd.run': mock}):
+            self.assertDictEqual(linux_lvm.lvresize('A', 1),
+                                 {'Output from lvresize': 'A'})

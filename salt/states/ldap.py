@@ -9,11 +9,13 @@ The ``states.ldap`` state module allows you to manage LDAP entries and
 their attributes.
 '''
 
-from __future__ import absolute_import
-
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 import copy
 import inspect
 import logging
+
+# Import Salt libs
 from salt.ext import six
 from salt.utils.odict import OrderedDict
 from salt.utils.oset import OrderedSet
@@ -344,7 +346,7 @@ def managed(name, entries, connect_spec=None):
             if len(errs):
                 ret['result'] = False
                 ret['comment'] = 'failed to ' \
-                                 + ', '.join((op + ' entry ' + dn + '(' + str(err) + ')'
+                                 + ', '.join((op + ' entry ' + dn + '(' + six.text_type(err) + ')'
                                               for op, dn, err in errs))
 
     # set ret['changes'].  filter out any unchanged attributes, and
@@ -521,6 +523,6 @@ def _toset(thing):
     # convert numbers to strings so that equality checks work
     # (LDAP stores numbers as strings)
     try:
-        return OrderedSet((str(x) for x in thing))
+        return OrderedSet((six.text_type(x) for x in thing))
     except TypeError:
-        return OrderedSet((str(thing),))
+        return OrderedSet((six.text_type(thing),))

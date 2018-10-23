@@ -52,14 +52,14 @@ The below code deletes a key pair:
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 from time import time, sleep
 
 # Import salt libs
 from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,no-name-in-module,redefined-builtin
-import salt.utils
+import salt.utils.data
 import salt.utils.dictupdate as dictupdate
 from salt.exceptions import SaltInvocationError, CommandExecutionError
 
@@ -87,7 +87,7 @@ def key_present(name, save_private=None, upload_public=None, region=None,
            'changes': {}
            }
     exists = __salt__['boto_ec2.get_key'](name, region, key, keyid, profile)
-    log.debug('exists is {0}'.format(exists))
+    log.debug('exists is %s', exists)
     if upload_public is not None and 'salt://' in upload_public:
         try:
             upload_public = __salt__['cp.get_file_str'](upload_public)
@@ -151,7 +151,7 @@ def key_absent(name, region=None, key=None, keyid=None, profile=None):
         deleted = __salt__['boto_ec2.delete_key'](name, region,
                                                   key, keyid,
                                                   profile)
-        log.debug('exists is {0}'.format(deleted))
+        log.debug('exists is %s', deleted)
         if deleted:
             ret['result'] = True
             ret['comment'] = 'The key {0} is deleted.'.format(name)
@@ -237,7 +237,7 @@ def eni_present(
         A dict with region, key and keyid, or a pillar key (string)
         that contains a dict with region, key and keyid.
     '''
-    if not salt.utils.exactly_one((subnet_id, subnet_name)):
+    if not salt.utils.data.exactly_one((subnet_id, subnet_name)):
         raise SaltInvocationError('One (but not both) of subnet_id or '
                                   'subnet_name must be provided.')
     if not groups:
@@ -354,7 +354,7 @@ def eni_present(
             if 'name' not in arecord:
                 msg = 'The arecord must contain a "name" property.'
                 raise SaltInvocationError(msg)
-            log.debug('processing arecord {0}'.format(arecord))
+            log.debug('processing arecord %s', arecord)
             _ret = None
             dns_provider = 'boto_route53'
             arecord['record_type'] = 'A'
@@ -383,7 +383,7 @@ def eni_present(
                 if 'region' not in arecord:
                     arecord['region'] = region
             _ret = __states__['.'.join([dns_provider, 'present'])](**arecord)
-            log.debug('ret from dns_provider.present = {0}'.format(_ret))
+            log.debug('ret from dns_provider.present = %s', _ret)
             ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
             ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
             if not _ret['result']:
@@ -665,8 +665,10 @@ def instance_present(name, instance_name=None, instance_id=None, image_id=None,
     instance_initiated_shutdown_behavior
         (string) – Specifies whether the instance stops or terminates on
         instance-initiated shutdown. Valid values are:
-            - 'stop'
-            - 'terminate'
+
+        - 'stop'
+        - 'terminate'
+
     placement_group
         (string) – If specified, this is the name of the placement group in
         which the instance(s) will be launched.
@@ -715,22 +717,26 @@ def instance_present(name, instance_name=None, instance_id=None, image_id=None,
     attributes
         (dict) - Instance attributes and value to be applied to the instance.
         Available options are:
-            - instanceType - A valid instance type (m1.small)
-            - kernel - Kernel ID (None)
-            - ramdisk - Ramdisk ID (None)
-            - userData - Base64 encoded String (None)
-            - disableApiTermination - Boolean (true)
-            - instanceInitiatedShutdownBehavior - stop|terminate
-            - blockDeviceMapping - List of strings - ie: [‘/dev/sda=false’]
-            - sourceDestCheck - Boolean (true)
-            - groupSet - Set of Security Groups or IDs
-            - ebsOptimized - Boolean (false)
-            - sriovNetSupport - String - ie: ‘simple’
+
+        - instanceType - A valid instance type (m1.small)
+        - kernel - Kernel ID (None)
+        - ramdisk - Ramdisk ID (None)
+        - userData - Base64 encoded String (None)
+        - disableApiTermination - Boolean (true)
+        - instanceInitiatedShutdownBehavior - stop|terminate
+        - blockDeviceMapping - List of strings - ie: [‘/dev/sda=false’]
+        - sourceDestCheck - Boolean (true)
+        - groupSet - Set of Security Groups or IDs
+        - ebsOptimized - Boolean (false)
+        - sriovNetSupport - String - ie: ‘simple’
+
     target_state
         (string) - The desired target state of the instance.  Available options
         are:
-            - running
-            - stopped
+
+        - running
+        - stopped
+
         Note that this option is currently UNIMPLEMENTED.
     public_ip:
         (string) - The IP of a previously allocated EIP address, which will be
@@ -765,10 +771,10 @@ def instance_present(name, instance_name=None, instance_id=None, image_id=None,
     running_states = ('pending', 'rebooting', 'running', 'stopping', 'stopped')
     changed_attrs = {}
 
-    if not salt.utils.exactly_one((image_id, image_name)):
+    if not salt.utils.data.exactly_one((image_id, image_name)):
         raise SaltInvocationError('Exactly one of image_id OR '
                                   'image_name must be provided.')
-    if (public_ip or allocation_id or allocate_eip) and not salt.utils.exactly_one((public_ip, allocation_id, allocate_eip)):
+    if (public_ip or allocation_id or allocate_eip) and not salt.utils.data.exactly_one((public_ip, allocation_id, allocate_eip)):
         raise SaltInvocationError('At most one of public_ip, allocation_id OR '
                                   'allocate_eip may be provided.')
 
@@ -851,7 +857,7 @@ def instance_present(name, instance_name=None, instance_id=None, image_id=None,
                 ret['comment'] = 'Failed to allocate new EIP.'
                 return ret
             allocation_id = r['allocation_id']
-            log.info("New EIP with address {0} allocated.".format(r['public_ip']))
+            log.info("New EIP with address %s allocated.", r['public_ip'])
         else:
             log.info("EIP not requested.")
 
@@ -866,8 +872,10 @@ def instance_present(name, instance_name=None, instance_id=None, image_id=None,
             if r:
                 break
             else:
-                log.info("Waiting up to {0} secs for new EIP {1} to become available".format(
-                        tries * secs, public_ip or allocation_id))
+                log.info(
+                    'Waiting up to %s secs for new EIP %s to become available',
+                    tries * secs, public_ip or allocation_id
+                )
                 time.sleep(secs)
         if not r:
             ret['result'] = False
@@ -891,6 +899,8 @@ def instance_present(name, instance_name=None, instance_id=None, image_id=None,
                     allocation_id=allocation_id, region=region, key=key,
                     keyid=keyid, profile=profile)
             if r:
+                if 'new' not in ret['changes']:
+                    ret['changes']['new'] = {}
                 ret['changes']['new']['public_ip'] = ip
             else:
                 ret['result'] = False
@@ -984,7 +994,7 @@ def instance_absent(name, instance_name=None, instance_id=None,
     '''
     Ensure an EC2 instance does not exist (is stopped and removed).
 
-    .. versionupdated:: 2016.11.0
+    .. versionchanged:: 2016.11.0
 
     name
         (string) - The name of the state definition.
@@ -1010,9 +1020,9 @@ def instance_absent(name, instance_name=None, instance_id=None,
     YAML example fragment:
 
     .. code-block:: yaml
+
         - filters:
             vpc-id: vpc-abcdef12
-
     '''
     ### TODO - Implement 'force' option??  Would automagically turn off
     ###        'disableApiTermination', as needed, before trying to delete.
@@ -1091,11 +1101,11 @@ def instance_absent(name, instance_name=None, instance_id=None,
                 # Race here - sometimes the terminate above will already have dropped this
                 if not __salt__['boto_ec2.disassociate_eip_address'](association_id=assoc_id,
                                                                      **base_args):
-                    log.warning("Failed to disassociate EIP {0}.".format(ip))
+                    log.warning("Failed to disassociate EIP %s.", ip)
 
             if __salt__['boto_ec2.release_eip_address'](allocation_id=alloc_id, public_ip=public_ip,
                                                         **base_args):
-                log.info("Released EIP address {0}".format(public_ip or r[0]['public_ip']))
+                log.info("Released EIP address %s", public_ip or r[0]['public_ip'])
                 ret['changes']['old']['public_ip'] = public_ip or r[0]['public_ip']
             else:
                 ret['result'] = False
@@ -1157,7 +1167,7 @@ def volume_absent(name, volume_name=None, volume_id=None, instance_name=None,
     filters = {}
     running_states = ('pending', 'rebooting', 'running', 'stopping', 'stopped')
 
-    if not salt.utils.exactly_one((volume_name, volume_id, instance_name, instance_id)):
+    if not salt.utils.data.exactly_one((volume_name, volume_id, instance_name, instance_id)):
         raise SaltInvocationError("Exactly one of 'volume_name', 'volume_id', "
                                   "'instance_name', or 'instance_id' must be provided.")
     if (instance_name or instance_id) and not device:
@@ -1193,7 +1203,7 @@ def volume_absent(name, volume_name=None, volume_id=None, instance_name=None,
         ret['result'] = False
         return ret
     vol = vols[0]
-    log.info('Matched Volume ID {0}'.format(vol))
+    log.info('Matched Volume ID %s', vol)
 
     if __opts__['test']:
         ret['comment'] = 'The volume {0} is set to be deleted.'.format(vol)
@@ -1230,6 +1240,7 @@ def volumes_tagged(name, tag_maps, authoritative=False, region=None, key=None,
     YAML example fragment:
 
     .. code-block:: yaml
+
         - filters:
             attachment.instance_id: i-abcdef12
           tags:
@@ -1380,10 +1391,10 @@ def volume_present(name, volume_name=None, volume_id=None, instance_name=None,
     new_dict = {}
     running_states = ('running', 'stopped')
 
-    if not salt.utils.exactly_one((volume_name, volume_id)):
+    if not salt.utils.data.exactly_one((volume_name, volume_id)):
         raise SaltInvocationError("Exactly one of 'volume_name', 'volume_id', "
                                   " must be provided.")
-    if not salt.utils.exactly_one((instance_name, instance_id)):
+    if not salt.utils.data.exactly_one((instance_name, instance_id)):
         raise SaltInvocationError("Exactly one of 'instance_name', or 'instance_id'"
                                   " must be provided.")
     if device is None:
@@ -1525,7 +1536,7 @@ def private_ips_present(name, network_interface_name=None, network_interface_id=
         dict with region, key and keyid.
     '''
 
-    if not salt.utils.exactly_one((network_interface_name, network_interface_id)):
+    if not salt.utils.data.exactly_one((network_interface_name, network_interface_id)):
         raise SaltInvocationError("Exactly one of 'network_interface_name', "
                                   "'network_interface_id' must be provided")
 
@@ -1646,7 +1657,7 @@ def private_ips_absent(name, network_interface_name=None, network_interface_id=N
         dict with region, key and keyid.
     '''
 
-    if not salt.utils.exactly_one((network_interface_name, network_interface_id)):
+    if not salt.utils.data.exactly_one((network_interface_name, network_interface_id)):
         raise SaltInvocationError("Exactly one of 'network_interface_name', "
                                   "'network_interface_id' must be provided")
 

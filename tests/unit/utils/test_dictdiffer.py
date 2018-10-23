@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing libs
 from tests.support.unit import TestCase
@@ -49,7 +49,7 @@ class RecursiveDictDifferTestCase(TestCase):
     def test_changed_without_ignore_unset_values(self):
         self.recursive_diff.ignore_unset_values = False
         self.assertEqual(self.recursive_diff.changed(),
-                         ['a.c', 'a.e', 'a.g', 'a.f', 'h', 'i'])
+                         ['a.c', 'a.e', 'a.f', 'a.g', 'h', 'i'])
 
     def test_unchanged(self):
         self.assertEqual(self.recursive_diff.unchanged(),
@@ -89,7 +89,7 @@ class RecursiveDictDifferTestCase(TestCase):
                          'a:\n'
                          '  c from 2 to 4\n'
                          '  e from \'old_value\' to \'new_value\'\n'
-                         '  g from nothing to \'new_key\'\n'
                          '  f from \'old_key\' to nothing\n'
+                         '  g from nothing to \'new_key\'\n'
                          'h from nothing to \'new_key\'\n'
                          'i from nothing to None')

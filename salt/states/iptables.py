@@ -17,7 +17,7 @@ at some point be deprecated in favor of a more generic ``firewall`` state.
         - match: state
         - connstate: NEW
         - dport: 80
-        - proto: tcp
+        - protocol: tcp
         - sport: 1025:65535
         - save: True
 
@@ -32,7 +32,7 @@ at some point be deprecated in favor of a more generic ``firewall`` state.
         - comment: "Allow HTTP"
         - connstate: NEW
         - dport: 80
-        - proto: tcp
+        - protocol: tcp
         - sport: 1025:65535
         - save: True
 
@@ -48,7 +48,7 @@ at some point be deprecated in favor of a more generic ``firewall`` state.
         - connstate: NEW
         - source: '127.0.0.1'
         - dport: 80
-        - proto: tcp
+        - protocol: tcp
         - sport: 1025:65535
         - save: True
 
@@ -65,7 +65,7 @@ at some point be deprecated in favor of a more generic ``firewall`` state.
         - connstate: NEW
         - source: '! 127.0.0.1'
         - dport: 80
-        - proto: tcp
+        - protocol: tcp
         - sport: 1025:65535
         - save: True
 
@@ -81,7 +81,7 @@ at some point be deprecated in favor of a more generic ``firewall`` state.
         - connstate: NEW
         - source: 'not 127.0.0.1'
         - dport: 80
-        - proto: tcp
+        - protocol: tcp
         - sport: 1025:65535
         - save: True
 
@@ -94,7 +94,7 @@ at some point be deprecated in favor of a more generic ``firewall`` state.
         - match: state
         - connstate: NEW
         - dport: 80
-        - proto: tcp
+        - protocol: tcp
         - sport: 1025:65535
         - save: True
 
@@ -109,7 +109,7 @@ at some point be deprecated in favor of a more generic ``firewall`` state.
         - dports:
             - 80
             - 443
-        - proto: tcp
+        - protocol: tcp
         - sport: 1025:65535
         - save: True
 
@@ -122,7 +122,7 @@ at some point be deprecated in favor of a more generic ``firewall`` state.
         - match: state
         - connstate: NEW
         - dport: 80
-        - proto: tcp
+        - protocol: tcp
         - sport: 1025:65535
         - save: True
 
@@ -136,7 +136,7 @@ at some point be deprecated in favor of a more generic ``firewall`` state.
         - match: state
         - connstate: NEW
         - dport: 80
-        - proto: tcp
+        - protocol: tcp
         - sport: 1025:65535
         - save: True
 
@@ -148,7 +148,7 @@ at some point be deprecated in favor of a more generic ``firewall`` state.
         - match: state
         - connstate: NEW
         - dport: 80
-        - proto: tcp
+        - protocol: tcp
         - sport: 1025:65535
         - save: True
 
@@ -161,7 +161,7 @@ at some point be deprecated in favor of a more generic ``firewall`` state.
         - match: state
         - connstate: NEW
         - dport: 80
-        - proto: tcp
+        - protocol: tcp
         - sport: 1025:65535
         - save: True
 
@@ -174,7 +174,7 @@ at some point be deprecated in favor of a more generic ``firewall`` state.
         - match: state
         - connstate: NEW
         - dport: 80
-        - proto: tcp
+        - protocol: tcp
         - sport: 1025:65535
         - save: True
 
@@ -185,13 +185,62 @@ at some point be deprecated in favor of a more generic ``firewall`` state.
 
 .. note::
 
+    Whereas iptables will accept ``-p``, ``--proto[c[o[l]]]`` as synonyms of
+    ``--protocol``, if ``--proto`` appears in an iptables command after the
+    appearance of ``-m policy``, it is interpreted as the ``--proto`` option of
+    the policy extension (see the iptables-extensions(8) man page).
+
+Example rules for IPSec policy:
+
+.. code-block:: yaml
+
+    accept_esp_in:
+      iptables.append:
+        - table: filter
+        - chain: INPUT
+        - jump: ACCEPT
+        - source: 10.20.0.0/24
+        - destination: 10.10.0.0/24
+        - in-interface: eth0
+        - match: policy
+        - dir: in
+        - pol: ipsec
+        - reqid: 1
+        - proto: esp
+    accept_esp_forward_in:
+      iptables.append:
+        - use:
+          - iptables: accept_esp_in
+        - chain: FORWARD
+
+    accept_esp_out:
+      iptables.append:
+        - table: filter
+        - chain: OUTPUT
+        - jump: ACCEPT
+        - source: 10.10.0.0/24
+        - destination: 10.20.0.0/24
+        - out-interface: eth0
+        - match: policy
+        - dir: out
+        - pol: ipsec
+        - reqid: 1
+        - proto: esp
+    accept_esp_forward_out:
+      iptables.append:
+        - use:
+          - iptables: accept_esp_out
+        - chain: FORWARD
+
+.. note::
+
     Various functions of the ``iptables`` module use the ``--check`` option. If
     the version of ``iptables`` on the target system does not include this
     option, an alternate version of this check will be performed using the
     output of iptables-save. This may have unintended consequences on legacy
     releases of ``iptables``.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import salt libs
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS

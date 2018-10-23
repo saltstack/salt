@@ -6,7 +6,7 @@ Loader mechanism for caching data, with data expiration, etc.
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import time
 
@@ -323,10 +323,10 @@ class MemCache(Cache):
         if record is not None and record[0] + self.expire >= now:
             if self.debug:
                 self.hit += 1
-                log.debug('MemCache stats (call/hit/rate): '
-                          '{0}/{1}/{2}'.format(self.call,
-                                               self.hit,
-                                               float(self.hit) / self.call))
+                log.debug(
+                    'MemCache stats (call/hit/rate): %s/%s/%s',
+                    self.call, self.hit, float(self.hit) / self.call
+                )
             # update atime and return
             record[0] = now
             self.storage[(bank, key)] = record

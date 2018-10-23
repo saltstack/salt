@@ -5,7 +5,7 @@ YAML Renderer for Salt
 For YAML usage information see :ref:`Understanding YAML <yaml>`.
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging
@@ -60,13 +60,12 @@ def render(yaml_data, saltenv='base', sls='', argline='', **kws):
         if len(warn_list) > 0:
             for item in warn_list:
                 log.warning(
-                    '{warn} found in {sls} saltenv={env}'.format(
-                        warn=item.message, sls=salt.utils.url.create(sls), env=saltenv
-                    )
+                    '%s found in %s saltenv=%s',
+                    item.message, salt.utils.url.create(sls), saltenv
                 )
         if not data:
             data = {}
-        log.debug('Results of YAML rendering: \n{0}'.format(data))
+        log.debug('Results of YAML rendering: \n%s', data)
 
         def _validate_data(data):
             '''

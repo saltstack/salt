@@ -1,17 +1,19 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Erik Johnson (erik@saltstack.com)`
+    :codeauthor: Erik Johnson (erik@saltstack.com)
     tests.integration.states.npm
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
+import os
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
 from tests.support.helpers import destructiveTest, requires_network
 from tests.support.mixins import SaltReturnAssertsMixin
+from tests.support.runtests import RUNTIME_VARS
 
 # Import salt libs
 import salt.modules.cmdmod as cmd
@@ -31,7 +33,7 @@ class NpmStateTest(ModuleCase, SaltReturnAssertsMixin):
         Basic test to determine if NPM module was successfully installed and
         removed.
         '''
-        ret = self.run_state('npm.installed', name='pm2')
+        ret = self.run_state('npm.installed', name='pm2@2.10.4', registry="http://registry.npmjs.org/")
         self.assertSaltTrueReturn(ret)
         ret = self.run_state('npm.removed', name='pm2')
         self.assertSaltTrueReturn(ret)
@@ -42,10 +44,23 @@ class NpmStateTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         Determine if URL-referenced NPM module can be successfully installed.
         '''
-        ret = self.run_state('npm.installed', name='request/request#v2.81.1')
+        if LooseVersion(cmd.run('npm -v')) >= LooseVersion(MAX_NPM_VERSION):
+            user = os.environ.get('SUDO_USER', 'root')
+            npm_dir = os.path.join(RUNTIME_VARS.TMP, 'git-install-npm')
+            self.run_state('file.directory', name=npm_dir, user=user, dir_mode='755')
+        else:
+            user = None
+            npm_dir = None
+        ret = self.run_state('npm.installed',
+                             name='request/request#v2.81.1',
+                             runas=user,
+                             dir=npm_dir,
+                             registry="http://registry.npmjs.org/")
         self.assertSaltTrueReturn(ret)
-        ret = self.run_state('npm.removed', name='git://github.com/request/request')
+        ret = self.run_state('npm.removed', name='git://github.com/request/request', runas=user, dir=npm_dir)
         self.assertSaltTrueReturn(ret)
+        if npm_dir is not None:
+            self.run_state('file.absent', name=npm_dir)
 
     @requires_network()
     @destructiveTest
@@ -54,7 +69,7 @@ class NpmStateTest(ModuleCase, SaltReturnAssertsMixin):
         Basic test to determine if NPM module successfully installs multiple
         packages.
         '''
-        ret = self.run_state('npm.installed', name='unused', pkgs=['pm2', 'grunt'])
+        ret = self.run_state('npm.installed', name='unused', pkgs=['pm2@2.10.4', 'grunt@1.0.2'], registry="http://registry.npmjs.org/")
         self.assertSaltTrueReturn(ret)
 
     @skipIf(salt.utils.path.which('npm') and LooseVersion(cmd.run('npm -v')) >= LooseVersion(MAX_NPM_VERSION),

@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Mike Place <mp@saltstack.com>`
+    :codeauthor: Mike Place <mp@saltstack.com>
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 from collections import namedtuple
 
 # Import Salt Testing libs

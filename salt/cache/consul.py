@@ -46,7 +46,7 @@ value to ``consul``:
 .. _`python-consul documentation`: https://python-consul.readthedocs.io/en/latest/#consul
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 try:
     import consul

@@ -2,12 +2,12 @@
 '''
 Generate baseline proxy minion grains for ESXi hosts.
 
-., versionadded:: 2015.8.4
+.. versionadded:: 2015.8.4
 
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import Salt Libs

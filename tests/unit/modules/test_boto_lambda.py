@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import random
 import string
 import logging
@@ -30,7 +30,6 @@ import salt.loader
 import salt.modules.boto_lambda as boto_lambda
 from salt.exceptions import SaltInvocationError
 from salt.utils.versions import LooseVersion
-import salt.utils
 import salt.utils.stringutils
 
 # Import 3rd-party libs

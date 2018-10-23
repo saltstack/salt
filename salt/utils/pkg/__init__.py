@@ -3,14 +3,14 @@
 Common functions for managing package refreshes during states
 '''
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import errno
 import logging
 import os
 import re
 
 # Import Salt libs
-import salt.utils  # Can be removed once is_true is moved
+import salt.utils.data
 import salt.utils.files
 import salt.utils.versions
 
@@ -62,17 +62,16 @@ def check_refresh(opts, refresh=None):
     - A boolean if refresh is not False and the rtag file exists
     '''
     return bool(
-        salt.utils.is_true(refresh) or
+        salt.utils.data.is_true(refresh) or
         (os.path.isfile(rtag(opts)) and refresh is not False)
     )
 
 
 def split_comparison(version):
-    match = re.match(r'^([<>])?(=)?([^<>=]+)$', version)
+    match = re.match(r'^(<=>|!=|>=|<=|>>|<<|<>|>|<|=)?\s?([^<>=]+)$', version)
     if match:
         comparison = match.group(1) or ''
-        comparison += match.group(2) or ''
-        version = match.group(3)
+        version = match.group(2)
     else:
         comparison = ''
     return comparison, version

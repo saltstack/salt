@@ -10,7 +10,7 @@ Manage the password database on BSD systems
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 try:
     import pwd
 except ImportError:
@@ -19,6 +19,7 @@ except ImportError:
 # Import salt libs
 from salt.ext import six
 import salt.utils.files
+import salt.utils.stringutils
 from salt.exceptions import SaltInvocationError
 
 # Define the module's virtual name
@@ -66,7 +67,7 @@ def info(name):
             'passwd': ''}
 
     if not isinstance(name, six.string_types):
-        name = str(name)
+        name = six.text_type(name)
     if ':' in name:
         raise SaltInvocationError('Invalid username \'{0}\''.format(name))
 
@@ -78,10 +79,11 @@ def info(name):
         try:
             with salt.utils.files.fopen('/etc/master.passwd', 'r') as fp_:
                 for line in fp_:
+                    line = salt.utils.stringutils.to_unicode(line)
                     if line.startswith('{0}:'.format(name)):
                         key = line.split(':')
                         change, expire = key[5:7]
-                        ret['passwd'] = str(key[1])
+                        ret['passwd'] = six.text_type(key[1])
                         break
         except IOError:
             change = expire = None

@@ -4,7 +4,7 @@ integration tests for mac_pkgutil
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 
 # Import Salt Testing libs
@@ -37,11 +37,16 @@ class MacPkgutilModuleTest(ModuleCase):
         if not salt.utils.path.which('pkgutil'):
             self.skipTest('Test requires pkgutil binary')
 
+        os_release = self.run_function('grains.get', ['osrelease'])
+        self.pkg_name = 'com.apple.pkg.BaseSystemResources'
+        if int(os_release.split('.')[1]) >= 13 and salt.utils.platform.is_darwin():
+            self.pkg_name = 'com.apple.pkg.iTunesX'
+
     def tearDown(self):
         '''
         Reset to original settings
         '''
-        self.run_function('pkgutil.forget', ['org.macports.MacPorts'])
+        self.run_function('pkgutil.forget', [TEST_PKG_NAME])
         self.run_function('file.remove', ['/opt/local'])
 
     def test_list(self):
@@ -49,7 +54,7 @@ class MacPkgutilModuleTest(ModuleCase):
         Test pkgutil.list
         '''
         self.assertIsInstance(self.run_function('pkgutil.list'), list)
-        self.assertIn('com.apple.pkg.BaseSystemResources',
+        self.assertIn(self.pkg_name,
                       self.run_function('pkgutil.list'))
 
     def test_is_installed(self):
@@ -59,7 +64,7 @@ class MacPkgutilModuleTest(ModuleCase):
         # Test Package is installed
         self.assertTrue(
             self.run_function('pkgutil.is_installed',
-                              ['com.apple.pkg.BaseSystemResources']))
+                              [self.pkg_name]))
 
         # Test Package is not installed
         self.assertFalse(

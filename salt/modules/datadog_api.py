@@ -15,7 +15,7 @@ https://docs.datadoghq.com/api/
 '''
 
 # Import salt libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 from salt.exceptions import SaltInvocationError
 
 # Import third party libs

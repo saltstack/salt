@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import Python Libs
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import Salt Libs
@@ -23,7 +23,7 @@ class LocalChannel(ReqChannel):
     def send(self, load, tries=3, timeout=60, raw=False):
 
         if self.tries == 0:
-            log.debug('LocalChannel load: {0}').format(load)
+            log.debug('LocalChannel load: %s', load)
             #data = json.loads(load)
             #{'path': 'apt-cacher-ng/map.jinja', 'saltenv': 'base', 'cmd': '_serve_file', 'loc': 0}
             #f = open(data['path'])

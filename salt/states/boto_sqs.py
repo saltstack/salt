@@ -57,13 +57,14 @@ passed in as a dict, or as a string to pull from pillars or minion config:
                 keyid: GKTADJGHEIQSXMKKRBJ08H
                 key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
 import difflib
-import json
 import logging
-import yaml
+
+# Import Salt libs
+import salt.utils.json
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -135,7 +136,7 @@ def present(
             ret['comment'].append(
                 'SQS queue {0} is set to be created.'.format(name),
             )
-            ret['pchanges'] = {'old': None, 'new': name}
+            ret['changes'] = {'old': None, 'new': name}
             return ret
 
         r = __salt__['boto_sqs.create'](
@@ -183,14 +184,14 @@ def present(
         if attr == 'Policy':
             # Normalize by brute force
             if isinstance(_val, six.string_types):
-                _val = json.loads(_val)
+                _val = salt.utils.json.loads(_val)
             if isinstance(val, six.string_types):
-                val = json.loads(val)
+                val = salt.utils.json.loads(val)
             if _val != val:
-                log.debug('Policies differ:\n{0}\n{1}'.format(_val, val))
-                attrs_to_set[attr] = json.dumps(val, sort_keys=True)
-        elif str(_val) != str(val):
-            log.debug('Attributes differ:\n{0}\n{1}'.format(_val, val))
+                log.debug('Policies differ:\n%s\n%s', _val, val)
+                attrs_to_set[attr] = salt.utils.json.dumps(val, sort_keys=True)
+        elif six.text_type(_val) != six.text_type(val):
+            log.debug('Attributes differ:\n%s\n%s', _val, val)
             attrs_to_set[attr] = val
     attr_names = ', '.join(attrs_to_set)
 
@@ -202,14 +203,15 @@ def present(
     final_attributes.update(attrs_to_set)
 
     def _yaml_safe_dump(attrs):
-        '''Safely dump YAML using a readable flow style'''
-        dumper_name = 'IndentedSafeOrderedDumper'
-        dumper = __utils__['yamldumper.get_dumper'](dumper_name)
-        return yaml.dump(
+        '''
+        Safely dump YAML using a readable flow style
+        '''
+        dumper = __utils__['yaml.get_dumper']('IndentedSafeOrderedDumper')
+        return __utils__['yaml.dump'](
             attrs,
             default_flow_style=False,
-            Dumper=dumper,
-        )
+            Dumper=dumper)
+
     attributes_diff = ''.join(difflib.unified_diff(
         _yaml_safe_dump(current_attributes).splitlines(True),
         _yaml_safe_dump(final_attributes).splitlines(True),
@@ -223,7 +225,7 @@ def present(
                 attributes_diff,
             )
         )
-        ret['pchanges'] = {'attributes': {'diff': attributes_diff}}
+        ret['changes'] = {'attributes': {'diff': attributes_diff}}
         return ret
 
     r = __salt__['boto_sqs.set_attributes'](
@@ -285,7 +287,7 @@ def absent(
     )
     if 'error' in r:
         ret['result'] = False
-        ret['comment'] = str(r['error'])
+        ret['comment'] = six.text_type(r['error'])
         return ret
 
     if not r['result']:
@@ -298,7 +300,7 @@ def absent(
     if __opts__['test']:
         ret['result'] = None
         ret['comment'] = 'SQS queue {0} is set to be removed.'.format(name)
-        ret['pchanges'] = {'old': name, 'new': None}
+        ret['changes'] = {'old': name, 'new': None}
         return ret
 
     r = __salt__['boto_sqs.delete'](
@@ -310,7 +312,7 @@ def absent(
     )
     if 'error' in r:
         ret['result'] = False
-        ret['comment'] = str(r['error'])
+        ret['comment'] = six.text_type(r['error'])
         return ret
 
     ret['comment'] = 'SQS queue {0} was deleted.'.format(name)

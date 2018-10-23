@@ -20,7 +20,7 @@ Philips HUE lamps module for proxy.
 .. versionadded:: 2015.8.3
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import sys
 
 __virtualname__ = 'hue'

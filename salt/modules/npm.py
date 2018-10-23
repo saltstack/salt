@@ -2,22 +2,23 @@
 '''
 Manage and query NPM packages.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 try:
     from shlex import quote as _cmd_quote  # pylint: disable=E0611
 except ImportError:
     from pipes import quote as _cmd_quote
 
 # Import python libs
-import json
 import logging
 
 # Import salt libs
-import salt.utils
+import salt.utils.json
 import salt.utils.path
+import salt.utils.user
 import salt.modules.cmdmod
 from salt.exceptions import CommandExecutionError
 from salt.utils.versions import LooseVersion as _LooseVersion
+from salt.ext import six
 
 
 log = logging.getLogger(__name__)
@@ -40,7 +41,7 @@ def __virtual__():
             return (False, 'npm execution module could not be loaded '
                            'because the npm binary could not be located')
     except CommandExecutionError as exc:
-        return (False, str(exc))
+        return (False, six.text_type(exc))
 
 
 def _check_valid_version():
@@ -156,12 +157,16 @@ def install(pkg=None,
     env = env or {}
 
     if runas:
-        uid = salt.utils.get_uid(runas)
+        uid = salt.utils.user.get_uid(runas)
         if uid:
-            env.update({'SUDO_UID': b'{0}'.format(uid), 'SUDO_USER': b''})
+            env.update({'SUDO_UID': uid, 'SUDO_USER': ''})
 
     cmd = ' '.join(cmd)
-    result = __salt__['cmd.run_all'](cmd, python_shell=True, cwd=dir, runas=runas, env=env)
+    result = __salt__['cmd.run_all'](cmd,
+                                     python_shell=True,
+                                     cwd=dir,
+                                     runas=runas,
+                                     env=env)
 
     if result['retcode'] != 0:
         raise CommandExecutionError(result['stderr'])
@@ -169,33 +174,9 @@ def install(pkg=None,
     # npm >1.2.21 is putting the output to stderr even though retcode is 0
     npm_output = result['stdout'] or result['stderr']
     try:
-        return json.loads(npm_output)
+        return salt.utils.json.find_json(npm_output)
     except ValueError:
-        pass
-
-    json_npm_output = _extract_json(npm_output)
-    return json_npm_output or npm_output
-
-
-def _extract_json(npm_output):
-    lines = npm_output.splitlines()
-    log.error(lines)
-
-    # Strip all lines until JSON output starts
-    while lines and not lines[0].startswith('{') and not lines[0].startswith('['):
-        lines = lines[1:]
-    while lines and not lines[-1].startswith('}') and not lines[-1].startswith(']'):
-        lines = lines[:-1]
-    # macOS with fsevents includes the following line in the return
-    # when a new module is installed which is invalid JSON:
-    #     [fsevents] Success: "..."
-    while lines and (lines[0].startswith('[fsevents]') or lines[0].startswith('Pass ')):
-        lines = lines[1:]
-    try:
-        return json.loads(''.join(lines))
-    except ValueError:
-        pass
-    return None
+        return npm_output
 
 
 def uninstall(pkg, dir=None, runas=None, env=None):
@@ -235,9 +216,9 @@ def uninstall(pkg, dir=None, runas=None, env=None):
     env = env or {}
 
     if runas:
-        uid = salt.utils.get_uid(runas)
+        uid = salt.utils.user.get_uid(runas)
         if uid:
-            env.update({'SUDO_UID': b'{0}'.format(uid), 'SUDO_USER': b''})
+            env.update({'SUDO_UID': uid, 'SUDO_USER': ''})
 
     cmd = ['npm', 'uninstall', '"{0}"'.format(pkg)]
     if not dir:
@@ -282,7 +263,7 @@ def list_(pkg=None, dir=None, runas=None, env=None, depth=None):
     depth
         Limit the depth of the packages listed
 
-        .. versionadded:: 2016.11.6, 2017.7.0
+        .. versionadded:: 2016.11.6,2017.7.0
 
     CLI Example:
 
@@ -294,9 +275,9 @@ def list_(pkg=None, dir=None, runas=None, env=None, depth=None):
     env = env or {}
 
     if runas:
-        uid = salt.utils.get_uid(runas)
+        uid = salt.utils.user.get_uid(runas)
         if uid:
-            env.update({'SUDO_UID': b'{0}'.format(uid), 'SUDO_USER': b''})
+            env.update({'SUDO_UID': uid, 'SUDO_USER': ''})
 
     cmd = ['npm', 'list', '--json', '--silent']
 
@@ -322,7 +303,7 @@ def list_(pkg=None, dir=None, runas=None, env=None, depth=None):
     if result['retcode'] != 0 and result['stderr']:
         raise CommandExecutionError(result['stderr'])
 
-    return json.loads(result['stdout']).get('dependencies', {})
+    return salt.utils.json.loads(result['stdout']).get('dependencies', {})
 
 
 def cache_clean(path=None, runas=None, env=None, force=False):
@@ -357,9 +338,9 @@ def cache_clean(path=None, runas=None, env=None, force=False):
     env = env or {}
 
     if runas:
-        uid = salt.utils.get_uid(runas)
+        uid = salt.utils.user.get_uid(runas)
         if uid:
-            env.update({'SUDO_UID': b'{0}'.format(uid), 'SUDO_USER': b''})
+            env.update({'SUDO_UID': uid, 'SUDO_USER': ''})
 
     cmd = ['npm', 'cache', 'clean']
     if path:
@@ -404,9 +385,9 @@ def cache_list(path=None, runas=None, env=None):
     env = env or {}
 
     if runas:
-        uid = salt.utils.get_uid(runas)
+        uid = salt.utils.user.get_uid(runas)
         if uid:
-            env.update({'SUDO_UID': b'{0}'.format(uid), 'SUDO_USER': b''})
+            env.update({'SUDO_UID': uid, 'SUDO_USER': ''})
 
     cmd = ['npm', 'cache', 'ls']
     if path:
@@ -444,9 +425,9 @@ def cache_path(runas=None, env=None):
     env = env or {}
 
     if runas:
-        uid = salt.utils.get_uid(runas)
+        uid = salt.utils.user.get_uid(runas)
         if uid:
-            env.update({'SUDO_UID': b'{0}'.format(uid), 'SUDO_USER': b''})
+            env.update({'SUDO_UID': uid, 'SUDO_USER': ''})
 
     cmd = 'npm config get cache'
 

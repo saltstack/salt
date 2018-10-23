@@ -4,7 +4,7 @@ integration tests for shadow linux
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import random
 import string
 import os
@@ -12,7 +12,7 @@ import os
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
-from tests.support.helpers import destructiveTest, skip_if_not_root
+from tests.support.helpers import destructiveTest, flaky, skip_if_not_root
 
 # Import Salt libs
 import salt.utils.files
@@ -31,12 +31,14 @@ class ShadowModuleTest(ModuleCase):
         super(self.__class__, self).__init__(arg)
         self._test_user = self.__random_string()
         self._no_user = self.__random_string()
-        self._password = self.run_function('shadow.gen_password', ['Password1234'])
 
     def setUp(self):
         '''
         Get current settings
         '''
+        self._password = self.run_function('shadow.gen_password', ['Password1234'])
+        if 'ERROR' in self._password:
+            self.fail('Failed to generate password: {0}'.format(self._password))
         super(ShadowModuleTest, self).setUp()
         os_grain = self.run_function('grains.item', ['kernel'])
         if os_grain['kernel'] not in 'Linux':
@@ -143,6 +145,7 @@ class ShadowModuleTest(ModuleCase):
         # User does not exist (set_inactdays return None is user does not exist)
         self.assertFalse(self.run_function('shadow.set_mindays', [self._no_user, 12]))
 
+    @flaky
     @destructiveTest
     def test_lock_password(self):
         '''
@@ -215,16 +218,16 @@ class ShadowModuleTest(ModuleCase):
         '''
         Test set/del password for root
         '''
-        #saving shadow file
+        # saving shadow file
         if not os.access("/etc/shadow", os.R_OK | os.W_OK):
             self.skipTest('Could not save initial state of /etc/shadow')
         with salt.utils.files.fopen('/etc/shadow', 'r') as sFile:
             shadow = sFile.read()
-        #set root password
+        # set root password
         self.assertTrue(self.run_function('shadow.set_password', ['root', self._password]))
         self.assertEqual(
             self.run_function('shadow.info', ['root'])['passwd'], self._password)
-        #delete root password
+        # delete root password
         self.assertTrue(self.run_function('shadow.del_password', ['root']))
         self.assertEqual(
             self.run_function('shadow.info', ['root'])['passwd'], '')

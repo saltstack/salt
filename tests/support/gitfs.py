@@ -4,7 +4,7 @@ Base classes for gitfs/git_pillar integration tests
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import copy
 import errno
 import logging
@@ -15,11 +15,11 @@ import signal
 import tempfile
 import textwrap
 import time
-import yaml
 
 # Import Salt libs
 import salt.utils.files
 import salt.utils.path
+import salt.utils.yaml
 from salt.fileserver import gitfs
 from salt.pillar import git_pillar
 from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
@@ -331,17 +331,21 @@ class GitPillarTestBase(GitTestBase, LoaderModuleMockMixin):
         '''
         cachedir = tempfile.mkdtemp(dir=TMP)
         self.addCleanup(shutil.rmtree, cachedir, ignore_errors=True)
-        ext_pillar_opts = yaml.safe_load(
-            ext_pillar_conf.format(
-                cachedir=cachedir,
-                extmods=os.path.join(cachedir, 'extmods'),
-                **self.ext_opts
+        ext_pillar_opts = {'optimization_order': [0, 1, 2]}
+        ext_pillar_opts.update(
+            salt.utils.yaml.safe_load(
+                ext_pillar_conf.format(
+                    cachedir=cachedir,
+                    extmods=os.path.join(cachedir, 'extmods'),
+                    **self.ext_opts
+                )
             )
         )
         with patch.dict(git_pillar.__opts__, ext_pillar_opts):
             return git_pillar.ext_pillar(
                 'minion',
-                ext_pillar_opts['ext_pillar'][0]['git'],
+                {},
+                *ext_pillar_opts['ext_pillar'][0]['git']
             )
 
     def make_repo(self, root_dir, user='root'):

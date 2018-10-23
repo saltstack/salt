@@ -13,13 +13,13 @@ Requires an ``api_key`` in ``/etc/salt/minion``:
 '''
 
 # Import python libs
-from __future__ import absolute_import, print_function
-import json
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import time
 
 # Import salt libs
 import salt.utils.http
+import salt.utils.json
 
 log = logging.getLogger(__name__)
 
@@ -89,7 +89,7 @@ def trigger_event(event=None, **kwargs):
     data['occurredat'] = time.strftime("%B %d, %Y %I:%M%p", time.localtime())
     result = _query(event=event,
                     method='POST',
-                    data=json.dumps(data)
+                    data=salt.utils.json.dumps(data)
                     )
     if 'status' in result:
         if result['status'] == 200:

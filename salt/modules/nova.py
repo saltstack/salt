@@ -5,7 +5,9 @@ Module for handling OpenStack Nova calls
 :depends:   - novaclient Python module
 :configuration: This module is not usable until the user, password, tenant, and
     auth URL are specified either in a pillar or in the minion's config file.
-    For example::
+    For example:
+
+    .. code-block:: yaml
 
         keystone.user: admin
         keystone.password: verybadpass
@@ -16,7 +18,9 @@ Module for handling OpenStack Nova calls
 
     If configuration for multiple OpenStack accounts is required, they can be
     set up as different configuration profiles:
-    For example::
+    For example:
+
+    .. code-block:: yaml
 
         openstack1:
           keystone.user: admin
@@ -32,37 +36,57 @@ Module for handling OpenStack Nova calls
 
     With this configuration in place, any of the nova functions can make use of
     a configuration profile by declaring it explicitly.
-    For example::
+    For example:
+
+    .. code-block:: bash
 
         salt '*' nova.flavor_list profile=openstack1
 
     To use keystoneauth1 instead of keystoneclient, include the `use_keystoneauth`
     option in the pillar or minion config.
 
-    .. note:: this is required to use keystone v3 as for authentication.
+    .. note::
+        This is required to use keystone v3 as for authentication.
 
     .. code-block:: yaml
 
         keystone.user: admin
         keystone.password: verybadpass
         keystone.tenant: admin
-        keystone.auth_url: 'http://127.0.0.1:5000/v3/'
-        keystone.use_keystoneauth: true
+        keystone.auth_url: 'http://127.0.0.1:5000'
+        keystone.use_keystoneauth: True
+        keystone.region_name: RegionOne
+        keystone.project_id: befcf35ea5094743b81ee12fb43484f5
+        keystone.user_domain_name: Default
+        # Optional
         keystone.verify: '/path/to/custom/certs/ca-bundle.crt'
 
+    .. note::
+        Auto detection of API version is added so there is no need to add /v3
+        to auth_url.
 
-    Note: by default the nova module will attempt to verify its connection
-    utilizing the system certificates. If you need to verify against another bundle
-    of CA certificates or want to skip verification altogether you will need to
-    specify the `verify` option. You can specify True or False to verify (or not)
-    against system certificates, a path to a bundle or CA certs to check against, or
-    None to allow keystoneauth to search for the certificates on its own.(defaults to True)
+    .. note::
+        By default the nova module will attempt to verify its connection
+        utilizing the system certificates. If you need to verify against
+        another bundle of CA certificates or want to skip verification
+        altogether you will need to specify the `verify` option. You can
+        specify True or False to verify (or not) against system certificates, a
+        path to a bundle or CA certs to check against, or None to allow
+        keystoneauth to search for the certificates on its own. (defaults to
+        True)
+
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import logging
 
+# Import salt libs
+try:
+    import salt.utils.openstack.nova as suon
+    HAS_NOVA = True
+except ImportError as exc:
+    HAS_NOVA = False
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -72,11 +96,8 @@ __func_alias__ = {
     'list_': 'list'
 }
 
-try:
-    import salt.utils.openstack.nova as suon
-    HAS_NOVA = True
-except NameError as exc:
-    HAS_NOVA = False
+# Define the module's virtual name
+__virtualname__ = 'nova'
 
 
 def __virtual__():
@@ -84,7 +105,10 @@ def __virtual__():
     Only load this module if nova
     is installed on this minion.
     '''
-    return HAS_NOVA
+    if HAS_NOVA:
+        return __virtualname__
+    return (False, 'The nova execution module failed to load: '
+            'only available if nova client is installed.')
 
 
 __opts__ = {}
@@ -104,7 +128,6 @@ def _auth(profile=None):
         api_key = credentials.get('keystone.api_key', None)
         os_auth_system = credentials.get('keystone.os_auth_system', None)
         use_keystoneauth = credentials.get('keystone.use_keystoneauth', False)
-        verify = credentials.get('keystone.verify', None)
     else:
         user = __salt__['config.option']('keystone.user')
         password = __salt__['config.option']('keystone.password')
@@ -114,16 +137,23 @@ def _auth(profile=None):
         api_key = __salt__['config.option']('keystone.api_key')
         os_auth_system = __salt__['config.option']('keystone.os_auth_system')
         use_keystoneauth = __salt__['config.option']('keystone.use_keystoneauth')
-        verify = __salt__['config.option']('keystone.verify')
 
     if use_keystoneauth is True:
-        project_domain_name = credentials['keystone.project_domain_name']
-        user_domain_name = credentials['keystone.user_domain_name']
+        if profile:
+            project_id = credentials.get('keystone.project_id', None)
+            user_domain_name = credentials.get('keystone.user_domain_name', None)
+            project_domain_name = credentials.get('keystone.project_domain_name', None)
+            verify = credentials.get('keystone.verify', None)
+        else:
+            project_id = __salt__['config.option']('keystone.project_id')
+            user_domain_name = __salt__['config.option']('keystone.user_domain_name')
+            project_domain_name = __salt__['config.option']('keystone.project_domain_name')
+            verify = __salt__['config.option']('keystone.verify')
 
         kwargs = {
             'username': user,
             'password': password,
-            'project_id': tenant,
+            'project_id': project_id,
             'auth_url': auth_url,
             'region_name': region_name,
             'use_keystoneauth': use_keystoneauth,
@@ -196,9 +226,7 @@ def volume_list(search_opts=None, profile=None):
 
     .. code-block:: bash
 
-        salt '*' nova.volume_list \
-                search_opts='{"display_name": "myblock"}' \
-                profile=openstack
+        salt '*' nova.volume_list search_opts='{"display_name": "myblock"}' profile=openstack
 
     '''
     conn = _auth(profile)
@@ -337,8 +365,7 @@ def volume_attach(name,
     .. code-block:: bash
 
         salt '*' nova.volume_attach myblock slice.example.com profile=openstack
-        salt '*' nova.volume_attach myblock server.example.com \
-                device='/dev/xvdb' profile=openstack
+        salt '*' nova.volume_attach myblock server.example.com device='/dev/xvdb' profile=openstack
 
     '''
     conn = _auth(profile)
@@ -461,8 +488,7 @@ def flavor_create(name,      # pylint: disable=C0103
 
     .. code-block:: bash
 
-        salt '*' nova.flavor_create myflavor flavor_id=6 \
-                ram=4096 disk=10 vcpus=1
+        salt '*' nova.flavor_create myflavor flavor_id=6 ram=4096 disk=10 vcpus=1
     '''
     conn = _auth(profile)
     return conn.flavor_create(
@@ -529,7 +555,7 @@ def keypair_delete(name, profile=None):
 
     .. code-block:: bash
 
-        salt '*' nova.keypair_delete mykey'
+        salt '*' nova.keypair_delete mykey
     '''
     conn = _auth(profile)
     return conn.keypair_delete(name)
@@ -562,8 +588,7 @@ def image_meta_set(image_id=None,
 
     .. code-block:: bash
 
-        salt '*' nova.image_meta_set 6f52b2ff-0b31-4d84-8fd1-af45b84824f6 \
-                cheese=gruyere
+        salt '*' nova.image_meta_set 6f52b2ff-0b31-4d84-8fd1-af45b84824f6 cheese=gruyere
         salt '*' nova.image_meta_set name=myimage salad=pasta beans=baked
     '''
     conn = _auth(profile)
@@ -586,8 +611,7 @@ def image_meta_delete(image_id=None,     # pylint: disable=C0103
 
     .. code-block:: bash
 
-        salt '*' nova.image_meta_delete \
-                6f52b2ff-0b31-4d84-8fd1-af45b84824f6 keys=cheese
+        salt '*' nova.image_meta_delete 6f52b2ff-0b31-4d84-8fd1-af45b84824f6 keys=cheese
         salt '*' nova.image_meta_delete name=myimage keys=salad,beans
     '''
     conn = _auth(profile)

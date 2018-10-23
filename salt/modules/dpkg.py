@@ -2,7 +2,7 @@
 '''
 Support for DEB packages
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging
@@ -11,10 +11,11 @@ import re
 import datetime
 
 # Import salt libs
-import salt.utils  # Can be removed once compare_dicts is moved
 import salt.utils.args
+import salt.utils.data
 import salt.utils.files
 import salt.utils.path
+import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 log = logging.getLogger(__name__)
@@ -131,7 +132,7 @@ def unpurge(*packages):
     )
     __context__.pop('pkg.list_pkgs', None)
     new = __salt__['pkg.list_pkgs'](purge_desired=True)
-    return salt.utils.compare_dicts(old, new)
+    return salt.utils.data.compare_dicts(old, new)
 
 
 def list_pkgs(*packages):
@@ -327,7 +328,7 @@ def _get_pkg_license(pkg):
     cpr = "/usr/share/doc/{0}/copyright".format(pkg)
     if os.path.exists(cpr):
         with salt.utils.files.fopen(cpr) as fp_:
-            for line in fp_.read().split(os.linesep):
+            for line in salt.utils.stringutils.to_unicode(fp_.read()).split(os.linesep):
                 if line.startswith("License:"):
                     licenses.add(line.split(":", 1)[1].strip())
 
@@ -365,7 +366,7 @@ def _get_pkg_ds_avail():
     pkg_mrk = "Package:"
     pkg_name = "package"
     with salt.utils.files.fopen(avail) as fp_:
-        for pkg_info in fp_.read().split(pkg_mrk):
+        for pkg_info in salt.utils.stringutils.to_unicode(fp_.read()).split(pkg_mrk):
             nfo = dict()
             for line in (pkg_mrk + pkg_info).split(os.linesep):
                 line = line.split(": ", 1)

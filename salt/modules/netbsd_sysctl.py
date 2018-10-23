@@ -2,12 +2,15 @@
 '''
 Module for viewing and modifying sysctl parameters
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import re
 
 # Import salt libs
+from salt.ext import six
+import salt.utils.data
 import salt.utils.files
+import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError
 
 # Define the module's virtual name
@@ -112,7 +115,7 @@ def persist(name, value, config='/etc/sysctl.conf'):
     '''
     nlines = []
     edited = False
-    value = str(value)
+    value = six.text_type(value)
 
     # create /etc/sysctl.conf if not present
     if not os.path.isfile(config):
@@ -125,6 +128,7 @@ def persist(name, value, config='/etc/sysctl.conf'):
 
     with salt.utils.files.fopen(config, 'r') as ifile:
         for line in ifile:
+            line = salt.utils.stringutils.to_unicode(line)
             m = re.match(r'{0}(\??=)'.format(name), line)
             if not m:
                 nlines.append(line)
@@ -148,8 +152,10 @@ def persist(name, value, config='/etc/sysctl.conf'):
         newline = '{0}={1}'.format(name, value)
         nlines.append("{0}\n".format(newline))
 
-    with salt.utils.files.fopen(config, 'w+') as ofile:
-        ofile.writelines(nlines)
+    with salt.utils.files.fopen(config, 'wb') as ofile:
+        ofile.writelines(
+            salt.utils.data.encode(nlines)
+        )
 
     assign(name, value)
 

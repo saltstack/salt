@@ -3,7 +3,7 @@
 TextFSM
 =======
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 Execution module that processes plain text and extracts data
 using TextFSM templates. The output is presented in JSON serializable

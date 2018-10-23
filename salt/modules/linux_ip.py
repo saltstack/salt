@@ -3,12 +3,13 @@
 The networking module for Non-RH/Deb Linux distros
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt libs
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
+import salt.utils.stringutils
 
 from salt.ext.six.moves import zip
 
@@ -140,7 +141,7 @@ def _parse_routes():
     Parse the contents of ``/proc/net/route``
     '''
     with salt.utils.files.fopen('/proc/net/route', 'r') as fp_:
-        out = fp_.read()
+        out = salt.utils.stringutils.to_unicode(fp_.read())
 
     ret = {}
     for line in out.splitlines():

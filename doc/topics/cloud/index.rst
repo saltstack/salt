@@ -125,10 +125,10 @@ Cloud Provider Specifics
         Getting Started With Parallels <parallels>
         Getting Started With ProfitBricks <profitbricks>
         Getting Started With Proxmox <proxmox>
-        Getting Started With Rackspace <rackspace>
         Getting Started With Scaleway <scaleway>
         Getting Started With Saltify <saltify>
         Getting Started With SoftLayer <softlayer>
+        Getting Started With Vagrant <vagrant>
         Getting Started With Vexxhost <vexxhost>
         Getting Started With Virtualbox <virtualbox>
         Getting Started With VMware <vmware>

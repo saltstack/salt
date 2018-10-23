@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Jayesh Kariya <jayeshk@saltstack.com>`
+    :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import socket
 import os.path
 
@@ -20,20 +20,11 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.ext import six
 import salt.utils.network
 import salt.utils.path
 import salt.modules.network as network
 from salt.exceptions import CommandExecutionError
-if six.PY2:
-    import salt.ext.ipaddress as ipaddress
-    HAS_IPADDRESS = True
-else:
-    try:
-        import ipaddress
-        HAS_IPADDRESS = True
-    except ImportError:
-        HAS_IPADDRESS = False
+from salt._compat import ipaddress
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -230,16 +221,14 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
         Test for Modify hostname
         '''
         self.assertFalse(network.mod_hostname(None))
+        file_d = '\n'.join(['#', 'A B C D,E,F G H'])
 
-        with patch.object(salt.utils.path, 'which', return_value='hostname'):
-            with patch.dict(network.__salt__,
-                            {'cmd.run': MagicMock(return_value=None)}):
-                file_d = '\n'.join(['#', 'A B C D,E,F G H'])
-                with patch('salt.utils.files.fopen', mock_open(read_data=file_d),
-                           create=True) as mfi:
-                    mfi.return_value.__iter__.return_value = file_d.splitlines()
-                    with patch.dict(network.__grains__, {'os_family': 'A'}):
-                        self.assertTrue(network.mod_hostname('hostname'))
+        with patch.object(salt.utils.path, 'which', return_value='hostname'), \
+                patch.dict(network.__salt__,
+                           {'cmd.run': MagicMock(return_value=None)}), \
+                patch.dict(network.__grains__, {'os_family': 'A'}), \
+                patch('salt.utils.files.fopen', mock_open(read_data=file_d)):
+            self.assertTrue(network.mod_hostname('hostname'))
 
     def test_connect(self):
         '''
@@ -278,7 +267,7 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
                     self.assertDictEqual(network.connect('host', 'port'),
                                          {'comment': ret, 'result': True})
 
-    @skipIf(HAS_IPADDRESS is False, 'unable to import \'ipaddress\'')
+    @skipIf(not bool(ipaddress), 'unable to import \'ipaddress\'')
     def test_is_private(self):
         '''
         Test for Check if the given IP address is a private address
@@ -290,7 +279,7 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
                           return_value=True):
             self.assertTrue(network.is_private('::1'))
 
-    @skipIf(HAS_IPADDRESS is False, 'unable to import \'ipaddress\'')
+    @skipIf(not bool(ipaddress), 'unable to import \'ipaddress\'')
     def test_is_loopback(self):
         '''
         Test for Check if the given IP address is a loopback address

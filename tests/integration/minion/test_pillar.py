@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Erik Johnson <erik@saltstack.com>`
+    :codeauthor: Erik Johnson <erik@saltstack.com>
 '''
 
 # Import Python libs
@@ -19,13 +19,11 @@ from tests.support.paths import TMP, TMP_CONF_DIR
 from tests.support.unit import skipIf
 from tests.support.helpers import requires_system_grains
 
-# Import 3rd-party libs
-import yaml
-from salt.ext import six
-
 # Import salt libs
 import salt.utils.files
 import salt.utils.path
+import salt.utils.stringutils
+import salt.utils.yaml
 import salt.pillar as pillar
 
 log = logging.getLogger(__name__)
@@ -38,6 +36,7 @@ GPG_SLS = os.path.join(PILLAR_BASE, 'gpg.sls')
 DEFAULT_OPTS = {
     'cachedir': os.path.join(TMP, 'rootdir', 'cache'),
     'config_dir': TMP_CONF_DIR,
+    'optimization_order': [0, 1, 2],
     'extension_modules': os.path.join(TMP,
                                       'test-decrypt-pillar',
                                       'extmods'),
@@ -191,6 +190,67 @@ GPG_PILLAR_DECRYPTED = {
 }
 
 
+class BasePillarTest(ModuleCase):
+    '''
+    Tests for pillar decryption
+    '''
+    @classmethod
+    def setUpClass(cls):
+        os.makedirs(PILLAR_BASE)
+        with salt.utils.files.fopen(TOP_SLS, 'w') as fp_:
+            fp_.write(textwrap.dedent('''\
+            base:
+              'N@mins not L@minion':
+                - ng1
+              'N@missing_minion':
+                - ng2
+            '''))
+
+        with salt.utils.files.fopen(os.path.join(PILLAR_BASE, 'ng1.sls'), 'w') as fp_:
+            fp_.write('pillar_from_nodegroup: True')
+
+        with salt.utils.files.fopen(os.path.join(PILLAR_BASE, 'ng2.sls'), 'w') as fp_:
+            fp_.write('pillar_from_nodegroup_with_ghost: True')
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(PILLAR_BASE)
+
+    def _build_opts(self, opts):
+        ret = copy.deepcopy(DEFAULT_OPTS)
+        for item in ADDITIONAL_OPTS:
+            ret[item] = self.master_opts[item]
+        ret.update(opts)
+        return ret
+
+    def test_pillar_top_compound_match(self, grains=None):
+        '''
+        Test that a compound match topfile that refers to a nodegroup via N@ works
+        as expected.
+        '''
+        if not grains:
+            grains = {}
+        grains['os'] = 'Fedora'
+        nodegroup_opts = salt.utils.yaml.safe_load(textwrap.dedent('''\
+            nodegroups:
+              min: minion
+              sub_min: sub_minion
+              mins: N@min or N@sub_min
+              missing_minion: L@minion,ghostminion
+        '''))
+
+        opts = self._build_opts(nodegroup_opts)
+        pillar_obj = pillar.Pillar(opts, grains, 'minion', 'base')
+        ret = pillar_obj.compile_pillar()
+        self.assertEqual(ret.get('pillar_from_nodegroup_with_ghost'), True)
+        self.assertEqual(ret.get('pillar_from_nodegroup'), None)
+
+        sub_pillar_obj = pillar.Pillar(opts, grains, 'sub_minion', 'base')
+        sub_ret = sub_pillar_obj.compile_pillar()
+        self.assertEqual(sub_ret.get('pillar_from_nodegroup_with_ghost'), None)
+        self.assertEqual(sub_ret.get('pillar_from_nodegroup'), True)
+
+
 @skipIf(not salt.utils.path.which('gpg'), 'GPG is not installed')
 class DecryptGPGPillarTest(ModuleCase):
     '''
@@ -223,7 +283,7 @@ class DecryptGPGPillarTest(ModuleCase):
                                       stdin=subprocess.PIPE,
                                       stdout=subprocess.PIPE,
                                       stderr=subprocess.STDOUT,
-                                      shell=False).communicate(input=six.b(TEST_KEY))[0]
+                                      shell=False).communicate(input=salt.utils.stringutils.to_bytes(TEST_KEY))[0]
             log.debug('Result:\n%s', output)
 
             os.makedirs(PILLAR_BASE)
@@ -245,7 +305,7 @@ class DecryptGPGPillarTest(ModuleCase):
                                       stdin=subprocess.PIPE,
                                       stdout=subprocess.PIPE,
                                       stderr=subprocess.STDOUT,
-                                      shell=False).communicate(input=six.b('KILLAGENT'))[0]
+                                      shell=False).communicate(input=b'KILLAGENT')[0]
             log.debug('Result:\n%s', output)
         except OSError:
             log.debug('No need to kill: old gnupg doesn\'t start the agent.')
@@ -272,7 +332,7 @@ class DecryptGPGPillarTest(ModuleCase):
         Test recursive decryption of secrets:vault as well as the fallback to
         default decryption renderer.
         '''
-        decrypt_pillar_opts = yaml.safe_load(textwrap.dedent('''\
+        decrypt_pillar_opts = salt.utils.yaml.safe_load(textwrap.dedent('''\
             decrypt_pillar:
               - 'secrets:vault'
             '''))
@@ -287,7 +347,7 @@ class DecryptGPGPillarTest(ModuleCase):
         Test recursive decryption of secrets:vault using a pipe instead of a
         colon as the nesting delimiter.
         '''
-        decrypt_pillar_opts = yaml.safe_load(textwrap.dedent('''\
+        decrypt_pillar_opts = salt.utils.yaml.safe_load(textwrap.dedent('''\
             decrypt_pillar_delimiter: '|'
             decrypt_pillar:
               - 'secrets|vault'
@@ -303,7 +363,7 @@ class DecryptGPGPillarTest(ModuleCase):
         Test recursive decryption, only with a more deeply-nested target. This
         should leave the other keys in secrets:vault encrypted.
         '''
-        decrypt_pillar_opts = yaml.safe_load(textwrap.dedent('''\
+        decrypt_pillar_opts = salt.utils.yaml.safe_load(textwrap.dedent('''\
             decrypt_pillar:
               - 'secrets:vault:qux'
             '''))
@@ -322,7 +382,7 @@ class DecryptGPGPillarTest(ModuleCase):
         explicitly defined, overriding the default. Setting the default to a
         nonexistant renderer so we can be sure that the override happened.
         '''
-        decrypt_pillar_opts = yaml.safe_load(textwrap.dedent('''\
+        decrypt_pillar_opts = salt.utils.yaml.safe_load(textwrap.dedent('''\
             decrypt_pillar_default: asdf
             decrypt_pillar_renderers:
               - asdf
@@ -341,7 +401,7 @@ class DecryptGPGPillarTest(ModuleCase):
         Test decryption using a missing renderer. It should fail, leaving the
         encrypted keys intact, and add an error to the pillar dictionary.
         '''
-        decrypt_pillar_opts = yaml.safe_load(textwrap.dedent('''\
+        decrypt_pillar_opts = salt.utils.yaml.safe_load(textwrap.dedent('''\
             decrypt_pillar_default: asdf
             decrypt_pillar_renderers:
               - asdf
@@ -365,7 +425,7 @@ class DecryptGPGPillarTest(ModuleCase):
         fail, leaving the encrypted keys intact, and add an error to the pillar
         dictionary.
         '''
-        decrypt_pillar_opts = yaml.safe_load(textwrap.dedent('''\
+        decrypt_pillar_opts = salt.utils.yaml.safe_load(textwrap.dedent('''\
             decrypt_pillar_default: foo
             decrypt_pillar_renderers:
               - foo

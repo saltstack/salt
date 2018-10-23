@@ -1,25 +1,33 @@
 # -*- coding: utf-8 -*-
+'''
+Functions which implement running reactor jobs
+'''
+
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
+import collections
 import fnmatch
 import glob
 import logging
+import time
 
 # Import salt libs
 import salt.client
 import salt.runner
 import salt.state
-import salt.utils
+import salt.utils.args
 import salt.utils.cache
+import salt.utils.data
 import salt.utils.event
 import salt.utils.files
 import salt.utils.process
+import salt.utils.yaml
 import salt.wheel
 import salt.defaults.exitcodes
+from salt.utils.event import tagify
 
 # Import 3rd-party libs
-import yaml
 from salt.ext import six
 
 log = logging.getLogger(__name__)
@@ -45,12 +53,15 @@ class Reactor(salt.utils.process.SignalHandlingMultiprocessingProcess, salt.stat
         'cmd': 'local',
     }
 
-    def __init__(self, opts, log_queue=None):
-        super(Reactor, self).__init__(log_queue=log_queue)
+    def __init__(self, opts, **kwargs):
+        super(Reactor, self).__init__(**kwargs)
         local_minion_opts = opts.copy()
         local_minion_opts['file_client'] = 'local'
         self.minion = salt.minion.MasterMinion(local_minion_opts)
         salt.state.Compiler.__init__(self, opts, self.minion.rend)
+        self.event = salt.utils.event.get_master_event(opts, opts['sock_dir'], listen=False)
+        self.stats = collections.defaultdict(lambda: {'mean': 0, 'latency': 0, 'runs': 0})
+        self.stat_clock = time.time()
 
     # We need __setstate__ and __getstate__ to avoid pickling errors since
     # 'self.rend' (from salt.state.Compiler) contains a function reference
@@ -61,11 +72,27 @@ class Reactor(salt.utils.process.SignalHandlingMultiprocessingProcess, salt.stat
         self._is_child = True
         Reactor.__init__(
             self, state['opts'],
-            log_queue=state['log_queue'])
+            log_queue=state['log_queue'],
+            log_queue_level=state['log_queue_level']
+        )
 
     def __getstate__(self):
-        return {'opts': self.opts,
-                'log_queue': self.log_queue}
+        return {
+            'opts': self.opts,
+            'log_queue': self.log_queue,
+            'log_queue_level': self.log_queue_level
+        }
+
+    def _post_stats(self, stats):
+        '''
+        Fire events with stat info if it's time
+        '''
+        end_time = time.time()
+        if end_time - self.stat_clock > self.opts['master_stats_event_iter']:
+            # Fire the event with the stats and wipe the tracker
+            self.event.fire_event({'time': end_time - self.stat_clock, 'worker': self.name, 'stats': stats}, tagify(self.name, 'stats'))
+            self.stats = collections.defaultdict(lambda: {'mean': 0, 'latency': 0, 'runs': 0})
+            self.stat_clock = end_time
 
     def render_reaction(self, glob_ref, tag, data):
         '''
@@ -78,7 +105,7 @@ class Reactor(salt.utils.process.SignalHandlingMultiprocessingProcess, salt.stat
             glob_ref = self.minion.functions['cp.cache_file'](glob_ref) or ''
         globbed_ref = glob.glob(glob_ref)
         if not globbed_ref:
-            log.error('Can not render SLS {0} for tag {1}. File missing or not found.'.format(glob_ref, tag))
+            log.error('Can not render SLS %s for tag %s. File missing or not found.', glob_ref, tag)
         for fn_ in globbed_ref:
             try:
                 res = self.render_template(
@@ -93,7 +120,7 @@ class Reactor(salt.utils.process.SignalHandlingMultiprocessingProcess, salt.stat
 
                 react.update(res)
             except Exception:
-                log.error('Failed to render "{0}": '.format(fn_), exc_info=True)
+                log.exception('Failed to render "%s": ', fn_)
         return react
 
     def list_reactors(self, tag):
@@ -101,24 +128,16 @@ class Reactor(salt.utils.process.SignalHandlingMultiprocessingProcess, salt.stat
         Take in the tag from an event and return a list of the reactors to
         process
         '''
-        log.debug('Gathering reactors for tag {0}'.format(tag))
+        log.debug('Gathering reactors for tag %s', tag)
         reactors = []
         if isinstance(self.opts['reactor'], six.string_types):
             try:
                 with salt.utils.files.fopen(self.opts['reactor']) as fp_:
-                    react_map = yaml.safe_load(fp_.read())
+                    react_map = salt.utils.yaml.safe_load(fp_)
             except (OSError, IOError):
-                log.error(
-                    'Failed to read reactor map: "{0}"'.format(
-                        self.opts['reactor']
-                        )
-                    )
+                log.error('Failed to read reactor map: "%s"', self.opts['reactor'])
             except Exception:
-                log.error(
-                    'Failed to parse YAML in reactor map: "{0}"'.format(
-                        self.opts['reactor']
-                        )
-                    )
+                log.error('Failed to parse YAML in reactor map: "%s"', self.opts['reactor'])
         else:
             react_map = self.opts['reactor']
         for ropt in react_map:
@@ -140,22 +159,17 @@ class Reactor(salt.utils.process.SignalHandlingMultiprocessingProcess, salt.stat
         Return a list of the reactors
         '''
         if isinstance(self.minion.opts['reactor'], six.string_types):
-            log.debug('Reading reactors from yaml {0}'.format(self.opts['reactor']))
+            log.debug('Reading reactors from yaml %s', self.opts['reactor'])
             try:
                 with salt.utils.files.fopen(self.opts['reactor']) as fp_:
-                    react_map = yaml.safe_load(fp_.read())
+                    react_map = salt.utils.yaml.safe_load(fp_)
             except (OSError, IOError):
-                log.error(
-                    'Failed to read reactor map: "{0}"'.format(
-                        self.opts['reactor']
-                        )
-                    )
+                log.error('Failed to read reactor map: "%s"', self.opts['reactor'])
             except Exception:
                 log.error(
-                    'Failed to parse YAML in reactor map: "{0}"'.format(
-                        self.opts['reactor']
-                        )
-                    )
+                    'Failed to parse YAML in reactor map: "%s"',
+                    self.opts['reactor']
+                )
         else:
             log.debug('Not reading reactors from yaml')
             react_map = self.minion.opts['reactor']
@@ -201,7 +215,7 @@ class Reactor(salt.utils.process.SignalHandlingMultiprocessingProcess, salt.stat
         '''
         Render a list of reactor files and returns a reaction struct
         '''
-        log.debug('Compiling reactions for tag {0}'.format(tag))
+        log.debug('Compiling reactions for tag %s', tag)
         high = {}
         chunks = []
         try:
@@ -210,12 +224,15 @@ class Reactor(salt.utils.process.SignalHandlingMultiprocessingProcess, salt.stat
             if high:
                 errors = self.verify_high(high)
                 if errors:
-                    log.error(('Unable to render reactions for event {0} due to '
-                               'errors ({1}) in one or more of the sls files ({2})').format(tag, errors, reactors))
+                    log.error(
+                        'Unable to render reactions for event %s due to '
+                        'errors (%s) in one or more of the sls files (%s)',
+                        tag, errors, reactors
+                    )
                     return []  # We'll return nothing since there was an error
                 chunks = self.order_chunks(self.compile_high_data(high))
         except Exception as exc:
-            log.error('Exception trying to compile reactions: {0}'.format(exc), exc_info=True)
+            log.exception('Exception encountered while compiling reactions')
 
         self.resolve_aliases(chunks)
         return chunks
@@ -231,7 +248,7 @@ class Reactor(salt.utils.process.SignalHandlingMultiprocessingProcess, salt.stat
         '''
         Enter into the server loop
         '''
-        salt.utils.appendproctitle(self.__class__.__name__)
+        salt.utils.process.appendproctitle(self.__class__.__name__)
 
         # instantiate some classes inside our new process
         self.event = salt.utils.event.get_event(
@@ -246,6 +263,7 @@ class Reactor(salt.utils.process.SignalHandlingMultiprocessingProcess, salt.stat
             # skip all events fired by ourselves
             if data['data'].get('user') == self.wrap.event_user:
                 continue
+
             if data['tag'].endswith('salt/reactors/manage/add'):
                 _data = data['data']
                 res = self.add_reactor(_data['event'], _data['reactors'])
@@ -267,10 +285,17 @@ class Reactor(salt.utils.process.SignalHandlingMultiprocessingProcess, salt.stat
                     continue
                 chunks = self.reactions(data['tag'], data['data'], reactors)
                 if chunks:
+                    if self.opts['master_stats']:
+                        _data = data['data']
+                        start = time.time()
                     try:
                         self.call_reactions(chunks)
                     except SystemExit:
                         log.warning('Exit ignored by reactor')
+
+                    if self.opts['master_stats']:
+                        stats = salt.utils.event.update_stats(self.stats, start, _data)
+                        self._post_stats(stats)
 
 
 class ReactWrap(object):
@@ -337,7 +362,7 @@ class ReactWrap(object):
             )
 
         try:
-            wrap_call = salt.utils.format_call(l_fun, low)
+            wrap_call = salt.utils.args.format_call(l_fun, low)
             args = wrap_call.get('args', ())
             kwargs = wrap_call.get('kwargs', {})
             # TODO: Setting user doesn't seem to work for actual remote pubs
@@ -364,7 +389,7 @@ class ReactWrap(object):
                         )
                 if low['state'] == 'caller' \
                         and isinstance(reactor_args, list) \
-                        and not salt.utils.is_dictlist(reactor_args):
+                        and not salt.utils.data.is_dictlist(reactor_args):
                     # Legacy 'caller' reactors were already using the 'args'
                     # param, but only supported a list of positional arguments.
                     # If low['args'] is a list but is *not* a dictlist, then
@@ -377,7 +402,7 @@ class ReactWrap(object):
                     kwargs['arg'] = ()
                     kwargs['kwarg'] = reactor_args
                 if not isinstance(kwargs['kwarg'], dict):
-                    kwargs['kwarg'] = salt.utils.repack_dictlist(kwargs['kwarg'])
+                    kwargs['kwarg'] = salt.utils.data.repack_dictlist(kwargs['kwarg'])
                     if not kwargs['kwarg']:
                         log.error(
                             'Reactor \'%s\' failed to execute %s \'%s\': '
@@ -402,7 +427,7 @@ class ReactWrap(object):
                             )
                             return
 
-                        react_call = salt.utils.format_call(
+                        react_call = salt.utils.args.format_call(
                             react_fun,
                             low,
                             expected_extra_kws=REACTOR_INTERNAL_KEYWORDS
@@ -417,7 +442,16 @@ class ReactWrap(object):
             # and kwargs['kwarg'] contain the positional and keyword arguments
             # that will be passed to the client interface to execute the
             # desired runner/wheel/remote-exec/etc. function.
-            l_fun(*args, **kwargs)
+            ret = l_fun(*args, **kwargs)
+
+            if ret is False:
+                log.error('Reactor \'%s\' failed  to execute %s \'%s\': '
+                            'TaskPool queue is full!'
+                            ' Consider tuning reactor_worker_threads and/or'
+                            ' reactor_worker_hwm',
+                            low['__id__'], low['state'], low['fun']
+                )
+
         except SystemExit:
             log.warning(
                 'Reactor \'%s\' attempted to exit. Ignored.', low['__id__']
@@ -432,13 +466,13 @@ class ReactWrap(object):
         '''
         Wrap RunnerClient for executing :ref:`runner modules <all-salt.runners>`
         '''
-        self.pool.fire_async(self.client_cache['runner'].low, args=(fun, kwargs))
+        return self.pool.fire_async(self.client_cache['runner'].low, args=(fun, kwargs))
 
     def wheel(self, fun, **kwargs):
         '''
         Wrap Wheel to enable executing :ref:`wheel modules <all-salt.wheel>`
         '''
-        self.pool.fire_async(self.client_cache['wheel'].low, args=(fun, kwargs))
+        return self.pool.fire_async(self.client_cache['wheel'].low, args=(fun, kwargs))
 
     def local(self, fun, tgt, **kwargs):
         '''

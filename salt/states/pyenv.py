@@ -48,7 +48,7 @@ This is how a state configuration could look like:
     Git needs to be installed and available via PATH if pyenv is to be
     installed automatically by the module.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import re

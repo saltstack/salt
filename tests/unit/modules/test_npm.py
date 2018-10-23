@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Jayesh Kariya <jayeshk@saltstack.com>`
+    :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
-import json
+from __future__ import absolute_import, unicode_literals, print_function
+import textwrap
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -18,6 +18,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
+import salt.utils.json
 import salt.modules.npm as npm
 from salt.exceptions import CommandExecutionError
 
@@ -34,43 +35,87 @@ class NpmTestCase(TestCase, LoaderModuleMockMixin):
         self.addCleanup(patcher.stop)
         return {npm: {}}
 
-    # 'install' function tests: 1
+    # 'install' function tests: 4
 
     def test_install(self):
         '''
-        Test if it install an NPM package.
+        Test if it installs an NPM package.
         '''
         mock = MagicMock(return_value={'retcode': 1, 'stderr': 'error'})
         with patch.dict(npm.__salt__, {'cmd.run_all': mock}):
             self.assertRaises(CommandExecutionError, npm.install,
                               'coffee-script')
 
-        mock = MagicMock(return_value={'retcode': 0, 'stderr': 'error',
-                                       'stdout': '{"salt": ["SALT"]}'})
-        with patch.dict(npm.__salt__, {'cmd.run_all': mock}):
-            mock_err = MagicMock(return_value='SALT')
-            with patch.object(json, 'loads', mock_err):
-                self.assertEqual(npm.install('coffee-script'), 'SALT')
+        # This is at least somewhat closer to the actual output format.
+        mock_json_out = textwrap.dedent('''\
+        [
+          {
+            "salt": "SALT"
+          }
+        ]''')
 
-        mock = MagicMock(return_value={'retcode': 0, 'stderr': 'error',
-                                       'stdout': '{"salt": ["SALT"]}'})
+        # Successful run, expected output format
+        mock = MagicMock(return_value={'retcode': 0, 'stderr': '',
+                                       'stdout': mock_json_out})
+        with patch.dict(npm.__salt__, {'cmd.run_all': mock}):
+            self.assertEqual(npm.install('coffee-script'),
+                             [{u'salt': u'SALT'}])
+
+        mock_json_out_extra = textwrap.dedent('''\
+        Compilation output here
+
+        [bcrypt] Success: "/tmp/node_modules/bcrypt/foo" is installed via remote"
+        [grpc] Success: "/usr/lib/node_modules/@foo/bar" is installed via remote"
+        [
+           {
+              "from" : "express@",
+              "name" : "express",
+              "dependencies" : {
+                 "escape-html" : {
+                    "from" : "escape-html@~1.0.3",
+                    "dependencies" : {},
+                    "version" : "1.0.3"
+                 }
+              },
+              "version" : "4.16.3"
+           }
+        ]''')
+        extra_expected = [{u'dependencies':
+            {u'escape-html': {
+                u'dependencies': {},
+                u'from': u'escape-html@~1.0.3',
+                u'version': u'1.0.3'}
+            },
+            u'from': u'express@',
+            u'name': u'express',
+            u'version': u'4.16.3'}]
+
+        # Successful run, expected output format with additional leading text
+        mock = MagicMock(return_value={'retcode': 0, 'stderr': '',
+                                       'stdout': mock_json_out_extra})
+        with patch.dict(npm.__salt__, {'cmd.run_all': mock}):
+            self.assertEqual(npm.install('coffee-script'), extra_expected)
+
+        # Successful run, unexpected output format
+        mock = MagicMock(return_value={'retcode': 0, 'stderr': '',
+                                       'stdout': 'SALT'})
         with patch.dict(npm.__salt__, {'cmd.run_all': mock}):
             mock_err = MagicMock(side_effect=ValueError())
-            with patch.object(json, 'loads', mock_err):
-                self.assertEqual(npm.install('coffee-script'),
-                                 '{"salt": ["SALT"]}')
+            # When JSON isn't successfully parsed, return should equal input
+            with patch.object(salt.utils.json, 'loads', mock_err):
+                self.assertEqual(npm.install('coffee-script'), 'SALT')
 
     # 'uninstall' function tests: 1
 
     def test_uninstall(self):
         '''
-        Test if it uninstall an NPM package.
+        Test if it uninstalls an NPM package.
         '''
         mock = MagicMock(return_value={'retcode': 1, 'stderr': 'error'})
         with patch.dict(npm.__salt__, {'cmd.run_all': mock}):
             self.assertFalse(npm.uninstall('coffee-script'))
 
-        mock = MagicMock(return_value={'retcode': 0, 'stderr': 'error'})
+        mock = MagicMock(return_value={'retcode': 0, 'stderr': ''})
         with patch.dict(npm.__salt__, {'cmd.run_all': mock}):
             self.assertTrue(npm.uninstall('coffee-script'))
 
@@ -88,7 +133,7 @@ class NpmTestCase(TestCase, LoaderModuleMockMixin):
                                        'stdout': '{"salt": ["SALT"]}'})
         with patch.dict(npm.__salt__, {'cmd.run_all': mock}):
             mock_err = MagicMock(return_value={'dependencies': 'SALT'})
-            with patch.object(json, 'loads', mock_err):
+            with patch.object(salt.utils.json, 'loads', mock_err):
                 self.assertEqual(npm.list_('coffee-script'), 'SALT')
 
     # 'cache_clean' function tests: 1

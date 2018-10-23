@@ -29,7 +29,7 @@ Allows for looping over execution modules.
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import time
 
@@ -94,6 +94,10 @@ def until(name,
         ret['comment'] = 'The execution module {0} will be run'.format(name)
         ret['result'] = None
         return ret
+    if not m_args:
+        m_args = []
+    if not m_kwargs:
+        m_kwargs = {}
 
     def timed_out():
         if time.time() >= timeout:

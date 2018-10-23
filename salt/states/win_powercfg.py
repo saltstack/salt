@@ -8,6 +8,7 @@ powercfg.
 
 .. code-block:: yaml
 
+    # Set timeout to 30 minutes on battery power
     monitor:
         powercfg.set_timeout:
             - value: 30
@@ -15,85 +16,135 @@ powercfg.
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import logging
+
+# Import Salt Libs
+import salt.utils.data
+import salt.utils.platform
 
 log = logging.getLogger(__name__)
 
-__virtualname__ = "powercfg"
+__virtualname__ = 'powercfg'
 
 
 def __virtual__():
     '''
     Only work on Windows
     '''
-    if __grains__['os'] == 'Windows':
-        return __virtualname__
-    return False
+    if not salt.utils.platform.is_windows():
+        return False, 'PowerCFG: Module only works on Windows'
+    return __virtualname__
 
 
-def _check_or_set(check_func, set_func, value, power):
-    values = check_func()
-    if values[power] == value:
-        return True
-    else:
-        set_func(value, power)
-        return False
-
-
-def set_timeout(name, value, power="ac", scheme=None):
+def set_timeout(name, value, power='ac', scheme=None):
     '''
-    Set the sleep timeouts of specific items such as disk, monitor.
+    Set the sleep timeouts of specific items such as disk, monitor, etc.
+
+    Args:
+
+        name (str)
+            The setting to change, can be one of the following:
+
+                - ``monitor``
+                - ``disk``
+                - ``standby``
+                - ``hibernate``
+
+        value (int):
+            The amount of time in minutes before the item will timeout
+
+        power (str):
+            Set the value for AC or DC power. Default is ``ac``. Valid options
+            are:
+
+                - ``ac`` (AC Power)
+                - ``dc`` (Battery)
+
+        scheme (str):
+            The scheme to use, leave as ``None`` to use the current. Default is
+            ``None``. This can be the GUID or the Alias for the Scheme. Known
+            Aliases are:
+
+                - ``SCHEME_BALANCED`` - Balanced
+                - ``SCHEME_MAX`` - Power saver
+                - ``SCHEME_MIN`` - High performance
 
     CLI Example:
 
     .. code-block:: yaml
 
+        # Set monitor timeout to 30 minutes on Battery
         monitor:
-            powercfg.set_timeout:
-                - value: 30
-                - power: dc
+          powercfg.set_timeout:
+            - value: 30
+            - power: dc
 
+        # Set disk timeout to 10 minutes on AC Power
         disk:
-            powercfg.set_timeout:
-                - value: 12
-                - power: ac
-
-    name
-        The setting to change, can be one of the following: monitor, disk, standby, hibernate
-
-    timeout
-        The amount of time in minutes before the item will timeout i.e the monitor
-
-    power
-        Should we set the value for AC or DC (battery)? Valid options ac,dc.
-
-    scheme
-        The scheme to use, leave as None to use the current.
+          powercfg.set_timeout:
+            - value: 10
+            - power: ac
     '''
     ret = {'name': name,
            'result': True,
            'comment': '',
            'changes': {}}
 
-    comment = []
+    # Validate name values
+    name = name.lower()
+    if name not in ['monitor', 'disk', 'standby', 'hibernate']:
+        ret['result'] = False
+        ret['comment'] = '"{0}" is not a valid setting'.format(name)
+        log.debug(ret['comment'])
+        return ret
 
-    if name not in ["monitor", "disk", "standby", "hibernate"]:
-        ret["result"] = False
-        comment.append("{0} is not a valid setting".format(name))
-    elif power not in ["ac", "dc"]:
-        ret["result"] = False
-        comment.append("{0} is not a power type".format(power))
+    # Validate power values
+    power = power.lower()
+    if power not in ['ac', 'dc']:
+        ret['result'] = False
+        ret['comment'] = '"{0}" is not a power type'.format(power)
+        log.debug(ret['comment'])
+        return ret
+
+    # Get current settings
+    old = __salt__['powercfg.get_{0}_timeout'.format(name)](scheme=scheme)
+
+    # Check current settings
+    if old[power] == value:
+        ret['comment'] = '{0} timeout on {1} power is already set to {2}' \
+                         ''.format(name.capitalize(), power.upper(), value)
+        return ret
     else:
-        check_func = __salt__["powercfg.get_{0}_timeout".format(name)]
-        set_func = __salt__["powercfg.set_{0}_timeout".format(name)]
+        ret['comment'] = '{0} timeout on {1} power will be set to {2}' \
+                         ''.format(name.capitalize(), power.upper(), value)
 
-        values = check_func(scheme=scheme)
-        if values[power] == value:
-            comment.append("{0} {1} is already set with the value {2}.".format(name, power, value))
-        else:
-            ret['changes'] = {name: {power: value}}
-            set_func(value, power, scheme=scheme)
+    # Check for test=True
+    if __opts__['test']:
+        ret['result'] = None
+        return ret
 
-    ret['comment'] = ' '.join(comment)
+    # Set the timeout value
+    __salt__['powercfg.set_{0}_timeout'.format(name)](
+        timeout=value,
+        power=power,
+        scheme=scheme)
+
+    # Get the setting after the change
+    new = __salt__['powercfg.get_{0}_timeout'.format(name)](scheme=scheme)
+
+    changes = salt.utils.data.compare_dicts(old, new)
+
+    if changes:
+        ret['changes'] = {name: changes}
+        ret['comment'] = '{0} timeout on {1} power set to {2}' \
+                         ''.format(name.capitalize(), power.upper(), value)
+        log.debug(ret['comment'])
+    else:
+        ret['changes'] = {}
+        ret['comment'] = 'Failed to set {0} timeout on {1} power to {2}' \
+                         ''.format(name, power.upper(), value)
+        log.debug(ret['comment'])
+        ret['result'] = False
+
     return ret

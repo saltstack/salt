@@ -10,15 +10,15 @@ SmartOS Metadata grain provider
 .. versionadded:: nitrogen
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import os
-import json
 import logging
 
 # Import salt libs
 import salt.utils.dictupdate
+import salt.utils.json
 import salt.utils.path
 import salt.utils.platform
 
@@ -29,7 +29,6 @@ import salt.modules.cmdmod
 __virtualname__ = 'mdata'
 __salt__ = {
     'cmd.run': salt.modules.cmdmod.run,
-    'cmd.run_all': salt.modules.cmdmod.run_all,
 }
 
 log = logging.getLogger(__name__)
@@ -63,14 +62,14 @@ def _user_mdata(mdata_list=None, mdata_get=None):
     if not mdata_list or not mdata_get:
         return grains
 
-    for mdata_grain in __salt__['cmd.run'](mdata_list).splitlines():
-        mdata_value = __salt__['cmd.run']('{0} {1}'.format(mdata_get, mdata_grain))
+    for mdata_grain in __salt__['cmd.run'](mdata_list, ignore_retcode=True).splitlines():
+        mdata_value = __salt__['cmd.run']('{0} {1}'.format(mdata_get, mdata_grain), ignore_retcode=True)
 
         if not mdata_grain.startswith('sdc:'):
             if 'mdata' not in grains:
                 grains['mdata'] = {}
 
-            log.debug('found mdata entry {name} with value {value}'.format(name=mdata_grain, value=mdata_value))
+            log.debug('found mdata entry %s with value %s', mdata_grain, mdata_value)
             mdata_grain = mdata_grain.replace('-', '_')
             mdata_grain = mdata_grain.replace(':', '_')
             grains['mdata'][mdata_grain] = mdata_value
@@ -107,7 +106,7 @@ def _sdc_mdata(mdata_list=None, mdata_get=None):
         return grains
 
     for mdata_grain in sdc_text_keys+sdc_json_keys:
-        mdata_value = __salt__['cmd.run']('{0} sdc:{1}'.format(mdata_get, mdata_grain))
+        mdata_value = __salt__['cmd.run']('{0} sdc:{1}'.format(mdata_get, mdata_grain), ignore_retcode=True)
 
         if not mdata_value.startswith('No metadata for '):
             if 'mdata' not in grains:
@@ -115,11 +114,11 @@ def _sdc_mdata(mdata_list=None, mdata_get=None):
             if 'sdc' not in grains['mdata']:
                 grains['mdata']['sdc'] = {}
 
-            log.debug('found mdata entry sdc:{name} with value {value}'.format(name=mdata_grain, value=mdata_value))
+            log.debug('found mdata entry sdc:%s with value %s', mdata_grain, mdata_value)
             mdata_grain = mdata_grain.replace('-', '_')
             mdata_grain = mdata_grain.replace(':', '_')
             if mdata_grain in sdc_json_keys:
-                grains['mdata']['sdc'][mdata_grain] = json.loads(mdata_value)
+                grains['mdata']['sdc'][mdata_grain] = salt.utils.json.loads(mdata_value)
             else:
                 grains['mdata']['sdc'][mdata_grain] = mdata_value
 

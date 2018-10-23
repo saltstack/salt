@@ -2,7 +2,7 @@
 '''
 Store key/value pairs in a CSV file
 
-.. versionaddedd:: 2016.11.0
+.. versionadded:: 2016.11.0
 
 Example configuration:
 
@@ -45,7 +45,7 @@ Will produce the following Pillar values for a minion named "jerry":
         'env': 'prod',
     }
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import csv
 
 import salt.utils.files

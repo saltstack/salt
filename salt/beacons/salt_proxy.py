@@ -7,7 +7,7 @@
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 import logging
 from salt.ext.six.moves import map
 
@@ -54,6 +54,7 @@ def validate(config):
             if not isinstance(_config['proxies'], dict):
                 return False, ('Proxies for salt_proxy '
                                'beacon must be a dictionary.')
+    return True, 'Valid beacon configuration'
 
 
 def beacon(config):

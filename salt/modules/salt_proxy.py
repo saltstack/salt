@@ -8,7 +8,7 @@
     on a minion.
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import os
 import logging
 
@@ -33,8 +33,8 @@ def _write_proxy_conf(proxyfile):
     if proxyfile:
         log.debug('Writing proxy conf file')
         with salt.utils.files.fopen(proxyfile, 'w') as proxy_conf:
-            proxy_conf.write('master = {0}'
-                             .format(__grains__['master']))
+            proxy_conf.write(salt.utils.stringutils.to_str('master = {0}'
+                             .format(__grains__['master'])))
         msg = 'Wrote proxy file {0}'.format(proxyfile)
         log.debug(msg)
 

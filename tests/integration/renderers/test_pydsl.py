@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import textwrap
 
@@ -11,6 +11,7 @@ from tests.support.case import ModuleCase
 # Import Salt libs
 import salt.utils.files
 import salt.utils.platform
+import salt.utils.stringutils
 
 
 class PyDSLRendererIncludeTestCase(ModuleCase):
@@ -49,7 +50,7 @@ class PyDSLRendererIncludeTestCase(ModuleCase):
                        'hello blue 3 \r\n'
 
         with salt.utils.files.fopen('/tmp/output', 'r') as f:
-            ret = f.read()
+            ret = salt.utils.stringutils.to_unicode(f.read())
 
         os.remove('/tmp/output')
 

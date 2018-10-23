@@ -60,7 +60,7 @@ Also configure a user in the conf/tomcat-users.xml file:
      Tomcat Version:
          Apache Tomcat/7.0.37
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import os
@@ -84,7 +84,7 @@ from salt.ext.six.moves.urllib.request import (
 # pylint: enable=no-name-in-module,import-error
 
 # Import Salt libs
-import salt.utils
+import salt.utils.data
 
 log = logging.getLogger(__name__)
 
@@ -146,9 +146,10 @@ def _get_credentials():
             # Look for the config key
             # Support old-style config format and new
             for config_key in __valid_configs[item]:
-                value = salt.utils.traverse_dict_and_list(struct,
-                                                          config_key,
-                                                          None)
+                value = salt.utils.data.traverse_dict_and_list(
+                    struct,
+                    config_key,
+                    None)
                 if value:
                     ret[item] = value
                     break
@@ -179,13 +180,14 @@ def _auth(uri):
 
 def extract_war_version(war):
     '''
-    Extract the version from the war file name.  There does not seem to be a
-    standard for encoding the version into the `war file name
-    <https://tomcat.apache.org/tomcat-6.0-doc/deployer-howto.html>`_.
+    Extract the version from the war file name. There does not seem to be a
+    standard for encoding the version into the `war file name`_
+
+    .. _`war file name`: https://tomcat.apache.org/tomcat-6.0-doc/deployer-howto.html
 
     Examples:
 
-    .. code-block::
+    .. code-block:: bash
 
         /path/salt-2015.8.6.war -> 2015.8.6
         /path/V6R2013xD5.war -> None
@@ -203,15 +205,18 @@ def _wget(cmd, opts=None, url='http://localhost:8080/manager', timeout=180):
 
     cmd
         the command to execute
+
     url
-        the URL of the server manager webapp
-        example: http://localhost:8080/manager
+        The URL of the server manager webapp (example:
+        http://localhost:8080/manager)
+
     opts
         a dict of arguments
+
     timeout
         timeout for HTTP request
 
-    return value is a dict in the from of::
+    Return value is a dict in the from of::
 
         {
             res: [True|False]

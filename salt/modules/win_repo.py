@@ -9,13 +9,13 @@ For documentation on Salt's Windows Repo feature, see :ref:`here
 '''
 
 # Import python libs
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, unicode_literals, print_function
 import logging
 import os
 
 # Import salt libs
 import salt.output
-import salt.utils
+import salt.utils.functools
 import salt.utils.path
 import salt.utils.platform
 import salt.loader
@@ -27,7 +27,9 @@ from salt.exceptions import CommandExecutionError, SaltRenderError
 from salt.runners.winrepo import (
     genrepo as _genrepo,
     update_git_repos as _update_git_repos,
-    PER_REMOTE_OVERRIDES
+    PER_REMOTE_OVERRIDES,
+    PER_REMOTE_ONLY,
+    GLOBAL_ONLY
 )
 from salt.ext import six
 try:
@@ -49,9 +51,9 @@ def __virtual__():
     '''
     if salt.utils.platform.is_windows():
         global _genrepo, _update_git_repos
-        _genrepo = salt.utils.namespaced_function(_genrepo, globals())
+        _genrepo = salt.utils.functools.namespaced_function(_genrepo, globals())
         _update_git_repos = \
-            salt.utils.namespaced_function(_update_git_repos, globals())
+            salt.utils.functools.namespaced_function(_update_git_repos, globals())
         return __virtualname__
     return (False, 'This module only works on Windows.')
 
@@ -126,6 +128,7 @@ def update_git_repos(clean=False):
 def show_sls(name, saltenv='base'):
     r'''
     .. versionadded:: 2015.8.0
+
     Display the rendered software definition from a specific sls file in the
     local winrepo cache. This will parse all Jinja. Run pkg.refresh_db to pull
     the latest software definitions from the master.
@@ -202,8 +205,8 @@ def show_sls(name, saltenv='base'):
 
     # Return the error if any
     except SaltRenderError as exc:
-        log.debug('Failed to compile {0}.'.format(sls_file))
-        log.debug('Error: {0}.'.format(exc))
+        log.debug('Failed to compile %s.', sls_file)
+        log.debug('Error: %s.', exc)
         config['Message'] = 'Failed to compile {0}'.format(sls_file)
         config['Error'] = '{0}'.format(exc)
 

@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Jayesh Kariya <jayeshk@saltstack.com>`
+    :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 
 # Import Salt Testing Libs
@@ -100,7 +100,7 @@ class BlockdevTestCase(TestCase, LoaderModuleMockMixin):
 
             # Test state return when block device format fails
             with patch.dict(blockdev.__salt__, {'cmd.run': MagicMock(return_value=mock_ext4),
-                                                'disk.format_': MagicMock(return_value=True)}):
+                                                'disk.format': MagicMock(return_value=True)}):
                 comt = ('Failed to format {0}'.format(name))
                 ret.update({'comment': comt, 'result': False})
                 with patch.object(salt.utils.path, 'which',

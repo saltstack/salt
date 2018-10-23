@@ -86,7 +86,7 @@ Dependencies
 
 Salt should run on any Unix-like platform so long as the dependencies are met.
 
-* `Python 2.6`_ >= 2.6 <3.0
+* `Python 2.7`_ >= 2.7 <3.0
 * `msgpack-python`_ - High-performance message interchange format
 * `YAML`_ - Python YAML bindings
 * `Jinja2`_ - parsing Salt States (configurable in the master settings)
@@ -97,27 +97,20 @@ Salt should run on any Unix-like platform so long as the dependencies are met.
 * `Tornado`_ - Web framework and asynchronous networking library
 * `futures`_ - Backport of the concurrent.futures package from Python 3.2
 
-Depending on the chosen Salt transport, `ZeroMQ`_ or `RAET`_, dependencies
-vary:
-
 * ZeroMQ:
 
   * `ZeroMQ`_ >= 3.2.0
   * `pyzmq`_ >= 2.2.0 - ZeroMQ Python bindings
   * `PyCrypto`_ - The Python cryptography toolkit
 
-* RAET:
 
-  * `libnacl`_ - Python bindings to `libsodium`_
-  * `ioflo`_ - The flo programming interface raet and salt-raet is built on
-  * `RAET`_ - The worlds most awesome UDP protocol
-
-Salt defaults to the `ZeroMQ`_ transport, and the choice can be made at install
-time, for example:
+Salt defaults to the `ZeroMQ`_ transport. The ``--salt-transport`` installation
+option is available, but currently only supports the ``szeromq`` option. This
+may be expanded in the future.
 
 .. code-block:: bash
 
-    python setup.py --salt-transport=raet install
+    python setup.py --salt-transport=zeromq install
 
 This way, only the required dependencies are pulled by the setup script if need
 be.
@@ -127,7 +120,7 @@ provided like:
 
 .. code-block:: bash
 
-  pip install --install-option="--salt-transport=raet" salt
+  pip install --install-option="--salt-transport=zeromq" salt
 
 .. note::
     Salt does not bundle dependencies that are typically distributed as part of
@@ -142,10 +135,11 @@ Optional Dependencies
   settings)
 * gcc - dynamic `Cython`_ module compiling
 
-.. _`Python 2.6`: http://python.org/download/
+.. _`Python 2.7`: http://python.org/download/
 .. _`ZeroMQ`: http://zeromq.org/
 .. _`pyzmq`: https://github.com/zeromq/pyzmq
 .. _`msgpack-python`:  https://pypi.python.org/pypi/msgpack-python/
+.. _`M2Crypto`: https://gitlab.com/m2crypto/m2crypto
 .. _`PyCrypto`: https://www.dlitz.net/software/pycrypto/
 .. _`YAML`: http://pyyaml.org/
 .. _`Jinja2`: http://jinja.pocoo.org/
@@ -155,10 +149,6 @@ Optional Dependencies
 .. _`apache-libcloud`: http://libcloud.apache.org
 .. _`Requests`: http://docs.python-requests.org/en/latest
 .. _`Tornado`: http://www.tornadoweb.org/en/stable/
-.. _`libnacl`: https://github.com/saltstack/libnacl
-.. _`ioflo`: https://github.com/ioflo/ioflo
-.. _`RAET`: https://github.com/saltstack/raet
-.. _`libsodium`: https://github.com/jedisct1/libsodium
 .. _`futures`: https://github.com/agronholm/pythonfutures
 
 

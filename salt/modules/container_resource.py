@@ -11,7 +11,7 @@ common logic to be re-used for common actions.
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import functools
 import copy
 import logging

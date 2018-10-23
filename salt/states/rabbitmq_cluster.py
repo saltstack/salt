@@ -12,13 +12,13 @@ Example:
         - user: rabbit
         - host: rabbit.example.com
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import logging
 
 # Import salt libs
-import salt.utils
+import salt.utils.functools
 import salt.utils.path
 
 log = logging.getLogger(__name__)
@@ -78,4 +78,4 @@ def joined(name, host, user='rabbit', ram_node=None, runas='root'):
 
 
 # Alias join to preserve backward compat
-join = salt.utils.alias_function(joined, 'join')
+join = salt.utils.functools.alias_function(joined, 'join')

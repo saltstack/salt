@@ -2,7 +2,7 @@
 '''
 Accept a key from a hypervisor if the virt runner has already submitted an authorization request
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Don't "fix" the above docstring to put it on two lines, as the sphinx
 # autosummary pulls only the first line for its description.

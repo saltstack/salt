@@ -2,7 +2,7 @@
 '''
 Module for managing disks and blockdevices
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging
@@ -85,6 +85,10 @@ def usage(args=None):
     '''
     Return usage information for volumes mounted on this minion
 
+    .. versionchanged:: Fluorine
+
+        Default for SunOS changed to 1 kilobyte blocks
+
     CLI Example:
 
     .. code-block:: bash
@@ -103,6 +107,8 @@ def usage(args=None):
         cmd = 'df -P'
     elif __grains__['kernel'] == 'OpenBSD' or __grains__['kernel'] == 'AIX':
         cmd = 'df -kP'
+    elif __grains__['kernel'] == 'SunOS':
+        cmd = 'df -k'
     else:
         cmd = 'df'
     if flags:
@@ -250,7 +256,10 @@ def percent(args=None):
             log.error('Problem parsing disk usage information')
             ret = {}
     if args and args not in ret:
-        log.error('Problem parsing disk usage information: Partition \'{0}\' does not exist!'.format(args))
+        log.error(
+            'Problem parsing disk usage information: Partition \'%s\' '
+            'does not exist!', args
+        )
         ret = {}
     elif args:
         return ret[args]
@@ -354,7 +363,7 @@ def wipe(device):
     if out['retcode'] == 0:
         return True
     else:
-        log.error('Error wiping device {0}: {1}'.format(device, out['stderr']))
+        log.error('Error wiping device %s: %s', device, out['stderr'])
         return False
 
 
@@ -453,10 +462,10 @@ def format_(device,
 
         salt '*' disk.format /dev/sdX1
     '''
-    cmd = ['mkfs', '-t', str(fs_type)]
+    cmd = ['mkfs', '-t', six.text_type(fs_type)]
     if inode_size is not None:
         if fs_type[:3] == 'ext':
-            cmd.extend(['-i', str(inode_size)])
+            cmd.extend(['-i', six.text_type(inode_size)])
         elif fs_type == 'xfs':
             cmd.extend(['-i', 'size={0}'.format(inode_size)])
     if lazy_itable_init is not None:
@@ -467,7 +476,7 @@ def format_(device,
             cmd.append('-F')
         elif fs_type == 'xfs':
             cmd.append('-f')
-    cmd.append(str(device))
+    cmd.append(six.text_type(device))
 
     mkfs_success = __salt__['cmd.retcode'](cmd, ignore_retcode=True) == 0
     sync_success = __salt__['cmd.retcode']('sync', ignore_retcode=True) == 0
@@ -591,7 +600,7 @@ def hdparms(disks, args=None):
                     try:
                         val = int(val)
                         rvals.append(val)
-                    except:  # pylint: disable=bare-except
+                    except Exception:
                         if '=' in val:
                             deep_key, val = val.split('=', 1)
                             deep_key = deep_key.strip()
@@ -658,7 +667,7 @@ def hpa(disks, size=None):
     for disk, data in hpa_data.items():
         try:
             size = data['total'] - int(size)
-        except:  # pylint: disable=bare-except
+        except Exception:
             if '%' in size:
                 size = int(size.strip('%'))
                 size = (100 - size) * data['total']
@@ -723,17 +732,17 @@ def smart_attributes(dev, attributes=None, values=None):
         data = dict(zip(fields, line[1:]))
         try:
             del data['_']
-        except:  # pylint: disable=bare-except
+        except Exception:
             pass
 
         for field in data:
             val = data[field]
             try:
                 val = int(val)
-            except:  # pylint: disable=bare-except
+            except Exception:
                 try:
                     val = [int(value) for value in val.split(' ')]
-                except:  # pylint: disable=bare-except
+                except Exception:
                     pass
             data[field] = val
 

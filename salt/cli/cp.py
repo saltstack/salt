@@ -7,8 +7,7 @@ Salt-cp can be used to distribute configuration files
 '''
 
 # Import python libs
-from __future__ import print_function
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import base64
 import errno
 import logging
@@ -19,7 +18,6 @@ import sys
 # Import salt libs
 import salt.client
 import salt.output
-import salt.utils
 import salt.utils.files
 import salt.utils.gzip_util
 import salt.utils.itertools
@@ -127,9 +125,10 @@ class SaltCP(object):
             if os.path.isfile(fn_):
                 files.update(self._file_dict(fn_))
             elif os.path.isdir(fn_):
-                salt.utils.print_cli(fn_ + ' is a directory, only files are supported '
-                                           'in non-chunked mode. Use "--chunked" command '
-                                           'line argument.')
+                salt.utils.stringutils.print_cli(
+                    fn_ + ' is a directory, only files are supported '
+                    'in non-chunked mode. Use "--chunked" command '
+                    'line argument.')
                 sys.exit(1)
         return files
 
@@ -272,7 +271,7 @@ class SaltCP(object):
             log.debug(
                 'Creating empty dir %s on %starget \'%s\'',
                 dirname,
-                '{0} '.format(selected_target_option)
+                '{0} '.format(selected_target_option)  # pylint: disable=str-format-in-logging
                     if selected_target_option
                     else '',
                 tgt,

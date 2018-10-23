@@ -12,7 +12,7 @@ Module for managing windows systems.
 
 Support for reboot, shutdown, etc
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Python libs
 import ctypes
@@ -21,7 +21,7 @@ import time
 from datetime import datetime
 
 # Import salt libs
-import salt.utils
+import salt.utils.functools
 import salt.utils.locales
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError
@@ -93,28 +93,31 @@ def halt(timeout=5, in_seconds=False):
     Halt a running system.
 
     Args:
-        timeout (int): Number of seconds before halting the system. Default is
-        5 seconds.
 
-        in_seconds (bool): Whether to treat timeout as seconds or minutes.
+        timeout (int):
+            Number of seconds before halting the system. Default is 5 seconds.
+
+        in_seconds (bool):
+            Whether to treat timeout as seconds or minutes.
 
             .. versionadded:: 2015.8.0
 
     Returns:
-        bool: True if successful, otherwise False
+        bool: ``True`` if successful, otherwise ``False``
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' system.halt 5
+        salt '*' system.halt 5 True
     '''
     return shutdown(timeout=timeout, in_seconds=in_seconds)
 
 
 def init(runlevel):  # pylint: disable=unused-argument
     '''
-    Change the system runlevel on sysV compatible systems
+    Change the system runlevel on sysV compatible systems. Not applicable to
+    Windows
 
     CLI Example:
 
@@ -137,14 +140,18 @@ def poweroff(timeout=5, in_seconds=False):
     Power off a running system.
 
     Args:
-        timeout (int): Number of seconds before powering off the system. Default
-            is 5 seconds.
 
-        in_seconds (bool): Whether to treat timeout as seconds or minutes.
+        timeout (int):
+            Number of seconds before powering off the system. Default is 5
+            seconds.
+
+        in_seconds (bool):
+            Whether to treat timeout as seconds or minutes.
+
             .. versionadded:: 2015.8.0
 
     Returns:
-        bool: True if successful, otherwise False
+        bool: ``True`` if successful, otherwise ``False``
 
     CLI Example:
 
@@ -161,29 +168,35 @@ def reboot(timeout=5, in_seconds=False, wait_for_reboot=False,  # pylint: disabl
     Reboot a running system.
 
     Args:
-        timeout (int): Number of minutes/seconds before rebooting the system.
-            Minutes vs seconds depends on the value of ``in_seconds``. Default
+
+        timeout (int):
+            The number of minutes/seconds before rebooting the system. Use of
+            minutes or seconds depends on the value of ``in_seconds``. Default
             is 5 minutes.
 
-        in_seconds (bool): Whether to treat timeout as seconds or minutes.
+        in_seconds (bool):
+            ``True`` will cause the ``timeout`` parameter to be in seconds.
+             ``False`` will be in minutes. Default is ``False``.
 
             .. versionadded:: 2015.8.0
 
-        wait_for_reboot (bool): Sleeps for timeout + 30 seconds after reboot has
-            been initiated. This may be useful for use in a highstate if a
-            reboot should be performed and the return data of the highstate is
-            not required. If return data is required, consider using the reboot
-            state instead of this module.
+        wait_for_reboot (bool)
+            ``True`` will sleep for timeout + 30 seconds after reboot has been
+            initiated. This is useful for use in a highstate. For example, you
+            may have states that you want to apply only after the reboot.
+            Default is ``False``.
 
             .. versionadded:: 2015.8.0
 
-        only_on_pending_reboot (bool): If this is set to True, then the reboot
-            will only proceed if the system reports a pending reboot. To
-            optionally reboot in a highstate, consider using the reboot state
-            instead of this module.
+        only_on_pending_reboot (bool):
+            If this is set to ``True``, then the reboot will only proceed
+            if the system reports a pending reboot. Setting this parameter to
+            ``True`` could be useful when calling this function from a final
+            housekeeping state intended to be executed at the end of a state run
+            (using *order: last*). Default is ``False``.
 
     Returns:
-        bool: True if successful (a reboot will occur), otherwise False
+        bool: ``True`` if successful (a reboot will occur), otherwise ``False``
 
     CLI Example:
 
@@ -192,20 +205,16 @@ def reboot(timeout=5, in_seconds=False, wait_for_reboot=False,  # pylint: disabl
         salt '*' system.reboot 5
         salt '*' system.reboot 5 True
 
-    As example of invoking this function from within a final housekeeping state
-    is as follows:
-
-    Example:
+    Invoking this function from a final housekeeping state:
 
     .. code-block:: yaml
 
-        final housekeeping:
+        final_housekeeping:
            module.run:
               - name: system.reboot
               - only_on_pending_reboot: True
               - order: last
     '''
-
     ret = shutdown(timeout=timeout, reboot=True, in_seconds=in_seconds,
                    only_on_pending_reboot=only_on_pending_reboot)
 
@@ -222,50 +231,63 @@ def shutdown(message=None, timeout=5, force_close=True, reboot=False,  # pylint:
     Shutdown a running system.
 
     Args:
-        message (str): A message to display to the user before shutting down.
 
-        timeout (int): The length of time that the shutdown dialog box should be
-            displayed, in seconds. While this dialog box is displayed, the
-            shutdown can be stopped by the shutdown_abort function.
+        message (str):
+            The message to display to the user before shutting down.
+
+        timeout (int):
+            The length of time (in seconds) that the shutdown dialog box should
+            be displayed. While this dialog box is displayed, the shutdown can
+            be aborted using the ``system.shutdown_abort`` function.
 
             If timeout is not zero, InitiateSystemShutdown displays a dialog box
             on the specified computer. The dialog box displays the name of the
-            user who called the function, displays the message specified by the
-            lpMessage parameter, and prompts the user to log off. The dialog box
-            beeps when it is created and remains on top of other windows in the
-            system. The dialog box can be moved but not closed. A timer counts
-            down the remaining time before a forced shutdown.
+            user who called the function, the message specified by the lpMessage
+            parameter, and prompts the user to log off. The dialog box beeps
+            when it is created and remains on top of other windows (system
+            modal). The dialog box can be moved but not closed. A timer counts
+            down the remaining time before the shutdown occurs.
 
-            If timeout is zero, the computer shuts down without displaying the
-            dialog box, and the shutdown cannot be stopped by shutdown_abort.
+            If timeout is zero, the computer shuts down immediately without
+            displaying the dialog box and cannot be stopped by
+            ``system.shutdown_abort``.
 
             Default is 5 minutes
 
-        in_seconds (bool): Whether to treat timeout as seconds or minutes.
+        in_seconds (bool):
+            ``True`` will cause the ``timeout`` parameter to be in seconds.
+             ``False`` will be in minutes. Default is ``False``.
 
             .. versionadded:: 2015.8.0
 
-        force_close (bool): True to force close all open applications. False
-            displays a dialog box instructing the user to close the
-            applications.
+        force_close (bool):
+            ``True`` will force close all open applications. ``False`` will
+            display a dialog box instructing the user to close open
+            applications. Default is ``True``.
 
-        reboot (bool): True restarts the computer immediately after shutdown.
-            False caches to disk and safely powers down the system.
+        reboot (bool):
+            ``True`` restarts the computer immediately after shutdown. ``False``
+            powers down the system. Default is ``False``.
 
         only_on_pending_reboot (bool): If this is set to True, then the shutdown
             will only proceed if the system reports a pending reboot. To
             optionally shutdown in a highstate, consider using the shutdown
             state instead of this module.
 
+        only_on_pending_reboot (bool):
+            If ``True`` the shutdown will only proceed if there is a reboot
+            pending. ``False`` will shutdown the system. Default is ``False``.
+
     Returns:
-        bool: True if successful (a shutdown or reboot will occur), otherwise
-            False
+        bool:
+            ``True`` if successful (a shutdown or reboot will occur), otherwise
+            ``False``
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' system.shutdown 5
+        salt '*' system.shutdown "System will shutdown in 5 minutes"
     '''
     if six.PY2:
         message = _to_unicode(message)
@@ -282,11 +304,11 @@ def shutdown(message=None, timeout=5, force_close=True, reboot=False,  # pylint:
                                         force_close, reboot)
         return True
     except pywintypes.error as exc:
-        (number, context, message) = exc
+        (number, context, message) = exc.args
         log.error('Failed to shutdown the system')
-        log.error('nbr: {0}'.format(number))
-        log.error('ctx: {0}'.format(context))
-        log.error('msg: {0}'.format(message))
+        log.error('nbr: %s', number)
+        log.error('ctx: %s', context)
+        log.error('msg: %s', message)
         return False
 
 
@@ -295,7 +317,7 @@ def shutdown_hard():
     Shutdown a running system with no timeout or warning.
 
     Returns:
-        bool: True if successful, otherwise False
+        bool: ``True`` if successful, otherwise ``False``
 
     CLI Example:
 
@@ -313,7 +335,7 @@ def shutdown_abort():
     aborted.
 
     Returns:
-        bool: True if successful, otherwise False
+        bool: ``True`` if successful, otherwise ``False``
 
     CLI Example:
 
@@ -325,11 +347,11 @@ def shutdown_abort():
         win32api.AbortSystemShutdown('127.0.0.1')
         return True
     except pywintypes.error as exc:
-        (number, context, message) = exc
+        (number, context, message) = exc.args
         log.error('Failed to abort system shutdown')
-        log.error('nbr: {0}'.format(number))
-        log.error('ctx: {0}'.format(context))
-        log.error('msg: {0}'.format(message))
+        log.error('nbr: %s', number)
+        log.error('ctx: %s', context)
+        log.error('msg: %s', message)
         return False
 
 
@@ -338,7 +360,7 @@ def lock():
     Lock the workstation.
 
     Returns:
-        bool: True if successful, otherwise False
+        bool: ``True`` if successful, otherwise ``False``
 
     CLI Example:
 
@@ -354,12 +376,14 @@ def set_computer_name(name):
     Set the Windows computer name
 
     Args:
-        name (str): The new name to give the computer. Requires a reboot to take
-            effect.
+
+        name (str):
+            The new name to give the computer. Requires a reboot to take effect.
 
     Returns:
-        dict: Returns a dictionary containing the old and new names if
-            successful. False if not.
+        dict:
+            Returns a dictionary containing the old and new names if successful.
+            ``False`` if not.
 
     CLI Example:
 
@@ -390,7 +414,9 @@ def get_pending_computer_name():
     error message will be logged to the minion log.
 
     Returns:
-        str: The pending name if restart is pending, otherwise returns None.
+        str:
+            Returns the pending name if pending restart. Returns ``None`` if not
+            pending restart.
 
     CLI Example:
 
@@ -413,7 +439,7 @@ def get_computer_name():
     Get the Windows computer name
 
     Returns:
-        str: Returns the computer name if found. Otherwise returns False
+        str: Returns the computer name if found. Otherwise returns ``False``.
 
     CLI Example:
 
@@ -430,10 +456,12 @@ def set_computer_desc(desc=None):
     Set the Windows computer description
 
     Args:
-        desc (str): The computer description
+
+        desc (str):
+            The computer description
 
     Returns:
-        bool: True if successful, otherwise False
+        str: Description if successful, otherwise ``False``
 
     CLI Example:
 
@@ -458,17 +486,17 @@ def set_computer_desc(desc=None):
     try:
         win32net.NetServerSetInfo(None, 101, system_info)
     except win32net.error as exc:
-        (number, context, message) = exc
+        (number, context, message) = exc.args
         log.error('Failed to update system')
-        log.error('nbr: {0}'.format(number))
-        log.error('ctx: {0}'.format(context))
-        log.error('msg: {0}'.format(message))
+        log.error('nbr: %s', number)
+        log.error('ctx: %s', context)
+        log.error('msg: %s', message)
         return False
 
     return {'Computer Description': get_computer_desc()}
 
 
-set_computer_description = salt.utils.alias_function(set_computer_desc, 'set_computer_description')  # pylint: disable=invalid-name
+set_computer_description = salt.utils.functools.alias_function(set_computer_desc, 'set_computer_description')  # pylint: disable=invalid-name
 
 
 def get_system_info():
@@ -476,14 +504,14 @@ def get_system_info():
     Get system information.
 
     Returns:
-        dict: Returns a Dictionary containing information about the system to
-            include name, description, version, etc...
+        dict: Dictionary containing information about the system to include
+        name, description, version, etc...
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt 'minion-id' system.get_info
+        salt 'minion-id' system.get_system_info
     '''
     os_type = {1: 'Work Station',
                2: 'Domain Controller',
@@ -530,7 +558,8 @@ def get_computer_desc():
     Get the Windows computer description
 
     Returns:
-        str: The computer description if found, otherwise False
+        str: Returns the computer description if found. Otherwise returns
+        ``False``.
 
     CLI Example:
 
@@ -542,17 +571,17 @@ def get_computer_desc():
     return False if desc is None else desc
 
 
-get_computer_description = salt.utils.alias_function(get_computer_desc, 'get_computer_description')  # pylint: disable=invalid-name
+get_computer_description = salt.utils.functools.alias_function(get_computer_desc, 'get_computer_description')  # pylint: disable=invalid-name
 
 
 def get_hostname():
     '''
-    .. versionadded:: 2016.3.0
-
     Get the hostname of the windows minion
 
+    .. versionadded:: 2016.3.0
+
     Returns:
-        str: The hostname of the windows minion
+        str: Returns the hostname of the windows minion
 
     CLI Example:
 
@@ -567,16 +596,16 @@ def get_hostname():
 
 def set_hostname(hostname):
     '''
-    .. versionadded:: 2016.3.0
+    Set the hostname of the windows minion, requires a restart before this will
+    be updated.
 
-    Set the hostname of the windows minion, requires a restart before this
-    will be updated.
+    .. versionadded:: 2016.3.0
 
     Args:
         hostname (str): The hostname to set
 
     Returns:
-        bool: True if successful, otherwise False
+        bool: ``True`` if successful, otherwise ``False``
 
     CLI Example:
 
@@ -598,37 +627,41 @@ def join_domain(domain,
                 account_exists=False,
                 restart=False):
     '''
-    Join a computer to an Active Directory domain. Requires reboot.
+    Join a computer to an Active Directory domain. Requires a reboot.
 
     Args:
-        domain (str): The domain to which the computer should be joined, e.g.
+
+        domain (str):
+            The domain to which the computer should be joined, e.g.
             ``example.com``
 
-        username (str): Username of an account which is authorized to join
-            computers to the specified domain. Need to be either fully qualified
-            like ``user@domain.tld`` or simply ``user``
+        username (str):
+            Username of an account which is authorized to join computers to the
+            specified domain. Needs to be either fully qualified like
+            ``user@domain.tld`` or simply ``user``
 
-        password (str): Password of the specified user
+        password (str):
+            Password of the specified user
 
-        account_ou (str): The DN of the OU below which the account for this
-            computer should be created when joining the domain, e.g.
+        account_ou (str):
+            The DN of the OU below which the account for this computer should be
+            created when joining the domain, e.g.
             ``ou=computers,ou=departm_432,dc=my-company,dc=com``
 
-        account_exists (bool): If set to ``True`` the computer will only join
-            the domain if the account already exists. If set to ``False`` the
-            computer account will be created if it does not exist, otherwise it
-            will use the existing account. Default is False.
+        account_exists (bool):
+            If set to ``True`` the computer will only join the domain if the
+            account already exists. If set to ``False`` the computer account
+            will be created if it does not exist, otherwise it will use the
+            existing account. Default is ``False``
 
-        restart (bool): Restarts the computer after a successful join
+        restart (bool):
+            ``True`` will restart the computer after a successful join. Default
+            is ``False``
 
             .. versionadded:: 2015.8.2/2015.5.7
 
     Returns:
-        dict: Dictionary if successful
-
-    Raises:
-        CommandExecutionError: Raises an error if _join_domain returns anything
-            other than 0
+        dict: Returns a dictionary if successful, otherwise ``False``
 
     CLI Example:
 
@@ -741,34 +774,43 @@ def unjoin_domain(username=None,
                   workgroup='WORKGROUP',
                   disable=False,
                   restart=False):
-    r'''
-    Unjoin a computer from an Active Directory Domain. Requires restart.
+    # pylint: disable=anomalous-backslash-in-string
+    '''
+    Unjoin a computer from an Active Directory Domain. Requires a restart.
 
     Args:
-        username (str): Username of an account which is authorized to manage
-            computer accounts on the domain. Need to be fully qualified like
-            ``user@domain.tld`` or ``domain.tld\user``. If domain not specified,
-            the passed domain will be used. If computer account doesn't need to
-            be disabled, can be None.
 
-        password (str): Password of the specified user
+        username (str):
+            Username of an account which is authorized to manage computer
+            accounts on the domain. Needs to be a fully qualified name like
+            ``user@domain.tld`` or ``domain.tld\\user``. If the domain is not
+            specified, the passed domain will be used. If the computer account
+            doesn't need to be disabled after the computer is unjoined, this can
+            be ``None``.
 
-        domain (str): The domain from which to unjoin the computer. Can be None.
+        password (str):
+            The password of the specified user
 
-        workgroup (str): The workgroup to join the computer to. Default is
-            ``WORKGROUP``
+        domain (str):
+            The domain from which to unjoin the computer. Can be ``None``
+
+        workgroup (str):
+            The workgroup to join the computer to. Default is ``WORKGROUP``
 
             .. versionadded:: 2015.8.2/2015.5.7
 
-        disable (bool): Disable the computer account in Active Directory. True
-            to disable. Default is False
+        disable (bool):
+            ``True`` to disable the computer account in Active Directory.
+            Default is ``False``
 
-        restart (bool): Restart the computer after successful unjoin
+        restart (bool):
+            ``True`` will restart the computer after successful unjoin. Default
+            is ``False``
 
             .. versionadded:: 2015.8.2/2015.5.7
 
     Returns:
-        dict: Dictionary if successful, otherwise False
+        dict: Returns a dictionary if successful, otherwise ``False``
 
     CLI Example:
 
@@ -780,6 +822,7 @@ def unjoin_domain(username=None,
                          password='unjoinpassword' disable=True \\
                          restart=True
     '''
+    # pylint: enable=anomalous-backslash-in-string
     if six.PY2:
         username = _to_unicode(username)
         password = _to_unicode(password)
@@ -825,11 +868,11 @@ def unjoin_domain(username=None,
             return ret
         else:
             log.error(win32api.FormatMessage(err[0]).rstrip())
-            log.error('Failed to join the computer to {0}'.format(workgroup))
+            log.error('Failed to join the computer to %s', workgroup)
             return False
     else:
         log.error(win32api.FormatMessage(err[0]).rstrip())
-        log.error('Failed to unjoin computer from {0}'.format(status['Domain']))
+        log.error('Failed to unjoin computer from %s', status['Domain'])
         return False
 
 
@@ -860,15 +903,16 @@ def get_domain_workgroup():
 
 def _try_parse_datetime(time_str, fmts):
     '''
-    Attempts to parse the input time_str as a date.
+    A helper function that attempts to parse the input time_str as a date.
 
     Args:
+
         time_str (str): A string representing the time
 
         fmts (list): A list of date format strings
 
     Returns:
-        datetime: A datetime object if parsed properly, otherwise None
+        datetime: Returns a datetime object if parsed properly, otherwise None
     '''
     result = None
     for fmt in fmts:
@@ -911,7 +955,9 @@ def set_system_time(newtime):
     Set the system time.
 
     Args:
-        newtime (str): The time to set. Can be any of the following formats.
+
+        newtime (str):
+            The time to set. Can be any of the following formats:
 
             - HH:MM:SS AM/PM
             - HH:MM AM/PM
@@ -919,7 +965,7 @@ def set_system_time(newtime):
             - HH:MM (24 hour)
 
     Returns:
-        bool: True if successful, otherwise False
+        bool: ``True`` if successful, otherwise ``False``
 
     CLI Example:
 
@@ -952,24 +998,16 @@ def set_system_date_time(years=None,
     system year will be used. (Used by set_system_date and set_system_time)
 
     Args:
+
         years (int): Years digit, ie: 2015
-
         months (int): Months digit: 1 - 12
-
         days (int): Days digit: 1 - 31
-
         hours (int): Hours digit: 0 - 23
-
         minutes (int): Minutes digit: 0 - 59
-
         seconds (int): Seconds digit: 0 - 59
 
     Returns:
-        bool: True if successful
-
-    Raises:
-        CommandExecutionError: Raises an error if ``SetLocalTime`` function
-            fails
+        bool: ``True`` if successful, otherwise ``False``
 
     CLI Example:
 
@@ -981,11 +1019,11 @@ def set_system_date_time(years=None,
     try:
         date_time = win32api.GetLocalTime()
     except win32api.error as exc:
-        (number, context, message) = exc
+        (number, context, message) = exc.args
         log.error('Failed to get local time')
-        log.error('nbr: {0}'.format(number))
-        log.error('ctx: {0}'.format(context))
-        log.error('msg: {0}'.format(message))
+        log.error('nbr: %s', number)
+        log.error('ctx: %s', context)
+        log.error('msg: %s', message)
         return False
 
     # Check for passed values. If not passed, use current values
@@ -1038,7 +1076,7 @@ def get_system_date():
     Get the Windows system date
 
     Returns:
-        str: The system date
+        str: Returns the system date
 
     CLI Example:
 
@@ -1055,7 +1093,8 @@ def set_system_date(newdate):
     Set the Windows system date. Use <mm-dd-yy> format for the date.
 
     Args:
-        newdate (str): The date to set. Can be any of the following formats:
+        newdate (str):
+            The date to set. Can be any of the following formats
 
             - YYYY-MM-DD
             - MM-DD-YYYY
@@ -1063,6 +1102,9 @@ def set_system_date(newdate):
             - MM/DD/YYYY
             - MM/DD/YY
             - YYYY/MM/DD
+
+    Returns:
+        bool: ``True`` if successful, otherwise ``False``
 
     CLI Example:
 
@@ -1088,7 +1130,7 @@ def start_time_service():
     Start the Windows time service
 
     Returns:
-        bool: True if successful, otherwise False.
+        bool: ``True`` if successful, otherwise ``False``
 
     CLI Example:
 
@@ -1104,7 +1146,7 @@ def stop_time_service():
     Stop the Windows time service
 
     Returns:
-        bool: True if successful, otherwise False
+        bool: ``True`` if successful, otherwise ``False``
 
     CLI Example:
 
@@ -1123,7 +1165,8 @@ def get_pending_component_servicing():
     .. versionadded:: 2016.11.0
 
     Returns:
-        bool: True if a reboot is pending, otherwise False.
+        bool: ``True`` if there are pending Component Based Servicing tasks,
+        otherwise ``False``
 
     CLI Example:
 
@@ -1131,28 +1174,28 @@ def get_pending_component_servicing():
 
         salt '*' system.get_pending_component_servicing
     '''
-    vname = '(Default)'
     key = r'SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\RebootPending'
 
-    reg_ret = __salt__['reg.read_value']('HKLM', key, vname)
-
     # So long as the registry key exists, a reboot is pending.
-    if reg_ret['success']:
-        log.debug('Found key: %s', key)
+    if __utils__['reg.key_exists']('HKLM', key):
+        log.debug('Key exists: %s', key)
         return True
     else:
-        log.debug('Unable to access key: %s', key)
+        log.debug('Key does not exist: %s', key)
+
     return False
 
 
 def get_pending_domain_join():
     '''
-    Determine whether there is a pending domain join action that requires a reboot.
+    Determine whether there is a pending domain join action that requires a
+    reboot.
 
     .. versionadded:: 2016.11.0
 
     Returns:
-        bool: True if a reboot is pending, otherwise False.
+        bool: ``True`` if there is a pending domain join action, otherwise
+        ``False``
 
     CLI Example:
 
@@ -1160,29 +1203,24 @@ def get_pending_domain_join():
 
         salt '*' system.get_pending_domain_join
     '''
-    vname = '(Default)'
     base_key = r'SYSTEM\CurrentControlSet\Services\Netlogon'
     avoid_key = r'{0}\AvoidSpnSet'.format(base_key)
     join_key = r'{0}\JoinDomain'.format(base_key)
 
     # If either the avoid_key or join_key is present,
     # then there is a reboot pending.
-
-    avoid_reg_ret = __salt__['reg.read_value']('HKLM', avoid_key, vname)
-
-    if avoid_reg_ret['success']:
-        log.debug('Found key: %s', avoid_key)
+    if __utils__['reg.key_exists']('HKLM', avoid_key):
+        log.debug('Key exists: %s', avoid_key)
         return True
     else:
-        log.debug('Unable to access key: %s', avoid_key)
+        log.debug('Key does not exist: %s', avoid_key)
 
-    join_reg_ret = __salt__['reg.read_value']('HKLM', join_key, vname)
-
-    if join_reg_ret['success']:
-        log.debug('Found key: %s', join_key)
+    if __utils__['reg.key_exists']('HKLM', join_key):
+        log.debug('Key exists: %s', join_key)
         return True
     else:
-        log.debug('Unable to access key: %s', join_key)
+        log.debug('Key does not exist: %s', join_key)
+
     return False
 
 
@@ -1194,7 +1232,8 @@ def get_pending_file_rename():
     .. versionadded:: 2016.11.0
 
     Returns:
-        bool: True if a reboot is pending, otherwise False.
+        bool: ``True`` if there are pending file rename operations, otherwise
+        ``False``
 
     CLI Example:
 
@@ -1229,7 +1268,8 @@ def get_pending_servermanager():
     .. versionadded:: 2016.11.0
 
     Returns:
-        bool: True if a reboot is pending, otherwise False.
+        bool: ``True`` if there are pending Server Manager tasks, otherwise
+        ``False``
 
     CLI Example:
 
@@ -1241,7 +1281,7 @@ def get_pending_servermanager():
     key = r'SOFTWARE\Microsoft\ServerManager'
 
     # There are situations where it's possible to have '(value not set)' as
-    # the value data, and since an actual reboot wont be pending in that
+    # the value data, and since an actual reboot won't be pending in that
     # instance, just catch instances where we try unsuccessfully to cast as int.
 
     reg_ret = __salt__['reg.read_value']('HKLM', key, vname)
@@ -1266,7 +1306,7 @@ def get_pending_update():
     .. versionadded:: 2016.11.0
 
     Returns:
-        bool: True if a reboot is pending, otherwise False.
+        bool: ``True`` if there are pending updates, otherwise ``False``
 
     CLI Example:
 
@@ -1274,17 +1314,15 @@ def get_pending_update():
 
         salt '*' system.get_pending_update
     '''
-    vname = '(Default)'
     key = r'SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired'
 
-    reg_ret = __salt__['reg.read_value']('HKLM', key, vname)
-
     # So long as the registry key exists, a reboot is pending.
-    if reg_ret['success']:
-        log.debug('Found key: %s', key)
+    if __utils__['reg.key_exists']('HKLM', key):
+        log.debug('Key exists: %s', key)
         return True
     else:
-        log.debug('Unable to access key: %s', key)
+        log.debug('Key does not exist: %s', key)
+
     return False
 
 
@@ -1306,14 +1344,14 @@ def set_reboot_required_witnessed():
     current boot session. Also, in the scope of this key, the name *'Reboot
     required'* will be assigned the value of *1*.
 
-    (For the time being, this this function is being used whenever an install
-    completes with exit code 3010 and this usage can be extended where
-    appropriate in the future.)
+    For the time being, this function is being used whenever an install
+    completes with exit code 3010 and can be extended where appropriate in the
+    future.
 
     .. versionadded:: 2016.11.0
 
     Returns:
-        bool: True if registry entry set successfuly, otherwise False.
+        bool: ``True`` if successful, otherwise ``False``
 
     CLI Example:
 
@@ -1331,16 +1369,18 @@ def set_reboot_required_witnessed():
 
 def get_reboot_required_witnessed():
     '''
-    This tells us if, at any time during the current boot session the salt
-    minion witnessed an event indicating that a reboot is required. (For the
-    time being, this function will return True if an install completed with exit
-    code 3010 during the current boot session and this usage can be extended
-    where appropriate in the future)
+    Determine if at any time during the current boot session the salt minion
+    witnessed an event indicating that a reboot is required.
+
+    This function will return ``True`` if an install completed with exit
+    code 3010 during the current boot session and can be extended where
+    appropriate in the future.
 
     .. versionadded:: 2016.11.0
 
     Returns:
-        bool: True if reboot required, otherwise False.
+        bool: ``True`` if the ``Requires reboot`` registry flag is set to ``1``,
+        otherwise ``False``
 
     CLI Example:
 
@@ -1362,7 +1402,7 @@ def get_pending_reboot():
     .. versionadded:: 2016.11.0
 
     Returns:
-        bool: True if pending reboot, otherwise False.
+        bool: ``True`` if the system is pending reboot, otherwise ``False``
 
     CLI Example:
 
@@ -1372,7 +1412,9 @@ def get_pending_reboot():
     '''
 
     # Order the checks for reboot pending in most to least likely.
-    checks = (get_pending_update, get_pending_file_rename, get_pending_servermanager,
+    checks = (get_pending_update,
+              get_pending_file_rename,
+              get_pending_servermanager,
               get_pending_component_servicing,
               get_reboot_required_witnessed,
               get_pending_computer_name,

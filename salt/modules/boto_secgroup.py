@@ -44,10 +44,15 @@ Connection module for Amazon Security Groups
 # keep lint from choking on _get_conn and _cache_id
 #pylint: disable=E0602
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
 import logging
+
+# Import Salt libs
+from salt.exceptions import CommandExecutionError, SaltInvocationError
+import salt.utils.odict as odict
+import salt.utils.versions
 
 log = logging.getLogger(__name__)
 
@@ -63,31 +68,24 @@ try:
 except ImportError:
     HAS_BOTO = False
 
-# Import Salt libs
-import salt.utils.odict as odict
-from salt.utils.versions import LooseVersion as _LooseVersion
-from salt.exceptions import SaltInvocationError, CommandExecutionError
-from salt.exceptions import SaltInvocationError
-
 
 def __virtual__():
     '''
     Only load if boto libraries exist and if boto libraries are greater than
     a given version.
     '''
-    required_boto_version = '2.4.0'
     # Boto < 2.4.0 GroupOrCIDR objects have different attributes than
     # Boto >= 2.4.0 GroupOrCIDR objects
     # Differences include no group_id attribute in Boto < 2.4.0 and returning
     # a groupId attribute when a GroupOrCIDR object authorizes an IP range
     # Support for Boto < 2.4.0 can be added if needed
-    if not HAS_BOTO:
-        return (False, 'The boto_secgroup module could not be loaded: boto libraries not found')
-    elif _LooseVersion(boto.__version__) < _LooseVersion(required_boto_version):
-        return (False, 'The boto_secgroup module could not be loaded: boto library v2.4.0 not found')
-    else:
+    has_boto_reqs = salt.utils.versions.check_boto_reqs(
+        boto_ver='2.4.0',
+        check_boto3=False
+    )
+    if has_boto_reqs is True:
         __utils__['boto.assign_funcs'](__name__, 'ec2', pack=__salt__)
-        return True
+    return has_boto_reqs
 
 
 def exists(name=None, region=None, key=None, keyid=None, profile=None,
@@ -161,7 +159,7 @@ def _get_group(conn=None, name=None, vpc_id=None, vpc_name=None, group_id=None,
             return None
     if name:
         if vpc_id is None:
-            log.debug('getting group for {0}'.format(name))
+            log.debug('getting group for %s', name)
             group_filter = {'group-name': name}
             filtered_groups = conn.get_all_security_groups(filters=group_filter)
             # security groups can have the same name if groups exist in both
@@ -179,7 +177,7 @@ def _get_group(conn=None, name=None, vpc_id=None, vpc_name=None, group_id=None,
                 return filtered_groups[0]
             return None
         elif vpc_id:
-            log.debug('getting group for {0} in vpc_id {1}'.format(name, vpc_id))
+            log.debug('getting group for %s in vpc_id %s', name, vpc_id)
             group_filter = {'group-name': name, 'vpc_id': vpc_id}
             filtered_groups = conn.get_all_security_groups(filters=group_filter)
             if len(filtered_groups) == 1:
@@ -205,7 +203,7 @@ def _get_group(conn=None, name=None, vpc_id=None, vpc_name=None, group_id=None,
 def _parse_rules(sg, rules):
     _rules = []
     for rule in rules:
-        log.debug('examining rule {0} for group {1}'.format(rule, sg.id))
+        log.debug('examining rule %s for group %s', rule, sg.id)
         attrs = ['ip_protocol', 'from_port', 'to_port', 'grants']
         _rule = odict.OrderedDict()
         for attr in attrs:
@@ -215,7 +213,7 @@ def _parse_rules(sg, rules):
             if attr == 'grants':
                 _grants = []
                 for grant in val:
-                    log.debug('examining grant {0} for'.format(grant))
+                    log.debug('examining grant %s for', grant)
                     g_attrs = {'name': 'source_group_name',
                                'owner_id': 'source_group_owner_id',
                                'group_id': 'source_group_group_id',
@@ -311,7 +309,7 @@ def get_group_id(name, vpc_id=None, vpc_name=None, region=None, key=None,
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     if name.startswith('sg-'):
-        log.debug('group {0} is a group id. get_group_id not called.'.format(name))
+        log.debug('group %s is a group id. get_group_id not called.', name)
         return name
     group = _get_group(conn=conn, name=name, vpc_id=vpc_id, vpc_name=vpc_name,
                        region=region, key=key, keyid=keyid, profile=profile)
@@ -328,7 +326,7 @@ def convert_to_group_ids(groups, vpc_id=None, vpc_name=None, region=None, key=No
 
         salt myminion boto_secgroup.convert_to_group_ids mysecgroup vpc-89yhh7h
     '''
-    log.debug('security group contents {0} pre-conversion'.format(groups))
+    log.debug('security group contents %s pre-conversion', groups)
     group_ids = []
     for group in groups:
         group_id = get_group_id(name=group, vpc_id=vpc_id,
@@ -339,8 +337,8 @@ def convert_to_group_ids(groups, vpc_id=None, vpc_name=None, region=None, key=No
             raise CommandExecutionError('Could not resolve Security Group name '
                                         '{0} to a Group ID'.format(group))
         else:
-            group_ids.append(str(group_id))
-    log.debug('security group contents {0} post-conversion'.format(group_ids))
+            group_ids.append(six.text_type(group_id))
+    log.debug('security group contents %s post-conversion', group_ids)
     return group_ids
 
 
@@ -397,7 +395,7 @@ def create(name, description, vpc_id=None, vpc_name=None, region=None, key=None,
 
     created = conn.create_security_group(name, description, vpc_id)
     if created:
-        log.info('Created security group {0}.'.format(name))
+        log.info('Created security group %s.', name)
         return True
     else:
         msg = 'Failed to create security group {0}.'.format(name)
@@ -422,8 +420,7 @@ def delete(name=None, group_id=None, region=None, key=None, keyid=None,
     if group:
         deleted = conn.delete_security_group(group_id=group.id)
         if deleted:
-            log.info('Deleted security group {0} with id {1}.'.format(group.name,
-                                                                      group.id))
+            log.info('Deleted security group %s with id %s.', group.name, group.id)
             return True
         else:
             msg = 'Failed to delete security group {0}.'.format(name)
@@ -467,8 +464,8 @@ def authorize(name=None, source_group_name=None,
                     cidr_ip=cidr_ip, group_id=group.id,
                     src_group_id=source_group_group_id)
             if added:
-                log.info('Added rule to security group {0} with id {1}'
-                         .format(group.name, group.id))
+                log.info('Added rule to security group %s with id %s',
+                         group.name, group.id)
                 return True
             else:
                 msg = ('Failed to add rule to security group {0} with id {1}.'
@@ -476,6 +473,9 @@ def authorize(name=None, source_group_name=None,
                 log.error(msg)
                 return False
         except boto.exception.EC2ResponseError as e:
+            # if we are trying to add the same rule then we are already in the desired state, return true
+            if e.error_code == 'InvalidPermission.Duplicate':
+                return True
             msg = ('Failed to add rule to security group {0} with id {1}.'
                    .format(group.name, group.id))
             log.error(msg)
@@ -520,8 +520,8 @@ def revoke(name=None, source_group_name=None,
                     src_group_id=source_group_group_id)
 
             if revoked:
-                log.info('Removed rule from security group {0} with id {1}.'
-                         .format(group.name, group.id))
+                log.info('Removed rule from security group %s with id %s.',
+                         group.name, group.id)
                 return True
             else:
                 msg = ('Failed to remove rule from security group {0} with id {1}.'
@@ -571,7 +571,8 @@ def _find_vpcs(vpc_id=None, vpc_name=None, cidr=None, tags=None,
             filter_parameters['filters']['tag:{0}'.format(tag_name)] = tag_value
 
     vpcs = conn.get_all_vpcs(**filter_parameters)
-    log.debug('The filters criteria {0} matched the following VPCs:{1}'.format(filter_parameters, vpcs))
+    log.debug('The filters criteria %s matched the following VPCs:%s',
+              filter_parameters, vpcs)
 
     if vpcs:
         return [vpc.id for vpc in vpcs]

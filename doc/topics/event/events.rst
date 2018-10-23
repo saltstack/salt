@@ -1,14 +1,29 @@
+.. _event-system:
+
 ============
 Event System
 ============
 
 The Salt Event System is used to fire off events enabling third party
 applications or external processes to react to behavior within Salt.
+The event system uses a publish-subscribe pattern, otherwise know as pub/sub.
 
-The event system is comprised of a two primary components:
+Event Bus
+=========
 
-    * The event sockets which publishes events.
-    * The event library which can listen to events and send events into the salt system.
+The event system is comprised of a two primary components, which make up the
+concept of an Event Bus:
+
+- The event sockets, which publish events
+- The event library, which can listen to events and send events into the salt system
+
+Events are published onto the event bus and event bus subscribers listen for the
+published events.
+
+The event bus is used for both inter-process communication as well as network transport
+in Salt. Inter-process communication is provided through UNIX domain sockets (UDX).
+
+The Salt Master and each Salt Minion has their own event bus.
 
 Event types
 ===========
@@ -21,7 +36,7 @@ Event types
 Listening for Events
 ====================
 
-Salt's Event Bus is used heavily within Salt and it is also written to
+Salt's event system is used heavily within Salt and it is also written to
 integrate heavily with existing tooling and scripts. There is a variety of
 ways to consume it.
 
@@ -161,17 +176,34 @@ YAML can be used at the CLI in function arguments:
     salt-call event.send 'myco/mytag/success' '{success: True, message: "It works!"}'
 
 If a process is listening on the minion, it may be useful for a user on the
-master to fire an event to it:
+master to fire an event to it. An example of listening local events on
+a minion on a non-Windows system:
 
 .. code-block:: python
 
     # Job on minion
     import salt.utils.event
 
-    event = salt.utils.event.MinionEvent(**__opts__)
+    opts = salt.config.minion_config('/etc/salt/minion')
+    event = salt.utils.event.MinionEvent(opts)
 
-    for evdata in event.iter_events(tag='customtag/'):
-        return evdata # do your processing here...
+    for evdata in event.iter_events(match_type = 'regex',
+                                    tag = 'custom/.*'):
+        # do your processing here...
+
+And an example of listening local events on a Windows system:
+
+.. code-block:: python
+
+    # Job on minion
+    import salt.utils.event
+
+    opts = salt.config.minion_config(salt.minion.DEFAULT_MINION_OPTS)
+    event = salt.utils.event.MinionEvent(opts)
+
+    for evdata in event.iter_events(match_type = 'regex',
+                                    tag = 'custom/.*'):
+        # do your processing here...
 
 .. code-block:: bash
 
@@ -218,10 +250,10 @@ done at the CLI:
 
     caller = salt.client.Caller()
 
-    caller.sminion.functions['event.send'](
-        'myco/myevent/success',
-        {
-            'success': True,
-            'message': "It works!",
-        }
-    )
+    ret = called.cmd('event.send',
+                     'myco/event/success'
+                     { 'success': True,
+                       'message': "It works!" })
+
+    if not ret:
+        # the event could not be sent, process the error here

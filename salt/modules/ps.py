@@ -8,7 +8,7 @@ See http://code.google.com/p/psutil.
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import time
 import datetime
 import re
@@ -301,7 +301,7 @@ def pkill(pattern, user=None, signal=15, full=False):
         return {'killed': killed}
 
 
-def pgrep(pattern, user=None, full=False):
+def pgrep(pattern, user=None, full=False, pattern_is_regex=False):
     '''
     Return the pids for processes matching a pattern.
 
@@ -322,6 +322,12 @@ def pgrep(pattern, user=None, full=False):
         A boolean value indicating whether only the name of the command or
         the full command line should be matched against the pattern.
 
+    pattern_is_regex
+        This flag enables ps.pgrep to mirror the regex search functionality
+         found in the pgrep command line utility.
+
+        .. versionadded:: Neon
+
     **Examples:**
 
     Find all httpd processes on all 'www' minions:
@@ -336,14 +342,28 @@ def pgrep(pattern, user=None, full=False):
 
         salt '*' ps.pgrep bash user=tom
     '''
+    procs = []
+
+    if pattern_is_regex:
+        pattern = re.compile(str(pattern))
 
     procs = []
     for proc in psutil.process_iter():
-        name_match = pattern in ' '.join(_get_proc_cmdline(proc)) if full \
-            else pattern in _get_proc_name(proc)
+        if full:
+            process_line = ' '.join(_get_proc_cmdline(proc))
+        else:
+            process_line = _get_proc_name(proc)
+
+        if pattern_is_regex:
+            name_match = re.search(pattern, process_line)
+        else:
+            name_match = pattern in process_line
+
         user_match = True if user is None else user == _get_proc_username(proc)
+
         if name_match and user_match:
             procs.append(_get_proc_pid(proc))
+
     return procs or None
 
 
@@ -649,7 +669,7 @@ def lsof(name):
 
         salt '*' ps.lsof apache2
     '''
-    sanitize_name = str(name)
+    sanitize_name = six.text_type(name)
     lsof_infos = __salt__['cmd.run']("lsof -c " + sanitize_name)
     ret = []
     ret.extend([sanitize_name, lsof_infos])
@@ -667,7 +687,7 @@ def netstat(name):
 
         salt '*' ps.netstat apache2
     '''
-    sanitize_name = str(name)
+    sanitize_name = six.text_type(name)
     netstat_infos = __salt__['cmd.run']("netstat -nap")
     found_infos = []
     ret = []
@@ -692,7 +712,7 @@ def ss(name):
     .. versionadded:: 2016.11.6
 
     '''
-    sanitize_name = str(name)
+    sanitize_name = six.text_type(name)
     ss_infos = __salt__['cmd.run']("ss -neap")
     found_infos = []
     ret = []
@@ -715,7 +735,7 @@ def psaux(name):
 
         salt '*' ps.psaux www-data.+apache2
     '''
-    sanitize_name = str(name)
+    sanitize_name = six.text_type(name)
     pattern = re.compile(sanitize_name)
     salt_exception_pattern = re.compile("salt.+ps.psaux.+")
     ps_aux = __salt__['cmd.run']("ps aux")
@@ -729,7 +749,7 @@ def psaux(name):
             if not salt_exception_pattern.search(info):
                 nb_lines += 1
                 found_infos.append(info)
-    pid_count = str(nb_lines) + " occurence(s)."
+    pid_count = six.text_type(nb_lines) + " occurence(s)."
     ret = []
     ret.extend([sanitize_name, found_infos, pid_count])
     return ret

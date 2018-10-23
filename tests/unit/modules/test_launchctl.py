@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Rupesh Tare <rupesht@saltstack.com>`
+    :codeauthor: Rupesh Tare <rupesht@saltstack.com>
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -18,7 +18,6 @@ from tests.support.mock import (
 
 # Import Salt Libs
 from salt.ext import six
-import salt.utils
 import salt.utils.stringutils
 import salt.modules.launchctl as launchctl
 

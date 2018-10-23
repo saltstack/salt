@@ -153,7 +153,7 @@ Look there to find an example structure for Pillar as well as an example
 
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
 
@@ -200,13 +200,12 @@ def init(opts):
     login
     the protocol and port are cached.
     '''
-    log.debug('Initting esxcluster proxy module in process '
-              '{}'.format(os.getpid()))
+    log.debug('Initting esxcluster proxy module in process %s', os.getpid())
     log.debug('Validating esxcluster proxy input')
     schema = EsxclusterProxySchema.serialize()
-    log.trace('schema = {}'.format(schema))
+    log.trace('schema = %s', schema)
     proxy_conf = merge(opts.get('proxy', {}), __pillar__.get('proxy', {}))
-    log.trace('proxy_conf = {0}'.format(proxy_conf))
+    log.trace('proxy_conf = %s', proxy_conf)
     try:
         jsonschema.validate(proxy_conf, schema)
     except jsonschema.exceptions.ValidationError as exc:
@@ -253,7 +252,7 @@ def init(opts):
             username, password = find_credentials()
             DETAILS['password'] = password
         except salt.exceptions.SaltSystemExit as err:
-            log.critical('Error: {0}'.format(err))
+            log.critical('Error: %s', err)
             return False
     return True
 

@@ -19,7 +19,7 @@ In the minion configuration file, the following block is required:
 .. versionadded:: 2017.7.0
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # import python std lib
 import logging
@@ -172,9 +172,6 @@ def create(endpoint='incidents',
 
     api_url
         Custom API URL in case the user has a StatusPage service running in a custom environment.
-
-    **kwargs
-        Other params.
 
     CLI Example:
 
@@ -447,7 +444,7 @@ def update(endpoint='incidents',
     '''
     endpoint_sg = endpoint[:-1]  # singular
     if not id:
-        log.error('Invalid {endpoint} ID'.format(endpoint=endpoint_sg))
+        log.error('Invalid %s ID', endpoint_sg)
         return {
             'result': False,
             'comment': 'Please specify a valid {endpoint} ID'.format(endpoint=endpoint_sg)
@@ -541,7 +538,7 @@ def delete(endpoint='incidents',
         }
     endpoint_sg = endpoint[:-1]  # singular
     if not id:
-        log.error('Invalid {endpoint} ID'.format(endpoint=endpoint_sg))
+        log.error('Invalid %s ID', endpoint_sg)
         return {
             'result': False,
             'comment': 'Please specify a valid {endpoint} ID'.format(endpoint=endpoint_sg)

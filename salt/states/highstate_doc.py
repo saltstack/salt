@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
-
 '''
 To be used with proccessors in module `highstate_doc`.
 '''
+
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 
 __virtualname__ = 'highstate_doc'
 

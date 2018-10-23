@@ -3,12 +3,12 @@
 Display clean output of an overstate stage
 ==========================================
 
-This outputter is used to display :ref:`OverState <states-overstate>` stages,
-and should not be called directly.
+This outputter is used to display :ref:`Orchestrate Runner
+<orchestrate-runner>` stages, and should not be called directly.
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt libs
 import salt.utils.color

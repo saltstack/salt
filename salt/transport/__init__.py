@@ -2,7 +2,7 @@
 '''
 Encapsulate the different transports available to Salt.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import third party libs
@@ -42,11 +42,6 @@ class Channel(object):
         elif 'transport' in opts.get('pillar', {}).get('master', {}):
             ttype = opts['pillar']['master']['transport']
 
-        # the raet ioflo implementation still uses this channel, we need
-        # this as compatibility
-        if ttype == 'raet':
-            import salt.transport.raet
-            return salt.transport.raet.RAETReqChannel(opts, **kwargs)
         # TODO: deprecation warning, should use
         # salt.transport.channel.Channel.factory()
         from salt.transport.client import ReqChannel
@@ -57,8 +52,10 @@ class MessageClientPool(object):
     def __init__(self, tgt, opts, args=None, kwargs=None):
         sock_pool_size = opts['sock_pool_size'] if 'sock_pool_size' in opts else 1
         if sock_pool_size < 1:
-            log.warn('sock_pool_size is not correctly set, \
-                     the option should be greater than 0 but, {0}'.format(sock_pool_size))
+            log.warning(
+                'sock_pool_size is not correctly set, the option should be '
+                'greater than 0 but is instead %s', sock_pool_size
+            )
             sock_pool_size = 1
 
         if args is None:

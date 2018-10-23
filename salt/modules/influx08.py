@@ -23,7 +23,7 @@ version 0.5-0.8)
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 try:
     import influxdb.influxdb08
@@ -149,7 +149,7 @@ def db_create(name, user=None, password=None, host=None, port=None):
         salt '*' influxdb08.db_create <name> <user> <password> <host> <port>
     '''
     if db_exists(name, user, password, host, port):
-        log.info('DB \'{0}\' already exists'.format(name))
+        log.info('DB \'%s\' already exists', name)
         return False
     client = _client(user=user, password=password, host=host, port=port)
     client.create_database(name)
@@ -183,7 +183,7 @@ def db_remove(name, user=None, password=None, host=None, port=None):
         salt '*' influxdb08.db_remove <name> <user> <password> <host> <port>
     '''
     if not db_exists(name, user, password, host, port):
-        log.info('DB \'{0}\' does not exist'.format(name))
+        log.info('DB \'%s\' does not exist', name)
         return False
     client = _client(user=user, password=password, host=host, port=port)
     return client.delete_database(name)
@@ -321,10 +321,9 @@ def user_create(name,
     '''
     if user_exists(name, database, user, password, host, port):
         if database:
-            log.info('User \'{0}\' already exists for DB \'{1}\''.format(
-                name, database))
+            log.info('User \'%s\' already exists for DB \'%s\'', name, database)
         else:
-            log.info('Cluster admin \'{0}\' already exists'.format(name))
+            log.info('Cluster admin \'%s\' already exists', name)
         return False
 
     client = _client(user=user, password=password, host=host, port=port)
@@ -380,14 +379,9 @@ def user_chpass(name,
     '''
     if not user_exists(name, database, user, password, host, port):
         if database:
-            log.info(
-                'User \'{0}\' does not exist for DB \'{1}\''.format(
-                    name,
-                    database
-                )
-            )
+            log.info('User \'%s\' does not exist for DB \'%s\'', name, database)
         else:
-            log.info('Cluster admin \'{0}\' does not exist'.format(name))
+            log.info('Cluster admin \'%s\' does not exist', name)
         return False
 
     client = _client(user=user, password=password, host=host, port=port)
@@ -442,13 +436,9 @@ def user_remove(name,
     '''
     if not user_exists(name, database, user, password, host, port):
         if database:
-            log.info(
-                'User \'{0}\' does not exist for DB \'{1}\''.format(
-                    name, database
-                )
-            )
+            log.info('User \'%s\' does not exist for DB \'%s\'', name, database)
         else:
-            log.info('Cluster admin \'{0}\' does not exist'.format(name))
+            log.info('Cluster admin \'%s\' does not exist', name)
         return False
 
     client = _client(user=user, password=password, host=host, port=port)

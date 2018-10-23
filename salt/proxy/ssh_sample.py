@@ -5,13 +5,13 @@
     This can be used as an option when the device does not provide
     an api over HTTP and doesn't have the python stack to run a minion.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
-import json
 import logging
 
-# Import Salt's libs
+# Import Salt libs
+import salt.utils.json
 from salt.utils.vt_helper import SSHConnection
 from salt.utils.vt import TerminalException
 
@@ -128,7 +128,7 @@ def parse(out):
             jsonret.append(ln_)
         if '}' in ln_:
             in_json = False
-    return json.loads('\n'.join(jsonret))
+    return salt.utils.json.loads('\n'.join(jsonret))
 
 
 def package_list():

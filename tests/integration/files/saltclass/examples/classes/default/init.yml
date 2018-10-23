@@ -1,0 +1,28 @@
+classes:
+  - default.users
+  - default.motd
+  - default.empty
+
+states:
+  - openssh
+
+pillars:
+  default:
+    network:
+      dns:
+{% if __grains__['os'] == 'should_never_match' %}
+        srv1: 192.168.0.1
+        srv2: 192.168.0.2
+        domain: example.com
+{% endif %}
+      ntp:
+        srv1: 192.168.10.10
+        srv2: 192.168.10.20
+  test_list:
+    - a: ${default:network:ntp:srv1}
+    - ${default:network:ntp:srv2}
+  test_str: ${motd:text}
+  test_str_var_first: ${default:network:ntp:srv2} is the second ntp srv
+  test_str_var_not_first: The second ntp server is ${default:network:ntp:srv2}
+  test_str_var_middle: The second ntp server - ${default:network:ntp:srv2} - is broken
+  test_str_multiple_var: 'There is 2 NTP server: ${default:network:ntp:srv1} and ${default:network:ntp:srv2}'

@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Jayesh Kariya <jayeshk@saltstack.com>`
+    :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -98,7 +98,6 @@ class MongodbUserTestCase(TestCase, LoaderModuleMockMixin):
                             'changes': {name: 'Absent'}})
                 self.assertDictEqual(mongodb_user.absent(name), ret)
 
-            comt = ('User {0} is not present, so it cannot be removed'
-                    .format(name))
+            comt = 'User {0} is not present'.format(name)
             ret.update({'comment': comt, 'result': True, 'changes': {}})
             self.assertDictEqual(mongodb_user.absent(name), ret)

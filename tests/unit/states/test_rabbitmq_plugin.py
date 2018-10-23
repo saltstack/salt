@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Jayesh Kariya <jayeshk@saltstack.com>`
+    :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -43,12 +43,12 @@ class RabbitmqPluginTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(side_effect=[True, False])
         with patch.dict(rabbitmq_plugin.__salt__,
                         {'rabbitmq.plugin_is_enabled': mock}):
-            comment = 'Plugin \'some_plugin\' is already enabled.'
+            comment = "Plugin 'some_plugin' is already enabled."
             ret.update({'comment': comment})
             self.assertDictEqual(rabbitmq_plugin.enabled(name), ret)
 
             with patch.dict(rabbitmq_plugin.__opts__, {'test': True}):
-                comment = 'Plugin \'some_plugin\' is set to be enabled.'
+                comment = "Plugin 'some_plugin' is set to be enabled."
                 changes = {'new': 'some_plugin', 'old': ''}
                 ret.update({'comment': comment, 'result': None, 'changes': changes})
                 self.assertDictEqual(rabbitmq_plugin.enabled(name), ret)
@@ -69,12 +69,12 @@ class RabbitmqPluginTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(side_effect=[False, True])
         with patch.dict(rabbitmq_plugin.__salt__,
                         {'rabbitmq.plugin_is_enabled': mock}):
-            comment = 'Plugin \'some_plugin\' is already disabled.'
+            comment = "Plugin 'some_plugin' is already disabled."
             ret.update({'comment': comment})
             self.assertDictEqual(rabbitmq_plugin.disabled(name), ret)
 
             with patch.dict(rabbitmq_plugin.__opts__, {'test': True}):
-                comment = 'Plugin \'some_plugin\' is set to be disabled.'
+                comment = "Plugin 'some_plugin' is set to be disabled."
                 changes = {'new': '', 'old': 'some_plugin'}
                 ret.update({'comment': comment, 'result': None, 'changes': changes})
                 self.assertDictEqual(rabbitmq_plugin.disabled(name), ret)

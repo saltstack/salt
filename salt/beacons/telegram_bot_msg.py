@@ -7,7 +7,7 @@ Requires the python-telegram-bot library
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 import logging
 from salt.ext.six.moves import map
 
@@ -82,14 +82,18 @@ def beacon(config):
     bot = telegram.Bot(_config['token'])
     updates = bot.get_updates(limit=100, timeout=0, network_delay=10)
 
-    log.debug('Num updates: {0}'.format(len(updates)))
+    log.debug('Num updates: %d', len(updates))
     if not updates:
         log.debug('Telegram Bot beacon has no new messages')
         return ret
 
     latest_update_id = 0
     for update in updates:
-        message = update.message
+
+        if update.message:
+            message = update.message
+        else:
+            message = update.edited_message
 
         if update.update_id > latest_update_id:
             latest_update_id = update.update_id
@@ -100,7 +104,7 @@ def beacon(config):
     # mark in the server that previous messages are processed
     bot.get_updates(offset=latest_update_id + 1)
 
-    log.debug('Emitting {0} messages.'.format(len(output['msgs'])))
+    log.debug('Emitting %d messages.', len(output['msgs']))
     if output['msgs']:
         ret.append(output)
     return ret

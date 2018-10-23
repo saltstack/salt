@@ -35,10 +35,9 @@ keys make the engine interactive.
                 wait_time: 1
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import time
-import json
 import os
 
 
@@ -52,6 +51,8 @@ import salt.utils.args
 import salt.utils.event
 import salt.utils.files
 import salt.utils.http
+import salt.utils.json
+import salt.utils.stringutils
 import salt.runner
 import salt.client
 import salt.loader
@@ -70,7 +71,9 @@ _DEFAULT_MAX_ROOMS = 1000
 
 
 def _publish_file(token, room, filepath, message='', outputter=None, api_url=None):
-    """ Send file to a HipChat room via API version 2
+    '''
+    Send file to a HipChat room via API version 2
+
     Parameters
     ----------
     token : str
@@ -83,7 +86,7 @@ def _publish_file(token, room, filepath, message='', outputter=None, api_url=Non
         Message to send to room
     api_url: str, optional
         Hipchat API URL to use, defaults to http://api.hipchat.com
-    """
+    '''
 
     if not os.path.isfile(filepath):
         raise ValueError("File '{0}' does not exist".format(filepath))
@@ -93,10 +96,11 @@ def _publish_file(token, room, filepath, message='', outputter=None, api_url=Non
     url = "{0}/v2/room/{1}/share/file".format(api_url, room)
     headers = {'Content-type': 'multipart/related; boundary=boundary123456'}
     headers['Authorization'] = "Bearer " + token
-    msg = json.dumps({'message': message})
+    msg = salt.utils.json.dumps({'message': message})
 
+    # future lint: disable=blacklisted-function
     with salt.utils.files.fopen(filepath, 'rb') as rfh:
-        payload = """\
+        payload = str('''\
 --boundary123456
 Content-Type: application/json; charset=UTF-8
 Content-Disposition: attachment; name="metadata"
@@ -109,7 +113,10 @@ Content-Disposition: attachment; name="file"; filename="{1}"
 {2}
 
 --boundary123456--\
-""".format(msg, os.path.basename(filepath), rfh.read())
+''').format(msg,
+            os.path.basename(salt.utils.stringutils.to_str(filepath)),
+            salt.utils.stringutils.to_str(rfh.read()))
+    # future lint: enable=blacklisted-function
 
     salt.utils.http.query(url, method='POST', header_dict=headers, data=payload)
 
@@ -237,13 +244,13 @@ def start(token,
             - ``html``: send the output as HTML
             - ``code``: send the output as code
 
-        This can be overriden when executing a command, using the ``--out-type`` argument.
+        This can be overridden when executing a command, using the ``--out-type`` argument.
 
         .. versionadded:: 2017.7.0
 
     outputter: ``nested``
         The format to display the data, using the outputters available on the CLI.
-        This argument can also be overriden when executing a command, using the ``--out`` option.
+        This argument can also be overridden when executing a command, using the ``--out`` option.
 
         .. versionadded:: 2017.7.0
 
@@ -309,7 +316,7 @@ def start(token,
         if a_room['name'] == room:
             target_room = a_room
     if not target_room:
-        log.debug("Unable to connect to room {0}".format(room))
+        log.debug("Unable to connect to room %s", room)
         # wait for a bit as to not burn through api calls
         time.sleep(30)
         raise UserWarning("Unable to connect to room {0}".format(room))
@@ -414,7 +421,7 @@ def start(token,
             else:
                 tmp_path_fn = salt.utils.files.mkstemp()
                 with salt.utils.files.fopen(tmp_path_fn, 'w+') as fp_:
-                    fp_.write(json.dumps(ret, sort_keys=True, indent=4))
+                    salt.utils.json.dump(ret, fp_, sort_keys=True, indent=4)
                 _publish_file(token, room, tmp_path_fn, message=message_string, api_url=api_url)
                 salt.utils.files.safe_rm(tmp_path_fn)
         time.sleep(wait_time or _DEFAULT_SLEEP)

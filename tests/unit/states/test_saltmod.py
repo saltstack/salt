@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Jayesh Kariya <jayeshk@saltstack.com>`
+    :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import os
 import time
 import tempfile
@@ -175,13 +175,11 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
         name = 'state'
         tgt = 'larry'
 
-        comt = ('Function state will be executed'
-                ' on target {0} as test=False'.format(tgt))
-
         ret = {'name': name,
                'changes': {},
                'result': None,
-               'comment': comt}
+               'comment': 'Function state would be executed '
+                          'on target {0}'.format(tgt)}
 
         with patch.dict(saltmod.__opts__, {'test': True}):
             self.assertDictEqual(saltmod.function(name, tgt), ret)
@@ -258,8 +256,8 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
         '''
         name = 'state'
 
-        ret = {'changes': {}, 'name': 'state', 'result': True,
-               'comment': 'Runner function \'state\' executed with return True.',
+        ret = {'changes': {'return': True}, 'name': 'state', 'result': True,
+               'comment': 'Runner function \'state\' executed.',
                '__orchestration__': True}
         runner_mock = MagicMock(return_value={'return': True})
 
@@ -274,8 +272,8 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
         '''
         name = 'state'
 
-        ret = {'changes': {}, 'name': 'state', 'result': True,
-               'comment': 'Wheel function \'state\' executed with return True.',
+        ret = {'changes': {'return': True}, 'name': 'state', 'result': True,
+               'comment': 'Wheel function \'state\' executed.',
                '__orchestration__': True}
         wheel_mock = MagicMock(return_value={'return': True})
 

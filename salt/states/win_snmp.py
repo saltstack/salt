@@ -5,7 +5,11 @@ Module for managing SNMP service settings on Windows servers.
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
+
+
+# Import 3rd party libs
+from salt.ext import six
 
 
 def __virtual__():
@@ -39,7 +43,7 @@ def agent_settings(name, contact, location, services=None):
     '''
     ret = {'name': name,
            'changes': {},
-           'comment': str(),
+           'comment': six.text_type(),
            'result': None}
 
     ret_settings = {'changes': dict(),
@@ -56,7 +60,7 @@ def agent_settings(name, contact, location, services=None):
     current_settings = __salt__['win_snmp.get_agent_settings']()
 
     for setting in settings:
-        if str(settings[setting]) != str(current_settings[setting]):
+        if six.text_type(settings[setting]) != six.text_type(current_settings[setting]):
             ret_settings['changes'][setting] = {'old': current_settings[setting],
                                                 'new': settings[setting]}
     if not ret_settings['changes']:
@@ -104,7 +108,7 @@ def auth_traps_enabled(name, status=True):
     '''
     ret = {'name': name,
            'changes': {},
-           'comment': str(),
+           'comment': six.text_type(),
            'result': None}
 
     vname = 'EnableAuthenticationTraps'
@@ -144,7 +148,7 @@ def community_names(name, communities=None):
     '''
     ret = {'name': name,
            'changes': dict(),
-           'comment': str(),
+           'comment': six.text_type(),
            'result': None}
 
     ret_communities = {'changes': dict(),

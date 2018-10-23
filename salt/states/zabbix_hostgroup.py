@@ -7,6 +7,12 @@ Management of Zabbix host groups.
 
 '''
 
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
+
+# Import Salt libs
+from salt.ext import six
+
 
 def __virtual__():
     '''
@@ -77,7 +83,7 @@ def present(name, **kwargs):
             ret['changes'] = changes_hostgroup_created
         else:
             ret['result'] = False
-            ret['comment'] = comment_hostgroup_notcreated + str(hostgroup_create['error'])
+            ret['comment'] = comment_hostgroup_notcreated + six.text_type(hostgroup_create['error'])
 
     return ret
 
@@ -151,6 +157,6 @@ def absent(name, **kwargs):
             ret['changes'] = changes_hostgroup_deleted
         else:
             ret['result'] = False
-            ret['comment'] = comment_hostgroup_notdeleted + str(hostgroup_delete['error'])
+            ret['comment'] = comment_hostgroup_notdeleted + six.text_type(hostgroup_delete['error'])
 
     return ret

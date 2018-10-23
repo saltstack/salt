@@ -13,6 +13,7 @@ state modules
     acme
     alias
     alternatives
+    ansiblegate
     apache
     apache_conf
     apache_module
@@ -26,6 +27,7 @@ state modules
     beacon
     bigip
     blockdev
+    bluecoat_sslv
     boto3_elasticache
     boto3_route53
     boto_apigateway
@@ -63,10 +65,12 @@ state modules
     chef
     chocolatey
     chronos_job
+    cimc
     cisconso
     cloud
     cmd
     composer
+    consul
     cron
     csf
     cyg
@@ -74,7 +78,6 @@ state modules
     debconfmod
     dellchassis
     disk
-    docker
     docker_container
     docker_image
     docker_network
@@ -96,6 +99,7 @@ state modules
     git
     github
     glance
+    glance_image
     glusterfs
     gnomedesktop
     gpg
@@ -123,7 +127,10 @@ state modules
     influxdb_database
     influxdb_retention_policy
     influxdb_user
-    infoblox
+    infoblox_a
+    infoblox_cname
+    infoblox_host_record
+    infoblox_range
     ini_manage
     ipmi
     ipset
@@ -131,11 +138,18 @@ state modules
     jboss7
     jenkins
     junos
-    k8s
     kapacitor
     kernelpkg
     keyboard
     keystone
+    keystone_domain
+    keystone_endpoint
+    keystone_group
+    keystone_project
+    keystone_role
+    keystone_role_grant
+    keystone_service
+    keystone_user
     kmod
     kubernetes
     layman
@@ -180,6 +194,10 @@ state modules
     netusers
     network
     netyang
+    neutron_network
+    neutron_secgroup
+    neutron_secgroup_rule
+    neutron_subnet
     nfs_export
     nftables
     npm
@@ -188,11 +206,13 @@ state modules
     openstack_config
     openvswitch_bridge
     openvswitch_port
+    opsgenie
     pagerduty
     pagerduty_escalation_policy
     pagerduty_schedule
     pagerduty_service
     pagerduty_user
+    panos
     pcs
     pecl
     pdbedit
@@ -267,6 +287,7 @@ state modules
     tuned
     uptime
     user
+    vagrant
     vault
     vbox_guest
     victorops
@@ -288,19 +309,22 @@ state modules
     win_smtp_server
     win_snmp
     win_system
-    win_update
     win_wua
     winrepo
     x509
     xmpp
+    zabbix_action
     zabbix_host
     zabbix_hostgroup
     zabbix_mediatype
+    zabbix_template
     zabbix_user
     zabbix_usergroup
+    zabbix_valuemap
     zcbuildout
     zenoss
     zk_concurrency
     zfs
     zone
+    zookeeper
     zpool

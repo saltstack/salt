@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
 '''
+Proxy Minion interface module for managing Palo Alto firewall devices
+=====================================================================
 
-Proxy Minion interface module for managing Palo Alto firewall devices.
+.. versionadded:: 2018.3.0
 
-:codeauthor: :email:`Spencer Ervin <spencer_ervin@hotmail.com>`
+:codeauthor: ``Spencer Ervin <spencer_ervin@hotmail.com>``
 :maturity:   new
 :depends:    none
 :platform:   unix
@@ -22,6 +24,7 @@ documentation.
 
 Configuration
 =============
+
 To use this integration proxy module, please configure the following:
 
 Pillar
@@ -53,6 +56,7 @@ the device with username and password.
 
 proxytype
 ^^^^^^^^^
+
 The ``proxytype`` key and value pair is critical, as it tells Salt which
 interface to load from the ``proxy`` directory in Salt's install hierarchy,
 or from ``/srv/salt/_proxy`` on the Salt Master (if you have created your
@@ -61,14 +65,17 @@ own proxy module, for example). To use this panos Proxy Module, set this to
 
 host
 ^^^^
+
 The location, or ip/dns, of the panos host. Required.
 
 username
 ^^^^^^^^
+
 The username used to login to the panos host. Required.
 
 password
 ^^^^^^^^
+
 The password used to login to the panos host. Required.
 
 Direct Device (API Key)
@@ -88,6 +95,7 @@ instead of username and password.
 
 proxytype
 ^^^^^^^^^
+
 The ``proxytype`` key and value pair is critical, as it tells Salt which
 interface to load from the ``proxy`` directory in Salt's install hierarchy,
 or from ``/srv/salt/_proxy`` on the Salt Master (if you have created your
@@ -96,14 +104,16 @@ own proxy module, for example). To use this panos Proxy Module, set this to
 
 host
 ^^^^
+
 The location, or ip/dns, of the panos host. Required.
 
 apikey
-^^^^^^^^
+^^^^^^
+
 The generated XML API key for the panos host. Required.
 
 Panorama Pass-Through (Password)
-------------------------
+--------------------------------
 
 The Panorama pass-through method sends all connections through the Panorama
 management system. It passes the connections to the appropriate device using
@@ -126,6 +136,7 @@ not the panos device.
 
 proxytype
 ^^^^^^^^^
+
 The ``proxytype`` key and value pair is critical, as it tells Salt which
 interface to load from the ``proxy`` directory in Salt's install hierarchy,
 or from ``/srv/salt/_proxy`` on the Salt Master (if you have created your
@@ -134,22 +145,26 @@ own proxy module, for example). To use this panos Proxy Module, set this to
 
 serial
 ^^^^^^
+
 The serial number of the panos host. Required.
 
 host
 ^^^^
+
 The location, or ip/dns, of the Panorama server. Required.
 
 username
 ^^^^^^^^
+
 The username used to login to the Panorama server. Required.
 
 password
 ^^^^^^^^
+
 The password used to login to the Panorama server. Required.
 
 Panorama Pass-Through (API Key)
-------------------------
+-------------------------------
 
 The Panorama server can also utilize a generated 'API key'_ for authentication.
 
@@ -165,6 +180,7 @@ The Panorama server can also utilize a generated 'API key'_ for authentication.
 
 proxytype
 ^^^^^^^^^
+
 The ``proxytype`` key and value pair is critical, as it tells Salt which
 interface to load from the ``proxy`` directory in Salt's install hierarchy,
 or from ``/srv/salt/_proxy`` on the Salt Master (if you have created your
@@ -173,25 +189,30 @@ own proxy module, for example). To use this panos Proxy Module, set this to
 
 serial
 ^^^^^^
+
 The serial number of the panos host. Required.
 
 host
 ^^^^
+
 The location, or ip/dns, of the Panorama server. Required.
 
 apikey
 ^^^^^^^^
-The generated XML API key for the Panorama server. Required.
 
+The generated XML API key for the Panorama server. Required.
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python Libs
 import logging
 
 # Import Salt Libs
+from salt._compat import ElementTree as ET
 import salt.exceptions
+import salt.utils.xmlutil as xml
+from salt.ext import six
 
 # This must be present or the Salt loader won't load this module.
 __proxyenabled__ = ['panos']
@@ -212,6 +233,22 @@ def __virtual__():
     Only return if all the modules are available.
     '''
     return __virtualname__
+
+
+def _strip_dirty(xmltree):
+    '''
+    Removes dirtyID tags from the candidate config result. Palo Alto devices will make the candidate configuration with
+    a dirty ID after a change. This can cause unexpected results when parsing.
+    '''
+    dirty = xmltree.attrib.pop('dirtyId', None)
+    if dirty:
+        xmltree.attrib.pop('admin', None)
+        xmltree.attrib.pop('time', None)
+
+    for child in xmltree:
+        child = _strip_dirty(child)
+
+    return xmltree
 
 
 def init(opts):
@@ -271,7 +308,7 @@ def call(payload=None):
     '''
     This function captures the query string and sends it to the Palo Alto device.
     '''
-    ret = {}
+    r = None
     try:
         if DETAILS['method'] == 'dev_key':
             # Pass the api key without the target declaration
@@ -280,11 +317,11 @@ def call(payload=None):
             r = __utils__['http.query'](DETAILS['url'],
                                         data=payload,
                                         method='POST',
-                                        decode_type='xml',
+                                        decode_type='plain',
                                         decode=True,
                                         verify_ssl=False,
+                                        status=True,
                                         raise_error=True)
-            ret = r['dict'][0]
         elif DETAILS['method'] == 'dev_pass':
             # Pass credentials without the target declaration
             r = __utils__['http.query'](DETAILS['url'],
@@ -292,11 +329,11 @@ def call(payload=None):
                                         password=DETAILS['password'],
                                         data=payload,
                                         method='POST',
-                                        decode_type='xml',
+                                        decode_type='plain',
                                         decode=True,
                                         verify_ssl=False,
+                                        status=True,
                                         raise_error=True)
-            ret = r['dict'][0]
         elif DETAILS['method'] == 'pan_key':
             # Pass the api key with the target declaration
             conditional_payload = {'key': DETAILS['apikey'],
@@ -305,11 +342,11 @@ def call(payload=None):
             r = __utils__['http.query'](DETAILS['url'],
                                         data=payload,
                                         method='POST',
-                                        decode_type='xml',
+                                        decode_type='plain',
                                         decode=True,
                                         verify_ssl=False,
+                                        status=True,
                                         raise_error=True)
-            ret = r['dict'][0]
         elif DETAILS['method'] == 'pan_pass':
             # Pass credentials with the target declaration
             conditional_payload = {'target': DETAILS['serial']}
@@ -319,14 +356,42 @@ def call(payload=None):
                                         password=DETAILS['password'],
                                         data=payload,
                                         method='POST',
-                                        decode_type='xml',
+                                        decode_type='plain',
                                         decode=True,
                                         verify_ssl=False,
+                                        status=True,
                                         raise_error=True)
-            ret = r['dict'][0]
     except KeyError as err:
         raise salt.exceptions.CommandExecutionError("Did not receive a valid response from host.")
-    return ret
+
+    if not r:
+        raise salt.exceptions.CommandExecutionError("Did not receive a valid response from host.")
+
+    if six.text_type(r['status']) not in ['200', '201', '204']:
+        if six.text_type(r['status']) == '400':
+            raise salt.exceptions.CommandExecutionError(
+                "The server cannot process the request due to a client error.")
+        elif six.text_type(r['status']) == '401':
+            raise salt.exceptions.CommandExecutionError(
+                "The server cannot process the request because it lacks valid authentication "
+                "credentials for the target resource.")
+        elif six.text_type(r['status']) == '403':
+            raise salt.exceptions.CommandExecutionError(
+                "The server refused to authorize the request.")
+        elif six.text_type(r['status']) == '404':
+            raise salt.exceptions.CommandExecutionError(
+                "The requested resource could not be found.")
+        else:
+            raise salt.exceptions.CommandExecutionError(
+                "Did not receive a valid response from host.")
+
+    xmldata = ET.fromstring(r['text'])
+
+    # If we are pulling the candidate configuration, we need to strip the dirtyId
+    if payload['type'] == 'config' and payload['action'] == 'get':
+        xmldata = (_strip_dirty(xmldata))
+
+    return xml.to_dict(xmldata, True)
 
 
 def is_required_version(required_version='0.0.0'):
@@ -382,7 +447,7 @@ def grains():
         DETAILS['grains_cache'] = GRAINS_CACHE
         try:
             query = {'type': 'op', 'cmd': '<show><system><info></info></system></show>'}
-            DETAILS['grains_cache'] = call(query)['system']
+            DETAILS['grains_cache'] = call(query)['result']['system']
         except Exception as err:
             pass
     return DETAILS['grains_cache']
@@ -402,7 +467,7 @@ def ping():
     '''
     try:
         query = {'type': 'op', 'cmd': '<show><system><info></info></system></show>'}
-        if 'system' in call(query):
+        if 'result' in call(query):
             return True
         else:
             return False

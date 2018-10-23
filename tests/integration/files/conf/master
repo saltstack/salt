@@ -8,7 +8,6 @@ worker_threads: 3
 pidfile: master.pid
 sock_dir: master_sock
 timeout: 12
-open_mode: True
 fileserver_list_cache_time: 0
 file_buffer_size: 8192
 file_recv: True
@@ -32,7 +31,7 @@ peer:
     - 'test.*'
 
 ext_pillar:
-  - test_ext_pillar_opts:
+  - ext_pillar_opts:
     - test_issue_5951_actual_file_roots_in_opts
 
 config_opt:
@@ -97,3 +96,27 @@ libcloud_dns:
     key: 12345
     secret: mysecret
     shopper_id: 12345
+
+autosign_grains_dir: autosign_grains
+autosign_file: autosign_file
+
+# disable discovery for test suite saltstack/salt-jenkins#683
+discovery: false
+
+# enable using ssh minions and regular minions
+#enable_ssh_minions: True
+#ignore_host_keys: True
+
+# test vault
+vault:
+  url: http://127.0.0.1:8200
+  auth:
+    method: token
+    token: testsecret
+  policies:
+  - testpolicy
+peer_run:
+  .*:
+  - vault.generate_token
+sdbvault:
+  driver: vault

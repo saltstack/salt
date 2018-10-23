@@ -14,7 +14,7 @@ you can specify what ruby version and gemset to target.
         - user: rvm
         - ruby: jruby@jgemset
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 import logging
 log = logging.getLogger(__name__)
@@ -84,14 +84,17 @@ def installed(name,          # pylint: disable=C0103
             'Use of argument ruby found, but neither rvm or rbenv is installed'
         )
     gems = __salt__['gem.list'](name, ruby, gem_bin=gem_bin, runas=user)
-    if name in gems and version is not None and str(version) in gems[name]:
-        ret['result'] = True
-        ret['comment'] = 'Gem is already installed.'
-        return ret
-    elif name in gems and version is None:
-        ret['result'] = True
-        ret['comment'] = 'Gem is already installed.'
-        return ret
+
+    if name in gems:
+        versions = list([x.replace('default: ', '') for x in gems[name]])
+        if version is not None and str(version) in versions:
+            ret['result'] = True
+            ret['comment'] = 'Gem is already installed.'
+            return ret
+        elif version is None:
+            ret['result'] = True
+            ret['comment'] = 'Gem is already installed.'
+            return ret
 
     if __opts__['test']:
         ret['comment'] = 'The gem {0} would have been installed'.format(name)
@@ -177,7 +180,7 @@ def sources_add(name, ruby=None, user=None):
         ret['comment'] = 'Gem source is already added.'
         return ret
     if __opts__['test']:
-        ret['comment'] = 'The gem source {0} would have been removed.'.format(name)
+        ret['comment'] = 'The gem source {0} would have been added.'.format(name)
         return ret
     if __salt__['gem.sources_add'](source_uri=name, ruby=ruby, runas=user):
         ret['result'] = True
@@ -212,7 +215,7 @@ def sources_remove(name, ruby=None, user=None):
         return ret
 
     if __opts__['test']:
-        ret['comment'] = 'The gem source would have been removed'
+        ret['comment'] = 'The gem source would have been removed.'
         return ret
 
     if __salt__['gem.sources_remove'](source_uri=name, ruby=ruby, runas=user):

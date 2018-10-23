@@ -3,14 +3,14 @@
 JSON Renderer for Salt
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
-import salt.utils
-json = salt.utils.import_json()
+import salt.utils.json
+json = salt.utils.json.import_json()
 
 # Import salt libs
-from salt.ext.six import string_types
+from salt.ext import six
 
 
 def render(json_data, saltenv='base', sls='', **kws):
@@ -20,7 +20,7 @@ def render(json_data, saltenv='base', sls='', **kws):
 
     :rtype: A Python data structure
     '''
-    if not isinstance(json_data, string_types):
+    if not isinstance(json_data, six.string_types):
         json_data = json_data.read()
 
     if json_data.startswith('#!'):

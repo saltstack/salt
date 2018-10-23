@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -422,8 +422,8 @@ class PostgresExtensionTestCase(TestCase, LoaderModuleMockMixin):
                 ret = postgres_extension.present('foo')
                 self.assertEqual(
                     ret,
-                    {'comment': "Extension foo is set to be created",
-                     'changes': {}, 'name': 'foo', 'result': None}
+                    {'comment': "Extension foo is already present",
+                     'changes': {}, 'name': 'foo', 'result': True}
 
                 )
                 ret = postgres_extension.present('foo')

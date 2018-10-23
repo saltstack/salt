@@ -12,7 +12,7 @@ so it can be used to maintain services using the ``provider`` argument:
       service.running:
         - provider: daemontools
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging

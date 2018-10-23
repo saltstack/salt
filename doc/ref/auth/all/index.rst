@@ -12,6 +12,7 @@ auth modules
 
     auto
     django
+    file
     keystone
     ldap
     mysql

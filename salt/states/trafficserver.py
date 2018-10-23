@@ -7,10 +7,7 @@ Control Apache Traffic Server
 '''
 
 # Import Python libs
-from __future__ import absolute_import
-
-# Import Salt libs
-import salt.utils.versions
+from __future__ import absolute_import, unicode_literals, print_function
 
 
 def __virtual__():
@@ -237,35 +234,6 @@ def config(name, value):
     ret['result'] = True
     ret['comment'] = 'Configured {0} to {1}'.format(name, value)
     return ret
-
-
-def set_var(name, value):
-    '''
-    Set Traffic Server configuration variable values.
-
-    .. deprecated:: Fluorine
-        Use ``trafficserver.config`` instead.
-
-    .. code-block:: yaml
-
-        proxy.config.proxy_name:
-          trafficserver.set_var:
-            - value: cdn.site.domain.tld
-
-        OR
-
-        traffic_server_setting:
-          trafficserver.set_var:
-            - name: proxy.config.proxy_name
-            - value: cdn.site.domain.tld
-
-    '''
-    salt.utils.versions.warn_until(
-        'Fluorine',
-        'The \'set_var\' function has been deprecated and will be removed in Salt '
-        '{version}. Please use \'trafficserver.config\' instead.'
-    )
-    return config(name, value)
 
 
 def shutdown(name):

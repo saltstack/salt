@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 
 
     runtests_helpers.py
@@ -66,10 +66,14 @@ def get_invalid_docs():
         'log.warning',
         'lowpkg.bin_pkg_info',
         'lxc.run_cmd',
+        'mantest.install',
+        'mantest.search',
         'nspawn.restart',
         'nspawn.stop',
         'pkg.expand_repo_def',
         'pip.iteritems',
+        'pip.parse_version',
+        'peeringdb.clean_kwargs',
         'runtests_decorators.depends',
         'runtests_decorators.depends_will_fallback',
         'runtests_decorators.missing_depends',
@@ -88,6 +92,7 @@ def get_invalid_docs():
         'vsphere.wraps',
     )
     allow_failure_glob = (
+        'runtests_decorators.*',
         'runtests_helpers.*',
         'vsphere.*',
     )
@@ -125,3 +130,26 @@ def modules_available(*names):
         if not fnmatch.filter(list(__salt__), name):
             not_found.append(name)
     return not_found
+
+
+def nonzero_retcode_return_true():
+    '''
+    Sets a nonzero retcode before returning. Designed to test orchestration.
+    '''
+    __context__['retcode'] = 1
+    return True
+
+
+def nonzero_retcode_return_false():
+    '''
+    Sets a nonzero retcode before returning. Designed to test orchestration.
+    '''
+    __context__['retcode'] = 1
+    return False
+
+
+def fail_function(*args, **kwargs):  # pylint: disable=unused-argument
+    '''
+    Return False no matter what is passed to it
+    '''
+    return False

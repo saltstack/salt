@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-r'''
+'''
 Management of user groups
 =========================
 
@@ -8,8 +8,8 @@ either present or absent. User/Group names can be passed to the ``adduser``,
 ``deluser``, and ``members`` parameters. ``adduser`` and ``deluser`` can be used
 together but not with ``members``.
 
-In Windows, if no domain is specified in the user or group name (ie:
-`DOMAIN\username``) the module will assume a local user or group.
+In Windows, if no domain is specified in the user or group name (i.e.
+``DOMAIN\\username``) the module will assume a local user or group.
 
 .. code-block:: yaml
 
@@ -35,7 +35,7 @@ In Windows, if no domain is specified in the user or group name (ie:
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import sys
 
 # Import 3rd-party libs
@@ -65,19 +65,29 @@ def _changes(name,
         if lgrp['members']:
             lgrp['members'] = [user.lower() for user in lgrp['members']]
         if members:
-            members = [salt.utils.win_functions.get_sam_name(user) for user in members]
+            members = [salt.utils.win_functions.get_sam_name(user).lower() for user in members]
         if addusers:
-            addusers = [salt.utils.win_functions.get_sam_name(user) for user in addusers]
+            addusers = [salt.utils.win_functions.get_sam_name(user).lower() for user in addusers]
         if delusers:
-            delusers = [salt.utils.win_functions.get_sam_name(user) for user in delusers]
+            delusers = [salt.utils.win_functions.get_sam_name(user).lower() for user in delusers]
 
     change = {}
+    ret = {}
     if gid:
-        if lgrp['gid'] != gid:
-            change['gid'] = gid
+        try:
+            gid = int(gid)
+            if lgrp['gid'] != gid:
+                change['gid'] = gid
+        except (TypeError, ValueError):
+            ret['result'] = False
+            ret['comment'] = 'Invalid gid'
+            return ret
 
-    if members:
-        # -- if new member list if different than the current
+    if members is not None and not members:
+        if set(lgrp['members']).symmetric_difference(members):
+            change['delusers'] = set(lgrp['members'])
+    elif members:
+        # if new member list if different than the current
         if set(lgrp['members']).symmetric_difference(members):
             change['members'] = members
 
@@ -158,7 +168,7 @@ def present(name,
            'result': True,
            'comment': 'Group {0} is present and up to date'.format(name)}
 
-    if members and (addusers or delusers):
+    if members is not None and (addusers is not None or delusers is not None):
         ret['result'] = None
         ret['comment'] = (
             'Error: Conflicting options "members" with "addusers" and/or'
@@ -244,9 +254,7 @@ def present(name,
                 return ret
 
         # Group is not present, make it.
-        if __salt__['group.add'](name,
-                                 gid,
-                                 system=system):
+        if __salt__['group.add'](name, gid=gid, system=system):
             # if members to be added
             grp_members = None
             if members:
@@ -269,7 +277,7 @@ def present(name,
                 ret['result'] = False
                 ret['comment'] = (
                     'Group {0} has been created but, some changes could not'
-                    ' be applied')
+                    ' be applied'.format(name))
                 ret['changes'] = {'Failed': changes}
         else:
             ret['result'] = False

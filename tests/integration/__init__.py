@@ -10,7 +10,6 @@ import os
 import re
 import sys
 import copy
-import json
 import time
 import stat
 import errno
@@ -42,45 +41,35 @@ from tests.support.mixins import CheckShellBinaryNameAndVersionMixin, ShellCaseC
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin, SaltClientTestCaseMixin
 from tests.support.mixins import SaltMinionEventAssertsMixin, SaltReturnAssertsMixin
 from tests.support.runtests import RUNTIME_VARS
+
 # Import Salt libs
 import salt
 import salt.config
+import salt.master
 import salt.minion
 import salt.runner
 import salt.output
 import salt.version
-import salt.utils  # Can be removed once appendproctitle is moved
 import salt.utils.color
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.process
 import salt.utils.stringutils
+import salt.utils.yaml
 import salt.log.setup as salt_log_setup
 from salt.utils.verify import verify_env
 from salt.utils.immutabletypes import freeze
-from salt.utils.nb_popen import NonBlockingPopen
 from salt.exceptions import SaltClientError
 
-try:
-    import salt.master
-except ImportError:
-    # Not required for raet tests
-    pass
-
 # Import 3rd-party libs
-import yaml
 import msgpack
 from salt.ext import six
-from salt.ext.six.moves import cStringIO
 
 try:
     import salt.ext.six.moves.socketserver as socketserver
 except ImportError:
     import socketserver
-
-from tornado import gen
-from tornado import ioloop
 
 # Import salt tests support libs
 from tests.support.processes import SaltMaster, SaltMinion, SaltSyndic
@@ -209,8 +198,6 @@ class TestDaemon(object):
 
         if self.parser.options.transport == 'zeromq':
             self.start_zeromq_daemons()
-        elif self.parser.options.transport == 'raet':
-            self.start_raet_daemons()
         elif self.parser.options.transport == 'tcp':
             self.start_tcp_daemons()
 
@@ -261,7 +248,7 @@ class TestDaemon(object):
 
     def start_daemon(self, cls, opts, start_fun):
         def start(cls, opts, start_fun):
-            salt.utils.appendproctitle('{0}-{1}'.format(self.__class__.__name__, cls.__name__))
+            salt.utils.process.appendproctitle('{0}-{1}'.format(self.__class__.__name__, cls.__name__))
             daemon = cls(opts)
             getattr(daemon, start_fun)()
         process = multiprocessing.Process(target=start,
@@ -292,7 +279,7 @@ class TestDaemon(object):
                 daemon_class=SaltMaster,
                 bin_dir_path=SCRIPT_DIR,
                 fail_hard=True,
-                start_timeout=30)
+                start_timeout=60)
             sys.stdout.write(
                 '\r{0}\r'.format(
                     ' ' * getattr(self.parser.options, 'output_columns', PNUM)
@@ -328,7 +315,7 @@ class TestDaemon(object):
                 daemon_class=SaltMinion,
                 bin_dir_path=SCRIPT_DIR,
                 fail_hard=True,
-                start_timeout=30)
+                start_timeout=60)
             sys.stdout.write(
                 '\r{0}\r'.format(
                     ' ' * getattr(self.parser.options, 'output_columns', PNUM)
@@ -364,7 +351,7 @@ class TestDaemon(object):
                 daemon_class=SaltMinion,
                 bin_dir_path=SCRIPT_DIR,
                 fail_hard=True,
-                start_timeout=30)
+                start_timeout=60)
             sys.stdout.write(
                 '\r{0}\r'.format(
                     ' ' * getattr(self.parser.options, 'output_columns', PNUM)
@@ -400,7 +387,7 @@ class TestDaemon(object):
                 daemon_class=SaltMaster,
                 bin_dir_path=SCRIPT_DIR,
                 fail_hard=True,
-                start_timeout=30)
+                start_timeout=60)
             sys.stdout.write(
                 '\r{0}\r'.format(
                     ' ' * getattr(self.parser.options, 'output_columns', PNUM)
@@ -436,7 +423,7 @@ class TestDaemon(object):
                 daemon_class=SaltSyndic,
                 bin_dir_path=SCRIPT_DIR,
                 fail_hard=True,
-                start_timeout=30)
+                start_timeout=60)
             sys.stdout.write(
                 '\r{0}\r'.format(
                     ' ' * getattr(self.parser.options, 'output_columns', PNUM)
@@ -473,7 +460,7 @@ class TestDaemon(object):
                     daemon_class=SaltProxy,
                     bin_dir_path=SCRIPT_DIR,
                     fail_hard=True,
-                    start_timeout=30)
+                    start_timeout=60)
                 sys.stdout.write(
                     '\r{0}\r'.format(
                         ' ' * getattr(self.parser.options, 'output_columns', PNUM)
@@ -493,31 +480,6 @@ class TestDaemon(object):
                     ' * {LIGHT_RED}Starting salt-proxy ... FAILED!\n{ENDC}'.format(**self.colors)
                 )
                 sys.stdout.flush()
-
-    def start_raet_daemons(self):
-        '''
-        Fire up the raet daemons!
-        '''
-        import salt.daemons.flo
-        self.master_process = self.start_daemon(salt.daemons.flo.IofloMaster,
-                                                self.master_opts,
-                                                'start')
-
-        self.minion_process = self.start_daemon(salt.daemons.flo.IofloMinion,
-                                                self.minion_opts,
-                                                'tune_in')
-
-        self.sub_minion_process = self.start_daemon(salt.daemons.flo.IofloMinion,
-                                                    self.sub_minion_opts,
-                                                    'tune_in')
-        # Wait for the daemons to all spin up
-        time.sleep(5)
-
-        # self.smaster_process = self.start_daemon(salt.daemons.flo.IofloMaster,
-        #                                            self.syndic_master_opts,
-        #                                            'start')
-
-        # no raet syndic daemon yet
 
     start_tcp_daemons = start_zeromq_daemons
 
@@ -673,8 +635,13 @@ class TestDaemon(object):
         else:
             os.environ['SSH_DAEMON_RUNNING'] = 'True'
         roster_path = os.path.join(FILES, 'conf/_ssh/roster')
+        syndic_roster_path = os.path.join(FILES, 'conf/_ssh/syndic_roster')
         shutil.copy(roster_path, RUNTIME_VARS.TMP_CONF_DIR)
+        shutil.copy(syndic_roster_path, os.path.join(RUNTIME_VARS.TMP_SYNDIC_MASTER_CONF_DIR, 'roster'))
         with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'roster'), 'a') as roster:
+            roster.write('  user: {0}\n'.format(RUNTIME_VARS.RUNNING_TESTS_USER))
+            roster.write('  priv: {0}/{1}'.format(RUNTIME_VARS.TMP_CONF_DIR, 'key_test'))
+        with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.TMP_SYNDIC_MASTER_CONF_DIR, 'roster'), 'a') as roster:
             roster.write('  user: {0}\n'.format(RUNTIME_VARS.RUNNING_TESTS_USER))
             roster.write('  priv: {0}/{1}'.format(RUNTIME_VARS.TMP_CONF_DIR, 'key_test'))
         sys.stdout.write(
@@ -739,14 +706,7 @@ class TestDaemon(object):
         master_opts['config_dir'] = RUNTIME_VARS.TMP_CONF_DIR
         master_opts['root_dir'] = os.path.join(TMP, 'rootdir')
         master_opts['pki_dir'] = os.path.join(TMP, 'rootdir', 'pki', 'master')
-
-        # This is the syndic for master
-        # Let's start with a copy of the syndic master configuration
-        syndic_opts = copy.deepcopy(master_opts)
-        # Let's update with the syndic configuration
-        syndic_opts.update(salt.config._read_conf_file(os.path.join(RUNTIME_VARS.CONF_DIR, 'syndic')))
-        syndic_opts['cachedir'] = os.path.join(TMP, 'rootdir', 'cache')
-        syndic_opts['config_dir'] = RUNTIME_VARS.TMP_SYNDIC_MINION_CONF_DIR
+        master_opts['syndic_master'] = 'localhost'
 
         # This minion connects to master
         minion_opts = salt.config._read_conf_file(os.path.join(RUNTIME_VARS.CONF_DIR, 'minion'))
@@ -776,6 +736,15 @@ class TestDaemon(object):
         syndic_master_opts['root_dir'] = os.path.join(TMP, 'rootdir-syndic-master')
         syndic_master_opts['pki_dir'] = os.path.join(TMP, 'rootdir-syndic-master', 'pki', 'master')
 
+        # This is the syndic for master
+        # Let's start with a copy of the syndic master configuration
+        syndic_opts = copy.deepcopy(syndic_master_opts)
+        # Let's update with the syndic configuration
+        syndic_opts.update(salt.config._read_conf_file(os.path.join(RUNTIME_VARS.CONF_DIR, 'syndic')))
+        syndic_opts['config_dir'] = RUNTIME_VARS.TMP_SYNDIC_MINION_CONF_DIR
+        syndic_opts['cachedir'] = os.path.join(TMP, 'rootdir', 'cache')
+        syndic_opts['root_dir'] = os.path.join(TMP, 'rootdir')
+
         # This proxy connects to master
         proxy_opts = salt.config._read_conf_file(os.path.join(CONF_DIR, 'proxy'))
         proxy_opts['cachedir'] = os.path.join(TMP, 'rootdir-proxy', 'cache')
@@ -786,15 +755,6 @@ class TestDaemon(object):
         proxy_opts['hosts.file'] = os.path.join(TMP, 'rootdir-proxy', 'hosts')
         proxy_opts['aliases.file'] = os.path.join(TMP, 'rootdir-proxy', 'aliases')
 
-        if transport == 'raet':
-            master_opts['transport'] = 'raet'
-            master_opts['raet_port'] = 64506
-            minion_opts['transport'] = 'raet'
-            minion_opts['raet_port'] = 64510
-            sub_minion_opts['transport'] = 'raet'
-            sub_minion_opts['raet_port'] = 64520
-            # syndic_master_opts['transport'] = 'raet'
-
         if transport == 'tcp':
             master_opts['transport'] = 'tcp'
             minion_opts['transport'] = 'tcp'
@@ -804,9 +764,31 @@ class TestDaemon(object):
 
         # Set up config options that require internal data
         master_opts['pillar_roots'] = syndic_master_opts['pillar_roots'] = {
-            'base': [os.path.join(FILES, 'pillar', 'base')]
+            'base': [
+                RUNTIME_VARS.TMP_PILLAR_TREE,
+                os.path.join(FILES, 'pillar', 'base'),
+            ]
+        }
+        minion_opts['pillar_roots'] = {
+            'base': [
+                RUNTIME_VARS.TMP_PILLAR_TREE,
+                os.path.join(FILES, 'pillar', 'base'),
+            ]
         }
         master_opts['file_roots'] = syndic_master_opts['file_roots'] = {
+            'base': [
+                os.path.join(FILES, 'file', 'base'),
+                # Let's support runtime created files that can be used like:
+                #   salt://my-temp-file.txt
+                RUNTIME_VARS.TMP_STATE_TREE
+            ],
+            # Alternate root to test __env__ choices
+            'prod': [
+                os.path.join(FILES, 'file', 'prod'),
+                RUNTIME_VARS.TMP_PRODENV_STATE_TREE
+            ]
+        }
+        minion_opts['file_roots'] = {
             'base': [
                 os.path.join(FILES, 'file', 'base'),
                 # Let's support runtime created files that can be used like:
@@ -836,6 +818,8 @@ class TestDaemon(object):
                 opts_dict['ext_pillar'].append(
                     {'cmd_yaml': 'cat {0}'.format(os.path.join(FILES, 'ext.yaml'))})
 
+        # all read, only owner write
+        autosign_file_permissions = stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH | stat.S_IWUSR
         for opts_dict in (master_opts, syndic_master_opts):
             # We need to copy the extension modules into the new master root_dir or
             # it will be prefixed by it
@@ -848,6 +832,14 @@ class TestDaemon(object):
                     new_extension_modules_path
                 )
             opts_dict['extension_modules'] = os.path.join(opts_dict['root_dir'], 'extension_modules')
+
+            # Copy the autosign_file to the new  master root_dir
+            new_autosign_file_path = os.path.join(opts_dict['root_dir'], 'autosign_file')
+            shutil.copyfile(
+                os.path.join(INTEGRATION_TEST_DIR, 'files', 'autosign_file'),
+                new_autosign_file_path
+            )
+            os.chmod(new_autosign_file_path, autosign_file_permissions)
 
         # Point the config values to the correct temporary paths
         for name in ('hosts', 'aliases'):
@@ -903,24 +895,18 @@ class TestDaemon(object):
         for entry in ('master', 'minion', 'sub_minion', 'syndic', 'syndic_master', 'proxy'):
             computed_config = copy.deepcopy(locals()['{0}_opts'.format(entry)])
             with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.TMP_CONF_DIR, entry), 'w') as fp_:
-                fp_.write(yaml.dump(computed_config, default_flow_style=False))
+                salt.utils.yaml.safe_dump(computed_config, fp_, default_flow_style=False)
         sub_minion_computed_config = copy.deepcopy(sub_minion_opts)
         with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.TMP_SUB_MINION_CONF_DIR, 'minion'), 'w') as wfh:
-            wfh.write(
-                yaml.dump(sub_minion_computed_config, default_flow_style=False)
-            )
+            salt.utils.yaml.safe_dump(sub_minion_computed_config, wfh, default_flow_style=False)
         shutil.copyfile(os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'master'), os.path.join(RUNTIME_VARS.TMP_SUB_MINION_CONF_DIR, 'master'))
 
         syndic_master_computed_config = copy.deepcopy(syndic_master_opts)
         with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.TMP_SYNDIC_MASTER_CONF_DIR, 'master'), 'w') as wfh:
-            wfh.write(
-                yaml.dump(syndic_master_computed_config, default_flow_style=False)
-            )
+            salt.utils.yaml.safe_dump(syndic_master_computed_config, wfh, default_flow_style=False)
         syndic_computed_config = copy.deepcopy(syndic_opts)
         with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.TMP_SYNDIC_MINION_CONF_DIR, 'minion'), 'w') as wfh:
-            wfh.write(
-                yaml.dump(syndic_computed_config, default_flow_style=False)
-            )
+            salt.utils.yaml.safe_dump(syndic_computed_config, wfh, default_flow_style=False)
         shutil.copyfile(os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'master'), os.path.join(RUNTIME_VARS.TMP_SYNDIC_MINION_CONF_DIR, 'master'))
         # <---- Transcribe Configuration -----------------------------------------------------------------------------
 
@@ -947,13 +933,11 @@ class TestDaemon(object):
                     os.path.join(master_opts['pki_dir'], 'minions_rejected'),
                     os.path.join(master_opts['pki_dir'], 'minions_denied'),
                     os.path.join(master_opts['cachedir'], 'jobs'),
-                    os.path.join(master_opts['cachedir'], 'raet'),
                     os.path.join(master_opts['root_dir'], 'cache', 'tokens'),
                     os.path.join(syndic_master_opts['pki_dir'], 'minions'),
                     os.path.join(syndic_master_opts['pki_dir'], 'minions_pre'),
                     os.path.join(syndic_master_opts['pki_dir'], 'minions_rejected'),
                     os.path.join(syndic_master_opts['cachedir'], 'jobs'),
-                    os.path.join(syndic_master_opts['cachedir'], 'raet'),
                     os.path.join(syndic_master_opts['root_dir'], 'cache', 'tokens'),
                     os.path.join(master_opts['pki_dir'], 'accepted'),
                     os.path.join(master_opts['pki_dir'], 'rejected'),
@@ -961,16 +945,13 @@ class TestDaemon(object):
                     os.path.join(syndic_master_opts['pki_dir'], 'accepted'),
                     os.path.join(syndic_master_opts['pki_dir'], 'rejected'),
                     os.path.join(syndic_master_opts['pki_dir'], 'pending'),
-                    os.path.join(syndic_master_opts['cachedir'], 'raet'),
 
                     os.path.join(minion_opts['pki_dir'], 'accepted'),
                     os.path.join(minion_opts['pki_dir'], 'rejected'),
                     os.path.join(minion_opts['pki_dir'], 'pending'),
-                    os.path.join(minion_opts['cachedir'], 'raet'),
                     os.path.join(sub_minion_opts['pki_dir'], 'accepted'),
                     os.path.join(sub_minion_opts['pki_dir'], 'rejected'),
                     os.path.join(sub_minion_opts['pki_dir'], 'pending'),
-                    os.path.join(sub_minion_opts['cachedir'], 'raet'),
                     os.path.dirname(master_opts['log_file']),
                     minion_opts['extension_modules'],
                     sub_minion_opts['extension_modules'],
@@ -980,10 +961,13 @@ class TestDaemon(object):
                     sub_minion_opts['sock_dir'],
                     minion_opts['sock_dir'],
                     RUNTIME_VARS.TMP_STATE_TREE,
+                    RUNTIME_VARS.TMP_PILLAR_TREE,
                     RUNTIME_VARS.TMP_PRODENV_STATE_TREE,
                     TMP,
                     ],
-                   RUNTIME_VARS.RUNNING_TESTS_USER)
+                   RUNTIME_VARS.RUNNING_TESTS_USER,
+                   root_dir=master_opts['root_dir'],
+                   )
 
         cls.master_opts = master_opts
         cls.minion_opts = minion_opts
@@ -1091,9 +1075,13 @@ class TestDaemon(object):
             os.chmod(path, stat.S_IRWXU)
             func(path)
 
-        for dirname in (TMP, RUNTIME_VARS.TMP_STATE_TREE, RUNTIME_VARS.TMP_PRODENV_STATE_TREE):
+        for dirname in (TMP, RUNTIME_VARS.TMP_STATE_TREE,
+                        RUNTIME_VARS.TMP_PILLAR_TREE, RUNTIME_VARS.TMP_PRODENV_STATE_TREE):
             if os.path.isdir(dirname):
-                shutil.rmtree(dirname, onerror=remove_readonly)
+                try:
+                    shutil.rmtree(six.text_type(dirname), onerror=remove_readonly)
+                except Exception:
+                    log.exception('Failed to remove directory: %s', dirname)
 
     def wait_for_jid(self, targets, jid, timeout=120):
         time.sleep(1)  # Allow some time for minions to accept jobs
@@ -1143,7 +1131,7 @@ class TestDaemon(object):
         ]
 
     def wait_for_minion_connections(self, targets, timeout):
-        salt.utils.appendproctitle('WaitForMinionConnections')
+        salt.utils.process.appendproctitle('WaitForMinionConnections')
         sys.stdout.write(
             ' {LIGHT_BLUE}*{ENDC} Waiting at most {0} for minions({1}) to '
             'connect back\n'.format(
@@ -1286,13 +1274,13 @@ class TestDaemon(object):
         return True
 
     def sync_minion_states(self, targets, timeout=None):
-        salt.utils.appendproctitle('SyncMinionStates')
+        salt.utils.process.appendproctitle('SyncMinionStates')
         self.sync_minion_modules_('states', targets, timeout=timeout)
 
     def sync_minion_modules(self, targets, timeout=None):
-        salt.utils.appendproctitle('SyncMinionModules')
+        salt.utils.process.appendproctitle('SyncMinionModules')
         self.sync_minion_modules_('modules', targets, timeout=timeout)
 
     def sync_minion_grains(self, targets, timeout=None):
-        salt.utils.appendproctitle('SyncMinionGrains')
+        salt.utils.process.appendproctitle('SyncMinionGrains')
         self.sync_minion_modules_('grains', targets, timeout=timeout)

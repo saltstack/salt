@@ -6,39 +6,51 @@ Module for handling kubernetes calls.
 :configuration: The k8s API settings are provided either in a pillar, in
     the minion's config file, or in master's config file::
 
-        kubernetes.user: admin
-        kubernetes.password: verybadpass
-        kubernetes.api_url: 'http://127.0.0.1:8080'
-        kubernetes.certificate-authority-data: '...'
-        kubernetes.client-certificate-data: '....n
-        kubernetes.client-key-data: '...'
-        kubernetes.certificate-authority-file: '/path/to/ca.crt'
-        kubernetes.client-certificate-file: '/path/to/client.crt'
-        kubernetes.client-key-file: '/path/to/client.key'
+        kubernetes.kubeconfig: '/path/to/kubeconfig'
+        kubernetes.kubeconfig-data: '<base64 encoded kubeconfig content'
+        kubernetes.context: 'context'
 
+These settings can be overridden by adding `context and `kubeconfig` or
+`kubeconfig_data` parameters when calling a function.
 
-These settings can be also overrided by adding `api_url`, `api_user`,
-`api_password`, `api_certificate_authority_file`, `api_client_certificate_file`
-or `api_client_key_file` parameters when calling a function:
+The data format for `kubernetes.kubeconfig-data` value is the content of
+`kubeconfig` base64 encoded in one line.
 
-The data format for `kubernetes.*-data` values is the same as provided in `kubeconfig`.
-It's base64 encoded certificates/keys in one line.
-
-For an item only one field should be provided. Either a `data` or a `file` entry.
-In case both are provided the `file` entry is prefered.
+Only `kubeconfig` or `kubeconfig-data` should be provided. In case both are
+provided `kubeconfig` entry is preferred.
 
 .. code-block:: bash
-    salt '*' kubernetes.nodes api_url=http://k8s-api-server:port api_user=myuser api_password=pass
+
+    salt '*' kubernetes.nodes kubeconfig=/etc/salt/k8s/kubeconfig context=minikube
 
 .. versionadded: 2017.7.0
+.. versionchanged:: Fluorine
+
+.. warning::
+
+    Configuration options changed in Fluorine. The following configuration options have been removed:
+
+    - kubernetes.user
+    - kubernetes.password
+    - kubernetes.api_url
+    - kubernetes.certificate-authority-data/file
+    - kubernetes.client-certificate-data/file
+    - kubernetes.client-key-data/file
+
+    Please use now:
+
+    - kubernetes.kubeconfig or kubernetes.kubeconfig-data
+    - kubernetes.context
+
 '''
 
 # Import Python Futures
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
+import sys
 import os.path
 import base64
+import errno
 import logging
-import yaml
 import tempfile
 import signal
 from time import sleep
@@ -46,8 +58,12 @@ from contextlib import contextmanager
 
 from salt.exceptions import CommandExecutionError
 from salt.ext.six import iteritems
+from salt.ext import six
 import salt.utils.files
+import salt.utils.platform
 import salt.utils.templates
+import salt.utils.versions
+import salt.utils.yaml
 from salt.exceptions import TimeoutError
 from salt.ext.six.moves import range  # pylint: disable=import-error
 
@@ -83,7 +99,7 @@ def __virtual__():
     return False, 'python kubernetes library not found'
 
 
-if not salt.utils.is_windows():
+if not salt.utils.platform.is_windows():
     @contextmanager
     def _time_limit(seconds):
         def signal_handler(signum, frame):
@@ -98,10 +114,9 @@ if not salt.utils.is_windows():
     POLLING_TIME_LIMIT = 30
 
 
-# pylint: disable=no-member
-def _setup_conn(**kwargs):
+def _setup_conn_old(**kwargs):
     '''
-    Setup kubernetes API connection singleton
+    Setup kubernetes API connection singleton the old way
     '''
     host = __salt__['config.option']('kubernetes.api_url',
                                      'http://localhost:8080')
@@ -164,24 +179,73 @@ def _setup_conn(**kwargs):
 
     if client_key_file:
         kubernetes.client.configuration.key_file = client_key_file
-    if client_key:
+    elif client_key:
         with tempfile.NamedTemporaryFile(prefix='salt-kube-', delete=False) as k:
             k.write(base64.b64decode(client_key))
             kubernetes.client.configuration.key_file = k.name
     else:
         kubernetes.client.configuration.key_file = None
+    return {}
+
+
+# pylint: disable=no-member
+def _setup_conn(**kwargs):
+    '''
+    Setup kubernetes API connection singleton
+    '''
+    kubeconfig = kwargs.get('kubeconfig') or __salt__['config.option']('kubernetes.kubeconfig')
+    kubeconfig_data = kwargs.get('kubeconfig_data') or __salt__['config.option']('kubernetes.kubeconfig-data')
+    context = kwargs.get('context') or __salt__['config.option']('kubernetes.context')
+
+    if (kubeconfig_data and not kubeconfig) or (kubeconfig_data and kwargs.get('kubeconfig_data')):
+        with tempfile.NamedTemporaryFile(prefix='salt-kubeconfig-', delete=False) as kcfg:
+            kcfg.write(base64.b64decode(kubeconfig_data))
+            kubeconfig = kcfg.name
+
+    if not (kubeconfig and context):
+        if kwargs.get('api_url') or __salt__['config.option']('kubernetes.api_url'):
+            salt.utils.versions.warn_until('Sodium',
+                    'Kubernetes configuration via url, certificate, username and password will be removed in Sodiom. '
+                    'Use \'kubeconfig\' and \'context\' instead.')
+            try:
+                return _setup_conn_old(**kwargs)
+            except Exception:
+                raise CommandExecutionError('Old style kubernetes configuration is only supported up to python-kubernetes 2.0.0')
+        else:
+            raise CommandExecutionError('Invalid kubernetes configuration. Parameter \'kubeconfig\' and \'context\' are required.')
+    kubernetes.config.load_kube_config(config_file=kubeconfig, context=context)
+
+    # The return makes unit testing easier
+    return {'kubeconfig': kubeconfig, 'context': context}
+
+
+def _cleanup_old(**kwargs):
+    try:
+        ca = kubernetes.client.configuration.ssl_ca_cert
+        cert = kubernetes.client.configuration.cert_file
+        key = kubernetes.client.configuration.key_file
+        if cert and os.path.exists(cert) and os.path.basename(cert).startswith('salt-kube-'):
+            salt.utils.files.safe_rm(cert)
+        if key and os.path.exists(key) and os.path.basename(key).startswith('salt-kube-'):
+            salt.utils.files.safe_rm(key)
+        if ca and os.path.exists(ca) and os.path.basename(ca).startswith('salt-kube-'):
+            salt.utils.files.safe_rm(ca)
+    except Exception:
+        pass
 
 
 def _cleanup(**kwargs):
-    ca = kubernetes.client.configuration.ssl_ca_cert
-    cert = kubernetes.client.configuration.cert_file
-    key = kubernetes.client.configuration.key_file
-    if cert and os.path.exists(cert) and os.path.basename(cert).startswith('salt-kube-'):
-        salt.utils.safe_rm(cert)
-    if key and os.path.exists(key) and os.path.basename(key).startswith('salt-kube-'):
-        salt.utils.safe_rm(key)
-    if ca and os.path.exists(ca) and os.path.basename(ca).startswith('salt-kube-'):
-        salt.utils.safe_rm(ca)
+    if not kwargs:
+        return _cleanup_old(**kwargs)
+
+    if 'kubeconfig' in kwargs:
+        kubeconfig = kwargs.get('kubeconfig')
+        if kubeconfig and os.path.basename(kubeconfig).startswith('salt-kubeconfig-'):
+            try:
+                os.unlink(kubeconfig)
+            except (IOError, OSError) as err:
+                if err.errno != errno.ENOENT:
+                    log.exception(err)
 
 
 def ping(**kwargs):
@@ -208,9 +272,9 @@ def nodes(**kwargs):
     CLI Examples::
 
         salt '*' kubernetes.nodes
-        salt '*' kubernetes.nodes api_url=http://myhost:port api_user=my-user
+        salt '*' kubernetes.nodes kubeconfig=/etc/salt/k8s/kubeconfig context=minikube
     '''
-    _setup_conn(**kwargs)
+    cfg = _setup_conn(**kwargs)
     try:
         api_instance = kubernetes.client.CoreV1Api()
         api_response = api_instance.list_node()
@@ -220,12 +284,10 @@ def nodes(**kwargs):
         if isinstance(exc, ApiException) and exc.status == 404:
             return None
         else:
-            log.exception(
-                'Exception when calling CoreV1Api->list_node: {0}'.format(exc)
-            )
+            log.exception('Exception when calling CoreV1Api->list_node')
             raise CommandExecutionError(exc)
     finally:
-        _cleanup()
+        _cleanup(**cfg)
 
 
 def node(name, **kwargs):
@@ -236,7 +298,7 @@ def node(name, **kwargs):
 
         salt '*' kubernetes.node name='minikube'
     '''
-    _setup_conn(**kwargs)
+    cfg = _setup_conn(**kwargs)
     try:
         api_instance = kubernetes.client.CoreV1Api()
         api_response = api_instance.list_node()
@@ -244,12 +306,10 @@ def node(name, **kwargs):
         if isinstance(exc, ApiException) and exc.status == 404:
             return None
         else:
-            log.exception(
-                'Exception when calling CoreV1Api->list_node: {0}'.format(exc)
-            )
+            log.exception('Exception when calling CoreV1Api->list_node')
             raise CommandExecutionError(exc)
     finally:
-        _cleanup()
+        _cleanup(**cfg)
 
     for k8s_node in api_response.items:
         if k8s_node.metadata.name == name:
@@ -269,7 +329,7 @@ def node_labels(name, **kwargs):
     match = node(name, **kwargs)
 
     if match is not None:
-        return match.metadata.labels
+        return match['metadata']['labels']
 
     return {}
 
@@ -285,7 +345,7 @@ def node_add_label(node_name, label_name, label_value, **kwargs):
         salt '*' kubernetes.node_add_label node_name="minikube" \
             label_name="foo" label_value="bar"
     '''
-    _setup_conn(**kwargs)
+    cfg = _setup_conn(**kwargs)
     try:
         api_instance = kubernetes.client.CoreV1Api()
         body = {
@@ -300,12 +360,10 @@ def node_add_label(node_name, label_name, label_value, **kwargs):
         if isinstance(exc, ApiException) and exc.status == 404:
             return None
         else:
-            log.exception(
-                'Exception when calling CoreV1Api->patch_node: {0}'.format(exc)
-            )
+            log.exception('Exception when calling CoreV1Api->patch_node')
             raise CommandExecutionError(exc)
     finally:
-        _cleanup()
+        _cleanup(**cfg)
 
     return None
 
@@ -320,7 +378,7 @@ def node_remove_label(node_name, label_name, **kwargs):
         salt '*' kubernetes.node_remove_label node_name="minikube" \
             label_name="foo"
     '''
-    _setup_conn(**kwargs)
+    cfg = _setup_conn(**kwargs)
     try:
         api_instance = kubernetes.client.CoreV1Api()
         body = {
@@ -335,12 +393,10 @@ def node_remove_label(node_name, label_name, **kwargs):
         if isinstance(exc, ApiException) and exc.status == 404:
             return None
         else:
-            log.exception(
-                'Exception when calling CoreV1Api->patch_node: {0}'.format(exc)
-            )
+            log.exception('Exception when calling CoreV1Api->patch_node')
             raise CommandExecutionError(exc)
     finally:
-        _cleanup()
+        _cleanup(**cfg)
 
     return None
 
@@ -352,9 +408,9 @@ def namespaces(**kwargs):
     CLI Examples::
 
         salt '*' kubernetes.namespaces
-        salt '*' kubernetes.namespaces api_url=http://myhost:port api_user=my-user
+        salt '*' kubernetes.namespaces kubeconfig=/etc/salt/k8s/kubeconfig context=minikube
     '''
-    _setup_conn(**kwargs)
+    cfg = _setup_conn(**kwargs)
     try:
         api_instance = kubernetes.client.CoreV1Api()
         api_response = api_instance.list_namespace()
@@ -364,13 +420,10 @@ def namespaces(**kwargs):
         if isinstance(exc, ApiException) and exc.status == 404:
             return None
         else:
-            log.exception(
-                'Exception when calling CoreV1Api->list_namespace: '
-                '{0}'.format(exc)
-            )
+            log.exception('Exception when calling CoreV1Api->list_namespace')
             raise CommandExecutionError(exc)
     finally:
-        _cleanup()
+        _cleanup(**cfg)
 
 
 def deployments(namespace='default', **kwargs):
@@ -382,7 +435,7 @@ def deployments(namespace='default', **kwargs):
         salt '*' kubernetes.deployments
         salt '*' kubernetes.deployments namespace=default
     '''
-    _setup_conn(**kwargs)
+    cfg = _setup_conn(**kwargs)
     try:
         api_instance = kubernetes.client.ExtensionsV1beta1Api()
         api_response = api_instance.list_namespaced_deployment(namespace)
@@ -394,12 +447,11 @@ def deployments(namespace='default', **kwargs):
         else:
             log.exception(
                 'Exception when calling '
-                'ExtensionsV1beta1Api->list_namespaced_deployment: '
-                '{0}'.format(exc)
+                'ExtensionsV1beta1Api->list_namespaced_deployment'
             )
             raise CommandExecutionError(exc)
     finally:
-        _cleanup()
+        _cleanup(**cfg)
 
 
 def services(namespace='default', **kwargs):
@@ -411,7 +463,7 @@ def services(namespace='default', **kwargs):
         salt '*' kubernetes.services
         salt '*' kubernetes.services namespace=default
     '''
-    _setup_conn(**kwargs)
+    cfg = _setup_conn(**kwargs)
     try:
         api_instance = kubernetes.client.CoreV1Api()
         api_response = api_instance.list_namespaced_service(namespace)
@@ -423,11 +475,11 @@ def services(namespace='default', **kwargs):
         else:
             log.exception(
                 'Exception when calling '
-                'CoreV1Api->list_namespaced_service: {0}'.format(exc)
+                'CoreV1Api->list_namespaced_service'
             )
             raise CommandExecutionError(exc)
     finally:
-        _cleanup()
+        _cleanup(**cfg)
 
 
 def pods(namespace='default', **kwargs):
@@ -439,7 +491,7 @@ def pods(namespace='default', **kwargs):
         salt '*' kubernetes.pods
         salt '*' kubernetes.pods namespace=default
     '''
-    _setup_conn(**kwargs)
+    cfg = _setup_conn(**kwargs)
     try:
         api_instance = kubernetes.client.CoreV1Api()
         api_response = api_instance.list_namespaced_pod(namespace)
@@ -451,11 +503,11 @@ def pods(namespace='default', **kwargs):
         else:
             log.exception(
                 'Exception when calling '
-                'CoreV1Api->list_namespaced_pod: {0}'.format(exc)
+                'CoreV1Api->list_namespaced_pod'
             )
             raise CommandExecutionError(exc)
     finally:
-        _cleanup()
+        _cleanup(**cfg)
 
 
 def secrets(namespace='default', **kwargs):
@@ -467,7 +519,7 @@ def secrets(namespace='default', **kwargs):
         salt '*' kubernetes.secrets
         salt '*' kubernetes.secrets namespace=default
     '''
-    _setup_conn(**kwargs)
+    cfg = _setup_conn(**kwargs)
     try:
         api_instance = kubernetes.client.CoreV1Api()
         api_response = api_instance.list_namespaced_secret(namespace)
@@ -479,11 +531,11 @@ def secrets(namespace='default', **kwargs):
         else:
             log.exception(
                 'Exception when calling '
-                'CoreV1Api->list_namespaced_secret: {0}'.format(exc)
+                'CoreV1Api->list_namespaced_secret'
             )
             raise CommandExecutionError(exc)
     finally:
-        _cleanup()
+        _cleanup(**cfg)
 
 
 def configmaps(namespace='default', **kwargs):
@@ -495,7 +547,7 @@ def configmaps(namespace='default', **kwargs):
         salt '*' kubernetes.configmaps
         salt '*' kubernetes.configmaps namespace=default
     '''
-    _setup_conn(**kwargs)
+    cfg = _setup_conn(**kwargs)
     try:
         api_instance = kubernetes.client.CoreV1Api()
         api_response = api_instance.list_namespaced_config_map(namespace)
@@ -507,11 +559,11 @@ def configmaps(namespace='default', **kwargs):
         else:
             log.exception(
                 'Exception when calling '
-                'CoreV1Api->list_namespaced_config_map: {0}'.format(exc)
+                'CoreV1Api->list_namespaced_config_map'
             )
             raise CommandExecutionError(exc)
     finally:
-        _cleanup()
+        _cleanup(**cfg)
 
 
 def show_deployment(name, namespace='default', **kwargs):
@@ -523,7 +575,7 @@ def show_deployment(name, namespace='default', **kwargs):
         salt '*' kubernetes.show_deployment my-nginx default
         salt '*' kubernetes.show_deployment name=my-nginx namespace=default
     '''
-    _setup_conn(**kwargs)
+    cfg = _setup_conn(**kwargs)
     try:
         api_instance = kubernetes.client.ExtensionsV1beta1Api()
         api_response = api_instance.read_namespaced_deployment(name, namespace)
@@ -535,12 +587,11 @@ def show_deployment(name, namespace='default', **kwargs):
         else:
             log.exception(
                 'Exception when calling '
-                'ExtensionsV1beta1Api->read_namespaced_deployment: '
-                '{0}'.format(exc)
+                'ExtensionsV1beta1Api->read_namespaced_deployment'
             )
             raise CommandExecutionError(exc)
     finally:
-        _cleanup()
+        _cleanup(**cfg)
 
 
 def show_service(name, namespace='default', **kwargs):
@@ -552,7 +603,7 @@ def show_service(name, namespace='default', **kwargs):
         salt '*' kubernetes.show_service my-nginx default
         salt '*' kubernetes.show_service name=my-nginx namespace=default
     '''
-    _setup_conn(**kwargs)
+    cfg = _setup_conn(**kwargs)
     try:
         api_instance = kubernetes.client.CoreV1Api()
         api_response = api_instance.read_namespaced_service(name, namespace)
@@ -564,11 +615,11 @@ def show_service(name, namespace='default', **kwargs):
         else:
             log.exception(
                 'Exception when calling '
-                'CoreV1Api->read_namespaced_service: {0}'.format(exc)
+                'CoreV1Api->read_namespaced_service'
             )
             raise CommandExecutionError(exc)
     finally:
-        _cleanup()
+        _cleanup(**cfg)
 
 
 def show_pod(name, namespace='default', **kwargs):
@@ -580,7 +631,7 @@ def show_pod(name, namespace='default', **kwargs):
         salt '*' kubernetes.show_pod guestbook-708336848-fqr2x
         salt '*' kubernetes.show_pod guestbook-708336848-fqr2x namespace=default
     '''
-    _setup_conn(**kwargs)
+    cfg = _setup_conn(**kwargs)
     try:
         api_instance = kubernetes.client.CoreV1Api()
         api_response = api_instance.read_namespaced_pod(name, namespace)
@@ -592,11 +643,11 @@ def show_pod(name, namespace='default', **kwargs):
         else:
             log.exception(
                 'Exception when calling '
-                'CoreV1Api->read_namespaced_pod: {0}'.format(exc)
+                'CoreV1Api->read_namespaced_pod'
             )
             raise CommandExecutionError(exc)
     finally:
-        _cleanup()
+        _cleanup(**cfg)
 
 
 def show_namespace(name, **kwargs):
@@ -607,7 +658,7 @@ def show_namespace(name, **kwargs):
 
         salt '*' kubernetes.show_namespace kube-system
     '''
-    _setup_conn(**kwargs)
+    cfg = _setup_conn(**kwargs)
     try:
         api_instance = kubernetes.client.CoreV1Api()
         api_response = api_instance.read_namespace(name)
@@ -619,11 +670,11 @@ def show_namespace(name, **kwargs):
         else:
             log.exception(
                 'Exception when calling '
-                'CoreV1Api->read_namespace: {0}'.format(exc)
+                'CoreV1Api->read_namespace'
             )
             raise CommandExecutionError(exc)
     finally:
-        _cleanup()
+        _cleanup(**cfg)
 
 
 def show_secret(name, namespace='default', decode=False, **kwargs):
@@ -638,7 +689,7 @@ def show_secret(name, namespace='default', decode=False, **kwargs):
         salt '*' kubernetes.show_secret name=confidential namespace=default
         salt '*' kubernetes.show_secret name=confidential decode=True
     '''
-    _setup_conn(**kwargs)
+    cfg = _setup_conn(**kwargs)
     try:
         api_instance = kubernetes.client.CoreV1Api()
         api_response = api_instance.read_namespaced_secret(name, namespace)
@@ -655,12 +706,11 @@ def show_secret(name, namespace='default', decode=False, **kwargs):
         else:
             log.exception(
                 'Exception when calling '
-                'CoreV1Api->read_namespaced_secret: '
-                '{0}'.format(exc)
+                'CoreV1Api->read_namespaced_secret'
             )
             raise CommandExecutionError(exc)
     finally:
-        _cleanup()
+        _cleanup(**cfg)
 
 
 def show_configmap(name, namespace='default', **kwargs):
@@ -672,7 +722,7 @@ def show_configmap(name, namespace='default', **kwargs):
         salt '*' kubernetes.show_configmap game-config default
         salt '*' kubernetes.show_configmap name=game-config namespace=default
     '''
-    _setup_conn(**kwargs)
+    cfg = _setup_conn(**kwargs)
     try:
         api_instance = kubernetes.client.CoreV1Api()
         api_response = api_instance.read_namespaced_config_map(
@@ -686,12 +736,11 @@ def show_configmap(name, namespace='default', **kwargs):
         else:
             log.exception(
                 'Exception when calling '
-                'CoreV1Api->read_namespaced_config_map: '
-                '{0}'.format(exc)
+                'CoreV1Api->read_namespaced_config_map'
             )
             raise CommandExecutionError(exc)
     finally:
-        _cleanup()
+        _cleanup(**cfg)
 
 
 def delete_deployment(name, namespace='default', **kwargs):
@@ -703,7 +752,7 @@ def delete_deployment(name, namespace='default', **kwargs):
         salt '*' kubernetes.delete_deployment my-nginx
         salt '*' kubernetes.delete_deployment name=my-nginx namespace=default
     '''
-    _setup_conn(**kwargs)
+    cfg = _setup_conn(**kwargs)
     body = kubernetes.client.V1DeleteOptions(orphan_dependents=True)
 
     try:
@@ -713,7 +762,7 @@ def delete_deployment(name, namespace='default', **kwargs):
             namespace=namespace,
             body=body)
         mutable_api_response = api_response.to_dict()
-        if not salt.utils.is_windows():
+        if not salt.utils.platform.is_windows():
             try:
                 with _time_limit(POLLING_TIME_LIMIT):
                     while show_deployment(name, namespace) is not None:
@@ -742,12 +791,11 @@ def delete_deployment(name, namespace='default', **kwargs):
         else:
             log.exception(
                 'Exception when calling '
-                'ExtensionsV1beta1Api->delete_namespaced_deployment: '
-                '{0}'.format(exc)
+                'ExtensionsV1beta1Api->delete_namespaced_deployment'
             )
             raise CommandExecutionError(exc)
     finally:
-        _cleanup()
+        _cleanup(**cfg)
 
 
 def delete_service(name, namespace='default', **kwargs):
@@ -759,7 +807,7 @@ def delete_service(name, namespace='default', **kwargs):
         salt '*' kubernetes.delete_service my-nginx default
         salt '*' kubernetes.delete_service name=my-nginx namespace=default
     '''
-    _setup_conn(**kwargs)
+    cfg = _setup_conn(**kwargs)
 
     try:
         api_instance = kubernetes.client.CoreV1Api()
@@ -773,12 +821,11 @@ def delete_service(name, namespace='default', **kwargs):
             return None
         else:
             log.exception(
-                'Exception when calling CoreV1Api->delete_namespaced_service: '
-                '{0}'.format(exc)
+                'Exception when calling CoreV1Api->delete_namespaced_service'
             )
             raise CommandExecutionError(exc)
     finally:
-        _cleanup()
+        _cleanup(**cfg)
 
 
 def delete_pod(name, namespace='default', **kwargs):
@@ -790,7 +837,7 @@ def delete_pod(name, namespace='default', **kwargs):
         salt '*' kubernetes.delete_pod guestbook-708336848-5nl8c default
         salt '*' kubernetes.delete_pod name=guestbook-708336848-5nl8c namespace=default
     '''
-    _setup_conn(**kwargs)
+    cfg = _setup_conn(**kwargs)
     body = kubernetes.client.V1DeleteOptions(orphan_dependents=True)
 
     try:
@@ -807,11 +854,11 @@ def delete_pod(name, namespace='default', **kwargs):
         else:
             log.exception(
                 'Exception when calling '
-                'CoreV1Api->delete_namespaced_pod: {0}'.format(exc)
+                'CoreV1Api->delete_namespaced_pod'
             )
             raise CommandExecutionError(exc)
     finally:
-        _cleanup()
+        _cleanup(**cfg)
 
 
 def delete_namespace(name, **kwargs):
@@ -823,7 +870,7 @@ def delete_namespace(name, **kwargs):
         salt '*' kubernetes.delete_namespace salt
         salt '*' kubernetes.delete_namespace name=salt
     '''
-    _setup_conn(**kwargs)
+    cfg = _setup_conn(**kwargs)
     body = kubernetes.client.V1DeleteOptions(orphan_dependents=True)
 
     try:
@@ -836,12 +883,11 @@ def delete_namespace(name, **kwargs):
         else:
             log.exception(
                 'Exception when calling '
-                'CoreV1Api->delete_namespace: '
-                '{0}'.format(exc)
+                'CoreV1Api->delete_namespace'
             )
             raise CommandExecutionError(exc)
     finally:
-        _cleanup()
+        _cleanup(**cfg)
 
 
 def delete_secret(name, namespace='default', **kwargs):
@@ -853,7 +899,7 @@ def delete_secret(name, namespace='default', **kwargs):
         salt '*' kubernetes.delete_secret confidential default
         salt '*' kubernetes.delete_secret name=confidential namespace=default
     '''
-    _setup_conn(**kwargs)
+    cfg = _setup_conn(**kwargs)
     body = kubernetes.client.V1DeleteOptions(orphan_dependents=True)
 
     try:
@@ -869,12 +915,11 @@ def delete_secret(name, namespace='default', **kwargs):
             return None
         else:
             log.exception(
-                'Exception when calling CoreV1Api->delete_namespaced_secret: '
-                '{0}'.format(exc)
+                'Exception when calling CoreV1Api->delete_namespaced_secret'
             )
             raise CommandExecutionError(exc)
     finally:
-        _cleanup()
+        _cleanup(**cfg)
 
 
 def delete_configmap(name, namespace='default', **kwargs):
@@ -886,7 +931,7 @@ def delete_configmap(name, namespace='default', **kwargs):
         salt '*' kubernetes.delete_configmap settings default
         salt '*' kubernetes.delete_configmap name=settings namespace=default
     '''
-    _setup_conn(**kwargs)
+    cfg = _setup_conn(**kwargs)
     body = kubernetes.client.V1DeleteOptions(orphan_dependents=True)
 
     try:
@@ -903,12 +948,11 @@ def delete_configmap(name, namespace='default', **kwargs):
         else:
             log.exception(
                 'Exception when calling '
-                'CoreV1Api->delete_namespaced_config_map: '
-                '{0}'.format(exc)
+                'CoreV1Api->delete_namespaced_config_map'
             )
             raise CommandExecutionError(exc)
     finally:
-        _cleanup()
+        _cleanup(**cfg)
 
 
 def create_deployment(
@@ -935,7 +979,7 @@ def create_deployment(
         template=template,
         saltenv=saltenv)
 
-    _setup_conn(**kwargs)
+    cfg = _setup_conn(**kwargs)
 
     try:
         api_instance = kubernetes.client.ExtensionsV1beta1Api()
@@ -949,12 +993,11 @@ def create_deployment(
         else:
             log.exception(
                 'Exception when calling '
-                'ExtensionsV1beta1Api->create_namespaced_deployment: '
-                '{0}'.format(exc)
+                'ExtensionsV1beta1Api->create_namespaced_deployment'
             )
             raise CommandExecutionError(exc)
     finally:
-        _cleanup()
+        _cleanup(**cfg)
 
 
 def create_pod(
@@ -981,7 +1024,7 @@ def create_pod(
         template=template,
         saltenv=saltenv)
 
-    _setup_conn(**kwargs)
+    cfg = _setup_conn(**kwargs)
 
     try:
         api_instance = kubernetes.client.CoreV1Api()
@@ -995,12 +1038,11 @@ def create_pod(
         else:
             log.exception(
                 'Exception when calling '
-                'CoreV1Api->create_namespaced_pod: '
-                '{0}'.format(exc)
+                'CoreV1Api->create_namespaced_pod'
             )
             raise CommandExecutionError(exc)
     finally:
-        _cleanup()
+        _cleanup(**cfg)
 
 
 def create_service(
@@ -1027,7 +1069,7 @@ def create_service(
         template=template,
         saltenv=saltenv)
 
-    _setup_conn(**kwargs)
+    cfg = _setup_conn(**kwargs)
 
     try:
         api_instance = kubernetes.client.CoreV1Api()
@@ -1041,23 +1083,31 @@ def create_service(
         else:
             log.exception(
                 'Exception when calling '
-                'CoreV1Api->create_namespaced_service: {0}'.format(exc)
+                'CoreV1Api->create_namespaced_service'
             )
             raise CommandExecutionError(exc)
     finally:
-        _cleanup()
+        _cleanup(**cfg)
 
 
 def create_secret(
         name,
-        namespace,
-        data,
-        source,
-        template,
-        saltenv,
+        namespace='default',
+        data=None,
+        source=None,
+        template=None,
+        saltenv='base',
         **kwargs):
     '''
     Creates the kubernetes secret as defined by the user.
+
+    CLI Examples::
+
+        salt 'minion1' kubernetes.create_secret \
+            passwords default '{"db": "letmein"}'
+
+        salt 'minion2' kubernetes.create_secret \
+            name=passwords namespace=default data='{"db": "letmein"}'
     '''
     if source:
         data = __read_and_render_yaml_file(source, template, saltenv)
@@ -1074,7 +1124,7 @@ def create_secret(
         metadata=__dict_to_object_meta(name, namespace, {}),
         data=data)
 
-    _setup_conn(**kwargs)
+    cfg = _setup_conn(**kwargs)
 
     try:
         api_instance = kubernetes.client.CoreV1Api()
@@ -1088,23 +1138,31 @@ def create_secret(
         else:
             log.exception(
                 'Exception when calling '
-                'CoreV1Api->create_namespaced_secret: {0}'.format(exc)
+                'CoreV1Api->create_namespaced_secret'
             )
             raise CommandExecutionError(exc)
     finally:
-        _cleanup()
+        _cleanup(**cfg)
 
 
 def create_configmap(
         name,
         namespace,
         data,
-        source,
-        template,
-        saltenv,
+        source=None,
+        template=None,
+        saltenv='base',
         **kwargs):
     '''
     Creates the kubernetes configmap as defined by the user.
+
+    CLI Examples::
+
+        salt 'minion1' kubernetes.create_configmap \
+            settings default '{"example.conf": "# example file"}'
+
+        salt 'minion2' kubernetes.create_configmap \
+            name=settings namespace=default data='{"example.conf": "# example file"}'
     '''
     if source:
         data = __read_and_render_yaml_file(source, template, saltenv)
@@ -1117,7 +1175,7 @@ def create_configmap(
         metadata=__dict_to_object_meta(name, namespace, {}),
         data=data)
 
-    _setup_conn(**kwargs)
+    cfg = _setup_conn(**kwargs)
 
     try:
         api_instance = kubernetes.client.CoreV1Api()
@@ -1131,11 +1189,11 @@ def create_configmap(
         else:
             log.exception(
                 'Exception when calling '
-                'CoreV1Api->create_namespaced_config_map: {0}'.format(exc)
+                'CoreV1Api->create_namespaced_config_map'
             )
             raise CommandExecutionError(exc)
     finally:
-        _cleanup()
+        _cleanup(**cfg)
 
 
 def create_namespace(
@@ -1153,7 +1211,7 @@ def create_namespace(
     body = kubernetes.client.V1Namespace(metadata=meta_obj)
     body.metadata.name = name
 
-    _setup_conn(**kwargs)
+    cfg = _setup_conn(**kwargs)
 
     try:
         api_instance = kubernetes.client.CoreV1Api()
@@ -1166,12 +1224,11 @@ def create_namespace(
         else:
             log.exception(
                 'Exception when calling '
-                'CoreV1Api->create_namespace: '
-                '{0}'.format(exc)
+                'CoreV1Api->create_namespace'
             )
             raise CommandExecutionError(exc)
     finally:
-        _cleanup()
+        _cleanup(**cfg)
 
 
 def replace_deployment(name,
@@ -1198,7 +1255,7 @@ def replace_deployment(name,
         template=template,
         saltenv=saltenv)
 
-    _setup_conn(**kwargs)
+    cfg = _setup_conn(**kwargs)
 
     try:
         api_instance = kubernetes.client.ExtensionsV1beta1Api()
@@ -1212,12 +1269,11 @@ def replace_deployment(name,
         else:
             log.exception(
                 'Exception when calling '
-                'ExtensionsV1beta1Api->replace_namespaced_deployment: '
-                '{0}'.format(exc)
+                'ExtensionsV1beta1Api->replace_namespaced_deployment'
             )
             raise CommandExecutionError(exc)
     finally:
-        _cleanup()
+        _cleanup(**cfg)
 
 
 def replace_service(name,
@@ -1250,7 +1306,7 @@ def replace_service(name,
     body.spec.cluster_ip = old_service['spec']['cluster_ip']
     body.metadata.resource_version = old_service['metadata']['resource_version']
 
-    _setup_conn(**kwargs)
+    cfg = _setup_conn(**kwargs)
 
     try:
         api_instance = kubernetes.client.CoreV1Api()
@@ -1264,23 +1320,31 @@ def replace_service(name,
         else:
             log.exception(
                 'Exception when calling '
-                'CoreV1Api->replace_namespaced_service: {0}'.format(exc)
+                'CoreV1Api->replace_namespaced_service'
             )
             raise CommandExecutionError(exc)
     finally:
-        _cleanup()
+        _cleanup(**cfg)
 
 
 def replace_secret(name,
                    data,
-                   source,
-                   template,
-                   saltenv,
+                   source=None,
+                   template=None,
+                   saltenv='base',
                    namespace='default',
                    **kwargs):
     '''
     Replaces an existing secret with a new one defined by name and namespace,
     having the specificed data.
+
+    CLI Examples::
+
+        salt 'minion1' kubernetes.replace_secret \
+            name=passwords data='{"db": "letmein"}'
+
+        salt 'minion2' kubernetes.replace_secret \
+            name=passwords namespace=saltstack data='{"db": "passw0rd"}'
     '''
     if source:
         data = __read_and_render_yaml_file(source, template, saltenv)
@@ -1297,7 +1361,7 @@ def replace_secret(name,
         metadata=__dict_to_object_meta(name, namespace, {}),
         data=data)
 
-    _setup_conn(**kwargs)
+    cfg = _setup_conn(**kwargs)
 
     try:
         api_instance = kubernetes.client.CoreV1Api()
@@ -1311,23 +1375,31 @@ def replace_secret(name,
         else:
             log.exception(
                 'Exception when calling '
-                'CoreV1Api->replace_namespaced_secret: {0}'.format(exc)
+                'CoreV1Api->replace_namespaced_secret'
             )
             raise CommandExecutionError(exc)
     finally:
-        _cleanup()
+        _cleanup(**cfg)
 
 
 def replace_configmap(name,
                       data,
-                      source,
-                      template,
-                      saltenv,
+                      source=None,
+                      template=None,
+                      saltenv='base',
                       namespace='default',
                       **kwargs):
     '''
     Replaces an existing configmap with a new one defined by name and
-    namespace, having the specificed data.
+    namespace with the specified data.
+
+    CLI Examples::
+
+        salt 'minion1' kubernetes.replace_configmap \
+            settings default '{"example.conf": "# example file"}'
+
+        salt 'minion2' kubernetes.replace_configmap \
+            name=settings namespace=default data='{"example.conf": "# example file"}'
     '''
     if source:
         data = __read_and_render_yaml_file(source, template, saltenv)
@@ -1338,7 +1410,7 @@ def replace_configmap(name,
         metadata=__dict_to_object_meta(name, namespace, {}),
         data=data)
 
-    _setup_conn(**kwargs)
+    cfg = _setup_conn(**kwargs)
 
     try:
         api_instance = kubernetes.client.CoreV1Api()
@@ -1352,11 +1424,11 @@ def replace_configmap(name,
         else:
             log.exception(
                 'Exception when calling '
-                'CoreV1Api->replace_namespaced_configmap: {0}'.format(exc)
+                'CoreV1Api->replace_namespaced_configmap'
             )
             raise CommandExecutionError(exc)
     finally:
-        _cleanup()
+        _cleanup(**cfg)
 
 
 def __create_object_body(kind,
@@ -1435,7 +1507,7 @@ def __read_and_render_yaml_file(source,
                     'Unknown template specified: {0}'.format(
                         template))
 
-        return yaml.load(contents)
+        return salt.utils.yaml.safe_load(contents)
 
 
 def __dict_to_object_meta(name, namespace, metadata):
@@ -1444,6 +1516,13 @@ def __dict_to_object_meta(name, namespace, metadata):
     '''
     meta_obj = kubernetes.client.V1ObjectMeta()
     meta_obj.namespace = namespace
+
+    # Replicate `kubectl [create|replace|apply] --record`
+    if 'annotations' not in metadata:
+        metadata['annotations'] = {}
+    if 'kubernetes.io/change-cause' not in metadata['annotations']:
+        metadata['annotations']['kubernetes.io/change-cause'] = ' '.join(sys.argv)
+
     for key, value in iteritems(metadata):
         if hasattr(meta_obj, key):
             setattr(meta_obj, key, value)
@@ -1461,7 +1540,7 @@ def __dict_to_deployment_spec(spec):
     '''
     Converts a dictionary into kubernetes AppsV1beta1DeploymentSpec instance.
     '''
-    spec_obj = AppsV1beta1DeploymentSpec()
+    spec_obj = AppsV1beta1DeploymentSpec(template=spec.get('template', ''))
     for key, value in iteritems(spec):
         if hasattr(spec_obj, key):
             setattr(spec_obj, key, value)
@@ -1511,6 +1590,6 @@ def __enforce_only_strings_dict(dictionary):
     ret = {}
 
     for key, value in iteritems(dictionary):
-        ret[str(key)] = str(value)
+        ret[six.text_type(key)] = six.text_type(value)
 
     return ret

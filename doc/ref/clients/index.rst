@@ -72,6 +72,7 @@ Each module type has a corresponding loader function.
 Salt's Client Interfaces
 ========================
 
+.. _client-interfaces:
 .. _local-client:
 
 LocalClient
@@ -85,6 +86,12 @@ Salt Caller
 -----------
 
 .. autoclass:: salt.client.Caller
+    :members: cmd
+
+Salt Proxy Caller
+-----------------
+
+.. autoclass:: salt.client.ProxyCaller
     :members: cmd
 
 RunnerClient

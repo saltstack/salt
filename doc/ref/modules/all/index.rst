@@ -11,6 +11,8 @@ execution modules
         salt.modules.group
         salt.modules.kernelpkg
         salt.modules.pkg
+        salt.modules.service
+        salt.modules.shadow
         salt.modules.user
 
 .. currentmodule:: salt.modules
@@ -23,12 +25,14 @@ execution modules
     aix_group
     aliases
     alternatives
+    ansiblegate
     apache
     apcups
     apf
     apk
     aptpkg
     archive
+    arista_pyeapi
     artifactory
     at
     at_solaris
@@ -38,6 +42,7 @@ execution modules
     bcache
     beacons
     bigip
+    bluecoat_sslv
     bluez
     boto3_elasticache
     boto3_route53
@@ -83,6 +88,8 @@ execution modules
     chef
     chocolatey
     chronos
+    cimc
+    ciscoconfparse_mod
     cisconso
     cloud
     cmdmod
@@ -95,7 +102,6 @@ execution modules
     cron
     csf
     cyg
-    cytest
     daemontools
     data
     datadog_api
@@ -147,8 +153,10 @@ execution modules
     git
     github
     glance
+    glanceng
     glusterfs
     gnomedesktop
+    google_chat
     gpg
     grafana4
     grains
@@ -182,13 +190,15 @@ execution modules
     inspectlib.query
     inspector
     introspect
+    iosconfig
     ipmi
     ipset
     iptables
     iwtools
     jboss7
     jboss7_cli
-    jenkins
+    jenkinsmod
+    jira_mod
     junos
     k8s
     kapacitor
@@ -198,6 +208,7 @@ execution modules
     key
     keyboard
     keystone
+    keystoneng
     kmod
     kubernetes
     launchctl
@@ -238,6 +249,7 @@ execution modules
     mac_user
     mac_xattr
     makeconf
+    mandrill
     marathon
     match
     mattermost
@@ -264,9 +276,10 @@ execution modules
     namecheap_ns
     namecheap_ssl
     namecheap_users
-    napalm
     napalm_acl
     napalm_bgp
+    napalm_formula
+    napalm_mod
     napalm_network
     napalm_ntp
     napalm_probes
@@ -275,11 +288,14 @@ execution modules
     napalm_users
     napalm_yang_mod
     netaddress
+    netbox
     netbsd_sysctl
     netbsdservice
+    netmiko_mod
     netscaler
     network
     neutron
+    neutronng
     nfs3
     nftables
     nginx
@@ -289,6 +305,7 @@ execution modules
     npm
     nspawn
     nxos
+    nxos_api
     omapi
     openbsd_sysctl
     openbsdpkg
@@ -299,6 +316,7 @@ execution modules
     openstack_mng
     openvswitch
     opkg
+    opsgenie
     oracle
     osquery
     out
@@ -306,11 +324,14 @@ execution modules
     pagerduty
     pagerduty_util
     pam
+    panos
     parallels
     parted
     pcs
     pdbedit
     pecl
+    peeringdb
+    pf
     philips_hue
     pillar
     pip
@@ -328,6 +349,7 @@ execution modules
     publish
     puppet
     purefa
+    purefb
     pushbullet
     pushover_notify
     pw_group
@@ -337,7 +359,6 @@ execution modules
     qemu_nbd
     quota
     rabbitmq
-    raet_publish
     rallydev
     random_org
     rbac_solaris
@@ -361,9 +382,11 @@ execution modules
     s3
     s6
     salt_proxy
+    saltcheck
     saltcloudmod
     saltutil
     schedule
+    scp_mod
     scsi
     sdb
     seed
@@ -405,6 +428,7 @@ execution modules
     supervisord
     suse_apache
     svn
+    swarm
     swift
     sysbench
     sysfs
@@ -414,6 +438,7 @@ execution modules
     system
     system_profiler
     systemd
+    telegram
     telemetry
     temp
     test
@@ -432,6 +457,7 @@ execution modules
     uptime
     useradd
     uwsgi
+    vagrant
     varnish
     vault
     vbox_guest
@@ -439,6 +465,7 @@ execution modules
     victorops
     virt
     virtualenv_mod
+    vmctl
     vsphere
     win_autoruns
     win_certutil
@@ -471,7 +498,6 @@ execution modules
     win_system
     win_task
     win_timezone
-    win_update
     win_useradd
     win_wua
     x509
@@ -488,5 +514,6 @@ execution modules
     znc
     zoneadm
     zonecfg
+    zookeeper
     zpool
     zypper

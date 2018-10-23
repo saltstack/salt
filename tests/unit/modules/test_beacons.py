@@ -4,7 +4,7 @@
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 
 # Import Salt Testing Libs
@@ -60,6 +60,9 @@ class BeaconsTestCase(TestCase, LoaderModuleMockMixin):
                           'tag': '/salt/minion/minion_beacons_list_complete',
                           'beacons': {}},
                          {'complete': True,
+                          'tag': '/salt/minion/minion_beacons_list_available_complete',
+                          'beacons': ['ps']},
+                         {'complete': True,
                           'valid': True,
                           'vcomment': '',
                           'tag': '/salt/minion/minion_beacons_list_complete'},
@@ -78,9 +81,9 @@ class BeaconsTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test saving beacons.
         '''
-        comm1 = 'Beacons saved to //tmp/beacons.conf.'
+        comm1 = 'Beacons saved to {0}beacons.conf.'.format(TMP + os.sep)
         with patch.dict(beacons.__opts__, {'config_dir': '', 'beacons': {},
-                                           'default_include': '/tmp/',
+                                           'default_include': TMP + os.sep,
                                            'sock_dir': SOCK_DIR}):
 
             mock = MagicMock(return_value=True)

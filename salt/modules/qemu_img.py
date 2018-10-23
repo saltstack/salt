@@ -7,13 +7,12 @@ The qemu img command is wrapped for specific functions
 
 :depends: qemu-img
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import os
 
 # Import salt libs
-import salt.utils
 import salt.utils.path
 
 

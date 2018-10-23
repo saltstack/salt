@@ -10,7 +10,7 @@ Library for interacting with Mattermost Incoming Webhooks
           hook: 3tdgo8restnxiykdx88wqtxryr
           api_url: https://example.com
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 
 import logging
 # Import 3rd-party libs
@@ -21,6 +21,7 @@ from salt.version import __version__
 # pylint: enable=import-error,no-name-in-module
 import salt.utils.http
 
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -41,7 +42,7 @@ def query(hook=None,
            'res': True}
 
     base_url = _urljoin(api_url, '/hooks/')
-    url = _urljoin(base_url, str(hook))
+    url = _urljoin(base_url, six.text_type(hook))
 
     result = salt.utils.http.query(url,
                                    method,

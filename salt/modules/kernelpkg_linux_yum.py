@@ -2,7 +2,7 @@
 '''
 Manage Linux kernel packages on YUM-based systems
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import functools
 import logging
 
@@ -11,11 +11,13 @@ try:
     from salt.ext import six
     from salt.utils.versions import LooseVersion as _LooseVersion
     from salt.exceptions import CommandExecutionError
+    import salt.utils.data
+    import salt.utils.functools
     import salt.utils.systemd
     import salt.modules.yumpkg
-    HAS_REQUIRED_LIBS = True
-except ImportError:
-    HAS_REQUIRED_LIBS = False
+    __IMPORT_ERROR = None
+except ImportError as exc:
+    __IMPORT_ERROR = exc.__str__()
 
 log = logging.getLogger(__name__)
 
@@ -23,7 +25,7 @@ log = logging.getLogger(__name__)
 __virtualname__ = 'kernelpkg'
 
 # Import functions from yumpkg
-_yum = salt.utils.namespaced_function(salt.modules.yumpkg._yum, globals())  # pylint: disable=invalid-name, protected-access
+_yum = salt.utils.functools.namespaced_function(salt.modules.yumpkg._yum, globals())  # pylint: disable=invalid-name, protected-access
 
 
 def __virtual__():
@@ -31,8 +33,8 @@ def __virtual__():
     Load this module on RedHat-based systems only
     '''
 
-    if not HAS_REQUIRED_LIBS:
-        return (False, "Required library could not be imported")
+    if __IMPORT_ERROR:
+        return (False, __IMPORT_ERROR)
 
     if __grains__.get('os_family', '') == 'RedHat':
         return __virtualname__
@@ -106,7 +108,6 @@ def latest_installed():
         salt '*' kernelpkg.latest_installed
 
     .. note::
-
         This function may not return the same value as
         :py:func:`~salt.modules.kernelpkg_linux_yum.active` if a new kernel
         has been installed and the system has not yet been rebooted.
@@ -155,9 +156,9 @@ def upgrade(reboot=False, at_time=None):
         salt '*' kernelpkg.upgrade reboot=True at_time=1
 
     .. note::
-    An immediate reboot often shuts down the system before the minion
-    has a chance to return, resulting in errors. A minimal delay (1 minute)
-    is useful to ensure the result is delivered to the master.
+        An immediate reboot often shuts down the system before the minion has a
+        chance to return, resulting in errors. A minimal delay (1 minute) is
+        useful to ensure the result is delivered to the master.
     '''
     result = __salt__['pkg.upgrade'](name=_package_name())
     _needs_reboot = needs_reboot()
@@ -180,7 +181,7 @@ def upgrade(reboot=False, at_time=None):
 def upgrade_available():
     '''
     Detect if a new kernel version is available in the repositories.
-    Returns True if a new kernel is avaliable, False otherwise.
+    Returns True if a new kernel is available, False otherwise.
 
     CLI Example:
 
@@ -213,7 +214,7 @@ def remove(release):
         raise CommandExecutionError('Active kernel cannot be removed')
 
     target = '{0}-{1}'.format(_package_name(), release)
-    log.info('Removing kernel package {0}'.format(target))
+    log.info('Removing kernel package %s', target)
     old = __salt__['pkg.list_pkgs']()
 
     # Build the command string
@@ -233,7 +234,7 @@ def remove(release):
     # Look for the changes in installed packages
     __context__.pop('pkg.list_pkgs', None)
     new = __salt__['pkg.list_pkgs']()
-    ret = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.data.compare_dicts(old, new)
 
     # Look for command execution errors
     if out['retcode'] != 0:

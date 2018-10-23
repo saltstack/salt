@@ -4,7 +4,7 @@
 Using Apache Libcloud for declarative and procedural multi-cloud orchestration
 ==============================================================================
 
-.. versionadded:: Oxygen
+.. versionadded:: 2018.3.0
 
 .. note::
 

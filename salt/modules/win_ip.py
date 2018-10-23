@@ -2,7 +2,7 @@
 '''
 The networking module for Windows based systems
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Python libs
 import logging
@@ -62,7 +62,7 @@ def _interface_configs():
             if current_ip_list:
                 current_ip_list.append(line)
             else:
-                log.warning('Cannot parse "{0}"'.format(line))
+                log.warning('Cannot parse "%s"', line)
             continue
 
         key, val = line.split(':', 1)
@@ -178,7 +178,9 @@ def enable(iface):
     '''
     if is_enabled(iface):
         return True
-    cmd = ['netsh', 'interface', 'set', 'interface', iface, 'admin=ENABLED']
+    cmd = ['netsh', 'interface', 'set', 'interface',
+           'name={0}'.format(iface),
+           'admin=ENABLED']
     __salt__['cmd.run'](cmd, python_shell=False)
     return is_enabled(iface)
 
@@ -195,7 +197,9 @@ def disable(iface):
     '''
     if is_disabled(iface):
         return True
-    cmd = ['netsh', 'interface', 'set', 'interface', iface, 'admin=DISABLED']
+    cmd = ['netsh', 'interface', 'set', 'interface',
+           'name={0}'.format(iface),
+           'admin=DISABLED']
     __salt__['cmd.run'](cmd, python_shell=False)
     return is_disabled(iface)
 
@@ -319,6 +323,18 @@ def set_static_dns(iface, *addrs):
     '''
     Set static DNS configuration on a Windows NIC
 
+    Args:
+
+        iface (str): The name of the interface to set
+
+        addrs (*):
+            One or more DNS servers to be added. To clear the list of DNS
+            servers pass an empty list (``[]``). If undefined or ``None`` no
+            changes will be made.
+
+    Returns:
+        dict: A dictionary containing the new DNS settings
+
     CLI Example:
 
     .. code-block:: bash
@@ -326,17 +342,31 @@ def set_static_dns(iface, *addrs):
         salt -G 'os_family:Windows' ip.set_static_dns 'Local Area Connection' '192.168.1.1'
         salt -G 'os_family:Windows' ip.set_static_dns 'Local Area Connection' '192.168.1.252' '192.168.1.253'
     '''
+    if addrs is () or str(addrs[0]).lower() == 'none':
+        return {'Interface': iface, 'DNS Server': 'No Changes'}
+    # Clear the list of DNS servers if [] is passed
+    if str(addrs[0]).lower() == '[]':
+        log.debug('Clearing list of DNS servers')
+        cmd = ['netsh', 'interface', 'ip', 'set', 'dns',
+               'name={0}'.format(iface),
+               'source=static',
+               'address=none']
+        __salt__['cmd.run'](cmd, python_shell=False)
+        return {'Interface': iface, 'DNS Server': []}
     addr_index = 1
     for addr in addrs:
         if addr_index == 1:
-            cmd = ['netsh', 'int', 'ip', 'set', 'dns',
-                   iface, 'static', addrs[0], 'primary']
+            cmd = ['netsh', 'interface', 'ip', 'set', 'dns',
+                   'name={0}'.format(iface),
+                   'source=static',
+                   'address={0}'.format(addr),
+                   'register=primary']
             __salt__['cmd.run'](cmd, python_shell=False)
             addr_index = addr_index + 1
         else:
             cmd = ['netsh', 'interface', 'ip', 'add', 'dns',
                    'name={0}'.format(iface),
-                   'addr={0}'.format(addr),
+                   'address={0}'.format(addr),
                    'index={0}'.format(addr_index)]
             __salt__['cmd.run'](cmd, python_shell=False)
             addr_index = addr_index + 1

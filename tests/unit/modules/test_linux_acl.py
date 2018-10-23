@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
-# Import Pytohn libs
-from __future__ import absolute_import
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -62,6 +62,22 @@ class LinuxAclTestCase(TestCase, LoaderModuleMockMixin):
     def test_getfacl__recursive_w_multiple_args(self):
         linux_acl.getfacl(*self.files, recursive=True)
         self.cmdrun.assert_called_once_with('getfacl --absolute-names -R ' + ' '.join(self.quoted_files), python_shell=False)
+
+    def test_getfacl__effective_acls(self):
+        line = 'group:webmaster:r-x        #effective:---'
+        user = 'root'
+        group = 'root'
+        expected = {
+            'type': 'acl',
+            'group': 'webmaster',
+            'permissions': {
+                'read': False,
+                'write': False,
+                'execute': False
+            },
+            'octal': 0,
+        }
+        self.assertEqual(linux_acl._parse_acl(line, user, group), expected)
 
     def test_wipefacls_wo_args(self):
         self.assertRaises(CommandExecutionError, linux_acl.wipefacls)

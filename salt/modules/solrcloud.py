@@ -6,7 +6,7 @@ Module for solrcloud configuration
 
 For now, module is limited to http-exposed API. It doesn't implement config upload via Solr zkCli
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import logging
@@ -78,7 +78,7 @@ def _query(url, solr_url='http://localhost:8983/solr/', **kwargs):
             raise SaltInvocationError(
                 'Got a {status} error when calling {solr_url}{url} : {error}'.
                 format(
-                    status=str(query_result["status"]),
+                    status=six.text_type(query_result["status"]),
                     solr_url=solr_url,
                     url=url,
                     error=query_result["error"]
@@ -110,7 +110,7 @@ def _validate_core_properties(properties):
             props_string = props_string+"&property."+prop_name+"="+prop_value
 
         else:
-            props_string = props_string+"&property."+str(prop_name)+"="+str(prop_value)
+            props_string = props_string+"&property."+six.text_type(prop_name)+"="+six.text_type(prop_value)
 
     return props_string
 
@@ -135,7 +135,7 @@ def _validate_collection_options(options):
             if not isinstance(option_value, six.integer_types):
                 raise ValueError('Option "'+option_name+'" value must be an int')
 
-            options_string = options_string+"&"+option_name+"="+str(option_value)
+            options_string = options_string+"&"+option_name+"="+six.text_type(option_value)
 
         elif option_name in BOOL_OPTIONS_LIST:
             if not isinstance(option_value, bool):
@@ -195,7 +195,7 @@ def cluster_status(**kwargs):
 def alias_exists(alias_name, **kwargs):
     '''
 
-    Check alias existance
+    Check alias existence
 
     Additional parameters (kwargs) may be passed, they will be proxied to http.query
 

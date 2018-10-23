@@ -13,7 +13,6 @@ but the back end to support expansion is in place.
 
 I also recently gave a presentation to the Utah Python users group in Salt Lake
 City, the slides from this presentation are available here:
-:download:`Salt.pdf`
 
 The video from this presentation will be available shortly.
 
@@ -74,7 +73,5 @@ making debugging of minion modules MUCH easier.
 Salt is nearing the goal of 1.0, where the core feature set and capability is
 complete!
 
-Salt 0.8.7 can be downloaded from GitHub here:
-:download:`salt-0.8.7.tar.gz`
 
 -Thomas S Hatch

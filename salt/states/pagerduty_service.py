@@ -1,23 +1,23 @@
 # -*- coding: utf-8 -*-
 '''
-
 Manage PagerDuty services
 
 Escalation policies can be referenced by pagerduty ID or by namea.
 
 For example:
 
-    .. code-block:: yaml
+.. code-block:: yaml
 
     ensure test service
         pagerduty_service.present:
             - name: 'my service'
             - escalation_policy_id: 'my escalation policy'
             - type: nagios
-            [etc]
-
 
 '''
+
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 
 
 def __virtual__():
@@ -39,27 +39,29 @@ def present(profile='pagerduty', subdomain=None, api_key=None, **kwargs):
 
     .. code-block:: yaml
 
-    # create a PagerDuty email service at test-email@DOMAIN.pagerduty.com
-    ensure generic email service exists:
-        pagerduty_service.present:
-            - name: my email service
-            - service:
-                description: "email service controlled by salt"
-                escalation_policy_id: "my escalation policy"
-                type: "generic_email"
-                service_key: "test-email"
+        # create a PagerDuty email service at test-email@DOMAIN.pagerduty.com
+        ensure generic email service exists:
+            pagerduty_service.present:
+                - name: my email service
+                - service:
+                    description: "email service controlled by salt"
+                    escalation_policy_id: "my escalation policy"
+                    type: "generic_email"
+                    service_key: "test-email"
 
-    # create a pagerduty service using cloudwatch integration
-    ensure my cloudwatch service exists:
-        pagerduty_service.present:
-            - name: my cloudwatch service
-            - service:
-                escalation_policy_id: "my escalation policy"
-                type: aws_cloudwatch
-                description: "my cloudwatch service controlled by salt"
+    .. code-block:: yaml
 
-    TODO: aws_cloudwatch type should be integrated with boto_sns
+        # create a pagerduty service using cloudwatch integration
+        ensure my cloudwatch service exists:
+            pagerduty_service.present:
+                - name: my cloudwatch service
+                - service:
+                    escalation_policy_id: "my escalation policy"
+                    type: aws_cloudwatch
+                    description: "my cloudwatch service controlled by salt"
+
     '''
+    # TODO: aws_cloudwatch type should be integrated with boto_sns
     # for convenience, we accept id, name, or email for users
     # and we accept the id or name for schedules
     kwargs['service']['name'] = kwargs['name']  # make args mirror PD API structure
