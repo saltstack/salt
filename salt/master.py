@@ -13,7 +13,6 @@ import os
 import re
 import sys
 import time
-import errno
 import signal
 import stat
 import logging
@@ -332,7 +331,9 @@ class Maintenance(salt.utils.process.SignalHandlingMultiprocessingProcess):
         '''
         Fire presence events if enabled
         '''
-        if self.presence_events:
+        # On the first run it may need more time for the EventPublisher
+        # to come up and be ready. Set the timeout to account for this.
+        if self.presence_events and self.event.connect_pull(timeout=3):
             present = self.ckminions.connected_ids()
             new = present.difference(old_present)
             lost = old_present.difference(present)
@@ -342,9 +343,7 @@ class Maintenance(salt.utils.process.SignalHandlingMultiprocessingProcess):
                         'lost': list(lost)}
                 self.event.fire_event(data, tagify('change', 'presence'))
             data = {'present': list(present)}
-            # On the first run it may need more time for the EventPublisher
-            # to come up and be ready. Set the timeout to account for this.
-            self.event.fire_event(data, tagify('present', 'presence'), timeout=3)
+            self.event.fire_event(data, tagify('present', 'presence'))
             old_present.clear()
             old_present.update(present)
 
@@ -2349,58 +2348,3 @@ class ClearFuncs(object):
         Send the load back to the sender.
         '''
         return clear_load
-
-
-class FloMWorker(MWorker):
-    '''
-    Change the run and bind to be ioflo friendly
-    '''
-    def __init__(self,
-                 opts,
-                 key,
-                 ):
-        MWorker.__init__(self, opts, key)
-
-    def setup(self):
-        '''
-        Prepare the needed objects and socket for iteration within ioflo
-        '''
-        salt.utils.crypt.appendproctitle(self.__class__.__name__)
-        self.clear_funcs = salt.master.ClearFuncs(
-                self.opts,
-                self.key,
-                )
-        self.aes_funcs = salt.master.AESFuncs(self.opts)
-        self.context = zmq.Context(1)
-        self.socket = self.context.socket(zmq.REP)
-        if self.opts.get('ipc_mode', '') == 'tcp':
-            self.w_uri = 'tcp://127.0.0.1:{0}'.format(
-                self.opts.get('tcp_master_workers', 4515)
-                )
-        else:
-            self.w_uri = 'ipc://{0}'.format(
-                os.path.join(self.opts['sock_dir'], 'workers.ipc')
-                )
-        log.info('ZMQ Worker binding to socket %s', self.w_uri)
-        self.poller = zmq.Poller()
-        self.poller.register(self.socket, zmq.POLLIN)
-        self.socket.connect(self.w_uri)
-
-    def handle_request(self):
-        '''
-        Handle a single request
-        '''
-        try:
-            polled = self.poller.poll(1)
-            if polled:
-                package = self.socket.recv()
-                self._update_aes()
-                payload = self.serial.loads(package)
-                ret = self.serial.dumps(self._handle_payload(payload))
-                self.socket.send(ret)
-        except KeyboardInterrupt:
-            raise
-        except Exception as exc:
-            # Properly handle EINTR from SIGUSR1
-            if isinstance(exc, zmq.ZMQError) and exc.errno == errno.EINTR:
-                return

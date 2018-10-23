@@ -26,7 +26,7 @@ def absent(name, user=None, signal=None):
         The pattern to match.
 
     user
-        The user process belongs
+        The user to which the process belongs
 
     signal
         Signal to send to the process(es).
