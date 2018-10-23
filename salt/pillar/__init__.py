@@ -322,7 +322,9 @@ class PillarCache(object):
             else:
                 # We found the minion but not the env. Store it.
                 fresh_pillar = self.fetch_pillar()
-                self.cache[self.minion_id][self.pillarenv] = fresh_pillar
+                self.cache[self.minion_id] = dict(self.cache[self.minion_id], **{
+                    self.pillarenv: fresh_pillar
+                })
                 log.debug('Pillar cache miss for pillarenv %s for minion %s', self.pillarenv, self.minion_id)
                 return fresh_pillar
         else:
