@@ -31,11 +31,13 @@ import salt.cli.support.intfunc
 import salt.utils.decorators
 import salt.utils.path
 import salt.cli.support
-from salt.cli.support.collector import SaltSupport, SupportDataCollector
 import salt.exceptions
 import salt.utils.stringutils
 import salt.defaults.exitcodes
 import salt.utils.odict
+import salt.utils.dictupdate
+
+from salt.cli.support.collector import SaltSupport, SupportDataCollector
 
 __virtualname__ = 'support'
 log = logging.getLogger(__name__)
@@ -236,7 +238,6 @@ class SaltSupportModule(SaltSupport):
 
         :return:
         '''
-        import salt.utils.dictupdate
         tfh, tfn = tempfile.mkstemp()
         processed_archives = []
         src_uri = uri = None
