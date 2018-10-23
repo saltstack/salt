@@ -647,7 +647,7 @@ Returns:
 ``method_call``
 ---------------
 
-.. versionadded:: develop
+.. versionadded:: Neon
 
 Returns a result of object's method call.
 
