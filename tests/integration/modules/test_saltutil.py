@@ -265,7 +265,7 @@ class SaltUtilSyncPillarTest(ModuleCase):
         wait = self.WaitForEvent(opts, '/salt/minion/minion_pillar_complete')
         wait.start()
         self.run_function('saltutil.refresh_pillar', async=False)
-        while (wait.is_alive()):
+        while wait.is_alive():
             time.sleep(1)
         self.assertTrue(wait.is_complete())
 
