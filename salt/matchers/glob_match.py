@@ -12,10 +12,9 @@ def match(tgt, opts=None):
     '''
     Returns true if the passed glob matches the id
     '''
+    if not opts:
+        opts = __opts__
     if not isinstance(tgt, six.string_types):
         return False
 
-    if not opts:
-        return fnmatch.fnmatch(__opts__['id'], tgt)
-    else:
-        return fnmatch.fnmatch(opts['id'], tgt)
+    return fnmatch.fnmatch(opts['id'], tgt)

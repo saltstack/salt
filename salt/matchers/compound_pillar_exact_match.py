@@ -19,8 +19,8 @@ def mmatch(expr, delimiter, greedy, opts=None):
     Return the minions found by looking via pillar
     '''
     if not opts:
-        ckminions = salt.utils.minions.CkMinions(__opts__)
-    else:
-        ckminions = salt.utils.minions.CkMinions(opts)
+        opts = __opts__
+
+    ckminions = salt.utils.minions.CkMinions(opts)
     return ckminions._check_compound_minions(expr, delimiter, greedy,
                                              pillar_exact=True)

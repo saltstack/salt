@@ -14,18 +14,15 @@ def match(tgt, delimiter=':', opts=None):
     '''
     Reads in the pillar match, no globbing, no PCRE
     '''
+    if not opts:
+        opts = __opts__
     log.debug('pillar target: %s', tgt)
     if delimiter not in tgt:
         log.error('Got insufficient arguments for pillar match '
                   'statement from master')
         return False
-    if opts:
-        return salt.utils.data.subdict_match(opts['pillar'],
-                                             tgt,
-                                             delimiter=delimiter,
-                                             exact_match=True)
-    else:
-        return salt.utils.data.subdict_match(__opts__['pillar'],
-                                             tgt,
-                                             delimiter=delimiter,
-                                             exact_match=True)
+
+    return salt.utils.data.subdict_match(opts['pillar'],
+                                         tgt,
+                                         delimiter=delimiter,
+                                         exact_match=True)

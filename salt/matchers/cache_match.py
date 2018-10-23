@@ -25,9 +25,9 @@ def mmatch(expr,
     If not 'greedy' return the only minions have cache data and matched by the condition.
     '''
     if not opts:
-        ckminions = salt.utils.minions.CkMinions(__opts__)
-    else:
-        ckminions = salt.utils.minions.CkMinions(opts)
+        opts = __opts__
+
+    ckminions = salt.utils.minions.CkMinions(opts)
 
     return ckminions._check_cache_minions(expr, delimiter, greedy,
                                           search_type, regex_match=regex_match,

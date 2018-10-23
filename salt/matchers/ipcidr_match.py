@@ -21,6 +21,9 @@ def match(tgt, opts=None):
     '''
     Matches based on IP address or CIDR notation
     '''
+    if not opts:
+        opts = __opts__
+
     try:
         # Target is an address?
         tgt = ipaddress.ip_address(tgt)
@@ -33,10 +36,7 @@ def match(tgt, opts=None):
             return []
     proto = 'ipv{0}'.format(tgt.version)
 
-    if not opts:
-        grains = __opts__['grains']
-    else:
-        grains = opts['grains']
+    grains = opts['grains']
 
     if proto not in grains:
         match = False

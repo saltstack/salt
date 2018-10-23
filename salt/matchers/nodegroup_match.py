@@ -17,18 +17,14 @@ def match(tgt, nodegroups=None, opts=None):
     nodegroups for remote execution, but is called when the nodegroups
     matcher is used in states
     '''
+    if not opts:
+        opts = __opts__
     if not nodegroups:
         log.debug('Nodegroup matcher called with no nodegroups.')
         return False
     if tgt in nodegroups:
-        if not opts:
-            matchers = salt.loader.matchers(__opts__)
-            return matchers['compound_match.match'](
-                salt.utils.minions.nodegroup_comp(tgt, nodegroups, opts=__opts__)
-            )
-        else:
-            matchers = salt.loader.matchers(opts)
-            return matchers['compound_match.match'](
-                salt.utils.minions.nodegroup_comp(tgt, nodegroups, opts=opts)
-            )
+        matchers = salt.loader.matchers(opts)
+        return matchers['compound_match.match'](
+            salt.utils.minions.nodegroup_comp(tgt, nodegroups, opts=opts)
+        )
     return False

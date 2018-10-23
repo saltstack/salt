@@ -16,17 +16,16 @@ def match(tgt, delimiter=DEFAULT_TARGET_DELIM, opts=None):
     '''
     Reads in the grains glob match
     '''
+    if not opts:
+        opts = __opts__
+
     log.debug('grains target: %s', tgt)
     if delimiter not in tgt:
         log.error('Got insufficient arguments for grains match '
                   'statement from master')
         return False
-    if not opts:
-        return salt.utils.data.subdict_match(
-            __opts__['grains'], tgt, delimiter=delimiter
-        )
-    else:
-        return salt.utils.data.subdict_match(
-            opts['grains'], tgt, delimiter=delimiter
-        )
+
+    return salt.utils.data.subdict_match(
+        opts['grains'], tgt, delimiter=delimiter
+    )
 

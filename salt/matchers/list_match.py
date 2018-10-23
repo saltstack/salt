@@ -14,7 +14,7 @@ def match(tgt, opts=None):
     '''
 
     if not opts:
-        opts = opts
+        opts = __opts__
     try:
         if ',' + opts['id'] + ',' in tgt \
                 or tgt.startswith(opts['id'] + ',') \
