@@ -8,11 +8,11 @@ involves preparing the three listeners and the workers needed by the master.
 from __future__ import absolute_import, with_statement, print_function, unicode_literals
 import copy
 import ctypes
+import functools
 import os
 import re
 import sys
 import time
-import errno
 import signal
 import stat
 import logging
@@ -89,6 +89,9 @@ try:
     HAS_HALITE = True
 except ImportError:
     HAS_HALITE = False
+
+from tornado.stack_context import StackContext
+from salt.utils.ctx import RequestContext
 
 
 log = logging.getLogger(__name__)
@@ -595,11 +598,19 @@ class Master(SMaster):
                 pass
 
         if self.opts.get('git_pillar_verify_config', True):
-            git_pillars = [
-                x for x in self.opts.get('ext_pillar', [])
-                if 'git' in x
-                and not isinstance(x['git'], six.string_types)
-            ]
+            try:
+                git_pillars = [
+                    x for x in self.opts.get('ext_pillar', [])
+                    if 'git' in x
+                    and not isinstance(x['git'], six.string_types)
+                ]
+            except TypeError:
+                git_pillars = []
+                critical_errors.append(
+                    'Invalid ext_pillar configuration. It is likely that the '
+                    'external pillar type was not specified for one or more '
+                    'external pillars.'
+                )
             if git_pillars:
                 try:
                     new_opts = copy.deepcopy(self.opts)
@@ -965,7 +976,7 @@ class MWorker(salt.utils.process.SignalHandlingMultiprocessingProcess):
         self.mkey = mkey
         self.key = key
         self.k_mtime = 0
-        self.stats = collections.defaultdict(lambda: {'mean': 0, 'runs': 0})
+        self.stats = collections.defaultdict(lambda: {'mean': 0, 'latency': 0, 'runs': 0})
         self.stat_clock = time.time()
 
     # We need __setstate__ and __getstate__ to also pickle 'SMaster.secrets'.
@@ -1047,18 +1058,16 @@ class MWorker(salt.utils.process.SignalHandlingMultiprocessingProcess):
                'clear': self._handle_clear}[key](load)
         raise tornado.gen.Return(ret)
 
-    def _post_stats(self, start, cmd):
+    def _post_stats(self, stats):
         '''
-        Calculate the master stats and fire events with stat info
+        Fire events with stat info if it's time
         '''
-        end = time.time()
-        duration = end - start
-        self.stats[cmd]['mean'] = (self.stats[cmd]['mean'] * (self.stats[cmd]['runs'] - 1) + duration) / self.stats[cmd]['runs']
-        if end - self.stat_clock > self.opts['master_stats_event_iter']:
+        end_time = time.time()
+        if end_time - self.stat_clock > self.opts['master_stats_event_iter']:
             # Fire the event with the stats and wipe the tracker
-            self.aes_funcs.event.fire_event({'time': end - self.stat_clock, 'worker': self.name, 'stats': self.stats}, tagify(self.name, 'stats'))
-            self.stats = collections.defaultdict(lambda: {'mean': 0, 'runs': 0})
-            self.stat_clock = end
+            self.aes_funcs.event.fire_event({'time': end_time - self.stat_clock, 'worker': self.name, 'stats': stats}, tagify(self.name, 'stats'))
+            self.stats = collections.defaultdict(lambda: {'mean': 0, 'latency': 0, 'runs': 0})
+            self.stat_clock = end_time
 
     def _handle_clear(self, load):
         '''
@@ -1074,10 +1083,10 @@ class MWorker(salt.utils.process.SignalHandlingMultiprocessingProcess):
             return False
         if self.opts['master_stats']:
             start = time.time()
-            self.stats[cmd]['runs'] += 1
         ret = getattr(self.clear_funcs, cmd)(load), {'fun': 'send_clear'}
         if self.opts['master_stats']:
-            self._post_stats(start, cmd)
+            stats = salt.utils.event.update_stats(self.stats, start, load)
+            self._post_stats(stats)
         return ret
 
     def _handle_aes(self, data):
@@ -1097,10 +1106,18 @@ class MWorker(salt.utils.process.SignalHandlingMultiprocessingProcess):
             return False
         if self.opts['master_stats']:
             start = time.time()
-            self.stats[cmd]['runs'] += 1
-        ret = self.aes_funcs.run_func(data['cmd'], data)
+
+        def run_func(data):
+            return self.aes_funcs.run_func(data['cmd'], data)
+
+        with StackContext(functools.partial(RequestContext,
+                                            {'data': data,
+                                             'opts': self.opts})):
+            ret = run_func(data)
+
         if self.opts['master_stats']:
-            self._post_stats(start, cmd)
+            stats = salt.utils.event.update_stats(self.stats, start, data)
+            self._post_stats(stats)
         return ret
 
     def run(self):
@@ -1164,7 +1181,7 @@ class AESFuncs(object):
         self._file_list_emptydirs = self.fs_.file_list_emptydirs
         self._dir_list = self.fs_.dir_list
         self._symlink_list = self.fs_.symlink_list
-        self._file_envs = self.fs_.envs
+        self._file_envs = self.fs_.file_envs
 
     def __verify_minion(self, id_, token):
         '''
@@ -1421,18 +1438,16 @@ class AESFuncs(object):
             return False
         if not salt.utils.verify.valid_id(self.opts, load['id']):
             return False
-        file_recv_max_size = 1024*1024 * self.opts['file_recv_max_size']
-
         if 'loc' in load and load['loc'] < 0:
             log.error('Invalid file pointer: load[loc] < 0')
             return False
 
-        if len(load['data']) + load.get('loc', 0) > file_recv_max_size:
+        if len(load['data']) + load.get('loc', 0) > self.opts['file_recv_max_size'] * 0x100000:
             log.error(
                 'file_recv_max_size limit of %d MB exceeded! %s will be '
                 'truncated. To successfully push this file, adjust '
                 'file_recv_max_size to an integer (in MB) large enough to '
-                'accommodate it.', file_recv_max_size, load['path']
+                'accommodate it.', self.opts['file_recv_max_size'], load['path']
             )
             return False
         if 'tok' not in load:
@@ -1915,9 +1930,9 @@ class ClearFuncs(object):
         try:
             fun = clear_load.pop('fun')
             runner_client = salt.runner.RunnerClient(self.opts)
-            return runner_client.async(fun,
-                                       clear_load.get('kwarg', {}),
-                                       username)
+            return runner_client.asynchronous(fun,
+                                              clear_load.get('kwarg', {}),
+                                              username)
         except Exception as exc:
             log.error('Exception occurred while introspecting %s: %s', fun, exc)
             return {'error': {'name': exc.__class__.__name__,
@@ -2333,58 +2348,3 @@ class ClearFuncs(object):
         Send the load back to the sender.
         '''
         return clear_load
-
-
-class FloMWorker(MWorker):
-    '''
-    Change the run and bind to be ioflo friendly
-    '''
-    def __init__(self,
-                 opts,
-                 key,
-                 ):
-        MWorker.__init__(self, opts, key)
-
-    def setup(self):
-        '''
-        Prepare the needed objects and socket for iteration within ioflo
-        '''
-        salt.utils.crypt.appendproctitle(self.__class__.__name__)
-        self.clear_funcs = salt.master.ClearFuncs(
-                self.opts,
-                self.key,
-                )
-        self.aes_funcs = salt.master.AESFuncs(self.opts)
-        self.context = zmq.Context(1)
-        self.socket = self.context.socket(zmq.REP)
-        if self.opts.get('ipc_mode', '') == 'tcp':
-            self.w_uri = 'tcp://127.0.0.1:{0}'.format(
-                self.opts.get('tcp_master_workers', 4515)
-                )
-        else:
-            self.w_uri = 'ipc://{0}'.format(
-                os.path.join(self.opts['sock_dir'], 'workers.ipc')
-                )
-        log.info('ZMQ Worker binding to socket %s', self.w_uri)
-        self.poller = zmq.Poller()
-        self.poller.register(self.socket, zmq.POLLIN)
-        self.socket.connect(self.w_uri)
-
-    def handle_request(self):
-        '''
-        Handle a single request
-        '''
-        try:
-            polled = self.poller.poll(1)
-            if polled:
-                package = self.socket.recv()
-                self._update_aes()
-                payload = self.serial.loads(package)
-                ret = self.serial.dumps(self._handle_payload(payload))
-                self.socket.send(ret)
-        except KeyboardInterrupt:
-            raise
-        except Exception as exc:
-            # Properly handle EINTR from SIGUSR1
-            if isinstance(exc, zmq.ZMQError) and exc.errno == errno.EINTR:
-                return

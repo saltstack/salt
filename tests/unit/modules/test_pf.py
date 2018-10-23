@@ -72,8 +72,17 @@ class PfTestCase(TestCase, LoaderModuleMockMixin):
         '''
         ret = {}
         ret['retcode'] = 0
+        # FreeBSD and OpenBSD have different log levels available.
         mock_cmd = MagicMock(return_value=ret)
-        with patch.dict(pf.__salt__, {'cmd.run_all': mock_cmd}):
+        with patch.dict(pf.__salt__, {'cmd.run_all': mock_cmd}), \
+                patch.dict(pf.__grains__, {'os': 'FreeBSD'}):
+            res = pf.loglevel('urgent')
+            mock_cmd.assert_called_once_with('pfctl -x urgent',
+                    output_loglevel='trace', python_shell=False)
+            self.assertTrue(res['changes'])
+        mock_cmd = MagicMock(return_value=ret)
+        with patch.dict(pf.__salt__, {'cmd.run_all': mock_cmd}), \
+                patch.dict(pf.__grains__, {'os': 'OpenBSD'}):
             res = pf.loglevel('crit')
             mock_cmd.assert_called_once_with('pfctl -x crit',
                     output_loglevel='trace', python_shell=False)

@@ -21,7 +21,7 @@ import logging
 
 # Import salt libs
 import salt.utils.event
-import salt.utils.async
+import salt.utils.asynchronous
 
 # Import 3rd-party libs
 from tornado import gen
@@ -70,7 +70,7 @@ class PyTestEngine(object):
         self.sock.bind(('localhost', port))
         # become a server socket
         self.sock.listen(5)
-        with salt.utils.async.current_ioloop(self.io_loop):
+        with salt.utils.asynchronous.current_ioloop(self.io_loop):
             netutil.add_accept_handler(
                 self.sock,
                 self.handle_connection,

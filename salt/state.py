@@ -38,6 +38,7 @@ import salt.utils.decorators.state
 import salt.utils.dictupdate
 import salt.utils.event
 import salt.utils.files
+import salt.utils.hashutils
 import salt.utils.immutabletypes as immutabletypes
 import salt.utils.platform
 import salt.utils.process
@@ -1763,7 +1764,9 @@ class State(object):
         ret['duration'] = duration
 
         troot = os.path.join(self.opts['cachedir'], self.jid)
-        tfile = os.path.join(troot, _clean_tag(tag))
+        tfile = os.path.join(
+            troot,
+            salt.utils.hashutils.sha1_digest(tag))
         if not os.path.isdir(troot):
             try:
                 os.makedirs(troot)
@@ -1804,6 +1807,11 @@ class State(object):
         Call a state directly with the low data structure, verify data
         before processing.
         '''
+        use_uptime = False
+        if os.path.isfile('/proc/uptime'):
+            use_uptime = True
+            with salt.utils.files.fopen('/proc/uptime', 'r') as fp_:
+                start_uptime = float(fp_.readline().split()[0])
         utc_start_time = datetime.datetime.utcnow()
         local_start_time = utc_start_time - (datetime.datetime.utcnow() - datetime.datetime.now())
         log.info('Running state [%s] at time %s',
@@ -1971,14 +1979,20 @@ class State(object):
         self.__run_num += 1
         format_log(ret)
         self.check_refresh(low, ret)
+        if use_uptime:
+            with salt.utils.files.fopen('/proc/uptime', 'r') as fp_:
+                finish_uptime = float(fp_.readline().split()[0])
         utc_finish_time = datetime.datetime.utcnow()
         timezone_delta = datetime.datetime.utcnow() - datetime.datetime.now()
         local_finish_time = utc_finish_time - timezone_delta
         local_start_time = utc_start_time - timezone_delta
         ret['start_time'] = local_start_time.time().isoformat()
-        delta = (utc_finish_time - utc_start_time)
-        # duration in milliseconds.microseconds
-        duration = (delta.seconds * 1000000 + delta.microseconds) / 1000.0
+        if use_uptime:
+            duration = (finish_uptime - start_uptime) * 1000.0
+        else:
+            delta = (utc_finish_time - utc_start_time)
+            # duration in milliseconds.microseconds
+            duration = (delta.seconds * 1000000 + delta.microseconds) / 1000.0
         ret['duration'] = duration
         ret['__id__'] = low['__id__']
         log.info(
@@ -2218,7 +2232,10 @@ class State(object):
             proc = running[tag].get('proc')
             if proc:
                 if not proc.is_alive():
-                    ret_cache = os.path.join(self.opts['cachedir'], self.jid, _clean_tag(tag))
+                    ret_cache = os.path.join(
+                        self.opts['cachedir'],
+                        self.jid,
+                        salt.utils.hashutils.sha1_digest(tag))
                     if not os.path.isfile(ret_cache):
                         ret = {'result': False,
                                'comment': 'Parallel process failed to return',
@@ -3379,7 +3396,7 @@ class BaseHighState(object):
                 def _filter_matches(_match, _data, _opts):
                     if isinstance(_data, six.string_types):
                         _data = [_data]
-                    if self.matcher.confirm_top(
+                    if self.matchers['confirm_top.confirm_top'](
                             _match,
                             _data,
                             _opts
@@ -4068,7 +4085,7 @@ class HighState(BaseHighState):
                            mocked=mocked,
                            loader=loader,
                            initial_pillar=initial_pillar)
-        self.matcher = salt.minion.Matcher(self.opts)
+        self.matchers = salt.loader.matchers(self.opts)
         self.proxy = proxy
 
         # tracks all pydsl state declarations globally across sls files

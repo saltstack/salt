@@ -2,6 +2,8 @@
 '''
 Work with virtual machines managed by libvirt
 
+:depends: libvirt Python module
+
 Connection
 ==========
 
@@ -14,8 +16,8 @@ hypervisor driver will be used. This can be overridden like this:
 .. code-block:: yaml
 
     virt:
-        connection:
-            uri: lxc:///
+      connection:
+        uri: lxc:///
 
 If the connection requires an authentication like for ESXi, this can be defined in the
 minion pillar data like this:
@@ -23,11 +25,11 @@ minion pillar data like this:
 .. code-block:: yaml
 
     virt:
-        connection:
-            uri: esx://10.1.1.101/?no_verify=1&auto_answer=1
-            auth:
-                username: user
-                password: secret
+      connection:
+        uri: esx://10.1.1.101/?no_verify=1&auto_answer=1
+        auth:
+          username: user
+          password: secret
 
 Connecting with SSH protocol
 ----------------------------
@@ -62,13 +64,10 @@ The calls not using the libvirt connection setup are:
 - ``is_*hyper``
 - all migration functions
 
-Reference:
-
 - `libvirt ESX URI format <http://libvirt.org/drvesx.html#uriformat>`_
 - `libvirt URI format <http://libvirt.org/uri.html#URI_config>`_
 - `libvirt authentication configuration <http://libvirt.org/auth.html#Auth_client_config>`_
 
-:depends: libvirt Python module
 '''
 # Special Thanks to Michael Dehann, many of the concepts, and a few structures
 # of his in the virt func module have been used
@@ -88,8 +87,6 @@ import datetime
 from xml.etree import ElementTree
 
 # Import third party libs
-import xml.dom
-from xml.dom import minidom
 import jinja2
 import jinja2.exceptions
 try:
@@ -111,7 +108,7 @@ import salt.utils.versions
 import salt.utils.yaml
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.ext import six
-from salt.ext.six.moves import StringIO as _StringIO  # pylint: disable=import-error
+from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 log = logging.getLogger(__name__)
 
@@ -182,6 +179,7 @@ def __get_conn(**kwargs):
     '''
     # This has only been tested on kvm and xen, it needs to be expanded to
     # support all vm layers supported by libvirt
+    # Connection string works on bhyve, but auth is not tested.
 
     username = kwargs.get('username', None)
     password = kwargs.get('password', None)
@@ -243,14 +241,6 @@ def __get_conn(**kwargs):
             )
         )
     return conn
-
-
-def _get_domain_types(**kwargs):
-    '''
-    Return the list of possible values for the <domain> type attribute.
-    '''
-    caps = capabilities(**kwargs)
-    return sorted(set([x for y in [guest['arch']['domains'].keys() for guest in caps['guests']] for x in y]))
 
 
 def _get_domain(conn, *vms, **kwargs):
@@ -342,11 +332,7 @@ def _get_uuid(dom):
 
         salt '*' virt.get_uuid <domain>
     '''
-    uuid = ''
-    doc = minidom.parse(_StringIO(get_xml(dom)))
-    for node in doc.getElementsByTagName('uuid'):
-        uuid = node.firstChild.nodeValue
-    return uuid
+    return ElementTree.fromstring(get_xml(dom)).find('uuid').text
 
 
 def _get_on_poweroff(dom):
@@ -359,11 +345,8 @@ def _get_on_poweroff(dom):
 
         salt '*' virt.get_on_restart <domain>
     '''
-    on_poweroff = ''
-    doc = minidom.parse(_StringIO(get_xml(dom)))
-    for node in doc.getElementsByTagName('on_poweroff'):
-        on_poweroff = node.firstChild.nodeValue
-    return on_poweroff
+    node = ElementTree.fromstring(get_xml(dom)).find('on_poweroff')
+    return node.text if node is not None else ''
 
 
 def _get_on_reboot(dom):
@@ -376,11 +359,8 @@ def _get_on_reboot(dom):
 
         salt '*' virt.get_on_reboot <domain>
     '''
-    on_restart = ''
-    doc = minidom.parse(_StringIO(get_xml(dom)))
-    for node in doc.getElementsByTagName('on_reboot'):
-        on_restart = node.firstChild.nodeValue
-    return on_restart
+    node = ElementTree.fromstring(get_xml(dom)).find('on_reboot')
+    return node.text if node is not None else ''
 
 
 def _get_on_crash(dom):
@@ -393,11 +373,8 @@ def _get_on_crash(dom):
 
         salt '*' virt.get_on_crash <domain>
     '''
-    on_crash = ''
-    doc = minidom.parse(_StringIO(get_xml(dom)))
-    for node in doc.getElementsByTagName('on_crash'):
-        on_crash = node.firstChild.nodeValue
-    return on_crash
+    node = ElementTree.fromstring(get_xml(dom)).find('on_crash')
+    return node.text if node is not None else ''
 
 
 def _get_nics(dom):
@@ -405,36 +382,34 @@ def _get_nics(dom):
     Get domain network interfaces from a libvirt domain object.
     '''
     nics = {}
-    doc = minidom.parse(_StringIO(dom.XMLDesc(0)))
-    for node in doc.getElementsByTagName('devices'):
-        i_nodes = node.getElementsByTagName('interface')
-        for i_node in i_nodes:
-            nic = {}
-            nic['type'] = i_node.getAttribute('type')
-            for v_node in i_node.getElementsByTagName('*'):
-                if v_node.tagName == 'mac':
-                    nic['mac'] = v_node.getAttribute('address')
-                if v_node.tagName == 'model':
-                    nic['model'] = v_node.getAttribute('type')
-                if v_node.tagName == 'target':
-                    nic['target'] = v_node.getAttribute('dev')
-                # driver, source, and match can all have optional attributes
-                if re.match('(driver|source|address)', v_node.tagName):
-                    temp = {}
-                    for key, value in v_node.attributes.items():
-                        temp[key] = value
-                    nic[six.text_type(v_node.tagName)] = temp
-                # virtualport needs to be handled separately, to pick up the
-                # type attribute of the virtualport itself
-                if v_node.tagName == 'virtualport':
-                    temp = {}
-                    temp['type'] = v_node.getAttribute('type')
-                    for key, value in v_node.attributes.items():
-                        temp[key] = value
-                    nic['virtualport'] = temp
-            if 'mac' not in nic:
-                continue
-            nics[nic['mac']] = nic
+    doc = ElementTree.fromstring(dom.XMLDesc(0))
+    for iface_node in doc.findall('devices/interface'):
+        nic = {}
+        nic['type'] = iface_node.get('type')
+        for v_node in iface_node:
+            if v_node.tag == 'mac':
+                nic['mac'] = v_node.get('address')
+            if v_node.tag == 'model':
+                nic['model'] = v_node.get('type')
+            if v_node.tag == 'target':
+                nic['target'] = v_node.get('dev')
+            # driver, source, and match can all have optional attributes
+            if re.match('(driver|source|address)', v_node.tag):
+                temp = {}
+                for key, value in six.iteritems(v_node.attrib):
+                    temp[key] = value
+                nic[v_node.tag] = temp
+            # virtualport needs to be handled separately, to pick up the
+            # type attribute of the virtualport itself
+            if v_node.tag == 'virtualport':
+                temp = {}
+                temp['type'] = v_node.get('type')
+                for key, value in six.iteritems(v_node.attrib):
+                    temp[key] = value
+                nic['virtualport'] = temp
+        if 'mac' not in nic:
+            continue
+        nics[nic['mac']] = nic
     return nics
 
 
@@ -447,14 +422,23 @@ def _get_graphics(dom):
            'listen': 'None',
            'port': 'None',
            'type': 'None'}
-    desc = dom.XMLDesc(0)
-    ssock = _StringIO(desc)
-    doc = minidom.parse(ssock)
-    for node in doc.getElementsByTagName('domain'):
-        g_nodes = node.getElementsByTagName('graphics')
-        for g_node in g_nodes:
-            for key, value in g_node.attributes.items():
-                out[key] = value
+    doc = ElementTree.fromstring(dom.XMLDesc(0))
+    for g_node in doc.findall('devices/graphics'):
+        for key, value in six.iteritems(g_node.attrib):
+            out[key] = value
+    return out
+
+
+def _get_loader(dom):
+    '''
+    Get domain loader from a libvirt domain object.
+    '''
+    out = {'path': 'None'}
+    doc = ElementTree.fromstring(dom.XMLDesc(0))
+    for g_node in doc.findall('os/loader'):
+        out['path'] = g_node.text
+        for key, value in six.iteritems(g_node.attrib):
+            out[key] = value
     return out
 
 
@@ -463,37 +447,34 @@ def _get_disks(dom):
     Get domain disks from a libvirt domain object.
     '''
     disks = {}
-    doc = minidom.parse(_StringIO(dom.XMLDesc(0)))
-    for elem in doc.getElementsByTagName('disk'):
-        sources = elem.getElementsByTagName('source')
-        targets = elem.getElementsByTagName('target')
-        if sources:
-            source = sources[0]
-        else:
+    doc = ElementTree.fromstring(dom.XMLDesc(0))
+    for elem in doc.findall('devices/disk'):
+        source = elem.find('source')
+        if source is None:
             continue
-        if targets:
-            target = targets[0]
-        else:
+        target = elem.find('target')
+        if target is None:
             continue
-        if target.hasAttribute('dev'):
-            qemu_target = ''
-            if source.hasAttribute('file'):
-                qemu_target = source.getAttribute('file')
-            elif source.hasAttribute('dev'):
-                qemu_target = source.getAttribute('dev')
-            elif source.hasAttribute('protocol') and \
-                    source.hasAttribute('name'):  # For rbd network
+        if 'dev' in target.attrib:
+            qemu_target = source.get('file', '')
+            if not qemu_target:
+                qemu_target = source.get('dev', '')
+            elif qemu_target.startswith('/dev/zvol/'):
+                disks[target.get('dev')] = {
+                        'file': qemu_target,
+                        'zfs': True}
+                continue
+            if not qemu_target and 'protocol' in source.attrib and 'name' in source.attrib:  # for rbd network
                 qemu_target = '{0}:{1}'.format(
-                        source.getAttribute('protocol'),
-                        source.getAttribute('name'))
+                        source.get('protocol'),
+                        source.get('name'))
             if not qemu_target:
                 continue
 
-            disk = {'file': qemu_target,
-                    'type': elem.getAttribute('device')}
+            disk = {'file': qemu_target, 'type': elem.get('device')}
 
-            driver = _get_xml_first_element_by_tag_name(elem, 'driver')
-            if driver and driver.getAttribute('type') == 'qcow2':
+            driver = elem.find('driver')
+            if driver is not None and driver.get('type') == 'qcow2':
                 try:
                     stdout = subprocess.Popen(
                                 ['qemu-img', 'info', '--output', 'json', '--backing-chain', disk['file']],
@@ -505,7 +486,7 @@ def _get_disks(dom):
                 except TypeError:
                     disk.update({'file': 'Does not exist'})
 
-            disks[target.getAttribute('dev')] = disk
+            disks[target.get('dev')] = disk
     return disks
 
 
@@ -567,7 +548,10 @@ def _gen_xml(name,
              diskp,
              nicp,
              hypervisor,
+             os_type,
+             arch,
              graphics=None,
+             loader=None,
              **kwargs):
     '''
     Generate the XML string to define a libvirt VM
@@ -591,7 +575,22 @@ def _gen_xml(name,
             graphics['listen'] = {'type': 'address', 'address': '0.0.0.0'}
         elif 'address' not in graphics['listen'] and graphics['listen']['type'] == 'address':
             graphics['listen']['address'] = '0.0.0.0'
+
+        # Graphics of type 'none' means no graphics device at all
+        if graphics.get('type', 'none') == 'none':
+            graphics = None
     context['graphics'] = graphics
+
+    if loader and 'path' not in loader:
+        log.info('`path` is a required property of `loader`, and cannot be found. Skipping loader configuration')
+        loader = None
+    elif loader:
+        loader_attributes = []
+        for key, val in loader.items():
+            if key == 'path':
+                continue
+            loader_attributes.append("{key}='{val}'".format(key=key, val=val))
+        loader['_attributes'] = ' '.join(loader_attributes)
 
     if 'boot_dev' in kwargs:
         context['boot_dev'] = []
@@ -600,6 +599,7 @@ def _gen_xml(name,
     else:
         context['boot_dev'] = ['hd']
 
+    context['loader'] = loader
     if 'serial_type' in kwargs:
         context['serial_type'] = kwargs['serial_type']
     if 'serial_type' in context and context['serial_type'] == 'tcp':
@@ -614,23 +614,26 @@ def _gen_xml(name,
             context['console'] = True
 
     context['disks'] = {}
+    disk_bus_map = {'virtio': 'vd', 'xen': 'xvd', 'fdc': 'fd', 'ide': 'hd'}
     for i, disk in enumerate(diskp):
         context['disks'][disk['name']] = {}
         context['disks'][disk['name']]['file_name'] = disk['filename']
         context['disks'][disk['name']]['source_file'] = disk['source_file']
-        if hypervisor in ['qemu', 'kvm']:
-            context['disks'][disk['name']]['target_dev'] = 'vd{0}'.format(string.ascii_lowercase[i])
+        prefix = disk_bus_map.get(disk['model'], 'sd')
+        context['disks'][disk['name']]['target_dev'] = '{0}{1}'.format(prefix, string.ascii_lowercase[i])
+        if hypervisor in ['qemu', 'kvm', 'bhyve', 'xen']:
             context['disks'][disk['name']]['address'] = False
             context['disks'][disk['name']]['driver'] = True
         elif hypervisor in ['esxi', 'vmware']:
-            context['disks'][disk['name']]['target_dev'] = 'sd{0}'.format(string.ascii_lowercase[i])
             context['disks'][disk['name']]['address'] = True
             context['disks'][disk['name']]['driver'] = False
         context['disks'][disk['name']]['disk_bus'] = disk['model']
         context['disks'][disk['name']]['type'] = disk['format']
         context['disks'][disk['name']]['index'] = six.text_type(i)
-
     context['nics'] = nicp
+
+    context['os_type'] = os_type
+    context['arch'] = arch
 
     fn_ = 'libvirt_domain.jinja'
     try:
@@ -694,16 +697,32 @@ def _gen_net_xml(name,
 
 def _gen_pool_xml(name,
                   ptype,
-                  target,
-                  source=None):
+                  target=None,
+                  permissions=None,
+                  source_devices=None,
+                  source_dir=None,
+                  source_adapter=None,
+                  source_hosts=None,
+                  source_auth=None,
+                  source_name=None,
+                  source_format=None):
     '''
     Generate the XML string to define a libvirt storage pool
     '''
+    hosts = [host.split(':') for host in source_hosts or []]
     context = {
         'name': name,
         'ptype': ptype,
-        'target': target,
-        'source': source,
+        'target': {'path': target, 'permissions': permissions},
+        'source': {
+            'devices': source_devices or [],
+            'dir': source_dir,
+            'adapter': source_adapter,
+            'hosts': [{'name': host[0], 'port': host[1] if len(host) > 1 else None} for host in hosts],
+            'auth': source_auth,
+            'name': source_name,
+            'format': source_format
+        }
     }
     fn_ = 'libvirt_pool.jinja'
     try:
@@ -732,6 +751,75 @@ def _get_images_dir():
     log.debug('Image directory from config option `virt:images`'
               ' is %s', img_dir)
     return img_dir
+
+
+def _zfs_image_create(vm_name,
+                      pool,
+                      disk_name,
+                      hostname_property_name,
+                      sparse_volume,
+                      disk_size,
+                      disk_image_name):
+    '''
+    Clones an existing image, or creates a new one.
+
+    When cloning an image, disk_image_name refers to the source
+    of the clone. If not specified, disk_size is used for creating
+    a new zvol, and sparse_volume determines whether to create
+    a thin provisioned volume.
+
+    The cloned or new volume can have a ZFS property set containing
+    the vm_name. Use hostname_property_name for specifying the key
+    of this ZFS property.
+    '''
+    if not disk_image_name and not disk_size:
+        raise CommandExecutionError(
+            'Unable to create new disk {0}, please specify'
+            ' the disk image name or disk size argument'
+            .format(disk_name)
+        )
+
+    if not pool:
+        raise CommandExecutionError(
+            'Unable to create new disk {0}, please specify'
+            ' the disk pool name'.format(disk_name))
+
+    destination_fs = os.path.join(pool,
+                                  '{0}.{1}'.format(vm_name, disk_name))
+    log.debug('Image destination will be %s', destination_fs)
+
+    existing_disk = __salt__['zfs.list'](name=pool)
+    if 'error' in existing_disk:
+        raise CommandExecutionError(
+            'Unable to create new disk {0}. {1}'
+            .format(destination_fs, existing_disk['error'])
+        )
+    elif destination_fs in existing_disk:
+        log.info('ZFS filesystem %s already exists. Skipping creation', destination_fs)
+        blockdevice_path = os.path.join('/dev/zvol', pool, vm_name)
+        return blockdevice_path
+
+    properties = {}
+    if hostname_property_name:
+        properties[hostname_property_name] = vm_name
+
+    if disk_image_name:
+        __salt__['zfs.clone'](
+                  name_a=disk_image_name,
+                  name_b=destination_fs,
+                  properties=properties)
+
+    elif disk_size:
+        __salt__['zfs.create'](
+                name=destination_fs,
+                properties=properties,
+                volume_size=disk_size,
+                sparse=sparse_volume)
+
+    blockdevice_path = os.path.join('/dev/zvol', pool, '{0}.{1}'
+                                    .format(vm_name, disk_name))
+    log.debug('Image path will be %s', blockdevice_path)
+    return blockdevice_path
 
 
 def _qemu_image_create(disk, create_overlay=False, saltenv='base'):
@@ -876,23 +964,29 @@ def _disk_profile(profile, hypervisor, disks=None, vm_name=None, image=None, poo
     elif hypervisor in ['qemu', 'kvm']:
         overlay = {'format': 'qcow2',
                    'model': 'virtio'}
+    elif hypervisor in ['bhyve']:
+        overlay = {'format': 'raw',
+                   'model': 'virtio',
+                   'sparse_volume': False}
     else:
         overlay = {}
 
     # Get the disks from the profile
-    disklist = copy.deepcopy(
-        __salt__['config.get']('virt:disk', {}).get(profile, default))
+    disklist = []
+    if profile:
+        disklist = copy.deepcopy(
+            __salt__['config.get']('virt:disk', {}).get(profile, default))
 
-    # Transform the list to remove one level of dictionnary and add the name as a property
-    disklist = [dict(d, name=name) for disk in disklist for name, d in disk.items()]
+        # Transform the list to remove one level of dictionnary and add the name as a property
+        disklist = [dict(d, name=name) for disk in disklist for name, d in disk.items()]
 
-    # Add the image to the first disk if there is one
-    if image:
-        # If image is specified in module arguments, then it will be used
-        # for the first disk instead of the image from the disk profile
-        log.debug('%s image from module arguments will be used for disk "%s"'
-                  ' instead of %s', image, disklist[0]['name'], disklist[0].get('image', ""))
-        disklist[0]['image'] = image
+        # Add the image to the first disk if there is one
+        if image:
+            # If image is specified in module arguments, then it will be used
+            # for the first disk instead of the image from the disk profile
+            log.debug('%s image from module arguments will be used for disk "%s"'
+                      ' instead of %s', image, disklist[0]['name'], disklist[0].get('image', ""))
+            disklist[0]['image'] = image
 
     # Merge with the user-provided disks definitions
     if disks:
@@ -926,9 +1020,11 @@ def _disk_profile(profile, hypervisor, disks=None, vm_name=None, image=None, poo
                                     'Unable to create new disk {0}, specified pool {1} does not exist '
                                     'or is unsupported'.format(disk['name'], base_dir))
                     base_dir = pool['target_path']
-
-        # Compute the filename and source file properties if possible
-        if vm_name:
+        if hypervisor == 'bhyve' and vm_name:
+            disk['filename'] = '{0}.{1}'.format(vm_name, disk['name'])
+            disk['source_file'] = os.path.join('/dev/zvol', base_dir or '', disk['filename'])
+        elif vm_name:
+            # Compute the filename and source file properties if possible
             disk['filename'] = '{0}_{1}.{2}'.format(vm_name, disk['name'], disk['format'])
             disk['source_file'] = os.path.join(base_dir, disk['filename'])
 
@@ -942,10 +1038,12 @@ def _complete_nics(interfaces, hypervisor, dmac=None):
 
     vmware_overlay = {'type': 'bridge', 'source': 'DEFAULT', 'model': 'e1000'}
     kvm_overlay = {'type': 'bridge', 'source': 'br0', 'model': 'virtio'}
+    bhyve_overlay = {'type': 'bridge', 'source': 'bridge0', 'model': 'virtio'}
     overlays = {
             'kvm': kvm_overlay,
             'qemu': kvm_overlay,
             'vmware': vmware_overlay,
+            'bhyve': bhyve_overlay,
             }
 
     def _normalize_net_types(attributes):
@@ -1079,6 +1177,24 @@ def _nic_profile(profile_name, hypervisor, dmac=None):
     return _complete_nics(interfaces, hypervisor, dmac=dmac)
 
 
+def _get_merged_nics(hypervisor, profile, interfaces=None, dmac=None):
+    '''
+    Get network devices from the profile and merge uer defined ones with them.
+    '''
+    nicp = _nic_profile(profile, hypervisor, dmac=dmac) if profile else []
+    log.debug('NIC profile is %s', nicp)
+    if interfaces:
+        users_nics = _complete_nics(interfaces, hypervisor)
+        for unic in users_nics:
+            found = [nic for nic in nicp if nic['name'] == unic['name']]
+            if found:
+                found[0].update(unic)
+            else:
+                nicp.append(unic)
+        log.debug('Merged NICs: %s', nicp)
+    return nicp
+
+
 def init(name,
          cpu,
          mem,
@@ -1098,6 +1214,9 @@ def init(name,
          enable_vnc=False,
          enable_qcow=False,
          graphics=None,
+         os_type=None,
+         arch=None,
+         loader=None,
          **kwargs):
     '''
     Initialize a new vm
@@ -1118,6 +1237,7 @@ def init(name,
 
     :param nic: NIC profile to use (Default: ``'default'``).
                 The profile interfaces can be customized / extended with the interfaces parameter.
+                If set to ``None``, no profile will be used.
     :param interfaces:
         List of dictionaries providing details on the network interfaces to create.
         These data are merged with the ones from the nic profile. The structure of
@@ -1127,7 +1247,7 @@ def init(name,
     :param hypervisor: the virtual machine type. By default the value will be computed according
                        to the virtual host capabilities.
     :param start: ``True`` to start the virtual machine after having defined it (Default: ``True``)
-    :param disk: Disk profile to use (Default: ``'default'``).
+    :param disk: Disk profile to use (Default: ``'default'``). If set to ``None``, no profile will be used.
     :param disks: List of dictionaries providing details on the disk devices to create.
                   These data are merged with the ones from the disk profile. The structure of
                   each dictionary is documented in :ref:`init-disk-def`.
@@ -1155,6 +1275,21 @@ def init(name,
     :param graphics:
         Dictionary providing details on the graphics device to create. (Default: ``None``)
         See :ref:`init-graphics-def` for more details on the possible values.
+
+        .. versionadded:: Fluorine
+    :param loader:
+        Dictionary providing details on the BIOS firmware loader. (Default: ``None``)
+        See :ref:`init-loader-def` for more details on the possible values.
+
+        .. versionadded:: Neon
+    :param os_type:
+        type of virtualization as found in the ``//os/type`` element of the libvirt definition.
+        The default value is taken from the host capabilities, with a preference for ``hvm``.
+
+        .. versionadded:: Fluorine
+    :param arch:
+        architecture of the virtual machine. The default value is taken from the host capabilities,
+        but ``x86_64`` is prefed over ``i686``.
 
         .. versionadded:: Fluorine
     :param enable_qcow:
@@ -1245,7 +1380,7 @@ def init(name,
 
     Disk dictionaries can contain the following properties:
 
-    disk_name
+    name
         Name of the disk. This is mostly used in the name of the disk image and as a key to merge
         with the profile data.
 
@@ -1263,8 +1398,7 @@ def init(name,
     model
         One of the disk busses allowed by libvirt (Default: depends on hypervisor)
 
-        See `libvirt documentation <https://libvirt.org/formatdomain.html#elementsDisks>`_
-        for the allowed bus types.
+        See the libvirt `disk element`_ documentation for the allowed bus types.
 
     image
         Path to the image to use for the disk. If no image is provided, an empty disk will be created
@@ -1274,6 +1408,32 @@ def init(name,
         ``True`` to create a QCOW2 disk image with ``image`` as backing file. If ``False``
         the file pointed to by the ``image`` property will simply be copied. (Default: ``False``)
 
+    hostname_property
+        When using ZFS volumes, setting this value to a ZFS property ID will make Salt store the name of the
+        virtual machine inside this property. (Default: ``None``)
+
+    sparse_volume
+        Boolean to specify whether to use a thin provisioned ZFS volume.
+
+        Example profile for a bhyve VM with two ZFS disks. The first is
+        cloned from the specified image. The second disk is a thin
+        provisioned volume.
+
+        .. code-block:: yaml
+
+            virt:
+              disk:
+                two_zvols:
+                  - system:
+                      image: zroot/bhyve/CentOS-7-x86_64-v1@v1.0.5
+                      hostname_property: virt:hostname
+                      pool: zroot/bhyve/guests
+                  - data:
+                      pool: tank/disks
+                      size: 20G
+                      hostname_property: virt:hostname
+                      sparse_volume: True
+
     .. _init-graphics-def:
 
     .. rubric:: Graphics Definition
@@ -1281,11 +1441,10 @@ def init(name,
     The graphics dictionnary can have the following properties:
 
     type
-        Graphics type. The possible values are ``'spice'``, ``'vnc'`` and other values
+        Graphics type. The possible values are ``none``, ``'spice'``, ``'vnc'`` and other values
         allowed as a libvirt graphics type (Default: ``None``)
 
-        See `the libvirt documentation <https://libvirt.org/formatdomain.html#elementsGraphics>`_
-        for more details on the possible types
+        See the libvirt `graphics element`_ documentation for more details on the possible types.
 
     port
         Port to export the graphics on for ``vnc``, ``spice`` and ``rdp`` types.
@@ -1300,6 +1459,16 @@ def init(name,
 
         By default, not setting the ``listen`` part of the dictionary will default to
         listen on all addresses.
+
+    .. rubric:: Loader Definition
+
+    The loader dictionary must have the following property:
+
+    path
+        Path to the UEFI firmware binary
+
+    Optionally, you can provide arbitrary attributes such as ``readonly`` or ``type``. See
+    the libvirt documentation for all supported loader parameters.
 
     .. rubric:: CLI Example
 
@@ -1317,8 +1486,14 @@ def init(name,
 
         virt:
             images: /data/my/vm/images/
+
+    .. _disk element: https://libvirt.org/formatdomain.html#elementsDisks
+    .. _graphics element: https://libvirt.org/formatdomain.html#elementsGraphics
     '''
-    hypervisors = _get_domain_types(**kwargs)
+    caps = capabilities(**kwargs)
+    os_types = sorted(set([guest['os_type'] for guest in caps['guests']]))
+    arches = sorted(set([guest['arch']['name'] for guest in caps['guests']]))
+    hypervisors = sorted(set([x for y in [guest['arch']['domains'].keys() for guest in caps['guests']] for x in y]))
     hypervisor = __salt__['config.get']('libvirt:hypervisor', hypervisor)
     if hypervisor is not None:
         salt.utils.versions.warn_until(
@@ -1349,17 +1524,7 @@ def init(name,
             '\'dmac\' parameter has been deprecated. Rather use the \'interfaces\' parameter '
             'to properly define the desired MAC address. \'dmac\' will be removed in {version}.'
         )
-    nicp = _nic_profile(nic, hypervisor, dmac=dmac)
-    log.debug('NIC profile is %s', nicp)
-    if interfaces:
-        users_nics = _complete_nics(interfaces, hypervisor)
-        for unic in users_nics:
-            found = [nic for nic in nicp if nic['name'] == unic['name']]
-            if found:
-                found[0].update(unic)
-            else:
-                nicp.append(unic)
-        log.debug('Merged NICs: %s', nicp)
+    nicp = _get_merged_nics(hypervisor, nic, interfaces, dmac=dmac)
 
     # the disks are computed as follows:
     # 1 - get the disks defined in the profile
@@ -1432,6 +1597,17 @@ def init(name,
                     priv_key=priv_key,
                 )
 
+        elif hypervisor in ['bhyve']:
+            img_dest = _zfs_image_create(
+                vm_name=name,
+                pool=_disk.get('pool'),
+                disk_name=_disk.get('name'),
+                disk_size=_disk.get('size'),
+                disk_image_name=_disk.get('image'),
+                hostname_property_name=_disk.get('hostname_property'),
+                sparse_volume=_disk.get('sparse_volume'),
+            )
+
         else:
             # Unknown hypervisor
             raise SaltInvocationError(
@@ -1449,7 +1625,10 @@ def init(name,
             '\'enable_vnc\' will be removed in {version}. ')
         graphics = {'type': 'vnc'}
 
-    vm_xml = _gen_xml(name, cpu, mem, diskp, nicp, hypervisor, graphics, **kwargs)
+    os_type = 'hvm' if 'hvm' in os_types else os_types[0]
+    arch = 'x86_64' if 'x86_64' in arches else arches[0]
+
+    vm_xml = _gen_xml(name, cpu, mem, diskp, nicp, hypervisor, os_type, arch, graphics, loader, **kwargs)
     conn = __get_conn(**kwargs)
     try:
         conn.defineXML(vm_xml)
@@ -1468,6 +1647,330 @@ def init(name,
     conn.close()
 
     return True
+
+
+def _disks_equal(disk1, disk2):
+    '''
+    Test if two disk elements should be considered like the same device
+    '''
+    return ElementTree.tostring(disk1.find('source')) == \
+        ElementTree.tostring(disk2.find('source'))
+
+
+def _nics_equal(nic1, nic2):
+    '''
+    Test if two interface elements should be considered like the same device
+    '''
+
+    def _filter_nic(nic):
+        '''
+        Filter out elements to ignore when comparing nics
+        '''
+        nic_copy = copy.deepcopy(nic)
+        for tag in ['mac', 'alias', 'target', 'address', 'model']:
+            element = nic_copy.find(tag)
+            if element is not None:
+                nic_copy.remove(element)
+
+        # Remove the bridge attribute if not needed: it's auto-added by libvirt
+        source = nic_copy.find('source')
+        if 'network' in source.attrib and 'bridge' in source.attrib:
+            del source.attrib['bridge']
+
+        return nic_copy
+    return ElementTree.tostring(_filter_nic(nic1)).strip() == ElementTree.tostring(_filter_nic(nic2)).strip()
+
+
+def _graphics_equal(gfx1, gfx2):
+    '''
+    Test if two graphics devices should be considered the same device
+    '''
+    def _filter_graphics(gfx):
+        '''
+        When the domain is running, the graphics element may contain additional properties
+        with the default values. This function will strip down the default values.
+        '''
+        gfx_copy = copy.deepcopy(gfx)
+
+        defaults = [{'node': '.', 'attrib': 'port', 'values': ['5900', '-1']},
+                    {'node': '.', 'attrib': 'address', 'values': ['127.0.0.1']},
+                    {'node': 'listen', 'attrib': 'address', 'values': ['127.0.0.1']}]
+
+        for default in defaults:
+            node = gfx_copy.find(default['node'])
+            attrib = default['attrib']
+            if node is not None and (attrib not in node.attrib or node.attrib[attrib] in default['values']):
+                node.set(attrib, default['values'][0])
+        return gfx_copy
+
+    return ElementTree.tostring(_filter_graphics(gfx1)) == ElementTree.tostring(_filter_graphics(gfx2))
+
+
+def _diff_lists(old, new, comparator):
+    '''
+    Compare lists to extract the changes
+
+    :param old: old list
+    :param new: new list
+    :return: a dictionary with ``unchanged``, ``new`` and ``deleted`` keys
+    '''
+    def _remove_indent(node):
+        '''
+        Remove the XML indentation to compare XML trees more easily
+        '''
+        node_copy = copy.deepcopy(node)
+        node_copy.text = None
+        for item in node_copy.iter():
+            item.tail = None
+        return node_copy
+
+    diff = {'unchanged': [], 'new': [], 'deleted': []}
+    for new_item in new:
+        found = [item for item in old if comparator(_remove_indent(item), _remove_indent(new_item))]
+        if found:
+            old.remove(found[0])
+            diff['unchanged'].append(found[0])
+        else:
+            diff['new'].append(new_item)
+    diff['deleted'] = old
+    return diff
+
+
+def _diff_disk_lists(old, new):
+    '''
+    Compare disk definitions to extract the changes and fix target devices
+
+    :param old: list of ElementTree nodes representing the old disks
+    :param new: list of ElementTree nodes representing the new disks
+    '''
+    diff = _diff_lists(old, new, _disks_equal)
+
+    # Fix the target device to avoid duplicates with the unchanged disks
+    # The requested device names may not be honoured by hypervisor and will
+    # likely be set right at the next start of the VM
+    targets = [disk.find('target').get('dev') for disk in diff['unchanged']]
+    prefixes = ['fd', 'hd', 'vd', 'sd', 'xvd', 'ubd']
+    for disk in diff['new']:
+        target_node = disk.find('target')
+        target = target_node.get('dev')
+        if target in targets:
+            prefix = [item for item in prefixes if target.startswith(item)][0]
+            for i in range(1024):
+                attempt = '{0}{1}'.format(prefix, string.ascii_lowercase[i])
+                if attempt not in targets:
+                    target_node.set('dev', attempt)
+                    targets.append(attempt)
+                    break
+    return diff
+
+
+def _diff_interface_lists(old, new):
+    '''
+    Compare network interface definitions to extract the changes
+
+    :param old: list of ElementTree nodes representing the old interfaces
+    :param new: list of ElementTree nodes representing the new interfaces
+    '''
+    diff = _diff_lists(old, new, _nics_equal)
+
+    # Remove duplicated addresses mac addresses and let libvirt generate them for us
+    macs = [nic.find('mac').get('address') for nic in diff['unchanged']]
+    for nic in diff['new']:
+        mac = nic.find('mac')
+        if mac.get('address') in macs:
+            nic.remove(mac)
+
+    return diff
+
+
+def _diff_graphics_lists(old, new):
+    '''
+    Compare graphic devices definitions to extract the changes
+
+    :param old: list of ElementTree nodes representing the old graphic devices
+    :param new: list of ElementTree nodes representing the new graphic devices
+    '''
+    return _diff_lists(old, new, _graphics_equal)
+
+
+def update(name,
+           cpu=0,
+           mem=0,
+           disk_profile=None,
+           disks=None,
+           nic_profile=None,
+           interfaces=None,
+           graphics=None,
+           live=True,
+           **kwargs):
+    '''
+    Update the definition of an existing domain.
+
+    :param name: Name of the domain to update
+    :param cpu: Number of virtual CPUs to assign to the virtual machine
+    :param mem: Amount of memory to allocate to the virtual machine in MiB.
+    :param disk_profile: disk profile to use
+    :param disks:
+        Disk definitions as documented in the :func:`init` function.
+        If neither the profile nor this parameter are defined, the disk devices
+        will not be changed. However to clear disks set this parameter to empty list.
+
+    :param nic_profile: network interfaces profile to use
+    :param interfaces:
+        Network interface definitions as documented in the :func:`init` function.
+        If neither the profile nor this parameter are defined, the interface devices
+        will not be changed. However to clear network interfaces set this parameter
+        to empty list.
+
+    :param graphics:
+        The new graphics definition as defined in :ref:`init-graphics-def`. If not set,
+        the graphics will not be changed. To remove a graphics device, set this parameter
+        to ``{'type': 'none'}``.
+
+    :param live:
+        ``False`` to avoid trying to live update the definition. In such a case, the
+        new definition is applied at the next start of the virtual machine. If ``True``,
+        not all aspects of the definition can be live updated, but as much as possible
+        will be attempted. (Default: ``True``)
+
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
+
+    :return:
+
+        Returns a dictionary indicating the status of what has been done. It is structured in
+        the following way:
+
+        .. code-block:: python
+
+            {
+              'definition': True,
+              'cpu': True,
+              'mem': True,
+              'disks': {'attached': [list of actually attached disks],
+                        'detached': [list of actually detached disks]},
+              'nics': {'attached': [list of actually attached nics],
+                       'detached': [list of actually detached nics]},
+              'errors': ['error messages for failures']
+            }
+
+    .. versionadded:: Fluorine
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.update domain cpu=2 mem=1024
+
+    '''
+    status = {
+        'definition': False,
+        'disk': {'attached': [], 'detached': []},
+        'interface': {'attached': [], 'detached': []}
+    }
+    conn = __get_conn(**kwargs)
+    domain = _get_domain(conn, name)
+    desc = ElementTree.fromstring(domain.XMLDesc(0))
+    need_update = False
+
+    # Compute the XML to get the disks, interfaces and graphics
+    hypervisor = desc.get('type')
+    new_desc = ElementTree.fromstring(_gen_xml(name,
+                                               cpu,
+                                               mem,
+                                               _disk_profile(disk_profile, hypervisor, disks, name, **kwargs),
+                                               _get_merged_nics(hypervisor, nic_profile, interfaces),
+                                               hypervisor,
+                                               domain.OSType(),
+                                               desc.find('.//os/type').get('arch'),
+                                               graphics,
+                                               **kwargs))
+
+    # Update the cpu
+    cpu_node = desc.find('vcpu')
+    if cpu and int(cpu_node.text) != cpu:
+        cpu_node.text = six.text_type(cpu)
+        cpu_node.set('current', six.text_type(cpu))
+        need_update = True
+
+    # Update the memory, note that libvirt outputs all memory sizes in KiB
+    mem_node = desc.find('memory')
+    if mem and int(mem_node.text) != mem * 1024:
+        mem_node.text = six.text_type(mem)
+        mem_node.set('unit', 'MiB')
+        need_update = True
+
+    # Update the XML definition with the new disks and diff changes
+    devices_node = desc.find('devices')
+    parameters = {'disk': ['disks', 'disk_profile'],
+                  'interface': ['interfaces', 'nic_profile'],
+                  'graphics': ['graphics']}
+    changes = {}
+    for dev_type in parameters:
+        changes[dev_type] = {}
+        func_locals = locals()
+        if [param for param in parameters[dev_type] if func_locals.get(param, None) is not None]:
+            old = devices_node.findall(dev_type)
+            new = new_desc.findall('devices/{0}'.format(dev_type))
+            changes[dev_type] = globals()['_diff_{0}_lists'.format(dev_type)](old, new)
+            if changes[dev_type]['deleted'] or changes[dev_type]['new']:
+                for item in old:
+                    devices_node.remove(item)
+                devices_node.extend(new)
+                need_update = True
+
+    # Set the new definition
+    if need_update:
+        try:
+            conn.defineXML(ElementTree.tostring(desc))
+            status['definition'] = True
+        except libvirt.libvirtError as err:
+            conn.close()
+            raise err
+
+        # Do the live changes now that we know the definition has been properly set
+        # From that point on, failures are not blocking to try to live update as much
+        # as possible.
+        commands = []
+        if domain.isActive() and live:
+            if cpu:
+                commands.append({'device': 'cpu',
+                                 'cmd': 'setVcpusFlags',
+                                 'args': [cpu, libvirt.VIR_DOMAIN_AFFECT_LIVE]})
+            if mem:
+                commands.append({'device': 'mem',
+                                 'cmd': 'setMemoryFlags',
+                                 'args': [mem * 1024, libvirt.VIR_DOMAIN_AFFECT_LIVE]})
+
+            for dev_type in ['disk', 'interface']:
+                for added in changes[dev_type].get('new', []):
+                    commands.append({'device': dev_type,
+                                     'cmd': 'attachDevice',
+                                     'args': [ElementTree.tostring(added)]})
+
+                for removed in changes[dev_type].get('deleted', []):
+                    commands.append({'device': dev_type,
+                                     'cmd': 'detachDevice',
+                                     'args': [ElementTree.tostring(removed)]})
+
+        for cmd in commands:
+            try:
+                ret = getattr(domain, cmd['cmd'])(*cmd['args'])
+                device_type = cmd['device']
+                if device_type in ['cpu', 'mem']:
+                    status[device_type] = not bool(ret)
+                else:
+                    actions = {'attachDevice': 'attached', 'detachDevice': 'detached'}
+                    status[device_type][actions[cmd['cmd']]].append(cmd['args'][0])
+
+            except libvirt.libvirtError as err:
+                if 'errors' not in status:
+                    status['errors'] = []
+                status['errors'].append(six.text_type(err))
+
+    conn.close()
+    return status
 
 
 def list_domains(**kwargs):
@@ -1603,6 +2106,7 @@ def vm_info(vm_=None, **kwargs):
                 'graphics': _get_graphics(dom),
                 'nics': _get_nics(dom),
                 'uuid': _get_uuid(dom),
+                'loader': _get_loader(dom),
                 'on_crash': _get_on_crash(dom),
                 'on_reboot': _get_on_reboot(dom),
                 'on_poweroff': _get_on_poweroff(dom),
@@ -1753,14 +2257,8 @@ def get_macs(vm_, **kwargs):
 
         salt '*' virt.get_macs <domain>
     '''
-    macs = []
-    doc = minidom.parse(_StringIO(get_xml(vm_, **kwargs)))
-    for node in doc.getElementsByTagName('devices'):
-        i_nodes = node.getElementsByTagName('interface')
-        for i_node in i_nodes:
-            for v_node in i_node.getElementsByTagName('mac'):
-                macs.append(v_node.getAttribute('address'))
-    return macs
+    doc = ElementTree.fromstring(get_xml(vm_, **kwargs))
+    return [node.get('address') for node in doc.findall('devices/interface/mac')]
 
 
 def get_graphics(vm_, **kwargs):
@@ -1788,6 +2286,29 @@ def get_graphics(vm_, **kwargs):
     graphics = _get_graphics(_get_domain(conn, vm_))
     conn.close()
     return graphics
+
+
+def get_loader(vm_, **kwargs):
+    '''
+    Returns the information on the loader for a given vm
+
+    :param vm_: name of the domain
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.get_loader <domain>
+
+    .. versionadded:: Fluorine
+    '''
+    conn = __get_conn(**kwargs)
+    loader = _get_loader(_get_domain(conn, vm_))
+    conn.close()
+    return loader
 
 
 def get_disks(vm_, **kwargs):
@@ -2073,7 +2594,8 @@ def get_profiles(hypervisor=None, **kwargs):
     '''
     ret = {}
 
-    hypervisors = _get_domain_types(**kwargs)
+    caps = capabilities(**kwargs)
+    hypervisors = sorted(set([x for y in [guest['arch']['domains'].keys() for guest in caps['guests']] for x in y]))
     default_hypervisor = 'kvm' if 'kvm' in hypervisors else hypervisors[0]
 
     if not hypervisor:
@@ -2785,14 +3307,26 @@ def purge(vm_, dirs=False, removables=None, **kwargs):
     for disk in disks:
         if not removables and disks[disk]['type'] in ['cdrom', 'floppy']:
             continue
-        os.remove(disks[disk]['file'])
-        directories.add(os.path.dirname(disks[disk]['file']))
+        elif disks[disk].get('zfs', False):
+            # TODO create solution for 'dataset is busy'
+            time.sleep(3)
+            fs_name = disks[disk]['file'][len('/dev/zvol/'):]
+            log.info('Destroying VM ZFS volume %s', fs_name)
+            __salt__['zfs.destroy'](
+                    name=fs_name,
+                    force=True)
+        else:
+            os.remove(disks[disk]['file'])
+            directories.add(os.path.dirname(disks[disk]['file']))
     if dirs:
         for dir_ in directories:
             shutil.rmtree(dir_)
     if getattr(libvirt, 'VIR_DOMAIN_UNDEFINE_NVRAM', False):
         # This one is only in 1.2.8+
-        dom.undefineFlags(libvirt.VIR_DOMAIN_UNDEFINE_NVRAM)
+        try:
+            dom.undefineFlags(libvirt.VIR_DOMAIN_UNDEFINE_NVRAM)
+        except libvirt.libvirtError:
+            dom.undefine()
     else:
         dom.undefine()
     conn.close()
@@ -2894,6 +3428,7 @@ def get_hypervisor():
 
     - kvm
     - xen
+    - bhyve
 
     CLI Example:
 
@@ -2902,13 +3437,29 @@ def get_hypervisor():
         salt '*' virt.get_hypervisor
 
     .. versionadded:: Fluorine
-        the function and the ``kvm`` and ``xen`` hypervisors support
+        the function and the ``kvm``, ``xen`` and ``bhyve`` hypervisors support
     '''
     # To add a new 'foo' hypervisor, add the _is_foo_hyper function,
     # add 'foo' to the list below and add it to the docstring with a .. versionadded::
-    hypervisors = ['kvm', 'xen']
-    result = [hyper for hyper in hypervisors if getattr(sys.modules[__name__], '_is_{}_hyper').format(hyper)()]
+    hypervisors = ['kvm', 'xen', 'bhyve']
+    result = [hyper for hyper in hypervisors if getattr(sys.modules[__name__], '_is_{}_hyper'.format(hyper))()]
     return result[0] if result else None
+
+
+def _is_bhyve_hyper():
+    '''
+    Returns a bool whether or not this node is a bhyve hypervisor
+    '''
+    sysctl_cmd = 'sysctl hw.vmm.create'
+    vmm_enabled = False
+    try:
+        stdout = subprocess.Popen(sysctl_cmd,
+                                  shell=True,
+                                  stdout=subprocess.PIPE).communicate()[0]
+        vmm_enabled = len(salt.utils.stringutils.to_str(stdout).split('"')[1]) != 0
+    except IndexError:
+        pass
+    return vmm_enabled
 
 
 def is_hyper():
@@ -2922,7 +3473,7 @@ def is_hyper():
         salt '*' virt.is_hyper
     '''
     if HAS_LIBVIRT:
-        return is_xen_hyper() or is_kvm_hyper()
+        return is_xen_hyper() or is_kvm_hyper() or _is_bhyve_hyper()
     return False
 
 
@@ -3112,13 +3663,8 @@ def vm_diskstats(vm_=None, **kwargs):
         '''
         Extract the disk devices names from the domain XML definition
         '''
-        doc = minidom.parse(_StringIO(dom.XMLDesc(0)))
-        disks = []
-        for elem in doc.getElementsByTagName('disk'):
-            targets = elem.getElementsByTagName('target')
-            target = targets[0]
-            disks.append(target.getAttribute('dev'))
-        return disks
+        doc = ElementTree.fromstring(get_xml(dom, **kwargs))
+        return [target.get('dev') for target in doc.findall('devices/disk/target')]
 
     def _info(dom):
         '''
@@ -3252,7 +3798,9 @@ def snapshot(domain, name=None, suffix=None, **kwargs):
     n_name.text = name
 
     conn = __get_conn(**kwargs)
-    _get_domain(conn, domain).snapshotCreateXML(ElementTree.tostring(doc))
+    _get_domain(conn, domain).snapshotCreateXML(
+        salt.utils.stringutils.to_str(ElementTree.tostring(doc))
+    )
     conn.close()
 
     return {'name': name}
@@ -3380,48 +3928,14 @@ def revert_snapshot(name, vm_snapshot=None, cleanup=False, **kwargs):
     return ret
 
 
-def _capabilities(conn):
-    '''
-    Return connection capabilities as XML.
-    '''
-    caps = conn.getCapabilities()
-    caps = minidom.parseString(caps)
-
-    return caps
-
-
-def _get_xml_first_element_by_tag_name(node, name):  # pylint: disable=invalid-name
-    '''
-    Convenience function getting the first result of getElementsByTagName() or None.
-    '''
-    nodes = node.getElementsByTagName(name)
-    return nodes[0] if nodes else None
-
-
-def _get_xml_element_text(node):
-    '''
-    Get the text value of an XML element.
-    '''
-    return "".join([child.data for child in node.childNodes if child.nodeType == xml.dom.Node.TEXT_NODE])
-
-
-def _get_xml_child_text(node, name, default):
-    '''
-    Get the text value of the child named name of XML element node
-    '''
-    result = "".join([_get_xml_element_text(child) for child in node.childNodes
-                      if child.nodeType == xml.dom.Node.ELEMENT_NODE and child.tagName == name])
-    return result if result else default
-
-
 def _caps_add_machine(machines, node):
     '''
     Parse the <machine> element of the host capabilities and add it
     to the machines list.
     '''
-    maxcpus = node.getAttribute('maxCpus')
-    canonical = node.getAttribute('canonical')
-    name = _get_xml_element_text(node)
+    maxcpus = node.get('maxCpus')
+    canonical = node.get('canonical')
+    name = node.text
 
     alternate_name = ""
     if canonical:
@@ -3442,46 +3956,42 @@ def _parse_caps_guest(guest):
     '''
     Parse the <guest> element of the connection capabilities XML
     '''
-    arch_node = _get_xml_first_element_by_tag_name(guest, 'arch')
+    arch_node = guest.find('arch')
     result = {
-        'os_type': _get_xml_element_text(guest.getElementsByTagName('os_type')[0]),
+        'os_type': guest.find('os_type').text,
         'arch': {
-            'name': arch_node.getAttribute('name'),
+            'name': arch_node.get('name'),
             'machines': {},
             'domains': {}
         },
     }
 
-    for child in arch_node.childNodes:
-        if child.nodeType != xml.dom.Node.ELEMENT_NODE:
-            continue
-        if child.tagName == 'wordsize':
-            result['arch']['wordsize'] = int(_get_xml_element_text(child))
-        elif child.tagName == 'emulator':
-            result['arch']['emulator'] = _get_xml_element_text(child)
-        elif child.tagName == 'machine':
+    for child in arch_node:
+        if child.tag == 'wordsize':
+            result['arch']['wordsize'] = int(child.text)
+        elif child.tag == 'emulator':
+            result['arch']['emulator'] = child.text
+        elif child.tag == 'machine':
             _caps_add_machine(result['arch']['machines'], child)
-        elif child.tagName == 'domain':
-            domain_type = child.getAttribute('type')
+        elif child.tag == 'domain':
+            domain_type = child.get('type')
             domain = {
                 'emulator': None,
                 'machines': {}
             }
-            emulator_node = _get_xml_first_element_by_tag_name(child, 'emulator')
-            if emulator_node:
-                domain['emulator'] = _get_xml_element_text(emulator_node)
-            for machine in child.getElementsByTagName('machine'):
+            emulator_node = child.find('emulator')
+            if emulator_node is not None:
+                domain['emulator'] = emulator_node.text
+            for machine in child.findall('machine'):
                 _caps_add_machine(domain['machines'], machine)
             result['arch']['domains'][domain_type] = domain
 
     # Note that some features have no default and toggle attributes.
     # This may not be a perfect match, but represent them as enabled by default
     # without possibility to toggle them.
-    features_node = _get_xml_first_element_by_tag_name(guest, 'features')
-    result['features'] = {child.tagName: {'toggle': True if child.getAttribute('toggle') == 'yes' else False,
-                                          'default': True if child.getAttribute('default') == 'no' else True}
-                          for child in features_node.childNodes if child.nodeType == xml.dom.Node.ELEMENT_NODE}
-
+    result['features'] = {child.tag: {'toggle': True if child.get('toggle') == 'yes' else False,
+                                      'default': True if child.get('default') == 'no' else True}
+                          for child in guest.find('features') or []}
     return result
 
 
@@ -3490,40 +4000,39 @@ def _parse_caps_cell(cell):
     Parse the <cell> nodes of the connection capabilities XML output.
     '''
     result = {
-        'id': int(cell.getAttribute('id'))
+        'id': int(cell.get('id'))
     }
 
-    mem_node = _get_xml_first_element_by_tag_name(cell, 'memory')
-    if mem_node:
-        unit = mem_node.getAttribute('unit') if mem_node.hasAttribute('unit') else 'KiB'
-        memory = _get_xml_element_text(mem_node)
+    mem_node = cell.find('memory')
+    if mem_node is not None:
+        unit = mem_node.get('unit', 'KiB')
+        memory = mem_node.text
         result['memory'] = "{} {}".format(memory, unit)
 
-    pages = [{'size': "{} {}".format(page.getAttribute('size'),
-                                     page.getAttribute('unit') if page.getAttribute('unit') else 'KiB'),
-              'available': int(_get_xml_element_text(page))}
-             for page in cell.getElementsByTagName('pages')]
+    pages = [{'size': "{} {}".format(page.get('size'), page.get('unit', 'KiB')),
+              'available': int(page.text)}
+             for page in cell.findall('pages')]
     if pages:
         result['pages'] = pages
 
-    distances = {int(distance.getAttribute('id')): int(distance.getAttribute('value'))
-                 for distance in cell.getElementsByTagName('sibling')}
+    distances = {int(distance.get('id')): int(distance.get('value'))
+                 for distance in cell.findall('distances/sibling')}
     if distances:
         result['distances'] = distances
 
     cpus = []
-    for cpu_node in cell.getElementsByTagName('cpu'):
+    for cpu_node in cell.findall('cpus/cpu'):
         cpu = {
-            'id': int(cpu_node.getAttribute('id'))
+            'id': int(cpu_node.get('id'))
         }
-        socket_id = cpu_node.getAttribute('socket_id')
+        socket_id = cpu_node.get('socket_id')
         if socket_id:
             cpu['socket_id'] = int(socket_id)
 
-        core_id = cpu_node.getAttribute('core_id')
+        core_id = cpu_node.get('core_id')
         if core_id:
             cpu['core_id'] = int(core_id)
-        siblings = cpu_node.getAttribute('siblings')
+        siblings = cpu_node.get('siblings')
         if siblings:
             cpu['siblings'] = siblings
         cpus.append(cpu)
@@ -3538,23 +4047,23 @@ def _parse_caps_bank(bank):
     Parse the <bank> element of the connection capabilities XML.
     '''
     result = {
-        'id': int(bank.getAttribute('id')),
-        'level': int(bank.getAttribute('level')),
-        'type': bank.getAttribute('type'),
-        'size': "{} {}".format(bank.getAttribute('size'), bank.getAttribute('unit')),
-        'cpus': bank.getAttribute('cpus')
+        'id': int(bank.get('id')),
+        'level': int(bank.get('level')),
+        'type': bank.get('type'),
+        'size': "{} {}".format(bank.get('size'), bank.get('unit')),
+        'cpus': bank.get('cpus')
     }
 
     controls = []
-    for control in bank.getElementsByTagName('control'):
-        unit = control.getAttribute('unit')
+    for control in bank.findall('control'):
+        unit = control.get('unit')
         result_control = {
-            'granularity': "{} {}".format(control.getAttribute('granularity'), unit),
-            'type': control.getAttribute('type'),
-            'maxAllocs': int(control.getAttribute('maxAllocs'))
+            'granularity': "{} {}".format(control.get('granularity'), unit),
+            'type': control.get('type'),
+            'maxAllocs': int(control.get('maxAllocs'))
         }
 
-        minimum = control.getAttribute('min')
+        minimum = control.get('min')
         if minimum:
             result_control['min'] = "{} {}".format(minimum, unit)
         controls.append(result_control)
@@ -3569,62 +4078,58 @@ def _parse_caps_host(host):
     Parse the <host> element of the connection capabilities XML.
     '''
     result = {}
-    for child in host.childNodes:
-        if child.nodeType != xml.dom.Node.ELEMENT_NODE:
-            continue
+    for child in host:
 
-        if child.tagName == 'uuid':
-            result['uuid'] = _get_xml_element_text(child)
+        if child.tag == 'uuid':
+            result['uuid'] = child.text
 
-        elif child.tagName == 'cpu':
+        elif child.tag == 'cpu':
             cpu = {
-                'arch': _get_xml_child_text(child, 'arch', None),
-                'model': _get_xml_child_text(child, 'model', None),
-                'vendor': _get_xml_child_text(child, 'vendor', None),
-                'features': [feature.getAttribute('name') for feature in child.getElementsByTagName('feature')],
-                'pages': [{'size': '{} {}'.format(page.getAttribute('size'),
-                                                  page.getAttribute('unit') if page.hasAttribute('unit') else 'KiB')}
-                          for page in child.getElementsByTagName('pages')]
+                'arch': child.find('arch').text if child.find('arch') is not None else None,
+                'model': child.find('model').text if child.find('model') is not None else None,
+                'vendor': child.find('vendor').text if child.find('vendor') is not None else None,
+                'features': [feature.get('name') for feature in child.findall('feature')],
+                'pages': [{'size': '{} {}'.format(page.get('size'), page.get('unit', 'KiB'))}
+                          for page in child.findall('pages')]
             }
             # Parse the cpu tag
-            microcode = _get_xml_first_element_by_tag_name(child, 'microcode')
-            if microcode:
-                cpu['microcode'] = microcode.getAttribute('version')
+            microcode = child.find('microcode')
+            if microcode is not None:
+                cpu['microcode'] = microcode.get('version')
 
-            topology = _get_xml_first_element_by_tag_name(child, 'topology')
-            if topology:
-                cpu['sockets'] = int(topology.getAttribute('sockets'))
-                cpu['cores'] = int(topology.getAttribute('cores'))
-                cpu['threads'] = int(topology.getAttribute('threads'))
+            topology = child.find('topology')
+            if topology is not None:
+                cpu['sockets'] = int(topology.get('sockets'))
+                cpu['cores'] = int(topology.get('cores'))
+                cpu['threads'] = int(topology.get('threads'))
             result['cpu'] = cpu
 
-        elif child.tagName == "power_management":
-            result['power_management'] = [node.tagName for node in child.childNodes
-                                          if node.nodeType == xml.dom.Node.ELEMENT_NODE]
+        elif child.tag == "power_management":
+            result['power_management'] = [node.tag for node in child]
 
-        elif child.tagName == "migration_features":
+        elif child.tag == "migration_features":
             result['migration'] = {
-                'live': bool(child.getElementsByTagName('live')),
-                'transports': [_get_xml_element_text(node) for node in child.getElementsByTagName('uri_transport')]
+                'live': child.find('live') is not None,
+                'transports': [node.text for node in child.findall('uri_transports/uri_transport')]
             }
 
-        elif child.tagName == "topology":
+        elif child.tag == "topology":
             result['topology'] = {
-                'cells': [_parse_caps_cell(cell) for cell in child.getElementsByTagName('cell')]
+                'cells': [_parse_caps_cell(cell) for cell in child.findall('cells/cell')]
             }
 
-        elif child.tagName == 'cache':
+        elif child.tag == 'cache':
             result['cache'] = {
-                'banks': [_parse_caps_bank(bank) for bank in child.getElementsByTagName('bank')]
+                'banks': [_parse_caps_bank(bank) for bank in child.findall('bank')]
             }
 
     result['security'] = [{
-            'model': _get_xml_child_text(secmodel, 'model', None),
-            'doi': _get_xml_child_text(secmodel, 'doi', None),
-            'baselabels': [{'type': label.getAttribute('type'), 'label': _get_xml_element_text(label)}
-                           for label in secmodel.getElementsByTagName('baselabel')]
+            'model': secmodel.find('model').text if secmodel.find('model') is not None else None,
+            'doi': secmodel.find('doi').text if secmodel.find('doi') is not None else None,
+            'baselabels': [{'type': label.get('type'), 'label': label.text}
+                           for label in secmodel.findall('baselabel')]
         }
-        for secmodel in host.getElementsByTagName('secmodel')]
+        for secmodel in host.findall('secmodel')]
 
     return result
 
@@ -3646,12 +4151,12 @@ def capabilities(**kwargs):
         salt '*' virt.capabilities
     '''
     conn = __get_conn(**kwargs)
-    caps = _capabilities(conn)
+    caps = ElementTree.fromstring(conn.getCapabilities())
     conn.close()
 
     return {
-        'host': _parse_caps_host(caps.getElementsByTagName('host')[0]),
-        'guests': [_parse_caps_guest(guest) for guest in caps.getElementsByTagName('guest')]
+        'host': _parse_caps_host(caps.find('host')),
+        'guests': [_parse_caps_guest(guest) for guest in caps.findall('guest')]
     }
 
 
@@ -3659,8 +4164,7 @@ def _parse_caps_enum(node):
     '''
     Return a tuple containing the name of the enum and the possible values
     '''
-    return (node.getAttribute('name') or None,
-            [_get_xml_element_text(value) for value in node.getElementsByTagName('value')])
+    return (node.get('name'), [value.text for value in node.findall('value')])
 
 
 def _parse_caps_cpu(node):
@@ -3668,37 +4172,36 @@ def _parse_caps_cpu(node):
     Parse the <cpu> element of the domain capabilities
     '''
     result = {}
-    for mode in node.getElementsByTagName('mode'):
-        if not mode.getAttribute('supported') == 'yes':
+    for mode in node.findall('mode'):
+        if not mode.get('supported') == 'yes':
             continue
 
-        name = mode.getAttribute('name')
+        name = mode.get('name')
         if name == 'host-passthrough':
             result[name] = True
 
         elif name == 'host-model':
             host_model = {}
-            model_node = _get_xml_first_element_by_tag_name(mode, 'model')
-            if model_node:
+            model_node = mode.find('model')
+            if model_node is not None:
                 model = {
-                    'name': _get_xml_element_text(model_node)
+                    'name': model_node.text
                 }
 
-                vendor_id = model_node.getAttribute('vendor_id')
+                vendor_id = model_node.get('vendor_id')
                 if vendor_id:
                     model['vendor_id'] = vendor_id
 
-                fallback = model_node.getAttribute('fallback')
+                fallback = model_node.get('fallback')
                 if fallback:
                     model['fallback'] = fallback
                 host_model['model'] = model
 
-            vendor = _get_xml_child_text(mode, 'vendor', None)
+            vendor = mode.find('vendor').text if mode.find('vendor') is not None else None
             if vendor:
                 host_model['vendor'] = vendor
 
-            features = {feature.getAttribute('name'): feature.getAttribute('policy')
-                        for feature in mode.getElementsByTagName('feature')}
+            features = {feature.get('name'): feature.get('policy') for feature in mode.findall('feature')}
             if features:
                 host_model['features'] = features
 
@@ -3706,8 +4209,7 @@ def _parse_caps_cpu(node):
 
         elif name == 'custom':
             custom_model = {}
-            models = {_get_xml_element_text(model): model.getAttribute('usable')
-                      for model in mode.getElementsByTagName('model')}
+            models = {model.text: model.get('usable') for model in mode.findall('model')}
             if models:
                 custom_model['models'] = models
             result[name] = custom_model
@@ -3720,11 +4222,10 @@ def _parse_caps_devices_features(node):
     Parse the devices or features list of the domain capatilities
     '''
     result = {}
-    for child in node.childNodes:
-        if child.nodeType != xml.dom.Node.ELEMENT_NODE or not child.getAttribute('supported') == 'yes':
-            continue
-        enums = [_parse_caps_enum(node) for node in child.getElementsByTagName('enum')]
-        result[child.tagName] = {item[0]: item[1] for item in enums if item[0]}
+    for child in node:
+        if child.get('supported') == 'yes':
+            enums = [_parse_caps_enum(node) for node in child.findall('enum')]
+            result[child.tag] = {item[0]: item[1] for item in enums if item[0]}
     return result
 
 
@@ -3732,14 +4233,56 @@ def _parse_caps_loader(node):
     '''
     Parse the <loader> element of the domain capabilities.
     '''
-    enums = [_parse_caps_enum(enum) for enum in node.getElementsByTagName('enum')]
+    enums = [_parse_caps_enum(enum) for enum in node.findall('enum')]
     result = {item[0]: item[1] for item in enums if item[0]}
 
-    values = [_get_xml_element_text(child) for child in node.childNodes
-              if child.nodeType == xml.dom.Node.ELEMENT_NODE and child.tagName == 'value']
+    values = [child.text for child in node.findall('value')]
 
     if values:
         result['values'] = values
+
+    return result
+
+
+def _parse_domain_caps(caps):
+    '''
+    Parse the XML document of domain capabilities into a structure.
+    '''
+    result = {
+        'emulator': caps.find('path').text if caps.find('path') is not None else None,
+        'domain': caps.find('domain').text if caps.find('domain') is not None else None,
+        'machine': caps.find('machine').text if caps.find('machine') is not None else None,
+        'arch': caps.find('arch').text if caps.find('arch') is not None else None
+    }
+
+    for child in caps:
+        if child.tag == 'vcpu' and child.get('max'):
+            result['max_vcpus'] = int(child.get('max'))
+
+        elif child.tag == 'iothreads':
+            result['iothreads'] = child.get('supported') == 'yes'
+
+        elif child.tag == 'os':
+            result['os'] = {}
+            loader_node = child.find('loader')
+            if loader_node is not None and loader_node.get('supported') == 'yes':
+                loader = _parse_caps_loader(loader_node)
+                result['os']['loader'] = loader
+
+        elif child.tag == 'cpu':
+            cpu = _parse_caps_cpu(child)
+            if cpu:
+                result['cpu'] = cpu
+
+        elif child.tag == 'devices':
+            devices = _parse_caps_devices_features(child)
+            if devices:
+                result['devices'] = devices
+
+        elif child.tag == 'features':
+            features = _parse_caps_devices_features(child)
+            if features:
+                result['features'] = features
 
     return result
 
@@ -3761,8 +4304,7 @@ def domain_capabilities(emulator=None, arch=None, machine=None, domain=None, **k
     The list of the possible emulator, arch, machine and domain can be found in
     the host capabilities output.
 
-    If none of the parameters is provided the libvirt default domain capabilities
-    will be returned.
+    If none of the parameters is provided, the libvirt default one is returned.
 
     CLI Example:
 
@@ -3772,52 +4314,51 @@ def domain_capabilities(emulator=None, arch=None, machine=None, domain=None, **k
 
     '''
     conn = __get_conn(**kwargs)
-    caps = conn.getDomainCapabilities(emulator, arch, machine, domain, 0)
-    caps = minidom.parseString(caps)
-    conn.close()
+    result = []
+    try:
+        caps = ElementTree.fromstring(conn.getDomainCapabilities(emulator, arch, machine, domain, 0))
+        result = _parse_domain_caps(caps)
+    finally:
+        conn.close()
 
-    root_node = caps.getElementsByTagName('domainCapabilities')[0]
+    return result
 
-    result = {
-        'emulator': _get_xml_child_text(root_node, 'path', None),
-        'domain': _get_xml_child_text(root_node, 'domain', None),
-        'machine': _get_xml_child_text(root_node, 'machine', None),
-        'arch': _get_xml_child_text(root_node, 'arch', None)
-    }
 
-    for child in root_node.childNodes:
-        if child.nodeType != xml.dom.Node.ELEMENT_NODE:
-            continue
+def all_capabilities(**kwargs):
+    '''
+    Return the host and domain capabilities in a single call.
 
-        if child.tagName == 'vcpu' and child.getAttribute('max'):
-            result['max_vcpus'] = int(child.getAttribute('max'))
+    .. versionadded:: Neon
 
-        elif child.tagName == 'iothreads':
-            iothreads = child.getAttribute('supported') == 'yes'
-            if iothreads is not None:
-                result['iothreads'] = iothreads
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
 
-        elif child.tagName == 'os':
-            result['os'] = {}
-            loader_node = _get_xml_first_element_by_tag_name(child, 'loader')
-            if loader_node and loader_node.getAttribute('supported') == 'yes':
-                loader = _parse_caps_loader(loader_node)
-                result['os']['loader'] = loader
+    CLI Example:
 
-        elif child.tagName == 'cpu':
-            cpu = _parse_caps_cpu(child)
-            if cpu:
-                result['cpu'] = cpu
+    .. code-block:: bash
 
-        elif child.tagName == 'devices':
-            devices = _parse_caps_devices_features(child)
-            if devices:
-                result['devices'] = devices
+        salt '*' virt.all_capabilities
 
-        elif child.tagName == 'features':
-            features = _parse_caps_devices_features(child)
-            if features:
-                result['features'] = features
+    '''
+    conn = __get_conn(**kwargs)
+    result = {}
+    try:
+        host_caps = ElementTree.fromstring(conn.getCapabilities())
+        domains = [[(guest.get('arch', {}).get('name', None), key)
+                    for key in guest.get('arch', {}).get('domains', {}).keys()]
+                   for guest in [_parse_caps_guest(guest) for guest in host_caps.findall('guest')]]
+        flattened = [pair for item in (x for x in domains) for pair in item]
+        result = {
+                'host': {
+                    'host': _parse_caps_host(host_caps.find('host')),
+                    'guests': [_parse_caps_guest(guest) for guest in host_caps.findall('guest')]
+                },
+                'domains': [_parse_domain_caps(ElementTree.fromstring(
+                                conn.getDomainCapabilities(None, arch, None, domain)))
+                            for (arch, domain) in flattened]}
+    finally:
+        conn.close()
 
     return result
 
@@ -3849,11 +4390,9 @@ def cpu_baseline(full=False, migratable=False, out='libvirt', **kwargs):
 
     '''
     conn = __get_conn(**kwargs)
-    caps = _capabilities(conn)
-
-    cpu = caps.getElementsByTagName('host')[0].getElementsByTagName('cpu')[0]
-
-    log.debug('Host CPU model definition: %s', cpu.toxml())
+    caps = ElementTree.fromstring(conn.getCapabilities())
+    cpu = caps.find('host/cpu')
+    log.debug('Host CPU model definition: %s', ElementTree.tostring(cpu))
 
     flags = 0
     if migratable:
@@ -3868,21 +4407,19 @@ def cpu_baseline(full=False, migratable=False, out='libvirt', **kwargs):
         # This one is only in 1.1.3+
         flags += libvirt.VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES
 
-    cpu = conn.baselineCPU([cpu.toxml()], flags)
-    cpu = minidom.parseString(cpu).getElementsByTagName('cpu')
-    cpu = cpu[0]
+    cpu = ElementTree.fromstring(conn.baselineCPU([ElementTree.tostring(cpu)], flags))
     conn.close()
 
     if full and not getattr(libvirt, 'VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES', False):
         # Try do it by ourselves
         # Find the models in cpu_map.xml and iterate over them for as long as entries have submodels
         with salt.utils.files.fopen('/usr/share/libvirt/cpu_map.xml', 'r') as cpu_map:
-            cpu_map = minidom.parse(cpu_map)
+            cpu_map = ElementTree.parse(cpu_map)
 
-        cpu_model = cpu.getElementsByTagName('model')[0].childNodes[0].nodeValue
+        cpu_model = cpu.find('model').text
         while cpu_model:
-            cpu_map_models = cpu_map.getElementsByTagName('model')
-            cpu_specs = [el for el in cpu_map_models if el.getAttribute('name') == cpu_model and el.hasChildNodes()]
+            cpu_map_models = cpu_map.findall('arch/model')
+            cpu_specs = [el for el in cpu_map_models if el.get('name') == cpu_model and bool(len(el))]
 
             if not cpu_specs:
                 raise ValueError('Model {0} not found in CPU map'.format(cpu_model))
@@ -3891,25 +4428,26 @@ def cpu_baseline(full=False, migratable=False, out='libvirt', **kwargs):
 
             cpu_specs = cpu_specs[0]
 
-            cpu_model = cpu_specs.getElementsByTagName('model')
-            if not cpu_model:
+            # libvirt's cpu map used to nest model elements, to point the parent model.
+            # keep this code for compatibility with old libvirt versions
+            model_node = cpu_specs.find('model')
+            if model_node is None:
                 cpu_model = None
             else:
-                cpu_model = cpu_model[0].getAttribute('name')
+                cpu_model = model_node.get('name')
 
-            for feature in cpu_specs.getElementsByTagName('feature'):
-                cpu.appendChild(feature)
+            cpu.extend([feature for feature in cpu_specs.findall('feature')])
 
     if out == 'salt':
         return {
-            'model': cpu.getElementsByTagName('model')[0].childNodes[0].nodeValue,
-            'vendor': cpu.getElementsByTagName('vendor')[0].childNodes[0].nodeValue,
-            'features': [feature.getAttribute('name') for feature in cpu.getElementsByTagName('feature')]
+            'model': cpu.find('model').text,
+            'vendor': cpu.find('vendor').text,
+            'features': [feature.get('name') for feature in cpu.findall('feature')]
         }
     return cpu.toxml()
 
 
-def net_define(name, bridge, forward, **kwargs):
+def network_define(name, bridge, forward, **kwargs):
     '''
     Create libvirt network.
 
@@ -3928,7 +4466,7 @@ def net_define(name, bridge, forward, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' virt.net_define network main bridge openvswitch
+        salt '*' virt.network_define network main bridge openvswitch
 
     .. versionadded:: Fluorine
     '''
@@ -3998,7 +4536,7 @@ def list_networks(**kwargs):
         conn.close()
 
 
-def network_info(name, **kwargs):
+def network_info(name=None, **kwargs):
     '''
     Return informations on a virtual network provided its name.
 
@@ -4006,6 +4544,8 @@ def network_info(name, **kwargs):
     :param connection: libvirt connection URI, overriding defaults
     :param username: username to connect with, overriding defaults
     :param password: password to connect with, overriding defaults
+
+    If no name is provided, return the infos for all defined virtual networks.
 
     .. versionadded:: Fluorine
 
@@ -4017,8 +4557,11 @@ def network_info(name, **kwargs):
     '''
     result = {}
     conn = __get_conn(**kwargs)
-    try:
-        net = conn.networkLookupByName(name)
+
+    def _net_get_leases(net):
+        '''
+        Get all DHCP leases for a network
+        '''
         leases = net.DHCPLeases()
         for lease in leases:
             if lease['type'] == libvirt.VIR_IP_ADDR_TYPE_IPV4:
@@ -4027,15 +4570,17 @@ def network_info(name, **kwargs):
                 lease['type'] = 'ipv6'
             else:
                 lease['type'] = 'unknown'
+        return leases
 
-        result = {
-            'uuid': net.UUIDString(),
-            'bridge': net.bridgeName(),
-            'autostart': net.autostart(),
-            'active': net.isActive(),
-            'persistent': net.isPersistent(),
-            'leases': leases
-        }
+    try:
+        nets = [net for net in conn.listAllNetworks() if name is None or net.name() == name]
+        result = {net.name(): {
+                       'uuid': net.UUIDString(),
+                       'bridge': net.bridgeName(),
+                       'autostart': net.autostart(),
+                       'active': net.isActive(),
+                       'persistent': net.isPersistent(),
+                       'leases': _net_get_leases(net)} for net in nets}
     except libvirt.libvirtError as err:
         log.debug('Silenced libvirt error: %s', str(err))
     finally:
@@ -4146,85 +4691,166 @@ def network_set_autostart(name, state='on', **kwargs):
         conn.close()
 
 
-def pool_define_build(name, **kwargs):
+def pool_define(name,
+                ptype,
+                target=None,
+                permissions=None,
+                source_devices=None,
+                source_dir=None,
+                source_adapter=None,
+                source_hosts=None,
+                source_auth=None,
+                source_name=None,
+                source_format=None,
+                transient=False,
+                start=True,  # pylint: disable=redefined-outer-name
+                **kwargs):
     '''
     Create libvirt pool.
 
     :param name: Pool name
-    :param ptype: Pool type
-    :param target: Pool path target
-    :param source: Pool dev source
-    :param autostart: Pool autostart (default True)
+    :param ptype:
+        Pool type. See `libvirt documentation <https://libvirt.org/storage.html>`_  for the
+        possible values.
+    :param target: Pool full path target
+    :param permissions:
+        Permissions to set on the target folder. This is mostly used for filesystem-based
+        pool types. See :ref:`pool-define-permissions` for more details on this structure.
+    :param source_devices:
+        List of source devices for pools backed by physical devices. (Default: ``None``)
+
+        Each item in the list is a dictionary with ``path`` and optionally ``part_separator``
+        keys. The path is the qualified name for iSCSI devices.
+
+        Report to `this libvirt page <https://libvirt.org/formatstorage.html#StoragePool>`_
+        for more informations on the use of ``part_separator``
+    :param source_dir:
+        Path to the source directory for pools of type ``dir``, ``netfs`` or ``gluster``.
+        (Default: ``None``)
+    :param source_adapter:
+        SCSI source definition. The value is a dictionary with ``type``, ``name``, ``parent``,
+        ``managed``, ``parent_wwnn``, ``parent_wwpn``, ``parent_fabric_wwn``, ``wwnn``, ``wwpn``
+        and ``parent_address`` keys.
+
+        The ``parent_address`` value is a dictionary with ``unique_id`` and ``address`` keys.
+        The address represents a PCI address and is itself a dictionary with ``domain``, ``bus``,
+        ``slot`` and ``function`` properties.
+        Report to `this libvirt page <https://libvirt.org/formatstorage.html#StoragePool>`_
+        for the meaning and possible values of these properties.
+    :param source_hosts:
+        List of source for pools backed by storage from remote servers. Each item is the hostname
+        optionally followed by the port separated by a colon. (Default: ``None``)
+    :param source_auth:
+        Source authentication details. (Default: ``None``)
+
+        The value is a dictionary with ``type``, ``username`` and ``secret`` keys. The type
+        can be one of ``ceph`` for Ceph RBD or ``chap`` for iSCSI sources.
+
+        The ``secret`` value links to a libvirt secret object. It is a dictionary with
+        ``type`` and ``value`` keys. The type value can be either ``uuid`` or ``usage``.
+
+        Examples:
+
+        .. code-block:: python
+
+            source_auth={
+                'type': 'ceph',
+                'username': 'admin',
+                'secret': {
+                    'type': 'uuid',
+                    'uuid': '2ec115d7-3a88-3ceb-bc12-0ac909a6fd87'
+                }
+            }
+
+        .. code-block:: python
+
+            source_auth={
+                'type': 'chap',
+                'username': 'myname',
+                'secret': {
+                    'type': 'usage',
+                    'uuid': 'mycluster_myname'
+                }
+            }
+
+    :param source_name:
+        Identifier of name-based sources.
+    :param source_format:
+        String representing the source format. The possible values are depending on the
+        source type. See `libvirt documentation <https://libvirt.org/storage.html>`_ for
+        the possible values.
     :param start: Pool start (default True)
+    :param transient:
+        When ``True``, the pool will be automatically undefined after being stopped.
+        Note that a transient pool will force ``start`` to ``True``. (Default: ``False``)
     :param connection: libvirt connection URI, overriding defaults
     :param username: username to connect with, overriding defaults
     :param password: password to connect with, overriding defaults
 
-    CLI Example:
+    .. _pool-define-permissions:
+
+    .. rubric:: Permissions definition
+
+    The permissions are described by a dictionary containing the following keys:
+
+    mode
+        The octal representation of the permissions. (Default: `0711`)
+
+    owner
+        the numeric user ID of the owner. (Default: from the parent folder)
+
+    group
+        the numeric ID of the group. (Default: from the parent folder)
+
+    label
+        the SELinux label. (Default: `None`)
+
+
+    .. rubric:: CLI Example:
+
+    Local folder pool:
 
     .. code-block:: bash
 
-        salt '*' virt.pool_define base logical base
+        salt '*' virt.pool_define somepool dir target=/srv/mypool \
+                                  permissions="{'mode': '0744' 'ower': 107, 'group': 107 }"
+
+    CIFS backed pool:
+
+    .. code-block:: bash
+
+        salt '*' virt.pool_define myshare netfs source_format=cifs \
+                                  source_dir=samba_share source_hosts="['example.com']" target=/mnt/cifs
 
     .. versionadded:: Fluorine
     '''
-    exist = False
-    update = False
     conn = __get_conn(**kwargs)
-    ptype = kwargs.pop('ptype', None)
-    target = kwargs.pop('target', None)
-    source = kwargs.pop('source', None)
-    autostart = kwargs.pop('autostart', True)
-    starting = kwargs.pop('start', True)
     pool_xml = _gen_pool_xml(
         name,
         ptype,
         target,
-        source,
+        permissions=permissions,
+        source_devices=source_devices,
+        source_dir=source_dir,
+        source_adapter=source_adapter,
+        source_hosts=source_hosts,
+        source_auth=source_auth,
+        source_name=source_name,
+        source_format=source_format
     )
     try:
-        conn.storagePoolDefineXML(pool_xml)
-    except libvirtError as err:
-        log.warning(err)
-        if err.get_error_code() == libvirt.VIR_ERR_STORAGE_POOL_BUILT or libvirt.VIR_ERR_OPERATION_FAILED:
-            exist = True
+        if transient:
+            pool = conn.storagePoolCreateXML(pool_xml)
         else:
-            conn.close()
-            raise err  # a real error we should report upwards
-    try:
-        pool = conn.storagePoolLookupByName(name)
+            pool = conn.storagePoolDefineXML(pool_xml)
+            if start:
+                pool.create()
     except libvirtError as err:
-        log.warning(err)
-        conn.close()
         raise err  # a real error we should report upwards
-
-    if pool is None:
+    finally:
         conn.close()
-        return False
 
-    if (starting is True or autostart is True) and pool.isActive() != 1:
-        if exist is True:
-            update = True
-            pool.create()
-        else:
-            pool.create(libvirt.VIR_STORAGE_POOL_CREATE_WITH_BUILD)
-
-    if autostart is True and pool.autostart() != 1:
-        if exist is True:
-            update = True
-        pool.setAutostart(int(autostart))
-    elif autostart is False and pool.autostart() == 1:
-        if exist is True:
-            update = True
-        pool.setAutostart(int(autostart))
-
-    conn.close()
-
-    if exist is True:
-        if update is True:
-            return (True, 'Pool exist', 'Pool update')
-        return (True, 'Pool exist')
-
+    # libvirt function will raise a libvirtError in case of failure
     return True
 
 
@@ -4251,7 +4877,7 @@ def list_pools(**kwargs):
         conn.close()
 
 
-def pool_info(name, **kwargs):
+def pool_info(name=None, **kwargs):
     '''
     Return informations on a storage pool provided its name.
 
@@ -4259,6 +4885,8 @@ def pool_info(name, **kwargs):
     :param connection: libvirt connection URI, overriding defaults
     :param username: username to connect with, overriding defaults
     :param password: password to connect with, overriding defaults
+
+    If no name is provided, return the infos for all defined storage pools.
 
     .. versionadded:: Fluorine
 
@@ -4270,15 +4898,19 @@ def pool_info(name, **kwargs):
     '''
     result = {}
     conn = __get_conn(**kwargs)
-    try:
-        pool = conn.storagePoolLookupByName(name)
-        infos = pool.info()
+
+    def _pool_extract_infos(pool):
+        '''
+        Format the pool info dictionary
+
+        :param pool: the libvirt pool object
+        '''
         states = ['inactive', 'building', 'running', 'degraded', 'inaccessible']
+        infos = pool.info()
         state = states[infos[0]] if infos[0] < len(states) else 'unknown'
-        desc = minidom.parseString(pool.XMLDesc())
-        pool_node = _get_xml_first_element_by_tag_name(desc, 'pool')
-        path_node = _get_xml_first_element_by_tag_name(desc, 'path')
-        result = {
+        desc = ElementTree.fromstring(pool.XMLDesc())
+        path_node = desc.find('target/path')
+        return {
             'uuid': pool.UUIDString(),
             'state': state,
             'capacity': infos[1],
@@ -4286,9 +4918,13 @@ def pool_info(name, **kwargs):
             'free': infos[3],
             'autostart': pool.autostart(),
             'persistent': pool.isPersistent(),
-            'target_path': _get_xml_element_text(path_node) if path_node else None,
-            'type': pool_node.getAttribute('type')
+            'target_path': path_node.text if path_node is not None else None,
+            'type': desc.get('type')
         }
+
+    try:
+        pools = [pool for pool in conn.listAllStoragePools() if name is None or pool.name() == name]
+        result = {pool.name(): _pool_extract_infos(pool) for pool in pools}
     except libvirt.libvirtError as err:
         log.debug('Silenced libvirt error: %s', str(err))
     finally:

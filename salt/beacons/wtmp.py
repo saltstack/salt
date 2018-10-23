@@ -2,10 +2,119 @@
 '''
 Beacon to fire events at login of users as registered in the wtmp file
 
+.. versionadded:: 2015.5.0
+
+
+Example Configuration
+=====================
+
+.. code-block:: yaml
+
+    # Fire events on all logins
+    beacons:
+      wtmp: []
+
+    # Matching on user name, using a default time range
+    beacons:
+      wtmp:
+        - users:
+            gareth:
+        - defaults:
+            time_range:
+                start: '8am'
+                end: '4pm'
+
+    # Matching on user name, overriding the default time range
+    beacons:
+      wtmp:
+        - users:
+            gareth:
+                time_range:
+                    start: '7am'
+                    end: '3pm'
+        - defaults:
+            time_range:
+                start: '8am'
+                end: '4pm'
+
+    # Matching on group name, overriding the default time range
+    beacons:
+      wtmp:
+        - groups:
+            users:
+                time_range:
+                    start: '7am'
+                    end: '3pm'
+        - defaults:
+            time_range:
+                start: '8am'
+                end: '4pm'
+
+
+How to Tell What An Event Means
+===============================
+
+In the events that this beacon fires, a type of ``7`` denotes a login, while a
+type of ``8`` denotes a logout. These values correspond to the ``ut_type``
+value from a wtmp/utmp event (see the ``wtmp`` manpage for more information).
+In the extremely unlikely case that your platform uses different values, they
+can be overridden using a ``ut_type`` key in the beacon configuration:
+
 .. code-block:: yaml
 
     beacons:
-      wtmp: []
+      wtmp:
+        - ut_type:
+            login: 9
+            logout: 10
+
+This beacon's events include an ``action`` key which will be either ``login``
+or ``logout`` depending on the event type.
+
+.. versionchanged:: Fluorine
+    ``action`` key added to beacon event, and ``ut_type`` config parameter
+    added.
+
+
+Use Case: Posting Login/Logout Events to Slack
+==============================================
+
+This can be done using the following reactor SLS:
+
+.. code-block:: jinja
+
+    report-wtmp:
+      runner.salt.cmd:
+        - args:
+          - fun: slack.post_message
+          - channel: mychannel      # Slack channel
+          - from_name: someuser     # Slack user
+          - message: "{{ data.get('action', 'Unknown event') | capitalize }} from `{{ data.get('user', '') or 'unknown user' }}` on `{{ data['id'] }}`"
+
+Match the event like so in the master config file:
+
+.. code-block:: yaml
+
+    reactor:
+
+      - 'salt/beacon/*/wtmp/':
+        - salt://reactor/wtmp.sls
+
+.. note::
+    This approach uses the :py:mod:`slack execution module
+    <salt.modules.slack_notify>` directly on the master, and therefore requires
+    that the master has a slack API key in its configuration:
+
+    .. code-block:: yaml
+
+        slack:
+          api_key: xoxb-XXXXXXXXXXXX-XXXXXXXXXXXX-XXXXXXXXXXXXXXXXXXXXXXXX
+
+    See the :py:mod:`slack execution module <salt.modules.slack_notify>`
+    documentation for more information. While you can use an individual user's
+    API key to post to Slack, a bot user is likely better suited for this. The
+    :py:mod:`slack engine <salt.engines.slack>` documentation has information
+    on how to set up a bot user.
 '''
 
 # Import Python libs
@@ -42,6 +151,9 @@ FIELDS = [
 ]
 SIZE = struct.calcsize(FMT)
 LOC_KEY = 'wtmp.loc'
+TTY_KEY_PREFIX = 'wtmp.tty.'
+LOGIN_TYPE = 7
+LOGOUT_TYPE = 8
 
 log = logging.getLogger(__name__)
 
@@ -182,52 +294,15 @@ def validate(config):
 def beacon(config):
     '''
     Read the last wtmp file and return information on the logins
-
-    .. code-block:: yaml
-
-        beacons:
-          wtmp: []
-
-        beacons:
-          wtmp:
-            - users:
-                gareth:
-            - defaults:
-                time_range:
-                    start: '8am'
-                    end: '4pm'
-
-        beacons:
-          wtmp:
-            - users:
-                gareth:
-                    time_range:
-                        start: '8am'
-                        end: '4pm'
-            - defaults:
-                time_range:
-                    start: '8am'
-                    end: '4pm'
-
-        beacons:
-          wtmp:
-            - groups:
-                users:
-                    time_range:
-                        start: '8am'
-                        end: '4pm'
-            - defaults:
-                time_range:
-                    start: '8am'
-                    end: '4pm'
-
-        .. versionadded:: Fluorine
-'''
+    '''
     ret = []
 
     users = {}
     groups = {}
     defaults = None
+
+    login_type = LOGIN_TYPE
+    logout_type = LOGOUT_TYPE
 
     for config_item in config:
         if 'users' in config_item:
@@ -238,6 +313,16 @@ def beacon(config):
 
         if 'defaults' in config_item:
             defaults = config_item['defaults']
+
+        if config_item == 'ut_type':
+            try:
+                login_type = config_item['ut_type']['login']
+            except KeyError:
+                pass
+            try:
+                logout_type = config_item['ut_type']['logout']
+            except KeyError:
+                pass
 
     with salt.utils.files.fopen(WTMP, 'rb') as fp_:
         loc = __context__.get(LOC_KEY, 0)
@@ -261,6 +346,17 @@ def beacon(config):
                     if isinstance(event[field], bytes):
                         event[field] = salt.utils.stringutils.to_unicode(event[field])
                     event[field] = event[field].strip('\x00')
+
+            if event['type'] == login_type:
+                event['action'] = 'login'
+                # Store the tty to identify the logout event
+                __context__['{0}{1}'.format(TTY_KEY_PREFIX, event['line'])] = event['user']
+            elif event['type'] == logout_type:
+                event['action'] = 'logout'
+                try:
+                    event['user'] = __context__.pop('{0}{1}'.format(TTY_KEY_PREFIX, event['line']))
+                except KeyError:
+                    pass
 
             for group in groups:
                 _gather_group_members(group, groups, users)

@@ -178,7 +178,7 @@ class AsyncRemotePillar(RemotePillarMixin):
                 load,
                 dictkey='pillar',
             )
-        except:
+        except Exception:
             log.exception('Exception getting pillar:')
             raise SaltClientError('Exception getting pillar.')
 
@@ -366,7 +366,7 @@ class Pillar(object):
         else:
             self.functions = functions
 
-        self.matcher = salt.minion.Matcher(self.opts, self.functions)
+        self.matchers = salt.loader.matchers(self.opts)
         self.rend = salt.loader.render(self.opts, self.functions)
         ext_pillar_opts = copy.deepcopy(self.opts)
         # Fix self.opts['file_roots'] so that ext_pillars know the real
@@ -649,7 +649,7 @@ class Pillar(object):
                 if saltenv != self.opts['pillarenv']:
                     continue
             for match, data in six.iteritems(body):
-                if self.matcher.confirm_top(
+                if self.matchers['confirm_top.confirm_top'](
                         match,
                         data,
                         self.opts.get('nodegroups', {}),
@@ -761,7 +761,7 @@ class Pillar(object):
                                      '\'{0}\' found'.format(saltenv)]
                                 )
 
-                        for sub_sls in set(matched_pstates):
+                        for sub_sls in matched_pstates:
                             if sub_sls not in mods:
                                 nstate, mods, err = self.render_pstate(
                                         sub_sls,
@@ -1029,6 +1029,11 @@ class Pillar(object):
         decrypt_errors = self.decrypt_pillar(pillar)
         if decrypt_errors:
             pillar.setdefault('_errors', []).extend(decrypt_errors)
+
+        # Reset the file_roots for the renderers
+        for mod_name in sys.modules:
+            if mod_name.startswith('salt.loaded.int.render.'):
+                sys.modules[mod_name].__opts__['file_roots'] = self.actual_file_roots
         return pillar
 
     def decrypt_pillar(self, pillar):

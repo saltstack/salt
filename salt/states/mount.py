@@ -199,12 +199,32 @@ def mounted(name,
 
     update_mount_cache = False
 
+    if not name:
+        ret['result'] = False
+        ret['comment'] = 'Must provide name to mount.mounted'
+        return ret
+
+    if not device:
+        ret['result'] = False
+        ret['comment'] = 'Must provide device to mount.mounted'
+        return ret
+
+    if not fstype:
+        ret['result'] = False
+        ret['comment'] = 'Must provide fstype to mount.mounted'
+        return ret
+
     if device_name_regex is None:
         device_name_regex = []
 
     # Defaults is not a valid option on Mac OS
     if __grains__['os'] in ['MacOS', 'Darwin'] and opts == 'defaults':
         opts = 'noowners'
+
+    # Defaults is not a valid option on AIX
+    if __grains__['os'] in ['AIX']:
+        if opts == 'defaults':
+            opts = ''
 
     # Make sure that opts is correct, it can be a list or a comma delimited
     # string
@@ -571,18 +591,32 @@ def mounted(name,
                 ret['comment'] = '{0} not mounted'.format(name)
 
     if persist:
-        # Override default for Mac OS
-        if __grains__['os'] in ['MacOS', 'Darwin'] and config == '/etc/fstab':
-            config = "/etc/auto_salt"
+        if '/etc/fstab' == config:
+            # Override default for Mac OS
+            if __grains__['os'] in ['MacOS', 'Darwin']:
+                config = "/etc/auto_salt"
+
+            # Override default for AIX
+            elif 'AIX' in __grains__['os']:
+                config = "/etc/filesystems"
 
         if __opts__['test']:
             if __grains__['os'] in ['MacOS', 'Darwin']:
                 out = __salt__['mount.set_automaster'](name,
-                                              device,
-                                              fstype,
-                                              opts,
-                                              config,
-                                              test=True)
+                                                       device,
+                                                       fstype,
+                                                       opts,
+                                                       config,
+                                                       test=True)
+            elif __grains__['os'] in ['AIX']:
+                out = __salt__['mount.set_filesystems'](name,
+                                                  device,
+                                                  fstype,
+                                                  opts,
+                                                  mount,
+                                                  config,
+                                                  test=True,
+                                                  match_on=match_on)
             else:
                 out = __salt__['mount.set_fstab'](name,
                                                   device,
@@ -627,10 +661,18 @@ def mounted(name,
         else:
             if __grains__['os'] in ['MacOS', 'Darwin']:
                 out = __salt__['mount.set_automaster'](name,
-                                              device,
-                                              fstype,
-                                              opts,
-                                              config)
+                                                       device,
+                                                       fstype,
+                                                       opts,
+                                                       config)
+            elif __grains__['os'] in ['AIX']:
+                out = __salt__['mount.set_filesystems'](name,
+                                                  device,
+                                                  fstype,
+                                                  opts,
+                                                  mount,
+                                                  config,
+                                                  match_on=match_on)
             else:
                 out = __salt__['mount.set_fstab'](name,
                                                   device,
@@ -712,7 +754,15 @@ def swap(name, persist=True, config='/etc/fstab'):
             ret['result'] = False
 
     if persist:
-        fstab_data = __salt__['mount.fstab'](config)
+        device_key_name = 'device'
+        if 'AIX' in __grains__['os']:
+            device_key_name = 'dev'
+            if '/etc/fstab' == config:
+                # Override default for AIX
+                config = "/etc/filesystems"
+            fstab_data = __salt__['mount.filesystems'](config)
+        else:
+            fstab_data = __salt__['mount.fstab'](config)
         if __opts__['test']:
             if name not in fstab_data:
                 ret['result'] = None
@@ -722,19 +772,25 @@ def swap(name, persist=True, config='/etc/fstab'):
             return ret
 
         if 'none' in fstab_data:
-            if fstab_data['none']['device'] == name and \
+            if fstab_data['none'][device_key_name] == name and \
                fstab_data['none']['fstype'] != 'swap':
                 return ret
 
-        # present, new, change, bad config
-        # Make sure the entry is in the fstab
-        out = __salt__['mount.set_fstab']('none',
-                                          name,
-                                          'swap',
-                                          ['defaults'],
-                                          0,
-                                          0,
-                                          config)
+        if 'AIX' in __grains__['os']:
+            out = None
+            ret['result'] = False
+            ret['comment'] += '. swap not present in /etc/filesystems on AIX.'
+            return ret
+        else:
+            # present, new, change, bad config
+            # Make sure the entry is in the fstab
+            out = __salt__['mount.set_fstab']('none',
+                                              name,
+                                              'swap',
+                                              ['defaults'],
+                                              0,
+                                              0,
+                                              config)
         if out == 'present':
             return ret
         if out == 'new':
@@ -789,6 +845,11 @@ def unmounted(name,
 
     update_mount_cache = False
 
+    if not name:
+        ret['result'] = False
+        ret['comment'] = 'Must provide name to mount.unmounted'
+        return ret
+
     # Get the active data
     active = __salt__['mount.active'](extended=True)
     if name not in active:
@@ -823,10 +884,16 @@ def unmounted(name,
         cache_result = __salt__['mount.delete_mount_cache'](name)
 
     if persist:
+        device_key_name = 'device'
         # Override default for Mac OS
         if __grains__['os'] in ['MacOS', 'Darwin'] and config == '/etc/fstab':
             config = "/etc/auto_salt"
             fstab_data = __salt__['mount.automaster'](config)
+        elif 'AIX' in __grains__['os']:
+            device_key_name = 'dev'
+            if config == '/etc/fstab':
+                config = "/etc/filesystems"
+            fstab_data = __salt__['mount.filesystems'](config)
         else:
             fstab_data = __salt__['mount.fstab'](config)
 
@@ -834,7 +901,7 @@ def unmounted(name,
             ret['comment'] += '. fstab entry not found'
         else:
             if device:
-                if fstab_data[name]['device'] != device:
+                if fstab_data[name][device_key_name] != device:
                     ret['comment'] += '. fstab entry for device {0} not found'.format(device)
                     return ret
             if __opts__['test']:
@@ -846,6 +913,8 @@ def unmounted(name,
             else:
                 if __grains__['os'] in ['MacOS', 'Darwin']:
                     out = __salt__['mount.rm_automaster'](name, device, config)
+                elif 'AIX' in __grains__['os']:
+                    out = __salt__['mount.rm_filesystems'](name, device, config)
                 else:
                     out = __salt__['mount.rm_fstab'](name, device, config)
                 if out is not True:
@@ -861,6 +930,12 @@ def unmounted(name,
 def mod_watch(name, user=None, **kwargs):
     '''
     The mounted watcher, called to invoke the watch command.
+
+    .. note::
+        This state exists to support special handling of the ``watch``
+        :ref:`requisite <requisites>`. It should not be called directly.
+
+        Parameters for this function should be set by the state being triggered.
 
     name
         The name of the mount point

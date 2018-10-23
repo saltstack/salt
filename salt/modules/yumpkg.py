@@ -53,6 +53,7 @@ import salt.utils.pkg
 import salt.utils.pkg.rpm
 import salt.utils.systemd
 import salt.utils.versions
+import salt.defaults.exitcodes
 from salt.utils.versions import LooseVersion as _LooseVersion
 import salt.utils.environment
 from salt.exceptions import (
@@ -1501,7 +1502,8 @@ def install(name=None,
                     # provided. It could either be the OS architecture, or
                     # 'noarch', and we don't make that distinction in the
                     # pkg.list_pkgs return data.
-                    version_num = version_num.split(':', 1)[-1]
+                    if ignore_epoch is True:
+                        version_num = version_num.split(':', 1)[-1]
                 arch = ''
                 try:
                     namepart, archpart = pkgname.rsplit('.', 1)
@@ -1529,23 +1531,24 @@ def install(name=None,
                         )
                         continue
 
-                pkgstr = '{0}-{1}{2}'.format(pkgname, version_num, arch)
+                if ignore_epoch is True:
+                    pkgstr = '{0}-{1}{2}'.format(pkgname, version_num, arch)
+                else:
+                    pkgstr = '{0}-{1}{2}'.format(pkgname, version_num.split(':', 1)[-1], arch)
+
             else:
                 pkgstr = pkgpath
 
             # Lambda to trim the epoch from the currently-installed version if
             # no epoch is specified in the specified version
-            norm_epoch = lambda x, y: x.split(':', 1)[-1] \
-                if ':' not in y \
-                else x
             cver = old_as_list.get(pkgname, [])
             if reinstall and cver:
                 for ver in cver:
-                    ver = norm_epoch(ver, version_num)
                     if salt.utils.versions.compare(ver1=version_num,
                                                    oper='==',
                                                    ver2=ver,
-                                                   cmp_func=version_cmp):
+                                                   cmp_func=version_cmp,
+                                                   ignore_epoch=ignore_epoch):
                         # This version is already installed, so we need to
                         # reinstall.
                         to_reinstall.append((pkgname, pkgstr))
@@ -1555,11 +1558,11 @@ def install(name=None,
                     to_install.append((pkgname, pkgstr))
                 else:
                     for ver in cver:
-                        ver = norm_epoch(ver, version_num)
                         if salt.utils.versions.compare(ver1=version_num,
                                                        oper='>=',
                                                        ver2=ver,
-                                                       cmp_func=version_cmp):
+                                                   cmp_func=version_cmp,
+                                                   ignore_epoch=ignore_epoch):
                             to_install.append((pkgname, pkgstr))
                             break
                     else:
@@ -2749,6 +2752,8 @@ def mod_repo(repo, basedir=None, **kwargs):
         the URL for yum to reference
     mirrorlist
         the URL for yum to reference
+    key_url
+        the URL to gather the repo key from (salt:// or any other scheme supported by cp.cache_file)
 
     Key/Value pairs may also be removed from a repo's configuration by setting
     a key to a blank value. Bear in mind that a name cannot be deleted, and a
@@ -2846,6 +2851,22 @@ def mod_repo(repo, basedir=None, **kwargs):
             raise SaltInvocationError(
                 'Cannot delete mirrorlist without specifying baseurl'
             )
+
+    # Import repository gpg key
+    if 'key_url' in repo_opts:
+        key_url = kwargs['key_url']
+        fn_ = __salt__['cp.cache_file'](key_url, saltenv=(kwargs['saltenv'] if 'saltenv' in kwargs else 'base'))
+        if not fn_:
+            raise CommandExecutionError(
+                'Error: Unable to copy key from URL {0} for repository {1}'.format(key_url, repo_opts['name'])
+            )
+        cmd = ['rpm', '--import', fn_]
+        out = __salt__['cmd.retcode'](cmd, python_shell=False, **kwargs)
+        if out != salt.defaults.exitcodes.EX_OK:
+            raise CommandExecutionError(
+                'Error: Unable to import key from URL {0} for repository {1}'.format(key_url, repo_opts['name'])
+            )
+        del repo_opts['key_url']
 
     # Delete anything in the todelete list
     for key in todelete:
@@ -2968,7 +2989,7 @@ def owner(*paths):
     .. versionadded:: 2014.7.0
 
     Return the name of the package that owns the file. Multiple file paths can
-    be passed. Like :mod:`pkg.version <salt.modules.yumpkg.version`, if a
+    be passed. Like :mod:`pkg.version <salt.modules.yumpkg.version>`, if a
     single path is passed, a string will be returned, and if multiple paths are
     passed, a dictionary of file/package name pairs will be returned.
 
@@ -3219,3 +3240,75 @@ def list_installed_patches():
         salt '*' pkg.list_installed_patches
     '''
     return _get_patches(installed_only=True)
+
+
+@salt.utils.decorators.path.which('yum-complete-transaction')
+def complete_transaction(cleanup_only=False, recursive=False, max_attempts=3):
+    '''
+    .. versionadded:: Fluorine
+
+    Execute ``yum-complete-transaction``, which is provided by the ``yum-utils`` package.
+
+    cleanup_only
+        Specify if the ``--cleanup-only`` option should be supplied.
+
+    recursive
+        Specify if ``yum-complete-transaction`` should be called recursively
+        (it only completes one transaction at a time).
+
+    max_attempts
+        If ``recursive`` is ``True``, the maximum times ``yum-complete-transaction`` should be called.
+
+    .. note::
+
+        Recursive calls will stop once ``No unfinished transactions left.`` is in the returned output.
+
+    .. note::
+
+        ``yum-utils`` will already be installed on the minion if the package
+        was installed from the Fedora / EPEL repositories.
+
+    CLI example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.complete_transaction
+        salt '*' pkg.complete_transaction cleanup_only=True
+        salt '*' pkg.complete_transaction recursive=True max_attempts=5
+    '''
+
+    return _complete_transaction(cleanup_only, recursive, max_attempts, 1, [])
+
+
+def _complete_transaction(cleanup_only, recursive, max_attempts, run_count, cmd_ret_list):
+    '''
+    .. versionadded:: Fluorine
+
+    Called from ``complete_transaction`` to protect the arguments
+    used for tail recursion, ``run_count`` and ``cmd_ret_list``.
+    '''
+
+    cmd = ['yum-complete-transaction']
+    if cleanup_only:
+        cmd.append('--cleanup-only')
+
+    cmd_ret_list.append(__salt__['cmd.run_all'](
+        cmd,
+        output_loglevel='trace',
+        python_shell=False
+    ))
+
+    if (cmd_ret_list[-1]['retcode'] == salt.defaults.exitcodes.EX_OK and
+            recursive and
+            'No unfinished transactions left.' not in cmd_ret_list[-1]['stdout']):
+        if run_count >= max_attempts:
+            cmd_ret_list[-1]['retcode'] = salt.defaults.exitcodes.EX_GENERIC
+            log.error('Attempt %s/%s exceeded `max_attempts` for command: `%s`',
+                      run_count, max_attempts, ' '.join(cmd))
+            raise CommandExecutionError('The `max_attempts` limit was reached and unfinished transactions remain.'
+                                        ' You may wish to increase `max_attempts` or re-execute this module.',
+                                        info={'results': cmd_ret_list})
+        else:
+            return _complete_transaction(cleanup_only, recursive, max_attempts, run_count + 1, cmd_ret_list)
+
+    return cmd_ret_list

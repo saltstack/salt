@@ -286,13 +286,14 @@ to the next master in the list if it finds the existing one is dead.
 ------------------
 
 .. versionadded:: 2014.7.0
+.. deprecated:: Fluorine
 
 Default: ``False``
 
-If :conf_minion:`master` is a list of addresses and :conf_minion`master_type`
-is ``failover``, shuffle them before trying to connect to distribute the
-minions over all available masters. This uses Python's :func:`random.shuffle
-<python2:random.shuffle>` method.
+.. warning::
+
+    This option has been deprecated in Salt ``Fluorine``. Please use
+    :conf_minion:`random_master` instead.
 
 .. code-block:: yaml
 
@@ -303,16 +304,37 @@ minions over all available masters. This uses Python's :func:`random.shuffle
 ``random_master``
 -----------------
 
+.. versionadded:: 2014.7.0
+.. versionchanged:: Fluorine
+    The :conf_minion:`master_failback` option can be used in conjunction with
+    ``random_master`` to force the minion to fail back to the first master in the
+    list if the first master is back online. Note that :conf_minion:`master_type`
+    must be set to ``failover`` in order for the ``master_failback`` setting to
+    work.
+
 Default: ``False``
 
-If :conf_minion:`master` is a list of addresses, and :conf_minion`master_type`
-is set to ``failover`` shuffle them before trying to connect to distribute the
-minions over all available masters. This uses Python's :func:`random.shuffle
-<python2:random.shuffle>` method.
+If :conf_minion:`master` is a list of addresses, shuffle them before trying to
+connect to distribute the minions over all available masters. This uses Python's
+:func:`random.shuffle <python2:random.shuffle>` method.
+
+If multiple masters are specified in the 'master' setting as a list, the default
+behavior is to always try to connect to them in the order they are listed. If
+``random_master`` is set to True, the order will be randomized instead upon Minion
+startup. This can be helpful in distributing the load of many minions executing
+``salt-call`` requests, for example, from a cron job. If only one master is listed,
+this setting is ignored and a warning is logged.
 
 .. code-block:: yaml
 
     random_master: True
+
+.. note::
+
+    When the ``failover``, ``master_failback``, and ``random_master`` options are
+    used together, only the "secondary masters" will be shuffled. The first master
+    in the list is ignored in the :func:`random.shuffle <python2:random.shuffle>`
+    call. See :conf_minion:`master_failback` for more information.
 
 .. conf_minion:: retry_dns
 
@@ -328,6 +350,23 @@ Set to zero if the minion should shutdown and not retry.
 .. code-block:: yaml
 
     retry_dns: 30
+
+.. conf_minion:: retry_dns_count
+
+``retry_dns_count``
+-------------------
+
+.. versionadded:: 2018.3.4
+
+Default: ``None``
+
+Set the number of attempts to perform when resolving
+the master hostname if name resolution fails.
+By default the minion will retry indefinitely.
+
+.. code-block:: yaml
+
+    retry_dns_count: 3
 
 .. conf_minion:: master_port
 
@@ -613,6 +652,35 @@ FQDN (for instance, Solaris).
 
     append_domain: foo.org
 
+.. conf_minion:: minion_id_remove_domain
+
+``minion_id_remove_domain``
+---------------------------
+
+.. versionadded:: Neon
+
+Default: ``False``
+
+Remove a domain when the minion id is generated as a fully qualified domain
+name (either by the user provided ``id_function``, or by Salt). This is useful
+when the minions shall be named like hostnames. Can be a single domain (to
+prevent name clashes), or True, to remove all domains.
+
+Examples:
+ - minion_id_remove_domain = foo.org
+   - FQDN = king_bob.foo.org --> minion_id = king_bob
+   - FQDN = king_bob.bar.org --> minion_id = king_bob.bar.org
+ - minion_id_remove_domain = True
+   - FQDN = king_bob.foo.org --> minion_id = king_bob
+   - FQDN = king_bob.bar.org --> minion_id = king_bob
+
+
+For more information, please see :issue:`49212` and  :pull:`49378`.
+
+.. code-block:: yaml
+
+    minion_id_remove_domain: foo.org
+
 .. conf_minion:: minion_id_lowercase
 
 ``minion_id_lowercase``
@@ -729,6 +797,30 @@ Statically assigns grains to the minion.
       deployment: datacenter4
       cabinet: 13
       cab_u: 14-15
+
+.. conf_minion:: grains_blacklist
+
+``grains_blacklist``
+--------------------
+
+Default: ``[]``
+
+Each grains key will be compared against each of the expressions in this list.
+Any keys which match will be filtered from the grains. Exact matches, glob
+matches, and regular expressions are supported.
+
+.. note::
+    Some states and execution modules depend on grains. Filtering may cause
+    them to be unavailable or run unreliably.
+
+.. versionadded:: Neon
+
+.. code-block:: yaml
+
+    grains_blacklist:
+      - cpu_flags
+      - zmq*
+      - ipv[46]
 
 .. conf_minion:: grains_cache
 
@@ -913,6 +1005,22 @@ The directory where Unix sockets will be kept.
 .. code-block:: yaml
 
     sock_dir: /var/run/salt/minion
+
+.. conf_minion:: enable_gpu_grains
+
+``enable_gpu_grains``
+---------------------
+
+Default: ``True``
+
+Enable GPU hardware data for your master. Be aware that the minion can
+take a while to start up when lspci and/or dmidecode is used to populate the
+grains for the minion, so this can be set to ``False`` if you do not need these
+grains.
+
+.. code-block:: yaml
+
+    enable_gpu_grains: False
 
 .. conf_minion:: outputter_dirs
 
@@ -1295,9 +1403,8 @@ Default: ``zeromq``
 
 Changes the underlying transport layer. ZeroMQ is the recommended transport
 while additional transport layers are under development. Supported values are
-``zeromq``, ``raet`` (experimental), and ``tcp`` (experimental). This setting has
-a significant impact on performance and should not be changed unless you know
-what you are doing!
+``zeromq`` and ``tcp`` (experimental). This setting has a significant impact
+on performance and should not be changed unless you know what you are doing!
 
 .. code-block:: yaml
 
@@ -1489,6 +1596,25 @@ Specifies which keys are examined by
         - GlobalIPv6Address
         - IPv6Gateway
 
+.. conf_minion:: optimization_order
+
+``optimization_order``
+----------------------
+
+Default: ``[0, 1, 2]``
+
+In cases where Salt is distributed without .py files, this option determines
+the priority of optimization level(s) Salt's module loader should prefer.
+
+.. note::
+    This option is only supported on Python 3.5+.
+
+.. code-block:: yaml
+
+    optimization_order:
+      - 2
+      - 0
+      - 1
 
 Minion Execution Module Management
 ==================================
@@ -3003,7 +3129,22 @@ at the moment a single state fails
 Include Configuration
 =====================
 
-.. conf_minion:: include
+Configuration can be loaded from multiple files. The order in which this is
+done is:
+
+1. The minion config file itself
+
+2. The files matching the glob in :conf_minion:`default_include`
+
+3. The files matching the glob in :conf_minion:`include` (if defined)
+
+Each successive step overrides any values defined in the previous steps.
+Therefore, any config options defined in one of the
+:conf_minion:`default_include` files would override the same value in the
+minion config file, and any options defined in :conf_minion:`include` would
+override both.
+
+.. conf_minion:: default_include
 
 ``default_include``
 -------------------
@@ -3021,6 +3162,7 @@ file.
     files are prefixed with an underscore. A common example of this is the
     ``_schedule.conf`` file.
 
+.. conf_minion:: include
 
 ``include``
 -----------

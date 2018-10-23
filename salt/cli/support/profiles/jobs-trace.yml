@@ -1,0 +1,7 @@
+jobs-details:
+  {% for job in runners('jobs.list_jobs') %}
+  - run:jobs.list_job:
+      info: Details on JID {{job}}
+      args:
+        - {{job}}
+  {% endfor %}

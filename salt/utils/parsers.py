@@ -20,6 +20,7 @@ import getpass
 import logging
 import optparse
 import traceback
+import tempfile
 from functools import partial
 
 
@@ -33,7 +34,7 @@ import salt.utils.args
 import salt.utils.data
 import salt.utils.files
 import salt.utils.jid
-import salt.utils.kinds as kinds
+import salt.utils.network
 import salt.utils.platform
 import salt.utils.process
 import salt.utils.stringutils
@@ -586,15 +587,24 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
                 dest=self._loglevel_config_setting_name_,
                 choices=list(log.LOG_LEVELS),
                 help='Console logging log level. One of {0}. Default: \'{1}\'.'.format(
-                     ', '.join([repr(l) for l in log.SORTED_LEVEL_NAMES]),
+                     ', '.join(["'{}'".format(n) for n in log.SORTED_LEVEL_NAMES]),
                      self._default_logging_level_
                 )
             )
+
+        def _logfile_callback(option, opt, value, parser, *args, **kwargs):
+            if not os.path.dirname(value):
+                # if the path is only a file name (no parent directory), assume current directory
+                value = os.path.join(os.path.curdir, value)
+            setattr(parser.values, self._logfile_config_setting_name_, value)
 
         group.add_option(
             '--log-file',
             dest=self._logfile_config_setting_name_,
             default=None,
+            action='callback',
+            type='string',
+            callback=_logfile_callback,
             help='Log file path. Default: \'{0}\'.'.format(
                 self._default_logging_logfile_
             )
@@ -605,7 +615,7 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
             dest=self._logfile_loglevel_config_setting_name_,
             choices=list(log.LOG_LEVELS),
             help='Logfile logging log level. One of {0}. Default: \'{1}\'.'.format(
-                 ', '.join([repr(l) for l in log.SORTED_LEVEL_NAMES]),
+                 ', '.join(["'{}'".format(n) for n in log.SORTED_LEVEL_NAMES]),
                  self._default_logging_level_
             )
         )
@@ -1266,6 +1276,28 @@ class ProxyIdMixIn(six.with_metaclass(MixInMeta, object)):
         )
 
 
+class ExecutorsMixIn(six.with_metaclass(MixInMeta, object)):
+    _mixin_prio = 10
+
+    def _mixin_setup(self):
+        self.add_option(
+            '--module-executors',
+            dest='module_executors',
+            default=None,
+            metavar='EXECUTOR_LIST',
+            help=('Set an alternative list of executors to override the one '
+                  'set in minion config.')
+        )
+        self.add_option(
+            '--executor-opts',
+            dest='executor_opts',
+            default=None,
+            metavar='EXECUTOR_OPTS',
+            help=('Set alternate executor options if supported by executor. '
+                  'Options set by minion config are used by default.')
+        )
+
+
 class CacheDirMixIn(six.with_metaclass(MixInMeta, object)):
     _mixin_prio = 40
 
@@ -1871,6 +1903,69 @@ class SyndicOptionParser(six.with_metaclass(OptionParserMeta,
             self.get_config_file_path('minion'))
 
 
+class SaltSupportOptionParser(six.with_metaclass(OptionParserMeta, OptionParser, ConfigDirMixIn,
+                                                 MergeConfigMixIn, LogLevelMixIn, TimeoutMixIn)):
+    default_timeout = 5
+    description = 'Salt Support is a program to collect all support data: logs, system configuration etc.'
+    usage = '%prog [options] \'<target>\' <function> [arguments]'
+    # ConfigDirMixIn config filename attribute
+    _config_filename_ = 'master'
+
+    # LogLevelMixIn attributes
+    _default_logging_level_ = config.DEFAULT_MASTER_OPTS['log_level']
+    _default_logging_logfile_ = config.DEFAULT_MASTER_OPTS['log_file']
+
+    def _mixin_setup(self):
+        self.add_option('-P', '--show-profiles', default=False, action='store_true',
+                        dest='support_profile_list', help='Show available profiles')
+        self.add_option('-p', '--profile', default='', dest='support_profile',
+                        help='Specify support profile or comma-separated profiles, e.g.: "salt,network"')
+        support_archive = '{t}/{h}-support.tar.bz2'.format(t=tempfile.gettempdir(),
+                                                           h=salt.utils.network.get_fqhostname())
+        self.add_option('-a', '--archive', default=support_archive, dest='support_archive',
+                        help=('Specify name of the resulting support archive. '
+                              'Default is "{f}".'.format(f=support_archive)))
+        self.add_option('-u', '--unit', default='', dest='support_unit',
+                        help='Specify examined unit (default "master").')
+        self.add_option('-U', '--show-units', default=False, action='store_true', dest='support_show_units',
+                        help='Show available units')
+        self.add_option('-f', '--force', default=False, action='store_true', dest='support_archive_force_overwrite',
+                        help='Force overwrite existing archive, if exists')
+        self.add_option('-o', '--out', default='null', dest='support_output_format',
+                        help=('Set the default output using the specified outputter, '
+                              'unless profile does not overrides this. Default: "yaml".'))
+
+    def find_existing_configs(self, default):
+        '''
+        Find configuration files on the system.
+        :return:
+        '''
+        configs = []
+        for cfg in [default, self._config_filename_, 'minion', 'proxy', 'cloud', 'spm']:
+            if not cfg:
+                continue
+            config_path = self.get_config_file_path(cfg)
+            if os.path.exists(config_path):
+                configs.append(cfg)
+
+        if default and default not in configs:
+            raise SystemExit('Unknown configuration unit: {}'.format(default))
+
+        return configs
+
+    def setup_config(self, cfg=None):
+        '''
+        Open suitable config file.
+        :return:
+        '''
+        _opts, _args = optparse.OptionParser.parse_args(self)
+        configs = self.find_existing_configs(_opts.support_unit)
+        if configs and cfg not in configs:
+            cfg = configs[0]
+
+        return config.master_config(self.get_config_file_path(cfg))
+
+
 class SaltCMDOptionParser(six.with_metaclass(OptionParserMeta,
                                              OptionParser,
                                              ConfigDirMixIn,
@@ -1879,6 +1974,7 @@ class SaltCMDOptionParser(six.with_metaclass(OptionParserMeta,
                                              ExtendedTargetOptionsMixIn,
                                              OutputOptionsMixIn,
                                              LogLevelMixIn,
+                                             ExecutorsMixIn,
                                              HardCrashMixin,
                                              SaltfileMixIn,
                                              ArgsStdinMixIn,
@@ -2015,22 +2111,6 @@ class SaltCMDOptionParser(six.with_metaclass(OptionParserMeta,
             default={},
             metavar='RETURNER_KWARGS',
             help=('Set any returner options at the command line.')
-        )
-        self.add_option(
-            '--module-executors',
-            dest='module_executors',
-            default=None,
-            metavar='EXECUTOR_LIST',
-            help=('Set an alternative list of executors to override the one '
-                  'set in minion config.')
-        )
-        self.add_option(
-            '--executor-opts',
-            dest='executor_opts',
-            default=None,
-            metavar='EXECUTOR_OPTS',
-            help=('Set alternate executor options if supported by executor. '
-                  'Options set by minion config are used by default.')
         )
         self.add_option(
             '-d', '--doc', '--documentation',
@@ -2515,7 +2595,7 @@ class SaltKeyOptionParser(six.with_metaclass(OptionParserMeta,
     process_config_dir._mixin_prio_ = ConfigDirMixIn._mixin_prio_
 
     def setup_config(self):
-        keys_config = config.master_config(self.get_config_file_path())
+        keys_config = config.client_config(self.get_config_file_path())
         if self.options.gen_keys:
             # Since we're generating the keys, some defaults can be assumed
             # or tweaked
@@ -2572,7 +2652,9 @@ class SaltKeyOptionParser(six.with_metaclass(OptionParserMeta,
 
 class SaltCallOptionParser(six.with_metaclass(OptionParserMeta,
                                               OptionParser,
+                                              ProxyIdMixIn,
                                               ConfigDirMixIn,
+                                              ExecutorsMixIn,
                                               MergeConfigMixIn,
                                               LogLevelMixIn,
                                               OutputOptionsMixIn,
@@ -2732,49 +2814,14 @@ class SaltCallOptionParser(six.with_metaclass(OptionParserMeta,
             self.config['arg'] = self.args[1:]
 
     def setup_config(self):
-        opts = config.minion_config(self.get_config_file_path(),
-                                    cache_minion_id=True)
-
-        if opts.get('transport') == 'raet':
-            if not self._find_raet_minion(opts):  # must create caller minion
-                opts['__role'] = kinds.APPL_KIND_NAMES[kinds.applKinds.caller]
-        return opts
-
-    def _find_raet_minion(self, opts):
-        '''
-        Returns true if local RAET Minion is available
-        '''
-        yardname = 'manor'
-        dirpath = opts['sock_dir']
-
-        role = opts.get('id')
-        if not role:
-            emsg = "Missing role required to setup RAET SaltCaller."
-            logger.error(emsg)
-            raise ValueError(emsg)
-
-        kind = opts.get('__role')  # application kind 'master', 'minion', etc
-        if kind not in kinds.APPL_KINDS:
-            emsg = "Invalid application kind = '{0}' for RAET SaltCaller.".format(six.text_type(kind))
-            logger.error(emsg)
-            raise ValueError(emsg)
-
-        if kind in [kinds.APPL_KIND_NAMES[kinds.applKinds.minion], kinds.APPL_KIND_NAMES[kinds.applKinds.caller]]:
-            lanename = "{0}_{1}".format(role, kind)
+        if self.options.proxyid:
+            opts = config.proxy_config(self.get_config_file_path(configfile='proxy'),
+                                       cache_minion_id=True,
+                                       minion_id=self.options.proxyid)
         else:
-            emsg = "Unsupported application kind '{0}' for RAET SaltCaller.".format(six.text_type(kind))
-            logger.error(emsg)
-            raise ValueError(emsg)
-
-        if kind == kinds.APPL_KIND_NAMES[kinds.applKinds.minion]:  # minion check
-            try:
-                from raet.lane.yarding import Yard  # pylint: disable=3rd-party-module-not-gated
-                ha, dirpath = Yard.computeHa(dirpath, lanename, yardname)  # pylint: disable=invalid-name
-                if os.path.exists(ha) and not os.path.isfile(ha) and not os.path.isdir(ha):  # minion manor yard
-                    return True
-            except ImportError as ex:
-                logger.error("Error while importing Yard: %s", ex)
-        return False
+            opts = config.minion_config(self.get_config_file_path(),
+                                        cache_minion_id=True)
+        return opts
 
     def process_module_dirs(self):
         for module_dir in self.options.module_dirs:

@@ -582,12 +582,6 @@
 #
 #master_tops: {}
 
-# The external_nodes option allows Salt to gather data that would normally be
-# placed in a top file. The external_nodes option is the executable that will
-# return the ENC data. Remember that Salt will look for external nodes AND top
-# files and combine the results if both are enabled!
-#external_nodes: None
-
 # The renderer to use on the minions to render the state data
 #renderer: jinja|yaml
 
@@ -1009,7 +1003,7 @@
 
 # If and only if a master has set ``pillar_cache: True``, the cache TTL controls the amount
 # of time, in seconds, before the cache is considered invalid by a master and a fresh
-# pillar is recompiled and stored.
+# pillar is recompiled and stored. A value of 0 will cause the cache to always be valid.
 #pillar_cache_ttl: 3600
 
 # If and only if a master has set `pillar_cache: True`, one of several storage providers

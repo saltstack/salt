@@ -93,10 +93,10 @@ class GitModuleTest(ModuleCase):
             dir_path = os.path.join(self.repo, dirname)
             _makedirs(dir_path)
             for filename in self.files:
-                with salt.utils.files.fopen(os.path.join(dir_path, filename), 'w') as fp_:
-                    fp_.write(salt.utils.stringutils.to_str(
-                        'This is a test file named {0}.'.format(filename)
-                    ))
+                with salt.utils.files.fopen(os.path.join(dir_path, filename), 'wb') as fp_:
+                    fp_.write(
+                        'This is a test file named {0}.'.format(filename).encode('utf-8')
+                    )
         # Navigate to the root of the repo to init, stage, and commit
         os.chdir(self.repo)
         # Initialize a new git repository
@@ -166,10 +166,10 @@ class GitModuleTest(ModuleCase):
         files = [os.path.join(newdir_path, x) for x in self.files]
         files_relpath = [os.path.join(newdir, x) for x in self.files]
         for path in files:
-            with salt.utils.files.fopen(path, 'w') as fp_:
-                fp_.write(salt.utils.stringutils.to_str(
-                    'This is a test file with relative path {0}.\n'.format(path)
-                ))
+            with salt.utils.files.fopen(path, 'wb') as fp_:
+                fp_.write(
+                    'This is a test file with relative path {0}.\n'.format(path).encode('utf-8')
+                )
         ret = self.run_function('git.add', [self.repo, newdir])
         res = '\n'.join(sorted(['add \'{0}\''.format(x) for x in files_relpath]))
         if salt.utils.platform.is_windows():
@@ -647,8 +647,6 @@ class GitModuleTest(ModuleCase):
 
         shutil.rmtree(new_repo)
 
-    # Test for git.is_worktree is in test_worktree_add_rm
-
     def test_list_branches(self):
         '''
         Test git.list_branches
@@ -699,7 +697,8 @@ class GitModuleTest(ModuleCase):
         second_rev = self.run_function(
             'git.revision',
             [self.repo],
-            rev=self.branches[1]
+            rev=self.branches[1],
+            timeout=120
         )
         # Make sure revision is a 40-char string
         self.assertTrue(len(second_rev) == 40)
@@ -975,6 +974,7 @@ class GitModuleTest(ModuleCase):
         worktree_path = tempfile.mkdtemp(dir=TMP)
         worktree_basename = os.path.basename(worktree_path)
         worktree_path2 = tempfile.mkdtemp(dir=TMP)
+        worktree_basename2 = os.path.basename(worktree_path2)
 
         # Even though this is Windows, git commands return a unix style path
         if salt.utils.platform.is_windows():
@@ -985,11 +985,13 @@ class GitModuleTest(ModuleCase):
         ret = self.run_function(
             'git.worktree_add', [self.repo, worktree_path],
         )
-        self.assertTrue(worktree_add_prefix + worktree_path in ret)
+        self.assertTrue(worktree_add_prefix in ret)
+        self.assertTrue(worktree_basename in ret)
         ret = self.run_function(
             'git.worktree_add', [self.repo, worktree_path2]
         )
-        self.assertTrue(worktree_add_prefix + worktree_path2 in ret)
+        self.assertTrue(worktree_add_prefix in ret)
+        self.assertTrue(worktree_basename2 in ret)
         # Check if this new path is a worktree
         self.assertTrue(self.run_function('git.is_worktree', [worktree_path]))
         # Check if the main repo is a worktree

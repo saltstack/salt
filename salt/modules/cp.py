@@ -301,6 +301,19 @@ def get_file(path,
                 gzip)
 
 
+def envs():
+    '''
+    List available environments for fileserver
+
+    CLI Example
+
+    .. code-block:: bash
+
+        salt '*' cp.envs
+    '''
+    return _client().envs()
+
+
 def get_template(path,
                  dest,
                  template='jinja',
@@ -812,6 +825,7 @@ def push(path, keep_symlinks=False, upload_path=None, remove_source=False):
     load = {'cmd': '_file_recv',
             'id': __opts__['id'],
             'path': load_path_list,
+            'size': os.path.getsize(path),
             'tok': auth.gen_token(b'salt')}
     channel = salt.transport.Channel.factory(__opts__)
     with salt.utils.files.fopen(path, 'rb') as fp_:

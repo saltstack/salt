@@ -158,7 +158,12 @@ def atomic_open(filename, mode='w'):
     '''
     if mode in ('r', 'rb', 'r+', 'rb+', 'a', 'ab'):
         raise TypeError('Read or append modes don\'t work with atomic_open')
-    ntf = tempfile.NamedTemporaryFile(mode, prefix='.___atomic_write',
-                                      dir=os.path.dirname(filename),
-                                      delete=False)
+    kwargs = {
+        'prefix': '.___atomic_write',
+        'dir': os.path.dirname(filename),
+        'delete': False,
+    }
+    if six.PY3 and 'b' not in mode:
+        kwargs['newline'] = ''
+    ntf = tempfile.NamedTemporaryFile(mode, **kwargs)
     return _AtomicWFile(ntf, ntf.name, filename)

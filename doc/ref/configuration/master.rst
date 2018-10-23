@@ -472,11 +472,15 @@ communication.
 ``enable_gpu_grains``
 ---------------------
 
-Default: ``True``
+Default: ``False``
 
 Enable GPU hardware data for your master. Be aware that the master can
 take a while to start up when lspci and/or dmidecode is used to populate the
 grains for the master.
+
+.. code-block:: yaml
+
+    enable_gpu_grains: True
 
 .. conf_master:: job_cache
 
@@ -846,9 +850,8 @@ Default: ``zeromq``
 
 Changes the underlying transport layer. ZeroMQ is the recommended transport
 while additional transport layers are under development. Supported values are
-``zeromq``, ``raet`` (experimental), and ``tcp`` (experimental). This setting has
-a significant impact on performance and should not be changed unless you know
-what you are doing!
+``zeromq`` and ``tcp`` (experimental). This setting has a significant impact on
+performance and should not be changed unless you know what you are doing!
 
 .. code-block:: yaml
 
@@ -883,8 +886,8 @@ Default: False
 
 Turning on the master stats enables runtime throughput and statistics events
 to be fired from the master event bus. These events will report on what
-functions have been run on the master and how long these runs have, on
-average, taken over a given period of time.
+functions have been run on the master along with their average latency and
+duration, taken over a given period of time.
 
 .. conf_master:: master_stats_event_iter
 
@@ -1782,6 +1785,25 @@ the master will drop the request and the minion's key will remain accepted.
 
     allow_minion_key_revoke: False
 
+.. conf_master:: optimization_order
+
+``optimization_order``
+----------------------
+
+Default: ``[0, 1, 2]``
+
+In cases where Salt is distributed without .py files, this option determines
+the priority of optimization level(s) Salt's module loader should prefer.
+
+.. note::
+    This option is only supported on Python 3.5+.
+
+.. code-block:: yaml
+
+    optimization_order:
+      - 2
+      - 0
+      - 1
 
 Master Large Scale Tuning Settings
 ==================================
@@ -2085,23 +2107,6 @@ following configuration:
 
     master_tops:
       ext_nodes: <Shell command which returns yaml>
-
-.. conf_master:: external_nodes
-
-``external_nodes``
-------------------
-
-Default: None
-
-The external_nodes option allows Salt to gather data that would normally be
-placed in a top file from and external node controller. The external_nodes
-option is the executable that will return the ENC data. Remember that Salt
-will look for external nodes AND top files and combine the results if both
-are enabled and available!
-
-.. code-block:: yaml
-
-    external_nodes: cobbler-ext-nodes
 
 .. conf_master:: renderer
 
@@ -4592,7 +4597,7 @@ Default: ``3600``
 
 If and only if a master has set ``pillar_cache: True``, the cache TTL controls the amount
 of time, in seconds, before the cache is considered invalid by a master and a fresh
-pillar is recompiled and stored.
+pillar is recompiled and stored. A value of 0 will cause the cache to always be valid.
 
 .. conf_master:: pillar_cache_backend
 
@@ -5105,6 +5110,21 @@ https://github.com/ytoolshed/range/wiki/%22yamlfile%22-module-file-spec
 
 Include Configuration
 =====================
+
+Configuration can be loaded from multiple files. The order in which this is
+done is:
+
+1. The master config file itself
+
+2. The files matching the glob in :conf_master:`default_include`
+
+3. The files matching the glob in :conf_master:`include` (if defined)
+
+Each successive step overrides any values defined in the previous steps.
+Therefore, any config options defined in one of the
+:conf_master:`default_include` files would override the same value in the
+master config file, and any options defined in :conf_master:`include` would
+override both.
 
 .. conf_master:: default_include
 

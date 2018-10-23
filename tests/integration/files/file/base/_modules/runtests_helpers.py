@@ -73,6 +73,7 @@ def get_invalid_docs():
         'pkg.expand_repo_def',
         'pip.iteritems',
         'pip.parse_version',
+        'peeringdb.clean_kwargs',
         'runtests_decorators.depends',
         'runtests_decorators.depends_will_fallback',
         'runtests_decorators.missing_depends',

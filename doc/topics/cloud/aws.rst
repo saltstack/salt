@@ -553,6 +553,53 @@ its size to 100G by using the following configuration.
           Ebs.VolumeType: gp2
           Ebs.VolumeSize: 3001
 
+Tagging of block devices can be set on a per device basis. For example, you may
+have multiple devices defined in your block_device_mappings structure. You have the
+option to set tags on any of one device or all of them as shown in the following
+configuration.
+
+.. code-block:: yaml
+
+    my-ec2-config:
+      block_device_mappings:
+        - DeviceName: /dev/sda
+          Ebs.VolumeSize: 100
+          Ebs.VolumeType: gp2
+          tag:
+            tag0: myserver
+            tag1: value
+        - DeviceName: /dev/sdb
+          Ebs.VolumeType: gp2
+          Ebs.VolumeSize: 3001
+          tag:
+            tagX: value
+            tagY: value
+
+You can configure any AWS valid tag name as shown in the above example, including
+'Name'. If you do not configure the tag 'Name', it will be automatically created
+with a value set to the virtual machine name. If you configure the tag 'Name', the
+value you configure will be used rather than defaulting to the virtual machine
+name as shown in the following configuration.
+
+.. code-block:: yaml
+
+    my-ec2-config:
+      block_device_mappings:
+        - DeviceName: /dev/sda
+          Ebs.VolumeSize: 100
+          Ebs.VolumeType: gp2
+          tag:
+            Name: myserver
+            tag0: value
+            tag1: value
+        - DeviceName: /dev/sdb
+          Ebs.VolumeType: gp2
+          Ebs.VolumeSize: 3001
+          tag:
+            Name: customvalue
+            tagX: value
+            tagY: value
+
 Existing EBS volumes may also be attached (not created) to your instances or
 you can create new EBS volumes based on EBS snapshots. To simply attach an
 existing volume use the ``volume_id`` parameter.

@@ -11,3 +11,4 @@ testinfra>=1.7.0
 # satisfy other requirements, and httpretty 0.8.10 has bugs in setup.py that
 # prevent it from being successfully installed (at least on Python 3.4).
 httpretty; python_version >= '3.4'
+pylint==1.6.5

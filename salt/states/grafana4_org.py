@@ -129,6 +129,9 @@ def present(name,
             raise
 
     if create:
+        if __opts__['test']:
+            ret['comment'] = 'Org {0} will be created'.format(name)
+            return ret
         __salt__['grafana4.create_org'](profile=profile, name=name)
         org = __salt__['grafana4.get_org'](name, profile)
         ret['changes'] = org
@@ -138,6 +141,9 @@ def present(name,
         city=city, zipCode=zip_code, state=address_state, country=country,
         defaults=org['address'])
     if data != org['address']:
+        if __opts__['test']:
+            ret['comment'] = 'Org {0} address will be updated'.format(name)
+            return ret
         __salt__['grafana4.update_org_address'](name, profile=profile, **data)
         if create:
             dictupdate.update(ret['changes']['address'], data)
@@ -148,6 +154,9 @@ def present(name,
     data = _get_json_data(theme=theme, homeDashboardId=home_dashboard_id,
         timezone=timezone, defaults=prefs)
     if data != prefs:
+        if __opts__['test']:
+            ret['comment'] = 'Org {0} prefs will be updated'.format(name)
+            return ret
         __salt__['grafana4.update_org_prefs'](name, profile=profile, **data)
         if create:
             dictupdate.update(ret['changes'], data)
@@ -164,13 +173,25 @@ def present(name,
         for username, role in users.items():
             if username in db_users:
                 if role is False:
+                    if __opts__['test']:
+                        ret['comment'] = 'Org {0} user {1} will be ' \
+                                'deleted'.format(name, username)
+                        return ret
                     __salt__['grafana4.delete_org_user'](
                         db_users[username]['userId'], profile=profile)
                 elif role != db_users[username]['role']:
+                    if __opts__['test']:
+                        ret['comment'] = 'Org {0} user {1} role will be ' \
+                                'updated'.format(name, username)
+                        return ret
                     __salt__['grafana4.update_org_user'](
                         db_users[username]['userId'], loginOrEmail=username,
                         role=role, profile=profile)
             elif role:
+                if __opts__['test']:
+                    ret['comment'] = 'Org {0} user {1} will be created'.format(
+                            name, username)
+                    return ret
                 __salt__['grafana4.create_org_user'](
                     loginOrEmail=username, role=role, profile=profile)
 
@@ -218,6 +239,9 @@ def absent(name, profile='grafana'):
         ret['comment'] = 'Org {0} already absent'.format(name)
         return ret
 
+    if __opts__['test']:
+        ret['comment'] = 'Org {0} will be deleted'.format(name)
+        return ret
     __salt__['grafana4.delete_org'](org['id'], profile=profile)
 
     ret['result'] = True

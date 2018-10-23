@@ -6,9 +6,11 @@ Functions which implement running reactor jobs
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
+import collections
 import fnmatch
 import glob
 import logging
+import time
 
 # Import salt libs
 import salt.client
@@ -23,6 +25,7 @@ import salt.utils.process
 import salt.utils.yaml
 import salt.wheel
 import salt.defaults.exitcodes
+from salt.utils.event import tagify
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -56,6 +59,9 @@ class Reactor(salt.utils.process.SignalHandlingMultiprocessingProcess, salt.stat
         local_minion_opts['file_client'] = 'local'
         self.minion = salt.minion.MasterMinion(local_minion_opts)
         salt.state.Compiler.__init__(self, opts, self.minion.rend)
+        self.event = salt.utils.event.get_master_event(opts, opts['sock_dir'], listen=False)
+        self.stats = collections.defaultdict(lambda: {'mean': 0, 'latency': 0, 'runs': 0})
+        self.stat_clock = time.time()
 
     # We need __setstate__ and __getstate__ to avoid pickling errors since
     # 'self.rend' (from salt.state.Compiler) contains a function reference
@@ -76,6 +82,17 @@ class Reactor(salt.utils.process.SignalHandlingMultiprocessingProcess, salt.stat
             'log_queue': self.log_queue,
             'log_queue_level': self.log_queue_level
         }
+
+    def _post_stats(self, stats):
+        '''
+        Fire events with stat info if it's time
+        '''
+        end_time = time.time()
+        if end_time - self.stat_clock > self.opts['master_stats_event_iter']:
+            # Fire the event with the stats and wipe the tracker
+            self.event.fire_event({'time': end_time - self.stat_clock, 'worker': self.name, 'stats': stats}, tagify(self.name, 'stats'))
+            self.stats = collections.defaultdict(lambda: {'mean': 0, 'latency': 0, 'runs': 0})
+            self.stat_clock = end_time
 
     def render_reaction(self, glob_ref, tag, data):
         '''
@@ -246,6 +263,7 @@ class Reactor(salt.utils.process.SignalHandlingMultiprocessingProcess, salt.stat
             # skip all events fired by ourselves
             if data['data'].get('user') == self.wrap.event_user:
                 continue
+
             if data['tag'].endswith('salt/reactors/manage/add'):
                 _data = data['data']
                 res = self.add_reactor(_data['event'], _data['reactors'])
@@ -267,10 +285,17 @@ class Reactor(salt.utils.process.SignalHandlingMultiprocessingProcess, salt.stat
                     continue
                 chunks = self.reactions(data['tag'], data['data'], reactors)
                 if chunks:
+                    if self.opts['master_stats']:
+                        _data = data['data']
+                        start = time.time()
                     try:
                         self.call_reactions(chunks)
                     except SystemExit:
                         log.warning('Exit ignored by reactor')
+
+                    if self.opts['master_stats']:
+                        stats = salt.utils.event.update_stats(self.stats, start, _data)
+                        self._post_stats(stats)
 
 
 class ReactWrap(object):
@@ -417,7 +442,16 @@ class ReactWrap(object):
             # and kwargs['kwarg'] contain the positional and keyword arguments
             # that will be passed to the client interface to execute the
             # desired runner/wheel/remote-exec/etc. function.
-            l_fun(*args, **kwargs)
+            ret = l_fun(*args, **kwargs)
+
+            if ret is False:
+                log.error('Reactor \'%s\' failed  to execute %s \'%s\': '
+                            'TaskPool queue is full!'
+                            ' Consider tuning reactor_worker_threads and/or'
+                            ' reactor_worker_hwm',
+                            low['__id__'], low['state'], low['fun']
+                )
+
         except SystemExit:
             log.warning(
                 'Reactor \'%s\' attempted to exit. Ignored.', low['__id__']
@@ -432,13 +466,13 @@ class ReactWrap(object):
         '''
         Wrap RunnerClient for executing :ref:`runner modules <all-salt.runners>`
         '''
-        self.pool.fire_async(self.client_cache['runner'].low, args=(fun, kwargs))
+        return self.pool.fire_async(self.client_cache['runner'].low, args=(fun, kwargs))
 
     def wheel(self, fun, **kwargs):
         '''
         Wrap Wheel to enable executing :ref:`wheel modules <all-salt.wheel>`
         '''
-        self.pool.fire_async(self.client_cache['wheel'].low, args=(fun, kwargs))
+        return self.pool.fire_async(self.client_cache['wheel'].low, args=(fun, kwargs))
 
     def local(self, fun, tgt, **kwargs):
         '''

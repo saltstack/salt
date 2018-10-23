@@ -29,6 +29,7 @@ from datetime import datetime
 # Import salt libs
 import salt.config
 import salt.cache
+import salt.defaults.exitcodes
 import salt.payload
 import salt.transport
 import salt.loader
@@ -96,16 +97,13 @@ def get_local_client(
         # Late import to prevent circular import
         import salt.config
         opts = salt.config.client_config(c_path)
-    if opts['transport'] == 'raet':
-        import salt.client.raet
-        return salt.client.raet.LocalClient(mopts=opts)
+
     # TODO: AIO core is separate from transport
-    elif opts['transport'] in ('zeromq', 'tcp'):
-        return LocalClient(
-            mopts=opts,
-            skip_perm_errors=skip_perm_errors,
-            io_loop=io_loop,
-            auto_reconnect=auto_reconnect)
+    return LocalClient(
+        mopts=opts,
+        skip_perm_errors=skip_perm_errors,
+        io_loop=io_loop,
+        auto_reconnect=auto_reconnect)
 
 
 class LocalClient(object):
@@ -283,7 +281,7 @@ class LocalClient(object):
                       'No command was sent, no jid was assigned.')
                 return {}
 
-        # don't install event subscription listeners when the request is async
+        # don't install event subscription listeners when the request is asynchronous
         # and doesn't care. this is important as it will create event leaks otherwise
         if not listen:
             return pub_data
@@ -339,6 +337,10 @@ class LocalClient(object):
             raise SaltClientError(
                 'The salt master could not be contacted. Is master running?'
             )
+        except AuthenticationError as err:
+            raise AuthenticationError(err)
+        except AuthorizationError as err:
+            raise AuthorizationError(err)
         except Exception as general_exception:
             # Convert to generic client error and pass along message
             raise SaltClientError(general_exception)
@@ -396,6 +398,10 @@ class LocalClient(object):
             raise SaltClientError(
                 'The salt master could not be contacted. Is master running?'
             )
+        except AuthenticationError as err:
+            raise AuthenticationError(err)
+        except AuthorizationError as err:
+            raise AuthorizationError(err)
         except Exception as general_exception:
             # Convert to generic client error and pass along message
             raise SaltClientError(general_exception)
@@ -1526,13 +1532,23 @@ class LocalClient(object):
                             and connected_minions \
                             and id_ not in connected_minions:
 
-                        yield {id_: {'out': 'no_return',
-                                     'ret': 'Minion did not return. [Not connected]'}}
+                        yield {
+                            id_: {
+                                'out': 'no_return',
+                                'ret': 'Minion did not return. [Not connected]',
+                                'retcode': salt.defaults.exitcodes.EX_GENERIC
+                            }
+                        }
                     else:
                         # don't report syndics as unresponsive minions
                         if not os.path.exists(os.path.join(self.opts['syndic_dir'], id_)):
-                            yield {id_: {'out': 'no_return',
-                                         'ret': 'Minion did not return. [No response]'}}
+                            yield {
+                                id_: {
+                                    'out': 'no_return',
+                                    'ret': 'Minion did not return. [No response]',
+                                    'retcode': salt.defaults.exitcodes.EX_GENERIC
+                                }
+                            }
                 else:
                     yield {id_: min_ret}
 
@@ -1993,3 +2009,78 @@ class Caller(object):
             salt.utils.args.parse_input(args),
             kwargs)
         return func(*args, **kwargs)
+
+
+class ProxyCaller(object):
+    '''
+    ``ProxyCaller`` is the same interface used by the :command:`salt-call`
+    with the args ``--proxyid <proxyid>`` command-line tool on the Salt Proxy
+    Minion.
+
+    Importing and using ``ProxyCaller`` must be done on the same machine as a
+    Salt Minion and it must be done using the same user that the Salt Minion is
+    running as.
+
+    Usage:
+
+    .. code-block:: python
+
+        import salt.client
+        caller = salt.client.Caller()
+        caller.cmd('test.ping')
+
+    Note, a running master or minion daemon is not required to use this class.
+    Running ``salt-call --local`` simply sets :conf_minion:`file_client` to
+    ``'local'``. The same can be achieved at the Python level by including that
+    setting in a minion config file.
+
+    .. code-block:: python
+
+        import salt.client
+        import salt.config
+        __opts__ = salt.config.proxy_config('/etc/salt/proxy', minion_id='quirky_edison')
+        __opts__['file_client'] = 'local'
+        caller = salt.client.ProxyCaller(mopts=__opts__)
+
+    .. note::
+
+        To use this for calling proxies, the :py:func:`is_proxy functions
+        <salt.utils.platform.is_proxy>` requires that ``--proxyid`` be an
+        argument on the commandline for the script this is used in, or that the
+        string ``proxy`` is in the name of the script.
+    '''
+    def __init__(self, c_path=os.path.join(syspaths.CONFIG_DIR, 'proxy'), mopts=None):
+        # Late-import of the minion module to keep the CLI as light as possible
+        import salt.minion
+        self.opts = mopts or salt.config.proxy_config(c_path)
+        self.sminion = salt.minion.SProxyMinion(self.opts)
+
+    def cmd(self, fun, *args, **kwargs):
+        '''
+        Call an execution module with the given arguments and keyword arguments
+
+        .. code-block:: python
+
+            caller.cmd('test.arg', 'Foo', 'Bar', baz='Baz')
+
+            caller.cmd('event.send', 'myco/myevent/something',
+                data={'foo': 'Foo'}, with_env=['GIT_COMMIT'], with_grains=True)
+        '''
+        func = self.sminion.functions[fun]
+        data = {
+          'arg': args,
+          'fun': fun
+        }
+        data.update(kwargs)
+        executors = getattr(self.sminion, 'module_executors', []) or \
+                    self.opts.get('module_executors', ['direct_call'])
+        if isinstance(executors, six.string_types):
+            executors = [executors]
+        for name in executors:
+            fname = '{0}.execute'.format(name)
+            if fname not in self.sminion.executors:
+                raise SaltInvocationError("Executor '{0}' is not available".format(name))
+            return_data = self.sminion.executors[fname](self.opts, data, func, args, kwargs)
+            if return_data is not None:
+                break
+        return return_data

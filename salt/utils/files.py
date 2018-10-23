@@ -407,7 +407,10 @@ def flopen(*args, **kwargs):
     with fopen(*args, **kwargs) as f_handle:
         try:
             if is_fcntl_available(check_sunos=True):
-                fcntl.flock(f_handle.fileno(), fcntl.LOCK_SH)
+                lock_type = fcntl.LOCK_SH
+                if 'w' in args[1] or 'a' in args[1]:
+                    lock_type = fcntl.LOCK_EX
+                fcntl.flock(f_handle.fileno(), lock_type)
             yield f_handle
         finally:
             if is_fcntl_available(check_sunos=True):
@@ -544,6 +547,11 @@ def rm_rf(path):
     if os.path.islink(path) or not os.path.isdir(path):
         os.remove(path)
     else:
+        if salt.utils.platform.is_windows():
+            try:
+                path = salt.utils.stringutils.to_unicode(path)
+            except TypeError:
+                pass
         shutil.rmtree(path, onerror=_onerror)
 
 
@@ -783,10 +791,10 @@ def backup_minion(path, bkroot):
 def get_encoding(path):
     '''
     Detect a file's encoding using the following:
-    - Check for ascii
     - Check for Byte Order Marks (BOM)
     - Check for UTF-8 Markers
     - Check System Encoding
+    - Check for ascii
 
     Args:
 
@@ -859,10 +867,6 @@ def get_encoding(path):
     except os.error:
         raise CommandExecutionError('Failed to open file')
 
-    # Check for ASCII first
-    if check_ascii(data):
-        return 'ASCII'
-
     # Check for Unicode BOM
     encoding = check_bom(data)
     if encoding:
@@ -875,5 +879,9 @@ def get_encoding(path):
     # Check system encoding
     if check_system_encoding(data):
         return __salt_system_encoding__
+
+    # Check for ASCII first
+    if check_ascii(data):
+        return 'ASCII'
 
     raise CommandExecutionError('Could not detect file encoding')

@@ -26,10 +26,7 @@ import salt.cache
 from salt.ext import six
 
 # Import 3rd-party libs
-if six.PY3:
-    import ipaddress
-else:
-    import salt.ext.ipaddress as ipaddress
+from salt._compat import ipaddress
 HAS_RANGE = False
 try:
     import seco.range  # pylint: disable=import-error
@@ -216,7 +213,7 @@ class CkMinions(object):
         return {'minions': fnmatch.filter(self._pki_minions(), expr),
                 'missing': []}
 
-    def _check_list_minions(self, expr, greedy):  # pylint: disable=unused-argument
+    def _check_list_minions(self, expr, greedy, ignore_missing=False):  # pylint: disable=unused-argument
         '''
         Return the minions found by looking via a list
         '''
@@ -224,7 +221,7 @@ class CkMinions(object):
             expr = [m for m in expr.split(',') if m]
         minions = self._pki_minions()
         return {'minions': [x for x in expr if x in minions],
-                'missing': [x for x in expr if x not in minions]}
+                'missing': [] if ignore_missing else [x for x in expr if x not in minions]}
 
     def _check_pcre_minions(self, expr, greedy):  # pylint: disable=unused-argument
         '''
@@ -239,13 +236,12 @@ class CkMinions(object):
         Retreive complete minion list from PKI dir.
         Respects cache if configured
         '''
-        opts_role = self.opts.get('__role')
-        if (opts_role == 'master' and self.opts.get('__cli') == 'salt-run') or (opts_role == 'minion'):
-            # If we're compiling the pillar directly on the master (or running masterless)
-            # just return our local ID as that is the only one that is available.
-            return [self.opts['id']]
         minions = []
         pki_cache_fn = os.path.join(self.opts['pki_dir'], self.acc, '.key_cache')
+        try:
+            os.makedirs(os.path.dirname(pki_cache_fn))
+        except OSError:
+            pass
         try:
             if self.opts['key_cache'] and os.path.exists(pki_cache_fn):
                 log.debug('Returning cached minion list')
@@ -388,11 +384,11 @@ class CkMinions(object):
             try:
                 # Target is an address?
                 tgt = ipaddress.ip_address(tgt)
-            except:  # pylint: disable=bare-except
+            except Exception:
                 try:
                     # Target is a network?
                     tgt = ipaddress.ip_network(tgt)
-                except:  # pylint: disable=bare-except
+                except Exception:
                     log.error('Invalid IP/CIDR target: %s', tgt)
                     return {'minions': [],
                             'missing': []}
@@ -583,6 +579,10 @@ class CkMinions(object):
                         engine_args.append(target_info['delimiter'] or ':')
                     engine_args.append(greedy)
 
+                    # ignore missing minions for lists if we exclude them with
+                    # a 'not'
+                    if 'L' == target_info['engine']:
+                        engine_args.append(results and results[-1] == '-')
                     _results = engine(*engine_args)
                     results.append(six.text_type(set(_results['minions'])))
                     missing.extend(_results['missing'])
@@ -734,7 +734,7 @@ class CkMinions(object):
                'S': 'ipcidr',
                'E': 'pcre',
                'N': 'node',
-               None: 'glob'}
+               None: 'compound'}
 
         target_info = parse_target(auth_entry)
         if not target_info:
@@ -1156,11 +1156,27 @@ def mine_get(tgt, fun, tgt_type='glob', opts=None):
             tgt_type)
     minions = _res['minions']
     cache = salt.cache.factory(opts)
+
+    if isinstance(fun, six.string_types):
+        functions = list(set(fun.split(',')))
+        _ret_dict = len(functions) > 1
+    elif isinstance(fun, list):
+        functions = fun
+        _ret_dict = True
+    else:
+        return {}
+
     for minion in minions:
         mdata = cache.fetch('minions/{0}'.format(minion), 'mine')
-        if mdata is None:
+
+        if not isinstance(mdata, dict):
             continue
-        fdata = mdata.get(fun)
-        if fdata:
-            ret[minion] = fdata
+
+        if not _ret_dict and functions and functions[0] in mdata:
+            ret[minion] = mdata.get(functions)
+        elif _ret_dict:
+            for fun in functions:
+                if fun in mdata:
+                    ret.setdefault(fun, {})[minion] = mdata.get(fun)
+
     return ret

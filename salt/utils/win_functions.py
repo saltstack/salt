@@ -175,7 +175,7 @@ def enable_ctrl_logoff_handler():
         )
 
 
-def escape_argument(arg):
+def escape_argument(arg, escape=True):
     '''
     Escape the argument for the cmd.exe shell.
     See http://blogs.msdn.com/b/twistylittlepassagesallalike/archive/2011/04/23/everyone-quotes-arguments-the-wrong-way.aspx
@@ -186,12 +186,19 @@ def escape_argument(arg):
     Args:
         arg (str): a single command line argument to escape for the cmd.exe shell
 
+    Kwargs:
+        escape (bool): True will call the escape_for_cmd_exe() function
+                       which escapes the characters '()%!^"<>&|'. False
+                       will not call the function and only quotes the cmd
+
     Returns:
         str: an escaped string suitable to be passed as a program argument to the cmd.exe shell
     '''
     if not arg or re.search(r'(["\s])', arg):
         arg = '"' + arg.replace('"', r'\"') + '"'
 
+    if not escape:
+        return arg
     return escape_for_cmd_exe(arg)
 
 

@@ -76,7 +76,25 @@ class _Zypper(object):
     Allows serial zypper calls (first came, first won).
     '''
 
-    SUCCESS_EXIT_CODES = [0, 100, 101, 102, 103]
+    SUCCESS_EXIT_CODES = {
+        0: 'Successful run of zypper with no special info.',
+        100: 'Patches are available for installation.',
+        101: 'Security patches are available for installation.',
+        102: 'Installation successful, reboot required.',
+        103: 'Installation succesful, restart of the package manager itself required.',
+    }
+
+    WARNING_EXIT_CODES = {
+        6: 'No repositories are defined.',
+        7: 'The ZYPP library is locked.',
+        106: 'Some repository had to be disabled temporarily because it failed to refresh. '
+             'You should check your repository configuration (e.g. zypper ref -f).',
+        107: 'Installation basically succeeded, but some of the packages %post install scripts returned an error. '
+             'These packages were successfully unpacked to disk and are registered in the rpm database, '
+             'but due to the failed install script they may not work as expected. The failed scripts output might '
+             'reveal what actually went wrong. Any scripts output is also logged to /var/log/zypp/history.'
+    }
+
     LOCK_EXIT_CODE = 7
     XML_DIRECTIVES = ['-x', '--xmlout']
     ZYPPER_LOCK = '/var/run/zypp.pid'
@@ -189,7 +207,15 @@ class _Zypper(object):
 
         :return:
         '''
-        return self.exit_code not in self.SUCCESS_EXIT_CODES
+        if self.exit_code:
+            msg = self.SUCCESS_EXIT_CODES.get(self.exit_code)
+            if msg:
+                log.info(msg)
+            msg = self.WARNING_EXIT_CODES.get(self.exit_code)
+            if msg:
+                log.warning(msg)
+
+        return self.exit_code not in self.SUCCESS_EXIT_CODES and self.exit_code not in self.WARNING_EXIT_CODES
 
     def _is_lock(self):
         '''
@@ -595,6 +621,8 @@ def latest_version(*names, **kwargs):
         status = pkg_info.get('status', '').lower()
         if status.find('not installed') > -1 or status.find('out-of-date') > -1:
             ret[name] = pkg_info.get('version')
+        else:
+            ret[name] = ''
 
     # Return a string if only one package name passed
     if len(names) == 1 and len(ret):
@@ -1481,11 +1509,6 @@ def upgrade(refresh=True,
     __zypper__(systemd_scope=_systemd_scope()).noraise.call(*cmd_update)
     _clean_cache()
     new = list_pkgs()
-
-    # Handle packages which report multiple new versions
-    # (affects only kernel packages at this point)
-    for pkg in new:
-        new[pkg] = new[pkg].split(',')[-1]
     ret = salt.utils.data.compare_dicts(old, new)
 
     if __zypper__.exit_code not in __zypper__.SUCCESS_EXIT_CODES:
@@ -2320,7 +2343,7 @@ def list_provides(**kwargs):
     '''
     ret = __context__.get('pkg.list_provides')
     if not ret:
-        cmd = ['rpm', '-qa', '--queryformat', '[%{PROVIDES}_|-%{NAME}\n]']
+        cmd = ['rpm', '-qa', '--queryformat', '%{PROVIDES}_|-%{NAME}\n']
         ret = dict()
         for line in __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False).splitlines():
             provide, realname = line.split('_|-')
@@ -2385,9 +2408,9 @@ def resolve_capabilities(pkgs, refresh, **kwargs):
                 try:
                     result = search(name, provides=True, match='exact')
                     if len(result) == 1:
-                        name = result.keys()[0]
+                        name = next(iter(result.keys()))
                     elif len(result) > 1:
-                        log.warn("Found ambiguous match for capability '%s'.", pkg)
+                        log.warning("Found ambiguous match for capability '%s'.", pkg)
                 except CommandExecutionError as exc:
                     # when search throws an exception stay with original name and version
                     log.debug("Search failed with: %s", exc)

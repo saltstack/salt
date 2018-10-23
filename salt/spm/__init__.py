@@ -700,7 +700,7 @@ class SPMClient(object):
 
         def _read_metadata(repo, repo_info):
             if cache.updated('.', repo) is None:
-                log.warn('Updating repo metadata')
+                log.warning('Updating repo metadata')
                 self._download_repo_metadata({})
 
             metadata[repo] = {

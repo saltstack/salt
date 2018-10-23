@@ -68,12 +68,12 @@ A REST API for Salt
     debug : ``False``
         Starts the web server in development mode. It will reload itself when
         the underlying code is changed and will output more debugging info.
-    log_access_file
+    log.access_file
         Path to a file to write HTTP access logs.
 
         .. versionadded:: 2016.11.0
 
-    log_error_file
+    log.error_file
         Path to a file to write HTTP error logs.
 
         .. versionadded:: 2016.11.0
@@ -529,7 +529,7 @@ described above, the most effective and most scalable way to use both Salt and
 salt-api is to run commands asynchronously using the ``local_async``,
 ``runner_async``, and ``wheel_async`` clients.
 
-Running async jobs results in being able to process 3x more commands per second
+Running asynchronous jobs results in being able to process 3x more commands per second
 for ``LocalClient`` and 17x more commands per second for ``RunnerClient``, in
 addition to much less network traffic and memory requirements. Job returns can
 be fetched from Salt's job cache via the ``/jobs/<jid>`` endpoint, or they can
@@ -2534,7 +2534,7 @@ class WebsocketEndpoint(object):
         parent_pipe, child_pipe = Pipe()
         handler.pipe = parent_pipe
         handler.opts = self.opts
-        # Process to handle async push to a client.
+        # Process to handle asynchronous push to a client.
         # Each GET request causes a process to be kicked off.
         proc = Process(target=event_stream, args=(handler, child_pipe))
         proc.start()

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-unit tests for the localfs cache
+unit tests for salt.cache
 '''
 
 # Import Python libs

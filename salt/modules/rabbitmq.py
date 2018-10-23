@@ -923,7 +923,6 @@ def set_policy(vhost,
     if apply_to:
         cmd.extend(['--apply-to', apply_to])
     cmd.extend([name, pattern, definition])
-    res = __salt__['cmd.run_all'](cmd, runas=runas, python_shell=False)
     res = __salt__['cmd.run_all'](cmd, reset_system_locale=False, runas=runas, python_shell=False)
     log.debug('Set policy: %s', res['stdout'])
     return _format_response(res, 'Set')

@@ -34,6 +34,9 @@ The Azure ARM cloud module is used to control access to Microsoft Azure Resource
       * ``client_id``
       * ``secret``
 
+    if using MSI-style authentication:
+      * ``subscription_id``
+
     Optional provider parameters:
 
     **cloud_environment**: Used to point the cloud driver to different API endpoints, such as Azure GovCloud. Possible values:
@@ -100,6 +103,7 @@ import string
 import time
 
 # Salt libs
+from salt.ext import six
 import salt.cache
 import salt.config as config
 import salt.loader
@@ -107,7 +111,6 @@ import salt.utils.cloud
 import salt.utils.files
 import salt.utils.stringutils
 import salt.utils.yaml
-import salt.ext.six as six
 import salt.version
 from salt.exceptions import (
     SaltCloudConfigError,
@@ -251,14 +254,22 @@ def get_configured_provider():
     provider = __is_provider_configured(
         __opts__,
         __active_provider_name__ or __virtualname__,
-        ('subscription_id', 'tenant', 'client_id', 'secret')
+        ('subscription_id', 'tenant', 'client_id', 'secret'),
     )
 
     if provider is False:
         provider = __is_provider_configured(
             __opts__,
             __active_provider_name__ or __virtualname__,
-            ('subscription_id', 'username', 'password')
+            ('subscription_id', 'username', 'password'),
+        )
+
+    if provider is False:
+        # check if using MSI style credentials...
+        provider = config.is_provider_configured(
+            __opts__,
+            __active_provider_name__ or __virtualname__,
+            required_keys=('subscription_id',),
         )
 
     return provider
@@ -311,11 +322,13 @@ def get_conn(client_type):
         )
         conn_kwargs.update({'client_id': client_id, 'secret': secret,
                             'tenant': tenant})
-    else:
-        username = config.get_cloud_config_value(
-            'username',
-            get_configured_provider(), __opts__, search_global=False
-        )
+
+    username = config.get_cloud_config_value(
+        'username',
+        get_configured_provider(), __opts__, search_global=False
+    )
+
+    if username is not None:
         password = config.get_cloud_config_value(
             'password',
             get_configured_provider(), __opts__, search_global=False
@@ -841,7 +854,7 @@ def create_network_interface(call=None, kwargs=None):
                 )
                 if pub_ip_data.ip_address:  # pylint: disable=no-member
                     ip_kwargs['public_ip_address'] = PublicIPAddress(
-                        six.text_type(pub_ip_data.id),  # pylint: disable=no-member
+                        id=six.text_type(pub_ip_data.id),  # pylint: disable=no-member
                     )
                     ip_configurations = [
                         NetworkInterfaceIPConfiguration(
@@ -886,7 +899,7 @@ def create_network_interface(call=None, kwargs=None):
     try:
         poller.wait()
     except Exception as exc:
-        log.warn('Network interface creation could not be polled. '
+        log.warning('Network interface creation could not be polled. '
                  'It is likely that we are reusing an existing interface. (%s)', exc)
 
     count = 0
@@ -1751,7 +1764,7 @@ def list_blobs(call=None, kwargs=None):  # pylint: disable=unused-argument
                                'server_encrypted': blob.properties.server_encrypted,
                              }
     except Exception as exc:
-        log.warn(six.text_type(exc))
+        log.warning(six.text_type(exc))
 
     return ret
 

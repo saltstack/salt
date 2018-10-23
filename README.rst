@@ -114,3 +114,10 @@ the world. The following links should get you started:
 `<https://docs.saltstack.com/en/latest/topics/development/index.html>`_
 
 `<https://docs.saltstack.com/en/develop/topics/development/pull_requests.html>`_
+
+License
+=======
+
+SaltStack is licensed by the SaltStack Team under the Apache 2.0 license. Please see the
+LICENSE file for the full text of the Apache license, followed by a full summary
+of the licensing used by external modules.

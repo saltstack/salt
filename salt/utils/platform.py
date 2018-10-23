@@ -37,7 +37,10 @@ def is_proxy():
     try:
         # Changed this from 'salt-proxy in main...' to 'proxy in main...'
         # to support the testsuite's temp script that is called 'cli_salt_proxy'
-        if 'proxy' in main.__file__:
+        #
+        # Add '--proxyid' in sys.argv so that salt-call --proxyid
+        # is seen as a proxy minion
+        if 'proxy' in main.__file__ or '--proxyid' in sys.argv:
             ret = True
     except AttributeError:
         pass

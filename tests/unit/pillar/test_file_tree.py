@@ -74,6 +74,7 @@ class FileTreePillarTestCase(TestCase, LoaderModuleMockMixin):
                     },
                     'pillarenv': 'base',
                     'nodegroups': {'test-group': [MINION_ID]},
+                    'optimization_order': [0, 1, 2],
                     'file_buffer_size': 262144,
                     'file_roots': {'base': '', 'dev': '', 'parent': ''},
                     'extension_modules': '',

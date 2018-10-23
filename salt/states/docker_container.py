@@ -2031,6 +2031,7 @@ def running(name,
         if __opts__['test']:
             ret['result'] = None
             comments.append('Container would be started')
+            return _format_comments(ret, comments)
         else:
             try:
                 post_state = __salt__['docker.start'](name)['state']['new']
@@ -2613,6 +2614,15 @@ def mod_run_check(onlyif, unless, creates):
 
 
 def mod_watch(name, sfun=None, **kwargs):
+    '''
+    The docker_container watcher, called to invoke the watch command.
+
+    .. note::
+        This state exists to support special handling of the ``watch``
+        :ref:`requisite <requisites>`. It should not be called directly.
+
+        Parameters for this function should be set by the state being triggered.
+    '''
     if sfun == 'running':
         watch_kwargs = copy.deepcopy(kwargs)
         if watch_kwargs.get('watch_action', 'force') == 'force':

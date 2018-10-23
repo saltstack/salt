@@ -72,7 +72,7 @@ def sleep_exponential_backoff(attempts):
     https://docs.aws.amazon.com/general/latest/gr/api-retries.html
     Failure to implement this approach results in a failure rate of >30% when using salt-cloud with
     "--parallel" when creating 50 or more instances with a fixed delay of 2 seconds.
-    A failure rate of >10% is observed when using the salt-api with an asyncronous client
+    A failure rate of >10% is observed when using the salt-api with an asynchronous client
     specified (runner_async).
     """
     time.sleep(random.uniform(1, 2**attempts))

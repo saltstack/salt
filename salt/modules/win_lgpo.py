@@ -1555,7 +1555,7 @@ class _policy_info(object):
                     'AllocateDASD': {
                         'Policy': 'Devices: Allowed to format and eject '
                                   'removable media',
-                        'Settings': ["", "0", "1", "2"],
+                        'Settings': ['9999', '0', '1', '2'],
                         'lgpo_section': self.security_options_gpedit_path,
                         'Registry': {
                             'Hive': 'HKEY_LOCAL_MACHINE',
@@ -3191,7 +3191,9 @@ class _policy_info(object):
                     userSid = '{1}\\{0}'.format(userSid[0], userSid[1])
                 else:
                     userSid = '{0}'.format(userSid[0])
+            # TODO: This needs to be more specific
             except Exception:
+                log.exception('Handle this explicitly')
                 userSid = win32security.ConvertSidToStringSid(_sid)
             usernames.append(userSid)
         return usernames
@@ -3210,7 +3212,9 @@ class _policy_info(object):
             try:
                 sid = win32security.LookupAccountName('', _user)[0]
                 sids.append(sid)
+            # This needs to be more specific
             except Exception as e:
+                log.exception('Handle this explicitly')
                 raise CommandExecutionError((
                     'There was an error obtaining the SID of user "{0}". Error '
                     'returned: {1}'
@@ -3433,7 +3437,9 @@ def _processPolicyDefinitions(policy_def_path='c:\\Windows\\PolicyDefinitions',
                 except lxml.etree.XMLSyntaxError:
                     try:
                         xmltree = _remove_unicode_encoding(admfile)
+                    # TODO: This needs to be more specific
                     except Exception:
+                        log.exception('Handle this explicitly')
                         log.error('A error was found while processing admx '
                                   'file %s, all policies from this file will '
                                   'be unavailable via this module', admfile)
@@ -3518,7 +3524,9 @@ def _processPolicyDefinitions(policy_def_path='c:\\Windows\\PolicyDefinitions',
                     # see issue #38100
                     try:
                         xmltree = _remove_unicode_encoding(adml_file)
+                    # TODO: This needs to be more specific
                     except Exception:
+                        log.exception('Handle this explicitly')
                         log.error('An error was found while processing '
                                   'adml file %s, all policy '
                                   'language data from this file will be '
@@ -3574,8 +3582,9 @@ def _findOptionValueInSeceditFile(option):
                 if _line.startswith(option):
                     return True, _line.split('=')[1].strip()
         return True, 'Not Defined'
-    except Exception as e:
-        log.debug('error occurred while trying to get secedit data')
+    # TODO: This needs to be more specific
+    except Exception:
+        log.exception('error occurred while trying to get secedit data')
         return False, None
 
 
@@ -3605,8 +3614,9 @@ def _importSeceditConfig(infdata):
         if __salt__['file.file_exists'](_tInfFile):
             _ret = __salt__['file.remove'](_tInfFile)
         return True
+    # TODO: This needs to be more specific
     except Exception as e:
-        log.debug('error occurred while trying to import secedit data')
+        log.exception('error occurred while trying to import secedit data')
         return False
 
 
@@ -3668,9 +3678,10 @@ def _addAccountRights(sidObject, user_right):
             user_rights_list = [user_right]
             _ret = win32security.LsaAddAccountRights(_polHandle, sidObject, user_rights_list)
         return True
+    # TODO: This needs to be more specific
     except Exception as e:
-        log.error('Error attempting to add account right, exception was %s',
-                  e)
+        log.exception('Error attempting to add account right, exception was %s',
+                      e)
         return False
 
 
@@ -3684,8 +3695,7 @@ def _delAccountRights(sidObject, user_right):
         _ret = win32security.LsaRemoveAccountRights(_polHandle, sidObject, False, user_rights_list)
         return True
     except Exception as e:
-        log.error('Error attempting to delete account right, '
-                  'exception was %s', e)
+        log.exception('Error attempting to delete account right')
         return False
 
 
@@ -4853,7 +4863,7 @@ def _write_regpol_data(data_to_write,
     try:
         reg_pol_header = u'\u5250\u6765\x01\x00'
         if not os.path.exists(policy_file_path):
-            ret = __salt__['file.makedirs'](policy_file_path)
+            __salt__['file.makedirs'](policy_file_path)
         with salt.utils.files.fopen(policy_file_path, 'wb') as pol_file:
             if not data_to_write.startswith(reg_pol_header.encode('utf-16-le')):
                 pol_file.write(reg_pol_header.encode('utf-16-le'))
@@ -4861,11 +4871,12 @@ def _write_regpol_data(data_to_write,
         try:
             gpt_ini_data = ''
             if os.path.exists(gpt_ini_path):
-                with salt.utils.files.fopen(gpt_ini_path, 'rb') as gpt_file:
+                with salt.utils.files.fopen(gpt_ini_path, 'r') as gpt_file:
                     gpt_ini_data = gpt_file.read()
             if not _regexSearchRegPolData(r'\[General\]\r\n', gpt_ini_data):
                 gpt_ini_data = '[General]\r\n' + gpt_ini_data
-            if _regexSearchRegPolData(r'{0}='.format(re.escape(gpt_extension)), gpt_ini_data):
+            if _regexSearchRegPolData(r'{0}='.format(re.escape(gpt_extension)),
+                                      gpt_ini_data):
                 # ensure the line contains the ADM guid
                 gpt_ext_loc = re.search(r'^{0}=.*\r\n'.format(re.escape(gpt_extension)),
                                         gpt_ini_data,
@@ -4881,9 +4892,10 @@ def _write_regpol_data(data_to_write,
                 general_location = re.search(r'^\[General\]\r\n',
                                              gpt_ini_data,
                                              re.IGNORECASE | re.MULTILINE)
-                gpt_ini_data = "{0}{1}={2}\r\n{3}".format(
+                gpt_ini_data = '{0}{1}={2}\r\n{3}'.format(
                         gpt_ini_data[general_location.start():general_location.end()],
-                        gpt_extension, gpt_extension_guid,
+                        gpt_extension,
+                        gpt_extension_guid,
                         gpt_ini_data[general_location.end():])
             # https://technet.microsoft.com/en-us/library/cc978247.aspx
             if _regexSearchRegPolData(r'Version=', gpt_ini_data):
@@ -4898,9 +4910,10 @@ def _write_regpol_data(data_to_write,
                 elif gpt_extension.lower() == 'gPCUserExtensionNames'.lower():
                     version_nums = (version_nums[0] + 1, version_nums[1])
                 version_num = struct.unpack(b'>I', struct.pack(b'>2H', *version_nums))[0]
-                gpt_ini_data = "{0}{1}={2}\r\n{3}".format(
+                gpt_ini_data = '{0}{1}={2}\r\n{3}'.format(
                         gpt_ini_data[0:version_loc.start()],
-                        'Version', version_num,
+                        'Version',
+                        version_num,
                         gpt_ini_data[version_loc.end():])
             else:
                 general_location = re.search(r'^\[General\]\r\n',
@@ -4910,20 +4923,26 @@ def _write_regpol_data(data_to_write,
                     version_nums = (0, 1)
                 elif gpt_extension.lower() == 'gPCUserExtensionNames'.lower():
                     version_nums = (1, 0)
-                gpt_ini_data = "{0}{1}={2}\r\n{3}".format(
+                gpt_ini_data = '{0}{1}={2}\r\n{3}'.format(
                         gpt_ini_data[general_location.start():general_location.end()],
                         'Version',
-                        int("{0}{1}".format(six.text_type(version_nums[0]).zfill(4), six.text_type(version_nums[1]).zfill(4)), 16),
+                        int("{0}{1}".format(six.text_type(version_nums[0]).zfill(4),
+                                            six.text_type(version_nums[1]).zfill(4)),
+                            16),
                         gpt_ini_data[general_location.end():])
             if gpt_ini_data:
-                with salt.utils.files.fopen(gpt_ini_path, 'wb') as gpt_file:
-                    gpt_file.write(salt.utils.stringutils.to_bytes(gpt_ini_data))
+                with salt.utils.files.fopen(gpt_ini_path, 'w') as gpt_file:
+                    gpt_file.write(gpt_ini_data)
+        # TODO: This needs to be more specific
         except Exception as e:
             msg = 'An error occurred attempting to write to {0}, the exception was {1}'.format(
                     gpt_ini_path, e)
+            log.exception(msg)
             raise CommandExecutionError(msg)
+    # TODO: This needs to be more specific
     except Exception as e:
         msg = 'An error occurred attempting to write to {0}, the exception was {1}'.format(policy_file_path, e)
+        log.exception(msg)
         raise CommandExecutionError(msg)
 
 
@@ -4991,6 +5010,7 @@ def _writeAdminTemplateRegPolFile(admtemplate_data,
                                   adml_policy_resources=None,
                                   display_language='en-US',
                                   registry_class='Machine'):
+    # pylint: disable=null-byte-unicode-literal
     u'''
     helper function to prep/write adm template data to the Registry.pol file
 
@@ -5321,8 +5341,9 @@ def _writeAdminTemplateRegPolFile(admtemplate_data,
                            policy_data.gpt_ini_path,
                            policy_data.admx_registry_classes[registry_class]['gpt_extension_location'],
                            policy_data.admx_registry_classes[registry_class]['gpt_extension_guid'])
+    # TODO: This needs to be more specific or removed
     except Exception:
-        log.error('Unhandled exception %s occurred while attempting to write Adm Template Policy File')
+        log.exception('Unhandled exception %s occurred while attempting to write Adm Template Policy File')
         return False
     return True
 
@@ -5344,7 +5365,7 @@ def _getScriptSettingsFromIniFile(policy_info):
                 _existingData = deserialize(_existingData.decode('utf-16-le').lstrip('\ufeff'))
                 log.debug('Have deserialized data %s', _existingData)
             except Exception as error:
-                log.error('An error occurred attempting to deserialize data for %s', policy_info['Policy'])
+                log.exception('An error occurred attempting to deserialize data for %s', policy_info['Policy'])
                 raise CommandExecutionError(error)
             if 'Section' in policy_info['ScriptIni'] and policy_info['ScriptIni']['Section'].lower() in [z.lower() for z in _existingData.keys()]:
                 if 'SettingName' in policy_info['ScriptIni']:
@@ -5590,7 +5611,7 @@ def _lookup_admin_template(policy_name,
 def get_policy_info(policy_name,
                     policy_class,
                     adml_language='en-US'):
-    '''
+    r'''
     Returns information about a specified policy
 
     Args:
@@ -5609,6 +5630,124 @@ def get_policy_info(policy_name,
     .. code-block:: bash
 
         salt '*' lgpo.get_policy_info 'Maximum password age' machine
+
+    You can use ``lgpo.get_policy_info`` to get all the possible names that
+    could be used in a state file or from the command line (along with elements
+    that need to be set/etc). The key is to match the text you see in the
+    ``gpedit.msc`` gui exactly, including quotes around words or phrases. The
+    "full path" style is really only needed when there are multiple policies
+    that use the same base name. For example, ``Access data sources across
+    domains`` exists in ~10 different paths. If you put that through
+    ``get_policy_info`` you'll get back a message that it is used for multiple
+    policies and you need to be more specific.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-call --local lgpo.get_policy_info ShellRemoveOrderPrints_2 machine
+
+        local:
+            ----------
+            message:
+            policy_aliases:
+                - Turn off the "Order Prints" picture task
+                - ShellRemoveOrderPrints_2
+                - System\Internet Communication Management\Internet Communication settings\Turn off the "Order Prints" picture task
+            policy_class:
+                machine
+            policy_elements:
+            policy_found:
+                True
+            policy_name:
+                ShellRemoveOrderPrints_2
+            rights_assignment:
+                False
+
+    Escaping can get tricky in cmd/Powershell. The following is an example of
+    escaping in Powershell using backquotes:
+
+    .. code-block:: bash
+
+        PS>salt-call --local lgpo.get_policy_info "Turn off the `\`"Order Prints`\`" picture task" machine
+
+        local:
+            ----------
+            message:
+            policy_aliases:
+                - Turn off the "Order Prints" picture task
+                - ShellRemoveOrderPrints_2
+                - System\Internet Communication Management\Internet Communication settings\Turn off the "Order Prints" picture task
+            policy_class:
+                machine
+            policy_elements:
+            policy_found:
+                True
+            policy_name:
+                Turn off the "Order Prints" picture task
+            rights_assignment:
+                False
+
+    This function can then be used to get the options available for specifying
+    Group Policy Objects to be used in state files. Based on the above any of
+    these *should* be usable:
+
+    .. code-block:: bash
+
+        internet_communications_settings:
+          lgpo.set:
+            - computer_policy:
+                Turn off the "Order Prints" picture task: Enabled
+
+    .. code-block:: bash
+
+        internet_communications_settings:
+          lgpo.set:
+            - computer_policy:
+                ShellRemoveOrderPrints_2: Enabled
+
+    When using the full path, it might be a good idea to use single quotes
+    around the path:
+
+    .. code-block:: bash
+
+        internet_communications_settings:
+          lgpo.set:
+            - computer_policy:
+                'System\Internet Communication Management\Internet Communication settings\Turn off the "Order Prints" picture task': 'Enabled'
+
+    If you struggle to find the policy from ``get_policy_info`` using the name
+    as you see in ``gpedit.msc``, the names such as "ShellRemoveOrderPrints_2"
+    come from the ``.admx`` files. If you know nothing about ``.admx/.adml``
+    relationships (ADML holds what you see in the GUI, ADMX holds the more
+    technical details), then this may be a little bit too much info, but here is
+    an example with the above policy using Powershell:
+
+
+    .. code-block:: bash
+
+        PS>Get-ChildItem -Path C:\Windows\PolicyDefinitions -Recurse -Filter *.adml | Select-String "Order Prints"
+
+        C:\windows\PolicyDefinitions\en-US\ICM.adml:152:      <string id="ShellRemoveOrderPrints">Turn off the "Order Prints" picture task</string>
+        C:\windows\PolicyDefinitions\en-US\ICM.adml:153:      <string id="ShellRemoveOrderPrints_Help">This policy setting specifies whether the "Order Prints Online" task is available from Picture Tasks in Windows folders.
+        C:\windows\PolicyDefinitions\en-US\ICM.adml:155:The Order Prints Online Wizard is used to download a list of providers and allow users to order prints online.
+        C:\windows\PolicyDefinitions\en-US\ICM.adml:157:If you enable this policy setting, the task "Order Prints Online" is removed from Picture Tasks in File Explorer folders.
+
+    From this grep, we can see id "ShellRemoveOrderPrints" is the ID of the
+    string used to describe this policy, then we search for it in the ADMX:
+
+    .. code-block:: bash
+
+        PS>Get-ChildItem -Path C:\Windows\PolicyDefinitions -Recurse -Filter *.admx | Select-String "ShellRemoveOrderPrints"
+
+        C:\windows\PolicyDefinitions\ICM.admx:661:    <policy name="ShellRemoveOrderPrints_1" class="User" displayName="$(string.ShellRemoveOrderPrints)" explainText="$(string.ShellRemoveOrderPrints_Help)" key="Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" valueName="NoOnlinePrintsWizard">
+        C:\windows\PolicyDefinitions\ICM.admx:671:    <policy name="ShellRemoveOrderPrints_2" class="Machine" displayName="$(string.ShellRemoveOrderPrints)" explainText="$(string.ShellRemoveOrderPrints_Help)" key="Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" valueName="NoOnlinePrintsWizard">
+
+    Now we have two to pick from. And if you notice the ``class="Machine"`` and
+    ``class="User"`` (which details if it is a computer policy or user policy
+    respectively) the ``ShellRemoveOrderPrints_2`` is the "short name" we could
+    use to pass through ``get_policy_info`` to see what the module itself is
+    expecting.
     '''
     # return the possible policy names and element names
     ret = {'policy_name': policy_name,
@@ -6218,8 +6357,10 @@ def set_(computer_policy=None, user_policy=None,
                             _newModalSetData = dictupdate.update(_existingModalData, _modal_sets[_modal_set])
                             log.debug('NEW MODAL SET = %s', _newModalSetData)
                             _ret = win32net.NetUserModalsSet(None, _modal_set, _newModalSetData)
-                        except:
+                        # TODO: This needs to be more specific
+                        except Exception:
                             msg = 'An unhandled exception occurred while attempting to set policy via NetUserModalSet'
+                            log.exception(msg)
                             raise CommandExecutionError(msg)
                 if _admTemplateData:
                     _ret = False

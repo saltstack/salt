@@ -38,6 +38,7 @@ import salt.utils.state
 import salt.utils.stringutils
 import salt.utils.url
 import salt.utils.versions
+import salt.defaults.exitcodes
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.runners.state import orchestrate as _orchestrate
 from salt.utils.odict import OrderedDict
@@ -98,13 +99,13 @@ def _set_retcode(ret, highstate=None):
     '''
 
     # Set default retcode to 0
-    __context__['retcode'] = 0
+    __context__['retcode'] = salt.defaults.exitcodes.EX_OK
 
     if isinstance(ret, list):
-        __context__['retcode'] = 1
+        __context__['retcode'] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
         return
     if not __utils__['state.check_result'](ret, highstate=highstate):
-        __context__['retcode'] = 2
+        __context__['retcode'] = salt.defaults.exitcodes.EX_STATE_FAILURE
 
 
 def _get_pillar_errors(kwargs, pillar=None):
@@ -417,7 +418,7 @@ def _check_queue(queue, kwargs):
     else:
         conflict = running(concurrent=kwargs.get('concurrent', False))
         if conflict:
-            __context__['retcode'] = 1
+            __context__['retcode'] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
             return conflict
 
 
@@ -449,13 +450,13 @@ def low(data, queue=False, **kwargs):
         st_ = salt.state.State(__opts__)
     err = st_.verify_data(data)
     if err:
-        __context__['retcode'] = 1
+        __context__['retcode'] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
         return err
     ret = st_.call(data)
     if isinstance(ret, list):
-        __context__['retcode'] = 1
+        __context__['retcode'] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
     if __utils__['state.check_result'](ret):
-        __context__['retcode'] = 2
+        __context__['retcode'] = salt.defaults.exitcodes.EX_STATE_FAILURE
     return ret
 
 
@@ -557,7 +558,7 @@ def template(tem, queue=False, **kwargs):
 
     errors = _get_pillar_errors(kwargs, pillar=st_.opts['pillar'])
     if errors:
-        __context__['retcode'] = 5
+        __context__['retcode'] = salt.defaults.exitcodes.EX_PILLAR_FAILURE
         raise CommandExecutionError('Pillar failed to render', info=errors)
 
     if not tem.endswith('.sls'):
@@ -568,7 +569,7 @@ def template(tem, queue=False, **kwargs):
                                           None,
                                           local=True)
     if errors:
-        __context__['retcode'] = 1
+        __context__['retcode'] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
         return errors
     ret = st_.state.call_high(high_state)
     _set_retcode(ret, highstate=high_state)
@@ -624,6 +625,13 @@ def apply_(mods=None, **kwargs):
 
     test
         Run states in test-only (dry-run) mode
+
+    mock
+        The mock option allows for the state run to execute without actually
+        calling any states. This then returns a mocked return which will show
+        the requisite ordering as well as fully validate the state run.
+
+        .. versionadded:: 2015.8.4
 
     pillar
         Custom Pillar values, passed as a dictionary of key-value pairs
@@ -684,6 +692,13 @@ def apply_(mods=None, **kwargs):
 
     test
         Run states in test-only (dry-run) mode
+
+    mock
+        The mock option allows for the state run to execute without actually
+        calling any states. This then returns a mocked return which will show
+        the requisite ordering as well as fully validate the state run.
+
+        .. versionadded:: 2015.8.4
 
     pillar
         Custom Pillar values, passed as a dictionary of key-value pairs
@@ -1052,7 +1067,7 @@ def highstate(test=None, queue=False, **kwargs):
 
     errors = _get_pillar_errors(kwargs, st_.opts['pillar'])
     if errors:
-        __context__['retcode'] = 5
+        __context__['retcode'] = salt.defaults.exitcodes.EX_PILLAR_FAILURE
         return ['Pillar failed to render with the following messages:'] + errors
 
     st_.push_active()
@@ -1206,7 +1221,7 @@ def sls(mods, test=None, exclude=None, queue=False, sync_mods=None, **kwargs):
     else:
         conflict = running(concurrent)
         if conflict:
-            __context__['retcode'] = 1
+            __context__['retcode'] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
             return conflict
 
     if isinstance(mods, list):
@@ -1220,7 +1235,7 @@ def sls(mods, test=None, exclude=None, queue=False, sync_mods=None, **kwargs):
                 'Salt state %s is disabled. To re-enable, run '
                 'state.enable %s', state, state
             )
-        __context__['retcode'] = 1
+        __context__['retcode'] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
         return disabled
 
     orig_test = __opts__.get('test', None)
@@ -1290,7 +1305,7 @@ def sls(mods, test=None, exclude=None, queue=False, sync_mods=None, **kwargs):
 
     errors = _get_pillar_errors(kwargs, pillar=st_.opts['pillar'])
     if errors:
-        __context__['retcode'] = 5
+        __context__['retcode'] = salt.defaults.exitcodes.EX_PILLAR_FAILURE
         return ['Pillar failed to render with the following messages:'] + errors
 
     orchestration_jid = kwargs.get('orchestration_jid')
@@ -1301,6 +1316,10 @@ def sls(mods, test=None, exclude=None, queue=False, sync_mods=None, **kwargs):
                     high_ = serial.load(fp_)
                     return st_.state.call_high(high_, orchestration_jid)
 
+    # If the state file is an integer, convert to a string then to unicode
+    if isinstance(mods, six.integer_types):
+        mods = salt.utils.stringutils.to_unicode(str(mods))  # future lint: disable=blacklisted-function
+
     mods = salt.utils.args.split_input(mods)
 
     st_.push_active()
@@ -1308,7 +1327,7 @@ def sls(mods, test=None, exclude=None, queue=False, sync_mods=None, **kwargs):
         high_, errors = st_.render_highstate({opts['saltenv']: mods})
 
         if errors:
-            __context__['retcode'] = 1
+            __context__['retcode'] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
             return errors
 
         if exclude:
@@ -1422,7 +1441,7 @@ def top(topfn, test=None, queue=False, **kwargs):
                                    initial_pillar=_get_initial_pillar(opts))
     errors = _get_pillar_errors(kwargs, pillar=st_.opts['pillar'])
     if errors:
-        __context__['retcode'] = 5
+        __context__['retcode'] = salt.defaults.exitcodes.EX_PILLAR_FAILURE
         return ['Pillar failed to render with the following messages:'] + errors
 
     st_.push_active()
@@ -1489,7 +1508,7 @@ def show_highstate(queue=False, **kwargs):
 
     errors = _get_pillar_errors(kwargs, pillar=st_.opts['pillar'])
     if errors:
-        __context__['retcode'] = 5
+        __context__['retcode'] = salt.defaults.exitcodes.EX_PILLAR_FAILURE
         raise CommandExecutionError('Pillar failed to render', info=errors)
 
     st_.push_active()
@@ -1527,7 +1546,7 @@ def show_lowstate(queue=False, **kwargs):
 
     errors = _get_pillar_errors(kwargs, pillar=st_.opts['pillar'])
     if errors:
-        __context__['retcode'] = 5
+        __context__['retcode'] = salt.defaults.exitcodes.EX_PILLAR_FAILURE
         raise CommandExecutionError('Pillar failed to render', info=errors)
 
     st_.push_active()
@@ -1603,7 +1622,7 @@ def show_states(queue=False, **kwargs):
 
     errors = _get_pillar_errors(kwargs, pillar=st_.opts['pillar'])
     if errors:
-        __context__['retcode'] = 5
+        __context__['retcode'] = salt.defaults.exitcodes.EX_PILLAR_FAILURE
         raise CommandExecutionError('Pillar failed to render', info=errors)
 
     st_.push_active()
@@ -1704,7 +1723,7 @@ def sls_id(id_, mods, test=None, queue=False, **kwargs):
 
     errors = _get_pillar_errors(kwargs, pillar=st_.opts['pillar'])
     if errors:
-        __context__['retcode'] = 5
+        __context__['retcode'] = salt.defaults.exitcodes.EX_PILLAR_FAILURE
         return ['Pillar failed to render with the following messages:'] + errors
 
     split_mods = salt.utils.args.split_input(mods)
@@ -1721,7 +1740,7 @@ def sls_id(id_, mods, test=None, queue=False, **kwargs):
         # but it is required to get the unit tests to pass.
         errors.extend(req_in_errors)
     if errors:
-        __context__['retcode'] = 1
+        __context__['retcode'] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
         return errors
     chunks = st_.state.compile_high_data(high_)
     ret = {}
@@ -1812,7 +1831,7 @@ def show_low_sls(mods, test=None, queue=False, **kwargs):
 
     errors = _get_pillar_errors(kwargs, pillar=st_.opts['pillar'])
     if errors:
-        __context__['retcode'] = 5
+        __context__['retcode'] = salt.defaults.exitcodes.EX_PILLAR_FAILURE
         raise CommandExecutionError('Pillar failed to render', info=errors)
 
     mods = salt.utils.args.split_input(mods)
@@ -1823,7 +1842,7 @@ def show_low_sls(mods, test=None, queue=False, **kwargs):
         st_.pop_active()
     errors += st_.state.verify_high(high_)
     if errors:
-        __context__['retcode'] = 1
+        __context__['retcode'] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
         return errors
     ret = st_.state.compile_high_data(high_)
     # Work around Windows multiprocessing bug, set __opts__['test'] back to
@@ -1900,7 +1919,7 @@ def show_sls(mods, test=None, queue=False, **kwargs):
 
     errors = _get_pillar_errors(kwargs, pillar=st_.opts['pillar'])
     if errors:
-        __context__['retcode'] = 5
+        __context__['retcode'] = salt.defaults.exitcodes.EX_PILLAR_FAILURE
         raise CommandExecutionError('Pillar failed to render', info=errors)
 
     mods = salt.utils.args.split_input(mods)
@@ -1914,7 +1933,7 @@ def show_sls(mods, test=None, queue=False, **kwargs):
     # value from before this function was run.
     __opts__['test'] = orig_test
     if errors:
-        __context__['retcode'] = 1
+        __context__['retcode'] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
         return errors
     return high_
 
@@ -1997,14 +2016,14 @@ def show_top(queue=False, **kwargs):
 
     errors = _get_pillar_errors(kwargs, pillar=st_.opts['pillar'])
     if errors:
-        __context__['retcode'] = 5
+        __context__['retcode'] = salt.defaults.exitcodes.EX_PILLAR_FAILURE
         raise CommandExecutionError('Pillar failed to render', info=errors)
 
     errors = []
     top_ = st_.get_top()
     errors += st_.verify_tops(top_)
     if errors:
-        __context__['retcode'] = 1
+        __context__['retcode'] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
         return errors
     matches = st_.top_matches(top_)
     return matches
@@ -2032,7 +2051,7 @@ def single(fun, name, test=None, queue=False, **kwargs):
         return conflict
     comps = fun.split('.')
     if len(comps) < 2:
-        __context__['retcode'] = 1
+        __context__['retcode'] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
         return 'Invalid function passed'
     kwargs.update({'state': comps[0],
                    'fun': comps[1],
@@ -2065,7 +2084,7 @@ def single(fun, name, test=None, queue=False, **kwargs):
                                initial_pillar=_get_initial_pillar(opts))
     err = st_.verify_data(kwargs)
     if err:
-        __context__['retcode'] = 1
+        __context__['retcode'] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
         return err
 
     st_._mod_init(kwargs)

@@ -6,6 +6,7 @@ Functions for manipulating or otherwise processing strings
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 import base64
+import difflib
 import errno
 import fnmatch
 import logging
@@ -31,21 +32,32 @@ def to_bytes(s, encoding=None, errors='strict'):
     Given bytes, bytearray, str, or unicode (python 2), return bytes (str for
     python 2)
     '''
+    if encoding is None:
+        # Try utf-8 first, and fall back to detected encoding
+        encoding = ('utf-8', __salt_system_encoding__)
+    if not isinstance(encoding, (tuple, list)):
+        encoding = (encoding,)
+
+    if not encoding:
+        raise ValueError('encoding cannot be empty')
+
+    exc = None
     if six.PY3:
         if isinstance(s, bytes):
             return s
         if isinstance(s, bytearray):
             return bytes(s)
         if isinstance(s, six.string_types):
-            if encoding:
-                return s.encode(encoding, errors)
-            else:
+            for enc in encoding:
                 try:
-                    # Try UTF-8 first
-                    return s.encode('utf-8', errors)
-                except UnicodeEncodeError:
-                    # Fall back to detected encoding
-                    return s.encode(__salt_system_encoding__, errors)
+                    return s.encode(enc, errors)
+                except UnicodeEncodeError as err:
+                    exc = err
+                    continue
+            # The only way we get this far is if a UnicodeEncodeError was
+            # raised, otherwise we would have already returned (or raised some
+            # other exception).
+            raise exc  # pylint: disable=raising-bad-type
         raise TypeError('expected bytes, bytearray, or str')
     else:
         return to_str(s, encoding, errors)
@@ -61,35 +73,48 @@ def to_str(s, encoding=None, errors='strict', normalize=False):
         except TypeError:
             return s
 
+    if encoding is None:
+        # Try utf-8 first, and fall back to detected encoding
+        encoding = ('utf-8', __salt_system_encoding__)
+    if not isinstance(encoding, (tuple, list)):
+        encoding = (encoding,)
+
+    if not encoding:
+        raise ValueError('encoding cannot be empty')
+
     # This shouldn't be six.string_types because if we're on PY2 and we already
     # have a string, we should just return it.
     if isinstance(s, str):
         return _normalize(s)
+
+    exc = None
     if six.PY3:
         if isinstance(s, (bytes, bytearray)):
-            if encoding:
-                return _normalize(s.decode(encoding, errors))
-            else:
+            for enc in encoding:
                 try:
-                    # Try UTF-8 first
-                    return _normalize(s.decode('utf-8', errors))
-                except UnicodeDecodeError:
-                    # Fall back to detected encoding
-                    return _normalize(s.decode(__salt_system_encoding__, errors))
+                    return _normalize(s.decode(enc, errors))
+                except UnicodeDecodeError as err:
+                    exc = err
+                    continue
+            # The only way we get this far is if a UnicodeDecodeError was
+            # raised, otherwise we would have already returned (or raised some
+            # other exception).
+            raise exc  # pylint: disable=raising-bad-type
         raise TypeError('expected str, bytes, or bytearray not {}'.format(type(s)))
     else:
         if isinstance(s, bytearray):
             return str(s)  # future lint: disable=blacklisted-function
         if isinstance(s, unicode):  # pylint: disable=incompatible-py3-code,undefined-variable
-            if encoding:
-                return _normalize(s).encode(encoding, errors)
-            else:
+            for enc in encoding:
                 try:
-                    # Try UTF-8 first
-                    return _normalize(s).encode('utf-8', errors)
-                except UnicodeEncodeError:
-                    # Fall back to detected encoding
-                    return _normalize(s).encode(__salt_system_encoding__, errors)
+                    return _normalize(s).encode(enc, errors)
+                except UnicodeEncodeError as err:
+                    exc = err
+                    continue
+            # The only way we get this far is if a UnicodeDecodeError was
+            # raised, otherwise we would have already returned (or raised some
+            # other exception).
+            raise exc  # pylint: disable=raising-bad-type
         raise TypeError('expected str, bytearray, or unicode')
 
 
@@ -100,6 +125,16 @@ def to_unicode(s, encoding=None, errors='strict', normalize=False):
     def _normalize(s):
         return unicodedata.normalize('NFC', s) if normalize else s
 
+    if encoding is None:
+        # Try utf-8 first, and fall back to detected encoding
+        encoding = ('utf-8', __salt_system_encoding__)
+    if not isinstance(encoding, (tuple, list)):
+        encoding = (encoding,)
+
+    if not encoding:
+        raise ValueError('encoding cannot be empty')
+
+    exc = None
     if six.PY3:
         if isinstance(s, str):
             return _normalize(s)
@@ -113,15 +148,16 @@ def to_unicode(s, encoding=None, errors='strict', normalize=False):
         if isinstance(s, unicode):  # pylint: disable=incompatible-py3-code
             return _normalize(s)
         elif isinstance(s, (str, bytearray)):
-            if encoding:
-                return _normalize(s.decode(encoding, errors))
-            else:
+            for enc in encoding:
                 try:
-                    # Try UTF-8 first
-                    return _normalize(s.decode('utf-8', errors))
-                except UnicodeDecodeError:
-                    # Fall back to detected encoding
-                    return _normalize(s.decode(__salt_system_encoding__, errors))
+                    return _normalize(s.decode(enc, errors))
+                except UnicodeDecodeError as err:
+                    exc = err
+                    continue
+            # The only way we get this far is if a UnicodeDecodeError was
+            # raised, otherwise we would have already returned (or raised some
+            # other exception).
+            raise exc  # pylint: disable=raising-bad-type
         raise TypeError('expected str or bytearray')
 
 
@@ -147,7 +183,7 @@ def to_none(text):
     '''
     Convert a string to None if the string is empty or contains only spaces.
     '''
-    if six.tex_type(text).strip():
+    if six.text_type(text).strip():
         return text
     return None
 
@@ -414,31 +450,37 @@ def check_include_exclude(path_str, include_pat=None, exclude_pat=None):
       - If both include_pat and exclude_pat are supplied: return 'True' if
         include_pat matches AND exclude_pat does not match
     '''
+    def _pat_check(path_str, check_pat):
+        if re.match('E@', check_pat):
+            return True if re.search(
+                check_pat[2:],
+                path_str
+            ) else False
+        else:
+            return True if fnmatch.fnmatch(
+                path_str,
+                check_pat
+            ) else False
+
     ret = True  # -- default true
     # Before pattern match, check if it is regexp (E@'') or glob(default)
     if include_pat:
-        if re.match('E@', include_pat):
-            retchk_include = True if re.search(
-                include_pat[2:],
-                path_str
-            ) else False
+        if isinstance(include_pat, list):
+            for include_line in include_pat:
+                retchk_include = _pat_check(path_str, include_line)
+                if retchk_include:
+                    break
         else:
-            retchk_include = True if fnmatch.fnmatch(
-                path_str,
-                include_pat
-            ) else False
+            retchk_include = _pat_check(path_str, include_pat)
 
     if exclude_pat:
-        if re.match('E@', exclude_pat):
-            retchk_exclude = False if re.search(
-                exclude_pat[2:],
-                path_str
-            ) else True
+        if isinstance(exclude_pat, list):
+            for exclude_line in exclude_pat:
+                retchk_exclude = not _pat_check(path_str, exclude_line)
+                if not retchk_exclude:
+                    break
         else:
-            retchk_exclude = False if fnmatch.fnmatch(
-                path_str,
-                exclude_pat
-            ) else True
+            retchk_exclude = not _pat_check(path_str, exclude_pat)
 
     # Now apply include/exclude conditions
     if include_pat and not exclude_pat:
@@ -513,3 +555,21 @@ def get_context(template, line, num_lines=5, marker=None):
         buf[error_line_in_context] += marker
 
     return '---\n{0}\n---'.format('\n'.join(buf))
+
+
+def get_diff(a, b, *args, **kwargs):
+    '''
+    Perform diff on two iterables containing lines from two files, and return
+    the diff as as string. Lines are normalized to str types to avoid issues
+    with unicode on PY2.
+    '''
+    encoding = ('utf-8', 'latin-1', __salt_system_encoding__)
+    # Late import to avoid circular import
+    import salt.utils.data
+    return ''.join(
+        difflib.unified_diff(
+            salt.utils.data.decode_list(a, encoding=encoding),
+            salt.utils.data.decode_list(b, encoding=encoding),
+            *args, **kwargs
+        )
+    )

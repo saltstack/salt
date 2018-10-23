@@ -413,6 +413,7 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
                    ZyppCallMock(return_value=get_test_data('zypper-available.txt'))), \
                 patch('salt.modules.zypper.refresh_db', MagicMock(return_value=True)):
             self.assertEqual(zypper.latest_version('vim'), '7.4.326-2.62')
+            self.assertDictEqual(zypper.latest_version('vim', 'fakepkg'), {'vim': '7.4.326-2.62', 'fakepkg': ''})
 
     def test_upgrade_success(self):
         '''
@@ -430,7 +431,13 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
                     zypper_mock.assert_any_call('update', '--auto-agree-with-licenses')
 
                 with patch('salt.modules.zypper.list_pkgs',
-                           MagicMock(side_effect=[{"vim": "1.1"}, {"vim": "1.1,1.2"}])):
+                           MagicMock(side_effect=[{"kernel-default": "1.1"}, {"kernel-default": "1.1,1.2"}])):
+                    ret = zypper.upgrade()
+                    self.assertDictEqual(ret, {"kernel-default": {"old": "1.1", "new": "1.1,1.2"}})
+                    zypper_mock.assert_any_call('update', '--auto-agree-with-licenses')
+
+                with patch('salt.modules.zypper.list_pkgs',
+                           MagicMock(side_effect=[{"vim": "1.1"}, {"vim": "1.2"}])):
                     ret = zypper.upgrade()
                     self.assertDictEqual(ret, {"vim": {"old": "1.1", "new": "1.2"}})
                     zypper_mock.assert_any_call('update', '--auto-agree-with-licenses')

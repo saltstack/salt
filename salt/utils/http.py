@@ -292,6 +292,9 @@ def query(url,
             auth = (username, password)
 
     if agent == USERAGENT:
+        user_agent = opts.get('user_agent', None)
+        if user_agent:
+            agent = user_agent
         agent = '{0} http.query()'.format(agent)
     header_dict['User-agent'] = agent
 
@@ -488,7 +491,11 @@ def query(url,
             data = _urlencode(data)
 
         if verify_ssl:
-            req_kwargs['ca_certs'] = ca_bundle
+            # tornado requires a str, cannot be unicode str in py2
+            if ca_bundle is None:
+                req_kwargs['ca_certs'] = ca_bundle
+            else:
+                req_kwargs['ca_certs'] = salt.utils.stringutils.to_str(ca_bundle)
 
         max_body = opts.get('http_max_body', salt.config.DEFAULT_MINION_OPTS['http_max_body'])
         connect_timeout = opts.get('http_connect_timeout', salt.config.DEFAULT_MINION_OPTS['http_connect_timeout'])
@@ -497,9 +504,18 @@ def query(url,
         client_argspec = None
 
         proxy_host = opts.get('proxy_host', None)
+        if proxy_host:
+            # tornado requires a str for proxy_host, cannot be a unicode str in py2
+            proxy_host = salt.utils.stringutils.to_str(proxy_host)
         proxy_port = opts.get('proxy_port', None)
         proxy_username = opts.get('proxy_username', None)
+        if proxy_username:
+            # tornado requires a str, cannot be unicode str in py2
+            proxy_username = salt.utils.stringutils.to_str(proxy_username)
         proxy_password = opts.get('proxy_password', None)
+        if proxy_password:
+            # tornado requires a str, cannot be unicode str in py2
+            proxy_password = salt.utils.stringutils.to_str(proxy_password)
         no_proxy = opts.get('no_proxy', [])
 
         # Since tornado doesnt support no_proxy, we'll always hand it empty proxies or valid ones
@@ -738,7 +754,7 @@ def update_ca_bundle(
         source=None,
         opts=None,
         merge_files=None,
-    ):
+        ):
     '''
     Attempt to update the CA bundle file from a URL
 
@@ -911,6 +927,7 @@ def parse_cookie_header(header):
         for item in list(cookie):
             if item in attribs:
                 continue
+            name = item
             value = cookie.pop(item)
 
         # cookielib.Cookie() requires an epoch

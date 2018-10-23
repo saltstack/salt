@@ -33,7 +33,8 @@ touch /tmp/foo if it does not exist:
       cmd.run:
         - creates: /tmp/foo
 
-``creates`` also accepts a list of files:
+``creates`` also accepts a list of files, in which case this state will
+run if **any** of the files does not exist:
 
 .. code-block:: yaml
 
@@ -490,7 +491,9 @@ def wait(name,
         a state. For more information, see the :ref:`stateful-argument` section.
 
     creates
-        Only run if the file or files specified by ``creates`` do not exist.
+        Only run if the file specified by ``creates`` do not exist. If you
+        specify a list of files then this state will only run if **any** of
+        the files does not exist.
 
         .. versionadded:: 2014.7.0
 
@@ -801,7 +804,9 @@ def run(name,
         .. versionadded:: 2015.8.0
 
     creates
-        Only run if the file or files specified by ``creates`` do not exist.
+        Only run if the file specified by ``creates`` do not exist. If you
+        specify a list of files then this state will only run if **any** of
+        the files does not exist.
 
         .. versionadded:: 2014.7.0
 
@@ -1053,7 +1058,9 @@ def script(name,
         'arg two' arg3"
 
     creates
-        Only run if the file or files specified by ``creates`` do not exist.
+        Only run if the file specified by ``creates`` do not exist. If you
+        specify a list of files then this state will only run if **any** of
+        the files does not exist.
 
         .. versionadded:: 2014.7.0
 
@@ -1304,6 +1311,12 @@ def wait_call(name,
 def mod_watch(name, **kwargs):
     '''
     Execute a cmd function based on a watch call
+
+    .. note::
+        This state exists to support special handling of the ``watch``
+        :ref:`requisite <requisites>`. It should not be called directly.
+
+        Parameters for this function should be set by the state being triggered.
     '''
     if kwargs['sfun'] in ('wait', 'run', 'watch'):
         if kwargs.get('stateful'):

@@ -22,7 +22,7 @@ version 0.9+)
     Most functions in this module allow you to override or provide some or all
     of these settings via keyword arguments::
 
-        salt '*' influxdb.foo_function user='influxadmin' password='s3cr1t'
+        salt '*' influxdb.foo_function user='influxadmin' passwd='s3cr1t'
 
     would override ``user`` and ``password`` while still using the defaults for
     ``host`` and ``port``.
@@ -58,22 +58,22 @@ def __virtual__():
                     'influxdb library not available.'))
 
 
-def _client(user=None, password=None, host=None, port=None, **client_args):
-    if not user:
-        user = __salt__['config.option']('influxdb.user', 'root')
-    if not password:
-        password = __salt__['config.option']('influxdb.password', 'root')
-    if not host:
-        host = __salt__['config.option']('influxdb.host', 'localhost')
-    if not port:
-        port = __salt__['config.option']('influxdb.port', 8086)
+def _client(influxdb_user=None, influxdb_password=None, influxdb_host=None, influxdb_port=None, **client_args):
+    if not influxdb_user:
+        influxdb_user = __salt__['config.option']('influxdb.user', 'root')
+    if not influxdb_password:
+        influxdb_password = __salt__['config.option']('influxdb.password', 'root')
+    if not influxdb_host:
+        influxdb_host = __salt__['config.option']('influxdb.host', 'localhost')
+    if not influxdb_port:
+        influxdb_port = __salt__['config.option']('influxdb.port', 8086)
     for ignore in _STATE_INTERNAL_KEYWORDS:
         if ignore in client_args:
             del client_args[ignore]
-    return influxdb.InfluxDBClient(host=host,
-                                   port=port,
-                                   username=user,
-                                   password=password,
+    return influxdb.InfluxDBClient(host=influxdb_host,
+                                   port=influxdb_port,
+                                   username=influxdb_user,
+                                   password=influxdb_password,
                                    **client_args)
 
 
@@ -213,14 +213,14 @@ def user_info(name, **client_args):
         pass
 
 
-def create_user(name, password, admin=False, **client_args):
+def create_user(name, passwd, admin=False, **client_args):
     '''
     Create a user.
 
     name
         Name of the user to create.
 
-    password
+    passwd
         Password of the new user.
 
     admin : False
@@ -239,19 +239,19 @@ def create_user(name, password, admin=False, **client_args):
         return False
 
     client = _client(**client_args)
-    client.create_user(name, password, admin)
+    client.create_user(name, passwd, admin)
 
     return True
 
 
-def set_user_password(name, password, **client_args):
+def set_user_password(name, passwd, **client_args):
     '''
     Change password of a user.
 
     name
         Name of the user for whom to set the password.
 
-    password
+    passwd
         New password of the user.
 
     CLI Example:
@@ -265,7 +265,7 @@ def set_user_password(name, password, **client_args):
         return False
 
     client = _client(**client_args)
-    client.set_user_password(name, password)
+    client.set_user_password(name, passwd)
 
     return True
 

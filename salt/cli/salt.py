@@ -7,6 +7,7 @@ sys.modules['pkg_resources'] = None
 import os
 
 # Import Salt libs
+import salt.defaults.exitcodes
 import salt.utils.job
 import salt.utils.parsers
 import salt.utils.stringutils
@@ -210,9 +211,9 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
             # returned 'ok' with a retcode of 0.
             # This is the final point before the 'salt' cmd returns,
             # which is why we set the retcode here.
-            if retcodes.count(0) < len(retcodes):
+            if not all(exit_code == salt.defaults.exitcodes.EX_OK for exit_code in retcodes):
                 sys.stderr.write('ERROR: Minions returned with non-zero exit code\n')
-                sys.exit(11)
+                sys.exit(salt.defaults.exitcodes.EX_GENERIC)
 
         except (AuthenticationError,
                 AuthorizationError,

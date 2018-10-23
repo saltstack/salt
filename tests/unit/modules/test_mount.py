@@ -63,6 +63,14 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                                                    'opts': ['D', 'E', 'F'],
                                                    'fstype': 'C'}})
 
+        with patch.dict(mount.__grains__, {'os': 'AIX', 'kernel': 'AIX'}):
+            mock = MagicMock(return_value='A * B * C D/E/F')
+            with patch.dict(mount.__salt__, {'cmd.run_stdout': mock}):
+                self.assertEqual(mount.active(),
+                                 {'B': {'node': 'A',
+                                        'device': '*',
+                                        'fstype': '*'}})
+
         with patch.dict(mount.__grains__, {'os': 'OpenBSD', 'kernel': 'OpenBSD'}):
             mock = MagicMock(return_value={})
             with patch.object(mount, '_active_mounts_openbsd', mock):
@@ -78,6 +86,11 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(mount, '_active_mountinfo', mock):
                 with patch.object(mount, '_active_mounts_darwin', mock):
                     self.assertEqual(mount.active(extended=True), {})
+
+        with patch.dict(mount.__grains__, {'os': 'AIX', 'kernel': 'AIX'}):
+            mock = MagicMock(return_value={})
+            with patch.object(mount, '_active_mounts_aix', mock):
+                self.assertEqual(mount.active(), {})
 
     def test_fstab(self):
         '''
@@ -126,6 +139,48 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                          'opts': ['size=2048m'],
                          'pass_fsck': '-'}
             }, vfstab
+
+    def test_filesystems(self):
+        '''
+        List the content of the filesystems
+        '''
+        file_data = textwrap.dedent('''\
+            #
+
+            ''')
+        mock = MagicMock(return_value=True)
+        with patch.dict(mount.__grains__, {'os': 'AIX', 'kernel': 'AIX'}), \
+                patch.object(os.path, 'isfile', mock), \
+                patch('salt.utils.files.fopen', mock_open(read_data=file_data)):
+            self.assertEqual(mount.filesystems(), {})
+
+        file_data = textwrap.dedent('''\
+            #
+            /home:
+                    dev             = /dev/hd1
+                    vfs             = jfs2
+                    log             = /dev/hd8
+                    mount           = true
+                    check           = true
+                    vol             = /home
+                    free            = false
+                    quota           = no
+
+            ''')
+        mock = MagicMock(return_value=True)
+        with patch.dict(mount.__grains__, {'os': 'AIX', 'kernel': 'AIX'}), \
+                patch.object(os.path, 'isfile', mock), \
+                patch('salt.utils.files.fopen', mock_open(read_data=file_data)):
+            fsyst = mount.filesystems()
+            test_fsyst = {'/home': {'dev': '/dev/hd1',
+                            'vfs': 'jfs2',
+                            'log': '/dev/hd8',
+                            'mount': 'true',
+                            'check': 'true',
+                            'vol': '/home',
+                            'free': 'false',
+                            'quota': 'no'}}
+            self.assertEqual(test_fsyst, fsyst)
 
     def test_rm_fstab(self):
         '''
@@ -190,11 +245,73 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
         '''
         self.assertDictEqual(mount.automaster(), {})
 
+    def test_rm_filesystems(self):
+        '''
+        Remove the mount point from the filesystems
+        '''
+        file_data = textwrap.dedent('''\
+            #
+
+            ''')
+        mock = MagicMock(return_value=True)
+        with patch.dict(mount.__grains__, {'os': 'AIX', 'kernel': 'AIX'}), \
+                patch.object(os.path, 'isfile', mock), \
+                patch('salt.utils.files.fopen', mock_open(read_data=file_data)):
+            self.assertFalse(mount.rm_filesystems('name', 'device'))
+
+        file_data = textwrap.dedent('''\
+            #
+            /name:
+                    dev             = device
+                    vol             = /name
+
+            ''')
+
+        mock = MagicMock(return_value=True)
+        mock_fsyst = MagicMock(return_value=True)
+        with patch.dict(mount.__grains__, {'os': 'AIX', 'kernel': 'AIX'}), \
+                patch.object(os.path, 'isfile', mock), \
+                patch('salt.utils.files.fopen', mock_open(read_data=file_data)):
+            self.assertTrue(mount.rm_filesystems('/name', 'device'))
+
+    def test_set_filesystems(self):
+        '''
+        Tests to verify that this mount is represented in the filesystems,
+        change the mount to match the data passed, or add the mount
+        if it is not present.
+        '''
+        mock = MagicMock(return_value=False)
+        with patch.dict(mount.__grains__, {'os': 'AIX', 'kernel': 'AIX'}):
+            with patch.object(os.path, 'isfile', mock):
+                self.assertRaises(CommandExecutionError,
+                              mount.set_filesystems, 'A', 'B', 'C')
+
+            mock_read = MagicMock(side_effect=OSError)
+            with patch.object(os.path, 'isfile', mock):
+                with patch.object(salt.utils.files, 'fopen', mock_read):
+                    self.assertRaises(CommandExecutionError,
+                                      mount.set_filesystems, 'A', 'B', 'C')
+
     def test_mount(self):
         '''
         Mount a device
         '''
         with patch.dict(mount.__grains__, {'os': 'MacOS'}):
+            mock = MagicMock(return_value=True)
+            with patch.object(os.path, 'exists', mock):
+                mock = MagicMock(return_value=None)
+                with patch.dict(mount.__salt__, {'file.mkdir': None}):
+                    mock = MagicMock(return_value={'retcode': True,
+                                                   'stderr': True})
+                    with patch.dict(mount.__salt__, {'cmd.run_all': mock}):
+                        self.assertTrue(mount.mount('name', 'device'))
+
+                    mock = MagicMock(return_value={'retcode': False,
+                                                   'stderr': False})
+                    with patch.dict(mount.__salt__, {'cmd.run_all': mock}):
+                        self.assertTrue(mount.mount('name', 'device'))
+
+        with patch.dict(mount.__grains__, {'os': 'AIX'}):
             mock = MagicMock(return_value=True)
             with patch.object(os.path, 'exists', mock):
                 mock = MagicMock(return_value=None)
@@ -215,6 +332,13 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
         is called
         '''
         with patch.dict(mount.__grains__, {'os': 'MacOS'}):
+            mock = MagicMock(return_value=[])
+            with patch.object(mount, 'active', mock):
+                mock = MagicMock(return_value=True)
+                with patch.object(mount, 'mount', mock):
+                    self.assertTrue(mount.remount('name', 'device'))
+
+        with patch.dict(mount.__grains__, {'os': 'AIX'}):
             mock = MagicMock(return_value=[])
             with patch.object(mount, 'active', mock):
                 mock = MagicMock(return_value=True)
@@ -274,7 +398,6 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Return a dict containing information on active swap
         '''
-
         file_data = textwrap.dedent('''\
             Filename Type Size Used Priority
             /dev/sda1 partition 31249404 4100 -1
@@ -306,6 +429,22 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                     'used': '4100'}
             }, swaps
 
+        file_data = textwrap.dedent('''\
+            device              maj,min        total       free
+            /dev/hd6              10,  2     11776MB     11765MB
+            ''')
+        mock = MagicMock(return_value=file_data)
+        with patch.dict(mount.__grains__, {'os': 'AIX', 'kernel': 'AIX'}), \
+                patch.dict(mount.__salt__, {'cmd.run_stdout': mock}):
+            swaps = mount.swaps()
+            assert swaps == {
+                '/dev/hd6': {
+                    'priority': '-',
+                    'size': 12058624,
+                    'type': 'device',
+                    'used': 11264}
+            }, swaps
+
     def test_swapon(self):
         '''
         Activate a swap disk
@@ -325,6 +464,27 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
 
         mock = MagicMock(side_effect=[{}, {'name': 'name'}])
         with patch.dict(mount.__grains__, {'kernel': ''}):
+            with patch.object(mount, 'swaps', mock):
+                mock = MagicMock(return_value=None)
+                with patch.dict(mount.__salt__, {'cmd.run': mock}):
+                    self.assertEqual(mount.swapon('name'), {'stats': 'name',
+                                                            'new': True})
+        ## effects of AIX
+        mock = MagicMock(return_value={'name': 'name'})
+        with patch.dict(mount.__grains__, {'kernel': 'AIX'}):
+            with patch.object(mount, 'swaps', mock):
+                self.assertEqual(mount.swapon('name'),
+                                 {'stats': 'name', 'new': False})
+
+        mock = MagicMock(return_value={})
+        with patch.dict(mount.__grains__, {'kernel': 'AIX'}):
+            with patch.object(mount, 'swaps', mock):
+                mock = MagicMock(return_value=None)
+                with patch.dict(mount.__salt__, {'cmd.run': mock}):
+                    self.assertEqual(mount.swapon('name', False), {})
+
+        mock = MagicMock(side_effect=[{}, {'name': 'name'}])
+        with patch.dict(mount.__grains__, {'kernel': 'AIX'}):
             with patch.object(mount, 'swaps', mock):
                 mock = MagicMock(return_value=None)
                 with patch.dict(mount.__salt__, {'cmd.run': mock}):
@@ -356,14 +516,38 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                     with patch.dict(mount.__salt__, {'cmd.run': mock}):
                         self.assertTrue(mount.swapoff('name'))
 
+        # check on AIX
+        mock = MagicMock(return_value={})
+        with patch.dict(mount.__grains__, {'kernel': 'AIX'}):
+            with patch.object(mount, 'swaps', mock):
+                self.assertEqual(mount.swapoff('name'), None)
+
+        mock = MagicMock(return_value={'name': 'name'})
+        with patch.dict(mount.__grains__, {'kernel': 'AIX'}):
+            with patch.object(mount, 'swaps', mock):
+                with patch.dict(mount.__grains__, {'os': 'test'}):
+                    mock = MagicMock(return_value=None)
+                    with patch.dict(mount.__salt__, {'cmd.run': mock}):
+                        self.assertFalse(mount.swapoff('name'))
+
+        mock = MagicMock(side_effect=[{'name': 'name'}, {}])
+        with patch.dict(mount.__grains__, {'kernel': 'AIX'}):
+            with patch.object(mount, 'swaps', mock):
+                with patch.dict(mount.__grains__, {'os': 'test'}):
+                    mock = MagicMock(return_value=None)
+                    with patch.dict(mount.__salt__, {'cmd.run': mock}):
+                        self.assertTrue(mount.swapoff('name'))
+
     def test_is_mounted(self):
         '''
         Provide information if the path is mounted
         '''
         mock = MagicMock(return_value={})
-        with patch.object(mount, 'active', mock):
+        with patch.object(mount, 'active', mock), \
+                patch.dict(mount.__grains__, {'kernel': ''}):
             self.assertFalse(mount.is_mounted('name'))
 
         mock = MagicMock(return_value={'name': 'name'})
-        with patch.object(mount, 'active', mock):
+        with patch.object(mount, 'active', mock), \
+                patch.dict(mount.__grains__, {'kernel': ''}):
             self.assertTrue(mount.is_mounted('name'))

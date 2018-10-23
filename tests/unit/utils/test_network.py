@@ -96,6 +96,19 @@ vpn0: flags=120002200850<POINTOPOINT,RUNNING,MULTICAST,NONUD,IPv6,PHYSRUNNING> m
         inet6 ::/0 --> fe80::b2d6:7c10
 '''
 
+NETBSD = '''\
+vioif0: flags=0x8943<UP,BROADCAST,RUNNING,PROMISC,SIMPLEX,MULTICAST> mtu 1500
+        ec_capabilities=1<VLAN_MTU>
+        ec_enabled=0
+        address: 00:a0:98:e6:83:18
+        inet 192.168.1.80/24 broadcast 192.168.1.255 flags 0x0
+        inet6 fe80::2a0:98ff:fee6:8318%vioif0/64 flags 0x0 scopeid 0x1
+lo0: flags=0x8049<UP,LOOPBACK,RUNNING,MULTICAST> mtu 33624
+        inet 127.0.0.1/8 flags 0x0
+        inet6 ::1/128 flags 0x20<NODAD>
+        inet6 fe80::1%lo0/64 flags 0x0 scopeid 0x2
+'''
+
 FREEBSD_SOCKSTAT = '''\
 USER    COMMAND     PID     FD  PROTO  LOCAL ADDRESS    FOREIGN ADDRESS
 root    python2.7   1294    41  tcp4   127.0.0.1:61115  127.0.0.1:4506
@@ -319,6 +332,24 @@ class NetworkTestCase(TestCase):
                                             'up': True}}
             self.assertEqual(interfaces, expected_interfaces)
 
+    def test_interfaces_ifconfig_netbsd(self):
+        interfaces = network._netbsd_interfaces_ifconfig(NETBSD)
+        self.assertEqual(interfaces,
+                          {'lo0': {'inet': [{'address': '127.0.0.1', 'netmask': '255.0.0.0'}],
+                                   'inet6': [{'address': 'fe80::1',
+                                               'prefixlen': '64',
+                                               'scope': 'lo0'}],
+                                   'up': True},
+                           'vioif0': {'hwaddr': '00:a0:98:e6:83:18',
+                                      'inet': [{'address': '192.168.1.80',
+                                                 'broadcast': '192.168.1.255',
+                                                 'netmask': '255.255.255.0'}],
+                                      'inet6': [{'address': 'fe80::2a0:98ff:fee6:8318',
+                                                  'prefixlen': '64',
+                                                  'scope': 'vioif0'}],
+                                      'up': True}}
+        )
+
     def test_freebsd_remotes_on(self):
         with patch('salt.utils.platform.is_sunos', lambda: False):
             with patch('salt.utils.platform.is_freebsd', lambda: True):
@@ -507,3 +538,14 @@ class NetworkTestCase(TestCase):
         self.assertRaises(ValueError, network.mac_str_to_bytes, 'a0:b0:c0:d0:e0:fg')
         self.assertEqual(b'\x10\x08\x06\x04\x02\x00', network.mac_str_to_bytes('100806040200'))
         self.assertEqual(b'\xf8\xe7\xd6\xc5\xb4\xa3', network.mac_str_to_bytes('f8e7d6c5b4a3'))
+
+    def test_get_fqhostname_return(self):
+        '''
+        Test if proper hostname is used when RevDNS differ from hostname
+
+        :return:
+        '''
+        with patch('socket.gethostname', MagicMock(return_value='hostname')), \
+             patch('socket.getfqdn', MagicMock(return_value='very.long.and.complex.domain.name')), \
+             patch('socket.getaddrinfo', MagicMock(return_value=[(2, 3, 0, 'hostname', ('127.0.1.1', 0))])):
+            self.assertEqual(network.get_fqhostname(), 'hostname')
