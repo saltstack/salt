@@ -200,8 +200,15 @@ class SaltSupportModule(SaltSupport):
                 if len(line) == 2:
                     stats[line[0].lower().replace(' ', '_')] = line[1]
             cnt['transfer'] = stats
-            for section in ['stderr', 'stdout']:
-                del cnt[section]
+            del cnt['stdout']
+
+        # Remove empty
+        empty_sections = []
+        for section in cnt:
+            if not cnt[section]:
+                empty_sections.append(section)
+        for section in empty_sections:
+            del cnt[section]
 
         return cnt
 
