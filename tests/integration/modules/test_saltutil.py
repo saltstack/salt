@@ -16,10 +16,12 @@ from tests.support.helpers import flaky
 from tests.support.paths import TMP_PILLAR_TREE
 
 # Import Salt Libs
+import salt.config
 import salt.utils.event
 import salt.utils.files
 import salt.utils.stringutils
-import salt.config
+
+from salt.minion import MinionEvents
 
 
 class SaltUtilModuleTest(ModuleCase):
@@ -262,7 +264,7 @@ class SaltUtilSyncPillarTest(ModuleCase):
                      '''))
 
         opts = self.run_function('test.get_opts')
-        wait = self.WaitForEvent(opts, '/salt/minion/minion_pillar_complete')
+        wait = self.WaitForEvent(opts, MinionEvents.PILLAR_COMPLETE)
         wait.start()
         self.run_function('saltutil.refresh_pillar', async=False)
         while wait.is_alive():

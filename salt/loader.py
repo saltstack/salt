@@ -36,6 +36,7 @@ import salt.utils.platform
 import salt.utils.versions
 import salt.utils.stringutils
 from salt.exceptions import LoaderError
+from salt.minion import MinionEvents
 from salt.template import check_render_pipe_str
 from salt.utils.decorators import Depends
 
@@ -262,7 +263,7 @@ def minion_mods(
 
     if notify:
         evt = salt.utils.event.get_event('minion', opts=opts, listen=False)
-        evt.fire_event({'complete': True}, tag='/salt/minion/minion_mod_complete')
+        evt.fire_event({'complete': True}, tag=MinionEvents.MOD_COMPLETE)
 
     return ret
 

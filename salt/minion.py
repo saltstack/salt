@@ -414,6 +414,11 @@ def service_name():
     return 'salt_minion' if 'bsd' in sys.platform else 'salt-minion'
 
 
+class MinionEvents(object):
+    PILLAR_COMPLETE = '/salt/minion/minion_pillar_complete'
+    MOD_COMPLETE = '/salt/minion/minion_mod_complete'
+
+
 class MinionBase(object):
     def __init__(self, opts):
         self.opts = opts

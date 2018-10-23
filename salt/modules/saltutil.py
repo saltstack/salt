@@ -67,6 +67,8 @@ from salt.exceptions import (
     SaltReqTimeoutError, SaltRenderError, CommandExecutionError, SaltInvocationError
 )
 
+from salt.minion import MinionEvents
+
 __proxyenabled__ = ['*']
 
 log = logging.getLogger(__name__)
@@ -1052,7 +1054,7 @@ def refresh_pillar(**kwargs):
             # Wait for the finish event to fire
             log.trace('refresh_pillar waiting for pillar refresh to complete')
             # Blocks until we hear this event or until the timeout expires
-            eventer.get_event(tag='/salt/minion/minion_pillar_complete', wait=30)
+            eventer.get_event(tag=MinionEvents.PILLAR_COMPLETE, wait=30)
     except KeyError:
         log.error('Event module not available. Pillar refresh failed.')
         ret = False  # Effectively a no-op, since we can't really return without an event system
@@ -1087,7 +1089,7 @@ def refresh_modules(**kwargs):
             # Wait for the finish event to fire
             log.trace('refresh_modules waiting for module refresh to complete')
             # Blocks until we hear this event or until the timeout expires
-            eventer.get_event(tag='/salt/minion/minion_mod_complete', wait=30)
+            eventer.get_event(tag=MinionEvents.MOD_COMPLETE, wait=30)
     except KeyError:
         log.error('Event module not available. Module refresh failed.')
         ret = False  # Effectively a no-op, since we can't really return without an event system
