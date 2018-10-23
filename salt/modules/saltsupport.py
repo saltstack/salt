@@ -15,6 +15,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 '''
+:codeauthor: :email:`Bo Maryniuk <bo@suse.de>`
+
 Module to run salt-support within Salt.
 '''
 from __future__ import unicode_literals, print_function, absolute_import
