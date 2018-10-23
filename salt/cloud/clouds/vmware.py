@@ -4735,7 +4735,7 @@ def shutdown_host(kwargs=None, call=None):
     '''
     if call != 'function':
         raise SaltCloudSystemExit(
-            'The reboot_host function must be called with '
+            'The shutdown_host function must be called with '
             '-f or --function.'
         )
 
