@@ -34,6 +34,8 @@ import salt.cli.support
 from salt.cli.support.collector import SaltSupport, SupportDataCollector
 import salt.exceptions
 import salt.utils.stringutils
+import salt.defaults.exitcodes
+import salt.utils.odict
 
 __virtualname__ = 'support'
 log = logging.getLogger(__name__)
@@ -183,6 +185,25 @@ class SaltSupportModule(SaltSupport):
                     ret['files'][archive] = 'left'
 
         return ret
+
+    def format_sync_stats(self, cnt):
+        '''
+        Format stats of the sync output.
+
+        :param cnt:
+        :return:
+        '''
+        stats = salt.utils.odict.OrderedDict()
+        if cnt.get('retcode') == salt.defaults.exitcodes.EX_OK:
+            for line in cnt.get('stdout', '').split(os.linesep):
+                line = line.split(': ')
+                if len(line) == 2:
+                    stats[line[0].lower().replace(' ', '_')] = line[1]
+            cnt['transfer'] = stats
+            for section in ['stderr', 'stdout']:
+                del cnt[section]
+
+        return cnt
 
     @salt.utils.decorators.depends('rsync')
     @salt.utils.decorators.external
