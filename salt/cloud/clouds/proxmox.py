@@ -778,7 +778,7 @@ def create(vm_):
         # We have to wait for a bit for qemu-agent to start
         log.debug("Waiting for qemu-agent to start...")
         time.sleep(20)
-        endpoint = 'nodes/{0}/qemu/{1}/agent/network-get-interfaces'.format(vm['host'], vmid)
+        endpoint = 'nodes/{0}/qemu/{1}/agent/network-get-interfaces'.format(vm_['host'], vmid)
         interfaces = query('get', endpoint)
         if 'data' in interfaces and 'result' in interfaces['data']:
             for interface in interfaces['data']['result']:
