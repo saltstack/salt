@@ -230,6 +230,9 @@ Module Changes
   ``dns`` can be overriden by ``ipv4dns`` or ``ipv6dns``). The ``proto`` option
   is now required.
 
+- Added new :py:func:`boto_ssm <salt.modules.boto_ssm>` module to set and query
+  secrets in AWS SSM parameters.
+
 Salt Cloud Features
 ===================
 
