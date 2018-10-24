@@ -146,6 +146,12 @@ class WinLgpoTest(ModuleCase):
             # expecting it to fail
             self.assertNotEqual(ret, True)
 
+    def runTest(self):
+        '''
+        runTest method
+        '''
+        pass
+
     @classmethod
     def setUpClass(cls):
         '''
