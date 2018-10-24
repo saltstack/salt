@@ -334,7 +334,14 @@ def wait_rm(name, recurse=False, profile=None, **kwargs):
 
 def mod_watch(name, **kwargs):
     '''
-    Execute a etcd function based on a watch call requisite.
+    The etcd watcher, called to invoke the watch command.
+    When called, execute a etcd function based on a watch call requisite.
+
+    .. note::
+        This state exists to support special handling of the ``watch``
+        :ref:`requisite <requisites>`. It should not be called directly.
+
+        Parameters for this function should be set by the state being triggered.
     '''
 
     # Watch to set etcd key

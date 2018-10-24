@@ -400,9 +400,9 @@ def update_distribution(
         keyid=keyid,
         profile=profile
     )
-    if 'error' in distribution_result:
-        return distribution_result
-    dist_with_tags = distribution_result['result']
+    if 'error' in distribution_ret:
+        return distribution_ret
+    dist_with_tags = distribution_ret['result']
 
     current_distribution = dist_with_tags['distribution']
     current_config = current_distribution['DistributionConfig']

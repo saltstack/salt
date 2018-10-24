@@ -164,6 +164,43 @@ New output:
           Skipped:
               0
 
+XML Module
+==========
+
+A new state and execution module for editing XML files is now included. Currently it allows for
+editing values from an xpath query, or editing XML IDs.
+
+.. code-block:: bash
+
+  # salt-call xml.set_attribute /tmp/test.xml ".//actor[@id='3']" editedby "Jane Doe"
+  local:
+      True
+  # salt-call xml.get_attribute /tmp/test.xml ".//actor[@id='3']"
+  local:
+      ----------
+      editedby:
+          Jane Doe
+      id:
+          3
+  # salt-call xml.get_value /tmp/test.xml ".//actor[@id='2']"
+  local:
+      Liam Neeson
+  # salt-call xml.set_value /tmp/test.xml ".//actor[@id='2']" "Patrick Stewart"
+  local:
+      True
+  # salt-call xml.get_value /tmp/test.xml ".//actor[@id='2']"
+  local:
+      Patrick Stewart
+
+.. code-block:: yaml
+
+    ensure_value_true:
+      xml.value_present:
+        - name: /tmp/test.xml
+        - xpath: .//actor[@id='1']
+        - value: William Shatner
+
+
 
 State Changes
 =============
@@ -177,6 +214,25 @@ State Changes
 - The ``onchanges`` and ``prereq`` :ref:`requisites <requisites>` now behave
   properly in test mode.
 
+- Adding a new option for the State compiler, ``disabled_requisites`` will allow
+  requisites to be disabled during State runs.
+
+- Added new :py:func:`ssh_auth.manage <salt.states.ssh_auth.manage>` state to
+  ensure only the specified ssh keys are present for the specified user.
+
+Module Changes
+==============
+
+- The :py:func:`debian_ip <salt.modules.debian_ip>` module used by the
+  :py:func:`network.managed <salt.states.network.managed>` state has been
+  heavily refactored. The order that options appear in inet/inet6 blocks may
+  produce cosmetic changes. Many options without an 'ipvX' prefix will now be
+  shared between inet and inet6 blocks. The options ``enable_ipv4`` and
+  ``enabled_ipv6`` will now fully remove relevant inet/inet6 blocks. Overriding
+  options by prefixing them with 'ipvX' will now work with most options (i.e.
+  ``dns`` can be overriden by ``ipv4dns`` or ``ipv6dns``). The ``proto`` option
+  is now required.
+
 Salt Cloud Features
 ===================
 
@@ -189,6 +245,12 @@ setting the configuration paramaters ``service_account_private_key`` and
 
 Deprecations
 ============
+
+RAET Transport
+--------------
+
+Support for RAET has been removed. Please use the ``zeromq`` or ``tcp`` transport
+instead of ``raet``.
 
 Module Deprecations
 -------------------
@@ -224,3 +286,13 @@ Module Deprecations
     - Support for the ``ssh.recv_known_host`` function has been removed. Please use the
       :py:func:`ssh.recv_known_host_entries <salt.modules.ssh.recv_known_host_entries>`
       function instead.
+
+State Deprecations
+------------------
+
+- The :py:mod:`win_servermanager <salt.states.win_servermanager>` state has been
+  changed as follows:
+
+    - Support for the ``force`` kwarg has been removed from the
+      :py:func:`win_servermanager.installed <salt.statues.win_servermanager.installed>`
+      function. Please use ``recurse`` instead.

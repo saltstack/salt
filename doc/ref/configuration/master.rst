@@ -850,9 +850,8 @@ Default: ``zeromq``
 
 Changes the underlying transport layer. ZeroMQ is the recommended transport
 while additional transport layers are under development. Supported values are
-``zeromq``, ``raet`` (experimental), and ``tcp`` (experimental). This setting has
-a significant impact on performance and should not be changed unless you know
-what you are doing!
+``zeromq`` and ``tcp`` (experimental). This setting has a significant impact on
+performance and should not be changed unless you know what you are doing!
 
 .. code-block:: yaml
 
@@ -1893,40 +1892,6 @@ The listen queue size of the ZeroMQ backlog.
 
     zmq_backlog: 1000
 
-.. conf_master:: salt_event_pub_hwm
-.. conf_master:: event_publisher_pub_hwm
-
-``salt_event_pub_hwm`` and ``event_publisher_pub_hwm``
-------------------------------------------------------
-
-These two ZeroMQ High Water Mark settings, ``salt_event_pub_hwm`` and
-``event_publisher_pub_hwm`` are significant for masters with thousands of
-minions. When these are insufficiently high it will manifest in random
-responses missing in the CLI and even missing from the job cache. Masters
-that have fast CPUs and many cores with appropriate ``worker_threads``
-will not need these set as high.
-
-The ZeroMQ high-water-mark for the ``SaltEvent`` pub socket default is:
-
-.. code-block:: yaml
-
-    salt_event_pub_hwm: 20000
-
-The ZeroMQ high-water-mark for the ``EventPublisher`` pub socket default is:
-
-.. code-block:: yaml
-
-    event_publisher_pub_hwm: 10000
-
-As an example, on single master deployment with 8,000 minions, 2.4GHz CPUs,
-24 cores, and 32GiB memory has these settings:
-
-.. code-block:: yaml
-
-    salt_event_pub_hwm: 128000
-    event_publisher_pub_hwm: 64000
-
-
 .. _master-module-management:
 
 Master Module Management
@@ -2482,6 +2447,12 @@ Master will not be returned to the Minion.
 ------------------------------
 
 .. versionadded:: 2014.1.0
+.. deprecated:: 2018.3.4
+   This option is now ignored. Firstly, it only traversed
+   :conf_master:`file_roots`, which means it did not work for the other
+   fileserver backends. Secondly, since this option was added we have added
+   caching to the code that traverses the file_roots (and gitfs, etc.), which
+   greatly reduces the amount of traversal that is done.
 
 Default: ``False``
 
@@ -4598,7 +4569,7 @@ Default: ``3600``
 
 If and only if a master has set ``pillar_cache: True``, the cache TTL controls the amount
 of time, in seconds, before the cache is considered invalid by a master and a fresh
-pillar is recompiled and stored.
+pillar is recompiled and stored. A value of 0 will cause the cache to always be valid.
 
 .. conf_master:: pillar_cache_backend
 
