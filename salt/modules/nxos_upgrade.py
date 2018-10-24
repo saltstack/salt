@@ -56,9 +56,6 @@ __virtual_aliases__ = ('nxos_upgrade',)
 
 log = logging.getLogger(__name__)
 
-DEVICE_DETAILS = {'grains_cache': {}}
-COPY_RS = 'copy running-config startup-config'
-
 
 def __virtual__():
     return __virtualname__
@@ -94,8 +91,8 @@ def check_upgrade_impact(system_image, kickstart_image=None, issu=True, **kwargs
 
     .. code-block:: bash
 
-        salt 'n9k' nxos.upgrade_impact system_image=nxos.9.2.1.bin
-        salt 'n7k' nxos.upgrade_impact system_image=n7000-s2-dk9.8.1.1.bin \\
+        salt 'n9k' nxos.check_upgrade_impact system_image=nxos.9.2.1.bin
+        salt 'n7k' nxos.check_upgrade_impact system_image=n7000-s2-dk9.8.1.1.bin \\
             kickstart_image=n7000-s2-kickstart.8.1.1.bin issu=False
     '''
     si = system_image
@@ -112,7 +109,7 @@ def check_upgrade_impact(system_image, kickstart_image=None, issu=True, **kwargs
         cmd = cmd + ' non-disruptive'
 
     log.info("Check upgrade impact using command: '{}'".format(cmd))
-    kwargs.update({'timeout': 900})
+    kwargs.update({'timeout': kwargs.get('timeout', 900)})
     error_pattern_list = ['Another install procedure may be in progress']
     kwargs.update({'error_pattern': error_pattern_list})
 
@@ -182,7 +179,7 @@ def upgrade(system_image, kickstart_image=None, issu=True, **kwargs):
     log.info(logmsg)
     log.info("Begin upgrade using command: '{}'".format(cmd))
 
-    kwargs.update({'timeout': 900})
+    kwargs.update({'timeout': kwargs.get('timeout', 900)})
     error_pattern_list = ['Another install procedure may be in progress']
     kwargs.update({'error_pattern': error_pattern_list})
 
@@ -191,4 +188,8 @@ def upgrade(system_image, kickstart_image=None, issu=True, **kwargs):
         upgrade_result = __salt__['nxos.sendline'](cmd, **kwargs)
     except CommandExecutionError as e:
         return ast.literal_eval(e.message)
+    except NxosError:
+        kwargs.update({'timeout': 120})
+        cmd = 'show install all status'
+        return __salt__['nxos.sendline'](cmd, **kwargs)
     return upgrade_result

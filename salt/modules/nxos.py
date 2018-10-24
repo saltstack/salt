@@ -810,4 +810,4 @@ def _nxapi_request(commands,
     else:
         api_kwargs = __salt__['config.get']('nxos', {})
         api_kwargs.update(**kwargs)
-        return __utils__['nxos.nxapi_request'](commands, method=method, **api_kwargs)1G
+        return __utils__['nxos.nxapi_request'](commands, method=method, **api_kwargs)
