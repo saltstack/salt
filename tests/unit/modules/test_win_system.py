@@ -55,7 +55,7 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(win_system.init(3),
                          'Not implemented on Windows at this time.')
 
-    @skipIf(not win_system.HAS_WIN32NET_MODS, 'this test needs the w32net library')
+    @skipIf(not win_system.HAS_WIN32NET_MODS, 'Missing win32 libraries')
     def test_poweroff(self):
         '''
             Test to poweroff a running system
@@ -64,7 +64,7 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(win_system, 'shutdown', mock):
             self.assertEqual(win_system.poweroff(), 'salt')
 
-    @skipIf(not win_system.HAS_WIN32NET_MODS, 'this test needs the w32net library')
+    @skipIf(not win_system.HAS_WIN32NET_MODS, 'Missing win32 libraries')
     def test_reboot(self):
         '''
             Test to reboot the system
@@ -73,7 +73,7 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
                    MagicMock(return_value=True)) as shutdown:
             self.assertEqual(win_system.reboot(), True)
 
-    @skipIf(not win_system.HAS_WIN32NET_MODS, 'this test needs the w32net library')
+    @skipIf(not win_system.HAS_WIN32NET_MODS, 'Missing win32 libraries')
     def test_reboot_with_timeout_in_minutes(self):
         '''
             Test to reboot the system with a timeout
@@ -84,7 +84,7 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
             shutdown.assert_called_with(timeout=5, in_seconds=False, reboot=True,
                                         only_on_pending_reboot=False)
 
-    @skipIf(not win_system.HAS_WIN32NET_MODS, 'this test needs the w32net library')
+    @skipIf(not win_system.HAS_WIN32NET_MODS, 'Missing win32 libraries')
     def test_reboot_with_timeout_in_seconds(self):
         '''
             Test to reboot the system with a timeout
@@ -95,7 +95,7 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
             shutdown.assert_called_with(timeout=5, in_seconds=True, reboot=True,
                                         only_on_pending_reboot=False)
 
-    @skipIf(not win_system.HAS_WIN32NET_MODS, 'this test needs the w32net library')
+    @skipIf(not win_system.HAS_WIN32NET_MODS, 'Missing win32 libraries')
     def test_reboot_with_wait(self):
         '''
             Test to reboot the system with a timeout and
@@ -108,7 +108,7 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(win_system.reboot(wait_for_reboot=True), True)
             time.assert_called_with(330)
 
-    @skipIf(not win_system.HAS_WIN32NET_MODS, 'this test needs the w32net library')
+    @skipIf(not win_system.HAS_WIN32NET_MODS, 'Missing win32 libraries')
     def test_shutdown(self):
         '''
             Test to shutdown a running system
@@ -117,7 +117,7 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
                    MagicMock()):
             self.assertEqual(win_system.shutdown(), True)
 
-    @skipIf(not win_system.HAS_WIN32NET_MODS, 'this test needs the w32net library')
+    @skipIf(not win_system.HAS_WIN32NET_MODS, 'Missing win32 libraries')
     def test_shutdown_hard(self):
         '''
             Test to shutdown a running system with no timeout or warning
@@ -127,7 +127,7 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(win_system.shutdown_hard(), True)
             shutdown.assert_called_with(timeout=0)
 
-    @skipIf(not win_system.HAS_WIN32NET_MODS, 'this test needs the w32net library')
+    @skipIf(not win_system.HAS_WIN32NET_MODS, 'Missing win32 libraries')
     def test_set_computer_name(self):
         '''
             Test to set the Windows computer name
@@ -146,7 +146,7 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
                    MagicMock(return_value=False)):
             self.assertFalse(win_system.set_computer_name("salt"))
 
-    @skipIf(not win_system.HAS_WIN32NET_MODS, 'this test needs the w32net library')
+    @skipIf(not win_system.HAS_WIN32NET_MODS, 'Missing win32 libraries')
     def test_get_pending_computer_name(self):
         '''
             Test to get a pending computer name.
@@ -162,7 +162,7 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
                 self.assertEqual(win_system.get_pending_computer_name(),
                                  'salt_pending')
 
-    @skipIf(not win_system.HAS_WIN32NET_MODS, 'this test needs the w32net library')
+    @skipIf(not win_system.HAS_WIN32NET_MODS, 'Missing win32 libraries')
     def test_get_computer_name(self):
         '''
             Test to get the Windows computer name
@@ -172,7 +172,7 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(win_system.get_computer_name(), 'computer name')
             self.assertFalse(win_system.get_computer_name())
 
-    @skipIf(not win_system.HAS_WIN32NET_MODS, 'this test needs the w32net library')
+    @skipIf(not win_system.HAS_WIN32NET_MODS, 'Missing win32 libraries')
     def test_set_computer_desc(self):
         '''
             Test to set the Windows computer description
@@ -186,7 +186,7 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
                                                                   ),
                                      {'Computer Description': "Salt's comp"})
 
-    @skipIf(not win_system.HAS_WIN32NET_MODS, 'this test needs the w32net library')
+    @skipIf(not win_system.HAS_WIN32NET_MODS, 'Missing win32 libraries')
     def test_get_computer_desc(self):
         '''
             Test to get the Windows computer description
@@ -197,7 +197,7 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(win_system.get_computer_desc(), 'salt description')
             self.assertFalse(win_system.get_computer_desc())
 
-    @skipIf(not win_system.HAS_WIN32NET_MODS, 'this test needs w32net and other windows libraries')
+    @skipIf(not win_system.HAS_WIN32NET_MODS, 'Missing win32 libraries')
     def test_join_domain(self):
         '''
             Test to join a computer to an Active Directory domain
@@ -230,7 +230,7 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
             import re
             self.assertTrue(re.search(r'^\d{2}:\d{2} \w{2}$', win_tm))
 
-    @skipIf(not win_system.HAS_WIN32NET_MODS, 'this test needs the w32net library')
+    @skipIf(not win_system.HAS_WIN32NET_MODS, 'Missing win32 libraries')
     def test_set_system_time(self):
         '''
             Test to set system time
@@ -247,7 +247,7 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
         date = datetime.strftime(datetime.now(), "%m/%d/%Y")
         self.assertEqual(win_system.get_system_date(), date)
 
-    @skipIf(not win_system.HAS_WIN32NET_MODS, 'this test needs the w32net library')
+    @skipIf(not win_system.HAS_WIN32NET_MODS, 'Missing win32 libraries')
     def test_set_system_date(self):
         '''
             Test to set system date
@@ -295,6 +295,7 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(ret, "MINION")
         cmd_run_mock.assert_called_once_with(cmd="hostname")
 
+    @skipIf(not win_system.HAS_WIN32NET_MODS, 'Missing win32 libraries')
     def test_get_system_info(self):
         fields = ['bios_caption', 'bios_description', 'bios_details',
                   'bios_manufacturer', 'bios_version', 'bootup_state',
