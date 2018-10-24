@@ -2796,10 +2796,31 @@ class State(object):
         running.update(errors)
         return running
 
+    def inject_default_call(self, high):
+        '''
+        Sets .call function to a state, if not there.
+
+        :param high:
+        :return:
+        '''
+        for chunk in high:
+            state = high[chunk]
+            for state_ref in state:
+                needs_default = True
+                for argset in state[state_ref]:
+                    if isinstance(argset, six.string_types):
+                        needs_default = False
+                        break
+                if needs_default:
+                    order = state[state_ref].pop(-1)
+                    state[state_ref].append('__call__')
+                    state[state_ref].append(order)
+
     def call_high(self, high, orchestration_jid=None):
         '''
         Process a high data call and ensure the defined states.
         '''
+        self.inject_default_call(high)
         errors = []
         # If there is extension data reconcile it
         high, ext_errors = self.reconcile_extend(high)

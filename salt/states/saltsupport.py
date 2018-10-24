@@ -72,7 +72,7 @@ class SaltSupportState(object):
             'name': kwargs.pop('name'),
             'changes': {},
             'result': True,
-            'comment': 'args: ' + str(args) + '\nkwargs: ' + str(kwargs),
+            'comment': '',
         }
 
         out = {}
@@ -141,5 +141,5 @@ def __virtual__():
     '''
     Salt Support state
     '''
-    setattr(sys.modules[__name__], 'call', lambda **kwargs: SaltSupportState()(**kwargs))   # pylint: disable=W0108
+    setattr(sys.modules[__name__], '__call__', lambda **kwargs: SaltSupportState()(**kwargs))   # pylint: disable=W0108
     return __virtualname__
