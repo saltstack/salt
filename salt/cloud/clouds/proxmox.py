@@ -595,17 +595,18 @@ def create(vm_):
     host = data['node']       # host which we have received
     nodeType = data['technology']  # VM tech (Qemu / OpenVZ)
 
-    # Determine which IP to use in order of preference:
-    if 'ip_address' in vm_:
-        ip_address = six.text_type(vm_['ip_address'])
-    elif 'public_ips' in data:
-        ip_address = six.text_type(data['public_ips'][0])  # first IP
-    elif 'private_ips' in data:
-        ip_address = six.text_type(data['private_ips'][0])  # first IP
-    else:
-        raise SaltCloudExecutionFailure("Could not determine an IP address to use")
+    if not nodeType == 'qemu':
+        # Determine which IP to use in order of preference:
+        if 'ip_address' in vm_:
+            ip_address = six.text_type(vm_['ip_address'])
+        elif 'public_ips' in data:
+            ip_address = six.text_type(data['public_ips'][0])  # first IP
+        elif 'private_ips' in data:
+            ip_address = six.text_type(data['private_ips'][0])  # first IP
+        else:
+            raise SaltCloudExecutionFailure("Could not determine an IP address to use")
 
-    log.debug('Using IP address %s', ip_address)
+        log.debug('Using IP address %s', ip_address)
 
     # wait until the vm has been created so we can start it
     if not wait_for_created(data['upid'], timeout=300):
@@ -771,6 +772,23 @@ def create(vm_):
     log.debug('Waiting for state "running" for vm %s on %s', vmid, host)
     if not wait_for_state(vmid, 'running'):
         return {'Error': 'Unable to start {0}, command timed out'.format(name)}
+
+    # For QEMU VMs, we can get the IP Address from qemu-agent
+    if nodeType == 'qemu':
+        # We have to wait for a bit for qemu-agent to start
+        log.debug("Waiting for qemu-agent to start...")
+        time.sleep(20)
+        endpoint = 'nodes/{0}/qemu/{1}/agent/network-get-interfaces'.format(vm['host'], vmid)
+        interfaces = query('get', endpoint)
+        if 'data' in interfaces and 'result' in interfaces['data']:
+            for interface in interfaces['data']['result']:
+                if_name = interface['name']
+                if if_name.startswith('eth') or if_name.startswith('ens'):
+                    for if_addr in interface['ip-addresses']:
+                        if if_addr['ip-address-type'] == 'ipv4':
+                            ip_address = six.text_type(if_addr['ip-address'])
+        else:
+            raise SaltCloudExecutionFailure
 
     ssh_username = config.get_cloud_config_value(
         'ssh_username', vm_, __opts__, default='root'
