@@ -257,7 +257,7 @@ project = 'Salt'
 
 version = salt.version.__version__
 latest_release = '2018.3.3'  # latest release
-previous_release = '2017.7.7'  # latest release from previous branch
+previous_release = '2017.7.8'  # latest release from previous branch
 previous_release_dir = '2017.7'  # path on web server for previous branch
 next_release = ''  # next release
 next_release_dir = ''  # path on web server for next release branch
