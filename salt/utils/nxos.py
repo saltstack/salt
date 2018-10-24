@@ -178,7 +178,6 @@ class NxapiClient(object):
                                        decode=True,
                                        decode_type='json',
                                        **self.nxargs)
-            response = response['dict']
 
         return self.parse_response(response, command_list)
 
@@ -186,7 +185,14 @@ class NxapiClient(object):
         '''
         Parse NX-API JSON response from the NX-OS device.
         '''
-        body = response
+        # Check for 500 level NX-API Server Errors
+        if 'status' in response:
+            if int(response['status']) >= 500:
+                raise NxosError('{}'.format(response))
+            else:
+                raise NxosError('NX-API Request Not Supported: {}'.format(response))
+
+        body = response['dict']
         if self.nxargs['connect_over_uds']:
             body = json.loads(response.read().decode('utf-8'))
 
