@@ -41,7 +41,11 @@ STUB_DISK_USAGE = [namedtuple('usage',
                    namedtuple('usage',
                               'total used free percent')(100, 75, 25, 25)]
 
-WINDOWS_STUB_DISK_USAGE = namedtuple('usage','total used free percent')(1000, 500, 500, 50)
+WINDOWS_STUB_DISK_USAGE = namedtuple('usage',
+                                     'total used free percent')(1000,
+                                                                500,
+                                                                500,
+                                                                50)
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
