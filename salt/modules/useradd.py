@@ -17,6 +17,7 @@ except ImportError:
     HAS_PWD = False
 import logging
 import copy
+import os
 
 # Import salt libs
 import salt.utils.data
@@ -694,3 +695,35 @@ def rename(name, new_name, root=None):
 
     __salt__['cmd.run'](cmd, python_shell=False)
     return info(name).get('name') == new_name
+
+
+def _getpwnam(name, root=None):
+    '''
+    Alternative implementation for getpwnam, that use only /etc/passwd
+    '''
+    root = '/' if not root else root
+    passwd = os.path.join(root, 'etc/passwd')
+    with salt.utils.files.fopen(passwd) as fp_:
+        for line in fp_:
+            line = salt.utils.stringutils.to_unicode(line)
+            comps = line.strip().split(':')
+            if comps[0] == name:
+                # Generate a getpwnam compatible output
+                comps[2], comps[3] = int(comps[2]), int(comps[3])
+                return pwd.struct_passwd(comps)
+    raise KeyError
+
+
+def _getpwall(root=None):
+    '''
+    Alternative implemetantion for getpwall, that use only /etc/passwd
+    '''
+    root = '/' if not root else root
+    passwd = os.path.join(root, 'etc/passwd')
+    with salt.utils.files.fopen(passwd) as fp_:
+        for line in fp_:
+            line = salt.utils.stringutils.to_unicode(line)
+            comps = line.strip().split(':')
+            # Generate a getpwall compatible output
+            comps[2], comps[3] = int(comps[2]), int(comps[3])
+            yield pwd.struct_passwd(comps)
