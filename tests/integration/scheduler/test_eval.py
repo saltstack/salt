@@ -117,7 +117,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.schedule.job_status(job_name)
         self.assertEqual(ret['_last_run'], run_time1)
 
-	time.sleep(2)
+        time.sleep(2)
 
         # Evaluate run time2
         self.schedule.eval(now=run_time2)
@@ -186,7 +186,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.schedule.job_status(job_name)
         self.assertEqual(ret['_last_run'], run_time1)
 
-	time.sleep(2)
+        time.sleep(2)
 
         # Evaluate 1 second at the run time
         self.schedule.eval(now=run_time2)
@@ -331,7 +331,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.schedule.job_status(job_name)
         self.assertEqual(ret['_last_run'], run_time)
 
-	time.sleep(2)
+        time.sleep(2)
 
         # eval at 4:00pm, will run.
         run_time = dateutil_parser.parse('11/29/2017 4:00pm')
@@ -339,7 +339,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.schedule.job_status(job_name)
         self.assertEqual(ret['_last_run'], run_time)
 
-	time.sleep(2)
+        time.sleep(2)
 
         # eval at 5:00pm, will not run
         run_time = dateutil_parser.parse('11/29/2017 5:00pm')
@@ -422,7 +422,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.schedule.job_status('job1')
         self.assertEqual(ret['_last_run'], run_time)
 
-	time.sleep(2)
+        time.sleep(2)
 
         # eval at 3:00pm, will run.
         run_time = dateutil_parser.parse('11/29/2017 3:00pm')
@@ -504,7 +504,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(ret['_last_run'], run_time)
         self.assertEqual(ret['_next_fire_time'], next_run_time)
 
-	time.sleep(2)
+        time.sleep(2)
 
         # eval at 2:01:00pm, will run.
         run_time = dateutil_parser.parse('11/29/2017 2:01:00pm')
@@ -514,7 +514,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(ret['_last_run'], run_time)
         self.assertEqual(ret['_next_fire_time'], next_run_time)
 
-	time.sleep(2)
+        time.sleep(2)
 
         # eval at 2:01:30pm, will run.
         run_time = dateutil_parser.parse('11/29/2017 2:01:30pm')
@@ -564,7 +564,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.schedule.job_status(job_name)
         self.assertEqual(ret['_last_run'], run_time)
 
-	time.sleep(2)
+        time.sleep(2)
 
         # eval at 3:00:00pm, will run.
         run_time = dateutil_parser.parse('11/29/2017 3:00:00pm')
@@ -572,7 +572,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.schedule.job_status(job_name)
         self.assertEqual(ret['_last_run'], run_time)
 
-	time.sleep(2)
+        time.sleep(2)
 
         # eval at 3:30:00pm, will run.
         run_time = dateutil_parser.parse('11/29/2017 3:30:00pm')
@@ -620,7 +620,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.schedule.job_status(job_name)
         self.assertEqual(ret['_last_run'], run_time)
 
-	time.sleep(2)
+        time.sleep(2)
 
         # eval at 6:00:00pm, will run.
         run_time = dateutil_parser.parse('11/29/2017 6:00:00pm')
@@ -628,7 +628,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.schedule.job_status(job_name)
         self.assertEqual(ret['_last_run'], run_time)
 
-	time.sleep(2)
+        time.sleep(2)
 
         # eval at 8:00:00pm, will run.
         run_time = dateutil_parser.parse('11/29/2017 8:00:00pm')
@@ -680,7 +680,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(ret['_last_run'], last_run_time)
         self.assertEqual(ret['_next_fire_time'], next_run_time)
 
-	time.sleep(2)
+        time.sleep(2)
 
         # eval at 11/27/2017 2:00:00pm, will run.
         run_time = dateutil_parser.parse('11/27/2017 2:00:00pm')
@@ -690,7 +690,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(ret['_last_run'], run_time)
         self.assertEqual(ret['_next_fire_time'], next_run_time)
 
-	time.sleep(2)
+        time.sleep(2)
 
         # eval at 11/28/2017 2:00:00pm, will not run.
         run_time = dateutil_parser.parse('11/28/2017 2:00:00pm')
@@ -700,7 +700,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(ret['_last_run'], last_run_time)
         self.assertEqual(ret['_next_fire_time'], next_run_time)
 
-	time.sleep(2)
+        time.sleep(2)
 
         # eval at 11/29/2017 2:00:00pm, will run.
         run_time = dateutil_parser.parse('11/29/2017 2:00:00pm')
