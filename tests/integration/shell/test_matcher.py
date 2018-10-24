@@ -63,7 +63,7 @@ class MatchTest(ShellCase, ShellCaseCommonTestsMixin):
 
     def test_compound_pcre_grain_and_grain(self):
         match = 'P@test_grain:^cheese$ and * and G@test_grain:cheese'
-        data = self.run_salt('-t 1 -C \'{0}\' test.ping'.format(match))
+        data = self.run_salt('-t 1 -C "{0}" test.ping'.format(match))
         assert minion_in_returns('minion', data) is True
         assert minion_in_returns('sub_minion', data) is False
 
@@ -74,22 +74,22 @@ class MatchTest(ShellCase, ShellCaseCommonTestsMixin):
         assert minion_in_returns('minion', data) is False
 
     def test_compound_not_sub_minion(self):
-        data = self.run_salt("-C 'not sub_minion' test.ping")
+        data = self.run_salt('-C "not sub_minion" test.ping')
         assert minion_in_returns('minion', data) is True
         assert minion_in_returns('sub_minion', data) is False
 
     def test_compound_all_and_not_grains(self):
-        data = self.run_salt("-C '* and ( not G@test_grain:cheese )' test.ping")
+        data = self.run_salt('-C "* and ( not G@test_grain:cheese )" test.ping')
         assert minion_in_returns('minion', data) is False
         assert minion_in_returns('sub_minion', data) is True
 
     def test_compound_grain_regex(self):
-        data = self.run_salt("-C 'G%@planets%merc*' test.ping")
+        data = self.run_salt('-C "G%@planets%merc*" test.ping')
         assert minion_in_returns('minion', data) is True
         assert minion_in_returns('sub_minion', data) is False
 
     def test_coumpound_pcre_grain_regex(self):
-        data = self.run_salt("-C 'P%@planets%^(mercury|saturn)$' test.ping")
+        data = self.run_salt('-C "P%@planets%^(mercury|saturn)$" test.ping')
         assert minion_in_returns('minion', data) is True
         assert minion_in_returns('sub_minion', data) is True
 
@@ -216,8 +216,6 @@ class MatchTest(ShellCase, ShellCaseCommonTestsMixin):
                 'No command was sent, no jid was '
                 'assigned.'
             )
-        elif self.master_opts['transport'] == 'raet':
-            expect = ''
         self.assertEqual(
             ''.join(data),
             expect
@@ -315,7 +313,7 @@ class MatchTest(ShellCase, ShellCaseCommonTestsMixin):
         self.assertIn('minion', data.replace('sub_minion', 'stub'))
 
     def test_ipcidr(self):
-        subnets_data = self.run_salt('--out yaml \'*\' network.subnets')
+        subnets_data = self.run_salt('--out yaml "*" network.subnets')
         yaml_data = salt.utils.yaml.safe_load('\n'.join(subnets_data))
 
         # We're just after the first defined subnet from 'minion'
@@ -372,7 +370,11 @@ class MatchTest(ShellCase, ShellCaseCommonTestsMixin):
         data = self.run_salt('-d minion salt ldap.search "filter=ou=People"', catch_stderr=True)
         self.assertIn('You can only get documentation for one method at one time', '\n'.join(data[1]))
 
+    @skipIf(salt.utils.platform.is_windows(), 'Skip on Windows OS')
     def test_issue_7754(self):
+        '''
+        Skip on Windows because Syslog is not installed
+        '''
         old_cwd = os.getcwd()
         config_dir = os.path.join(TMP, 'issue-7754')
         if not os.path.isdir(config_dir):
