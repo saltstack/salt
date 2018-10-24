@@ -62,7 +62,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         verify that scheduled job runs
         '''
-        job_name = 'tet_eval'
+        job_name = 'test_eval'
         job = {
           'schedule': {
             job_name: {
