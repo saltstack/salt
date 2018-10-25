@@ -488,6 +488,18 @@ in.  Because of the non-deterministic order that grains are rendered in, the
 only grains that can be relied upon to be passed in are ``core.py`` grains,
 since those are compiled first.
 
+More Precise ``virtual`` Grain
+==============================
+
+This release improves the accuracy of the ``virtual`` grain when running Salt in
+a nested virtualization environment (e.g. ``systemd-nspawn`` container inside a
+VM) and having ``virt-what`` installed.
+
+Until now, the ``virtual`` grain was determined by matching against all output
+lines of ``virt-what`` instead of individual items which could lead to not quite
+precise results (e.g. reporting ``HyperV`` inside a ``systemd-nspawn`` container
+running within a Hyper-V-based VM.
+
 Configurable Module Environment
 ===============================
 
