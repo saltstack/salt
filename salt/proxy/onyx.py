@@ -62,7 +62,6 @@ import multiprocessing
 import re
 
 # Import Salt libs
-from salt.utils.pycrypto import gen_hash, secure_password
 from salt.utils.vt_helper import SSHConnection
 from salt.utils.vt import TerminalException
 log = logging.getLogger(__file__)
@@ -285,39 +284,6 @@ def get_roles(username):
     return roles
 
 
-def check_password(username, password, encrypted=False):
-    '''
-    Check if passed password is the one assigned to user
-
-    .. code-block: bash
-
-        salt '*' onyx.cmd check_password username=admin password=admin
-        salt '*' onyx.cmd check_password username=admin \\
-            password='$5$2fWwO2vK$s7.Hr3YltMNHuhywQQ3nfOd.gAPHgs3SOBYYdGT3E.A' \\
-            encrypted=True
-    '''
-    hash_algorithms = {'1': 'md5',
-                       '2a': 'blowfish',
-                       '5': 'sha256',
-                       '6': 'sha512', }
-    user = get_user(username)
-    password_line = user.split('\n')
-    password_line = password_line[1]
-    if not password_line:
-        return None
-    if '!!' in password_line:
-        return False
-    cur_hash = re.search(r'(\$[0-6](?:\$[^$ ]+)+)', str(password_line)).group(0)
-    if encrypted is False:
-        hash_type, cur_salt, hashed_pass = re.search(r'^\$([0-6])\$([^$]+)\$(.*)$', str(cur_hash)).groups()
-        new_hash = gen_hash(crypt_salt=cur_salt, password=password, algorithm=hash_algorithms[hash_type])
-    else:
-        new_hash = password
-    if new_hash == cur_hash:
-        return True
-    return False
-
-
 def check_role(username, role):
     '''
     Check if user is assigned a specific role on switch
@@ -327,42 +293,6 @@ def check_role(username, role):
         salt '*' onyx.cmd check_role username=admin role=network-admin
     '''
     return role in get_roles(username)
-
-
-def set_password(username, password,
-                 encrypted=False, role=None,
-                 crypt_salt=None, algorithm='sha256'):
-    '''
-    Set users password on switch
-
-    .. code-block:: bash
-
-        salt '*' onyx.cmd set_password admin TestPass
-        salt '*' onyx.cmd set_password admin \\
-            password='$5$2fWwO2vK$s7.Hr3YltMNHuhywQQ3nfOd.gAPHgs3SOBYYdGT3E.A' \\
-            encrypted=True
-    '''
-    password_line = get_user(username)
-    if encrypted is False:
-        if crypt_salt is None:
-            # onyx does not like non alphanumeric characters.  Using the random module from pycrypto
-            # can lead to having non alphanumeric characters in the salt for the hashed password.
-            crypt_salt = secure_password(8, use_random=False)
-        hashed_pass = gen_hash(crypt_salt=crypt_salt, password=password, algorithm=algorithm)
-    else:
-        hashed_pass = password
-    password_line = 'username {0} password 5 {1}'.format(username, hashed_pass)
-    if role is not None:
-        password_line += ' role {0}'.format(role)
-    try:
-        sendline('config terminal')
-        ret = sendline(password_line)
-        sendline('end')
-        sendline('copy running-config startup-config')
-        return '\n'.join([password_line, ret])
-    except TerminalException as e:
-        log.error(e)
-        return 'Failed to set password'
 
 
 def remove_user(username):
