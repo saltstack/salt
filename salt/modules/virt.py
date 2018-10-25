@@ -972,19 +972,21 @@ def _disk_profile(profile, hypervisor, disks=None, vm_name=None, image=None, poo
         overlay = {}
 
     # Get the disks from the profile
-    disklist = copy.deepcopy(
-        __salt__['config.get']('virt:disk', {}).get(profile, default))
+    disklist = []
+    if profile:
+        disklist = copy.deepcopy(
+            __salt__['config.get']('virt:disk', {}).get(profile, default))
 
-    # Transform the list to remove one level of dictionnary and add the name as a property
-    disklist = [dict(d, name=name) for disk in disklist for name, d in disk.items()]
+        # Transform the list to remove one level of dictionnary and add the name as a property
+        disklist = [dict(d, name=name) for disk in disklist for name, d in disk.items()]
 
-    # Add the image to the first disk if there is one
-    if image:
-        # If image is specified in module arguments, then it will be used
-        # for the first disk instead of the image from the disk profile
-        log.debug('%s image from module arguments will be used for disk "%s"'
-                  ' instead of %s', image, disklist[0]['name'], disklist[0].get('image', ""))
-        disklist[0]['image'] = image
+        # Add the image to the first disk if there is one
+        if image:
+            # If image is specified in module arguments, then it will be used
+            # for the first disk instead of the image from the disk profile
+            log.debug('%s image from module arguments will be used for disk "%s"'
+                      ' instead of %s', image, disklist[0]['name'], disklist[0].get('image', ""))
+            disklist[0]['image'] = image
 
     # Merge with the user-provided disks definitions
     if disks:
@@ -1179,7 +1181,7 @@ def _get_merged_nics(hypervisor, profile, interfaces=None, dmac=None):
     '''
     Get network devices from the profile and merge uer defined ones with them.
     '''
-    nicp = _nic_profile(profile, hypervisor, dmac=dmac)
+    nicp = _nic_profile(profile, hypervisor, dmac=dmac) if profile else []
     log.debug('NIC profile is %s', nicp)
     if interfaces:
         users_nics = _complete_nics(interfaces, hypervisor)
@@ -1235,6 +1237,7 @@ def init(name,
 
     :param nic: NIC profile to use (Default: ``'default'``).
                 The profile interfaces can be customized / extended with the interfaces parameter.
+                If set to ``None``, no profile will be used.
     :param interfaces:
         List of dictionaries providing details on the network interfaces to create.
         These data are merged with the ones from the nic profile. The structure of
@@ -1244,7 +1247,7 @@ def init(name,
     :param hypervisor: the virtual machine type. By default the value will be computed according
                        to the virtual host capabilities.
     :param start: ``True`` to start the virtual machine after having defined it (Default: ``True``)
-    :param disk: Disk profile to use (Default: ``'default'``).
+    :param disk: Disk profile to use (Default: ``'default'``). If set to ``None``, no profile will be used.
     :param disks: List of dictionaries providing details on the disk devices to create.
                   These data are merged with the ones from the disk profile. The structure of
                   each dictionary is documented in :ref:`init-disk-def`.
@@ -1810,13 +1813,14 @@ def update(name,
     :param disks:
         Disk definitions as documented in the :func:`init` function.
         If neither the profile nor this parameter are defined, the disk devices
-        will not be changed.
+        will not be changed. However to clear disks set this parameter to empty list.
 
     :param nic_profile: network interfaces profile to use
     :param interfaces:
         Network interface definitions as documented in the :func:`init` function.
         If neither the profile nor this parameter are defined, the interface devices
-        will not be changed.
+        will not be changed. However to clear network interfaces set this parameter
+        to empty list.
 
     :param graphics:
         The new graphics definition as defined in :ref:`init-graphics-def`. If not set,
@@ -1906,7 +1910,7 @@ def update(name,
     for dev_type in parameters:
         changes[dev_type] = {}
         func_locals = locals()
-        if [param for param in parameters[dev_type] if func_locals.get(param, None)]:
+        if [param for param in parameters[dev_type] if func_locals.get(param, None) is not None]:
             old = devices_node.findall(dev_type)
             new = new_desc.findall('devices/{0}'.format(dev_type))
             changes[dev_type] = globals()['_diff_{0}_lists'.format(dev_type)](old, new)
@@ -4240,37 +4244,10 @@ def _parse_caps_loader(node):
     return result
 
 
-def domain_capabilities(emulator=None, arch=None, machine=None, domain=None, **kwargs):
+def _parse_domain_caps(caps):
     '''
-    Return the domain capabilities given an emulator, architecture, machine or virtualization type.
-
-    .. versionadded:: Fluorine
-
-    :param emulator: return the capabilities for the given emulator binary
-    :param arch: return the capabilities for the given CPU architecture
-    :param machine: return the capabilities for the given emulated machine type
-    :param domain: return the capabilities for the given virtualization type.
-    :param connection: libvirt connection URI, overriding defaults
-    :param username: username to connect with, overriding defaults
-    :param password: password to connect with, overriding defaults
-
-    The list of the possible emulator, arch, machine and domain can be found in
-    the host capabilities output.
-
-    If none of the parameters is provided the libvirt default domain capabilities
-    will be returned.
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' virt.domain_capabilities arch='x86_64' domain='kvm'
-
+    Parse the XML document of domain capabilities into a structure.
     '''
-    conn = __get_conn(**kwargs)
-    caps = ElementTree.fromstring(conn.getDomainCapabilities(emulator, arch, machine, domain, 0))
-    conn.close()
-
     result = {
         'emulator': caps.find('path').text if caps.find('path') is not None else None,
         'domain': caps.find('domain').text if caps.find('domain') is not None else None,
@@ -4306,6 +4283,82 @@ def domain_capabilities(emulator=None, arch=None, machine=None, domain=None, **k
             features = _parse_caps_devices_features(child)
             if features:
                 result['features'] = features
+
+    return result
+
+
+def domain_capabilities(emulator=None, arch=None, machine=None, domain=None, **kwargs):
+    '''
+    Return the domain capabilities given an emulator, architecture, machine or virtualization type.
+
+    .. versionadded:: Fluorine
+
+    :param emulator: return the capabilities for the given emulator binary
+    :param arch: return the capabilities for the given CPU architecture
+    :param machine: return the capabilities for the given emulated machine type
+    :param domain: return the capabilities for the given virtualization type.
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
+
+    The list of the possible emulator, arch, machine and domain can be found in
+    the host capabilities output.
+
+    If none of the parameters is provided, the libvirt default one is returned.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.domain_capabilities arch='x86_64' domain='kvm'
+
+    '''
+    conn = __get_conn(**kwargs)
+    result = []
+    try:
+        caps = ElementTree.fromstring(conn.getDomainCapabilities(emulator, arch, machine, domain, 0))
+        result = _parse_domain_caps(caps)
+    finally:
+        conn.close()
+
+    return result
+
+
+def all_capabilities(**kwargs):
+    '''
+    Return the host and domain capabilities in a single call.
+
+    .. versionadded:: Neon
+
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.all_capabilities
+
+    '''
+    conn = __get_conn(**kwargs)
+    result = {}
+    try:
+        host_caps = ElementTree.fromstring(conn.getCapabilities())
+        domains = [[(guest.get('arch', {}).get('name', None), key)
+                    for key in guest.get('arch', {}).get('domains', {}).keys()]
+                   for guest in [_parse_caps_guest(guest) for guest in host_caps.findall('guest')]]
+        flattened = [pair for item in (x for x in domains) for pair in item]
+        result = {
+                'host': {
+                    'host': _parse_caps_host(host_caps.find('host')),
+                    'guests': [_parse_caps_guest(guest) for guest in host_caps.findall('guest')]
+                },
+                'domains': [_parse_domain_caps(ElementTree.fromstring(
+                                conn.getDomainCapabilities(None, arch, None, domain)))
+                            for (arch, domain) in flattened]}
+    finally:
+        conn.close()
 
     return result
 
