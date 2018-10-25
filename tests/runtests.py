@@ -11,6 +11,7 @@ import os
 import sys
 import time
 import warnings
+import collections
 
 TESTS_DIR = os.path.dirname(os.path.normpath(os.path.abspath(__file__)))
 if os.name == 'nt':
@@ -97,7 +98,7 @@ MAX_OPEN_FILES = {
 
 # Combine info from command line options and test suite directories.  A test
 # suite is a python package of test modules relative to the tests directory.
-TEST_SUITES = {
+TEST_SUITES_UNORDERED = {
     'unit':
        {'display_name': 'Unit',
         'path': 'unit'},
@@ -187,6 +188,9 @@ TEST_SUITES = {
          'path': 'integration/logging'},
 }
 
+TEST_SUITES = collections.OrderedDict(sorted(TEST_SUITES_UNORDERED.items(),
+    key=lambda x: x[0]))
+
 
 class SaltTestsuiteParser(SaltCoverageTestingParser):
     support_docker_execution = True
@@ -248,9 +252,9 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         self.add_option(
             '--transport',
             default='zeromq',
-            choices=('zeromq', 'raet', 'tcp'),
+            choices=('zeromq', 'tcp'),
             help=('Select which transport to run the integration tests with, '
-                  'zeromq, raet, or tcp. Default: %default')
+                  'zeromq or tcp. Default: %default')
         )
         self.add_option(
             '--interactive',

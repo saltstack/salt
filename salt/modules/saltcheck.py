@@ -570,7 +570,7 @@ class SaltCheck(object):
             else:
                 assertion = test_dict['assertion']
             expected_return = test_dict.get('expected-return', None)
-            assert_print_result = test_dict.get('print_result', None)
+            assert_print_result = test_dict.get('print_result', True)
             actual_return = self._call_salt_command(mod_and_func, args, kwargs, assertion_section)
             if assertion not in ["assertIn", "assertNotIn", "assertEmpty", "assertNotEmpty",
                                  "assertTrue", "assertFalse"]:

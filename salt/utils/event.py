@@ -128,27 +128,20 @@ def get_event(
     '''
     sock_dir = sock_dir or opts['sock_dir']
     # TODO: AIO core is separate from transport
-    if transport in ('zeromq', 'tcp'):
-        if node == 'master':
-            return MasterEvent(sock_dir,
-                               opts,
-                               listen=listen,
-                               io_loop=io_loop,
-                               keep_loop=keep_loop,
-                               raise_errors=raise_errors)
-        return SaltEvent(node,
-                         sock_dir,
-                         opts,
-                         listen=listen,
-                         io_loop=io_loop,
-                         keep_loop=keep_loop,
-                         raise_errors=raise_errors)
-    elif transport == 'raet':
-        import salt.utils.raetevent
-        return salt.utils.raetevent.RAETEvent(node,
-                                              sock_dir=sock_dir,
-                                              listen=listen,
-                                              opts=opts)
+    if node == 'master':
+        return MasterEvent(sock_dir,
+                           opts,
+                           listen=listen,
+                           io_loop=io_loop,
+                           keep_loop=keep_loop,
+                           raise_errors=raise_errors)
+    return SaltEvent(node,
+                     sock_dir,
+                     opts,
+                     listen=listen,
+                     io_loop=io_loop,
+                     keep_loop=keep_loop,
+                     raise_errors=raise_errors)
 
 
 def get_master_event(opts, sock_dir, listen=True, io_loop=None, raise_errors=False):
@@ -158,11 +151,6 @@ def get_master_event(opts, sock_dir, listen=True, io_loop=None, raise_errors=Fal
     # TODO: AIO core is separate from transport
     if opts['transport'] in ('zeromq', 'tcp', 'detect'):
         return MasterEvent(sock_dir, opts, listen=listen, io_loop=io_loop, raise_errors=raise_errors)
-    elif opts['transport'] == 'raet':
-        import salt.utils.raetevent
-        return salt.utils.raetevent.MasterEvent(
-            opts=opts, sock_dir=sock_dir, listen=listen
-        )
 
 
 def fire_args(opts, jid, tag_data, prefix=''):
@@ -210,6 +198,32 @@ def tagify(suffix='', prefix='', base=SALT):
         except TypeError:
             parts[index] = str(parts[index])
     return TAGPARTER.join([part for part in parts if part])
+
+
+def update_stats(stats, start_time, data):
+    '''
+    Calculate the master stats and return the updated stat info
+    '''
+    end_time = time.time()
+    cmd = data['cmd']
+    # the jid is used as the create time
+    try:
+        jid = data['jid']
+    except KeyError:
+        try:
+            jid = data['data']['__pub_jid']
+        except KeyError:
+            log.info('jid not found in data, stats not updated')
+            return stats
+    create_time = int(time.mktime(time.strptime(jid, '%Y%m%d%H%M%S%f')))
+    latency = start_time - create_time
+    duration = end_time - start_time
+
+    stats[cmd]['runs'] += 1
+    stats[cmd]['latency'] = (stats[cmd]['latency'] * (stats[cmd]['runs'] - 1) + latency) / stats[cmd]['runs']
+    stats[cmd]['mean'] = (stats[cmd]['mean'] * (stats[cmd]['runs'] - 1) + duration) / stats[cmd]['runs']
+
+    return stats
 
 
 class SaltEvent(object):
@@ -878,7 +892,7 @@ class SaltEvent(object):
         # shutdown-- where globals start going missing
         try:
             self.destroy()
-        except:  # pylint: disable=W0702
+        except Exception:
             pass
 
 

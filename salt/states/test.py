@@ -67,7 +67,7 @@ def nop(name, **kwargs):
     return succeed_without_changes(name)
 
 
-def succeed_without_changes(name):
+def succeed_without_changes(name, **kwargs):  # pylint: disable=unused-argument
     '''
     Returns successful.
 
@@ -85,7 +85,7 @@ def succeed_without_changes(name):
     return ret
 
 
-def fail_without_changes(name):
+def fail_without_changes(name, **kwargs):  # pylint: disable=unused-argument
     '''
     Returns failure.
 
@@ -108,7 +108,7 @@ def fail_without_changes(name):
     return ret
 
 
-def succeed_with_changes(name):
+def succeed_with_changes(name, **kwargs):  # pylint: disable=unused-argument
     '''
     Returns successful and changes is not empty
 
@@ -141,7 +141,7 @@ def succeed_with_changes(name):
     return ret
 
 
-def fail_with_changes(name):
+def fail_with_changes(name, **kwargs):  # pylint: disable=unused-argument
     '''
     Returns failure and changes is not empty.
 
@@ -334,7 +334,7 @@ def _check_key_type(key_str, key_type=None):
     value = __salt__['pillar.get'](key_str, None)
     if value is None:
         return None
-    elif type(value) is not key_type and key_type is not None:
+    elif key_type is not None and not isinstance(value, key_type):
         return False
     else:
         return True
@@ -415,7 +415,7 @@ def check_pillar(name,
     checks[int] = integer
     # those should be str:
     string = _if_str_then_list(string)
-    checks[str] = string
+    checks[six.string_types] = string
     # those should be list:
     listing = _if_str_then_list(listing)
     checks[list] = listing
