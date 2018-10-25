@@ -211,8 +211,25 @@ State Changes
   ``False`` result would be returned, but this meant that subsequent runs of
   the state would fail due to the destination file being present.
 
+- The :py:func:`file.managed <salt.states.file.managed>` state now supports
+  setting selinux contexts.
+
+  .. code-block:: yaml
+
+    /tmp/selinux.test
+      file.managed:
+        - user: root
+        - selinux:
+            seuser: system_u
+            serole: object_r
+            setype: system_conf_t
+            seranage: s0
+
 - The ``onchanges`` and ``prereq`` :ref:`requisites <requisites>` now behave
   properly in test mode.
+
+- Adding a new option for the State compiler, ``disabled_requisites`` will allow
+  requisites to be disabled during State runs.
 
 - Added new :py:func:`ssh_auth.manage <salt.states.ssh_auth.manage>` state to
   ensure only the specified ssh keys are present for the specified user.
@@ -232,6 +249,10 @@ Module Changes
 
 - Added new :py:func:`boto_ssm <salt.modules.boto_ssm>` module to set and query
   secrets in AWS SSM parameters.
+
+- The :py:func:`file.set_selinux_context <salt.modules.file.set_selinux_context>`
+  module now supports perstant changes with ``persist=True`` by calling the
+  :py:func:`selinux.fcontext_add_policy <salt.modules.selinux.fcontext_add_policy>` module.
 
 Salt Cloud Features
 ===================
