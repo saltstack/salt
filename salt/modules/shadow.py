@@ -13,6 +13,7 @@ from __future__ import absolute_import, unicode_literals, print_function
 # Import python libs
 import os
 import datetime
+import functools
 try:
     import spwd
 except ImportError:
@@ -384,3 +385,37 @@ def list_users():
         salt '*' shadow.list_users
     '''
     return sorted([user.sp_nam for user in spwd.getspall()])
+
+
+def _getspnam(name, root=None):
+    '''
+    Alternative implementation for getspnam, that use only /etc/shadow
+    '''
+    root = '/' if not root else root
+    passwd = os.path.join(root, 'etc/shadow')
+    with salt.utils.files.fopen(passwd) as fp_:
+        for line in fp_:
+            line = salt.utils.stringutils.to_unicode(line)
+            comps = line.strip().split(':')
+            if comps[0] == name:
+                # Generate a getspnam compatible output
+                for i in range(2, 9):
+                    comps[i] = int(comps[i]) if comps[i] else -1
+                return spwd.struct_spwd(comps)
+    raise KeyError
+
+
+def _getspall(root=None):
+    '''
+    Alternative implementation for getspnam, that use only /etc/shadow
+    '''
+    root = '/' if not root else root
+    passwd = os.path.join(root, 'etc/shadow')
+    with salt.utils.files.fopen(passwd) as fp_:
+        for line in fp_:
+            line = salt.utils.stringutils.to_unicode(line)
+            comps = line.strip().split(':')
+            # Generate a getspall compatible output
+            for i in range(2, 9):
+                comps[i] = int(comps[i]) if comps[i] else -1
+            yield spwd.struct_spwd(comps)
