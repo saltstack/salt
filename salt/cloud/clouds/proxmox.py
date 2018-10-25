@@ -595,7 +595,7 @@ def create(vm_):
     host = data['node']       # host which we have received
     nodeType = data['technology']  # VM tech (Qemu / OpenVZ)
 
-    if not 'agent_get_ip' in vm_ or vm_['agent_get_ip'] == 0:
+    if 'agent_get_ip' not in vm_ or vm_['agent_get_ip'] == 0:
         # Determine which IP to use in order of preference:
         if 'ip_address' in vm_:
             ip_address = six.text_type(vm_['ip_address'])
@@ -783,11 +783,9 @@ def create(vm_):
                     if if_name.startswith('eth') or if_name.startswith('ens'):
                         for if_addr in interface['ip-addresses']:
                             if if_addr['ip-address-type'] == 'ipv4':
-                                if if_addr['ip-address'] != None:
+                                if if_addr['ip-address'] is not None:
                                     return six.text_type(if_addr['ip-address'])
-                raise SaltCloudExecutionFailure
-            else:
-                raise SaltCloudExecutionFailure
+            raise SaltCloudExecutionFailure
         
         # We have to wait for a bit for qemu-agent to start
         try:
