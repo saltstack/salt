@@ -706,8 +706,8 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         expected = dedent('''\
             Die Webseite ist https://saltstack.com.
             Der Zucker ist süß.
-            
-        ''')
+
+            ''')
         assert managed == expected, '{0!r} != {1!r}'.format(managed, expected)  # pylint: disable=repr-flag-used-in-string
 
     def test_managed_source_hash_indifferent_case(self):
