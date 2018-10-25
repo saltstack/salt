@@ -786,7 +786,7 @@ def create(vm_):
                                 if if_addr['ip-address'] is not None:
                                     return six.text_type(if_addr['ip-address'])
             raise SaltCloudExecutionFailure
-        
+
         # We have to wait for a bit for qemu-agent to start
         try:
             ip_address = __utils__['cloud.wait_for_fun'](
