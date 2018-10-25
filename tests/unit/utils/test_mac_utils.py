@@ -425,7 +425,7 @@ class MacUtilsTestCase(TestCase, LoaderModuleMockMixin):
         mock_run.configure_mock(**attrs)
         mock_exists.return_value = True
         mock_read_plist.side_effect = Exception()
-        mock_read_plist_from_string.return_value = 'malformedness'
+        mock_read_plist_from_string.return_value = Exception()
 
         ret = mac_utils._available_services()
 
