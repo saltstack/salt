@@ -1591,7 +1591,11 @@ def win32_kill_process_tree(pid, sig=signal.SIGTERM, include_parent=True,
     '''
     if pid == os.getpid():
         raise RuntimeError("I refuse to kill myself")
-    parent = psutil.Process(pid)
+    try:
+        parent = psutil.Process(pid)
+    except psutil.NoSuchProcess:
+        log.debug("PID not found alive: %d", pid)
+        return ([], [])
     children = parent.children(recursive=True)
     if include_parent:
         children.append(parent)
