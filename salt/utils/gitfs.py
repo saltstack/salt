@@ -1213,9 +1213,36 @@ class GitPython(GitProvider):
             relpath = lambda path: path
         add_mountpoint = lambda path: salt.utils.path.join(
             self.mountpoint(tgt_env), path, use_posixpath=True)
+        symlink_dirs = dict()
         for blob in tree.traverse():
             if isinstance(blob, git.Tree):
                 ret.add(add_mountpoint(relpath(blob.path)))
+            else:
+                # If this blob is not a tree, check to see if it is a symlink
+                # that targets a tree
+                if stat.S_ISLNK(blob.mode):
+                    stream = six.StringIO()
+                    blob.stream_data(stream)
+                    stream.seek(0)
+                    link_tgt = stream.read()
+                    stream.close()
+                    link_path = relpath(blob.path)
+                    (basepath, _) = os.path.split(blob.path)
+                    link_tgt = relpath(str('/'.join([basepath, link_tgt])))
+                    if isinstance(tree[link_tgt], git.Tree):
+                        symlink_dirs[link_path] = link_tgt
+
+        # Add all paths that belong under symlinked directories
+        link_paths = set()
+        for link_path in symlink_dirs:
+            for dirname in ret:
+                if dirname.startswith(symlink_dirs[link_path]):
+                    # replace the symlink path, with the taret path
+                    subpath = dirname.replace(
+                        symlink_dirs[link_path], link_path, 1)
+                    link_paths.add(add_mountpoint(subpath))
+        ret.update(link_paths)
+
         if self.mountpoint(tgt_env):
             ret.add(self.mountpoint(tgt_env))
         return ret
@@ -1286,11 +1313,11 @@ class GitPython(GitProvider):
             relpath = lambda path: path
         add_mountpoint = lambda path: salt.utils.path.join(
             self.mountpoint(tgt_env), path, use_posixpath=True)
+        symlink_dirs = dict()
         for file_blob in tree.traverse():
             if not isinstance(file_blob, git.Blob):
                 continue
             file_path = add_mountpoint(relpath(file_blob.path))
-            files.add(file_path)
             if stat.S_ISLNK(file_blob.mode):
                 stream = six.StringIO()
                 file_blob.stream_data(stream)
@@ -1298,12 +1325,68 @@ class GitPython(GitProvider):
                 link_tgt = stream.read()
                 stream.close()
                 symlinks[file_path] = link_tgt
+
+                # If symlink points to a directory, add it to symlink_dirs so
+                # its children can be added later
+                link_path = relpath(file_blob.path)
+                (basepath, _) = os.path.split(file_blob.path)
+                link_tgt = relpath(str('/'.join([basepath, link_tgt])))
+                if isinstance(tree[link_tgt], git.Tree):
+                    symlink_dirs[link_path] = link_tgt
+                else:
+                    files.add(file_path)
+            else:
+                files.add(file_path)
+
+        # Add all paths that belong under symlinked directories
+        link_paths = set()
+        for link_path in symlink_dirs:
+            for dirname in files:
+                if dirname.startswith(symlink_dirs[link_path]):
+                    # Replace the symlink path, with the taret path
+                    subpath = dirname.replace(
+                        symlink_dirs[link_path], link_path, 1)
+                    link_paths.add(add_mountpoint(subpath))
+        files.update(link_paths)
+
         return files, symlinks
 
     def find_file(self, path, tgt_env):
         '''
         Find the specified file in the specified environment
         '''
+
+        def _search_symlinks(path):
+            '''
+            Helper function search the descendent paths for symlinks
+            '''
+            relative_path = ''
+            link_path = path
+            while link_path:
+                (head, tail) = os.path.split(link_path)
+                link_path = head
+                if relative_path:
+                    relative_path = '/'.join([tail, relative_path])
+                else:
+                    relative_path = tail
+                try:
+                    if link_path:
+                        file_blob = tree / link_path
+                        if stat.S_ISLNK(file_blob.mode):
+                            stream = six.StringIO()
+                            file_blob.stream_data(stream)
+                            stream.seek(0)
+                            target = stream.read()
+                            stream.close()
+                            (link_parent, _) = os.path.split(link_path)
+                            target_path = '/'.join(
+                                [link_parent, target, relative_path])
+                            return tree / target_path
+                except KeyError:
+                    # paths trailing a symlink will not be found in the tree
+                    pass
+            return None
+
         tree = self.get_tree(tgt_env)
         if not tree:
             # Branch/tag/SHA not found in repo
@@ -1336,8 +1419,9 @@ class GitPython(GitProvider):
                         blob = None
                     break
             except KeyError:
-                # File not found or repo_path points to a directory
-                blob = None
+                # "path" is not found in tree
+                # test to see if the parent path is actually a symlink
+                blob = _search_symlinks(path)
                 break
         if isinstance(blob, git.Blob):
             return blob, blob.hexsha, blob.mode
