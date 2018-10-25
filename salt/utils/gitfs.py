@@ -1648,6 +1648,12 @@ class Pygit2(GitProvider):
                     # Entry is a submodule, skip it
                     continue
                 blob = self.repo[entry.oid]
+                # If a blob is a symlink, and that symlink points to another
+                # tree, then use the blob of that link target
+                if stat.S_ISLNK(entry.filemode):
+                    link_tgt = self.repo[entry.oid].data
+                    if tree[link_tgt].type == 'tree':
+                        blob = self.repo[tree[link_tgt].oid]
                 if not isinstance(blob, pygit2.Tree):
                     continue
                 blobs.append(
@@ -1776,8 +1782,17 @@ class Pygit2(GitProvider):
                     repo_path = salt.utils.path.join(
                         prefix, entry.name, use_posixpath=True)
                     blobs.setdefault('files', []).append(repo_path)
-                    if stat.S_ISLNK(tree[entry.name].filemode):
-                        link_tgt = self.repo[tree[entry.name].oid].data
+                    if stat.S_ISLNK(entry.filemode):
+                        link_tgt = self.repo[entry.oid].data
+                        # if a symlink points to a directory, traverse that
+                        # directory
+                        if tree[link_tgt].type == 'tree':
+                            _traverse(
+                                self.repo[tree[link_tgt].oid],
+                                blobs,
+                                salt.utils.path.join(
+                                    prefix, entry.name, use_posixpath=True)
+                            )
                         blobs.setdefault('symlinks', {})[repo_path] = link_tgt
                 elif isinstance(obj, pygit2.Tree):
                     _traverse(
@@ -1819,6 +1834,33 @@ class Pygit2(GitProvider):
         '''
         Find the specified file in the specified environment
         '''
+
+        def _search_symlinks(path):
+            '''
+            Helper function search the descendent paths for symlinks
+            '''
+            relative_path = ''
+            link_path = path
+            while link_path:
+                (head, tail) = os.path.split(link_path)
+                link_path = head
+                if relative_path:
+                    relative_path = '/'.join([tail, relative_path])
+                else:
+                    relative_path = tail
+                try:
+                    if link_path:
+                        if stat.S_ISLNK(tree[link_path].filemode):
+                            target = self.repo[tree[link_path].oid].data
+                            (link_parent, _) = os.path.split(link_path)
+                            target_path = '/'.join(
+                                [link_parent, target, relative_path])
+                            return self.repo[tree[target_path].oid]
+                except KeyError:
+                    # paths trailing a symlink will not be found in the tree
+                    pass
+            return None
+
         tree = self.get_tree(tgt_env)
         if not tree:
             # Branch/tag/SHA not found in repo
@@ -1849,7 +1891,9 @@ class Pygit2(GitProvider):
                         blob = None
                     break
             except KeyError:
-                blob = None
+                # "path" is not found in tree
+                # test to see if the parent path is actually a symlink
+                blob = _search_symlinks(path)
                 break
         if isinstance(blob, pygit2.Blob):
             return blob, blob.hex, mode
