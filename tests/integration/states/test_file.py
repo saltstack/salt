@@ -703,11 +703,12 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         assert ret['result'], ret
         with salt.utils.files.fopen(test_file) as fp_:
             managed = salt.utils.stringutils.to_unicode(fp_.read())
-        expected = textwrap.dedent('''\
-            Die Webseite ist https://saltstack.com.
-            Der Zucker ist süß.
-
-            ''')
+        expected = os.linesep.join([
+            'Die Webseite ist https://saltstack.com.',
+            'Der Zucker ist süß.',
+            '',
+            ''
+        ])
         assert managed == expected, '{0!r} != {1!r}'.format(managed, expected)  # pylint: disable=repr-flag-used-in-string
 
     def test_managed_source_hash_indifferent_case(self):
