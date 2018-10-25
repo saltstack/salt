@@ -253,7 +253,7 @@ def adduser(name, username, root=None):
         else:
             cmd = ['gpasswd', '--add', username, name]
         if root is not None:
-            cmd.extend(('-Q', root))
+            cmd.extend(('--root', root))
     else:
         cmd = ['usermod', '-G', name, username]
         if root is not None:
@@ -300,7 +300,7 @@ def deluser(name, username, root=None):
                 else:
                     cmd = ['gpasswd', '--del', username, name]
                 if root is not None:
-                    cmd.extend(('-R', root))
+                    cmd.extend(('--root', root))
                 retcode = __salt__['cmd.retcode'](cmd, python_shell=False)
             elif __grains__['kernel'] == 'OpenBSD':
                 out = __salt__['cmd.run_stdout']('id -Gn {0}'.format(username),
@@ -352,7 +352,7 @@ def members(name, members_list, root=None):
         else:
             cmd = ['gpasswd', '--members', members_list, name]
         if root is not None:
-            cmd.extend(('-R', root))
+            cmd.extend(('--root', root))
         retcode = __salt__['cmd.retcode'](cmd, python_shell=False)
     elif __grains__['kernel'] == 'OpenBSD':
         retcode = 1
