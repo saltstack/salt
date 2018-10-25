@@ -773,24 +773,27 @@ def create(vm_):
 
     # For QEMU VMs, we can get the IP Address from qemu-agent
     if 'agent_get_ip' in vm_ and vm_['agent_get_ip'] == 1:
-        def __query_node(vm_):
+        def __find_agent_ip(vm_):
             log.debug("Waiting for qemu-agent to start...")
             endpoint = 'nodes/{0}/qemu/{1}/agent/network-get-interfaces'.format(vm_['host'], vmid)
             interfaces = query('get', endpoint)
+            # If we get a result from the agent, parse it
             if 'result' in interfaces:
                 for interface in interfaces['result']:
                     if_name = interface['name']
+                    # Only check ethernet type interfaces, as they are not returned in any order
                     if if_name.startswith('eth') or if_name.startswith('ens'):
                         for if_addr in interface['ip-addresses']:
-                            if if_addr['ip-address-type'] == 'ipv4':
-                                if if_addr['ip-address'] is not None:
-                                    return six.text_type(if_addr['ip-address'])
+                            ip_addr = if_addr['ip-address']
+                            # Ensure interface has a valid IPv4 address
+                            if if_addr['ip-address-type'] == 'ipv4' and ip_addr is not None:
+                                return six.text_type(ip_addr)
             raise SaltCloudExecutionFailure
 
         # We have to wait for a bit for qemu-agent to start
         try:
             ip_address = __utils__['cloud.wait_for_fun'](
-                __query_node,
+                __find_agent_ip,
                 vm_=vm_
             )
         except (SaltCloudExecutionTimeout, SaltCloudExecutionFailure) as exc:
