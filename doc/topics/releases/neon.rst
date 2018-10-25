@@ -247,6 +247,9 @@ Module Changes
   ``dns`` can be overriden by ``ipv4dns`` or ``ipv6dns``). The ``proto`` option
   is now required.
 
+- Added new :py:func:`boto_ssm <salt.modules.boto_ssm>` module to set and query
+  secrets in AWS SSM parameters.
+
 - The :py:func:`file.set_selinux_context <salt.modules.file.set_selinux_context>`
   module now supports perstant changes with ``persist=True`` by calling the
   :py:func:`selinux.fcontext_add_policy <salt.modules.selinux.fcontext_add_policy>` module.
