@@ -2106,6 +2106,9 @@ class FileSelinuxTestCase(TestCase, LoaderModuleMockMixin):
                            'mode': '0644'}, 'name': self.tfile3.name, 'result': True}, {
                            'luser': 'root', 'lmode': '0600', 'lgroup': 'root'}
 
-        result = filemod.check_perms(self.tfile3.name, {}, 'root', 'root', 644, seuser=None,
-                                     serole=None, setype='lost_found_t', serange=None)
-        self.assertEqual(result, expected_result)
+        # Disable lsattr calls
+        with patch('salt.utils.path.which') as m_which:
+            m_which.return_value = None
+            result = filemod.check_perms(self.tfile3.name, {}, 'root', 'root', 644, seuser=None,
+                                        serole=None, setype='lost_found_t', serange=None)
+            self.assertEqual(result, expected_result)
