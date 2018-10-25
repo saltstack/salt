@@ -355,6 +355,12 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
         with salt.utils.files.fopen(rand_bytes_file, 'rb') as fp_:
             stdout_bytes = fp_.read()
 
+        # kitchen-salt uses unix2dos on all the files before copying them over
+        # to the vm that will be running the tests. It skips binary files though
+        # The file specified in `rand_bytes_file` is detected as binary so the
+        # Unix-style line ending remains. This should account for that.
+        stdout_bytes = stdout_bytes.rstrip() + os.linesep
+
         # stdout with the non-decodable bits replaced with the unicode
         # replacement character U+FFFD.
         stdout_unicode = '\ufffd\x1b\ufffd\ufffd' + os.linesep
