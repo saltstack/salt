@@ -272,10 +272,10 @@ release = previous_release  # version, latest_release, previous_release
 
 if release == latest_release:
     search_cx = '011515552685726825874:ht0p8miksrm' # latest
-elif release.startswith('2017.7'):
-    search_cx = '011515552685726825874:w-hxmnbcpou' # 2017.7
 elif release.startswith('2018.3'):
     search_cx = '011515552685726825874:vadptdpvyyu' # 2018.3
+elif release.startswith('2017.7'):
+    search_cx = '011515552685726825874:w-hxmnbcpou' # 2017.7
 elif release.startswith('2016.11'):
     search_cx = '011515552685726825874:dlsj745pvhq' # 2016.11
 else:
