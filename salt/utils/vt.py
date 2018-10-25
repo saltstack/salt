@@ -53,7 +53,6 @@ except ImportError:
 
 # Import salt libs
 import salt.utils.crypt
-import salt.utils.data
 import salt.utils.stringutils
 from salt.ext.six import string_types
 from salt.log.setup import LOG_LEVELS
@@ -686,7 +685,7 @@ class Terminal(object):
                         stdout = None
                     else:
                         if self.stream_stdout:
-                            self.stream_stdout.write(salt.utils.data.encode(stdout))
+                            self.stream_stdout.write(stdout)
                             self.stream_stdout.flush()
 
                         if self.stdout_logger:
@@ -704,7 +703,7 @@ class Terminal(object):
                     if self.child_fd is not None:
                         fcntl.fcntl(self.child_fd, fcntl.F_SETFL, fd_flags)
             # <---- Process STDOUT -------------------------------------------
-            return salt.utils.data.encode(stdout), salt.utils.data.encode(stderr)
+            return stdout, stderr
 
         def __detect_parent_terminal_size(self):
             try:
