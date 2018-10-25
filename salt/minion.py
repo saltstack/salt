@@ -147,7 +147,8 @@ def resolve_dns(opts, fallback=True):
                 opts['master'],
                 int(opts['master_port']),
                 True,
-                opts['ipv6'])
+                opts['ipv6'],
+                attempt_connect=False)
         except SaltClientError:
             retry_dns_count = opts.get('retry_dns_count', None)
             if opts['retry_dns']:
@@ -169,7 +170,8 @@ def resolve_dns(opts, fallback=True):
                             opts['master'],
                             int(opts['master_port']),
                             True,
-                            opts['ipv6'])
+                            opts['ipv6'],
+                            attempt_connect=False)
                         break
                     except SaltClientError:
                         pass
@@ -221,7 +223,8 @@ def resolve_dns(opts, fallback=True):
             opts['source_address'],
             int(opts['source_ret_port']),
             True,
-            opts['ipv6'])
+            opts['ipv6'],
+            attempt_connect=False)
         log.debug('Using %s as source IP address', ret['source_ip'])
     if opts['source_ret_port']:
         ret['source_ret_port'] = int(opts['source_ret_port'])
