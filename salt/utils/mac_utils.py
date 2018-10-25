@@ -358,15 +358,21 @@ def _available_services(refresh=False):
 
                 except Exception:
                     # If plistlib is unable to read the file we'll need to use
-                    # the system provided plutil program to do the conversion
+                    # the system provided plutil program to attempt conversion
+                    # from binary.
                     cmd = '/usr/bin/plutil -convert xml1 -o - -- "{0}"'.format(
                         true_path)
-                    plist_xml = __salt__['cmd.run'](cmd)
-                    if six.PY2:
-                        plist = plistlib.readPlistFromString(plist_xml)
-                    else:
-                        plist = plistlib.loads(
-                            salt.utils.stringutils.to_bytes(plist_xml))
+                    try:
+                        plist_xml = __salt__['cmd.run'](cmd)
+                        if six.PY2:
+                            plist = plistlib.readPlistFromString(plist_xml)
+                        else:
+                            plist = plistlib.loads(
+                                salt.utils.stringutils.to_bytes(plist_xml))
+                    except Exception:
+                        # If the file is actually just invalid XML, move on to
+                        # the next one.
+                        continue
 
                 try:
                     _available_services[plist.Label.lower()] = {
