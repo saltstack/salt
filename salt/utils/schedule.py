@@ -1059,6 +1059,13 @@ class Schedule(object):
                         # last scheduled time in the past.
                         when = _when[0]
 
+                        if when < now - loop_interval and \
+                                not data.get('_run', False) and \
+                                not run and \
+                                not data['_splay']:
+                            data['_next_fire_time'] = None
+                            continue
+
                         if '_run' not in data:
                             # Prevent run of jobs from the past
                             data['_run'] = bool(when >= now - loop_interval)
@@ -1179,6 +1186,8 @@ class Schedule(object):
                 if data['_splay']:
                     # The "splay" configuration has been already processed, just use it
                     seconds = (data['_splay'] - now).total_seconds()
+                    if 'when' in data:
+                        data['_next_fire_time'] = data['_splay']
 
             if '_seconds' in data:
                 if seconds <= 0:
