@@ -12,8 +12,11 @@ Manage groups on Linux, OpenBSD and NetBSD
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 import logging
+import os
 
 from salt.ext import six
+import salt.utils.files
+import salt.utils.stringutils
 try:
     import grp
 except ImportError:
@@ -284,3 +287,37 @@ def members(name, members_list, root=None):
         return False
 
     return not retcode
+
+
+def _getgrnam(name, root=None):
+    '''
+    Alternative implementation for getgrnam, that use only /etc/group
+    '''
+    root = '/' if not root else root
+    passwd = os.path.join(root, 'etc/group')
+    with salt.utils.files.fopen(passwd) as fp_:
+        for line in fp_:
+            line = salt.utils.stringutils.to_unicode(line)
+            comps = line.strip().split(':')
+            if comps[0] == name:
+                # Generate a getpwnam compatible output
+                comps[2] = int(comps[2])
+                comps[3] = comps[3].split(',') if comps[3] else []
+                return grp.struct_group(comps)
+    raise KeyError
+
+
+def _getgrall(root=None):
+    '''
+    Alternative implemetantion for getgrall, that use only /etc/group
+    '''
+    root = '/' if not root else root
+    passwd = os.path.join(root, 'etc/group')
+    with salt.utils.files.fopen(passwd) as fp_:
+        for line in fp_:
+            line = salt.utils.stringutils.to_unicode(line)
+            comps = line.strip().split(':')
+            # Generate a getgrall compatible output
+            comps[2] = int(comps[2])
+            comps[3] = comps[3].split(',') if comps[3] else []
+            yield grp.struct_group(comps)
