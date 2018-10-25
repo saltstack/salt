@@ -671,7 +671,7 @@ def create(vm_):
     host = data["node"]  # host which we have received
     nodeType = data["technology"]  # VM tech (Qemu / OpenVZ)
 
-    if not nodeType == 'qemu':
+    if not "agent_get_ip" in vm_ or vm_["agent_get_ip"] == 0:
         # Determine which IP to use in order of preference:
         if "ip_address" in vm_:
             ip_address = six.text_type(vm_["ip_address"])
@@ -681,8 +681,6 @@ def create(vm_):
             ip_address = six.text_type(data["private_ips"][0])  # first IP
         else:
             raise SaltCloudExecutionFailure  # err.. not a good idea i reckon
-
-        log.debug("Using IP address %s", ip_address)
 
     # wait until the vm has been created so we can start it
     if not wait_for_created(data["upid"], timeout=300):
@@ -702,21 +700,39 @@ def create(vm_):
         return {"Error": "Unable to start {0}, command timed out".format(name)}
 
     # For QEMU VMs, we can get the IP Address from qemu-agent
-    if nodeType == 'qemu':
+    if "agent_get_ip" in vm_ and vm_["agent_get_ip"] == 1:
+
+        def __query_node(vm_):
+            log.debug("Waiting for qemu-agent to start...")
+            endpoint = "nodes/{0}/qemu/{1}/agent/network-get-interfaces".format(
+                vm_["host"], vmid
+            )
+            interfaces = query("get", endpoint)
+            if "result" in interfaces:
+                for interface in interfaces["result"]:
+                    if_name = interface["name"]
+                    if if_name.startswith("eth") or if_name.startswith("ens"):
+                        for if_addr in interface["ip-addresses"]:
+                            if if_addr["ip-address-type"] == "ipv4":
+                                if if_addr["ip-address"] != None:
+                                    return six.text_type(if_addr["ip-address"])
+                raise SaltCloudExecutionFailure
+            else:
+                raise SaltCloudExecutionFailure
+
         # We have to wait for a bit for qemu-agent to start
-        log.debug("Waiting for qemu-agent to start...")
-        time.sleep(20)
-        endpoint = 'nodes/{0}/qemu/{1}/agent/network-get-interfaces'.format(vm_['host'], vmid)
-        interfaces = query('get', endpoint)
-        if 'data' in interfaces and 'result' in interfaces['data']:
-            for interface in interfaces['data']['result']:
-                if_name = interface['name']
-                if if_name.startswith('eth') or if_name.startswith('ens'):
-                    for if_addr in interface['ip-addresses']:
-                        if if_addr['ip-address-type'] == 'ipv4':
-                            ip_address = six.text_type(if_addr['ip-address'])
-        else:
-            raise SaltCloudExecutionFailure
+        try:
+            ip_address = __utils__["cloud.wait_for_fun"](__query_node, vm_=vm_)
+        except (SaltCloudExecutionTimeout, SaltCloudExecutionFailure) as exc:
+            try:
+                # If VM was created but we can't connect, destroy it.
+                destroy(vm_["name"])
+            except SaltCloudSystemExit:
+                pass
+            finally:
+                raise SaltCloudSystemExit(six.text_type(exc))
+
+    log.debug("Using IP address %s", ip_address)
 
     ssh_username = config.get_cloud_config_value(
         "ssh_username", vm_, __opts__, default="root"
