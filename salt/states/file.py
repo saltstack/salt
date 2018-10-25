@@ -2185,6 +2185,7 @@ def managed(name,
             follow_symlinks=True,
             check_cmd=None,
             skip_verify=False,
+            selinux=None,
             win_owner=None,
             win_perms=None,
             win_deny_perms=None,
@@ -2685,6 +2686,22 @@ def managed(name,
 
         .. versionadded:: 2016.3.0
 
+    selinux : None
+        Allows setting the selinux user, role, type, and range of a managed file
+
+        .. code-block:: yaml
+
+            /tmp/selinux.test
+              file.managed:
+                - user: root
+                - selinux:
+                    seuser: system_u
+                    serole: object_r
+                    setype: system_conf_t
+                    seranage: s0
+
+        .. versionadded:: Neon
+
     win_owner : None
         The owner of the directory. If this is not passed, user will be used. If
         user is not passed, the account under which Salt is running will be
@@ -2767,6 +2784,17 @@ def managed(name,
 
     if attrs is not None and salt.utils.platform.is_windows():
         return _error(ret, 'The \'attrs\' option is not supported on Windows')
+
+    if selinux is not None and not salt.utils.platform.is_linux():
+        return _error(ret, 'The \'selinux\' option is only supported on Linux')
+
+    if selinux:
+        seuser = selinux.get('seuser', None)
+        serole = selinux.get('serole', None)
+        setype = selinux.get('setype', None)
+        serange = selinux.get('serange', None)
+    else:
+        seuser = serole = setype = serange = None
 
     try:
         keep_mode = mode.lower() == 'keep'
@@ -2992,7 +3020,11 @@ def managed(name,
                 reset=win_perms_reset)
         else:
             ret, ret_perms = __salt__['file.check_perms'](
-                name, ret, user, group, mode, attrs, follow_symlinks)
+                name, ret, user, group, mode, attrs, follow_symlinks,
+                seuser=seuser,
+                serole=serole,
+                setype=setype,
+                serange=serange)
         if __opts__['test']:
             if isinstance(ret_perms, dict) and \
                'lmode' in ret_perms and \
@@ -3034,6 +3066,10 @@ def managed(name,
                     contents,
                     skip_verify,
                     keep_mode,
+                    seuser=seuser,
+                    serole=serole,
+                    setype=setype,
+                    serange=serange,
                     **kwargs
                 )
 
@@ -3145,6 +3181,10 @@ def managed(name,
                 win_perms_reset=win_perms_reset,
                 encoding=encoding,
                 encoding_errors=encoding_errors,
+                seuser=seuser,
+                serole=serole,
+                setype=setype,
+                serange=serange,
                 **kwargs)
         except Exception as exc:  # pylint: disable=broad-except
             ret['changes'] = {}
@@ -3222,6 +3262,10 @@ def managed(name,
                 win_perms_reset=win_perms_reset,
                 encoding=encoding,
                 encoding_errors=encoding_errors,
+                seuser=seuser,
+                serole=serole,
+                setype=setype,
+                serange=serange,
                 **kwargs)
         except Exception as exc:  # pylint: disable=broad-except
             ret['changes'] = {}
@@ -7508,10 +7552,10 @@ def decode(name,
 
     if not (encoded_data or contents_pillar):
         raise CommandExecutionError("Specify either the 'encoded_data' or "
-            "'contents_pillar' argument.")
+                                    "'contents_pillar' argument.")
     elif encoded_data and contents_pillar:
         raise CommandExecutionError("Specify only one 'encoded_data' or "
-            "'contents_pillar' argument.")
+                                    "'contents_pillar' argument.")
     elif encoded_data:
         content = encoded_data
     elif contents_pillar:
@@ -7537,7 +7581,6 @@ def decode(name,
         if not ret['changes']:
             ret['comment'] = 'File is in the correct state.'
             ret['result'] = True
-
             return ret
 
     if __opts__['test'] is True:
