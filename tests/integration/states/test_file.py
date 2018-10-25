@@ -681,7 +681,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         1. A unicode string type would be loaded as a unicode literal with the
            leading "u" as well as the quotes, rather than simply being loaded
            as the proper unicode type which matches the content of the string
-           literal. In other wordss, u'foo' would be loaded literally as
+           literal. In other words, u'foo' would be loaded literally as
            u"u'foo'". This test includes actual non-ascii unicode in one of the
            strings to confirm that this also handles these international
            characters properly.
@@ -703,12 +703,11 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         assert ret['result'], ret
         with salt.utils.files.fopen(test_file) as fp_:
             managed = salt.utils.stringutils.to_unicode(fp_.read())
-        expected = os.linesep.join([
-            'Die Webseite ist https://saltstack.com.',
-            'Der Zucker ist süß.',
-            '',
-            ''
-        ])
+        expected = dedent('''\
+            Die Webseite ist https://saltstack.com.
+            Der Zucker ist süß.
+            
+        ''')
         assert managed == expected, '{0!r} != {1!r}'.format(managed, expected)  # pylint: disable=repr-flag-used-in-string
 
     def test_managed_source_hash_indifferent_case(self):
