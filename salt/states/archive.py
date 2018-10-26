@@ -642,7 +642,7 @@ def extracted(name,
 
         If this argument is not used, then the minion will attempt to use
         Python's native tarfile_/zipfile_ support to extract it. For zip
-        archives, this argument is mostly used to overwrite exsiting files with
+        archives, this argument is mostly used to overwrite existing files with
         ``o``.
 
         Using this argument means that the ``tar`` or ``unzip`` command will be
@@ -1684,25 +1684,19 @@ def extracted(name,
                 dir_result = __states__['file.directory'](full_path,
                                                           user=user,
                                                           group=group,
-                                                          recurse=recurse,
-                                                          test=__opts__['test'])
+                                                          recurse=recurse)
                 log.debug('file.directory: %s', dir_result)
 
-                if __opts__['test']:
-                    if dir_result.get('pchanges'):
-                        ret['changes']['updated ownership'] = True
-                else:
-                    try:
-                        if dir_result['result']:
-                            if dir_result['changes']:
-                                ret['changes']['updated ownership'] = True
-                        else:
-                            enforce_failed.append(full_path)
-                    except (KeyError, TypeError):
-                        log.warning(
-                            'Bad state return %s for file.directory state on %s',
-                            dir_result, dirname
-                        )
+                if dir_result.get('changes'):
+                    ret['changes']['updated ownership'] = True
+                try:
+                    if not dir_result['result']:
+                        enforce_failed.append(full_path)
+                except (KeyError, TypeError):
+                    log.warning(
+                        'Bad state return %s for file.directory state on %s',
+                        dir_result, dirname
+                    )
 
         for filename in enforce_files + enforce_links:
             full_path = os.path.join(name, filename)

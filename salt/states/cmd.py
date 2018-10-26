@@ -1311,6 +1311,12 @@ def wait_call(name,
 def mod_watch(name, **kwargs):
     '''
     Execute a cmd function based on a watch call
+
+    .. note::
+        This state exists to support special handling of the ``watch``
+        :ref:`requisite <requisites>`. It should not be called directly.
+
+        Parameters for this function should be set by the state being triggered.
     '''
     if kwargs['sfun'] in ('wait', 'run', 'watch'):
         if kwargs.get('stateful'):

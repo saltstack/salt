@@ -1924,7 +1924,7 @@ def _check_perms(obj_name, obj_type, new_perms, cur_perms, access_mode, ret):
             # Check Perms for basic perms
             if isinstance(new_perms[user]['perms'], six.string_types):
                 if not has_permission(obj_name=obj_name,
-                                      principal=user,
+                                      principal=user_name,
                                       permission=new_perms[user]['perms'],
                                       access_mode=access_mode,
                                       obj_type=obj_type,
@@ -1937,7 +1937,7 @@ def _check_perms(obj_name, obj_type, new_perms, cur_perms, access_mode, ret):
             else:
                 for perm in new_perms[user]['perms']:
                     if not has_permission(obj_name=obj_name,
-                                          principal=user,
+                                          principal=user_name,
                                           permission=perm,
                                           access_mode=access_mode,
                                           obj_type=obj_type,
@@ -1957,17 +1957,15 @@ def _check_perms(obj_name, obj_type, new_perms, cur_perms, access_mode, ret):
                         changes[user]['applies_to'] = applies_to
 
     if changes:
-        if 'perms' not in ret['pchanges']:
-            ret['pchanges']['perms'] = {}
         if 'perms' not in ret['changes']:
             ret['changes']['perms'] = {}
         for user in changes:
             user_name = get_name(principal=user)
 
             if __opts__['test'] is True:
-                if user not in ret['pchanges']['perms']:
-                    ret['pchanges']['perms'][user] = {}
-                ret['pchanges']['perms'][user][access_mode] = changes[user][access_mode]
+                if user not in ret['changes']['perms']:
+                    ret['changes']['perms'][user] = {}
+                ret['changes']['perms'][user][access_mode] = changes[user][access_mode]
             else:
                 # Get applies_to
                 applies_to = None
@@ -2015,7 +2013,7 @@ def _check_perms(obj_name, obj_type, new_perms, cur_perms, access_mode, ret):
                 try:
                     set_permissions(
                         obj_name=obj_name,
-                        principal=user,
+                        principal=user_name,
                         permissions=perms,
                         access_mode=access_mode,
                         applies_to=applies_to,
@@ -2123,7 +2121,6 @@ def check_perms(obj_name,
     if not ret:
         ret = {'name': obj_name,
                'changes': {},
-               'pchanges': {},
                'comment': [],
                'result': True}
         orig_comment = ''
@@ -2137,7 +2134,7 @@ def check_perms(obj_name,
         current_owner = get_owner(obj_name=obj_name, obj_type=obj_type)
         if owner != current_owner:
             if __opts__['test'] is True:
-                ret['pchanges']['owner'] = owner
+                ret['changes']['owner'] = owner
             else:
                 try:
                     set_owner(obj_name=obj_name,
@@ -2155,7 +2152,7 @@ def check_perms(obj_name,
         if not inheritance == get_inheritance(obj_name=obj_name,
                                               obj_type=obj_type):
             if __opts__['test'] is True:
-                ret['pchanges']['inheritance'] = inheritance
+                ret['changes']['inheritance'] = inheritance
             else:
                 try:
                     set_inheritance(
@@ -2199,12 +2196,13 @@ def check_perms(obj_name,
         cur_perms = get_permissions(obj_name=obj_name, obj_type=obj_type)
         for user_name in cur_perms['Not Inherited']:
             # case insensitive dictionary search
-            if user_name.lower() not in set(k.lower() for k in grant_perms):
+            if grant_perms is not None and \
+                    user_name.lower() not in set(k.lower() for k in grant_perms):
                 if 'grant' in cur_perms['Not Inherited'][user_name]:
                     if __opts__['test'] is True:
-                        if 'remove_perms' not in ret['pchanges']:
-                            ret['pchanges']['remove_perms'] = {}
-                        ret['pchanges']['remove_perms'].update(
+                        if 'remove_perms' not in ret['changes']:
+                            ret['changes']['remove_perms'] = {}
+                        ret['changes']['remove_perms'].update(
                             {user_name: cur_perms['Not Inherited'][user_name]})
                     else:
                         if 'remove_perms' not in ret['changes']:
@@ -2217,12 +2215,13 @@ def check_perms(obj_name,
                         ret['changes']['remove_perms'].update(
                             {user_name: cur_perms['Not Inherited'][user_name]})
             # case insensitive dictionary search
-            if user_name.lower() not in set(k.lower() for k in deny_perms):
+            if deny_perms is not None and \
+                    user_name.lower() not in set(k.lower() for k in deny_perms):
                 if 'deny' in cur_perms['Not Inherited'][user_name]:
                     if __opts__['test'] is True:
-                        if 'remove_perms' not in ret['pchanges']:
-                            ret['pchanges']['remove_perms'] = {}
-                        ret['pchanges']['remove_perms'].update(
+                        if 'remove_perms' not in ret['changes']:
+                            ret['changes']['remove_perms'] = {}
+                        ret['changes']['remove_perms'].update(
                             {user_name: cur_perms['Not Inherited'][user_name]})
                     else:
                         if 'remove_perms' not in ret['changes']:
@@ -2246,7 +2245,7 @@ def check_perms(obj_name,
     ret['comment'] = '\n'.join(ret['comment'])
 
     # Set result for test = True
-    if __opts__['test'] and (ret['changes'] or ret['pchanges']):
+    if __opts__['test'] and ret['changes']:
         ret['result'] = None
 
     return ret

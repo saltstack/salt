@@ -49,10 +49,12 @@ except ImportError:
 # Import salt libs
 import salt.exceptions
 import salt.log
+import salt.utils.args
 import salt.utils.dns
 import salt.utils.files
 import salt.utils.network
 import salt.utils.path
+import salt.utils.pkg.rpm
 import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.versions
@@ -235,7 +237,7 @@ def _linux_gpu_data():
 
     gpus = []
     for gpu in devs:
-        vendor_strings = gpu['Vendor'].lower().split()
+        vendor_strings = re.split('[^A-Za-z0-9]', gpu['Vendor'].lower())
         # default vendor to 'unknown', overwrite if we match a known one
         vendor = 'unknown'
         for name in known_vendors:
@@ -620,6 +622,8 @@ def _windows_virtual(osdata):
     if osdata['kernel'] != 'Windows':
         return grains
 
+    grains['virtual'] = 'physical'
+
     # It is possible that the 'manufacturer' and/or 'productname' grains
     # exist but have a value of None.
     manufacturer = osdata.get('manufacturer', '')
@@ -784,6 +788,7 @@ def _virtual(osdata):
                 grains['virtual'] = 'LXC'
                 break
         elif command == 'virt-what':
+            output = output.splitlines()[-1]
             if output in ('kvm', 'qemu', 'uml', 'xen', 'lxc'):
                 grains['virtual'] = output
                 break
@@ -1387,6 +1392,7 @@ _OS_FAMILY_MAP = {
     'OVS': 'RedHat',
     'OEL': 'RedHat',
     'XCP': 'RedHat',
+    'XCP-ng': 'RedHat',
     'XenServer': 'RedHat',
     'RES': 'RedHat',
     'Sangoma': 'RedHat',
@@ -1434,6 +1440,7 @@ _OS_FAMILY_MAP = {
     'KDE neon': 'Debian',
     'Void': 'Void',
     'IDMS': 'Debian',
+    'Funtoo': 'Gentoo',
     'AIX': 'AIX',
 }
 
@@ -1522,6 +1529,34 @@ def _parse_os_release(*os_release_files):
             break
         except (IOError, OSError):
             pass
+
+    return ret
+
+
+def _parse_cpe_name(cpe):
+    '''
+    Parse CPE_NAME data from the os-release
+
+    Info: https://csrc.nist.gov/projects/security-content-automation-protocol/scap-specifications/cpe
+
+    :param cpe:
+    :return:
+    '''
+    part = {
+        'o': 'operating system',
+        'h': 'hardware',
+        'a': 'application',
+    }
+    ret = {}
+    cpe = (cpe or '').split(':')
+    if len(cpe) > 4 and cpe[0] == 'cpe':
+        if cpe[1].startswith('/'):  # WFN to URI
+            ret['vendor'], ret['product'], ret['version'] = cpe[2:5]
+            ret['phase'] = cpe[5] if len(cpe) > 5 else None
+            ret['part'] = part.get(cpe[1][1:])
+        elif len(cpe) == 13 and cpe[1] == '2.3':  # WFN to a string
+            ret['vendor'], ret['product'], ret['version'], ret['phase'] = [x if x != '*' else None for x in cpe[3:7]]
+            ret['part'] = part.get(cpe[2])
 
     return ret
 
@@ -1722,13 +1757,20 @@ def os_data():
                                 codename = codename_match.group(1)
                         grains['lsb_distrib_codename'] = codename
                     if 'CPE_NAME' in os_release:
-                        if ":suse:" in os_release['CPE_NAME'] or ":opensuse:" in os_release['CPE_NAME']:
+                        cpe = _parse_cpe_name(os_release['CPE_NAME'])
+                        if not cpe:
+                            log.error('Broken CPE_NAME format in /etc/os-release!')
+                        elif cpe.get('vendor', '').lower() in ['suse', 'opensuse']:
                             grains['os'] = "SUSE"
                             # openSUSE `osfullname` grain normalization
                             if os_release.get("NAME") == "openSUSE Leap":
                                 grains['osfullname'] = "Leap"
                             elif os_release.get("VERSION") == "Tumbleweed":
                                 grains['osfullname'] = os_release["VERSION"]
+                            # Override VERSION_ID, if CPE_NAME around
+                            if cpe.get('version') and cpe.get('vendor') == 'opensuse':  # Keep VERSION_ID for SLES
+                                grains['lsb_distrib_release'] = cpe['version']
+
                 elif os.path.isfile('/etc/SuSE-release'):
                     log.trace('Parsing distrib info from /etc/SuSE-release')
                     grains['lsb_distrib_id'] = 'SUSE'
@@ -1769,8 +1811,16 @@ def os_data():
                                     comps[3].replace('(', '').replace(')', '')
                 elif os.path.isfile('/etc/centos-release'):
                     log.trace('Parsing distrib info from /etc/centos-release')
-                    # CentOS Linux
-                    grains['lsb_distrib_id'] = 'CentOS'
+                    # Maybe CentOS Linux; could also be SUSE Expanded Support.
+                    # SUSE ES has both, centos-release and redhat-release.
+                    if os.path.isfile('/etc/redhat-release'):
+                        with salt.utils.files.fopen('/etc/redhat-release') as ifile:
+                            for line in ifile:
+                                if "red hat enterprise linux server" in line.lower():
+                                    # This is a SUSE Expanded Support Rhel installation
+                                    grains['lsb_distrib_id'] = 'RedHat'
+                                    break
+                    grains.setdefault('lsb_distrib_id', 'CentOS')
                     with salt.utils.files.fopen('/etc/centos-release') as ifile:
                         for line in ifile:
                             # Need to pull out the version and codename
@@ -1838,8 +1888,7 @@ def os_data():
             # Commit introducing this comment should be reverted after the upstream bug is released.
             if 'CentOS Linux 7' in grains.get('lsb_distrib_codename', ''):
                 grains.pop('lsb_distrib_release', None)
-            grains['osrelease'] = \
-                grains.get('lsb_distrib_release', osrelease).strip()
+            grains['osrelease'] = grains.get('lsb_distrib_release', osrelease).strip()
         grains['oscodename'] = grains.get('lsb_distrib_codename', '').strip() or oscodename
         if 'Red Hat' in grains['oscodename']:
             grains['oscodename'] = oscodename
@@ -1877,8 +1926,7 @@ def os_data():
                         r'((?:Open|Oracle )?Solaris|OpenIndiana|OmniOS) (Development)?'
                         r'\s*(\d+\.?\d*|v\d+)\s?[A-Z]*\s?(r\d+|\d+\/\d+|oi_\S+|snv_\S+)?'
                     )
-                    osname, development, osmajorrelease, osminorrelease = \
-                        release_re.search(rel_data).groups()
+                    osname, development, osmajorrelease, osminorrelease = release_re.search(rel_data).groups()
                 except AttributeError:
                     # Set a blank osrelease grain and fallback to 'Solaris'
                     # as the 'os' grain.
@@ -1965,8 +2013,8 @@ def os_data():
     # architecture.
     if grains.get('os_family') == 'Debian':
         osarch = __salt__['cmd.run']('dpkg --print-architecture').strip()
-    elif grains.get('os_family') == 'RedHat':
-        osarch = __salt__['cmd.run']('rpm --eval %{_host_cpu}').strip()
+    elif grains.get('os_family') in ['RedHat', 'Suse']:
+        osarch = salt.utils.pkg.rpm.get_osarch()
     elif grains.get('os_family') in ('NILinuxRT', 'Poky'):
         archinfo = {}
         for line in __salt__['cmd.run']('opkg print-architecture').splitlines():
@@ -2620,7 +2668,7 @@ def _hw_data(osdata):
                     break
     elif osdata['kernel'] == 'AIX':
         cmd = salt.utils.path.which('prtconf')
-        if data:
+        if cmd:
             data = __salt__['cmd.run']('{0}'.format(cmd)) + os.linesep
             for dest, regstring in (('serialnumber', r'(?im)^\s*Machine\s+Serial\s+Number:\s+(\S+)'),
                                     ('systemfirmware', r'(?im)^\s*Firmware\s+Version:\s+(.*)')):
@@ -2702,10 +2750,10 @@ def get_server_id():
         if bool(use_crc):
             id_hash = getattr(zlib, use_crc, zlib.adler32)(__opts__.get('id', '').encode()) & 0xffffffff
         else:
-            log.info('This server_id is computed not by Adler32 nor by CRC32. '
-                     'Please use "server_id_use_crc" option and define algorithm you '
-                     'prefer (default "Adler32"). Starting with Sodium, the '
-                     'server_id will be computed with Adler32 by default.')
+            log.debug('This server_id is computed not by Adler32 nor by CRC32. '
+                      'Please use "server_id_use_crc" option and define algorithm you '
+                      'prefer (default "Adler32"). Starting with Sodium, the '
+                      'server_id will be computed with Adler32 by default.')
             id_hash = _get_hash_by_shell()
         server_id = {'server_id': id_hash}
 
@@ -2766,3 +2814,28 @@ def default_gateway():
         except Exception:
             continue
     return grains
+
+
+def kernelparams():
+    '''
+    Return the kernel boot parameters
+    '''
+    if salt.utils.platform.is_windows():
+        # TODO: add grains using `bcdedit /enum {current}`
+        return {}
+    else:
+        try:
+            with salt.utils.files.fopen('/proc/cmdline', 'r') as fhr:
+                cmdline = fhr.read()
+                grains = {'kernelparams': []}
+                for data in [item.split('=') for item in salt.utils.args.shlex_split(cmdline)]:
+                    value = None
+                    if len(data) == 2:
+                        value = data[1].strip('"')
+
+                    grains['kernelparams'] += [(data[0], value)]
+        except IOError as exc:
+            grains = {}
+            log.debug('Failed to read /proc/cmdline: %s', exc)
+
+        return grains

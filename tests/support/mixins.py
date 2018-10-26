@@ -102,7 +102,6 @@ class AdaptedConfigurationTestCaseMixin(object):
                     os.path.join(rdict['pki_dir'], 'minions_rejected'),
                     os.path.join(rdict['pki_dir'], 'minions_denied'),
                     os.path.join(rdict['cachedir'], 'jobs'),
-                    os.path.join(rdict['cachedir'], 'raet'),
                     os.path.join(rdict['cachedir'], 'tokens'),
                     os.path.join(rdict['root_dir'], 'cache', 'tokens'),
                     os.path.join(rdict['pki_dir'], 'accepted'),
@@ -259,23 +258,23 @@ class ShellCaseCommonTestsMixin(CheckShellBinaryNameAndVersionMixin):
         git = salt.utils.path.which('git')
         if not git:
             self.skipTest('The git binary is not available')
-
+        opts = {
+            'stdout': subprocess.PIPE,
+            'stderr': subprocess.PIPE,
+            'cwd': CODE_DIR,
+        }
+        if not salt.utils.platform.is_windows():
+            opts['close_fds'] = True
         # Let's get the output of git describe
         process = subprocess.Popen(
             [git, 'describe', '--tags', '--first-parent', '--match', 'v[0-9]*'],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            close_fds=True,
-            cwd=CODE_DIR
+            **opts
         )
         out, err = process.communicate()
         if process.returncode != 0:
             process = subprocess.Popen(
                 [git, 'describe', '--tags', '--match', 'v[0-9]*'],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                close_fds=True,
-                cwd=CODE_DIR
+                **opts
             )
             out, err = process.communicate()
         if not out:

@@ -41,11 +41,11 @@ _salt_list_functions(){
     # sort: chop out doubled entries, so overhead is minimal later during actual completion
     if [ "$1" = 'local' ] ; then
         salt-call --log-level=quiet --out=txt -- sys.list_functions \
-          | sed "s/^.*\[//;s/[],']//g;s/ /\n/g" \
+          | sed "s/^.*\[//;s/[],']\|u'//g;s/ /\n/g" \
           | sort -u
     else
         salt '*' --timeout 2 --hide-timeout --log-level=quiet --out=txt -- sys.list_functions \
-          | sed "s/^.*\[//;s/[],']//g;s/ /\n/g" \
+          | sed "s/^.*\[//;s/[],']\|u'//g;s/ /\n/g" \
           | sort -u
     fi
 }

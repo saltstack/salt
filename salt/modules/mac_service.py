@@ -25,6 +25,7 @@ This module has support for services in the following locations.
 from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
+import logging
 import os
 import re
 
@@ -45,6 +46,8 @@ __virtualname__ = 'service'
 __func_alias__ = {
     'list_': 'list',
 }
+
+log = logging.getLogger(__name__)
 
 
 def __virtual__():
@@ -491,6 +494,12 @@ def status(name, sig=None, runas=None):
     # Find service with ps
     if sig:
         return __salt__['status.pid'](sig)
+
+    try:
+        _get_service(name)
+    except CommandExecutionError as msg:
+        log.error(msg)
+        return ''
 
     if not runas and _launch_agent(name):
         runas = __utils__['mac_utils.console_user'](username=True)

@@ -350,7 +350,11 @@ def _available_services(refresh=False):
                 try:
                     # This assumes most of the plist files
                     # will be already in XML format
-                    plist = plistlib.readPlist(true_path)
+                    if six.PY2:
+                        plist = plistlib.readPlist(true_path)
+                    else:
+                        with salt.utils.files.fopen(true_path, 'rb') as plist_handle:
+                            plist = plistlib.load(plist_handle)
 
                 except Exception:
                     # If plistlib is unable to read the file we'll need to use

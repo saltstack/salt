@@ -5,6 +5,7 @@
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+import errno
 import os
 
 # Import Salt Testing Libs
@@ -140,7 +141,7 @@ class PuppetTestCase(TestCase, LoaderModuleMockMixin):
                         mock_open(read_data="resources: 1")):
                 self.assertDictEqual(puppet.summary(), {'resources': 1})
 
-            permission_error = IOError(os.errno.EACCES, 'Permission denied:', '/file')
+            permission_error = IOError(errno.EACCES, 'Permission denied:', '/file')
             with patch('salt.utils.files.fopen',
                        mock_open(read_data=permission_error)) as m_open:
                 self.assertRaises(CommandExecutionError, puppet.summary)

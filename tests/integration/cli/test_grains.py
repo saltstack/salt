@@ -47,7 +47,7 @@ class GrainsTargetingTest(ShellCase):
         '''
         Tests return of each running test minion targeting with minion id grain
         '''
-        minion = self.run_salt('-G \'id:minion\' test.ping')
+        minion = self.run_salt('-G "id:minion" test.ping')
         self.assertEqual(sorted(minion), sorted(['minion:', '    True']))
 
         sub_minion = self.run_salt('-G "id:sub_minion" test.ping')
