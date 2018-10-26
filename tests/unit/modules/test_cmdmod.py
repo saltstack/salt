@@ -359,7 +359,7 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
         # to the vm that will be running the tests. It skips binary files though
         # The file specified in `rand_bytes_file` is detected as binary so the
         # Unix-style line ending remains. This should account for that.
-        stdout_bytes = stdout_bytes.rstrip() + os.linesep
+        stdout_bytes = stdout_bytes.rstrip() + os.linesep.encode()
 
         # stdout with the non-decodable bits replaced with the unicode
         # replacement character U+FFFD.
