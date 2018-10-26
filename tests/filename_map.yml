@@ -113,9 +113,6 @@ salt/cloud/*:
 salt/cloud/__init__.py:
   - integration.cloud.test_cloud
 
-salt/grains/*:
-  - integration.grains.test_custom
-
 salt/proxy/*:
   - integration.proxy.test_shell
   - integration.proxy.test_simple
