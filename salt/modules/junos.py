@@ -85,11 +85,13 @@ def facts_refresh():
     conn = __proxy__['junos.conn']()
     ret = dict()
     ret['out'] = True
+    ret['result'] = False
     try:
         conn.facts_refresh()
     except Exception as exception:
         ret['message'] = 'Execution failed due to "{0}"'.format(exception)
         ret['out'] = False
+        ret['result'] = False
         return ret
 
     ret['facts'] = __proxy__['junos.get_serialized_facts']()
@@ -122,7 +124,7 @@ def facts():
         ret['out'] = False
     return ret
 
-
+# 
 def rpc(cmd=None, dest=None, **kwargs):
     '''
     This function executes the RPC provided as arguments on the junos device.
@@ -912,7 +914,7 @@ def install_config(path=None, **kwargs):
             ret['out'] = False
             return ret
 
-        if check and not test:
+        if check:
             try:
                 cu.commit(**commit_params)
                 ret['message'] = 'Successfully loaded and committed!'
@@ -922,8 +924,8 @@ def install_config(path=None, **kwargs):
                     .format(exception)
                 ret['out'] = False
                 return ret
-        elif not check:
-            ret['message'] = 'Setting it here'
+        else:
+            ret['message'] = 'Loaded configuration but commit check failed.'
             ret['out'] = False
             cu.rollback()
 
