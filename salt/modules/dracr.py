@@ -173,7 +173,7 @@ def get_property(host=None, admin_username=None, admin_password=None, property=N
     if property is None:
         raise SaltException("No property specified!")
     ret = __execute_ret(
-        "get {0}".format(property),
+        "get '{0}'".format(property),
         host=host,
         admin_username=admin_username,
         admin_password=admin_password,
@@ -214,7 +214,7 @@ def set_property(
     elif value is None:
         raise SaltException("No value specified!")
     ret = __execute_ret(
-        "set {0} {1}".format(property, value),
+        "set '{0}' '{1}'".format(property, value),
         host=host,
         admin_username=admin_username,
         admin_password=admin_password,
