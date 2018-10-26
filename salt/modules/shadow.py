@@ -73,8 +73,8 @@ def info(name, root=None):
     try:
         data = getspnam(name)
         ret = {
-            'name': data.sp_nam,
-            'passwd': data.sp_pwd,
+            'name': data.sp_namp if hasattr(data, 'sp_namp') else data.sp_nam,
+            'passwd': data.sp_pwdp if hasattr(data, 'sp_pwdp') else data.sp_pwd,
             'lstchg': data.sp_lstchg,
             'min': data.sp_min,
             'max': data.sp_max,
@@ -499,7 +499,8 @@ def list_users(root=None):
     else:
         getspall = functools.partial(spwd.getspall)
 
-    return sorted([user.sp_nam for user in getspall()])
+    return sorted([user.sp_namp if hasattr(user, 'sp_namp') else user.sp_nam
+                   for user in getspall()])
 
 
 def _getspnam(name, root=None):
