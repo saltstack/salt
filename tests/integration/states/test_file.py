@@ -359,7 +359,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         grain_path = os.path.join(TMP, 'file-grain-test')
         state_file = 'file-grainget'
 
-        self.run_function('state.sls', [state_file])
+        self.run_function('state.sls', [state_file], pillar={'grain_path': grain_path})
         self.assertTrue(os.path.exists(grain_path))
 
         with salt.utils.files.fopen(grain_path, 'r') as fp_:

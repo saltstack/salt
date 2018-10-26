@@ -1,9 +1,8 @@
-========================================
-In Progress: Salt 2018.3.3 Release Notes
-========================================
+===========================
+Salt 2018.3.3 Release Notes
+===========================
 
-Version 2018.3.3 is an **unreleased** bugfix release for :ref:`2018.3.0 <release-2018-3-0>`.
-This release is still in progress and has not been released yet.
+Version 2018.3.3 is a security and bugfix release for :ref:`2018.3.0 <release-2018-3-0>`.
 
 Statistics
 ==========
@@ -43,6 +42,13 @@ Statistics
           - source: salt://foo.conf
           - template: jinja
           - defaults: {{ mydict | tojson }}
+
+Security Fix
+============
+
+CVE-2018-15751 Remote command execution and incorrect access control when using salt-api.
+
+CVE-2018-15750 Directory traversal vulnerability when using salt-api. Allows an attacker to determine what files exist on a server when querying /run or /events.
 
 Changes to win_timezone
 =======================
