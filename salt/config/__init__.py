@@ -522,6 +522,7 @@ VALID_OPTS = {
     # The number of seconds to sleep between retrying an attempt to resolve the hostname of a
     # salt master
     'retry_dns': float,
+    'retry_dns_count': (type(None), int),
 
     # In the case when the resolve of the salt master hostname fails, fall back to localhost
     'resolve_dns_fallback': bool,
@@ -1197,6 +1198,9 @@ VALID_OPTS = {
     # Use Adler32 hashing algorithm for server_id (default False until Sodium, "adler32" after)
     # Possible values are: False, adler32, crc32
     'server_id_use_crc': (bool, six.string_types),
+
+    # Disable requisites during State runs
+    'disabled_requisites': (six.string_types, list),
 }
 
 # default configurations
@@ -1407,6 +1411,7 @@ DEFAULT_MINION_OPTS = {
     'update_url': False,
     'update_restart_services': [],
     'retry_dns': 30,
+    'retry_dns_count': None,
     'resolve_dns_fallback': True,
     'recon_max': 10000,
     'recon_default': 1000,
@@ -1494,6 +1499,7 @@ DEFAULT_MINION_OPTS = {
     'schedule': {},
     'ssh_merge_pillar': True,
     'server_id_use_crc': False,
+    'disabled_requisites': [],
 }
 
 DEFAULT_MASTER_OPTS = {

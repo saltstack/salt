@@ -491,11 +491,7 @@ def query(url,
             data = _urlencode(data)
 
         if verify_ssl:
-            # tornado requires a str, cannot be unicode str in py2
-            if ca_bundle is None:
-                req_kwargs['ca_certs'] = ca_bundle
-            else:
-                req_kwargs['ca_certs'] = salt.utils.stringutils.to_str(ca_bundle)
+            req_kwargs['ca_certs'] = ca_bundle
 
         max_body = opts.get('http_max_body', salt.config.DEFAULT_MINION_OPTS['http_max_body'])
         connect_timeout = opts.get('http_connect_timeout', salt.config.DEFAULT_MINION_OPTS['http_connect_timeout'])
@@ -541,31 +537,36 @@ def query(url,
 
         supports_max_body_size = 'max_body_size' in client_argspec.args
 
+        req_kwargs.update({
+            'method': method,
+            'headers': header_dict,
+            'auth_username': username,
+            'auth_password': password,
+            'body': data,
+            'validate_cert': verify_ssl,
+            'allow_nonstandard_methods': True,
+            'streaming_callback': streaming_callback,
+            'header_callback': header_callback,
+            'connect_timeout': connect_timeout,
+            'request_timeout': timeout,
+            'proxy_host': proxy_host,
+            'proxy_port': proxy_port,
+            'proxy_username': proxy_username,
+            'proxy_password': proxy_password,
+            'raise_error': raise_error,
+            'decompress_response': False,
+        })
+
+        # Unicode types will cause a TypeError when Tornado's curl HTTPClient
+        # invokes setopt. Therefore, make sure all arguments we pass which
+        # contain strings are str types.
+        req_kwargs = salt.utils.data.decode(req_kwargs, to_str=True)
+
         try:
             download_client = HTTPClient(max_body_size=max_body) \
                 if supports_max_body_size \
                 else HTTPClient()
-            result = download_client.fetch(
-                url_full,
-                method=method,
-                headers=header_dict,
-                auth_username=username,
-                auth_password=password,
-                body=data,
-                validate_cert=verify_ssl,
-                allow_nonstandard_methods=True,
-                streaming_callback=streaming_callback,
-                header_callback=header_callback,
-                connect_timeout=connect_timeout,
-                request_timeout=timeout,
-                proxy_host=proxy_host,
-                proxy_port=proxy_port,
-                proxy_username=proxy_username,
-                proxy_password=proxy_password,
-                raise_error=raise_error,
-                decompress_response=False,
-                **req_kwargs
-            )
+            result = download_client.fetch(url_full, **req_kwargs)
         except tornado.httpclient.HTTPError as exc:
             ret['status'] = exc.code
             ret['error'] = six.text_type(exc)
@@ -754,7 +755,7 @@ def update_ca_bundle(
         source=None,
         opts=None,
         merge_files=None,
-    ):
+        ):
     '''
     Attempt to update the CA bundle file from a URL
 

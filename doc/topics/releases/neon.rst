@@ -164,6 +164,43 @@ New output:
           Skipped:
               0
 
+XML Module
+==========
+
+A new state and execution module for editing XML files is now included. Currently it allows for
+editing values from an xpath query, or editing XML IDs.
+
+.. code-block:: bash
+
+  # salt-call xml.set_attribute /tmp/test.xml ".//actor[@id='3']" editedby "Jane Doe"
+  local:
+      True
+  # salt-call xml.get_attribute /tmp/test.xml ".//actor[@id='3']"
+  local:
+      ----------
+      editedby:
+          Jane Doe
+      id:
+          3
+  # salt-call xml.get_value /tmp/test.xml ".//actor[@id='2']"
+  local:
+      Liam Neeson
+  # salt-call xml.set_value /tmp/test.xml ".//actor[@id='2']" "Patrick Stewart"
+  local:
+      True
+  # salt-call xml.get_value /tmp/test.xml ".//actor[@id='2']"
+  local:
+      Patrick Stewart
+
+.. code-block:: yaml
+
+    ensure_value_true:
+      xml.value_present:
+        - name: /tmp/test.xml
+        - xpath: .//actor[@id='1']
+        - value: William Shatner
+
+
 
 State Changes
 =============
@@ -174,8 +211,28 @@ State Changes
   ``False`` result would be returned, but this meant that subsequent runs of
   the state would fail due to the destination file being present.
 
+- The :py:func:`file.managed <salt.states.file.managed>` state now supports
+  setting selinux contexts.
+
+  .. code-block:: yaml
+
+    /tmp/selinux.test
+      file.managed:
+        - user: root
+        - selinux:
+            seuser: system_u
+            serole: object_r
+            setype: system_conf_t
+            seranage: s0
+
 - The ``onchanges`` and ``prereq`` :ref:`requisites <requisites>` now behave
   properly in test mode.
+
+- Adding a new option for the State compiler, ``disabled_requisites`` will allow
+  requisites to be disabled during State runs.
+
+- Added new :py:func:`ssh_auth.manage <salt.states.ssh_auth.manage>` state to
+  ensure only the specified ssh keys are present for the specified user.
 
 Module Changes
 ==============
@@ -189,6 +246,13 @@ Module Changes
   options by prefixing them with 'ipvX' will now work with most options (i.e.
   ``dns`` can be overriden by ``ipv4dns`` or ``ipv6dns``). The ``proto`` option
   is now required.
+
+- Added new :py:func:`boto_ssm <salt.modules.boto_ssm>` module to set and query
+  secrets in AWS SSM parameters.
+
+- The :py:func:`file.set_selinux_context <salt.modules.file.set_selinux_context>`
+  module now supports perstant changes with ``persist=True`` by calling the
+  :py:func:`selinux.fcontext_add_policy <salt.modules.selinux.fcontext_add_policy>` module.
 
 Salt Cloud Features
 ===================

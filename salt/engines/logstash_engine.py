@@ -30,16 +30,16 @@ import salt.utils.event
 # Import third-party libs
 try:
     import logstash
-    HAS_LOGSTASH = True
 except ImportError:
-    HAS_LOGSTASH = False
+    logstash = None
+
+__virtualname__ = 'logstash'
 
 
 def __virtual__():
-    if not HAS_LOGSTASH:
-        return False
-    else:
-        return True
+    return __virtualname__ \
+        if logstash is not None \
+        else (False, 'python-logstash not installed')
 
 log = logging.getLogger(__name__)
 
