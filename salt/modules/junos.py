@@ -18,7 +18,6 @@ Refer to :mod:`junos <salt.proxy.junos>` for information on connecting to junos 
 from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
-from functools import wraps
 
 try:
     from lxml import etree
