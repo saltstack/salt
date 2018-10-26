@@ -219,7 +219,6 @@ salt/utils/docker/*:
   - unit.utils.test_docker
 
 salt/utils/schedule.py:
-  - integration.scheduler.test_error
   - integration.scheduler.test_eval
   - integration.scheduler.test_postpone
   - integration.scheduler.test_skip
