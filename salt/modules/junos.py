@@ -85,13 +85,11 @@ def facts_refresh():
     conn = __proxy__['junos.conn']()
     ret = dict()
     ret['out'] = True
-    ret['result'] = False
     try:
         conn.facts_refresh()
     except Exception as exception:
         ret['message'] = 'Execution failed due to "{0}"'.format(exception)
         ret['out'] = False
-        ret['result'] = False
         return ret
 
     ret['facts'] = __proxy__['junos.get_serialized_facts']()
@@ -124,7 +122,7 @@ def facts():
         ret['out'] = False
     return ret
 
-# 
+
 def rpc(cmd=None, dest=None, **kwargs):
     '''
     This function executes the RPC provided as arguments on the junos device.
