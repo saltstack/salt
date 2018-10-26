@@ -102,7 +102,7 @@ def _localectl_set(locale=''):
     '''
     locale_params = _parse_dbus_locale() if dbus is not None else _localectl_status().get('system_locale', {})
     locale_params['LANG'] = six.text_type(locale)
-    args = ' '.join(['{0}="{1}"'.format(k, v) for k, v in six.iteritems(locale_params) if v is not None])
+    args = ' '.join(['{0}="{1}"'.format(k, v) for k, v in six.iteritems(locale_params) if v and k is not 'data'])
     return not __salt__['cmd.retcode']('localectl set-locale {0}'.format(args), python_shell=False)
 
 
