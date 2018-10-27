@@ -163,7 +163,7 @@ class BeaconsTest(ModuleCase):
         if 'enabled' in ret:
             self.assertEqual(ret, {'ps': [{'processes': {'apache2': 'stopped'}}], 'enabled': True})
         else:
-            self.assertEqual(ret,  {'ps': [{'processes': {'apache2': 'stopped'}}]})
+            self.assertEqual(ret, {'ps': [{'processes': {'apache2': 'stopped'}}]})
 
 
 class BeaconsWithBeaconTypeTest(ModuleCase):
