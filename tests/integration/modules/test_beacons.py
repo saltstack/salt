@@ -49,6 +49,24 @@ class BeaconsAddDeleteTest(ModuleCase):
         # save the results
         self.run_function('beacons.save')
 
+    def test_add_and_delete_beacon_type(self):
+        '''
+        Test adding and deleting a beacon
+        '''
+        _add = self.run_function('beacons.add', ['watch_apache', [{'processes': {'apache2': 'stopped'}}, {'beacon_type': 'ps'}]])
+        self.assertTrue(_add['result'])
+
+        # save added beacon
+        _save = self.run_function('beacons.save')
+        self.assertTrue(_save['result'])
+
+        # delete the beacon
+        _delete = self.run_function('beacons.delete', ['watch_apache'])
+        self.assertTrue(_delete['result'])
+
+        # save the results
+        self.run_function('beacons.save')
+
 
 class BeaconsTest(ModuleCase):
     '''
@@ -72,13 +90,14 @@ class BeaconsTest(ModuleCase):
         try:
             # Add beacon to disable
             self.run_function('beacons.add', ['ps', [{'processes': {'apache2': 'stopped'}}]])
+            self.run_function('beacons.add', ['watch_apache', [{'processes': {'apache2': 'stopped'}}, {'beacon_type': 'ps'}]])
             self.run_function('beacons.save')
         except CommandExecutionError:
             self.skipTest('Unable to add beacon')
 
     def tearDown(self):
         # delete added beacon
-        self.run_function('beacons.delete', ['ps'])
+        self.run_function('beacons.delete', ['watch_apache'])
         self.run_function('beacons.save')
 
     def test_disable(self):
@@ -107,6 +126,32 @@ class BeaconsTest(ModuleCase):
                 self.assertFalse(bdict['enabled'])
                 break
 
+    def test_disable_with_beacon_type(self):
+        '''
+        Test disabling beacons
+        '''
+        # assert beacon exists
+        _list = self.run_function('beacons.list', return_yaml=False)
+        self.assertIn('watch_apache', _list)
+
+        ret = self.run_function('beacons.disable')
+        self.assertTrue(ret['result'])
+
+        # assert beacons are disabled
+        _list = self.run_function('beacons.list', return_yaml=False)
+        self.assertFalse(_list['enabled'])
+
+        # disable added beacon
+        ret = self.run_function('beacons.disable_beacon', ['watch_apache'])
+        self.assertTrue(ret['result'])
+
+        # assert beacon ps is disabled
+        _list = self.run_function('beacons.list', return_yaml=False)
+        for bdict in _list['watch_apache']:
+            if 'enabled' in bdict:
+                self.assertFalse(bdict['enabled'])
+                break
+
     def test_enable(self):
         '''
         Test enabling beacons
@@ -122,6 +167,7 @@ class BeaconsTest(ModuleCase):
         # assert beacons are enabled
         _list = self.run_function('beacons.list', return_yaml=False)
         self.assertTrue(_list['enabled'])
+
 
     @skipIf(True, 'Skip until https://github.com/saltstack/salt/issues/31516 problems are resolved.')
     def test_enabled_beacons(self):
@@ -142,7 +188,13 @@ class BeaconsTest(ModuleCase):
         '''
         # list beacons
         ret = self.run_function('beacons.list', return_yaml=False)
+        _expected = {'ps': [{'processes': {'apache2': 'stopped'}}],
+                     'watch_apache': [{'processes': {'apache2': 'stopped'}},
+                                      {'beacon_type': 'ps'}]}
+        _enabled_expected = {'ps': [{'processes': {'apache2': 'stopped'}}],
+                             'watch_apache': [{'processes': {'apache2': 'stopped'}}, {'beacon_type': 'ps'}],
+                             'enabled': True}
         if 'enabled' in ret:
-            self.assertEqual(ret, {'ps': [{'processes': {'apache2': 'stopped'}}], 'enabled': True})
+            self.assertEqual(ret, _enabled_expected)
         else:
-            self.assertEqual(ret, {'ps': [{'processes': {'apache2': 'stopped'}}]})
+            self.assertEqual(ret, _expected)
