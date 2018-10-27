@@ -232,6 +232,10 @@ There are several corresponding requisite_any statements:
 * ``onchanges_any``
 * ``onfail_any``
 
+Lastly, onfail has one special ``onfail_all`` form to account for when `AND`
+logic is desired instead of the default `OR` logic of onfail/onfail_any (which
+are equivalent).
+
 All of the requisites define specific relationships and always work with the
 dependency logic defined above.
 
@@ -521,6 +525,46 @@ The ``onfail`` requisite is applied in the same way as ``require`` as ``watch``:
         - onfail:
           - mount: primary_mount
 
+.. code-block:: yaml
+
+    build_site:
+      cmd.run:
+        - name: /srv/web/app/build_site
+
+    notify-build_failure:
+      hipchat.send_message:
+        - room_id: 123456
+        - message: "Building website fail on {{ salt.grains.get('id') }}"
+
+
+The default behavior of the ``onfail`` when multiple requisites are listed is
+the opposite of other requisites in the salt state engine, it acts by default
+like ``any()`` instead of ``all()``. This means that when you list multiple
+onfail requisites on a state, if *any* fail the requisite will be satisfied.
+If you instead need *all* logic to be applied, you can use ``onfail_all``
+form:
+
+.. code-block:: yaml
+
+    test_site_a:
+      cmd.run:
+        - name: ping -c1 10.0.0.1
+
+    test_site_b:
+      cmd.run:
+        - name: ping -c1 10.0.0.2
+
+    notify_site_down:
+      hipchat.send_message:
+        - room_id: 123456
+        - message: "Both primary and backup sites are down!"
+      - onfail_all:
+        - cmd: test_site_a
+        - cmd: test_site_b
+
+In this contrived example `notify_site_down` will run when both 10.0.0.1 and
+10.0.0.2 fail to respond to ping.
+
 .. note::
 
     Setting failhard (:ref:`globally <global-failhard>` or in
@@ -535,6 +579,8 @@ The ``onfail`` requisite is applied in the same way as ``require`` as ``watch``:
     Beginning in the ``2016.11.0`` release of Salt, ``onfail`` uses OR logic for
     multiple listed ``onfail`` requisites. Prior to the ``2016.11.0`` release,
     ``onfail`` used AND logic. See `Issue #22370`_ for more information.
+    Beginning in the ``Neon`` release of Salt, a new ``onfail_all`` requisite
+    form is available if AND logic is desired.
 
 .. _Issue #22370: https://github.com/saltstack/salt/issues/22370
 
