@@ -2503,3 +2503,187 @@ def configuration_import(config_file, rules=None, file_format='xml', **connectio
                                                                 'called successfully.'}
     except SaltException as exc:
         return {'name': config_file, 'result': False, 'message': six.text_type(exc)}
+
+
+def triggerid_get(hostid=None, trigger_desc=None, priority=4, **connection_args):
+    '''
+    .. versionadded:: Fluorine
+
+    Retrieve trigger ID and description based in host ID and trigger description.
+
+    .. note::
+        https://www.zabbix.com/documentation/3.4/manual/api/reference/trigger/get
+
+    :param hostid: ID of the host which's trigger we want to find
+    :param trigger_desc: Description of trigger (trigger name) which's we want to find
+    :param priority: Priority of trigger (useful if we have same name for more triggers with different priorities)
+
+    :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
+    :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
+    :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
+
+    :return: Trigger ID and description. False if no trigger found or on failure.
+
+    CLI Example:
+    .. code-block:: bash
+
+        salt '*' zabbix.triggerid_get 1111 'trigger name to find' 5
+    '''
+    conn_args = _login(**connection_args)
+    ret = False
+    try:
+        if conn_args:
+            method = 'trigger.get'
+            if not hostid or not trigger_desc:
+                return {'result': False, 'comment': 'hostid and trigger_desc params are required'}
+            params = {'output': ["triggerid", "description"],
+                      'filter': {"priority": priority}, 'hostids': hostid}
+            params = _params_extend(params, _ignore_name=True, **connection_args)
+            ret = _query(method, params, conn_args['url'], conn_args['auth'])
+            if len(ret['result']) > 0:
+                for r in ret['result']:
+                    if trigger_desc in r['description']:
+                        ret['result'] = r
+                        return ret
+                return False
+            else:
+                return False
+        else:
+            raise KeyError
+    except KeyError:
+        return ret
+
+
+def service_add(service_rootid=None, service_name=None, triggerid=None, **connection_args):
+    '''
+    .. versionadded:: Fluorine
+
+    Create service under service with id specified as parameter.
+
+    .. note::
+        https://www.zabbix.com/documentation/3.4/manual/api/reference/service/create
+
+    :param service_rootid: Service id under which service should be added
+    :param service_name: Name of new service
+    :param triggerid: Optional - ID of trigger which should be watched in service
+
+    :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
+    :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
+    :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
+
+    :return: Service details, False if service could not be added or on failure.
+
+    CLI Example:
+    .. code-block:: bash
+
+        salt '*' zabbix.service_add 11 'My service' 11111
+    '''
+    conn_args = _login(**connection_args)
+    ret = False
+    try:
+        if conn_args:
+            method = 'service.create'
+            params = {'name': service_name}
+            params = _params_extend(params, _ignore_name=True, **connection_args)
+            # Ensure that we have required params.
+            params.setdefault('algorithm', 1)
+            params.setdefault('showsla', 1)
+            params.setdefault('goodsla', 99.7)
+            params.setdefault('sortorder', 1)
+            if service_rootid:
+                params.setdefault('parentid', service_rootid)
+            if triggerid:
+                params.setdefault('triggerid', triggerid)
+
+            ret = _query(method, params, conn_args['url'], conn_args['auth'])
+            return ret['result'] if len(ret['result']) > 0 else False
+        else:
+            raise KeyError
+    except KeyError:
+        return ret
+
+
+def service_get(service_name=None, service_rootid=None, **connection_args):
+    '''
+    .. versionadded:: Fluorine
+
+    Get service according to name and parent service ID.
+
+    .. note::
+        https://www.zabbix.com/documentation/3.4/manual/api/reference/service/get
+
+    :param service_name: Name of the service
+    :param service_rootid: ID of service parent
+
+    :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
+    :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
+    :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
+
+    :return: Service details, False if no service found or on failure.
+
+    CLI Example:
+    .. code-block:: bash
+
+        salt '*' zabbix.service_get 'My service' 11
+    '''
+
+    conn_args = _login(**connection_args)
+    ret = False
+    try:
+        if conn_args:
+            method = 'service.get'
+            if not service_name:
+                return {'result': False, 'comment': 'service_name param is required'}
+            params = {'output': ['name']}
+            if service_rootid:
+                params['parentids'] = service_rootid
+            params['filter'] = {'name': service_name}
+            params = _params_extend(params, _ignore_name=True, **connection_args)
+            ret = _query(method, params, conn_args['url'], conn_args['auth'])
+            return ret['result'] if len(ret['result']) > 0 else False
+        else:
+            raise KeyError
+    except KeyError:
+        return ret
+
+
+def service_delete(service_id=None, **connection_args):
+    '''
+    .. versionadded:: Fluorine
+
+    Delete service specified by id.
+
+    .. note::
+        https://www.zabbix.com/documentation/3.4/manual/api/reference/service/delete
+
+    :param service_id: ID of service which should be deleted
+
+    .. note::
+        Service can't be deleted if it has any children.
+
+    :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
+    :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
+    :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
+
+    :return: ID of deleted service, False if service could not be deleted or on failure.
+
+    CLI Example:
+    .. code-block:: bash
+
+        salt '*' zabbix.service_delete 10
+    '''
+
+    conn_args = _login(**connection_args)
+    ret = False
+    try:
+        if conn_args:
+            method = 'service.delete'
+            if not service_id:
+                return {'result': False, 'comment': 'service_id param is required'}
+            params = [str(service_id)]
+            ret = _query(method, params, conn_args['url'], conn_args['auth'])
+            return ret['result'] if len(ret['result']) > 0 else False
+        else:
+            raise KeyError
+    except KeyError:
+        return ret
