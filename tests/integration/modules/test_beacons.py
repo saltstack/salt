@@ -168,7 +168,6 @@ class BeaconsTest(ModuleCase):
         _list = self.run_function('beacons.list', return_yaml=False)
         self.assertTrue(_list['enabled'])
 
-
     @skipIf(True, 'Skip until https://github.com/saltstack/salt/issues/31516 problems are resolved.')
     def test_enabled_beacons(self):
         '''
