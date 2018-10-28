@@ -36,9 +36,6 @@ class BeaconsAddDeleteTest(ModuleCase):
         Test adding and deleting a beacon
         '''
         _add = self.run_function('beacons.add', ['ps', [{'processes': {'apache2': 'stopped'}}]])
-        import logging
-        log = logging.getLogger(__name__)
-        log.debug('=== _add %s ===', _add)
         self.assertTrue(_add['result'])
 
         # save added beacon
