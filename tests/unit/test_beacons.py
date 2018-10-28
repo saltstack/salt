@@ -42,5 +42,6 @@ class BeaconsTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(beacons.__opts__, mock_opts):
             ret = salt.beacons.Beacon(mock_opts, []).process(mock_opts['beacons'], mock_opts['grains'])
             _expected = [{'tag': 'salt/beacon/minion/watch_apache/',
-                          'data': {'id': u'minion', u'apache2': u'Stopped'}}]
+                          'data': {'id': u'minion', u'apache2': u'Stopped'},
+                          'beacon_name': 'ps'}]
             self.assertEqual(ret, _expected)
