@@ -17,9 +17,6 @@ from tests.support.mock import (
 import salt.beacons as beacons
 import salt.config
 
-# Import 3rd-party libs
-from salt.ext import six
-
 import logging
 log = logging.getLogger(__name__)
 
