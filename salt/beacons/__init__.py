@@ -121,7 +121,9 @@ class Beacon(object):
                         tag += data.pop('tag')
                     if 'id' not in data:
                         data['id'] = self.opts['id']
-                    ret.append({'tag': tag, 'data': data})
+                    ret.append({'tag': tag,
+                                'data': data,
+                                'beacon_name': beacon_name})
                 if runonce:
                     self.disable_beacon(mod)
             else:
