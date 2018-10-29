@@ -18,7 +18,6 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import copy
-import fnmatch
 import os
 import re
 import logging
@@ -1660,11 +1659,11 @@ def list_repo_pkgs(*args, **kwargs):  # pylint: disable=unused-import
         salt '*' pkg.list_repo_pkgs foo bar baz
     '''
     if args:
-        # get only information about packages in args
-        cmd = ['apt-cache', 'show' ] + [arg for arg in args]
+        # Get only information about packages in args
+        cmd = ['apt-cache', 'show'] + [arg for arg in args]
     else:
-        # get information about all available packages
-        cmd = ['apt-cache', 'show', '.']
+        # Get information about all available packages
+        cmd = ['apt-cache', 'dump']
 
     out = __salt__['cmd.run_all'](
         cmd,
@@ -1678,7 +1677,7 @@ def list_repo_pkgs(*args, **kwargs):  # pylint: disable=unused-import
     skip_pkg = False
     new_pkg = re.compile('^Package: (.+)')
     for line in salt.utils.itertools.split(out['stdout'], '\n'):
-        if len(line.strip()) == 0:
+        if not line.strip():
             continue
         try:
             cur_pkg = new_pkg.match(line).group(1)
