@@ -307,7 +307,7 @@ def delete_zone(zone_id, profile):
         salt myminion libcloud_dns.delete_zone google.com profile1
     '''
     conn = _get_driver(profile=profile)
-    zone = conn.get_zone(zone_id=zone_id)
+    zone = conn.get_zone(zone_id)
     return conn.delete_zone(zone)
 
 

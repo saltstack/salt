@@ -225,3 +225,15 @@ class LibcloudDnsModuleTestCase(TestCase, LoaderModuleMockMixin):
                                                extra={'extra': 'data'})
                 get_zone.assert_called_once()
                 get_zone.assert_called_with('12345')
+
+    def test_delete_zone(self):
+        test_zone = TestZone()
+        with patch('tests.unit.modules.test_libcloud_dns.MockDNSDriver.get_zone', return_value=test_zone) as get_zone:
+            with patch('tests.unit.modules.test_libcloud_dns.MockDNSDriver.delete_zone',
+                           return_value=True) as delete_zone:
+                result = libcloud_dns.delete_zone('12345', 'test')
+                self.assertTrue(result)
+                delete_zone.assert_called_once()
+                delete_zone.assert_called_with(test_zone)
+                get_zone.assert_called_once()
+                get_zone.assert_called_with('12345')
