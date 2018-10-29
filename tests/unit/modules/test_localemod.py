@@ -44,8 +44,8 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
        System Locale: n/a
 
        VC Keymap: n/a
-      X11 Layout: us
-       X11 Model: pc105
+      X11 Layout: n/a
+       X11 Model: n/a
     '''
     locale_ctl_out_empty = ''
     locale_ctl_out_broken = '''
