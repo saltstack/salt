@@ -366,6 +366,8 @@ def install(name=None,
     to_reinstall = []
     to_downgrade = []
 
+    if kwargs.get('noaction', False):
+        cmd_prefix.append('--noaction')
     if pkg_params is None or len(pkg_params) == 0:
         return {}
     elif pkg_type == 'file':
@@ -540,6 +542,8 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
     if not targets:
         return {}
     cmd = ['opkg', 'remove']
+    if kwargs.get('noaction', False):
+        cmd.append('--noaction')
     if kwargs.get('remove_dependencies', False):
         cmd.append('--force-removal-of-dependent-packages')
     if kwargs.get('auto_remove_deps', False):
