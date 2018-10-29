@@ -70,8 +70,8 @@ class Beacon(object):
 
             log.trace('Beacon processing: %s', mod)
             beacon_name = None
-            if self._determine_beacon_config(current_beacon_config, 'beacon_type'):
-                beacon_name = current_beacon_config['beacon_type']
+            if self._determine_beacon_config(current_beacon_config, 'beacon_module'):
+                beacon_name = current_beacon_config['beacon_module']
             else:
                 beacon_name = mod
             fun_str = '{0}.beacon'.format(beacon_name)

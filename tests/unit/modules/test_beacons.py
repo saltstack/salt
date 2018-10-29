@@ -129,7 +129,7 @@ class BeaconsTestCase(TestCase, LoaderModuleMockMixin):
                     self.assertDictEqual(beacons.enable(),
                                          {'comment': comm1, 'result': True})
 
-    def test_add_beacon_type(self):
+    def test_add_beacon_module(self):
         '''
         Test adding a beacon
         '''
@@ -147,16 +147,16 @@ class BeaconsTestCase(TestCase, LoaderModuleMockMixin):
                          {'complete': True,
                           'tag': '/salt/minion/minion_beacon_add_complete',
                           'beacons': {'watch_salt_master': [{'processes': {'salt-master': 'stopped'}},
-                                                            {'beacon_type': 'ps'}]}}]
+                                                            {'beacon_module': 'ps'}]}}]
 
         with patch.dict(beacons.__opts__, {'beacons': {}, 'sock_dir': SOCK_DIR}):
             mock = MagicMock(return_value=True)
             with patch.dict(beacons.__salt__, {'event.fire': mock}):
                 with patch.object(SaltEvent, 'get_event', side_effect=event_returns):
-                    self.assertDictEqual(beacons.add('watch_salt_master', [{'processes': {'salt-master': 'stopped'}}, {'beacon_type': 'ps'}]),
+                    self.assertDictEqual(beacons.add('watch_salt_master', [{'processes': {'salt-master': 'stopped'}}, {'beacon_module': 'ps'}]),
                                          {'comment': comm1, 'result': True})
 
-    def test_enable_beacon_type(self):
+    def test_enable_beacon_module(self):
         '''
         Test enabling beacons
         '''
@@ -165,7 +165,7 @@ class BeaconsTestCase(TestCase, LoaderModuleMockMixin):
                           'tag': '/salt/minion/minion_beacon_enabled_complete',
                           'beacons': {'enabled': True,
                                       'watch_salt_master': [{'processes': {'salt-master': 'stopped'}},
-                                                            {'beacon_type': 'ps'}]}}]
+                                                            {'beacon_module': 'ps'}]}}]
 
         with patch.dict(beacons.__opts__, {'beacons': {}, 'sock_dir': SOCK_DIR}):
             mock = MagicMock(return_value=True)
@@ -174,7 +174,7 @@ class BeaconsTestCase(TestCase, LoaderModuleMockMixin):
                     self.assertDictEqual(beacons.enable(),
                                          {'comment': comm1, 'result': True})
 
-    def test_delete_beacon_type(self):
+    def test_delete_beacon_module(self):
         '''
         Test deleting a beacon.
         '''
@@ -185,7 +185,7 @@ class BeaconsTestCase(TestCase, LoaderModuleMockMixin):
                           'beacons': {}},
                         ]
 
-        with patch.dict(beacons.__opts__, {'beacons': {'watch_salt_master': [{'processes': {'salt-master': 'stopped'}}, {'beacon_type': 'ps'}]}, 'sock_dir': SOCK_DIR}):
+        with patch.dict(beacons.__opts__, {'beacons': {'watch_salt_master': [{'processes': {'salt-master': 'stopped'}}, {'beacon_module': 'ps'}]}, 'sock_dir': SOCK_DIR}):
             mock = MagicMock(return_value=True)
             with patch.dict(beacons.__salt__, {'event.fire': mock}):
                 with patch.object(SaltEvent, 'get_event', side_effect=event_returns):

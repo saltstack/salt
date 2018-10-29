@@ -49,11 +49,11 @@ class BeaconsAddDeleteTest(ModuleCase):
         # save the results
         self.run_function('beacons.save')
 
-    def test_add_and_delete_beacon_type(self):
+    def test_add_and_delete_beacon_module(self):
         '''
         Test adding and deleting a beacon
         '''
-        _add = self.run_function('beacons.add', ['watch_apache', [{'processes': {'apache2': 'stopped'}}, {'beacon_type': 'ps'}]])
+        _add = self.run_function('beacons.add', ['watch_apache', [{'processes': {'apache2': 'stopped'}}, {'beacon_module': 'ps'}]])
         self.assertTrue(_add['result'])
 
         # save added beacon
@@ -187,7 +187,7 @@ class BeaconsWithBeaconTypeTest(ModuleCase):
         self.__class__.beacons_config_file_path = os.path.join(self.minion_conf_d_dir, 'beacons.conf')
         try:
             # Add beacon to disable
-            self.run_function('beacons.add', ['watch_apache', [{'processes': {'apache2': 'stopped'}}, {'beacon_type': 'ps'}]])
+            self.run_function('beacons.add', ['watch_apache', [{'processes': {'apache2': 'stopped'}}, {'beacon_module': 'ps'}]])
             self.run_function('beacons.save')
         except CommandExecutionError:
             self.skipTest('Unable to add beacon')
@@ -259,8 +259,8 @@ class BeaconsWithBeaconTypeTest(ModuleCase):
         # list beacons
         ret = self.run_function('beacons.list', return_yaml=False)
         _expected = {'watch_apache': [{'processes': {'apache2': 'stopped'}},
-                                      {'beacon_type': 'ps'}]}
-        _enabled_expected = {'watch_apache': [{'processes': {'apache2': 'stopped'}}, {'beacon_type': 'ps'}],
+                                      {'beacon_module': 'ps'}]}
+        _enabled_expected = {'watch_apache': [{'processes': {'apache2': 'stopped'}}, {'beacon_module': 'ps'}],
                              'enabled': True}
         if 'enabled' in ret:
             self.assertEqual(ret, _enabled_expected)

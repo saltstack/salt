@@ -144,11 +144,11 @@ def add(name, beacon_data, **kwargs):
         ret['comment'] = 'Beacon {0} is already configured.'.format(name)
         return ret
 
-    # Check to see if a beacon_type is specified, if so, verify it is
+    # Check to see if a beacon_module is specified, if so, verify it is
     # valid and available beacon type.
-    if any('beacon_type' in key for key in beacon_data):
-        res = next(value for value in beacon_data if 'beacon_type' in value)
-        beacon_name = res['beacon_type']
+    if any('beacon_module' in key for key in beacon_data):
+        res = next(value for value in beacon_data if 'beacon_module' in value)
+        beacon_name = res['beacon_module']
     else:
         beacon_name = name
 

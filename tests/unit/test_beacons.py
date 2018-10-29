@@ -30,15 +30,15 @@ class BeaconsTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {beacons: {}}
 
-    def test_beacon_type(self):
+    def test_beacon_module(self):
         '''
-        Test that beacon_type parameter for beacon configuration
+        Test that beacon_module parameter for beacon configuration
         '''
         mock_opts = salt.config.DEFAULT_MINION_OPTS
         mock_opts['id'] = 'minion'
         mock_opts['__role'] = 'minion'
         mock_opts['beacons'] = {'watch_apache': [{'processes': {'apache2': 'stopped'}},
-                                                 {'beacon_type': 'ps'}]}
+                                                 {'beacon_module': 'ps'}]}
         with patch.dict(beacons.__opts__, mock_opts):
             ret = salt.beacons.Beacon(mock_opts, []).process(mock_opts['beacons'], mock_opts['grains'])
             _expected = [{'tag': 'salt/beacon/minion/watch_apache/',
