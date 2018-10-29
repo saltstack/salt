@@ -40,11 +40,18 @@ except ImportError:
     HAS_WIN32 = False
 
 try:
+    import win32service
+    import win32serviceutil
+    import win32event
+    import servicemanager
     import win32api
     CODE_DIR = win32api.GetLongPathName(CODE_DIR)
+    HAS_WIN32 = True
 except ImportError:
-    pass
-
+    # Mock win32serviceutil object to avoid
+    # a stacktrace in the _ServiceManager class
+    win32serviceutil = Mock()
+    HAS_WIN32 = False
 
 logger = logging.getLogger(__name__)
 
