@@ -35,6 +35,7 @@ def __random_name(size=6):
         for x in range(size)
     )
 
+
 # Create the cloud instance name to be used throughout the tests
 INSTANCE_NAME = __random_name()
 PROVIDER_NAME = 'ec2'
@@ -46,6 +47,7 @@ class EC2Test(ShellCase):
     '''
     Integration tests for the EC2 cloud provider in Salt-Cloud
     '''
+
 
     def _installer_name(self):
         '''
@@ -111,10 +113,11 @@ class EC2Test(ShellCase):
         key = config[profile_str][PROVIDER_NAME]['key']
         key_name = config[profile_str][PROVIDER_NAME]['keyname']
         sec_group = config[profile_str][PROVIDER_NAME]['securitygroupname'][0]
+        subnet_id = config[profile_str][PROVIDER_NAME]['subnet_id']
         private_key = config[profile_str][PROVIDER_NAME]['private_key']
         location = config[profile_str][PROVIDER_NAME]['location']
 
-        conf_items = [id_, key, key_name, sec_group, private_key, location]
+        conf_items = [id_, key, key_name, sec_group, subnet_id, private_key, location]
         missing_conf_item = []
 
         for item in conf_items:
@@ -123,7 +126,7 @@ class EC2Test(ShellCase):
 
         if missing_conf_item:
             self.skipTest(
-                'An id, key, keyname, security group, private key, and location must '
+                'An id, key, keyname, security group, subnet id, private key, and location must '
                 'be provided to run these tests. One or more of these elements is '
                 'missing. Check tests/integration/files/conf/cloud.providers.d/{0}.conf'
                 .format(PROVIDER_NAME)
