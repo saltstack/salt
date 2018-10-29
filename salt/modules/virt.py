@@ -900,29 +900,40 @@ def _disk_profile(profile, hypervisor, disks=None, vm_name=None, image=None, poo
             if key not in disk:
                 disk[key] = val
 
-        base_dir = disk.get('pool', None)
-        if hypervisor in ['qemu', 'kvm']:
-            # Compute the base directory from the pool property. We may have either a path
-            # or a libvirt pool name there.
-            # If the pool is a known libvirt one with a target path, use it as target path
-            if not base_dir:
-                base_dir = _get_images_dir()
-            else:
-                if not base_dir.startswith('/'):
-                    # The pool seems not to be a path, lookup for pool infos
-                    pool = pool_info(base_dir, **kwargs)
-                    if not pool or not pool['target_path'] or pool['target_path'].startswith('/dev'):
-                        raise CommandExecutionError(
-                                    'Unable to create new disk {0}, specified pool {1} does not exist '
-                                    'or is unsupported'.format(disk['name'], base_dir))
-                    base_dir = pool['target_path']
-
-        # Compute the filename and source file properties if possible
-        if vm_name:
-            disk['filename'] = '{0}_{1}.{2}'.format(vm_name, disk['name'], disk['format'])
-            disk['source_file'] = os.path.join(base_dir, disk['filename'])
+        # We may have an already computed source_file (i.e. image not created by our module)
+        if 'source_file' in disk:
+            disk['filename'] = os.path.basename(disk['source_file'])
+        else:
+            _fill_disk_filename(vm_name, disk, hypervisor, **kwargs)
 
     return disklist
+
+
+def _fill_disk_filename(vm_name, disk, hypervisor, **kwargs):
+    '''
+    Compute the disk file name and update it in the disk value.
+    '''
+    base_dir = disk.get('pool', None)
+    if hypervisor in ['qemu', 'kvm']:
+        # Compute the base directory from the pool property. We may have either a path
+        # or a libvirt pool name there.
+        # If the pool is a known libvirt one with a target path, use it as target path
+        if not base_dir:
+            base_dir = _get_images_dir()
+        else:
+            if not base_dir.startswith('/'):
+                # The pool seems not to be a path, lookup for pool infos
+                pool = pool_info(base_dir, **kwargs)
+                if not pool or not pool['target_path'] or pool['target_path'].startswith('/dev'):
+                    raise CommandExecutionError(
+                                'Unable to create new disk {0}, specified pool {1} does not exist '
+                                'or is unsupported'.format(disk['name'], base_dir))
+                base_dir = pool['target_path']
+
+    # Compute the filename and source file properties if possible
+    if vm_name:
+        disk['filename'] = '{0}_{1}.{2}'.format(vm_name, disk['name'], disk['format'])
+        disk['source_file'] = os.path.join(base_dir, disk['filename'])
 
 
 def _complete_nics(interfaces, hypervisor, dmac=None):
@@ -1294,6 +1305,39 @@ def init(name,
         ``True`` to create a QCOW2 disk image with ``image`` as backing file. If ``False``
         the file pointed to by the ``image`` property will simply be copied. (Default: ``False``)
 
+<<<<<<< HEAD
+=======
+    hostname_property
+        When using ZFS volumes, setting this value to a ZFS property ID will make Salt store the name of the
+        virtual machine inside this property. (Default: ``None``)
+
+    sparse_volume
+        Boolean to specify whether to use a thin provisioned ZFS volume.
+
+        Example profile for a bhyve VM with two ZFS disks. The first is
+        cloned from the specified image. The second disk is a thin
+        provisioned volume.
+
+        .. code-block:: yaml
+
+            virt:
+              disk:
+                two_zvols:
+                  - system:
+                      image: zroot/bhyve/CentOS-7-x86_64-v1@v1.0.5
+                      hostname_property: virt:hostname
+                      pool: zroot/bhyve/guests
+                  - data:
+                      pool: tank/disks
+                      size: 20G
+                      hostname_property: virt:hostname
+                      sparse_volume: True
+
+    source_file
+        Absolute path to the disk image to use. Not to be confused with ``image`` parameter. This
+        parameter is useful to use disk images that are created outside of this module.
+
+>>>>>>> 148e60488e... virt: expose source_file disk property to user
     .. _init-graphics-def:
 
     .. rubric:: Graphics Definition
@@ -1433,7 +1477,10 @@ def init(name,
             else:
                 create_overlay = _disk.get('overlay_image', False)
 
-            img_dest = _qemu_image_create(_disk, create_overlay, saltenv)
+            if os.path.exists(_disk['source_file']):
+                img_dest = _disk['source_file']
+            else:
+                img_dest = _qemu_image_create(_disk, create_overlay, saltenv)
 
             # Seed only if there is an image specified
             if seed and _disk.get('image', None):
