@@ -18,6 +18,7 @@ Refer to :mod:`junos <salt.proxy.junos>` for information on connecting to junos 
 from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
+from functools import wraps
 
 try:
     from lxml import etree
@@ -67,6 +68,29 @@ def __virtual__():
     else:
         return (False, 'The junos module could not be loaded: '
                        'junos-eznc or jxmlease or proxy could not be loaded.')
+
+
+def timeoutDecorator(function):
+    @wraps(function)
+    def wrapper(*args, **kwargs):
+        if 'dev_timeout' in kwargs:
+            conn = __proxy__['junos.conn']()
+            restore_timeout = conn.timeout
+            conn.timeout = kwargs.pop('dev_timeout', None)
+            try:
+                result = function(*args, **kwargs)
+                conn.timeout = restore_timeout
+                return result
+            except Exception:
+                conn.timeout = restore_timeout
+                raise
+        else:
+            try:
+                return function(*args, **kwargs)
+            except Exception:
+                raise
+
+    return wrapper
 
 
 def facts_refresh():
@@ -122,6 +146,7 @@ def facts():
     return ret
 
 
+@timeoutDecorator
 def rpc(cmd=None, dest=None, **kwargs):
     '''
     This function executes the RPC provided as arguments on the junos device.
@@ -183,7 +208,6 @@ def rpc(cmd=None, dest=None, **kwargs):
                 op[key] = value
     else:
         op.update(kwargs)
-    op['dev_timeout'] = six.text_type(op.pop('dev_timeout', conn.timeout))
 
     if cmd in ['get-config', 'get_config']:
         filter_reply = None
@@ -204,7 +228,6 @@ def rpc(cmd=None, dest=None, **kwargs):
             ret['out'] = False
             return ret
     else:
-        op['dev_timeout'] = int(op['dev_timeout'])
         if 'filter' in op:
             log.warning(
                 'Filter ignored as it is only used with "get-config" rpc')
@@ -242,6 +265,7 @@ def rpc(cmd=None, dest=None, **kwargs):
     return ret
 
 
+@timeoutDecorator
 def set_hostname(hostname=None, **kwargs):
     '''
     Set the device's hostname
@@ -281,12 +305,6 @@ def set_hostname(hostname=None, **kwargs):
     else:
         op.update(kwargs)
 
-    # Caching value to revert back
-    prev_timeout = conn.timeout
-    # If timeout is given
-    if 'dev_timeout' in op:
-        conn.timeout = op['dev_timeout']
-
     # Added to recent versions of JunOs
     # Use text format instead
     set_string = 'set system host-name {0}'.format(hostname)
@@ -322,12 +340,10 @@ def set_hostname(hostname=None, **kwargs):
             'message'] = 'Successfully loaded host-name but pre-commit check failed.'
         conn.cu.rollback()
 
-    # Reverting timeout back to previous value
-    conn.timeout = prev_timeout
-
     return ret
 
 
+@timeoutDecorator
 def commit(**kwargs):
     '''
     To commit the changes loaded in the candidate configuration.
@@ -380,11 +396,6 @@ def commit(**kwargs):
         op.update(kwargs)
 
     op['detail'] = op.get('detail', False)
-    # Caching value to revert back
-    prev_timeout = conn.timeout
-    # If timeout is given
-    if 'dev_timeout' in op:
-        conn.timeout = op['dev_timeout']
 
     try:
         commit_ok = conn.cu.commit_check()
@@ -416,18 +427,19 @@ def commit(**kwargs):
         ret['message'] = 'Pre-commit check failed.'
         conn.cu.rollback()
 
-    # Reverting timeout back to previous value
-    conn.timeout = prev_timeout
-
     return ret
 
 
+@timeoutDecorator
 def rollback(**kwargs):
     '''
     Roll back the last committed configuration changes and commit
 
     id : 0
         The rollback ID value (0-49)
+
+    dev_timeout : 30
+        The NETCONF RPC timeout (in seconds)
 
     comment
       Provide a comment for the commit
@@ -540,6 +552,7 @@ def diff(**kwargs):
     return ret
 
 
+@timeoutDecorator
 def ping(dest_ip=None, **kwargs):
     '''
     Send a ping RPC to a device
@@ -602,6 +615,7 @@ def ping(dest_ip=None, **kwargs):
     return ret
 
 
+@timeoutDecorator
 def cli(command=None, **kwargs):
     '''
     Executes the CLI commands and returns the output in specified format. \
@@ -612,6 +626,9 @@ def cli(command=None, **kwargs):
 
     format : text
         Format in which to get the CLI output (either ``text`` or ``xml``)
+
+    dev_timeout : 30
+        The NETCONF RPC timeout (in seconds)
 
     dest
         Destination file where the RPC output is stored. Note that the file
@@ -741,6 +758,7 @@ def shutdown(**kwargs):
     return ret
 
 
+@timeoutDecorator
 def install_config(path=None, **kwargs):
     '''
     Installs the given configuration file into the candidate configuration.
@@ -831,12 +849,6 @@ def install_config(path=None, **kwargs):
                 op.update(kwargs['__pub_arg'][-1])
     else:
         op.update(kwargs)
-
-    # Caching value to revert back
-    prev_timeout = conn.timeout
-    # If timeout is given
-    if 'dev_timeout' in op:
-        conn.timeout = op['dev_timeout']
 
     template_vars = dict()
     if "template_vars" in op:
@@ -945,9 +957,6 @@ def install_config(path=None, **kwargs):
                 exception)
             ret['out'] = False
 
-    # Reverting timeout back to previous value
-    conn.timeout = prev_timeout
-
     return ret
 
 
@@ -974,6 +983,7 @@ def zeroize():
     return ret
 
 
+@timeoutDecorator
 def install_os(path=None, **kwargs):
     '''
     Installs the given image on the device. After the installation is complete\
@@ -1035,10 +1045,6 @@ def install_os(path=None, **kwargs):
     else:
         op.update(kwargs)
 
-    # If timeout is given
-    if 'dev_timeout' in op:
-        conn.timeout = op['dev_timeout']
-
     try:
         conn.sw.install(path, progress=True)
         ret['message'] = 'Installed the os.'
@@ -1059,6 +1065,7 @@ def install_os(path=None, **kwargs):
             ret['out'] = False
             return ret
         ret['message'] = 'Successfully installed and rebooted!'
+
     return ret
 
 
@@ -1106,6 +1113,7 @@ def file_copy(src=None, dest=None):
     except Exception as exception:
         ret['message'] = 'Could not copy file : "{0}"'.format(exception)
         ret['out'] = False
+
     return ret
 
 
@@ -1281,7 +1289,7 @@ def load(path=None, **kwargs):
     except Exception as exception:
         ret['message'] = 'Could not load configuration due to : "{0}"'.format(
             exception)
-        ret['format'] = template_format
+        ret['format'] = op['format']
         ret['out'] = False
         return ret
     finally:
