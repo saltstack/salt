@@ -1659,8 +1659,15 @@ def list_repo_pkgs(*args, **kwargs):  # pylint: disable=unused-import
         salt '*' pkg.list_repo_pkgs
         salt '*' pkg.list_repo_pkgs foo bar baz
     '''
+    if args:
+        # get only information about packages in args
+        cmd = ['apt-cache', 'show' ] + [arg for arg in args]
+    else:
+        # get information about all available packages
+        cmd = ['apt-cache', 'show', '.']
+
     out = __salt__['cmd.run_all'](
-        ['apt-cache', 'dump'],
+        cmd,
         output_loglevel='trace',
         ignore_retcode=True,
         python_shell=False
@@ -1671,6 +1678,8 @@ def list_repo_pkgs(*args, **kwargs):  # pylint: disable=unused-import
     skip_pkg = False
     new_pkg = re.compile('^Package: (.+)')
     for line in salt.utils.itertools.split(out['stdout'], '\n'):
+        if len(line.strip()) == 0:
+            continue
         try:
             cur_pkg = new_pkg.match(line).group(1)
         except AttributeError:
@@ -1678,22 +1687,10 @@ def list_repo_pkgs(*args, **kwargs):  # pylint: disable=unused-import
         else:
             if cur_pkg != pkg_name:
                 pkg_name = cur_pkg
-                if args:
-                    for arg in args:
-                        if fnmatch.fnmatch(pkg_name, arg):
-                            skip_pkg = False
-                            break
-                    else:
-                        # Package doesn't match any of the passed args, skip it
-                        skip_pkg = True
-                else:
-                    # No args passed, we're getting all packages
-                    skip_pkg = False
                 continue
-        if not skip_pkg:
-            comps = line.strip().split(None, 1)
-            if comps[0] == 'Version:':
-                ret.setdefault(pkg_name, []).append(comps[1])
+        comps = line.strip().split(None, 1)
+        if comps[0] == 'Version:':
+            ret.setdefault(pkg_name, []).append(comps[1])
 
     return ret
 
