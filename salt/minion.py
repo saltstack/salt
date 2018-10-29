@@ -3314,8 +3314,9 @@ def _metaproxy_call(opts, fn_name):
     try:
         metaproxy_name = opts['metaproxy']
     except KeyError:
+        metaproxy_name = 'proxy'
         errmsg = 'No metaproxy key found in opts for id ' + opts['id'] + '. ' + \
-                 'Check your opts configuration and contents.  Salt-proxy aborted.'
+                 'Defaulting to standard proxy minion'
         log.error(errmsg)
 
     metaproxy_fn = metaproxy_name + '.' + fn_name
