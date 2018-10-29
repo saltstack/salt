@@ -1698,10 +1698,10 @@ def copy_security(source,
                   copy_group=True,
                   copy_dacl=True,
                   copy_sacl=True):
-    '''
+    r'''
     Copy the security descriptor of the Source to the Target. You can specify a
-    specific portion of the security descripto to copy using one of the `copy_*`
-    parameters.
+    specific portion of the security descriptor to copy using one of the
+    `copy_*` parameters.
 
     .. note::
         At least one `copy_*` parameter must be ``True``
