@@ -223,6 +223,7 @@ verifier:
   sudo: true
   run_destructive: true
   transport: zeromq
+  enable_filenames: true
   types:
     - ssh
   xml: /tmp/xml-unittests-output/
