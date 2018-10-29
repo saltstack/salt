@@ -237,3 +237,15 @@ class LibcloudDnsModuleTestCase(TestCase, LoaderModuleMockMixin):
                 delete_zone.assert_called_with(test_zone)
                 get_zone.assert_called_once()
                 get_zone.assert_called_with('12345')
+
+    def test_delete_record(self):
+        test_record = TestRecord()
+        with patch('tests.unit.modules.test_libcloud_dns.MockDNSDriver.get_record', return_value=test_record) as get_record:
+            with patch('tests.unit.modules.test_libcloud_dns.MockDNSDriver.delete_record',
+                       return_value=True) as delete_record:
+                result = libcloud_dns.delete_record('12345', '45678', 'test')
+                self.assertTrue(result)
+                delete_record.assert_called_once()
+                delete_record.assert_called_with(test_record)
+                get_record.assert_called_once()
+                get_record.assert_called_with(zone_id='12345', record_id='45678')
