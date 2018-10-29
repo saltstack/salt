@@ -110,7 +110,7 @@ class Saltutil(TestCase, LoaderModuleMockMixin):
         state_id = 'somename'
         state_result = {'changes': {'modules': ['modules.file'],
                                     'states': ['states.saltutil', 'states.ssh_auth']},
-                        'comment': 'Updated modules. Updated states.',
+                        'comment': 'Sync performed',
                         'name': 'somename',
                         'result': True
                        }

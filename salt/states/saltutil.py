@@ -74,7 +74,7 @@ def sync_all(name, **kwargs):
         for key, value in sync_status.items():
             if value:
                 ret['changes'][key] = value
-                ret['comment'] += "Updated {0}. ".format(key)
+                ret['comment'] = "Sync performed"
     except Exception as e:
         log.error("Failed to run saltutil.sync_all: %s", e)
         ret['result'] = False
@@ -83,7 +83,7 @@ def sync_all(name, **kwargs):
 
     if not ret['changes']:
         ret['comment'] = "No updates to sync"
-    ret['comment'] = ret['comment'].strip()
+
     return ret
 
 
