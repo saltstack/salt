@@ -1004,31 +1004,42 @@ def _disk_profile(profile, hypervisor, disks=None, vm_name=None, image=None, poo
             if key not in disk:
                 disk[key] = val
 
-        base_dir = disk.get('pool', None)
-        if hypervisor in ['qemu', 'kvm']:
-            # Compute the base directory from the pool property. We may have either a path
-            # or a libvirt pool name there.
-            # If the pool is a known libvirt one with a target path, use it as target path
-            if not base_dir:
-                base_dir = _get_images_dir()
-            else:
-                if not base_dir.startswith('/'):
-                    # The pool seems not to be a path, lookup for pool infos
-                    pool = pool_info(base_dir, **kwargs)
-                    if not pool or not pool['target_path'] or pool['target_path'].startswith('/dev'):
-                        raise CommandExecutionError(
-                                    'Unable to create new disk {0}, specified pool {1} does not exist '
-                                    'or is unsupported'.format(disk['name'], base_dir))
-                    base_dir = pool['target_path']
-        if hypervisor == 'bhyve' and vm_name:
-            disk['filename'] = '{0}.{1}'.format(vm_name, disk['name'])
-            disk['source_file'] = os.path.join('/dev/zvol', base_dir or '', disk['filename'])
-        elif vm_name:
-            # Compute the filename and source file properties if possible
-            disk['filename'] = '{0}_{1}.{2}'.format(vm_name, disk['name'], disk['format'])
-            disk['source_file'] = os.path.join(base_dir, disk['filename'])
+        # We may have an already computed source_file (i.e. image not created by our module)
+        if 'source_file' in disk:
+            disk['filename'] = os.path.basename(disk['source_file'])
+        else:
+            _fill_disk_filename(vm_name, disk, hypervisor, **kwargs)
 
     return disklist
+
+
+def _fill_disk_filename(vm_name, disk, hypervisor, **kwargs):
+    '''
+    Compute the disk file name and update it in the disk value.
+    '''
+    base_dir = disk.get('pool', None)
+    if hypervisor in ['qemu', 'kvm']:
+        # Compute the base directory from the pool property. We may have either a path
+        # or a libvirt pool name there.
+        # If the pool is a known libvirt one with a target path, use it as target path
+        if not base_dir:
+            base_dir = _get_images_dir()
+        else:
+            if not base_dir.startswith('/'):
+                # The pool seems not to be a path, lookup for pool infos
+                pool = pool_info(base_dir, **kwargs)
+                if not pool or not pool['target_path'] or pool['target_path'].startswith('/dev'):
+                    raise CommandExecutionError(
+                                'Unable to create new disk {0}, specified pool {1} does not exist '
+                                'or is unsupported'.format(disk['name'], base_dir))
+                base_dir = pool['target_path']
+    if hypervisor == 'bhyve' and vm_name:
+        disk['filename'] = '{0}.{1}'.format(vm_name, disk['name'])
+        disk['source_file'] = os.path.join('/dev/zvol', base_dir or '', disk['filename'])
+    elif vm_name:
+        # Compute the filename and source file properties if possible
+        disk['filename'] = '{0}_{1}.{2}'.format(vm_name, disk['name'], disk['format'])
+        disk['source_file'] = os.path.join(base_dir, disk['filename'])
 
 
 def _complete_nics(interfaces, hypervisor, dmac=None):
@@ -1434,6 +1445,10 @@ def init(name,
                       hostname_property: virt:hostname
                       sparse_volume: True
 
+    source_file
+        Absolute path to the disk image to use. Not to be confused with ``image`` parameter. This
+        parameter is useful to use disk images that are created outside of this module.
+
     .. _init-graphics-def:
 
     .. rubric:: Graphics Definition
@@ -1583,7 +1598,10 @@ def init(name,
             else:
                 create_overlay = _disk.get('overlay_image', False)
 
-            img_dest = _qemu_image_create(_disk, create_overlay, saltenv)
+            if os.path.exists(_disk['source_file']):
+                img_dest = _disk['source_file']
+            else:
+                img_dest = _qemu_image_create(_disk, create_overlay, saltenv)
 
             # Seed only if there is an image specified
             if seed and _disk.get('image', None):
