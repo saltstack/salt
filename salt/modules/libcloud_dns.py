@@ -187,7 +187,7 @@ def get_record(zone_id, record_id, profile):
     return _simple_record(conn.get_record(zone_id, record_id))
 
 
-def create_zone(domain, profile, type='master', ttl=None, extra={}):
+def create_zone(domain, profile, type='master', ttl=None, extra=None):
     '''
     Create a new zone.
 
@@ -217,7 +217,7 @@ def create_zone(domain, profile, type='master', ttl=None, extra={}):
     return _simple_zone(zone)
 
 
-def update_zone(zone_id, domain, profile, type='master', ttl=None):
+def update_zone(zone_id, domain, profile, type='master', ttl=None, extra=None):
     '''
     Update an existing zone.
 
@@ -244,7 +244,7 @@ def update_zone(zone_id, domain, profile, type='master', ttl=None):
     '''
     conn = _get_driver(profile=profile)
     zone = conn.get_zone(zone_id)
-    return _simple_zone(conn.update_zone(zone=zone, domain=domain, type=type, ttl=ttl))
+    return _simple_zone(conn.update_zone(zone=zone, domain=domain, type=type, ttl=ttl, extra=extra))
 
 
 def create_record(name, zone_id, type, data, profile):
