@@ -782,8 +782,6 @@ def target_load(self, load):
     # a "salt -G 'grain_key:grain_val' test.ping" will invoke some
     # pre-processing on the master and this minion should not see the
     # publication if the master does not determine that it should.
-    print('My ID is: {}'.format(self.opts['id']))
-    print('tgt_type {}'.format(load.get('tgt_type', 'No target type')))
     if 'tgt_type' in load:
         match_func = self.matchers.get('{0}_match.match'.format(load['tgt_type']), None)
         if match_func is None:
