@@ -1,23 +1,18 @@
+# -*- coding: utf-8 -*-
 #
 # Proxy minion metaproxy modules
 #
 from __future__ import absolute_import, print_function, with_statement, unicode_literals
 import os
+import signal
+import sys
 import types
 import logging
+import threading
 import traceback
 
 # Import Salt Libs
-import salt.serializers.msgpack
-import salt.minion
-import salt.defaults.exitcodes
-# pylint: disable=import-error,no-name-in-module,redefined-builtin
-from salt.ext import six
-from salt.ext.six.moves import range
-from salt.utils.zeromq import zmq, ZMQDefaultLoop, install_zmq, ZMQ_VERSION_INFO
-from salt.minion import ProxyMinion
-
-
+# pylint: disable=3rd-party-module-not-gated
 import salt
 import salt.client
 import salt.crypt
@@ -46,6 +41,9 @@ import salt.utils.zeromq
 import salt.defaults.exitcodes
 import salt.cli.daemons
 import salt.log.setup
+import salt.serializers.msgpack
+import salt.minion
+import salt.defaults.exitcodes
 
 import salt.utils.dictupdate
 from salt.utils.event import tagify
@@ -55,12 +53,20 @@ from salt.exceptions import (
     SaltInvocationError,
     SaltSystemExit,
 )
+from salt.ext import six
+from salt.ext.six.moves import range
+from salt.minion import ProxyMinion
+
+from salt.defaults import DEFAULT_TARGET_DELIM
+from salt.utils.process import (default_signals,
+                                SignalHandlingMultiprocessingProcess)
 
 
 import tornado.gen  # pylint: disable=F0401
 import tornado.ioloop  # pylint: disable=F0401
 
 log = logging.getLogger(__name__)
+
 
 def post_master_init(self, master):
 

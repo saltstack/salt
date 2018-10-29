@@ -28,4 +28,3 @@ def match(tgt, delimiter=DEFAULT_TARGET_DELIM, opts=None):
     return salt.utils.data.subdict_match(
         opts['grains'], tgt, delimiter=delimiter
     )
-

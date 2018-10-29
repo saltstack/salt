@@ -3318,8 +3318,6 @@ def _metaproxy_call(opts, fn_name):
                  'Check your opts configuration and contents.  Salt-proxy aborted.'
         log.error(errmsg)
 
-
-
     metaproxy_fn = metaproxy_name + '.' + fn_name
     return metaproxy[metaproxy_fn]
 
@@ -3349,7 +3347,6 @@ class ProxyMinion(Minion):
         mp_call = _metaproxy_call(self.opts, 'post_master_init')
         return mp_call(self, master)
 
-
     def _target_load(self, load):
         '''
         Verify that the publication is valid and applies to this minion
@@ -3357,11 +3354,9 @@ class ProxyMinion(Minion):
         mp_call = _metaproxy_call(self.opts, 'target_load')
         return mp_call(self, load)
 
-
     def _handle_payload(self, payload):
         mp_call = _metaproxy_call(self.opts, 'handle_payload')
         return mp_call(self, payload)
-
 
     @tornado.gen.coroutine
     def _handle_decoded_payload(self, data):

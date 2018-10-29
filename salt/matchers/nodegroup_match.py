@@ -25,6 +25,6 @@ def match(tgt, nodegroups=None, opts=None):
     if tgt in nodegroups:
         matchers = salt.loader.matchers(opts)
         return matchers['compound_match.match'](
-            salt.utils.minions.nodegroup_comp(tgt, nodegroups, opts=opts)
+            salt.utils.minions.nodegroup_comp(tgt, nodegroups)
         )
     return False
