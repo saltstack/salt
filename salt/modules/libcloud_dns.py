@@ -236,6 +236,9 @@ def update_zone(zone_id, domain, profile, type='master', ttl=None, extra=None):
     :param ttl: TTL for new records. (optional)
     :type  ttl: ``int``
 
+    :param extra: Extra data (optional)
+    :type  extra: ``dict``
+
     CLI Example:
 
     .. code-block:: bash
@@ -247,7 +250,7 @@ def update_zone(zone_id, domain, profile, type='master', ttl=None, extra=None):
     return _simple_zone(conn.update_zone(zone=zone, domain=domain, type=type, ttl=ttl, extra=extra))
 
 
-def create_record(name, zone_id, type, data, profile):
+def create_record(name, zone_id, type, data, profile, extra=None):
     '''
     Create a new record.
 
@@ -269,6 +272,9 @@ def create_record(name, zone_id, type, data, profile):
     :param profile: The profile key
     :type  profile: ``str``
 
+    :param extra: Extra data (optional)
+    :type  extra: ``dict``
+
     CLI Example:
 
     .. code-block:: bash
@@ -278,7 +284,8 @@ def create_record(name, zone_id, type, data, profile):
     conn = _get_driver(profile=profile)
     record_type = _string_to_record_type(type)
     zone = conn.get_zone(zone_id)
-    return _simple_record(conn.create_record(name, zone, record_type, data))
+    return _simple_record(conn.create_record(name=name, zone=zone,
+                                             type=record_type, data=data, extra=extra))
 
 
 def delete_zone(zone_id, profile):

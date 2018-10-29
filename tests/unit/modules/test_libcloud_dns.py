@@ -211,3 +211,17 @@ class LibcloudDnsModuleTestCase(TestCase, LoaderModuleMockMixin):
                 update_zone.assert_called_with(zone=test_zone, domain='test.com', type='slave', ttl=400, extra={'extra': 'data'})
                 get_zone.assert_called_once()
                 get_zone.assert_called_with('12345')
+
+    def test_create_record(self):
+        test_zone = TestZone()
+        test_record = TestRecord()
+        with patch('tests.unit.modules.test_libcloud_dns.MockDNSDriver.get_zone', return_value=test_zone) as get_zone:
+            with patch('tests.unit.modules.test_libcloud_dns.MockDNSDriver.create_record',
+                       return_value=test_record) as create_record:
+                record = libcloud_dns.create_record('www', '12345', 'A', '1.2.3.4', 'test', extra={'extra': 'data'})
+                self.assertEqual(record, _DICT_TEST_RECORD)
+                create_record.assert_called_once()
+                create_record.assert_called_with(name='www', zone=test_zone, type='A', data='1.2.3.4',
+                                               extra={'extra': 'data'})
+                get_zone.assert_called_once()
+                get_zone.assert_called_with('12345')
