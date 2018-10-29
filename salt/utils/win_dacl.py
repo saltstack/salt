@@ -1432,7 +1432,7 @@ def set_permissions(obj_name,
         obj_dacl = dacl(obj_type=obj_type)
     else:
         obj_dacl = dacl(obj_name, obj_type)
-        obj_dacl.re_ace(principal, access_mode)
+        obj_dacl.rm_ace(principal, access_mode)
 
     obj_dacl.add_ace(principal, access_mode, permissions, applies_to)
 
