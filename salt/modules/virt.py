@@ -1539,8 +1539,13 @@ def _disks_equal(disk1, disk2):
     '''
     Test if two disk elements should be considered like the same device
     '''
+    target1 = disk1.find('target')
+    target2 = disk2.find('target')
+
     return ElementTree.tostring(disk1.find('source')) == \
-        ElementTree.tostring(disk2.find('source'))
+        ElementTree.tostring(disk2.find('source')) and \
+        target1 is not None and target2 is not None and \
+        target1.get('bus') == target2.get('bus')
 
 
 def _nics_equal(nic1, nic2):
