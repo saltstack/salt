@@ -34,14 +34,14 @@ class EngineTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {engines: {}}
 
-    def test_engine_type(self):
+    def test_engine_module(self):
         '''
         Test
         '''
         mock_opts = salt.config.DEFAULT_MINION_OPTS
         mock_opts['__role'] = 'minion'
-        mock_opts['engines'] = [{'test_one': {'engine_type': 'test'}},
-                                {'test_two': {'engine_type': 'test'}}]
+        mock_opts['engines'] = [{'test_one': {'engine_module': 'test'}},
+                                {'test_two': {'engine_module': 'test'}}]
 
         process_manager = salt.utils.process.ProcessManager()
         with patch.dict(engines.__opts__, mock_opts):

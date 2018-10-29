@@ -258,7 +258,7 @@ Enhancements to Engines
 =======================
 
 Multiple copies of a particular Salt engine can be configured by including
-the ``engine_type`` parameter in the engine configuration.
+the ``engine_module`` parameter in the engine configuration.
 
 .. code-block:: yaml
 
@@ -267,12 +267,12 @@ the ``engine_type`` parameter in the engine configuration.
          host: production_log.my_network.com
          port: 5959
          proto: tcp
-         engine_type: logstash
+         engine_module: logstash
      - develop_logstash:
          host: develop_log.my_network.com
          port: 5959
          proto: tcp
-         engine_type: logstash
+         engine_module: logstash
 
 Salt Cloud Features
 ===================
