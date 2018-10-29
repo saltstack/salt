@@ -34,6 +34,7 @@ from __future__ import absolute_import, unicode_literals, print_function
 import logging
 
 # Import salt libs
+import salt.utils.args
 import salt.utils.compat
 from salt.utils.versions import LooseVersion as _LooseVersion
 
@@ -380,7 +381,7 @@ def extra(method, profile, **libcloud_kwargs):
 
         salt myminion libcloud_dns.extra ex_get_permissions google container_name=my_container object_name=me.jpg --out=yaml
     '''
-    _sanitize_kwargs(libcloud_kwargs)
+    salt.utils.args.clean_kwargs(**libcloud_kwargs)
     conn = _get_driver(profile=profile)
     connection_method = getattr(conn, method)
     return connection_method(**libcloud_kwargs)

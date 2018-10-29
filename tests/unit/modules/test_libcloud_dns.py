@@ -55,6 +55,12 @@ class MockDNSDriver(object):
     def delete_record(self, record):
         raise NotImplementedError()
 
+    def export_zone_to_bind_format(self, zone):
+        raise NotImplementedError()
+
+    def ex_foo(self, arg1, kwarg2=None):
+        raise NotImplementedError()
+
 
 class TestZone(object):
     '''
@@ -249,3 +255,22 @@ class LibcloudDnsModuleTestCase(TestCase, LoaderModuleMockMixin):
                 delete_record.assert_called_with(test_record)
                 get_record.assert_called_once()
                 get_record.assert_called_with(zone_id='12345', record_id='45678')
+
+    def test_get_bind_data(self):
+        test_zone = TestZone()
+        with patch('tests.unit.modules.test_libcloud_dns.MockDNSDriver.get_zone', return_value=test_zone) as get_zone:
+            with patch('tests.unit.modules.test_libcloud_dns.MockDNSDriver.export_zone_to_bind_format',
+                       return_value='test') as get_bind_data:
+                result = libcloud_dns.get_bind_data('12345', 'test')
+                self.assertEqual(result, 'test')
+                get_bind_data.assert_called_once()
+                get_bind_data.assert_called_with(test_zone)
+                get_zone.assert_called_once()
+                get_zone.assert_called_with('12345')
+
+    def test_extra(self):
+        with patch('tests.unit.modules.test_libcloud_dns.MockDNSDriver.ex_foo',
+                   return_value='test') as ex_foo:
+            result = libcloud_dns.extra('ex_foo', 'test', arg1=1, kwarg2=2)
+            ex_foo.assert_called_once()
+            ex_foo.assert_called_with(arg1=1, kwarg2=2)
