@@ -187,7 +187,7 @@ def get_record(zone_id, record_id, profile):
     return _simple_record(conn.get_record(zone_id, record_id))
 
 
-def create_zone(domain, profile, type='master', ttl=None):
+def create_zone(domain, profile, type='master', ttl=None, extra={}):
     '''
     Create a new zone.
 
@@ -203,6 +203,9 @@ def create_zone(domain, profile, type='master', ttl=None):
     :param ttl: TTL for new records. (optional)
     :type  ttl: ``int``
 
+    :param extra: Extra data (optional)
+    :type  extra: ``dict``
+
     CLI Example:
 
     .. code-block:: bash
@@ -210,7 +213,7 @@ def create_zone(domain, profile, type='master', ttl=None):
         salt myminion libcloud_dns.create_zone google.com profile1
     '''
     conn = _get_driver(profile=profile)
-    zone = conn.create_record(domain, type=type, ttl=ttl)
+    zone = conn.create_zone(domain, type=type, ttl=ttl, extra=extra)
     return _simple_zone(zone)
 
 

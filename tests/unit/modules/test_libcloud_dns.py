@@ -199,4 +199,4 @@ class LibcloudDnsModuleTestCase(TestCase, LoaderModuleMockMixin):
             zone = libcloud_dns.create_zone('test.com', 'test', type='slave', ttl=400, extra={'extra': 'data'})
             self.assertEqual(zone, _DICT_TEST_ZONE)
             create_zone.assert_called_once()
-            create_zone.assert_called_with('test.com', 'slave', 400, {'extra': 'data'})
+            create_zone.assert_called_with('test.com', type='slave', ttl=400, extra={'extra': 'data'})
