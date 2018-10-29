@@ -47,10 +47,10 @@ def start_engines(opts, proc_mgr, proxy=None):
         else:
             engine_opts = None
         engine_name = None
-        if engine_opts is not None and 'engine_type' in engine_opts:
-            fun = '{0}.start'.format(engine_opts['engine_type'])
+        if engine_opts is not None and 'engine_module' in engine_opts:
+            fun = '{0}.start'.format(engine_opts['engine_module'])
             engine_name = engine
-            del engine_opts['engine_type']
+            del engine_opts['engine_module']
         else:
             fun = '{0}.start'.format(engine)
         if fun in engines:
