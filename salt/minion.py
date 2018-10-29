@@ -87,6 +87,7 @@ import salt.utils.schedule
 import salt.utils.ssdp
 import salt.utils.user
 import salt.utils.zeromq
+import salt.defaults.events
 import salt.defaults.exitcodes
 import salt.cli.daemons
 import salt.log.setup
@@ -2198,7 +2199,7 @@ class Minion(MinionBase):
                 ).compile_pillar()
                 if notify:
                     evt = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
-                    evt.fire_event({'complete': True}, tag='/salt/minion/minion_pillar_complete')
+                    evt.fire_event({'complete': True}, tag=salt.defaults.events.EV_PILLAR_COMPLETE)
             except SaltClientError:
                 # Do not exit if a pillar refresh fails.
                 log.error('Pillar data could not be refreshed. '

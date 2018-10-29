@@ -22,8 +22,8 @@ from zipimport import zipimporter
 
 # Import salt libs
 import salt.config
+import salt.defaults.events
 import salt.defaults.exitcodes
-import salt.events
 import salt.syspaths
 import salt.utils.args
 import salt.utils.context
@@ -263,7 +263,7 @@ def minion_mods(
 
     if notify:
         evt = salt.utils.event.get_event('minion', opts=opts, listen=False)
-        evt.fire_event({'complete': True}, tag=salt.events.MOD_COMPLETE)
+        evt.fire_event({'complete': True}, tag=salt.defaults.events.EV_MOD_COMPLETE)
 
     return ret
 

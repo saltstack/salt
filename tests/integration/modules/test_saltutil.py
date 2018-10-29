@@ -18,11 +18,10 @@ from tests.support.unit import skipIf
 
 # Import Salt Libs
 import salt.config
+import salt.defaults.events
 import salt.utils.event
 import salt.utils.files
 import salt.utils.stringutils
-
-import salt.events
 
 
 class SaltUtilModuleTest(ModuleCase):
@@ -266,7 +265,7 @@ class SaltUtilSyncPillarTest(ModuleCase):
                      '''))
 
         opts = self.run_function('test.get_opts')
-        wait = self.WaitForEvent(opts, salt.events.PILLAR_COMPLETE)
+        wait = self.WaitForEvent(opts, salt.defaults.events.EV_PILLAR_COMPLETE)
         wait.start()
         self.run_function('saltutil.refresh_pillar', async=False)
         while wait.is_alive():
