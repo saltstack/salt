@@ -102,7 +102,10 @@ class BotoCloudTrailTestCaseBase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
         self.opts = opts = salt.config.DEFAULT_MINION_OPTS
-        utils = salt.loader.utils(opts, whitelist=['boto3'], context={})
+        utils = salt.loader.utils(
+            opts,
+            whitelist=['boto3', 'args', 'systemd', 'path', 'platform'],
+            context={})
         return {
             boto_cloudtrail: {
                 '__utils__': utils,
