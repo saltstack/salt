@@ -6,6 +6,8 @@ After=network.target
 LimitNOFILE=16384
 Type=notify
 NotifyAccess=all
+StandardOutput=null                                                                                                     
+StandardError=null 
 ExecStart=/usr/bin/salt-master
 
 [Install]
