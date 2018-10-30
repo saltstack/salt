@@ -128,7 +128,7 @@ def zone_absent(domain, profile):
             return state_result(result, 'Deleted zone', domain)
 
 
-def record_present(name, zone, type, data, profile):
+def record_present(name, zone, type, data, profile, extra=None):
     '''
     Ensures a record is present.
 
@@ -149,6 +149,9 @@ def record_present(name, zone, type, data, profile):
 
     :param profile: The profile key
     :type  profile: ``str``
+
+    :param extra: Extra data (optional)
+    :type  extra: ``dict``
     '''
     zones = __salt__['libcloud_dns.list_zones'](profile)
     try:
@@ -166,7 +169,7 @@ def record_present(name, zone, type, data, profile):
         else:
             result = __salt__['libcloud_dns.create_record'](
                 name, matching_zone['id'],
-                type, data, profile)
+                type, data, profile, extra=extra)
             return state_result(True, 'Created new record', name, result)
     else:
         return state_result(True, 'Record already exists', name)
