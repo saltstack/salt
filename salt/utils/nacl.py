@@ -402,3 +402,5 @@ def secretbox_decrypt(data, **kwargs):
 
     key = _get_sk(**kwargs)
     b = libnacl.secret.SecretBox(key=key)
+
+    return b.decrypt(base64.b64decode(data))
