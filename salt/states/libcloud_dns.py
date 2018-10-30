@@ -72,7 +72,7 @@ def state_result(result, message, name, changes=None):
             'changes': changes}
 
 
-def zone_present(domain, type, profile):
+def zone_present(domain, type, profile, ttl=None, extra=None):
     '''
     Ensures a record is present.
 
@@ -84,6 +84,12 @@ def zone_present(domain, type, profile):
 
     :param profile: The profile key
     :type  profile: ``str``
+
+    :param ttl: TTL for new records. (optional)
+    :type  ttl: ``int``
+
+    :param extra: Extra data (optional)
+    :type  extra: ``dict``
     '''
     zones = __salt__['libcloud_dns.list_zones'](profile)
     if not type:
@@ -92,7 +98,8 @@ def zone_present(domain, type, profile):
     if len(matching_zone) > 0:
         return state_result(True, 'Zone already exists', domain)
     else:
-        result = __salt__['libcloud_dns.create_zone'](domain, profile, type)
+        result = __salt__['libcloud_dns.create_zone'](
+            domain=domain, profile=profile, type=type, ttl=ttl, extra=extra)
         return state_result(True, 'Created new zone', domain, result)
 
 
