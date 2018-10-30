@@ -21,7 +21,6 @@ from random import randint, shuffle
 from stat import S_IMODE
 import salt.serializers.msgpack
 from binascii import crc32
-
 # Import Salt Libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 from salt.ext import six
@@ -2781,7 +2780,6 @@ class Minion(MinionBase):
         # pre-processing on the master and this minion should not see the
         # publication if the master does not determine that it should.
 
-        print('tgt_type {}'.format(load.get('tgt_type', 'No target type')))
         if 'tgt_type' in load:
             match_func = self.matchers.get('{0}_match.match'.format(load['tgt_type']), None)
             if match_func is None:
@@ -3372,15 +3370,11 @@ class ProxyMinion(Minion):
 
     @classmethod
     def _thread_return(cls, minion_instance, opts, data):
-        print('~!@#~!@#!~@#~!@#~!@#~!@#!~@#~!@#~!@#!~@#')
-        print('ProxyMinion _thread_return')
         mp_call = _metaproxy_call(opts, 'thread_return')
         return mp_call(cls, minion_instance, opts, data)
 
     @classmethod
     def _thread_multi_return(cls, minion_instance, opts, data):
-        print('~!@#~!@#!~@#~!@#~!@#~!@#!~@#~!@#~!@#!~@#')
-        print('ProxyMinion _thread_multi_return')
         mp_call = _metaproxy_call(opts, 'thread_multi_return')
         return mp_call(cls, minion_instance, opts, data)
 
