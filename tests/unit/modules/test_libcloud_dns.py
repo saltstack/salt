@@ -74,9 +74,6 @@ class TestZone(object):
     extra = {'k': 'v'}
 
 
-'''
-Dictionary version of the test zone
-'''
 _DICT_TEST_ZONE = {
     'id': '12345',
     'domain': 'test.com',
@@ -100,9 +97,6 @@ class TestRecord(object):
     extra = {'y': 'x'}
 
 
-'''
-Dictionary version of the test zone
-'''
 _DICT_TEST_RECORD = {
     'id': '45678',
     'name': 'www',
@@ -228,7 +222,7 @@ class LibcloudDnsModuleTestCase(TestCase, LoaderModuleMockMixin):
                 self.assertEqual(record, _DICT_TEST_RECORD)
                 create_record.assert_called_once()
                 create_record.assert_called_with(name='www', zone=test_zone, type='A', data='1.2.3.4',
-                                               extra={'extra': 'data'})
+                                                 extra={'extra': 'data'})
                 get_zone.assert_called_once()
                 get_zone.assert_called_with('12345')
 
@@ -272,5 +266,6 @@ class LibcloudDnsModuleTestCase(TestCase, LoaderModuleMockMixin):
         with patch('tests.unit.modules.test_libcloud_dns.MockDNSDriver.ex_foo',
                    return_value='test') as ex_foo:
             result = libcloud_dns.extra('ex_foo', 'test', arg1=1, kwarg2=2)
+            self.assertEqual(result, 'test')
             ex_foo.assert_called_once()
             ex_foo.assert_called_with(arg1=1, kwarg2=2)
