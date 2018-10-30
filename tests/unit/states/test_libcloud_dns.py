@@ -11,68 +11,68 @@ from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     NO_MOCK,
-    NO_MOCK_REASON
+    NO_MOCK_REASON,
+    MagicMock,
+    patch
 )
 import salt.states.libcloud_dns as libcloud_dns
-from salt.modules.libcloud_dns import _simple_record, _simple_zone
 
 
-class DNSTestZone(object):
-    def __init__(self, id, domain):
-        self.id = id
-        self.type = 'master'
-        self.ttl = 4400
-        self.domain = domain
-        self.extra = {}
+_ZONES = [
+    {
+        'id': '12345',
+        'domain': 'test.com',
+        'type': 'master',
+        'ttl': 3600,
+        'extra': {'k': 'v'}
+    },
+    {
+        'id': '455677',
+        'domain': 'test2.com',
+        'type': 'slave',
+        'ttl': 3600,
+        'extra': {'k': 'v'}
+    }
+]
 
 
-class DNSTestRecord(object):
-    def __init__(self, id, name, record_type, data):
-        self.id = id
-        self.name = name
-        self.type = record_type
-        self.ttl = 4400
-        self.data = data
-        self.zone = DNSTestZone('test', 'domain')
-        self.extra = {}
+_RECORDS = [
+    {
+        'id': '45678',
+        'name': 'www',
+        'type': 'A',
+        'data': '127.0.0.1',
+        'ttl': 600,
+        'extra': {'y': 'x'},
+        'zone': _ZONES[0]
+    }
+]
 
+_CREATED_RECORD = {
+    'id': '45678',
+    'name': 'mail',
+    'type': 'A',
+    'data': '127.0.0.1',
+    'ttl': 600,
+    'extra': {'ttl': 600, 'y': 'x'},
+    'zone': _ZONES[0]
+}
+
+_CREATED_ZONE = {
+    'id': '455677',
+    'domain': 'test3.com',
+    'type': 'master',
+    'ttl': 3600,
+    'extra': {'k': 'v'}
+}
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class LibcloudDnsModuleTestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
-        test_records = {
-            'zone1': [_simple_record(DNSTestRecord(0, 'www', 'A', '127.0.0.1'))]
-        }
-
-        def list_zones(profile):
-            return [_simple_zone(DNSTestZone('zone1', 'test.com'))]
-
-        def list_records(zone_id, profile):
-            return test_records[zone_id]
-
-        def create_record(*args, **kwargs):
-            return True
-
-        def delete_record(*args):
-            return True
-
-        def create_zone(*args, **kwargs):
-            return True
-
-        def delete_zone(*args, **kwargs):
-            return True
-
         return {
             libcloud_dns: {
-                '__salt__': {
-                    'libcloud_dns.list_zones': list_zones,
-                    'libcloud_dns.list_records': list_records,
-                    'libcloud_dns.create_record': create_record,
-                    'libcloud_dns.delete_record': delete_record,
-                    'libcloud_dns.create_zone': create_zone,
-                    'libcloud_dns.delete_zone': delete_zone
-                },
+                '__salt__': {},
                 '__opts__': {
                     'test': False
                 }
@@ -83,70 +83,305 @@ class LibcloudDnsModuleTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Try and create a record that already exists
         '''
-        result = libcloud_dns.record_present('www', 'test.com', 'A', '127.0.0.1', 'test')
-        self.assertTrue(result)
+        ret = {'changes': {},
+               'comment': 'Record already exists.',
+               'name': 'www',
+               'result': True}
+
+        list_zones = MagicMock(return_value=_ZONES)
+        list_records = MagicMock(return_value=_RECORDS)
+        create_record = MagicMock(return_value='abcdef')
+
+        with patch.dict(libcloud_dns.__salt__,
+                        {'libcloud_dns.list_zones': list_zones,
+                         'libcloud_dns.list_records': list_records,
+                         'libcloud_dns.create_record': create_record}):
+            result = libcloud_dns.record_present('www', 'test.com', 'A', '127.0.0.1', 'test', extra={'y': 'x'})
+            assert result == ret
+            assert list_zones.called
+            assert not create_record.called
+
+    def test_present_record_exists_missing_zone(self):
+        '''
+        Try and create a record with a zone that does not exist
+        '''
+        ret = {'changes': {},
+               'comment': 'Zone could not be found.',
+               'name': 'www',
+               'result': False}
+
+        list_zones = MagicMock(return_value=_ZONES)
+        list_records = MagicMock(return_value=_RECORDS)
+        create_record = MagicMock(return_value='abcdef')
+
+        with patch.dict(libcloud_dns.__salt__,
+                        {'libcloud_dns.list_zones': list_zones,
+                         'libcloud_dns.list_records': list_records,
+                         'libcloud_dns.create_record': create_record}):
+            result = libcloud_dns.record_present('www', 'notadomain.com', 'A', '127.0.0.1', 'test', extra={'y': 'x'})
+            assert result == ret
+            assert list_zones.called
+            assert not create_record.called
 
     def test_present_record_does_not_exist(self):
         '''
-        Try and create a record that already exists
+        Try and create a record that does not exist
         '''
-        result = libcloud_dns.record_present('mail', 'test.com', 'A', '127.0.0.1', 'test')
-        self.assertTrue(result)
+        ret = {'changes': _CREATED_RECORD,
+               'comment': 'Created new record.',
+               'name': 'mail',
+               'result': True}
+
+        list_zones = MagicMock(return_value=_ZONES)
+        list_records = MagicMock(return_value=_RECORDS)
+        create_record = MagicMock(return_value=_CREATED_RECORD)
+
+        with patch.dict(libcloud_dns.__salt__,
+                        {'libcloud_dns.list_zones': list_zones,
+                         'libcloud_dns.list_records': list_records,
+                         'libcloud_dns.create_record': create_record}):
+            result = libcloud_dns.record_present('mail', 'test.com', 'A', '127.0.0.1', 'test', extra={'y': 'x'})
+            assert result == ret
+            assert list_zones.called
+            assert create_record.called
+
+    def test_present_record_does_not_exist_test_mode(self):
+        '''
+        Try and create a record that does not exist in test mode
+        '''
+        _TEST_RECORD = _CREATED_RECORD.copy()
+        _TEST_RECORD['id'] = None  # ID is not set in test mode
+        ret = {'changes': _TEST_RECORD,
+               'comment': 'Will create new record.',
+               'name': 'mail',
+               'result': None}
+
+        list_zones = MagicMock(return_value=_ZONES)
+        list_records = MagicMock(return_value=_RECORDS)
+        create_record = MagicMock(return_value=_CREATED_RECORD)
+
+        with patch.dict(libcloud_dns.__opts__, {'test': True}):
+            with patch.dict(libcloud_dns.__salt__,
+                            {'libcloud_dns.list_zones': list_zones,
+                             'libcloud_dns.list_records': list_records,
+                             'libcloud_dns.create_record': create_record}):
+                result = libcloud_dns.record_present('mail', 'test.com', 'A', '127.0.0.1', 'test', extra={'y': 'x', 'ttl': 600})
+                assert result == ret
+                assert list_zones.called
+                assert not create_record.called
 
     def test_absent_record_exists(self):
         '''
         Try and deny a record that already exists
         '''
-        result = libcloud_dns.record_absent('www', 'test.com', 'A', '127.0.0.1', 'test')
-        self.assertTrue(result)
+        ret = {'changes': _RECORDS,
+               'comment': 'Removed 1 records.',
+               'name': 'www',
+               'result': True}
+
+        list_zones = MagicMock(return_value=_ZONES)
+        list_records = MagicMock(return_value=_RECORDS)
+        delete_record = MagicMock(return_value=True)
+
+        with patch.dict(libcloud_dns.__salt__,
+                        {'libcloud_dns.list_zones': list_zones,
+                         'libcloud_dns.list_records': list_records,
+                         'libcloud_dns.delete_record': delete_record}):
+            result = libcloud_dns.record_absent('www', 'test.com', 'A', '127.0.0.1', 'test')
+            assert result == ret
+            assert list_zones.called
+            assert delete_record.called
 
     def test_absent_record_does_not_exist(self):
         '''
         Try and deny a record that already exists
         '''
-        result = libcloud_dns.record_absent('mail', 'test.com', 'A', '127.0.0.1', 'test')
-        self.assertTrue(result)
+        ret = {'changes': {},
+               'comment': 'Records already absent.',
+               'name': 'mail',
+               'result': True}
+
+        list_zones = MagicMock(return_value=_ZONES)
+        list_records = MagicMock(return_value=_RECORDS)
+        delete_record = MagicMock(return_value=True)
+
+        with patch.dict(libcloud_dns.__salt__,
+                        {'libcloud_dns.list_zones': list_zones,
+                         'libcloud_dns.list_records': list_records,
+                         'libcloud_dns.delete_record': delete_record}):
+            result = libcloud_dns.record_absent('mail', 'test.com', 'A', '127.0.0.1', 'test')
+            assert result == ret
+            assert list_zones.called
+            assert not delete_record.called
 
     def test_present_zone_not_found(self):
         '''
         Assert that when you try and ensure present state for a record to a zone that doesn't exist
         it fails gracefully
         '''
-        result = libcloud_dns.record_present('mail', 'notatest.com', 'A', '127.0.0.1', 'test')
-        self.assertFalse(result['result'])
+        ret = {'changes': {},
+               'comment': 'Zone could not be found.',
+               'name': 'salty_record',
+               'result': False}
+
+        list_zones = MagicMock(return_value=_ZONES)
+        create_record = MagicMock(return_value=_CREATED_RECORD)
+
+        with patch.dict(libcloud_dns.__salt__,
+                        {'libcloud_dns.list_zones': list_zones,
+                         'libcloud_dns.create_record': create_record}):
+            result = libcloud_dns.record_present(name='salty_record', zone='test3.com', type='A', profile='test1',
+                                                 data='127.0.0.1')
+            assert result == ret
+            assert list_zones.called
+            assert not create_record.called
 
     def test_absent_zone_not_found(self):
         '''
         Assert that when you try and ensure absent state for a record to a zone that doesn't exist
         it fails gracefully
         '''
-        result = libcloud_dns.record_absent('mail', 'notatest.com', 'A', '127.0.0.1', 'test')
-        self.assertFalse(result['result'])
+        ret = {'changes': {},
+               'comment': 'Zone could not be found.',
+               'name': 'salty_record',
+               'result': False}
+
+        list_zones = MagicMock(return_value=_ZONES)
+        create_record = MagicMock(return_value=_CREATED_RECORD)
+
+        with patch.dict(libcloud_dns.__salt__,
+                        {'libcloud_dns.list_zones': list_zones,
+                         'libcloud_dns.create_record': create_record}):
+            result = libcloud_dns.record_absent(name='salty_record', zone='test3.com', type='A', profile='test1',
+                                                data='127.0.0.1')
+            assert result == ret
+            assert list_zones.called
+            assert not create_record.called
 
     def test_zone_present(self):
         '''
         Assert that a zone is present (that did not exist)
         '''
-        result = libcloud_dns.zone_present('testing.com', 'master', 'test1')
-        self.assertTrue(result)
+        ret = {'changes': _CREATED_ZONE,
+               'comment': 'Created new zone.',
+               'name': 'salty_zone',
+               'result': True}
+
+        list_zones = MagicMock(return_value=_ZONES)
+        create_zone = MagicMock(return_value=_CREATED_ZONE)
+
+        with patch.dict(libcloud_dns.__salt__,
+                        {'libcloud_dns.list_zones': list_zones,
+                         'libcloud_dns.create_zone': create_zone}):
+            result = libcloud_dns.zone_present(name='salty_zone', domain='test3.com', type='master', profile='test1', ttl=600)
+            assert result == ret
+            assert list_zones.called
+            assert create_zone.called
+            create_zone.assert_called_with(domain='test3.com', type='master', ttl=600, extra={}, profile='test1')
+
+    def test_zone_present_test_mode(self):
+        '''
+        Assert that a zone is present (that did not exist) in test mode
+        '''
+        _TEST_ZONE = _CREATED_ZONE.copy()
+        _TEST_ZONE['id'] = None
+        ret = {'changes': _TEST_ZONE,
+               'comment': 'Will create new zone.',
+               'name': 'salty_zone',
+               'result': None}
+
+        list_zones = MagicMock(return_value=_ZONES)
+        create_zone = MagicMock(return_value=_CREATED_ZONE)
+
+        with patch.dict(libcloud_dns.__opts__, {'test': True}):
+            with patch.dict(libcloud_dns.__salt__,
+                            {'libcloud_dns.list_zones': list_zones,
+                             'libcloud_dns.create_zone': create_zone}):
+                result = libcloud_dns.zone_present(name='salty_zone', domain='test3.com', type='master',
+                                                   profile='test1', ttl=3600, extra={'k': 'v'})
+                assert result == ret
+                assert list_zones.called
+                assert not create_zone.called
 
     def test_zone_already_present(self):
         '''
         Assert that a zone is present (that did exist)
         '''
-        result = libcloud_dns.zone_present('test.com', 'master', 'test1')
-        self.assertTrue(result)
+        ret = {'changes': {},
+               'comment': 'Zone already exists.',
+               'name': 'salty_zone',
+               'result': True}
+
+        list_zones = MagicMock(return_value=_ZONES)
+        create_zone = MagicMock(return_value=_CREATED_ZONE)
+
+        with patch.dict(libcloud_dns.__salt__,
+                        {'libcloud_dns.list_zones': list_zones,
+                         'libcloud_dns.create_zone': create_zone}):
+            result = libcloud_dns.zone_present(name='salty_zone', domain='test.com', type='master',
+                                               profile='test1', ttl=3600, extra={'k': 'v'})
+            assert result == ret
+            assert list_zones.called
+            assert not create_zone.called
 
     def test_zone_absent(self):
         '''
         Assert that a zone that did exist is absent
         '''
-        result = libcloud_dns.zone_absent('test.com', 'test1')
-        self.assertTrue(result)
+        ret = {'changes': {'domain': 'test.com'},
+               'comment': 'Deleted zone.',
+               'name': 'salty_zone',
+               'result': True}
+
+        list_zones = MagicMock(return_value=_ZONES)
+        delete_zone = MagicMock(return_value=True)
+
+        with patch.dict(libcloud_dns.__salt__,
+                        {'libcloud_dns.list_zones': list_zones,
+                         'libcloud_dns.delete_zone': delete_zone}):
+            result = libcloud_dns.zone_absent(name='salty_zone', domain='test.com', profile='test1')
+            assert result == ret
+            assert list_zones.called
+            assert delete_zone.called
+
+    def test_zone_absent_test_mode(self):
+        '''
+        Assert that a zone that did exist is absent in test mode
+        '''
+        ret = {'changes': {'domain': 'test.com'},
+               'comment': 'Will delete zone.',
+               'name': 'salty_zone',
+               'result': None}
+
+        list_zones = MagicMock(return_value=_ZONES)
+        delete_zone = MagicMock(return_value=True)
+
+        with patch.dict(libcloud_dns.__opts__, {'test': True}):
+            with patch.dict(libcloud_dns.__salt__,
+                            {'libcloud_dns.list_zones': list_zones,
+                             'libcloud_dns.delete_zone': delete_zone}):
+                result = libcloud_dns.zone_absent(name='salty_zone', domain='test.com', profile='test1')
+                assert result == ret
+                assert list_zones.called
+                assert not delete_zone.called
+
 
     def test_zone_already_absent(self):
         '''
         Assert that a zone that did not exist is absent
         '''
-        result = libcloud_dns.zone_absent('testing.com', 'test1')
-        self.assertTrue(result)
+        ret = {'changes': {},
+               'comment': 'Zone already absent.',
+               'name': 'salty_zone',
+               'result': True}
+
+        list_zones = MagicMock(return_value=_ZONES)
+        delete_zone = MagicMock(return_value=True)
+
+        with patch.dict(libcloud_dns.__salt__,
+                        {'libcloud_dns.list_zones': list_zones,
+                         'libcloud_dns.delete_zone': delete_zone}):
+            result = libcloud_dns.zone_absent(name='salty_zone', domain='test3.com', profile='test1')
+            assert result == ret
+            assert list_zones.called
+            assert not delete_zone.called
