@@ -31,7 +31,8 @@ Example:
 
     my-zone:
       libcloud_dns.zone_present:
-        - name: mywebsite.com
+        - domain: mywebsite.com
+        - type: master
         - profile: profile1
     my-website:
       libcloud_dns.record_present:
@@ -71,7 +72,7 @@ def state_result(result, message, name, changes=None):
             'changes': changes}
 
 
-def zone_present(domain, type, profile):
+def zone_present(domain, profile, type=None, ttl=None, extra=None):
     '''
     Ensures a record is present.
 
@@ -83,16 +84,26 @@ def zone_present(domain, type, profile):
 
     :param profile: The profile key
     :type  profile: ``str``
+
+    :param ttl: TTL for new records. (optional)
+    :type  ttl: ``int``
+
+    :param extra: Extra data (optional)
+    :type  extra: ``dict``
     '''
     zones = __salt__['libcloud_dns.list_zones'](profile)
-    if not type:
+    if type is None:
         type = 'master'
     matching_zone = [z for z in zones if z['domain'] == domain]
     if len(matching_zone) > 0:
         return state_result(True, 'Zone already exists', domain)
     else:
-        result = __salt__['libcloud_dns.create_zone'](domain, profile, type)
-        return state_result(True, 'Created new zone', domain, result)
+        if __opts__['test']:
+            return state_result(True, 'Created new zone', domain)
+        else:
+            result = __salt__['libcloud_dns.create_zone'](
+                domain=domain, profile=profile, type=type, ttl=ttl, extra=extra)
+            return state_result(True, 'Created new zone', domain, result)
 
 
 def zone_absent(domain, profile):
@@ -110,11 +121,14 @@ def zone_absent(domain, profile):
     if len(matching_zone) == 0:
         return state_result(True, 'Zone already absent', domain)
     else:
-        result = __salt__['libcloud_dns.delete_zone'](matching_zone[0]['id'], profile)
-        return state_result(result, 'Deleted zone', domain)
+        if __opts__['test']:
+            return state_result(True, 'Deleted zone', domain)
+        else:
+            result = __salt__['libcloud_dns.delete_zone'](matching_zone[0]['id'], profile)
+            return state_result(result, 'Deleted zone', domain)
 
 
-def record_present(name, zone, type, data, profile):
+def record_present(name, zone, type, data, profile, extra=None):
     '''
     Ensures a record is present.
 
@@ -135,6 +149,9 @@ def record_present(name, zone, type, data, profile):
 
     :param profile: The profile key
     :type  profile: ``str``
+
+    :param extra: Extra data (optional)
+    :type  extra: ``dict``
     '''
     zones = __salt__['libcloud_dns.list_zones'](profile)
     try:
@@ -147,10 +164,13 @@ def record_present(name, zone, type, data, profile):
                         record['type'] == type and
                         record['data'] == data]
     if len(matching_records) == 0:
-        result = __salt__['libcloud_dns.create_record'](
-            name, matching_zone['id'],
-            type, data, profile)
-        return state_result(True, 'Created new record', name, result)
+        if __opts__['test']:
+            return state_result(True, 'Created new record', name, {})
+        else:
+            result = __salt__['libcloud_dns.create_record'](
+                name, matching_zone['id'],
+                type, data, profile, extra=extra)
+            return state_result(True, 'Created new record', name, result)
     else:
         return state_result(True, 'Record already exists', name)
 
@@ -189,11 +209,14 @@ def record_absent(name, zone, type, data, profile):
                         record['data'] == data]
     if len(matching_records) > 0:
         result = []
-        for record in matching_records:
-            result.append(__salt__['libcloud_dns.delete_record'](
-                matching_zone['id'],
-                record['id'],
-                profile))
-        return state_result(all(result), 'Removed {0} records'.format(len(result)), name)
+        if __opts__['test']:
+            return state_result(True, 'Removed {0} records'.format(len(matching_records)), name)
+        else:
+            for record in matching_records:
+                result.append(__salt__['libcloud_dns.delete_record'](
+                    matching_zone['id'],
+                    record['id'],
+                    profile))
+            return state_result(all(result), 'Removed {0} records'.format(len(result)), name)
     else:
         return state_result(True, 'Records already absent', name)

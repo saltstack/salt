@@ -51,16 +51,16 @@ class LibcloudDnsModuleTestCase(TestCase, LoaderModuleMockMixin):
         def list_records(zone_id, profile):
             return test_records[zone_id]
 
-        def create_record(*args):
+        def create_record(*args, **kwargs):
             return True
 
         def delete_record(*args):
             return True
 
-        def create_zone(*args):
+        def create_zone(*args, **kwargs):
             return True
 
-        def delete_zone(*args):
+        def delete_zone(*args, **kwargs):
             return True
 
         return {
@@ -72,6 +72,9 @@ class LibcloudDnsModuleTestCase(TestCase, LoaderModuleMockMixin):
                     'libcloud_dns.delete_record': delete_record,
                     'libcloud_dns.create_zone': create_zone,
                     'libcloud_dns.delete_zone': delete_zone
+                },
+                '__opts__': {
+                    'test': False
                 }
             }
         }

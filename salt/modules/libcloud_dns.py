@@ -5,6 +5,8 @@ Apache Libcloud DNS Management
 
 Connection module for Apache Libcloud DNS management
 
+    :codeauthor: Anthony Shaw <anthonyshaw@apache.org>
+
 .. versionadded:: 2016.11.0
 
 :configuration:
@@ -24,6 +26,7 @@ Connection module for Apache Libcloud DNS management
               shopper_id: 12345
 
 :depends: apache-libcloud
+
 '''
 # keep lint from choking on _get_conn and _cache_id
 #pylint: disable=E0602
@@ -34,6 +37,7 @@ from __future__ import absolute_import, unicode_literals, print_function
 import logging
 
 # Import salt libs
+import salt.utils.args
 import salt.utils.compat
 from salt.utils.versions import LooseVersion as _LooseVersion
 
@@ -187,7 +191,7 @@ def get_record(zone_id, record_id, profile):
     return _simple_record(conn.get_record(zone_id, record_id))
 
 
-def create_zone(domain, profile, type='master', ttl=None):
+def create_zone(domain, profile, type='master', ttl=None, extra=None):
     '''
     Create a new zone.
 
@@ -203,6 +207,9 @@ def create_zone(domain, profile, type='master', ttl=None):
     :param ttl: TTL for new records. (optional)
     :type  ttl: ``int``
 
+    :param extra: Extra data (optional)
+    :type  extra: ``dict``
+
     CLI Example:
 
     .. code-block:: bash
@@ -210,11 +217,11 @@ def create_zone(domain, profile, type='master', ttl=None):
         salt myminion libcloud_dns.create_zone google.com profile1
     '''
     conn = _get_driver(profile=profile)
-    zone = conn.create_record(domain, type=type, ttl=ttl)
+    zone = conn.create_zone(domain, type=type, ttl=ttl, extra=extra)
     return _simple_zone(zone)
 
 
-def update_zone(zone_id, domain, profile, type='master', ttl=None):
+def update_zone(zone_id, domain, profile, type='master', ttl=None, extra=None):
     '''
     Update an existing zone.
 
@@ -233,6 +240,9 @@ def update_zone(zone_id, domain, profile, type='master', ttl=None):
     :param ttl: TTL for new records. (optional)
     :type  ttl: ``int``
 
+    :param extra: Extra data (optional)
+    :type  extra: ``dict``
+
     CLI Example:
 
     .. code-block:: bash
@@ -241,10 +251,10 @@ def update_zone(zone_id, domain, profile, type='master', ttl=None):
     '''
     conn = _get_driver(profile=profile)
     zone = conn.get_zone(zone_id)
-    return _simple_zone(conn.update_zone(zone=zone, domain=domain, type=type, ttl=ttl))
+    return _simple_zone(conn.update_zone(zone=zone, domain=domain, type=type, ttl=ttl, extra=extra))
 
 
-def create_record(name, zone_id, type, data, profile):
+def create_record(name, zone_id, type, data, profile, extra=None):
     '''
     Create a new record.
 
@@ -266,6 +276,9 @@ def create_record(name, zone_id, type, data, profile):
     :param profile: The profile key
     :type  profile: ``str``
 
+    :param extra: Extra data (optional)
+    :type  extra: ``dict``
+
     CLI Example:
 
     .. code-block:: bash
@@ -275,7 +288,8 @@ def create_record(name, zone_id, type, data, profile):
     conn = _get_driver(profile=profile)
     record_type = _string_to_record_type(type)
     zone = conn.get_zone(zone_id)
-    return _simple_record(conn.create_record(name, zone, record_type, data))
+    return _simple_record(conn.create_record(name=name, zone=zone,
+                                             type=record_type, data=data, extra=extra))
 
 
 def delete_zone(zone_id, profile):
@@ -297,7 +311,7 @@ def delete_zone(zone_id, profile):
         salt myminion libcloud_dns.delete_zone google.com profile1
     '''
     conn = _get_driver(profile=profile)
-    zone = conn.get_zone(zone_id=zone_id)
+    zone = conn.get_zone(zone_id)
     return conn.delete_zone(zone)
 
 
@@ -370,7 +384,7 @@ def extra(method, profile, **libcloud_kwargs):
 
         salt myminion libcloud_dns.extra ex_get_permissions google container_name=my_container object_name=me.jpg --out=yaml
     '''
-    _sanitize_kwargs(libcloud_kwargs)
+    salt.utils.args.clean_kwargs(**libcloud_kwargs)
     conn = _get_driver(profile=profile)
     connection_method = getattr(conn, method)
     return connection_method(**libcloud_kwargs)
