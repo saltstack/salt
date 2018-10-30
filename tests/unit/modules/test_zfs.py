@@ -43,7 +43,9 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
     '''
     def setup_loader_modules(self):
         self.opts = opts = salt.config.DEFAULT_MINION_OPTS
-        utils = salt.loader.utils(opts, whitelist=['zfs'])
+        utils = salt.loader.utils(
+            opts,
+            whitelist=['zfs', 'args', 'systemd', 'path', 'platform'])
         zfs_obj = {
             zfs: {
                 '__opts__': opts,
