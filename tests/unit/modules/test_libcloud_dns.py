@@ -142,14 +142,14 @@ class LibcloudDnsModuleTestCase(TestCase, LoaderModuleMockMixin):
             dunder.assert_called_with('salt.modules.libcloud_dns')
 
     def test_list_record_types(self):
-        with patch('tests.unit.modules.test_libcloud_dns.MockDNSDriver.list_record_types', return_value=[]) as method:
+        with patch.object(MockDNSDriver, 'list_record_types', return_value=[]) as method:
             types = libcloud_dns.list_record_types('test')
             self.assertEqual(types, [])
             method.assert_called_once()
             method.assert_called_with()
 
     def test_list_zones(self):
-        with patch('tests.unit.modules.test_libcloud_dns.MockDNSDriver.list_zones', return_value=[TestZone()]) as method:
+        with patch.object(MockDNSDriver, 'list_zones', return_value=[TestZone()]) as method:
             types = libcloud_dns.list_zones('test')
             self.assertEqual(types, [_DICT_TEST_ZONE])
             method.assert_called_once()
@@ -157,8 +157,8 @@ class LibcloudDnsModuleTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_list_records(self):
         zone = TestZone()
-        with patch('tests.unit.modules.test_libcloud_dns.MockDNSDriver.get_zone', return_value=zone) as get_zone:
-            with patch('tests.unit.modules.test_libcloud_dns.MockDNSDriver.list_records', return_value=[TestRecord()]) as method:
+        with patch.object(MockDNSDriver, 'get_zone', return_value=zone) as get_zone:
+            with patch.object(MockDNSDriver, 'list_records', return_value=[TestRecord()]) as method:
                 types = libcloud_dns.list_records('12345', 'test')
                 self.assertEqual(types, [_DICT_TEST_RECORD])
                 method.assert_called_once()
@@ -168,8 +168,8 @@ class LibcloudDnsModuleTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_list_records_by_type(self):
         zone = TestZone()
-        with patch('tests.unit.modules.test_libcloud_dns.MockDNSDriver.get_zone', return_value=zone) as get_zone:
-            with patch('tests.unit.modules.test_libcloud_dns.MockDNSDriver.list_records', return_value=[TestRecord()]) as method:
+        with patch.object(MockDNSDriver, 'get_zone', return_value=zone) as get_zone:
+            with patch.object(MockDNSDriver, 'list_records', return_value=[TestRecord()]) as method:
                 types = libcloud_dns.list_records('12345', 'test', 'NS')
                 self.assertEqual(types, [])
                 method.assert_called_once()
@@ -179,7 +179,7 @@ class LibcloudDnsModuleTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_get_zone(self):
         zone = TestZone()
-        with patch('tests.unit.modules.test_libcloud_dns.MockDNSDriver.get_zone', return_value=zone) as get_zone:
+        with patch.object(MockDNSDriver, 'get_zone', return_value=zone) as get_zone:
             zone = libcloud_dns.get_zone('12345', 'test')
             self.assertEqual(zone, _DICT_TEST_ZONE)
             get_zone.assert_called_once()
@@ -187,7 +187,7 @@ class LibcloudDnsModuleTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_get_record(self):
         record = TestRecord()
-        with patch('tests.unit.modules.test_libcloud_dns.MockDNSDriver.get_record', return_value=record) as get_record:
+        with patch.object(MockDNSDriver, 'get_record', return_value=record) as get_record:
             record = libcloud_dns.get_record('12345', '45678', 'test')
             self.assertEqual(record, _DICT_TEST_RECORD)
             get_record.assert_called_once()
@@ -195,7 +195,7 @@ class LibcloudDnsModuleTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_create_zone(self):
         zone = TestZone()
-        with patch('tests.unit.modules.test_libcloud_dns.MockDNSDriver.create_zone', return_value=zone) as create_zone:
+        with patch.object(MockDNSDriver, 'create_zone', return_value=zone) as create_zone:
             zone = libcloud_dns.create_zone('test.com', 'test', type='slave', ttl=400, extra={'extra': 'data'})
             self.assertEqual(zone, _DICT_TEST_ZONE)
             create_zone.assert_called_once()
@@ -203,8 +203,8 @@ class LibcloudDnsModuleTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_update_zone(self):
         test_zone = TestZone()
-        with patch('tests.unit.modules.test_libcloud_dns.MockDNSDriver.get_zone', return_value=test_zone) as get_zone:
-            with patch('tests.unit.modules.test_libcloud_dns.MockDNSDriver.update_zone', return_value=test_zone) as update_zone:
+        with patch.object(MockDNSDriver, 'get_zone', return_value=test_zone) as get_zone:
+            with patch.object(MockDNSDriver, 'update_zone', return_value=test_zone) as update_zone:
                 zone = libcloud_dns.update_zone('12345', 'test.com', 'test', type='slave', ttl=400, extra={'extra': 'data'})
                 self.assertEqual(zone, _DICT_TEST_ZONE)
                 update_zone.assert_called_once()
@@ -215,8 +215,8 @@ class LibcloudDnsModuleTestCase(TestCase, LoaderModuleMockMixin):
     def test_create_record(self):
         test_zone = TestZone()
         test_record = TestRecord()
-        with patch('tests.unit.modules.test_libcloud_dns.MockDNSDriver.get_zone', return_value=test_zone) as get_zone:
-            with patch('tests.unit.modules.test_libcloud_dns.MockDNSDriver.create_record',
+        with patch.object(MockDNSDriver, 'get_zone', return_value=test_zone) as get_zone:
+            with patch.object(MockDNSDriver, 'create_record',
                        return_value=test_record) as create_record:
                 record = libcloud_dns.create_record('www', '12345', 'A', '1.2.3.4', 'test', extra={'extra': 'data'})
                 self.assertEqual(record, _DICT_TEST_RECORD)
@@ -228,8 +228,8 @@ class LibcloudDnsModuleTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_delete_zone(self):
         test_zone = TestZone()
-        with patch('tests.unit.modules.test_libcloud_dns.MockDNSDriver.get_zone', return_value=test_zone) as get_zone:
-            with patch('tests.unit.modules.test_libcloud_dns.MockDNSDriver.delete_zone',
+        with patch.object(MockDNSDriver, 'get_zone', return_value=test_zone) as get_zone:
+            with patch.object(MockDNSDriver, 'delete_zone',
                            return_value=True) as delete_zone:
                 result = libcloud_dns.delete_zone('12345', 'test')
                 self.assertTrue(result)
@@ -240,8 +240,8 @@ class LibcloudDnsModuleTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_delete_record(self):
         test_record = TestRecord()
-        with patch('tests.unit.modules.test_libcloud_dns.MockDNSDriver.get_record', return_value=test_record) as get_record:
-            with patch('tests.unit.modules.test_libcloud_dns.MockDNSDriver.delete_record',
+        with patch.object(MockDNSDriver, 'get_record', return_value=test_record) as get_record:
+            with patch.object(MockDNSDriver, 'delete_record',
                        return_value=True) as delete_record:
                 result = libcloud_dns.delete_record('12345', '45678', 'test')
                 self.assertTrue(result)
@@ -252,8 +252,8 @@ class LibcloudDnsModuleTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_get_bind_data(self):
         test_zone = TestZone()
-        with patch('tests.unit.modules.test_libcloud_dns.MockDNSDriver.get_zone', return_value=test_zone) as get_zone:
-            with patch('tests.unit.modules.test_libcloud_dns.MockDNSDriver.export_zone_to_bind_format',
+        with patch.object(MockDNSDriver, 'get_zone', return_value=test_zone) as get_zone:
+            with patch.object(MockDNSDriver, 'export_zone_to_bind_format',
                        return_value='test') as get_bind_data:
                 result = libcloud_dns.get_bind_data('12345', 'test')
                 self.assertEqual(result, 'test')
@@ -263,7 +263,7 @@ class LibcloudDnsModuleTestCase(TestCase, LoaderModuleMockMixin):
                 get_zone.assert_called_with('12345')
 
     def test_extra(self):
-        with patch('tests.unit.modules.test_libcloud_dns.MockDNSDriver.ex_foo',
+        with patch.object(MockDNSDriver, 'ex_foo',
                    return_value='test') as ex_foo:
             result = libcloud_dns.extra('ex_foo', 'test', arg1=1, kwarg2=2)
             self.assertEqual(result, 'test')
