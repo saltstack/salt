@@ -234,6 +234,9 @@ State Changes
 - Added new :py:func:`ssh_auth.manage <salt.states.ssh_auth.manage>` state to
   ensure only the specified ssh keys are present for the specified user.
 
+- Added new :py:func:`saltutil <salt.states.saltutil>` state to use instead of
+  ``module.run`` to more easily handle change.
+
 Module Changes
 ==============
 
