@@ -1208,6 +1208,13 @@ class LocalClient(object):
                 if raw['data']['return'] == {}:
                     continue
 
+                # if the minion throws an exception containing the word "return"
+                # the master will try to handle the string as a dict in the next
+                # step. Check if we have a string, log the issue and continue.
+                if isinstance(raw['data']['return'], six.string_types):
+                    log.error("unexpected return from minion: %s", raw)
+                    continue
+
                 if 'return' in raw['data']['return'] and \
                     raw['data']['return']['return'] == {}:
                     continue
