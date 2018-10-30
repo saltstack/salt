@@ -210,7 +210,7 @@ def record_absent(name, zone, type, data, profile):
     if len(matching_records) > 0:
         result = []
         if __opts__['test']:
-            return state_result(True, 'Removed {0} records'.format(len(matching_records)))
+            return state_result(True, 'Removed {0} records'.format(len(matching_records)), name)
         else:
             for record in matching_records:
                 result.append(__salt__['libcloud_dns.delete_record'](
