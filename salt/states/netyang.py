@@ -77,7 +77,6 @@ def __virtual__():
 
 def managed(name,
             data,
-            *models,
             **kwargs):
     '''
     Manage the device configuration given the input data structured
@@ -143,6 +142,7 @@ def managed(name,
                 config:
                   description: "description example"
     '''
+    models = kwargs.get('models', None)
     if isinstance(models, tuple) and isinstance(models[0], list):
         models = models[0]
     ret = salt.utils.napalm.default_ret(name)
@@ -206,7 +206,6 @@ def managed(name,
 
 def configured(name,
                data,
-               *models,
                **kwargs):
     '''
     Configure the network device, given the input data strucuted
@@ -276,6 +275,7 @@ def configured(name,
                 config:
                   description: "description example"
     '''
+    models = kwargs.get('models', None)
     if isinstance(models, tuple) and isinstance(models[0], list):
         models = models[0]
     ret = salt.utils.napalm.default_ret(name)
