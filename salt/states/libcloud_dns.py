@@ -31,7 +31,8 @@ Example:
 
     my-zone:
       libcloud_dns.zone_present:
-        - name: mywebsite.com
+        - domain: mywebsite.com
+        - type: master
         - profile: profile1
     my-website:
       libcloud_dns.record_present:
