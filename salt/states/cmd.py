@@ -402,6 +402,7 @@ def wait(name,
          unless=None,
          creates=None,
          cwd=None,
+         root=None,
          runas=None,
          shell=None,
          env=(),
@@ -435,6 +436,10 @@ def wait(name,
     cwd
         The current working directory to execute the command in, defaults to
         /root
+
+    root
+        Path to the root of the jail to use. If this parameter is set, the command
+        will run inside a chroot
 
     runas
         The user name to run the command as
@@ -674,6 +679,7 @@ def run(name,
         unless=None,
         creates=None,
         cwd=None,
+        root=None,
         runas=None,
         shell=None,
         env=None,
@@ -706,6 +712,10 @@ def run(name,
     cwd
         The current working directory to execute the command in, defaults to
         /root
+
+    root
+        Path to the root of the jail to use. If this parameter is set, the command
+        will run inside a chroot
 
     runas
         The user name to run the command as
@@ -882,6 +892,7 @@ def run(name,
 
     cmd_kwargs = copy.deepcopy(kwargs)
     cmd_kwargs.update({'cwd': cwd,
+                       'root': root,
                        'runas': runas,
                        'use_vt': use_vt,
                        'shell': shell or __grains__['shell'],
@@ -912,10 +923,11 @@ def run(name,
 
     # Wow, we passed the test, run this sucker!
     try:
-        cmd_all = __salt__['cmd.run_all'](
-            name, timeout=timeout, python_shell=True, **cmd_kwargs
+        run_cmd = 'cmd.run_all' if not root else 'cmd.run_chroot'
+        cmd_all = __salt__[run_cmd](
+            cmd=name, timeout=timeout, python_shell=True, **cmd_kwargs
         )
-    except CommandExecutionError as err:
+    except Exception as err:
         ret['comment'] = six.text_type(err)
         return ret
 
