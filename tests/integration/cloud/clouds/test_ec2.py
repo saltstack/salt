@@ -21,6 +21,7 @@ from tests.support.helpers import expensiveTest, generate_random_name
 from tests.support.unit import skipIf
 from tests.support import win_installer
 
+
 # Create the cloud instance name to be used throughout the tests
 INSTANCE_NAME = generate_random_name('CLOUD-TEST-')
 PROVIDER_NAME = 'ec2'
@@ -32,6 +33,7 @@ class EC2Test(ShellCase):
     '''
     Integration tests for the EC2 cloud provider in Salt-Cloud
     '''
+
 
     def _installer_name(self):
         '''
