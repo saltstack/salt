@@ -307,9 +307,9 @@ def _get_pkg_info(*packages, **kwargs):
             key, value = pkg_info_line.split(":", 1)
             if value:
                 pkg_data[key] = value
-            install_date = _get_pkg_install_time(pkg_data.get('package'))
-            if install_date:
-                pkg_data['install_date'] = install_date
+        install_date = _get_pkg_install_time(pkg_data.get('package'), pkg_data.get('architecture'))
+        if install_date:
+            pkg_data['install_date'] = install_date
         pkg_data['description'] = pkg_descr.split(":", 1)[-1]
         ret.append(pkg_data)
 
@@ -335,7 +335,7 @@ def _get_pkg_license(pkg):
     return ", ".join(sorted(licenses))
 
 
-def _get_pkg_install_time(pkg):
+def _get_pkg_install_time(pkg, arch=None):
     '''
     Return package install time, based on the /var/lib/dpkg/info/<package>.list
 
@@ -343,9 +343,15 @@ def _get_pkg_install_time(pkg):
     '''
     iso_time = None
     if pkg is not None:
-        location = "/var/lib/dpkg/info/{0}.list".format(pkg)
-        if os.path.exists(location):
-            iso_time = datetime.datetime.utcfromtimestamp(int(os.path.getmtime(location))).isoformat() + "Z"
+        if arch is not None and arch != 'all':
+            location = "/var/lib/dpkg/info/{0}:{1}.list".format(pkg, arch)
+            if os.path.exists(location):
+                iso_time = datetime.datetime.utcfromtimestamp(int(os.path.getmtime(location))).isoformat() + "Z"
+
+        if iso_time is None:
+            location = "/var/lib/dpkg/info/{0}.list".format(pkg)
+            if os.path.exists(location):
+                iso_time = datetime.datetime.utcfromtimestamp(int(os.path.getmtime(location))).isoformat() + "Z"
 
     return iso_time
 
