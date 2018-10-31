@@ -158,7 +158,7 @@ class OpkgTestCase(TestCase, LoaderModuleMockMixin):
                 }
             }
             with patch.multiple(opkg, **patch_kwargs):
-                self.assertEqual(opkg.install('vim:7.4', noaction=True), {})
+                self.assertEqual(opkg.install('vim:7.4', test=True), {})
 
     def test_remove(self):
         '''
@@ -192,7 +192,7 @@ class OpkgTestCase(TestCase, LoaderModuleMockMixin):
                 }
             }
             with patch.multiple(opkg, **patch_kwargs):
-                self.assertEqual(opkg.remove('vim:7.4', noaction=True), {})
+                self.assertEqual(opkg.remove('vim:7.4', test=True), {})
 
     def test_info_installed(self):
         '''
