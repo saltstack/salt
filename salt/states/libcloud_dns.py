@@ -81,7 +81,7 @@ def zone_present(name, profile, domain=None, type=None, ttl=None, extra=None):
 
     :param profile: The profile key
     :type  profile: ``str``
-    
+
     :param domain: The domain name (defaults to name if not provided)
     :type  domain: ``str``
 

@@ -66,6 +66,7 @@ _CREATED_ZONE = {
     'extra': {'k': 'v'}
 }
 
+
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class LibcloudDnsModuleTestCase(TestCase, LoaderModuleMockMixin):
 
@@ -381,7 +382,6 @@ class LibcloudDnsModuleTestCase(TestCase, LoaderModuleMockMixin):
                 assert list_zones.called
                 list_zones.assert_called_with('test')
                 assert not delete_zone.called
-
 
     def test_zone_already_absent(self):
         '''
