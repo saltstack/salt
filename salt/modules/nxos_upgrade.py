@@ -74,6 +74,9 @@ def check_upgrade_impact(system_image, kickstart_image=None, issu=True, **kwargs
         Default: None
 
     issu
+        When True: Attempt In Service Software Upgrade. (non-disruptive)
+          The upgrade will abort if issu is not possible.
+        When False: Force (disruptive) Upgrade/Downgrade.
         Set this option to True when an in service software service or
         non-disruptive upgrade is needed. The upgrade will abort if issu is
         not possible.
@@ -164,15 +167,18 @@ def upgrade(system_image, kickstart_image=None, issu=True, **kwargs):
         logmsg = 'Upgrading device using combined system/kickstart image.'
         logmsg += '\nSystem Image: {}'.format(si)
         cmd = cmd + ' nxos {0}:{1}'.format(dev, si)
+        if issu:
+            cmd = cmd + ' non-disruptive'
     else:
         logmsg = 'Upgrading device using separate system/kickstart images.'
         logmsg += '\nSystem Image: {}'.format(si)
         logmsg += '\nKickstart Image: {}'.format(ki)
+        if not issu:
+            cmd = cmd + ' force'
         cmd = cmd + ' kickstart {0}:{1} system {0}:{2}'.format(dev, ki, si)
 
     if issu:
         logmsg += '\nIn Service Software Upgrade/Downgrade (non-disruptive) requested.'
-        cmd = cmd + ' non-disruptive'
     else:
         logmsg += '\nDisruptive Upgrade/Downgrade requested.'
 
