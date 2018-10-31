@@ -19,8 +19,25 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
+from salt.ext import six
+from salt.exceptions import CommandExecutionError
 import salt.states.virt as virt
 import salt.utils.files
+
+
+class LibvirtMock(MagicMock):  # pylint: disable=too-many-ancestors
+    '''
+    libvirt library mockup
+    '''
+    class libvirtError(Exception):  # pylint: disable=invalid-name
+        '''
+        libvirt error mockup
+        '''
+        def get_error_message(self):
+            '''
+            Fake function return error message
+            '''
+            return six.text_type(self)
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -29,7 +46,13 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
     Test cases for salt.states.libvirt
     '''
     def setup_loader_modules(self):
-        return {virt: {}}
+        self.mock_libvirt = LibvirtMock()  # pylint: disable=attribute-defined-outside-init
+        self.addCleanup(delattr, self, 'mock_libvirt')
+        loader_globals = {
+            'libvirt': self.mock_libvirt
+        }
+        return {virt: loader_globals}
+        #return {virt: {}}
 
     @classmethod
     def setUpClass(cls):
