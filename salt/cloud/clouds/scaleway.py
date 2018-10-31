@@ -78,7 +78,7 @@ def avail_images(call=None):
             "-f or --function, or with the --list-images option"
         )
 
-    items = query(method="images")
+    items = query(method="images", root="marketplace_root")
     ret = {}
     for image in items["images"]:
         ret[image["id"]] = {}
@@ -371,13 +371,11 @@ def query(method="servers", server_id=None, command=None, args=None, http_method
             "Error: '{1}'".format(request.status_code, request.text)
         )
 
-    log.debug(request.url)
-
     # success without data
-    if request.status_code == 204:
+    if request["status"] == 204:
         return True
 
-    return request.json()
+    return salt.utils.json.loads(request["body"])
 
 
 def script(server_):
