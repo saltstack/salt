@@ -37,3 +37,36 @@ class ManageTest(ShellCase):
         '''
         ret = self.run_run_plus('jobs.list_jobs')
         self.assertIsInstance(ret['return'], dict)
+
+
+class LocalCacheTargetTest(ShellCase):
+    '''
+    Test that a job stored in the local_cache has target information
+    '''
+
+    def test_target_info(self):
+        '''
+        This is a test case for issue #48734
+
+        PR #43454 fixed an issue where "jobs.lookup_jid" was not working
+        correctly with external job caches. However, this fix for external
+        job caches broke some inner workings of job storage when using the
+        local_cache.
+
+        We need to preserve the previous behavior for the local_cache, but
+        keep the new behavior for other external job caches.
+
+        If "savefstr" is called in the local cache, the target data does not
+        get written to the local_cache, and the target-type gets listed as a
+        "list" type instead of "glob".
+
+        This is a regression test for fixing the local_cache behavior.
+        '''
+        ret = self.run_run_plus('jobs.list_jobs')
+        keys = ret['return'].keys()
+        tgt = ret['return'][keys[0]]['Target']
+        tgt_type = ret['return'][keys[0]]['Target-type']
+
+        assert tgt != 'unknown-target'
+        assert tgt in ['minion', 'sub_minion']
+        assert tgt_type == 'glob'
