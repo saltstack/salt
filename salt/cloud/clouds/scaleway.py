@@ -78,8 +78,9 @@ def avail_images(call=None):
             '-f or --function, or with the --list-images option'
         )
 
-    items = query(method='images')
+    items = query(method='images', root='marketplace_root')
     ret = {}
+    log.debug("items type: %s", type(items))
     for image in items['images']:
         ret[image['id']] = {}
         for item in image:
@@ -313,12 +314,12 @@ def create(server_):
     return ret
 
 
-def query(method='servers', server_id=None, command=None, args=None,
-          http_method='get'):
+def query(method='servers', root='api_root', server_id=None, command=None, args=None,
+          http_method='GET'):
     ''' Make a call to the Scaleway API.
     '''
     base_path = six.text_type(config.get_cloud_config_value(
-        'api_root',
+        root,
         get_configured_provider(),
         __opts__,
         search_global=False,
@@ -342,28 +343,34 @@ def query(method='servers', server_id=None, command=None, args=None,
 
     data = salt.utils.json.dumps(args)
 
+
     request = __utils__["http.query"](path,
                                       method=http_method,
                                       data=data,
+                                      status=True,
+                                      decode=True,
+                                      decode_type='json',
+                                      data_render=True,
+                                      data_renderer='json',
                                       headers={'X-Auth-Token': token,
                                                'User-Agent': "salt-cloud",
                                                'Content-Type': 'application/json'})
-    if request.status_code > 299:
+
+    if request['status'] > 299:
         raise SaltCloudSystemExit(
             'An error occurred while querying Scaleway. HTTP Code: {0}  '
             'Error: \'{1}\''.format(
-                request.status_code,
-                request.text
+                request['status'],
+                request['error']
             )
         )
 
-    log.debug(request.url)
 
     # success without data
-    if request.status_code == 204:
+    if request['status'] == 204:
         return True
 
-    return request.json()
+    return salt.utils.json.loads(request['body'])
 
 
 def script(server_):
