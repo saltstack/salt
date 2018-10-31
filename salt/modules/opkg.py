@@ -368,7 +368,7 @@ def install(name=None,
 
     if bool(kwargs.get('test') or __opts__.get('test')):
         cmd_prefix.append('--noaction')
-    
+
     if pkg_params is None or len(pkg_params) == 0:
         return {}
     elif pkg_type == 'file':
