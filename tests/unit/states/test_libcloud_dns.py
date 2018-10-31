@@ -96,9 +96,11 @@ class LibcloudDnsModuleTestCase(TestCase, LoaderModuleMockMixin):
                         {'libcloud_dns.list_zones': list_zones,
                          'libcloud_dns.list_records': list_records,
                          'libcloud_dns.create_record': create_record}):
-            result = libcloud_dns.record_present('www', 'test.com', 'A', '127.0.0.1', 'test', extra={'y': 'x'})
+            result = libcloud_dns.record_present(name='www', zone='test.com', type='A',
+                                                 data='127.0.0.1', profile='test', extra={'y': 'x'})
             assert result == ret
             assert list_zones.called
+            list_zones.assert_called_with('test')
             assert not create_record.called
 
     def test_present_record_exists_missing_zone(self):
@@ -121,6 +123,7 @@ class LibcloudDnsModuleTestCase(TestCase, LoaderModuleMockMixin):
             result = libcloud_dns.record_present('www', 'notadomain.com', 'A', '127.0.0.1', 'test', extra={'y': 'x'})
             assert result == ret
             assert list_zones.called
+            list_zones.assert_called_with('test')
             assert not create_record.called
 
     def test_present_record_does_not_exist(self):
@@ -143,7 +146,9 @@ class LibcloudDnsModuleTestCase(TestCase, LoaderModuleMockMixin):
             result = libcloud_dns.record_present('mail', 'test.com', 'A', '127.0.0.1', 'test', extra={'y': 'x'})
             assert result == ret
             assert list_zones.called
+            list_zones.assert_called_with('test')
             assert create_record.called
+            create_record.assert_called_with('mail', '12345', 'A', '127.0.0.1', 'test', extra={'y': 'x'})
 
     def test_present_record_does_not_exist_test_mode(self):
         '''
@@ -168,6 +173,7 @@ class LibcloudDnsModuleTestCase(TestCase, LoaderModuleMockMixin):
                 result = libcloud_dns.record_present('mail', 'test.com', 'A', '127.0.0.1', 'test', extra={'y': 'x', 'ttl': 600})
                 assert result == ret
                 assert list_zones.called
+                list_zones.assert_called_with('test')
                 assert not create_record.called
 
     def test_absent_record_exists(self):
@@ -190,7 +196,9 @@ class LibcloudDnsModuleTestCase(TestCase, LoaderModuleMockMixin):
             result = libcloud_dns.record_absent('www', 'test.com', 'A', '127.0.0.1', 'test')
             assert result == ret
             assert list_zones.called
+            list_zones.assert_called_with('test')
             assert delete_record.called
+            delete_record.assert_called_with('12345', '45678', 'test')
 
     def test_absent_record_does_not_exist(self):
         '''
@@ -212,6 +220,7 @@ class LibcloudDnsModuleTestCase(TestCase, LoaderModuleMockMixin):
             result = libcloud_dns.record_absent('mail', 'test.com', 'A', '127.0.0.1', 'test')
             assert result == ret
             assert list_zones.called
+            list_zones.assert_called_with('test')
             assert not delete_record.called
 
     def test_present_zone_not_found(self):
@@ -230,10 +239,11 @@ class LibcloudDnsModuleTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(libcloud_dns.__salt__,
                         {'libcloud_dns.list_zones': list_zones,
                          'libcloud_dns.create_record': create_record}):
-            result = libcloud_dns.record_present(name='salty_record', zone='test3.com', type='A', profile='test1',
+            result = libcloud_dns.record_present(name='salty_record', zone='test3.com', type='A', profile='test',
                                                  data='127.0.0.1')
             assert result == ret
             assert list_zones.called
+            list_zones.assert_called_with('test')
             assert not create_record.called
 
     def test_absent_zone_not_found(self):
@@ -252,10 +262,11 @@ class LibcloudDnsModuleTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(libcloud_dns.__salt__,
                         {'libcloud_dns.list_zones': list_zones,
                          'libcloud_dns.create_record': create_record}):
-            result = libcloud_dns.record_absent(name='salty_record', zone='test3.com', type='A', profile='test1',
+            result = libcloud_dns.record_absent(name='salty_record', zone='test3.com', type='A', profile='test',
                                                 data='127.0.0.1')
             assert result == ret
             assert list_zones.called
+            list_zones.assert_called_with('test')
             assert not create_record.called
 
     def test_zone_present(self):
@@ -273,11 +284,12 @@ class LibcloudDnsModuleTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(libcloud_dns.__salt__,
                         {'libcloud_dns.list_zones': list_zones,
                          'libcloud_dns.create_zone': create_zone}):
-            result = libcloud_dns.zone_present(name='salty_zone', domain='test3.com', type='master', profile='test1', ttl=600)
+            result = libcloud_dns.zone_present(name='salty_zone', domain='test3.com', type='master', profile='test', ttl=600)
             assert result == ret
             assert list_zones.called
+            list_zones.assert_called_with('test')
             assert create_zone.called
-            create_zone.assert_called_with(domain='test3.com', type='master', ttl=600, extra={}, profile='test1')
+            create_zone.assert_called_with(domain='test3.com', type='master', ttl=600, extra={}, profile='test')
 
     def test_zone_present_test_mode(self):
         '''
@@ -298,9 +310,10 @@ class LibcloudDnsModuleTestCase(TestCase, LoaderModuleMockMixin):
                             {'libcloud_dns.list_zones': list_zones,
                              'libcloud_dns.create_zone': create_zone}):
                 result = libcloud_dns.zone_present(name='salty_zone', domain='test3.com', type='master',
-                                                   profile='test1', ttl=3600, extra={'k': 'v'})
+                                                   profile='test', ttl=3600, extra={'k': 'v'})
                 assert result == ret
                 assert list_zones.called
+                list_zones.assert_called_with('test')
                 assert not create_zone.called
 
     def test_zone_already_present(self):
@@ -319,9 +332,10 @@ class LibcloudDnsModuleTestCase(TestCase, LoaderModuleMockMixin):
                         {'libcloud_dns.list_zones': list_zones,
                          'libcloud_dns.create_zone': create_zone}):
             result = libcloud_dns.zone_present(name='salty_zone', domain='test.com', type='master',
-                                               profile='test1', ttl=3600, extra={'k': 'v'})
+                                               profile='test', ttl=3600, extra={'k': 'v'})
             assert result == ret
             assert list_zones.called
+            list_zones.assert_called_with('test')
             assert not create_zone.called
 
     def test_zone_absent(self):
@@ -339,10 +353,12 @@ class LibcloudDnsModuleTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(libcloud_dns.__salt__,
                         {'libcloud_dns.list_zones': list_zones,
                          'libcloud_dns.delete_zone': delete_zone}):
-            result = libcloud_dns.zone_absent(name='salty_zone', domain='test.com', profile='test1')
+            result = libcloud_dns.zone_absent(name='salty_zone', domain='test.com', profile='test')
             assert result == ret
             assert list_zones.called
+            list_zones.assert_called_with('test')
             assert delete_zone.called
+            delete_zone.assert_called_with('12345', 'test')
 
     def test_zone_absent_test_mode(self):
         '''
@@ -360,9 +376,10 @@ class LibcloudDnsModuleTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(libcloud_dns.__salt__,
                             {'libcloud_dns.list_zones': list_zones,
                              'libcloud_dns.delete_zone': delete_zone}):
-                result = libcloud_dns.zone_absent(name='salty_zone', domain='test.com', profile='test1')
+                result = libcloud_dns.zone_absent(name='salty_zone', domain='test.com', profile='test')
                 assert result == ret
                 assert list_zones.called
+                list_zones.assert_called_with('test')
                 assert not delete_zone.called
 
 
@@ -381,7 +398,8 @@ class LibcloudDnsModuleTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(libcloud_dns.__salt__,
                         {'libcloud_dns.list_zones': list_zones,
                          'libcloud_dns.delete_zone': delete_zone}):
-            result = libcloud_dns.zone_absent(name='salty_zone', domain='test3.com', profile='test1')
+            result = libcloud_dns.zone_absent(name='salty_zone', domain='test3.com', profile='test')
             assert result == ret
             assert list_zones.called
+            list_zones.assert_called_with('test')
             assert not delete_zone.called
