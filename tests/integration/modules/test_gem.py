@@ -110,7 +110,7 @@ class GemModuleTest(ModuleCase):
         gem.sources_add
         gem.sources_remove
         '''
-        source = 'http://gemcutter.org/'
+        source = 'https://gems.ruby-china.com/'
 
         self.run_function('gem.sources_add', [source])
         sources_list = self.run_function('gem.sources_list')
