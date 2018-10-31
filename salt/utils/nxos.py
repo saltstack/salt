@@ -10,6 +10,7 @@ import logging
 import os
 import socket
 import re
+import collections
 from salt.exceptions import (NxosClientError, NxosCliError, NxosError,
                              NxosRequestNotSupported, CommandExecutionError)
 
@@ -186,13 +187,17 @@ class NxapiClient(object):
         Parse NX-API JSON response from the NX-OS device.
         '''
         # Check for 500 level NX-API Server Errors
-        if 'status' in response:
+        if isinstance(response, collections.Iterable) and 'status' in response:
             if int(response['status']) >= 500:
                 raise NxosError('{}'.format(response))
             else:
                 raise NxosError('NX-API Request Not Supported: {}'.format(response))
 
-        body = response['dict']
+        if isinstance(response, collections.Iterable):
+            body = response['dict']
+        else:
+            body = response
+
         if self.nxargs['connect_over_uds']:
             body = json.loads(response.read().decode('utf-8'))
 
