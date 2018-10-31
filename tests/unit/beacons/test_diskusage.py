@@ -74,9 +74,11 @@ class DiskUsageBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_diskusage_match(self):
         disk_usage_mock = Mock(side_effect=STUB_DISK_USAGE)
-        with patch('psutil.disk_partitions',
-                   MagicMock(return_value=STUB_DISK_PARTITION)), \
-                patch('psutil.disk_usage', disk_usage_mock):
+        with patch('salt.utils.platform.is_windows',
+                   MagicMock(return_value=False)),\
+                 patch('psutil.disk_partitions',
+                       MagicMock(return_value=STUB_DISK_PARTITION)), \
+                 patch('psutil.disk_usage', disk_usage_mock):
             config = [{'/': '50%'}]
 
             ret = diskusage.validate(config)
@@ -88,8 +90,10 @@ class DiskUsageBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_diskusage_nomatch(self):
         disk_usage_mock = Mock(side_effect=STUB_DISK_USAGE)
-        with patch('psutil.disk_partitions',
-                   MagicMock(return_value=STUB_DISK_PARTITION)), \
+        with patch('salt.utils.platform.is_windows',
+                   MagicMock(return_value=False)),\
+                patch('psutil.disk_partitions',
+                      MagicMock(return_value=STUB_DISK_PARTITION)), \
                 patch('psutil.disk_usage', disk_usage_mock):
             config = [{'/': '70%'}]
 
@@ -102,8 +106,10 @@ class DiskUsageBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_diskusage_match_regex(self):
         disk_usage_mock = Mock(side_effect=STUB_DISK_USAGE)
-        with patch('psutil.disk_partitions',
-                   MagicMock(return_value=STUB_DISK_PARTITION)), \
+        with patch('salt.utils.platform.is_windows',
+                   MagicMock(return_value=False)),\
+                patch('psutil.disk_partitions',
+                      MagicMock(return_value=STUB_DISK_PARTITION)), \
                 patch('psutil.disk_usage', disk_usage_mock):
             config = [{r'^\/': '50%'}]
 

@@ -1272,6 +1272,7 @@ def id_():
     '''
     return {'id': __opts__.get('id', '')}
 
+
 _REPLACE_LINUX_RE = re.compile(r'\W(?:gnu/)?linux', re.IGNORECASE)
 
 # This maps (at most) the first ten characters (no spaces, lowercased) of
