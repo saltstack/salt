@@ -52,7 +52,6 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
             'libvirt': self.mock_libvirt
         }
         return {virt: loader_globals}
-        #return {virt: {}}
 
     @classmethod
     def setUpClass(cls):
