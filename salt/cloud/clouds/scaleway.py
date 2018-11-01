@@ -328,13 +328,19 @@ def create(server_):
 def query(method="servers", server_id=None, command=None, args=None, http_method="get"):
     """ Make a call to the Scaleway API.
     """
+
+    if root == "api_root":
+        default_url = "https://cp-par1.scaleway.com"
+    else:
+        default_url = "https://api-marketplace.scaleway.com"
+
     base_path = six.text_type(
         config.get_cloud_config_value(
             "api_root",
             get_configured_provider(),
             __opts__,
             search_global=False,
-            default="https://api.cloud.online.net",
+            default=default_url,
         )
     )
 
