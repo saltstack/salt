@@ -828,6 +828,12 @@ class Schedule(object):
                 splay_ = random.randint(1, splaytime)
             return splay_
 
+        def _chop_ms(dt):
+            '''
+            Remove the microseconds from a datetime object
+            '''
+            return dt - datetime.timedelta(microseconds=dt.microsecond)
+
         schedule = self._get_schedule()
         if not isinstance(schedule, dict):
             raise ValueError('Schedule must be of type dict.')
@@ -846,6 +852,11 @@ class Schedule(object):
             if job in _hidden:
                 continue
 
+            # Clear these out between runs
+            for item in ['_skipped',
+                         '_skip_reason']:
+                if item in data:
+                    del data[item]
             # Clear out _skip_reason from previous runs
             if '_skip_reason' in data:
                 del data['_skip_reason']
@@ -1048,6 +1059,13 @@ class Schedule(object):
                         # last scheduled time in the past.
                         when = _when[0]
 
+                        if when < now - loop_interval and \
+                                not data.get('_run', False) and \
+                                not run and \
+                                not data['_splay']:
+                            data['_next_fire_time'] = None
+                            continue
+
                         if '_run' not in data:
                             # Prevent run of jobs from the past
                             data['_run'] = bool(when >= now - loop_interval)
@@ -1145,7 +1163,7 @@ class Schedule(object):
             else:
                 continue
 
-            seconds = int((data['_next_fire_time'] - now).total_seconds())
+            seconds = int((_chop_ms(data['_next_fire_time']) - _chop_ms(now)).total_seconds())
 
             if 'splay' in data:
                 # Got "splay" configured, make decision to run a job based on that
@@ -1168,6 +1186,8 @@ class Schedule(object):
                 if data['_splay']:
                     # The "splay" configuration has been already processed, just use it
                     seconds = (data['_splay'] - now).total_seconds()
+                    if 'when' in data:
+                        data['_next_fire_time'] = data['_splay']
 
             if '_seconds' in data:
                 if seconds <= 0:
@@ -1419,38 +1439,45 @@ class Schedule(object):
                 utils = self.utils
                 self.utils = {}
             try:
-                # Job is disabled, continue
-                if 'enabled' in data and not data['enabled']:
-                    log.debug('Job: %s is disabled', job)
-                    data['_skip_reason'] = 'disabled'
-                    continue
-                else:
-                    if not self.standalone:
-                        data = self._check_max_running(func, data, self.opts)
-                        run = data['run']
+                if run:
+                    # Job is disabled, continue
+                    if 'enabled' in data and not data['enabled']:
+                        log.debug('Job: %s is disabled', job)
+                        data['_skip_reason'] = 'disabled'
+                        continue
+                    else:
+                        if not self.standalone:
+                            data = self._check_max_running(func, data, self.opts)
+                            run = data['run']
 
-                    if run:
-                        if multiprocessing_enabled:
-                            thread_cls = salt.utils.process.SignalHandlingMultiprocessingProcess
-                        else:
-                            thread_cls = threading.Thread
-                        proc = thread_cls(target=self.handle_func, args=(multiprocessing_enabled, func, data))
+                        if run:
+                            if multiprocessing_enabled:
+                                thread_cls = salt.utils.process.SignalHandlingMultiprocessingProcess
+                            else:
+                                thread_cls = threading.Thread
+                            proc = thread_cls(target=self.handle_func, args=(multiprocessing_enabled, func, data))
 
-                        if multiprocessing_enabled:
-                            with salt.utils.process.default_signals(signal.SIGINT, signal.SIGTERM):
-                                # Reset current signals before starting the process in
-                                # order not to inherit the current signal handlers
+                            if multiprocessing_enabled:
+                                with salt.utils.process.default_signals(signal.SIGINT, signal.SIGTERM):
+                                    # Reset current signals before starting the process in
+                                    # order not to inherit the current signal handlers
+                                    proc.start()
+                            else:
                                 proc.start()
-                        else:
-                            proc.start()
 
-                        if multiprocessing_enabled:
-                            proc.join()
+                            if multiprocessing_enabled:
+                                proc.join()
             finally:
+                if run:
+                    data['_last_run'] = now
+                    data['_splay'] = None
                 if '_seconds' in data:
-                    data['_next_fire_time'] = now + datetime.timedelta(seconds=data['_seconds'])
-                data['_last_run'] = now
-                data['_splay'] = None
+                    if self.standalone:
+                        data['_next_fire_time'] = now + datetime.timedelta(seconds=data['_seconds'])
+                    elif '_skipped' in data and data['_skipped']:
+                        data['_next_fire_time'] = now + datetime.timedelta(seconds=data['_seconds'])
+                    elif run:
+                        data['_next_fire_time'] = now + datetime.timedelta(seconds=data['_seconds'])
             if salt.utils.platform.is_windows():
                 # Restore our function references.
                 self.functions = functions

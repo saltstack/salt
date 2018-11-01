@@ -269,7 +269,10 @@ class BotoS3BucketStateTestCaseBase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
         ctx = {}
-        utils = salt.loader.utils(self.opts, whitelist=['boto', 'boto3'], context=ctx)
+        utils = salt.loader.utils(
+            self.opts,
+            whitelist=['boto', 'boto3', 'args', 'systemd', 'path', 'platform'],
+            context=ctx)
         serializers = salt.loader.serializers(self.opts)
         self.funcs = funcs = salt.loader.minion_mods(self.opts, context=ctx, utils=utils, whitelist=['boto_s3_bucket'])
         self.salt_states = salt.loader.states(opts=self.opts, functions=funcs, utils=utils, whitelist=['boto_s3_bucket'],

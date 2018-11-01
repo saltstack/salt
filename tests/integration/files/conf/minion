@@ -25,7 +25,6 @@ integration.test: True
 # Grains addons
 grains:
   test_grain: cheese
-  grain_path: /tmp/salt-tests-tmpdir/file-grain-test
   script: grail
   alot: many
   planets:

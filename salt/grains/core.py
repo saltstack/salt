@@ -1274,6 +1274,7 @@ def id_():
     '''
     return {'id': __opts__.get('id', '')}
 
+
 _REPLACE_LINUX_RE = re.compile(r'\W(?:gnu/)?linux', re.IGNORECASE)
 
 # This maps (at most) the first ten characters (no spaces, lowercased) of
@@ -1330,6 +1331,7 @@ _OS_FAMILY_MAP = {
     'OVS': 'RedHat',
     'OEL': 'RedHat',
     'XCP': 'RedHat',
+    'XCP-ng': 'RedHat',
     'XenServer': 'RedHat',
     'RES': 'RedHat',
     'Sangoma': 'RedHat',
