@@ -571,3 +571,38 @@ def disable_beacon(name, **kwargs):
             # Effectively a no-op, since we can't really return without an event system
             ret['comment'] = 'Event module not available. Beacon disable job failed.'
     return ret
+
+
+def reset(**kwargs):
+    '''
+    Resest beacon configuration on the minion
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' beacons.reset
+    '''
+
+    ret = {'comment': [],
+           'result': True}
+
+    if 'test' in kwargs and kwargs['test']:
+        ret['comment'] = 'Beacons would be reset.'
+    else:
+        try:
+            eventer = salt.utils.event.get_event('minion', opts=__opts__)
+            res = __salt__['event.fire']({'func': 'reset'}, 'manage_beacons')
+            if res:
+                event_ret = eventer.get_event(tag='/salt/minion/minion_beacon_reset_complete', wait=30)
+                if event_ret and event_ret['complete']:
+                    ret['result'] = True
+                    ret['comment'] = 'Beacon configuration reset.'
+                else:
+                    ret['result'] = False
+                    ret['comment'] = event_ret['comment']
+                return ret
+        except KeyError:
+            # Effectively a no-op, since we can't really return without an event system
+            ret['comment'] = 'Event module not available. Beacon disable job failed.'
+    return ret
