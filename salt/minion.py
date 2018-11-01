@@ -481,7 +481,11 @@ class MinionBase(object):
 
         # Run masters discovery over SSDP. This may modify the whole configuration,
         # depending of the networking and sets of masters.
-        self._discover_masters()
+        # if we are using multimaster, discovery can only happen at start time
+        # because MinionManager handles it. by eval_master time the minion doesn't
+        # know about other siblings currently running
+        if isinstance(self.opts['discovery'], dict) and not self.opts['discovery'].get('multimaster'):
+            self._discover_masters()
 
         # check if master_type was altered from its default
         if opts['master_type'] != 'str' and opts['__role'] != 'syndic':
@@ -745,16 +749,21 @@ class MinionBase(object):
                 policy = self.opts.get('discovery', {}).get('match', 'any')
                 if policy not in ['any', 'all']:
                     log.error('SSDP configuration matcher failure: unknown value "{0}". '
-                              'Should be "any" or "all"'.format(policy))
-                else:
-                    mapping = self.opts['discovery'].get('mapping', {})
-                    for addr, mappings in masters.items():
-                        for proto_data in mappings:
-                            cnt = len([key for key, value in mapping.items()
-                                       if proto_data.get('mapping', {}).get(key) == value])
-                            if policy == 'any' and bool(cnt) or cnt == len(mapping):
+                                  'Should be "any" or "all"'.format(policy))
+                    return
+                mapping = self.opts['discovery'].get('mapping', {})
+                discovered = []
+                for addr, mappings in masters.items():
+                    for proto_data in mappings:
+                        cnt = len([key for key, value in mapping.items()
+                                   if proto_data.get('mapping', {}).get(key) == value])
+                        if policy == 'any' and bool(cnt) or cnt == len(mapping):
+                            if self.opts['discovery'].get('multimaster'):
+                                discovered.append(proto_data['master'])
+                            else:
                                 self.opts['master'] = proto_data['master']
                                 return
+                self.opts['master'] = discovered
 
     def _return_retry_timer(self):
         '''
@@ -797,6 +806,9 @@ class SMinion(MinionBase):
         import salt.loader
         opts['grains'] = salt.loader.grains(opts)
         super(SMinion, self).__init__(opts)
+
+        # run ssdp discovery if necessary
+        self._discover_masters()
 
         # Clean out the proc directory (default /var/cache/salt/minion/proc)
         if (self.opts.get('file_client', 'remote') == 'remote'
@@ -987,6 +999,13 @@ class MinionManager(MinionBase):
         '''
         Spawn all the coroutines which will sign in to masters
         '''
+        # Run masters discovery over SSDP. This may modify the whole configuration,
+        # depending of the networking and sets of masters. If match is 'any' we let
+        # eval_master handle the discovery instead so disconnections can also handle
+        # discovery
+        if isinstance(self.opts['discovery'], dict) and self.opts['discovery'].get('multimaster'):
+            self._discover_masters()
+
         masters = self.opts['master']
         if (self.opts['master_type'] in ('failover', 'distributed')) or not isinstance(self.opts['master'], list):
             masters = [masters]
