@@ -277,15 +277,15 @@ release = version  # version, latest_release, previous_release
 # Set google custom search engine
 
 if release == latest_release:
-    search_cx = '004624818632696854117:yfmprrbw3pk' # latest
-elif release.startswith('2014.7'):
-    search_cx = '004624818632696854117:thhslradbru' # 2014.7
-elif release.startswith('2015.5'):
-    search_cx = '004624818632696854117:ovogwef29do' # 2015.5
-elif release.startswith('2015.8'):
-    search_cx = '004624818632696854117:aw_tegffouy' # 2015.8
+    search_cx = '011515552685726825874:ht0p8miksrm' # latest
+elif release.startswith('2018.3'):
+    search_cx = '011515552685726825874:vadptdpvyyu' # 2018.3
+elif release.startswith('2017.7'):
+    search_cx = '011515552685726825874:w-hxmnbcpou' # 2017.7
+elif release.startswith('2016.11'):
+    search_cx = '011515552685726825874:dlsj745pvhq' # 2016.11
 else:
-    search_cx = '004624818632696854117:haj7bjntf4s'  # develop
+    search_cx = '011515552685726825874:x17j5zl74g8'  # develop
 
 needs_sphinx = '1.3'
 
