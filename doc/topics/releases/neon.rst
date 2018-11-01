@@ -370,6 +370,12 @@ Module Deprecations
       :py:func:`ssh.recv_known_host_entries <salt.modules.ssh.recv_known_host_entries>`
       function instead.
 
+- The :py:mod:`test <salt.modules.test>` execution module has been changed as follows:
+
+    - Support for the :py:func:`test.rand_str <salt.modules.test.rand_str>` has been
+      removed. Please use the :py:func:`test.random_hash <salt.modules.test.random_hash>`
+      function instead.
+
 State Deprecations
 ------------------
 
