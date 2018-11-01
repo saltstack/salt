@@ -134,7 +134,7 @@ def add(name, beacon_data, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' beacons.add ps "[{'salt-master': 'stopped', 'apache2': 'stopped'}]"
+        salt '*' beacons.add ps "[{'salt-master': 'stopped'}, {'apache2': 'stopped'}]"
 
     '''
     ret = {'comment': 'Failed to add beacon {0}.'.format(name),
@@ -207,7 +207,7 @@ def modify(name, beacon_data, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' beacons.modify ps "[{'salt-master': 'stopped', 'apache2': 'stopped'}]"
+        salt '*' beacons.modify ps "[{'salt-master': 'stopped'}, {'apache2': 'stopped'}]"
     '''
 
     ret = {'comment': '',
