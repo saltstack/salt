@@ -445,7 +445,7 @@ def apiinfo_version(**connection_args):
         salt '*' zabbix.apiinfo_version
     '''
     conn_args = _login(**connection_args)
-    ret = False
+    ret = {}
     try:
         if conn_args:
             method = 'apiinfo.version'
@@ -489,7 +489,7 @@ def user_create(alias, passwd, usrgrps, **connection_args):
         salt '*' zabbix.user_create james password007 '[7, 12]' firstname='James Bond'
     '''
     conn_args = _login(**connection_args)
-    ret = False
+    ret = {}
     try:
         if conn_args:
             method = 'user.create'
@@ -528,7 +528,7 @@ def user_delete(users, **connection_args):
         salt '*' zabbix.user_delete 15
     '''
     conn_args = _login(**connection_args)
-    ret = False
+    ret = {}
     try:
         if conn_args:
             method = 'user.delete'
@@ -564,7 +564,7 @@ def user_exists(alias, **connection_args):
         salt '*' zabbix.user_exists james
     '''
     conn_args = _login(**connection_args)
-    ret = False
+    ret = {}
     try:
         if conn_args:
             method = 'user.get'
@@ -597,7 +597,7 @@ def user_get(alias=None, userids=None, **connection_args):
         salt '*' zabbix.user_get james
     '''
     conn_args = _login(**connection_args)
-    ret = False
+    ret = {}
     try:
         if conn_args:
             method = 'user.get'
@@ -642,7 +642,7 @@ def user_update(userid, **connection_args):
         salt '*' zabbix.user_update 16 visible_name='James Brown'
     '''
     conn_args = _login(**connection_args)
-    ret = False
+    ret = {}
     try:
         if conn_args:
             method = 'user.update'
@@ -682,7 +682,7 @@ def user_getmedia(userids=None, **connection_args):
         salt '*' zabbix.user_getmedia
     '''
     conn_args = _login(**connection_args)
-    ret = False
+    ret = {}
     try:
         if conn_args:
             method = 'usermedia.get'
@@ -725,7 +725,7 @@ def user_addmedia(userids, active, mediatypeid, period, sendto, severity, **conn
 
     '''
     conn_args = _login(**connection_args)
-    ret = False
+    ret = {}
     try:
         if conn_args:
             method = 'user.addmedia'
@@ -766,7 +766,7 @@ def user_deletemedia(mediaids, **connection_args):
         salt '*' zabbix.user_deletemedia 27
     '''
     conn_args = _login(**connection_args)
-    ret = False
+    ret = {}
     try:
         if conn_args:
             method = 'user.deletemedia'
@@ -800,7 +800,7 @@ def user_list(**connection_args):
         salt '*' zabbix.user_list
     '''
     conn_args = _login(**connection_args)
-    ret = False
+    ret = {}
     try:
         if conn_args:
             method = 'user.get'
@@ -838,7 +838,7 @@ def usergroup_create(name, **connection_args):
         salt '*' zabbix.usergroup_create GroupName
     '''
     conn_args = _login(**connection_args)
-    ret = False
+    ret = {}
     try:
         if conn_args:
             method = 'usergroup.create'
@@ -870,7 +870,7 @@ def usergroup_delete(usergroupids, **connection_args):
         salt '*' zabbix.usergroup_delete 28
     '''
     conn_args = _login(**connection_args)
-    ret = False
+    ret = {}
     try:
         if conn_args:
             method = 'usergroup.delete'
@@ -908,7 +908,7 @@ def usergroup_exists(name=None, node=None, nodeids=None, **connection_args):
     '''
     conn_args = _login(**connection_args)
     zabbix_version = apiinfo_version(**connection_args)
-    ret = False
+    ret = {}
     try:
         if conn_args:
             # usergroup.exists deprecated
@@ -968,7 +968,7 @@ def usergroup_get(name=None, usrgrpids=None, userids=None, **connection_args):
     '''
     conn_args = _login(**connection_args)
     zabbix_version = apiinfo_version(**connection_args)
-    ret = False
+    ret = {}
     try:
         if conn_args:
             method = 'usergroup.get'
@@ -1020,7 +1020,7 @@ def usergroup_update(usrgrpid, **connection_args):
         salt '*' zabbix.usergroup_update 8 name=guestsRenamed
     '''
     conn_args = _login(**connection_args)
-    ret = False
+    ret = {}
     try:
         if conn_args:
             method = 'usergroup.update'
@@ -1052,7 +1052,7 @@ def usergroup_list(**connection_args):
         salt '*' zabbix.usergroup_list
     '''
     conn_args = _login(**connection_args)
-    ret = False
+    ret = {}
     try:
         if conn_args:
             method = 'usergroup.get'
@@ -1098,7 +1098,7 @@ def host_create(host, groups, interfaces, **connection_args):
         visible_name='Host Visible Name' inventory_mode=0 inventory='{"alias": "something"}'
     '''
     conn_args = _login(**connection_args)
-    ret = False
+    ret = {}
     try:
         if conn_args:
             method = 'host.create'
@@ -1142,7 +1142,7 @@ def host_delete(hostids, **connection_args):
         salt '*' zabbix.host_delete 10106
     '''
     conn_args = _login(**connection_args)
-    ret = False
+    ret = {}
     try:
         if conn_args:
             method = 'host.delete'
@@ -1182,7 +1182,7 @@ def host_exists(host=None, hostid=None, name=None, node=None, nodeids=None, **co
     '''
     conn_args = _login(**connection_args)
     zabbix_version = apiinfo_version(**connection_args)
-    ret = False
+    ret = {}
     try:
         if conn_args:
             # hostgroup.exists deprecated
@@ -1251,7 +1251,7 @@ def host_get(host=None, name=None, hostids=None, **connection_args):
         salt '*' zabbix.host_get 'Zabbix server'
     '''
     conn_args = _login(**connection_args)
-    ret = False
+    ret = {}
     try:
         if conn_args:
             method = 'host.get'
@@ -1304,7 +1304,7 @@ def host_update(hostid, **connection_args):
         salt '*' zabbix.host_update 10084 name='Zabbix server2'
     '''
     conn_args = _login(**connection_args)
-    ret = False
+    ret = {}
     try:
         if conn_args:
             method = 'host.update'
@@ -1338,7 +1338,7 @@ def host_inventory_get(hostids, **connection_args):
         salt '*' zabbix.host_inventory_get 101054
     '''
     conn_args = _login(**connection_args)
-    ret = False
+    ret = {}
     try:
         if conn_args:
             method = 'host.get'
@@ -1376,7 +1376,7 @@ def host_inventory_set(hostid, **connection_args):
         salt '*' zabbix.host_inventory_set 101054 asset_tag=jml3322 type=vm clear_old=True
     '''
     conn_args = _login(**connection_args)
-    ret = False
+    ret = {}
     try:
         if conn_args:
             params = {}
@@ -1427,7 +1427,7 @@ def host_list(**connection_args):
         salt '*' zabbix.host_list
     '''
     conn_args = _login(**connection_args)
-    ret = False
+    ret = {}
     try:
         if conn_args:
             method = 'host.get'
@@ -1465,7 +1465,7 @@ def hostgroup_create(name, **connection_args):
         salt '*' zabbix.hostgroup_create MyNewGroup
     '''
     conn_args = _login(**connection_args)
-    ret = False
+    ret = {}
     try:
         if conn_args:
             method = 'hostgroup.create'
@@ -1498,7 +1498,7 @@ def hostgroup_delete(hostgroupids, **connection_args):
         salt '*' zabbix.hostgroup_delete 23
     '''
     conn_args = _login(**connection_args)
-    ret = False
+    ret = {}
     try:
         if conn_args:
             method = 'hostgroup.delete'
@@ -1537,7 +1537,7 @@ def hostgroup_exists(name=None, groupid=None, node=None, nodeids=None, **connect
     '''
     conn_args = _login(**connection_args)
     zabbix_version = apiinfo_version(**connection_args)
-    ret = False
+    ret = {}
     try:
         if conn_args:
             # hostgroup.exists deprecated
@@ -1604,7 +1604,7 @@ def hostgroup_get(name=None, groupids=None, hostids=None, **connection_args):
         salt '*' zabbix.hostgroup_get MyNewGroup
     '''
     conn_args = _login(**connection_args)
-    ret = False
+    ret = {}
     try:
         if conn_args:
             method = 'hostgroup.get'
@@ -1653,7 +1653,7 @@ def hostgroup_update(groupid, name=None, **connection_args):
         salt '*' zabbix.hostgroup_update 24 name='Renamed Name'
     '''
     conn_args = _login(**connection_args)
-    ret = False
+    ret = {}
     try:
         if conn_args:
             method = 'hostgroup.update'
@@ -1687,7 +1687,7 @@ def hostgroup_list(**connection_args):
         salt '*' zabbix.hostgroup_list
     '''
     conn_args = _login(**connection_args)
-    ret = False
+    ret = {}
     try:
         if conn_args:
             method = 'hostgroup.get'
@@ -1729,7 +1729,7 @@ def hostinterface_get(hostids, **connection_args):
         salt '*' zabbix.hostinterface_get 101054
     '''
     conn_args = _login(**connection_args)
-    ret = False
+    ret = {}
     try:
         if conn_args:
             method = 'hostinterface.get'
@@ -1790,7 +1790,7 @@ def hostinterface_create(hostid, ip_, dns='', main=1, if_type=1, useip=1, port=N
         salt '*' zabbix.hostinterface_create 10105 192.193.194.197
     '''
     conn_args = _login(**connection_args)
-    ret = False
+    ret = {}
 
     if not port:
         port = INTERFACE_DEFAULT_PORTS[if_type]
@@ -1833,7 +1833,7 @@ def hostinterface_delete(interfaceids, **connection_args):
         salt '*' zabbix.hostinterface_delete 50
     '''
     conn_args = _login(**connection_args)
-    ret = False
+    ret = {}
     try:
         if conn_args:
             method = 'hostinterface.delete'
@@ -1877,7 +1877,7 @@ def hostinterface_update(interfaceid, **connection_args):
         salt '*' zabbix.hostinterface_update 6 ip_=0.0.0.2
     '''
     conn_args = _login(**connection_args)
-    ret = False
+    ret = {}
     try:
         if conn_args:
             method = 'hostinterface.update'
@@ -1919,7 +1919,7 @@ def usermacro_get(macro=None, hostids=None, templateids=None, hostmacroids=None,
         salt '*' zabbix.usermacro_get macro='{$SNMP_COMMUNITY}'
     '''
     conn_args = _login(**connection_args)
-    ret = False
+    ret = {}
     try:
         if conn_args:
             method = 'usermacro.get'
@@ -1971,7 +1971,7 @@ def usermacro_create(macro, value, hostid, **connection_args):
         salt '*' zabbix.usermacro_create '{$SNMP_COMMUNITY}' 'public' 1
     '''
     conn_args = _login(**connection_args)
-    ret = False
+    ret = {}
     try:
         if conn_args:
             params = {}
@@ -2013,7 +2013,7 @@ def usermacro_createglobal(macro, value, **connection_args):
         salt '*' zabbix.usermacro_createglobal '{$SNMP_COMMUNITY}' 'public'
     '''
     conn_args = _login(**connection_args)
-    ret = False
+    ret = {}
     try:
         if conn_args:
             params = {}
@@ -2054,7 +2054,7 @@ def usermacro_delete(macroids, **connection_args):
         salt '*' zabbix.usermacro_delete 21
     '''
     conn_args = _login(**connection_args)
-    ret = False
+    ret = {}
     try:
         if conn_args:
             method = 'usermacro.delete'
@@ -2089,7 +2089,7 @@ def usermacro_deleteglobal(macroids, **connection_args):
         salt '*' zabbix.usermacro_deleteglobal 21
     '''
     conn_args = _login(**connection_args)
-    ret = False
+    ret = {}
     try:
         if conn_args:
             method = 'usermacro.deleteglobal'
@@ -2124,7 +2124,7 @@ def usermacro_update(hostmacroid, value, **connection_args):
         salt '*' zabbix.usermacro_update 1 'public'
     '''
     conn_args = _login(**connection_args)
-    ret = False
+    ret = {}
     try:
         if conn_args:
             params = {}
@@ -2159,7 +2159,7 @@ def usermacro_updateglobal(globalmacroid, value, **connection_args):
         salt '*' zabbix.usermacro_updateglobal 1 'public'
     '''
     conn_args = _login(**connection_args)
-    ret = False
+    ret = {}
     try:
         if conn_args:
             params = {}
@@ -2202,7 +2202,7 @@ def mediatype_get(name=None, mediatypeids=None, **connection_args):
         salt '*' zabbix.mediatype_get mediatypeids="['1', '2', '3']"
     '''
     conn_args = _login(**connection_args)
-    ret = False
+    ret = {}
     try:
         if conn_args:
             method = 'mediatype.get'
@@ -2253,7 +2253,7 @@ def mediatype_create(name, mediatype, **connection_args):
         smtp_server='mailserver.example.com' smtp_helo='zabbix.example.com'
     '''
     conn_args = _login(**connection_args)
-    ret = False
+    ret = {}
     try:
         if conn_args:
             method = 'mediatype.create'
@@ -2286,7 +2286,7 @@ def mediatype_delete(mediatypeids, **connection_args):
         salt '*' zabbix.mediatype_delete 3
     '''
     conn_args = _login(**connection_args)
-    ret = False
+    ret = {}
     try:
         if conn_args:
             method = 'mediatype.delete'
@@ -2325,7 +2325,7 @@ def mediatype_update(mediatypeid, name=False, mediatype=False, **connection_args
         salt '*' zabbix.usergroup_update 8 name="Email update"
     '''
     conn_args = _login(**connection_args)
-    ret = False
+    ret = {}
     try:
         if conn_args:
             method = 'mediatype.update'
@@ -2371,7 +2371,7 @@ def template_get(name=None, host=None, templateids=None, **connection_args):
         salt '*' zabbix.template_get templateids="['10050', '10001']"
     '''
     conn_args = _login(**connection_args)
-    ret = False
+    ret = {}
     try:
         if conn_args:
             method = 'template.get'
@@ -2417,7 +2417,7 @@ def run_query(method, params, **connection_args):
         salt '*' zabbix.run_query proxy.create '{"host": "zabbixproxy.domain.com", "status": "5"}'
     '''
     conn_args = _login(**connection_args)
-    ret = False
+    ret = {}
     try:
         if conn_args:
             method = method
@@ -2530,14 +2530,14 @@ def triggerid_get(hostid=None, trigger_desc=None, priority=4, **connection_args)
         salt '*' zabbix.triggerid_get 1111 'trigger name to find' 5
     '''
     conn_args = _login(**connection_args)
-    ret = False
+    ret = {}
     try:
         if conn_args:
             method = 'trigger.get'
             if not hostid or not trigger_desc:
                 return {'result': False, 'comment': 'hostid and trigger_desc params are required'}
-            params = {'output': ["triggerid", "description"],
-                      'filter': {"priority": priority}, 'hostids': hostid}
+            params = {'output': ['triggerid', 'description'],
+                      'filter': {'priority': priority}, 'hostids': hostid}
             params = _params_extend(params, _ignore_name=True, **connection_args)
             ret = _query(method, params, conn_args['url'], conn_args['auth'])
             if len(ret['result']) > 0:
@@ -2579,7 +2579,7 @@ def service_add(service_rootid=None, service_name=None, triggerid=None, **connec
         salt '*' zabbix.service_add 11 'My service' 11111
     '''
     conn_args = _login(**connection_args)
-    ret = False
+    ret = {}
     try:
         if conn_args:
             method = 'service.create'
@@ -2628,7 +2628,7 @@ def service_get(service_name=None, service_rootid=None, **connection_args):
     '''
 
     conn_args = _login(**connection_args)
-    ret = False
+    ret = {}
     try:
         if conn_args:
             method = 'service.get'
@@ -2674,7 +2674,7 @@ def service_delete(service_id=None, **connection_args):
     '''
 
     conn_args = _login(**connection_args)
-    ret = False
+    ret = {}
     try:
         if conn_args:
             method = 'service.delete'
