@@ -329,7 +329,7 @@ def query(method='servers', root='api_root', server_id=None, command=None, args=
         get_configured_provider(),
         __opts__,
         search_global=False,
-        default_url
+        default=default_url
     ))
 
     path = '{0}/{1}/'.format(base_path, method)
