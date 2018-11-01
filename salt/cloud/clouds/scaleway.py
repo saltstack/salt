@@ -318,12 +318,18 @@ def query(method='servers', root='api_root', server_id=None, command=None, args=
           http_method='GET'):
     ''' Make a call to the Scaleway API.
     '''
+
+    if root == 'api_root':
+        default_url='https://cp-par1.scaleway.com'
+    else:
+        default_url='https://api-marketplace.scaleway.com'
+
     base_path = six.text_type(config.get_cloud_config_value(
         root,
         get_configured_provider(),
         __opts__,
         search_global=False,
-        default='https://api.cloud.online.net'
+        default_url
     ))
 
     path = '{0}/{1}/'.format(base_path, method)
@@ -343,7 +349,6 @@ def query(method='servers', root='api_root', server_id=None, command=None, args=
 
     data = salt.utils.json.dumps(args)
 
-
     request = __utils__["http.query"](path,
                                       method=http_method,
                                       data=data,
@@ -352,10 +357,10 @@ def query(method='servers', root='api_root', server_id=None, command=None, args=
                                       decode_type='json',
                                       data_render=True,
                                       data_renderer='json',
-                                      headers={'X-Auth-Token': token,
+                                      headers=True,
+                                      header_dict={'X-Auth-Token': token,
                                                'User-Agent': "salt-cloud",
                                                'Content-Type': 'application/json'})
-
     if request['status'] > 299:
         raise SaltCloudSystemExit(
             'An error occurred while querying Scaleway. HTTP Code: {0}  '
