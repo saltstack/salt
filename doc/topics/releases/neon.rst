@@ -147,6 +147,12 @@ Module Deprecations
         - :py:func:`dockermod.load <salt.modules.dockermod.load>`
         - :py:func:`dockermod.tag <salt.modules.dockermod.tag_>`
 
+- The :py:mod:`test <salt.modules.test>` execution module has been changed as follows:
+
+    - Support for the :py:func:`test.rand_str <salt.modules.test.rand_str>` has been
+      removed. Please use the :py:func:`test.random_hash <salt.modules.test.random_hash>`
+      function instead.
+
 State Deprecations
 ------------------
 

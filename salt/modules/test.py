@@ -18,7 +18,6 @@ import salt.utils.args
 import salt.utils.functools
 import salt.utils.hashutils
 import salt.utils.platform
-import salt.utils.versions
 import salt.version
 import salt.loader
 from salt.ext import six
@@ -494,14 +493,6 @@ def opts_pkg():
     ret.update(__opts__)
     ret['grains'] = __grains__
     return ret
-
-
-def rand_str(size=9999999999, hash_type=None):
-    salt.utils.versions.warn_until(
-        'Neon',
-        'test.rand_str has been renamed to test.random_hash'
-    )
-    return random_hash(size=size, hash_type=hash_type)
 
 
 def random_hash(size=9999999999, hash_type=None):
