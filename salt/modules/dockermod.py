@@ -3879,7 +3879,11 @@ def build(path=None,
           api_response=False,
           fileobj=None,
           dockerfile=None,
-          buildargs=None):
+          buildargs=None,
+          network_mode=None,
+          labels=None,
+          cache_from=None,
+          target=None):
     '''
     .. versionchanged:: 2018.3.0
         If the built image should be tagged, then the repository and tag must
@@ -3931,8 +3935,19 @@ def build(path=None,
 
     buildargs
         A dictionary of build arguments provided to the docker build process.
+    
+    network_mode
+        networking mode(or name of docker network) to use when executing RUN commands.
+   
+    labels
+        A dictionary of labels to set for the image
 
+    cache_from
+        list of image names to use a sources of cached layers(when cache is True)
 
+    target
+        Name of build stage to build for a multi-stage Dockerfile.
+    
     **RETURN DATA**
 
     A dictionary containing one or more of the following keys:
@@ -3993,7 +4008,11 @@ def build(path=None,
                                rm=rm,
                                nocache=not cache,
                                dockerfile=dockerfile,
-                               buildargs=buildargs)
+                               buildargs=buildargs,
+                               network_mode=network_mode,
+                               labels=labels
+                               cache_from=cache_from
+                               target=target)
     ret = {'Time_Elapsed': time.time() - time_started}
     _clear_context()
 
