@@ -19,14 +19,6 @@ from __future__ import absolute_import
 import copy
 import logging
 import re
-try:
-    if globals()['__builtins__'].reload:
-        pass
-except AttributeError:
-    try:
-        from importlib import reload
-    except ImportError:
-        from imp import reload
 
 # Import salt libs
 import salt.utils
@@ -34,6 +26,10 @@ import salt.utils.pkg
 import salt.utils.systemd
 from salt.exceptions import CommandExecutionError, MinionError
 import salt.ext.six as six
+
+# Workaround for 'reload' builtin of py2.7
+if six.PY3:
+    from importlib import reload
 
 # Import third party libs
 HAS_PORTAGE = False

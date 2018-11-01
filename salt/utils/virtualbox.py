@@ -13,17 +13,13 @@ import logging
 import re
 import time
 
-try:
-    if globals()['__builtins__'].reload:
-        pass
-except AttributeError:
-    try:
-        from importlib import reload
-    except ImportError:
-        from imp import reload
-
 # Import salt libs
 from salt.utils.timeout import wait_for
+import salt.ext.six as six
+
+# Workaround for 'reload' builtin of py2.7
+if six.PY3:
+    from importlib import reload
 
 log = logging.getLogger(__name__)
 
