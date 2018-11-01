@@ -100,7 +100,23 @@ def zone_present(name, profile, domain=None, type=None, ttl=None, extra=None):
     extra = extra or {}
     matching_zone = [z for z in zones if z['domain'] == domain]
     if len(matching_zone) > 0:
-        return state_result(True, 'Zone already exists.', name)
+        if ttl == matching_zone[0]['ttl'] and extra == matching_zone[0]['extra']:
+            return state_result(True, 'Zone already exists.', name)
+        else:
+            if __opts__['test']:
+                _changes = {
+                    'id': matching_zone[0]['id'],
+                    'domain': domain,
+                    'type': type,
+                    'ttl': ttl,
+                    'extra': extra
+                }
+                return state_result(True, 'Will update zone.', name, _changes)
+            else:
+                result = __salt__['libcloud_dns.update_zone'](
+                    zone_id=matching_zone[0]['id'],
+                    domain=domain, profile=profile, type=type, ttl=ttl, extra=extra)
+                return state_result(True, 'Updated zone.', name, result)
     else:
         if __opts__['test']:
             _changes = {

@@ -356,7 +356,7 @@ class LibcloudDnsModuleTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Assert that a zone is present (that did exist) with a new ttl 
         '''
-        _TEST_ZONE = _CREATED_ZONE.copy()
+        _TEST_ZONE = _ZONES[0].copy()
         _TEST_ZONE['ttl'] = 900
         ret = {'changes': _TEST_ZONE,
                'comment': 'Updated zone.',
@@ -364,7 +364,7 @@ class LibcloudDnsModuleTestCase(TestCase, LoaderModuleMockMixin):
                'result': True}
 
         list_zones = MagicMock(return_value=_ZONES)
-        create_zone = MagicMock(return_value=_CREATED_ZONE)
+        create_zone = MagicMock(return_value='foo')
         update_zone = MagicMock(return_value=_TEST_ZONE)
 
         with patch.dict(libcloud_dns.__salt__,
@@ -377,7 +377,7 @@ class LibcloudDnsModuleTestCase(TestCase, LoaderModuleMockMixin):
             list_zones.assert_called_with('test')
             assert not create_zone.called
             assert update_zone.called
-            update_zone.assert_called_with(domain='test.com', type='master', ttl=900, extra={}, profile='test')
+            update_zone.assert_called_with(zone_id='12345', domain='test.com', type='master', ttl=900, extra={}, profile='test')
 
     def test_zone_present_test_mode(self):
         '''
