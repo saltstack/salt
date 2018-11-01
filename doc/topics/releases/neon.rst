@@ -277,6 +277,23 @@ the ``engine_module`` parameter in the engine configuration.
          proto: tcp
          engine_module: logstash
 
+Enhancements to Beacons
+=======================
+Multiple copies of a particular Salt beacon can be configured by including
+the ``beacon_module`` parameter in the beacon configuration.
+
+ .. code-block:: yaml
+
+    beacons:
+      watch_importand_file:
+        - files:
+            /etc/important_file: {}
+        - beacon_module: inotify
+      watch_another_file:
+        - files:
+            /etc/another_file: {}
+        - beacon_module: inotify
+
 Salt Cloud Features
 ===================
 
