@@ -30,7 +30,8 @@ class NetyangTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_managed(self):
         ret = {'changes': {}, 'comment': 'Loaded.',
-               'name': 'test', 'result': False}
+               'name': 'test', 'result': False,
+               'pchanges': {'compliance_report': {'complies': False}}}
         parse = MagicMock(return_value='abcdef')
         temp_file = MagicMock(return_value='')
         compliance_report = MagicMock(return_value={'complies': False})
@@ -54,7 +55,8 @@ class NetyangTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_configured(self):
         ret = {'changes': {}, 'comment': 'Loaded.',
-               'name': 'test', 'result': False}
+               'name': 'test', 'result': False,
+               'pchanges': {}}
         load_config = MagicMock(return_value={'comment': 'Loaded.'})
 
         with patch('salt.utils.files.fopen'):
