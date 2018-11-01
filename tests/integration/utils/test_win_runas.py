@@ -11,16 +11,14 @@ import sys
 import os
 import logging
 import threading
-import win32service
-import win32serviceutil
-import win32event
-import servicemanager
 import traceback
 import time
 
 import yaml
 from tests.support.case import ModuleCase
+from tests.support.mock import Mock
 from tests.support.paths import CODE_DIR
+from tests.support.unit import skipIf
 
 from tests.support.helpers import (
     with_system_user,
@@ -30,11 +28,18 @@ import salt.utils.win_runas
 import salt.ext.six
 
 try:
+    import win32service
+    import win32serviceutil
+    import win32event
+    import servicemanager
     import win32api
     CODE_DIR = win32api.GetLongPathName(CODE_DIR)
+    HAS_WIN32 = True
 except ImportError:
-    pass
-
+    # Mock win32serviceutil object to avoid
+    # a stacktrace in the _ServiceManager class
+    win32serviceutil = Mock()
+    HAS_WIN32 = False
 
 logger = logging.getLogger(__name__)
 
@@ -204,7 +209,8 @@ def service_class_factory(cls_name, name, target=default_target, display_name=''
     )
 
 
-test_service = service_class_factory('test_service', 'test service')
+if HAS_WIN32:
+    test_service = service_class_factory('test_service', 'test service')
 
 
 SERVICE_SOURCE = '''
@@ -272,6 +278,7 @@ def wait_for_service(name, timeout=200):
         time.sleep(.3)
 
 
+@skipIf(not HAS_WIN32, 'This test runs only on windows.')
 class RunAsTest(ModuleCase):
 
     @classmethod

@@ -1203,6 +1203,7 @@ def _windows_platform_data():
     #    osfullname
     #    timezone
     #    windowsdomain
+    #    windowsdomaintype
     #    motherboard.productname
     #    motherboard.serialnumber
     #    virtual
@@ -1234,6 +1235,7 @@ def _windows_platform_data():
         os_release = platform.release()
         kernel_version = platform.version()
         info = salt.utils.win_osinfo.get_os_version_info()
+        net_info = salt.utils.win_osinfo.get_join_info()
         server = {'Vista': '2008Server',
                   '7': '2008ServerR2',
                   '8': '2012Server',
@@ -1268,7 +1270,8 @@ def _windows_platform_data():
             'serialnumber': _clean_value('serialnumber', biosinfo.SerialNumber),
             'osfullname': _clean_value('osfullname', osinfo.Caption),
             'timezone': _clean_value('timezone', timeinfo.Description),
-            'windowsdomain': _clean_value('windowsdomain', systeminfo.Domain),
+            'windowsdomain': _clean_value('windowsdomain', net_info['Domain']),
+            'windowsdomaintype': _clean_value('windowsdomaintype', net_info['DomainType']),
             'motherboard': {
                 'productname': _clean_value('motherboard.productname', motherboard['product']),
                 'serialnumber': _clean_value('motherboard.serialnumber', motherboard['serial']),
@@ -1332,6 +1335,7 @@ def id_():
     '''
     return {'id': __opts__.get('id', '')}
 
+
 _REPLACE_LINUX_RE = re.compile(r'\W(?:gnu/)?linux', re.IGNORECASE)
 
 # This maps (at most) the first ten characters (no spaces, lowercased) of
@@ -1388,6 +1392,7 @@ _OS_FAMILY_MAP = {
     'OVS': 'RedHat',
     'OEL': 'RedHat',
     'XCP': 'RedHat',
+    'XCP-ng': 'RedHat',
     'XenServer': 'RedHat',
     'RES': 'RedHat',
     'Sangoma': 'RedHat',

@@ -907,9 +907,9 @@ def route_table_present(name, vpc_name=None, vpc_id=None, routes=None,
               interface_id: eni-123456
             - destination_cidr_block: 10.10.13.0/24
               instance_name: mygatewayserver
-            - subnet_names:
-              - subnet1
-              - subnet2
+          - subnet_names:
+            - subnet1
+            - subnet2
 
     name
         Name of the route table.
