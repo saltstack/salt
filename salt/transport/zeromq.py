@@ -21,6 +21,7 @@ from salt.ext.six.moves import map
 import salt.auth
 import salt.crypt
 import salt.utils
+import salt.log.setup
 import salt.utils.verify
 import salt.utils.event
 import salt.utils.files
@@ -737,10 +738,11 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
     '''
     Encapsulate synchronous operations for a publisher channel
     '''
-    def __init__(self, opts):
+    def __init__(self, opts, log_queue=None):
         self.opts = opts
         self.serial = salt.payload.Serial(self.opts)  # TODO: in init?
         self.ckminions = salt.utils.minions.CkMinions(self.opts)
+        self.log_queue = log_queue
 
     def connect(self):
         return tornado.gen.sleep(5)
@@ -750,6 +752,8 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
         Bind to the interface specified in the configuration file
         '''
         salt.utils.appendproctitle(self.__class__.__name__)
+        if self.log_queue:
+            salt.log.setup.set_multiprocessing_logging_queue(self.log_queue)
         # Set up the context
         context = zmq.Context(1)
         # Prepare minion publish socket
