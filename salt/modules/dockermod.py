@@ -4010,8 +4010,8 @@ def build(path=None,
                                dockerfile=dockerfile,
                                buildargs=buildargs,
                                network_mode=network_mode,
-                               labels=labels
-                               cache_from=cache_from
+                               labels=labels,
+                               cache_from=cache_from,
                                target=target)
     ret = {'Time_Elapsed': time.time() - time_started}
     _clear_context()
