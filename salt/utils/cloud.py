@@ -850,6 +850,9 @@ def wait_for_winrm(host, port, username, password, timeout=900, use_ssl=True, ve
     '''
     Wait until WinRM connection can be established.
     '''
+    # Ensure the winrm service is listening before attempting to connect
+    wait_for_port(host=host, port=port, timeout=timeout)
+
     start = time.time()
     log.debug(
         'Attempting WinRM connection to host {0} on port {1}'.format(
