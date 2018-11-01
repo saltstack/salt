@@ -171,14 +171,14 @@ def get_image(server_):
 def create_node(args):
     """ Create a node.
     """
-    node = query(method="servers", args=args, http_method="post")
+    node = query(method="servers", args=args, http_method="POST")
 
     action = query(
         method="servers",
         server_id=node["server"]["id"],
         command="action",
         args={"action": "poweron"},
-        http_method="post",
+        http_method="POST",
     )
     return node
 
@@ -452,7 +452,7 @@ def destroy(name, call=None):
         server_id=data["id"],
         command="action",
         args={"action": "terminate"},
-        http_method="post",
+        http_method="POST",
     )
 
     __utils__["cloud.fire_event"](
