@@ -17,7 +17,7 @@ log = logging.getLogger(__name__)
 @destructiveTest
 class BeaconStateTestCase(ModuleCase):
     '''
-    Test zookeeper states
+    Test beacon states
     '''
     def setUp(self):
         '''
