@@ -35,8 +35,11 @@ def __random_name(size=6):
         for x in range(size)
     )
 
+
 # Create the cloud instance name to be used throughout the tests
 INSTANCE_NAME = __random_name()
+
+
 PROVIDER_NAME = 'ec2'
 HAS_WINRM = salt.utils.cloud.HAS_WINRM and salt.utils.cloud.HAS_SMB
 TIMEOUT = 1200
@@ -46,6 +49,7 @@ class EC2Test(ShellCase):
     '''
     Integration tests for the EC2 cloud provider in Salt-Cloud
     '''
+
 
     def _installer_name(self):
         '''
@@ -110,7 +114,7 @@ class EC2Test(ShellCase):
         id_ = config[profile_str][PROVIDER_NAME]['id']
         key = config[profile_str][PROVIDER_NAME]['key']
         key_name = config[profile_str][PROVIDER_NAME]['keyname']
-        sec_group = config[profile_str][PROVIDER_NAME]['securitygroup']
+        sec_group = config[profile_str][PROVIDER_NAME]['securitygroupname'][0]
         private_key = config[profile_str][PROVIDER_NAME]['private_key']
         location = config[profile_str][PROVIDER_NAME]['location']
 

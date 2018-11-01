@@ -42,10 +42,15 @@ except ImportError:
 if HAS_PIP is True:
     try:
         from pip.req import InstallRequirement
+        _from_line = InstallRequirement.from_line
     except ImportError:
         # pip 10.0.0 move req module under pip._internal
         try:
-            from pip._internal.req import InstallRequirement
+            try:
+                from pip._internal.req import InstallRequirement
+                _from_line = InstallRequirement.from_line
+            except AttributeError:
+                from pip._internal.req.constructors import install_req_from_line as _from_line
         except ImportError:
             HAS_PIP = False
             # Remove references to the loaded pip module above so reloading works
@@ -133,7 +138,7 @@ def _check_pkg_version_format(pkg):
             logger.debug(
                 'Installed pip version: {0}'.format(pip.__version__)
             )
-            install_req = InstallRequirement.from_line(pkg)
+            install_req = _from_line(pkg)
         except AttributeError:
             logger.debug('Installed pip version is lower than 1.2')
             supported_vcs = ('git', 'svn', 'hg', 'bzr')
@@ -141,12 +146,12 @@ def _check_pkg_version_format(pkg):
                 for vcs in supported_vcs:
                     if pkg.startswith(vcs):
                         from_vcs = True
-                        install_req = InstallRequirement.from_line(
+                        install_req = _from_line(
                             pkg.split('{0}+'.format(vcs))[-1]
                         )
                         break
             else:
-                install_req = InstallRequirement.from_line(pkg)
+                install_req = _from_line(pkg)
     except (ValueError, InstallationError) as exc:
         ret['result'] = False
         if not from_vcs and '=' in pkg and '==' not in pkg:
