@@ -354,7 +354,7 @@ class LibcloudDnsModuleTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_zone_present_change_ttl(self):
         '''
-        Assert that a zone is present (that did exist) with a new ttl 
+        Assert that a zone is present (that did exist) with a new ttl
         '''
         _TEST_ZONE = _ZONES[0].copy()
         _TEST_ZONE['ttl'] = 900
