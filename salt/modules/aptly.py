@@ -86,6 +86,78 @@ def _format_repo_args(comment=None, component=None, distribution=None,
     return ret
 
 
+def _parse_show_output(cmd_ret):
+    '''
+    Parse the output of an aptly show command.
+
+    :param str cmd_ret: The text of the command output that needs to be parsed.
+
+    :return: A dictionary containing the configuration data.
+    :rtype: dict
+    '''
+    ret = dict()
+
+    # Extract the settings and their values, and attempt to format
+    # them to match their equivalent setting names.
+    list_key = None
+
+    for line in cmd_ret.splitlines():
+        # Skip empty lines.
+        if not line.strip():
+            continue
+
+        # If there are indented lines below an existing key, assign them as a list value
+        # for that key.
+        if salt.utils.stringutils.contains_whitespace(line[0]) and list_key:
+            value = salt.utils.stringutils.to_none(salt.utils.stringutils.to_num(line.strip()))
+
+            if list_key not in ret:
+                ret[list_key] = list()
+
+            ret[list_key].append(value)
+            continue
+
+        try:
+            items = [item.strip() for item in line.split(':', 1)]
+
+            key = items[0].lower()
+            key = ' '.join(key.split()).replace(' ', '_')
+
+            value = salt.utils.stringutils.to_none(salt.utils.stringutils.to_num(items[1]))
+
+            if value:
+                ret[key] = value
+                list_key = None
+            else:
+                # Track the current key so that we can use it in instances where the values
+                # appear on subsequent lines of the output.
+                list_key = key
+        except (AttributeError, IndexError):
+            # If the line doesn't have the separator or is otherwise invalid, skip it.
+            log.debug('Skipping line: %s', line)
+
+    if 'architectures' in ret:
+        ret['architectures'] = sorted([item.strip() for item in ret['architectures'].split()])
+
+    if 'sources' in ret:
+        # Match lines like "main: xenial [snapshot]" or "test [local]".
+        source_pattern = '((?P<component>\S+):)?\s*(?P<name>\S+)\s+\[(?P<type>\S+)\]'
+        sources = list()
+
+        for source in ret['sources']:
+            matches = re.search(source_pattern, source)
+            source_data = dict()
+
+            for item in ('component', 'name', 'type'):
+                if matches.group(item):
+                    source_data[item] = matches.group(item)
+
+            sources.append(source_data)
+        ret['sources'] = sources
+
+    return ret
+
+
 def _validate_config(config_path):
     '''
     Validate that the configuration file exists and is readable.
@@ -101,6 +173,7 @@ def _validate_config(config_path):
         message = 'Unable to get configuration file: {}'.format(config_path)
         log.error(message)
         raise SaltInvocationError(message)
+    log.debug('Found configuration file: %s', config_path)
 
 
 def get_config(config_path=_DEFAULT_CONFIG_PATH):
@@ -185,23 +258,13 @@ def get_repo(name, config_path=_DEFAULT_CONFIG_PATH, with_packages=False):
 
     cmd_ret = _cmd_run(cmd)
 
-    for line in cmd_ret.splitlines():
-        try:
-            # Extract the settings and their values, and attempt to format
-            # them to match their equivalent setting names.
-            items = line.split(':')
-            key = items[0].lower().replace('default', '').strip()
-            key = ' '.join(key.split()).replace(' ', '_')
-            ret[key] = salt.utils.stringutils.to_none(
-                salt.utils.stringutils.to_num(items[1].strip()))
-        except (AttributeError, IndexError):
-            # If the line doesn't have the separator or is otherwise invalid, skip it.
-            log.debug('Skipping line: %s', line)
+    ret = _parse_show_output(cmd_ret=cmd_ret)
 
     if ret:
         log.debug('Found repository: %s', name)
     else:
         log.debug('Unable to find repository: %s', name)
+
     return ret
 
 
@@ -398,13 +461,89 @@ def list_mirrors(config_path=_DEFAULT_CONFIG_PATH):
     return ret
 
 
+def get_mirror(name, config_path=_DEFAULT_CONFIG_PATH, with_packages=False):
+    '''
+    Get the details of the mirror.
+
+    :param str name: The name of the mirror.
+    :param str config_path: The path to the configuration file for the aptly instance.
+    :param bool with_packages: Return a list of packages in the repo.
+
+    :return: A dictionary containing information about the mirror.
+    :rtype: dict
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' aptly.get_mirror name="test-mirror"
+    '''
+    _validate_config(config_path)
+
+    ret = dict()
+    cmd = ['mirror', 'show', '-config={}'.format(config_path),
+           '-with-packages={}'.format(str(with_packages).lower()),
+           name]
+
+    cmd_ret = _cmd_run(cmd)
+
+    ret = _parse_show_output(cmd_ret=cmd_ret)
+
+    if ret:
+        log.debug('Found mirror: %s', name)
+    else:
+        log.debug('Unable to find mirror: %s', name)
+
+    return ret
+
+
+def delete_mirror(name, config_path=_DEFAULT_CONFIG_PATH, force=False):
+    '''
+    Remove the mirror.
+
+    :param str name: The name of the mirror.
+    :param str config_path: The path to the configuration file for the aptly instance.
+    :param bool force: Whether to remove the mirror even if it is used as the source
+        of an existing snapshot.
+
+    :return: A boolean representing whether all changes succeeded.
+    :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' aptly.delete_mirror name="test-mirror"
+    '''
+    _validate_config(config_path)
+    force = six.text_type(bool(force)).lower()
+
+    current_mirror = __salt__['aptly.get_mirror'](name=name, config_path=config_path)
+
+    if not current_mirror:
+        log.debug('Mirror already absent: %s', name)
+        return True
+
+    cmd = ['mirror', 'drop', '-config={}'.format(config_path),
+           '-force={}'.format(force), name]
+
+    _cmd_run(cmd)
+    mirror = __salt__['aptly.get_mirror'](name=name, config_path=config_path)
+
+    if mirror:
+        log.error('Unable to remove mirror: %s', name)
+        return False
+    log.debug('Removed mirror: %s', name)
+    return True
+
+
 def list_published(config_path=_DEFAULT_CONFIG_PATH):
     '''
     Get a list of all the published repositories.
 
     :param str config_path: The path to the configuration file for the aptly instance.
 
-    :return: A list of the published repository names.
+    :return: A list of the published repositories.
     :rtype: list
 
     CLI Example:
@@ -415,13 +554,110 @@ def list_published(config_path=_DEFAULT_CONFIG_PATH):
     '''
     _validate_config(config_path)
 
+    ret = list()
     cmd = ['publish', 'list', '-config={}'.format(config_path), '-raw=true']
 
     cmd_ret = _cmd_run(cmd)
-    ret = [line.strip() for line in cmd_ret.splitlines()]
+
+    for line in cmd_ret.splitlines():
+        items = [item.strip() for item in line.split(' ', 1)]
+        ret.append({
+            'distribution': items[1],
+            'prefix': items[0]
+        })
 
     log.debug('Found published repositories: %s', len(ret))
     return ret
+
+
+def get_published(name, config_path=_DEFAULT_CONFIG_PATH, endpoint='', prefix=None):
+    '''
+    Get the details of the published repository.
+
+    :param str name: The distribution name of the published repository.
+    :param str config_path: The path to the configuration file for the aptly instance.
+    :param str endpoint: The publishing endpoint.
+    :param str prefix: The prefix for publishing.
+
+    :return: A dictionary containing information about the published repository.
+    :rtype: dict
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' aptly.get_published name="test-dist"
+    '''
+    _validate_config(config_path)
+
+    ret = dict()
+    sources = list()
+    cmd = ['publish', 'show', '-config={}'.format(config_path), name]
+
+    if prefix:
+        cmd.append('{}:{}'.format(endpoint, prefix))
+
+    cmd_ret = _cmd_run(cmd)
+
+    ret = _parse_show_output(cmd_ret=cmd_ret)
+
+    if ret:
+        log.debug('Found published repository: %s', name)
+    else:
+        log.debug('Unable to find published repository: %s', name)
+
+    return ret
+
+
+def delete_published(name, config_path=_DEFAULT_CONFIG_PATH, endpoint='', prefix=None,
+                     skip_cleanup=False, force=False):
+    '''
+    Remove the published repository.
+
+    :param str name: The distribution name of the published repository.
+    :param str config_path: The path to the configuration file for the aptly instance.
+    :param str endpoint: The publishing endpoint.
+    :param str prefix: The prefix for publishing.
+    :param bool skip_cleanup: Whether to remove unreferenced files.
+    :param bool force: Whether to remove the published repository even if component
+        cleanup fails.
+
+    :return: A boolean representing whether all changes succeeded.
+    :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' aptly.delete_published name="test-dist"
+    '''
+    _validate_config(config_path)
+    force = six.text_type(bool(force)).lower()
+    skip_cleanup = six.text_type(bool(skip_cleanup)).lower()
+
+    current_published = __salt__['aptly.get_published'](name=name, config_path=config_path,
+                                                        endpoint=endpoint, prefix=prefix)
+
+    if not current_published:
+        log.debug('Published repository already absent: %s', name)
+        return True
+
+    cmd = ['publish', 'drop', '-config={}'.format(config_path),
+           '-force-drop={}'.format(force), '-skip-cleanup={}'.format(skip_cleanup),
+           name]
+
+    if prefix:
+        cmd.append('{}:{}'.format(endpoint, prefix))
+
+    _cmd_run(cmd)
+    published = __salt__['aptly.get_published'](name=name, config_path=config_path,
+                                                endpoint=endpoint, prefix=prefix)
+
+    if published:
+        log.error('Unable to remove published snapshot: %s', name)
+        return False
+    log.debug('Removed published snapshot: %s', name)
+    return True
 
 
 def list_snapshots(config_path=_DEFAULT_CONFIG_PATH, sort_by_time=False):
@@ -454,6 +690,83 @@ def list_snapshots(config_path=_DEFAULT_CONFIG_PATH, sort_by_time=False):
 
     log.debug('Found snapshots: %s', len(ret))
     return ret
+
+
+def get_snapshot(name, config_path=_DEFAULT_CONFIG_PATH, with_packages=False):
+    '''
+    Get the details of the snapshot.
+
+    :param str name: The name of the snapshot.
+    :param str config_path: The path to the configuration file for the aptly instance.
+    :param bool with_packages: Return a list of packages in the snapshot.
+
+    :return: A dictionary containing information about the snapshot.
+    :rtype: dict
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' aptly.get_snapshot name="test-repo"
+    '''
+    _validate_config(config_path)
+
+    sources = list()
+
+    cmd = ['snapshot', 'show', '-config={}'.format(config_path),
+           '-with-packages={}'.format(str(with_packages).lower()),
+           name]
+
+    cmd_ret = _cmd_run(cmd)
+
+    ret = _parse_show_output(cmd_ret=cmd_ret)
+
+    if ret:
+        log.debug('Found shapshot: %s', name)
+    else:
+        log.debug('Unable to find snapshot: %s', name)
+
+    return ret
+
+
+def delete_snapshot(name, config_path=_DEFAULT_CONFIG_PATH, force=False):
+    '''
+    Remove the snapshot.
+
+    :param str name: The name of the snapshot.
+    :param str config_path: The path to the configuration file for the aptly instance.
+    :param bool force: Whether to remove the snapshot even if it is used as the source
+        of another snapshot.
+
+    :return: A boolean representing whether all changes succeeded.
+    :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' aptly.delete_snapshot name="test-snapshot"
+    '''
+    _validate_config(config_path)
+    force = six.text_type(bool(force)).lower()
+
+    current_snapshot = __salt__['aptly.get_snapshot'](name=name, config_path=config_path)
+
+    if not current_snapshot:
+        log.debug('Snapshot already absent: %s', name)
+        return True
+
+    cmd = ['snapshot', 'drop', '-config={}'.format(config_path),
+           '-force={}'.format(force), name]
+
+    _cmd_run(cmd)
+    snapshot = __salt__['aptly.get_snapshot'](name=name, config_path=config_path)
+
+    if snapshot:
+        log.error('Unable to remove snapshot: %s', name)
+        return False
+    log.debug('Removed snapshot: %s', name)
+    return True
 
 
 def cleanup_db(config_path=_DEFAULT_CONFIG_PATH, dry_run=False):
