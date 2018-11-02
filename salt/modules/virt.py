@@ -1541,9 +1541,10 @@ def _disks_equal(disk1, disk2):
     '''
     target1 = disk1.find('target')
     target2 = disk2.find('target')
+    source1 = ElementTree.tostring(disk1.find('source')) if disk1.find('source') is not None else None
+    source2 = ElementTree.tostring(disk2.find('source')) if disk2.find('source') is not None else None
 
-    return ElementTree.tostring(disk1.find('source')) == \
-        ElementTree.tostring(disk2.find('source')) and \
+    return source1 == source2 and \
         target1 is not None and target2 is not None and \
         target1.get('bus') == target2.get('bus')
 
