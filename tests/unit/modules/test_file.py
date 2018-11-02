@@ -1527,6 +1527,37 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
             assert writelines_content[0] == expected, (writelines_content[0], expected)
 
     @with_tempfile()
+    def test_line_insert_duplicate_ensure_before(self, name):
+        '''
+        Test for file.line for insertion ensuring the line is before
+        :return:
+        '''
+        cfg_content = '/etc/init.d/someservice restart'
+        file_content = os.linesep.join([
+            '#!/bin/bash',
+            '',
+            cfg_content,
+            'exit 0'
+        ])
+        file_modified = os.linesep.join([
+            '#!/bin/bash',
+            '',
+            cfg_content,
+            'exit 0'
+        ])
+
+        isfile_mock = MagicMock(side_effect=lambda x: True if x == name else DEFAULT)
+        with patch('os.path.isfile', isfile_mock), \
+                patch('os.stat', MagicMock(return_value=DummyStat())), \
+                patch('salt.utils.files.fopen',
+                      mock_open(read_data=file_content)), \
+                patch('salt.utils.atomicfile.atomic_open',
+                      mock_open()) as atomic_open_mock:
+            filemod.line(name, content=cfg_content, before='exit 0', mode='ensure')
+            # If file not modified no handlers in dict
+            assert atomic_open_mock.filehandles.get(name) is None
+
+    @with_tempfile()
     def test_line_insert_ensure_before_first_line(self, name):
         '''
         Test for file.line for insertion ensuring the line is before first line
@@ -1599,6 +1630,35 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
             # ... with the updated content
             expected = self._get_body(file_modified)
             assert writelines_content[0] == expected, (writelines_content[0], expected)
+
+    @with_tempfile()
+    def test_line_insert_duplicate_ensure_after(self, name):
+        '''
+        Test for file.line for insertion ensuring the line is after
+        :return:
+        '''
+        cfg_content = 'exit 0'
+        file_content = os.linesep.join([
+            '#!/bin/bash',
+            '/etc/init.d/someservice restart',
+            cfg_content
+        ])
+        file_modified = os.linesep.join([
+            '#!/bin/bash',
+            '/etc/init.d/someservice restart',
+            cfg_content
+        ])
+
+        isfile_mock = MagicMock(side_effect=lambda x: True if x == name else DEFAULT)
+        with patch('os.path.isfile', isfile_mock), \
+                patch('os.stat', MagicMock(return_value=DummyStat())), \
+                patch('salt.utils.files.fopen',
+                      mock_open(read_data=file_content)), \
+                patch('salt.utils.atomicfile.atomic_open',
+                      mock_open()) as atomic_open_mock:
+            filemod.line(name, content=cfg_content, after='/etc/init.d/someservice restart', mode='ensure')
+            # If file not modified no handlers in dict
+            assert atomic_open_mock.filehandles.get(name) is None
 
     @with_tempfile()
     def test_line_insert_ensure_beforeafter_twolines(self, name):
