@@ -3094,15 +3094,9 @@ def _getAdmlPresentationRefId(adml_data, ref_id):
                         else:
                             if etree.QName(p_item.tag).localname == 'text':
                                 if prepended_text:
-                                    if getattr(p_item, 'text', ''):
-                                        prepended_text = ' '.join([prepended_text, getattr(p_item, 'text', '').rstrip()])
-                                    else:
-                                        prepended_text = ''
+                                    prepended_text = ' '.join((text for text in (prepended_text, getattr(p_item, 'text', '').rstrip()) if text))
                                 else:
-                                    if getattr(p_item, 'text', ''):
-                                        prepended_text = getattr(p_item, 'text', '').rstrip()
-                                    else:
-                                        prepended_text = ''
+                                    prepended_text = getattr(p_item, 'text', '').rstrip()
                             else:
                                 prepended_text = ''
                     if prepended_text.endswith('.'):
@@ -4185,6 +4179,8 @@ def _regexSearchKeyValueCombo(policy_data, policy_regpath, policy_regkey):
                                b'\00;'])
         match = re.search(_thisSearch, policy_data, re.IGNORECASE)
         if match:
+            # add 2 so we get the ']' and the \00
+            # to return the full policy entry
             return policy_data[match.start():(policy_data.index(b']', match.end())) + 2]
 
     return None
