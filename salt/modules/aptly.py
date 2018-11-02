@@ -95,7 +95,7 @@ def _parse_show_output(cmd_ret):
     :return: A dictionary containing the configuration data.
     :rtype: dict
     '''
-    ret = dict()
+    parsed_data = dict()
 
     # Extract the settings and their values, and attempt to format
     # them to match their equivalent setting names.
@@ -111,10 +111,10 @@ def _parse_show_output(cmd_ret):
         if salt.utils.stringutils.contains_whitespace(line[0]) and list_key:
             value = salt.utils.stringutils.to_none(salt.utils.stringutils.to_num(line.strip()))
 
-            if list_key not in ret:
-                ret[list_key] = list()
+            if list_key not in parsed_data:
+                parsed_data[list_key] = list()
 
-            ret[list_key].append(value)
+            parsed_data[list_key].append(value)
             continue
 
         try:
@@ -126,7 +126,7 @@ def _parse_show_output(cmd_ret):
             value = salt.utils.stringutils.to_none(salt.utils.stringutils.to_num(items[1]))
 
             if value:
-                ret[key] = value
+                parsed_data[key] = value
                 list_key = None
             else:
                 # Track the current key so that we can use it in instances where the values
@@ -136,15 +136,29 @@ def _parse_show_output(cmd_ret):
             # If the line doesn't have the separator or is otherwise invalid, skip it.
             log.debug('Skipping line: %s', line)
 
-    if 'architectures' in ret:
-        ret['architectures'] = sorted([item.strip() for item in ret['architectures'].split()])
+    return _convert_parsed_show_output(parsed_data=parsed_data)
 
-    if 'sources' in ret:
-        # Match lines like "main: xenial [snapshot]" or "test [local]".
-        source_pattern = r'((?P<component>\S+):)?\s*(?P<name>\S+)\s+\[(?P<type>\S+)\]'
+
+def _convert_parsed_show_output(parsed_data):
+    '''
+    Convert matching string values to lists/dictionaries.
+
+    :param dict parsed_data: The text of the command output that needs to be parsed.
+
+    :return: A dictionary containing the modified configuration data.
+    :rtype: dict
+    '''
+    # Match lines like "main: xenial [snapshot]" or "test [local]".
+    source_pattern = r'((?P<component>\S+):)?\s*(?P<name>\S+)\s+\[(?P<type>\S+)\]'
+
+    if 'architectures' in parsed_data:
+        parsed_data['architectures'] = [item.strip() for item in parsed_data['architectures'].split()]
+        parsed_data['architectures'] = sorted(parsed_data['architectures'])
+
+    if 'sources' in parsed_data:
         sources = list()
 
-        for source in ret['sources']:
+        for source in parsed_data['sources']:
             matches = re.search(source_pattern, source)
             source_data = dict()
 
@@ -153,9 +167,9 @@ def _parse_show_output(cmd_ret):
                     source_data[item] = matches.group(item)
 
             sources.append(source_data)
-        ret['sources'] = sources
+        parsed_data['sources'] = sources
 
-    return ret
+    return parsed_data
 
 
 def _validate_config(config_path):
