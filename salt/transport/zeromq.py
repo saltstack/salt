@@ -738,22 +738,23 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
     '''
     Encapsulate synchronous operations for a publisher channel
     '''
-    def __init__(self, opts, log_queue=None):
+    def __init__(self, opts):
         self.opts = opts
         self.serial = salt.payload.Serial(self.opts)  # TODO: in init?
         self.ckminions = salt.utils.minions.CkMinions(self.opts)
-        self.log_queue = log_queue
 
     def connect(self):
         return tornado.gen.sleep(5)
 
-    def _publish_daemon(self):
+    def _publish_daemon(self, log_queue=None):
         '''
         Bind to the interface specified in the configuration file
         '''
         salt.utils.appendproctitle(self.__class__.__name__)
-        if self.log_queue:
-            salt.log.setup.set_multiprocessing_logging_queue(self.log_queue)
+        if log_queue:
+            salt.log.setup.set_multiprocessing_logging_queue(log_queue)
+            salt.log.setup.setup_multiprocessing_logging(log_queue)
+
         # Set up the context
         context = zmq.Context(1)
         # Prepare minion publish socket
@@ -845,7 +846,7 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
             if context.closed is False:
                 context.term()
 
-    def pre_fork(self, process_manager):
+    def pre_fork(self, process_manager, kwargs=None):
         '''
         Do anything necessary pre-fork. Since this is on the master side this will
         primarily be used to create IPC channels and create our daemon process to
@@ -853,7 +854,7 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
 
         :param func process_manager: A ProcessManager, from salt.utils.process.ProcessManager
         '''
-        process_manager.add_process(self._publish_daemon)
+        process_manager.add_process(self._publish_daemon, kwargs=kwargs)
 
     def publish(self, load):
         '''
