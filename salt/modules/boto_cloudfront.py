@@ -490,7 +490,7 @@ def get_distribution_v2(region=None, key=None, keyid=None, profile=None, **kwarg
     '''
     retries = 10
     sleep = 6
-    kwargs = {k:v for k, v in kwargs.items() if not k.startswith('_')}
+    kwargs = {k: v for k, v in kwargs.items() if not k.startswith('_')}
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     Id = kwargs.get('Id')
     while retries:
@@ -515,7 +515,7 @@ def get_distribution_v2(region=None, key=None, keyid=None, profile=None, **kwarg
 def get_distribution_config(region=None, key=None, keyid=None, profile=None, **kwargs):
     retries = 10
     sleep = 6
-    kwargs = {k:v for k, v in kwargs.items() if not k.startswith('_')}
+    kwargs = {k: v for k, v in kwargs.items() if not k.startswith('_')}
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     Id = kwargs.get('Id')
     while retries:
@@ -623,7 +623,7 @@ def get_distributions_by_comment(Comment, region=None, key=None, keyid=None, pro
 def create_distribution_v2(region=None, key=None, keyid=None, profile=None, **kwargs):
     retries = 10
     sleep = 6
-    kwargs = {k:v for k, v in kwargs.items() if not k.startswith('_')}
+    kwargs = {k: v for k, v in kwargs.items() if not k.startswith('_')}
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     Comment = jmespath.search('DistributionConfig.Comment', kwargs)
     while retries:
@@ -646,7 +646,7 @@ def create_distribution_v2(region=None, key=None, keyid=None, profile=None, **kw
 def update_distribution_v2(region=None, key=None, keyid=None, profile=None, **kwargs):
     retries = 10
     sleep = 6
-    kwargs = {k:v for k, v in kwargs.items() if not k.startswith('_')}
+    kwargs = {k: v for k, v in kwargs.items() if not k.startswith('_')}
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     Comment = jmespath.search('DistributionConfig.Comment', kwargs)
     while retries:
@@ -669,7 +669,7 @@ def update_distribution_v2(region=None, key=None, keyid=None, profile=None, **kw
 def disable_distribution(region=None, key=None, keyid=None, profile=None, **kwargs):
     retries = 10
     sleep = 6
-    kwargs = {k:v for k, v in kwargs.items() if not k.startswith('_')}
+    kwargs = {k: v for k, v in kwargs.items() if not k.startswith('_')}
     authargs = {'region': region, 'key': key, 'keyid': keyid, 'profile': profile}
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     Id = kwargs.get('Id')
@@ -705,7 +705,7 @@ def disable_distribution(region=None, key=None, keyid=None, profile=None, **kwar
 def delete_distribution(region=None, key=None, keyid=None, profile=None, **kwargs):
     retries = 10
     sleep = 6
-    kwargs = {k:v for k, v in kwargs.items() if not k.startswith('_')}
+    kwargs = {k: v for k, v in kwargs.items() if not k.startswith('_')}
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     Id = kwargs.get('Id')
     while retries:
@@ -755,7 +755,7 @@ def get_cloud_front_origin_access_identity(region=None, key=None, keyid=None, pr
                                            **kwargs):
     retries = 10
     sleep = 6
-    kwargs = {k:v for k, v in kwargs.items() if not k.startswith('_')}
+    kwargs = {k: v for k, v in kwargs.items() if not k.startswith('_')}
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     Id = kwargs.get('Id')
     while retries:
@@ -781,7 +781,7 @@ def get_cloud_front_origin_access_identity_config(region=None, key=None, keyid=N
                                                   **kwargs):
     retries = 10
     sleep = 6
-    kwargs = {k:v for k, v in kwargs.items() if not k.startswith('_')}
+    kwargs = {k: v for k, v in kwargs.items() if not k.startswith('_')}
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     Id = kwargs.get('Id')
     while retries:
@@ -856,7 +856,7 @@ def create_cloud_front_origin_access_identity(region=None, key=None, keyid=None,
                                               **kwargs):
     retries = 10
     sleep = 6
-    kwargs = {k:v for k, v in kwargs.items() if not k.startswith('_')}
+    kwargs = {k: v for k, v in kwargs.items() if not k.startswith('_')}
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     Comment = kwargs.get('CloudFrontOriginAccessIdentityConfig', {}).get('Comment')
     while retries:
@@ -882,7 +882,7 @@ def update_cloud_front_origin_access_identity(region=None, key=None, keyid=None,
                                               **kwargs):
     retries = 10
     sleep = 6
-    kwargs = {k:v for k, v in kwargs.items() if not k.startswith('_')}
+    kwargs = {k: v for k, v in kwargs.items() if not k.startswith('_')}
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     Id = kwargs.get('Id')
     while retries:
@@ -908,7 +908,7 @@ def delete_cloud_front_origin_access_identity(region=None, key=None, keyid=None,
                                               **kwargs):
     retries = 10
     sleep = 6
-    kwargs = {k:v for k, v in kwargs.items() if not k.startswith('_')}
+    kwargs = {k: v for k, v in kwargs.items() if not k.startswith('_')}
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     Id = kwargs.get('Id')
     while retries:
@@ -961,7 +961,7 @@ def list_tags_for_resource(region=None, key=None, keyid=None, profile=None, **kw
     '''
     retries = 10
     sleep = 6
-    kwargs = {k:v for k, v in kwargs.items() if not k.startswith('_')}
+    kwargs = {k: v for k, v in kwargs.items() if not k.startswith('_')}
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     Id = kwargs.get('Id')
     while retries:
@@ -1008,7 +1008,7 @@ def tag_resource(region=None, key=None, keyid=None, profile=None, **kwargs):
     '''
     retries = 10
     sleep = 6
-    kwargs = {k:v for k, v in kwargs.items() if not k.startswith('_')}
+    kwargs = {k: v for k, v in kwargs.items() if not k.startswith('_')}
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     kwargs['Tags'] = {'Items': [{'Key': k, 'Value': v} for k, v in kwargs.get('Tags', {}).items()]}
     while retries:
@@ -1055,7 +1055,7 @@ def untag_resource(region=None, key=None, keyid=None, profile=None, **kwargs):
     '''
     retries = 10
     sleep = 6
-    kwargs = {k:v for k, v in kwargs.items() if not k.startswith('_')}
+    kwargs = {k: v for k, v in kwargs.items() if not k.startswith('_')}
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     kwargs['TagKeys'] = {'Items': kwargs.get('TagKeys', [])}
     while retries:
@@ -1106,14 +1106,14 @@ def enforce_tags(Resource, Tags, region=None, key=None, keyid=None, profile=None
     if current is None:
         log.error('Failed to list tags for CloudFront resource `%s`.', Resource)
         return False
-    if current == Tags:  ## Short-ciruits save cycles!
+    if current == Tags:  # Short-ciruits save cycles!
         return True
     remove = [k for k in current if k not in Tags]
     removed = untag_resource(Resource=Resource, TagKeys=remove, **authargs)
     if removed is False:
         log.error('Failed to remove tags (%s) from CloudFront resource `%s`.', remove, Resource)
         return False
-    add = {k:v for k, v in Tags.items() if current.get(k) != v}
+    add = {k: v for k, v in Tags.items() if current.get(k) != v}
     added = tag_resource(Resource=Resource, Tags=add, **authargs)
     if added is False:
         log.error('Failed to add tags (%s) to CloudFront resource `%s`.', add, Resource)

@@ -49,13 +49,12 @@ from __future__ import absolute_import, print_function, unicode_literals
 import difflib
 import logging
 import uuid
-import jmespath
 import copy
 
 # Import Salt conveniences
-from salt.exceptions import SaltInvocationError
 import salt.utils.boto3
 
+#pylint: disable=W0106
 log = logging.getLogger(__name__)
 
 
@@ -375,7 +374,7 @@ def distribution_present(name, region=None, key=None, keyid=None, profile=None, 
 
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
-    kwargs = {k:v for k, v in kwargs.items() if not k.startswith('_')}
+    kwargs = {k: v for k, v in kwargs.items() if not k.startswith('_')}
     authargs = {'region': region, 'key': key, 'keyid': keyid, 'profile': profile}
     Name = kwargs.pop('Name', name)
     Tags = kwargs.pop('Tags', None)
@@ -393,7 +392,7 @@ def distribution_present(name, region=None, key=None, keyid=None, profile=None, 
         if oai and not oai.startswith('origin-access-identity/cloudfront/'):
             res = __salt__['boto_cloudfront.get_cloud_front_origin_access_identities_by_comment'](
                     Comment=oai, region=region, key=key, keyid=keyid, profile=profile)
-            if res is None:  ## An error occurred, bubble it up...
+            if res is None:  # An error occurred, bubble it up...
                 log.warning('Error encountered while trying to determine the Resource ID of'
                             ' CloudFront origin access identity `%s`.  Passing as-is.', oai)
             elif len(res) < 1:
@@ -841,11 +840,11 @@ def origin_access_identity_present(name, region=None, key=None, keyid=None, prof
           - Comment: Simply ensures an OAI named my_OAI exists
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
-    kwargs = {k:v for k, v in kwargs.items() if not k.startswith('_')}
+    kwargs = {k: v for k, v in kwargs.items() if not k.startswith('_')}
     authargs = {'region': region, 'key': key, 'keyid': keyid, 'profile': profile}
     Name = kwargs.get('Name', name)
     # Munge Name into the Comment field...
-    Comment = '{}:{}'.format(Name, Comment) if kwargs.get('Comment') else Name
+    Comment = '{}:{}'.format(Name, kwargs['Comment']) if kwargs.get('Comment') else Name
 
     # Current state of the thing?
     res = __salt__['boto_cloudfront.get_cloud_front_origin_access_identities_by_comment'](
@@ -892,7 +891,7 @@ def origin_access_identity_present(name, region=None, key=None, keyid=None, prof
         currentETag = current['ETag']
         currentOAIC = current['CloudFrontOriginAccessIdentity']['CloudFrontOriginAccessIdentityConfig']
         new = copy.deepcopy(currentOAIC)
-        new.update({'Comment': Comment})  ## Currently the only updatable element :-/
+        new.update({'Comment': Comment})  # Currently the only updatable element :-/
         if currentOAIC == new:
             msg = 'CloudFront origin access identity `{}` is in the correct state.'.format(Name)
             log.info(msg)
@@ -968,26 +967,26 @@ def origin_access_identity_absent(name, region=None, key=None, keyid=None, profi
     if not Id:
         current = __salt__['boto_cloudfront.get_cloud_front_origin_access_identities_by_comment'](
                 Comment=Name, **authargs)
-        if res is None:
+        if current is None:
             msg = 'Error dereferencing origin access identity `{}` to a Resource ID.'.format(Name)
             log.error(msg)
             ret['comment'] = msg
             ret['result'] = False
             return ret
-        if len(res) > 1:
+        if len(current) > 1:
             msg = ('Multiple CloudFront origin access identities matched `{}`, no way to know'
                    ' which to delete.`.'.format(Name))
             log.error(msg)
             ret['comment'] = msg
             ret['result'] = False
             return ret
-        if len(res) < 1:
+        if len(current) < 1:
             msg = 'CloudFront origin access identity `{}` already absent.'.format(Name)
             log.info(msg)
             ret['comment'] = msg
             ret['result'] = True
             return ret
-        Id = res[0]['Id']
+        Id = current[0]['Id']
 
     if not __salt__['boto_cloudfront.cloud_front_origin_access_identity_exists'](Id=Id, **authargs):
         msg = 'CloudFront origin access identity `{}` already absent.'.format(ref)
