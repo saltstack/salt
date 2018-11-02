@@ -54,7 +54,7 @@ class LoadBeaconTestCase(TestCase, LoaderModuleMockMixin):
             config = [{'averages': {'1m': [0.0, 2.0],
                                     '5m': [0.0, 1.5],
                                     '15m': [0.0, 1.0]},
-                       'emitatstartup': False,
+                       'emitatstartup': True,
                        'onchangeonly': False}]
 
             ret = load.validate(config)
