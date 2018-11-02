@@ -141,7 +141,7 @@ def _parse_show_output(cmd_ret):
 
     if 'sources' in ret:
         # Match lines like "main: xenial [snapshot]" or "test [local]".
-        source_pattern = '((?P<component>\S+):)?\s*(?P<name>\S+)\s+\[(?P<type>\S+)\]'
+        source_pattern = r'((?P<component>\S+):)?\s*(?P<name>\S+)\s+\[(?P<type>\S+)\]'
         sources = list()
 
         for source in ret['sources']:
