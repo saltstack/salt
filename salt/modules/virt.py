@@ -617,8 +617,9 @@ def _gen_xml(name,
     disk_bus_map = {'virtio': 'vd', 'xen': 'xvd', 'fdc': 'fd', 'ide': 'hd'}
     for i, disk in enumerate(diskp):
         context['disks'][disk['name']] = {}
-        context['disks'][disk['name']]['file_name'] = disk['filename']
-        context['disks'][disk['name']]['source_file'] = disk['source_file']
+        context['disks'][disk['name']]['device'] = disk.get('device', 'disk')
+        if 'source_file' and disk['source_file']:
+            context['disks'][disk['name']]['source_file'] = disk['source_file']
         prefix = disk_bus_map.get(disk['model'], 'sd')
         context['disks'][disk['name']]['target_dev'] = '{0}{1}'.format(prefix, string.ascii_lowercase[i])
         if hypervisor in ['qemu', 'kvm', 'bhyve', 'xen']:
@@ -960,12 +961,15 @@ def _disk_profile(profile, hypervisor, disks=None, vm_name=None, image=None, poo
     if hypervisor == 'vmware':
         overlay = {'format': 'vmdk',
                    'model': 'scsi',
+                   'device': 'disk',
                    'pool': '[{0}] '.format(pool if pool else '0')}
     elif hypervisor in ['qemu', 'kvm']:
         overlay = {'format': 'qcow2',
+                   'device': 'disk',
                    'model': 'virtio'}
     elif hypervisor in ['bhyve']:
         overlay = {'format': 'raw',
+                   'device': 'disk',
                    'model': 'virtio',
                    'sparse_volume': False}
     else:
@@ -1005,9 +1009,9 @@ def _disk_profile(profile, hypervisor, disks=None, vm_name=None, image=None, poo
                 disk[key] = val
 
         # We may have an already computed source_file (i.e. image not created by our module)
-        if 'source_file' in disk:
+        if 'source_file' in disk and disk['source_file']:
             disk['filename'] = os.path.basename(disk['source_file'])
-        else:
+        elif 'source_file' not in disk:
             _fill_disk_filename(vm_name, disk, hypervisor, **kwargs)
 
     return disklist
@@ -1447,7 +1451,12 @@ def init(name,
 
     source_file
         Absolute path to the disk image to use. Not to be confused with ``image`` parameter. This
-        parameter is useful to use disk images that are created outside of this module.
+        parameter is useful to use disk images that are created outside of this module. Can also
+        be ``None`` for devices that have no associated image like cdroms.
+
+    device
+        Type of device of the disk. Can be one of 'disk', 'cdrom', 'floppy' or 'lun'.
+        (Default: ``'disk'``)
 
     .. _init-graphics-def:
 
@@ -1598,13 +1607,15 @@ def init(name,
             else:
                 create_overlay = _disk.get('overlay_image', False)
 
-            if os.path.exists(_disk['source_file']):
+            if _disk['source_file'] and os.path.exists(_disk['source_file']):
                 img_dest = _disk['source_file']
-            else:
+            elif 'source_file' not in _disk:
                 img_dest = _qemu_image_create(_disk, create_overlay, saltenv)
+            else:
+                img_dest = None
 
             # Seed only if there is an image specified
-            if seed and _disk.get('image', None):
+            if seed and img_dest and _disk.get('image', None):
                 log.debug('Seed command is %s', seed_cmd)
                 __salt__[seed_cmd](
                     img_dest,
@@ -1678,7 +1689,8 @@ def _disks_equal(disk1, disk2):
 
     return source1 == source2 and \
         target1 is not None and target2 is not None and \
-        target1.get('bus') == target2.get('bus')
+        target1.get('bus') == target2.get('bus') and \
+        disk1.get('device', 'disk') == disk2.get('device', 'disk')
 
 
 def _nics_equal(nic1, nic2):
