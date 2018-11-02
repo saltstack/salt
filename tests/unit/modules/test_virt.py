@@ -771,6 +771,9 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 <source file='/path/to/img4.qcow2'/>
                 <target dev='hdb' bus='ide'/>
               </disk>
+              <disk type='file' device='cdrom'>
+                <target dev='hdc' bus='ide'/>
+              </disk>
             </devices>
         ''').findall('disk')
 
@@ -788,13 +791,17 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 <source file='/path/to/img4.qcow2'/>
                 <target dev='vdc' bus='virtio'/>
               </disk>
+              <disk type='file' device='cdrom'>
+                <target dev='hdc' bus='ide'/>
+              </disk>
             </devices>
         ''').findall('disk')
         ret = virt._diff_disk_lists(old_disks, new_disks)
         self.assertEqual([disk.find('source').get('file') for disk in ret['deleted']],
                          ['/path/to/img1.qcow2', '/path/to/img2.qcow2', '/path/to/img4.qcow2'])
-        self.assertEqual([disk.find('source').get('file') for disk in ret['unchanged']],
-                         ['/path/to/img0.qcow2'])
+        self.assertEqual([disk.find('source').get('file') if disk.find('source') is not None else None
+                          for disk in ret['unchanged']],
+                         ['/path/to/img0.qcow2', None])
         self.assertEqual([disk.find('source').get('file') for disk in ret['new']],
                          ['/path/to/img3.qcow2', '/path/to/img4.qcow2'])
         self.assertEqual(ret['new'][0].find('target').get('dev'), 'vdb')
