@@ -94,6 +94,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         disks = virt._disk_profile('default', 'kvm', userdisks, 'myvm', image='/path/to/image')
         self.assertEqual(
             [{'name': 'system',
+              'device': 'disk',
               'size': 8192,
               'format': 'qcow2',
               'model': 'virtio',
@@ -101,6 +102,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
               'image': '/path/to/image',
               'source_file': '{0}{1}myvm_system.qcow2'.format(root_dir, os.sep)},
              {'name': 'data',
+              'device': 'disk',
               'size': 16384,
               'format': 'raw',
               'model': 'virtio',
@@ -703,6 +705,31 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 disks, "/default/path/"])}):
             with self.assertRaises(CommandExecutionError):
                 virt._disk_profile('noeffect', 'kvm', [], 'hello')
+
+    def test_gen_xml_cdrom(self):
+        '''
+        Test virt._gen_xml(), generating a cdrom device (different disk type, no source)
+        '''
+        diskp = virt._disk_profile(None, 'kvm', [{
+            'name': 'tested',
+            'device': 'cdrom',
+            'source_file': None,
+            'model': 'ide'}], 'hello')
+        nicp = virt._nic_profile(None, 'kvm')
+        xml_data = virt._gen_xml(
+            'hello',
+            1,
+            512,
+            diskp,
+            nicp,
+            'kvm',
+            'hvm',
+            'x86_64',
+            )
+        root = ET.fromstring(xml_data)
+        disk = root.findall('.//disk')[0]
+        self.assertEqual(disk.attrib['device'], 'cdrom')
+        self.assertIsNone(disk.find('source'))
 
     def test_controller_for_esxi(self):
         '''
