@@ -53,6 +53,7 @@ import copy
 
 # Import Salt conveniences
 import salt.utils.boto3
+from salt.ext.six.moves import range
 
 #pylint: disable=W0106
 log = logging.getLogger(__name__)
