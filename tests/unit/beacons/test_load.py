@@ -53,7 +53,9 @@ class LoadBeaconTestCase(TestCase, LoaderModuleMockMixin):
                    MagicMock(return_value=(1.82, 1.84, 1.56))):
             config = [{'averages': {'1m': [0.0, 2.0],
                                     '5m': [0.0, 1.5],
-                                    '15m': [0.0, 1.0]}}]
+                                    '15m': [0.0, 1.0]},
+                       'emitatstartup': False,
+                       'onchangeonly': False}]
 
             ret = load.validate(config)
 
