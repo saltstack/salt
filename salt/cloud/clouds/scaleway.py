@@ -325,7 +325,14 @@ def create(server_):
     return ret
 
 
-def query(method="servers", server_id=None, command=None, args=None, http_method="get"):
+def query(
+    method="servers",
+    server_id=None,
+    command=None,
+    args=None,
+    http_method="GET",
+    root="api_root",
+):
     """ Make a call to the Scaleway API.
     """
 
@@ -336,7 +343,7 @@ def query(method="servers", server_id=None, command=None, args=None, http_method
 
     base_path = six.text_type(
         config.get_cloud_config_value(
-            "api_root",
+            root,
             get_configured_provider(),
             __opts__,
             search_global=False,
