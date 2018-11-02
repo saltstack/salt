@@ -352,17 +352,20 @@ class MatchTest(ShellCase, ShellCaseCommonTestsMixin):
             self.skipTest('This test is failing in Arch due to a bug in salt-testing. '
                           'Skipping until salt-testing can be upgraded. For more information, '
                           'see https://github.com/saltstack/salt-jenkins/issues/324.')
-        data = self.run_salt('-d -t 20')
+        timeout = 20
+        if os_family == 'Windows':
+            timeout = 60
+        data = self.run_salt('-d', timeout=timeout)
         if data:
             assert 'user.add:' in data
-        data = self.run_salt('"*" -d -t 20')
+        data = self.run_salt('"*" -d', timeout=timeout)
         if data:
             assert 'user.add:' in data
-        data = self.run_salt('"*" -d user -t 20')
+        data = self.run_salt('"*" -d user', timeout=timeout)
         assert 'user.add:' in data
-        data = self.run_salt('"*" sys.doc -d user -t 20')
+        data = self.run_salt('"*" sys.doc -d user', timeout=timeout)
         assert 'user.add:' in data
-        data = self.run_salt('"*" sys.doc user -t 20')
+        data = self.run_salt('"*" sys.doc user', timeout=timeout)
         assert 'user.add:' in data
 
     def test_salt_documentation_too_many_arguments(self):
