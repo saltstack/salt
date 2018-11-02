@@ -80,7 +80,6 @@ def avail_images(call=None):
 
     items = query(method='images', root='marketplace_root')
     ret = {}
-    log.debug("items type: %s", type(items))
     for image in items['images']:
         ret[image['id']] = {}
         for item in image:
@@ -314,8 +313,8 @@ def create(server_):
     return ret
 
 
-def query(method='servers', root='api_root', server_id=None, command=None, args=None,
-          http_method='GET'):
+def query(method='servers', server_id=None, command=None, args=None,
+          http_method='GET', root='api_root'):
     ''' Make a call to the Scaleway API.
     '''
 
