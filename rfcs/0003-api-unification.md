@@ -79,7 +79,7 @@ class PkgInterface(Interface):
     @Interface.supported('weirdlinux', 'beos', 'frogbsd')
     def salute_fireworks(self, name):
         '''
-        Launch some fireforks
+        Launch some fireworks
         '''
 		return {}
 ```
@@ -124,7 +124,7 @@ The code above does the following:
 ## Effect
 [effect]: #effect
 
-Essentically, the SMI works as automatic checker/corrector for the
+Essentially, the SMI works as automatic checker/corrector for the
 module on the moment it is lazy-loaded.
 
 What PkgInterface does in the example above, it takes the current
@@ -160,7 +160,7 @@ values to compare with. Once certain grain matches in the list of the
 given values, decorator is triggered.
 
 In this case method `foo` will be still added on Windows and NetBSD
-minions, despite the fact that the code below adds it onlny on RedHat
+minions, despite the fact that the code below adds it only on RedHat
 Linux. However it will only return specified structure and debug log
 will inform that not applicable function has been called.
 
@@ -205,7 +205,7 @@ SMI class should define return structure from the defined method. This
 structure is very similar to `config/__init__.py::_validate_opts()`
 function.
 
-SMI also shuld take care of return structure definition so all virtual
+SMI also should take care of return structure definition so all virtual
 modules returns by default the same structure.
 
 However, the migration and adoption of the same structure from
@@ -266,7 +266,7 @@ Implementation of this concept must be done in two phases:
 2. Migrating module by module in a transparent way.
 
 On the second phrase corner cases might force the implementation
-details to be minorly changed. The result, however should be the same:
+details to be minor changed. The result, however should be the same:
 modules should just work as they worked before while used in real systems.
 
 The structure definition and migration should be done as well
