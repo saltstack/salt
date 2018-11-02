@@ -29,7 +29,7 @@ import salt.ext.six as six
 
 # Workaround for 'reload' builtin of py2.7
 if six.PY3:
-    from importlib import reload
+    from importlib import reload # pylint: disable=W0611
 
 # Import third party libs
 HAS_PORTAGE = False
@@ -245,6 +245,7 @@ def latest_version(*names, **kwargs):
     if len(names) == 1:
         return ret[names[0]]
     return ret
+
 
 # available_version is being deprecated
 available_version = salt.utils.alias_function(latest_version, 'available_version')
