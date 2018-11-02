@@ -353,6 +353,9 @@ def fopen(*args, **kwargs):
     # ensure 'binary' mode is always used on Windows in Python 2
     if ((six.PY2 and salt.utils.platform.is_windows() and 'binary' not in kwargs) or
             kwargs.pop('binary', False)):
+        # encoding is not available in Py2 and will cause an error later if passed
+        if kwargs.pop('encoding', False):
+            log.debug('Remove kwarg "encoding" on Py2')
         if len(args) > 1:
             args = list(args)
             if 'b' not in args[1]:
