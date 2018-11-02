@@ -52,7 +52,7 @@ import uuid
 import copy
 
 # Import Salt conveniences
-import salt.utils.boto3
+import salt.utils.boto3mod
 from salt.ext.six.moves import range
 
 #pylint: disable=W0106
