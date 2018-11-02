@@ -319,9 +319,9 @@ def query(method='servers', server_id=None, command=None, args=None,
     '''
 
     if root == 'api_root':
-        default_url='https://cp-par1.scaleway.com'
+        default_url = 'https://cp-par1.scaleway.com'
     else:
-        default_url='https://api-marketplace.scaleway.com'
+        default_url = 'https://api-marketplace.scaleway.com'
 
     base_path = six.text_type(config.get_cloud_config_value(
         root,
@@ -358,8 +358,8 @@ def query(method='servers', server_id=None, command=None, args=None,
                                       data_renderer='json',
                                       headers=True,
                                       header_dict={'X-Auth-Token': token,
-                                               'User-Agent': "salt-cloud",
-                                               'Content-Type': 'application/json'})
+                                                   'User-Agent': "salt-cloud",
+                                                   'Content-Type': 'application/json'})
     if request['status'] > 299:
         raise SaltCloudSystemExit(
             'An error occurred while querying Scaleway. HTTP Code: {0}  '
@@ -368,7 +368,6 @@ def query(method='servers', server_id=None, command=None, args=None,
                 request['error']
             )
         )
-
 
     # success without data
     if request['status'] == 204:
