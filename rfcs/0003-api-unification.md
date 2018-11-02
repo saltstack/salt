@@ -176,10 +176,12 @@ if __grains__['osfamily'] == 'RedHat':
 ## Return Structure Definition
 [returnstruct]: #returnstruct
 
-Return structure in virtual modules another pitfall, where dynamically
-replaced module suddenly returns "something else" than usually
-expected. This is widely affects API and integration. In this case
-integration code usually looks like this (pseudo-code):
+Return structure in virtual modules is another pitfall. Dynamically
+replaced module suddenly renders virtual module to return "something else"
+than is usually expected. This is widely affects API and integration.
+To the only way to avoid this, is to know what kind of platform minion
+is dealing with. In this case integration code usually looks like
+this (pseudo-code):
 
 ```
 if this_is_debian {
