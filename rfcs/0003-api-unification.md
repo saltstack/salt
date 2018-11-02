@@ -6,151 +6,268 @@
 # Summary
 [summary]: #summary
 
-Modules with `__virtual__` should yield to the common interface.
+Salt Module Interface (SMI) concept introduction for virtual modules.
 
 # Motivation
 [motivation]: #motivation
 
-Virtual modules behaves differently on different Linux distributions
-and different operating systems. So if one is query `pkg` module, on
-one system there is `lock` package, on other is `hold` package, on
-another this feature is not even there. And so on...
+Any salt module has couple of specific properties we dealing every day
+with:
 
-To solve this chaos, virtual modules, that represents a module per se,
-should also have the same standard interface. So we no longer have a
-module that is _called_ differently on different operating systems,
-however we will have a module that _reports_ differently on
-heterogeneous environments.
+- Fixed set of functions
+- Known functions signatures
+- Known structure of return
+
+This is true but for virtual modules. The virtual module covering
+several "fixed" or "physical" modules and behaves like that would be
+one module. But differences between those physical modules on
+different platforms makes such virtual module a moving target and
+unpredictable.
+
+Virtual modules concept is missing crucial part in the design:
+interfaces. The interface should define how module looks like and what
+APIs can be called to it. Interface should move module that is
+_called_ differently on heterogeneous environments to a module that
+_reports_ differently on heterogeneous environments.
 
 
 # Design
 [design]: #detailed-design
 
-Interface is a list of functions in the module and is to make sure
-that any virtual module is always called exactly the same, regardless
+*DISCLAIMER*: The SMI is not that classic understanding of typical
+interface one may find in languages like Java. It is also not as same
+as Zope Interface package or Python Abstract Base Classes (ABC).
+
+The SMI should describe the following properties of the module:
+
+- Functions
+- Signatures
+- Lowest common denominator of the function output format (or minimum
+  required default output structure)
+
+SMI only describes functions of the module and is there to make sure
+that any virtual module is always called exactly the same way, regardless
 what operating system minion is running on.
 
-Interface does not define the function output format. It only defines
-the name of the function and its signature.
-
-
 ## Declaration
+[declaration]: #declaration
 
-Salt interfaces are declared just as classes. Salt's module to
-functions is Salt's interface to methods. Therefore `self` in the
-class is not a part of a function signature. Example:
+SMI are declared just as regular Python classes. Salt's "module to
+functions" map is Salt's "interface to methods" map. Therefore `self`
+parameter in the SMI class is not a part of a function signature.
+
+Example of SMI definition for module `pkg`:
 
 ```
 from salt.interfaces import Interface
 
 class PkgInterface(Interface):
+	__modulename__ = 'pkg'
+
     def list_installed(self, *names, **kwargs):
         '''
 	    List installed packages.
 	    '''
+		return {}
 
     def upgrade_available(self, name, **kwargs):
         '''
         List available upgrades.
 		'''
+		return {}
+
+    @Interface.supported('weirdlinux', 'beos', 'frogbsd')
+    def salute_fireworks(self, name):
+        '''
+        Launch some fireforks
+        '''
+		return {}
 ```
 
-Basically, the list of methods should reflect exact names and
-signatures as in the module, except `self` parameter.
+In above incomplete interface example, the list of methods should
+reflect exact names and signatures as in the module, except `self`
+parameter. Rules apply:
+
+- If a method is not in the SMI class, but function is implemented in
+  the module, then such function is marked as "deprecated".
+
+- If a method is in the SMI class but not in the module, then such
+  function is marked as "not implemented".
+
+- If a method has a decorator `@Interface.supported`, only on these
+  platforms unimplemented method will be reported as "not
+  implemented", otherwise "not supported".
 
 
 ## Usage
+[usage]: #usage
 
-Since Salt calls functions from the modules, therefore the interface
-can be run inside the module on `__virtual__` function as follows:
+Once SMI class defined, the usage should be very simple:
 
 ```
 from salt.interfaces.pkg_module import PkgInterface
 
+__virtualname__ = PkgInterface(__name__)()
 
-def __virtual__():
-	PkgInterface(__name__)()
-    ...
 ```
-This should be that simple.
+
+The code above does the following:
+
+- Ensures that the `__virtualname__` is properly set according to the
+  interface.
+- Performs check for the entire module and automatically unifies it to
+  the rules in the "Declaration" section above by adding stub
+  functions that would raise corresponding exceptions or wrap/decorate
+  existing "illegal" functions as "deprecated".
 
 
 ## Effect
+[effect]: #effect
+
+Essentically, the SMI works as automatic checker/corrector for the
+module on the moment it is lazy-loaded.
 
 What PkgInterface does in the example above, it takes the current
 module and examines if the exported functions are there. Once nothing
 found, a stub is placed. That means, if module `pkg` requires,
 e.g. function `lock` and there is implemented `hold`, then function
-`lock`will be _also_ added. But if this function is called, it will
-raise an error "Function is not implemented yet" (different exception
-type from "function not found").
+`lock`will be _also_ added as "not implemented" (or "unsupported",
+depends on decorator in the Interface declaration).
 
-But the interface will also mark existing functions that are not
-inside the interface as subject to retirement, by automatically
-placing a warning decorator to them. That said, if an interface class
-does not implement `hold` function, but that function is still
-implemented, using that function will also raise a warning in the log
-file that this function is deprecated and is subject to be removed in
-a future.
+SMI will also mark existing functions that are not inside the
+interface as subject to retirement, by automatically placing a warning
+decorator to them. That said, if an interface class does not describes
+`hold` function, but that function is still physically implemented,
+calling that function will also raise a warning in the log file that
+this function is deprecated and is subject to be removed in a future.
 
 
 ## Not applicable functions
+[notapplicable]: #notapplicable
 
 On some operating systems certain functions aren't applicable. In this
 case they should be decorated with the proposed function decorator:
 
 ```
 class SomeModuleInterface(Interface):
-    @Interface.not_applicable('Windows', 'NetBSD')
+    @Interface.not_applicable(osfamily=['Windows', 'NetBSD'])
     def foo(self, name, *args):
-	    pass
+	    return {}
 ```
 
-In this case method `foo` will be still added on Windows and NetBSD
-minions, however it will only return `False` and debug log will inform
-that not applicable function has been called.
+The decorator would support _any_ kind of grains keys with any of the
+values to compare with. Once certain grain matches in the list of the
+given values, decorator is triggered.
 
-## Unresolved questions
+In this case method `foo` will be still added on Windows and NetBSD
+minions, despite the fact that the code below adds it onlny on RedHat
+Linux. However it will only return specified structure and debug log
+will inform that not applicable function has been called.
+
+Such decorator deals with the cases, where function is being added to
+the module only on certain conditions, e.g.:
+
+```
+if __grains__['osfamily'] == 'RedHat':
+    def foo(name, *args):
+        return {}
+```
+
+## Return Structure Definition
+[returnstruct]: #returnstruct
+
+Return structure in virtual modules another pitfall, where dynamically
+replaced module suddenly returns "something else" than usually
+expected. This is widely affects API and integration. In this case
+integration code usually looks like this (pseudo-code):
+
+```
+if this_is_debian {
+  function_call({'disabled': False})
+else {
+  function_call({'enabled': True})
+}
+```
+
+There is a catch: some operating systems/platforms _must_ return
+specific properties that aren't available on other systems. Therefore
+return structure should be always defined from two blocks:
+
+- *Minimal common data.* This comes from every platform, even if this is
+  only one value. This data should be available on _all Salt
+  supported_ platforms. This group must be defined in the Interface.
+- *Extra specific data.* This comes from a specific platform that
+  is not be available on _all other_ platforms, even if this data might
+  be _also available_ on other platforms. This group is always
+  coming additionally to the basic one and is _not_ part of the interface.
+
+SMI class should define return structure from the defined method. This
+structure is very similar to `config/__init__.py::_validate_opts()`
+function.
+
+SMI also shuld take care of return structure definition so all virtual
+modules returns by default the same structure.
+
+However, the migration and adoption of the same structure from
+different physical modules is not easy. Modules are also called
+through the states and there is already specific structure is
+used. The usage would not change, but the implementation would be to
+wrap all functions with a decorator, which would validate the default
+output.
+
+This RFC is not to cover the detailed output structure part, but only
+foresee a placeholder for it the in current design of the Interface
+concept.
+
+## Unresolved questions and known possible solutions
 [unresolved]: #unresolved-questions
 
-Which path do we choose here to make sure interface is used all the time?
+- Make deprecation of the interface configurable?
+
+This is still asking for a problem. Because if we know that in N
+years/releases function is going to be retired, simply just do not use
+it or move away from it. But if this is configured and can be muted,
+such option will bring more harm than help.
+
+- Which path do we choose here to make sure interface is used all the time?
+
+One of the possibility is to expect Interface class instance in
+`__virtualname__` variable, instead of a string. In this case
+`__call__` is not performed right in the module, but LazyLoader
+instead gets the `__modulename__` variable content.
+
+Another possibility is to adjust PyLint to it and make sure each
+`__virtualname__` has Interface assigned instead of a string.
+
+Alternatively, not to force Interface usage. But this has drawback of
+setting the interface overall optional, which will eventually be optional
+everywhere, unfortunately.
 
 
-### Easy implementation
+## Hints
+[hints]: #hints
 
-Just _force_ the interface over _every_ module that implements
-`__virtualname__`. As long as `__virtualname__` is there and no
-interface -- such module is rejected to be loaded. Period. Drawback
-here is that we will need to write an interface for every module with
-the `__virtualname__` if it is used merely to rename the
-module. However, writing an interface also does not have to be a
-problem: it is merely to copy function signatures. To generate
-an interface out of the signatures of some package, it is just enough
-to take a reference package and do something like this: 
+To generate an interface out of the signatures of some package, it is
+just enough to take a reference package and do something like this: 
 
 
     cat zypper.py | grep '^def [a-z]' | sed -e 's/(/(self, /g' | sed -e 's/def/    def/g'
 
 
-It will create ready to copy interface, to which only `pass` needs
-to be added after each line. The `Interface` class, from which
-`PkgInterface` class is subclassed will alter its code so every time
-one is calling any method from the `PkgInterface` directly, will raise
-an exception "Function is not yet implemented".
+It will create ready to copy signatures, based on `zypper.py` as a reference.
 
 
-### Not so easy implementation
+# Strategy
+[strategy]: #strategy
 
-It includes easy implementation from the above, plus some extra
-work. The easy implementation just bluntly forcing the interface
-requirement. In this case this is happening only if module with
-`__virtualname__` is using more than once. But that should be verified
-at Salt component startup. As long as there is a module that has no
-interface but has the same `__virtualname__` twice or more, such
-module is blacklisted for EasyLoader in future calls.
+Implementation of this concept must be done in two phases:
 
+1. Implementation of the very mechanism.
+2. Migrating module by module in a transparent way.
 
-# Drawbacks
-[drawbacks]: #drawbacks
+On the second phrase corner cases might force the implementation
+details to be minorly changed. The result, however should be the same:
+modules should just work as they worked before while used in real systems.
 
-Implementation of another sibling module will be a bit more complex.
+The structure definition and migration should be done as well
+gradually. This should be covered in a separate RFC.
