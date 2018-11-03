@@ -231,7 +231,7 @@ def get_config(config_path=_DEFAULT_CONFIG_PATH):
 
 def list_repos(config_path=_DEFAULT_CONFIG_PATH, with_packages=False):
     '''
-    List all of the repos.
+    List all of the local package repositories.
 
     :param str config_path: The path to the configuration file for the aptly instance.
     :param bool with_packages: Return a list of packages in the repo.
@@ -263,9 +263,9 @@ def list_repos(config_path=_DEFAULT_CONFIG_PATH, with_packages=False):
 
 def get_repo(name, config_path=_DEFAULT_CONFIG_PATH, with_packages=False):
     '''
-    Get the details of the repository.
+    Get detailed information about a local package repository.
 
-    :param str name: The name of the repository.
+    :param str name: The name of the local repository.
     :param str config_path: The path to the configuration file for the aptly instance.
     :param bool with_packages: Return a list of packages in the repo.
 
@@ -301,9 +301,9 @@ def new_repo(name, config_path=_DEFAULT_CONFIG_PATH, comment=None, component=Non
              distribution=None, uploaders_file=None, from_snapshot=None,
              saltenv='base'):
     '''
-    Create the new repository.
+    Create a new local package repository.
 
-    :param str name: The name of the repository.
+    :param str name: The name of the local repository.
     :param str config_path: The path to the configuration file for the aptly instance.
     :param str comment: The description of the repository.
     :param str component: The default component to use when publishing.
@@ -352,9 +352,9 @@ def new_repo(name, config_path=_DEFAULT_CONFIG_PATH, comment=None, component=Non
 def set_repo(name, config_path=_DEFAULT_CONFIG_PATH, comment=None, component=None,
              distribution=None, uploaders_file=None, saltenv='base'):
     '''
-    Configure the repository settings.
+    Configure the settings for a local package repository.
 
-    :param str name: The name of the repository.
+    :param str name: The name of the local repository.
     :param str config_path: The path to the configuration file for the aptly instance.
     :param str comment: The description of the repository.
     :param str component: The default component to use when publishing.
@@ -426,9 +426,9 @@ def set_repo(name, config_path=_DEFAULT_CONFIG_PATH, comment=None, component=Non
 
 def delete_repo(name, config_path=_DEFAULT_CONFIG_PATH, force=False):
     '''
-    Remove the repository.
+    Remove a local package repository.
 
-    :param str name: The name of the repository.
+    :param str name: The name of the local repository.
     :param str config_path: The path to the configuration file for the aptly instance.
     :param bool force: Whether to remove the repository even if it is used as the source
         of an existing snapshot.
@@ -466,7 +466,7 @@ def delete_repo(name, config_path=_DEFAULT_CONFIG_PATH, force=False):
 
 def list_mirrors(config_path=_DEFAULT_CONFIG_PATH):
     '''
-    Get a list of all the mirrors.
+    Get a list of all the mirrored remote repositories.
 
     :param str config_path: The path to the configuration file for the aptly instance.
 
@@ -492,9 +492,9 @@ def list_mirrors(config_path=_DEFAULT_CONFIG_PATH):
 
 def get_mirror(name, config_path=_DEFAULT_CONFIG_PATH, with_packages=False):
     '''
-    Get the details of the mirror.
+    Get detailed information about a mirrored remote repository.
 
-    :param str name: The name of the mirror.
+    :param str name: The name of the remote repository mirror.
     :param str config_path: The path to the configuration file for the aptly instance.
     :param bool with_packages: Return a list of packages in the repo.
 
@@ -528,9 +528,9 @@ def get_mirror(name, config_path=_DEFAULT_CONFIG_PATH, with_packages=False):
 
 def delete_mirror(name, config_path=_DEFAULT_CONFIG_PATH, force=False):
     '''
-    Remove the mirror.
+    Remove a mirrored remote repository. By default, Package data is not removed.
 
-    :param str name: The name of the mirror.
+    :param str name: The name of the remote repository mirror.
     :param str config_path: The path to the configuration file for the aptly instance.
     :param bool force: Whether to remove the mirror even if it is used as the source
         of an existing snapshot.
@@ -601,7 +601,7 @@ def list_published(config_path=_DEFAULT_CONFIG_PATH):
 
 def get_published(name, config_path=_DEFAULT_CONFIG_PATH, endpoint='', prefix=None):
     '''
-    Get the details of the published repository.
+    Get the details of a published repository.
 
     :param str name: The distribution name of the published repository.
     :param str config_path: The path to the configuration file for the aptly instance.
@@ -641,7 +641,8 @@ def get_published(name, config_path=_DEFAULT_CONFIG_PATH, endpoint='', prefix=No
 def delete_published(name, config_path=_DEFAULT_CONFIG_PATH, endpoint='', prefix=None,
                      skip_cleanup=False, force=False):
     '''
-    Remove the published repository.
+    Remove files belonging to a published repository. Aptly tries to remove as many files
+        belonging to this repository as possible.
 
     :param str name: The distribution name of the published repository.
     :param str config_path: The path to the configuration file for the aptly instance.
@@ -691,7 +692,7 @@ def delete_published(name, config_path=_DEFAULT_CONFIG_PATH, endpoint='', prefix
 
 def list_snapshots(config_path=_DEFAULT_CONFIG_PATH, sort_by_time=False):
     '''
-    Get a list of all the snapshots.
+    Get a list of all the existing snapshots.
 
     :param str config_path: The path to the configuration file for the aptly instance.
     :param bool sort_by_time: Whether to sort by creation time instead of by name.
@@ -723,9 +724,9 @@ def list_snapshots(config_path=_DEFAULT_CONFIG_PATH, sort_by_time=False):
 
 def get_snapshot(name, config_path=_DEFAULT_CONFIG_PATH, with_packages=False):
     '''
-    Get the details of the snapshot.
+    Get detailed information about a snapshot.
 
-    :param str name: The name of the snapshot.
+    :param str name: The name of the snapshot given during snapshot creation.
     :param str config_path: The path to the configuration file for the aptly instance.
     :param bool with_packages: Return a list of packages in the snapshot.
 
@@ -760,9 +761,12 @@ def get_snapshot(name, config_path=_DEFAULT_CONFIG_PATH, with_packages=False):
 
 def delete_snapshot(name, config_path=_DEFAULT_CONFIG_PATH, force=False):
     '''
-    Remove the snapshot.
+    Remove information about a snapshot. If a snapshot is published, it can not be
+        dropped without first removing publishing for that snapshot. If a snapshot is
+        used as the source for other snapshots, Aptly will refuse to remove it unless
+        forced.
 
-    :param str name: The name of the snapshot.
+    :param str name: The name of the snapshot given during snapshot creation.
     :param str config_path: The path to the configuration file for the aptly instance.
     :param bool force: Whether to remove the snapshot even if it is used as the source
         of another snapshot.
