@@ -4719,16 +4719,16 @@ def rmi(*names, **kwargs):
                 errors.append(exc.explanation)
                 deps = depends(name)
                 if deps['Containers'] or deps['Images']:
-                    err = 'Image is in use by '
+                    users = []
                     if deps['Containers']:
-                        err += 'container(s): {0}'.format(
-                            ', '.join(deps['Containers'])
-                        )
+                        users.append('container(s): {0}'
+                                     .format(', '.join(deps['Containers'])))
                     if deps['Images']:
-                        if deps['Containers']:
-                            err += ' and '
-                        err += 'image(s): {0}'.format(
-                            ', '.join(deps['Images']))
+                        users.append('image(s): {0}'
+                                     .format(', '.join(deps['Images'])))
+                    err = 'Image is in use by {}'.format(
+                        " and ".join(users)
+                    )
                     errors.append(err)
             else:
                 errors.append('Error {0}: {1}'.format(exc.response.status_code,
