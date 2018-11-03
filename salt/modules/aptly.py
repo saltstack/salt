@@ -10,6 +10,11 @@ import logging
 import os
 import re
 
+try:
+    from json.decoder import JSONDecodeError
+except ImportError:
+    JSONDecodeError = ValueError
+
 # Import salt libs
 from salt.ext import six
 from salt.exceptions import SaltInvocationError
@@ -64,7 +69,7 @@ def _convert_to_closest_type(value):
     if value.lower() in ('false', 'true'):
         try:
             return salt.utils.json.loads(value.lower())
-        except json.decoder.JSONDecodeError:
+        except JSONDecodeError:
             return salt.utils.stringutils.to_none(salt.utils.stringutils.to_num(value))
     else:
         return salt.utils.stringutils.to_none(salt.utils.stringutils.to_num(value))
