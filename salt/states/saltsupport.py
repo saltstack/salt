@@ -79,10 +79,14 @@ class SaltSupportState(object):
         }
 
         out = {}
-        for ref_func, ref_kwargs in kwargs.items():
-            if ref_func not in allowed_functions:
-                raise salt.exceptions.SaltInvocationError('Function {} is not found'.format(ref_func))
-            out[ref_func] = getattr(self, ref_func)(**self.get_kwargs(ref_kwargs))
+        try:
+            for ref_func, ref_kwargs in kwargs.items():
+                if ref_func not in allowed_functions:
+                    raise salt.exceptions.SaltInvocationError('Function {} is not found'.format(ref_func))
+                out[ref_func] = getattr(self, ref_func)(**self.get_kwargs(ref_kwargs))
+        except Exception as ex:
+            ret['comment'] = str(ex)
+            ret['result'] = False
         ret['changes'] = out
 
         return ret
@@ -96,6 +100,8 @@ class SaltSupportState(object):
         # put one file named as group
         try:
             destination = os.path.join(location, group)
+            if os.path.exists(destination) and not os.path.isdir(destination):
+                raise salt.exceptions.SaltException('Destination "{}" should be directory!'.format(destination))
             os.makedirs(destination, exist_ok=True)
             log.debug('Created destination directory for archives: %s', destination)
         except OSError as err:
@@ -122,8 +128,8 @@ class SaltSupportState(object):
         }
         location = location or tempfile.gettempdir()
         self.check_destination(location, group)
-        result = __salt__['support.sync'](group, name=filename, host=host, location=location, move=move, all=all)
-        ret['changes'] = result
+        ret['changes'] = __salt__['support.sync'](group, name=filename, host=host,
+                                                  location=location, move=move, all=all)
 
         return ret
 
