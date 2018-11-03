@@ -530,9 +530,15 @@ class Master(SMaster):
             pub_channels = []
             log.info('Creating master publisher process')
             log_queue = salt.log.setup.get_multiprocessing_logging_queue()
+            msg_queue = multiprocessing.Queue(1000)
             for transport, opts in iter_transport_opts(self.opts):
                 chan = salt.transport.server.PubServerChannel.factory(opts)
-                chan.pre_fork(self.process_manager, kwargs={'log_queue': log_queue})
+                chan.pre_fork(
+                    self.process_manager,
+                    kwargs={
+                        'log_queue': log_queue,
+                        'msg_queue': msg_queue,
+                    })
                 pub_channels.append(chan)
 
             log.info('Creating master event publisher process')
@@ -592,6 +598,7 @@ class Master(SMaster):
             if salt.utils.is_windows():
                 kwargs['log_queue'] = log_queue
                 kwargs['secrets'] = SMaster.secrets
+                kwargs['msg_queue'] = msg_queue
 
             self.process_manager.add_process(
                 ReqServer,
@@ -657,7 +664,7 @@ class ReqServer(SignalHandlingMultiprocessingProcess):
     Starts up the master request server, minions send results to this
     interface.
     '''
-    def __init__(self, opts, key, mkey, log_queue=None, secrets=None):
+    def __init__(self, opts, key, mkey, log_queue=None, secrets=None, msg_queue=None):
         '''
         Create a request server
 
@@ -668,12 +675,13 @@ class ReqServer(SignalHandlingMultiprocessingProcess):
         :rtype: ReqServer
         :returns: Request server
         '''
-        super(ReqServer, self).__init__(log_queue=log_queue)
+        super(ReqServer, self).__init__(log_queue=log_queue, msg_queue=msg_queue)
         self.opts = opts
         self.master_key = mkey
         # Prepare the AES key
         self.key = key
         self.secrets = secrets
+        self.msg_queue = msg_queue
 
     # __setstate__ and __getstate__ are only used on Windows.
     # We do this so that __init__ will be invoked on Windows in the child
@@ -681,14 +689,15 @@ class ReqServer(SignalHandlingMultiprocessingProcess):
     def __setstate__(self, state):
         self._is_child = True
         self.__init__(state['opts'], state['key'], state['mkey'],
-                      log_queue=state['log_queue'], secrets=state['secrets'])
+                      log_queue=state['log_queue'], msg_queue=state['msg_queue'], secrets=state['secrets'])
 
     def __getstate__(self):
         return {'opts': self.opts,
                 'key': self.key,
                 'mkey': self.master_key,
                 'log_queue': self.log_queue,
-                'secrets': self.secrets}
+                'secrets': self.secrets,
+                'msg_queue': self.msg_queue}
 
     def _handle_signals(self, signum, sigframe):  # pylint: disable=unused-argument
         self.destroy(signum)
@@ -730,6 +739,7 @@ class ReqServer(SignalHandlingMultiprocessingProcess):
         kwargs = {}
         if salt.utils.is_windows():
             kwargs['log_queue'] = self.log_queue
+            kwargs['msg_queue'] = self.msg_queue
             # Use one worker thread if only the TCP transport is set up on
             # Windows and we are using Python 2. There is load balancer
             # support on Windows for the TCP transport when using Python 3.
@@ -800,6 +810,7 @@ class MWorker(SignalHandlingMultiprocessingProcess):
         self.mkey = mkey
         self.key = key
         self.k_mtime = 0
+        self.msg_queue = kwargs.get('msg_queue', None)
 
     # We need __setstate__ and __getstate__ to also pickle 'SMaster.secrets'.
     # Otherwise, 'SMaster.secrets' won't be copied over to the spawned process
@@ -814,6 +825,7 @@ class MWorker(SignalHandlingMultiprocessingProcess):
         self.mkey = state['mkey']
         self.key = state['key']
         self.k_mtime = state['k_mtime']
+        self.msg_queue = state['msg_queue']
         SMaster.secrets = state['secrets']
 
     def __getstate__(self):
@@ -823,6 +835,7 @@ class MWorker(SignalHandlingMultiprocessingProcess):
                 'key': self.key,
                 'k_mtime': self.k_mtime,
                 'log_queue': self.log_queue,
+                'msg_queue': self.msg_queue,
                 'secrets': SMaster.secrets}
 
     def _handle_signals(self, signum, sigframe):
@@ -911,6 +924,7 @@ class MWorker(SignalHandlingMultiprocessingProcess):
         self.clear_funcs = ClearFuncs(
            self.opts,
            self.key,
+           self.msg_queue,
            )
         self.aes_funcs = AESFuncs(self.opts)
         salt.utils.reinit_crypto()
@@ -1651,7 +1665,7 @@ class ClearFuncs(object):
     # the clear:
     # publish (The publish from the LocalClient)
     # _auth
-    def __init__(self, opts, key):
+    def __init__(self, opts, key, msg_queue=None):
         self.opts = opts
         self.key = key
         # Create the event manager
@@ -1673,6 +1687,7 @@ class ClearFuncs(object):
         self.wheel_ = salt.wheel.Wheel(opts)
         # Make a masterapi object
         self.masterapi = salt.daemons.masterapi.LocalFuncs(opts, key)
+        self.msg_queue = msg_queue
 
     def runner(self, clear_load):
         '''
@@ -2010,7 +2025,7 @@ class ClearFuncs(object):
         '''
         for transport, opts in iter_transport_opts(self.opts):
             chan = salt.transport.server.PubServerChannel.factory(opts)
-            chan.publish(load)
+            chan.publish(load, msg_queue=self.msg_queue)
 
     def _prep_pub(self, minions, jid, clear_load, extra):
         '''

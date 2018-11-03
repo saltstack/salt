@@ -595,6 +595,7 @@ class MultiprocessingProcess(multiprocessing.Process, NewStyleClassMixIn):
             self._kwargs_for_getstate = copy.copy(kwargs)
 
         self.log_queue = kwargs.pop('log_queue', None)
+        self.msg_queue = kwargs.pop('msg_queue', None)
         if self.log_queue is None:
             self.log_queue = salt.log.setup.get_multiprocessing_logging_queue()
         else:
@@ -648,6 +649,8 @@ class MultiprocessingProcess(multiprocessing.Process, NewStyleClassMixIn):
         kwargs = self._kwargs_for_getstate
         if 'log_queue' not in kwargs:
             kwargs['log_queue'] = self.log_queue
+        if 'msg_queue' not in kwargs:
+            kwargs['msg_queue'] = self.msg_queue
         # Remove the version of these in the parent process since
         # they are no longer needed.
         del self._args_for_getstate

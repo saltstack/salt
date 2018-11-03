@@ -746,7 +746,7 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
     def connect(self):
         return tornado.gen.sleep(5)
 
-    def _publish_daemon(self, log_queue=None):
+    def _publish_daemon(self, log_queue=None, msg_queue=None):
         '''
         Bind to the interface specified in the configuration file
         '''
@@ -755,46 +755,47 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
             salt.log.setup.set_multiprocessing_logging_queue(log_queue)
             salt.log.setup.setup_multiprocessing_logging(log_queue)
 
-        # Set up the context
-        context = zmq.Context(1)
-        # Prepare minion publish socket
-        pub_sock = context.socket(zmq.PUB)
-        _set_tcp_keepalive(pub_sock, self.opts)
-        # if 2.1 >= zmq < 3.0, we only have one HWM setting
-        try:
-            pub_sock.setsockopt(zmq.HWM, self.opts.get('pub_hwm', 1000))
-        # in zmq >= 3.0, there are separate send and receive HWM settings
-        except AttributeError:
-            # Set the High Water Marks. For more information on HWM, see:
-            # http://api.zeromq.org/4-1:zmq-setsockopt
-            pub_sock.setsockopt(zmq.SNDHWM, self.opts.get('pub_hwm', 1000))
-            pub_sock.setsockopt(zmq.RCVHWM, self.opts.get('pub_hwm', 1000))
-        if self.opts['ipv6'] is True and hasattr(zmq, 'IPV4ONLY'):
-            # IPv6 sockets work for both IPv6 and IPv4 addresses
-            pub_sock.setsockopt(zmq.IPV4ONLY, 0)
-        pub_sock.setsockopt(zmq.BACKLOG, self.opts.get('zmq_backlog', 1000))
-        pub_uri = 'tcp://{interface}:{publish_port}'.format(**self.opts)
-        # Prepare minion pull socket
-        pull_sock = context.socket(zmq.PULL)
+        if not msg_queue:
+            # Set up the context
+            context = zmq.Context(1)
+            # Prepare minion publish socket
+            pub_sock = context.socket(zmq.PUB)
+            _set_tcp_keepalive(pub_sock, self.opts)
+            # if 2.1 >= zmq < 3.0, we only have one HWM setting
+            try:
+                pub_sock.setsockopt(zmq.HWM, self.opts.get('pub_hwm', 1000))
+            # in zmq >= 3.0, there are separate send and receive HWM settings
+            except AttributeError:
+                # Set the High Water Marks. For more information on HWM, see:
+                # http://api.zeromq.org/4-1:zmq-setsockopt
+                pub_sock.setsockopt(zmq.SNDHWM, self.opts.get('pub_hwm', 1000))
+                pub_sock.setsockopt(zmq.RCVHWM, self.opts.get('pub_hwm', 1000))
+            if self.opts['ipv6'] is True and hasattr(zmq, 'IPV4ONLY'):
+                # IPv6 sockets work for both IPv6 and IPv4 addresses
+                pub_sock.setsockopt(zmq.IPV4ONLY, 0)
+            pub_sock.setsockopt(zmq.BACKLOG, self.opts.get('zmq_backlog', 1000))
+            pub_uri = 'tcp://{interface}:{publish_port}'.format(**self.opts)
+            # Prepare minion pull socket
+            pull_sock = context.socket(zmq.PULL)
 
-        if self.opts.get('ipc_mode', '') == 'tcp':
-            pull_uri = 'tcp://127.0.0.1:{0}'.format(
-                self.opts.get('tcp_master_publish_pull', 4514)
-                )
-        else:
-            pull_uri = 'ipc://{0}'.format(
-                os.path.join(self.opts['sock_dir'], 'publish_pull.ipc')
-                )
-        salt.utils.zeromq.check_ipc_path_max_len(pull_uri)
+            if self.opts.get('ipc_mode', '') == 'tcp':
+                pull_uri = 'tcp://127.0.0.1:{0}'.format(
+                    self.opts.get('tcp_master_publish_pull', 4514)
+                    )
+            else:
+                pull_uri = 'ipc://{0}'.format(
+                    os.path.join(self.opts['sock_dir'], 'publish_pull.ipc')
+                    )
+            salt.utils.zeromq.check_ipc_path_max_len(pull_uri)
 
-        # Start the minion command publisher
-        log.info('Starting the Salt Publisher on {0}'.format(pub_uri))
-        pub_sock.bind(pub_uri)
+            # Start the minion command publisher
+            log.info('Starting the Salt Publisher on {0}'.format(pub_uri))
+            pub_sock.bind(pub_uri)
 
-        # Securely create socket
-        log.info('Starting the Salt Puller on {0}'.format(pull_uri))
-        with salt.utils.files.set_umask(0o177):
-            pull_sock.bind(pull_uri)
+            # Securely create socket
+            log.info('Starting the Salt Puller on {0}'.format(pull_uri))
+            with salt.utils.files.set_umask(0o177):
+                pull_sock.bind(pull_uri)
 
         try:
             while True:
@@ -802,7 +803,10 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
                 # SIGUSR1 gracefully so we don't choke and die horribly
                 try:
                     log.debug('Publish daemon getting data from puller %s', pull_uri)
-                    package = pull_sock.recv()
+                    if msg_queue:
+                        package = msg_queue.get()
+                    else:
+                        package = pull_sock.recv()
                     log.debug('Publish daemon received payload. size=%d', len(package))
 
                     unpacked_package = salt.payload.unpackage(package)
@@ -858,7 +862,7 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
         '''
         process_manager.add_process(self._publish_daemon, kwargs=kwargs)
 
-    def publish(self, load):
+    def publish(self, load, msg_queue=None):
         '''
         Publish "load" to minions
 
@@ -872,18 +876,19 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
             master_pem_path = os.path.join(self.opts['pki_dir'], 'master.pem')
             log.debug("Signing data packet")
             payload['sig'] = salt.crypt.sign_message(master_pem_path, payload['load'])
-        # Send 0MQ to the publisher
-        context = zmq.Context(1)
-        pub_sock = context.socket(zmq.PUSH)
-        if self.opts.get('ipc_mode', '') == 'tcp':
-            pull_uri = 'tcp://127.0.0.1:{0}'.format(
-                self.opts.get('tcp_master_publish_pull', 4514)
-                )
-        else:
-            pull_uri = 'ipc://{0}'.format(
-                os.path.join(self.opts['sock_dir'], 'publish_pull.ipc')
-                )
-        pub_sock.connect(pull_uri)
+        if not msg_queue:
+            # Send 0MQ to the publisher
+            context = zmq.Context(1)
+            pub_sock = context.socket(zmq.PUSH)
+            if self.opts.get('ipc_mode', '') == 'tcp':
+                pull_uri = 'tcp://127.0.0.1:{0}'.format(
+                    self.opts.get('tcp_master_publish_pull', 4514)
+                    )
+            else:
+                pull_uri = 'ipc://{0}'.format(
+                    os.path.join(self.opts['sock_dir'], 'publish_pull.ipc')
+                    )
+            pub_sock.connect(pull_uri)
         int_payload = {'payload': self.serial.dumps(payload)}
 
         # add some targeting stuff for lists only (for now)
@@ -905,11 +910,14 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
             'Sending payload to publish daemon. jid=%s size=%d',
             load.get('jid', None), len(payload),
         )
-        pub_sock.send(payload)
+        payload = self.serial.dumps(int_payload)
+        if msg_queue:
+            msg_queue.put(payload)
+        else:
+            pub_sock.send(payload)
+            pub_sock.close()
+            context.term()
         log.debug('Sent payload to publish daemon.')
-
-        pub_sock.close()
-        context.term()
 
 
 class AsyncReqMessageClientPool(salt.transport.MessageClientPool):
