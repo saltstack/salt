@@ -58,7 +58,7 @@ parameter in the SMI class is not a part of a function signature.
 
 Example of SMI definition for module `pkg`:
 
-```
+```python
 from salt.interfaces import Interface
 
 class PkgInterface(Interface):
@@ -104,7 +104,7 @@ parameter. Rules apply:
 
 Once SMI class defined, the usage should be very simple:
 
-```
+```python
 from salt.interfaces.pkg_module import PkgInterface
 
 __virtualname__ = PkgInterface(__name__)()
@@ -148,7 +148,7 @@ this function is deprecated and is subject to be removed in a future.
 On some operating systems certain functions aren't applicable. In this
 case they should be decorated with the proposed function decorator:
 
-```
+```python
 class SomeModuleInterface(Interface):
     @Interface.not_applicable(osfamily=['Windows', 'NetBSD'])
     def foo(self, name, *args):
@@ -167,7 +167,7 @@ will inform that not applicable function has been called.
 Such decorator deals with the cases, where function is being added to
 the module only on certain conditions, e.g.:
 
-```
+```python
 if __grains__['osfamily'] == 'RedHat':
     def foo(name, *args):
         return {}
@@ -224,9 +224,11 @@ concept.
 ## Unresolved questions and known possible solutions
 [unresolved]: #unresolved-questions
 
-- Make deprecation of the interface configurable?
+- Should be confugrable function deprecation while aligning module with the interface?
 
-This is still asking for a problem. Because if we know that in N
+If some function happens to be an alien to the interface, question is
+how to react on this. Muting and do not report function is obsolete is
+still asking for a problem. Because if we know that in N
 years/releases function is going to be retired, simply just do not use
 it or move away from it. But if this is configured and can be muted,
 such option will bring more harm than help.
