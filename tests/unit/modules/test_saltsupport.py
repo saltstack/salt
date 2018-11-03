@@ -53,3 +53,19 @@ class LogCollectorTestCase(TestCase, LoaderModuleMockMixin):
             assert 'info' in out.messages
             assert type(out.messages['info']) == saltsupport.LogCollector.MessagesList
             assert out.messages['info'] == ['00:00:00.000 - {}'.format(msg)]
+
+    def test_info(self):
+        '''
+        Test set info message to the log collector.
+
+        :return:
+        '''
+        utcmock = MagicMock()
+        utcmock.utcnow = MagicMock(return_value=datetime.datetime.utcfromtimestamp(0))
+        with patch('datetime.datetime', utcmock):
+            msg = 'Upgrading /dev/null device'
+            out = saltsupport.LogCollector()
+            out.info(msg)
+            assert 'info' in out.messages
+            assert type(out.messages['info']) == saltsupport.LogCollector.MessagesList
+            assert out.messages['info'] == ['00:00:00.000 - {}'.format(msg)]
