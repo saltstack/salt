@@ -925,6 +925,7 @@ class ClientCase(AdaptedConfigurationTestCaseMixin, TestCase):
             else:
                 raise
 
+
 # ----- Backwards Compatible Imports -------------------------------------------------------------------------------->
 from tests.support.mixins import ShellCaseCommonTestsMixin  # pylint: disable=unused-import
 # <---- Backwards Compatible Imports ---------------------------------------------------------------------------------
