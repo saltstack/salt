@@ -85,3 +85,19 @@ class LogCollectorTestCase(TestCase, LoaderModuleMockMixin):
             assert saltsupport.LogCollector.WARNING in out.messages
             assert type(out.messages[saltsupport.LogCollector.WARNING]) == saltsupport.LogCollector.MessagesList
             assert out.messages[saltsupport.LogCollector.WARNING] == ['00:00:00.000 - {}'.format(msg)]
+
+    def test_error_message(self):
+        '''
+        Test set error message to the log collector.
+
+        :return:
+        '''
+        utcmock = MagicMock()
+        utcmock.utcnow = MagicMock(return_value=datetime.datetime.utcfromtimestamp(0))
+        with patch('datetime.datetime', utcmock):
+            msg = 'Learning curve appears to be fractal'
+            out = saltsupport.LogCollector()
+            out.error(msg)
+            assert saltsupport.LogCollector.ERROR in out.messages
+            assert type(out.messages[saltsupport.LogCollector.ERROR]) == saltsupport.LogCollector.MessagesList
+            assert out.messages[saltsupport.LogCollector.ERROR] == ['00:00:00.000 - {}'.format(msg)]
