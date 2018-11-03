@@ -19,7 +19,7 @@ import salt.ext.six as six
 
 # Workaround for 'reload' builtin of py2.7
 if six.PY3:
-    from importlib import reload  # pylint: disable=W0611
+    from importlib import reload  # pylint: disable=no-name-in-module
 
 log = logging.getLogger(__name__)
 
