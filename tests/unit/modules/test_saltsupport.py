@@ -49,10 +49,10 @@ class LogCollectorTestCase(TestCase, LoaderModuleMockMixin):
         with patch('datetime.datetime', utcmock):
             msg = 'Upgrading /dev/null device'
             out = saltsupport.LogCollector()
-            out.msg(msg)
+            out.msg(msg, title='Here')
             assert saltsupport.LogCollector.INFO in out.messages
             assert type(out.messages[saltsupport.LogCollector.INFO]) == saltsupport.LogCollector.MessagesList
-            assert out.messages[saltsupport.LogCollector.INFO] == ['00:00:00.000 - {}'.format(msg)]
+            assert out.messages[saltsupport.LogCollector.INFO] == ['00:00:00.000 - {0}: {1}'.format('Here', msg)]
 
     def test_info_message(self):
         '''
