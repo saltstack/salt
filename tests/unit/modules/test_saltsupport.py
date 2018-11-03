@@ -50,11 +50,11 @@ class LogCollectorTestCase(TestCase, LoaderModuleMockMixin):
             msg = 'Upgrading /dev/null device'
             out = saltsupport.LogCollector()
             out.msg(msg)
-            assert 'info' in out.messages
-            assert type(out.messages['info']) == saltsupport.LogCollector.MessagesList
-            assert out.messages['info'] == ['00:00:00.000 - {}'.format(msg)]
+            assert saltsupport.LogCollector.INFO in out.messages
+            assert type(out.messages[saltsupport.LogCollector.INFO]) == saltsupport.LogCollector.MessagesList
+            assert out.messages[saltsupport.LogCollector.INFO] == ['00:00:00.000 - {}'.format(msg)]
 
-    def test_info(self):
+    def test_info_message(self):
         '''
         Test set info message to the log collector.
 
@@ -63,12 +63,13 @@ class LogCollectorTestCase(TestCase, LoaderModuleMockMixin):
         utcmock = MagicMock()
         utcmock.utcnow = MagicMock(return_value=datetime.datetime.utcfromtimestamp(0))
         with patch('datetime.datetime', utcmock):
-            msg = 'Upgrading /dev/null device'
+            msg = 'SIMM crosstalk during tectonic stress'
             out = saltsupport.LogCollector()
             out.info(msg)
-            assert 'info' in out.messages
-            assert type(out.messages['info']) == saltsupport.LogCollector.MessagesList
-            assert out.messages['info'] == ['00:00:00.000 - {}'.format(msg)]
+            assert saltsupport.LogCollector.INFO in out.messages
+            assert type(out.messages[saltsupport.LogCollector.INFO]) == saltsupport.LogCollector.MessagesList
+            assert out.messages[saltsupport.LogCollector.INFO] == ['00:00:00.000 - {}'.format(msg)]
+
     def test_warning_message(self):
         '''
         Test set warning message to the log collector.
