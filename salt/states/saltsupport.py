@@ -44,6 +44,7 @@ import salt.fileclient
 import salt.ext.six as six
 from salt.utils.decorators import depends
 import salt.utils.decorators.path
+import salt.exceptions
 
 log = logging.getLogger(__name__)
 __virtualname__ = 'support'
@@ -68,6 +69,7 @@ class SaltSupportState(object):
         :param kwargs:
         :return:
         '''
+        allowed_functions = ['collected', 'taken']
         ret = {
             'name': kwargs.pop('name'),
             'changes': {},
@@ -77,6 +79,8 @@ class SaltSupportState(object):
 
         out = {}
         for ref_func, ref_kwargs in kwargs.items():
+            if ref_func not in allowed_functions:
+                raise salt.exceptions.SaltInvocationError('Function {} is not found'.format(ref_func))
             out[ref_func] = getattr(self, ref_func)(**self.get_kwargs(ref_kwargs))
         ret['changes'] = out
 
