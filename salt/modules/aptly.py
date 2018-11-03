@@ -121,9 +121,6 @@ def _parse_show_output(cmd_ret):
     :rtype: dict
     '''
     parsed_data = dict()
-
-    # Extract the settings and their values, and attempt to format
-    # them to match their equivalent setting names.
     list_key = None
 
     for line in cmd_ret.splitlines():
@@ -131,30 +128,31 @@ def _parse_show_output(cmd_ret):
         if not line.strip():
             continue
 
+        # If there are indented lines below an existing key, assign them as a list value
+        # for that key.
         if not salt.utils.stringutils.contains_whitespace(line[0]):
             list_key = None
 
-        # If there are indented lines below an existing key, assign them as a list value
-        # for that key.
         if list_key:
             value = _convert_to_closest_type(line)
             parsed_data.setdefault(list_key, []).append(value)
-        else:
-            items = [item.strip() for item in line.split(':', 1)]
+            continue
 
-            key = items[0].lower()
-            key = ' '.join(key.split()).replace(' ', '_')
+        items = [item.strip() for item in line.split(':', 1)]
 
-            # Track the current key so that we can use it in instances where the values
-            # appear on subsequent lines of the output.
-            list_key = key
+        key = items[0].lower()
+        key = ' '.join(key.split()).replace(' ', '_')
 
-            try:
-                if items[1]:
-                    parsed_data[key] = _convert_to_closest_type(items[1])
-            except IndexError:
-                # If the line doesn't have the separator or is otherwise invalid, skip it.
-                log.debug('Skipping line: %s', line)
+        # Track the current key so that we can use it in instances where the values
+        # appear on subsequent lines of the output.
+        list_key = key
+
+        try:
+            if items[1]:
+                parsed_data[key] = _convert_to_closest_type(items[1])
+        except IndexError:
+            # If the line doesn't have the separator or is otherwise invalid, skip it.
+            log.debug('Skipping line: %s', line)
 
     return _convert_parsed_show_output(parsed_data=parsed_data)
 
