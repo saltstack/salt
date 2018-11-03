@@ -137,33 +137,6 @@ class LibcloudDnsModuleTestCase(TestCase, LoaderModuleMockMixin):
             list_zones.assert_called_with('test')
             assert not create_record.called
 
-    def test_present_record_exists_new_ttl(self):
-        '''
-        Try and change the extra data on a record
-        '''
-        ret = {'changes': {},
-               'comment': 'Record already exists.',
-               'name': 'mail',
-               'result': True}
-
-        list_zones = MagicMock(return_value=_ZONES)
-        list_records = MagicMock(return_value=_RECORDS)
-        create_record = MagicMock(return_value='abcdef')
-        update_record = MagicMock(return_value=_RECORDS[0])
-
-        with patch.dict(libcloud_dns.__salt__,
-                        {'libcloud_dns.list_zones': list_zones,
-                         'libcloud_dns.list_records': list_records,
-                         'libcloud_dns.create_record': create_record,
-                         'libcloud_dns.update_record': update_record}):
-            result = libcloud_dns.record_present(name='mail', zone='test.com', type='MX',
-                                                 data='127.0.0.1', profile='test', extra={'y': 'x', 'ttl': 500})
-            assert result == ret
-            assert list_zones.called
-            list_zones.assert_called_with('test')
-            assert not create_record.called
-            assert update_record.called
-
     def test_present_record_exists_missing_zone(self):
         '''
         Try and create a record with a zone that does not exist
@@ -354,7 +327,7 @@ class LibcloudDnsModuleTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_zone_present_change_ttl(self):
         '''
-        Assert that a zone is present (that did exist) with a new ttl 
+        Assert that a zone is present (that did exist) with a new ttl
         '''
         _TEST_ZONE = _ZONES[0].copy()
         _TEST_ZONE['ttl'] = 900
