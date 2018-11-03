@@ -101,3 +101,19 @@ class LogCollectorTestCase(TestCase, LoaderModuleMockMixin):
             assert saltsupport.LogCollector.ERROR in out.messages
             assert type(out.messages[saltsupport.LogCollector.ERROR]) == saltsupport.LogCollector.MessagesList
             assert out.messages[saltsupport.LogCollector.ERROR] == ['00:00:00.000 - {}'.format(msg)]
+
+    def test_hl_message(self):
+        '''
+        Test highlighter message to the log collector.
+
+        :return:
+        '''
+        utcmock = MagicMock()
+        utcmock.utcnow = MagicMock(return_value=datetime.datetime.utcfromtimestamp(0))
+        with patch('datetime.datetime', utcmock):
+            out = saltsupport.LogCollector()
+            out.highlight('The {} TTYs became {} TTYs and vice versa', 'real', 'pseudo')
+            assert saltsupport.LogCollector.INFO in out.messages
+            assert type(out.messages[saltsupport.LogCollector.INFO]) == saltsupport.LogCollector.MessagesList
+            assert out.messages[saltsupport.LogCollector.INFO] == ['00:00:00.000 - The real TTYs became '
+                                                                   'pseudo TTYs and vice versa']
