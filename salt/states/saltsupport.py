@@ -37,6 +37,7 @@ State to collect support data from the systems:
 from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
+import tempfile
 import sys
 
 # Import salt modules
@@ -86,6 +87,20 @@ class SaltSupportState(object):
 
         return ret
 
+    def check_destination(self, location, group):
+        '''
+        Check destination for the archives.
+        :return:
+        '''
+        # Pre-create destination, since rsync will
+        # put one file named as group
+        try:
+            destination = os.path.join(location, group)
+            os.makedirs(destination, exist_ok=True)
+            log.debug('Created destination directory for archives: %s', destination)
+        except OSError as err:
+            log.error(err)
+
     def collected(self, group, filename=None, host=None, location=None, move=True, all=True):
         '''
         Sync archives to a central place.
@@ -105,7 +120,8 @@ class SaltSupportState(object):
             'result': True,
             'comment': '',
         }
-
+        location = location or tempfile.gettempdir()
+        self.check_destination(location, group)
         result = __salt__['support.sync'](group, name=filename, host=host, location=location, move=move, all=all)
         ret['changes'] = result
 
