@@ -50,6 +50,26 @@ def _cmd_run(cmd):
     return cmd_ret['stdout']
 
 
+def _convert_to_closest_type(value):
+    '''
+    Convert string value to it's closest non-string analog, if possible.
+
+    :param dict value: The string value to attempt conversion on.
+
+    :return: The converted value.
+    :rtype: Union[bool, int, None, str]
+    '''
+    value = value.strip()
+
+    if value.lower() in ('false', 'true'):
+        try:
+            return salt.utils.json.loads(value.lower())
+        except json.decoder.JSONDecodeError:
+            return salt.utils.stringutils.to_none(salt.utils.stringutils.to_num(value))
+    else:
+        return salt.utils.stringutils.to_none(salt.utils.stringutils.to_num(value))
+
+
 def _format_repo_args(comment=None, component=None, distribution=None,
                       uploaders_file=None, saltenv='base'):
     '''
@@ -106,32 +126,28 @@ def _parse_show_output(cmd_ret):
         if not line.strip():
             continue
 
+        if not salt.utils.stringutils.contains_whitespace(line[0]):
+            list_key = None
+
         # If there are indented lines below an existing key, assign them as a list value
         # for that key.
-        if salt.utils.stringutils.contains_whitespace(line[0]) and list_key:
-            value = salt.utils.stringutils.to_none(salt.utils.stringutils.to_num(line.strip()))
-
-            if list_key not in parsed_data:
-                parsed_data[list_key] = list()
-
-            parsed_data[list_key].append(value)
+        if list_key:
+            value = _convert_to_closest_type(line)
+            parsed_data.setdefault(list_key, []).append(value)
         else:
             items = [item.strip() for item in line.split(':', 1)]
 
-            if len(items) > 1:
-                key = items[0].lower()
-                key = ' '.join(key.split()).replace(' ', '_')
+            key = items[0].lower()
+            key = ' '.join(key.split()).replace(' ', '_')
 
-                # Track the current key so that we can use it in instances where the values
-                # appear on subsequent lines of the output.
-                list_key = key
+            # Track the current key so that we can use it in instances where the values
+            # appear on subsequent lines of the output.
+            list_key = key
 
-                value = salt.utils.stringutils.to_none(salt.utils.stringutils.to_num(items[1]))
-
-                if value:
-                    parsed_data[key] = value
-                    list_key = None
-            else:
+            try:
+                if items[1]:
+                    parsed_data[key] = _convert_to_closest_type(items[1])
+            except IndexError:
                 # If the line doesn't have the separator or is otherwise invalid, skip it.
                 log.debug('Skipping line: %s', line)
 
@@ -149,21 +165,20 @@ def _convert_parsed_show_output(parsed_data):
     '''
     # Match lines like "main: xenial [snapshot]" or "test [local]".
     source_pattern = re.compile(r'(?:(?P<component>\S+):)?\s*(?P<name>\S+)\s+\[(?P<type>\S+)\]')
+    sources = list()
 
     if 'architectures' in parsed_data:
         parsed_data['architectures'] = [item.strip() for item in parsed_data['architectures'].split()]
         parsed_data['architectures'] = sorted(parsed_data['architectures'])
 
-    if 'sources' in parsed_data:
-        sources = list()
+    for source in parsed_data.get('sources', []):
+        # Retain the key/value of only the matching named groups.
+        matches = source_pattern.search(source)
 
-        for source in parsed_data['sources']:
-            # Retain the key/value of only the matching named groups.
-            matches = source_pattern.search(source)
-
-            if matches:
-                groups = matches.groupdict()
-                sources.append({key: groups[key] for key in groups if groups[key]})
+        if matches:
+            groups = matches.groupdict()
+            sources.append({key: groups[key] for key in groups if groups[key]})
+    if sources:
         parsed_data['sources'] = sources
 
     return parsed_data
