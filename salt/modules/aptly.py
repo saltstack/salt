@@ -115,26 +115,25 @@ def _parse_show_output(cmd_ret):
                 parsed_data[list_key] = list()
 
             parsed_data[list_key].append(value)
-            continue
-
-        try:
+        else:
             items = [item.strip() for item in line.split(':', 1)]
 
-            key = items[0].lower()
-            key = ' '.join(key.split()).replace(' ', '_')
+            if len(items) > 1:
+                key = items[0].lower()
+                key = ' '.join(key.split()).replace(' ', '_')
 
-            value = salt.utils.stringutils.to_none(salt.utils.stringutils.to_num(items[1]))
-
-            if value:
-                parsed_data[key] = value
-                list_key = None
-            else:
                 # Track the current key so that we can use it in instances where the values
                 # appear on subsequent lines of the output.
                 list_key = key
-        except (AttributeError, IndexError):
-            # If the line doesn't have the separator or is otherwise invalid, skip it.
-            log.debug('Skipping line: %s', line)
+
+                value = salt.utils.stringutils.to_none(salt.utils.stringutils.to_num(items[1]))
+
+                if value:
+                    parsed_data[key] = value
+                    list_key = None
+            else:
+                # If the line doesn't have the separator or is otherwise invalid, skip it.
+                log.debug('Skipping line: %s', line)
 
     return _convert_parsed_show_output(parsed_data=parsed_data)
 
@@ -149,7 +148,7 @@ def _convert_parsed_show_output(parsed_data):
     :rtype: dict
     '''
     # Match lines like "main: xenial [snapshot]" or "test [local]".
-    source_pattern = r'((?P<component>\S+):)?\s*(?P<name>\S+)\s+\[(?P<type>\S+)\]'
+    source_pattern = re.compile(r'(?:(?P<component>\S+):)?\s*(?P<name>\S+)\s+\[(?P<type>\S+)\]')
 
     if 'architectures' in parsed_data:
         parsed_data['architectures'] = [item.strip() for item in parsed_data['architectures'].split()]
@@ -159,14 +158,12 @@ def _convert_parsed_show_output(parsed_data):
         sources = list()
 
         for source in parsed_data['sources']:
-            matches = re.search(source_pattern, source)
-            source_data = dict()
+            # Retain the key/value of only the matching named groups.
+            matches = source_pattern.search(source)
 
-            for item in ('component', 'name', 'type'):
-                if matches.group(item):
-                    source_data[item] = matches.group(item)
-
-            sources.append(source_data)
+            if matches:
+                groups = matches.groupdict()
+                sources.append({key: groups[key] for key in groups if groups[key]})
         parsed_data['sources'] = sources
 
     return parsed_data
