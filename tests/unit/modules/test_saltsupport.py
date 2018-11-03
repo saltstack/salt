@@ -69,3 +69,18 @@ class LogCollectorTestCase(TestCase, LoaderModuleMockMixin):
             assert 'info' in out.messages
             assert type(out.messages['info']) == saltsupport.LogCollector.MessagesList
             assert out.messages['info'] == ['00:00:00.000 - {}'.format(msg)]
+    def test_warning_message(self):
+        '''
+        Test set warning message to the log collector.
+
+        :return:
+        '''
+        utcmock = MagicMock()
+        utcmock.utcnow = MagicMock(return_value=datetime.datetime.utcfromtimestamp(0))
+        with patch('datetime.datetime', utcmock):
+            msg = 'Your e-mail is now being delivered by USPS'
+            out = saltsupport.LogCollector()
+            out.warning(msg)
+            assert saltsupport.LogCollector.WARNING in out.messages
+            assert type(out.messages[saltsupport.LogCollector.WARNING]) == saltsupport.LogCollector.MessagesList
+            assert out.messages[saltsupport.LogCollector.WARNING] == ['00:00:00.000 - {}'.format(msg)]
