@@ -1384,18 +1384,12 @@ class TCPPubServerChannel(salt.transport.server.PubServerChannel):
         except (KeyboardInterrupt, SystemExit):
             salt.log.setup.shutdown_multiprocessing_logging()
 
-    def pre_fork(self, process_manager):
+    def pre_fork(self, process_manager, kwargs=None):
         '''
         Do anything necessary pre-fork. Since this is on the master side this will
         primarily be used to create IPC channels and create our daemon process to
         do the actual publishing
         '''
-        kwargs = {}
-        if salt.utils.is_windows():
-            kwargs['log_queue'] = (
-                salt.log.setup.get_multiprocessing_logging_queue()
-            )
-
         process_manager.add_process(self._publish_daemon, kwargs=kwargs)
 
     def publish(self, load):
