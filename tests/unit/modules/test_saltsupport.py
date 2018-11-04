@@ -70,6 +70,22 @@ class LogCollectorTestCase(TestCase, LoaderModuleMockMixin):
             assert type(out.messages[saltsupport.LogCollector.INFO]) == saltsupport.LogCollector.MessagesList
             assert out.messages[saltsupport.LogCollector.INFO] == ['00:00:00.000 - {}'.format(msg)]
 
+    def test_put_message(self):
+        '''
+        Test put message to the log collector.
+
+        :return:
+        '''
+        utcmock = MagicMock()
+        utcmock.utcnow = MagicMock(return_value=datetime.datetime.utcfromtimestamp(0))
+        with patch('datetime.datetime', utcmock):
+            msg = 'Webmaster kidnapped by evil cult'
+            out = saltsupport.LogCollector()
+            out.put(msg)
+            assert saltsupport.LogCollector.INFO in out.messages
+            assert type(out.messages[saltsupport.LogCollector.INFO]) == saltsupport.LogCollector.MessagesList
+            assert out.messages[saltsupport.LogCollector.INFO] == ['00:00:00.000 - {}'.format(msg)]
+
     def test_warning_message(self):
         '''
         Test set warning message to the log collector.
