@@ -354,7 +354,7 @@ def _get_pkg_install_time(pkg, arch=None):
                 iso_time = datetime.datetime.utcfromtimestamp(
                             int(os.path.getmtime(location))).isoformat() + 'Z'
                 break
-            except:
+            except OSError as err:
                 pass
 
         if iso_time is None:
