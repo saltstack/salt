@@ -28,6 +28,17 @@ class SaltSupportModuleTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {saltsupport: {}}
 
+    @patch('tempfile.gettempdir', MagicMock(return_value='/mnt/storage'))
+    @patch('salt.modules.saltsupport.__grains__', {'fqdn': 'c-3po'})
+    @patch('time.strftime', MagicMock(return_value='000'))
+    def test_get_archive_name(self):
+        '''
+        Test archive name construction.
+
+        :return:
+        '''
+        assert saltsupport.SaltSupportModule()._get_archive_name() == '/mnt/storage/c-3po-support-000-000.bz2'
+
 
 @skipIf(not bool(pytest), 'Pytest required')
 @skipIf(NO_MOCK, NO_MOCK_REASON)
