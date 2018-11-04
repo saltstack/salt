@@ -901,7 +901,10 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
             # Send list of miions thru so zmq can target them
             int_payload['topic_lst'] = match_ids
         payload = self.serial.dumps(int_payload)
-        log.debug('Sending payload to publish daemon. size=%d', len(payload))
+        log.debug(
+            'Sending payload to publish daemon. jid=%s size=%d',
+            load.get('jid', None), len(payload),
+        )
         pub_sock.send(payload)
         log.debug('Sent payload to publish daemon.')
 
