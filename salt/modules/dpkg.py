@@ -342,16 +342,23 @@ def _get_pkg_install_time(pkg, arch=None):
     :return:
     '''
     iso_time = None
+    loc_root = '/var/lib/dpkg/info'
     if pkg is not None:
+        locations = []
         if arch is not None and arch != 'all':
-            location = "/var/lib/dpkg/info/{0}:{1}.list".format(pkg, arch)
-            if os.path.exists(location):
-                iso_time = datetime.datetime.utcfromtimestamp(int(os.path.getmtime(location))).isoformat() + "Z"
+            locations.append(os.path.join(loc_root, '{0}:{1}.list'.format(pkg, arch)))
+
+        locations.append(os.path.join(loc_root, '{0}.list'.format(pkg)))
+        for location in locations:
+            try:
+                iso_time = datetime.datetime.utcfromtimestamp(
+                            int(os.path.getmtime(location))).isoformat() + 'Z'
+                break
+            except:
+                pass
 
         if iso_time is None:
-            location = "/var/lib/dpkg/info/{0}.list".format(pkg)
-            if os.path.exists(location):
-                iso_time = datetime.datetime.utcfromtimestamp(int(os.path.getmtime(location))).isoformat() + "Z"
+            log.debug('Unable to get package installation time for package "%s".', pkg)
 
     return iso_time
 
