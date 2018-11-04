@@ -40,7 +40,7 @@ class LogCollectorTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_msg(self):
         '''
-        Test set message to the log collector.
+        Test message to the log collector.
 
         :return:
         '''
@@ -56,7 +56,7 @@ class LogCollectorTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_info_message(self):
         '''
-        Test set info message to the log collector.
+        Test info message to the log collector.
 
         :return:
         '''
@@ -88,7 +88,7 @@ class LogCollectorTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_warning_message(self):
         '''
-        Test set warning message to the log collector.
+        Test warning message to the log collector.
 
         :return:
         '''
@@ -104,7 +104,7 @@ class LogCollectorTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_error_message(self):
         '''
-        Test set error message to the log collector.
+        Test error message to the log collector.
 
         :return:
         '''
