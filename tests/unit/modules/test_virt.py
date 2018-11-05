@@ -94,6 +94,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         disks = virt._disk_profile('default', 'kvm', userdisks, 'myvm', image='/path/to/image')
         self.assertEqual(
             [{'name': 'system',
+              'device': 'disk',
               'size': 8192,
               'format': 'qcow2',
               'model': 'virtio',
@@ -101,6 +102,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
               'image': '/path/to/image',
               'source_file': '{0}{1}myvm_system.qcow2'.format(root_dir, os.sep)},
              {'name': 'data',
+              'device': 'disk',
               'size': 16384,
               'format': 'raw',
               'model': 'virtio',
@@ -704,6 +706,31 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             with self.assertRaises(CommandExecutionError):
                 virt._disk_profile('noeffect', 'kvm', [], 'hello')
 
+    def test_gen_xml_cdrom(self):
+        '''
+        Test virt._gen_xml(), generating a cdrom device (different disk type, no source)
+        '''
+        diskp = virt._disk_profile(None, 'kvm', [{
+            'name': 'tested',
+            'device': 'cdrom',
+            'source_file': None,
+            'model': 'ide'}], 'hello')
+        nicp = virt._nic_profile(None, 'kvm')
+        xml_data = virt._gen_xml(
+            'hello',
+            1,
+            512,
+            diskp,
+            nicp,
+            'kvm',
+            'hvm',
+            'x86_64',
+            )
+        root = ET.fromstring(xml_data)
+        disk = root.findall('.//disk')[0]
+        self.assertEqual(disk.attrib['device'], 'cdrom')
+        self.assertIsNone(disk.find('source'))
+
     def test_controller_for_esxi(self):
         '''
         Test virt._gen_xml() generated device controller for ESXi/vmware
@@ -771,6 +798,9 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 <source file='/path/to/img4.qcow2'/>
                 <target dev='hdb' bus='ide'/>
               </disk>
+              <disk type='file' device='cdrom'>
+                <target dev='hdc' bus='ide'/>
+              </disk>
             </devices>
         ''').findall('disk')
 
@@ -782,24 +812,39 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
               </disk>
               <disk type='file' device='disk' cache='default'>
                 <source file='/path/to/img0.qcow2'/>
-                <target dev='vdb' bus='virtio'/>
+                <target dev='vda' bus='virtio'/>
               </disk>
               <disk type='file' device='disk'>
                 <source file='/path/to/img4.qcow2'/>
-                <target dev='vdc' bus='virtio'/>
+                <target dev='vda' bus='virtio'/>
+              </disk>
+              <disk type='file' device='cdrom'>
+                <target dev='hda' bus='ide'/>
               </disk>
             </devices>
         ''').findall('disk')
         ret = virt._diff_disk_lists(old_disks, new_disks)
-        self.assertEqual([disk.find('source').get('file') for disk in ret['deleted']],
-                         ['/path/to/img1.qcow2', '/path/to/img2.qcow2', '/path/to/img4.qcow2'])
-        self.assertEqual([disk.find('source').get('file') for disk in ret['unchanged']],
-                         ['/path/to/img0.qcow2'])
-        self.assertEqual([disk.find('source').get('file') for disk in ret['new']],
-                         ['/path/to/img3.qcow2', '/path/to/img4.qcow2'])
-        self.assertEqual(ret['new'][0].find('target').get('dev'), 'vdb')
-        self.assertEqual(ret['new'][1].find('target').get('dev'), 'vdc')
+        self.assertEqual([disk.find('source').get('file') if disk.find('source') is not None else None
+                          for disk in ret['unchanged']], [])
+        self.assertEqual([disk.find('source').get('file') if disk.find('source') is not None else None
+                          for disk in ret['new']],
+                         ['/path/to/img3.qcow2', '/path/to/img0.qcow2', '/path/to/img4.qcow2', None])
+        self.assertEqual([disk.find('target').get('dev') for disk in ret['sorted']],
+                         ['vda', 'vdb', 'vdc', 'hda'])
+        self.assertEqual([disk.find('source').get('file') if disk.find('source') is not None else None
+                          for disk in ret['sorted']],
+                         ['/path/to/img3.qcow2',
+                          '/path/to/img0.qcow2',
+                          '/path/to/img4.qcow2',
+                          None])
         self.assertEqual(ret['new'][1].find('target').get('bus'), 'virtio')
+        self.assertEqual([disk.find('source').get('file') if disk.find('source') is not None else None
+                          for disk in ret['deleted']],
+                         ['/path/to/img0.qcow2',
+                          '/path/to/img1.qcow2',
+                          '/path/to/img2.qcow2',
+                          '/path/to/img4.qcow2',
+                          None])
 
     def test_diff_nics(self):
         '''
@@ -1009,7 +1054,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                   <driver name='qemu' type='qcow2'/>
                   <source file='{0}{1}myvm_data.qcow2'/>
                   <backingStore/>
-                  <target dev='vda' bus='virtio'/>
+                  <target dev='vdb' bus='virtio'/>
                   <alias name='virtio-disk1'/>
                   <address type='pci' domain='0x0000' bus='0x00' slot='0x07' function='0x1'/>
                 </disk>
