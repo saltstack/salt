@@ -581,24 +581,27 @@ def _gen_xml(name,
         else:
             context['console'] = True
 
-    context['disks'] = {}
+    context['disks'] = []
     disk_bus_map = {'virtio': 'vd', 'xen': 'xvd', 'fdc': 'fd', 'ide': 'hd'}
     for i, disk in enumerate(diskp):
-        context['disks'][disk['name']] = {}
-        context['disks'][disk['name']]['file_name'] = disk['filename']
-        context['disks'][disk['name']]['source_file'] = disk['source_file']
         prefix = disk_bus_map.get(disk['model'], 'sd')
-        context['disks'][disk['name']]['target_dev'] = '{0}{1}'.format(prefix, string.ascii_lowercase[i])
-        if hypervisor in ['qemu', 'kvm', 'xen']:
-            context['disks'][disk['name']]['address'] = False
-            context['disks'][disk['name']]['driver'] = True
-        elif hypervisor in ['esxi', 'vmware']:
-            context['disks'][disk['name']]['address'] = True
-            context['disks'][disk['name']]['driver'] = False
-        context['disks'][disk['name']]['disk_bus'] = disk['model']
-        context['disks'][disk['name']]['type'] = disk['format']
-        context['disks'][disk['name']]['index'] = six.text_type(i)
+        disk_context = {
+            'device': disk.get('device', 'disk'),
+            'target_dev': '{0}{1}'.format(prefix, string.ascii_lowercase[i]),
+            'disk_bus': disk['model'],
+            'type': disk['format'],
+            'index': six.text_type(i),
+        }
+        if 'source_file' and disk['source_file']:
+            disk_context['source_file'] = disk['source_file']
 
+        if hypervisor in ['qemu', 'kvm', 'bhyve', 'xen']:
+            disk_context['address'] = False
+            disk_context['driver'] = True
+        elif hypervisor in ['esxi', 'vmware']:
+            disk_context['address'] = True
+            disk_context['driver'] = False
+        context['disks'].append(disk_context)
     context['nics'] = nicp
 
     context['os_type'] = os_type
@@ -860,9 +863,11 @@ def _disk_profile(profile, hypervisor, disks=None, vm_name=None, image=None, poo
     if hypervisor == 'vmware':
         overlay = {'format': 'vmdk',
                    'model': 'scsi',
+                   'device': 'disk',
                    'pool': '[{0}] '.format(pool if pool else '0')}
     elif hypervisor in ['qemu', 'kvm']:
         overlay = {'format': 'qcow2',
+                   'device': 'disk',
                    'model': 'virtio'}
     else:
         overlay = {}
@@ -901,9 +906,9 @@ def _disk_profile(profile, hypervisor, disks=None, vm_name=None, image=None, poo
                 disk[key] = val
 
         # We may have an already computed source_file (i.e. image not created by our module)
-        if 'source_file' in disk:
+        if 'source_file' in disk and disk['source_file']:
             disk['filename'] = os.path.basename(disk['source_file'])
-        else:
+        elif 'source_file' not in disk:
             _fill_disk_filename(vm_name, disk, hypervisor, **kwargs)
 
     return disklist
@@ -1305,39 +1310,15 @@ def init(name,
         ``True`` to create a QCOW2 disk image with ``image`` as backing file. If ``False``
         the file pointed to by the ``image`` property will simply be copied. (Default: ``False``)
 
-<<<<<<< HEAD
-=======
-    hostname_property
-        When using ZFS volumes, setting this value to a ZFS property ID will make Salt store the name of the
-        virtual machine inside this property. (Default: ``None``)
-
-    sparse_volume
-        Boolean to specify whether to use a thin provisioned ZFS volume.
-
-        Example profile for a bhyve VM with two ZFS disks. The first is
-        cloned from the specified image. The second disk is a thin
-        provisioned volume.
-
-        .. code-block:: yaml
-
-            virt:
-              disk:
-                two_zvols:
-                  - system:
-                      image: zroot/bhyve/CentOS-7-x86_64-v1@v1.0.5
-                      hostname_property: virt:hostname
-                      pool: zroot/bhyve/guests
-                  - data:
-                      pool: tank/disks
-                      size: 20G
-                      hostname_property: virt:hostname
-                      sparse_volume: True
-
     source_file
         Absolute path to the disk image to use. Not to be confused with ``image`` parameter. This
-        parameter is useful to use disk images that are created outside of this module.
+        parameter is useful to use disk images that are created outside of this module. Can also
+        be ``None`` for devices that have no associated image like cdroms.
 
->>>>>>> 148e60488e... virt: expose source_file disk property to user
+    device
+        Type of device of the disk. Can be one of 'disk', 'cdrom', 'floppy' or 'lun'.
+        (Default: ``'disk'``)
+
     .. _init-graphics-def:
 
     .. rubric:: Graphics Definition
@@ -1477,13 +1458,15 @@ def init(name,
             else:
                 create_overlay = _disk.get('overlay_image', False)
 
-            if os.path.exists(_disk['source_file']):
+            if _disk['source_file'] and os.path.exists(_disk['source_file']):
                 img_dest = _disk['source_file']
-            else:
+            elif 'source_file' not in _disk:
                 img_dest = _qemu_image_create(_disk, create_overlay, saltenv)
+            else:
+                img_dest = None
 
             # Seed only if there is an image specified
-            if seed and _disk.get('image', None):
+            if seed and img_dest and _disk.get('image', None):
                 log.debug('Seed command is %s', seed_cmd)
                 __salt__[seed_cmd](
                     img_dest,
@@ -1541,11 +1524,14 @@ def _disks_equal(disk1, disk2):
     '''
     target1 = disk1.find('target')
     target2 = disk2.find('target')
+    source1 = ElementTree.tostring(disk1.find('source')) if disk1.find('source') is not None else None
+    source2 = ElementTree.tostring(disk2.find('source')) if disk2.find('source') is not None else None
 
-    return ElementTree.tostring(disk1.find('source')) == \
-        ElementTree.tostring(disk2.find('source')) and \
+    return source1 == source2 and \
         target1 is not None and target2 is not None and \
-        target1.get('bus') == target2.get('bus')
+        target1.get('bus') == target2.get('bus') and \
+        disk1.get('device', 'disk') == disk2.get('device', 'disk') and \
+        target1.get('dev') == target2.get('dev')
 
 
 def _nics_equal(nic1, nic2):
@@ -1603,7 +1589,10 @@ def _diff_lists(old, new, comparator):
 
     :param old: old list
     :param new: new list
-    :return: a dictionary with ``unchanged``, ``new`` and ``deleted`` keys
+    :return: a dictionary with ``unchanged``, ``new``, ``deleted`` and ``sorted`` keys
+
+    The sorted list is the union of unchanged and new lists, but keeping the original
+    order from the new list.
     '''
     def _remove_indent(node):
         '''
@@ -1615,15 +1604,19 @@ def _diff_lists(old, new, comparator):
             item.tail = None
         return node_copy
 
-    diff = {'unchanged': [], 'new': [], 'deleted': []}
+    diff = {'unchanged': [], 'new': [], 'deleted': [], 'sorted': []}
+    # We don't want to alter old since it may be used later by caller
+    old_devices = copy.deepcopy(old)
     for new_item in new:
-        found = [item for item in old if comparator(_remove_indent(item), _remove_indent(new_item))]
+        found = [item for item in old_devices if comparator(_remove_indent(item), _remove_indent(new_item))]
         if found:
-            old.remove(found[0])
+            old_devices.remove(found[0])
             diff['unchanged'].append(found[0])
+            diff['sorted'].append(found[0])
         else:
             diff['new'].append(new_item)
-    diff['deleted'] = old
+            diff['sorted'].append(new_item)
+    diff['deleted'] = old_devices
     return diff
 
 
@@ -1634,25 +1627,21 @@ def _diff_disk_lists(old, new):
     :param old: list of ElementTree nodes representing the old disks
     :param new: list of ElementTree nodes representing the new disks
     '''
-    diff = _diff_lists(old, new, _disks_equal)
-
-    # Fix the target device to avoid duplicates with the unchanged disks
-    # The requested device names may not be honoured by hypervisor and will
-    # likely be set right at the next start of the VM
-    targets = [disk.find('target').get('dev') for disk in diff['unchanged']]
+    # Fix the target device to avoid duplicates before diffing: this may lead
+    # to additional changes. Think of unchanged disk 'hda' and another disk listed
+    # before it becoming 'hda' too... the unchanged need to turn into 'hdb'.
+    targets = []
     prefixes = ['fd', 'hd', 'vd', 'sd', 'xvd', 'ubd']
-    for disk in diff['new']:
+    for disk in new:
         target_node = disk.find('target')
         target = target_node.get('dev')
-        if target in targets:
-            prefix = [item for item in prefixes if target.startswith(item)][0]
-            for i in range(1024):
-                attempt = '{0}{1}'.format(prefix, string.ascii_lowercase[i])
-                if attempt not in targets:
-                    target_node.set('dev', attempt)
-                    targets.append(attempt)
-                    break
-    return diff
+        prefix = [item for item in prefixes if target.startswith(item)][0]
+        new_target = ['{0}{1}'.format(prefix, string.ascii_lowercase[i]) for i in range(len(new))
+                      if '{0}{1}'.format(prefix, string.ascii_lowercase[i]) not in targets][0]
+        target_node.set('dev', new_target)
+        targets.append(new_target)
+
+    return _diff_lists(old, new, _disks_equal)
 
 
 def _diff_interface_lists(old, new):
@@ -1808,7 +1797,7 @@ def update(name,
             if changes[dev_type]['deleted'] or changes[dev_type]['new']:
                 for item in old:
                     devices_node.remove(item)
-                devices_node.extend(new)
+                devices_node.extend(changes[dev_type]['sorted'])
                 need_update = True
 
     # Set the new definition
