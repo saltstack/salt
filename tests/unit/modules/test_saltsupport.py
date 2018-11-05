@@ -39,6 +39,23 @@ class SaltSupportModuleTestCase(TestCase, LoaderModuleMockMixin):
         '''
         assert saltsupport.SaltSupportModule()._get_archive_name() == '/mnt/storage/c-3po-support-000-000.bz2'
 
+    @patch('tempfile.gettempdir', MagicMock(return_value='/mnt/storage'))
+    @patch('salt.modules.saltsupport.__grains__', {'fqdn': 'c-3po'})
+    @patch('time.strftime', MagicMock(return_value='000'))
+    def test_get_custom_archive_name(self):
+        '''
+        Test archive name construction.
+
+        :return:
+        '''
+        support = saltsupport.SaltSupportModule()
+        temp_name = support._get_archive_name(archname='Darth Wader')
+        assert temp_name == '/mnt/storage/c-3po-darthwader-000-000.bz2'
+        temp_name = support._get_archive_name(archname='Яйця з сіллю')
+        assert temp_name == '/mnt/storage/c-3po-support-000-000.bz2'
+        temp_name = support._get_archive_name(archname='!@#$%^&*()Fillip J. Fry')
+        assert temp_name == '/mnt/storage/c-3po-fillipjfry-000-000.bz2'
+
 
 @skipIf(not bool(pytest), 'Pytest required')
 @skipIf(NO_MOCK, NO_MOCK_REASON)
