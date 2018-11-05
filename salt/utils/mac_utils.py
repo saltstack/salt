@@ -45,6 +45,11 @@ __salt__ = {
     'cmd.run': salt.modules.cmdmod._run_quiet,
 }
 
+if six.PY2:
+    class InvalidFileException(Exception):
+        pass
+    plistlib.InvalidFileException = InvalidFileException
+
 
 def __virtual__():
     '''
