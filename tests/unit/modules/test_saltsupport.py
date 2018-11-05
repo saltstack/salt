@@ -149,6 +149,23 @@ class SaltSupportModuleTestCase(TestCase, LoaderModuleMockMixin):
         assert ret['errors']['/mnt/storage/one-support-000-000.bz2'] == 'Decreasing electron flux'
         assert ret['errors']['/mnt/storage/two-support-111-111.bz2'] == 'Solar flares interference'
 
+    def test_format_sync_stats(self):
+        '''
+        Test format rsync stats for preserving ordering of the keys
+
+        :return:
+        '''
+        support = saltsupport.SaltSupportModule()
+        stats = '''
+robot: Bender
+cute: Leela
+weird: Zoidberg
+professor: Farnsworth
+        '''
+        f_stats = support.format_sync_stats({'retcode': 0, 'stdout': stats})
+        assert list(f_stats['transfer'].keys()) == ['robot', 'cute', 'weird', 'professor']
+        assert list(f_stats['transfer'].values()) == ['Bender', 'Leela', 'Zoidberg', 'Farnsworth']
+
 
 @skipIf(not bool(pytest), 'Pytest required')
 @skipIf(NO_MOCK, NO_MOCK_REASON)
