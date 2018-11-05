@@ -42,6 +42,7 @@ import logging
 import difflib
 import re
 import ast
+import time
 
 # Import Salt libs
 from salt.utils.pycrypto import gen_hash, secure_password
@@ -55,6 +56,22 @@ __virtualname__ = 'nxos'
 __virtual_aliases__ = ('nxos_upgrade',)
 
 log = logging.getLogger(__name__)
+
+import sys
+import pdb
+class ForkedPdb(pdb.Pdb):
+    """A Pdb subclass that may be used from a forked multiprocessing child
+    Use this subclass to set a pdb tracepoint for debugging purposes.
+    Usage:
+        ForkedPdb().set_trace()
+    """
+    def interaction(self, *args, **kwargs):
+        _stdin = sys.stdin
+        try:
+            sys.stdin = open('/dev/stdin')
+            pdb.Pdb.interaction(self, *args, **kwargs)
+        finally:
+            sys.stdin = _stdin
 
 
 def __virtual__():
@@ -113,15 +130,16 @@ def check_upgrade_impact(system_image, kickstart_image=None, issu=True, **kwargs
 
     log.info("Check upgrade impact using command: '{}'".format(cmd))
     kwargs.update({'timeout': kwargs.get('timeout', 900)})
-    error_pattern_list = ['Another install procedure may be in progress']
+    error_pattern_list = ['Another install procedure may be in progress',
+                          'Pre-upgrade check failed']
     kwargs.update({'error_pattern': error_pattern_list})
 
     # Execute Upgrade Impact Check
     try:
         impact_check = __salt__['nxos.sendline'](cmd, **kwargs)
     except CommandExecutionError as e:
-        return ast.literal_eval(e.message)
-    return impact_check
+        impact_check = ast.literal_eval(e.message)
+    return _parse_upgrade_data(impact_check)
 
 
 def upgrade(system_image, kickstart_image=None, issu=True, **kwargs):
@@ -158,6 +176,60 @@ def upgrade(system_image, kickstart_image=None, issu=True, **kwargs):
         salt 'n7k' nxos.upgrade system_image=n7000-s2-dk9.8.1.1.bin \\
             kickstart_image=n7000-s2-kickstart.8.1.1.bin issu=False
     '''
+    impact = None
+    upgrade = None
+    maxtry = 60
+    for attempt in range(1, maxtry):
+        # Gather impact data first.  It's possible to loose upgrade data
+        # when the switch reloads or switches over to the inative sup.
+        # The impact data will be used if data being collected during the
+        # upgrade is lost.
+        if impact is None:
+            log.info('Gathering impact data')
+            impact = check_upgrade_impact(system_image, kickstart_image,
+                                          issu, **kwargs)
+            if impact['installing']:
+                log.info('Show impact in progress... wait and retry')
+                time.sleep(30)
+                continue
+            log.info('Impact data gathered:\n{}'.format(impact))
+
+            # Check to see if conditions are sufficent to return the impact
+            # data and not proceed with the actual upgrade.
+
+            # Impact data indicates the upgrade or downgrade will fail
+            if impact['error_data']:
+                return impact
+            # Impact data indicates a failure and no module_data collected
+            if not impact['succeeded'] and not impact['module_data']:
+                impact['error_data'] = impact['upgrade_data']
+                return impact
+            # Impact data indicates switch already running desired image
+            if not impact['upgrade_required']:
+                impact['succeeded'] = True
+                return impact
+        # Attempt Upgrade
+        upgrade = _upgrade(system_image, kickstart_image, issu, **kwargs)
+        if upgrade['installing']:
+            log.info('Install in progress... wait and retry')
+            time.sleep(30)
+            continue
+        break
+
+    # Check for errors and return upgrade result:
+    if upgrade['backend_processing_error']:
+        # This means we received a backend processing error from the transport
+        # and lost the upgrade data.  This also indicates that the upgrade
+        # is in progress so use the impact data for logging purposes.
+        impact['upgrade_in_progress'] = True
+        return impact
+    return upgrade
+
+
+def _upgrade(system_image, kickstart_image, issu, **kwargs):
+    '''
+    Helper method that does the heavy lifting for upgrades.
+    '''
     si = system_image
     ki = kickstart_image
     dev = 'bootflash'
@@ -189,13 +261,108 @@ def upgrade(system_image, kickstart_image=None, issu=True, **kwargs):
     error_pattern_list = ['Another install procedure may be in progress']
     kwargs.update({'error_pattern': error_pattern_list})
 
-    # Begin Upgrade
+    # Begin Actual Upgrade
     try:
         upgrade_result = __salt__['nxos.sendline'](cmd, **kwargs)
     except CommandExecutionError as e:
-        return ast.literal_eval(e.message)
-    except NxosError:
-        kwargs.update({'timeout': 120})
-        cmd = 'show install all status'
-        return __salt__['nxos.sendline'](cmd, **kwargs)
+        upgrade_result = ast.literal_eval(e.message)
+    except NxosError as e:
+        if re.search('Code: 500', e.message):
+            upgrade_result = e.message
+        else:
+            upgrade_result = ast.literal_eval(e.message)
+        # kwargs.update({'timeout': 900})
+        # cmd = 'show install all status'
+        # upgrade_result = __salt__['nxos.sendline'](cmd, **kwargs)
+    return _parse_upgrade_data(upgrade_result)
+
+
+def _parse_upgrade_data(data):
+    '''
+    Helper method to parse upgrade data from the NX-OS device.
+    '''
+    upgrade_result = {}
+    upgrade_result['upgrade_data'] = None
+    upgrade_result['succeeded'] = False
+    upgrade_result['upgrade_required'] = False
+    upgrade_result['upgrade_in_progress'] = False
+    upgrade_result['installing'] = False
+    upgrade_result['module_data'] = {}
+    upgrade_result['error_data'] = None
+    upgrade_result['backend_processing_error'] = False
+
+    # Error handling
+    if isinstance(data, basestring) and re.search('Code: 500', data):
+        log.info('Detected backend processing error')
+        upgrade_result['error_data'] = data
+        upgrade_result['backend_processing_error'] = True
+        return upgrade_result
+
+    if 'code' in data and data['code'] == '400':
+        log.info('Detected client error')
+        upgrade_result['error_data'] = data['cli_error']
+
+        if re.search('install.*may be in progress', data['cli_error']):
+            log.info('Detected install in progress...')
+            upgrade_result['installing'] = True
+
+        return upgrade_result
+
+    # Get upgrade data for further parsing
+    # Case 1: Command terminal dont-ask returns empty {} that we don't need.
+    if isinstance(data, list) and len(data) == 2:
+        data = data[1]
+    # Case 2: Command terminal dont-ask does not get included.
+    if isinstance(data, list) and len(data) == 1:
+        data = data[0]
+
+    log.info('Parsing NX-OS upgrade data')
+    upgrade_result['upgrade_data'] = data
+    for line in data.split('\n'):
+
+        log.info('Processing line: ({})'.format(line))
+
+        # Example:
+        # Module  Image  Running-Version(pri:alt)  New-Version  Upg-Required
+        # 1       nxos   7.0(3)I7(5a)              7.0(3)I7(5a)        no
+        # 1       bios   v07.65(09/04/2018)        v07.64(05/16/2018)  no
+        mo = re.search(r'(\d+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(yes|no)', line)
+        if mo:
+            log.info('Matched Module Running/New Version Upg-Req Line')
+            bk = 'module_data'  # base key
+            g1 = mo.group(1)
+            g2 = mo.group(2)
+            g3 = mo.group(3)
+            g4 = mo.group(4)
+            g5 = mo.group(5)
+            mk = 'module {0}:image {1}'.format(g1, g2)  # module key
+            upgrade_result[bk][mk] = {}
+            upgrade_result[bk][mk]['running_version'] = g3
+            upgrade_result[bk][mk]['new_version'] = g4
+            if g5 == 'yes':
+                upgrade_result['upgrade_required'] = True
+                upgrade_result[bk][mk]['upgrade_required'] = True
+            continue
+
+        # The following lines indicate a successfull upgrade.
+        if re.search(r'Install has been successful', line):
+            log.info('Install successful line')
+            upgrade_result['succeeded'] = True
+            continue
+
+        if re.search(r'Finishing the upgrade, switch will reboot in', line):
+            log.info('Finishing upgrade line')
+            upgrade_result['upgrade_in_progress'] = True
+            continue
+
+        if re.search(r'Switch will be reloaded for disruptive upgrade', line):
+            log.info('Switch will be reloaded line')
+            upgrade_result['upgrade_in_progress'] = True
+            continue
+
+        if re.search(r'Switching over onto standby', line):
+            log.info('Switching over onto standby line')
+            upgrade_result['upgrade_in_progress'] = True
+            continue
+
     return upgrade_result

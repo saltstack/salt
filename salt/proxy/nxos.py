@@ -262,7 +262,7 @@ def grains(**kwargs):
         ret = salt.utils.nxos.system_info(data)
         log.debug(ret)
         DEVICE_DETAILS['grains_cache'].update(ret['nxos'])
-    return DEVICE_DETAILS['grains_cache']
+    return {'nxos': DEVICE_DETAILS['grains_cache']}
 
 
 def grains_refresh(**kwargs):
@@ -440,10 +440,11 @@ def _parse_output_for_errors(data, command, **kwargs):
     '''
     Helper method to parse command output for error information
     '''
-    if re.search('\% Invalid', data):
+    if re.search('% Invalid', data):
         raise CommandExecutionError({
             'rejected_input': command,
             'message': 'CLI excution error',
+            'code': '400',
             'cli_error': data.lstrip(),
         })
     if kwargs.get('error_pattern') is not None:
@@ -452,7 +453,8 @@ def _parse_output_for_errors(data, command, **kwargs):
                 raise CommandExecutionError({
                     'rejected_input': command,
                     'message': 'CLI excution error',
-                    'cli_error': data,
+                    'code': '400',
+                    'cli_error': data.lstrip(),
                 })
 
 
