@@ -11,6 +11,7 @@ import logging
 import operator
 import re
 import requests
+import itertools
 import salt.utils.data
 from salt.ext.six.moves import map
 
@@ -28,6 +29,14 @@ comparisons = {
     'search': re.search
 }
 
+attr_func_map = {
+  'status': lambda x: x.status_code,
+  'content': lambda x: x.json()
+}
+
+required_site_attributes = {'url'}
+optional_site_attributes = {'content', 'status'}
+
 
 def __virtual__():
     return __virtualname__
@@ -37,35 +46,43 @@ def validate(config):
     '''
     Validate the beacon configuration
     '''
+    valid = True
+    messages = []
+
     if not isinstance(config, list):
-        return False, ('Configuration for %s beacon must '
-                       'be a list.', config)
+        valid = False
+        messages.append('[-] Configuration for %s beacon must be a list', config)
     else:
         _config = {}
         list(map(_config.update, config))
 
-        if 'sites' not in _config:
-            return False, ('Configuration for %s beacon '
-                           'requires sites.', __virtualname__)
-        else:
-            if not isinstance(_config['sites'], dict):
-                return False, ('Sites for %s beacon '
-                               'must be a dict.', __virtualname__)
-            else:
-                for sites in _config['sites']:
-                    log.debug('_config %s', _config['sites'][sites])
-                    if 'url' not in _config['sites'][sites]:
-                        return False, ('Sites for %s beacon '
-                                       'requires url.', __virtualname__)
-                    if 'json_response' not in _config['sites'][sites]:
-                        return False, ('Sites for %s beacon '
-                                       'requires json_response.', __virtualname__)
-                    else:
-                        _json_response = _config['sites'][sites]['json_response']
-                        if not isinstance(_json_response, list):
-                            return False, ('json_response for %s beacon '
-                                           'must be a list.', __virtualname__)
-    return True, 'Valid beacon configuration'
+    try:
+        sites = _config.get('sites', {})
+    except AttributeError:
+        valid = False
+        messages.append('[-] Sites for %s beacon must be a dict', __virtualname__)
+
+    if not sites:
+        valid = False
+        messages.append('[-] Configuration does not contain sites')
+
+    for site, settings in sites.items():
+        if required_site_attributes.isdisjoint(set(settings.keys())):
+            valid = False
+            messages.append('[-] Sites for {} beacon requires {}'.format(__virtualname__,
+                                                                         required_site_attributes))
+        log.debug('[+] site: %s', site)
+        log.debug('[+] settings: %s', settings)
+
+        for optional_attrs in itertools.chain(settings.get(attr, []) for attr in optional_site_attributes):
+            for item in optional_attrs:
+                cmp = item.get('comp')
+                if cmp and not cmp in comparisons:
+                    valid = False
+                    messages.append('[-] Invalid comparison operator %s', cmp)
+
+    messages.append('[+] Valid beacon configuration')
+    return valid, messages
 
 
 def beacon(config):
@@ -80,63 +97,62 @@ def beacon(config):
             - sites:
                 example-site-1:
                   url: "https://example.com/status"
-                  json_response:
-                    - path: 'redis:status'
-                      value: 'up'
-                      comp: '='
-                    - path: 'postgresql:response_microseconds'
-                      value: 50
-                      comp: '<='
-                  html_response:
-                    - path: ''
-                      value: 'foo.*bar'
-                      comp: search
+                  timeout: 30
+                  content-type: json
+                  status:
+                    - value: 400
+                      comp: <
+                    - value: 300
+                      comp: '>='
+                  content:
+                    - path: 'certificate:status'
+                      value: down
+                      comp: '=='
+                    - path: 'status_all'
+                      value: down
+                      comp: '=='
+            - interval: 10
     '''
     ret = []
 
     _config = {}
     list(map(_config.update, config))
 
-    for sites in _config.get('sites', ()):
-        sites_config = _config['sites'][sites]
-        url = sites_config['url']
+    for site, site_config in _config.get('sites', {}).items():
+        url = site_config.pop('url')
+        content_type = site_config.pop('content_type', 'json')
         try:
-            if 'timeout' in sites_config:
-                r = requests.get(url, timeout=sites_config['timeout'])
-            else:
-                r = requests.get(url, timeout=30)
-        # r.status_code
+            r = requests.get(url, timeout=site_config.pop('timeout', 30))
         except requests.exceptions.RequestException as e:
-            log.debug("Request failed: %s", e)
-        if r.status_code >= 500:
-            log.debug('Response from status endpoint was invalid: '
-                      '%s', r.status_code)
-        for json_response_item in sites_config.get('json_response', []):
-            if ':' in json_response_item['path']:
-                service = json_response_item['path'].split(':')[0]
-                service_value = json_response_item['path'].split(':')[1]
-            if service in r.json():
-                if json_response_item['comp'] in comparisons:
-                    comp = comparisons[json_response_item['comp']]
-                    expected_value = json_response_item['value']
-                    received_value = salt.utils.traverse_dict(r.json(), '{}:{}'.format(service, service_value))
-                    log.debug('********* expected_value: %s', expected_value)
-                    log.debug('********* received_value: %s', received_value)
-                    if not comp(expected_value, received_value):
-                        _failed = {'service': service,
-                                   'status': expected_value,
-                                   'comp': json_response_item['comp'],
-                                   }
-                        ret.append(_failed)
+            log.info("Request failed: %s", e)
+            if r.raise_for_status:
+                log.info('[-] Response from status endpoint was invalid: '
+                         '%s', r.status_code)
+                _failed = {'status_code': r.status_code,
+                           'url': url}
+                ret.append(_failed)
+                continue
+
+        for attr, checks in site_config.items():
+            for check in checks:
+                log.debug('[+] response_item: %s', attr)
+                attr_path = check.get('path', '')
+                comp = comparisons[check['comp']]
+                expected_value = check['value']
+                if attr_path:
+                    received_value = salt.utils.data.traverse_dict_and_list(attr_func_map[attr](r), attr_path)
                 else:
-                    log.debug('Comparison operator not in comparisons dict: '
-                              '%s', expected_value)
-            else:
-                log.debug('Server status response does not include listed '
-                          'service in path: %s', service)
-        for html_response_item in sites_config.get('html_response', []):
-            search_value = html_response_item['value']
-            comp = comparisons[html_response_item['comp']]
-            if not comp(search_value, r.text):
-                ret.append({'keyword': search_value})
+                    received_value = attr_func_map[attr](r)
+                if received_value is None:
+                    log.info('[-] No data found at location {} for url {}'.format(attr_path, url))
+                    continue
+                log.debug('[+] expected_value: %s', expected_value)
+                log.debug('[+] received_value: %s', received_value)
+                if not comp(expected_value, received_value):
+                    _failed = {'expected': expected_value,
+                               'received': received_value,
+                               'url': url,
+                               'path': attr_path
+                               }
+                    ret.append(_failed)
     return ret
