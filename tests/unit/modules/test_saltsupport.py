@@ -216,6 +216,20 @@ professor: Farnsworth
             support.sync('group-name', name='lost.bz2')
         assert ' Support archive "lost.bz2" was not found' in str(err)
 
+    @patch('tempfile.mkstemp', MagicMock(return_value=(0, 'dummy')))
+    @patch('os.path.exists', MagicMock(return_value=False))
+    @patch('os.close', MagicMock())
+    def test_sync_no_archive_to_transfer_failure(self):
+        '''
+        Test sync failed when no archive was found to transfer
+
+        :return:
+        '''
+        support = saltsupport.SaltSupportModule()
+        support.archives = MagicMock(return_value=[])
+        with pytest.raises(salt.exceptions.SaltInvocationError) as err:
+            support.sync('group-name', all=True)
+        assert 'No archives found to transfer' in str(err)
 
 
 @skipIf(not bool(pytest), 'Pytest required')
