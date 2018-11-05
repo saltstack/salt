@@ -466,6 +466,8 @@ class SSHDMixin(SaltClientMixin, SaltReturnAssertsMixin):
 
     @classmethod
     def tearDownClass(cls):
+        if cls.case is None:
+            return
         if cls.sshd_proc is not None:
             log.info(
                 "[%s] Stopping %s",
