@@ -538,6 +538,8 @@ class GitPillarSSHTestBase(GitPillarTestBase, SSHDMixin):
 
     @classmethod
     def tearDownClass(cls):
+        if cls.case is None:
+            return
         if cls.case.sshd_proc is not None:
             cls.case.sshd_proc.send_signal(signal.SIGTERM)
         cls.case.run_state('user.absent', name=cls.username, purge=True)
