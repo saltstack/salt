@@ -77,7 +77,7 @@ def validate(config):
         for optional_attrs in itertools.chain(settings.get(attr, []) for attr in optional_site_attributes):
             for item in optional_attrs:
                 cmp = item.get('comp')
-                if cmp and not cmp in comparisons:
+                if cmp and cmp not in comparisons:
                     valid = False
                     messages.append('[-] Invalid comparison operator %s', cmp)
 
