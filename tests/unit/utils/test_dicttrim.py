@@ -20,7 +20,7 @@ class DictTrimTestCase(TestCase):
         self.new_dict = {'a': 'b', 'c': 'VALUE_TRIMMED'}
 
     def test_trim_dict(self):
-        ret = dicttrimmer.trim_dict(self.old_dict, 100)
+        ret = dicttrimmer.trim_dict(self.old_dict, 1000)
         self.assertEqual(ret, self.new_dict)
 
 
@@ -31,5 +31,5 @@ class RecursiveDictTrimTestCase(TestCase):
         self.new_dict = {'a': {'b': 1, 'c': 2, 'e': 'VALUE_TRIMMED', 'f': '3'}}
 
     def test_trim_dict(self):
-        ret = dicttrimmer.trim_dict(self.old_dict, 100)
+        ret = dicttrimmer.trim_dict(self.old_dict, 1000)
         self.assertEqual(ret, self.new_dict)
