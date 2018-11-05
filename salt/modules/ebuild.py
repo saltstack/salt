@@ -27,6 +27,10 @@ import salt.utils.systemd
 from salt.exceptions import CommandExecutionError, MinionError
 import salt.ext.six as six
 
+# Workaround for 'reload' builtin of py2.7
+if six.PY3:
+    from importlib import reload  # pylint: disable=no-name-in-module
+
 # Import third party libs
 HAS_PORTAGE = False
 try:
@@ -241,6 +245,7 @@ def latest_version(*names, **kwargs):
     if len(names) == 1:
         return ret[names[0]]
     return ret
+
 
 # available_version is being deprecated
 available_version = salt.utils.alias_function(latest_version, 'available_version')
