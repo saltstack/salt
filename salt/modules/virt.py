@@ -581,25 +581,27 @@ def _gen_xml(name,
         else:
             context['console'] = True
 
-    context['disks'] = {}
+    context['disks'] = []
     disk_bus_map = {'virtio': 'vd', 'xen': 'xvd', 'fdc': 'fd', 'ide': 'hd'}
     for i, disk in enumerate(diskp):
-        context['disks'][disk['name']] = {}
-        context['disks'][disk['name']]['device'] = disk.get('device', 'disk')
-        if 'source_file' and disk['source_file']:
-            context['disks'][disk['name']]['source_file'] = disk['source_file']
         prefix = disk_bus_map.get(disk['model'], 'sd')
-        context['disks'][disk['name']]['target_dev'] = '{0}{1}'.format(prefix, string.ascii_lowercase[i])
-        if hypervisor in ['qemu', 'kvm', 'xen']:
-            context['disks'][disk['name']]['address'] = False
-            context['disks'][disk['name']]['driver'] = True
-        elif hypervisor in ['esxi', 'vmware']:
-            context['disks'][disk['name']]['address'] = True
-            context['disks'][disk['name']]['driver'] = False
-        context['disks'][disk['name']]['disk_bus'] = disk['model']
-        context['disks'][disk['name']]['type'] = disk['format']
-        context['disks'][disk['name']]['index'] = six.text_type(i)
+        disk_context = {
+            'device': disk.get('device', 'disk'),
+            'target_dev': '{0}{1}'.format(prefix, string.ascii_lowercase[i]),
+            'disk_bus': disk['model'],
+            'type': disk['format'],
+            'index': six.text_type(i),
+        }
+        if 'source_file' and disk['source_file']:
+            disk_context['source_file'] = disk['source_file']
 
+        if hypervisor in ['qemu', 'kvm', 'bhyve', 'xen']:
+            disk_context['address'] = False
+            disk_context['driver'] = True
+        elif hypervisor in ['esxi', 'vmware']:
+            disk_context['address'] = True
+            disk_context['driver'] = False
+        context['disks'].append(disk_context)
     context['nics'] = nicp
 
     context['os_type'] = os_type
