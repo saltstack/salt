@@ -328,6 +328,15 @@ def _available_services(refresh=False):
         '/System/Library/LaunchAgents',
         '/System/Library/LaunchDaemons',
     ]
+
+    try:
+        for user in os.listdir('/Users/'):
+            agent_path = '/Users/{}/Library/LaunchAgents'.format(user)
+            if os.path.isdir(agent_path):
+                launchd_paths.append(agent_path)
+    except OSError:
+        pass
+
     _available_services = dict()
     for launch_dir in launchd_paths:
         for root, dirs, files in salt.utils.path.os_walk(launch_dir):
