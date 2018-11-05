@@ -100,6 +100,27 @@ class SaltSupportModuleTestCase(TestCase, LoaderModuleMockMixin):
                                                    '/mnt/storage/three-support-222-222.bz2'])
         assert support.last_archive() == '/mnt/storage/three-support-222-222.bz2'
 
+    @patch('os.unlink', MagicMock(return_value=True))
+    def test_delete_all_archives_success(self):
+        '''
+        Test delete archives
+        :return:
+        '''
+        support = saltsupport.SaltSupportModule()
+        support.archives = MagicMock(return_value=['/mnt/storage/one-support-000-000.bz2',
+                                                   '/mnt/storage/two-support-111-111.bz2',
+                                                   '/mnt/storage/three-support-222-222.bz2'])
+        ret = support.delete_archives()
+        assert 'files' in ret
+        assert 'errors' in ret
+        assert not bool(ret['errors'])
+        assert bool(ret['files'])
+        assert isinstance(ret['errors'], dict)
+        assert isinstance(ret['files'], dict)
+
+        for arc in support.archives():
+            assert ret['files'][arc] == 'removed'
+
 
 @skipIf(not bool(pytest), 'Pytest required')
 @skipIf(NO_MOCK, NO_MOCK_REASON)
