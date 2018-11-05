@@ -44,7 +44,7 @@ class SaltSupportModuleTestCase(TestCase, LoaderModuleMockMixin):
     @patch('time.strftime', MagicMock(return_value='000'))
     def test_get_custom_archive_name(self):
         '''
-        Test archive name construction.
+        Test get custom archive name.
 
         :return:
         '''
