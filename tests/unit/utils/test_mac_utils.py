@@ -213,15 +213,6 @@ class MacUtilsTestCase(TestCase, LoaderModuleMockMixin):
             except CommandExecutionError as exc:
                 self.assertEqual(exc.message, error)
 
-    def _get_walk_side_effects(self, results):
-        '''
-        Data generation helper function for service tests.
-        '''
-        def walk_side_effect(*args, **kwargs):
-            return [(args[0], [], results.get(args[0], []))]
-        return walk_side_effect
-
-
     @patch('salt.utils.path.os_walk')
     @patch('os.path.exists')
     def test_available_services_result(self, mock_exists, mock_os_walk):
@@ -229,18 +220,11 @@ class MacUtilsTestCase(TestCase, LoaderModuleMockMixin):
         test available_services results are properly formed dicts.
         '''
         results = {'/Library/LaunchAgents': ['com.apple.lla1.plist']}
-        mock_os_walk.side_effect = self._get_walk_side_effects(results)
+        mock_os_walk.side_effect = _get_walk_side_effects(results)
         mock_exists.return_value = True
 
-        mock_plist = {'Label': 'com.apple.lla1'}
-        if six.PY2:
-            mock_read_plist = MagicMock(return_value=mock_plist)
-            with patch('plistlib.readPlist', mock_read_plist):
-                ret = mac_utils._available_services()
-        else:
-            mock_load = MagicMock(return_value=mock_plist)
-            with patch('salt.utils.files.fopen', mock_open()), patch('plistlib.load', mock_load):
-                ret = mac_utils._available_services()
+        plists = [{'Label': 'com.apple.lla1'}]
+        ret = _run_available_services(plists)
 
         self.assertTrue(isinstance(ret, dict))
         self.assertEqual(len(ret), 1)
@@ -269,7 +253,7 @@ class MacUtilsTestCase(TestCase, LoaderModuleMockMixin):
             '/Users/saltymcsaltface/Library/LaunchAgents': [
                 'com.apple.uslla1.plist']}
 
-        mock_os_walk.side_effect = self._get_walk_side_effects(results)
+        mock_os_walk.side_effect = _get_walk_side_effects(results)
         mock_listdir.return_value = ['saltymcsaltface']
         mock_isdir.return_value = True
         mock_exists.return_value = True
@@ -280,18 +264,57 @@ class MacUtilsTestCase(TestCase, LoaderModuleMockMixin):
             {'Label': 'com.apple.slla1'},
             {'Label': 'com.apple.slld1'},
             {'Label': 'com.apple.uslla1'}]
-
-        if six.PY2:
-            mock_read_plist = MagicMock()
-            mock_read_plist.side_effect = plists
-            with patch('plistlib.readPlist', mock_read_plist):
-                ret = mac_utils._available_services()
-        else:
-            mock_load = MagicMock()
-            mock_load.side_effect = plists
-            with patch('salt.utils.files.fopen', mock_open()):
-                with patch('plistlib.load', mock_load):
-                    ret = mac_utils._available_services()
+        ret = _run_available_services(plists)
 
         self.assertEqual(len(ret), 5)
 
+    @patch('salt.utils.path.os_walk')
+    @patch('os.path.exists')
+    @patch('plistlib.readPlist' if six.PY2 else 'plistlib.load')
+    def test_available_services_broken_symlink(self, mock_read_plist, mock_exists, mock_os_walk):
+        '''
+        test available_services when it encounters a broken symlink.
+        '''
+        results = {'/Library/LaunchAgents': ['com.apple.lla1.plist', 'com.apple.lla2.plist']}
+        mock_os_walk.side_effect = _get_walk_side_effects(results)
+        mock_exists.side_effect = [True, False]
+
+        plists = [{'Label': 'com.apple.lla1'}]
+        ret = _run_available_services(plists)
+
+        # self.assertTrue(isinstance(ret, dict))
+        self.assertEqual(len(ret), 1)
+        # Ensure the correct, first plist, is returned.
+        self.assertEqual(
+            ret['com.apple.lla1']['file_name'],
+            'com.apple.lla1.plist')
+        self.assertEqual(
+            ret['com.apple.lla1']['file_path'],
+            os.path.realpath(
+                os.path.join('/Library/LaunchAgents', 'com.apple.lla1.plist')))
+
+
+
+
+def _get_walk_side_effects(results):
+    '''
+    Data generation helper function for service tests.
+    '''
+    def walk_side_effect(*args, **kwargs):
+        return [(args[0], [], results.get(args[0], []))]
+    return walk_side_effect
+
+
+def _run_available_services(plists):
+    if six.PY2:
+        mock_read_plist = MagicMock()
+        mock_read_plist.side_effect = plists
+        with patch('plistlib.readPlist', mock_read_plist):
+            ret = mac_utils._available_services()
+    else:
+        mock_load = MagicMock()
+        mock_load.side_effect = plists
+        with patch('salt.utils.files.fopen', mock_open()):
+            with patch('plistlib.load', mock_load):
+                ret = mac_utils._available_services()
+    return ret
