@@ -87,6 +87,17 @@ class SaltSupportModuleTestCase(TestCase, LoaderModuleMockMixin):
                      '/mnt/storage/000-support-000-000.bz2']:
             assert name in out
 
+    def test_last_archive(self):
+        '''
+        Get last archive name
+        :return:
+        '''
+        support = saltsupport.SaltSupportModule()
+        support.archives = MagicMock(return_value=['/mnt/storage/one-support-000-000.bz2',
+                                                   '/mnt/storage/two-support-111-111.bz2',
+                                                   '/mnt/storage/three-support-222-222.bz2'])
+        assert support.last_archive() == '/mnt/storage/three-support-222-222.bz2'
+
 
 @skipIf(not bool(pytest), 'Pytest required')
 @skipIf(NO_MOCK, NO_MOCK_REASON)
