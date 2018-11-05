@@ -360,6 +360,18 @@ Module Deprecations
         - :py:func:`dockermod.load <salt.modules.dockermod.load>`
         - :py:func:`dockermod.tag <salt.modules.dockermod.tag_>`
 
+- The :py:mod`firewalld <salt.modules.firewalld>` module has been changed as
+  follows:
+
+    - Support for the ``force_masquerade`` option has been removed from the
+      :py:func:`firewalld.add_port <salt.module.firewalld.add_port` function. Please
+      use the :py:func:`firewalld.add_masquerade <salt.modules.firewalld.add_masquerade`
+      function instead.
+    - Support for the ``force_masquerade`` option has been removed from the
+      :py:func:`firewalld.add_port_fwd <salt.module.firewalld.add_port_fwd` function. Please
+      use the :py:func:`firewalld.add_masquerade <salt.modules.firewalld.add_masquerade`
+      function instead.
+
 - The :py:mod:`ssh <salt.modules.ssh>` execution module has been
   changed as follows:
 
@@ -373,9 +385,15 @@ Module Deprecations
 State Deprecations
 ------------------
 
+- The :py:mod`firewalld <salt.states.firewalld>` state has been changed as follows:
+
+    - The default setting for the ``prune_services`` option in the
+      :py:func:`firewalld.present <salt.states.firewalld.present>` function has changed
+      from ``True`` to ``False``.
+
 - The :py:mod:`win_servermanager <salt.states.win_servermanager>` state has been
   changed as follows:
 
     - Support for the ``force`` kwarg has been removed from the
-      :py:func:`win_servermanager.installed <salt.statues.win_servermanager.installed>`
+      :py:func:`win_servermanager.installed <salt.states.win_servermanager.installed>`
       function. Please use ``recurse`` instead.
