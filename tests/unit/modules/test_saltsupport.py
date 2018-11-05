@@ -168,6 +168,7 @@ professor: Farnsworth
         assert list(f_stats['transfer'].values()) == ['Bender', 'Leela', 'Zoidberg', 'Farnsworth']
 
     @patch('tempfile.mkstemp', MagicMock(return_value=(0, 'dummy')))
+    @patch('os.close', MagicMock())
     def test_sync_no_archives_failure(self):
         '''
         Test sync failed when no archives specified.
@@ -179,7 +180,7 @@ professor: Farnsworth
 
         with pytest.raises(salt.exceptions.SaltInvocationError) as err:
             support.sync('group-name')
-        assert 'No support archive has been defined' in str(err)
+        assert 'No archives found to transfer' in str(err)
 
     @patch('tempfile.mkstemp', MagicMock(return_value=(0, 'dummy')))
     @patch('os.path.exists', MagicMock(return_value=False))
