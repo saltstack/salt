@@ -1730,16 +1730,21 @@ class Keys(LowDataAdapter):
         priv_key_file = tarfile.TarInfo('minion.pem')
         priv_key_file.size = len(priv_key)
 
-        fileobj = six.StringIO()
+        fileobj = BytesIO()
         tarball = tarfile.open(fileobj=fileobj, mode='w')
-        tarball.addfile(pub_key_file, six.StringIO(pub_key))
-        tarball.addfile(priv_key_file, six.StringIO(priv_key))
+
+        if six.PY3:
+            pub_key = pub_key.encode(__salt_system_encoding__)
+            priv_key = priv_key.encode(__salt_system_encoding__)
+
+        tarball.addfile(pub_key_file, BytesIO(pub_key))
+        tarball.addfile(priv_key_file, BytesIO(priv_key))
         tarball.close()
 
         headers = cherrypy.response.headers
         headers['Content-Disposition'] = 'attachment; filename="saltkeys-{0}.tar"'.format(lowstate[0]['id_'])
         headers['Content-Type'] = 'application/x-tar'
-        headers['Content-Length'] = fileobj.len
+        headers['Content-Length'] = len(fileobj.getvalue())
         headers['Cache-Control'] = 'no-cache'
 
         fileobj.seek(0)
