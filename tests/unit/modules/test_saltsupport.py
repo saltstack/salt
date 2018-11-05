@@ -56,6 +56,19 @@ class SaltSupportModuleTestCase(TestCase, LoaderModuleMockMixin):
         temp_name = support._get_archive_name(archname='!@#$%^&*()Fillip J. Fry')
         assert temp_name == '/mnt/storage/c-3po-fillipjfry-000-000.bz2'
 
+    @patch('salt.cli.support.get_profiles', MagicMock(return_value={'message': 'Feature was not beta tested'}))
+    def test_profiles_format(self):
+        '''
+        Test profiles format.
+        :return:
+        '''
+        profiles = saltsupport.SaltSupportModule().profiles()
+        assert 'custom' in profiles
+        assert 'standard' in profiles
+        assert 'message' in profiles['standard']
+        assert profiles['custom'] == []
+        assert profiles['standard']['message'] == 'Feature was not beta tested'
+
 
 @skipIf(not bool(pytest), 'Pytest required')
 @skipIf(NO_MOCK, NO_MOCK_REASON)
