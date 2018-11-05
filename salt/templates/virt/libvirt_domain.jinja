@@ -12,7 +12,7 @@
 		{% endif %}
         </os>
         <devices>
-                {% for diskname, disk in disks.items() %}
+                {% for disk in disks %}
                 <disk type='file' device='{{ disk.device }}'>
                         {% if 'source_file' in disk %}
                         <source file='{{ disk.source_file }}' />
