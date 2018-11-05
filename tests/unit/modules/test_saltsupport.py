@@ -181,6 +181,22 @@ professor: Farnsworth
             support.sync('group-name')
         assert 'No support archive has been defined' in str(err)
 
+    @patch('tempfile.mkstemp', MagicMock(return_value=(0, 'dummy')))
+    @patch('os.path.exists', MagicMock(return_value=False))
+    def test_sync_last_picked_archive_not_found_failure(self):
+        '''
+        Test sync failed when archive was not found (last picked)
+
+        :return:
+        '''
+        support = saltsupport.SaltSupportModule()
+        support.archives = MagicMock(return_value=['/mnt/storage/one-support-000-000.bz2',
+                                                   '/mnt/storage/two-support-111-111.bz2',
+                                                   '/mnt/storage/three-support-222-222.bz2'])
+
+        with pytest.raises(salt.exceptions.SaltInvocationError) as err:
+            support.sync('group-name')
+        assert ' Support archive "/mnt/storage/three-support-222-222.bz2" was not found' in str(err)
 
 
 @skipIf(not bool(pytest), 'Pytest required')
