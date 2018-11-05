@@ -11,6 +11,7 @@ from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import patch, MagicMock, NO_MOCK, NO_MOCK_REASON
 from salt.modules import saltsupport
+import salt.exceptions
 import datetime
 
 try:
@@ -165,6 +166,21 @@ professor: Farnsworth
         f_stats = support.format_sync_stats({'retcode': 0, 'stdout': stats})
         assert list(f_stats['transfer'].keys()) == ['robot', 'cute', 'weird', 'professor']
         assert list(f_stats['transfer'].values()) == ['Bender', 'Leela', 'Zoidberg', 'Farnsworth']
+
+    @patch('tempfile.mkstemp', MagicMock(return_value=(0, 'dummy')))
+    def test_sync_no_archives_failure(self):
+        '''
+        Test sync failed when no archives specified.
+
+        :return:
+        '''
+        support = saltsupport.SaltSupportModule()
+        support.archives = MagicMock(return_value=[])
+
+        with pytest.raises(salt.exceptions.SaltInvocationError) as err:
+            support.sync('group-name')
+        assert 'No support archive has been defined' in str(err)
+
 
 
 @skipIf(not bool(pytest), 'Pytest required')
