@@ -1588,7 +1588,10 @@ def _diff_lists(old, new, comparator):
 
     :param old: old list
     :param new: new list
-    :return: a dictionary with ``unchanged``, ``new`` and ``deleted`` keys
+    :return: a dictionary with ``unchanged``, ``new``, ``deleted`` and ``sorted`` keys
+
+    The sorted list is the union of unchanged and new lists, but keeping the original
+    order from the new list.
     '''
     def _remove_indent(node):
         '''
@@ -1600,15 +1603,19 @@ def _diff_lists(old, new, comparator):
             item.tail = None
         return node_copy
 
-    diff = {'unchanged': [], 'new': [], 'deleted': []}
+    diff = {'unchanged': [], 'new': [], 'deleted': [], 'sorted': []}
+    # We don't want to alter old since it may be used later by caller
+    old_devices = copy.deepcopy(old)
     for new_item in new:
-        found = [item for item in old if comparator(_remove_indent(item), _remove_indent(new_item))]
+        found = [item for item in old_devices if comparator(_remove_indent(item), _remove_indent(new_item))]
         if found:
-            old.remove(found[0])
+            old_devices.remove(found[0])
             diff['unchanged'].append(found[0])
+            diff['sorted'].append(found[0])
         else:
             diff['new'].append(new_item)
-    diff['deleted'] = old
+            diff['sorted'].append(new_item)
+    diff['deleted'] = old_devices
     return diff
 
 
@@ -1793,7 +1800,7 @@ def update(name,
             if changes[dev_type]['deleted'] or changes[dev_type]['new']:
                 for item in old:
                     devices_node.remove(item)
-                devices_node.extend(new)
+                devices_node.extend(changes[dev_type]['sorted'])
                 need_update = True
 
     # Set the new definition
