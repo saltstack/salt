@@ -60,6 +60,7 @@ class SaltSupportModuleTestCase(TestCase, LoaderModuleMockMixin):
     def test_profiles_format(self):
         '''
         Test profiles format.
+
         :return:
         '''
         profiles = saltsupport.SaltSupportModule().profiles()
@@ -68,6 +69,23 @@ class SaltSupportModuleTestCase(TestCase, LoaderModuleMockMixin):
         assert 'message' in profiles['standard']
         assert profiles['custom'] == []
         assert profiles['standard']['message'] == 'Feature was not beta tested'
+
+    @patch('tempfile.gettempdir', MagicMock(return_value='/mnt/storage'))
+    @patch('os.listdir', MagicMock(return_value=['one-support-000-000.bz2', 'two-support-111-111.bz2', 'trash.bz2',
+                                                 'hostname-000-000.bz2', 'three-support-wrong222-222.bz2',
+                                                 '000-support-000-000.bz2']))
+    def test_get_existing_archives(self):
+        '''
+        Get list of existing archives.
+
+        :return:
+        '''
+        support = saltsupport.SaltSupportModule()
+        out = support.archives()
+        assert len(out) == 3
+        for name in ['/mnt/storage/one-support-000-000.bz2', '/mnt/storage/two-support-111-111.bz2',
+                     '/mnt/storage/000-support-000-000.bz2']:
+            assert name in out
 
 
 @skipIf(not bool(pytest), 'Pytest required')
