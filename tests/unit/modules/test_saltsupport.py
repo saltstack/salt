@@ -37,7 +37,8 @@ class SaltSupportModuleTestCase(TestCase, LoaderModuleMockMixin):
 
         :return:
         '''
-        assert saltsupport.SaltSupportModule()._get_archive_name() == '/mnt/storage/c-3po-support-000-000.bz2'
+        support = saltsupport.SaltSupportModule()
+        assert support._get_archive_name() == '/mnt/storage/c-3po-support-000-000.bz2'
 
     @patch('tempfile.gettempdir', MagicMock(return_value='/mnt/storage'))
     @patch('salt.modules.saltsupport.__grains__', {'fqdn': 'c-3po'})
@@ -63,7 +64,8 @@ class SaltSupportModuleTestCase(TestCase, LoaderModuleMockMixin):
 
         :return:
         '''
-        profiles = saltsupport.SaltSupportModule().profiles()
+        support = saltsupport.SaltSupportModule()
+        profiles = support.profiles()
         assert 'custom' in profiles
         assert 'standard' in profiles
         assert 'message' in profiles['standard']
