@@ -141,7 +141,9 @@ class BotoVpcTestCaseBase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
         self.opts = opts = salt.config.DEFAULT_MINION_OPTS
-        utils = salt.loader.utils(opts, whitelist=['boto', 'boto3'])
+        utils = salt.loader.utils(
+            opts,
+            whitelist=['boto', 'boto3', 'args', 'systemd', 'path', 'platform'])
         return {boto_vpc: {'__utils__': utils}}
 
     # Set up MagicMock to replace the boto3 session
