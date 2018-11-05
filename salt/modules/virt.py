@@ -1530,7 +1530,8 @@ def _disks_equal(disk1, disk2):
     return source1 == source2 and \
         target1 is not None and target2 is not None and \
         target1.get('bus') == target2.get('bus') and \
-        disk1.get('device', 'disk') == disk2.get('device', 'disk')
+        disk1.get('device', 'disk') == disk2.get('device', 'disk') and \
+        target1.get('dev') == target2.get('dev')
 
 
 def _nics_equal(nic1, nic2):
@@ -1626,25 +1627,21 @@ def _diff_disk_lists(old, new):
     :param old: list of ElementTree nodes representing the old disks
     :param new: list of ElementTree nodes representing the new disks
     '''
-    diff = _diff_lists(old, new, _disks_equal)
-
-    # Fix the target device to avoid duplicates with the unchanged disks
-    # The requested device names may not be honoured by hypervisor and will
-    # likely be set right at the next start of the VM
-    targets = [disk.find('target').get('dev') for disk in diff['unchanged']]
+    # Fix the target device to avoid duplicates before diffing: this may lead
+    # to additional changes. Think of unchanged disk 'hda' and another disk listed
+    # before it becoming 'hda' too... the unchanged need to turn into 'hdb'.
+    targets = []
     prefixes = ['fd', 'hd', 'vd', 'sd', 'xvd', 'ubd']
-    for disk in diff['new']:
+    for disk in new:
         target_node = disk.find('target')
         target = target_node.get('dev')
-        if target in targets:
-            prefix = [item for item in prefixes if target.startswith(item)][0]
-            for i in range(1024):
-                attempt = '{0}{1}'.format(prefix, string.ascii_lowercase[i])
-                if attempt not in targets:
-                    target_node.set('dev', attempt)
-                    targets.append(attempt)
-                    break
-    return diff
+        prefix = [item for item in prefixes if target.startswith(item)][0]
+        new_target = ['{0}{1}'.format(prefix, string.ascii_lowercase[i]) for i in range(len(new))
+                      if '{0}{1}'.format(prefix, string.ascii_lowercase[i]) not in targets][0]
+        target_node.set('dev', new_target)
+        targets.append(new_target)
+
+    return _diff_lists(old, new, _disks_equal)
 
 
 def _diff_interface_lists(old, new):
