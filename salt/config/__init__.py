@@ -93,6 +93,7 @@ def _gather_buffer_space():
     # Return the higher number between 5% of the system memory and 10MiB
     return max([total_mem * 0.05, 10 << 20])
 
+
 # For the time being this will be a fixed calculation
 # TODO: Allow user configuration
 _DFLT_IPC_WBUFFER = _gather_buffer_space() * .5
@@ -437,7 +438,7 @@ VALID_OPTS = {
     # If an event is above this size, it will be trimmed before putting it on the event bus
     'max_event_size': int,
 
-    # Enable old style events to be sent on minion_startup. Change default to False in Neon release
+    # Enable old style events to be sent on minion_startup. Change default to False in Sodium release
     'enable_legacy_startup_events': bool,
 
     # Always execute states with test=True if this flag is set
