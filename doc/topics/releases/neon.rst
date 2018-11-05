@@ -234,6 +234,9 @@ State Changes
 - Added new :py:func:`ssh_auth.manage <salt.states.ssh_auth.manage>` state to
   ensure only the specified ssh keys are present for the specified user.
 
+- Added new :py:func:`saltutil <salt.states.saltutil>` state to use instead of
+  ``module.run`` to more easily handle change.
+
 Module Changes
 ==============
 
@@ -254,6 +257,43 @@ Module Changes
   module now supports perstant changes with ``persist=True`` by calling the
   :py:func:`selinux.fcontext_add_policy <salt.modules.selinux.fcontext_add_policy>` module.
 
+Enhancements to Engines
+=======================
+
+Multiple copies of a particular Salt engine can be configured by including
+the ``engine_module`` parameter in the engine configuration.
+
+.. code-block:: yaml
+
+   engines:
+     - production_logstash:
+         host: production_log.my_network.com
+         port: 5959
+         proto: tcp
+         engine_module: logstash
+     - develop_logstash:
+         host: develop_log.my_network.com
+         port: 5959
+         proto: tcp
+         engine_module: logstash
+
+Enhancements to Beacons
+=======================
+Multiple copies of a particular Salt beacon can be configured by including
+the ``beacon_module`` parameter in the beacon configuration.
+
+ .. code-block:: yaml
+
+    beacons:
+      watch_importand_file:
+        - files:
+            /etc/important_file: {}
+        - beacon_module: inotify
+      watch_another_file:
+        - files:
+            /etc/another_file: {}
+        - beacon_module: inotify
+
 Salt Cloud Features
 ===================
 
@@ -263,6 +303,28 @@ GCE Driver
 The GCE salt cloud driver can now be used with GCE instance credentials by
 setting the configuration paramaters ``service_account_private_key`` and
 ``service_account_private_email`` to an empty string.
+
+Salt Api
+========
+
+salt-api will now work on Windows platforms with limited support.
+You will be able to configure the ``rest_cherrypy`` module, without ``pam``
+external authentication and without ssl support.
+
+Example configuration:
+
+.. code-block:: yaml
+
+    external_auth:
+      auto:
+        saltuser:
+          -.*
+
+    rest_cherrypy:
+      host: 127.0.0.1
+      port: 8000
+
+
 
 Deprecations
 ============
