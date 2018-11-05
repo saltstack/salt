@@ -704,7 +704,7 @@ class Terminal(object):
                     if self.child_fd is not None:
                         fcntl.fcntl(self.child_fd, fcntl.F_SETFL, fd_flags)
             # <---- Process STDOUT -------------------------------------------
-            return salt.utils.data.encode(stdout), salt.utils.data.encode(stderr)
+            return stdout, stderr
 
         def __detect_parent_terminal_size(self):
             try:

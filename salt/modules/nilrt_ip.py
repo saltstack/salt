@@ -208,6 +208,8 @@ def _get_service_info(service):
             if value is None:
                 log.warning('Unable to get IPv6 %s for service %s\n', info, service)
                 continue
+            if 'ipv6' not in data:
+                data['ipv6'] = {}
             data['ipv6'][info.lower()] = [six.text_type(value)]
 
         nameservers = []

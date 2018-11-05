@@ -23,6 +23,7 @@ class StdTest(ModuleCase):
         cmd_iter = self.client.cmd_cli(
                 'minion',
                 'test.ping',
+                timeout=20,
                 )
         for ret in cmd_iter:
             self.assertTrue(ret['minion'])
@@ -31,7 +32,8 @@ class StdTest(ModuleCase):
         cmd_iter = self.client.cmd_cli(
                 'minion',
                 'test.sleep',
-                [6]
+                [6],
+                timeout=20,
                 )
         num_ret = 0
         for ret in cmd_iter:
@@ -50,6 +52,7 @@ class StdTest(ModuleCase):
             cmd_iter = self.client.cmd_cli(
                     'footest',
                     'test.ping',
+                    timeout=20,
                     )
             num_ret = 0
             for ret in cmd_iter:
@@ -113,6 +116,7 @@ class StdTest(ModuleCase):
         ret = self.client.cmd_full_return(
                 'minion',
                 'test.ping',
+                timeout=20,
                 )
         self.assertIn('minion', ret)
         self.assertEqual({'ret': True, 'success': True}, ret['minion'])
