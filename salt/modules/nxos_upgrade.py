@@ -1,15 +1,31 @@
 # -*- coding: utf-8 -*-
+# Copyright (c) 2018 Cisco and/or its affiliates.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 '''
 Execution module to upgrade Cisco NX-OS Switches.
 
 .. versionadded:: xxxx.xx.x
 
-This module supports execution using a Proxy Minion:
-  Proxy Minion: Connect over SSH or NX-API HTTP(S).
-  See :mod:`salt.proxy.nxos <salt.proxy.nxos>` for proxy minion setup details.
+This module supports execution using a Proxy Minion or Native Minion:
+1) Proxy Minion: Connect over SSH or NX-API HTTP(S).
+   See :mod:`salt.proxy.nxos <salt.proxy.nxos>` for proxy minion setup details.
+2) Native Minion: Connect over NX-API Unix Domain Socket (UDS).
+   Install the minion inside the GuestShell running on the NX-OS device.
 
 :maturity:   new
 :platform:   nxos
+:codeauthor: Michael G Wiebe
 
 .. note::
 
@@ -57,22 +73,6 @@ __virtual_aliases__ = ('nxos_upgrade',)
 
 log = logging.getLogger(__name__)
 
-import sys
-import pdb
-class ForkedPdb(pdb.Pdb):
-    """A Pdb subclass that may be used from a forked multiprocessing child
-    Use this subclass to set a pdb tracepoint for debugging purposes.
-    Usage:
-        ForkedPdb().set_trace()
-    """
-    def interaction(self, *args, **kwargs):
-        _stdin = sys.stdin
-        try:
-            sys.stdin = open('/dev/stdin')
-            pdb.Pdb.interaction(self, *args, **kwargs)
-        finally:
-            sys.stdin = _stdin
-
 
 def __virtual__():
     return __virtualname__
@@ -80,7 +80,7 @@ def __virtual__():
 
 def check_upgrade_impact(system_image, kickstart_image=None, issu=True, **kwargs):
     '''
-    Display upgrade impact information but don't perform upgrade.
+    Display upgrade impact information without actually upgrading the device.
 
     system_image (Mandatory Option)
         Path on bootflash: to system image upgrade file.
@@ -94,9 +94,6 @@ def check_upgrade_impact(system_image, kickstart_image=None, issu=True, **kwargs
         When True: Attempt In Service Software Upgrade. (non-disruptive)
           The upgrade will abort if issu is not possible.
         When False: Force (disruptive) Upgrade/Downgrade.
-        Set this option to True when an in service software service or
-        non-disruptive upgrade is needed. The upgrade will abort if issu is
-        not possible.
         Default: True
 
     timeout
@@ -115,6 +112,10 @@ def check_upgrade_impact(system_image, kickstart_image=None, issu=True, **kwargs
         salt 'n7k' nxos.check_upgrade_impact system_image=n7000-s2-dk9.8.1.1.bin \\
             kickstart_image=n7000-s2-kickstart.8.1.1.bin issu=False
     '''
+    # Input Validation
+    if not isinstance(issu, bool):
+        return 'Input Error: The [issu] parameter must be either True or False'
+
     si = system_image
     ki = kickstart_image
     dev = 'bootflash'
@@ -125,7 +126,7 @@ def check_upgrade_impact(system_image, kickstart_image=None, issu=True, **kwargs
     else:
         cmd = cmd + ' nxos {0}:{1}'.format(dev, si)
 
-    if issu:
+    if issu and ki is None:
         cmd = cmd + ' non-disruptive'
 
     log.info("Check upgrade impact using command: '{}'".format(cmd))
@@ -176,12 +177,16 @@ def upgrade(system_image, kickstart_image=None, issu=True, **kwargs):
         salt 'n7k' nxos.upgrade system_image=n7000-s2-dk9.8.1.1.bin \\
             kickstart_image=n7000-s2-kickstart.8.1.1.bin issu=False
     '''
+    # Input Validation
+    if not isinstance(issu, bool):
+        return 'Input Error: The [issu] parameter must be either True or False'
+
     impact = None
     upgrade = None
     maxtry = 60
     for attempt in range(1, maxtry):
         # Gather impact data first.  It's possible to loose upgrade data
-        # when the switch reloads or switches over to the inative sup.
+        # when the switch reloads or switches over to the inactive supervisor.
         # The impact data will be used if data being collected during the
         # upgrade is lost.
         if impact is None:
@@ -189,16 +194,19 @@ def upgrade(system_image, kickstart_image=None, issu=True, **kwargs):
             impact = check_upgrade_impact(system_image, kickstart_image,
                                           issu, **kwargs)
             if impact['installing']:
-                log.info('Show impact in progress... wait and retry')
+                log.info('Another show impact in progress... wait and retry')
                 time.sleep(30)
                 continue
             log.info('Impact data gathered:\n{}'.format(impact))
 
             # Check to see if conditions are sufficent to return the impact
             # data and not proceed with the actual upgrade.
-
+            #
             # Impact data indicates the upgrade or downgrade will fail
             if impact['error_data']:
+                return impact
+            # Requested ISSU but ISSU is not possible
+            if issu and not impact['upgrade_non_disruptive']:
                 return impact
             # Impact data indicates a failure and no module_data collected
             if not impact['succeeded'] and not impact['module_data']:
@@ -208,12 +216,22 @@ def upgrade(system_image, kickstart_image=None, issu=True, **kwargs):
             if not impact['upgrade_required']:
                 impact['succeeded'] = True
                 return impact
-        # Attempt Upgrade
+        # If we get here, impact data indicates upgrade is needed.
         upgrade = _upgrade(system_image, kickstart_image, issu, **kwargs)
         if upgrade['installing']:
-            log.info('Install in progress... wait and retry')
+            log.info('Another install is in progress... wait and retry')
             time.sleep(30)
             continue
+        # If the issu option is False and this upgrade request includes a
+        # kickstart image then the 'force' option is used.  This option is
+        # only available in certain image sets.
+        if upgrade['invalid_command']:
+            log_msg = 'The [issu] option was set to False for this upgrade.'
+            log_msg = log_msg + ' Attempt was made to ugrade using the force'
+            log_msg = log_msg + ' keyword which is not supported in this'
+            log_msg = log_msg + ' image.  Set [issu=True] and re-try.'
+            upgrade['upgrade_data'] = log_msg
+            break
         break
 
     # Check for errors and return upgrade result:
@@ -246,6 +264,7 @@ def _upgrade(system_image, kickstart_image, issu, **kwargs):
         logmsg += '\nSystem Image: {}'.format(si)
         logmsg += '\nKickstart Image: {}'.format(ki)
         if not issu:
+            log.info('Attempting upgrade using force option')
             cmd = cmd + ' force'
         cmd = cmd + ' kickstart {0}:{1} system {0}:{2}'.format(dev, ki, si)
 
@@ -271,9 +290,6 @@ def _upgrade(system_image, kickstart_image, issu, **kwargs):
             upgrade_result = e.message
         else:
             upgrade_result = ast.literal_eval(e.message)
-        # kwargs.update({'timeout': 900})
-        # cmd = 'show install all status'
-        # upgrade_result = __salt__['nxos.sendline'](cmd, **kwargs)
     return _parse_upgrade_data(upgrade_result)
 
 
@@ -285,11 +301,13 @@ def _parse_upgrade_data(data):
     upgrade_result['upgrade_data'] = None
     upgrade_result['succeeded'] = False
     upgrade_result['upgrade_required'] = False
+    upgrade_result['upgrade_non_disruptive'] = False
     upgrade_result['upgrade_in_progress'] = False
     upgrade_result['installing'] = False
     upgrade_result['module_data'] = {}
     upgrade_result['error_data'] = None
     upgrade_result['backend_processing_error'] = False
+    upgrade_result['invalid_command'] = False
 
     # Error handling
     if isinstance(data, basestring) and re.search('Code: 500', data):
@@ -298,14 +316,24 @@ def _parse_upgrade_data(data):
         upgrade_result['backend_processing_error'] = True
         return upgrade_result
 
-    if 'code' in data and data['code'] == '400':
-        log.info('Detected client error')
-        upgrade_result['error_data'] = data['cli_error']
+    if isinstance(data, dict):
+        if 'code' in data and data['code'] == '400':
+            log.info('Detected client error')
+            upgrade_result['error_data'] = data['cli_error']
 
-        if re.search('install.*may be in progress', data['cli_error']):
-            log.info('Detected install in progress...')
-            upgrade_result['installing'] = True
+            if re.search('install.*may be in progress', data['cli_error']):
+                log.info('Detected install in progress...')
+                upgrade_result['installing'] = True
 
+            if re.search('Invalid command', data['cli_error']):
+                log.info('Detected invalid command...')
+                upgrade_result['invalid_command'] = True
+        else:
+            # If we get here then it's likely we lost access to the device
+            # but the upgrade succeeded.  We lost the actual upgrade data so
+            # set the flag such that impact data is used instead.
+            log.info('Probable backend processing error')
+            upgrade_result['backend_processing_error'] = True
         return upgrade_result
 
     # Get upgrade data for further parsing
@@ -321,6 +349,11 @@ def _parse_upgrade_data(data):
     for line in data.split('\n'):
 
         log.info('Processing line: ({})'.format(line))
+
+        # Check to see if upgrade is disruptive or non-disruptive
+        if re.search(r'non-disruptive', line):
+            log.info('Found non-disruptive line')
+            upgrade_result['upgrade_non_disruptive'] = True
 
         # Example:
         # Module  Image  Running-Version(pri:alt)  New-Version  Upg-Required
