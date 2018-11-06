@@ -25,7 +25,8 @@ import os
 import socket
 import re
 import collections
-from salt.exceptions import (NxosClientError, NxosCliError, NxosError,
+from six import string_types
+from salt.exceptions import (NxosClientError, NxosError,
                              NxosRequestNotSupported, CommandExecutionError)
 
 # Import salt libs
@@ -237,7 +238,7 @@ class NxapiClient(object):
         # subesequent loop.
         if not isinstance(output, list):
             output = [output]
-        if isinstance(command_list, basestring):
+        if isinstance(command_list, string_types):
             command_list = [cmd.strip() for cmd in command_list.split(';')]
         if not isinstance(command_list, list):
             command_list = [command_list]
