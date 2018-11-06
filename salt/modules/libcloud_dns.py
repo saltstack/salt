@@ -125,7 +125,7 @@ def list_records(zone_id, profile, type=None):
     '''
     List records for the given zone_id on the given profile
 
-    :param zone_id: Zone to export.
+    :param zone_id: Zone identifier.
     :type  zone_id: ``str``
 
     :param profile: The profile key
@@ -152,7 +152,7 @@ def get_zone(zone_id, profile):
     '''
     Get zone information for the given zone_id on the given profile
 
-    :param zone_id: Zone to export.
+    :param zone_id: Zone identifier.
     :type  zone_id: ``str``
 
     :param profile: The profile key
@@ -172,10 +172,10 @@ def get_record(zone_id, record_id, profile):
     '''
     Get record information for the given zone_id on the given profile
 
-    :param zone_id: Zone to export.
+    :param zone_id: Zone identifier.
     :type  zone_id: ``str``
 
-    :param record_id: Record to delete.
+    :param record_id: Record identifier.
     :type  record_id: ``str``
 
     :param profile: The profile key
@@ -185,7 +185,7 @@ def get_record(zone_id, record_id, profile):
 
     .. code-block:: bash
 
-        salt myminion libcloud_dns.get_record google.com www profile1
+        salt myminion libcloud_dns.get_record google.com record_1 profile1
     '''
     conn = _get_driver(profile=profile)
     return _simple_record(conn.get_record(zone_id, record_id))
@@ -292,6 +292,47 @@ def create_record(name, zone_id, type, data, profile, extra=None):
                                              type=record_type, data=data, extra=extra))
 
 
+def update_record(name, record_id, zone_id, type, data, profile, extra=None):
+    '''
+    Update an existing record.
+
+    :param name: Record name without the domain name (e.g. www).
+                 Note: If you want to create a record for a base domain
+                 name, you should specify empty string ('') for this
+                 argument.
+    :type  name: ``str``
+
+    :param record_id: Identifier of the record to be updated.
+    :type  record_id: ``str``
+
+    :param zone_id: Zone where the requested record is created.
+    :type  zone_id: ``str``
+
+    :param type: DNS record type (A, AAAA, ...).
+    :type  type: ``str``
+
+    :param data: Data for the record (depends on the record type).
+    :type  data: ``str``
+
+    :param profile: The profile key
+    :type  profile: ``str``
+
+    :param extra: Extra data (optional)
+    :type  extra: ``dict``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion libcloud_dns.update_record www record_1 zone_1 A 12.32.12.2 profile1
+    '''
+    conn = _get_driver(profile=profile)
+    record_type = _string_to_record_type(type)
+    record=get_record(zone_id=zone_id, record_id=record_id, profile=profile)
+    return _simple_record(conn.create_record(record=record, name=name,
+                                             type=record_type, data=data, extra=extra))
+
+
 def delete_zone(zone_id, profile):
     '''
     Delete a zone.
@@ -319,7 +360,7 @@ def delete_record(zone_id, record_id, profile):
     '''
     Delete a record.
 
-    :param zone_id: Zone to delete.
+    :param zone_id: Zone identifier.
     :type  zone_id: ``str``
 
     :param record_id: Record to delete.
