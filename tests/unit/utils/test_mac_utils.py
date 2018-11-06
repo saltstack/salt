@@ -226,12 +226,12 @@ class MacUtilsTestCase(TestCase, LoaderModuleMockMixin):
         plists = [{'Label': 'com.apple.lla1'}]
         ret = _run_available_services(plists)
 
-        self.assertTrue(isinstance(ret, dict))
-        self.assertEqual(len(ret), 1)
-        self.assertEqual(ret['com.apple.lla1']['file_name'], 'com.apple.lla1.plist')
-        self.assertEqual(
-            ret['com.apple.lla1']['file_path'],
-            os.path.realpath(os.path.join('/Library/LaunchAgents', 'com.apple.lla1.plist')))
+        expected = {
+            'com.apple.lla1': {
+                'file_name': 'com.apple.lla1.plist',
+                'file_path': '/Library/LaunchAgents/com.apple.lla1.plist',
+                'plist': plists[0]}}
+        self.assertEqual(ret, expected)
 
     @patch('salt.utils.path.os_walk')
     @patch('os.path.exists')
@@ -282,16 +282,63 @@ class MacUtilsTestCase(TestCase, LoaderModuleMockMixin):
         plists = [{'Label': 'com.apple.lla1'}]
         ret = _run_available_services(plists)
 
-        # self.assertTrue(isinstance(ret, dict))
-        self.assertEqual(len(ret), 1)
-        # Ensure the correct, first plist, is returned.
-        self.assertEqual(
-            ret['com.apple.lla1']['file_name'],
-            'com.apple.lla1.plist')
-        self.assertEqual(
-            ret['com.apple.lla1']['file_path'],
-            os.path.realpath(
-                os.path.join('/Library/LaunchAgents', 'com.apple.lla1.plist')))
+        expected = {
+            'com.apple.lla1': {
+                'file_name': 'com.apple.lla1.plist',
+                'file_path': '/Library/LaunchAgents/com.apple.lla1.plist',
+                'plist': plists[0]}}
+        self.assertEqual(ret, expected)
+
+    @patch('salt.utils.path.os_walk')
+    @patch('os.path.exists')
+    @patch('plistlib.readPlist')
+    @patch('salt.utils.mac_utils.__salt__')
+    @patch('plistlib.readPlistFromString', create=True)
+    def test_available_services_binary_plist(self,
+                                             mock_read_plist_from_string,
+                                             mock_run,
+                                             mock_read_plist,
+                                             mock_exists,
+                                             mock_os_walk):
+        '''
+        test available_services handles binary plist files.
+        '''
+        results = {'/Library/LaunchAgents': ['com.apple.lla1.plist']}
+        mock_os_walk.side_effect = _get_walk_side_effects(results)
+        mock_exists.return_value = True
+
+        plists = [{'Label': 'com.apple.lla1'}]
+
+        if six.PY2:
+            attrs = {'cmd.run': MagicMock()}
+
+            def getitem(name):
+                return attrs[name]
+
+            mock_run.__getitem__.side_effect = getitem
+            mock_run.configure_mock(**attrs)
+            cmd = '/usr/bin/plutil -convert xml1 -o - -- "{}"'.format(
+                '/Library/LaunchAgents/com.apple.lla1.plist')
+            calls = [call.cmd.run(cmd)]
+
+            mock_read_plist.side_effect = xml.parsers.expat.ExpatError
+            mock_read_plist_from_string.side_effect = plists
+            ret = mac_utils._available_services()
+        else:
+            # Py3 plistlib knows how to handle binary plists without
+            # any extra work, so this test doesn't really do anything
+            # new.
+            ret = _run_available_services(plists)
+
+        expected = {
+            'com.apple.lla1': {
+                'file_name': 'com.apple.lla1.plist',
+                'file_path': '/Library/LaunchAgents/com.apple.lla1.plist',
+                'plist': plists[0]}}
+        self.assertEqual(ret, expected)
+
+        if six.PY2:
+            mock_run.assert_has_calls(calls, any_order=True)
 
 
 
