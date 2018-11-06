@@ -78,7 +78,7 @@ def avail_images(call=None):
             '-f or --function, or with the --list-images option'
         )
 
-    items = query(method='images')
+    items = query(method='images', root='marketplace_root')
     ret = {}
     for image in items['images']:
         ret[image['id']] = {}
@@ -171,14 +171,14 @@ def get_image(server_):
 def create_node(args):
     ''' Create a node.
     '''
-    node = query(method='servers', args=args, http_method='post')
+    node = query(method='servers', args=args, http_method='POST')
 
     action = query(
         method='servers',
         server_id=node['server']['id'],
         command='action',
         args={'action': 'poweron'},
-        http_method='post'
+        http_method='POST'
     )
     return node
 
@@ -314,15 +314,21 @@ def create(server_):
 
 
 def query(method='servers', server_id=None, command=None, args=None,
-          http_method='get'):
+          http_method='GET', root='api_root'):
     ''' Make a call to the Scaleway API.
     '''
+
+    if root == 'api_root':
+        default_url = 'https://cp-par1.scaleway.com'
+    else:
+        default_url = 'https://api-marketplace.scaleway.com'
+
     base_path = six.text_type(config.get_cloud_config_value(
-        'api_root',
+        root,
         get_configured_provider(),
         __opts__,
         search_global=False,
-        default='https://api.cloud.online.net'
+        default=default_url
     ))
 
     path = '{0}/{1}/'.format(base_path, method)
@@ -345,25 +351,29 @@ def query(method='servers', server_id=None, command=None, args=None,
     request = __utils__["http.query"](path,
                                       method=http_method,
                                       data=data,
-                                      headers={'X-Auth-Token': token,
-                                               'User-Agent': "salt-cloud",
-                                               'Content-Type': 'application/json'})
-    if request.status_code > 299:
+                                      status=True,
+                                      decode=True,
+                                      decode_type='json',
+                                      data_render=True,
+                                      data_renderer='json',
+                                      headers=True,
+                                      header_dict={'X-Auth-Token': token,
+                                                   'User-Agent': "salt-cloud",
+                                                   'Content-Type': 'application/json'})
+    if request['status'] > 299:
         raise SaltCloudSystemExit(
             'An error occurred while querying Scaleway. HTTP Code: {0}  '
             'Error: \'{1}\''.format(
-                request.status_code,
-                request.text
+                request['status'],
+                request['error']
             )
         )
 
-    log.debug(request.url)
-
     # success without data
-    if request.status_code == 204:
+    if request['status'] == 204:
         return True
 
-    return request.json()
+    return salt.utils.json.loads(request['body'])
 
 
 def script(server_):
@@ -431,7 +441,7 @@ def destroy(name, call=None):
     data = show_instance(name, call='action')
     node = query(
         method='servers', server_id=data['id'], command='action',
-        args={'action': 'terminate'}, http_method='post'
+        args={'action': 'terminate'}, http_method='POST'
     )
 
     __utils__['cloud.fire_event'](

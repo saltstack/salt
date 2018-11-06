@@ -22,6 +22,13 @@ pipeline {
         stage('setup') {
             steps {
                 sh '''
+                # Need -M to detect renames otherwise they are reported as Delete and Add, need -C to detect copies, -C includes -M
+                # -M is on by default in git 2.9+
+                git diff --name-status -l99999 -C "origin/$CHANGE_TARGET" "origin/$BRANCH_NAME" > file-list-status.log
+                # the -l increase the search limit, lets use awk so we do not need to repeat the search above.
+                gawk 'BEGIN {FS="\\t"} {if ($1 != "D") {print $NF}}' file-list-status.log > file-list-changed.log
+                gawk 'BEGIN {FS="\\t"} {if ($1 == "D") {print $NF}}' file-list-status.log > file-list-deleted.log
+                touch pylint-report-salt.log pylint-report-tests.log
                 eval "$(pyenv init -)"
                 pyenv --version
                 pyenv install --skip-existing 2.7.14
@@ -30,40 +37,38 @@ pipeline {
                 python --version
                 pip install tox
                 '''
+                archiveArtifacts artifacts: 'file-list-status.log,file-list-changed.log,file-list-deleted.log'
             }
         }
         stage('linting') {
             failFast false
             parallel {
                 stage('salt linting') {
+                    when {
+                        expression { return readFile('file-list-changed.log') =~ /(?i)(^|\n)(salt\/.*\.py|setup\.py)\n/ }
+                    }
                     steps {
                         sh '''
                         eval "$(pyenv init - --no-rehash)"
-                        _FILES="$(find salt/ -name "*.py" -exec git diff --name-only "origin/$CHANGE_TARGET" "origin/$BRANCH_NAME" {} +)"
-                        _FILES="$_FILES $(git diff --name-only "origin/$CHANGE_TARGET" "origin/$BRANCH_NAME" setup.py)"
-                        if [[ -z ${_FILES} ]]; then
-                            echo "No pylint run, no changes found in the files"
-                            echo "empty" pylint-reports.xml
-                        else
-                            tox -e pylint-salt ${_FILES} | tee pylint-report.xml
-                        fi
+                        grep -Ei '^salt/.*\\.py$|^setup\\.py$' file-list-changed.log | xargs -r '--delimiter=\\n' tox -e pylint-salt | tee pylint-report-salt.log
+                        # remove color escape coding
+                        sed -ri 's/\\x1B\\[([0-9]{1,2}(;[0-9]{1,2})?)?[m|K]//g' pylint-report-salt.log
                         '''
-                        archiveArtifacts artifacts: 'pylint-report.xml'
+                        archiveArtifacts artifacts: 'pylint-report-salt.log'
                     }
                 }
                 stage('test linting') {
+                    when {
+                        expression { return readFile('file-list-changed.log') =~ /(?i)(^|\n)tests\/.*\.py\n/ }
+                    }
                     steps {
                         sh '''
                         eval "$(pyenv init - --no-rehash)"
-                        _FILES="$(find tests/ -name "*.py" -exec git diff --name-only "origin/$CHANGE_TARGET" "origin/$BRANCH_NAME" setup.py {} +)"
-                        if [[ -z ${_FILES} ]]; then
-                            echo "No pylint run, no changes found in the files"
-                            touch pylint-report-tests.xml
-                        else
-                            tox -e pylint-tests ${_FILES} | tee pylint-report-tests.xml
-                        fi
+                        grep -Ei '^tests/.*\\.py$' file-list-changed.log | xargs -r '--delimiter=\\n' tox -e pylint-tests | tee pylint-report-tests.log
+                        # remove color escape coding
+                        sed -ri 's/\\x1B\\[([0-9]{1,2}(;[0-9]{1,2})?)?[m|K]//g' pylint-report-tests.log
                         '''
-                        archiveArtifacts artifacts: 'pylint-report-tests.xml'
+                        archiveArtifacts artifacts: 'pylint-report-tests.log'
                     }
                 }
             }
@@ -74,7 +79,7 @@ pipeline {
             step([$class: 'WarningsPublisher',
                 parserConfigurations: [[
                     parserName: 'PyLint',
-                    pattern: 'pylint-report*.xml'
+                    pattern: 'pylint-report*.log'
                 ]],
                 failedTotalAll: '0',
                 useDeltaValues: false,
@@ -94,6 +99,9 @@ pipeline {
                 description: 'The lint job has failed',
                 status: 'FAILURE',
                 context: "jenkins/pr/lint"
+            slackSend channel: "#jenkins-prod-pr", 
+                color: '#FF0000', 
+                message: "FAILED: PR-Job: '${env.JOB_NAME} [${env.BUILD_NUMBER}]' (${env.BUILD_URL})"
         }
     }
 }

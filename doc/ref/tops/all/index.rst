@@ -15,4 +15,4 @@ master tops modules
     mongo
     reclass_adapter
     saltclass
-    varstack
+    varstack_top
