@@ -260,6 +260,33 @@ professor: Farnsworth
                          (0, b'\n'), (0, b'two-support-111-111.bz2'), (0, b'\n'),
                          (0, b'three-support-222-222.bz2'), (0, b'\n')]
 
+    @patch('salt.modules.saltsupport.__pillar__', {})
+    def test_run_support(self):
+        '''
+        Test run support
+        :return:
+        '''
+        saltsupport.SupportDataCollector = MagicMock()
+        saltsupport.SupportDataCollector().archive_path = 'dummy'
+        support = saltsupport.SaltSupportModule()
+        support.collect_internal_data = MagicMock()
+        support.collect_local_data = MagicMock()
+        out = support.run()
+
+        for section in ['messages', 'archive']:
+            assert section in out
+        assert out['archive'] == 'dummy'
+        for section in ['warning', 'error', 'info']:
+            assert section in out['messages']
+        ld_call = support.collect_local_data.call_args_list[0][1]
+        assert 'profile' in ld_call
+        assert ld_call['profile'] == 'default'
+        assert 'profile_source' in ld_call
+        assert ld_call['profile_source'] is None
+        assert support.collector.open.call_count == 1
+        assert support.collector.close.call_count == 1
+        assert support.collect_internal_data.call_count == 1
+
 
 @skipIf(not bool(pytest), 'Pytest required')
 @skipIf(NO_MOCK, NO_MOCK_REASON)
