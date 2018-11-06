@@ -1,13 +1,15 @@
 # -*- coding: utf-8 -*-
 '''
 SaltClass Pillar Module
+=======================
 
 .. code-block:: yaml
 
-  ext_pillar:
-    - saltclass:
-      - path: /srv/saltclass
+    ext_pillar:
+      - saltclass:
+        - path: /srv/saltclass
 
+For additional configuration instructions, see the :mod:`saltclass <salt.tops.saltclass>` module
 '''
 
 # import python libs

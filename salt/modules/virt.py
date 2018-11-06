@@ -613,23 +613,27 @@ def _gen_xml(name,
         else:
             context['console'] = True
 
-    context['disks'] = {}
+    context['disks'] = []
     disk_bus_map = {'virtio': 'vd', 'xen': 'xvd', 'fdc': 'fd', 'ide': 'hd'}
     for i, disk in enumerate(diskp):
-        context['disks'][disk['name']] = {}
-        context['disks'][disk['name']]['file_name'] = disk['filename']
-        context['disks'][disk['name']]['source_file'] = disk['source_file']
         prefix = disk_bus_map.get(disk['model'], 'sd')
-        context['disks'][disk['name']]['target_dev'] = '{0}{1}'.format(prefix, string.ascii_lowercase[i])
+        disk_context = {
+            'device': disk.get('device', 'disk'),
+            'target_dev': '{0}{1}'.format(prefix, string.ascii_lowercase[i]),
+            'disk_bus': disk['model'],
+            'type': disk['format'],
+            'index': six.text_type(i),
+        }
+        if 'source_file' and disk['source_file']:
+            disk_context['source_file'] = disk['source_file']
+
         if hypervisor in ['qemu', 'kvm', 'bhyve', 'xen']:
-            context['disks'][disk['name']]['address'] = False
-            context['disks'][disk['name']]['driver'] = True
+            disk_context['address'] = False
+            disk_context['driver'] = True
         elif hypervisor in ['esxi', 'vmware']:
-            context['disks'][disk['name']]['address'] = True
-            context['disks'][disk['name']]['driver'] = False
-        context['disks'][disk['name']]['disk_bus'] = disk['model']
-        context['disks'][disk['name']]['type'] = disk['format']
-        context['disks'][disk['name']]['index'] = six.text_type(i)
+            disk_context['address'] = True
+            disk_context['driver'] = False
+        context['disks'].append(disk_context)
     context['nics'] = nicp
 
     context['os_type'] = os_type
@@ -795,8 +799,7 @@ def _zfs_image_create(vm_name,
             .format(destination_fs, existing_disk['error'])
         )
     elif destination_fs in existing_disk:
-        log.info('ZFS filesystem {0} already exists. Skipping creation'
-                 .format(destination_fs))
+        log.info('ZFS filesystem %s already exists. Skipping creation', destination_fs)
         blockdevice_path = os.path.join('/dev/zvol', pool, vm_name)
         return blockdevice_path
 
@@ -961,31 +964,36 @@ def _disk_profile(profile, hypervisor, disks=None, vm_name=None, image=None, poo
     if hypervisor == 'vmware':
         overlay = {'format': 'vmdk',
                    'model': 'scsi',
+                   'device': 'disk',
                    'pool': '[{0}] '.format(pool if pool else '0')}
     elif hypervisor in ['qemu', 'kvm']:
         overlay = {'format': 'qcow2',
+                   'device': 'disk',
                    'model': 'virtio'}
     elif hypervisor in ['bhyve']:
         overlay = {'format': 'raw',
+                   'device': 'disk',
                    'model': 'virtio',
                    'sparse_volume': False}
     else:
         overlay = {}
 
     # Get the disks from the profile
-    disklist = copy.deepcopy(
-        __salt__['config.get']('virt:disk', {}).get(profile, default))
+    disklist = []
+    if profile:
+        disklist = copy.deepcopy(
+            __salt__['config.get']('virt:disk', {}).get(profile, default))
 
-    # Transform the list to remove one level of dictionnary and add the name as a property
-    disklist = [dict(d, name=name) for disk in disklist for name, d in disk.items()]
+        # Transform the list to remove one level of dictionnary and add the name as a property
+        disklist = [dict(d, name=name) for disk in disklist for name, d in disk.items()]
 
-    # Add the image to the first disk if there is one
-    if image:
-        # If image is specified in module arguments, then it will be used
-        # for the first disk instead of the image from the disk profile
-        log.debug('%s image from module arguments will be used for disk "%s"'
-                  ' instead of %s', image, disklist[0]['name'], disklist[0].get('image', ""))
-        disklist[0]['image'] = image
+        # Add the image to the first disk if there is one
+        if image:
+            # If image is specified in module arguments, then it will be used
+            # for the first disk instead of the image from the disk profile
+            log.debug('%s image from module arguments will be used for disk "%s"'
+                      ' instead of %s', image, disklist[0]['name'], disklist[0].get('image', ""))
+            disklist[0]['image'] = image
 
     # Merge with the user-provided disks definitions
     if disks:
@@ -1003,31 +1011,42 @@ def _disk_profile(profile, hypervisor, disks=None, vm_name=None, image=None, poo
             if key not in disk:
                 disk[key] = val
 
-        base_dir = disk.get('pool', None)
-        if hypervisor in ['qemu', 'kvm']:
-            # Compute the base directory from the pool property. We may have either a path
-            # or a libvirt pool name there.
-            # If the pool is a known libvirt one with a target path, use it as target path
-            if not base_dir:
-                base_dir = _get_images_dir()
-            else:
-                if not base_dir.startswith('/'):
-                    # The pool seems not to be a path, lookup for pool infos
-                    pool = pool_info(base_dir, **kwargs)
-                    if not pool or not pool['target_path'] or pool['target_path'].startswith('/dev'):
-                        raise CommandExecutionError(
-                                    'Unable to create new disk {0}, specified pool {1} does not exist '
-                                    'or is unsupported'.format(disk['name'], base_dir))
-                    base_dir = pool['target_path']
-        if hypervisor == 'bhyve' and vm_name:
-            disk['filename'] = '{0}.{1}'.format(vm_name, disk['name'])
-            disk['source_file'] = os.path.join('/dev/zvol', base_dir or '', disk['filename'])
-        elif vm_name:
-            # Compute the filename and source file properties if possible
-            disk['filename'] = '{0}_{1}.{2}'.format(vm_name, disk['name'], disk['format'])
-            disk['source_file'] = os.path.join(base_dir, disk['filename'])
+        # We may have an already computed source_file (i.e. image not created by our module)
+        if 'source_file' in disk and disk['source_file']:
+            disk['filename'] = os.path.basename(disk['source_file'])
+        elif 'source_file' not in disk:
+            _fill_disk_filename(vm_name, disk, hypervisor, **kwargs)
 
     return disklist
+
+
+def _fill_disk_filename(vm_name, disk, hypervisor, **kwargs):
+    '''
+    Compute the disk file name and update it in the disk value.
+    '''
+    base_dir = disk.get('pool', None)
+    if hypervisor in ['qemu', 'kvm']:
+        # Compute the base directory from the pool property. We may have either a path
+        # or a libvirt pool name there.
+        # If the pool is a known libvirt one with a target path, use it as target path
+        if not base_dir:
+            base_dir = _get_images_dir()
+        else:
+            if not base_dir.startswith('/'):
+                # The pool seems not to be a path, lookup for pool infos
+                pool = pool_info(base_dir, **kwargs)
+                if not pool or not pool['target_path'] or pool['target_path'].startswith('/dev'):
+                    raise CommandExecutionError(
+                                'Unable to create new disk {0}, specified pool {1} does not exist '
+                                'or is unsupported'.format(disk['name'], base_dir))
+                base_dir = pool['target_path']
+    if hypervisor == 'bhyve' and vm_name:
+        disk['filename'] = '{0}.{1}'.format(vm_name, disk['name'])
+        disk['source_file'] = os.path.join('/dev/zvol', base_dir or '', disk['filename'])
+    elif vm_name:
+        # Compute the filename and source file properties if possible
+        disk['filename'] = '{0}_{1}.{2}'.format(vm_name, disk['name'], disk['format'])
+        disk['source_file'] = os.path.join(base_dir, disk['filename'])
 
 
 def _complete_nics(interfaces, hypervisor, dmac=None):
@@ -1180,7 +1199,7 @@ def _get_merged_nics(hypervisor, profile, interfaces=None, dmac=None):
     '''
     Get network devices from the profile and merge uer defined ones with them.
     '''
-    nicp = _nic_profile(profile, hypervisor, dmac=dmac)
+    nicp = _nic_profile(profile, hypervisor, dmac=dmac) if profile else []
     log.debug('NIC profile is %s', nicp)
     if interfaces:
         users_nics = _complete_nics(interfaces, hypervisor)
@@ -1236,6 +1255,7 @@ def init(name,
 
     :param nic: NIC profile to use (Default: ``'default'``).
                 The profile interfaces can be customized / extended with the interfaces parameter.
+                If set to ``None``, no profile will be used.
     :param interfaces:
         List of dictionaries providing details on the network interfaces to create.
         These data are merged with the ones from the nic profile. The structure of
@@ -1245,7 +1265,7 @@ def init(name,
     :param hypervisor: the virtual machine type. By default the value will be computed according
                        to the virtual host capabilities.
     :param start: ``True`` to start the virtual machine after having defined it (Default: ``True``)
-    :param disk: Disk profile to use (Default: ``'default'``).
+    :param disk: Disk profile to use (Default: ``'default'``). If set to ``None``, no profile will be used.
     :param disks: List of dictionaries providing details on the disk devices to create.
                   These data are merged with the ones from the disk profile. The structure of
                   each dictionary is documented in :ref:`init-disk-def`.
@@ -1378,7 +1398,7 @@ def init(name,
 
     Disk dictionaries can contain the following properties:
 
-    disk_name
+    name
         Name of the disk. This is mostly used in the name of the disk image and as a key to merge
         with the profile data.
 
@@ -1431,6 +1451,15 @@ def init(name,
                       size: 20G
                       hostname_property: virt:hostname
                       sparse_volume: True
+
+    source_file
+        Absolute path to the disk image to use. Not to be confused with ``image`` parameter. This
+        parameter is useful to use disk images that are created outside of this module. Can also
+        be ``None`` for devices that have no associated image like cdroms.
+
+    device
+        Type of device of the disk. Can be one of 'disk', 'cdrom', 'floppy' or 'lun'.
+        (Default: ``'disk'``)
 
     .. _init-graphics-def:
 
@@ -1581,10 +1610,15 @@ def init(name,
             else:
                 create_overlay = _disk.get('overlay_image', False)
 
-            img_dest = _qemu_image_create(_disk, create_overlay, saltenv)
+            if _disk['source_file'] and os.path.exists(_disk['source_file']):
+                img_dest = _disk['source_file']
+            elif 'source_file' not in _disk:
+                img_dest = _qemu_image_create(_disk, create_overlay, saltenv)
+            else:
+                img_dest = None
 
             # Seed only if there is an image specified
-            if seed and _disk.get('image', None):
+            if seed and img_dest and _disk.get('image', None):
                 log.debug('Seed command is %s', seed_cmd)
                 __salt__[seed_cmd](
                     img_dest,
@@ -1651,8 +1685,16 @@ def _disks_equal(disk1, disk2):
     '''
     Test if two disk elements should be considered like the same device
     '''
-    return ElementTree.tostring(disk1.find('source')) == \
-        ElementTree.tostring(disk2.find('source'))
+    target1 = disk1.find('target')
+    target2 = disk2.find('target')
+    source1 = ElementTree.tostring(disk1.find('source')) if disk1.find('source') is not None else None
+    source2 = ElementTree.tostring(disk2.find('source')) if disk2.find('source') is not None else None
+
+    return source1 == source2 and \
+        target1 is not None and target2 is not None and \
+        target1.get('bus') == target2.get('bus') and \
+        disk1.get('device', 'disk') == disk2.get('device', 'disk') and \
+        target1.get('dev') == target2.get('dev')
 
 
 def _nics_equal(nic1, nic2):
@@ -1710,7 +1752,10 @@ def _diff_lists(old, new, comparator):
 
     :param old: old list
     :param new: new list
-    :return: a dictionary with ``unchanged``, ``new`` and ``deleted`` keys
+    :return: a dictionary with ``unchanged``, ``new``, ``deleted`` and ``sorted`` keys
+
+    The sorted list is the union of unchanged and new lists, but keeping the original
+    order from the new list.
     '''
     def _remove_indent(node):
         '''
@@ -1722,15 +1767,19 @@ def _diff_lists(old, new, comparator):
             item.tail = None
         return node_copy
 
-    diff = {'unchanged': [], 'new': [], 'deleted': []}
+    diff = {'unchanged': [], 'new': [], 'deleted': [], 'sorted': []}
+    # We don't want to alter old since it may be used later by caller
+    old_devices = copy.deepcopy(old)
     for new_item in new:
-        found = [item for item in old if comparator(_remove_indent(item), _remove_indent(new_item))]
+        found = [item for item in old_devices if comparator(_remove_indent(item), _remove_indent(new_item))]
         if found:
-            old.remove(found[0])
+            old_devices.remove(found[0])
             diff['unchanged'].append(found[0])
+            diff['sorted'].append(found[0])
         else:
             diff['new'].append(new_item)
-    diff['deleted'] = old
+            diff['sorted'].append(new_item)
+    diff['deleted'] = old_devices
     return diff
 
 
@@ -1741,25 +1790,21 @@ def _diff_disk_lists(old, new):
     :param old: list of ElementTree nodes representing the old disks
     :param new: list of ElementTree nodes representing the new disks
     '''
-    diff = _diff_lists(old, new, _disks_equal)
-
-    # Fix the target device to avoid duplicates with the unchanged disks
-    # The requested device names may not be honoured by hypervisor and will
-    # likely be set right at the next start of the VM
-    targets = [disk.find('target').get('dev') for disk in diff['unchanged']]
+    # Fix the target device to avoid duplicates before diffing: this may lead
+    # to additional changes. Think of unchanged disk 'hda' and another disk listed
+    # before it becoming 'hda' too... the unchanged need to turn into 'hdb'.
+    targets = []
     prefixes = ['fd', 'hd', 'vd', 'sd', 'xvd', 'ubd']
-    for disk in diff['new']:
+    for disk in new:
         target_node = disk.find('target')
         target = target_node.get('dev')
-        if target in targets:
-            prefix = [item for item in prefixes if target.startswith(item)][0]
-            for i in range(1024):
-                attempt = '{0}{1}'.format(prefix, string.ascii_lowercase[i])
-                if attempt not in targets:
-                    target_node.set('dev', attempt)
-                    targets.append(attempt)
-                    break
-    return diff
+        prefix = [item for item in prefixes if target.startswith(item)][0]
+        new_target = ['{0}{1}'.format(prefix, string.ascii_lowercase[i]) for i in range(len(new))
+                      if '{0}{1}'.format(prefix, string.ascii_lowercase[i]) not in targets][0]
+        target_node.set('dev', new_target)
+        targets.append(new_target)
+
+    return _diff_lists(old, new, _disks_equal)
 
 
 def _diff_interface_lists(old, new):
@@ -1811,13 +1856,14 @@ def update(name,
     :param disks:
         Disk definitions as documented in the :func:`init` function.
         If neither the profile nor this parameter are defined, the disk devices
-        will not be changed.
+        will not be changed. However to clear disks set this parameter to empty list.
 
     :param nic_profile: network interfaces profile to use
     :param interfaces:
         Network interface definitions as documented in the :func:`init` function.
         If neither the profile nor this parameter are defined, the interface devices
-        will not be changed.
+        will not be changed. However to clear network interfaces set this parameter
+        to empty list.
 
     :param graphics:
         The new graphics definition as defined in :ref:`init-graphics-def`. If not set,
@@ -1907,14 +1953,14 @@ def update(name,
     for dev_type in parameters:
         changes[dev_type] = {}
         func_locals = locals()
-        if [param for param in parameters[dev_type] if func_locals.get(param, None)]:
+        if [param for param in parameters[dev_type] if func_locals.get(param, None) is not None]:
             old = devices_node.findall(dev_type)
             new = new_desc.findall('devices/{0}'.format(dev_type))
             changes[dev_type] = globals()['_diff_{0}_lists'.format(dev_type)](old, new)
             if changes[dev_type]['deleted'] or changes[dev_type]['new']:
                 for item in old:
                     devices_node.remove(item)
-                devices_node.extend(new)
+                devices_node.extend(changes[dev_type]['sorted'])
                 need_update = True
 
     # Set the new definition
@@ -3308,7 +3354,7 @@ def purge(vm_, dirs=False, removables=None, **kwargs):
             # TODO create solution for 'dataset is busy'
             time.sleep(3)
             fs_name = disks[disk]['file'][len('/dev/zvol/'):]
-            log.info('Destroying VM ZFS volume {0}'.format(fs_name))
+            log.info('Destroying VM ZFS volume %s', fs_name)
             __salt__['zfs.destroy'](
                     name=fs_name,
                     force=True)
@@ -3322,7 +3368,7 @@ def purge(vm_, dirs=False, removables=None, **kwargs):
         # This one is only in 1.2.8+
         try:
             dom.undefineFlags(libvirt.VIR_DOMAIN_UNDEFINE_NVRAM)
-        except Exception:
+        except libvirt.libvirtError:
             dom.undefine()
     else:
         dom.undefine()
@@ -3444,6 +3490,9 @@ def get_hypervisor():
 
 
 def _is_bhyve_hyper():
+    '''
+    Returns a bool whether or not this node is a bhyve hypervisor
+    '''
     sysctl_cmd = 'sysctl hw.vmm.create'
     vmm_enabled = False
     try:
@@ -4238,37 +4287,10 @@ def _parse_caps_loader(node):
     return result
 
 
-def domain_capabilities(emulator=None, arch=None, machine=None, domain=None, **kwargs):
+def _parse_domain_caps(caps):
     '''
-    Return the domain capabilities given an emulator, architecture, machine or virtualization type.
-
-    .. versionadded:: Fluorine
-
-    :param emulator: return the capabilities for the given emulator binary
-    :param arch: return the capabilities for the given CPU architecture
-    :param machine: return the capabilities for the given emulated machine type
-    :param domain: return the capabilities for the given virtualization type.
-    :param connection: libvirt connection URI, overriding defaults
-    :param username: username to connect with, overriding defaults
-    :param password: password to connect with, overriding defaults
-
-    The list of the possible emulator, arch, machine and domain can be found in
-    the host capabilities output.
-
-    If none of the parameters is provided the libvirt default domain capabilities
-    will be returned.
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' virt.domain_capabilities arch='x86_64' domain='kvm'
-
+    Parse the XML document of domain capabilities into a structure.
     '''
-    conn = __get_conn(**kwargs)
-    caps = ElementTree.fromstring(conn.getDomainCapabilities(emulator, arch, machine, domain, 0))
-    conn.close()
-
     result = {
         'emulator': caps.find('path').text if caps.find('path') is not None else None,
         'domain': caps.find('domain').text if caps.find('domain') is not None else None,
@@ -4304,6 +4326,82 @@ def domain_capabilities(emulator=None, arch=None, machine=None, domain=None, **k
             features = _parse_caps_devices_features(child)
             if features:
                 result['features'] = features
+
+    return result
+
+
+def domain_capabilities(emulator=None, arch=None, machine=None, domain=None, **kwargs):
+    '''
+    Return the domain capabilities given an emulator, architecture, machine or virtualization type.
+
+    .. versionadded:: Fluorine
+
+    :param emulator: return the capabilities for the given emulator binary
+    :param arch: return the capabilities for the given CPU architecture
+    :param machine: return the capabilities for the given emulated machine type
+    :param domain: return the capabilities for the given virtualization type.
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
+
+    The list of the possible emulator, arch, machine and domain can be found in
+    the host capabilities output.
+
+    If none of the parameters is provided, the libvirt default one is returned.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.domain_capabilities arch='x86_64' domain='kvm'
+
+    '''
+    conn = __get_conn(**kwargs)
+    result = []
+    try:
+        caps = ElementTree.fromstring(conn.getDomainCapabilities(emulator, arch, machine, domain, 0))
+        result = _parse_domain_caps(caps)
+    finally:
+        conn.close()
+
+    return result
+
+
+def all_capabilities(**kwargs):
+    '''
+    Return the host and domain capabilities in a single call.
+
+    .. versionadded:: Neon
+
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.all_capabilities
+
+    '''
+    conn = __get_conn(**kwargs)
+    result = {}
+    try:
+        host_caps = ElementTree.fromstring(conn.getCapabilities())
+        domains = [[(guest.get('arch', {}).get('name', None), key)
+                    for key in guest.get('arch', {}).get('domains', {}).keys()]
+                   for guest in [_parse_caps_guest(guest) for guest in host_caps.findall('guest')]]
+        flattened = [pair for item in (x for x in domains) for pair in item]
+        result = {
+                'host': {
+                    'host': _parse_caps_host(host_caps.find('host')),
+                    'guests': [_parse_caps_guest(guest) for guest in host_caps.findall('guest')]
+                },
+                'domains': [_parse_domain_caps(ElementTree.fromstring(
+                                conn.getDomainCapabilities(None, arch, None, domain)))
+                            for (arch, domain) in flattened]}
+    finally:
+        conn.close()
 
     return result
 
@@ -4481,7 +4579,7 @@ def list_networks(**kwargs):
         conn.close()
 
 
-def network_info(name, **kwargs):
+def network_info(name=None, **kwargs):
     '''
     Return informations on a virtual network provided its name.
 
@@ -4489,6 +4587,8 @@ def network_info(name, **kwargs):
     :param connection: libvirt connection URI, overriding defaults
     :param username: username to connect with, overriding defaults
     :param password: password to connect with, overriding defaults
+
+    If no name is provided, return the infos for all defined virtual networks.
 
     .. versionadded:: Fluorine
 
@@ -4500,8 +4600,11 @@ def network_info(name, **kwargs):
     '''
     result = {}
     conn = __get_conn(**kwargs)
-    try:
-        net = conn.networkLookupByName(name)
+
+    def _net_get_leases(net):
+        '''
+        Get all DHCP leases for a network
+        '''
         leases = net.DHCPLeases()
         for lease in leases:
             if lease['type'] == libvirt.VIR_IP_ADDR_TYPE_IPV4:
@@ -4510,15 +4613,17 @@ def network_info(name, **kwargs):
                 lease['type'] = 'ipv6'
             else:
                 lease['type'] = 'unknown'
+        return leases
 
-        result = {
-            'uuid': net.UUIDString(),
-            'bridge': net.bridgeName(),
-            'autostart': net.autostart(),
-            'active': net.isActive(),
-            'persistent': net.isPersistent(),
-            'leases': leases
-        }
+    try:
+        nets = [net for net in conn.listAllNetworks() if name is None or net.name() == name]
+        result = {net.name(): {
+                       'uuid': net.UUIDString(),
+                       'bridge': net.bridgeName(),
+                       'autostart': net.autostart(),
+                       'active': net.isActive(),
+                       'persistent': net.isPersistent(),
+                       'leases': _net_get_leases(net)} for net in nets}
     except libvirt.libvirtError as err:
         log.debug('Silenced libvirt error: %s', str(err))
     finally:
@@ -4815,7 +4920,7 @@ def list_pools(**kwargs):
         conn.close()
 
 
-def pool_info(name, **kwargs):
+def pool_info(name=None, **kwargs):
     '''
     Return informations on a storage pool provided its name.
 
@@ -4823,6 +4928,8 @@ def pool_info(name, **kwargs):
     :param connection: libvirt connection URI, overriding defaults
     :param username: username to connect with, overriding defaults
     :param password: password to connect with, overriding defaults
+
+    If no name is provided, return the infos for all defined storage pools.
 
     .. versionadded:: Fluorine
 
@@ -4834,14 +4941,19 @@ def pool_info(name, **kwargs):
     '''
     result = {}
     conn = __get_conn(**kwargs)
-    try:
-        pool = conn.storagePoolLookupByName(name)
-        infos = pool.info()
+
+    def _pool_extract_infos(pool):
+        '''
+        Format the pool info dictionary
+
+        :param pool: the libvirt pool object
+        '''
         states = ['inactive', 'building', 'running', 'degraded', 'inaccessible']
+        infos = pool.info()
         state = states[infos[0]] if infos[0] < len(states) else 'unknown'
         desc = ElementTree.fromstring(pool.XMLDesc())
         path_node = desc.find('target/path')
-        result = {
+        return {
             'uuid': pool.UUIDString(),
             'state': state,
             'capacity': infos[1],
@@ -4852,6 +4964,10 @@ def pool_info(name, **kwargs):
             'target_path': path_node.text if path_node is not None else None,
             'type': desc.get('type')
         }
+
+    try:
+        pools = [pool for pool in conn.listAllStoragePools() if name is None or pool.name() == name]
+        result = {pool.name(): _pool_extract_infos(pool) for pool in pools}
     except libvirt.libvirtError as err:
         log.debug('Silenced libvirt error: %s', str(err))
     finally:

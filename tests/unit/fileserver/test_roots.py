@@ -168,24 +168,3 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMix
         finally:
             if self.test_symlink_list_file_roots:
                 self.opts['file_roots'] = orig_file_roots
-
-
-class RootsLimitTraversalTest(TestCase, AdaptedConfigurationTestCaseMixin):
-
-    def test_limit_traversal(self):
-        '''
-        1) Set up a deep directory structure
-        2) Enable the configuration option 'fileserver_limit_traversal'
-        3) Ensure that we can find SLS files in a directory so long as there is
-           an SLS file in a directory above.
-        4) Ensure that we cannot find an SLS file in a directory that does not
-           have an SLS file in a directory above.
-
-        '''
-        file_client_opts = self.get_temp_config('master')
-        file_client_opts['fileserver_limit_traversal'] = True
-
-        ret = salt.fileclient.Client(file_client_opts).list_states('base')
-        self.assertIn('test_deep.test', ret)
-        self.assertIn('test_deep.a.test', ret)
-        self.assertNotIn('test_deep.b.2.test', ret)

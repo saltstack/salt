@@ -109,6 +109,7 @@ from salt.exceptions import (
     SaltSystemExit,
     SaltDaemonNotRunning,
     SaltException,
+    SaltMasterUnresolvableError
 )
 
 
@@ -146,10 +147,16 @@ def resolve_dns(opts, fallback=True):
                 opts['master'],
                 int(opts['master_port']),
                 True,
-                opts['ipv6'])
+                opts['ipv6'],
+                attempt_connect=False)
         except SaltClientError:
+            retry_dns_count = opts.get('retry_dns_count', None)
             if opts['retry_dns']:
                 while True:
+                    if retry_dns_count is not None:
+                        if retry_dns_count == 0:
+                            raise SaltMasterUnresolvableError
+                        retry_dns_count -= 1
                     import salt.log
                     msg = ('Master hostname: \'{0}\' not found or not responsive. '
                            'Retrying in {1} seconds').format(opts['master'], opts['retry_dns'])
@@ -163,7 +170,8 @@ def resolve_dns(opts, fallback=True):
                             opts['master'],
                             int(opts['master_port']),
                             True,
-                            opts['ipv6'])
+                            opts['ipv6'],
+                            attempt_connect=False)
                         break
                     except SaltClientError:
                         pass
@@ -215,7 +223,8 @@ def resolve_dns(opts, fallback=True):
             opts['source_address'],
             int(opts['source_ret_port']),
             True,
-            opts['ipv6'])
+            opts['ipv6'],
+            attempt_connect=False)
         log.debug('Using %s as source IP address', ret['source_ip'])
     if opts['source_ret_port']:
         ret['source_ret_port'] = int(opts['source_ret_port'])
@@ -964,7 +973,17 @@ class MinionManager(MinionBase):
                       loaded_base_name=loaded_base_name,
                       jid_queue=jid_queue)
 
-    def _spawn_minions(self):
+    def _check_minions(self):
+        '''
+        Check the size of self.minions and raise an error if it's empty
+        '''
+        if not self.minions:
+            err = ('Minion unable to successfully connect to '
+                   'a Salt Master.  Exiting.')
+            log.error(err)
+            raise SaltSystemExit(code=42, msg=err)
+
+    def _spawn_minions(self, timeout=60):
         '''
         Spawn all the coroutines which will sign in to masters
         '''
@@ -983,8 +1002,9 @@ class MinionManager(MinionBase):
                                                 loaded_base_name='salt.loader.{0}'.format(s_opts['master']),
                                                 jid_queue=self.jid_queue,
                                                )
-            self.minions.append(minion)
-            self.io_loop.spawn_callback(self._connect_minion, minion)
+
+            self._connect_minion(minion)
+        self.io_loop.call_later(timeout, self._check_minions)
 
     @tornado.gen.coroutine
     def _connect_minion(self, minion):
@@ -1002,6 +1022,7 @@ class MinionManager(MinionBase):
                     minion.setup_scheduler(before_connect=True)
                 yield minion.connect_master(failed=failed)
                 minion.tune_in(start=False)
+                self.minions.append(minion)
                 break
             except SaltClientError as exc:
                 failed = True
@@ -1013,6 +1034,11 @@ class MinionManager(MinionBase):
                 if auth_wait < self.max_auth_wait:
                     auth_wait += self.auth_wait
                 yield tornado.gen.sleep(auth_wait)  # TODO: log?
+            except SaltMasterUnresolvableError:
+                err = 'Master address: \'{0}\' could not be resolved. Invalid or unresolveable address. ' \
+                      'Set \'master\' value in minion config.'.format(minion.opts['master'])
+                log.error(err)
+                break
             except Exception as e:
                 failed = True
                 log.critical(
@@ -1577,7 +1603,7 @@ class Minion(MinionBase):
 
         sdata = {'pid': os.getpid()}
         sdata.update(data)
-        log.info('Starting a new job with PID %s', sdata['pid'])
+        log.info('Starting a new job %s with PID %s', data['jid'], sdata['pid'])
         with salt.utils.files.fopen(fn_, 'w+b') as fp_:
             fp_.write(minion_instance.serial.dumps(sdata))
         ret = {'success': False}
@@ -2116,7 +2142,7 @@ class Minion(MinionBase):
     def _fire_master_minion_start(self):
         # Send an event to the master that the minion is live
         if self.opts['enable_legacy_startup_events']:
-            # old style event. Defaults to False in Neon Salt release
+            # Old style event. Defaults to False in Sodium release.
             self._fire_master(
                 'Minion {0} started at {1}'.format(
                 self.opts['id'],
@@ -2852,7 +2878,7 @@ class Syndic(Minion):
     def fire_master_syndic_start(self):
         # Send an event to the master that the minion is live
         if self.opts['enable_legacy_startup_events']:
-            # old style event. Defaults to false in Neon Salt release.
+            # Old style event. Defaults to false in Sodium release.
             self._fire_master(
                 'Syndic {0} started at {1}'.format(
                     self.opts['id'],

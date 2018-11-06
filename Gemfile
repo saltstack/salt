@@ -12,12 +12,15 @@ group :docker do
 end
 
 group :windows do
-  gem 'vagrant-wrapper'
-  gem 'kitchen-vagrant'
   gem 'winrm', '~>2.0'
-  gem 'winrm-fs', '~>1.2.1'
+  gem 'winrm-fs', '~>1.3.1' 
 end
 
 group :ec2 do
   gem 'kitchen-ec2'
+end
+
+group :vagrant do
+  gem 'vagrant-wrapper'
+  gem 'kitchen-vagrant'
 end
