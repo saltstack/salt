@@ -45,6 +45,15 @@ _RECORDS = [
         'ttl': 600,
         'extra': {'y': 'x'},
         'zone': _ZONES[0]
+    },
+    {
+        'id': '56789',
+        'name': 'mail',
+        'type': 'MX',
+        'data': '127.0.0.1',
+        'ttl': 600,
+        'extra': {'y': 'x'},
+        'zone': _ZONES[0]
     }
 ]
 
@@ -65,6 +74,7 @@ _CREATED_ZONE = {
     'ttl': 3600,
     'extra': {'k': 'v'}
 }
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class LibcloudDnsModuleTestCase(TestCase, LoaderModuleMockMixin):
@@ -97,6 +107,30 @@ class LibcloudDnsModuleTestCase(TestCase, LoaderModuleMockMixin):
                          'libcloud_dns.list_records': list_records,
                          'libcloud_dns.create_record': create_record}):
             result = libcloud_dns.record_present(name='www', zone='test.com', type='A',
+                                                 data='127.0.0.1', profile='test', extra={'y': 'x'})
+            assert result == ret
+            assert list_zones.called
+            list_zones.assert_called_with('test')
+            assert not create_record.called
+
+    def test_present_record_exists_mx(self):
+        '''
+        Try and create a record that already exists (MX)
+        '''
+        ret = {'changes': {},
+               'comment': 'Record already exists.',
+               'name': 'mail',
+               'result': True}
+
+        list_zones = MagicMock(return_value=_ZONES)
+        list_records = MagicMock(return_value=_RECORDS)
+        create_record = MagicMock(return_value='abcdef')
+
+        with patch.dict(libcloud_dns.__salt__,
+                        {'libcloud_dns.list_zones': list_zones,
+                         'libcloud_dns.list_records': list_records,
+                         'libcloud_dns.create_record': create_record}):
+            result = libcloud_dns.record_present(name='mail', zone='test.com', type='MX',
                                                  data='127.0.0.1', profile='test', extra={'y': 'x'})
             assert result == ret
             assert list_zones.called
@@ -180,7 +214,7 @@ class LibcloudDnsModuleTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Try and deny a record that already exists
         '''
-        ret = {'changes': _RECORDS,
+        ret = {'changes': [_RECORDS[0]],
                'comment': 'Removed 1 records.',
                'name': 'www',
                'result': True}
@@ -291,6 +325,33 @@ class LibcloudDnsModuleTestCase(TestCase, LoaderModuleMockMixin):
             assert create_zone.called
             create_zone.assert_called_with(domain='test3.com', type='master', ttl=600, extra={}, profile='test')
 
+    def test_zone_present_change_ttl(self):
+        '''
+        Assert that a zone is present (that did exist) with a new ttl
+        '''
+        _TEST_ZONE = _ZONES[0].copy()
+        _TEST_ZONE['ttl'] = 900
+        ret = {'changes': _TEST_ZONE,
+               'comment': 'Updated zone.',
+               'name': 'salty_zone',
+               'result': True}
+
+        list_zones = MagicMock(return_value=_ZONES)
+        create_zone = MagicMock(return_value='foo')
+        update_zone = MagicMock(return_value=_TEST_ZONE)
+
+        with patch.dict(libcloud_dns.__salt__,
+                        {'libcloud_dns.list_zones': list_zones,
+                         'libcloud_dns.create_zone': create_zone,
+                         'libcloud_dns.update_zone': update_zone}):
+            result = libcloud_dns.zone_present(name='salty_zone', domain='test.com', type='master', profile='test', ttl=900)
+            assert result == ret
+            assert list_zones.called
+            list_zones.assert_called_with('test')
+            assert not create_zone.called
+            assert update_zone.called
+            update_zone.assert_called_with(zone_id='12345', domain='test.com', type='master', ttl=900, extra={}, profile='test')
+
     def test_zone_present_test_mode(self):
         '''
         Assert that a zone is present (that did not exist) in test mode
@@ -381,7 +442,6 @@ class LibcloudDnsModuleTestCase(TestCase, LoaderModuleMockMixin):
                 assert list_zones.called
                 list_zones.assert_called_with('test')
                 assert not delete_zone.called
-
 
     def test_zone_already_absent(self):
         '''

@@ -72,21 +72,21 @@ def state_result(result, message, name, changes=None):
             'changes': changes}
 
 
-def zone_present(name, domain, profile, type=None, ttl=None, extra=None):
+def zone_present(name, profile, domain=None, type=None, ttl=None, extra=None):
     '''
     Ensures a record is present.
 
     :param name: Name for this zone
     :type  name: ``str``
 
-    :param domain: The domain name
+    :param profile: The profile key
+    :type  profile: ``str``
+
+    :param domain: The domain name (defaults to name if not provided)
     :type  domain: ``str``
 
     :param type: Zone type (master / slave), defaults to master
     :type  type: ``str``
-
-    :param profile: The profile key
-    :type  profile: ``str``
 
     :param ttl: TTL for new records. (optional)
     :type  ttl: ``int``
@@ -95,13 +95,28 @@ def zone_present(name, domain, profile, type=None, ttl=None, extra=None):
     :type  extra: ``dict``
     '''
     zones = __salt__['libcloud_dns.list_zones'](profile)
-    if type is None:
-        type = 'master'
-    if not extra:
-        extra = {}
+    type = type or 'master'
+    domain = domain or name
+    extra = extra or {}
     matching_zone = [z for z in zones if z['domain'] == domain]
     if len(matching_zone) > 0:
-        return state_result(True, 'Zone already exists.', name)
+        if ttl == matching_zone[0]['ttl'] and extra == matching_zone[0]['extra']:
+            return state_result(True, 'Zone already exists.', name)
+        else:
+            if __opts__['test']:
+                _changes = {
+                    'id': matching_zone[0]['id'],
+                    'domain': domain,
+                    'type': type,
+                    'ttl': ttl,
+                    'extra': extra
+                }
+                return state_result(True, 'Will update zone.', name, _changes)
+            else:
+                result = __salt__['libcloud_dns.update_zone'](
+                    zone_id=matching_zone[0]['id'],
+                    domain=domain, profile=profile, type=type, ttl=ttl, extra=extra)
+                return state_result(True, 'Updated zone.', name, result)
     else:
         if __opts__['test']:
             _changes = {
@@ -118,19 +133,20 @@ def zone_present(name, domain, profile, type=None, ttl=None, extra=None):
             return state_result(True, 'Created new zone.', name, result)
 
 
-def zone_absent(name, domain, profile):
+def zone_absent(name, profile, domain=None):
     '''
     Ensures a record is absent.
 
     :param name: Name for this zone
     :type  name: ``str``
 
-    :param domain: The domain name
-    :type  domain: ``str``
-
     :param profile: The profile key
     :type  profile: ``str``
+
+    :param domain: The domain name (defaults to name if not provided)
+    :type  domain: ``str``
     '''
+    domain = domain or name
     zones = __salt__['libcloud_dns.list_zones'](profile)
     matching_zone = [z for z in zones if z['domain'] == domain]
     if len(matching_zone) == 0:
