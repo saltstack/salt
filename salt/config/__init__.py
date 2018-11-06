@@ -558,10 +558,10 @@ VALID_OPTS = {
     'worker_threads': int,
 
     # Use a multiprocessing Queue to send messages to the pub server process
-    'worker_use_queue' int,
+    'worker_use_queue': bool,
 
     # Pub server multiprocessing Queue size
-    'worker_queue_size', int
+    'worker_queue_size': int,
 
     # The port for the master to listen to returns on. The minion needs to connect to this port
     # to send returns.
@@ -1393,7 +1393,7 @@ DEFAULT_MASTER_OPTS = {
     'auth_mode': 1,
     'user': _MASTER_USER,
     'worker_threads': 5,
-    'worker_use_queue' False,
+    'worker_use_queue': False,
     'sock_dir': os.path.join(salt.syspaths.SOCK_DIR, 'master'),
     'sock_pool_size': 1,
     'ret_port': 4506,
