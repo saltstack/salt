@@ -289,7 +289,27 @@ class SaltSupportModule(SaltSupport):
     @salt.utils.decorators.external
     def run(self, profile='default', pillar=None, archive=None, output='nested'):
         '''
-        Something
+        Run Salt Support on the minion.
+
+        profile
+            Set available profile name. Default is "default".
+
+        pillar
+            Set available profile from the pillars.
+
+        archive
+            Override archive name. Default is "support". This results to "hostname-support-YYYYMMDD-hhmmss.bz2".
+
+        output
+            Change the default outputter. Default is "nested".
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' support.run
+            salt '*' support.run profile=network
+            salt '*' support.run pillar=something_special
         '''
         class outputswitch(object):
             '''
