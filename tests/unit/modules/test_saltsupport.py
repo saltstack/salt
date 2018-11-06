@@ -231,6 +231,35 @@ professor: Farnsworth
             support.sync('group-name', all=True)
         assert 'No archives found to transfer' in str(err)
 
+    @patch('tempfile.mkstemp', MagicMock(return_value=(0, 'dummy')))
+    @patch('os.path.exists', MagicMock(return_value=True))
+    @patch('os.close', MagicMock())
+    @patch('os.write', MagicMock())
+    @patch('os.unlink', MagicMock())
+    @patch('salt.modules.saltsupport.__salt__', {'rsync.rsync': MagicMock(return_value={})})
+    def test_sync_archives(self):
+        '''
+        Test sync archives
+        :return:
+        '''
+        support = saltsupport.SaltSupportModule()
+        support.archives = MagicMock(return_value=['/mnt/storage/one-support-000-000.bz2',
+                                                   '/mnt/storage/two-support-111-111.bz2',
+                                                   '/mnt/storage/three-support-222-222.bz2'])
+        out = support.sync('group-name', host='buzz', all=True, move=False)
+        assert 'files' in out
+        for arc_name in out['files']:
+            assert out['files'][arc_name] == 'copied'
+        assert saltsupport.os.unlink.call_count == 1
+        assert saltsupport.os.unlink.call_args_list[0][0][0] == 'dummy'
+        calls = []
+        for call in saltsupport.os.write.call_args_list:
+            assert len(call) == 2
+            calls.append(call[0])
+        assert calls == [(0, b'one-support-000-000.bz2'),
+                         (0, b'\n'), (0, b'two-support-111-111.bz2'), (0, b'\n'),
+                         (0, b'three-support-222-222.bz2'), (0, b'\n')]
+
 
 @skipIf(not bool(pytest), 'Pytest required')
 @skipIf(NO_MOCK, NO_MOCK_REASON)
