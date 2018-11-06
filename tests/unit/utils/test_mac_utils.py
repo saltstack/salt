@@ -5,7 +5,8 @@ mac_utils tests
 
 # Import python libs
 from __future__ import absolute_import, unicode_literals
-import os
+import plistlib
+import xml.parsers.expat
 
 # Import Salt Testing Libs
 from tests.support.unit import TestCase, skipIf
@@ -339,7 +340,6 @@ class MacUtilsTestCase(TestCase, LoaderModuleMockMixin):
 
         if six.PY2:
             mock_run.assert_has_calls(calls, any_order=True)
-
 
     @patch('salt.utils.path.os_walk')
     @patch('os.path.exists')
