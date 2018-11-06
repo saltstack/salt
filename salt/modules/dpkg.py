@@ -341,7 +341,7 @@ def _get_pkg_install_time(pkg, arch=None):
 
     :return:
     '''
-    iso_time = None
+    iso_time = iso_time_t = None
     loc_root = '/var/lib/dpkg/info'
     if pkg is not None:
         locations = []
@@ -351,8 +351,8 @@ def _get_pkg_install_time(pkg, arch=None):
         locations.append(os.path.join(loc_root, '{0}.list'.format(pkg)))
         for location in locations:
             try:
-                iso_time = datetime.datetime.utcfromtimestamp(
-                            int(os.path.getmtime(location))).isoformat() + 'Z'
+                iso_time_t = int(os.path.getmtime(location))
+                iso_time = datetime.datetime.utcfromtimestamp(iso_time_t).isoformat() + 'Z'
                 break
             except OSError:
                 pass
@@ -360,7 +360,7 @@ def _get_pkg_install_time(pkg, arch=None):
         if iso_time is None:
             log.debug('Unable to get package installation time for package "%s".', pkg)
 
-    return iso_time
+    return iso_time, iso_time_t
 
 
 def _get_pkg_ds_avail():
