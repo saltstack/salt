@@ -18,6 +18,7 @@ from random import randint
 # Import Salt Libs
 import salt.auth
 import salt.crypt
+import salt.log.setup
 import salt.utils.event
 import salt.utils.files
 import salt.utils.minions
@@ -767,11 +768,15 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
     def connect(self):
         return tornado.gen.sleep(5)
 
-    def _publish_daemon(self):
+    def _publish_daemon(self, log_queue=None):
         '''
         Bind to the interface specified in the configuration file
         '''
         salt.utils.process.appendproctitle(self.__class__.__name__)
+        if log_queue:
+            salt.log.setup.set_multiprocessing_logging_queue(log_queue)
+            salt.log.setup.setup_multiprocessing_logging(log_queue)
+
         # Set up the context
         context = zmq.Context(1)
         # Prepare minion publish socket
@@ -863,7 +868,7 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
             if context.closed is False:
                 context.term()
 
-    def pre_fork(self, process_manager):
+    def pre_fork(self, process_manager, kwargs=None):
         '''
         Do anything necessary pre-fork. Since this is on the master side this will
         primarily be used to create IPC channels and create our daemon process to
@@ -871,7 +876,7 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
 
         :param func process_manager: A ProcessManager, from salt.utils.process.ProcessManager
         '''
-        process_manager.add_process(self._publish_daemon)
+        process_manager.add_process(self._publish_daemon, kwargs=kwargs)
 
     def publish(self, load):
         '''
