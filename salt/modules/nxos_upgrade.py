@@ -58,7 +58,7 @@ import logging
 import re
 import ast
 import time
-from six import string_types
+from salt.ext.six import string_types
 
 # Import Salt libs
 from salt.exceptions import (NxosError, CommandExecutionError)
@@ -191,6 +191,13 @@ def upgrade(system_image, kickstart_image=None, issu=True, **kwargs):
             if impact['installing']:
                 log.info('Another show impact in progress... wait and retry')
                 time.sleep(30)
+                continue
+            # If we are upgrading from a system running a separate system and
+            # kickstart image to a combined image or vice versa then the impact
+            # check will return a syntax error as it's not supported.
+            # Skip the impact check in this case and attempt the upgrade.
+            if impact['invalid_command']:
+                impact = False
                 continue
             log.info('Impact data gathered:\n{}'.format(impact))
 

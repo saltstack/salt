@@ -25,7 +25,7 @@ import os
 import socket
 import re
 import collections
-from six import string_types
+from salt.ext.six import string_types
 from salt.exceptions import (NxosClientError, NxosError,
                              NxosRequestNotSupported, CommandExecutionError)
 
