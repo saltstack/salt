@@ -2771,6 +2771,10 @@ def info_installed(*names, **kwargs):
     '''
     kwargs = salt.utils.args.clean_kwargs(**kwargs)
     failhard = kwargs.pop('failhard', True)
+    kwargs.pop('errors', None)  # Only for compatibility with RPM
+    attr = kwargs.pop('attr', None)
+    all_versions = kwargs.pop('all_versions', False)
+
     if kwargs:
         salt.utils.args.invalid_kwargs(kwargs)
 
