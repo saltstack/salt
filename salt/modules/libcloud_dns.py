@@ -328,8 +328,8 @@ def update_record(name, record_id, zone_id, type, data, profile, extra=None):
     '''
     conn = _get_driver(profile=profile)
     record_type = _string_to_record_type(type)
-    record=get_record(zone_id=zone_id, record_id=record_id, profile=profile)
-    return _simple_record(conn.create_record(record=record, name=name,
+    record = conn.get_record(zone_id, record_id)
+    return _simple_record(conn.update_record(record=record, name=name,
                                              type=record_type, data=data, extra=extra))
 
 
