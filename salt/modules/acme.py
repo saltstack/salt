@@ -235,7 +235,7 @@ def cert(name,
         result = True
     else:
         comment = 'Certificate {0} obtained'.format(name)
-        resul = True
+        result = True
 
     ret = {'comment': comment, 'not_after': expires(name), 'changes': {}, 'result': result}
     ret, _ = __salt__['file.check_perms'](_cert_file(name, 'privkey'),
