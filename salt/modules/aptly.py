@@ -61,7 +61,7 @@ def _convert_to_closest_type(value):
     '''
     value = salt.utils.stringutils.to_bool(value.strip())
 
-    if type(value) == type(True):
+    if isinstance(value, bool):
         return value
 
     return salt.utils.stringutils.to_none(salt.utils.stringutils.to_num(value))
