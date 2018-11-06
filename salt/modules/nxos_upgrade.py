@@ -207,6 +207,7 @@ def upgrade(system_image, kickstart_image=None, issu=True, **kwargs):
                 return impact
             # Requested ISSU but ISSU is not possible
             if issu and not impact['upgrade_non_disruptive']:
+                impact['error_data'] = impact['upgrade_data']
                 return impact
             # Impact data indicates a failure and no module_data collected
             if not impact['succeeded'] and not impact['module_data']:
