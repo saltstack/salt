@@ -307,9 +307,10 @@ def _get_pkg_info(*packages, **kwargs):
             key, value = pkg_info_line.split(":", 1)
             if value:
                 pkg_data[key] = value
-        install_date = _get_pkg_install_time(pkg_data.get('package'), pkg_data.get('architecture'))
+        install_date, install_date_t = _get_pkg_install_time(pkg_data.get('package'), pkg_data.get('architecture'))
         if install_date:
             pkg_data['install_date'] = install_date
+            pkg_data['install_date_t'] = install_date_t  # Unix ticks
         pkg_data['description'] = pkg_descr.split(":", 1)[-1]
         ret.append(pkg_data)
 
