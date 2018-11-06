@@ -343,6 +343,77 @@ class MacUtilsTestCase(TestCase, LoaderModuleMockMixin):
             mock_run.assert_has_calls(calls, any_order=True)
 
 
+    @patch('salt.utils.path.os_walk')
+    @patch('os.path.exists')
+    def test_available_services_invalid_file(self, mock_exists, mock_os_walk):
+        '''
+        test available_services excludes invalid files.
+
+        The py3 plistlib raises an InvalidFileException when a plist
+        file cannot be parsed. This test only asserts things for py3.
+        '''
+        if six.PY3:
+            results = {'/Library/LaunchAgents': ['com.apple.lla1.plist']}
+            mock_os_walk.side_effect = _get_walk_side_effects(results)
+            mock_exists.return_value = True
+
+            plists = [{'Label': 'com.apple.lla1'}]
+
+            mock_load = MagicMock()
+            mock_load.side_effect = plistlib.InvalidFileException
+            with patch('salt.utils.files.fopen', mock_open()):
+                with patch('plistlib.load', mock_load):
+                    ret = mac_utils._available_services()
+
+            self.assertEqual(len(ret), 0)
+
+    @patch('salt.utils.mac_utils.__salt__')
+    @patch('plistlib.readPlist')
+    @patch('salt.utils.path.os_walk')
+    @patch('os.path.exists')
+    def test_available_services_expat_error(self,
+                                            mock_exists,
+                                            mock_os_walk,
+                                            mock_read_plist,
+                                            mock_run):
+        '''
+        test available_services excludes files with expat errors.
+
+        Poorly formed XML will raise an ExpatError on py2. It will
+        also be raised by some almost-correct XML on py3.
+        '''
+        results = {'/Library/LaunchAgents': ['com.apple.lla1.plist']}
+        mock_os_walk.side_effect = _get_walk_side_effects(results)
+        mock_exists.return_value = True
+
+        if six.PY3:
+            mock_load = MagicMock()
+            mock_load.side_effect = xml.parsers.expat.ExpatError
+            with patch('salt.utils.files.fopen', mock_open()):
+                with patch('plistlib.load', mock_load):
+                    ret = mac_utils._available_services()
+        else:
+            attrs = {'cmd.run': MagicMock()}
+
+            def getitem(name):
+                return attrs[name]
+
+            mock_run.__getitem__.side_effect = getitem
+            mock_run.configure_mock(**attrs)
+            cmd = '/usr/bin/plutil -convert xml1 -o - -- "{}"'.format(
+                '/Library/LaunchAgents/com.apple.lla1.plist')
+            calls = [call.cmd.run(cmd)]
+
+            mock_raise_expat_error = MagicMock(
+                side_effect=xml.parsers.expat.ExpatError)
+
+            with patch('plistlib.readPlist', mock_raise_expat_error):
+                with patch('plistlib.readPlistFromString', mock_raise_expat_error):
+                    ret = mac_utils._available_services()
+
+            mock_run.assert_has_calls(calls, any_order=True)
+
+        self.assertEqual(len(ret), 0)
 
 
 def _get_walk_side_effects(results):
