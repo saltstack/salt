@@ -100,9 +100,12 @@ def zone_present(name, profile, domain=None, type=None, ttl=None, extra=None):
     extra = extra or {}
     matching_zone = [z for z in zones if z['domain'] == domain]
     if len(matching_zone) > 0:
-        if ttl == matching_zone[0]['ttl'] and extra == matching_zone[0]['extra']:
-            return state_result(True, 'Zone already exists.', name)
-        else:
+        has_changes = False
+        if ttl and ttl != matching_zone[0]['ttl']:
+            has_changes = True
+        if extra and extra != matching_zone[0]['extra']:
+            has_changes = True
+        if has_changes:
             if __opts__['test']:
                 _changes = {
                     'id': matching_zone[0]['id'],
@@ -117,6 +120,8 @@ def zone_present(name, profile, domain=None, type=None, ttl=None, extra=None):
                     zone_id=matching_zone[0]['id'],
                     domain=domain, profile=profile, type=type, ttl=ttl, extra=extra)
                 return state_result(True, 'Updated zone.', name, result)
+        else:
+            return state_result(True, 'Zone already exists.', name)
     else:
         if __opts__['test']:
             _changes = {
