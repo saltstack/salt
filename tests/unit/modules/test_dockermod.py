@@ -821,15 +821,15 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
                 'container1': {'Config': {},
                                'HostConfig': {
                                    'Ulimits': [
-                                       {u'Hard': -1, u'Soft': -1, u'Name': u'core'},
-                                       {u'Hard': 65536, u'Soft': 65536, u'Name': u'nofile'}
+                                       {'Hard': -1, 'Soft': -1, 'Name': 'core'},
+                                       {'Hard': 65536, 'Soft': 65536, 'Name': 'nofile'}
                                    ]
                                }},
                 'container2': {'Config': {},
                                'HostConfig': {
                                    'Ulimits': [
-                                       {u'Hard': 65536, u'Soft': 65536, u'Name': u'nofile'},
-                                       {u'Hard': -1, u'Soft': -1, u'Name': u'core'}
+                                       {'Hard': 65536, 'Soft': 65536, 'Name': 'nofile'},
+                                       {'Hard': -1, 'Soft': -1, 'Name': 'core'}
                                    ]
                                }},
             }[id_]
