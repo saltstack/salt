@@ -63,6 +63,23 @@ def image_running(name, system_image, kickstart_image=None, issu=True, **kwargs)
     timeout
         Timeout in seconds for long running 'install all' upgrade command.
         Default: 900
+
+    Examples:
+
+    .. code-block:: yaml
+
+        upgrade_software_image_n9k:
+          nxos.image_running:
+            - name: Ensure nxos.7.0.3.I7.5a.bin is running
+            - system_image: nxos.7.0.3.I7.5a.bin
+            - issu: True
+
+        upgrade_software_image_n7k:
+          nxos.image_running:
+            - name: Ensure n7000-s2-kickstart.8.0.1.bin is running
+            - kickstart_image: n7000-s2-kickstart.8.0.1.bin
+            - system_image: n7000-s2-dk9.8.0.1.bin
+            - issu: False
     '''
     ret = {'name': name,
            'result': False,
