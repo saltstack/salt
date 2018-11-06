@@ -168,14 +168,12 @@ import logging
 import multiprocessing
 import copy
 import re
-import ast
 
 # Import Salt libs
 import salt.utils.nxos
 from salt.utils.vt_helper import SSHConnection
 from salt.utils.vt import TerminalException
-from salt.exceptions import (NxosClientError, NxosCliError, NxosError,
-                             NxosRequestNotSupported, CommandExecutionError)
+from salt.exceptions import (NxosCliError, CommandExecutionError)
 
 log = logging.getLogger(__file__)
 

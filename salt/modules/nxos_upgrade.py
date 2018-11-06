@@ -55,18 +55,13 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python stdlib
 import logging
-import difflib
 import re
 import ast
 import time
+from six import string_types
 
 # Import Salt libs
-from salt.utils.pycrypto import gen_hash, secure_password
-import salt.utils.platform
-import salt.utils.nxos
-from salt.ext import six
-from salt.exceptions import (NxosClientError, NxosCliError, NxosError,
-                             NxosRequestNotSupported, CommandExecutionError)
+from salt.exceptions import (NxosError, CommandExecutionError)
 
 __virtualname__ = 'nxos'
 __virtual_aliases__ = ('nxos_upgrade',)
@@ -156,8 +151,8 @@ def upgrade(system_image, kickstart_image=None, issu=True, **kwargs):
         Default: None
 
     issu
-        Set this option to True when an in service software service or
-        non-disruptive upgrade is needed. The upgrade will abort if issu is
+        Set this option to True when an In Service Software Upgrade or
+        non-disruptive upgrade is required. The upgrade will abort if issu is
         not possible.
         Default: True
 
@@ -311,7 +306,7 @@ def _parse_upgrade_data(data):
     upgrade_result['invalid_command'] = False
 
     # Error handling
-    if isinstance(data, basestring) and re.search('Code: 500', data):
+    if isinstance(data, string_types) and re.search('Code: 500', data):
         log.info('Detected backend processing error')
         upgrade_result['error_data'] = data
         upgrade_result['backend_processing_error'] = True
