@@ -732,6 +732,7 @@ class State(object):
             except AttributeError:
                 pillar_enc = six.text_type(pillar_enc).lower()
         self._pillar_enc = pillar_enc
+        log.debug('Gathering pillar data for state run')
         if initial_pillar and not self._pillar_override:
             self.opts['pillar'] = initial_pillar
         else:
@@ -745,6 +746,7 @@ class State(object):
                     self.opts.get('pillar_source_merging_strategy', 'smart'),
                     self.opts.get('renderer', 'yaml'),
                     self.opts.get('pillar_merge_lists', False))
+        log.debug('Finished gathering pillar data for state run')
         self.state_con = context or {}
         self.load_modules()
         self.active = set()
@@ -2704,6 +2706,7 @@ class State(object):
             else:
                 running[tag] = self.call(low, chunks, running)
         if tag in running:
+            running[tag]['__saltfunc__'] = '{0}.{1}'.format(low['state'], low['fun'])
             self.event(running[tag], len(chunks), fire_event=low.get('fire_event'))
         return running
 

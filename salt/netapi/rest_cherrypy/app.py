@@ -5,6 +5,14 @@ A REST API for Salt
 
 .. py:currentmodule:: salt.netapi.rest_cherrypy.app
 
+.. note::
+
+    This module is Experimental on Windows platforms and support limited
+    configurations:
+     - doesn't support PAM authentication (i.e. external_auth: auto)
+     - doesn't support SSL (i.e. disable_ssl: True)
+
+
 :depends:
     - CherryPy Python module.
 
@@ -1167,6 +1175,20 @@ class LowDataAdapter(object):
             if token:
                 chunk['token'] = token
 
+            if 'token' in chunk:
+                # Make sure that auth token is hex
+                try:
+                    int(chunk['token'], 16)
+                except (TypeError, ValueError):
+                    raise cherrypy.HTTPError(401, 'Invalid token')
+
+            if 'token' in chunk:
+                # Make sure that auth token is hex
+                try:
+                    int(chunk['token'], 16)
+                except (TypeError, ValueError):
+                    raise cherrypy.HTTPError(401, 'Invalid token')
+
             if client:
                 chunk['client'] = client
 
@@ -1708,16 +1730,21 @@ class Keys(LowDataAdapter):
         priv_key_file = tarfile.TarInfo('minion.pem')
         priv_key_file.size = len(priv_key)
 
-        fileobj = six.StringIO()
+        fileobj = BytesIO()
         tarball = tarfile.open(fileobj=fileobj, mode='w')
-        tarball.addfile(pub_key_file, six.StringIO(pub_key))
-        tarball.addfile(priv_key_file, six.StringIO(priv_key))
+
+        if six.PY3:
+            pub_key = pub_key.encode(__salt_system_encoding__)
+            priv_key = priv_key.encode(__salt_system_encoding__)
+
+        tarball.addfile(pub_key_file, BytesIO(pub_key))
+        tarball.addfile(priv_key_file, BytesIO(priv_key))
         tarball.close()
 
         headers = cherrypy.response.headers
         headers['Content-Disposition'] = 'attachment; filename="saltkeys-{0}.tar"'.format(lowstate[0]['id_'])
         headers['Content-Type'] = 'application/x-tar'
-        headers['Content-Length'] = fileobj.len
+        headers['Content-Length'] = len(fileobj.getvalue())
         headers['Cache-Control'] = 'no-cache'
 
         fileobj.seek(0)
@@ -2167,7 +2194,11 @@ class Events(object):
 
         :return bool: True if valid, False if not valid.
         '''
-        if auth_token is None:
+        # Make sure that auth token is hex. If it's None, or something other
+        # than hex, this will raise a ValueError.
+        try:
+            int(auth_token, 16)
+        except (TypeError, ValueError):
             return False
 
         # First check if the given token is in our session table; if so it's a
