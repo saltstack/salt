@@ -530,7 +530,10 @@ class Master(SMaster):
             pub_channels = []
             log.info('Creating master publisher process')
             log_queue = salt.log.setup.get_multiprocessing_logging_queue()
-            msg_queue = multiprocessing.Queue(1000)
+            if self.opts['worker_use_queue']:
+                msg_queue = multiprocessing.Queue(self.opts.get('worker_queue_size', 1000))
+            else:
+                msg_queue = None
             for transport, opts in iter_transport_opts(self.opts):
                 chan = salt.transport.server.PubServerChannel.factory(opts)
                 chan.pre_fork(
@@ -689,7 +692,8 @@ class ReqServer(SignalHandlingMultiprocessingProcess):
     def __setstate__(self, state):
         self._is_child = True
         self.__init__(state['opts'], state['key'], state['mkey'],
-                      log_queue=state['log_queue'], msg_queue=state['msg_queue'], secrets=state['secrets'])
+                      log_queue=state['log_queue'], msg_queue=state['msg_queue'],
+                      secrets=state['secrets'])
 
     def __getstate__(self):
         return {'opts': self.opts,
