@@ -383,7 +383,7 @@ class GitPythonMixin(object):
         self.assertEqual(
             ret,
             {'branch': 'master',
-             'motd': u'The force will be with you. Always.',
+             'motd': 'The force will be with you. Always.',
              'mylist': ['master'],
              'mydict': {'master': True,
                         'nested_list': ['master'],
@@ -1256,7 +1256,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         self.assertEqual(
             ret,
             {'branch': 'master',
-             'motd': u'The force will be with you. Always.',
+             'motd': 'The force will be with you. Always.',
              'mylist': ['master'],
              'mydict': {'master': True,
                         'nested_list': ['master'],
@@ -1535,7 +1535,7 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
         self.assertEqual(
             ret,
             {'branch': 'master',
-             'motd': u'The force will be with you. Always.',
+             'motd': 'The force will be with you. Always.',
              'mylist': ['master'],
              'mydict': {'master': True,
                         'nested_list': ['master'],
@@ -2025,7 +2025,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
         self.assertEqual(
             ret,
             {'branch': 'master',
-             'motd': u'The force will be with you. Always.',
+             'motd': 'The force will be with you. Always.',
              'mylist': ['master'],
              'mydict': {'master': True,
                         'nested_list': ['master'],
