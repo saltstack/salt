@@ -267,7 +267,7 @@ professor: Farnsworth
         Test run support
         :return:
         '''
-        saltsupport.SupportDataCollector().archive_path = 'dummy'
+        saltsupport.SupportDataCollector(None, None).archive_path = 'dummy'
         support = saltsupport.SaltSupportModule()
         support.collect_internal_data = MagicMock()
         support.collect_local_data = MagicMock()
