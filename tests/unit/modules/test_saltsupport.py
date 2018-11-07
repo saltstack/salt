@@ -261,12 +261,12 @@ professor: Farnsworth
                          (0, b'three-support-222-222.bz2'), (0, b'\n')]
 
     @patch('salt.modules.saltsupport.__pillar__', {})
+    @patch('salt.modules.saltsupport.SupportDataCollector', MagicMock())
     def test_run_support(self):
         '''
         Test run support
         :return:
         '''
-        saltsupport.SupportDataCollector = MagicMock()
         saltsupport.SupportDataCollector().archive_path = 'dummy'
         support = saltsupport.SaltSupportModule()
         support.collect_internal_data = MagicMock()
