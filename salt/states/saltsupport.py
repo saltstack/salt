@@ -44,6 +44,7 @@ import sys
 import salt.fileclient
 import salt.utils.decorators.path
 import salt.exceptions
+import salt.utils.odict
 
 log = logging.getLogger(__name__)
 __virtualname__ = 'support'
@@ -53,6 +54,8 @@ class SaltSupportState(object):
     '''
     Salt-support.
     '''
+    EXPORTED = ['collected', 'taken']
+
     def get_kwargs(self, data):
         kwargs = {}
         for keyset in data:
@@ -60,7 +63,7 @@ class SaltSupportState(object):
 
         return kwargs
 
-    def __call__(self, *args, **kwargs):
+    def __call__(self, state):
         '''
         Call support.
 
@@ -68,20 +71,22 @@ class SaltSupportState(object):
         :param kwargs:
         :return:
         '''
-        allowed_functions = ['collected', 'taken']
         ret = {
-            'name': kwargs.pop('name'),
+            'name': state.pop('name'),
             'changes': {},
             'result': True,
             'comment': '',
         }
 
         out = {}
+        functions = ['Functions:']
         try:
-            for ref_func, ref_kwargs in kwargs.items():
-                if ref_func not in allowed_functions:
+            for ref_func, ref_kwargs in state.items():
+                if ref_func not in self.EXPORTED:
                     raise salt.exceptions.SaltInvocationError('Function {} is not found'.format(ref_func))
                 out[ref_func] = getattr(self, ref_func)(**self.get_kwargs(ref_kwargs))
+                functions.append('  - {}'.format(ref_func))
+            ret['comment'] = '\n'.join(functions)
         except Exception as ex:
             ret['comment'] = str(ex)
             ret['result'] = False
