@@ -42,8 +42,6 @@ import sys
 
 # Import salt modules
 import salt.fileclient
-import salt.ext.six as six
-from salt.utils.decorators import depends
 import salt.utils.decorators.path
 import salt.exceptions
 
