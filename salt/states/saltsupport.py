@@ -169,6 +169,24 @@ class SaltSupportState(object):
         return ret
 
 
+def __call__(*args, **kwargs):
+    '''
+    SLS single-ID syntax processing.
+
+    module:
+        This module reference, equals to sys.modules[__name__]
+
+    state:
+        Compiled state in preserved order. The function supposed to look
+        at first level array of functions.
+
+    :param cdata:
+    :param kwargs:
+    :return:
+    '''
+    return SaltSupportState()(kwargs.get('state', {}))
+
+
 def __virtual__():
     '''
     Salt Support state
