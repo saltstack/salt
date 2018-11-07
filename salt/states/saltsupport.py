@@ -38,7 +38,6 @@ from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
 import tempfile
-import sys
 
 # Import salt modules
 import salt.fileclient
