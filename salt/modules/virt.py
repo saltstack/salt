@@ -928,7 +928,8 @@ def _fill_disk_filename(vm_name, disk, hypervisor, **kwargs):
         else:
             if not base_dir.startswith('/'):
                 # The pool seems not to be a path, lookup for pool infos
-                pool = pool_info(base_dir, **kwargs)
+                infos = pool_info(base_dir, **kwargs)
+                pool = infos[base_dir] if base_dir in infos else None
                 if not pool or not pool['target_path'] or pool['target_path'].startswith('/dev'):
                     raise CommandExecutionError(
                                 'Unable to create new disk {0}, specified pool {1} does not exist '
