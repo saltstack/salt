@@ -169,6 +169,9 @@ class SaltSupportState(object):
         return ret
 
 
+_support_state = SaltSupportState()
+
+
 def __call__(*args, **kwargs):
     '''
     SLS single-ID syntax processing.
@@ -184,12 +187,21 @@ def __call__(*args, **kwargs):
     :param kwargs:
     :return:
     '''
-    return SaltSupportState()(kwargs.get('state', {}))
+    return _support_state(kwargs.get('state', {}))
+
+
+def taken(name, profile='default', pillar=None, archive=None, output='nested'):
+    return _support_state.taken(profile=profile, pillar=pillar,
+                                archive=archive, output=output)
+
+
+def collected(name, group, filename=None, host=None, location=None, move=True, all=True):
+    return _support_state.collected(group=group, filename=filename,
+                                    host=host, location=location, move=move, all=all)
 
 
 def __virtual__():
     '''
     Salt Support state
     '''
-    setattr(sys.modules[__name__], '__call__', lambda **kwargs: SaltSupportState()(**kwargs))   # pylint: disable=W0108
     return __virtualname__
