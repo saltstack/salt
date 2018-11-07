@@ -102,8 +102,11 @@ class SaltSupportState(object):
             destination = os.path.join(location, group)
             if os.path.exists(destination) and not os.path.isdir(destination):
                 raise salt.exceptions.SaltException('Destination "{}" should be directory!'.format(destination))
-            os.makedirs(destination, exist_ok=True)
-            log.debug('Created destination directory for archives: %s', destination)
+            if not os.path.exists(destination):
+                os.makedirs(destination)
+                log.debug('Created destination directory for archives: %s', destination)
+            else:
+                log.debug('Archives destination directory %s already exists', destination)
         except OSError as err:
             log.error(err)
 
