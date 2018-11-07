@@ -47,7 +47,6 @@ def installed(name, source):
         'changes': {},
         'result': False,
         'comment': '',
-        'pchanges': {},
         }
 
     # Start with basic error-checking. Do all the passed parameters make sense
@@ -68,7 +67,7 @@ def installed(name, source):
     # in ``test=true`` mode.
     if __opts__['test'] is True:
         ret['comment'] = 'The KB "{0}" will be installed.'.format(name)
-        ret['pchanges'] = {
+        ret['changes'] = {
             'old': current_state,
             'new': True,
         }
