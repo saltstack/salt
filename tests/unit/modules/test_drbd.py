@@ -66,15 +66,14 @@ class DrbdTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(drbd.__salt__, {'cmd.run': mock}):
             self.assertDictEqual(drbd.overview(), ret)
 
-
     def test_status(self):
         '''
         Test if it shows status of the DRBD resources via drbdadm
         '''
         ret = [{'local role': 'Primary',
                 'local volumes': [{'disk': 'UpToDate'}],
-                'peer nodes': [{'peer volumes': [{'done': '96.47', \
-                   'peer-disk': 'Inconsistent', 'replication': 'SyncSource'}],
+                'peer nodes': [{'peer volumes': [{'done': '96.47',
+                    'peer-disk': 'Inconsistent', 'replication': 'SyncSource'}],
                 'peernode name': 'opensuse-node2',
                 'role': 'Secondary'}],
                 'resource name': 'single'}]
