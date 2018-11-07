@@ -19,6 +19,8 @@
 
 Module to run salt-support within Salt.
 '''
+# pylint: disable=W0231,W0221
+
 from __future__ import unicode_literals, print_function, absolute_import
 
 import tempfile
@@ -145,7 +147,7 @@ class SaltSupportModule(SaltSupport):
         arc_files = []
         tmpdir = tempfile.gettempdir()
         for filename in os.listdir(tmpdir):
-            mtc = re.match('\w+-\w+-\d+-\d+\.bz2', filename)
+            mtc = re.match(r'\w+-\w+-\d+-\d+\.bz2', filename)
             if mtc and len(filename) == mtc.span()[-1]:
                 arc_files.append(os.path.join(tmpdir, filename))
 
