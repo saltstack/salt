@@ -953,6 +953,9 @@ def compare_containers(first, second, ignore=None):
                 if item == 'Ulimits':
                     val1 = _ulimit_sort(val1)
                     val2 = _ulimit_sort(val2)
+                if item == 'Env':
+                    val1 = sorted(val1)
+                    val2 = sorted(val2)
                 if val1 != val2:
                     ret.setdefault(conf_dict, {})[item] = {
                         'old': val1, 'new': val2}
@@ -982,6 +985,9 @@ def compare_containers(first, second, ignore=None):
                 if item == 'Ulimits':
                     val1 = _ulimit_sort(val1)
                     val2 = _ulimit_sort(val2)
+                if item == 'Env':
+                    val1 = sorted(val1)
+                    val2 = sorted(val2)
                 if val1 != val2:
                     ret.setdefault(conf_dict, {})[item] = {
                         'old': val1, 'new': val2}

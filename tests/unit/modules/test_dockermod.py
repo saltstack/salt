@@ -822,15 +822,44 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
                 'container1': {'Config': {},
                                'HostConfig': {
                                    'Ulimits': [
-                                       {u'Hard': -1, u'Soft': -1, u'Name': u'core'},
-                                       {u'Hard': 65536, u'Soft': 65536, u'Name': u'nofile'}
+                                       {'Hard': -1, 'Soft': -1, 'Name': 'core'},
+                                       {'Hard': 65536, 'Soft': 65536, 'Name': 'nofile'}
                                    ]
                                }},
                 'container2': {'Config': {},
                                'HostConfig': {
                                    'Ulimits': [
-                                       {u'Hard': 65536, u'Soft': 65536, u'Name': u'nofile'},
-                                       {u'Hard': -1, u'Soft': -1, u'Name': u'core'}
+                                       {'Hard': 65536, 'Soft': 65536, 'Name': 'nofile'},
+                                       {'Hard': -1, 'Soft': -1, 'Name': 'core'}
+                                   ]
+                               }},
+            }[id_]
+
+        inspect_container_mock = MagicMock(side_effect=_inspect_container_effect)
+
+        with patch.object(docker_mod, 'inspect_container', inspect_container_mock):
+            ret = docker_mod.compare_container('container1', 'container2')
+            self.assertEqual(ret, {})
+
+    def test_compare_container_env_order(self):
+        '''
+        Test comparing two containers when the order of the Env HostConfig
+        values are different, but the values are the same.
+        '''
+        def _inspect_container_effect(id_):
+            return {
+                'container1': {'Config': {},
+                               'HostConfig': {
+                                   'Env': [
+                                       'FOO=bar',
+                                       'HELLO=world',
+                                   ]
+                               }},
+                'container2': {'Config': {},
+                               'HostConfig': {
+                                   'Env': [
+                                       'HELLO=world',
+                                       'FOO=bar',
                                    ]
                                }},
             }[id_]
