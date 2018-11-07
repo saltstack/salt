@@ -1942,7 +1942,7 @@ class State(object):
                         ret = self.call_parallel(cdata, low)
                     else:
                         self.format_slots(cdata)
-                        if cdata['full'].endswith('.__call__'):
+                        if cdata['full'].split('.')[-1] == '__call__':
                             # __call__ requires OrderedDict to preserve state order
                             # kwargs are also invalid overall
                             ret = self.states[cdata['full']](cdata['args'], module=None, state=cdata['kwargs'])
