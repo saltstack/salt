@@ -636,32 +636,32 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             self.assertTrue(len(root.findall('.//interface')) == 2)
 
     @patch('salt.modules.virt.pool_info',
-           return_value={'target_path': os.path.join(salt.syspaths.ROOT_DIR,
-                                                     'pools',
-                                                     'default')})
+           return_value={'mypool': {'target_path': os.path.join(salt.syspaths.ROOT_DIR, 'pools', 'mypool')}})
     def test_disk_profile_kvm_disk_pool(self, mock_poolinfo):
         '''
         Test virt._gen_xml(), KVM case with pools defined.
         '''
         disks = {
             'noeffect': [
-                {'first': {'size': 8192, 'pool': 'default'}},
+                {'first': {'size': 8192, 'pool': 'mypool'}},
                 {'second': {'size': 4096}}
             ]
         }
+
+        # pylint: disable=no-member
         with patch.dict(virt.__salt__, {'config.get': MagicMock(side_effect=[
                 disks,
                 os.path.join(salt.syspaths.ROOT_DIR, 'default', 'path')])}):
+
             diskp = virt._disk_profile('noeffect', 'kvm', [], 'hello')
 
-            pools_path = os.path.join(
-                salt.syspaths.ROOT_DIR, 'pools', 'default') + os.sep
-            default_path = os.path.join(
-                salt.syspaths.ROOT_DIR, 'default', 'path') + os.sep
+            pools_path = os.path.join(salt.syspaths.ROOT_DIR, 'pools', 'mypool') + os.sep
+            default_path = os.path.join(salt.syspaths.ROOT_DIR, 'default', 'path') + os.sep
 
             self.assertEqual(len(diskp), 2)
             self.assertTrue(diskp[0]['source_file'].startswith(pools_path))
             self.assertTrue(diskp[1]['source_file'].startswith(default_path))
+        # pylint: enable=no-member
 
     def test_disk_profile_kvm_disk_external_image(self):
         '''
