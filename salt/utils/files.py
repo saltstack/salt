@@ -9,6 +9,7 @@ from __future__ import absolute_import, unicode_literals, print_function
 import codecs
 import contextlib
 import errno
+import io
 import logging
 import os
 import re
@@ -349,9 +350,6 @@ def fopen(*args, **kwargs):
                 )
         except IndexError:
             pass
-    if six.PY2:
-        # encoding is not available in Py2 and will cause an error later if passed
-        kwargs.pop('encoding', False)
     binary = None
     # ensure 'binary' mode is always used on Windows in Python 2
     if ((six.PY2 and salt.utils.platform.is_windows() and 'binary' not in kwargs) or
@@ -387,7 +385,10 @@ def fopen(*args, **kwargs):
     if six.PY3 and not binary and not kwargs.get('newline', None):
         kwargs['newline'] = ''
 
-    f_handle = open(*args, **kwargs)  # pylint: disable=resource-leakage
+    if kwargs.pop('use_io_open', True):
+        f_handle = io.open(*args, **kwargs)  # pylint: disable=resource-leakage
+    else:
+        f_handle = open(*args, **kwargs)  # pylint: disable=resource-leakage
 
     if is_fcntl_available():
         # modify the file descriptor on systems with fcntl

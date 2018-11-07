@@ -1535,7 +1535,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                         # pylint: enable=no-member
                         sys.modules[mod_namespace] = mod
                     else:
-                        with salt.utils.files.fopen(fpath, desc[1]) as fn_:
+                        with salt.utils.files.fopen(fpath, desc[1], use_io_open=False) as fn_:
                             mod = imp.load_module(mod_namespace, fn_, fpath, desc)
         except IOError:
             raise
