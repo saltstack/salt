@@ -946,9 +946,14 @@ class Schedule(object):
                 log.error(data['_error'])
                 return
 
-            if isinstance(data['when'], list):
+            if not isinstance(data['when'], list):
+                _when_data = [data['when']]
+            else:
+                _when_data = data['when']
+        
+            if isinstance(_when_data, list):
                 _when = []
-                for i in data['when']:
+                for i in _when_data:
                     if ('pillar' in self.opts and 'whens' in self.opts['pillar'] and
                             i in self.opts['pillar']['whens']):
                         if not isinstance(self.opts['pillar']['whens'],
@@ -963,7 +968,7 @@ class Schedule(object):
                           i in self.opts['grains']['whens']):
                         if not isinstance(self.opts['grains']['whens'],
                                           dict):
-                            data['_error'] = ('Grain "whens" must be a dict.'
+                            data['_error'] = ('Grain "whens" must be a dict. '
                                               'Ignoring job {0}.'.format(data['name']))
                             log.error(data['_error'])
                             return
