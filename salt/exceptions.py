@@ -588,5 +588,5 @@ class NxosClientError(NxosError):
 
 class NxosRequestNotSupported(NxosError):
     '''
-    Raised for unssuported client requests
+    Raised for unsupported client requests
     '''
