@@ -247,7 +247,16 @@ class SaltSupportModule(SaltSupport):
         src_uri = uri = None
 
         last_arc = self.last_archive()
-        for name in [name] if name else self.archives() if all else [last_arc] if last_arc else []:
+        if name:
+            archives = [name]
+        elif all:
+            archives = self.archives()
+        elif last_arc:
+            archives = [last_arc]
+        else:
+            archives = []
+
+        for name in archives:
             err = None
             if not name:
                 err = 'No support archive has been defined.'
