@@ -1359,8 +1359,9 @@ class State(object):
                 names = []
                 if state.startswith('__'):
                     continue
-                chunk = {'state': state,
-                         'name': name}
+                chunk = OrderedDict()
+                chunk['state'] = state
+                chunk['name'] = name
                 if orchestration_jid is not None:
                     chunk['__orchestration_jid__'] = orchestration_jid
                 if '__sls__' in body:
@@ -1941,8 +1942,12 @@ class State(object):
                         ret = self.call_parallel(cdata, low)
                     else:
                         self.format_slots(cdata)
-                        ret = self.states[cdata['full']](*cdata['args'],
-                                                         **cdata['kwargs'])
+                        if cdata['full'].endswith('.__call__'):
+                            # __call__ requires OrderedDict to preserve state order
+                            # kwargs are also invalid overall
+                            ret = self.states[cdata['full']](cdata['args'], module=None, state=cdata['kwargs'])
+                        else:
+                            ret = self.states[cdata['full']](*cdata['args'], **cdata['kwargs'])
                 self.states.inject_globals = {}
             if 'check_cmd' in low and '{0[state]}.mod_run_check_cmd'.format(low) not in self.states:
                 ret.update(self._run_check_cmd(low))
