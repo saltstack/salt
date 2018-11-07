@@ -368,6 +368,7 @@ def fopen(*args, **kwargs):
         else:
             # the default is to read
             kwargs['mode'] = 'rb'
+        binary = True
     elif six.PY3 and 'encoding' not in kwargs:
         # In Python 3, if text mode is used and the encoding
         # is not specified, set the encoding to 'utf-8'.
@@ -386,8 +387,14 @@ def fopen(*args, **kwargs):
         kwargs['newline'] = ''
 
     if kwargs.pop('use_io_open', True):
+        # If it is binary you can't pass encoding
+        if binary:
+            kwargs.pop('encoding', False)
         f_handle = io.open(*args, **kwargs)  # pylint: disable=resource-leakage
     else:
+        # encoding will cause this to fail on Py2
+        if six.PY2:
+            kwargs.pop('encoding', False)
         f_handle = open(*args, **kwargs)  # pylint: disable=resource-leakage
 
     if is_fcntl_available():

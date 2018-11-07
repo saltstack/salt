@@ -1665,7 +1665,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             serialized_file = salt.utils.stringutils.to_unicode(fp_.read())
 
         # The JSON serializer uses LF even on OSes where os.path.sep is CRLF.
-        expected_file = '\n'.join([
+        expected_file = os.linesep.join([
             '{',
             '  "a_list": [',
             '    "first_element",',
