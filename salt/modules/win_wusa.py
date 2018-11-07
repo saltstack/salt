@@ -28,7 +28,7 @@ def __virtual__():
     if not salt.utils.platform.is_windows():
         return False, 'Only available on Windows systems'
 
-    powershell_info = __salt__['cmd.shell_info'](shell='powershell', list_modules=True)
+    powershell_info = __salt__['cmd.shell_info'](shell='powershell', list_modules=False)
     if not powershell_info['installed']:
         return False, 'PowerShell not available'
 
@@ -50,3 +50,8 @@ def install(path):
 def uninstall(kb):
 
     return __salt__['cmd.run_all']('wusa.exe /uninstall /kb:{0} /quiet /norestart'.format(kb[2:]), ignore_retcode=True)
+
+
+def list_kbs():
+
+    return __salt__['cmd.powershell']('Get-HotFix')
