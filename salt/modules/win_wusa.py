@@ -28,7 +28,7 @@ def __virtual__():
     if not salt.utils.platform.is_windows():
         return False, 'Only available on Windows systems'
 
-    powershell_info = __salt__['cmd.shell_info']('powershell', True)
+    powershell_info = __salt__['cmd.shell_info'](shell='powershell', list_modules=True)
     if not powershell_info['installed']:
         return False, 'PowerShell not available'
 
