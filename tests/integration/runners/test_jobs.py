@@ -62,10 +62,13 @@ class LocalCacheTargetTest(ShellCase):
 
         This is a regression test for fixing the local_cache behavior.
         '''
+        self.run_salt('minion test.ping')
         ret = self.run_run_plus('jobs.list_jobs')
-        ret_key = list(ret['return'].keys())[0]
-        tgt = ret['return'][ret_key]['Target']
-        tgt_type = ret['return'][ret_key]['Target-type']
+        for item in ret['return'].values():
+            if item['Function'] == 'test.ping':
+                job_ret = item
+        tgt = job_ret['Target']
+        tgt_type = job_ret['Target-type']
 
         assert tgt != 'unknown-target'
         assert tgt in ['minion', 'sub_minion']
