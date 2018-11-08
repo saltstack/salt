@@ -636,32 +636,32 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             self.assertTrue(len(root.findall('.//interface')) == 2)
 
     @patch('salt.modules.virt.pool_info',
-           return_value={'target_path': os.path.join(salt.syspaths.ROOT_DIR,
-                                                     'pools',
-                                                     'default')})
+           return_value={'mypool': {'target_path': os.path.join(salt.syspaths.ROOT_DIR, 'pools', 'mypool')}})
     def test_disk_profile_kvm_disk_pool(self, mock_poolinfo):
         '''
         Test virt._gen_xml(), KVM case with pools defined.
         '''
         disks = {
             'noeffect': [
-                {'first': {'size': 8192, 'pool': 'default'}},
+                {'first': {'size': 8192, 'pool': 'mypool'}},
                 {'second': {'size': 4096}}
             ]
         }
+
+        # pylint: disable=no-member
         with patch.dict(virt.__salt__, {'config.get': MagicMock(side_effect=[
                 disks,
                 os.path.join(salt.syspaths.ROOT_DIR, 'default', 'path')])}):
+
             diskp = virt._disk_profile('noeffect', 'kvm', [], 'hello')
 
-            pools_path = os.path.join(
-                salt.syspaths.ROOT_DIR, 'pools', 'default') + os.sep
-            default_path = os.path.join(
-                salt.syspaths.ROOT_DIR, 'default', 'path') + os.sep
+            pools_path = os.path.join(salt.syspaths.ROOT_DIR, 'pools', 'mypool') + os.sep
+            default_path = os.path.join(salt.syspaths.ROOT_DIR, 'default', 'path') + os.sep
 
             self.assertEqual(len(diskp), 2)
             self.assertTrue(diskp[0]['source_file'].startswith(pools_path))
             self.assertTrue(diskp[1]['source_file'].startswith(default_path))
+        # pylint: enable=no-member
 
     def test_disk_profile_kvm_disk_external_image(self):
         '''
@@ -1123,16 +1123,25 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         devdetach_mock = MagicMock(return_value=0)
         domain_mock.attachDevice = devattach_mock
         domain_mock.detachDevice = devdetach_mock
-        ret = virt.update('myvm', disk_profile='default', disks=[{'name': 'added', 'size': 2048}])
-        self.assertListEqual(
-            [os.path.join(root_dir, 'myvm_added.qcow2')],
-            [ET.fromstring(disk).find('source').get('file') for disk in ret['disk']['attached']])
+        mock_chmod = MagicMock()
+        mock_run = MagicMock()
+        with patch.dict(os.__dict__, {'chmod': mock_chmod}):  # pylint: disable=no-member
+            with patch.dict(virt.__salt__, {'cmd.run': mock_run}):  # pylint: disable=no-member
+                ret = virt.update('myvm', disk_profile='default', disks=[{'name': 'added', 'size': 2048}])
+                added_disk_path = os.path.join(
+                        virt.__salt__['config.get']('virt:images'), 'myvm_added.qcow2')  # pylint: disable=no-member
+                self.assertEqual(mock_run.call_args[0][0],
+                                 'qemu-img create -f qcow2 {0} 2048M'.format(added_disk_path))
+                self.assertEqual(mock_chmod.call_args[0][0], added_disk_path)
+                self.assertListEqual(
+                    [os.path.join(root_dir, 'myvm_added.qcow2')],
+                    [ET.fromstring(disk).find('source').get('file') for disk in ret['disk']['attached']])
 
-        self.assertListEqual(
-            [os.path.join(root_dir, 'myvm_data.qcow2')],
-            [ET.fromstring(disk).find('source').get('file') for disk in ret['disk']['detached']])
-        devattach_mock.assert_called_once()
-        devdetach_mock.assert_called_once()
+                self.assertListEqual(
+                    [os.path.join(root_dir, 'myvm_data.qcow2')],
+                    [ET.fromstring(disk).find('source').get('file') for disk in ret['disk']['detached']])
+                devattach_mock.assert_called_once()
+                devdetach_mock.assert_called_once()
 
         # Update nics case
         yaml_config = '''

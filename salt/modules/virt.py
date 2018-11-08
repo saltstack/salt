@@ -928,7 +928,8 @@ def _fill_disk_filename(vm_name, disk, hypervisor, **kwargs):
         else:
             if not base_dir.startswith('/'):
                 # The pool seems not to be a path, lookup for pool infos
-                pool = pool_info(base_dir, **kwargs)
+                infos = pool_info(base_dir, **kwargs)
+                pool = infos[base_dir] if base_dir in infos else None
                 if not pool or not pool['target_path'] or pool['target_path'].startswith('/dev'):
                     raise CommandExecutionError(
                                 'Unable to create new disk {0}, specified pool {1} does not exist '
@@ -1366,9 +1367,9 @@ def init(name,
     .. _graphics element: https://libvirt.org/formatdomain.html#elementsGraphics
     '''
     caps = capabilities(**kwargs)
-    os_types = sorted(set([guest['os_type'] for guest in caps['guests']]))
-    arches = sorted(set([guest['arch']['name'] for guest in caps['guests']]))
-    hypervisors = sorted(set([x for y in [guest['arch']['domains'].keys() for guest in caps['guests']] for x in y]))
+    os_types = sorted({guest['os_type'] for guest in caps['guests']})
+    arches = sorted({guest['arch']['name'] for guest in caps['guests']})
+    hypervisors = sorted({x for y in [guest['arch']['domains'].keys() for guest in caps['guests']] for x in y})
     hypervisor = __salt__['config.get']('libvirt:hypervisor', hypervisor)
     if hypervisor is not None:
         salt.utils.versions.warn_until(
@@ -1627,7 +1628,7 @@ def _diff_disk_lists(old, new):
     :param old: list of ElementTree nodes representing the old disks
     :param new: list of ElementTree nodes representing the new disks
     '''
-    # Fix the target device to avoid duplicates before diffing: this may lead
+    # Change the target device to avoid duplicates before diffing: this may lead
     # to additional changes. Think of unchanged disk 'hda' and another disk listed
     # before it becoming 'hda' too... the unchanged need to turn into 'hdb'.
     targets = []
@@ -1756,10 +1757,11 @@ def update(name,
 
     # Compute the XML to get the disks, interfaces and graphics
     hypervisor = desc.get('type')
+    all_disks = _disk_profile(disk_profile, hypervisor, disks, name, **kwargs)
     new_desc = ElementTree.fromstring(_gen_xml(name,
                                                cpu,
                                                mem,
-                                               _disk_profile(disk_profile, hypervisor, disks, name, **kwargs),
+                                               all_disks,
                                                _get_merged_nics(hypervisor, nic_profile, interfaces),
                                                hypervisor,
                                                domain.OSType(),
@@ -1802,6 +1804,12 @@ def update(name,
 
     # Set the new definition
     if need_update:
+        # Create missing disks if needed
+        if changes['disk']:
+            for idx, item in enumerate(changes['disk']['sorted']):
+                if item in new and not os.path.isfile(all_disks[idx]['source_file']):
+                    _qemu_image_create(all_disks[idx])
+
         try:
             conn.defineXML(ElementTree.tostring(desc))
             status['definition'] = True
@@ -2451,7 +2459,7 @@ def get_profiles(hypervisor=None, **kwargs):
     ret = {}
 
     caps = capabilities(**kwargs)
-    hypervisors = sorted(set([x for y in [guest['arch']['domains'].keys() for guest in caps['guests']] for x in y]))
+    hypervisors = sorted({x for y in [guest['arch']['domains'].keys() for guest in caps['guests']] for x in y})
     default_hypervisor = 'kvm' if 'kvm' in hypervisors else hypervisors[0]
 
     if not hypervisor:
