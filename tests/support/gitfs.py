@@ -473,6 +473,23 @@ class GitPillarTestBase(GitTestBase, LoaderModuleMockMixin):
             '''))
         _push('top_only', 'add top_only branch')
 
+        # Create just another top file in a separate repo, to be mapped to the base
+        # env and including mounted.bar
+        self.run_function(
+            'git.checkout',
+            [self.admin_repo],
+            user=user,
+            opts='-b top_mounted')
+        # The top.sls should be the only file in this branch
+        with salt.utils.files.fopen(
+                os.path.join(self.admin_repo, 'top.sls'), 'w') as fp_:
+            fp_.write(textwrap.dedent('''\
+            base:
+              '*':
+                - mounted.bar
+            '''))
+        _push('top_mounted', 'add top_mounted branch')
+
 
 class GitPillarSSHTestBase(GitPillarTestBase, SSHDMixin):
     '''
