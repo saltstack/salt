@@ -2143,7 +2143,7 @@ class Minion(MinionBase):
     def _fire_master_minion_start(self):
         # Send an event to the master that the minion is live
         if self.opts['enable_legacy_startup_events']:
-            # old style event. Defaults to False in Neon Salt release
+            # Old style event. Defaults to False in Sodium release.
             self._fire_master(
                 'Minion {0} started at {1}'.format(
                 self.opts['id'],
@@ -2883,7 +2883,7 @@ class Syndic(Minion):
     def fire_master_syndic_start(self):
         # Send an event to the master that the minion is live
         if self.opts['enable_legacy_startup_events']:
-            # old style event. Defaults to false in Neon Salt release.
+            # Old style event. Defaults to false in Sodium release.
             self._fire_master(
                 'Syndic {0} started at {1}'.format(
                     self.opts['id'],
