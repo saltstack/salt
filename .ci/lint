@@ -28,6 +28,7 @@ pipeline {
                 # the -l increase the search limit, lets use awk so we do not need to repeat the search above.
                 gawk 'BEGIN {FS="\\t"} {if ($1 != "D") {print $NF}}' file-list-status.log > file-list-changed.log
                 gawk 'BEGIN {FS="\\t"} {if ($1 == "D") {print $NF}}' file-list-status.log > file-list-deleted.log
+                (git diff --name-status -l99999 -C "origin/$CHANGE_TARGET";echo "---";git diff --name-status -l99999 -C "origin/$BRANCH_NAME";printenv|grep -E '=[0-9a-z]{40,}+$|COMMIT=|BRANCH') > file-list-experiment.log
                 touch pylint-report-salt.log pylint-report-tests.log
                 eval "$(pyenv init -)"
                 pyenv --version
@@ -37,7 +38,7 @@ pipeline {
                 python --version
                 pip install tox
                 '''
-                archiveArtifacts artifacts: 'file-list-status.log,file-list-changed.log,file-list-deleted.log'
+                archiveArtifacts artifacts: 'file-list-status.log,file-list-changed.log,file-list-deleted.log,file-list-experiment.log'
             }
         }
         stage('linting') {
