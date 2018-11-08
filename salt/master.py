@@ -597,11 +597,10 @@ class Master(SMaster):
                 time.sleep(2)
 
             log.info('Creating master request server process')
-            kwargs = {}
+            kwargs = {'msg_queue': msg_queue}
             if salt.utils.is_windows():
                 kwargs['log_queue'] = log_queue
                 kwargs['secrets'] = SMaster.secrets
-                kwargs['msg_queue'] = msg_queue
 
             self.process_manager.add_process(
                 ReqServer,
@@ -740,10 +739,9 @@ class ReqServer(SignalHandlingMultiprocessingProcess):
             if transport != 'tcp':
                 tcp_only = False
 
-        kwargs = {}
+        kwargs = {'msg_queue': self.msg_queue}
         if salt.utils.is_windows():
             kwargs['log_queue'] = self.log_queue
-            kwargs['msg_queue'] = self.msg_queue
             # Use one worker thread if only the TCP transport is set up on
             # Windows and we are using Python 2. There is load balancer
             # support on Windows for the TCP transport when using Python 3.

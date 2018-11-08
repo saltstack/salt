@@ -778,32 +778,29 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
         log.info('Starting the Salt Publisher on {0}'.format(pub_uri))
         pub_sock.bind(pub_uri)
 
-        if not msg_queue:
-            # Prepare minion pull socket
-            pull_sock = context.socket(zmq.PULL)
+        # Prepare minion pull socket
+        pull_sock = context.socket(zmq.PULL)
 
-            if self.opts.get('ipc_mode', '') == 'tcp':
-                pull_uri = 'tcp://127.0.0.1:{0}'.format(
-                    self.opts.get('tcp_master_publish_pull', 4514)
-                    )
-            else:
-                pull_uri = 'ipc://{0}'.format(
-                    os.path.join(self.opts['sock_dir'], 'publish_pull.ipc')
-                    )
-            salt.utils.zeromq.check_ipc_path_max_len(pull_uri)
-            # Securely create socket
-            log.info('Starting the Salt Puller on {0}'.format(pull_uri))
-            with salt.utils.files.set_umask(0o177):
-                pull_sock.bind(pull_uri)
-
-
+        if self.opts.get('ipc_mode', '') == 'tcp':
+            pull_uri = 'tcp://127.0.0.1:{0}'.format(
+                self.opts.get('tcp_master_publish_pull', 4514)
+                )
+        else:
+            pull_uri = 'ipc://{0}'.format(
+                os.path.join(self.opts['sock_dir'], 'publish_pull.ipc')
+                )
+        salt.utils.zeromq.check_ipc_path_max_len(pull_uri)
+        # Securely create socket
+        log.info('Starting the Salt Puller on {0}'.format(pull_uri))
+        with salt.utils.files.set_umask(0o177):
+            pull_sock.bind(pull_uri)
 
         try:
             while True:
                 # Catch and handle EINTR from when this process is sent
                 # SIGUSR1 gracefully so we don't choke and die horribly
                 try:
-                    log.debug('Publish daemon getting data from puller %s', pull_uri)
+                    log.debug('Publish daemon getting data from puller')
                     if msg_queue:
                         package = msg_queue.get()
                     else:
@@ -863,7 +860,7 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
         '''
         process_manager.add_process(self._publish_daemon, kwargs=kwargs)
 
-    def publish(self, load, msg_queue=None):
+    def publish(self, load, msg_queue=None):  # pylint: disable=W0221
         '''
         Publish "load" to minions
 
@@ -911,7 +908,6 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
             'Sending payload to publish daemon. jid=%s size=%d',
             load.get('jid', None), len(payload),
         )
-        payload = self.serial.dumps(int_payload)
         if msg_queue:
             msg_queue.put(payload)
         else:
