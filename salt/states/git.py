@@ -3411,16 +3411,32 @@ def mod_run_check(cmd_kwargs, onlyif, unless):
     cmd_kwargs = copy.deepcopy(cmd_kwargs)
     cmd_kwargs['python_shell'] = True
     if onlyif:
-        if __salt__['cmd.retcode'](onlyif, **cmd_kwargs) != 0:
-            return {'comment': 'onlyif condition is false',
-                    'skip_watch': True,
-                    'result': True}
+        try:
+            if __salt__['cmd.retcode'](onlyif, **cmd_kwargs) != 0:
+                return {'comment': 'onlyif condition is false',
+                        'skip_watch': True,
+                        'result': True}
+        except Exception as exc:
+            log.exception(exc)
+            return {
+                'comment': 'onlyif raised error ({0}), see log for '
+                           'more details'.format(exc),
+                'result': False
+            }
 
     if unless:
-        if __salt__['cmd.retcode'](unless, **cmd_kwargs) == 0:
-            return {'comment': 'unless condition is true',
-                    'skip_watch': True,
-                    'result': True}
+        try:
+            if __salt__['cmd.retcode'](unless, **cmd_kwargs) == 0:
+                return {'comment': 'unless condition is true',
+                        'skip_watch': True,
+                        'result': True}
+        except Exception as exc:
+            log.exception(exc)
+            return {
+                'comment': 'onlyif raised error ({0}), see log for '
+                           'more details'.format(exc),
+                'result': False
+            }
 
     # No reason to stop, return True
     return True
