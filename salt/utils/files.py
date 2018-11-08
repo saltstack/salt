@@ -408,8 +408,9 @@ def flopen(*args, **kwargs):
         try:
             if is_fcntl_available(check_sunos=True):
                 lock_type = fcntl.LOCK_SH
-                if 'w' in args[1] or 'a' in args[1]:
-                    lock_type = fcntl.LOCK_EX
+                if len(args) > 1:
+                    if 'w' in args[1] or 'a' in args[1]:
+                        lock_type = fcntl.LOCK_EX
                 fcntl.flock(f_handle.fileno(), lock_type)
             yield f_handle
         finally:
