@@ -310,8 +310,8 @@ def runas_system(cmd, username, password, cwd=None):
 
     except win32security.error as exc:
         # User doesn't have admin, use existing token
-        if exc[0] == winerror.ERROR_NO_SUCH_LOGON_SESSION \
-                or exc[0] == winerror.ERROR_PRIVILEGE_NOT_HELD:
+        if exc.winerror == winerror.ERROR_NO_SUCH_LOGON_SESSION \
+                or exc.winerror == winerror.ERROR_PRIVILEGE_NOT_HELD:
             elevated_token = token
         else:
             raise
