@@ -29,6 +29,11 @@ from salt.utils.decorators.jinja import jinja_filter
 from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 
+try:
+    import jmespath
+except ImportError:
+    jmespath = None
+
 log = logging.getLogger(__name__)
 
 
@@ -894,3 +899,13 @@ def stringify(data):
             item = six.text_type(item)
         ret.append(item)
     return ret
+
+
+@jinja_filter('json_query')
+def json_query(data, expr):
+    '''
+    Query data using JMESPath query language (http://jmespath.org).
+    '''
+    if jmespath is None:
+        raise RuntimeError('json_query filter requires jmespath library which is not installed')
+    return jmespath.search(expr, data)
