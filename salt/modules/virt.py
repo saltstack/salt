@@ -1367,9 +1367,9 @@ def init(name,
     .. _graphics element: https://libvirt.org/formatdomain.html#elementsGraphics
     '''
     caps = capabilities(**kwargs)
-    os_types = sorted(set([guest['os_type'] for guest in caps['guests']]))
-    arches = sorted(set([guest['arch']['name'] for guest in caps['guests']]))
-    hypervisors = sorted(set([x for y in [guest['arch']['domains'].keys() for guest in caps['guests']] for x in y]))
+    os_types = sorted({guest['os_type'] for guest in caps['guests']})
+    arches = sorted({guest['arch']['name'] for guest in caps['guests']})
+    hypervisors = sorted({x for y in [guest['arch']['domains'].keys() for guest in caps['guests']] for x in y})
     hypervisor = __salt__['config.get']('libvirt:hypervisor', hypervisor)
     if hypervisor is not None:
         salt.utils.versions.warn_until(
@@ -1628,7 +1628,7 @@ def _diff_disk_lists(old, new):
     :param old: list of ElementTree nodes representing the old disks
     :param new: list of ElementTree nodes representing the new disks
     '''
-    # Fix the target device to avoid duplicates before diffing: this may lead
+    # Change the target device to avoid duplicates before diffing: this may lead
     # to additional changes. Think of unchanged disk 'hda' and another disk listed
     # before it becoming 'hda' too... the unchanged need to turn into 'hdb'.
     targets = []
@@ -2459,7 +2459,7 @@ def get_profiles(hypervisor=None, **kwargs):
     ret = {}
 
     caps = capabilities(**kwargs)
-    hypervisors = sorted(set([x for y in [guest['arch']['domains'].keys() for guest in caps['guests']] for x in y]))
+    hypervisors = sorted({x for y in [guest['arch']['domains'].keys() for guest in caps['guests']] for x in y})
     default_hypervisor = 'kvm' if 'kvm' in hypervisors else hypervisors[0]
 
     if not hypervisor:
