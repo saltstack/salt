@@ -447,6 +447,15 @@ def info(*packages, **kwargs):
 
         .. versionadded:: 2016.11.3
 
+    attr
+        Comma-separated package attributes. If no 'attr' is specified, all available attributes returned.
+
+        Valid attributes are:
+            version, vendor, release, build_date, build_date_time_t, install_date, install_date_time_t,
+            build_host, group, source_rpm, arch, epoch, size, license, signature, packager, url, summary, description.
+
+        .. versionadded:: 2018.11
+
     CLI example:
 
     .. code-block:: bash
@@ -461,6 +470,10 @@ def info(*packages, **kwargs):
 
     kwargs = salt.utils.args.clean_kwargs(**kwargs)
     failhard = kwargs.pop('failhard', True)
+    attr = kwargs.pop('attr', None) or None
+    if attr:
+        attr = attr.split(',')
+
     if kwargs:
         salt.utils.args.invalid_kwargs(kwargs)
 
@@ -480,6 +493,14 @@ def info(*packages, **kwargs):
         lic = _get_pkg_license(pkg['package'])
         if lic:
             pkg['license'] = lic
-        ret[pkg['package']] = pkg
+
+        # Remove keys that aren't in attrs
+        pkg_name = pkg['package']
+        if attr:
+            for k in list(pkg.keys())[:]:
+                if k not in attr:
+                    del pkg[k]
+
+        ret[pkg_name] = pkg
 
     return ret
