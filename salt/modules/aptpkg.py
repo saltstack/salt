@@ -2771,15 +2771,15 @@ def info_installed(*names, **kwargs):
     '''
     kwargs = salt.utils.args.clean_kwargs(**kwargs)
     failhard = kwargs.pop('failhard', True)
-    kwargs.pop('errors', None)  # Only for compatibility with RPM
-    attr = kwargs.pop('attr', None)
+    kwargs.pop('errors', None)                # Only for compatibility with RPM
+    attr = kwargs.pop('attr', None)           # Package attributes to return
     all_versions = kwargs.pop('all_versions', False)
 
     if kwargs:
         salt.utils.args.invalid_kwargs(kwargs)
 
     ret = dict()
-    for pkg_name, pkg_nfo in __salt__['lowpkg.info'](*names, failhard=failhard).items():
+    for pkg_name, pkg_nfo in __salt__['lowpkg.info'](*names, failhard=failhard, attr=attr).items():
         t_nfo = dict()
         # Translate dpkg-specific keys to a common structure
         for key, value in pkg_nfo.items():
