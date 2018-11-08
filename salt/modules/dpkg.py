@@ -306,7 +306,7 @@ def _get_pkg_info(*packages, **kwargs):
     ret = []
     cmd = "dpkg-query -W -f='package:" + bin_var + "\\n" \
           "revision:${binary:Revision}\\n" \
-          "architecture:${Architecture}\\n" \
+          "arch:${Architecture}\\n" \
           "maintainer:${Maintainer}\\n" \
           "summary:${Summary}\\n" \
           "source:${source:Package}\\n" \
