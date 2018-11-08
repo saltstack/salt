@@ -2191,7 +2191,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
 
         caps = virt.all_capabilities()
         self.assertEqual('44454c4c-3400-105a-8033-b3c04f4b344a', caps['host']['host']['uuid'])
-        self.assertEqual(set(['qemu', 'kvm']), set([domainCaps['domain'] for domainCaps in caps['domains']]))
+        self.assertEqual(set(['qemu', 'kvm']), {domainCaps['domain'] for domainCaps in caps['domains']})
 
     def test_network_tag(self):
         '''
