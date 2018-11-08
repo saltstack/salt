@@ -904,8 +904,10 @@ def stringify(data):
 @jinja_filter('json_query')
 def json_query(data, expr):
     '''
-    Query data using JMESPath query language (http://jmespath.org).
+    Query data using JMESPath language (http://jmespath.org).
     '''
     if jmespath is None:
-        raise RuntimeError('json_query filter requires jmespath library which is not installed')
+        err = 'json_query requires jmespath module installed'
+        log.error(err)
+        raise RuntimeError(err)
     return jmespath.search(expr, data)
