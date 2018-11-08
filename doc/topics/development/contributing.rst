@@ -526,6 +526,19 @@ GPG key with ``git`` locally, and linking the GPG key to your GitHub account.
 Once these steps are completed, the commit signing verification will look like
 the example in GitHub's `GPG Signature Verification feature announcement`_.
 
+Bootstrap Script Changes
+------------------------
+
+Salt's Bootstrap Script, known as `bootstrap-salt.sh`_ in the Salt repo, has it's own
+repository, contributing guidelines, and release cadence.
+
+All changes to the Bootstrap Script should be made to `salt-bootstrap repo`_. Any
+pull requests made to the `bootstrap-salt.sh`_ file in the Salt repository will be
+automatically overwritten upon the next stable release of the Bootstrap Script.
+
+For more information on the release process or how to contribute to the Bootstrap
+Script, see the Bootstrap Script's `Contributing Guidelines`_.
+
 .. _`saltstack/salt`: https://github.com/saltstack/salt
 .. _`GitHub Fork a Repo Guide`: https://help.github.com/articles/fork-a-repo
 .. _`GitHub issue tracker`: https://github.com/saltstack/salt/issues
@@ -537,3 +550,6 @@ the example in GitHub's `GPG Signature Verification feature announcement`_.
 .. _GPG Probot: https://probot.github.io/apps/gpg/
 .. _help articles: https://help.github.com/articles/signing-commits-with-gpg/
 .. _GPG Signature Verification feature announcement: https://github.com/blog/2144-gpg-signature-verification
+.. _bootstrap-salt.sh: https://github.com/saltstack/salt/blob/develop/salt/cloud/deploy/bootstrap-salt.sh
+.. _salt-bootstrap repo: https://github.com/saltstack/salt-bootstrap
+.. _Contributing Guidelines: https://github.com/saltstack/salt-bootstrap/blob/develop/CONTRIBUTING.md
