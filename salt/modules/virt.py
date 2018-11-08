@@ -1757,10 +1757,11 @@ def update(name,
 
     # Compute the XML to get the disks, interfaces and graphics
     hypervisor = desc.get('type')
+    all_disks = _disk_profile(disk_profile, hypervisor, disks, name, **kwargs)
     new_desc = ElementTree.fromstring(_gen_xml(name,
                                                cpu,
                                                mem,
-                                               _disk_profile(disk_profile, hypervisor, disks, name, **kwargs),
+                                               all_disks,
                                                _get_merged_nics(hypervisor, nic_profile, interfaces),
                                                hypervisor,
                                                domain.OSType(),
@@ -1803,6 +1804,12 @@ def update(name,
 
     # Set the new definition
     if need_update:
+        # Create missing disks if needed
+        if changes['disk']:
+            for idx, item in enumerate(changes['disk']['sorted']):
+                if item in new and not os.path.isfile(all_disks[idx]['source_file']):
+                    _qemu_image_create(all_disks[idx])
+
         try:
             conn.defineXML(ElementTree.tostring(desc))
             status['definition'] = True
