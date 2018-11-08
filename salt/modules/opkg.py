@@ -289,12 +289,46 @@ def refresh_db(failhard=False, **kwargs):  # pylint: disable=unused-argument
     return ret
 
 
+def _is_testmode(**kwargs):
+    """
+    Returns whether a test mode (noaction) operation was requested.
+    """
+    return bool(kwargs.get("test") or __opts__.get("test"))
+
+
 def _append_noaction_if_testmode(cmd, **kwargs):
     """
     Adds the --noaction flag to the command if it's running in the test mode.
     """
-    if bool(kwargs.get("test") or __opts__.get("test")):
+    if _is_testmode(**kwargs):
         cmd.append("--noaction")
+
+
+def _parse_reported_packages_from_noaction_install_output(output):
+    """
+    Parses the output of "opkg install" to determine what packages would have been
+    installed by an operation run with the --noaction flag.
+
+    We are looking for lines like:
+        Installing <package> (<version>) on <target>
+    or
+        Upgrading <package> from <oldVersion> to <version> on root
+    """
+    reportedPkgs = {}
+    installPattern = re.compile(
+        r"Installing\s(?P<package>.*?)\s\((?P<version>.*?)\)\son\s(?P<target>.*?)"
+    )
+    upgradePattern = re.compile(
+        r"Upgrading\s(?P<package>.*?)\sfrom\s(?P<oldVersion>.*?)\sto\s(?P<version>.*?)\son\s(?P<target>.*?)"
+    )
+    for line in salt.utils.itertools.split(output, "\n"):
+        match = installPattern.match(line)
+        if match is None:
+            match = upgradePattern.match(line)
+        if match:
+            reportedPkgs[match.group("package")] = match.group("version")
+
+    return reportedPkgs
 
 
 def install(
@@ -476,6 +510,13 @@ def install(
 
     __context__.pop("pkg.list_pkgs", None)
     new = list_pkgs()
+    if _is_testmode(**kwargs):
+        reportedPkgs = _parse_reported_packages_from_noaction_install_output(
+            out["stdout"]
+        )
+        new = copy.deepcopy(new)
+        new.update(reportedPkgs)
+
     ret = salt.utils.data.compare_dicts(old, new)
 
     if pkg_type == "file" and reinstall:
@@ -511,6 +552,26 @@ def install(
     _process_restartcheck_result(rs_result)
 
     return ret
+
+
+def _parse_reported_packages_from_noaction_remove_output(output):
+    """
+    Parses the output of "opkg remove" to determine what packages would have been
+    removed by an operation run with the --noaction flag.
+
+    We are looking for lines like
+        Removing <package> (<version>) from <Target>...
+    """
+    reportedPkgs = {}
+    removePattern = re.compile(
+        r"Removing\s(?P<package>.*?)\s\((?P<version>.*?)\)\sfrom\s(?P<target>.*?)..."
+    )
+    for line in salt.utils.itertools.split(output, "\n"):
+        match = removePattern.match(line)
+        if match:
+            reportedPkgs[match.group("package")] = ""
+
+    return reportedPkgs
 
 
 def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
@@ -576,6 +637,11 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
 
     __context__.pop("pkg.list_pkgs", None)
     new = list_pkgs()
+    if _is_testmode(**kwargs):
+        reportedPkgs = _parse_reported_packages_from_noaction_remove_output(
+            out["stdout"]
+        )
+        new = {k: v for k, v in new.items() if k not in reportedPkgs}
     ret = salt.utils.data.compare_dicts(old, new)
 
     rs_result = _get_restartcheck_result(errors)
