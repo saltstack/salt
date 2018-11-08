@@ -1725,6 +1725,28 @@ The listen queue size of the ZeroMQ backlog.
 
 .. _master-module-management:
 
+``worker_use_queue``
+--------------------
+
+Default: ``False``
+
+Use a multiprocessing Queue instead of ZeroMQ PUSH/PULL for MWorker to publisher messaging.
+
+.. code-block:: yaml
+
+    worker_use_queue: True
+
+``worker_queue_size``
+---------------------
+
+Default: ``1000``
+
+Maximum queue size when ``worker_use_queue`` is enabled.
+
+.. code-block:: yaml
+
+    worker_queue_size: 2000
+
 Master Module Management
 ========================
 
