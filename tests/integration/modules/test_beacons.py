@@ -31,6 +31,9 @@ class BeaconsAddDeleteTest(ModuleCase):
         if os.path.isfile(self.beacons_config_file_path):
             os.unlink(self.beacons_config_file_path)
 
+        # Reset beacons
+        self.run_function('beacons.reset')
+
     def test_add_and_delete(self):
         '''
         Test adding and deleting a beacon
@@ -98,6 +101,9 @@ class BeaconsTest(ModuleCase):
         # delete added beacon
         self.run_function('beacons.delete', ['ps'])
         self.run_function('beacons.save')
+
+        # Reset beacons
+        self.run_function('beacons.reset')
 
     def test_disable(self):
         '''
