@@ -454,7 +454,7 @@ def info(*packages, **kwargs):
             version, vendor, release, build_date, build_date_time_t, install_date, install_date_time_t,
             build_host, group, source_rpm, arch, epoch, size, license, signature, packager, url, summary, description.
 
-        .. versionadded:: 2018.11
+        .. versionadded:: Neon
 
     CLI example:
 
