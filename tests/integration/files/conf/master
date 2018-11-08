@@ -5,6 +5,7 @@ interface: 127.0.0.1
 publish_port: 64505
 ret_port: 64506
 worker_threads: 3
+worker_use_queue: True
 pidfile: master.pid
 sock_dir: master_sock
 timeout: 12
