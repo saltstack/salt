@@ -2773,7 +2773,7 @@ def info_installed(*names, **kwargs):
     failhard = kwargs.pop('failhard', True)
     kwargs.pop('errors', None)                # Only for compatibility with RPM
     attr = kwargs.pop('attr', None)           # Package attributes to return
-    all_versions = kwargs.pop('all_versions', False)
+    all_versions = kwargs.pop('all_versions', False)  # This is for backward compatible structure only
 
     if kwargs:
         salt.utils.args.invalid_kwargs(kwargs)
@@ -2796,7 +2796,10 @@ def info_installed(*names, **kwargs):
             else:
                 t_nfo[key] = value
 
-        ret[pkg_name] = t_nfo
+        if all_versions:
+            ret.setdefault(pkg_name, []).append(t_nfo)
+        else:
+            ret[pkg_name] = t_nfo
 
     return ret
 
