@@ -1011,7 +1011,6 @@ class MinionManager(MinionBase):
         '''
         Create a minion, and asynchronously connect it to a master
         '''
-        last = 0  # never have we signed in
         auth_wait = minion.opts['acceptance_wait_time']
         failed = False
         while True:
@@ -1034,7 +1033,6 @@ class MinionManager(MinionBase):
                     'Error while bringing up minion for multi-master. Is '
                     'master at %s responding?', minion.opts['master']
                 )
-                last = time.time()
             except SaltMasterUnresolvableError:
                 err = 'Master address: \'{0}\' could not be resolved. Invalid or unresolveable address. ' \
                       'Set \'master\' value in minion config.'.format(minion.opts['master'])
@@ -3026,7 +3024,6 @@ class SyndicManager(MinionBase):
         '''
         Create a syndic, and asynchronously connect it to a master
         '''
-        last = 0  # never have we signed in
         auth_wait = opts['acceptance_wait_time']
         failed = False
         while True:
@@ -3062,7 +3059,6 @@ class SyndicManager(MinionBase):
                     'Error while bringing up syndic for multi-syndic. Is the '
                     'master at %s responding?', opts['master']
                 )
-                last = time.time()
             except (KeyboardInterrupt, SystemExit):
                 raise
             except Exception:
