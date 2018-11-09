@@ -306,14 +306,12 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
             assert k in expected_pkg
             assert wget_pkg[k] == expected_pkg[k]
 
+    @patch('salt.modules.aptpkg.__salt__', {'cmd.run_stdout': MagicMock(return_value='wget: /usr/bin/wget')})
     def test_owner(self):
         '''
         Test - Return the name of the package that owns the file.
         '''
-        paths = ['/usr/bin/wget']
-        mock = MagicMock(return_value='wget: /usr/bin/wget')
-        with patch.dict(aptpkg.__salt__, {'cmd.run_stdout': mock}):
-            self.assertEqual(aptpkg.owner(*paths), 'wget')
+        assert aptpkg.owner('/usr/bin/wget') == 'wget'
 
     def test_refresh_db(self):
         '''
