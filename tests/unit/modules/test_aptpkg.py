@@ -148,51 +148,39 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {aptpkg: {}}
 
+    @patch('salt.modules.aptpkg.__salt__',
+           {'pkg_resource.version': MagicMock(return_value=LOWPKG_INFO['wget']['version'])})
     def test_version(self):
         '''
         Test - Returns a string representing the package version or an empty string if
         not installed.
         '''
-        version = LOWPKG_INFO['wget']['version']
-        mock = MagicMock(return_value=version)
-        with patch.dict(aptpkg.__salt__, {'pkg_resource.version': mock}):
-            self.assertEqual(aptpkg.version(*['wget']), version)
+        assert aptpkg.version(*['wget']) == aptpkg.__salt__['pkg_resource.version']()
 
+    @patch('salt.modules.aptpkg.latest_version', MagicMock(return_value=''))
     def test_upgrade_available(self):
         '''
         Test - Check whether or not an upgrade is available for a given package.
         '''
-        with patch('salt.modules.aptpkg.latest_version',
-                   MagicMock(return_value='')):
-            self.assertFalse(aptpkg.upgrade_available('wget'))
+        assert not aptpkg.upgrade_available('wget')
 
+    @patch('salt.modules.aptpkg.get_repo_keys', MagicMock(return_value=REPO_KEYS))
+    @patch('salt.modules.aptpkg.__salt__', {'cmd.run_all': MagicMock(return_value={'retcode': 0, 'stdout': 'OK'})})
     def test_add_repo_key(self):
         '''
         Test - Add a repo key.
         '''
-        with patch('salt.modules.aptpkg.get_repo_keys',
-                   MagicMock(return_value=REPO_KEYS)):
-            mock = MagicMock(return_value={
-                'retcode': 0,
-                'stdout': 'OK'
-            })
-            with patch.dict(aptpkg.__salt__, {'cmd.run_all': mock}):
-                self.assertTrue(aptpkg.add_repo_key(keyserver='keyserver.ubuntu.com',
-                                                    keyid='FBB75451'))
+        assert aptpkg.add_repo_key(keyserver='keyserver.ubuntu.com', keyid='FBB75451')
 
+    @patch('salt.modules.aptpkg.get_repo_keys', MagicMock(return_value=REPO_KEYS))
+    @patch('salt.modules.aptpkg.__salt__', {'cmd.run_all': MagicMock(return_value={'retcode': 0, 'stdout': 'OK'})})
     def test_add_repo_key_failed(self):
         '''
         Test - Add a repo key using incomplete input data.
         '''
-        with patch('salt.modules.aptpkg.get_repo_keys',
-                   MagicMock(return_value=REPO_KEYS)):
-            kwargs = {'keyserver': 'keyserver.ubuntu.com'}
-            mock = MagicMock(return_value={
-                'retcode': 0,
-                'stdout': 'OK'
-            })
-            with patch.dict(aptpkg.__salt__, {'cmd.run_all': mock}):
-                self.assertRaises(SaltInvocationError, aptpkg.add_repo_key, **kwargs)
+        with pytest.raises(SaltInvocationError) as ex:
+            aptpkg.add_repo_key(keyserver='keyserver.ubuntu.com')
+        assert ' No keyid or keyid too short for keyserver: keyserver.ubuntu.com' in str(ex)
 
     def test_get_repo_keys(self):
         '''
@@ -205,35 +193,31 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(aptpkg.__salt__, {'cmd.run_all': mock}):
             self.assertEqual(aptpkg.get_repo_keys(), REPO_KEYS)
 
+    @patch('salt.modules.aptpkg.__salt__', {'lowpkg.file_dict': MagicMock(return_value=LOWPKG_FILES)})
     def test_file_dict(self):
         '''
         Test - List the files that belong to a package, grouped by package.
         '''
-        mock = MagicMock(return_value=LOWPKG_FILES)
-        with patch.dict(aptpkg.__salt__, {'lowpkg.file_dict': mock}):
-            self.assertEqual(aptpkg.file_dict('wget'), LOWPKG_FILES)
+        assert aptpkg.file_dict('wget') == LOWPKG_FILES
 
+    @patch('salt.modules.aptpkg.__salt__', {
+        'lowpkg.file_list': MagicMock(return_value={'errors': LOWPKG_FILES['errors'],
+                                                    'files': LOWPKG_FILES['packages']['wget']})})
     def test_file_list(self):
         '''
-        Test - List the files that belong to a package.
-        '''
-        files = {
-            'errors': LOWPKG_FILES['errors'],
-            'files': LOWPKG_FILES['packages']['wget'],
-        }
-        mock = MagicMock(return_value=files)
-        with patch.dict(aptpkg.__salt__, {'lowpkg.file_list': mock}):
-            self.assertEqual(aptpkg.file_list('wget'), files)
+        Test 'file_list' function, which is just an alias to the lowpkg 'file_list'
 
+        '''
+        assert aptpkg.file_list('wget') == aptpkg.__salt__['lowpkg.file_list']()
+
+    @patch('salt.modules.aptpkg.__salt__', {'cmd.run_stdout': MagicMock(return_value='wget\t\t\t\t\t\tinstall')})
     def test_get_selections(self):
         '''
         Test - View package state from the dpkg database.
         '''
-        selections = {'install': ['wget']}
-        mock = MagicMock(return_value='wget\t\t\t\t\t\tinstall')
-        with patch.dict(aptpkg.__salt__, {'cmd.run_stdout': mock}):
-            self.assertEqual(aptpkg.get_selections('wget'), selections)
+        assert aptpkg.get_selections('wget') == {'install': ['wget']}
 
+    @patch('salt.modules.aptpkg.__salt__', {'lowpkg.info': MagicMock(return_value=LOWPKG_INFO)})
     def test_info_installed(self):
         '''
         Test - Return the information of the named package(s) installed on the system.
@@ -249,9 +233,7 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
             if installed['wget'].get(names[name], False):
                 installed['wget'][name] = installed['wget'].pop(names[name])
 
-        mock = MagicMock(return_value=LOWPKG_INFO)
-        with patch.dict(aptpkg.__salt__, {'lowpkg.info': mock}):
-            self.assertEqual(aptpkg.info_installed('wget'), installed)
+        assert aptpkg.info_installed('wget') == installed
 
     @patch('salt.modules.aptpkg.__salt__', {'lowpkg.info': MagicMock(return_value=LOWPKG_INFO)})
     def test_info_installed_attr(self):
