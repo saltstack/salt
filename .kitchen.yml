@@ -1,6 +1,6 @@
 ---
 <% vagrant = system('gem list -i kitchen-vagrant 2>/dev/null >/dev/null') %>
-<% version = '2018.3.3' %>
+<% version = 'v2018.3.3' %>
 <% platformsfile = ENV['SALT_KITCHEN_PLATFORMS'] || '.kitchen/platforms.yml' %>
 <% driverfile = ENV['SALT_KITCHEN_DRIVER'] || '.kitchen/driver.yml' %>
 <% verifierfile = ENV['SALT_KITCHEN_VERIFIER'] || '.kitchen/verifier.yml' %>
