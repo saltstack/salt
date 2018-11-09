@@ -265,6 +265,7 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
         ret = aptpkg.info_installed('emacs', attr='foo,bar')
         assert isinstance(ret, dict)
         assert 'wget' in ret
+        assert isinstance(ret['wget'], dict)
 
         wget_pkg = ret['wget']
         expected_pkg = {'url': 'http://www.gnu.org/software/wget/',
