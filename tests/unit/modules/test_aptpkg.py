@@ -397,6 +397,7 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.multiple(aptpkg, **patch_kwargs):
                     self.assertEqual(aptpkg.upgrade(), dict())
 
+    # TODO: has to be broken up
     def test_show(self):
         '''
         Test that the pkg.show function properly parses apt-cache show output.
