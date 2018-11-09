@@ -1807,7 +1807,8 @@ def update(name,
         # Create missing disks if needed
         if changes['disk']:
             for idx, item in enumerate(changes['disk']['sorted']):
-                if item in new and not os.path.isfile(all_disks[idx]['source_file']):
+                source_file = all_disks[idx]['source_file']
+                if item in changes['disk']['new'] and source_file and not os.path.isfile(source_file):
                     _qemu_image_create(all_disks[idx])
 
         try:
