@@ -513,6 +513,31 @@ def get_distribution_v2(region=None, key=None, keyid=None, profile=None, **kwarg
 
 
 def get_distribution_config(region=None, key=None, keyid=None, profile=None, **kwargs):
+    '''
+    Get config information about a CloudFront distribution given its Resource ID.
+
+    Id
+        Resource ID of the CloudFront distribution.
+
+    region
+        Region to connect to.
+
+    key
+        Secret key to use.
+
+    keyid
+        Access key to use.
+
+    profile
+        Dict, or pillar key pointing to a dict, containing AWS region/key/keyid.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_cloudfront.get_distribution_config Id=E24RBTSABCDEF0
+
+    '''
     retries = 10
     sleep = 6
     kwargs = {k: v for k, v in kwargs.items() if not k.startswith('_')}
@@ -538,6 +563,28 @@ def get_distribution_config(region=None, key=None, keyid=None, profile=None, **k
 
 
 def list_distributions(region=None, key=None, keyid=None, profile=None):
+    '''
+    List, with moderate information, all CloudFront distributions in the bound account.
+
+    region
+        Region to connect to.
+
+    key
+        Secret key to use.
+
+    keyid
+        Access key to use.
+
+    profile
+        Dict, or pillar key pointing to a dict, containing AWS region/key/keyid.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_cloudfront.list_distributions
+
+    '''
     retries = 10
     sleep = 6
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
@@ -566,6 +613,28 @@ def list_distributions(region=None, key=None, keyid=None, profile=None):
 def distribution_exists(Id, region=None, key=None, keyid=None, profile=None):
     '''
     Return True if a CloudFront distribution exists with the given Resource ID or False otherwise.
+
+    Id
+        Resource ID of the CloudFront distribution.
+
+    region
+        Region to connect to.
+
+    key
+        Secret key to use.
+
+    keyid
+        Access key to use.
+
+    profile
+        Dict, or pillar key pointing to a dict, containing AWS region/key/keyid.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_cloudfront.distribution_exists Id=E24RBTSABCDEF0
+
     '''
     authargs = {'region': region, 'key': key, 'keyid': keyid, 'profile': profile}
     dists = list_distributions(**authargs) or []
@@ -621,6 +690,121 @@ def get_distributions_by_comment(Comment, region=None, key=None, keyid=None, pro
 
 
 def create_distribution_v2(region=None, key=None, keyid=None, profile=None, **kwargs):
+    '''
+    Create a CloudFront distribution with the provided configuration details.  A LOT of fields are
+    required in DistributionConfig to make up a valid creation request.  Details can be found at
+    __: https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/distribution-overview-required-fields.html
+    and
+    __: https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/cloudfront.html#CloudFront.Client.create_distribution
+
+    DistributionConfig
+        The distribution's configuration information.
+
+    region
+        Region to connect to.
+
+    key
+        Secret key to use.
+
+    keyid
+        Access key to use.
+
+    profile
+        Dict, or pillar key pointing to a dict, containing AWS region/key/keyid.
+
+    CLI Example:
+
+    .. code-block:: bash
+        # Note that, minus the Aliases section, this is pretty close to the minimal config I've
+        # found which AWS will accept for a create_distribution() call...
+        salt myminion boto_cloudfront.create_distribution_v2 DistributionConfig='{
+            "CallerReference": "28deef17-cc47-4169-b1a2-eff30c997bf0",
+            "Aliases": {
+                "Items": [
+                    "spa-dev.saltstack.org"
+                ],
+                "Quantity": 1
+            },
+            "Comment": "CloudFront distribution for SPA",
+            "DefaultCacheBehavior": {
+                "AllowedMethods": {
+                    "CachedMethods": {
+                        "Items": [
+                            "HEAD",
+                            "GET"
+                        ],
+                        "Quantity": 2
+                    },
+                    "Items": [
+                        "HEAD",
+                        "GET"
+                    ],
+                    "Quantity": 2
+                },
+                "Compress": false,
+                "DefaultTTL": 86400,
+                "FieldLevelEncryptionId": "",
+                "ForwardedValues": {
+                    "Cookies": {
+                        "Forward": "none"
+                    },
+                    "Headers": {
+                        "Quantity": 0
+                    },
+                    "QueryString": false,
+                    "QueryStringCacheKeys": {
+                        "Quantity": 0
+                    }
+                },
+                "LambdaFunctionAssociations": {
+                    "Quantity": 0
+                },
+                "MaxTTL": 31536000,
+                "MinTTL": 0,
+                "SmoothStreaming": false,
+                "TargetOriginId": "saltstack-spa-cf-dist",
+                "TrustedSigners": {
+                    "Enabled": false,
+                    "Quantity": 0
+                },
+                "ViewerProtocolPolicy": "allow-all"
+            },
+            "DefaultRootObject": "",
+            "Enabled": true,
+            "HttpVersion": "http2",
+            "IsIPV6Enabled": true,
+            "Logging": {
+                "Bucket": "",
+                "Enabled": false,
+                "IncludeCookies": false,
+                "Prefix": ""
+            },
+            "Origins": {
+                "Items": [
+                    {
+                        "CustomHeaders": {
+                            "Quantity": 0
+                        },
+                        "DomainName": "saltstack-spa-dist.s3.amazonaws.com",
+                        "Id": "saltstack-spa-dist",
+                        "OriginPath": "",
+                        "S3OriginConfig": {
+                            "OriginAccessIdentity": "origin-access-identity/cloudfront/EABCDEF1234567"
+                        }
+                    }
+                ],
+                "Quantity": 1
+            },
+            "PriceClass": "PriceClass_All",
+            "ViewerCertificate": {
+                "CertificateSource": "cloudfront",
+                "CloudFrontDefaultCertificate": true,
+                "MinimumProtocolVersion": "TLSv1"
+            },
+            "WebACLId": ""
+        }'
+
+    '''
     retries = 10
     sleep = 6
     kwargs = {k: v for k, v in kwargs.items() if not k.startswith('_')}
@@ -644,6 +828,130 @@ def create_distribution_v2(region=None, key=None, keyid=None, profile=None, **kw
 
 
 def update_distribution_v2(region=None, key=None, keyid=None, profile=None, **kwargs):
+    '''
+    Update a CloudFront distribution with the provided configuration details.  A LOT of fields are
+    required in DistributionConfig to make up a valid update request.  Details can be found at
+    __: https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/distribution-overview-required-fields.html
+    and
+    __: https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/cloudfront.html#CloudFront.Client.update_distribution
+
+    DistributionConfig
+        The distribution's configuration information.
+
+    Id
+        Id of the distribution to update.
+
+    IfMatch
+        The value of the ETag header from a previous get_distribution_v2() call.  Optional, but
+        highly recommended to use this, to avoid update conflicts.  If this value doesn't match
+        the current ETag of the resource (in other words, if the resource was changed since you
+        last fetched its config), the update will be refused.
+
+    region
+        Region to connect to.
+
+    key
+        Secret key to use.
+
+    keyid
+        Access key to use.
+
+    profile
+        Dict, or pillar key pointing to a dict, containing AWS region/key/keyid.
+
+    CLI Example:
+
+    .. code-block:: bash
+        # Note that, minus the Aliases section, this is pretty close to the minimal config I've
+        # found which AWS will accept for a update_distribution() call...
+        salt myminion boto_cloudfront.update_distribution_v2 Id=ET123456789AB IfMatch=E2QWRUHABCDEF0 DistributionConfig='{
+            "CallerReference": "28deef17-cc47-4169-b1a2-eff30c997bf0",
+            "Aliases": {
+                "Items": [
+                    "spa-dev.saltstack.org"
+                ],
+                "Quantity": 1
+            },
+            "Comment": "CloudFront distribution for SPA",
+            "DefaultCacheBehavior": {
+                "AllowedMethods": {
+                    "CachedMethods": {
+                        "Items": [
+                            "HEAD",
+                            "GET"
+                        ],
+                        "Quantity": 2
+                    },
+                    "Items": [
+                        "HEAD",
+                        "GET"
+                    ],
+                    "Quantity": 2
+                },
+                "Compress": false,
+                "DefaultTTL": 86400,
+                "FieldLevelEncryptionId": "",
+                "ForwardedValues": {
+                    "Cookies": {
+                        "Forward": "none"
+                    },
+                    "Headers": {
+                        "Quantity": 0
+                    },
+                    "QueryString": false,
+                    "QueryStringCacheKeys": {
+                        "Quantity": 0
+                    }
+                },
+                "LambdaFunctionAssociations": {
+                    "Quantity": 0
+                },
+                "MaxTTL": 31536000,
+                "MinTTL": 0,
+                "SmoothStreaming": false,
+                "TargetOriginId": "saltstack-spa-cf-dist",
+                "TrustedSigners": {
+                    "Enabled": false,
+                    "Quantity": 0
+                },
+                "ViewerProtocolPolicy": "allow-all"
+            },
+            "DefaultRootObject": "",
+            "Enabled": true,
+            "HttpVersion": "http2",
+            "IsIPV6Enabled": true,
+            "Logging": {
+                "Bucket": "",
+                "Enabled": false,
+                "IncludeCookies": false,
+                "Prefix": ""
+            },
+            "Origins": {
+                "Items": [
+                    {
+                        "CustomHeaders": {
+                            "Quantity": 0
+                        },
+                        "DomainName": "saltstack-spa-dist.s3.amazonaws.com",
+                        "Id": "saltstack-spa-dist",
+                        "OriginPath": "",
+                        "S3OriginConfig": {
+                            "OriginAccessIdentity": "origin-access-identity/cloudfront/EABCDEF1234567"
+                        }
+                    }
+                ],
+                "Quantity": 1
+            },
+            "PriceClass": "PriceClass_All",
+            "ViewerCertificate": {
+                "CertificateSource": "cloudfront",
+                "CloudFrontDefaultCertificate": true,
+                "MinimumProtocolVersion": "TLSv1"
+            },
+            "WebACLId": ""
+        }'
+
+    '''
     retries = 10
     sleep = 6
     kwargs = {k: v for k, v in kwargs.items() if not k.startswith('_')}
@@ -667,6 +975,31 @@ def update_distribution_v2(region=None, key=None, keyid=None, profile=None, **kw
 
 
 def disable_distribution(region=None, key=None, keyid=None, profile=None, **kwargs):
+    '''
+    Set a CloudFront distribution to be disabled.
+
+    Id
+        Id of the distribution to update.
+
+    region
+        Region to connect to.
+
+    key
+        Secret key to use.
+
+    keyid
+        Access key to use.
+
+    profile
+        Dict, or pillar key pointing to a dict, containing AWS region/key/keyid.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_cloudfront.disable_distribution Id=E24RBTSABCDEF0
+
+    '''
     retries = 10
     sleep = 6
     kwargs = {k: v for k, v in kwargs.items() if not k.startswith('_')}
@@ -703,6 +1036,31 @@ def disable_distribution(region=None, key=None, keyid=None, profile=None, **kwar
 
 
 def delete_distribution(region=None, key=None, keyid=None, profile=None, **kwargs):
+    '''
+    Delete a CloudFront distribution.
+
+    Id
+        Id of the distribution to delete.
+
+    region
+        Region to connect to.
+
+    key
+        Secret key to use.
+
+    keyid
+        Access key to use.
+
+    profile
+        Dict, or pillar key pointing to a dict, containing AWS region/key/keyid.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_cloudfront.delete_distribution Id=E24RBTSABCDEF0
+
+    '''
     retries = 10
     sleep = 6
     kwargs = {k: v for k, v in kwargs.items() if not k.startswith('_')}
@@ -726,6 +1084,28 @@ def delete_distribution(region=None, key=None, keyid=None, profile=None, **kwarg
 
 
 def list_cloud_front_origin_access_identities(region=None, key=None, keyid=None, profile=None):
+    '''
+    List, with moderate information, all CloudFront origin access identities in the bound account.
+
+    region
+        Region to connect to.
+
+    key
+        Secret key to use.
+
+    keyid
+        Access key to use.
+
+    profile
+        Dict, or pillar key pointing to a dict, containing AWS region/key/keyid.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_cloudfront.list_cloud_front_origin_access_identities
+
+    '''
     retries = 10
     sleep = 6
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
@@ -753,6 +1133,31 @@ def list_cloud_front_origin_access_identities(region=None, key=None, keyid=None,
 
 def get_cloud_front_origin_access_identity(region=None, key=None, keyid=None, profile=None,
                                            **kwargs):
+    '''
+    Get information about a CloudFront origin access identity given its Resource ID.
+
+    Id
+        Resource ID of the CloudFront origin access identity.
+
+    region
+        Region to connect to.
+
+    key
+        Secret key to use.
+
+    keyid
+        Access key to use.
+
+    profile
+        Dict, or pillar key pointing to a dict, containing AWS region/key/keyid.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_cloudfront.get_origin_access_identity Id=E30ABCDEF12345
+
+    '''
     retries = 10
     sleep = 6
     kwargs = {k: v for k, v in kwargs.items() if not k.startswith('_')}
@@ -779,6 +1184,31 @@ def get_cloud_front_origin_access_identity(region=None, key=None, keyid=None, pr
 
 def get_cloud_front_origin_access_identity_config(region=None, key=None, keyid=None, profile=None,
                                                   **kwargs):
+    '''
+    Get config information about a CloudFront origin access identity given its Resource ID.
+
+    Id
+        Resource ID of the CloudFront origin access identity.
+
+    region
+        Region to connect to.
+
+    key
+        Secret key to use.
+
+    keyid
+        Access key to use.
+
+    profile
+        Dict, or pillar key pointing to a dict, containing AWS region/key/keyid.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_cloudfront.get_cloud_front_origin_access_identity_config Id=E30ABCDEF12345
+
+    '''
     retries = 10
     sleep = 6
     kwargs = {k: v for k, v in kwargs.items() if not k.startswith('_')}
@@ -854,6 +1284,34 @@ def get_cloud_front_origin_access_identities_by_comment(Comment, region=None, ke
 
 def create_cloud_front_origin_access_identity(region=None, key=None, keyid=None, profile=None,
                                               **kwargs):
+    '''
+    Create a CloudFront origin access identity with the provided configuration details.
+
+    CloudFrontOriginAccessIdentityConfig
+        The origin access identity's configuration information.
+
+    region
+        Region to connect to.
+
+    key
+        Secret key to use.
+
+    keyid
+        Access key to use.
+
+    profile
+        Dict, or pillar key pointing to a dict, containing AWS region/key/keyid.
+
+    CLI Example:
+
+    .. code-block:: bash
+        salt myminion boto_cloudfront.create_cloud_front_origin_access_identity \
+                CloudFrontOriginAccessIdentityConfig='{
+                    "CallerReference": "28deef17-cc47-4169-b1a2-eff30c997bf0",
+                    "Comment": "CloudFront origin access identity for SPA"
+                }'
+
+    '''
     retries = 10
     sleep = 6
     kwargs = {k: v for k, v in kwargs.items() if not k.startswith('_')}
@@ -880,6 +1338,43 @@ def create_cloud_front_origin_access_identity(region=None, key=None, keyid=None,
 
 def update_cloud_front_origin_access_identity(region=None, key=None, keyid=None, profile=None,
                                               **kwargs):
+    '''
+    Update a CloudFront origin access identity with the provided configuration details.
+
+    CloudFrontOriginAccessIdentityConfig
+        The origin access identity's configuration information.
+
+    Id
+        Id of the origin access identity to update.
+
+    IfMatch
+        The value of the ETag header from a previous get_cloud_front_origin_access_identity() call.
+        Optional, but highly recommended to use this, to avoid update conflicts.  If this value
+        doesn't match the current ETag of the resource (in other words, if the resource was changed
+        since you last fetched its config), the update will be refused.
+
+    region
+        Region to connect to.
+
+    key
+        Secret key to use.
+
+    keyid
+        Access key to use.
+
+    profile
+        Dict, or pillar key pointing to a dict, containing AWS region/key/keyid.
+
+    CLI Example:
+
+    .. code-block:: bash
+        salt myminion boto_cloudfront.update_cloud_front_origin_access_identity Id=ET123456789AB \\
+                IfMatch=E2QWRUHABCDEF0 CloudFrontOriginAccessIdentityConfig='{
+                    "CallerReference": "28deef17-cc47-4169-b1a2-eff30c997bf0",
+                    "Comment": "CloudFront origin access identity for SPA"
+                }'
+
+    '''
     retries = 10
     sleep = 6
     kwargs = {k: v for k, v in kwargs.items() if not k.startswith('_')}
@@ -906,6 +1401,31 @@ def update_cloud_front_origin_access_identity(region=None, key=None, keyid=None,
 
 def delete_cloud_front_origin_access_identity(region=None, key=None, keyid=None, profile=None,
                                               **kwargs):
+    '''
+    Delete a CloudFront origin access identity.
+
+    Id
+        Id of the origin access identity to delete.
+
+    region
+        Region to connect to.
+
+    key
+        Secret key to use.
+
+    keyid
+        Access key to use.
+
+    profile
+        Dict, or pillar key pointing to a dict, containing AWS region/key/keyid.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_cloudfront.delete_origin_access_identity Id=E30RBTSABCDEF0
+
+    '''
     retries = 10
     sleep = 6
     kwargs = {k: v for k, v in kwargs.items() if not k.startswith('_')}
@@ -933,6 +1453,28 @@ def cloud_front_origin_access_identity_exists(Id, region=None, key=None, keyid=N
     '''
     Return True if a CloudFront origin access identity exists with the given Resource ID or False
     otherwise.
+
+    Id
+        Resource ID of the CloudFront origin access identity.
+
+    region
+        Region to connect to.
+
+    key
+        Secret key to use.
+
+    keyid
+        Access key to use.
+
+    profile
+        Dict, or pillar key pointing to a dict, containing AWS region/key/keyid.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_cloudfront.cloud_front_origin_access_identity_exists Id=E30RBTSABCDEF0
+
     '''
     authargs = {'region': region, 'key': key, 'keyid': keyid, 'profile': profile}
     oais = list_cloud_front_origin_access_identities(**authargs) or []
@@ -957,6 +1499,12 @@ def list_tags_for_resource(region=None, key=None, keyid=None, profile=None, **kw
 
     profile
         Dict, or pillar key pointing to a dict, containing AWS region/key/keyid.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_cloudfront.list_tags_for_resource Resource='arn:aws:cloudfront::012345678012:distribution/ETLNABCDEF123'
 
     '''
     retries = 10
@@ -1005,6 +1553,13 @@ def tag_resource(region=None, key=None, keyid=None, profile=None, **kwargs):
     profile
         Dict, or pillar key pointing to a dict, containing AWS region/key/keyid.
 
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_cloudfront.tag_resource Tags='{Owner: Infra, Role: salt_master}' \\
+                Resource='arn:aws:cloudfront::012345678012:distribution/ETLNABCDEF123'
+
     '''
     retries = 10
     sleep = 6
@@ -1052,6 +1607,12 @@ def untag_resource(region=None, key=None, keyid=None, profile=None, **kwargs):
     profile
         Dict, or pillar key pointing to a dict, containing AWS region/key/keyid.
 
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_cloudfront.untag_resource TagKeys='[Owner, Role]' \\
+                Resource='arn:aws:cloudfront::012345678012:distribution/ETLNABCDEF123'
     '''
     retries = 10
     sleep = 6
@@ -1080,7 +1641,7 @@ def untag_resource(region=None, key=None, keyid=None, profile=None, **kwargs):
 def enforce_tags(Resource, Tags, region=None, key=None, keyid=None, profile=None):
     '''
     Enforce a given set of tags on a CloudFront resource:  adding, removing, or changing them
-    as necessary to ensure the resource's tags are exactly those specified.
+    as necessary to ensure the resource's tags are exactly and only those specified.
 
     Resource
         The ARN of the affected CloudFront resource.
@@ -1099,6 +1660,13 @@ def enforce_tags(Resource, Tags, region=None, key=None, keyid=None, profile=None
 
     profile
         Dict, or pillar key pointing to a dict, containing AWS region/key/keyid.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_cloudfront.enforce_tags Tags='{Owner: Infra, Role: salt_master}' \\
+                Resource='arn:aws:cloudfront::012345678012:distribution/ETLNABCDEF123'
 
     '''
     authargs = {'region': region, 'key': key, 'keyid': keyid, 'profile': profile}

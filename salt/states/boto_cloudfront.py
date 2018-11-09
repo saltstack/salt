@@ -258,10 +258,17 @@ def _fix_quantities(tree):
 def distribution_present(name, region=None, key=None, keyid=None, profile=None, **kwargs):
     '''
     Ensure the given CloudFront distribution exists in the described state.
+    
+    The implementation of this function, and all those following, is orthagonal to that of
+    `present()` above.  Resources created with `present()` will not be correctly managed by
+    this function, as a different method is used to store Salt's state signifier.  This function
+    and those following are a suite, designed to work together.  As an extra bonus, they correctly
+    process updates of the managed resources, so it is recommended to use them in preference to
+    `present()` above.
 
-    Note that the semantics of DistributionConfig (below) are rather arcane, and vary
-    wildly depending on whether the distribution already exists or not (e.g. is being
-    initially created, or being updated in place).  Lots more details can be found at
+    Note that the semantics of DistributionConfig (below) are rather arcane, and vary wildly
+    depending on whether the distribution already exists or not (e.g. is being initially created,
+    or being updated in place).  Lots more details can be found at
     __: https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/distribution-overview-required-fields.html
 
     name (string)
@@ -276,18 +283,18 @@ def distribution_present(name, region=None, key=None, keyid=None, profile=None, 
         Notes:
         - The CallerReference field should NOT be provided - it will be autopopulated by Salt.
         - A large number of sub- (and sub-sub-) fields require a `Quantity` element, which simply
-          COUNTS the number of items in the `Items` element.  This is bluntly stupid, and thus as
-          a convenience, Salt will traverse the given configuration, and add (or fix) a `Quantity`
+          COUNTS the number of items in the `Items` element.  This is bluntly stupid, so as a
+          convenience, Salt will traverse the provided configuration, and add (or fix) a `Quantity`
           element for any `Items` elements of list-type it encounters.  This adds a bit of sanity
           to an otherwise error-prone situation.  Note that for this to work, zero-length lists
           must be inlined as `[]`.
         - Due to the unavailibity of a better way to store stateful idempotency information about
           Distributions, the Comment sub-element (as the only user-settable attribute without weird
           self-blocking semantics, and which is available from the core `get_distribution()` API
-          call) is utilized to store the Salt `Name` value, which is used to determine resource
+          call) is utilized to store the Salt state signifier, which is used to determine resource
           existence and state.  That said, to enable SOME usability of this field, only the value
-          up to the first colon character is taken as the `Name` attribute, while anything
-          afterward is free-form and ignored (but preserved) by Salt.
+          up to the first colon character is taken as the signifier, with everything afterward
+          free-form, and ignored (but preserved) by Salt.
 
     Tags (dict)
         Tags to associate with the distribution.
@@ -603,6 +610,7 @@ def route53_alias_present(name, region=None, key=None, keyid=None, profile=None,
           boto_cloudfront.present:
           - Distribution: my_distribution
           - DomainName: saltstack.org.
+
     '''
     MAGIC_CLOUDFRONT_HOSTED_ZONEID = 'Z2FDTNDATAQYW2'
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
@@ -720,6 +728,7 @@ def distribution_absent(name, region=None, key=None, keyid=None, profile=None, *
         Ensure a distribution named my_distribution is gone:
           boto_cloudfront.distribution_absent:
           - Name: my_distribution
+
     '''
     Name = kwargs['Name'] if 'Name' in kwargs else name
     Id = kwargs.get('Id')
@@ -806,9 +815,9 @@ def origin_access_identity_present(name, region=None, key=None, keyid=None, prof
     Implementation Note:  Due to the unavailibity of ANY other way to store stateful idempotency
     information about Origin Access Identities (including resource tags), the Comment attribute (as
     the only user-settable attribute without weird self-blocking semantics) is necessarily utilized
-    to store the Salt `name` value, which is used to determine resource existence and state.  That
+    to store the Salt state signifier, which is used to determine resource existence and state.  That
     said, to enable SOME usability of this field, only the value up to the first colon character
-    is taken as the `name` attribute, while anything afterward is free-form and ignored by Salt.
+    is taken as the signifier, while anything afterward is free-form and ignored by Salt.
 
     name (string)
         Name of the state definition.
@@ -839,6 +848,7 @@ def origin_access_identity_present(name, region=None, key=None, keyid=None, prof
         my_OAI:
           boto_cloudfront.origin_access_identity_present:
           - Comment: Simply ensures an OAI named my_OAI exists
+
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     kwargs = {k: v for k, v in kwargs.items() if not k.startswith('_')}
@@ -922,13 +932,6 @@ def origin_access_identity_absent(name, region=None, key=None, keyid=None, profi
     '''
     Ensure a given CloudFront Origin Access Identity is absent.
 
-    Implementation Note:  Due to the unavailibity of ANY other way to store stateful idempotency
-    information about Origin Access Identities (including resource tags), the Comment field (as
-    the only user-settable attribute without weird self-blocking semantics) is necessarily utilized
-    to store the Salt `Name` value, used to determine resource existence and state.  That said,
-    to enable SOME usability of this field, only the value up to the first colon character
-    is taken as the `Name` attribute, while anything afterward is free-form and ignored by Salt.
-
     name
         The name of the state definition.
 
@@ -958,6 +961,7 @@ def origin_access_identity_absent(name, region=None, key=None, keyid=None, profi
         Ensure an origin access identity named my_OAI is gone:
           boto_cloudfront.origin_access_identity_absent:
           - Name: my_distribution
+
     '''
     Name = kwargs['Name'] if 'Name' in kwargs else name
     Id = kwargs.get('Id')
