@@ -258,7 +258,7 @@ def _fix_quantities(tree):
 def distribution_present(name, region=None, key=None, keyid=None, profile=None, **kwargs):
     '''
     Ensure the given CloudFront distribution exists in the described state.
-    
+
     The implementation of this function, and all those following, is orthagonal to that of
     `present()` above.  Resources created with `present()` will not be correctly managed by
     this function, as a different method is used to store Salt's state signifier.  This function
