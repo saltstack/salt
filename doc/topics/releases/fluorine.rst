@@ -812,7 +812,7 @@ sent.
 
 The new :conf_minion:`enable_legacy_startup_events` minion config option
 defaults to ``True``, but will be set to default to ``False`` beginning with
-the Neon release of Salt.
+the Sodium release of Salt.
 
 The Salt Syndic currently sends an old style ``syndic_start`` event as well. The
 syndic respects :conf_minion:`enable_legacy_startup_events` as well.

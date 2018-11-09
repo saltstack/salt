@@ -3195,8 +3195,8 @@ class _policy_info(object):
                     userSid = '{0}'.format(userSid[0])
             # TODO: This needs to be more specific
             except Exception:
-                log.exception('Handle this explicitly')
                 userSid = win32security.ConvertSidToStringSid(_sid)
+                log.warning('Unable to convert SID "%s" to a friendly name.  The SID will be disaplayed instead of a user/group name.', userSid)
             usernames.append(userSid)
         return usernames
 
@@ -3585,8 +3585,8 @@ def _findOptionValueInSeceditFile(option):
                     return True, _line.split('=')[1].strip()
         return True, 'Not Defined'
     # TODO: This needs to be more specific
-    except Exception:
-        log.exception('error occurred while trying to get secedit data')
+    except Exception as e:
+        log.exception('error %s occurred while trying to get secedit data', e)
         return False, None
 
 
@@ -3754,9 +3754,9 @@ def _getAdmlPresentationRefId(adml_data, ref_id):
                         else:
                             if etree.QName(p_item.tag).localname == 'text':
                                 if prepended_text:
-                                    prepended_text = ' '.join([prepended_text, p_item.text.rstrip()])
+                                    prepended_text = ' '.join((text for text in (prepended_text, getattr(p_item, 'text', '').rstrip()) if text))
                                 else:
-                                    prepended_text = p_item.text.rstrip()
+                                    prepended_text = getattr(p_item, 'text', '').rstrip()
                             else:
                                 prepended_text = ''
                     if prepended_text.endswith('.'):
@@ -4151,7 +4151,7 @@ def _processValueItem(element, reg_key, reg_valuename, policy, parent_element,
                                          encoded_semicolon,
                                          chr(registry.vtype[this_vtype]).encode('utf-32-le'),
                                          encoded_semicolon,
-                                         chr(len(' {0}'.format(chr(0)).encode('utf-16-le'))).encode('utf-32-le'),
+                                         six.unichr(len(' {0}'.format(chr(0)).encode('utf-16-le'))).encode('utf-32-le'),
                                          encoded_semicolon,
                                          ' '.encode('utf-16-le'),
                                          encoded_null,
@@ -4212,7 +4212,7 @@ def _processValueItem(element, reg_key, reg_valuename, policy, parent_element,
                                             encoded_semicolon,
                                             chr(registry.vtype[this_vtype]).encode('utf-32-le'),
                                             encoded_semicolon,
-                                            chr(len(' {0}'.format(chr(0)))).encode('utf-32-le'),
+                                            six.unichr(len(' {0}'.format(chr(0)).encode('utf-16-le'))).encode('utf-32-le'),
                                             encoded_semicolon,
                                             ' '.encode('utf-16-le'),
                                             encoded_null,
@@ -4839,7 +4839,9 @@ def _regexSearchKeyValueCombo(policy_data, policy_regpath, policy_regkey):
                                b'\00;'])
         match = re.search(_thisSearch, policy_data, re.IGNORECASE)
         if match:
-            return policy_data[match.start():(policy_data.index(']', match.end())) + 1]
+            # add 2 so we get the ']' and the \00
+            # to return the full policy entry
+            return policy_data[match.start():(policy_data.index(b']', match.end())) + 2]
 
     return None
 
@@ -5343,8 +5345,8 @@ def _writeAdminTemplateRegPolFile(admtemplate_data,
                            policy_data.admx_registry_classes[registry_class]['gpt_extension_location'],
                            policy_data.admx_registry_classes[registry_class]['gpt_extension_guid'])
     # TODO: This needs to be more specific or removed
-    except Exception:
-        log.exception('Unhandled exception %s occurred while attempting to write Adm Template Policy File')
+    except Exception as e:
+        log.exception('Unhandled exception %s occurred while attempting to write Adm Template Policy File', e)
         return False
     return True
 
@@ -5492,12 +5494,14 @@ def _lookup_admin_template(policy_name,
             suggested_policies = ''
             adml_to_remove = []
             if len(adml_search_results) > 1:
+                log.debug('multiple ADML entries found matching the policy name %s', policy_name)
                 multiple_adml_entries = True
                 for adml_search_result in adml_search_results:
                     if not getattr(adml_search_result, 'text', '').strip() == policy_name:
                         adml_to_remove.append(adml_search_result)
                     else:
                         if hierarchy:
+                            log.debug('we have hierarchy of %s', hierarchy)
                             display_name_searchval = '$({0}.{1})'.format(
                                     adml_search_result.tag.split('}')[1],
                                     adml_search_result.attrib['id'])
@@ -5507,8 +5511,11 @@ def _lookup_admin_template(policy_name,
                                 display_name_searchval,
                                 policy_class)
                             admx_results = []
-                            admx_search_results = admx_policy_definitions.xpath(policy_search_string, namespaces=adml_search_result.nsmap)
-                            for search_result in admx_search_results:
+                            these_admx_search_results = admx_policy_definitions.xpath(policy_search_string, namespaces=adml_search_result.nsmap)
+                            if not these_admx_search_results:
+                                log.debug('No admx was found for the adml entry %s, it will be removed', display_name_searchval)
+                                adml_to_remove.append(adml_search_result)
+                            for search_result in these_admx_search_results:
                                 log.debug('policy_name == %s', policy_name)
                                 this_hierarchy = _build_parent_list(search_result,
                                                                     admx_policy_definitions,
@@ -5516,11 +5523,29 @@ def _lookup_admin_template(policy_name,
                                                                     adml_policy_resources)
                                 this_hierarchy.reverse()
                                 if hierarchy != this_hierarchy:
-                                    adml_to_remove.append(adml_search_result)
+                                    msg = 'hierarchy %s does not match this item\'s hierarchy of %s'
+                                    log.debug(msg, hierarchy, this_hierarchy)
+                                    if len(these_admx_search_results) == 1:
+                                        log.debug('only 1 admx was found and it does not match this adml, it is safe to remove from the list')
+                                        adml_to_remove.append(adml_search_result)
                                 else:
+                                    log.debug('hierarchy %s matches item\'s hierarchy of %s', hierarchy, this_hierarchy)
+                                    log.debug('search_result %s added to results', search_result)
                                     admx_results.append(search_result)
                             if len(admx_results) == 1:
-                                admx_search_results = admx_results
+                                admx_search_results.append(admx_results[0])
+                        else:
+                            # verify the ADMX correlated to this ADML is in the same class
+                            # that we are looking for
+                            display_name_searchval = '$({0}.{1})'.format(
+                                    adml_search_result.tag.split('}')[1],
+                                    adml_search_result.attrib['id'])
+                            these_admx_search_results = ADMX_DISPLAYNAME_SEARCH_XPATH(
+                                    admx_policy_definitions,
+                                    display_name=display_name_searchval,
+                                    registry_class=policy_class)
+                            if not these_admx_search_results:
+                                adml_to_remove.append(adml_search_result)
             for adml in adml_to_remove:
                 if adml in adml_search_results:
                     adml_search_results.remove(adml)
@@ -5535,12 +5560,15 @@ def _lookup_admin_template(policy_name,
                         adml_search_result.attrib['id'])
                 log.debug('searching for displayName == %s', display_name_searchval)
                 if not admx_search_results:
+                    log.debug('search for an admx entry matching display_name %s and registry_class %s', display_name_searchval, policy_class)
                     admx_search_results = ADMX_DISPLAYNAME_SEARCH_XPATH(
                             admx_policy_definitions,
                             display_name=display_name_searchval,
                             registry_class=policy_class)
                 if admx_search_results:
-                    if len(admx_search_results) == 1 or hierarchy and not multiple_adml_entries:
+                    log.debug('processing admx_search_results of {0}'.format(admx_search_results))
+                    log.debug('multiple_adml_entries is {0}'.format(multiple_adml_entries))
+                    if (len(admx_search_results) == 1 or hierarchy) and not multiple_adml_entries:
                         found = False
                         for search_result in admx_search_results:
                             found = False
@@ -5596,9 +5624,6 @@ def _lookup_admin_template(policy_name,
                                                                '\\'.join(this_parent_list)])
                             else:
                                 suggested_policies = '\\'.join(this_parent_list)
-                else:
-                    msg = 'Unable to find a policy with the name "{0}".'.format(policy_name)
-                    return (False, None, [], msg)
             if suggested_policies:
                 msg = ('ADML policy name "{0}" is used as the display name'
                        ' for multiple policies.'
