@@ -49,7 +49,6 @@ class DpkgTestCase(TestCase, LoaderModuleMockMixin):
          'build_date_time_t': 1407430308, 'installed_size': '25', 'install_date': '2016-12-14T20:02:58Z'}
     ]
 
-
     def setup_loader_modules(self):
         return {dpkg: {}}
 
