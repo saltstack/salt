@@ -275,6 +275,37 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
         for k in wget_pkg:
             assert k in expected_pkg
             assert wget_pkg[k] == expected_pkg[k]
+
+    @patch('salt.modules.aptpkg.__salt__', {'lowpkg.info': MagicMock(return_value=LOWPKG_INFO)})
+    def test_info_installed_all_versions(self):
+        '''
+        Test info_installed 'all_versions'.
+        Since Debian won't return same name packages with the different names,
+        this should just return different structure, backward compatible with
+        the RPM equivalents.
+
+        :return:
+        '''
+        print()
+        ret = aptpkg.info_installed('emacs', all_versions=True)
+        assert isinstance(ret, dict)
+        assert 'wget' in ret
+        assert isinstance(ret['wget'], list)
+
+        pkgs = ret['wget']
+
+        assert len(pkgs) == 1
+        assert isinstance(pkgs[0], dict)
+
+        wget_pkg = pkgs[0]
+        expected_pkg = {'url': 'http://www.gnu.org/software/wget/',
+                        'packager': 'Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>', 'name': 'wget',
+                        'install_date': '2016-08-30T22:20:15Z', 'description': 'retrieves files from the web',
+                        'version': '1.15-1ubuntu1.14.04.2', 'architecture': 'amd64', 'group': 'web', 'source': 'wget'}
+        for k in wget_pkg:
+            assert k in expected_pkg
+            assert wget_pkg[k] == expected_pkg[k]
+
     def test_owner(self):
         '''
         Test - Return the name of the package that owns the file.
