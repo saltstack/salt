@@ -253,6 +253,26 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(aptpkg.__salt__, {'lowpkg.info': mock}):
             self.assertEqual(aptpkg.info_installed('wget'), installed)
 
+    @patch('salt.modules.aptpkg.__salt__', {'lowpkg.info': MagicMock(return_value=LOWPKG_INFO)})
+    def test_info_installed_attr(self):
+        '''
+        Test info_installed 'attr'.
+        This doesn't test 'attr' behaviour per se, since the underlying function in dpkg
+
+        :return:
+        '''
+        ret = aptpkg.info_installed('emacs', attr='foo,bar')
+        assert isinstance(ret, dict)
+        assert 'wget' in ret
+
+        wget_pkg = ret['wget']
+        expected_pkg = {'url': 'http://www.gnu.org/software/wget/',
+                        'packager': 'Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>', 'name': 'wget',
+                        'install_date': '2016-08-30T22:20:15Z', 'description': 'retrieves files from the web',
+                        'version': '1.15-1ubuntu1.14.04.2', 'architecture': 'amd64', 'group': 'web', 'source': 'wget'}
+        for k in wget_pkg:
+            assert k in expected_pkg
+            assert wget_pkg[k] == expected_pkg[k]
     def test_owner(self):
         '''
         Test - Return the name of the package that owns the file.
