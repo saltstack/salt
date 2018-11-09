@@ -257,7 +257,8 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
     def test_info_installed_attr(self):
         '''
         Test info_installed 'attr'.
-        This doesn't test 'attr' behaviour per se, since the underlying function in dpkg
+        This doesn't test 'attr' behaviour per se, since the underlying function is in dpkg.
+        The test should simply not raise exceptions for invalid parameter.
 
         :return:
         '''
