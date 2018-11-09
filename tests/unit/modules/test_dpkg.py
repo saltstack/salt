@@ -154,3 +154,21 @@ class DpkgTestCase(TestCase, LoaderModuleMockMixin):
         assert pkg_data['section'] == 'editors'
         assert pkg_data['maintainer'] == 'Simpsons Developers <simpsons-devel-discuss@lists.springfield.org>'
         assert pkg_data['license'] == 'BSD v3'
+
+    @patch('salt.modules.dpkg._get_pkg_ds_avail', MagicMock(return_value=dselect_pkg))
+    @patch('salt.modules.dpkg._get_pkg_info', MagicMock(return_value=pkgs_info))
+    @patch('salt.modules.dpkg._get_pkg_license', MagicMock(return_value='BSD v3'))
+    def test_info_attr(self):
+        '''
+        Test info with 'attr' parameter
+        :return:
+        '''
+        ret = dpkg.info('emacs', attr='arch,license,version')
+        assert isinstance(ret, dict)
+        assert 'emacs' in ret
+        for attr in ['arch', 'license', 'version']:
+            assert attr in ret['emacs']
+
+        assert ret['emacs']['arch'] == 'all'
+        assert ret['emacs']['license'] == 'BSD v3'
+        assert ret['emacs']['version'] == '46.1'
