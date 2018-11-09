@@ -313,6 +313,10 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
         '''
         assert aptpkg.owner('/usr/bin/wget') == 'wget'
 
+    @patch('salt.utils.pkg.clear_rtag', MagicMock())
+    @patch('salt.modules.aptpkg.__salt__', {'cmd.run_all': MagicMock(return_value={'retcode': 0,
+                                                                                   'stdout': APT_Q_UPDATE}),
+                                            'config.get': MagicMock(return_value=False)})
     def test_refresh_db(self):
         '''
         Test - Updates the APT database to latest packages based upon repositories.
@@ -324,26 +328,20 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
             'http://security.ubuntu.com trusty-security/main amd64 Packages': True,
             'http://security.ubuntu.com trusty-security/main i386 Packages': True
         }
-        mock = MagicMock(return_value={
-            'retcode': 0,
-            'stdout': APT_Q_UPDATE
-        })
-        with patch('salt.utils.pkg.clear_rtag', MagicMock()):
-            with patch.dict(aptpkg.__salt__, {'cmd.run_all': mock, 'config.get': MagicMock(return_value=False)}):
-                self.assertEqual(aptpkg.refresh_db(), refresh_db)
+        assert aptpkg.refresh_db() == refresh_db
 
+    @patch('salt.utils.pkg.clear_rtag', MagicMock())
+    @patch('salt.modules.aptpkg.__salt__', {'cmd.run_all': MagicMock(return_value={'retcode': 0,
+                                                                                   'stdout': APT_Q_UPDATE_ERROR}),
+                                            'config.get': MagicMock(return_value=False)})
     def test_refresh_db_failed(self):
         '''
         Test - Update the APT database using unreachable repositories.
         '''
-        kwargs = {'failhard': True}
-        mock = MagicMock(return_value={
-            'retcode': 0,
-            'stdout': APT_Q_UPDATE_ERROR
-        })
-        with patch('salt.utils.pkg.clear_rtag', MagicMock()):
-            with patch.dict(aptpkg.__salt__, {'cmd.run_all': mock, 'config.get': MagicMock(return_value=False)}):
-                self.assertRaises(CommandExecutionError, aptpkg.refresh_db, **kwargs)
+        with pytest.raises(CommandExecutionError) as err:
+            aptpkg.refresh_db(failhard=True)
+        assert 'Error getting repos' in str(err)
+        assert 'http://security.ubuntu.com trusty InRelease, http://security.ubuntu.com trusty Release.gpg' in str(err)
 
     def test_autoremove(self):
         '''
