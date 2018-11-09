@@ -361,41 +361,29 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
                 assert aptpkg.autoremove(list_only=True) == []
                 assert aptpkg.autoremove(list_only=True, purge=True) == []
 
+    @patch('salt.modules.aptpkg._uninstall', MagicMock(return_value=UNINSTALL))
     def test_remove(self):
         '''
         Test - Remove packages.
         '''
-        with patch('salt.modules.aptpkg._uninstall',
-                   MagicMock(return_value=UNINSTALL)):
-            self.assertEqual(aptpkg.remove(name='tmux'), UNINSTALL)
+        assert aptpkg.remove(name='tmux') == UNINSTALL
 
+    @patch('salt.modules.aptpkg._uninstall', MagicMock(return_value=UNINSTALL))
     def test_purge(self):
         '''
         Test - Remove packages along with all configuration files.
         '''
-        with patch('salt.modules.aptpkg._uninstall',
-                   MagicMock(return_value=UNINSTALL)):
-            self.assertEqual(aptpkg.purge(name='tmux'), UNINSTALL)
+        assert aptpkg.purge(name='tmux') == UNINSTALL
 
+    @patch('salt.utils.pkg.clear_rtag', MagicMock())
+    @patch('salt.modules.aptpkg.list_pkgs', MagicMock(return_value=UNINSTALL))
+    @patch.multiple(aptpkg, **{'__salt__': {'config.get': MagicMock(return_value=True),
+                                            'cmd.run_all': MagicMock(return_value={'retcode': 0, 'stdout': UPGRADE})}})
     def test_upgrade(self):
         '''
         Test - Upgrades all packages.
         '''
-        with patch('salt.utils.pkg.clear_rtag', MagicMock()):
-            with patch('salt.modules.aptpkg.list_pkgs',
-                       MagicMock(return_value=UNINSTALL)):
-                mock_cmd = MagicMock(return_value={
-                    'retcode': 0,
-                    'stdout': UPGRADE
-                })
-                patch_kwargs = {
-                    '__salt__': {
-                        'config.get': MagicMock(return_value=True),
-                        'cmd.run_all': mock_cmd
-                    }
-                }
-                with patch.multiple(aptpkg, **patch_kwargs):
-                    self.assertEqual(aptpkg.upgrade(), dict())
+        assert aptpkg.upgrade() == {}
 
     # TODO: has to be broken up
     def test_show(self):
