@@ -143,6 +143,7 @@ def _get_options(ret):
 
     return _options
 
+
 #
 # Most email readers to not support <style> tag.
 # The following dict and a function provide a primitive styler
@@ -479,13 +480,10 @@ def _produce_output(report, failed, setup):
         if tls is True:
             smtp.starttls()
             log.debug('highstate smtp tls enabled')
-        
+
         if username and password:
             smtp.login(username, password)
             log.debug('highstate smtp authenticated')
-        
-        # Enable logging SMTP session after the login credentials were passed
-        smtp.set_debuglevel(1)
 
         smtp.sendmail(
             sender,
