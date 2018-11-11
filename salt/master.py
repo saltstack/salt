@@ -590,12 +590,13 @@ class Master(SMaster):
             errors.append('No fileserver backends are configured')
 
         # Check to see if we need to create a pillar cache dir
-        if self.opts['pillar_cache'] and not os.path.isdir(os.path.join(self.opts['cachedir'], 'pillar_cache')):
-            try:
-                with salt.utils.files.set_umask(0o077):
-                    os.mkdir(os.path.join(self.opts['cachedir'], 'pillar_cache'))
-            except OSError:
-                pass
+        for k in ['pillar_cache', 'ext_pillar_cache']:
+            if self.opts[k] and not os.path.isdir(os.path.join(self.opts['cachedir'], k)):
+                try:
+                    with salt.utils.files.set_umask(0o077):
+                        os.mkdir(os.path.join(self.opts['cachedir'], k))
+                except OSError:
+                    pass
 
         if self.opts.get('git_pillar_verify_config', True):
             try:

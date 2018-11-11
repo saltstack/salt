@@ -56,7 +56,7 @@ def get_pillar(opts, grains, minion_id, saltenv=None, ext=None, funcs=None,
     }.get(file_client, Pillar)
     # If local pillar and we're caching, run through the cache system first
     log.debug('Determining pillar cache')
-    if opts['pillar_cache']:
+    if opts['pillar_cache'] or opts['ext_pillar_cache']:
         log.info('Compiling pillar from cache')
         log.debug('get_pillar using pillar cache with ext: %s', ext)
         return PillarCache(opts, grains, minion_id, saltenv, ext=ext, functions=funcs,
@@ -273,6 +273,8 @@ class PillarCache(object):
         self.functions = functions
         self.pillar_override = pillar_override
         self.pillarenv = pillarenv
+        self.cache = None
+        self.ext_cache = None
 
         if saltenv is None:
             self.saltenv = 'base'
@@ -280,58 +282,128 @@ class PillarCache(object):
             self.saltenv = saltenv
 
         # Determine caching backend
-        self.cache = salt.utils.cache.CacheFactory.factory(
-                self.opts['pillar_cache_backend'],
-                self.opts['pillar_cache_ttl'],
-                minion_cache_path=self._minion_cache_path(minion_id))
+        if self.opts.get('pillar_cache', False):
+            self.cache = salt.utils.cache.CacheFactory.factory(
+                    self.opts['pillar_cache_backend'],
+                    self.opts['pillar_cache_ttl'],
+                    minion_cache_path=self._minion_cache_path('pillar_cache', minion_id))
 
-    def _minion_cache_path(self, minion_id):
+        if self.opts.get('ext_pillar_cache', False):
+            self.ext_cache = salt.utils.cache.CacheFactory.factory(
+                    self.opts['ext_pillar_cache_backend'],
+                    self.opts['ext_pillar_cache_ttl'],
+                    minion_cache_path=self._minion_cache_path('ext_pillar_cache', minion_id))
+
+    def _minion_cache_path(self, cache_type, minion_id):
         '''
         Return the path to the cache file for the minion.
 
         Used only for disk-based backends
         '''
-        return os.path.join(self.opts['cachedir'], 'pillar_cache', minion_id)
+        return os.path.join(self.opts['cachedir'], cache_type, minion_id)
 
-    def fetch_pillar(self):
+    def fetch_pillar(self, fetch_pillar=True, fetch_ext_pillar=True):
         '''
         In the event of a cache miss, we need to incur the overhead of caching
         a new pillar.
         '''
-        log.debug('Pillar cache getting external pillar with ext: %s', self.ext)
+        ext = None
+        msg = 'Pillar cache getting external pillar with ext: {0}'.format(ext)
+        if fetch_ext_pillar is True:
+            ext = self.ext
+            msg = 'Ext_pillar cache getting external pillar with ext: {0}'.format(ext)
+        log.debug(msg)
         fresh_pillar = Pillar(self.opts,
                               self.grains,
                               self.minion_id,
                               self.saltenv,
-                              ext=self.ext,
+                              ext=ext,
                               functions=self.functions,
                               pillar_override=self.pillar_override,
-                              pillarenv=self.pillarenv)
+                              pillarenv=self.pillarenv,
+                              fetch_pillar=fetch_pillar,
+                              fetch_ext_pillar=fetch_ext_pillar)
         return fresh_pillar.compile_pillar()
 
     def compile_pillar(self, *args, **kwargs):  # Will likely just be pillar_dirs
-        log.debug('Scanning pillar cache for information about minion %s and pillarenv %s', self.minion_id, self.pillarenv)
-        log.debug('Scanning cache: %s', self.cache._dict)
-        # Check the cache!
-        if self.minion_id in self.cache:  # Keyed by minion_id
-            # TODO Compare grains, etc?
-            if self.pillarenv in self.cache[self.minion_id]:
-                # We have a cache hit! Send it back.
-                log.debug('Pillar cache hit for minion %s and pillarenv %s', self.minion_id, self.pillarenv)
-                return self.cache[self.minion_id][self.pillarenv]
+        pillar_ret = {}
+        ext_pillar_ret = {}
+        if self.cache:
+            log.debug('Scanning pillar cache for information about minion %s and pillarenv %s',
+                      self.minion_id, self.pillarenv)
+            log.debug('Scanning cache: %s', self.cache._dict)
+            # Check the cache!
+            if self.minion_id in self.cache:  # Keyed by minion_id
+                # TODO Compare grains, etc?
+                if self.pillarenv in self.cache[self.minion_id]:
+                    # We have a cache hit! Send it back.
+                    log.debug('Pillar cache hit for minion %s and pillarenv %s',
+                              self.minion_id, self.pillarenv)
+                    pillar_ret = self.cache[self.minion_id][self.pillarenv]
+                else:
+                    # We found the minion but not the env. Store it.
+                    fresh_pillar = self.fetch_pillar(fetch_ext_pillar=False)
+                    self.cache[self.minion_id] = dict(self.cache[self.minion_id], **{
+                        self.pillarenv: fresh_pillar
+                    log.debug('Pillar cache miss for minion %s and pillarenv %s',
+                              self.minion_id, self.pillarenv)
+                    pillar_ret = fresh_pillar
             else:
-                # We found the minion but not the env. Store it.
-                fresh_pillar = self.fetch_pillar()
-                self.cache[self.minion_id][self.pillarenv] = fresh_pillar
-                log.debug('Pillar cache miss for pillarenv %s for minion %s', self.pillarenv, self.minion_id)
-                return fresh_pillar
+                # We haven't seen this minion yet in the cache. Store it.
+                fresh_pillar = self.fetch_pillar(fetch_ext_pillar=False)
+                self.cache[self.minion_id] = {self.pillarenv: fresh_pillar}
+                log.debug('Pillar cache miss for minion %s and pillarenv %s',
+                          self.minion_id, self.pillarenv)
+                log.debug('Current pillar cache: %s', self.cache._dict)  # FIXME hack!
+                pillar_ret = fresh_pillar
         else:
-            # We haven't seen this minion yet in the cache. Store it.
-            fresh_pillar = self.fetch_pillar()
-            self.cache[self.minion_id] = {self.pillarenv: fresh_pillar}
-            log.debug('Pillar cache miss for minion %s', self.minion_id)
-            log.debug('Current pillar cache: %s', self.cache._dict)  # FIXME hack!
-            return fresh_pillar
+            fresh_pillar = self.fetch_pillar(fetch_ext_pillar=False)
+            log.debug('Fetching pillar for minion %s and pillarenv %s',
+                      self.minion_id, self.pillarenv)
+            pillar_ret = fresh_pillar
+        if self.ext_cache:
+            log.debug('Scanning ext_pillar cache for information about minion %s and pillarenv %s',
+                      self.minion_id, self.pillarenv)
+            log.debug('Scanning cache: %s', self.ext_cache._dict)
+            # Check the cache!
+            if self.minion_id in self.ext_cache:  # Keyed by minion_id
+                # TODO Compare grains, etc?
+                if self.pillarenv in self.ext_cache[self.minion_id]:
+                    # We have a cache hit! Send it back.
+                    log.debug('Ext_pillar cache hit for minion %s and pillarenv %s',
+                              self.minion_id, self.pillarenv)
+                    ext_pillar_ret = self.ext_cache[self.minion_id][self.pillarenv]
+                else:
+                    # We found the minion but not the env. Store it.
+                    fresh_ext_pillar = self.fetch_pillar(fetch_pillar=False)
+                    self.ext_cache[self.minion_id] = dict(self.ext_cache[self.minion_id], **{
+                        self.pillarenv: fresh_ext_pillar
+                    })
+                    log.debug('Ext_pillar cache miss for minion %s and pillarenv %s',
+                              self.minion_id, self.pillarenv)
+                    ext_pillar_ret = fresh_ext_pillar
+            else:
+                # We haven't seen this minion yet in the cache. Store it.
+                fresh_ext_pillar = self.fetch_pillar(fetch_pillar=False)
+                self.ext_cache[self.minion_id] = {self.pillarenv: fresh_ext_pillar}
+                log.debug('Ext_pillar cache miss for minion %s and pillarenv %s',
+                          self.minion_id, self.pillarenv)
+                log.debug('Current Ext_pillar cache: %s', self.ext_cache._dict)  # FIXME hack!
+                ext_pillar_ret = fresh_ext_pillar
+        else:
+            fresh_ext_pillar = self.fetch_pillar(fetch_pillar=False)
+            log.debug('Fetching Ext_pillar for minion %s and pillarenv %s',
+                      self.minion_id, self.pillarenv)
+            ext_pillar_ret = fresh_ext_pillar
+        if self.opts.get('ext_pillar_first', False):
+            ret1, ret2 = ext_pillar_ret, pillar_ret
+        else:
+            ret1, ret2 = pillar_ret, ext_pillar_ret
+        return merge(ret1,
+                     ret2,
+                     self.opts.get('pillar_source_merging_strategy', 'smart'),
+                     self.opts.get('renderer', 'yaml'),
+                     self.opts.get('pillar_merge_lists', False))
 
 
 class Pillar(object):
@@ -339,17 +411,21 @@ class Pillar(object):
     Read over the pillar top files and render the pillar data
     '''
     def __init__(self, opts, grains, minion_id, saltenv, ext=None, functions=None,
-                 pillar_override=None, pillarenv=None, extra_minion_data=None):
+                 pillar_override=None, pillarenv=None, extra_minion_data=None,
+                 fetch_pillar=True, fetch_ext_pillar=True):
         self.minion_id = minion_id
         self.ext = ext
         if pillarenv is None:
             if opts.get('pillarenv_from_saltenv', False):
                 opts['pillarenv'] = saltenv
+        self.fetch_pillar = fetch_pillar
+        self.fetch_ext_pillar = fetch_ext_pillar
         # use the local file client
         self.opts = self.__gen_opts(opts, grains, saltenv=saltenv, pillarenv=pillarenv)
         self.saltenv = saltenv
-        self.client = salt.fileclient.get_file_client(self.opts, True)
-        self.avail = self.__gather_avail()
+        if self.fetch_pillar is True:
+            self.client = salt.fileclient.get_file_client(self.opts, True)
+            self.avail = self.__gather_avail()
 
         if opts.get('file_client', '') == 'local':
             opts['grains'] = grains
@@ -364,17 +440,18 @@ class Pillar(object):
         else:
             self.functions = functions
 
-        self.matchers = salt.loader.matchers(self.opts)
-        self.rend = salt.loader.render(self.opts, self.functions)
-        ext_pillar_opts = copy.deepcopy(self.opts)
-        # Keep the incoming opts ID intact, ie, the master id
-        if 'id' in opts:
-            ext_pillar_opts['id'] = opts['id']
+        if self.fetch_pillar is True:
+            self.matchers = salt.loader.matchers(self.opts)
+            self.rend = salt.loader.render(self.opts, self.functions)
+        if self.fetch_ext_pillar is True:
+            ext_pillar_opts = copy.deepcopy(self.opts)
+            # Keep the incoming opts ID intact, ie, the master id
+            if 'id' in opts:
+                ext_pillar_opts['id'] = opts['id']
+            self.ext_pillars = salt.loader.pillars(ext_pillar_opts, self.functions)
         self.merge_strategy = 'smart'
         if opts.get('pillar_source_merging_strategy'):
             self.merge_strategy = opts['pillar_source_merging_strategy']
-
-        self.ext_pillars = salt.loader.pillars(ext_pillar_opts, self.functions)
         self.ignored_pillars = {}
         self.pillar_override = pillar_override or {}
         if not isinstance(self.pillar_override, dict):
@@ -433,31 +510,32 @@ class Pillar(object):
         The options need to be altered to conform to the file client
         '''
         opts = copy.deepcopy(opts_in)
-        opts['file_client'] = 'local'
-        if not grains:
-            opts['grains'] = {}
-        else:
-            opts['grains'] = grains
-        # Allow minion/CLI saltenv/pillarenv to take precedence over master
-        opts['saltenv'] = saltenv \
-            if saltenv is not None \
-            else opts.get('saltenv')
-        opts['pillarenv'] = pillarenv \
-            if pillarenv is not None \
-            else opts.get('pillarenv')
-        opts['id'] = self.minion_id
-        if opts['state_top'].startswith('salt://'):
-            opts['state_top'] = opts['state_top']
-        elif opts['state_top'].startswith('/'):
-            opts['state_top'] = salt.utils.url.create(opts['state_top'][1:])
-        else:
-            opts['state_top'] = salt.utils.url.create(opts['state_top'])
-        if self.ext and self.__valid_on_demand_ext_pillar(opts):
+        if self.fetch_pillar is True:
+            opts['file_client'] = 'local'
+            if not grains:
+                opts['grains'] = {}
+            else:
+                opts['grains'] = grains
+            # Allow minion/CLI saltenv/pillarenv to take precedence over master
+            opts['saltenv'] = saltenv \
+                if saltenv is not None \
+                else opts.get('saltenv')
+            opts['pillarenv'] = pillarenv \
+                if pillarenv is not None \
+                else opts.get('pillarenv')
+            opts['id'] = self.minion_id
+            if opts['state_top'].startswith('salt://'):
+                opts['state_top'] = opts['state_top']
+            elif opts['state_top'].startswith('/'):
+                opts['state_top'] = salt.utils.url.create(opts['state_top'][1:])
+            else:
+                opts['state_top'] = salt.utils.url.create(opts['state_top'])
+        if self.fetch_ext_pillar is True and self.ext and self.__valid_on_demand_ext_pillar(opts):
             if 'ext_pillar' in opts:
                 opts['ext_pillar'].append(self.ext)
             else:
                 opts['ext_pillar'] = [self.ext]
-        if '__env__' in opts['pillar_roots']:
+        if self.fetch_pillar is True and '__env__' in opts['pillar_roots']:
             env = opts.get('pillarenv') or opts.get('saltenv') or 'base'
             if env not in opts['pillar_roots']:
                 log.debug("pillar environment '%s' maps to __env__ pillar_roots directory", env)
@@ -974,9 +1052,12 @@ class Pillar(object):
         '''
         Render the pillar data and return
         '''
-        top, top_errors = self.get_top()
+        pillar, errors = {}, []
+        if self.fetch_pillar is True:
+            top, top_errors = self.get_top()
         if ext:
-            if self.opts.get('ext_pillar_first', False):
+            if False not in [self.fetch_pillar, self.fetch_ext_pillar] \
+                and self.opts.get('ext_pillar_first', False):
                 self.opts['pillar'], errors = self.ext_pillar(self.pillar_override)
                 self.rend = salt.loader.render(self.opts, self.functions)
                 matches = self.top_matches(top)
@@ -988,19 +1069,22 @@ class Pillar(object):
                     self.opts.get('renderer', 'yaml'),
                     self.opts.get('pillar_merge_lists', False))
             else:
-                matches = self.top_matches(top)
-                pillar, errors = self.render_pillar(matches)
-                pillar, errors = self.ext_pillar(pillar, errors=errors)
+                if self.fetch_pillar is True:
+                    matches = self.top_matches(top)
+                    pillar, errors = self.render_pillar(matches)
+                if self.fetch_ext_pillar is True:
+                    pillar, errors = self.ext_pillar(pillar, errors=errors)
         else:
             matches = self.top_matches(top)
             pillar, errors = self.render_pillar(matches)
-        errors.extend(top_errors)
-        if self.opts.get('pillar_opts', False):
-            mopts = dict(self.opts)
-            if 'grains' in mopts:
-                mopts.pop('grains')
-            mopts['saltversion'] = __version__
-            pillar['master'] = mopts
+        if self.fetch_pillar is True:
+            errors.extend(top_errors)
+            if self.opts.get('pillar_opts', False):
+                mopts = dict(self.opts)
+                if 'grains' in mopts:
+                    mopts.pop('grains')
+                mopts['saltversion'] = __version__
+                pillar['master'] = mopts
         if 'pillar' in self.opts and self.opts.get('ssh_merge_pillar', False):
             pillar = merge(
                 self.opts['pillar'],

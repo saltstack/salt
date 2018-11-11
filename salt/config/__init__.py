@@ -739,6 +739,15 @@ VALID_OPTS = {
     # Pillar cache backend. Defaults to `disk` which stores caches in the master cache
     'pillar_cache_backend': six.string_types,
 
+    # Cache the master external pillar to disk to avoid having to pass through the rendering system
+    'ext_pillar_cache': bool,
+
+    # External pillar cache TTL, in seconds. Has no effect unless `ext_pillar_cache` is True
+    'ext_pillar_cache_ttl': int,
+
+    # External pillar cache backend. Defaults to `disk` which stores caches in the master cache
+    'ext_pillar_cache_backend': six.string_types,
+
     'pillar_safe_render_error': bool,
 
     # When creating a pillar, there are several strategies to choose from when
@@ -1260,6 +1269,11 @@ DEFAULT_MINION_OPTS = {
     'pillar_cache': False,
     'pillar_cache_ttl': 3600,
     'pillar_cache_backend': 'disk',
+    # ``ext_pillar_cache``, ``ext_pillar_cache_ttl`` and ``ext_pillar_cache_backend``
+    # are not used on the minion but are unavoidably in the code path
+    'ext_pillar_cache': False,
+    'ext_pillar_cache_ttl': 3600,
+    'ext_pillar_cache_backend': 'disk',
     'extension_modules': os.path.join(salt.syspaths.CACHE_DIR, 'minion', 'extmods'),
     'state_top': 'top.sls',
     'state_top_saltenv': None,
@@ -1635,6 +1649,9 @@ DEFAULT_MASTER_OPTS = {
     'pillar_cache': False,
     'pillar_cache_ttl': 3600,
     'pillar_cache_backend': 'disk',
+    'ext_pillar_cache': False,
+    'ext_pillar_cache_ttl': 3600,
+    'ext_pillar_cache_backend': 'disk',
     'ping_on_rotate': False,
     'peer': {},
     'preserve_minion_cache': False,

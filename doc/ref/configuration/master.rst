@@ -4557,6 +4557,7 @@ configuration options to fully understand the tunable parameters and their impli
 
     Setting ``pillar_cache: True`` has no effect on
     :ref:`targeting minions with pillar <targeting-pillar>`.
+    And it also has no effect on pillar data rendered from external pillar sources.
 
 .. conf_master:: pillar_cache_ttl
 
@@ -4597,6 +4598,80 @@ can be utilized:
   however. First, because each master worker contains its own in-memory cache,
   there is no guarantee of cache consistency between minion requests. This
   works best in situations where the pillar rarely if ever changes. Secondly,
+  and perhaps more importantly, this means that unencrypted pillars will
+  be accessible to any process which can examine the memory of the ``salt-master``!
+  This may represent a substantial security risk.
+
+.. code-block:: yaml
+
+    pillar_cache_backend: disk
+
+.. conf_master:: ext_pillar_cache
+
+``ext_pillar_cache``
+********************
+
+.. versionadded:: Neon
+
+Default: ``False``
+
+A master can cache external pillars locally to bypass the expense of having to render them
+for each minion on every request. This feature should only be enabled in cases
+where external pillar rendering time is known to be unsatisfactory and any attendant security
+concerns about storing external pillars in a master cache have been addressed.
+
+When enabling this feature, be certain to read through the additional ``ext_pillar_cache_*``
+configuration options to fully understand the tunable parameters and their implications.
+
+.. code-block:: yaml
+
+    ext_pillar_cache: False
+
+.. note::
+
+    Setting ``ext_pillar_cache: True`` has no effect on
+    :ref:`targeting minions with pillar <targeting-pillar>`.
+    And it also has no effect on pillar data rendered from pillar_roots.
+
+.. conf_master:: ext_pillar_cache_ttl
+
+``ext_pillar_cache_ttl``
+************************
+
+.. versionadded:: Neon
+
+Default: ``3600``
+
+If and only if a master has set ``ext_pillar_cache: True``, the cache TTL controls the amount
+of time, in seconds, before the cache is considered invalid by a master and a fresh external
+pillar is recompiled and stored. A value of 0 will cause the cache to always be valid.
+
+.. conf_master:: ext_pillar_cache_backend
+
+``ext_pillar_cache_backend``
+****************************
+
+.. versionadded:: Neon
+
+Default: ``disk``
+
+If an only if a master has set ``ext_pillar_cache: True``, one of several storage providers
+can be utilized:
+
+* ``disk`` (default):
+
+  The default storage backend. This caches rendered pillars to the master cache.
+  Rendered pillars are serialized and deserialized as ``msgpack`` structures for speed.
+  Note that pillars are stored UNENCRYPTED. Ensure that the master cache has permissions
+  set appropriately (sane defaults are provided).
+
+* ``memory`` [EXPERIMENTAL]:
+
+  An optional backend for external pillar caches which uses a pure-Python
+  in-memory data structure for maximal performance. There are several caveats,
+  however. First, because each master worker contains its own in-memory cache,
+  there is no guarantee of cache consistency between minion requests. This
+  works best in situations where the external pillar rarely if ever changes. Secondly,
   and perhaps more importantly, this means that unencrypted pillars will
   be accessible to any process which can examine the memory of the ``salt-master``!
   This may represent a substantial security risk.

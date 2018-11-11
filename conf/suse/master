@@ -934,7 +934,9 @@ syndic_user: salt
 # configuration options to fully understand the tunable parameters and their implications.
 #
 # Note: setting ``pillar_cache: True`` has no effect on targeting Minions with Pillars.
-# See https://docs.saltstack.com/en/latest/topics/targeting/pillar.html
+# See https://docs.saltstack.com/en/latest/topics/targeting/pillar.html.
+# And it also has no effect on pillar data rendered from external pillar sources.
+# See the additional ``ext_pillar_cache_*`` configuration options.
 #pillar_cache: False
 
 # If and only if a master has set ``pillar_cache: True``, the cache TTL controls the amount
@@ -960,6 +962,28 @@ syndic_user: salt
 #         This may represent a substantial security risk.
 #
 #pillar_cache_backend: disk
+
+# A master can cache external pillars locally to bypass the expense of having to render them
+# for each minion on every request. This feature should only be enabled in cases
+# where external pillar rendering time is known to be unsatisfactory and any attendant security
+# concerns about storing external pillars in a master cache have been addressed.
+#
+# When enabling this feature, be certain to read through the additional ``ext_pillar_cache_*``
+# configuration options to fully understand the tunable parameters and their implications.
+#
+# Note: setting ``ext_pillar_cache: True`` has no effect on targeting Minions with Pillars.
+# See https://docs.saltstack.com/en/latest/topics/targeting/pillar.html.
+# And it also has no effect on pillar data rendered from pillar_roots.
+# See the additional ``pillar_cache_*`` configuration options.
+#ext_pillar_cache: False
+
+# If and only if a master has set ``ext_pillar_cache: True``, others same with 
+# pillar_cache_ttl.
+#ext_pillar_cache_ttl: 3600
+
+# If and only if a master has set ``ext_pillar_cache: True``, others same with 
+# pillar_cache_backend.
+#ext_pillar_cache_backend: disk
 
 
 #####          Syndic settings       #####
