@@ -383,7 +383,7 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
         ctx = zmq.Context()
         sock = ctx.socket(zmq.SUB)
         sock.setsockopt(zmq.LINGER, -1)
-        sock.subscribe(b'')
+        sock.setsockopt(zmq.SUBSCRIBE, b'')
         sock.connect(pub_uri)
         last_msg = time.time()
         serial = salt.payload.Serial(opts)
