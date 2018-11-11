@@ -61,6 +61,6 @@ class LoadBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
             self.assertEqual(ret, (True, 'Valid beacon configuration'))
 
-            _expected_return = [{'15m': 1.56, '1m': 1.82, '5m': 1.84}]
+            _expected_return = [{'1m': 1.82, '5m': 1.84, '15m': 1.56}]
             ret = load.beacon(config)
             self.assertEqual(ret, _expected_return)
