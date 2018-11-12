@@ -163,6 +163,22 @@ class Batch(object):
         if i:
             del wait[:i]
 
+    def _get_next(self, bnum, active, wait, to_run):
+        next_ = []
+        if len(to_run) <= bnum - len(wait) and not active:
+            # last bit of them, add them all to next iterator
+            while to_run:
+                next_.append(to_run.pop())
+        else:
+            for i in range(bnum - len(active) - len(wait)):
+                if to_run:
+                    minion_id = to_run.pop()
+                    if isinstance(minion_id, dict):
+                        next_.append(minion_id.keys()[0])
+                    else:
+                        next_.append(minion_id)
+        return next_, to_run
+
     def run(self):
         '''
         Execute the batch run
@@ -208,21 +224,9 @@ class Batch(object):
 
         # Iterate while we still have things to execute
         while len(ret) < len(self.minions):
-            next_ = []
             if bwait and wait:
                 self.__update_wait(wait)
-            if len(to_run) <= bnum - len(wait) and not active:
-                # last bit of them, add them all to next iterator
-                while to_run:
-                    next_.append(to_run.pop())
-            else:
-                for i in range(bnum - len(active) - len(wait)):
-                    if to_run:
-                        minion_id = to_run.pop()
-                        if isinstance(minion_id, dict):
-                            next_.append(minion_id.keys()[0])
-                        else:
-                            next_.append(minion_id)
+            next_, to_run = self._get_next(bnum, active, wait, to_run)
 
             active += next_
             args[0] = next_
