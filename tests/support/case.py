@@ -232,7 +232,8 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                    with_retcode=False,
                    # FIXME A timeout of zero or disabling timeouts may not return results!
                    timeout=15,
-                   raw=False):
+                   raw=False,
+                   popen_kwargs=None):
         '''
         Execute a script with the given argument string
         '''
@@ -261,11 +262,12 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
         tmp_file = tempfile.SpooledTemporaryFile()
 
-        popen_kwargs = {
+        popen_kwargs = popen_kwargs or {}
+        popen_kwargs = dict({
             'shell': True,
             'stdout': tmp_file,
             'universal_newlines': True,
-        }
+        }, **popen_kwargs)
 
         if catch_stderr is True:
             popen_kwargs['stderr'] = subprocess.PIPE
@@ -447,7 +449,7 @@ class ShellCase(ShellTestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixi
         except OSError:
             os.chdir(INTEGRATION_TEST_DIR)
 
-    def run_salt(self, arg_str, with_retcode=False, catch_stderr=False, timeout=60):  # pylint: disable=W0221
+    def run_salt(self, arg_str, with_retcode=False, catch_stderr=False, timeout=60, popen_kwargs=None):  # pylint: disable=W0221
         '''
         Execute salt
         '''
@@ -456,7 +458,8 @@ class ShellCase(ShellTestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixi
                                arg_str,
                                with_retcode=with_retcode,
                                catch_stderr=catch_stderr,
-                               timeout=timeout)
+                               timeout=timeout,
+                               popen_kwargs=popen_kwargs)
 
     def run_spm(self, arg_str, with_retcode=False, catch_stderr=False, timeout=60):  # pylint: disable=W0221
         '''
@@ -857,6 +860,7 @@ class ClientCase(AdaptedConfigurationTestCaseMixin, TestCase):
                 pass
             else:
                 raise
+
 
 # ----- Backwards Compatible Imports -------------------------------------------------------------------------------->
 from tests.support.mixins import ShellCaseCommonTestsMixin  # pylint: disable=unused-import
