@@ -97,10 +97,7 @@ class CopyTest(ShellCase, ShellCaseCommonTestsMixin):
 
             data = eval('\n'.join(ret), {}, {})  # pylint: disable=eval-used
             for part in six.itervalues(data):
-                if salt.utils.platform.is_windows():
-                    key = minion_testfile.replace('\\', '\\\\')
-                else:
-                    key = minion_testfile
+                key = minion_testfile
                 self.assertTrue(part[key])
 
             ret = self.run_salt(
