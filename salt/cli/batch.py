@@ -183,12 +183,12 @@ class Batch(object):
         '''
         Execute the batch run
         '''
-        args = [[],
-                self.opts['fun'],
-                self.opts['arg'],
-                self.opts['timeout'],
-                'list',
-                ]
+        args = [
+            self.opts['fun'],
+            self.opts['arg'],
+            self.opts['timeout'],
+            'list',
+        ]
         bnum = self.get_bnum()
         # No targets to run
         if not self.minions:
@@ -229,13 +229,13 @@ class Batch(object):
             next_, to_run = self._get_next(bnum, active, wait, to_run)
 
             active += next_
-            args[0] = next_
 
             if next_:
                 if not self.quiet:
                     salt.utils.stringutils.print_cli('\nExecuting run on {0}\n'.format(sorted(next_)))
                 # create a new iterator for this batch of minions
                 new_iter = self.local.cmd_iter_no_block(
+                                next_,
                                 *args,
                                 raw=self.opts.get('raw', False),
                                 ret=self.opts.get('return', ''),
