@@ -179,16 +179,36 @@ class Batch(object):
                         next_.append(minion_id)
         return next_, to_run
 
-    def run(self):
-        '''
-        Execute the batch run
-        '''
+    def _generate_iter(self, next_, iters, minion_tracker, show_jid, show_verbose):
         args = [
             self.opts['fun'],
             self.opts['arg'],
             self.opts['timeout'],
             'list',
         ]
+        if not self.quiet:
+            salt.utils.stringutils.print_cli('\nExecuting run on {0}\n'.format(sorted(next_)))
+        # create a new iterator for this batch of minions
+        new_iter = self.local.cmd_iter_no_block(
+                        next_,
+                        *args,
+                        raw=self.opts.get('raw', False),
+                        ret=self.opts.get('return', ''),
+                        show_jid=show_jid,
+                        verbose=show_verbose,
+                        gather_job_timeout=self.opts['gather_job_timeout'],
+                        **self.eauth)
+        # add it to our iterators and to the minion_tracker
+        iters.append(new_iter)
+        minion_tracker[new_iter] = {}
+        # every iterator added is 'active' and has its set of minions
+        minion_tracker[new_iter]['minions'] = next_
+        minion_tracker[new_iter]['active'] = True
+
+    def run(self):
+        '''
+        Execute the batch run
+        '''
         bnum = self.get_bnum()
         # No targets to run
         if not self.minions:
@@ -231,25 +251,7 @@ class Batch(object):
             active += next_
 
             if next_:
-                if not self.quiet:
-                    salt.utils.stringutils.print_cli('\nExecuting run on {0}\n'.format(sorted(next_)))
-                # create a new iterator for this batch of minions
-                new_iter = self.local.cmd_iter_no_block(
-                                next_,
-                                *args,
-                                raw=self.opts.get('raw', False),
-                                ret=self.opts.get('return', ''),
-                                show_jid=show_jid,
-                                verbose=show_verbose,
-                                gather_job_timeout=self.opts['gather_job_timeout'],
-                                **self.eauth)
-                # add it to our iterators and to the minion_tracker
-                iters.append(new_iter)
-                minion_tracker[new_iter] = {}
-                # every iterator added is 'active' and has its set of minions
-                minion_tracker[new_iter]['minions'] = next_
-                minion_tracker[new_iter]['active'] = True
-
+                self._generate_iter(next_, iters, minion_tracker, show_jid, show_verbose)
             else:
                 time.sleep(0.02)
             parts = {}
