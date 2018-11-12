@@ -116,6 +116,12 @@ class PartedTestCase(TestCase, LoaderModuleMockMixin):
                 '''1:17.4kB:150MB:150MB:ext3::boot;\n'''
                 '''2:3921GB:4000GB:79.3GB:linux-swap(v1)::;\n'''
             ),
+            "valid chs": (
+                '''CHS;\n'''
+                '''/dev/sda:3133,0,2:scsi:512:512:gpt:AMCC 9650SE-24M DISK:;\n'''
+                '''1:0,0,34:2431,134,43:ext3::boot;\n'''
+                '''2:2431,134,44:2492,80,42:linux-swap(v1)::;\n'''
+            ),
             "valid_legacy": (
                 '''BYT;\n'''
                 '''/dev/sda:4000GB:scsi:512:512:gpt:AMCC 9650SE-24M DISK;\n'''
@@ -258,6 +264,41 @@ class PartedTestCase(TestCase, LoaderModuleMockMixin):
                         'type': 'linux-swap(v1)',
                         'size': '79.3GB'
                     }
+                }
+            }
+            self.assertEqual(output, expected)
+
+    def test_list__valid_unit_chs_valid_cmd_output(self):
+        with patch('salt.modules.parted._validate_device', MagicMock()):
+            self.cmdrun_stdout.return_value = self.parted_print_output('valid chs')
+            output = parted.list_('/dev/sda', unit='chs')
+            self.cmdrun_stdout.assert_called_once_with('parted -m -s /dev/sda unit chs print')
+            expected = {
+                'info': {
+                    'logical sector': '512',
+                    'physical sector': '512',
+                    'interface': 'scsi',
+                    'model': 'AMCC 9650SE-24M DISK',
+                    'disk': '/dev/sda',
+                    'disk flags': '',
+                    'partition table': 'gpt',
+                    'size': '3133,0,2'
+                },
+                'partitions': {
+                    '1': {
+                        'end': '2431,134,43',
+                        'number': '1',
+                        'start': '0,0,34',
+                        'file system': 'ext3',
+                        'flags': 'boot',
+                        'name': ''},
+                    '2': {
+                        'end': '2492,80,42',
+                        'number': '2',
+                        'start': '2431,134,44',
+                        'file system': 'linux-swap(v1)',
+                        'flags': '',
+                        'name': ''}
                 }
             }
             self.assertEqual(output, expected)
