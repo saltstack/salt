@@ -344,7 +344,7 @@ class PillarCache(object):
                     # We found the minion but not the env. Store it.
                     fresh_pillar = self.fetch_pillar(fetch_ext_pillar=False)
                     self.cache[self.minion_id] = dict(self.cache[self.minion_id], **{
-                        self.pillarenv: fresh_pillar
+                        self.pillarenv: fresh_pillar})
                     log.debug('Pillar cache miss for minion %s and pillarenv %s',
                               self.minion_id, self.pillarenv)
                     pillar_ret = fresh_pillar
@@ -377,8 +377,7 @@ class PillarCache(object):
                     # We found the minion but not the env. Store it.
                     fresh_ext_pillar = self.fetch_pillar(fetch_pillar=False)
                     self.ext_cache[self.minion_id] = dict(self.ext_cache[self.minion_id], **{
-                        self.pillarenv: fresh_ext_pillar
-                    })
+                        self.pillarenv: fresh_ext_pillar})
                     log.debug('Ext_pillar cache miss for minion %s and pillarenv %s',
                               self.minion_id, self.pillarenv)
                     ext_pillar_ret = fresh_ext_pillar
