@@ -534,7 +534,7 @@ class LocalClient(object):
             tgt, fun, batch, self.opts,
             arg=arg, tgt_type=tgt_type, ret=ret, kwarg=kwarg, **kwargs)
 
-        eauth = salt.cli.batch._batch_get_eauth(opts, kwargs)
+        eauth = salt.cli.batch._batch_get_eauth(kwargs)
 
         batch = salt.cli.batch.Batch(opts, eauth=eauth, quiet=True)
         for ret in batch.run():

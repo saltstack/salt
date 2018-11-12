@@ -66,7 +66,7 @@ def _batch_get_opts(
     return opts
 
 
-def _batch_get_eauth(opts, kwargs):
+def _batch_get_eauth(kwargs):
     eauth = {}
     if 'eauth' in kwargs:
         eauth['eauth'] = kwargs.pop('eauth')
