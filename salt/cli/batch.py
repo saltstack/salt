@@ -205,6 +205,16 @@ class Batch(object):
         minion_tracker[new_iter]['minions'] = next_
         minion_tracker[new_iter]['active'] = True
 
+    def _update_minions(self, to_run):
+        # see if we found more minions
+        for ping_ret in self.ping_gen:
+            if ping_ret is None:
+                break
+            m = next(six.iterkeys(ping_ret))
+            if m not in self.minions:
+                self.minions.append(m)
+                to_run.append(m)
+
     def run(self):
         '''
         Execute the batch run
@@ -256,14 +266,7 @@ class Batch(object):
                 time.sleep(0.02)
             parts = {}
 
-            # see if we found more minions
-            for ping_ret in self.ping_gen:
-                if ping_ret is None:
-                    break
-                m = next(six.iterkeys(ping_ret))
-                if m not in self.minions:
-                    self.minions.append(m)
-                    to_run.append(m)
+            self._update_minions(to_run)
 
             for queue in iters:
                 try:
