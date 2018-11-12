@@ -1653,30 +1653,31 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         both serialized and formatted properly
         '''
         path_test = os.path.join(TMP, 'test_serialize')
-        ret = self.run_state('file.serialize',
-                name=path_test,
-                dataset={'name': 'naive',
-                    'description': 'A basic test',
-                    'a_list': ['first_element', 'second_element'],
-                    'finally': 'the last item'},
-                formatter='json')
+        self.run_state('file.serialize',
+                       name=path_test,
+                       dataset={'name': 'naive',
+                                'description': 'A basic test',
+                                'a_list': [
+                                    'first_element',
+                                    'second_element'],
+                                'finally': 'the last item'},
+                       formatter='json')
 
         with salt.utils.files.fopen(path_test, 'rb') as fp_:
             serialized_file = salt.utils.stringutils.to_unicode(fp_.read())
 
-        # The JSON serializer uses LF even on OSes where os.path.sep is CRLF.
-        expected_file = os.linesep.join([
-            '{',
-            '  "a_list": [',
-            '    "first_element",',
-            '    "second_element"',
-            '  ],',
-            '  "description": "A basic test",',
-            '  "finally": "the last item",',
-            '  "name": "naive"',
-            '}',
-            '',
-        ])
+        # The JSON serializer uses LF even on OSes where os.linesep is CRLF.
+        expected_file = dedent(six.text_type('''\
+            {
+              "a_list": [
+                "first_element",
+                "second_element"
+              ],
+              "description": "A basic test",
+              "finally": "the last item",
+              "name": "naive"
+            }
+        '''), linesep='\n')
         self.assertEqual(serialized_file, expected_file)
 
     @with_tempfile(create=False)

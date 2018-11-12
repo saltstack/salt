@@ -350,7 +350,7 @@ def fopen(*args, **kwargs):
                 )
         except IndexError:
             pass
-    binary = None
+    binary = False
     # ensure 'binary' mode is always used on Windows in Python 2
     if ((six.PY2 and salt.utils.platform.is_windows() and 'binary' not in kwargs) or
             kwargs.pop('binary', False)):
@@ -372,7 +372,6 @@ def fopen(*args, **kwargs):
     elif six.PY3 and 'encoding' not in kwargs:
         # In Python 3, if text mode is used and the encoding
         # is not specified, set the encoding to 'utf-8'.
-        binary = False
         if len(args) > 1:
             args = list(args)
             if 'b' in args[1]:
@@ -390,7 +389,7 @@ def fopen(*args, **kwargs):
         # If it is binary you can't pass encoding
         if binary:
             kwargs.pop('encoding', False)
-        f_handle = io.open(*args, **kwargs)  # pylint: disable=resource-leakage
+        f_handle = io.open(*args, **kwargs)
     else:
         # encoding will cause this to fail on Py2
         if six.PY2:
