@@ -30,6 +30,7 @@ def __random_name(size=6):
         for x in range(size)
     )
 
+
 # Create the cloud instance name to be used throughout the tests
 INSTANCE_NAME = __random_name()
 PROVIDER_NAME = 'digital_ocean'
@@ -95,7 +96,7 @@ class DigitalOceanTest(ShellCase):
         '''
         _list_locations = self.run_cloud('--list-locations {0}'.format(PROVIDER_NAME))
         self.assertIn(
-            'San Francisco 1',
+            'San Francisco 2',
             [i.strip() for i in _list_locations]
         )
 
