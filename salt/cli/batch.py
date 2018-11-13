@@ -262,7 +262,7 @@ class Batch(object):
             if bwait:
                 wait.append(datetime.now() + timedelta(seconds=bwait))
 
-    def _update_ret(self, parts, ret, wait, active, bwait):
+    def _update_ret(self, parts, ret, active, wait, bwait):
         for minion, data in six.iteritems(parts):
             self._remove_minion_from_active(minion, active, wait, bwait)
             # Munge retcode into return data
@@ -361,7 +361,7 @@ class Batch(object):
 
             parts = self._get_parts(iters, minion_tracker)
 
-            for i in self._update_ret(parts, ret, wait, active, bwait):
+            for i in self._update_ret(parts, ret, active, wait, bwait):
                 yield i
 
             self._update_trackers(iters, active, wait, bwait, minion_tracker)
