@@ -127,7 +127,6 @@ log = logging.getLogger(__name__)
 
 __func_alias__ = {
     'import_': 'import',
-    'export_': 'export',
 }
 
 # Define the state's virtual name
@@ -623,7 +622,7 @@ def halted(name, graceful=True):
     return ret
 
 
-def export_(name, path, replace=False):
+def export(name, path, replace=False):
     '''
     Export a zones configuration
 
@@ -760,6 +759,11 @@ def import_(name, path, mode='import', nodataset=False, brand_opts=None):
         ``install``: will import and then try to install the zone
         ``attach``: will import and then try to attach of the zone
 
+    .. code-block:: yaml
+
+        omipkg1:
+          zone.import:
+            - path: /foo/bar/baz
     '''
     ret = {'name': name,
            'changes': {},
