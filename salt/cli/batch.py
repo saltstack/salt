@@ -292,6 +292,19 @@ class Batch(object):
                 )
                 raise StopIteration
 
+    def _update_trackers(self, iters, active, wait, bwait, minion_tracker):
+        # remove inactive iterators from the iters list
+        for queue in minion_tracker:
+            # only remove inactive queues
+            if not minion_tracker[queue]['active'] and queue in iters:
+                iters.remove(queue)
+                # also remove the iterator's minions from the active list
+                for minion in minion_tracker[queue]['minions']:
+                    if minion in active:
+                        active.remove(minion)
+                        if bwait:
+                            wait.append(datetime.now() + timedelta(seconds=bwait))
+
     def run(self):
         '''
         Execute the batch run
@@ -349,14 +362,4 @@ class Batch(object):
             for i in self._update_ret(parts, ret, wait, active, bwait):
                 yield i
 
-            # remove inactive iterators from the iters list
-            for queue in minion_tracker:
-                # only remove inactive queues
-                if not minion_tracker[queue]['active'] and queue in iters:
-                    iters.remove(queue)
-                    # also remove the iterator's minions from the active list
-                    for minion in minion_tracker[queue]['minions']:
-                        if minion in active:
-                            active.remove(minion)
-                            if bwait:
-                                wait.append(datetime.now() + timedelta(seconds=bwait))
+            self._update_trackers(iters, active, wait, bwait, minion_tracker)
