@@ -289,7 +289,7 @@ class Batch(object):
                 )
                 raise StopIteration
 
-    def _update_trackers(self, iters, active, wait, bwait, minion_tracker):
+    def _remove_from_trackers(self, iters, active, wait, bwait, minion_tracker):
         # remove inactive iterators from the iters list
         for queue in minion_tracker:
             # only remove inactive queues
@@ -367,4 +367,4 @@ class Batch(object):
             for i in self._update_ret(parts, ret, active, wait, bwait):
                 yield i
 
-            self._update_trackers(iters, active, wait, bwait, minion_tracker)
+            self._remove_from_trackers(iters, active, wait, bwait, minion_tracker)
