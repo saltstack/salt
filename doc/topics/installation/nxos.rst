@@ -138,7 +138,7 @@ All of the data for both ssh and nxapi proxy minion types can be stored in the s
     
 
 * For the most current nxos proxy minion configuration options, See :mod:`salt.proxy.nxos <salt.proxy.nxos>`
-* For the most current list of nxos execution module functions, see :mod:`salt.modules.nxos<salt.modules.nxos>`
+* For the most current list of nxos execution module functions, See :mod:`salt.modules.nxos<salt.modules.nxos>`
 
 
 
