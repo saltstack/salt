@@ -200,10 +200,11 @@ class Batch(object):
                         **self.eauth)
         # add it to our iterators and to the minion_tracker
         iters.append(new_iter)
-        minion_tracker[new_iter] = {}
         # every iterator added is 'active' and has its set of minions
-        minion_tracker[new_iter]['minions'] = next_
-        minion_tracker[new_iter]['active'] = True
+        minion_tracker[new_iter] = {
+            'minions': next_,
+            'active': True
+        }
 
     def _update_minions(self, to_run):
         # see if we found more minions
