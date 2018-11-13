@@ -107,6 +107,7 @@ Here is a sample Proxy Minon pillar data file.
 All of the data for both ssh and nxapi proxy minion types can be stored in the same pillar data file.  To choose ``ssh`` or ``nxapi``, simply set the ``connection:`` parameter accordingly.
 
 .. code:: yaml
+
   saltmaster:/srv/pillar$cat n7k-proxy.sls
   proxy:
     proxytype: nxos
