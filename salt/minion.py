@@ -2250,9 +2250,11 @@ class Minion(MinionBase):
                  'disable': self.beacons.disable_beacons(),
                  'enable_beacon': self.beacons.enable_beacon(name),
                  'disable_beacon': self.beacons.disable_beacon(name),
-                 'list': self.beacons.list_beacons(include_opts, include_pillar),
+                 'list': self.beacons.list_beacons(include_opts,
+                                                   include_pillar),
                  'list_available': self.beacons.list_available_beacons(),
-                 'validate_beacon': self.beacons.validate_beacon(name, beacon_data),
+                 'validate_beacon': self.beacons.validate_beacon(name,
+                                                                 beacon_data),
                  'reset': self.beacons.reset()}
 
         # Call the appropriate schedule function
