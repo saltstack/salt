@@ -1017,6 +1017,12 @@ class MinionManager(MinionBase):
             if failed:
                 if auth_wait < self.max_auth_wait:
                     auth_wait += self.auth_wait
+                log.debug(
+                    "sleeping before reconnect attempt to %s [%d/%d]",
+                   minion.opts['master'],
+                    auth_wait,
+                    self.max_auth_wait,
+                )
                 yield tornado.gen.sleep(auth_wait)  # TODO: log?
             try:
                 if minion.opts.get('beacons_before_connect', False):
@@ -3030,6 +3036,12 @@ class SyndicManager(MinionBase):
             if failed:
                 if auth_wait < self.max_auth_wait:
                     auth_wait += self.auth_wait
+                log.debug(
+                    "sleeping before reconnect attempt to %s [%d/%d]",
+                    opts['master'],
+                    auth_wait,
+                    self.max_auth_wait,
+                )
                 yield tornado.gen.sleep(auth_wait)  # TODO: log?
             log.debug(
                 'Syndic attempting to connect to %s',
