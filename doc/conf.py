@@ -178,7 +178,12 @@ MOCK_MODULES = [
     'msgpack',
 ]
 
-autodoc_mock_imports = MOCK_MODULES
+for mod_name in MOCK_MODULES:
+    if mod_name == 'psutil':
+        mock = Mock(mapping={'total': 0})  # Otherwise it will crash Sphinx
+    else:
+        mock = Mock()
+    sys.modules[mod_name] = mock
 
 def mock_decorator_with_params(*oargs, **okwargs):
     '''
@@ -196,6 +201,18 @@ def mock_decorator_with_params(*oargs, **okwargs):
         else:
             return Mock()
     return inner
+
+# Define a fake version attribute for the following libs.
+sys.modules['libcloud'].__version__ = '0.0.0'
+sys.modules['msgpack'].version = (1, 0, 0)
+sys.modules['psutil'].version_info = (3, 0, 0)
+sys.modules['pymongo'].version = '0.0.0'
+sys.modules['ntsecuritycon'].STANDARD_RIGHTS_REQUIRED = 0
+sys.modules['ntsecuritycon'].SYNCHRONIZE = 0
+
+# Define a fake version attribute for the following libs.
+sys.modules['cherrypy'].config = mock_decorator_with_params
+
 
 # -- Add paths to PYTHONPATH ---------------------------------------------------
 try:
