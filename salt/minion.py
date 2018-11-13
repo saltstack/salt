@@ -2215,34 +2215,23 @@ class Minion(MinionBase):
         where = data.get('where', None)
         persist = data.get('persist', None)
 
-        if func == 'delete':
-            self.schedule.delete_job(name, persist)
-        elif func == 'add':
-            self.schedule.add_job(schedule, persist)
-        elif func == 'modify':
-            self.schedule.modify_job(name, schedule, persist)
-        elif func == 'enable':
-            self.schedule.enable_schedule()
-        elif func == 'disable':
-            self.schedule.disable_schedule()
-        elif func == 'enable_job':
-            self.schedule.enable_job(name, persist)
-        elif func == 'run_job':
-            self.schedule.run_job(name)
-        elif func == 'disable_job':
-            self.schedule.disable_job(name, persist)
-        elif func == 'postpone_job':
-            self.schedule.postpone_job(name, data)
-        elif func == 'skip_job':
-            self.schedule.skip_job(name, data)
-        elif func == 'reload':
-            self.schedule.reload(schedule)
-        elif func == 'list':
-            self.schedule.list(where)
-        elif func == 'save_schedule':
-            self.schedule.save_schedule()
-        elif func == 'get_next_fire_time':
-            self.schedule.get_next_fire_time(name)
+        funcs = {'delete': self.schedule.delete_job(name, persist),
+                 'add': self.schedule.add_job(schedule, persist),
+                 'modify': self.schedule.modify_job(name, schedule, persist),
+                 'enable': self.schedule.enable_schedule(),
+                 'disable': self.schedule.disable_schedule(),
+                 'enable_job': self.schedule.enable_job(name, persist),
+                 'disable_job': self.schedule.disable_job(name, persist),
+                 'postpone_job': self.schedule.postpone_job(name, data),
+                 'skip_job': self.schedule.skip_job(name, data),
+                 'reload': self.schedule.reload(schedule),
+                 'list': self.schedule.list(where),
+                 'save_schedule': self.schedule.save_schedule(),
+                 'get_next_fire_time': self.schedule.get_next_fire_time(name)}
+
+        # Call the appropriate schedule function
+        if func in funcs:
+            funcs[func]
 
     def manage_beacons(self, tag, data):
         '''
@@ -2254,28 +2243,21 @@ class Minion(MinionBase):
         include_pillar = data.get('include_pillar', None)
         include_opts = data.get('include_opts', None)
 
-        if func == 'add':
-            self.beacons.add_beacon(name, beacon_data)
-        elif func == 'modify':
-            self.beacons.modify_beacon(name, beacon_data)
-        elif func == 'delete':
-            self.beacons.delete_beacon(name)
-        elif func == 'enable':
-            self.beacons.enable_beacons()
-        elif func == 'disable':
-            self.beacons.disable_beacons()
-        elif func == 'enable_beacon':
-            self.beacons.enable_beacon(name)
-        elif func == 'disable_beacon':
-            self.beacons.disable_beacon(name)
-        elif func == 'list':
-            self.beacons.list_beacons(include_opts, include_pillar)
-        elif func == 'list_available':
-            self.beacons.list_available_beacons()
-        elif func == 'validate_beacon':
-            self.beacons.validate_beacon(name, beacon_data)
-        elif func == 'reset':
-            self.beacons.reset()
+        funcs = {'add': self.beacons.add_beacon(name, beacon_data),
+                 'modify': self.beacons.modify_beacon(name, beacon_data),
+                 'delete': self.beacons.delete_beacon(name),
+                 'enable': self.beacons.enable_beacons(),
+                 'disable': self.beacons.disable_beacons(),
+                 'enable_beacon': self.beacons.enable_beacon(name),
+                 'disable_beacon': self.beacons.disable_beacon(name),
+                 'list': self.beacons.list_beacons(include_opts, include_pillar),
+                 'list_available': self.beacons.list_available_beacons(),
+                 'validate_beacon': self.beacons.validate_beacon(name, beacon_data),
+                 'reset': self.beacons.reset()}
+
+        # Call the appropriate schedule function
+        if func in funcs:
+            funcs[func]
 
     def environ_setenv(self, tag, data):
         '''
