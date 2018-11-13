@@ -1007,7 +1007,8 @@ def _complete_nics(interfaces, hypervisor, dmac=None):
 
     for interface in interfaces:
         _normalize_net_types(interface)
-        _assign_mac(interface, hypervisor)
+        if interface.get('mac', None) is None:
+            _assign_mac(interface, hypervisor)
         if hypervisor in overlays:
             _apply_default_overlay(interface)
 
@@ -1544,19 +1545,13 @@ def _nics_equal(nic1, nic2):
         '''
         Filter out elements to ignore when comparing nics
         '''
-        nic_copy = copy.deepcopy(nic)
-        for tag in ['mac', 'alias', 'target', 'address', 'model']:
-            element = nic_copy.find(tag)
-            if element is not None:
-                nic_copy.remove(element)
-
-        # Remove the bridge attribute if not needed: it's auto-added by libvirt
-        source = nic_copy.find('source')
-        if 'network' in source.attrib and 'bridge' in source.attrib:
-            del source.attrib['bridge']
-
-        return nic_copy
-    return ElementTree.tostring(_filter_nic(nic1)).strip() == ElementTree.tostring(_filter_nic(nic2)).strip()
+        return {
+            'type': nic.attrib['type'],
+            'source': nic.find('source').attrib[nic.attrib['type']] if nic.find('source') is not None else None,
+            'mac': nic.find('mac').attrib['address'].lower() if nic.find('mac') is not None else None,
+            'model': nic.find('model').attrib['type'] if nic.find('model') is not None else None,
+        }
+    return _filter_nic(nic1) == _filter_nic(nic2)
 
 
 def _graphics_equal(gfx1, gfx2):
