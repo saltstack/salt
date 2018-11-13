@@ -305,16 +305,19 @@ class Batch(object):
             ret = [self.options.show_jid, self.options.verbose]
         return ret
 
-    def _add_to_trackers(self, next_, iters, active, minion_tracker):
-        active += next_
-        new_iter = self._generate_iter(next_, iters, minion_tracker)
-        # add it to our iterators and to the minion_tracker
-        iters.append(new_iter)
-        # every iterator added is 'active' and has its set of minions
-        minion_tracker[new_iter] = {
-            'minions': next_,
-            'active': True
-        }
+    def _add_to_trackers(self, bnum, iters, active, wait, to_run, minion_tracker):
+        next_, to_run = self._get_next(bnum, active, wait, to_run)
+        if next_:
+            active += next_
+            new_iter = self._generate_iter(next_, iters, minion_tracker)
+            # add it to our iterators and to the minion_tracker
+            iters.append(new_iter)
+            # every iterator added is 'active' and has its set of minions
+            minion_tracker[new_iter] = {
+                'minions': next_,
+                'active': True
+            }
+        return next_
 
     def run(self):
         '''
@@ -352,11 +355,9 @@ class Batch(object):
             if bwait and wait:
                 self.__update_wait(wait)
 
-            next_, to_run = self._get_next(bnum, active, wait, to_run)
+            next_ = self._add_to_trackers(bnum, iters, active, wait, to_run, minion_tracker)
 
-            if next_:
-                self._add_to_trackers(next_, iters, active, minion_tracker)
-            else:
+            if not next_:
                 time.sleep(0.02)
 
             self._update_minions(to_run)
