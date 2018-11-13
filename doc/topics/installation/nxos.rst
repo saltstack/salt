@@ -127,8 +127,8 @@ All of the data for both ssh and nxapi proxy minion types can be stored in the s
     key_accept: True
     
     # NX-API Parameters
-    transport: http
-    port: 80 
+    transport: https
+    port: 443
     verify: False
     
     # Option to prevent auto-save after each configuration command.
