@@ -31,6 +31,7 @@ from salt.exceptions import (NxosClientError, NxosError,
 
 # Import salt libs
 import salt.utils.http
+from salt.ext.six.moves import zip
 try:
     from salt.utils.args import clean_kwargs
 except ImportError:
