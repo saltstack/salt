@@ -148,7 +148,7 @@ def key_regen():
     return msg
 
 
-def down(removekeys=False, tgt='*', tgt_type='glob'):
+def down(removekeys=False, tgt='*', tgt_type='glob', timeout=None, gather_job_timeout=None):
     '''
     .. versionchanged:: 2017.7.0
         The ``expr_form`` argument has been renamed to ``tgt_type``, earlier
@@ -166,7 +166,12 @@ def down(removekeys=False, tgt='*', tgt_type='glob'):
         salt-run manage.down tgt="webservers" tgt_type="nodegroup"
 
     '''
-    ret = status(output=False, tgt=tgt, tgt_type=tgt_type).get('down', [])
+    ret = status(output=False,
+                 tgt=tgt,
+                 tgt_type=tgt_type,
+                 timeout=timeout,
+                 gather_job_timeout=gather_job_timeout
+    ).get('down', [])
     for minion in ret:
         if removekeys:
             wheel = salt.wheel.Wheel(__opts__)

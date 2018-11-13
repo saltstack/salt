@@ -412,6 +412,11 @@ class GitPillarTestBase(GitTestBase, LoaderModuleMockMixin):
         with salt.utils.files.fopen(
                 os.path.join(self.admin_repo, 'bar.sls'), 'w') as fp_:
             fp_.write('included_pillar: True\n')
+        # Add another file in subdir
+        os.mkdir(os.path.join(self.admin_repo, 'subdir'))
+        with salt.utils.files.fopen(
+                os.path.join(self.admin_repo, 'subdir', 'bar.sls'), 'w') as fp_:
+            fp_.write('from_subdir: True\n')
         _push('master', 'initial commit')
 
         # Do the same with different values for "dev" branch
@@ -457,7 +462,7 @@ class GitPillarTestBase(GitTestBase, LoaderModuleMockMixin):
         # The top.sls should be the only file in this branch
         self.run_function(
             'git.rm',
-            [self.admin_repo, 'foo.sls'],
+            [self.admin_repo, 'foo.sls', os.path.join('subdir', 'bar.sls')],
             user=user)
         with salt.utils.files.fopen(
                 os.path.join(self.admin_repo, 'top.sls'), 'w') as fp_:
