@@ -255,12 +255,15 @@ class Batch(object):
                             parts[minion]['ret'] = {}
         return parts
 
+    def _remove_minion_from_active(self, minion, active, wait, bwait):
+        if minion in active:
+            active.remove(minion)
+            if bwait:
+                wait.append(datetime.now() + timedelta(seconds=bwait))
+
     def _update_ret(self, parts, ret, wait, active, bwait):
         for minion, data in six.iteritems(parts):
-            if minion in active:
-                active.remove(minion)
-                if bwait:
-                    wait.append(datetime.now() + timedelta(seconds=bwait))
+            self._remove_minion_from_active(minion, active, wait, bwait)
             # Munge retcode into return data
             failhard = False
             if 'retcode' in data and isinstance(data['ret'], dict) and 'retcode' not in data['ret']:
@@ -300,10 +303,7 @@ class Batch(object):
                 iters.remove(queue)
                 # also remove the iterator's minions from the active list
                 for minion in minion_tracker[queue]['minions']:
-                    if minion in active:
-                        active.remove(minion)
-                        if bwait:
-                            wait.append(datetime.now() + timedelta(seconds=bwait))
+                    self._remove_minion_from_active(minion, active, wait, bwait)
 
     def _get_show_options(self):
         ret = [False, False]
@@ -345,8 +345,10 @@ class Batch(object):
 
         # Iterate while we still have things to execute
         while len(ret) < len(self.minions):
+
             if bwait and wait:
                 self.__update_wait(wait)
+
             next_, to_run = self._get_next(bnum, active, wait, to_run)
 
             active += next_
