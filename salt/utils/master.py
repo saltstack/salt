@@ -39,7 +39,7 @@ from salt.utils.zeromq import zmq
 log = logging.getLogger(__name__)
 
 
-def running(opts):
+def get_running_jobs(opts):
     '''
     Return the running jobs on this minion
     '''
@@ -56,9 +56,9 @@ def running(opts):
                 ret.append(data)
         except (IOError, OSError):
             # proc files may be removed at any time during this process by
-            # the minion process that is executing the JID in question, so
+            # the master process that is executing the JID in question, so
             # we must ignore ENOENT during this process
-            pass
+            log.trace('%s removed during processing by master process', path)
     return ret
 
 
@@ -126,8 +126,7 @@ def _check_cmdline(data):
         return False
     try:
         with salt.utils.files.fopen(path, 'rb') as fp_:
-            if b'salt' in fp_.read():
-                return True
+            return b'salt' in fp_.read()
     except (OSError, IOError):
         return False
 

@@ -179,7 +179,7 @@ class Schedule(object):
         if 'jid_include' not in data or data['jid_include']:
             jobcount = 0
             if self.opts['__role'] == 'master':
-                current_jobs = salt.utils.master.running(self.opts)
+                current_jobs = salt.utils.master.get_running_jobs(self.opts)
             else:
                 current_jobs = salt.utils.minion.running(self.opts)
             for job in current_jobs:
