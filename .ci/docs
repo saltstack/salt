@@ -29,7 +29,7 @@ pipeline {
         }
         stage('build') {
             steps {
-                sh 'eval "$(pyenv init -)"; make -C doc clean html'
+                sh 'eval "$(pyenv init -)"; make SPHINXOPTS="-W" -C doc clean html'
             }
         }
     }
@@ -48,8 +48,8 @@ pipeline {
                 description: 'The docs job has failed',
                 status: 'FAILURE',
                 context: "jenkins/pr/docs"
-            slackSend channel: "#jenkins-prod-pr", 
-                color: '#FF0000', 
+            slackSend channel: "#jenkins-prod-pr",
+                color: '#FF0000',
                 message: "FAILED: PR-Job: '${env.JOB_NAME} [${env.BUILD_NUMBER}]' (${env.BUILD_URL})"
         }
     }
