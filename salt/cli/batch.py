@@ -200,15 +200,16 @@ class Batch(object):
                         gather_job_timeout=self.opts['gather_job_timeout'],
                         **self.eauth)
 
-    def _update_minions(self, to_run):
+    def _find_new_minions(self):
+        new_minions = []
         # see if we found more minions
         for ping_ret in self.ping_gen:
             if ping_ret is None:
                 break
             m = next(six.iterkeys(ping_ret))
             if m not in self.minions:
-                self.minions.append(m)
-                to_run.append(m)
+                new_minions.append(m)
+        return new_minions
 
     def _get_parts(self, iters, minion_tracker):
         parts = {}
@@ -360,7 +361,9 @@ class Batch(object):
             if not next_:
                 time.sleep(0.02)
 
-            self._update_minions(to_run)
+            new_minions = self._find_new_minions()
+            self.minions += new_minions
+            to_run += new_minions
 
             parts = self._get_parts(iters, minion_tracker)
 
