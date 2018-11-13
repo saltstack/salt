@@ -305,7 +305,8 @@ class Batch(object):
             ret = [self.options.show_jid, self.options.verbose]
         return ret
 
-    def _add_to_trackers(self, next_, iters, minion_tracker):
+    def _add_to_trackers(self, next_, iters, active, minion_tracker):
+        active += next_
         new_iter = self._generate_iter(next_, iters, minion_tracker)
         # add it to our iterators and to the minion_tracker
         iters.append(new_iter)
@@ -353,10 +354,8 @@ class Batch(object):
 
             next_, to_run = self._get_next(bnum, active, wait, to_run)
 
-            active += next_
-
             if next_:
-                self._add_to_trackers(next_, iters, minion_tracker)
+                self._add_to_trackers(next_, iters, active, minion_tracker)
             else:
                 time.sleep(0.02)
 
