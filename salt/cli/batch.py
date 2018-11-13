@@ -305,6 +305,12 @@ class Batch(object):
                         if bwait:
                             wait.append(datetime.now() + timedelta(seconds=bwait))
 
+    def _get_show_options(self):
+        ret = [False, False]
+        if self.options:
+            ret = [self.options.show_jid, self.options.verbose]
+        return ret
+
     def run(self):
         '''
         Execute the batch run
@@ -321,12 +327,7 @@ class Batch(object):
         bwait = self.opts.get('batch_wait', 0)
         wait = []
 
-        if self.options:
-            show_jid = self.options.show_jid
-            show_verbose = self.options.verbose
-        else:
-            show_jid = False
-            show_verbose = False
+        show_jid, show_verbose = self._get_show_options()
 
         # the minion tracker keeps track of responses and iterators
         # - it removes finished iterators from iters[]
