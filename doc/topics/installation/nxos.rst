@@ -135,6 +135,11 @@ All of the data for both ssh and nxapi proxy minion types can be stored in the s
     # Setting this to True will improve performance when using
     # nxos execution module functions to configure the device.
     no_save_config: True
+    
+
+* For the most current nxos proxy minion configuration options, See :mod:`salt.proxy.nxos <salt.proxy.nxos>`
+* For the most current list of nxos execution module functions, see :mod:`salt.modules.nxos<salt.modules.nxos>`
+
 
 
 GuestShell Salt Minion Installation
