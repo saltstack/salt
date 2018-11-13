@@ -282,18 +282,13 @@ class Batch(object):
                                 break
                             continue
                         if self.opts.get('raw'):
-                            parts.update({part['data']['id']: part})
-                            if part['data']['id'] in minion_tracker[queue]['minions']:
-                                minion_tracker[queue]['minions'].remove(part['data']['id'])
+                            part = {part['data']['id']: part}
+                        parts.update(part)
+                        for id in part:
+                            if id in minion_tracker[queue]['minions']:
+                                minion_tracker[queue]['minions'].remove(id)
                             else:
-                                salt.utils.stringutils.print_cli('minion {0} was already deleted from tracker, probably a duplicate key'.format(part['id']))
-                        else:
-                            parts.update(part)
-                            for id in part:
-                                if id in minion_tracker[queue]['minions']:
-                                    minion_tracker[queue]['minions'].remove(id)
-                                else:
-                                    salt.utils.stringutils.print_cli('minion {0} was already deleted from tracker, probably a duplicate key'.format(id))
+                                salt.utils.stringutils.print_cli('minion {0} was already deleted from tracker, probably a duplicate key'.format(id))
                 except StopIteration:
                     # if a iterator is done:
                     # - set it to inactive
