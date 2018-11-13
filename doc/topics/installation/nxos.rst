@@ -47,19 +47,12 @@ Choices:
   * SSH Proxy Minion
   * NX-API Proxy Minon
   * GuestShell Native Minion
-      * Some platforms support a native minon installed directly on the NX-OS device
-      * This is a secure Linux container environment running CentOS
+      * Some platforms support a native minon installed directly on the NX-OS device inside the GuestShell
+      * The GuestShell is a secure Linux container environment running CentOS
 
 **STEP 3: Network Connectivity**
 
-When Using Proxy Minion:
-
-* Ensure that IP reachability exists between the Proxy Minion Device and the SaltStack Master.
-   * (NOTE) Not needed if Proxy Minions are started on the SaltStack Master.
-
-When Using GuestShell Minion:
-
-* Ensure that IP reachability exists between the NX-OS Salt Minon device and the SaltStack Master. Note that connectivity via the management interface is in a separate VRF context which requires some additional configuration.
+Ensure that IP reachability exists between the NX-OS Salt Minon device and the SaltStack Master. Note that connectivity via the management interface is in a separate VRF context which requires some additional configuration.
 
 Note: The management interface exists in a separate VRF context and requires additional configuration as shown.
 
@@ -80,14 +73,64 @@ Example: Nexus CLI Configuration for connectivity via management interface
     ntp server 10.0.0.201 use-vrf management
   end
 
-Salt Proxy Minion Installation
-==============================
+Salt Proxy Minion Configuration
+===============================
 
-SSH Proxy Minion
-----------------
+Here is a sample Proxy Minion directory structure
 
-NX-API Proxy Minion
--------------------
+.. code:: bash
+
+  saltmaster:/srv/pillar$tree
+  .
+  ├── n3k-proxy.sls
+  ├── n7k-proxy.sls
+  └── top.sls
+
+This displays a top sls file and two proxy minon sls files for a Nexus 3k and Nexus 7k device.
+
+Sample contents for the top.sls file.
+
+.. code:: yaml
+
+  saltmaster:/srv/pillar$cat top.sls 
+  base:
+    n3k-proxy:
+      - n3k-proxy
+    n7k-proxy:
+      - n7k-proxy
+
+Proxy Minion Pillar Data
+------------------------
+
+Here is a sample Proxy Minon pillar data file.
+
+.. code:: yaml
+
+  proxy:
+    proxytype: nxos
+    
+    # Specify ssh or nxapi connection type (default is ssh)
+    #connection: ssh 
+    connection: nxapi
+
+    # Parameters Common to both SSH and NX-API
+    host: n7k.example.com
+    username: admin 
+    password: password
+    
+    # SSH Parameters
+    prompt_name: n7k
+    ssh_args: '-o PubkeyAuthentication=no'
+    key_accept: True
+    
+    # NX-API Parameters
+    transport: http
+    port: 80 
+    verify: False
+    
+    # Option to prevent auto-save after each configuration command.
+    no_save_config: True
+
 
 GuestShell Salt Minion Installation
 ===================================
