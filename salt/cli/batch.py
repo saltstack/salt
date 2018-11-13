@@ -179,7 +179,8 @@ class Batch(object):
                         next_.append(minion_id)
         return next_, to_run
 
-    def _generate_iter(self, next_, iters, minion_tracker, show_jid, show_verbose):
+    def _generate_iter(self, next_, iters, minion_tracker):
+        show_jid, show_verbose = self._get_show_options()
         args = [
             self.opts['fun'],
             self.opts['arg'],
@@ -327,8 +328,6 @@ class Batch(object):
         bwait = self.opts.get('batch_wait', 0)
         wait = []
 
-        show_jid, show_verbose = self._get_show_options()
-
         # the minion tracker keeps track of responses and iterators
         # - it removes finished iterators from iters[]
         # - if a previously detected minion does not respond, its
@@ -354,7 +353,7 @@ class Batch(object):
             active += next_
 
             if next_:
-                self._generate_iter(next_, iters, minion_tracker, show_jid, show_verbose)
+                self._generate_iter(next_, iters, minion_tracker)
             else:
                 time.sleep(0.02)
 
