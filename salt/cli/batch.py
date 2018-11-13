@@ -177,7 +177,7 @@ class Batch(object):
                         next_.append(minion_id.keys()[0])
                     else:
                         next_.append(minion_id)
-        return next_, to_run
+        return next_
 
     def _generate_iter(self, next_, iters, minion_tracker):
         show_jid, show_verbose = self._get_show_options()
@@ -306,7 +306,7 @@ class Batch(object):
         return ret
 
     def _add_to_trackers(self, bnum, iters, active, wait, to_run, minion_tracker):
-        next_, to_run = self._get_next(bnum, active, wait, to_run)
+        next_ = self._get_next(bnum, active, wait, to_run)
         if next_:
             active += next_
             new_iter = self._generate_iter(next_, iters, minion_tracker)
