@@ -216,6 +216,45 @@ class Batch(object):
                 self.minions.append(m)
                 to_run.append(m)
 
+    def _get_parts(self, iters, minion_tracker):
+        parts = {}
+        for queue in iters:
+            try:
+                # Gather returns until we get to the bottom
+                ncnt = 0
+                while True:
+                    part = next(queue)
+                    if part is None:
+                        time.sleep(0.01)
+                        ncnt += 1
+                        if ncnt > 5:
+                            break
+                        continue
+                    if self.opts.get('raw'):
+                        part = {part['data']['id']: part}
+                    parts.update(part)
+                    for id in part:
+                        if id in minion_tracker[queue]['minions']:
+                            minion_tracker[queue]['minions'].remove(id)
+                        else:
+                            salt.utils.stringutils.print_cli('minion {0} was already deleted from tracker, probably a duplicate key'.format(id))
+            except StopIteration:
+                # if a iterator is done:
+                # - set it to inactive
+                # - add minions that have not responded to parts{}
+
+                # check if the tracker contains the iterator
+                if queue in minion_tracker:
+                    minion_tracker[queue]['active'] = False
+
+                    # add all minions that belong to this iterator and
+                    # that have not responded to parts{} with an empty response
+                    for minion in minion_tracker[queue]['minions']:
+                        if minion not in parts:
+                            parts[minion] = {}
+                            parts[minion]['ret'] = {}
+        return parts
+
     def run(self):
         '''
         Execute the batch run
@@ -265,45 +304,10 @@ class Batch(object):
                 self._generate_iter(next_, iters, minion_tracker, show_jid, show_verbose)
             else:
                 time.sleep(0.02)
-            parts = {}
 
             self._update_minions(to_run)
 
-            for queue in iters:
-                try:
-                    # Gather returns until we get to the bottom
-                    ncnt = 0
-                    while True:
-                        part = next(queue)
-                        if part is None:
-                            time.sleep(0.01)
-                            ncnt += 1
-                            if ncnt > 5:
-                                break
-                            continue
-                        if self.opts.get('raw'):
-                            part = {part['data']['id']: part}
-                        parts.update(part)
-                        for id in part:
-                            if id in minion_tracker[queue]['minions']:
-                                minion_tracker[queue]['minions'].remove(id)
-                            else:
-                                salt.utils.stringutils.print_cli('minion {0} was already deleted from tracker, probably a duplicate key'.format(id))
-                except StopIteration:
-                    # if a iterator is done:
-                    # - set it to inactive
-                    # - add minions that have not responded to parts{}
-
-                    # check if the tracker contains the iterator
-                    if queue in minion_tracker:
-                        minion_tracker[queue]['active'] = False
-
-                        # add all minions that belong to this iterator and
-                        # that have not responded to parts{} with an empty response
-                        for minion in minion_tracker[queue]['minions']:
-                            if minion not in parts:
-                                parts[minion] = {}
-                                parts[minion]['ret'] = {}
+            parts = self._get_parts(iters, minion_tracker)
 
             for minion, data in six.iteritems(parts):
                 if minion in active:
