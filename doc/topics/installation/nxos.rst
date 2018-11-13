@@ -44,9 +44,9 @@ The following platforms and software versions have been certified to work with t
 Using the tables above, select the Salt Minion type.
 
 Choices:
-  * SSH Proxy Minion
-  * NX-API Proxy Minon
-  * GuestShell Native Minion
+  * ``SSH`` Proxy Minion
+  * ``NX-API`` Proxy Minon
+  * ``GuestShell`` Native Minion
       * Some platforms support a native minon installed directly on the NX-OS device inside the GuestShell
       * The GuestShell is a secure Linux container environment running CentOS
 
@@ -88,7 +88,7 @@ Here is a sample Proxy Minion directory structure
 
 This displays a top sls file and two proxy minon sls files for a Nexus 3k and Nexus 7k device.
 
-Sample contents for the top.sls file.
+Sample contents for the ``top.sls`` file.
 
 .. code:: yaml
 
@@ -103,6 +103,8 @@ Proxy Minion Pillar Data
 ------------------------
 
 Here is a sample Proxy Minon pillar data file.
+
+All of the data for both ssh and nxapi proxy minion types can be stored in the same pillar data file.  To choose ``ssh`` or ``nxapi``, simply set the ``connection:`` parameter accordingly.
 
 .. code:: yaml
 
