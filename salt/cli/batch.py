@@ -190,7 +190,7 @@ class Batch(object):
         if not self.quiet:
             salt.utils.stringutils.print_cli('\nExecuting run on {0}\n'.format(sorted(next_)))
         # create a new iterator for this batch of minions
-        new_iter = self.local.cmd_iter_no_block(
+        return self.local.cmd_iter_no_block(
                         next_,
                         *args,
                         raw=self.opts.get('raw', False),
@@ -199,13 +199,6 @@ class Batch(object):
                         verbose=show_verbose,
                         gather_job_timeout=self.opts['gather_job_timeout'],
                         **self.eauth)
-        # add it to our iterators and to the minion_tracker
-        iters.append(new_iter)
-        # every iterator added is 'active' and has its set of minions
-        minion_tracker[new_iter] = {
-            'minions': next_,
-            'active': True
-        }
 
     def _update_minions(self, to_run):
         # see if we found more minions
@@ -312,6 +305,16 @@ class Batch(object):
             ret = [self.options.show_jid, self.options.verbose]
         return ret
 
+    def _add_to_trackers(self, next_, iters, minion_tracker):
+        new_iter = self._generate_iter(next_, iters, minion_tracker)
+        # add it to our iterators and to the minion_tracker
+        iters.append(new_iter)
+        # every iterator added is 'active' and has its set of minions
+        minion_tracker[new_iter] = {
+            'minions': next_,
+            'active': True
+        }
+
     def run(self):
         '''
         Execute the batch run
@@ -353,7 +356,7 @@ class Batch(object):
             active += next_
 
             if next_:
-                self._generate_iter(next_, iters, minion_tracker)
+                self._add_to_trackers(next_, iters, minion_tracker)
             else:
                 time.sleep(0.02)
 
