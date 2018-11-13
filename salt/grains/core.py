@@ -1427,6 +1427,7 @@ _OS_FAMILY_MAP = {
     'GCEL': 'Debian',
     'Linaro': 'Debian',
     'elementary OS': 'Debian',
+    'elementary': 'Debian',
     'Univention': 'Debian',
     'ScientificLinux': 'RedHat',
     'Raspbian': 'Debian',
