@@ -255,6 +255,43 @@ class Batch(object):
                             parts[minion]['ret'] = {}
         return parts
 
+    def _update_ret(self, parts, ret, wait, active, bwait):
+        for minion, data in six.iteritems(parts):
+            if minion in active:
+                active.remove(minion)
+                if bwait:
+                    wait.append(datetime.now() + timedelta(seconds=bwait))
+            # Munge retcode into return data
+            failhard = False
+            if 'retcode' in data and isinstance(data['ret'], dict) and 'retcode' not in data['ret']:
+                data['ret']['retcode'] = data['retcode']
+                if self.opts.get('failhard') and data['ret']['retcode'] > 0:
+                    failhard = True
+
+            if self.opts.get('raw'):
+                ret[minion] = data
+                yield data
+            else:
+                ret[minion] = data['ret']
+                yield {minion: data['ret']}
+            if not self.quiet:
+                ret[minion] = data['ret']
+                data[minion] = data.pop('ret')
+                if 'out' in data:
+                    out = data.pop('out')
+                else:
+                    out = None
+                salt.output.display_output(
+                        data,
+                        out,
+                        self.opts)
+            if failhard:
+                log.error(
+                    'Minion %s returned with non-zero exit code. '
+                    'Batch run stopped due to failhard', minion
+                )
+                raise StopIteration
+
     def run(self):
         '''
         Execute the batch run
@@ -309,41 +346,8 @@ class Batch(object):
 
             parts = self._get_parts(iters, minion_tracker)
 
-            for minion, data in six.iteritems(parts):
-                if minion in active:
-                    active.remove(minion)
-                    if bwait:
-                        wait.append(datetime.now() + timedelta(seconds=bwait))
-                # Munge retcode into return data
-                failhard = False
-                if 'retcode' in data and isinstance(data['ret'], dict) and 'retcode' not in data['ret']:
-                    data['ret']['retcode'] = data['retcode']
-                    if self.opts.get('failhard') and data['ret']['retcode'] > 0:
-                        failhard = True
-
-                if self.opts.get('raw'):
-                    ret[minion] = data
-                    yield data
-                else:
-                    ret[minion] = data['ret']
-                    yield {minion: data['ret']}
-                if not self.quiet:
-                    ret[minion] = data['ret']
-                    data[minion] = data.pop('ret')
-                    if 'out' in data:
-                        out = data.pop('out')
-                    else:
-                        out = None
-                    salt.output.display_output(
-                            data,
-                            out,
-                            self.opts)
-                if failhard:
-                    log.error(
-                        'Minion %s returned with non-zero exit code. '
-                        'Batch run stopped due to failhard', minion
-                    )
-                    raise StopIteration
+            for i in self._update_ret(parts, ret, wait, active, bwait):
+                yield i
 
             # remove inactive iterators from the iters list
             for queue in minion_tracker:
