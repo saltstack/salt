@@ -894,6 +894,7 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
             pull_uri = 'ipc://{0}'.format(
                 os.path.join(self.opts['sock_dir'], 'publish_pull.ipc')
                 )
+        log.debug("Connecting to pub server: %s", pull_uri)
         self.pub_sock.connect(pull_uri)
         return self._sock_data.sock
 
