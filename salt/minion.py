@@ -2347,6 +2347,7 @@ class Minion(MinionBase):
             notify=data.get('notify', False)
         )
 
+    @tornado.gen.coroutine
     def _handle_tag_pillar_refresh(self, tag, data):
         '''
         Handle a pillar_refresh event
@@ -2618,8 +2619,9 @@ class Minion(MinionBase):
                          }
 
         # Run the appropriate function
-        if tag in tag_functions:
-            tag_functions[tag](tag, data)
+        for tag_function in tag_functions:
+            if tag.startswith(tag_function):
+                tag_functions[tag_function](tag, data)
 
     def _fallback_cleanups(self):
         '''
