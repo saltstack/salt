@@ -132,6 +132,8 @@ All of the data for both ssh and nxapi proxy minion types can be stored in the s
     verify: False
     
     # Option to prevent auto-save after each configuration command.
+    # Setting this to True will improve performance when using
+    # nxos execution module functions to configure the device.
     no_save_config: True
 
 
