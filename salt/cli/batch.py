@@ -211,6 +211,13 @@ class Batch(object):
                 new_minions.append(m)
         return new_minions
 
+    def _remove_minion_from_queue(self, minionid, queue, minion_tracker):
+        if minionid in minion_tracker[queue]['minions']:
+            minion_tracker[queue]['minions'].remove(minionid)
+        else:
+            salt.utils.stringutils.print_cli(
+                'minion {0} was already deleted from tracker, probably a duplicate key'.format(minionid))
+
     def _get_parts(self, iters, minion_tracker):
         parts = {}
         for queue in iters:
@@ -228,11 +235,8 @@ class Batch(object):
                     if self.opts.get('raw'):
                         part = {part['data']['id']: part}
                     parts.update(part)
-                    for id in part:
-                        if id in minion_tracker[queue]['minions']:
-                            minion_tracker[queue]['minions'].remove(id)
-                        else:
-                            salt.utils.stringutils.print_cli('minion {0} was already deleted from tracker, probably a duplicate key'.format(id))
+                    for minion_id in part:
+                        self._remove_minion_from_queue(minion_id, queue, minion_tracker)
             except StopIteration:
                 # if a iterator is done:
                 # - set it to inactive
