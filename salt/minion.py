@@ -147,7 +147,8 @@ def resolve_dns(opts, fallback=True):
                 opts['master'],
                 int(opts['master_port']),
                 True,
-                opts['ipv6'])
+                opts['ipv6'],
+                attempt_connect=False)
         except SaltClientError:
             retry_dns_count = opts.get('retry_dns_count', None)
             if opts['retry_dns']:
@@ -169,7 +170,8 @@ def resolve_dns(opts, fallback=True):
                             opts['master'],
                             int(opts['master_port']),
                             True,
-                            opts['ipv6'])
+                            opts['ipv6'],
+                            attempt_connect=False)
                         break
                     except SaltClientError:
                         pass
@@ -221,7 +223,8 @@ def resolve_dns(opts, fallback=True):
             opts['source_address'],
             int(opts['source_ret_port']),
             True,
-            opts['ipv6'])
+            opts['ipv6'],
+            attempt_connect=False)
         log.debug('Using %s as source IP address', ret['source_ip'])
     if opts['source_ret_port']:
         ret['source_ret_port'] = int(opts['source_ret_port'])
@@ -1600,7 +1603,7 @@ class Minion(MinionBase):
 
         sdata = {'pid': os.getpid()}
         sdata.update(data)
-        log.info('Starting a new job with PID %s', sdata['pid'])
+        log.info('Starting a new job %s with PID %s', data['jid'], sdata['pid'])
         with salt.utils.files.fopen(fn_, 'w+b') as fp_:
             fp_.write(minion_instance.serial.dumps(sdata))
         ret = {'success': False}
@@ -2139,7 +2142,7 @@ class Minion(MinionBase):
     def _fire_master_minion_start(self):
         # Send an event to the master that the minion is live
         if self.opts['enable_legacy_startup_events']:
-            # old style event. Defaults to False in Neon Salt release
+            # Old style event. Defaults to False in Sodium release.
             self._fire_master(
                 'Minion {0} started at {1}'.format(
                 self.opts['id'],
@@ -2271,6 +2274,8 @@ class Minion(MinionBase):
             self.beacons.list_available_beacons()
         elif func == 'validate_beacon':
             self.beacons.validate_beacon(name, beacon_data)
+        elif func == 'reset':
+            self.beacons.reset()
 
     def environ_setenv(self, tag, data):
         '''
@@ -2875,7 +2880,7 @@ class Syndic(Minion):
     def fire_master_syndic_start(self):
         # Send an event to the master that the minion is live
         if self.opts['enable_legacy_startup_events']:
-            # old style event. Defaults to false in Neon Salt release.
+            # Old style event. Defaults to false in Sodium release.
             self._fire_master(
                 'Syndic {0} started at {1}'.format(
                     self.opts['id'],

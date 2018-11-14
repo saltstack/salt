@@ -613,23 +613,27 @@ def _gen_xml(name,
         else:
             context['console'] = True
 
-    context['disks'] = {}
+    context['disks'] = []
     disk_bus_map = {'virtio': 'vd', 'xen': 'xvd', 'fdc': 'fd', 'ide': 'hd'}
     for i, disk in enumerate(diskp):
-        context['disks'][disk['name']] = {}
-        context['disks'][disk['name']]['file_name'] = disk['filename']
-        context['disks'][disk['name']]['source_file'] = disk['source_file']
         prefix = disk_bus_map.get(disk['model'], 'sd')
-        context['disks'][disk['name']]['target_dev'] = '{0}{1}'.format(prefix, string.ascii_lowercase[i])
+        disk_context = {
+            'device': disk.get('device', 'disk'),
+            'target_dev': '{0}{1}'.format(prefix, string.ascii_lowercase[i]),
+            'disk_bus': disk['model'],
+            'type': disk['format'],
+            'index': six.text_type(i),
+        }
+        if 'source_file' and disk['source_file']:
+            disk_context['source_file'] = disk['source_file']
+
         if hypervisor in ['qemu', 'kvm', 'bhyve', 'xen']:
-            context['disks'][disk['name']]['address'] = False
-            context['disks'][disk['name']]['driver'] = True
+            disk_context['address'] = False
+            disk_context['driver'] = True
         elif hypervisor in ['esxi', 'vmware']:
-            context['disks'][disk['name']]['address'] = True
-            context['disks'][disk['name']]['driver'] = False
-        context['disks'][disk['name']]['disk_bus'] = disk['model']
-        context['disks'][disk['name']]['type'] = disk['format']
-        context['disks'][disk['name']]['index'] = six.text_type(i)
+            disk_context['address'] = True
+            disk_context['driver'] = False
+        context['disks'].append(disk_context)
     context['nics'] = nicp
 
     context['os_type'] = os_type
@@ -960,12 +964,15 @@ def _disk_profile(profile, hypervisor, disks=None, vm_name=None, image=None, poo
     if hypervisor == 'vmware':
         overlay = {'format': 'vmdk',
                    'model': 'scsi',
+                   'device': 'disk',
                    'pool': '[{0}] '.format(pool if pool else '0')}
     elif hypervisor in ['qemu', 'kvm']:
         overlay = {'format': 'qcow2',
+                   'device': 'disk',
                    'model': 'virtio'}
     elif hypervisor in ['bhyve']:
         overlay = {'format': 'raw',
+                   'device': 'disk',
                    'model': 'virtio',
                    'sparse_volume': False}
     else:
@@ -1004,31 +1011,43 @@ def _disk_profile(profile, hypervisor, disks=None, vm_name=None, image=None, poo
             if key not in disk:
                 disk[key] = val
 
-        base_dir = disk.get('pool', None)
-        if hypervisor in ['qemu', 'kvm']:
-            # Compute the base directory from the pool property. We may have either a path
-            # or a libvirt pool name there.
-            # If the pool is a known libvirt one with a target path, use it as target path
-            if not base_dir:
-                base_dir = _get_images_dir()
-            else:
-                if not base_dir.startswith('/'):
-                    # The pool seems not to be a path, lookup for pool infos
-                    pool = pool_info(base_dir, **kwargs)
-                    if not pool or not pool['target_path'] or pool['target_path'].startswith('/dev'):
-                        raise CommandExecutionError(
-                                    'Unable to create new disk {0}, specified pool {1} does not exist '
-                                    'or is unsupported'.format(disk['name'], base_dir))
-                    base_dir = pool['target_path']
-        if hypervisor == 'bhyve' and vm_name:
-            disk['filename'] = '{0}.{1}'.format(vm_name, disk['name'])
-            disk['source_file'] = os.path.join('/dev/zvol', base_dir or '', disk['filename'])
-        elif vm_name:
-            # Compute the filename and source file properties if possible
-            disk['filename'] = '{0}_{1}.{2}'.format(vm_name, disk['name'], disk['format'])
-            disk['source_file'] = os.path.join(base_dir, disk['filename'])
+        # We may have an already computed source_file (i.e. image not created by our module)
+        if 'source_file' in disk and disk['source_file']:
+            disk['filename'] = os.path.basename(disk['source_file'])
+        elif 'source_file' not in disk:
+            _fill_disk_filename(vm_name, disk, hypervisor, **kwargs)
 
     return disklist
+
+
+def _fill_disk_filename(vm_name, disk, hypervisor, **kwargs):
+    '''
+    Compute the disk file name and update it in the disk value.
+    '''
+    base_dir = disk.get('pool', None)
+    if hypervisor in ['qemu', 'kvm']:
+        # Compute the base directory from the pool property. We may have either a path
+        # or a libvirt pool name there.
+        # If the pool is a known libvirt one with a target path, use it as target path
+        if not base_dir:
+            base_dir = _get_images_dir()
+        else:
+            if not base_dir.startswith('/'):
+                # The pool seems not to be a path, lookup for pool infos
+                infos = pool_info(base_dir, **kwargs)
+                pool = infos[base_dir] if base_dir in infos else None
+                if not pool or not pool['target_path'] or pool['target_path'].startswith('/dev'):
+                    raise CommandExecutionError(
+                                'Unable to create new disk {0}, specified pool {1} does not exist '
+                                'or is unsupported'.format(disk['name'], base_dir))
+                base_dir = pool['target_path']
+    if hypervisor == 'bhyve' and vm_name:
+        disk['filename'] = '{0}.{1}'.format(vm_name, disk['name'])
+        disk['source_file'] = os.path.join('/dev/zvol', base_dir or '', disk['filename'])
+    elif vm_name:
+        # Compute the filename and source file properties if possible
+        disk['filename'] = '{0}_{1}.{2}'.format(vm_name, disk['name'], disk['format'])
+        disk['source_file'] = os.path.join(base_dir, disk['filename'])
 
 
 def _complete_nics(interfaces, hypervisor, dmac=None):
@@ -1434,6 +1453,15 @@ def init(name,
                       hostname_property: virt:hostname
                       sparse_volume: True
 
+    source_file
+        Absolute path to the disk image to use. Not to be confused with ``image`` parameter. This
+        parameter is useful to use disk images that are created outside of this module. Can also
+        be ``None`` for devices that have no associated image like cdroms.
+
+    device
+        Type of device of the disk. Can be one of 'disk', 'cdrom', 'floppy' or 'lun'.
+        (Default: ``'disk'``)
+
     .. _init-graphics-def:
 
     .. rubric:: Graphics Definition
@@ -1491,9 +1519,9 @@ def init(name,
     .. _graphics element: https://libvirt.org/formatdomain.html#elementsGraphics
     '''
     caps = capabilities(**kwargs)
-    os_types = sorted(set([guest['os_type'] for guest in caps['guests']]))
-    arches = sorted(set([guest['arch']['name'] for guest in caps['guests']]))
-    hypervisors = sorted(set([x for y in [guest['arch']['domains'].keys() for guest in caps['guests']] for x in y]))
+    os_types = sorted({guest['os_type'] for guest in caps['guests']})
+    arches = sorted({guest['arch']['name'] for guest in caps['guests']})
+    hypervisors = sorted({x for y in [guest['arch']['domains'].keys() for guest in caps['guests']] for x in y})
     hypervisor = __salt__['config.get']('libvirt:hypervisor', hypervisor)
     if hypervisor is not None:
         salt.utils.versions.warn_until(
@@ -1583,10 +1611,15 @@ def init(name,
             else:
                 create_overlay = _disk.get('overlay_image', False)
 
-            img_dest = _qemu_image_create(_disk, create_overlay, saltenv)
+            if _disk['source_file'] and os.path.exists(_disk['source_file']):
+                img_dest = _disk['source_file']
+            elif 'source_file' not in _disk:
+                img_dest = _qemu_image_create(_disk, create_overlay, saltenv)
+            else:
+                img_dest = None
 
             # Seed only if there is an image specified
-            if seed and _disk.get('image', None):
+            if seed and img_dest and _disk.get('image', None):
                 log.debug('Seed command is %s', seed_cmd)
                 __salt__[seed_cmd](
                     img_dest,
@@ -1653,8 +1686,16 @@ def _disks_equal(disk1, disk2):
     '''
     Test if two disk elements should be considered like the same device
     '''
-    return ElementTree.tostring(disk1.find('source')) == \
-        ElementTree.tostring(disk2.find('source'))
+    target1 = disk1.find('target')
+    target2 = disk2.find('target')
+    source1 = ElementTree.tostring(disk1.find('source')) if disk1.find('source') is not None else None
+    source2 = ElementTree.tostring(disk2.find('source')) if disk2.find('source') is not None else None
+
+    return source1 == source2 and \
+        target1 is not None and target2 is not None and \
+        target1.get('bus') == target2.get('bus') and \
+        disk1.get('device', 'disk') == disk2.get('device', 'disk') and \
+        target1.get('dev') == target2.get('dev')
 
 
 def _nics_equal(nic1, nic2):
@@ -1712,7 +1753,10 @@ def _diff_lists(old, new, comparator):
 
     :param old: old list
     :param new: new list
-    :return: a dictionary with ``unchanged``, ``new`` and ``deleted`` keys
+    :return: a dictionary with ``unchanged``, ``new``, ``deleted`` and ``sorted`` keys
+
+    The sorted list is the union of unchanged and new lists, but keeping the original
+    order from the new list.
     '''
     def _remove_indent(node):
         '''
@@ -1724,15 +1768,19 @@ def _diff_lists(old, new, comparator):
             item.tail = None
         return node_copy
 
-    diff = {'unchanged': [], 'new': [], 'deleted': []}
+    diff = {'unchanged': [], 'new': [], 'deleted': [], 'sorted': []}
+    # We don't want to alter old since it may be used later by caller
+    old_devices = copy.deepcopy(old)
     for new_item in new:
-        found = [item for item in old if comparator(_remove_indent(item), _remove_indent(new_item))]
+        found = [item for item in old_devices if comparator(_remove_indent(item), _remove_indent(new_item))]
         if found:
-            old.remove(found[0])
+            old_devices.remove(found[0])
             diff['unchanged'].append(found[0])
+            diff['sorted'].append(found[0])
         else:
             diff['new'].append(new_item)
-    diff['deleted'] = old
+            diff['sorted'].append(new_item)
+    diff['deleted'] = old_devices
     return diff
 
 
@@ -1743,25 +1791,21 @@ def _diff_disk_lists(old, new):
     :param old: list of ElementTree nodes representing the old disks
     :param new: list of ElementTree nodes representing the new disks
     '''
-    diff = _diff_lists(old, new, _disks_equal)
-
-    # Fix the target device to avoid duplicates with the unchanged disks
-    # The requested device names may not be honoured by hypervisor and will
-    # likely be set right at the next start of the VM
-    targets = [disk.find('target').get('dev') for disk in diff['unchanged']]
+    # Change the target device to avoid duplicates before diffing: this may lead
+    # to additional changes. Think of unchanged disk 'hda' and another disk listed
+    # before it becoming 'hda' too... the unchanged need to turn into 'hdb'.
+    targets = []
     prefixes = ['fd', 'hd', 'vd', 'sd', 'xvd', 'ubd']
-    for disk in diff['new']:
+    for disk in new:
         target_node = disk.find('target')
         target = target_node.get('dev')
-        if target in targets:
-            prefix = [item for item in prefixes if target.startswith(item)][0]
-            for i in range(1024):
-                attempt = '{0}{1}'.format(prefix, string.ascii_lowercase[i])
-                if attempt not in targets:
-                    target_node.set('dev', attempt)
-                    targets.append(attempt)
-                    break
-    return diff
+        prefix = [item for item in prefixes if target.startswith(item)][0]
+        new_target = ['{0}{1}'.format(prefix, string.ascii_lowercase[i]) for i in range(len(new))
+                      if '{0}{1}'.format(prefix, string.ascii_lowercase[i]) not in targets][0]
+        target_node.set('dev', new_target)
+        targets.append(new_target)
+
+    return _diff_lists(old, new, _disks_equal)
 
 
 def _diff_interface_lists(old, new):
@@ -1876,10 +1920,11 @@ def update(name,
 
     # Compute the XML to get the disks, interfaces and graphics
     hypervisor = desc.get('type')
+    all_disks = _disk_profile(disk_profile, hypervisor, disks, name, **kwargs)
     new_desc = ElementTree.fromstring(_gen_xml(name,
                                                cpu,
                                                mem,
-                                               _disk_profile(disk_profile, hypervisor, disks, name, **kwargs),
+                                               all_disks,
                                                _get_merged_nics(hypervisor, nic_profile, interfaces),
                                                hypervisor,
                                                domain.OSType(),
@@ -1917,11 +1962,18 @@ def update(name,
             if changes[dev_type]['deleted'] or changes[dev_type]['new']:
                 for item in old:
                     devices_node.remove(item)
-                devices_node.extend(new)
+                devices_node.extend(changes[dev_type]['sorted'])
                 need_update = True
 
     # Set the new definition
     if need_update:
+        # Create missing disks if needed
+        if changes['disk']:
+            for idx, item in enumerate(changes['disk']['sorted']):
+                source_file = all_disks[idx]['source_file']
+                if item in changes['disk']['new'] and source_file and not os.path.isfile(source_file):
+                    _qemu_image_create(all_disks[idx])
+
         try:
             conn.defineXML(ElementTree.tostring(desc))
             status['definition'] = True
@@ -2595,7 +2647,7 @@ def get_profiles(hypervisor=None, **kwargs):
     ret = {}
 
     caps = capabilities(**kwargs)
-    hypervisors = sorted(set([x for y in [guest['arch']['domains'].keys() for guest in caps['guests']] for x in y]))
+    hypervisors = sorted({x for y in [guest['arch']['domains'].keys() for guest in caps['guests']] for x in y})
     default_hypervisor = 'kvm' if 'kvm' in hypervisors else hypervisors[0]
 
     if not hypervisor:

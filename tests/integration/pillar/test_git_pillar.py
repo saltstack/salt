@@ -101,13 +101,13 @@ from salt.utils.gitfs import (
 # Check for requisite components
 try:
     HAS_GITPYTHON = GITPYTHON_VERSION >= GITPYTHON_MINVER
-except ImportError:
+except Exception:
     HAS_GITPYTHON = False
 
 try:
     HAS_PYGIT2 = PYGIT2_VERSION >= PYGIT2_MINVER \
         and LIBGIT2_VERSION >= LIBGIT2_MINVER
-except AttributeError:
+except Exception:
     HAS_PYGIT2 = False
 
 HAS_SSHD = bool(salt.utils.path.which('sshd'))
@@ -357,6 +357,29 @@ class GitPythonMixin(object):
              '_errors': ["Specified SLS 'bar' in environment 'base' is not "
                          "available on the salt master"]}
         )
+
+    def test_root_parameter(self):
+        '''
+        Test root parameter
+        '''
+        expected = {
+            'from_subdir': True
+        }
+
+        ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
+            git_pillar_provider: gitpython
+            cachedir: {cachedir}
+            extension_modules: {extmods}
+            ext_pillar:
+              - git:
+                - master {url}:
+                  - root: subdir
+                - top_only {url}:
+                  - env: base
+            ''')
+        self.assertEqual(ret, expected)
 
 
 @destructiveTest
@@ -1192,6 +1215,98 @@ class TestPygit2SSH(GitPillarSSHTestBase):
             ''')
         self.assertEqual(ret, expected)
 
+    @requires_system_grains
+    def test_root_parameter(self, grains):
+        '''
+        Test root parameter
+        '''
+        expected = {
+            'from_subdir': True
+        }
+
+        # Test with passphraseless key and global credential options
+        ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
+            git_pillar_provider: pygit2
+            git_pillar_pubkey: {pubkey_nopass}
+            git_pillar_privkey: {privkey_nopass}
+            cachedir: {cachedir}
+            extension_modules: {extmods}
+            ext_pillar:
+              - git:
+                - master {url}:
+                  - root: subdir
+                - top_only {url}:
+                  - env: base
+            ''')
+        self.assertEqual(ret, expected)
+
+        # Test with passphraseless key and per-repo credential options
+        ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
+            git_pillar_provider: pygit2
+            cachedir: {cachedir}
+            extension_modules: {extmods}
+            ext_pillar:
+              - git:
+                - master {url}:
+                  - root: subdir
+                  - pubkey: {pubkey_nopass}
+                  - privkey: {privkey_nopass}
+                - top_only {url}:
+                  - pubkey: {pubkey_nopass}
+                  - privkey: {privkey_nopass}
+                  - env: base
+            ''')
+        self.assertEqual(ret, expected)
+
+        if grains['os_family'] == 'Debian':
+            # passphrase-protected currently does not work here
+            return
+
+        # Test with passphrase-protected key and global credential options
+        ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
+            git_pillar_provider: pygit2
+            git_pillar_pubkey: {pubkey_withpass}
+            git_pillar_privkey: {privkey_withpass}
+            git_pillar_passphrase: {passphrase}
+            cachedir: {cachedir}
+            extension_modules: {extmods}
+            ext_pillar:
+              - git:
+                - master {url}:
+                  - root: subdir
+                - top_only {url}:
+                  - env: base
+            ''')
+        self.assertEqual(ret, expected)
+
+        # Test with passphrase-protected key and per-repo credential options
+        ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
+            git_pillar_provider: pygit2
+            cachedir: {cachedir}
+            extension_modules: {extmods}
+            ext_pillar:
+              - git:
+                - master {url}:
+                  - root: subdir
+                  - pubkey: {pubkey_withpass}
+                  - privkey: {privkey_withpass}
+                  - passphrase: {passphrase}
+                - top_only {url}:
+                  - pubkey: {pubkey_withpass}
+                  - privkey: {privkey_withpass}
+                  - passphrase: {passphrase}
+                  - env: base
+            ''')
+        self.assertEqual(ret, expected)
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(_windows_or_mac(), 'minion is windows or mac')
@@ -1434,6 +1549,29 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
             ext_pillar:
               - git:
                 - master {url}
+                - top_only {url}:
+                  - env: base
+            ''')
+        self.assertEqual(ret, expected)
+
+    def test_root_parameter(self):
+        '''
+        Test root parameter
+        '''
+        expected = {
+            'from_subdir': True
+        }
+
+        ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
+            git_pillar_provider: pygit2
+            cachedir: {cachedir}
+            extension_modules: {extmods}
+            ext_pillar:
+              - git:
+                - master {url}:
+                  - root: subdir
                 - top_only {url}:
                   - env: base
             ''')
@@ -1884,6 +2022,32 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
                   - user: {user}
                   - password: {password}
                   - insecure_auth: True
+                  - env: base
+            ''')
+        self.assertEqual(ret, expected)
+
+    def test_root_parameter(self):
+        '''
+        Test root parameter
+        '''
+        expected = {
+            'from_subdir': True
+        }
+
+        ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
+            git_pillar_provider: pygit2
+            git_pillar_user: {user}
+            git_pillar_password: {password}
+            git_pillar_insecure_auth: True
+            cachedir: {cachedir}
+            extension_modules: {extmods}
+            ext_pillar:
+              - git:
+                - master {url}:
+                  - root: subdir
+                - top_only {url}:
                   - env: base
             ''')
         self.assertEqual(ret, expected)
