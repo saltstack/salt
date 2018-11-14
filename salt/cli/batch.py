@@ -271,8 +271,7 @@ class Batch(object):
                 # that have not responded to minion_returns{} with an empty response
                 for minion in minion_tracker[iterator]['minions']:
                     if minion not in minion_returns:
-                        minion_returns[minion] = {}
-                        minion_returns[minion]['ret'] = {}
+                        minion_returns[minion] = {'ret': {}}
 
     def _update_ret(self, minion_returns, ret):
         for minion, data in six.iteritems(minion_returns):
