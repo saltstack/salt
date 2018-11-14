@@ -219,28 +219,37 @@ class Batch(object):
                 salt.utils.stringutils.print_cli(
                     'minion {0} was already deleted from tracker, probably a duplicate key'.format(minionid))
 
+    def _process_queue(self, queue):
+        parts = {}
+        completed = False
+        # Gather returns until we get to the bottom
+        ncnt = 0
+        for part in queue:
+            if part is None:
+                time.sleep(0.01)
+                ncnt += 1
+                if ncnt > 5:
+                    break
+                continue
+            if self.opts.get('raw'):
+                part = {part['data']['id']: part}
+            parts.update(part)
+        else:
+            # if a iterator is done:
+            # - set it to inactive
+            # - add minions that have not responded to parts{}
+            completed = True
+        return parts, completed
+
     def _get_parts(self, iters):
         parts = {}
         to_remove = []
         to_inactive = []
         for queue in iters:
-            # Gather returns until we get to the bottom
-            ncnt = 0
-            for part in queue:
-                if part is None:
-                    time.sleep(0.01)
-                    ncnt += 1
-                    if ncnt > 5:
-                        break
-                    continue
-                if self.opts.get('raw'):
-                    part = {part['data']['id']: part}
-                parts.update(part)
-                to_remove.append([part.keys(), queue])
-            else:
-                # if a iterator is done:
-                # - set it to inactive
-                # - add minions that have not responded to parts{}
+            queue_parts, completed = self._process_queue(queue)
+            parts.update(queue_parts)
+            to_remove.append((queue_parts.keys(), queue))
+            if completed:
                 to_inactive.append(queue)
         return parts, to_remove, to_inactive
 
