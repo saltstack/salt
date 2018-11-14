@@ -261,8 +261,8 @@ class Batch(object):
             if bwait:
                 wait.append(datetime.now() + timedelta(seconds=bwait))
 
-    def _deactivate(self, to_inactive, minion_returns, minion_tracker):
-        for iterator in to_inactive:
+    def _deactivate(self, done_iterators, minion_returns, minion_tracker):
+        for iterator in done_iterators:
             # check if the tracker contains the iterator
             if iterator in minion_tracker:
                 minion_tracker[iterator]['active'] = False
