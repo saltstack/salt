@@ -304,7 +304,31 @@ def _append_noaction_if_testmode(cmd, **kwargs):
         cmd.append("--noaction")
 
 
-def _parse_reported_packages_from_noaction_install_output(output):
+def _build_install_command_list(cmd_prefix, to_install, to_downgrade, to_reinstall):
+    """
+    Builds a list of install commands to be executed in sequence in order to process
+    each of the to_install, to_downgrade, and to_reinstall lists.
+    """
+    cmds = []
+    if to_install:
+        cmd = copy.deepcopy(cmd_prefix)
+        cmd.extend(to_install)
+        cmds.append(cmd)
+    if to_downgrade:
+        cmd = copy.deepcopy(cmd_prefix)
+        cmd.append("--force-downgrade")
+        cmd.extend(to_downgrade)
+        cmds.append(cmd)
+    if to_reinstall:
+        cmd = copy.deepcopy(cmd_prefix)
+        cmd.append("--force-reinstall")
+        cmd.extend(to_reinstall)
+        cmds.append(cmd)
+
+    return cmds
+
+
+def _parse_reported_packages_from_install_output(output):
     """
     Parses the output of "opkg install" to determine what packages would have been
     installed by an operation run with the --noaction flag.
@@ -329,6 +353,25 @@ def _parse_reported_packages_from_noaction_install_output(output):
             reportedPkgs[match.group("package")] = match.group("version")
 
     return reportedPkgs
+
+
+def _execute_install_commands(cmds, parse_output, errors, parsed_packages):
+    """
+    Executes a sequence of install commands.
+    If any command fails, the command output will be appended to the errors list.
+    If parse_output is true, updated packages will be appended to the parsed_packages dictionary.
+    """
+    for cmd in cmds:
+        out = __salt__["cmd.run_all"](cmd, output_loglevel="trace", python_shell=False)
+        if out["retcode"] != 0:
+            if out["stderr"]:
+                errors.append(out["stderr"])
+            else:
+                errors.append(out["stdout"])
+        elif parse_output:
+            parsed_packages.update(
+                _parse_reported_packages_from_install_output(out["stdout"])
+            )
 
 
 def install(
@@ -474,24 +517,9 @@ def install(
                         # This should cause the command to fail.
                         to_install.append(pkgstr)
 
-    cmds = []
-
-    if to_install:
-        cmd = copy.deepcopy(cmd_prefix)
-        cmd.extend(to_install)
-        cmds.append(cmd)
-
-    if to_downgrade:
-        cmd = copy.deepcopy(cmd_prefix)
-        cmd.append("--force-downgrade")
-        cmd.extend(to_downgrade)
-        cmds.append(cmd)
-
-    if to_reinstall:
-        cmd = copy.deepcopy(cmd_prefix)
-        cmd.append("--force-reinstall")
-        cmd.extend(to_reinstall)
-        cmds.append(cmd)
+    cmds = _build_install_command_list(
+        cmd_prefix, to_install, to_downgrade, to_reinstall
+    )
 
     if not cmds:
         return {}
@@ -500,22 +528,15 @@ def install(
         refresh_db()
 
     errors = []
-    for cmd in cmds:
-        out = __salt__["cmd.run_all"](cmd, output_loglevel="trace", python_shell=False)
-        if out["retcode"] != 0:
-            if out["stderr"]:
-                errors.append(out["stderr"])
-            else:
-                errors.append(out["stdout"])
+    is_testmode = _is_testmode(**kwargs)
+    test_packages = {}
+    _execute_install_commands(cmds, is_testmode, errors, test_packages)
 
     __context__.pop("pkg.list_pkgs", None)
     new = list_pkgs()
-    if _is_testmode(**kwargs):
-        reportedPkgs = _parse_reported_packages_from_noaction_install_output(
-            out["stdout"]
-        )
+    if is_testmode:
         new = copy.deepcopy(new)
-        new.update(reportedPkgs)
+        new.update(test_packages)
 
     ret = salt.utils.data.compare_dicts(old, new)
 
@@ -554,7 +575,7 @@ def install(
     return ret
 
 
-def _parse_reported_packages_from_noaction_remove_output(output):
+def _parse_reported_packages_from_remove_output(output):
     """
     Parses the output of "opkg remove" to determine what packages would have been
     removed by an operation run with the --noaction flag.
@@ -638,9 +659,7 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
     __context__.pop("pkg.list_pkgs", None)
     new = list_pkgs()
     if _is_testmode(**kwargs):
-        reportedPkgs = _parse_reported_packages_from_noaction_remove_output(
-            out["stdout"]
-        )
+        reportedPkgs = _parse_reported_packages_from_remove_output(out["stdout"])
         new = {k: v for k, v in new.items() if k not in reportedPkgs}
     ret = salt.utils.data.compare_dicts(old, new)
 
