@@ -2234,10 +2234,10 @@ class Minion(MinionBase):
         # Call the appropriate schedule function
         if func in funcs:
             alias, params = funcs.get(func)
-            #try:
-            getattr(self.schedule, alias)(*params)
-            #except TypeError:
-            #log.error('Function "%s" is unavailable in scheduler')
+            try:
+                getattr(self.schedule, alias)(*params)
+            except TypeError:
+                log.error('Function "%s" is unavailable in scheduler')
 
     def manage_beacons(self, tag, data):
         '''
