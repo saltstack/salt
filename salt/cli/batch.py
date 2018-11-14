@@ -273,15 +273,17 @@ class Batch(object):
                         minion_returns[minion]['ret'] = {}
 
     def _update_ret(self, iters, ret, active, wait, bwait, minion_tracker):
-        minion_returns, to_remove, to_inactive = self._process_iterators(iters)
+        minion_returns, done_minions, done_iterators = self._process_iterators(iters)
 
-        for minions, iterator in to_remove:
+        for minions, iterator in done_minions:
             self._remove_minion_from_iterator(minions, iterator, minion_tracker)
 
-        self._deactivate(to_inactive, minion_returns, minion_tracker)
+        for minion in minion_returns:
+            self._remove_minion_from_active(minion, active, wait, bwait)
+
+        self._deactivate(done_iterators, minion_returns, minion_tracker)
 
         for minion, data in six.iteritems(minion_returns):
-            self._remove_minion_from_active(minion, active, wait, bwait)
             # Munge retcode into return data
             failhard = False
             if 'retcode' in data and isinstance(data['ret'], dict) and 'retcode' not in data['ret']:
