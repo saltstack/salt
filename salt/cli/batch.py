@@ -211,20 +211,20 @@ class Batch(object):
                 new_minions.append(m)
         return new_minions
 
-    def _remove_minion_from_queue(self, minions, queue, minion_tracker):
+    def _remove_minion_from_iterator(self, minions, iterator, minion_tracker):
         for minionid in minions:
-            if minionid in minion_tracker[queue]['minions']:
-                minion_tracker[queue]['minions'].remove(minionid)
+            if minionid in minion_tracker[iterator]['minions']:
+                minion_tracker[iterator]['minions'].remove(minionid)
             else:
                 salt.utils.stringutils.print_cli(
                     'minion {0} was already deleted from tracker, probably a duplicate key'.format(minionid))
 
-    def _process_queue(self, queue):
+    def _process_iterator(self, iterator):
         parts = {}
         completed = False
         # Gather returns until we get to the bottom
         ncnt = 0
-        for part in queue:
+        for part in iterator:
             if part is None:
                 time.sleep(0.01)
                 ncnt += 1
@@ -241,17 +241,17 @@ class Batch(object):
             completed = True
         return parts, completed
 
-    def _get_parts(self, iters):
+    def _process_iterators(self, iters):
         parts = {}
         to_remove = []
-        to_inactive = []
-        for queue in iters:
-            queue_parts, completed = self._process_queue(queue)
-            parts.update(queue_parts)
-            to_remove.append((queue_parts.keys(), queue))
+        done_iters = []
+        for it in iters:
+            it_parts, completed = self._process_iterator(it)
+            parts.update(it_parts)
+            to_remove.append((it_parts.keys(), it))
             if completed:
-                to_inactive.append(queue)
-        return parts, to_remove, to_inactive
+                done_iters.append(it)
+        return parts, to_remove, done_iters
 
     def _remove_minion_from_active(self, minion, active, wait, bwait):
         if minion in active:
@@ -260,23 +260,23 @@ class Batch(object):
                 wait.append(datetime.now() + timedelta(seconds=bwait))
 
     def _deactivate(self, to_inactive, parts, minion_tracker):
-        for queue in to_inactive:
+        for iterator in to_inactive:
             # check if the tracker contains the iterator
-            if queue in minion_tracker:
-                minion_tracker[queue]['active'] = False
+            if iterator in minion_tracker:
+                minion_tracker[iterator]['active'] = False
 
                 # add all minions that belong to this iterator and
                 # that have not responded to parts{} with an empty response
-                for minion in minion_tracker[queue]['minions']:
+                for minion in minion_tracker[iterator]['minions']:
                     if minion not in parts:
                         parts[minion] = {}
                         parts[minion]['ret'] = {}
 
     def _update_ret(self, iters, ret, active, wait, bwait, minion_tracker):
-        parts, to_remove, to_inactive = self._get_parts(iters)
+        parts, to_remove, to_inactive = self._process_iterators(iters)
 
-        for minions, queue in to_remove:
-            self._remove_minion_from_queue(minions, queue, minion_tracker)
+        for minions, iterator in to_remove:
+            self._remove_minion_from_iterator(minions, iterator, minion_tracker)
 
         self._deactivate(to_inactive, parts, minion_tracker)
 
@@ -315,12 +315,12 @@ class Batch(object):
 
     def _remove_from_trackers(self, iters, active, wait, bwait, minion_tracker):
         # remove inactive iterators from the iters list
-        for queue in minion_tracker:
-            # only remove inactive queues
-            if not minion_tracker[queue]['active'] and queue in iters:
-                iters.remove(queue)
+        for iterator in minion_tracker:
+            # only remove inactive iterators
+            if not minion_tracker[iterator]['active'] and iterator in iters:
+                iters.remove(iterator)
                 # also remove the iterator's minions from the active list
-                for minion in minion_tracker[queue]['minions']:
+                for minion in minion_tracker[iterator]['minions']:
                     self._remove_minion_from_active(minion, active, wait, bwait)
 
     def _get_show_options(self):
