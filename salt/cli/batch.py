@@ -272,16 +272,7 @@ class Batch(object):
                         minion_returns[minion] = {}
                         minion_returns[minion]['ret'] = {}
 
-    def _update_ret(self, iters, ret, active, wait, bwait, minion_tracker):
-        minion_returns, done_minions, done_iterators = self._process_iterators(iters)
-
-        for minions, iterator in done_minions:
-            self._remove_minion_from_iterator(minions, iterator, minion_tracker)
-
-        for minion in minion_returns:
-            self._remove_minion_from_active(minion, active, wait, bwait)
-
-        self._deactivate(done_iterators, minion_returns, minion_tracker)
+    def _update_ret(self, minion_returns, ret):
 
         for minion, data in six.iteritems(minion_returns):
             # Munge retcode into return data
@@ -390,7 +381,17 @@ class Batch(object):
             self.minions += new_minions
             to_run += new_minions
 
-            for i in self._update_ret(iters, ret, active, wait, bwait, minion_tracker):
+            minion_returns, done_minions, done_iterators = self._process_iterators(iters)
+
+            for minions, iterator in done_minions:
+                self._remove_minion_from_iterator(minions, iterator, minion_tracker)
+
+            for minion in minion_returns:
+                self._remove_minion_from_active(minion, active, wait, bwait)
+
+            self._deactivate(done_iterators, minion_returns, minion_tracker)
+
+            for i in self._update_ret(minion_returns, ret):
                 yield i
 
             self._remove_from_trackers(iters, active, wait, bwait, minion_tracker)
