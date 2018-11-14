@@ -2191,7 +2191,7 @@ class Minion(MinionBase):
         Refresh the pillar
         '''
         if self.connected:
-            log.debug('Refreshing pillar. Notify: {}'.format(notify))
+            log.debug('Refreshing pillar. Notify: %s', notify)
             try:
                 self.opts['pillar'] = yield salt.pillar.get_async_pillar(
                     self.opts,
