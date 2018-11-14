@@ -116,8 +116,16 @@ start() {
     # $1 - config dir
     local retval=0
 
+    if [ -f $LOCK_FILE ]; then
+        echo "Service $SERVICE:$MINION_USER:$MINION_ID is starting"
+        return 0
+    else
+        touch "$LOCK_FILE"
+    fi
+
     if _is_running; then
         echo "Service $SERVICE:$MINION_USER:$MINION_ID already running"
+        rm -f "$LOCK_FILE"
         return 0
     fi
 
@@ -146,6 +154,7 @@ start() {
         done
     fi
 
+    rm -f "$LOCK_FILE"
     if [ 0 -eq "$retval" ]; then
         echo -n "OK"
     else
@@ -278,6 +287,7 @@ main() {
         LOG_FILE="$(_get_salt_config_value log_file)"
         MINION_ID="$(_get_salt_config_value id)"
         MINION_ID_HASH="$(_make_id_hash "$MINION_ID")"
+        LOCK_FILE="/var/lock/subsys/$SERVICE.$MINION_ID_HASH"
         if [ \
             -z "$SOCK_DIR" \
             -o -z "$PID_FILE" \
