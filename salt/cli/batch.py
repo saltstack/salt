@@ -251,6 +251,8 @@ class Batch(object):
             done_minions.append((it_minion_returns.keys(), it))
             if completed:
                 done_iters.append(it)
+                # remove completed iterators from the iters list
+                iters.remove(it)
         return minion_returns, done_minions, done_iters
 
     def _remove_minion_from_active(self, minion, active, wait, bwait):
@@ -379,11 +381,6 @@ class Batch(object):
                 self._remove_minion_from_active(minion, active, wait, bwait)
 
             self._deactivate(done_iterators, minion_returns, minion_tracker)
-
-            # remove inactive iterators from the iters list
-            for iterator in done_iterators:
-                if iterator in iters:
-                    iters.remove(iterator)
 
             for i in self._update_ret(minion_returns, ret):
                 yield i
