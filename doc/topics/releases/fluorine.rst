@@ -1183,6 +1183,7 @@ The :py:func:`event.send <salt.states.event.send>` state does not know the
 results of the sent event, so returns changed every state run.  It can now be
 set to return changed or unchanged.
 
+
 :py:mod:`influxdb_user.present <salt.states.influxdb_user>` Influxdb User Module State
 ---------------------------------------------------------------------------------------
 
@@ -1210,6 +1211,17 @@ New behavior:
       - passwd: exampleuserpassword
       - user: admin
       - password: adminpassword
+
+:conf_minion:`winrepo_cache_expire_min` Windows Package Definitions Caching
+---------------------------------------------------------------------------------------
+
+The :conf_minion:`winrepo_cache_expire_min` has been changed from 0 to 1800 (30 minutes)
+For example if you run highstate the package definitions are normally updated, however now
+if the package definitions are younger than :conf_minion:`winrepo_cache_expire_min` (30 minutes)
+the package definitions will not be refresh reducing the amount of time taken to
+run a 2nd highstate. To get the old behaviour change the value back to 0 in the
+minion configuration file. This also effects the behaviour of other functions on their 2nd run.
+The ``pkg.refresh_db`` will always refresh the package definitions.
 
 LDAP External Authentication
 ============================
