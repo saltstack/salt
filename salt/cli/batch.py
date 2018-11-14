@@ -220,38 +220,38 @@ class Batch(object):
                     'minion {0} was already deleted from tracker, probably a duplicate key'.format(minionid))
 
     def _process_iterator(self, iterator):
-        parts = {}
+        minion_returns = {}
         completed = False
         # Gather returns until we get to the bottom
         ncnt = 0
-        for part in iterator:
-            if part is None:
+        for ret in iterator:
+            if ret is None:
                 time.sleep(0.01)
                 ncnt += 1
                 if ncnt > 5:
                     break
                 continue
             if self.opts.get('raw'):
-                part = {part['data']['id']: part}
-            parts.update(part)
+                ret = {ret['data']['id']: ret}
+            minion_returns.update(ret)
         else:
             # if a iterator is done:
             # - set it to inactive
-            # - add minions that have not responded to parts{}
+            # - add minions that have not responded to minion_returns{}
             completed = True
-        return parts, completed
+        return minion_returns, completed
 
     def _process_iterators(self, iters):
-        parts = {}
-        to_remove = []
+        minion_returns = {}
+        done_minions = []
         done_iters = []
         for it in iters:
-            it_parts, completed = self._process_iterator(it)
-            parts.update(it_parts)
-            to_remove.append((it_parts.keys(), it))
+            it_minion_returns, completed = self._process_iterator(it)
+            minion_returns.update(it_minion_returns)
+            done_minions.append((it_minion_returns.keys(), it))
             if completed:
                 done_iters.append(it)
-        return parts, to_remove, done_iters
+        return minion_returns, done_minions, done_iters
 
     def _remove_minion_from_active(self, minion, active, wait, bwait):
         if minion in active:
@@ -259,28 +259,28 @@ class Batch(object):
             if bwait:
                 wait.append(datetime.now() + timedelta(seconds=bwait))
 
-    def _deactivate(self, to_inactive, parts, minion_tracker):
+    def _deactivate(self, to_inactive, minion_returns, minion_tracker):
         for iterator in to_inactive:
             # check if the tracker contains the iterator
             if iterator in minion_tracker:
                 minion_tracker[iterator]['active'] = False
 
                 # add all minions that belong to this iterator and
-                # that have not responded to parts{} with an empty response
+                # that have not responded to minion_returns{} with an empty response
                 for minion in minion_tracker[iterator]['minions']:
-                    if minion not in parts:
-                        parts[minion] = {}
-                        parts[minion]['ret'] = {}
+                    if minion not in minion_returns:
+                        minion_returns[minion] = {}
+                        minion_returns[minion]['ret'] = {}
 
     def _update_ret(self, iters, ret, active, wait, bwait, minion_tracker):
-        parts, to_remove, to_inactive = self._process_iterators(iters)
+        minion_returns, to_remove, to_inactive = self._process_iterators(iters)
 
         for minions, iterator in to_remove:
             self._remove_minion_from_iterator(minions, iterator, minion_tracker)
 
-        self._deactivate(to_inactive, parts, minion_tracker)
+        self._deactivate(to_inactive, minion_returns, minion_tracker)
 
-        for minion, data in six.iteritems(parts):
+        for minion, data in six.iteritems(minion_returns):
             self._remove_minion_from_active(minion, active, wait, bwait)
             # Munge retcode into return data
             failhard = False
