@@ -154,8 +154,8 @@
 
 # Store all returns in the given returner.
 # Setting this option requires that any returner-specific configuration also
-# be set. See various returners in salt/returners for details on required
-# configuration values. (See also, event_return_queue below.)
+# be set. See https://docs.saltstack.com/en/latest/ref/returners/all/ for
+# details on required configuration values. See also, event_return_queue below.
 #event_return: ''
 
 # On busy systems, enabling event_returns can cause a considerable load on
@@ -439,8 +439,9 @@
 # from the eauth driver each time.
 #keep_acl_in_token: False
 
-# Auth subsystem module to use to get authorized access list for a user. By default it's
-# the same module used for external authentication.
+# Auth subsystem module to use to get authorized access list for a user.
+# By default it's the same module used for external authentication.
+# See https://docs.saltstack.com/en/latest/ref/auth/all/ for module list.
 #eauth_acl_module: ''
 
 # Allow minions to push files to the master. This is disabled by default, for
