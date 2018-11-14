@@ -305,16 +305,6 @@ class Batch(object):
                 )
                 raise StopIteration
 
-    def _remove_from_trackers(self, iters, active, wait, bwait, minion_tracker):
-        # remove inactive iterators from the iters list
-        for iterator in minion_tracker:
-            # only remove inactive iterators
-            if not minion_tracker[iterator]['active'] and iterator in iters:
-                iters.remove(iterator)
-                # also remove the iterator's minions from the active list
-                for minion in minion_tracker[iterator]['minions']:
-                    self._remove_minion_from_active(minion, active, wait, bwait)
-
     def _get_show_options(self):
         ret = [False, False]
         if self.options:
@@ -390,7 +380,10 @@ class Batch(object):
 
             self._deactivate(done_iterators, minion_returns, minion_tracker)
 
-            self._remove_from_trackers(iters, active, wait, bwait, minion_tracker)
+            # remove inactive iterators from the iters list
+            for iterator in done_iterators:
+                if iterator in iters:
+                    iters.remove(iterator)
 
             for i in self._update_ret(minion_returns, ret):
                 yield i
