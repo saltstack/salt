@@ -338,21 +338,21 @@ def _parse_reported_packages_from_install_output(output):
     or
         Upgrading <package> from <oldVersion> to <version> on root
     """
-    reportedPkgs = {}
-    installPattern = re.compile(
+    reported_pkgs = {}
+    install_pattern = re.compile(
         r"Installing\s(?P<package>.*?)\s\((?P<version>.*?)\)\son\s(?P<target>.*?)"
     )
-    upgradePattern = re.compile(
+    upgrade_pattern = re.compile(
         r"Upgrading\s(?P<package>.*?)\sfrom\s(?P<oldVersion>.*?)\sto\s(?P<version>.*?)\son\s(?P<target>.*?)"
     )
     for line in salt.utils.itertools.split(output, "\n"):
-        match = installPattern.match(line)
+        match = install_pattern.match(line)
         if match is None:
-            match = upgradePattern.match(line)
+            match = upgrade_pattern.match(line)
         if match:
-            reportedPkgs[match.group("package")] = match.group("version")
+            reported_pkgs[match.group("package")] = match.group("version")
 
-    return reportedPkgs
+    return reported_pkgs
 
 
 def _execute_install_commands(cmds, parse_output, errors, parsed_packages):
@@ -583,16 +583,16 @@ def _parse_reported_packages_from_remove_output(output):
     We are looking for lines like
         Removing <package> (<version>) from <Target>...
     """
-    reportedPkgs = {}
-    removePattern = re.compile(
+    reported_pkgs = {}
+    remove_pattern = re.compile(
         r"Removing\s(?P<package>.*?)\s\((?P<version>.*?)\)\sfrom\s(?P<target>.*?)..."
     )
     for line in salt.utils.itertools.split(output, "\n"):
-        match = removePattern.match(line)
+        match = remove_pattern.match(line)
         if match:
-            reportedPkgs[match.group("package")] = ""
+            reported_pkgs[match.group("package")] = ""
 
-    return reportedPkgs
+    return reported_pkgs
 
 
 def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
