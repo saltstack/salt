@@ -2214,6 +2214,8 @@ class Minion(MinionBase):
             self.beacons.list_available_beacons()
         elif func == 'validate_beacon':
             self.beacons.validate_beacon(name, beacon_data)
+        elif func == 'reset':
+            self.beacons.reset()
 
     def environ_setenv(self, tag, data):
         '''
