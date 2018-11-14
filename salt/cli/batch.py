@@ -273,7 +273,6 @@ class Batch(object):
                         minion_returns[minion]['ret'] = {}
 
     def _update_ret(self, minion_returns, ret):
-
         for minion, data in six.iteritems(minion_returns):
             # Munge retcode into return data
             failhard = False
@@ -391,7 +390,8 @@ class Batch(object):
 
             self._deactivate(done_iterators, minion_returns, minion_tracker)
 
+            self._remove_from_trackers(iters, active, wait, bwait, minion_tracker)
+
             for i in self._update_ret(minion_returns, ret):
                 yield i
 
-            self._remove_from_trackers(iters, active, wait, bwait, minion_tracker)
