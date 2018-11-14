@@ -224,22 +224,20 @@ class Batch(object):
         to_remove = []
         to_inactive = []
         for queue in iters:
-            try:
-                # Gather returns until we get to the bottom
-                ncnt = 0
-                while True:
-                    part = next(queue)
-                    if part is None:
-                        time.sleep(0.01)
-                        ncnt += 1
-                        if ncnt > 5:
-                            break
-                        continue
-                    if self.opts.get('raw'):
-                        part = {part['data']['id']: part}
-                    parts.update(part)
-                    to_remove.append([part.keys(), queue])
-            except StopIteration:
+            # Gather returns until we get to the bottom
+            ncnt = 0
+            for part in queue:
+                if part is None:
+                    time.sleep(0.01)
+                    ncnt += 1
+                    if ncnt > 5:
+                        break
+                    continue
+                if self.opts.get('raw'):
+                    part = {part['data']['id']: part}
+                parts.update(part)
+                to_remove.append([part.keys(), queue])
+            else:
                 # if a iterator is done:
                 # - set it to inactive
                 # - add minions that have not responded to parts{}
