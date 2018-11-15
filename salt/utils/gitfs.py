@@ -11,7 +11,6 @@ import glob
 import hashlib
 import logging
 import os
-import pwd
 import re
 import shlex
 import shutil
@@ -19,6 +18,11 @@ import stat
 import subprocess
 import time
 from datetime import datetime
+import getpass
+try:
+    import pwd
+except ImportError:
+    pass
 
 # Import salt libs
 import salt.utils
@@ -1427,7 +1431,10 @@ class Pygit2(GitProvider):
         '''
         # https://github.com/libgit2/pygit2/issues/339
         # https://github.com/libgit2/libgit2/issues/2122
-        home = pwd.getpwnam(salt.utils.get_user()).pw_dir
+        if salt.utils.is_windows():
+            home = os.path.expanduser('~' + getpass.get_user())
+        else:
+            home = pwd.getpwnam(salt.utils.get_user()).pw_dir
         pygit2.settings.search_path[pygit2.GIT_CONFIG_LEVEL_GLOBAL] = home
         new = False
         if not os.listdir(self.cachedir):
