@@ -76,8 +76,13 @@ class PkgRPMTestCase(TestCase):
         assert len(subprocess_mock.Popen.call_args_list) == 2
         assert subprocess_mock.Popen.call_args[0][0] == 'rpm --eval "%{_host_cpu}"'
 
+    @patch('salt.utils.path.which', MagicMock(return_value=False))
+    @patch('salt.utils.pkg.rpm.subprocess', MagicMock(return_value=False))
+    @patch('salt.utils.pkg.rpm.platform.uname', MagicMock(
+        return_value=('Sinclair BASIC', 'motophone', '1982 Sinclair Research Ltd', '1.0', 'ZX81', 'Z80')))
     def test_get_osarch_by_platform(self):
         '''
         Get os_arch if RPM package is not installed (inird image, for example).
         :return:
         '''
+        assert rpm.get_osarch() == 'Z80'
