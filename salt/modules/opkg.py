@@ -355,23 +355,23 @@ def _parse_reported_packages_from_install_output(output):
     return reported_pkgs
 
 
-def _execute_install_commands(cmds, parse_output, errors, parsed_packages):
+def _execute_install_command(cmd, parse_output, errors, parsed_packages):
     """
-    Executes a sequence of install commands.
-    If any command fails, the command output will be appended to the errors list.
-    If parse_output is true, updated packages will be appended to the parsed_packages dictionary.
+    Executes a command for the install operation.
+    If the command fails, its error output will be appended to the errors list.
+    If the command succeeds and parse_output is true, updated packages will be appended
+    to the parsed_packages dictionary.
     """
-    for cmd in cmds:
-        out = __salt__["cmd.run_all"](cmd, output_loglevel="trace", python_shell=False)
-        if out["retcode"] != 0:
-            if out["stderr"]:
-                errors.append(out["stderr"])
-            else:
-                errors.append(out["stdout"])
-        elif parse_output:
-            parsed_packages.update(
-                _parse_reported_packages_from_install_output(out["stdout"])
-            )
+    out = __salt__["cmd.run_all"](cmd, output_loglevel="trace", python_shell=False)
+    if out["retcode"] != 0:
+        if out["stderr"]:
+            errors.append(out["stderr"])
+        else:
+            errors.append(out["stdout"])
+    elif parse_output:
+        parsed_packages.update(
+            _parse_reported_packages_from_install_output(out["stdout"])
+        )
 
 
 def install(
@@ -530,7 +530,8 @@ def install(
     errors = []
     is_testmode = _is_testmode(**kwargs)
     test_packages = {}
-    _execute_install_commands(cmds, is_testmode, errors, test_packages)
+    for cmd in cmds:
+        _execute_install_command(cmd, is_testmode, errors, test_packages)
 
     __context__.pop("pkg.list_pkgs", None)
     new = list_pkgs()
