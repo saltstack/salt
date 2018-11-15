@@ -5,10 +5,11 @@ Microsoft Updates (KB) Management
 This module provides the ability to enforce KB installations
 from files (.msu), without WSUS.
 
+.. versionadded:: Neon
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 import logging
 
 # Import salt libs
