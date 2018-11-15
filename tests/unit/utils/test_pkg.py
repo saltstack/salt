@@ -1,11 +1,16 @@
 # -*- coding: utf-8 -*-
 
-# Import Python libs
-from __future__ import absolute_import
-# Import Salt Libs
+from __future__ import absolute_import, unicode_literals, print_function
+
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import Mock, MagicMock, patch, NO_MOCK, NO_MOCK_REASON
 import salt.utils.pkg
-# Import Salt Testing Libs
-from tests.support.unit import TestCase
+from salt.utils.pkg import rpm
+
+try:
+    import pytest
+except ImportError:
+    pytest = None
 
 
 class PkgUtilsTestCase(TestCase):
