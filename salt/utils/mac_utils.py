@@ -354,7 +354,7 @@ def _available_services(refresh=False):
                 # Follow symbolic links of files in _launchd_paths
                 file_path = os.path.join(root, file_name)
                 true_path = os.path.realpath(file_path)
-
+                log.trace('Gathering service info for {}'.format(true_path))
                 # ignore broken symlinks
                 if not os.path.exists(true_path):
                     continue
@@ -397,10 +397,16 @@ def _available_services(refresh=False):
                         logging.warning(msg, true_path)
                         continue
 
-                _available_services[plist['Label'].lower()] = {
-                    'file_name': file_name,
-                    'file_path': true_path,
-                    'plist': plist}
+                try:
+                    # not all launchd plists contain a Label key
+                    _available_services[plist['Label'].lower()] = {
+                        'file_name': file_name,
+                        'file_path': true_path,
+                        'plist': plist}
+                except KeyError:
+                    log.debug('Service {} does not contain a'
+                              ' Label key. Skipping.'.format(true_path))
+                    continue
 
     # put this in __context__ as this is a time consuming function.
     # a fix for this issue. https://github.com/saltstack/salt/issues/48414

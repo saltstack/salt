@@ -3425,7 +3425,7 @@ def directory(name,
             # NOTE: Should this be enough to stop the whole check altogether?
     if recurse_set:
         if 'user' in recurse_set:
-            if user:
+            if user or isinstance(user, int):
                 uid = __salt__['file.user_to_uid'](user)
                 # file.user_to_uid returns '' if user does not exist. Above
                 # check for user is not fatal, so we need to be sure user
@@ -3443,7 +3443,7 @@ def directory(name,
         else:
             user = None
         if 'group' in recurse_set:
-            if group:
+            if group or isinstance(group, int):
                 gid = __salt__['file.group_to_gid'](group)
                 # As above with user, we need to make sure group exists.
                 if isinstance(gid, six.string_types):
@@ -3703,20 +3703,19 @@ def recurse(name,
 
     exclude_pat
         Exclude this pattern, or list of patterns, from the source when copying.
-         If both `include_pat` and `exclude_pat` are supplied, then it will apply
-        conditions cumulatively. i.e. first select based on include_pat, and
-        then within that result apply exclude_pat.
+        If both ``include_pat`` and ``exclude_pat`` are supplied, then it will apply
+        conditions cumulatively. i.e. first select based on ``include_pat``, and
+        then within that result apply ``exclude_pat``.
 
-        Also, when 'clean=True', exclude this pattern from the removal
-        list and preserve in the destination.
-        Example:
+        Also, when ``clean=True``, exclude this pattern from the removal list
+        and preserve in the destination. For example:
 
         .. code-block:: text
 
-          - exclude_pat: APPDATA*               :: glob matches APPDATA.01,
-                                                   APPDATA.02,.. for exclusion
-          - exclude_pat: E@(APPDATA)|(TEMPDATA) :: regexp matches APPDATA
-                                                   or TEMPDATA for exclusion
+            # glob matches APPDATA.01, APPDATA.02,.. for exclusion
+            - exclude_pat: APPDATA*
+            # regexp matches APPDATA or TEMPDATA for exclusion
+            - exclude_pat: E@(APPDATA)|(TEMPDATA)
 
         .. versionchanged:: Neon
             List patterns are now supported
