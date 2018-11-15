@@ -67,7 +67,7 @@ def sanitize_host(host):
     Sanitize host string.
     https://tools.ietf.org/html/rfc1123#section-2.1
     """
-    RFC952_characters = ascii_letters + digits + ".-"
+    RFC952_characters = ascii_letters + digits + ".-_"
     return "".join([c for c in host[0:255] if c in RFC952_characters])
 
 
