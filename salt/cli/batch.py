@@ -243,13 +243,11 @@ class Batch(object):
 
     def _process_iterators(self, iters, minion_tracker):
         minion_returns = {}
-        done_iters = []
         for it in iters:
             it_minion_returns, completed = self._process_iterator(it)
             minion_returns.update(it_minion_returns)
             done_minions = it_minion_returns.keys()
             if completed:
-                done_iters.append(it)
                 # remove completed iterators from the iters list
                 iters.remove(it)
 
@@ -263,7 +261,7 @@ class Batch(object):
 
             self._remove_minion_from_iterator(done_minions, it, minion_tracker)
 
-        return minion_returns, done_iters
+        return minion_returns
 
     def _remove_minion_from_active(self, minion, active, wait, bwait):
         if minion in active:
@@ -369,7 +367,7 @@ class Batch(object):
             self.minions += new_minions
             to_run += new_minions
 
-            minion_returns, done_iterators = self._process_iterators(iters, minion_tracker)
+            minion_returns = self._process_iterators(iters, minion_tracker)
 
             for minion in minion_returns:
                 self._remove_minion_from_active(minion, active, wait, bwait)
