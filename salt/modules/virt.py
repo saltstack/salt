@@ -745,10 +745,8 @@ def _qemu_image_create(disk, create_overlay=False, saltenv='base'):
     log.debug('Image destination will be %s', img_dest)
     img_dir = os.path.dirname(img_dest)
     log.debug('Image destination directory is %s', img_dir)
-    try:
+    if not os.path.exists(img_dir):
         os.makedirs(img_dir)
-    except OSError:
-        pass
 
     if disk_image:
         log.debug('Create disk from specified image %s', disk_image)
@@ -1460,10 +1458,11 @@ def init(name,
             else:
                 create_overlay = _disk.get('overlay_image', False)
 
-            if _disk['source_file'] and os.path.exists(_disk['source_file']):
-                img_dest = _disk['source_file']
-            elif 'source_file' not in _disk:
-                img_dest = _qemu_image_create(_disk, create_overlay, saltenv)
+            if _disk['source_file']:
+                if os.path.exists(_disk['source_file']):
+                    img_dest = _disk['source_file']
+                else:
+                    img_dest = _qemu_image_create(_disk, create_overlay, saltenv)
             else:
                 img_dest = None
 
