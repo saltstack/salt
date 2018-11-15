@@ -86,3 +86,14 @@ class PkgRPMTestCase(TestCase):
         :return:
         '''
         assert rpm.get_osarch() == 'Z80'
+
+    @patch('salt.utils.path.which', MagicMock(return_value=False))
+    @patch('salt.utils.pkg.rpm.subprocess', MagicMock(return_value=False))
+    @patch('salt.utils.pkg.rpm.platform.uname', MagicMock(
+        return_value=('Sinclair BASIC', 'motophone', '1982 Sinclair Research Ltd', '1.0', 'ZX81', '')))
+    def test_get_osarch_by_platform_no_cpu_arch(self):
+        '''
+        Get os_arch if RPM package is not installed (inird image, for example) but cpu arch cannot be determined.
+        :return:
+        '''
+        assert rpm.get_osarch() == 'ZX81'
