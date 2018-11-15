@@ -56,7 +56,7 @@ class PkgUtilsTestCase(TestCase):
 @skipIf(pytest is None, 'PyTest is missing')
 class PkgRPMTestCase(TestCase):
     '''
-    Test case.
+    Test case for pkg.rpm utils
     '''
 
     @patch('salt.utils.path.which', MagicMock(return_value=True))
