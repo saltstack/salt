@@ -1213,15 +1213,16 @@ New behavior:
       - password: adminpassword
 
 :conf_minion:`winrepo_cache_expire_min` Windows Package Definitions Caching
----------------------------------------------------------------------------------------
+---------------------------------------------------------------------------
 
 The :conf_minion:`winrepo_cache_expire_min` has been changed from 0 to 1800 (30 minutes)
-For example if you run highstate the package definitions are normally updated, however now
-if the package definitions are younger than :conf_minion:`winrepo_cache_expire_min` (30 minutes)
-the package definitions will not be refresh reducing the amount of time taken to
-run a 2nd highstate. To get the old behaviour change the value back to 0 in the
-minion configuration file. This also effects the behaviour of other functions on their 2nd run.
-The ``pkg.refresh_db`` will always refresh the package definitions.
+For example if you run highstate the package definitions are normally updated,
+however now if the package definitions are younger than :conf_minion:`winrepo_cache_expire_min`
+(30 minutes) the package definitions will not be refreshed, reducing the amount
+of time taken to run a 2nd highstate. To get the old behaviour change the value
+back to 0 in the minion configuration file. This also effects the behaviour of
+other functions which default to refresh.  The ``pkg.refresh_db`` will always
+refresh the package definitions.
 
 LDAP External Authentication
 ============================
