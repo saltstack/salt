@@ -252,7 +252,14 @@ class Batch(object):
                 done_iters.append(it)
                 # remove completed iterators from the iters list
                 iters.remove(it)
-                self._deactivate(it, it_minion_returns, minion_tracker)
+
+                minion_tracker[it]['active'] = False
+
+                # add all minions that belong to this iterator and
+                # that have not responded to minion_returns{} with an empty response
+                for minion in minion_tracker[it]['minions']:
+                    if minion not in done_minions:
+                        it_minion_returns[minion] = {'ret': {}}
 
             self._remove_minion_from_iterator(done_minions, it, minion_tracker)
 
@@ -263,17 +270,6 @@ class Batch(object):
             active.remove(minion)
             if bwait:
                 wait.append(datetime.now() + timedelta(seconds=bwait))
-
-    def _deactivate(self, iterator, minion_returns, minion_tracker):
-        # check if the tracker contains the iterator
-        if iterator in minion_tracker:
-            minion_tracker[iterator]['active'] = False
-
-            # add all minions that belong to this iterator and
-            # that have not responded to minion_returns{} with an empty response
-            for minion in minion_tracker[iterator]['minions']:
-                if minion not in minion_returns:
-                    minion_returns[minion] = {'ret': {}}
 
     def _update_ret(self, minion_returns, ret):
         for minion, data in six.iteritems(minion_returns):
