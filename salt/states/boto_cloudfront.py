@@ -50,9 +50,11 @@ import difflib
 import logging
 import uuid
 import copy
+import json
 
 # Import Salt conveniences
 import salt.utils.boto3mod
+from salt.ext import six
 from salt.ext.six.moves import range
 
 #pylint: disable=W0106
@@ -558,6 +560,125 @@ def distribution_present(name, region=None, key=None, keyid=None, profile=None, 
         ret['comment'] = '  '.join(comments)
         ret['changes'] = {'old': old, 'new': new}
         return ret
+
+
+def oai_bucket_policy_present(name, Bucket, OAI, Policy,
+                              region=None, key=None, keyid=None, profile=None):
+    '''
+    Ensure the given policy exists on an S3 bucket, granting access for the given origin access
+    identity to do the things specified in the policy.
+
+    name
+        The name of the state definition
+
+    Bucket
+        The S3 bucket which CloudFront needs access to.  Note that this policy is exclusive - it
+        will be the only policy definition on the bucket (and objects inside the bucket if you
+        specify such permissions in the policy).  Note that this likely SHOULD reflect the bucket
+        mentioned in the Resource section of the Policy, but this is not enforced...
+
+    OAI
+        The value of `Name` passed to the state definition for the origin access identity which
+        will be accessing the bucket.
+
+    Policy
+        The full policy document which should be set on the S3 bucket.
+        If a `Principal` clause is not provided in the policy, one will be automatically added, and
+        pointed at the correct value as dereferenced from the OAI provided above.
+        If one IS provided, then this is not done, and you are responsible for providing the correct
+        values.
+
+    region (string)
+        Region to connect to.
+
+    key (string)
+        Secret key to use.
+
+    keyid (string)
+        Access key to use.
+
+    profile (dict or string)
+        Dict, or pillar key pointing to a dict, containing AWS region/key/keyid.
+
+    Example:
+
+    .. code-block:: yaml
+
+        my_oai_s3_policy:
+          boto_cloudfront.oai_bucket_policy_present:
+          - Bucket: the_bucket_for_my_distribution
+          - OAI: the_OAI_I_just_created_and_attached_to_my_distribution
+          - Policy:
+              Version: 2012-10-17
+              Statement:
+              - Effect: Allow
+                Action: s3:GetObject
+                Resource: arn:aws:s3:::the_bucket_for_my_distribution/*
+
+    '''
+    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
+    oais = __salt__['boto_cloudfront.get_cloud_front_origin_access_identities_by_comment'](
+            Comment=OAI, region=region, key=key, keyid=keyid, profile=profile)
+    if len(oais) > 1:
+        msg = 'Multiple origin access identities matched `{}`.'.format(OAI)
+        log.error(msg)
+        ret['comment'] = msg
+        ret['result'] = False
+        return ret
+    if len(oais) < 1:
+        msg = 'No origin access identities matched `{}`.'.format(OAI)
+        log.error(msg)
+        ret['comment'] = msg
+        ret['result'] = False
+        return ret
+    canonical_user = oais[0].get('S3CanonicalUserId')
+    oai_id = oais[0].get('Id')
+    if isinstance(Policy, six.string_types):
+        Policy = json.loads(Policy)
+    for stanza in range(len(Policy.get('Statement', []))):
+        if 'Principal' not in Policy['Statement'][stanza]:
+            Policy['Statement'][stanza]['Principal'] = {"CanonicalUser": canonical_user}
+    bucket = __salt__['boto_s3_bucket.describe'](Bucket=Bucket, region=region, key=key,
+            keyid=keyid, profile=profile)
+    if not bucket or 'bucket' not in bucket:
+        msg = 'S3 bucket `{}` not found.'.format(Bucket)
+        log.error(msg)
+        ret['comment'] = msg
+        ret['result'] = False
+        return ret
+    curr_policy = bucket['bucket'].get('Policy', {}).get('Policy', {})  # ?!? dunno, that's just how it gets returned...
+    curr_policy = json.loads(curr_policy) if isinstance(curr_policy,
+            six.string_types) else curr_policy
+    # Sooooo, you have to SUBMIT Principals of the form
+    #   Principal: {'S3CanonicalUserId': someCrazyLongMagicValueAsDerivedAbove}
+    # BUT, they RETURN the Principal as something WILDLY different
+    #   Principal: {'AWS': arn:aws:iam::cloudfront:user/CloudFront Origin Access Identity E30ABCDEF12345}
+    # which obviously compare different on every run...  So we fake it thusly.
+    fake_Policy = copy.deepcopy(Policy)
+    for stanza in range(len(fake_Policy.get('Statement', []))):
+        # Warning: unavoidable hardcoded magic values HO!
+        fake_Policy['Statement'][stanza].update({'Principal': {'AWS':
+            'arn:aws:iam::cloudfront:user/CloudFront Origin Access Identity {}'.format(oai_id)}})
+    if salt.utils.boto3.json_objs_equal(curr_policy, fake_Policy):
+        msg = 'Policy of S3 bucket `{}` is in the correct state.'.format(Bucket)
+        log.info(msg)
+        ret['comment'] = msg
+        return ret
+    if __opts__['test']:
+        ret['comment'] = 'Policy on S3 bucket `{}` would be updated.'.format(Bucket)
+        ret['result'] = None
+        ret['changes'] = {'old': curr_policy, 'new': fake_Policy}
+        return ret
+    res = __salt__['boto_s3_bucket.put_policy'](Bucket=Bucket, Policy=Policy,
+            region=region, key=key, keyid=keyid, profile=profile)
+    if 'error' in res:
+        ret['comment'] = 'Failed to update policy on S3 bucket `{}`: {}'.format(Bucket,
+                res['error'])
+        ret['return'] = False
+        return ret
+    ret['comment'] = 'Policy on S3 bucket `{}` updated.'.format(Bucket)
+    ret['changes'] = {'old': curr_policy, 'new': fake_Policy}
+    return ret
 
 
 def route53_alias_present(name, region=None, key=None, keyid=None, profile=None, **kwargs):
