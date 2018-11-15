@@ -49,7 +49,6 @@ class NaclTest(TestCase, LoaderModuleMockMixin):
         self.pk = ret['pk']
         self.sk = ret['sk']
 
-
     def test_keygen(self):
         '''
         Test keygen
