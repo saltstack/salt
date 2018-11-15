@@ -2232,12 +2232,12 @@ class Minion(MinionBase):
                                         (name))}
 
         # Call the appropriate schedule function
-        if func in funcs:
+        try:
             alias, params = funcs.get(func)
-            try:
-                getattr(self.schedule, alias)(*params)
-            except TypeError:
-                log.error('Function "%s" is unavailable in scheduler')
+            getattr(self.schedule, alias)(*params)
+        except TypeError:
+            log.error('Function "%s" is unavailable in salt.utils.scheduler',
+                      func)
 
     def manage_beacons(self, tag, data):
         '''
@@ -2264,12 +2264,12 @@ class Minion(MinionBase):
                  'reset': ('reset', ())}
 
         # Call the appropriate beacon function
-        if func in funcs:
+        try:
             alias, params = funcs.get(func)
-            try:
-                getattr(self.beacons, alias)(*params)
-            except TypeError:
-                log.error('Function "%s" is unavailable in beacons')
+            getattr(self.beacons, alias)(*params)
+        except TypeError:
+            log.error('Function "%s" is unavailable in salt.utils.beacons',
+                      func)
 
     def environ_setenv(self, tag, data):
         '''
