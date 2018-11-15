@@ -474,6 +474,8 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
     def test_issue_36469_tcp(self):
         '''
         Test sending both large and small messags to publisher using TCP
+
+        https://github.com/saltstack/salt/issues/36469
         '''
         opts = dict(self.master_config, ipc_mode='tcp', pub_hwm=0)
         server_channel = salt.transport.zeromq.ZeroMQPubServerChannel(opts)
@@ -503,6 +505,8 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
     def test_issue_36469_udp(self):
         '''
         Test sending both large and small messags to publisher using UDP
+
+        https://github.com/saltstack/salt/issues/36469
         '''
         opts = dict(self.master_config, ipc_mode='udp', pub_hwm=0)
         server_channel = salt.transport.zeromq.ZeroMQPubServerChannel(opts)
