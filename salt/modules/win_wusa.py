@@ -6,10 +6,11 @@ Microsoft Update files management via wusa.exe
 :platform:      Windows
 :depends:       PowerShell
 
+.. versionadded:: Neon
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 import logging
 
 # Import salt libs
