@@ -253,13 +253,13 @@ class Batch(object):
                 # remove completed iterators from the iters list
                 iters.remove(it)
 
-                minion_tracker[it]['active'] = False
+            minion_tracker[it]['active'] = False
 
-                # add all minions that belong to this iterator and
-                # that have not responded to minion_returns{} with an empty response
-                for minion in minion_tracker[it]['minions']:
-                    if minion not in done_minions:
-                        it_minion_returns[minion] = {'ret': {}}
+            # add all minions that belong to this iterator and
+            # that have not responded to minion_returns{} with an empty response
+            for minion in minion_tracker[it]['minions']:
+                if minion not in done_minions:
+                    it_minion_returns[minion] = {'ret': {}}
 
             self._remove_minion_from_iterator(done_minions, it, minion_tracker)
 
