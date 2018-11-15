@@ -695,11 +695,11 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
                 patch.object(os.path,
                              'isfile',
                              MagicMock(side_effect=lambda x: True if x == '/sys/bus/xen/drivers/xenconsole' else False)):
-                    log.debug('Testing Xen')
-                    self.assertEqual(
-                        core._virtual({'kernel': 'Linux'}).get('virtual_subtype'),
-                        'Xen PV DomU'
-                    )
+                log.debug('Testing Xen')
+                self.assertEqual(
+                    core._virtual({'kernel': 'Linux'}).get('virtual_subtype'),
+                    'Xen PV DomU'
+                )
 
     def _check_ipaddress(self, value, ip_v):
         '''
