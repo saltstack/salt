@@ -327,27 +327,30 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 patch('salt.utils.process.SignalHandlingMultiprocessingProcess.start', MagicMock(return_value=True)), \
                 patch('salt.utils.process.SignalHandlingMultiprocessingProcess.join', MagicMock(return_value=True)):
             mock_opts = self.get_config('minion', from_scratch=True)
-            mock_opts['scheduler_before_connect'] = True
             io_loop = tornado.ioloop.IOLoop()
             io_loop.make_current()
 
-            minion = salt.minion.Minion(mock_opts, io_loop=io_loop)
-            minion._post_master_init(None)
+            with patch('salt.utils.schedule.clean_proc_dir', MagicMock(return_value=None)):
+                mock_functions = {'test.ping': None}
 
-            schedule = {'test_job': {'function': 'mine.update',
-                                     'run_on_start': True,
-                                     'return_job': False,
-                                     'jid_include': True,
-                                     'maxrunning': 2,
-                                     'seconds': 10}}
-            data = {'name': 'test-item',
-                    'schedule': schedule,
-                    'func': 'add',
-                    'persist': True}
-            tag = 'manage_schedule'
+                minion = salt.minion.Minion(mock_opts, io_loop=io_loop)
+                minion.schedule = salt.utils.schedule.Schedule(mock_opts,
+                                                               mock_functions,
+                                                               returners={})
 
-            minion.manage_schedule(tag, data)
-            self.assertIn('test_job', minion.opts['schedule'])
+                schedule_data = {'test_job': {'function': 'test.ping',
+                                              'return_job': False,
+                                              'jid_include': True,
+                                              'maxrunning': 2,
+                                              'seconds': 10}}
+
+                data = {'name': 'test-item',
+                        'schedule': schedule_data,
+                        'func': 'add'}
+                tag = 'manage_schedule'
+
+                minion.manage_schedule(tag, data)
+                self.assertIn('test_job', minion.opts['schedule'])
 
     def test_minion_manage_beacons(self):
         '''
@@ -362,8 +365,9 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             io_loop = tornado.ioloop.IOLoop()
             io_loop.make_current()
 
+            mock_functions = {'test.ping': None}
             minion = salt.minion.Minion(mock_opts, io_loop=io_loop)
-            minion._post_master_init(None)
+            minion.beacons = salt.beacons.Beacon(mock_opts, mock_functions)
 
             bdata = [{'salt-master': 'stopped'}, {'apache2': 'stopped'}]
             data = {'name': 'ps',
