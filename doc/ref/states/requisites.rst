@@ -581,7 +581,7 @@ In the following example, Salt will not try to manage the nginx service or any
 configuration files unless the nginx package is installed because of the ``pkg:
 nginx`` requisite.
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     nginx:
       pkg.installed: []
