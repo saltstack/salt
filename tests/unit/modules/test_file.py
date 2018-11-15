@@ -505,12 +505,17 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
                 salt.utils.stringutils.to_unicode(fp.read())
             )
 
-        filemod.blockreplace(self.tfile.name,
-                             marker_start='#-- START BLOCK 2',
-                             marker_end='#-- END BLOCK 2',
-                             content=new_content,
-                             backup=False,
-                             insert_after_match='malesuada')
+        if salt.utils.platform.is_windows():
+            check_perms_patch = win_file.check_perms
+        else:
+            check_perms_patch = filemod.check_perms
+        with patch.object(filemod, 'check_perms', check_perms_patch):
+            filemod.blockreplace(self.tfile.name,
+                                 marker_start='#-- START BLOCK 2',
+                                 marker_end='#-- END BLOCK 2',
+                                 content=new_content,
+                                 backup=False,
+                                 insert_after_match='malesuada')
 
         with salt.utils.files.fopen(self.tfile.name, 'rb') as fp:
             self.assertIn(salt.utils.stringutils.to_bytes(
@@ -635,12 +640,17 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
                 salt.utils.stringutils.to_unicode(fp.read())
             )
 
-        filemod.blockreplace(self.tfile.name,
-                             marker_start='#-- START BLOCK 2',
-                             marker_end='#-- END BLOCK 2',
-                             content=new_content,
-                             backup=False,
-                             insert_before_match='malesuada')
+        if salt.utils.platform.is_windows():
+            check_perms_patch = win_file.check_perms
+        else:
+            check_perms_patch = filemod.check_perms
+        with patch.object(filemod, 'check_perms', check_perms_patch):
+            filemod.blockreplace(self.tfile.name,
+                                 marker_start='#-- START BLOCK 2',
+                                 marker_end='#-- END BLOCK 2',
+                                 content=new_content,
+                                 backup=False,
+                                 insert_before_match='malesuada')
 
         with salt.utils.files.fopen(self.tfile.name, 'rb') as fp:
             self.assertIn(salt.utils.stringutils.to_bytes(

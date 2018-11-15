@@ -2616,7 +2616,9 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state('file.copy', name=dest, source=source, user=user,
                               makedirs=True, mode=mode)
         self.assertSaltTrueReturn(ret)
-        file_checks = [dest, os.path.join(TMP, 'dir1'), os.path.join(TMP, 'dir1', 'dir2')]
+        file_checks = [dest,
+                       os.path.join(RUNTIME_VARS.TMP, 'dir1'),
+                       os.path.join(RUNTIME_VARS.TMP, 'dir1', 'dir2')]
         for check in file_checks:
             user_check = self.run_function('file.get_user', [check])
             mode_check = self.run_function('file.get_mode', [check])

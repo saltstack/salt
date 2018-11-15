@@ -2776,10 +2776,6 @@ def blockreplace(path,
                     if insert_before_match:
                         match_idx += 1
                 block_found = True
-        else:
-            raise CommandExecutionError(
-                'Cannot edit marked block. Markers were not found in file.'
-            )
 
     if block_found:
         diff = __utils__['stringutils.get_diff'](orig_file, new_file)
@@ -2811,6 +2807,10 @@ def blockreplace(path,
                                 user=perms['user'],
                                 group=perms['group'],
                                 mode=perms['mode'])
+    else:
+        raise CommandExecutionError(
+            'Cannot edit marked block. Markers were not found in file.'
+        )
 
     diff = __utils__['stringutils.get_diff'](orig_file, new_file)
     has_changes = diff is not ''
@@ -2831,12 +2831,12 @@ def blockreplace(path,
                 # This function resides in win_file.py and will be available
                 # on Windows. The local function will be overridden
                 # pylint: disable=E1120,E1123
-                check_perms(path=path,
+                check_perms(path=backup_path,
                             ret=None,
                             owner=perms['user'])
                 # pylint: enable=E1120,E1123
             else:
-                check_perms(path,
+                check_perms(backup_path,
                             ret=None,
                             user=perms['user'],
                             group=perms['group'],
@@ -2851,11 +2851,20 @@ def blockreplace(path,
             fh_.close()
 
         # this may have overwritten file attrs
-        check_perms(path,
-                None,
-                perms['user'],
-                perms['group'],
-                perms['mode'])
+        if salt.utils.platform.is_windows():
+            # This function resides in win_file.py and will be available
+            # on Windows. The local function will be overridden
+            # pylint: disable=E1120,E1123
+            check_perms(path=path,
+                        ret=None,
+                        owner=perms['user'])
+            # pylint: enable=E1120,E1123
+        else:
+            check_perms(path,
+                        ret=None,
+                        user=perms['user'],
+                        group=perms['group'],
+                        mode=perms['mode'])
 
     if show_changes:
         return diff
