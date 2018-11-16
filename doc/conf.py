@@ -285,7 +285,7 @@ extensions = [
     'sphinx.ext.intersphinx',
     'httpdomain',
     'youtube',
-    'saltautodoc', # Must be AFTER autodoc
+    #'saltautodoc', # Must be AFTER autodoc
     'shorturls',
 ]
 
