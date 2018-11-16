@@ -42,123 +42,132 @@ To configure the proxy minon for nxapi:
       verify: False
       no_save_config: True
 
-proxytype:
-    (REQUIRED) Use this proxy minion `nxos`
+``proxytype``
 
-connection:
-    (REQUIRED) connection transport type.
-    Choices: `ssh, nxapi`
-    Default: `ssh`
+- (REQUIRED) Use this proxy minion `nxos`
 
-host:
-    (REQUIRED) login ip address or dns hostname.
+``connection``
 
-username:
-    (REQUIRED) login username.
+- (REQUIRED) connection transport type.
+- Choices: `ssh, nxapi`
+- Default: `ssh`
 
-password:
-    (REQUIRED) login password.
+``host``
 
-no_save_config:
-    If False, 'copy running-config starting-config' is issues for every
-        configuration command.
-    If True, Running config is not saved to startup config
-    Default: False
+- (REQUIRED) login ip address or dns hostname.
 
-    The recommended approach is to use the `save_running_config` function
-    instead of this option to improve performance.  The default behavior
-    controlled by this option is preserved for backwards compatibility.
+``username``
 
-Conection SSH Args:
+- (REQUIRED) login username.
 
-    prompt_name:
-        (REQUIRED when `connection` is `ssh`)
-        (REQUIRED, this or `prompt_regex` below, but not both)
-        The name in the prompt on the switch.  Recommended to use your
-        device's hostname.
+``password``
+- (REQUIRED) login password.
 
-    prompt_regex:
-        (REQUIRED when `connection` is `ssh`)
-        (REQUIRED, this or `prompt_name` above, but not both)
-        A regular expression that matches the prompt on the switch
-        and any other possible prompt at which you need the proxy minion
-        to continue sending input.  This feature was specifically developed
-        for situations where the switch may ask for confirmation.  `prompt_name`
-        above would not match these, and so the session would timeout.
+``no_save_config``
 
-        Example:
+- If False, 'copy running-config starting-config' is issues for every
+  configuration command.
 
-        .. code-block:: yaml
+- If True, Running config is not saved to startup config (Default: False)
 
-            nxos-switch#.*|\(y\/n\)\?.*
+- The recommended approach is to use the `save_running_config` function instead
+  of this option to improve performance.  The default behavior controlled by
+  this option is preserved for backwards compatibility.
 
-        This should match
+**Connection SSH Args**
 
-        .. code-block:: shell
+``prompt_name``
 
-            nxos-switch#
+- (REQUIRED when `connection` is `ssh`)
+- (REQUIRED, this or `prompt_regex` below, but not both)
+- The name in the prompt on the switch. Recommended to use your device's
+  hostname.
 
-        or
+``prompt_regex``
 
-        .. code-block:: shell
+- (REQUIRED when ``connection`` is ``ssh``)
+- (REQUIRED, this or ``prompt_name`` above, but not both)
+- A regular expression that matches the prompt on the switch and any other
+  possible prompt at which you need the proxy minion to continue sending input.
+  This feature was specifically developed for situations where the switch may
+  ask for confirmation. ``prompt_name`` above would not match these, and so the
+  session would timeout.
 
-            Flash complete.  Reboot this switch (y/n)? [n]
+  Example:
+
+  .. code-block:: yaml
+
+      nxos-switch#.*|\(y\/n\)\?.*
+
+  This should match
+
+  .. code-block:: shell
+
+      nxos-switch#
+
+  or
+
+  .. code-block:: shell
+
+      Flash complete.  Reboot this switch (y/n)? [n]
 
 
-        If neither `prompt_name` nor `prompt_regex` is specified the prompt will be
-        defaulted to
+  If neither ``prompt_name`` nor ``prompt_regex`` is specified the prompt will
+  be defaulted to
 
-        .. code-block:: shell
+  .. code-block:: shell
 
-            .+#$
+      .+#$
 
-        which should match any number of characters followed by a `#` at the end
-        of the line.  This may be far too liberal for most installations.
+  which should match any number of characters followed by a `#` at the end of
+  the line. This may be far too liberal for most installations.
 
-    ssh_args:
-        Extra optional arguments used for connecting to switch.
+``ssh_args``
 
-    key_accept:
-        Wheather or not to accept the host key of the switch on initial login.
-        Default: `False`
+- Extra optional arguments used for connecting to switch.
 
-Connection NXAPI Args:
+``key_accept``
 
-    transport:
-        (REQUIRED) when `connection` is `nxapi`.
-        Choices: `http, https`
-        Default: `https`
+- Wheather or not to accept the host key of the switch on initial login.
+  (Default: `False`)
 
-    port:
-        (REQUIRED) when `connection` is `nxapi`.
-        Default: `80`
+**Connection NXAPI Args**
 
-    verify:
-        (REQUIRED) when `connection` is `nxapi`.
-        Either a boolean, in which case it controls whether we verify the NX-API
-        TLS certificate, or a string, in which case it must be a path to a CA bundle
-        to use.
-        Default: `True`
+``transport``
 
-        When there is no certificate configuration on the device and this option is
-        set as ``True`` (default), the commands will fail with the following error:
-        ``SSLError: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed (_ssl.c:581)``.
-        In this case, you either need to configure a proper certificate on the
-        device (*recommended*), or bypass the checks setting this argument as ``False``
-        with all the security risks considered.
+- (REQUIRED) when `connection` is `nxapi`.
+- Choices: `http, https`
+- Default: `https`
 
-        Check https://www.cisco.com/c/en/us/td/docs/switches/datacenter/nexus3000/sw/programmability/6_x/b_Cisco_Nexus_3000_Series_NX-OS_Programmability_Guide/b_Cisco_Nexus_3000_Series_NX-OS_Programmability_Guide_chapter_01.html
-        to see how to properly configure the certificate.
+``port``
 
+- (REQUIRED) when `connection` is `nxapi`.
+- Default: `80`
+
+``verify``
+
+- (REQUIRED) when `connection` is `nxapi`.
+- Either a boolean, in which case it controls whether we verify the NX-API TLS
+  certificate, or a string, in which case it must be a path to a CA bundle to
+  use.
+- When there is no certificate configuration on the device and this option is
+  set as ``True`` (default), the commands will fail with the following error:
+  ``SSLError: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed
+  (_ssl.c:581)``.  In this case, you either need to configure a proper
+  certificate on the device (*recommended*), or bypass the checks setting this
+  argument as ``False`` with all the security risks considered.
+- Check
+  https://www.cisco.com/c/en/us/td/docs/switches/datacenter/nexus3000/sw/programmability/6_x/b_Cisco_Nexus_3000_Series_NX-OS_Programmability_Guide/b_Cisco_Nexus_3000_Series_NX-OS_Programmability_Guide_chapter_01.html
+  to see how to properly configure the certificate.
 
 The functions from the proxy minion can be run from the salt commandline using
 the :mod:`salt.modules.nxos<salt.modules.nxos>` execution module.
 
 .. note:
-    If `multiprocessing: True` is set for the proxy minion config, each forked
-    worker will open up a new connection to the Cisco NX OS Switch.  If you
-    only want one consistent connection used for everything, use
-    `multiprocessing: False`
+    If ``multiprocessing: True`` is set for the proxy minion config, each
+    forked worker will open up a new connection to the Cisco NX OS Switch. If
+    you only want one consistent connection used for everything, use
+    ``multiprocessing: False``
 
 '''
 
