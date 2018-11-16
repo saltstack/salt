@@ -96,6 +96,12 @@ from salt.utils.ctx import RequestContext
 
 log = logging.getLogger(__name__)
 
+fh = logging.FileHandler('/tmp/log.log')
+formatter = logging.Formatter('%(asctime)s - %(module)s.%(funcName)s - %(message)s')
+fh.setFormatter(formatter)
+mylogger = logging.getLogger('loglog')
+mylogger.addHandler(fh)
+
 
 class SMaster(object):
     '''
@@ -1602,6 +1608,7 @@ class AESFuncs(object):
 
         :param dict load: The minion payload
         '''
+        mylogger.debug("{jid} {id} {fun}".format(**load))
         if self.opts['require_minion_sign_messages'] and 'sig' not in load:
             log.critical(
                 '_return: Master is requiring minions to sign their '
@@ -2034,12 +2041,48 @@ class ClearFuncs(object):
             return False
         return self.loadauth.get_tok(clear_load['token'])
 
+    @tornado.gen.coroutine
+    def _timestamp(self, ioloop, lasttime, times, name):
+        if times >= 50:
+            raise tornado.gen.Return()
+        import random
+        # yield tornado.gen.sleep(random.randint(1, 50) / 100.0)
+        yield tornado.gen.sleep(0.1)
+        mylogger.info("%s %s", name, time.time() - lasttime)
+        ioloop.add_callback(self._timestamp, ioloop, time.time(), times + 1, name)
+
+    def publish_batch(self, batch, clear_load):
+        batch_load = {}
+        batch_load.update(clear_load)
+        batch_load['kwargs']['batch'] = batch
+        import salt.cli.batch_async
+        batch = salt.cli.batch_async.BatchAsync(
+            self.local.opts,
+            functools.partial(self._prep_jid, clear_load, {}),
+            batch_load
+        )
+        ioloop = tornado.ioloop.IOLoop.current()
+        ioloop.add_callback(batch.start)
+        # ioloop.add_callback(self._timestamp, ioloop, time.time(), 0, ' 1     ')
+        # ioloop.add_callback(self._timestamp, ioloop, time.time(), 0, '   2   ')
+        # ioloop.add_callback(self._timestamp, ioloop, time.time(), 0, '     3 ')
+
+        return {
+            'enc': 'clear',
+            'load': {
+                'jid': batch.batch_jid,
+                'minions': [],
+                'missing': []
+            }
+        }
+
     def publish(self, clear_load):
         '''
         This method sends out publications to the minions, it can only be used
         by the LocalClient.
         '''
         extra = clear_load.get('kwargs', {})
+        batch = extra.pop('batch', None)
 
         publisher_acl = salt.acl.PublisherACL(self.opts['publisher_acl_blacklist'])
 
@@ -2125,24 +2168,28 @@ class ClearFuncs(object):
                         'error': 'Master could not resolve minions for target {0}'.format(clear_load['tgt'])
                     }
                 }
-        jid = self._prep_jid(clear_load, extra)
-        if jid is None:
-            return {'enc': 'clear',
-                    'load': {'error': 'Master failed to assign jid'}}
-        payload = self._prep_pub(minions, jid, clear_load, extra, missing)
+        if batch:
+            return self.publish_batch(batch, clear_load)
+        else:
+            jid = self._prep_jid(clear_load, extra)
+            if jid is None:
+                return {'enc': 'clear',
+                        'load': {'error': 'Master failed to assign jid'}}
+            payload = self._prep_pub(minions, jid, clear_load, extra, missing)
+            mylogger.debug("{jid} {fun} {tgt} {arg}".format(**payload))
 
-        # Send it!
-        self._send_ssh_pub(payload, ssh_minions=ssh_minions)
-        self._send_pub(payload)
+            # Send it!
+            self._send_ssh_pub(payload, ssh_minions=ssh_minions)
+            self._send_pub(payload)
 
-        return {
-            'enc': 'clear',
-            'load': {
-                'jid': clear_load['jid'],
-                'minions': minions,
-                'missing': missing
+            return {
+                'enc': 'clear',
+                'load': {
+                    'jid': clear_load['jid'],
+                    'minions': minions,
+                    'missing': missing
+                }
             }
-        }
 
     def _prep_auth_info(self, clear_load):
         sensitive_load_keys = []

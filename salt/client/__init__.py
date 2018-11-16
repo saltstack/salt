@@ -528,45 +528,14 @@ class LocalClient(object):
             {'dave': {...}}
             {'stewart': {...}}
         '''
-        # We need to re-import salt.utils.args here
-        # even though it has already been imported.
-        # when cmd_batch is called via the NetAPI
-        # the module is unavailable.
-        import salt.utils.args
-
         # Late import - not used anywhere else in this file
         import salt.cli.batch
+        opts = salt.cli.batch._batch_get_opts(
+            tgt, fun, batch, self.opts,
+            arg=arg, tgt_type=tgt_type, ret=ret, kwarg=kwarg, **kwargs)
 
-        arg = salt.utils.args.condition_input(arg, kwarg)
-        opts = {'tgt': tgt,
-                'fun': fun,
-                'arg': arg,
-                'tgt_type': tgt_type,
-                'ret': ret,
-                'batch': batch,
-                'failhard': kwargs.get('failhard', False),
-                'raw': kwargs.get('raw', False)}
+        eauth = salt.cli.batch._batch_get_eauth(kwargs)
 
-        if 'timeout' in kwargs:
-            opts['timeout'] = kwargs['timeout']
-        if 'gather_job_timeout' in kwargs:
-            opts['gather_job_timeout'] = kwargs['gather_job_timeout']
-        if 'batch_wait' in kwargs:
-            opts['batch_wait'] = int(kwargs['batch_wait'])
-
-        eauth = {}
-        if 'eauth' in kwargs:
-            eauth['eauth'] = kwargs.pop('eauth')
-        if 'username' in kwargs:
-            eauth['username'] = kwargs.pop('username')
-        if 'password' in kwargs:
-            eauth['password'] = kwargs.pop('password')
-        if 'token' in kwargs:
-            eauth['token'] = kwargs.pop('token')
-
-        for key, val in six.iteritems(self.opts):
-            if key not in opts:
-                opts[key] = val
         batch = salt.cli.batch.Batch(opts, eauth=eauth, quiet=True)
         for ret in batch.run():
             yield ret
@@ -1761,7 +1730,8 @@ class LocalClient(object):
             if listen and not self.event.connect_pub(timeout=timeout):
                 raise SaltReqTimeoutError()
             payload = channel.send(payload_kwargs, timeout=timeout)
-        except SaltReqTimeoutError:
+        except SaltReqTimeoutError as err:
+            log.error(err)
             raise SaltReqTimeoutError(
                 'Salt request timed out. The master is not responding. You '
                 'may need to run your command with `--async` in order to '
