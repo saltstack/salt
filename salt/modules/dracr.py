@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Manage Dell DRAC.
+Manage Dell DRAC
 
 .. versionadded:: 2015.8.2
 '''
@@ -154,6 +154,7 @@ def __execute_ret(command, host=None,
 def get_property(host=None, admin_username=None, admin_password=None, property=None):
     '''
     .. versionadded:: Fluorine
+
     Return specific property
 
     host
@@ -185,6 +186,7 @@ def get_property(host=None, admin_username=None, admin_password=None, property=N
 def set_property(host=None, admin_username=None, admin_password=None, property=None, value=None):
     '''
     .. versionadded:: Fluorine
+
     Set specific property
 
     host
@@ -221,7 +223,8 @@ def set_property(host=None, admin_username=None, admin_password=None, property=N
 def ensure_property_set(host=None, admin_username=None, admin_password=None, property=None, value=None):
     '''
     .. versionadded:: Fluorine
-    Ensure that property is set to specific value.
+
+    Ensure that property is set to specific value
 
     host
         The chassis host.
