@@ -7,10 +7,11 @@ A REST API for Salt
 
 .. note::
 
-    This module is Experimental on Windows platforms and support limited
+    This module is Experimental on Windows platforms, and supports limited
     configurations:
-     - doesn't support PAM authentication (i.e. external_auth: auto)
-     - doesn't support SSL (i.e. disable_ssl: True)
+
+    - doesn't support PAM authentication (i.e. external_auth: auto)
+    - doesn't support SSL (i.e. disable_ssl: True)
 
 
 :depends:
