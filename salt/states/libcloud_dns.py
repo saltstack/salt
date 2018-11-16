@@ -103,8 +103,13 @@ def zone_present(name, profile, domain=None, type=None, ttl=None, extra=None):
         has_changes = False
         if ttl and ttl != matching_zone[0]['ttl']:
             has_changes = True
-        if extra and extra != matching_zone[0]['extra']:
-            has_changes = True
+        if extra:
+            for key, value in list(extra.items()):
+                if key in matching_zone[0]['extra'] and \
+                 matching_zone[0]['extra'][key] != value:
+                    has_changes = True
+                else:
+                    has_changes = True
         if has_changes:
             if __opts__['test']:
                 _changes = {
