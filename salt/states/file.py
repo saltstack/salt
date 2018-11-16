@@ -3703,20 +3703,19 @@ def recurse(name,
 
     exclude_pat
         Exclude this pattern, or list of patterns, from the source when copying.
-         If both `include_pat` and `exclude_pat` are supplied, then it will apply
-        conditions cumulatively. i.e. first select based on include_pat, and
-        then within that result apply exclude_pat.
+        If both ``include_pat`` and ``exclude_pat`` are supplied, then it will apply
+        conditions cumulatively. i.e. first select based on ``include_pat``, and
+        then within that result apply ``exclude_pat``.
 
-        Also, when 'clean=True', exclude this pattern from the removal
-        list and preserve in the destination.
-        Example:
+        Also, when ``clean=True``, exclude this pattern from the removal list
+        and preserve in the destination. For example:
 
         .. code-block:: text
 
-          - exclude_pat: APPDATA*               :: glob matches APPDATA.01,
-                                                   APPDATA.02,.. for exclusion
-          - exclude_pat: E@(APPDATA)|(TEMPDATA) :: regexp matches APPDATA
-                                                   or TEMPDATA for exclusion
+            # glob matches APPDATA.01, APPDATA.02,.. for exclusion
+            - exclude_pat: APPDATA*
+            # regexp matches APPDATA or TEMPDATA for exclusion
+            - exclude_pat: E@(APPDATA)|(TEMPDATA)
 
         .. versionchanged:: Neon
             List patterns are now supported
