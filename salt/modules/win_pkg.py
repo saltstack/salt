@@ -576,13 +576,19 @@ def _get_reg_software():
     search_key_userdata = 'Software\\Microsoft\\Windows\\CurrentVersion\\Installer\\UserData\\S-1-5-18\\Products'
     for reg_key in __utils__['reg.list_keys'](hive=search_hive, key=search_key):
         # Does the key exist in userdata
-        if __utils__['reg.key_exists'](
+        if not __utils__['reg.key_exists'](
                 hive=search_hive,
                 key='{0}\\{1}'.format(search_key_userdata, reg_key)):
             continue
-        if skip_component(hive=search_hive, key=search_key, reg_key=reg_key):
+        if skip_component(hive=search_hive,
+                          key=search_key,
+                          reg_key=reg_key,
+                          use_32bit=False):
             continue
-        add_software(hive=search_hive, key=search_key, reg_key=reg_key)
+        add_software(hive=search_hive,
+                     key=search_key,
+                     reg_key=reg_key,
+                     use_32bit=False)
 
     # This has a propensity to take a while on a machine where many users have
     # logged in. Untested in such a scenario
