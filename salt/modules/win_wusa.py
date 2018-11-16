@@ -37,22 +37,57 @@ def __virtual__():
 
 
 def is_installed(kb):
+    '''
+    Check if a specific KB is installed.
 
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' win_wusa.is_installed KB123456
+    '''
     get_hotfix_result = __salt__['cmd.powershell_all']('Get-HotFix -Id {0}'.format(kb), ignore_retcode=True)
 
     return get_hotfix_result['retcode'] == 0
 
 
 def install(path):
+    '''
+    Install a KB from a .msu file.
+    Some KBs will need a reboot, but this function does not manage it.
+    You may have to manage reboot yourself after installation.
 
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' win_wusa.install C:/temp/KB123456.msu
+    '''
     return __salt__['cmd.run_all']('wusa.exe {0} /quiet /norestart'.format(path), ignore_retcode=True)
 
 
 def uninstall(kb):
+    '''
+    Uninstall a specific KB.
 
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' win_wusa.uninstall KB123456
+    '''
     return __salt__['cmd.run_all']('wusa.exe /uninstall /kb:{0} /quiet /norestart'.format(kb[2:]), ignore_retcode=True)
 
 
 def list_kbs():
+    '''
+    Return a list of dictionaries, one dictionary for each installed KB.
+    The HotFixID key contains the ID of the KB.
 
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' win_wusa.list_kbs
+    '''
     return __salt__['cmd.powershell']('Get-HotFix')
