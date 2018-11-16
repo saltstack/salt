@@ -426,80 +426,246 @@ def _get_reg_software():
     keys, it will return a dict with the display name as the key and the
     version as the value
     '''
-    ignore_list = ['AddressBook',
-                   'Connection Manager',
-                   'DirectDrawEx',
-                   'Fontcore',
-                   'IE40',
-                   'IE4Data',
-                   'IE5BAKEX',
-                   'IEData',
-                   'MobileOptionPack',
-                   'SchedulingAgent',
-                   'WIC',
-                   'Not Found',
-                   '(value not set)',
-                   '',
-                   None]
-
+    # Logic for this can be found in this question:
+    # https://social.technet.microsoft.com/Forums/windows/en-US/d913471a-d7fb-448d-869b-da9025dcc943/where-does-addremove-programs-get-its-information-from-in-the-registry
     reg_software = {}
-    hive = 'HKLM'
-    key = "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall"
 
-    def update(hive, key, reg_key, use_32bit):
-        # 2018 this code has been update to reflect some of utils/pkg/win.py logic
-        # i.e. check_reg, and checking of DisplayName and DisplayVersion.
-        d_name = ''
-        d_vers = ''
+    def skip_component(hive, key, reg_key, use_32bit):
+        '''
+        Returns:
+            bool: True if the component needs to be skipped, otherwise False
+        '''
+        # Skip SystemComponents
+        # Skip WindowsInstaller (removes Compiler for Python 2.7)
+        #for check in ['SystemComponent', 'WindowsInstaller']:
+        for check in ['SystemComponent']:
+            if __utils__['reg.value_exists'](
+                    hive=hive,
+                    key='{0}\\{1}'.format(key, reg_key),
+                    vname=check,
+                    use_32bit_registry=use_32bit):
+                if __utils__['reg.read_value'](
+                        hive=hive,
+                        key='{0}\\{1}'.format(key, reg_key),
+                        vname=check,
+                        use_32bit_registry=use_32bit)['vdata'] > 0:
+                    return True
+        return False
 
-        d_name_regdata = __salt__['reg.read_value'](hive,
-                                                    '{0}\\{1}'.format(key, reg_key),
-                                                    'DisplayName',
-                                                    use_32bit)
+    def skip_additional_checks(hive, key, reg_key, use_32bit):
+        '''
+        Returns:
+            bool: True if the component needs to be skipped, otherwise False
+        '''
+        # Must contain one of UninstallString, QuietUninstallString, ModifyPath
+        # If it does not exist, skip (return True)
+        vname_present = False
+        for reg_vname in ['UninstallString',
+                          'QuietUninstallString',
+                          'ModifyPath']:
+            if __utils__['reg.value_exists'](
+                    hive=hive,
+                    key='{0}\\{1}'.format(key, reg_key),
+                    vname=reg_vname,
+                    use_32bit_registry=use_32bit):
+                vname_present = True
+                break
+        if not vname_present:
+            return True
+
+        # Check for Hotfixes, Service Packs, etc...
+        # If found, skip (return True)
+        skip_types = ['Hotfix',
+                      'Service Pack',
+                      'Security Update',
+                      'Update Rollup']
+        if __utils__['reg.value_exists'](
+                hive=hive,
+                key='{0}\\{1}'.format(key, reg_key),
+                vname='ReleaseType',
+                use_32bit_registry=use_32bit):
+            if __utils__['reg.read_value'](
+                    hive=hive,
+                    key='{0}\\{1}'.format(key, reg_key),
+                    vname='ReleaseType',
+                    use_32bit_registry=use_32bit)['vdata'] in skip_types:
+                return True
+
+        # Skip items that are children of an installation
+        # If a child, skip (return True)
+        if __utils__['reg.value_exists'](
+                hive=hive,
+                key='{0}\\{1}'.format(key, reg_key),
+                vname='ParentKeyName',
+                use_32bit_registry=use_32bit):
+            return True
+
+        return False
+
+    def add_software(hive, key, reg_key, use_32bit):
+        d_name_regdata = __utils__['reg.read_value'](
+            hive=hive,
+            key='{0}\\{1}'.format(key, reg_key),
+            vname='DisplayName',
+            use_32bit_registry=use_32bit)
+
         if (not d_name_regdata['success'] or
-            d_name_regdata['vtype'] not in ['REG_SZ', 'REG_EXPAND_SZ'] or
+                d_name_regdata['vtype'] not in ['REG_SZ', 'REG_EXPAND_SZ'] or
                 d_name_regdata['vdata'] in ['(value not set)', None, False]):
             return
         d_name = d_name_regdata['vdata']
 
-        d_vers_regdata = __salt__['reg.read_value'](hive,
-                                                    '{0}\\{1}'.format(key, reg_key),
-                                                    'DisplayVersion',
-                                                    use_32bit)
+        d_vers_regdata = __utils__['reg.read_value'](
+            hive=hive,
+            key='{0}\\{1}'.format(key, reg_key),
+            vname='DisplayVersion',
+            use_32bit_registry=use_32bit)
+
         d_vers = 'Not Found'
-        if (d_vers_regdata['success'] and
-            d_vers_regdata['vtype'] in ['REG_SZ', 'REG_EXPAND_SZ', 'REG_DWORD']):
-            if isinstance(d_vers_regdata['vdata'], int):
-                d_vers = six.text_type(d_vers_regdata['vdata'])
-            elif d_vers_regdata['vdata'] and d_vers_regdata['vdata'] != '(value not set)':  # Check for blank values
-                d_vers = d_vers_regdata['vdata']
+        if (not d_vers_regdata['success'] or
+                d_vers_regdata['vtype'] not in ['REG_SZ',
+                                                'REG_EXPAND_SZ',
+                                                'REG_DWORD'] or
+                d_name_regdata['vdata'] in ['(value not set)', None, False]):
+            d_vers = d_name
 
-        check_ok = False
-        for check_reg in ['UninstallString', 'QuietUninstallString', 'ModifyPath']:
-            check_regdata = __salt__['reg.read_value'](hive,
-                                                       '{0}\\{1}'.format(key, reg_key),
-                                                       check_reg,
-                                                       use_32bit)
-            if (not check_regdata['success'] or
-                check_regdata['vtype'] not in ['REG_SZ', 'REG_EXPAND_SZ'] or
-                    check_regdata['vdata'] in ['(value not set)', None, False]):
+        if isinstance(d_vers_regdata['vdata'], int):
+            d_vers = six.text_type(d_vers_regdata['vdata'])
+        elif d_vers_regdata['vdata'] and d_vers_regdata['vdata'] != '(value not set)':  # Check for blank values
+            d_vers = d_vers_regdata['vdata']
+
+        reg_software.setdefault(d_name, []).append(d_vers)
+
+    search_hive = 'HKLM'
+    search_key = 'Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall'
+    for reg_key in __utils__['reg.list_keys'](hive=search_hive, key=search_key):
+        if skip_component(hive=search_hive,
+                          key=search_key,
+                          reg_key=reg_key,
+                          use_32bit=False):
+            continue
+        if skip_additional_checks(hive=search_hive,
+                                  key=search_key,
+                                  reg_key=reg_key,
+                                  use_32bit=False):
+            continue
+        add_software(hive=search_hive,
+                     key=search_key,
+                     reg_key=reg_key,
+                     use_32bit=False)
+
+    for reg_key in __utils__['reg.list_keys'](hive=search_hive,
+                                              key=search_key,
+                                              use_32bit_registry=True):
+        if skip_component(hive=search_hive,
+                          key=search_key,
+                          reg_key=reg_key,
+                          use_32bit=True):
+            continue
+        if skip_additional_checks(hive=search_hive,
+                                  key=search_key,
+                                  reg_key=reg_key,
+                                  use_32bit=True):
+            continue
+        add_software(hive=search_hive,
+                     key=search_key,
+                     reg_key=reg_key,
+                     use_32bit=True)
+
+    search_key = 'Software\\Classes\\Installer\\Products'
+    search_key_userdata = 'Software\\Microsoft\\Windows\\CurrentVersion\\Installer\\UserData\\S-1-5-18\\Products'
+    for reg_key in __utils__['reg.list_keys'](hive=search_hive, key=search_key):
+        # Does the key exist in userdata
+        if __utils__['reg.key_exists'](
+                hive=search_hive,
+                key='{0}\\{1}'.format(search_key_userdata, reg_key)):
+            continue
+        if skip_component(hive=search_hive, key=search_key, reg_key=reg_key):
+            continue
+        add_software(hive=search_hive, key=search_key, reg_key=reg_key)
+
+    # This has a propensity to take a while on a machine where many users have
+    # logged in. Untested in such a scenario
+    search_hive = 'HKU'
+    for user_guid in __utils__['reg.list_keys'](hive=search_hive):
+        search_key = '{0}\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall'.format(user_guid)
+        for reg_key in __utils__['reg.list_keys'](hive=search_hive,
+                                                  key=search_key):
+            if skip_component(hive=search_hive,
+                              key=search_key,
+                              reg_key=reg_key,
+                              use_32bit=False):
                 continue
-            else:
-                check_ok = True
+            if skip_additional_checks(hive=search_hive,
+                                      key=search_key,
+                                      reg_key=reg_key,
+                                      use_32bit=False):
+                continue
+            add_software(hive=search_hive,
+                         key=search_key,
+                         reg_key=reg_key,
+                         use_32bit=False)
 
-        if not check_ok:
-            return
+        search_key_2 = '{0}\\Software\\Microsoft\\Installer\\Products' \
+                       ''.format(user_guid)
+        for reg_key_2 in __utils__['reg.list_keys'](hive=search_hive,
+                                                    key=search_key_2):
+            ud_key = 'Software\\Microsoft\\Windows\\CurrentVersion\\Installer' \
+                     '\\UserData\\{0}\\Products\\{1}'.format(user_guid,
+                                                             reg_key_2)
+            if __utils__['reg.key_exists'](hive='HKLM', key=ud_key):
+                if skip_component(hive='HKLM',
+                                  key=ud_key,
+                                  reg_key='InstallProperties',
+                                  use_32bit=False):
+                    continue
+                add_software(hive='HKLM',
+                             key=ud_key,
+                             reg_key='InstallProperties',
+                             use_32bit=False)
 
-        if d_name not in ignore_list:
-            # some MS Office updates don't register a product name which means
-            # their information is useless
-            reg_software.setdefault(d_name, []).append(d_vers)
+    for user_guid in __utils__['reg.list_keys'](hive=search_hive,
+                                                use_32bit_registry=True):
+        search_key = '{0}\\Software\\Microsoft\\Windows\\CurrentVersion' \
+                     '\\Uninstall'.format(user_guid)
+        for reg_key in __utils__['reg.list_keys'](hive=search_hive,
+                                                  key=search_key,
+                                                  use_32bit_registry=True):
+            if skip_component(hive=search_hive,
+                              key=search_key,
+                              reg_key=reg_key,
+                              use_32bit=True):
+                continue
+            if skip_additional_checks(hive=search_hive,
+                                      key=search_key,
+                                      reg_key=reg_key,
+                                      use_32bit=True):
+                continue
+            add_software(hive=search_hive,
+                         key=search_key,
+                         reg_key=reg_key,
+                         use_32bit=True)
 
-    for reg_key in __salt__['reg.list_keys'](hive, key):
-        update(hive, key, reg_key, False)
-
-    for reg_key in __salt__['reg.list_keys'](hive, key, True):
-        update(hive, key, reg_key, True)
+        search_key_2 = '{0}\\Software\\Microsoft\\Installer\\Products' \
+                       ''.format(user_guid)
+        for reg_key_2 in __utils__['reg.list_keys'](hive=search_hive,
+                                                    key=search_key_2,
+                                                    use_32bit_registry=True):
+            ud_key = 'Software\\Microsoft\\Windows\\CurrentVersion\\Installer' \
+                     '\\UserData\\{0}\\Products\\{1}'.format(user_guid,
+                                                             reg_key_2)
+            if __utils__['reg.key_exists'](hive='HKLM',
+                                           key=ud_key,
+                                           use_32bit_registry=True):
+                if skip_component(hive='HKLM',
+                                  key=ud_key,
+                                  reg_key='InstallProperties',
+                                  use_32bit=True):
+                    continue
+                add_software(hive='HKLM',
+                             key=ud_key,
+                             reg_key='InstallProperties',
+                             use_32bit=True)
 
     return reg_software
 
