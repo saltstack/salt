@@ -191,13 +191,12 @@ def monitored(name, group=None, salt_name=True, salt_params=True, agent_version=
             ret['comment'] = 'Server Density agent is already installed, or device already exists'
             return ret
 
-    
     elif device_in_sd:
         device = __salt__['serverdensity_device.ls'](name=name)[0]
         agent_key = device['agentKey']
         ret['comment'] = 'Device was already in Server Density db.'
 
-    if not device_in_sd:   
+    if not device_in_sd:
         device = __salt__['serverdensity_device.create'](name, **params_from_salt)
         agent_key = device['agentKey']
         ret['comment'] = 'Device created in Server Density db.'
