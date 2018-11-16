@@ -37,7 +37,7 @@ Usage
 
 Example file system layout:
 
-.. code-block:: txt
+.. code-block:: text
 
     /srv/salt/apache/
         init.sls
@@ -47,10 +47,11 @@ Example file system layout:
             config.tst
             deployment_validation.tst
 
-Tests can be run for each state by name, for all apache/saltcheck/*.tst files, or for all states
-assigned to the minion in top.sls. Tests may also be created with no associated state. These tests
-will be run through the use of ``saltcheck.run_state_tests``, but will not be automatically run
-by ``saltcheck.run_highstate_tests``.
+Tests can be run for each state by name, for all ``apache/saltcheck/*.tst`` files,
+or for all states assigned to the minion in top.sls. Tests may also be created
+with no associated state. These tests will be run through the use of
+``saltcheck.run_state_tests``, but will not be automatically run by
+``saltcheck.run_highstate_tests``.
 
 .. code-block:: bash
 
@@ -234,6 +235,9 @@ State Changes
 - Added new :py:func:`ssh_auth.manage <salt.states.ssh_auth.manage>` state to
   ensure only the specified ssh keys are present for the specified user.
 
+- Added new :py:func:`saltutil <salt.states.saltutil>` state to use instead of
+  ``module.run`` to more easily handle change.
+
 Module Changes
 ==============
 
@@ -254,6 +258,43 @@ Module Changes
   module now supports perstant changes with ``persist=True`` by calling the
   :py:func:`selinux.fcontext_add_policy <salt.modules.selinux.fcontext_add_policy>` module.
 
+Enhancements to Engines
+=======================
+
+Multiple copies of a particular Salt engine can be configured by including
+the ``engine_module`` parameter in the engine configuration.
+
+.. code-block:: yaml
+
+   engines:
+     - production_logstash:
+         host: production_log.my_network.com
+         port: 5959
+         proto: tcp
+         engine_module: logstash
+     - develop_logstash:
+         host: develop_log.my_network.com
+         port: 5959
+         proto: tcp
+         engine_module: logstash
+
+Enhancements to Beacons
+=======================
+Multiple copies of a particular Salt beacon can be configured by including
+the ``beacon_module`` parameter in the beacon configuration.
+
+ .. code-block:: yaml
+
+    beacons:
+      watch_importand_file:
+        - files:
+            /etc/important_file: {}
+        - beacon_module: inotify
+      watch_another_file:
+        - files:
+            /etc/another_file: {}
+        - beacon_module: inotify
+
 Salt Cloud Features
 ===================
 
@@ -263,6 +304,28 @@ GCE Driver
 The GCE salt cloud driver can now be used with GCE instance credentials by
 setting the configuration paramaters ``service_account_private_key`` and
 ``service_account_private_email`` to an empty string.
+
+Salt Api
+========
+
+salt-api will now work on Windows platforms with limited support.
+You will be able to configure the ``rest_cherrypy`` module, without ``pam``
+external authentication and without ssl support.
+
+Example configuration:
+
+.. code-block:: yaml
+
+    external_auth:
+      auto:
+        saltuser:
+          -.*
+
+    rest_cherrypy:
+      host: 127.0.0.1
+      port: 8000
+
+
 
 Deprecations
 ============
@@ -298,6 +361,18 @@ Module Deprecations
         - :py:func:`dockermod.load <salt.modules.dockermod.load>`
         - :py:func:`dockermod.tag <salt.modules.dockermod.tag_>`
 
+- The :py:mod`firewalld <salt.modules.firewalld>` module has been changed as
+  follows:
+
+    - Support for the ``force_masquerade`` option has been removed from the
+      :py:func:`firewalld.add_port <salt.module.firewalld.add_port` function. Please
+      use the :py:func:`firewalld.add_masquerade <salt.modules.firewalld.add_masquerade`
+      function instead.
+    - Support for the ``force_masquerade`` option has been removed from the
+      :py:func:`firewalld.add_port_fwd <salt.module.firewalld.add_port_fwd` function. Please
+      use the :py:func:`firewalld.add_masquerade <salt.modules.firewalld.add_masquerade`
+      function instead.
+
 - The :py:mod:`ssh <salt.modules.ssh>` execution module has been
   changed as follows:
 
@@ -308,12 +383,24 @@ Module Deprecations
       :py:func:`ssh.recv_known_host_entries <salt.modules.ssh.recv_known_host_entries>`
       function instead.
 
+- The :py:mod:`test <salt.modules.test>` execution module has been changed as follows:
+
+    - Support for the :py:func:`test.rand_str <salt.modules.test.rand_str>` has been
+      removed. Please use the :py:func:`test.random_hash <salt.modules.test.random_hash>`
+      function instead.
+
 State Deprecations
 ------------------
+
+- The :py:mod`firewalld <salt.states.firewalld>` state has been changed as follows:
+
+    - The default setting for the ``prune_services`` option in the
+      :py:func:`firewalld.present <salt.states.firewalld.present>` function has changed
+      from ``True`` to ``False``.
 
 - The :py:mod:`win_servermanager <salt.states.win_servermanager>` state has been
   changed as follows:
 
     - Support for the ``force`` kwarg has been removed from the
-      :py:func:`win_servermanager.installed <salt.statues.win_servermanager.installed>`
+      :py:func:`win_servermanager.installed <salt.states.win_servermanager.installed>`
       function. Please use ``recurse`` instead.

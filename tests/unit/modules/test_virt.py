@@ -94,6 +94,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         disks = virt._disk_profile('default', 'kvm', userdisks, 'myvm', image='/path/to/image')
         self.assertEqual(
             [{'name': 'system',
+              'device': 'disk',
               'size': 8192,
               'format': 'qcow2',
               'model': 'virtio',
@@ -101,6 +102,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
               'image': '/path/to/image',
               'source_file': '{0}{1}myvm_system.qcow2'.format(root_dir, os.sep)},
              {'name': 'data',
+              'device': 'disk',
               'size': 16384,
               'format': 'raw',
               'model': 'virtio',
@@ -696,32 +698,45 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             self.assertTrue(len(root.findall('.//interface')) == 2)
 
     @patch('salt.modules.virt.pool_info',
-           return_value={'target_path': os.path.join(salt.syspaths.ROOT_DIR,
-                                                     'pools',
-                                                     'default')})
+           return_value={'mypool': {'target_path': os.path.join(salt.syspaths.ROOT_DIR, 'pools', 'mypool')}})
     def test_disk_profile_kvm_disk_pool(self, mock_poolinfo):
         '''
         Test virt._gen_xml(), KVM case with pools defined.
         '''
         disks = {
             'noeffect': [
-                {'first': {'size': 8192, 'pool': 'default'}},
+                {'first': {'size': 8192, 'pool': 'mypool'}},
                 {'second': {'size': 4096}}
             ]
         }
+
+        # pylint: disable=no-member
         with patch.dict(virt.__salt__, {'config.get': MagicMock(side_effect=[
                 disks,
                 os.path.join(salt.syspaths.ROOT_DIR, 'default', 'path')])}):
+
             diskp = virt._disk_profile('noeffect', 'kvm', [], 'hello')
 
-            pools_path = os.path.join(
-                salt.syspaths.ROOT_DIR, 'pools', 'default') + os.sep
-            default_path = os.path.join(
-                salt.syspaths.ROOT_DIR, 'default', 'path') + os.sep
+            pools_path = os.path.join(salt.syspaths.ROOT_DIR, 'pools', 'mypool') + os.sep
+            default_path = os.path.join(salt.syspaths.ROOT_DIR, 'default', 'path') + os.sep
 
             self.assertEqual(len(diskp), 2)
             self.assertTrue(diskp[0]['source_file'].startswith(pools_path))
             self.assertTrue(diskp[1]['source_file'].startswith(default_path))
+        # pylint: enable=no-member
+
+    def test_disk_profile_kvm_disk_external_image(self):
+        '''
+        Test virt._gen_xml(), KVM case with an external image.
+        '''
+        diskp = virt._disk_profile(None, 'kvm', [
+            {
+                'name': 'mydisk',
+                'source_file': '/path/to/my/image.qcow2'
+            }], 'hello')
+
+        self.assertEqual(len(diskp), 1)
+        self.assertEqual(diskp[0]['source_file'], ('/path/to/my/image.qcow2'))
 
     @patch('salt.modules.virt.pool_info', return_value={})
     def test_disk_profile_kvm_disk_pool_notfound(self, mock_poolinfo):
@@ -752,6 +767,31 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 disks, "/default/path/"])}):
             with self.assertRaises(CommandExecutionError):
                 virt._disk_profile('noeffect', 'kvm', [], 'hello')
+
+    def test_gen_xml_cdrom(self):
+        '''
+        Test virt._gen_xml(), generating a cdrom device (different disk type, no source)
+        '''
+        diskp = virt._disk_profile(None, 'kvm', [{
+            'name': 'tested',
+            'device': 'cdrom',
+            'source_file': None,
+            'model': 'ide'}], 'hello')
+        nicp = virt._nic_profile(None, 'kvm')
+        xml_data = virt._gen_xml(
+            'hello',
+            1,
+            512,
+            diskp,
+            nicp,
+            'kvm',
+            'hvm',
+            'x86_64',
+            )
+        root = ET.fromstring(xml_data)
+        disk = root.findall('.//disk')[0]
+        self.assertEqual(disk.attrib['device'], 'cdrom')
+        self.assertIsNone(disk.find('source'))
 
     def test_controller_for_esxi(self):
         '''
@@ -816,6 +856,13 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 <source file='/path/to/img2.qcow2'/>
                 <target dev='hda' bus='ide'/>
               </disk>
+              <disk type='file' device='disk'>
+                <source file='/path/to/img4.qcow2'/>
+                <target dev='hdb' bus='ide'/>
+              </disk>
+              <disk type='file' device='cdrom'>
+                <target dev='hdc' bus='ide'/>
+              </disk>
             </devices>
         ''').findall('disk')
 
@@ -827,18 +874,39 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
               </disk>
               <disk type='file' device='disk' cache='default'>
                 <source file='/path/to/img0.qcow2'/>
-                <target dev='vdb' bus='virtio'/>
+                <target dev='vda' bus='virtio'/>
+              </disk>
+              <disk type='file' device='disk'>
+                <source file='/path/to/img4.qcow2'/>
+                <target dev='vda' bus='virtio'/>
+              </disk>
+              <disk type='file' device='cdrom'>
+                <target dev='hda' bus='ide'/>
               </disk>
             </devices>
         ''').findall('disk')
         ret = virt._diff_disk_lists(old_disks, new_disks)
-        self.assertEqual([disk.find('source').get('file') for disk in ret['deleted']],
-                         ['/path/to/img1.qcow2', '/path/to/img2.qcow2'])
-        self.assertEqual([disk.find('source').get('file') for disk in ret['unchanged']],
-                         ['/path/to/img0.qcow2'])
-        self.assertEqual([disk.find('source').get('file') for disk in ret['new']],
-                         ['/path/to/img3.qcow2'])
-        self.assertEqual(ret['new'][0].find('target').get('dev'), 'vdb')
+        self.assertEqual([disk.find('source').get('file') if disk.find('source') is not None else None
+                          for disk in ret['unchanged']], [])
+        self.assertEqual([disk.find('source').get('file') if disk.find('source') is not None else None
+                          for disk in ret['new']],
+                         ['/path/to/img3.qcow2', '/path/to/img0.qcow2', '/path/to/img4.qcow2', None])
+        self.assertEqual([disk.find('target').get('dev') for disk in ret['sorted']],
+                         ['vda', 'vdb', 'vdc', 'hda'])
+        self.assertEqual([disk.find('source').get('file') if disk.find('source') is not None else None
+                          for disk in ret['sorted']],
+                         ['/path/to/img3.qcow2',
+                          '/path/to/img0.qcow2',
+                          '/path/to/img4.qcow2',
+                          None])
+        self.assertEqual(ret['new'][1].find('target').get('bus'), 'virtio')
+        self.assertEqual([disk.find('source').get('file') if disk.find('source') is not None else None
+                          for disk in ret['deleted']],
+                         ['/path/to/img0.qcow2',
+                          '/path/to/img1.qcow2',
+                          '/path/to/img2.qcow2',
+                          '/path/to/img4.qcow2',
+                          None])
 
     def test_diff_nics(self):
         '''
@@ -858,20 +926,31 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                  <model type='virtio'/>
                  <address type='pci' domain='0x0000' bus='0x00' slot='0x03' function='0x0'/>
                </interface>
+               <interface type='network'>
+                 <mac address='52:54:00:39:02:b3'/>
+                 <source network='admin'/>
+                 <model type='virtio'/>
+                 <address type='pci' domain='0x0000' bus='0x00' slot='0x03' function='0x0'/>
+               </interface>
             </devices>
         ''').findall('interface')
 
         new_nics = ET.fromstring('''
             <devices>
                <interface type='network'>
-                 <mac address='52:54:00:39:02:b3'/>
+                 <mac address='52:54:00:39:02:b1'/>
+                 <source network='default'/>
+                 <model type='virtio'/>
+               </interface>
+               <interface type='network'>
+                 <mac address='52:54:00:39:02:b2'/>
                  <source network='default'/>
                  <model type='virtio'/>
                </interface>
                <interface type='network'>
                  <mac address='52:54:00:39:02:b4'/>
-                 <source network='default'/>
-                 <model type='othermodel'/>
+                 <source network='admin'/>
+                 <model type='virtio'/>
                </interface>
             </devices>
         ''').findall('interface')
@@ -879,9 +958,9 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual([nic.find('mac').get('address') for nic in ret['unchanged']],
                          ['52:54:00:39:02:b1'])
         self.assertEqual([nic.find('mac').get('address') for nic in ret['new']],
-                         ['52:54:00:39:02:b4'])
+                         ['52:54:00:39:02:b2', '52:54:00:39:02:b4'])
         self.assertEqual([nic.find('mac').get('address') for nic in ret['deleted']],
-                         ['52:54:00:39:02:b2'])
+                         ['52:54:00:39:02:b2', '52:54:00:39:02:b3'])
 
     def test_init_no_nics_disks(self):
         '''
@@ -1048,7 +1127,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                   <driver name='qemu' type='qcow2'/>
                   <source file='{0}{1}myvm_data.qcow2'/>
                   <backingStore/>
-                  <target dev='vda' bus='virtio'/>
+                  <target dev='vdb' bus='virtio'/>
                   <alias name='virtio-disk1'/>
                   <address type='pci' domain='0x0000' bus='0x00' slot='0x07' function='0x1'/>
                 </disk>
@@ -1117,16 +1196,28 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         devdetach_mock = MagicMock(return_value=0)
         domain_mock.attachDevice = devattach_mock
         domain_mock.detachDevice = devdetach_mock
-        ret = virt.update('myvm', disk_profile='default', disks=[{'name': 'added', 'size': 2048}])
-        self.assertListEqual(
-            [os.path.join(root_dir, 'myvm_added.qcow2')],
-            [ET.fromstring(disk).find('source').get('file') for disk in ret['disk']['attached']])
+        mock_chmod = MagicMock()
+        mock_run = MagicMock()
+        with patch.dict(os.__dict__, {'chmod': mock_chmod}):  # pylint: disable=no-member
+            with patch.dict(virt.__salt__, {'cmd.run': mock_run}):  # pylint: disable=no-member
+                ret = virt.update('myvm', disk_profile='default', disks=[
+                    {'name': 'cddrive', 'device': 'cdrom', 'source_file': None, 'model': 'ide'},
+                    {'name': 'added', 'size': 2048}])
+                added_disk_path = os.path.join(
+                        virt.__salt__['config.get']('virt:images'), 'myvm_added.qcow2')  # pylint: disable=no-member
+                self.assertEqual(mock_run.call_args[0][0],
+                                 'qemu-img create -f qcow2 {0} 2048M'.format(added_disk_path))
+                self.assertEqual(mock_chmod.call_args[0][0], added_disk_path)
+                self.assertListEqual(
+                    [None, os.path.join(root_dir, 'myvm_added.qcow2')],
+                    [ET.fromstring(disk).find('source').get('file') if str(disk).find('<source') > -1 else None
+                     for disk in ret['disk']['attached']])
 
-        self.assertListEqual(
-            [os.path.join(root_dir, 'myvm_data.qcow2')],
-            [ET.fromstring(disk).find('source').get('file') for disk in ret['disk']['detached']])
-        devattach_mock.assert_called_once()
-        devdetach_mock.assert_called_once()
+                self.assertListEqual(
+                    [os.path.join(root_dir, 'myvm_data.qcow2')],
+                    [ET.fromstring(disk).find('source').get('file') for disk in ret['disk']['detached']])
+                self.assertEqual(devattach_mock.call_count, 2)
+                devdetach_mock.assert_called_once()
 
         # Update nics case
         yaml_config = '''
@@ -1141,7 +1232,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         devdetach_mock.reset_mock()
         with patch.dict(salt.modules.config.__opts__, mock_config):  # pylint: disable=no-member
             ret = virt.update('myvm', nic_profile='myprofile',
-                              interfaces=[{'name': 'eth0', 'type': 'network', 'source': 'default'},
+                              interfaces=[{'name': 'eth0', 'type': 'network', 'source': 'default',
+                                           'mac': '52:54:00:39:02:b1'},
                                           {'name': 'eth1', 'type': 'network', 'source': 'newnet'}])
             self.assertEqual(['newnet'],
                              [ET.fromstring(nic).find('source').get('network') for nic in ret['interface']['attached']])
@@ -1185,8 +1277,10 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             }, virt.update('myvm', cpu=1, mem=1024,
                            disk_profile='default', disks=[{'name': 'data', 'size': 2048}],
                            nic_profile='myprofile',
-                           interfaces=[{'name': 'eth0', 'type': 'network', 'source': 'default'},
-                                       {'name': 'eth1', 'type': 'network', 'source': 'oldnet'}],
+                           interfaces=[{'name': 'eth0', 'type': 'network', 'source': 'default',
+                                        'mac': '52:54:00:39:02:b1'},
+                                       {'name': 'eth1', 'type': 'network', 'source': 'oldnet',
+                                        'mac': '52:54:00:39:02:b2'}],
                            graphics={'type': 'spice',
                                      'listen': {'type': 'address', 'address': '127.0.0.1'}}))
 
@@ -2114,7 +2208,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
 
         caps = virt.all_capabilities()
         self.assertEqual('44454c4c-3400-105a-8033-b3c04f4b344a', caps['host']['host']['uuid'])
-        self.assertEqual(set(['qemu', 'kvm']), set([domainCaps['domain'] for domainCaps in caps['domains']]))
+        self.assertEqual(set(['qemu', 'kvm']), {domainCaps['domain'] for domainCaps in caps['domains']})
 
     def test_network_tag(self):
         '''
