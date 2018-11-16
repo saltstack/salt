@@ -3315,7 +3315,7 @@ def _metaproxy_call(opts, fn_name):
         metaproxy_name = 'proxy'
         errmsg = 'No metaproxy key found in opts for id ' + opts['id'] + '. ' + \
                  'Defaulting to standard proxy minion'
-        log.error(errmsg)
+        log.trace(errmsg)
 
     metaproxy_fn = metaproxy_name + '.' + fn_name
     return metaproxy[metaproxy_fn]
