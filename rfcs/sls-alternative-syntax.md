@@ -166,6 +166,13 @@ as class or functions made dynamically, in this case `__call__` should
 be made separately for that. However, since this is advanced way of
 making modules, developer already knows what he is doing in this case.
 
+Or "lazy" implementation, if one wants to just turn this feature off:
+
+```python
+
+__call__ = lambda (*a, **k): raise SaltNotSupportedError()
+```
+
 ## Impact on existing ecosystem
 
 No impact. Performance and default syntax should stay unchanged.
