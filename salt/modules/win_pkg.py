@@ -66,6 +66,7 @@ import salt.utils.path
 import salt.utils.pkg
 import salt.utils.platform
 import salt.utils.versions
+import salt.utils.win_functions
 import salt.syspaths
 import salt.payload
 from salt.exceptions import MinionError
@@ -363,13 +364,35 @@ def version(*names, **kwargs):
     return ret
 
 
-def list_pkgs(versions_as_list=False, **kwargs):
+def list_pkgs(versions_as_list=False,
+              include_components=True,
+              include_updates=True,
+              **kwargs):
     '''
-    List the packages currently installed
+    List the packages currently installed.
 
-    version_as_list (bool): Returns the versions as a list
-    saltenv (str): The salt environment to use. Default ``base``.
-    refresh (bool): Refresh package metadata. Default ``False``.
+    .. note::
+        To view installed software as displayed in the Add/Remove Programs, set
+        ``include_components`` and ``include_updates`` to False.
+
+    Args:
+
+        version_as_list (bool):
+            Returns the versions as a list
+
+        include_components (bool):
+            Include sub components of installed software. Default is ``True``
+
+        include_updates (bool):
+            Include software updates and Windows updates. Default is ``True``
+
+    Kwargs:
+
+        saltenv (str):
+            The salt environment to use. Default ``base``
+
+        refresh (bool):
+            Refresh package metadata. Default ``False``
 
     Returns:
         dict: A dictionary of installed software with versions installed
@@ -396,7 +419,9 @@ def list_pkgs(versions_as_list=False, **kwargs):
 
     ret = {}
     name_map = _get_name_map(saltenv)
-    for pkg_name, val_list in six.iteritems(_get_reg_software()):
+    for pkg_name, val_list in six.iteritems(
+            _get_reg_software(include_components=include_components,
+                              include_updates=include_updates)):
         if pkg_name in name_map:
             key = name_map[pkg_name]
             for val in val_list:
@@ -420,92 +445,158 @@ def list_pkgs(versions_as_list=False, **kwargs):
     return ret
 
 
-def _get_reg_software():
+def _get_reg_software(include_components=True,
+                      include_updates=True):
     '''
     This searches the uninstall keys in the registry to find a match in the sub
     keys, it will return a dict with the display name as the key and the
     version as the value
+
+    Args:
+
+        include_components (bool):
+            Include sub components of installed software. Default is ``True``
+
+        include_updates (bool):
+            Include software updates and Windows updates. Default is ``True``
+
+    Returns:
+        dict: A dictionary of installed software with versions installed
+
+    .. code-block:: cfg
+
+        {'<package_name>': '<version>'}
     '''
     # Logic for this can be found in this question:
     # https://social.technet.microsoft.com/Forums/windows/en-US/d913471a-d7fb-448d-869b-da9025dcc943/where-does-addremove-programs-get-its-information-from-in-the-registry
+    # and also in the collectPlatformDependentApplicationData function in
+    # https://github.com/aws/amazon-ssm-agent/blob/master/agent/plugins/inventory/gatherers/application/dataProvider_windows.go
     reg_software = {}
 
-    def skip_component(hive, key, reg_key, use_32bit):
+    def skip_component(hive, key, sub_key, use_32bit):
         '''
+        'SystemComponent' must be either absent or present with a value of 0,
+        because this value is usually set on programs that have been installed
+        via a Windows Installer Package (MSI).
+
         Returns:
-            bool: True if the component needs to be skipped, otherwise False
+            bool: True if the package needs to be skipped, otherwise False
         '''
-        # Skip SystemComponents
-        # Skip WindowsInstaller (removes Compiler for Python 2.7)
-        #for check in ['SystemComponent', 'WindowsInstaller']:
-        for check in ['SystemComponent']:
-            if __utils__['reg.value_exists'](
+        if include_components:
+            return False
+        if __utils__['reg.value_exists'](
+                hive=hive,
+                key='{0}\\{1}'.format(key, sub_key),
+                vname='SystemComponent',
+                use_32bit_registry=use_32bit):
+            if __utils__['reg.read_value'](
                     hive=hive,
-                    key='{0}\\{1}'.format(key, reg_key),
-                    vname=check,
-                    use_32bit_registry=use_32bit):
-                if __utils__['reg.read_value'](
-                        hive=hive,
-                        key='{0}\\{1}'.format(key, reg_key),
-                        vname=check,
-                        use_32bit_registry=use_32bit)['vdata'] > 0:
+                    key='{0}\\{1}'.format(key, sub_key),
+                    vname='SystemComponent',
+                    use_32bit_registry=use_32bit)['vdata'] > 0:
+                return True
+        return False
+
+    def skip_win_installer(hive, key, sub_key, use_32bit):
+        '''
+        'WindowsInstaller' must be either absent or present with a value of 0.
+        If the value is set to 1, then the application is included in the list
+        if and only if the corresponding compressed guid is also present in
+        HKLM:\Software\Classes\Installer\Products\
+
+        Returns:
+            bool: True if the package needs to be skipped, otherwise False
+        '''
+        products_key = 'Software\\Classes\\Installer\\Products\\{0}'
+        if __utils__['reg.value_exists'](
+                hive=hive,
+                key='{0}\\{1}'.format(key, sub_key),
+                vname='WindowsInstaller',
+                use_32bit_registry=use_32bit):
+            if __utils__['reg.read_value'](
+                    hive=hive,
+                    key='{0}\\{1}'.format(key, sub_key),
+                    vname='WindowsInstaller',
+                    use_32bit_registry=use_32bit)['vdata'] > 0:
+                squid = salt.utils.win_functions.guid_to_squid(sub_key)
+                if not __utils__['reg.key_exists'](
+                        hive='HKLM',
+                        key=products_key.format(squid),
+                        use_32bit_registry=use_32bit):
                     return True
         return False
 
-    def skip_additional_checks(hive, key, reg_key, use_32bit):
+    def skip_uninstall_string(hive, key, sub_key, use_32bit):
         '''
-        Returns:
-            bool: True if the component needs to be skipped, otherwise False
-        '''
-        # Must contain one of UninstallString, QuietUninstallString, ModifyPath
-        # If it does not exist, skip (return True)
-        vname_present = False
-        for reg_vname in ['UninstallString',
-                          'QuietUninstallString',
-                          'ModifyPath']:
-            if __utils__['reg.value_exists'](
-                    hive=hive,
-                    key='{0}\\{1}'.format(key, reg_key),
-                    vname=reg_vname,
-                    use_32bit_registry=use_32bit):
-                vname_present = True
-                break
-        if not vname_present:
-            return True
+        'UninstallString' must be present, because it stores the command line
+        that gets executed by Add/Remove programs, when the user tries to
+        uninstall a program.
 
-        # Check for Hotfixes, Service Packs, etc...
-        # If found, skip (return True)
+        Returns:
+            bool: True if the package needs to be skipped, otherwise False
+        '''
+        if not __utils__['reg.value_exists'](
+                hive=hive,
+                key='{0}\\{1}'.format(key, sub_key),
+                vname='UninstallString',
+                use_32bit_registry=use_32bit):
+            return True
+        return False
+
+    def skip_release_type(hive, key, sub_key, use_32bit):
+        '''
+        'ReleaseType' must either be absent or if present must not have a
+        value set to 'Security Update', 'Update Rollup', or 'Hotfix', because
+        that indicates it's an update to an existing program.
+
+        Returns:
+            bool: True if the package needs to be skipped, otherwise False
+        '''
+        if include_updates:
+            return False
         skip_types = ['Hotfix',
-                      'Service Pack',
                       'Security Update',
                       'Update Rollup']
         if __utils__['reg.value_exists'](
                 hive=hive,
-                key='{0}\\{1}'.format(key, reg_key),
+                key='{0}\\{1}'.format(key, sub_key),
                 vname='ReleaseType',
                 use_32bit_registry=use_32bit):
             if __utils__['reg.read_value'](
                     hive=hive,
-                    key='{0}\\{1}'.format(key, reg_key),
+                    key='{0}\\{1}'.format(key, sub_key),
                     vname='ReleaseType',
                     use_32bit_registry=use_32bit)['vdata'] in skip_types:
                 return True
+        return False
 
-        # Skip items that are children of an installation
-        # If a child, skip (return True)
+    def skip_parent_key(hive, key, sub_key, use_32bit):
+        '''
+        'ParentKeyName' must NOT be present, because that indicates it's an
+        update to the parent program.
+
+        Returns:
+            bool: True if the package needs to be skipped, otherwise False
+        '''
         if __utils__['reg.value_exists'](
                 hive=hive,
-                key='{0}\\{1}'.format(key, reg_key),
+                key='{0}\\{1}'.format(key, sub_key),
                 vname='ParentKeyName',
                 use_32bit_registry=use_32bit):
             return True
 
         return False
 
-    def add_software(hive, key, reg_key, use_32bit):
+    def add_software(hive, key, sub_key, use_32bit):
+        '''
+        'DisplayName' must be present with a valid value, as this is reflected
+        as the software name returned by pkg.list_pkgs. Also, its value must
+        not start with 'KB' followed by 6 numbers - as that indicates a
+        Windows update.
+        '''
         d_name_regdata = __utils__['reg.read_value'](
             hive=hive,
-            key='{0}\\{1}'.format(key, reg_key),
+            key='{0}\\{1}'.format(key, sub_key),
             vname='DisplayName',
             use_32bit_registry=use_32bit)
 
@@ -515,9 +606,13 @@ def _get_reg_software():
             return
         d_name = d_name_regdata['vdata']
 
+        if not include_updates:
+            if re.match(r'^KB[0-9]{6}', d_name):
+                return
+
         d_vers_regdata = __utils__['reg.read_value'](
             hive=hive,
-            key='{0}\\{1}'.format(key, reg_key),
+            key='{0}\\{1}'.format(key, sub_key),
             vname='DisplayVersion',
             use_32bit_registry=use_32bit)
 
@@ -536,142 +631,139 @@ def _get_reg_software():
 
         reg_software.setdefault(d_name, []).append(d_vers)
 
-    search_hive = 'HKLM'
-    search_key = 'Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall'
-    for reg_key in __utils__['reg.list_keys'](hive=search_hive, key=search_key):
-        if skip_component(hive=search_hive,
-                          key=search_key,
-                          reg_key=reg_key,
-                          use_32bit=False):
+    # Start gathering information from the registry
+    # HKLM Uninstall 64 bit
+    kwargs = {'hive': 'HKLM',
+              'key': 'Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall',
+              'use_32bit': False}
+    for sub_key in __utils__['reg.list_keys'](hive=kwargs['hive'],
+                                              key=kwargs['key']):
+        kwargs['sub_key'] = sub_key
+        if skip_component(**kwargs):
             continue
-        if skip_additional_checks(hive=search_hive,
-                                  key=search_key,
-                                  reg_key=reg_key,
-                                  use_32bit=False):
+        if skip_win_installer(**kwargs):
             continue
-        add_software(hive=search_hive,
-                     key=search_key,
-                     reg_key=reg_key,
-                     use_32bit=False)
+        if skip_uninstall_string(**kwargs):
+            continue
+        if skip_release_type(**kwargs):
+            continue
+        if skip_parent_key(**kwargs):
+            continue
+        add_software(**kwargs)
 
-    for reg_key in __utils__['reg.list_keys'](hive=search_hive,
-                                              key=search_key,
-                                              use_32bit_registry=True):
-        if skip_component(hive=search_hive,
-                          key=search_key,
-                          reg_key=reg_key,
-                          use_32bit=True):
+    # HKLM Uninstall 32 bit
+    kwargs['use_32bit'] = True
+    for sub_key in __utils__['reg.list_keys'](hive=kwargs['hive'],
+                                              key=kwargs['key'],
+                                              use_32bit_registry=kwargs['use_32bit']):
+        kwargs['sub_key'] = sub_key
+        if skip_component(**kwargs):
             continue
-        if skip_additional_checks(hive=search_hive,
-                                  key=search_key,
-                                  reg_key=reg_key,
-                                  use_32bit=True):
+        if skip_win_installer(**kwargs):
             continue
-        add_software(hive=search_hive,
-                     key=search_key,
-                     reg_key=reg_key,
-                     use_32bit=True)
+        if skip_uninstall_string(**kwargs):
+            continue
+        if skip_release_type(**kwargs):
+            continue
+        if skip_parent_key(**kwargs):
+            continue
+        add_software(**kwargs)
 
-    search_key = 'Software\\Classes\\Installer\\Products'
-    search_key_userdata = 'Software\\Microsoft\\Windows\\CurrentVersion\\Installer\\UserData\\S-1-5-18\\Products'
-    for reg_key in __utils__['reg.list_keys'](hive=search_hive, key=search_key):
-        # Does the key exist in userdata
+    # HKLM Uninstall 64 bit
+    kwargs = {'hive': 'HKLM',
+              'key': 'Software\\Classes\\Installer\\Products',
+              'use_32bit': False}
+    userdata_key = 'Software\\Microsoft\\Windows\\CurrentVersion\\Installer\\' \
+                   'UserData\\S-1-5-18\\Products'
+    for sub_key in __utils__['reg.list_keys'](hive=kwargs['hive'], key=kwargs['key']):
+        # If the key does not exist in userdata, skip it
         if not __utils__['reg.key_exists'](
-                hive=search_hive,
-                key='{0}\\{1}'.format(search_key_userdata, reg_key)):
+                hive=kwargs['hive'],
+                key='{0}\\{1}'.format(userdata_key, sub_key)):
             continue
-        if skip_component(hive=search_hive,
-                          key=search_key,
-                          reg_key=reg_key,
-                          use_32bit=False):
+        kwargs['sub_key'] = sub_key
+        if skip_component(**kwargs):
             continue
-        add_software(hive=search_hive,
-                     key=search_key,
-                     reg_key=reg_key,
-                     use_32bit=False)
+        if skip_win_installer(**kwargs):
+            continue
+        add_software(**kwargs)
 
+    # Uninstall for each user on the system (HKU), 64 bit
     # This has a propensity to take a while on a machine where many users have
     # logged in. Untested in such a scenario
-    search_hive = 'HKU'
-    for user_guid in __utils__['reg.list_keys'](hive=search_hive):
-        search_key = '{0}\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall'.format(user_guid)
-        for reg_key in __utils__['reg.list_keys'](hive=search_hive,
-                                                  key=search_key):
-            if skip_component(hive=search_hive,
-                              key=search_key,
-                              reg_key=reg_key,
-                              use_32bit=False):
+    hive_hku = 'HKU'
+    uninstall_key = '{0}\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall'
+    product_key = '{0}\\Software\\Microsoft\\Installer\\Products'
+    user_data_key = 'Software\\Microsoft\\Windows\\CurrentVersion\\Installer\\' \
+                    'UserData\\{0}\\Products\\{1}'
+    for user_guid in __utils__['reg.list_keys'](hive=hive_hku):
+        kwargs = {'hive': hive_hku,
+                  'key': uninstall_key.format(user_guid),
+                  'use_32bit': False}
+        for sub_key in __utils__['reg.list_keys'](hive=kwargs['hive'],
+                                                  key=kwargs['key']):
+            kwargs['sub_key'] = sub_key
+            if skip_component(**kwargs):
                 continue
-            if skip_additional_checks(hive=search_hive,
-                                      key=search_key,
-                                      reg_key=reg_key,
-                                      use_32bit=False):
+            if skip_win_installer(**kwargs):
                 continue
-            add_software(hive=search_hive,
-                         key=search_key,
-                         reg_key=reg_key,
-                         use_32bit=False)
+            if skip_uninstall_string(**kwargs):
+                continue
+            if skip_release_type(**kwargs):
+                continue
+            if skip_parent_key(**kwargs):
+                continue
+            add_software(**kwargs)
 
-        search_key_2 = '{0}\\Software\\Microsoft\\Installer\\Products' \
-                       ''.format(user_guid)
-        for reg_key_2 in __utils__['reg.list_keys'](hive=search_hive,
-                                                    key=search_key_2):
-            ud_key = 'Software\\Microsoft\\Windows\\CurrentVersion\\Installer' \
-                     '\\UserData\\{0}\\Products\\{1}'.format(user_guid,
-                                                             reg_key_2)
-            if __utils__['reg.key_exists'](hive='HKLM', key=ud_key):
-                if skip_component(hive='HKLM',
-                                  key=ud_key,
-                                  reg_key='InstallProperties',
-                                  use_32bit=False):
+        # While we have the user guid, we're gong to check userdata in HKLM
+        for sub_key in __utils__['reg.list_keys'](hive=hive_hku,
+                                                  key=product_key.format(user_guid)):
+            kwargs = {'hive': 'HKLM',
+                      'key': user_data_key.format(user_guid, sub_key),
+                      'sub_key': 'InstallProperties',
+                      'use_32bit': False}
+            if __utils__['reg.key_exists'](hive=kwargs['hive'],
+                                           key=kwargs['key']):
+                if skip_component(**kwargs):
                     continue
-                add_software(hive='HKLM',
-                             key=ud_key,
-                             reg_key='InstallProperties',
-                             use_32bit=False)
+                add_software(**kwargs)
 
-    for user_guid in __utils__['reg.list_keys'](hive=search_hive,
+    # Uninstall for each user on the system (HKU), 32 bit
+    for user_guid in __utils__['reg.list_keys'](hive=hive_hku,
                                                 use_32bit_registry=True):
-        search_key = '{0}\\Software\\Microsoft\\Windows\\CurrentVersion' \
-                     '\\Uninstall'.format(user_guid)
-        for reg_key in __utils__['reg.list_keys'](hive=search_hive,
-                                                  key=search_key,
-                                                  use_32bit_registry=True):
-            if skip_component(hive=search_hive,
-                              key=search_key,
-                              reg_key=reg_key,
-                              use_32bit=True):
+        kwargs = {'hive': hive_hku,
+                  'key': uninstall_key.format(user_guid),
+                  'use_32bit': True}
+        for sub_key in __utils__['reg.list_keys'](hive=kwargs['hive'],
+                                                  key=kwargs['key'],
+                                                  use_32bit_registry=kwargs['use_32bit']):
+            kwargs['sub_key'] = sub_key
+            if skip_component(**kwargs):
                 continue
-            if skip_additional_checks(hive=search_hive,
-                                      key=search_key,
-                                      reg_key=reg_key,
-                                      use_32bit=True):
+            if skip_win_installer(**kwargs):
                 continue
-            add_software(hive=search_hive,
-                         key=search_key,
-                         reg_key=reg_key,
-                         use_32bit=True)
+            if skip_uninstall_string(**kwargs):
+                continue
+            if skip_release_type(**kwargs):
+                continue
+            if skip_parent_key(**kwargs):
+                continue
+            add_software(**kwargs)
 
-        search_key_2 = '{0}\\Software\\Microsoft\\Installer\\Products' \
-                       ''.format(user_guid)
-        for reg_key_2 in __utils__['reg.list_keys'](hive=search_hive,
-                                                    key=search_key_2,
+        # While we have the user guid, we're gong to check userdata in HKLM
+        for sub_key_2 in __utils__['reg.list_keys'](hive=hive_hku,
+                                                    key=product_key.format(user_guid),
                                                     use_32bit_registry=True):
-            ud_key = 'Software\\Microsoft\\Windows\\CurrentVersion\\Installer' \
-                     '\\UserData\\{0}\\Products\\{1}'.format(user_guid,
-                                                             reg_key_2)
-            if __utils__['reg.key_exists'](hive='HKLM',
-                                           key=ud_key,
-                                           use_32bit_registry=True):
-                if skip_component(hive='HKLM',
-                                  key=ud_key,
-                                  reg_key='InstallProperties',
-                                  use_32bit=True):
+            kwargs = {'hive': 'HKLM',
+                      'key': user_data_key.format(user_guid, sub_key_2),
+                      'sub_key': 'InstallProperties',
+                      'use_32bit': True}
+            if __utils__['reg.key_exists'](hive=kwargs['hive'],
+                                           key=kwargs['key'],
+                                           use_32bit_registry=kwargs['use_32bit']):
+                if skip_component(**kwargs):
                     continue
-                add_software(hive='HKLM',
-                             key=ud_key,
-                             reg_key='InstallProperties',
-                             use_32bit=True)
+                add_software(**kwargs)
 
     return reg_software
 
