@@ -158,10 +158,10 @@ for function_name in functions:
   ret.append(getattr(function_name, *args, **kwargs))
 ```
 
-## What needs to be changed in modules?
+## What needs to be changed in existing modules?
 
-Nothing.
+Nothing. Also no changes to any future modules, yet to be written.
 
 ## Impact on existing ecosystem
 
-No impact at all. Performance and default syntax should continue working.
+No impact. Performance and default syntax should stay unchanged.
