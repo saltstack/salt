@@ -458,7 +458,7 @@ def _produce_output(report, failed, setup):
         recipients = setup.get('smtp_recipients', '')
 
         host = setup.get('smtp_server', '')
-        port = int(setup.get('smtp_port', 0))
+        port = int(setup.get('smtp_port', 25))
         tls = setup.get('smtp_tls')
         username = setup.get('smtp_username')
         password = setup.get('smtp_password')
