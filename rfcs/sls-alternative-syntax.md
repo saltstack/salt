@@ -140,7 +140,10 @@ efficient way as follows:
 It works in three steps:
 
 1. During state compile, compiler finds that there is no end function
-   defined, then it injects `__call__` function name into the state.
+   defined, then it injects `__call__` function name into the
+   state. Essentially, referring to the example above, state will be
+   simply altered to `somemodule.__call__`, but transparently for the
+   user.
 
 2. When LazyLoader loads a module, it will inject a generic function
    named `__call__` at the module level. If such function is already
