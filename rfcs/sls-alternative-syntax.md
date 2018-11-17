@@ -124,7 +124,7 @@ With the batch-mode, the same above can be re-written in much more
 efficient way as follows:
 
 ```yaml
-/etc/some.conf
+/etc/some.conf:
   somemodule:
     - some_function
       - params ....
