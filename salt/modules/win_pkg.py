@@ -502,7 +502,7 @@ def _get_reg_software(include_components=True,
         'WindowsInstaller' must be either absent or present with a value of 0.
         If the value is set to 1, then the application is included in the list
         if and only if the corresponding compressed guid is also present in
-        HKLM:\Software\Classes\Installer\Products\
+        HKLM:\\Software\\Classes\\Installer\\Products
 
         Returns:
             bool: True if the package needs to be skipped, otherwise False

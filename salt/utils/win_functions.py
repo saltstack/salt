@@ -10,6 +10,7 @@ import ctypes
 
 # Import Salt Libs
 from salt.exceptions import CommandExecutionError
+from salt.ext.six.moves import range
 
 # Import 3rd Party Libs
 try:
