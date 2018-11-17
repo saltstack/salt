@@ -1,4 +1,4 @@
-- Feature Name: Alternative SLS syntax
+- Feature Name: Batch mode SLS syntax
 - Start Date: November 17, 2018.
 
 # Summary
@@ -63,7 +63,7 @@ release:
     - run:
       - name: cat /etc/{{releasefile}}-release
       - onlyif: test -f /etc/{{releasefile}}-release
-	{% endfor %}
+    {% endfor %}
 ```
 
 In the example above, the for-loop will just generate four times same
@@ -71,17 +71,19 @@ statement to call `cmd.run` function, reusing already built-in check
 on `onlyif`. That said, no more need to figure out what OS name
 belongs to what family etc.
 
+The example above only made for show-case to let you get the idea.
+
 # Design
 [design]: #detailed-design
 
-## How simpler syntax is used?
+## How batch-mode syntax is used?
 
 As simple as _not_ specifying particular function. Typically, in Salt
 it is done this way:
 
 ```yaml
 /etc/some.conf:
-  somemodule.some_function:
+  somemodule.some_function:  # <--- here!
     - params...
 ```
 
@@ -89,14 +91,17 @@ The simple syntax will be invoked as so:
 
 ```yaml
 /etc/some.conf:
-  somemodule:
+  somemodule:  # <--- just like that, no function
     - some_function:
       - params ...
 ```
 
 Of course, in single call this dosn't make much sense and is actually
 one line more to write. However, if there is more one operation that
-needed to be done, this makes a big difference:
+needed to be done, this makes a big difference. Since it is impossible
+to have more than one same ID, you will be required to write different
+IDs for the _same_ task. This results into something like this:
+
 
 ```yaml
 do_something_with_my_config:
@@ -115,7 +120,8 @@ do_something_with_my_config_and_over_again:
     - params ....
 ```
 
-In this case the same above can be re-written in much more efficient way:
+With the batch-mode, the same above can be re-written in much more
+efficient way as follows:
 
 ```yaml
 /etc/some.conf
