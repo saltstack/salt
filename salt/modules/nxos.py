@@ -5,10 +5,14 @@ Execution module for Cisco NX OS Switches.
 .. versionadded:: 2016.11.0
 
 This module supports execution using a Proxy Minion or Native Minion:
-1) Proxy Minion: Connect over SSH or NX-API HTTP(S).
-   See :mod:`salt.proxy.nxos <salt.proxy.nxos>` for proxy minion setup details.
-2) Native Minion: Connect over NX-API Unix Domain Socket (UDS).
-   Install the minion inside the GuestShell running on the NX-OS device.
+
+- Proxy Minion: Connect over SSH or NX-API HTTP(S).
+
+  - See :mod:`salt.proxy.nxos <salt.proxy.nxos>` for proxy minion setup details.
+
+- Native Minion: Connect over NX-API Unix Domain Socket (UDS).
+
+  - Install the minion inside the GuestShell running on the NX-OS device.
 
 :maturity:   new
 :platform:   nxos
@@ -45,22 +49,26 @@ Native minon configuration options:
       cookie: 'username'
       no_save_config: True
 
-cookie
-    Use the option to override the default cookie 'admin:local' when
-    connecting over UDS and use 'username:local' instead. This is needed when
-    running the salt-minion in the GuestShell using a non-admin user.
+``cookie``
 
-    This option is ignored for SSH and NX-API Proxy minions.
+- Use the option to override the default cookie 'admin:local' when connecting
+  over UDS and use 'username:local' instead. This is needed when running the
+  salt-minion in the GuestShell using a non-admin user.
 
-no_save_config:
-    If False, 'copy running-config starting-config' is issues for every
-        configuration command.
-    If True, Running config is not saved to startup config
-    Default: False
+- This option is ignored for SSH and NX-API Proxy minions.
 
-    The recommended approach is to use the `save_running_config` function
-    instead of this option to improve performance.  The default behavior
-    controlled by this option is preserved for backwards compatibility.
+``no_save_config``
+
+- If False, 'copy running-config starting-config' is issues for every
+  configuration command.
+
+- If True, Running config is not saved to startup config
+
+- Default: False
+
+- The recommended approach is to use the `save_running_config` function instead
+  of this option to improve performance.  The default behavior controlled by
+  this option is preserved for backwards compatibility.
 
 
 The APIs defined in this execution module can also be executed using
@@ -75,13 +83,17 @@ salt-call from the GuestShell environment as follows.
     The functions in this module can be executed using either of the
     following syntactic forms.
 
-    salt '*' nxos.cmd <function>
-    salt '*' nxos.cmd get_user username=admin
+    .. code-block:: bash
+
+        salt '*' nxos.cmd <function>
+        salt '*' nxos.cmd get_user username=admin
 
     or
 
-    salt '*' nxos.<function>
-    salt '*' nxos.get_user username=admin
+    .. code-block:: bash
+
+        salt '*' nxos.<function>
+        salt '*' nxos.get_user username=admin
 
     The nxos.cmd <function> syntax is preserved for backwards compatibility.
 '''
