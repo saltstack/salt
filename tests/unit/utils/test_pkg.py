@@ -7,11 +7,6 @@ from tests.support.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
 import salt.utils.pkg
 from salt.utils.pkg import rpm
 
-try:
-    import pytest
-except ImportError:
-    pytest = None
-
 
 class PkgUtilsTestCase(TestCase):
     '''
@@ -53,7 +48,6 @@ class PkgUtilsTestCase(TestCase):
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-@skipIf(pytest is None, 'PyTest is missing')
 class PkgRPMTestCase(TestCase):
     '''
     Test case for pkg.rpm utils
