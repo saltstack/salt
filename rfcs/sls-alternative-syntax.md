@@ -143,7 +143,10 @@ It works in three steps:
    defined, then it injects `__call__` function name into the
    state. Essentially, referring to the example above, state will be
    simply altered to `somemodule.__call__`, but transparently for the
-   user.
+   user. LazyLoader does not allow any functions that starts with `_`
+   as they are considered private/hidden. The `__call__` is an
+   exception but it should be still impossible to invoke it from the
+   module directly.
 
 2. When LazyLoader loads a module, it will inject a generic function
    named `__call__` at the module level. If such function is already
