@@ -62,6 +62,7 @@ from salt.ext.six import string_types
 
 # Import Salt libs
 from salt.exceptions import (NxosError, CommandExecutionError)
+from salt.ext.six.moves import range
 
 __virtualname__ = 'nxos'
 __virtual_aliases__ = ('nxos_upgrade',)
