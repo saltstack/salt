@@ -139,7 +139,7 @@ efficient way as follows:
 It works in three steps:
 
 1. During state compile, compiler finds that there is no end function
-   defined, so it injects `__call__` function name into the state.
+   defined, then it injects `__call__` function name into the state.
 
 2. When LazyLoader loads a module, it will inject a generic function
    named `__call__` at the module level. If such function is already
@@ -160,7 +160,11 @@ for function_name in functions:
 
 ## What needs to be changed in existing modules?
 
-Nothing. Also no changes to any future modules, yet to be written.
+Nothing. Also no changes to any future modules, yet to be written. If
+module has non-traditional way of exposing methods, e.g. implemented
+as class or functions made dynamically, in this case `__call__` should
+be made separately for that. However, since this is advanced way of
+making modules, developer already knows what he is doing in this case.
 
 ## Impact on existing ecosystem
 
