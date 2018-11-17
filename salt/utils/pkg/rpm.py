@@ -55,7 +55,7 @@ def get_osarch():
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE).communicate()[0]
     else:
-        ret = ''.join(list(filter(None, platform.uname()[-2:]))[-1:])
+        ret = ''.join([x for x in platform.uname()[-2:] if x][-1:])
 
     return salt.utils.stringutils.to_str(ret).strip() or 'unknown'
 
