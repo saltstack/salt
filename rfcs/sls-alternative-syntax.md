@@ -59,7 +59,7 @@ We can make it simpler. For example as follows:
 ```jinja
 release:
   cmd:
-    {% for relesefile in ['redhat', 'centos', 'SuSE', 'sles'] %}
+    {% for releasefile in ['redhat', 'centos', 'SuSE', 'sles'] %}
     - run:
       - name: cat /etc/{{releasefile}}-release
       - onlyif: test -f /etc/{{releasefile}}-release
@@ -100,7 +100,8 @@ Of course, in single call this dosn't make much sense and is actually
 one line more to write. However, if there is more one operation that
 needed to be done, this makes a big difference. Since it is impossible
 to have more than one same ID, you will be required to write different
-IDs for the _same_ task. This results into something like this:
+IDs for the _same group_ of tasks, if we grouping them by the targeted
+object. This results into something like this:
 
 
 ```yaml
