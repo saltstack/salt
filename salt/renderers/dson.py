@@ -19,13 +19,23 @@ import logging
 
 try:
     import dson
+    HAS_DSON = True
 except ImportError:
-    raise
+    HAS_DSON = False
 
 # Import salt libs
 from salt.ext import six
 
 log = logging.getLogger(__name__)
+
+# Define the module's virtual name
+__virtualname__ = 'dson'
+
+
+def __virtual__():
+    if not HAS_DSON:
+        return (False, 'dson module not installed')
+    return __virtualname__
 
 
 def render(dson_input, saltenv='base', sls='', **kwargs):
