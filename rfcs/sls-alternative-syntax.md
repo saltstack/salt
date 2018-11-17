@@ -155,8 +155,8 @@ It works in three steps:
 ```python
 ret = []
 for function_name in functions:
-  args, kwargs = functions[function_name]['args'], functions[function_name]['kwargs']
-  ret.append(getattr(function_name, *args, **kwargs))
+    args, kwargs = functions[function_name]['args'], functions[function_name]['kwargs']
+    ret.append(getattr(function_name, *args, **kwargs))
 ```
 
 ## What needs to be changed in existing modules?
