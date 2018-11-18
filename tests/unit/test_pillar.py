@@ -9,6 +9,7 @@
 
 # Import python libs
 from __future__ import absolute_import
+import os
 import shutil
 import tempfile
 
@@ -895,3 +896,42 @@ class AsyncRemotePillarTestCase(TestCase):
              'pillar_override': {},
              'extra_minion_data': {'path_to_add': 'fake_data'}},
             dictkey='pillar')
+
+
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+class PillarCacheTestCase(TestCase):
+    '''
+    Tests for instantiating a PillarCache in salt.pillar
+    '''
+    def setUp(self):
+        self.tmpdir = tempfile.mkdtemp()
+        self.path = os.path.join(self.tmpdir, 'CacheDisk_test')
+
+    def tearDown(self):
+        shutil.rmtree(self.tmpdir, ignore_errors=True)
+
+    def test_compile_pillar(self):
+        opts = {
+            'pillar_cache': True,
+            'pillar_cache_ttl': 10,
+            'pillar_cache_backend': 'disk'
+        }
+
+        with patch('salt.pillar.PillarCache._minion_cache_path', MagicMock(return_value=self.path)):
+            # We haven't seen this minion yet in the cache. Store it.
+            pillar = salt.pillar.PillarCache(opts, {}, 'mocked-minion', 'dev', pillarenv='dev')
+            with patch('salt.pillar.PillarCache.fetch_pillar', MagicMock(return_value={'env': 'dev'})):
+                pillar.compile_pillar()
+                self.assertEqual(pillar.cache['mocked-minion'], {'dev': {'env': 'dev'}})
+            # We found the minion but not the env. Store it.
+            pillar = salt.pillar.PillarCache(opts, {}, 'mocked-minion', 'test', pillarenv='test')
+            with patch('salt.pillar.PillarCache.fetch_pillar', MagicMock(return_value={'env': 'test'})):
+                pillar.compile_pillar()
+                self.assertEqual(pillar.cache['mocked-minion'], {'dev': {'env': 'dev'},
+                                                                 'test': {'env': 'test'}})
+            # We have a cache hit! Send it back.
+            pillar = salt.pillar.PillarCache(opts, {}, 'mocked-minion', 'test', pillarenv='test')
+            with patch('salt.pillar.PillarCache.fetch_pillar', MagicMock(return_value={'k': 'v'})):
+                pillar.compile_pillar()
+                self.assertEqual(pillar.cache['mocked-minion'], {'dev': {'env': 'dev'},
+                                                                 'test': {'env': 'test'}})
