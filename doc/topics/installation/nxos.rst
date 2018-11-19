@@ -289,14 +289,14 @@ STEP 4: Configure SaltStack Minion
 
 Make the following changes to the ``/etc/salt/minion`` configuration file in the NX-OS GuestShell.
 
-Change the `master` directive to point to the SaltStack Master.
+Change the ``master:`` directive to point to the SaltStack Master.
 
 .. code:: diff
 
   - #master: salt
   + master: saltmaster.example.com
 
-Change the `id` directive to easily identify the minion running in the GuestShell.
+Change the ``id:`` directive to easily identify the minion running in the GuestShell.
 
 Example: 
 
