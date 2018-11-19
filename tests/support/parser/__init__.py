@@ -456,6 +456,14 @@ class SaltTestingParser(optparse.OptionParser):
                     ret.update(filename_map[path_expr])
                     break
 
+        if any(x.startswith('integration.proxy.') for x in ret):
+            # Ensure that the salt-proxy daemon is started for these tests.
+            self.options.proxy = True
+
+        if any(x.startswith('integration.ssh.') for x in ret):
+            # Ensure that an ssh daemon is started for these tests.
+            self.options.ssh = True
+
         return ret
 
     def parse_args(self, args=None, values=None):

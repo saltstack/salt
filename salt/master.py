@@ -667,9 +667,10 @@ class Master(SMaster):
             self.process_manager = salt.utils.process.ProcessManager(wait_for_kill=5)
             pub_channels = []
             log.info('Creating master publisher process')
+            log_queue = salt.log.setup.get_multiprocessing_logging_queue()
             for transport, opts in iter_transport_opts(self.opts):
                 chan = salt.transport.server.PubServerChannel.factory(opts)
-                chan.pre_fork(self.process_manager)
+                chan.pre_fork(self.process_manager, kwargs={'log_queue': log_queue})
                 pub_channels.append(chan)
 
             log.info('Creating master event publisher process')
@@ -726,8 +727,7 @@ class Master(SMaster):
             log.info('Creating master request server process')
             kwargs = {}
             if salt.utils.platform.is_windows():
-                kwargs['log_queue'] = salt.log.setup.get_multiprocessing_logging_queue()
-                kwargs['log_queue_level'] = salt.log.setup.get_multiprocessing_logging_level()
+                kwargs['log_queue'] = log_queue
                 kwargs['secrets'] = SMaster.secrets
 
             self.process_manager.add_process(
