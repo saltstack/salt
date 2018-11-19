@@ -46,9 +46,9 @@ STEP 2: Choose Salt Minion Type
 Using the tables above, select the Salt Minion type.
 
 Choices:
-  * ``SSH`` Proxy Minion
-  * ``NX-API`` Proxy Minon
-  * ``GuestShell`` Native Minion
+  * ``SSH`` Proxy Minion (See `Salt Proxy Minion Configuration`_ Section)
+  * ``NX-API`` Proxy Minon (See `Salt Proxy Minion Configuration`_ Section)
+  * ``GuestShell`` Native Minion (See `GuestShell Salt Minion Installation`_ Section)
       * Some platforms support a native minon installed directly on the NX-OS device inside the GuestShell
       * The GuestShell is a secure Linux container environment running CentOS
 
