@@ -9,7 +9,8 @@ This document describes the Salt Minion installation and configuration on Cisco 
 Pre-Install Tasks
 =================
 
-**STEP 1: Verify Platform and Software Version Support**
+STEP 1: Verify Platform and Software Version Support
+----------------------------------------------------
 
 The following platforms and software versions have been certified to work with this version of Salt.
 
@@ -39,7 +40,8 @@ The following platforms and software versions have been certified to work with t
      N9k       Support includes all N9xxx models
      ========  ===========
 
-**STEP 2: Choose Salt Minion Type**
+STEP 2: Choose Salt Minion Type
+-------------------------------
 
 Using the tables above, select the Salt Minion type.
 
@@ -50,7 +52,8 @@ Choices:
       * Some platforms support a native minon installed directly on the NX-OS device inside the GuestShell
       * The GuestShell is a secure Linux container environment running CentOS
 
-**STEP 3: Network Connectivity**
+STEP 3: Network Connectivity
+----------------------------
 
 Ensure that IP reachability exists between the NX-OS Salt Minon device and the SaltStack Master. Note that connectivity via the management interface is in a separate VRF context which requires some additional configuration.
 
@@ -144,6 +147,78 @@ All of the data for both ssh and nxapi proxy minion types can be stored in the s
 
 GuestShell Salt Minion Installation
 ===================================
+
+This section is only required when running the SaltStack Minion from the ``guestshell``.
+
+STEP 1a: Enable the gustshell on low footprint N3ks
+---------------------------------------------------
+
+**NOTE:** Skip down to **STEP 1b** if the target system is not a low footprint N3k.
+
+Nexus 3xxx switches with 4 GB RAM and 1.6 GB bootflash are advised to use compacted images to reduce the storage resources consumed by the image. As part of the compaction process, the ``guestshell.ova`` is removed from the system image.  To make use of the guestshell on these systems, the guestshell.ova may be downloaded and used to install the guestshell.
+
+Guestshell OVA Download Link_
+
+.. _Link: https://software.cisco.com/download/home/283970187/type/282088129/release/9.2%25281%2529?catid=268438038
+
+Starting in release ``9.2(1)`` and onward, the .ova file can be copied to the ``volatile:`` directory which frees up more space on ``bootflash:``.
+
+Copy the ``guestshell.ova`` file to ``volatile:`` if supported, otherwise copy it to ``bootflash:``
+
+.. code:: bash
+
+  n3xxx# copy scp://admin@1.2.3.4/guestshell.ova volatile: vrf management
+  guestshell.ova 100% 55MB 10.9MB/s 00:05 
+  Copy complete, now saving to disk (please wait)...
+  Copy complete.
+
+Use the ``guestshell enable`` command to install and enable guestshell.
+
+.. code:: bash
+
+  n3xxx# guestshell enable package volatile:guestshell.ova
+  
+
+STEP 1b: Enable the gustshell
+-----------------------------
+
+The ``guestshell`` container environment is enabled by default on most platforms; however, the default disk and memory resources allotted to guestshell are typically too small to support SaltStack Minion requirements. The resource limits may be increased with the NX-OS CLI ``guestshell resize`` commands as shown below.
+
+  .. table:: Resource Requirements
+     :widths: auto
+     :align: center
+
+     ===================  =====================
+     Resource             Recommended
+     ===================  =====================
+     Disk                 **500 MB**
+     Memory               **350 MB**
+     ===================  =====================
+
+
+``show guestshell detail`` displays the current resource limits:
+
+.. code:: bash
+
+  n3k# show guestshell detail
+  Virtual service guestshell+ detail
+    State                 : Activated
+  ...
+    Resource reservation
+    Disk                : 150 MB
+    Memory              : 128 MB
+
+``guestshell resize rootfs`` sets disk size limits while ``guestshell resize memory`` sets memory limits. The resize commands do not take effect until after the guestshell container is (re)started by ``guestshell reboot`` or ``guestshell enable``.
+
+**Example.** Allocate resources for guestshell by setting new limits to 500MB disk and 350MB memory.
+
+.. code:: bash
+  n3k# guestshell resize rootfs 500
+  n3k# guestshell resize memory 350
+
+  n3k# guestshell reboot
+  Are you sure you want to reboot the guest shell? (y/n) [n] y
+
 
 GuestShell Salt Minion Persistence
 ===================================
