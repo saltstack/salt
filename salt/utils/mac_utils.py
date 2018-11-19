@@ -354,7 +354,7 @@ def _available_services(refresh=False):
                 # Follow symbolic links of files in _launchd_paths
                 file_path = os.path.join(root, file_name)
                 true_path = os.path.realpath(file_path)
-                log.trace('Gathering service info for {}'.format(true_path))
+                log.trace('Gathering service info for %s', true_path)
                 # ignore broken symlinks
                 if not os.path.exists(true_path):
                     continue
@@ -404,8 +404,8 @@ def _available_services(refresh=False):
                         'file_path': true_path,
                         'plist': plist}
                 except KeyError:
-                    log.debug('Service {} does not contain a'
-                              ' Label key. Skipping.'.format(true_path))
+                    log.debug('Service %s does not contain a'
+                              ' Label key. Skipping.', true_path)
                     continue
 
     # put this in __context__ as this is a time consuming function.
