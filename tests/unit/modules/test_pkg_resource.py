@@ -139,12 +139,16 @@ class PkgresTestCase(TestCase, LoaderModuleMockMixin):
             'foobar': [
                 {'version': '1.2.0', 'epoch': '2', 'release': '7', 'arch': 'x86_64'},
                 {'version': '1.2.3', 'epoch': '2', 'release': '27', 'arch': 'x86_64'},
-            ]
+            ],
+            'foobar.something': [{'version': '1.1', 'epoch': '3', 'release': '23.1', 'arch': 'i686'}],
+            'foobar.': [{'version': '1.1', 'epoch': '3', 'release': '23.1', 'arch': 'i686'}]
         }
         expected_pkg_list = {
             'glibc': '2.12-1.212.el6',
             'glibc.i686': '2.12-1.212.el6',
             'foobar': '2:1.2.0-7,2:1.2.3-27',
+            'foobar.something': '3:1.1-23.1',
+            'foobar.': '3:1.1-23.1',
         }
         self.assertDictEqual(pkg_resource.format_pkg_list(packages, False, None), expected_pkg_list)
 
@@ -160,18 +164,22 @@ class PkgresTestCase(TestCase, LoaderModuleMockMixin):
             'foobar': [
                 {'version': '1.2.0', 'epoch': '2', 'release': '7', 'arch': 'x86_64'},
                 {'version': '1.2.3', 'epoch': '2', 'release': '27', 'arch': 'x86_64'},
-            ]
+            ],
+            'foobar.something': [{'version': '1.1', 'epoch': '3', 'release': '23.1', 'arch': 'i686'}],
+            'foobar.': [{'version': '1.1', 'epoch': '3', 'release': '23.1', 'arch': 'i686'}]
         }
         expected_pkg_list = {
             'glibc': [
                 {
                     'arch': 'x86_64',
                     'release': '1.212.el6',
+                    'epoch': '',
                     'version': '2.12'
                 },
                 {
                     'arch': 'i686',
                     'release': '1.212.el6',
+                    'epoch': '',
                     'version': '2.12'
                 }
              ],
@@ -188,7 +196,23 @@ class PkgresTestCase(TestCase, LoaderModuleMockMixin):
                     'epoch': '2',
                     'version': '1.2.3'
                 }
-             ]
+            ],
+            'foobar.': [
+                {
+                    'arch': 'i686',
+                    'release': '23.1',
+                    'epoch': '3',
+                    'version': '1.1'
+                }
+            ],
+            'foobar.something': [
+                {
+                    'arch': 'i686',
+                    'release': '23.1',
+                    'epoch': '3',
+                    'version': '1.1'
+                }
+            ]
         }
         self.assertDictEqual(pkg_resource.format_pkg_list(packages, False, attr=['epoch', 'release']), expected_pkg_list)
 
