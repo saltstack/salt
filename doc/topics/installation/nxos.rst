@@ -284,6 +284,56 @@ Install the Salt Minion.
 
   ``[root@guestshell guestshell]# yum install salt-minion``
 
+STEP 4: Configure SaltStack Minion
+----------------------------------
+
+Make the following changes to the ``/etc/salt/minion`` configuration file in the NX-OS GuestShell.
+
+Change the `master` directive to point to the SaltStack Master.
+
+.. code:: diff
+
+  - #master: salt
+  + master: saltmaster.example.com
+
+Change the `id` directive to easily identify the minion running in the GuestShell.
+
+Example: 
+
+.. code:: diff
+
+  - #id: salt
+  + id: n3k-guestshell-minion
+
+Start the Minon in the Guestshell and accept the key on the SaltStack Master.
+
+  ``[root@guestshell ~]# salt-minion -d``
+  
+.. code:: bash
+
+  saltmaster: salt-key -L
+  Accepted Keys:
+  Denied Keys:
+  Unaccepted Keys:
+  n3k-guestshell-minion
+  Rejected Keys:
+
+.. code:: bash
+
+  saltmaster: salt-key -A
+  The following keys are going to be accepted:
+  Unaccepted Keys:
+  n3k-guestshell-minion
+  Proceed? [n/Y] Y
+  Key for minion n3k-guestshell-minion accepted.
+
+Ping the SaltStack Minon running in the Guestshell.
+
+.. code:: bash
+
+  saltmaster: salt n3k-guestshell-minion nxos.ping
+  n3k-guestshell-minion:
+    True
 
 
 GuestShell Salt Minion Persistence
