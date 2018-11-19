@@ -617,17 +617,12 @@ def _get_reg_software(include_components=True,
             use_32bit_registry=use_32bit)
 
         d_vers = 'Not Found'
-        if (not d_vers_regdata['success'] or
-                d_vers_regdata['vtype'] not in ['REG_SZ',
-                                                'REG_EXPAND_SZ',
-                                                'REG_DWORD'] or
-                d_name_regdata['vdata'] in ['(value not set)', None, False]):
-            d_vers = d_name
-
-        if isinstance(d_vers_regdata['vdata'], int):
-            d_vers = six.text_type(d_vers_regdata['vdata'])
-        elif d_vers_regdata['vdata'] and d_vers_regdata['vdata'] != '(value not set)':  # Check for blank values
-            d_vers = d_vers_regdata['vdata']
+        if (d_vers_regdata['success'] and
+                d_vers_regdata['vtype'] in ['REG_SZ', 'REG_EXPAND_SZ', 'REG_DWORD']):
+            if isinstance(d_vers_regdata['vdata'], int):
+                d_vers = six.text_type(d_vers_regdata['vdata'])
+            elif d_vers_regdata['vdata'] and d_vers_regdata['vdata'] != '(value not set)':  # Check for blank values
+                d_vers = d_vers_regdata['vdata']
 
         reg_software.setdefault(d_name, []).append(d_vers)
 
