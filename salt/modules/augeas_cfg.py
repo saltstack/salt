@@ -42,6 +42,7 @@ except ImportError:
 
 # Import salt libs
 import salt.utils.args
+import salt.utils.data
 from salt.exceptions import SaltInvocationError
 
 log = logging.getLogger(__name__)
@@ -239,6 +240,7 @@ def execute(context=None, lens=None, commands=(), load_path=None):
                            'see debug log for details: {0}'.format(arg)
             return ret
 
+        args = salt.utils.data.decode(args, to_str=True)
         log.debug('%s: %s', method, args)
 
         func = getattr(aug, method)
