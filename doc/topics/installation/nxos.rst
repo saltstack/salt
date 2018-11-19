@@ -259,12 +259,12 @@ STEP 3: Install SaltStack Minion
 
 **OPTIONAL: Upgrade the pip installer**
 
-  ``pip install --upgrade pip``
+  ``[root@guestshell guestshell]# pip install --upgrade pip``
 
 
 Install the ``certifi`` python package.
 
-  ``pip install certifi``
+  ``[root@guestshell guestshell]# pip install certifi``
 
 The most current information on installing the SaltStack Minion in a Centos7 environment can be found here_
 
@@ -274,15 +274,15 @@ Information from the install guide is provided here for convenience.
 
 Run the following commands to install the SaltStack repository and key:
 
-  ``yum install https://repo.saltstack.com/yum/redhat/salt-repo-latest-2.el7.noarch.rpm``
+  ``[root@guestshell guestshell]# yum install https://repo.saltstack.com/yum/redhat/salt-repo-latest-2.el7.noarch.rpm``
 
 Run the following command to force yum to revalidate the cache for each repository.
 
-  ``yum clean expire-cache``
+  ``[root@guestshell guestshell]# yum clean expire-cache``
   
 Install the Salt Minion.
 
-  ``yum install salt-minion``
+  ``[root@guestshell guestshell]# yum install salt-minion``
 
 
 
