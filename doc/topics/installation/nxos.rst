@@ -246,7 +246,7 @@ The ``guestshell`` is an independent CentOS container that does not inherit sett
   EOF
 
 
-**OPTIONAL: Define proxy server variables to allow network access to SaltStack package repositories**
+**OPTIONAL: Define proxy server variables if needed to allow network access to SaltStack package repositories**
 
 .. code:: bash
 
@@ -257,11 +257,33 @@ The ``guestshell`` is an independent CentOS container that does not inherit sett
 STEP 3: Install SaltStack Minion
 ---------------------------------
 
+**OPTIONAL: Upgrade the pip installer**
+
+  ``pip install --upgrade pip``
+
+
 Install the ``certifi`` python package.
 
-.. code:: bash
+  ``pip install certifi``
 
-  pip install certifi
+The most current information on installing the SaltStack Minion in a Centos7 environment can be found here_
+
+.. _here: https://repo.saltstack.com/#rhel
+
+Information from the install guide is provided here for convenience.
+
+Run the following commands to install the SaltStack repository and key:
+
+  ``yum install https://repo.saltstack.com/yum/redhat/salt-repo-latest-2.el7.noarch.rpm``
+
+Run the following command to force yum to revalidate the cache for each repository.
+
+  ``yum clean expire-cache``
+  
+Install the Salt Minion.
+
+  ``yum install salt-minion``
+
 
 
 GuestShell Salt Minion Persistence
