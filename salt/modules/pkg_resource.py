@@ -319,22 +319,22 @@ def format_pkg_list(packages, versions_as_list, attr):
             requested_attr &= set(attr + ['version'] + ['arch'])
 
         for name in ret:
+            try:
+                _name, _arch = name.rsplit('.', 1)
+            except ValueError:
+                _name, _arch = None, None
+
             versions = []
-            pkgname = name
+            pkgname = None
             for all_attr in ret[name]:
                 filtered_attr = {}
                 for key in requested_attr:
-                    if all_attr[key]:
+                    if key in all_attr:
                         filtered_attr[key] = all_attr[key]
                 versions.append(filtered_attr)
-            try:
-                namepart, archpart = name.rsplit('.', 1)
-            except ValueError:
-                pass
-            else:
-                if archpart in [attrs['arch'] for attrs in versions]:
-                    pkgname = namepart
-            ret_attr.setdefault(pkgname, []).extend(versions)
+                if _name and filtered_attr.get('arch', None) == _arch:
+                    pkgname = _name
+            ret_attr.setdefault(pkgname or name, []).extend(versions)
         return ret_attr
 
     for name in ret:
