@@ -56,7 +56,7 @@ def _get_config(**kwargs):
     try:
         config.update(__salt__['config.get'](config_key, {}))
     except (NameError, KeyError) as e:
-        # likly using salt-run so fallback to __opts__
+        # likely using salt-run so fallback to __opts__
         config.update(kwargs['opts'].get(config_key, {}))
     # pylint: disable=C0201
     for k in set(config.keys()) & set(kwargs.keys()):
@@ -69,7 +69,7 @@ def _get_sk(**kwargs):
     Return sk
     '''
     config = _get_config(**kwargs)
-    key = config['sk']
+    key = salt.utils.stringutils.to_str(config['sk'])
     sk_file = config['sk_file']
     if not key and sk_file:
         with salt.utils.files.fopen(sk_file, 'rb') as keyf:
@@ -84,7 +84,7 @@ def _get_pk(**kwargs):
     Return pk
     '''
     config = _get_config(**kwargs)
-    pubkey = config['pk']
+    pubkey = salt.utils.stringutils.to_str(config['pk'])
     pk_file = config['pk_file']
     if not pubkey and pk_file:
         with salt.utils.files.fopen(pk_file, 'rb') as keyf:
@@ -199,12 +199,7 @@ def enc(data, **kwargs):
         )
         kwargs['sk'] = kwargs['key']
 
-    # ensure data is in bytes
-    data = salt.utils.stringutils.to_bytes(data)
-
     box_type = _get_config(**kwargs)['box_type']
-    if box_type == 'sealedbox':
-        return sealedbox_encrypt(data, **kwargs)
     if box_type == 'secretbox':
         return secretbox_encrypt(data, **kwargs)
     return sealedbox_encrypt(data, **kwargs)
@@ -271,12 +266,7 @@ def dec(data, **kwargs):
         # set boxtype to `secretbox` to maintain backward compatibility
         kwargs['box_type'] = 'secretbox'
 
-    # ensure data is in bytes
-    data = salt.utils.stringutils.to_bytes(data)
-
     box_type = _get_config(**kwargs)['box_type']
-    if box_type == 'sealedbox':
-        return sealedbox_decrypt(data, **kwargs)
     if box_type == 'secretbox':
         return secretbox_decrypt(data, **kwargs)
     return sealedbox_decrypt(data, **kwargs)
