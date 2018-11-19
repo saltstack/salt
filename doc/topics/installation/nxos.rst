@@ -150,7 +150,7 @@ GuestShell Salt Minion Installation
 
 This section is only required when running the SaltStack Minion from the ``guestshell``.
 
-STEP 1a: Enable the gustshell on low footprint N3ks
+STEP 1a: Enable the Guestshell on low footprint N3ks
 ---------------------------------------------------
 
 **NOTE:** Skip down to **STEP 1b** if the target system is not a low footprint N3k.
@@ -179,8 +179,8 @@ Use the ``guestshell enable`` command to install and enable guestshell.
   n3xxx# guestshell enable package volatile:guestshell.ova
   
 
-STEP 1b: Enable the gustshell
------------------------------
+STEP 1b: Enable the Guestshell
+------------------------------
 
 The ``guestshell`` container environment is enabled by default on most platforms; however, the default disk and memory resources allotted to guestshell are typically too small to support SaltStack Minion requirements. The resource limits may be increased with the NX-OS CLI ``guestshell resize`` commands as shown below.
 
@@ -210,6 +210,7 @@ The ``guestshell`` container environment is enabled by default on most platforms
 
 ``guestshell resize rootfs`` sets disk size limits while ``guestshell resize memory`` sets memory limits. The resize commands do not take effect until after the guestshell container is (re)started by ``guestshell reboot`` or ``guestshell enable``.
 
+
 **Example.** Allocate resources for guestshell by setting new limits to 500MB disk and 350MB memory.
 
 .. code:: bash
@@ -218,6 +219,48 @@ The ``guestshell`` container environment is enabled by default on most platforms
 
   n3k# guestshell reboot
   Are you sure you want to reboot the guest shell? (y/n) [n] y
+
+STEP 2: Set Up Guestshell Network
+---------------------------------
+
+The ``guestshell`` is an independent CentOS container that does not inherit settings from NX-OS.
+
+* Use ``guestshell`` to enter the guestshell environment, then become root.
+* *Optional:* Use ``chvrf`` to specify a vrf namespace; e.g. ``sudo chvrf management``
+
+.. code:: bash
+
+  n3k#  guestshell
+
+  [guestshell@guestshell ~]$ sudo su -          # Optional: sudo chvrf management
+  [root@guestshell guestshell]#
+
+**OPTIONAL: Add DNS Configuration**
+
+.. code:: bash
+
+  [root@guestshell guestshell]#  cat >> /etc/resolv.conf << EOF
+  nameserver 10.0.0.202
+  domain mycompany.com
+  EOF
+
+
+**OPTIONAL: Define proxy server variables to allow network access to SaltStack package repositories**
+
+.. code:: bash
+
+  export http_proxy=http://proxy.yourdomain.com:<port>
+  export https_proxy=https://proxy.yourdomain.com:<port>
+  
+
+STEP 3: Install SaltStack Minion
+---------------------------------
+
+Install the ``certifi`` python package.
+
+.. code:: bash
+
+  pip install certifi
 
 
 GuestShell Salt Minion Persistence
