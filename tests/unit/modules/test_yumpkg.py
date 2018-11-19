@@ -242,8 +242,67 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
                     'arch': 'x86_64',
                     'epoch': ''
                 }}.items():
+
                 self.assertTrue(pkgs.get(pkg_name))
                 self.assertEqual(pkgs[pkg_name], [pkg_attr])
+
+    def test_list_pkgs_with_attr_multiple_versions(self):
+        '''
+        Test packages listing with the attr parameter reporting multiple version installed
+
+        :return:
+        '''
+        def _add_data(data, key, value):
+            data.setdefault(key, []).append(value)
+
+        rpm_out = [
+            'glibc_|-(none)_|-2.12_|-1.212.el6_|-i686_|-(none)_|-1542394210'
+            'glibc_|-(none)_|-2.12_|-1.212.el6_|-x86_64_|-(none)_|-1542394204',
+            'virt-what_|-(none)_|-1.13_|-8.el7_|-x86_64_|-(none)_|-1487838486',
+            'virt-what_|-(none)_|-1.10_|-2.el7_|-x86_64_|-(none)_|-1387838486',
+        ]
+        with patch.dict(yumpkg.__grains__, {'osarch': 'x86_64'}), \
+             patch.dict(yumpkg.__salt__, {'cmd.run': MagicMock(return_value=os.linesep.join(rpm_out))}), \
+             patch.dict(yumpkg.__salt__, {'pkg_resource.add_pkg': _add_data}), \
+             patch.dict(yumpkg.__salt__, {'pkg_resource.format_pkg_list': pkg_resource.format_pkg_list}), \
+             patch.dict(yumpkg.__salt__, {'pkg_resource.stringify': MagicMock()}):
+            pkgs = yumpkg.list_pkgs(attr=['epoch', 'release', 'arch', 'install_date_time_t'])
+            expected_pkg_list = {
+                'glibc': [
+                    {
+                        'version': '2.12',
+                        'release': '1.212.el6',
+                        'install_date_time_t': 1542394210,
+                        'arch': 'i686',
+                        'epoch': ''
+                    },
+                    {
+                        'version': '2.12',
+                        'release': '1.212.el6',
+                        'install_date_time_t': 1542394204,
+                        'arch': 'x86_64',
+                        'epoch': ''
+                    }
+                ],
+                'virt-what': [
+                    {
+                        'version': '1.10',
+                        'release': '2.el7',
+                        'install_date_time_t': 1387838486,
+                        'arch': 'x86_64',
+                        'epoch': ''
+                    },
+                    {
+                        'version': '1.13',
+                        'release': '8.el7',
+                        'install_date_time_t': 1487838486,
+                        'arch': 'x86_64',
+                        'epoch': ''
+                    }
+                ]
+            }
+            for pkgname, pkginfo in pkgs.items():
+                self.assertListEqual(pkginfo, expected_pkg_list[pkgname])
 
     def test_latest_version_with_options(self):
         with patch.object(yumpkg, 'list_pkgs', MagicMock(return_value={})):
