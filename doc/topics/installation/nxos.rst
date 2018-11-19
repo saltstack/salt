@@ -55,9 +55,9 @@ Choices:
 STEP 3: Network Connectivity
 ----------------------------
 
-Ensure that IP reachability exists between the NX-OS Salt Minon device and the SaltStack Master. Note that connectivity via the management interface is in a separate VRF context which requires some additional configuration.
+Ensure that IP reachability exists between the NX-OS Salt Minon device and the SaltStack Master.
 
-Note: The management interface exists in a separate VRF context and requires additional configuration as shown.
+**Note:** The management interface exists in a separate VRF context and requires additional configuration as shown.
 
 Example: Nexus CLI Configuration for connectivity via management interface
 
