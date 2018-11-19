@@ -377,7 +377,7 @@ def list_pkgs(versions_as_list=False,
 
     Args:
 
-        version_as_list (bool):
+        versions_as_list (bool):
             Returns the versions as a list
 
         include_components (bool):
