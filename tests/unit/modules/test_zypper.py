@@ -541,36 +541,42 @@ Repository 'DUMMY' not found by its alias, number, or URI.
                     'release': '129.686',
                     'arch': 'noarch',
                     'install_date_time_t': 1498636511,
+                    'epoch': '',
                 },
                 'yast2-ftp-server': {
                     'version': '3.1.8',
                     'release': '8.1',
                     'arch': 'x86_64',
                     'install_date_time_t': 1499257798,
+                    'epoch': '',
                 },
                 'protobuf-java': {
                     'version': '2.6.1',
                     'release': '3.1.develHead',
                     'install_date_time_t': 1499257756,
                     'arch': 'noarch',
+                    'epoch': '',
                 },
                 'susemanager-build-keys-web': {
                     'version': '12.0',
                     'release': '5.1.develHead',
                     'arch': 'noarch',
                     'install_date_time_t': 1498636510,
+                    'epoch': '',
                 },
                 'apache-commons-cli': {
                     'version': '1.2',
                     'release': '1.233',
                     'arch': 'noarch',
                     'install_date_time_t': 1498636510,
+                    'epoch': '',
                 },
                 'jose4j': {
                     'arch': 'noarch',
                     'version': '0.4.4',
                     'release': '2.1.develHead',
                     'install_date_time_t': 1499257756,
+                    'epoch': '',
                 }}.items():
                 self.assertTrue(pkgs.get(pkg_name))
                 self.assertEqual(pkgs[pkg_name], [pkg_attr])
