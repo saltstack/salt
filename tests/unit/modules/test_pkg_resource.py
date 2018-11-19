@@ -151,8 +151,8 @@ class PkgresTestCase(TestCase, LoaderModuleMockMixin):
     def test_format_pkg_list_with_attr(self):
         '''
             Test to output format of the package list with attr parameter.
-			In this case, any redundant "arch" reference will be removed from the package name since it's
-			include as part of the requested attr.
+            In this case, any redundant "arch" reference will be removed from the package name since it's
+            include as part of the requested attr.
         '''
         packages = {
             'glibc': [{'version': '2.12', 'epoch': '', 'release': '1.212.el6', 'arch': 'x86_64'}],
