@@ -339,7 +339,11 @@ Ping the SaltStack Minon running in the Guestshell.
 GuestShell Salt Minion Persistence
 ===================================
 
-This section documents SaltStack Minion persistence after system restarts and high availability switchovers.
+This section documents SaltStack Minion persistence in the ``guestshell`` after system restarts and high availability switchovers.
+
+The ``guestshell`` container does not automatically sync filesystem changes from the active processor to the standby processor. This means that SaltStack Minion installation files and related file changes will not be present on the standby until they are manually synced with the following NX-OS exec command:
+
+``guestshell sync``
 
 The ``guestshell`` environment uses **systemd** for service management. The SaltStack Minion provides a generic systemd script when installed, but a slight modification as shown below is needed for nodes that run Salt in the management (or other vrf) namespace:
 
