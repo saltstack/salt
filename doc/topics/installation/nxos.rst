@@ -214,6 +214,7 @@ The ``guestshell`` container environment is enabled by default on most platforms
 **Example.** Allocate resources for guestshell by setting new limits to 500MB disk and 350MB memory.
 
 .. code:: bash
+
   n3k# guestshell resize rootfs 500
   n3k# guestshell resize memory 350
 
