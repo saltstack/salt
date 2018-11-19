@@ -311,22 +311,31 @@ def format_pkg_list(packages, versions_as_list, attr):
     '''
     ret = copy.deepcopy(packages)
     if attr:
+        ret_attr = {}
         requested_attr = set(['epoch', 'version', 'release', 'arch',
                               'install_date', 'install_date_time_t'])
 
         if attr != 'all':
-            requested_attr &= set(attr + ['version'])
+            requested_attr &= set(attr + ['version'] + ['arch'])
 
         for name in ret:
             versions = []
+            pkgname = name
             for all_attr in ret[name]:
                 filtered_attr = {}
                 for key in requested_attr:
                     if all_attr[key]:
                         filtered_attr[key] = all_attr[key]
                 versions.append(filtered_attr)
-            ret[name] = versions
-        return ret
+            try:
+                namepart, archpart = name.rsplit('.', 1)
+            except ValueError:
+                pass
+            else:
+                if archpart in [attrs['arch'] for attrs in versions]:
+                    pkgname = namepart
+            ret_attr.setdefault(pkgname, []).extend(versions)
+        return ret_attr
 
     for name in ret:
         ret[name] = [format_version(d['epoch'], d['version'], d['release'])
