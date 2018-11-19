@@ -338,3 +338,44 @@ Ping the SaltStack Minon running in the Guestshell.
 
 GuestShell Salt Minion Persistence
 ===================================
+
+This section documents SaltStack Minion persistence after system restarts and high availability switchovers.
+
+The ``guestshell`` environment uses **systemd** for service management. The SaltStack Minion provides a generic systemd script when installed, but a slight modification as shown below is needed for nodes that run Salt in the management (or other vrf) namespace:
+
+.. code:: diff
+
+  --- /usr/lib/systemd/system/salt-minion.service.old
+  +++ /usr/lib/systemd/system/salt-minion.service
+  [Unit]
+  Description=The Salt Minion
+  Documentation=man:salt-minion(1) file:///usr/share/doc/salt/html/contents.html
+  https://docs.saltstack.com/en/latest/contents.html
+  After=network.target salt-master.service
+
+  [Service]
+  KillMode=process
+  Type=notify
+  NotifyAccess=all
+  LimitNOFILE=8192
+
+  - ExecStart=/usr/bin/salt-minion
+  + ExecStart=/bin/nsenter --net=/var/run/netns/management -- /usr/bin/salt-minion
+
+  [Install]
+  WantedBy=multi-user.target
+
+
+Change the ``pidfile:`` directive to point to the ``/run`` ``tmpfs`` location in the GuestShell.
+
+.. code:: diff
+
+  - #pidfile: /var/run/salt-minion.pid
+  + pidfile: /run/salt-minion.pid
+
+Next, enable the SaltStack Minion systemd service (the ``enable`` command adds it to systemd for autostarting on the next boot) and optionally start it now:
+
+.. code:: diff
+
+  systemctl enable salt-minion
+  systemctl start salt-minion
