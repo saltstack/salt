@@ -129,6 +129,69 @@ class PkgresTestCase(TestCase, LoaderModuleMockMixin):
         '''
         self.assertIsNone(pkg_resource.sort_pkglist({}))
 
+    def test_format_pkg_list_no_attr(self):
+        '''
+            Test to output format of the package list with no attr parameter.
+        '''
+        packages = {
+            'glibc': [{'version': '2.12', 'epoch': '', 'release': '1.212.el6', 'arch': 'x86_64'}],
+            'glibc.i686': [{'version': '2.12', 'epoch': '', 'release': '1.212.el6', 'arch': 'i686'}],
+            'foobar': [
+                {'version': '1.2.0', 'epoch': '2', 'release': '7', 'arch': 'x86_64'},
+                {'version': '1.2.3', 'epoch': '2', 'release': '27', 'arch': 'x86_64'},
+            ]
+        }
+        expected_pkg_list = {
+            'glibc': '2.12-1.212.el6',
+            'glibc.i686': '2.12-1.212.el6',
+            'foobar': '2:1.2.0-7,2:1.2.3-27',
+        }
+        self.assertDictEqual(pkg_resource.format_pkg_list(packages, False, None), expected_pkg_list)
+
+    def test_format_pkg_list_with_attr(self):
+        '''
+            Test to output format of the package list with attr parameter.
+			In this case, any redundant "arch" reference will be removed from the package name since it's
+			include as part of the requested attr.
+        '''
+        packages = {
+            'glibc': [{'version': '2.12', 'epoch': '', 'release': '1.212.el6', 'arch': 'x86_64'}],
+            'glibc.i686': [{'version': '2.12', 'epoch': '', 'release': '1.212.el6', 'arch': 'i686'}],
+            'foobar': [
+                {'version': '1.2.0', 'epoch': '2', 'release': '7', 'arch': 'x86_64'},
+                {'version': '1.2.3', 'epoch': '2', 'release': '27', 'arch': 'x86_64'},
+            ]
+        }
+        expected_pkg_list = {
+            'glibc': [
+                {
+                    'arch': 'x86_64',
+                    'release': '1.212.el6',
+                    'version': '2.12'
+                },
+                {
+                    'arch': 'i686',
+                    'release': '1.212.el6',
+                    'version': '2.12'
+                }
+             ],
+            'foobar': [
+                {
+                    'arch': 'x86_64',
+                    'release': '7',
+                    'epoch': '2',
+                    'version': '1.2.0'
+                },
+                {
+                    'arch': 'x86_64',
+                    'release': '27',
+                    'epoch': '2',
+                    'version': '1.2.3'
+                }
+             ]
+        }
+        self.assertDictEqual(pkg_resource.format_pkg_list(packages, False, attr=['epoch', 'release']), expected_pkg_list)
+
     def test_stringify(self):
         '''
             Test to takes a dict of package name/version information
