@@ -194,6 +194,22 @@ class CacheDiskTestCase(TestCase):
             msg, arg = logger.debug.call_args[0]
             assert msg % arg == 'Cache path does not exist for reading: /solar/interference'
 
+    @patch('os.path.exists', MagicMock(return_value=True))
+    @patch('salt.utils.files.fopen', MagicMock(side_effect=IOError('Radial telemetry infiltration')))
+    def test_read_ioerror_handling(self):
+        '''
+        Test _read() is handling IOError.
+        :return:
+        '''
+        logger = MagicMock()
+        with patch('salt.utils.cache.log', logger):
+            cache.CacheDisk(0, '/solar/interference')
+            assert logger.error.call_count == 1
+            assert len(logger.error.call_args[0]) == 3
+            msg, pth, exc = logger.error.call_args[0]
+            assert msg % (pth, exc) == ('Error while reading disk cache from /solar/interference: '
+                                        'Radial telemetry infiltration')
+
     def test_everything(self):
         '''
         Make sure you can instantiate, add, update, remove, expire
