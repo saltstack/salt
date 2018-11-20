@@ -339,8 +339,8 @@ class PillarCache(object):
             fresh_pillar = self.fetch_pillar()
             self.cache[self.minion_id] = {self.pillarenv: fresh_pillar}
             log.debug('Pillar cache miss for minion %s', self.minion_id)
-            log.debug('Current pillar cache: %s', self.cache._dict)  # FIXME hack!
             return fresh_pillar
+            log.debug('Current pillar cache: %s', self.cache[self.minion_id])
 
 
 class Pillar(object):
