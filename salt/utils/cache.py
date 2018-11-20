@@ -43,7 +43,15 @@ class CacheFactory(object):
             log.error('CacheFactory received unrecognized cache type')
 
 
-class CacheDict(dict):
+class CacheAPI(dict):
+    def store(self):
+        '''
+        Store data in the cache persistence.
+        :return:
+        '''
+
+
+class CacheDict(CacheAPI):
     '''
     Subclass of dict that will lazily delete items past ttl
     '''
