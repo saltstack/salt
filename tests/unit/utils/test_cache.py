@@ -233,7 +233,9 @@ class CacheDiskTestCase(TestCase):
     @patch('salt.utils.data.decode', MagicMock(return_value={'banana': {'status': 'rotten'}}))
     def test_read_old_format_support(self):
         '''
-        Test _read() is handling OSError.
+        Test _read() support old format of the cache.
+        :return:
+        '''
         :return:
         '''
         logger = MagicMock()
