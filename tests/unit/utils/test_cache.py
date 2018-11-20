@@ -322,6 +322,21 @@ class CacheDiskTestCase(TestCase):
                 assert len(logger.error.call_args[0]) == 1
                 assert logger.error.call_args[0][0] == 'Cache cannot be stored on disk: msgpack is missing'
 
+    @patch('salt.utils.files.fopen', MagicMock(side_effect=OSError('Your processor does not develop enough heat.')))
+    def test_store_target_is_not_writable(self):
+        '''
+        Test store() function cannot write target properly.
+        :return:
+        '''
+        logger = MagicMock()
+        with patch('salt.utils.cache.log', logger):
+            c = cache.CacheDisk(0, '/dev/nowhere')
+            c.store()
+            assert logger.error.call_count == 1
+            assert len(logger.error.call_args[0]) == 2
+            msg, args = logger.error.call_args[0]
+            assert msg % args == 'Error storing cache data to the disk: Your processor does not develop enough heat.'
+
     def test_everything(self):
         '''
         Make sure you can instantiate, add, update, remove, expire
