@@ -122,6 +122,13 @@ class CacheDisk(CacheDict):
         '''
         return '<{name} of {length} entries at {memaddr}>'.format(
             name=self.__class__.__name__, length=len(self), memaddr=hex(id(self)))
+
+    def __str__(self):
+        '''
+        String version of this object.
+        :return:
+        '''
+        return self.__repr__()
     def __getitem__(self, key):
         '''
         Check if the key is ttld out, then do the get
