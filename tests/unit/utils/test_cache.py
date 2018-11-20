@@ -306,6 +306,23 @@ class CacheDiskTestCase(TestCase):
             assert 'banana' in args
             assert msg % 'Redundant ACLs' == 'Disk cache retrieved: Redundant ACLs'
 
+    @patch('salt.utils.cache.msgpack', True)
+    @patch('salt.utils.files.fopen', MagicMock())
+    def test_store(self):
+        '''
+        Test storing is not happening if no msgpack installed.
+        :return:
+        '''
+        logger = MagicMock()
+        logger.isEnabledFor = MagicMock(return_value=True)
+        with patch('salt.utils.cache.log', logger):
+            c = cache.CacheDisk(0, '/dev/nowhere')
+            with patch('salt.utils.cache.msgpack', None):
+                c.store()
+                assert logger.error.call_count == 1
+                assert len(logger.error.call_args[0]) == 1
+                assert logger.error.call_args[0][0] == 'Cache cannot be stored on disk: msgpack is missing'
+
     def test_everything(self):
         '''
         Make sure you can instantiate, add, update, remove, expire
