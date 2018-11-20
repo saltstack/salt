@@ -18,6 +18,7 @@ from tests.support.mock import (
 # Import Salt libs
 from salt.exceptions import CommandExecutionError
 import salt.modules.rpm_lowpkg as rpm
+from salt.ext import six
 import salt.modules.yumpkg as yumpkg
 import salt.modules.pkg_resource as pkg_resource
 
