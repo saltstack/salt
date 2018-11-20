@@ -308,13 +308,12 @@ class CacheDiskTestCase(TestCase):
 
     @patch('salt.utils.cache.msgpack', True)
     @patch('salt.utils.files.fopen', MagicMock())
-    def test_store(self):
+    def test_store_msgpack_missing(self):
         '''
         Test storing is not happening if no msgpack installed.
         :return:
         '''
         logger = MagicMock()
-        logger.isEnabledFor = MagicMock(return_value=True)
         with patch('salt.utils.cache.log', logger):
             c = cache.CacheDisk(0, '/dev/nowhere')
             with patch('salt.utils.cache.msgpack', None):
