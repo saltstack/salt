@@ -240,7 +240,7 @@ class CacheDiskTestCase(TestCase):
         with patch('salt.utils.cache.log', logger):
             c = cache.CacheDisk(0, '/dev/nowhere')
             assert 'banana' in c
-            assert 'status' in c['banana']
+            assert 'status' in c['banana']  # pylint: disable=E1135
             assert c['banana']['status'] == 'rotten'
             assert c['banana'] == c._dict['banana']
             assert 'banana' in c._key_cache_time
@@ -261,7 +261,7 @@ class CacheDiskTestCase(TestCase):
         with patch('salt.utils.cache.log', logger):
             c = cache.CacheDisk(0, '/dev/nowhere')
             assert 'banana' in c
-            assert 'status' in c['banana']
+            assert 'status' in c['banana']  # pylint: disable=E1135
             assert c['banana']['status'] == 'rotten'
             assert c['banana'] == c._dict['banana']
             assert 'banana' in c._key_cache_time

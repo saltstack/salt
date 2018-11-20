@@ -54,8 +54,8 @@ class CacheDict(CacheAPI):
     '''
     Subclass of dict that will lazily delete items past ttl
     '''
-    def __init__(self, ttl, *args, **kwargs):
-        dict.__init__(self, *args, **kwargs)
+    def __init__(self, ttl, *args, **kwargs):  # pylint: disable=W0231
+        dict.__init__(self, *args, **kwargs)   # pylint: disable=W0233
         self._ttl = ttl
         self._key_cache_time = {}
 
