@@ -10,9 +10,8 @@ import time
 import logging
 try:
     import msgpack
-    HAS_MSGPACK = True
 except ImportError:
-    HAS_MSGPACK = False
+    msgpack = None
 
 # Import salt libs
 import salt.config
@@ -171,37 +170,44 @@ class CacheDisk(CacheDict):
         '''
         Read in from disk
         '''
-        if not HAS_MSGPACK or not os.path.exists(self._path):
-            return
-        with salt.utils.files.fopen(self._path, 'rb') as fp_:
-            cache = salt.utils.data.decode(msgpack.load(fp_, encoding=__salt_system_encoding__))
-        if "CacheDisk_cachetime" in cache:  # new format
-            self._dict = cache["CacheDisk_data"]
-            self._key_cache_time = cache["CacheDisk_cachetime"]
-        else:  # old format
-            self._dict = cache
-            timestamp = os.path.getmtime(self._path)
-            for key in self._dict:
-                self._key_cache_time[key] = timestamp
-        if log.isEnabledFor(logging.DEBUG):
-            log.debug('Disk cache retrieved: %s', cache)
+        if msgpack is None:
+            log.error('Cache cannot be read from the disk: msgpack is missing')
+        elif not os.path.exists(self._path):
+            log.debug('Cache path does not exist for reading: %s', self._path)
+        else:
+            try:
+                with salt.utils.files.fopen(self._path, 'rb') as fp_:
+                    cache = salt.utils.data.decode(msgpack.load(fp_, encoding=__salt_system_encoding__))
+                if "CacheDisk_cachetime" in cache:  # new format
+                    self._dict = cache["CacheDisk_data"]
+                    self._key_cache_time = cache["CacheDisk_cachetime"]
+                else:  # old format
+                    self._dict = cache
+                    timestamp = os.path.getmtime(self._path)
+                    for key in self._dict:
+                        self._key_cache_time[key] = timestamp
+                if log.isEnabledFor(logging.DEBUG):
+                    log.debug('Disk cache retrieved: %s', cache)
+            except (IOError, OSError) as err:
+                log.error('Error while reading disk cache from %s: %s', self._path, err)
 
     def store(self):
         '''
         Write content of the entire cache to disk
         '''
-        if not HAS_MSGPACK:
-            return
-        # TODO Dir hashing?
-        try:
-            with salt.utils.files.fopen(self._path, 'wb+') as fp_:
-                cache = {
-                    "CacheDisk_data": self._dict,
-                    "CacheDisk_cachetime": self._key_cache_time
-                }
-                msgpack.dump(cache, fp_, use_bin_type=True)
-        except (IOError, OSError) as err:
-            log.error('Error storing cache data to the disk: %s', err)
+        if msgpack is None:
+            log.error('Cache cannot be stored on disk: msgpack is missing')
+        else:
+            # TODO Dir hashing?
+            try:
+                with salt.utils.files.fopen(self._path, 'wb+') as fp_:
+                    cache = {
+                        "CacheDisk_data": self._dict,
+                        "CacheDisk_cachetime": self._key_cache_time
+                    }
+                    msgpack.dump(cache, fp_, use_bin_type=True)
+            except (IOError, OSError) as err:
+                log.error('Error storing cache data to the disk: %s', err)
 
 
 class CacheCli(object):
