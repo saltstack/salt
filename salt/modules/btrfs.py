@@ -675,6 +675,24 @@ def properties(obj, type=None, set=None):
         return ret
 
 
+def subvolume_exists(path):
+    '''
+    Check if a subvolume is present in the filesystem.
+
+    path
+        Mount point for the subvolume (full path)
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' btrfs.subvolume_exists /mnt/var
+
+    '''
+    cmd = ['btrfs', 'subvolume', 'show', path]
+    return __salt__['cmd.retcode'](cmd, ignore_retcode=True) == 0
+
+
 def subvolume_create(name, dest=None, qgroupids=None):
     '''
     Create subvolume `name` in `dest`.
