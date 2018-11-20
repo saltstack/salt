@@ -227,6 +227,26 @@ class CacheDiskTestCase(TestCase):
                                         "The keyboard isn't plugged in")
 
     @patch('os.path.exists', MagicMock(return_value=True))
+    @patch('os.path.getmtime', MagicMock(return_value=42))
+    @patch('salt.utils.files.fopen', MagicMock())
+    @patch('salt.utils.cache.msgpack', MagicMock())
+    @patch('salt.utils.data.decode', MagicMock(return_value={'banana': {'status': 'rotten'}}))
+    def test_read_old_format_support(self):
+        '''
+        Test _read() is handling OSError.
+        :return:
+        '''
+        logger = MagicMock()
+        with patch('salt.utils.cache.log', logger):
+            c = cache.CacheDisk(0, '/dev/nowhere')
+            assert 'banana' in c
+            assert 'status' in c['banana']
+            assert c['banana']['status'] == 'rotten'
+            assert c['banana'] == c._dict['banana']
+            assert 'banana' in c._key_cache_time
+            assert c._key_cache_time['banana'] == 42
+
+    @patch('os.path.exists', MagicMock(return_value=True))
     @patch('salt.utils.files.fopen', MagicMock())
     @patch('salt.utils.cache.msgpack', MagicMock())
     @patch('salt.utils.cache.id', MagicMock(return_value=66))
