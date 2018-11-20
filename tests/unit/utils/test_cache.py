@@ -406,6 +406,22 @@ class CacheDiskTestCase(TestCase):
             msg, arg = logger.error.call_args[0]
             assert msg % arg == 'Error storing cache data to the disk: Boredom in the kernel'
 
+    @patch('os.path.exists', MagicMock(return_value=True))
+    @patch('salt.utils.files.fopen', MagicMock(side_effect=OSError('Boredom in the kernel')))
+    def test_cache_data_expiration(self):
+        '''
+        Test if data is expired.
+        :return:
+        '''
+        c = cache.CacheDisk(0xffff, '/dev/nowhere')
+        c['banana'] = 42
+        assert 'banana' in c
+        with patch.object(c, '_ttl', -1):
+            assert 'banana' not in c
+
+        assert isinstance(c._key_cache_time, dict)
+        assert not c._key_cache_time
+
     def test_persistence_no_mocking(self):
         '''
         Make sure you can instantiate, add, update, remove, expire
