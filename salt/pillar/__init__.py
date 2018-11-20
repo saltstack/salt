@@ -318,7 +318,8 @@ class PillarCache(object):
         :return:
         '''
         log.debug('Scanning pillar cache for information about minion %s and pillarenv %s', self.minion_id, self.pillarenv)
-        log.debug('Scanning cache: %s', self.cache._dict)
+        log.debug('Scanning cache for minion %s: %s', self.minion_id, self.cache[self.minion_id] or '*empty*')
+
         # Check the cache!
         if self.minion_id in self.cache:  # Keyed by minion_id
             # TODO Compare grains, etc?
