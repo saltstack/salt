@@ -326,21 +326,21 @@ class PillarCache(object):
             if self.pillarenv in self.cache[self.minion_id]:
                 # We have a cache hit! Send it back.
                 log.debug('Pillar cache hit for minion %s and pillarenv %s', self.minion_id, self.pillarenv)
-                return self.cache[self.minion_id][self.pillarenv]
+                pillar_data = self.cache[self.minion_id][self.pillarenv]
             else:
                 # We found the minion but not the env. Store it.
-                fresh_pillar = self.fetch_pillar()
-                self.cache[self.minion_id][self.pillarenv] = fresh_pillar
+                pillar_data = self.fetch_pillar()
+                self.cache[self.minion_id][self.pillarenv] = pillar_data
                 self.cache.store()
                 log.debug('Pillar cache miss for pillarenv %s for minion %s', self.pillarenv, self.minion_id)
-                return fresh_pillar
         else:
             # We haven't seen this minion yet in the cache. Store it.
-            fresh_pillar = self.fetch_pillar()
-            self.cache[self.minion_id] = {self.pillarenv: fresh_pillar}
-            log.debug('Pillar cache miss for minion %s', self.minion_id)
-            return fresh_pillar
+            pillar_data = self.fetch_pillar()
+            self.cache[self.minion_id] = {self.pillarenv: pillar_data}
+            log.debug('Pillar cache has been added for minion %s', self.minion_id)
             log.debug('Current pillar cache: %s', self.cache[self.minion_id])
+
+        return pillar_data
 
 
 class Pillar(object):
