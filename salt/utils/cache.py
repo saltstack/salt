@@ -115,6 +115,13 @@ class CacheDisk(CacheDict):
         self._enforce_ttl_key(key)
         return self._dict.__contains__(key)
 
+    def __repr__(self):
+        '''
+        Represent CacheDisk.
+        :return:
+        '''
+        return '<{name} of {length} entries at {memaddr}>'.format(
+            name=self.__class__.__name__, length=len(self), memaddr=hex(id(self)))
     def __getitem__(self, key):
         '''
         Check if the key is ttld out, then do the get
