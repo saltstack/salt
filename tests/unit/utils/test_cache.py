@@ -15,7 +15,7 @@ import shutil
 
 # Import Salt Testing libs
 from tests.support.unit import TestCase, skipIf
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON
+from tests.support.mock import patch, MagicMock, NO_MOCK, NO_MOCK_REASON
 
 # Import salt libs
 import salt.config
@@ -164,6 +164,20 @@ class ContextCacheTest(TestCase):
 
 
 class CacheDiskTestCase(TestCase):
+    '''
+    DiskCache test case.
+    '''
+    @patch('salt.utils.cache.msgpack', None)
+    def test_no_msgpack(self):
+        '''
+        Test msgpack is not installed.
+        :return:
+        '''
+        logger = MagicMock()
+        with patch('salt.utils.cache.log', logger):
+            cache.CacheDisk(0, '/tmp')
+            assert logger.error.call_count == 1
+            assert logger.error.call_args[0][0] == 'Cache cannot be read from the disk: msgpack is missing'
 
     def test_everything(self):
         '''
