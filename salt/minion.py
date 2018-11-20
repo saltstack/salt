@@ -1010,10 +1010,19 @@ class MinionManager(MinionBase):
         '''
         Create a minion, and asynchronously connect it to a master
         '''
-        last = 0  # never have we signed in
         auth_wait = minion.opts['acceptance_wait_time']
         failed = False
         while True:
+            if failed:
+                if auth_wait < self.max_auth_wait:
+                    auth_wait += self.auth_wait
+                log.debug(
+                    "sleeping before reconnect attempt to %s [%d/%d]",
+                   minion.opts['master'],
+                    auth_wait,
+                    self.max_auth_wait,
+                )
+                yield tornado.gen.sleep(auth_wait)  # TODO: log?
             try:
                 if minion.opts.get('beacons_before_connect', False):
                     minion.setup_beacons(before_connect=True)
@@ -1029,10 +1038,6 @@ class MinionManager(MinionBase):
                     'Error while bringing up minion for multi-master. Is '
                     'master at %s responding?', minion.opts['master']
                 )
-                last = time.time()
-                if auth_wait < self.max_auth_wait:
-                    auth_wait += self.auth_wait
-                yield tornado.gen.sleep(auth_wait)  # TODO: log?
             except SaltMasterUnresolvableError:
                 err = 'Master address: \'{0}\' could not be resolved. Invalid or unresolveable address. ' \
                       'Set \'master\' value in minion config.'.format(minion.opts['master'])
@@ -3107,10 +3112,19 @@ class SyndicManager(MinionBase):
         '''
         Create a syndic, and asynchronously connect it to a master
         '''
-        last = 0  # never have we signed in
         auth_wait = opts['acceptance_wait_time']
         failed = False
         while True:
+            if failed:
+                if auth_wait < self.max_auth_wait:
+                    auth_wait += self.auth_wait
+                log.debug(
+                    "sleeping before reconnect attempt to %s [%d/%d]",
+                    opts['master'],
+                    auth_wait,
+                    self.max_auth_wait,
+                )
+                yield tornado.gen.sleep(auth_wait)  # TODO: log?
             log.debug(
                 'Syndic attempting to connect to %s',
                 opts['master']
@@ -3139,10 +3153,6 @@ class SyndicManager(MinionBase):
                     'Error while bringing up syndic for multi-syndic. Is the '
                     'master at %s responding?', opts['master']
                 )
-                last = time.time()
-                if auth_wait < self.max_auth_wait:
-                    auth_wait += self.auth_wait
-                yield tornado.gen.sleep(auth_wait)  # TODO: log?
             except (KeyboardInterrupt, SystemExit):
                 raise
             except Exception:
