@@ -310,6 +310,13 @@ class PillarCache(object):
         return fresh_pillar.compile_pillar()
 
     def compile_pillar(self, *args, **kwargs):  # Will likely just be pillar_dirs
+        '''
+        Compile pillar and set it to the cache, if not found.
+
+        :param args:
+        :param kwargs:
+        :return:
+        '''
         log.debug('Scanning pillar cache for information about minion %s and pillarenv %s', self.minion_id, self.pillarenv)
         log.debug('Scanning cache: %s', self.cache._dict)
         # Check the cache!
