@@ -47,6 +47,10 @@ import salt.log.setup as log_setup
 import salt.defaults.exitcodes
 from salt.utils.odict import OrderedDict
 
+from salt.exceptions import (
+    SaltInvocationError
+)
+
 # Import 3rd-party libs
 from salt.ext import six
 
@@ -609,6 +613,7 @@ class Schedule(object):
                 log.warning('schedule: The metadata parameter must be '
                             'specified as a dictionary.  Ignoring.')
 
+        data_returner = data.get('returner', None)
         salt.utils.process.appendproctitle('{0} {1}'.format(self.__class__.__name__, ret['jid']))
 
         if not self.standalone:
@@ -704,6 +709,22 @@ class Schedule(object):
                         self.functions[mod_name].__globals__[global_key] = value
 
             self.functions.pack['__context__']['retcode'] = 0
+
+            minion_blackout_violation = False
+            if self.opts['pillar'].get('minion_blackout', False):
+                whitelist = self.opts['pillar'].get('minion_blackout_whitelist', [])
+                # this minion is blacked out. Only allow saltutil.refresh_pillar and the whitelist
+                if func != 'saltutil.refresh_pillar' and func not in whitelist:
+                    minion_blackout_violation = True
+            elif self.opts['grains'].get('minion_blackout', False):
+                whitelist = self.opts['grains'].get('minion_blackout_whitelist', [])
+                if func != 'saltutil.refresh_pillar' and func not in whitelist:
+                    minion_blackout_violation = True
+            if minion_blackout_violation:
+                raise SaltInvocationError('Minion in blackout mode. Set \'minion_blackout\' '
+                                          'to False in pillar or grains to resume operations. Only '
+                                          'saltutil.refresh_pillar allowed in blackout mode.')
+
             ret['return'] = self.functions[func](*args, **kwargs)
 
             if not self.standalone:
@@ -713,7 +734,6 @@ class Schedule(object):
 
                 ret['success'] = True
 
-                data_returner = data.get('returner', None)
                 if data_returner or self.schedule_returner:
                     if 'return_config' in data:
                         ret['ret_config'] = data['return_config']
