@@ -129,6 +129,15 @@ class CacheDisk(CacheDict):
         :return:
         '''
         return self.__repr__()
+
+    def __len__(self):
+        '''
+        Length of the cache storage.
+
+        :return:
+        '''
+        return len(self._dict)
+
     def __getitem__(self, key):
         '''
         Check if the key is ttld out, then do the get
