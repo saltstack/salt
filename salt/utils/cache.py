@@ -153,7 +153,7 @@ class CacheDisk(CacheDict):
 
     def _write(self):
         '''
-        Write out to disk
+        Write content of the entire cache to disk
         '''
         if not HAS_MSGPACK:
             return
