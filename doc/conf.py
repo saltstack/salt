@@ -271,8 +271,9 @@ if on_saltstack:
 
 # < --- START do not merge these settings to other branches START ---> #
 build_type = 'develop'  # latest, previous, develop, next
-release = version  # version, latest_release, previous_release
 # < --- END do not merge these settings to other branches END ---> #
+
+release = latest_release if build_type == 'develop' else version
 
 # Set google custom search engine
 
@@ -308,7 +309,7 @@ extensions = [
     'sphinx.ext.intersphinx',
     'httpdomain',
     'youtube',
-    'saltautodoc', # Must be AFTER autodoc
+    #'saltautodoc', # Must be AFTER autodoc
     'shorturls',
 ]
 

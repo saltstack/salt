@@ -63,7 +63,7 @@ def alive(opts):
     log.debug('=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-')
     log.debug('proxys alive() fn called')
     log.debug('=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-')
-    return False
+    return ping()
 
 
 def id(opts):

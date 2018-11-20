@@ -2,7 +2,7 @@
 '''
 A state module to manage Blue Coat SSL Visibility Devices.
 
-:codeauthor: :email:`Spencer Ervin <spencer_ervin@hotmail.com>`
+:codeauthor: Spencer Ervin <spencer_ervin@hotmail.com>
 :maturity:   new
 :depends:    none
 :platform:   unix
@@ -15,7 +15,7 @@ This state module was designed to handle connections to a Blue Coat SSL Visibili
 module relies on the bluecoat_sslv proxy module to interface with the device.
 
 .. seealso::
-    :prox:`bluecoat_sslv Proxy Module <salt.proxy.bluecoat_sslv>`
+    :py:mod:`Bluecoat SSLV Proxy Module <salt.proxy.bluecoat_sslv>`
 
 '''
 

@@ -926,20 +926,31 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                  <model type='virtio'/>
                  <address type='pci' domain='0x0000' bus='0x00' slot='0x03' function='0x0'/>
                </interface>
+               <interface type='network'>
+                 <mac address='52:54:00:39:02:b3'/>
+                 <source network='admin'/>
+                 <model type='virtio'/>
+                 <address type='pci' domain='0x0000' bus='0x00' slot='0x03' function='0x0'/>
+               </interface>
             </devices>
         ''').findall('interface')
 
         new_nics = ET.fromstring('''
             <devices>
                <interface type='network'>
-                 <mac address='52:54:00:39:02:b3'/>
+                 <mac address='52:54:00:39:02:b1'/>
+                 <source network='default'/>
+                 <model type='virtio'/>
+               </interface>
+               <interface type='network'>
+                 <mac address='52:54:00:39:02:b2'/>
                  <source network='default'/>
                  <model type='virtio'/>
                </interface>
                <interface type='network'>
                  <mac address='52:54:00:39:02:b4'/>
-                 <source network='default'/>
-                 <model type='othermodel'/>
+                 <source network='admin'/>
+                 <model type='virtio'/>
                </interface>
             </devices>
         ''').findall('interface')
@@ -947,13 +958,13 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual([nic.find('mac').get('address') for nic in ret['unchanged']],
                          ['52:54:00:39:02:b1'])
         self.assertEqual([nic.find('mac').get('address') for nic in ret['new']],
-                         ['52:54:00:39:02:b4'])
+                         ['52:54:00:39:02:b2', '52:54:00:39:02:b4'])
         self.assertEqual([nic.find('mac').get('address') for nic in ret['deleted']],
-                         ['52:54:00:39:02:b2'])
+                         ['52:54:00:39:02:b2', '52:54:00:39:02:b3'])
 
-    def test_init_no_nics_disks(self):
+    def test_init(self):
         '''
-        Ensure the init() function allows creating VM without NIC and disk
+        Test init() function
         '''
         xml = '''
 <capabilities>
@@ -1075,19 +1086,50 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
 </capabilities>
         '''
         self.mock_conn.getCapabilities.return_value = xml  # pylint: disable=no-member
+
+        root_dir = os.path.join(salt.syspaths.ROOT_DIR, 'srv', 'salt-images')
+
         defineMock = MagicMock(return_value=1)
         self.mock_conn.defineXML = defineMock
-        with patch.dict(virt.__salt__, {'cmd.run': MagicMock()}):  # pylint: disable=no-member
-            virt.init('testvm',
-                      2,
-                      1234,
-                      nic=None,
-                      disk=None,
-                      seed=False,
-                      start=False)
-            definition = defineMock.call_args_list[0][0][0]
-            self.assertFalse('<interface' in definition)
-            self.assertFalse('<disk' in definition)
+        mock_chmod = MagicMock()
+        mock_run = MagicMock()
+        with patch.dict(os.__dict__, {'chmod': mock_chmod, 'makedirs': MagicMock()}):  # pylint: disable=no-member
+            with patch.dict(virt.__salt__, {'cmd.run': mock_run}):  # pylint: disable=no-member
+
+                # Ensure the init() function allows creating VM without NIC and disk
+                virt.init('testvm',
+                          2,
+                          1234,
+                          nic=None,
+                          disk=None,
+                          seed=False,
+                          start=False)
+                definition = defineMock.call_args_list[0][0][0]
+                self.assertFalse('<interface' in definition)
+                self.assertFalse('<disk' in definition)
+
+                # Test case creating disks
+                defineMock.reset_mock()
+                mock_run.reset_mock()
+                virt.init('testvm',
+                          2,
+                          1234,
+                          nic=None,
+                          disk=None,
+                          disks=[
+                              {'name': 'system', 'size': 10240},
+                              {'name': 'cddrive', 'device': 'cdrom', 'source_file': None, 'model': 'ide'}
+                          ],
+                          seed=False,
+                          start=False)
+                definition = ET.fromstring(defineMock.call_args_list[0][0][0])
+                disk_sources = [disk.find('source').get('file') if disk.find('source') is not None else None
+                                for disk in definition.findall('./devices/disk')]
+                expected_disk_path = os.path.join(root_dir, 'testvm_system.qcow2')
+                self.assertEqual(disk_sources, [expected_disk_path, None])
+                self.assertEqual(mock_run.call_args[0][0],
+                                 'qemu-img create -f qcow2 {0} 10240M'.format(expected_disk_path))
+                self.assertEqual(mock_chmod.call_args[0][0], expected_disk_path)
 
     def test_update(self):
         '''
@@ -1187,7 +1229,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         domain_mock.detachDevice = devdetach_mock
         mock_chmod = MagicMock()
         mock_run = MagicMock()
-        with patch.dict(os.__dict__, {'chmod': mock_chmod}):  # pylint: disable=no-member
+        with patch.dict(os.__dict__, {'chmod': mock_chmod, 'makedirs': MagicMock()}):  # pylint: disable=no-member
             with patch.dict(virt.__salt__, {'cmd.run': mock_run}):  # pylint: disable=no-member
                 ret = virt.update('myvm', disk_profile='default', disks=[
                     {'name': 'cddrive', 'device': 'cdrom', 'source_file': None, 'model': 'ide'},
@@ -1221,7 +1263,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         devdetach_mock.reset_mock()
         with patch.dict(salt.modules.config.__opts__, mock_config):  # pylint: disable=no-member
             ret = virt.update('myvm', nic_profile='myprofile',
-                              interfaces=[{'name': 'eth0', 'type': 'network', 'source': 'default'},
+                              interfaces=[{'name': 'eth0', 'type': 'network', 'source': 'default',
+                                           'mac': '52:54:00:39:02:b1'},
                                           {'name': 'eth1', 'type': 'network', 'source': 'newnet'}])
             self.assertEqual(['newnet'],
                              [ET.fromstring(nic).find('source').get('network') for nic in ret['interface']['attached']])
@@ -1265,8 +1308,10 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             }, virt.update('myvm', cpu=1, mem=1024,
                            disk_profile='default', disks=[{'name': 'data', 'size': 2048}],
                            nic_profile='myprofile',
-                           interfaces=[{'name': 'eth0', 'type': 'network', 'source': 'default'},
-                                       {'name': 'eth1', 'type': 'network', 'source': 'oldnet'}],
+                           interfaces=[{'name': 'eth0', 'type': 'network', 'source': 'default',
+                                        'mac': '52:54:00:39:02:b1'},
+                                       {'name': 'eth1', 'type': 'network', 'source': 'oldnet',
+                                        'mac': '52:54:00:39:02:b2'}],
                            graphics={'type': 'spice',
                                      'listen': {'type': 'address', 'address': '127.0.0.1'}}))
 

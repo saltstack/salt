@@ -1425,7 +1425,7 @@ DEFAULT_MINION_OPTS = {
     'winrepo_dir_ng': os.path.join(salt.syspaths.BASE_FILE_ROOTS_DIR, 'win', 'repo-ng'),
     'winrepo_cachefile': 'winrepo.p',
     'winrepo_cache_expire_max': 21600,
-    'winrepo_cache_expire_min': 0,
+    'winrepo_cache_expire_min': 1800,
     'winrepo_remotes': ['https://github.com/saltstack/salt-winrepo.git'],
     'winrepo_remotes_ng': ['https://github.com/saltstack/salt-winrepo-ng.git'],
     'winrepo_branch': 'master',
