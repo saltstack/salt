@@ -43,7 +43,11 @@ Module for Sending Messages via SMTP
 
 from __future__ import absolute_import, unicode_literals, print_function
 import logging
+import os
 import socket
+
+# Import salt libs
+import salt.utils.files
 
 log = logging.getLogger(__name__)
 
@@ -51,6 +55,8 @@ HAS_LIBS = False
 try:
     import smtplib
     import email.mime.text
+    import email.mime.application
+    import email.mime.multipart
     HAS_LIBS = True
 except ImportError:
     pass
@@ -76,7 +82,8 @@ def send_msg(recipient,
              use_ssl='True',
              username=None,
              password=None,
-             profile=None):
+             profile=None,
+             attachments=None):
     '''
     Send a message to an SMTP recipient. Designed for use in states.
 
@@ -84,11 +91,9 @@ def send_msg(recipient,
 
     .. code-block:: bash
 
-        smtp.send_msg 'admin@example.com' 'This is a salt module test' \
-            profile='my-smtp-account'
-        smtp.send_msg 'admin@example.com' 'This is a salt module test' \
-            username='myuser' password='verybadpass' sender="admin@example.com' \
-            server='smtp.domain.com'
+        salt '*' smtp.send_msg 'admin@example.com' 'This is a salt module test' profile='my-smtp-account'
+        salt '*' smtp.send_msg 'admin@example.com' 'This is a salt module test' username='myuser' password='verybadpass' sender='admin@example.com' server='smtp.domain.com'
+        salt '*' smtp.send_msg 'admin@example.com' 'This is a salt module test' username='myuser' password='verybadpass' sender='admin@example.com' server='smtp.domain.com' attachments="['/var/log/messages']"
     '''
     if profile:
         creds = __salt__['config.option'](profile)
@@ -98,7 +103,11 @@ def send_msg(recipient,
         username = creds.get('smtp.username')
         password = creds.get('smtp.password')
 
-    msg = email.mime.text.MIMEText(message)
+    if attachments:
+        msg = email.mime.multipart.MIMEMultipart()
+        msg.attach(email.mime.text.MIMEText(message))
+    else:
+        msg = email.mime.text.MIMEText(message)
     msg['Subject'] = subject
     msg['From'] = sender
     msg['To'] = recipient
@@ -138,6 +147,14 @@ def send_msg(recipient,
         except smtplib.SMTPAuthenticationError as _error:
             log.debug("SMTP Authentication Failure")
             return False
+
+    if attachments:
+        for f in attachments:
+            name = os.path.basename(f)
+            with salt.utils.files.fopen(f, 'rb') as fin:
+                att = email.mime.application.MIMEApplication(fin.read(), Name=name)
+            att['Content-Disposition'] = 'attachment; filename="{0}"'.format(name)
+            msg.attach(att)
 
     try:
         smtpconn.sendmail(sender, recipients, msg.as_string())

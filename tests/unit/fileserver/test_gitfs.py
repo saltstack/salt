@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-:codeauthor: :email:`Erik Johnson <erik@saltstack.com>`
+    :codeauthor: Erik Johnson <erik@saltstack.com>
 '''
 
 # Import Python libs
@@ -15,7 +15,7 @@ import tornado.ioloop
 import logging
 import stat
 try:
-    import pwd
+    import pwd  # pylint: disable=unused-import
 except ImportError:
     pass
 
@@ -31,6 +31,7 @@ import salt.utils.files
 import salt.utils.platform
 import salt.utils.win_functions
 import salt.utils.yaml
+import salt.ext.six
 
 import salt.utils.gitfs
 from salt.utils.gitfs import (
@@ -62,6 +63,8 @@ log = logging.getLogger(__name__)
 
 TMP_SOCK_DIR = tempfile.mkdtemp(dir=TMP)
 TMP_REPO_DIR = os.path.join(TMP, 'gitfs_root')
+if salt.utils.platform.is_windows():
+    TMP_REPO_DIR = TMP_REPO_DIR.replace('\\', '/')
 INTEGRATION_BASE_FILES = os.path.join(FILES, 'file', 'base')
 UNICODE_FILENAME = 'питон.txt'
 UNICODE_DIRNAME = UNICODE_ENVNAME = 'соль'
@@ -142,6 +145,9 @@ class GitfsConfigTestCase(TestCase, LoaderModuleMockMixin):
             try:
                 shutil.rmtree(path, onerror=_rmtree_error)
             except OSError as exc:
+                if exc.errno == errno.EACCES:
+                    log.error("Access error removeing file %s", path)
+                    continue
                 if exc.errno != errno.EEXIST:
                     raise
 
@@ -389,7 +395,9 @@ class GitFSTestBase(object):
         try:
             shutil.rmtree(TMP_REPO_DIR)
         except OSError as exc:
-            if exc.errno != errno.ENOENT:
+            if exc.errno == errno.EACCES:
+                log.error("Access error removeing file %s", TMP_REPO_DIR)
+            elif exc.errno != errno.ENOENT:
                 raise
         shutil.copytree(INTEGRATION_BASE_FILES, TMP_REPO_DIR + '/')
 
@@ -422,6 +430,9 @@ class GitFSTestBase(object):
 
             # Add a tag
             repo.create_tag(TAG_NAME, 'HEAD')
+            # Older GitPython versions do not have a close method.
+            if hasattr(repo, 'close'):
+                repo.close()
         finally:
             if orig_username is not None:
                 os.environ[username_key] = orig_username
@@ -436,9 +447,11 @@ class GitFSTestBase(object):
         '''
         for path in (cls.tmp_cachedir, cls.tmp_sock_dir, TMP_REPO_DIR):
             try:
-                shutil.rmtree(path, onerror=_rmtree_error)
+                salt.utils.files.rm_rf(path)
             except OSError as exc:
-                if exc.errno != errno.EEXIST:
+                if exc.errno == errno.EACCES:
+                    log.error("Access error removeing file %s", path)
+                elif exc.errno != errno.EEXIST:
                     raise
 
     def setUp(self):
@@ -457,10 +470,16 @@ class GitFSTestBase(object):
         _clear_instance_map()
         for subdir in ('gitfs', 'file_lists'):
             try:
-                shutil.rmtree(os.path.join(self.tmp_cachedir, subdir))
+                salt.utils.files.rm_rf(os.path.join(self.tmp_cachedir, subdir))
             except OSError as exc:
+                if exc.errno == errno.EACCES:
+                    log.warning("Access error removeing file %s", os.path.join(self.tmp_cachedir, subdir))
+                    continue
                 if exc.errno != errno.ENOENT:
                     raise
+        if salt.ext.six.PY3 and salt.utils.platform.is_windows():
+            self.setUpClass()
+            self.setup_loader_modules()
 
 
 @skipIf(not HAS_GITPYTHON, 'GitPython >= {0} required'.format(GITPYTHON_MINVER))

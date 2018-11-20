@@ -122,6 +122,7 @@ def state(name,
         expect_minions=True,
         fail_minions=None,
         allow_fail=0,
+        exclude=None,
         concurrent=False,
         timeout=None,
         batch=None,
@@ -201,6 +202,9 @@ def state(name,
         Pass in the number of minions to allow for failure before setting
         the result of the execution to False
 
+    exclude
+        Pass exclude kwarg to state
+
     concurrent
         Allow multiple state runs to occur at once.
 
@@ -235,6 +239,18 @@ def state(name,
               - apache
               - django
               - core
+            - saltenv: prod
+
+    Run sls file via :py:func:`state.sls <salt.state.sls>` on target
+    minions with exclude:
+
+    .. code-block:: yaml
+
+        docker:
+          salt.state:
+            - tgt: 'docker*'
+            - sls: docker
+            - exclude: docker.swarm
             - saltenv: prod
 
     Run a full :py:func:`state.highstate <salt.state.highstate>` on target
@@ -298,6 +314,9 @@ def state(name,
     if saltenv is not None:
         cmd_kw['kwarg']['saltenv'] = saltenv
 
+    if exclude is not None:
+        cmd_kw['kwarg']['exclude'] = exclude
+
     cmd_kw['kwarg']['queue'] = queue
 
     if isinstance(concurrent, bool):
@@ -321,7 +340,7 @@ def state(name,
         if top:
             cmd_kw['topfn'] = ''.join(cmd_kw.pop('arg'))
         elif sls:
-            cmd_kw['mods'] = cmd_kw.pop('arg')
+            cmd_kw['mods'] = ''.join(cmd_kw.pop('arg'))
         cmd_kw.update(cmd_kw.pop('kwarg'))
         tmp_ret = __salt__[fun](**cmd_kw)
         cmd_ret = {__opts__['id']: {
@@ -425,7 +444,8 @@ def function(
         kwarg=None,
         timeout=None,
         batch=None,
-        subset=None):
+        subset=None,
+        **kwargs):  # pylint: disable=unused-argument
     '''
     Execute a single module function on a remote minion via salt or salt-ssh
 
@@ -476,15 +496,15 @@ def function(
 
     '''
     func_ret = {'name': name,
-           'changes': {},
-           'comment': '',
-           'result': True}
+                'changes': {},
+                'comment': '',
+                'result': True}
     if kwarg is None:
         kwarg = {}
     if isinstance(arg, six.string_types):
-        func_ret['warnings'] = ['Please specify \'arg\' as a list, not a string. '
-                           'Modifying in place, but please update SLS file '
-                           'to remove this warning.']
+        func_ret['warnings'] = [
+            'Please specify \'arg\' as a list of arguments.'
+        ]
         arg = arg.split()
 
     cmd_kw = {'arg': arg or [], 'kwarg': kwarg, 'ret': ret, 'timeout': timeout}
@@ -507,9 +527,8 @@ def function(
 
     fun = name
     if __opts__['test'] is True:
-        func_ret['comment'] = (
-                'Function {0} will be executed on target {1} as test={2}'
-                ).format(fun, tgt, six.text_type(False))
+        func_ret['comment'] = \
+            'Function {0} would be executed on target {1}'.format(fun, tgt)
         func_ret['result'] = None
         return func_ret
     try:
@@ -550,6 +569,9 @@ def function(
                 mdata['ret'] = mdata.pop('return')
             m_ret = mdata['ret']
             m_func = (not fail_function and True) or __salt__[fail_function](m_ret)
+
+            if m_ret is False:
+                m_func = False
 
         if not m_func:
             if minion not in fail_minions:
@@ -746,7 +768,7 @@ def runner(name, **kwargs):
     return ret
 
 
-def parallel_runners(name, runners):
+def parallel_runners(name, runners, **kwargs):  # pylint: disable=unused-argument
     '''
     Executes multiple runner modules on the master in parallel.
 

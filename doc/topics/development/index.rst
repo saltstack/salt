@@ -8,8 +8,7 @@ Developing Salt
 
     *
     extend/index
-    tests/index
-    raet/index
+    tests/*
     git/index
     conventions/index
     ../../ref/internals/index

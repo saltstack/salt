@@ -93,7 +93,7 @@ try:
     import git
     import gitdb
     GITPYTHON_VERSION = _LooseVersion(git.__version__)
-except ImportError:
+except Exception:
     GITPYTHON_VERSION = None
 
 try:
@@ -476,6 +476,10 @@ class GitProvider(object):
         use_tags = 'tag' in self.ref_types
 
         ret = set()
+        if salt.utils.stringutils.is_hex(self.base):
+            # gitfs_base or per-saltenv 'base' may point to a commit ID, which
+            # would not show up in the refs. Make sure we include it.
+            ret.add('base')
         for ref in salt.utils.data.decode(refs):
             if ref.startswith('refs/'):
                 ref = ref[5:]
@@ -1530,9 +1534,9 @@ class Pygit2(GitProvider):
 
             elif tag_ref in refs:
                 tag_obj = self.repo.revparse_single(tag_ref)
-                if not isinstance(tag_obj, pygit2.Tag):
+                if not isinstance(tag_obj, pygit2.Commit):
                     log.error(
-                        '%s does not correspond to pygit2.Tag object',
+                        '%s does not correspond to pygit2.Commit object',
                         tag_ref
                     )
                 else:
@@ -1552,9 +1556,10 @@ class Pygit2(GitProvider):
                                 exc_info=True
                             )
                             return None
+                    log.debug('SHA of tag %s: %s', tgt_ref, tag_sha)
 
-                    if head_sha != target_sha:
-                        if not _perform_checkout(local_ref, branch=False):
+                    if head_sha != tag_sha:
+                        if not _perform_checkout(tag_ref, branch=False):
                             return None
 
                     # Return the relative root, if present
@@ -1578,11 +1583,19 @@ class Pygit2(GitProvider):
         '''
         Clean stale local refs so they don't appear as fileserver environments
         '''
+        try:
+            if pygit2.GIT_FETCH_PRUNE:
+                # Don't need to clean anything, pygit2 can do it by itself
+                return []
+        except AttributeError:
+            # However, only in 0.26.2 and newer
+            pass
         if self.credentials is not None:
             log.debug(
-                'pygit2 does not support detecting stale refs for '
-                'authenticated remotes, saltenvs will not reflect '
-                'branches/tags removed from remote \'%s\'', self.id
+                'The installed version of pygit2 (%s) does not support '
+                'detecting stale refs for authenticated remotes, saltenvs '
+                'will not reflect branches/tags removed from remote \'%s\'',
+                PYGIT2_VERSION, self.id
             )
             return []
         return super(Pygit2, self).clean_stale_refs()
@@ -1694,6 +1707,11 @@ class Pygit2(GitProvider):
         else:
             if self.credentials is not None:
                 origin.credentials = self.credentials
+        try:
+            fetch_kwargs['prune'] = pygit2.GIT_FETCH_PRUNE
+        except AttributeError:
+            # pruning only available in pygit2 >= 0.26.2
+            pass
         try:
             fetch_results = origin.fetch(**fetch_kwargs)
         except GitError as exc:
@@ -2546,7 +2564,8 @@ class GitBase(object):
                     LIBGIT2_VERSION
                 )
             )
-        if not salt.utils.path.which('git'):
+        if not getattr(pygit2, 'GIT_FETCH_PRUNE', False) \
+                and not salt.utils.path.which('git'):
             errors.append(
                 'The git command line utility is required when using the '
                 '\'pygit2\' {0}_provider.'.format(self.role)
@@ -2975,7 +2994,7 @@ class GitPillar(GitBase):
                 if repo.env:
                     env = repo.env
                 else:
-                    env = 'base' if repo.branch == repo.base else repo.branch
+                    env = 'base' if repo.branch == repo.base else repo.get_checkout_target()
                 if repo._mountpoint:
                     if self.link_mountpoint(repo):
                         self.pillar_dirs[repo.linkdir] = env

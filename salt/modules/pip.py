@@ -79,7 +79,10 @@ from __future__ import absolute_import, print_function, unicode_literals
 # Import python libs
 import logging
 import os
-import pkg_resources
+try:
+    import pkg_resources
+except ImportError:
+    pkg_resources = None
 import re
 import shutil
 import sys
@@ -116,7 +119,12 @@ def __virtual__():
     entire filesystem.  If it's not installed in a conventional location, the
     user is required to provide the location of pip each time it is used.
     '''
-    return 'pip'
+    if pkg_resources is None:
+        ret = False, 'Package dependency "pkg_resource" is missing'
+    else:
+        ret = 'pip'
+
+    return ret
 
 
 def _clear_context(bin_env=None):
@@ -172,20 +180,7 @@ def _get_pip_bin(bin_env):
             # If the python binary was passed, return it
             if 'python' in os.path.basename(bin_env):
                 return [os.path.normpath(bin_env), '-m', 'pip']
-            # Try to find the python binary based on the location of pip in a
-            # virtual environment, should be relative
-            if 'pip' in os.path.basename(bin_env):
-                # Look in the same directory as the pip binary, and also its
-                # parent directories.
-                pip_dirname = os.path.dirname(bin_env)
-                pip_parent_dir = os.path.dirname(pip_dirname)
-                for bin_path in _search_paths(pip_dirname, pip_parent_dir):
-                    if os.path.isfile(bin_path):
-                        logger.debug('pip: Found python binary: %s', bin_path)
-                        return [os.path.normpath(bin_path), '-m', 'pip']
-
-            # Couldn't find python, use the passed pip binary
-            # This has the limitation of being unable to update pip itself
+            # We have been passed a pip binary, use the pip binary.
             return [os.path.normpath(bin_env)]
 
         raise CommandExecutionError(
@@ -316,7 +311,7 @@ def _process_requirements(requirements, cmd, cwd, saltenv, user):
                 # In Windows, just being owner of a file isn't enough. You also
                 # need permissions
                 if salt.utils.platform.is_windows():
-                    __utils__['win_dacl.set_permissions'](
+                    __utils__['dacl.set_permissions'](
                         obj_name=treq,
                         principal=user,
                         permissions='read_execute')
@@ -464,6 +459,13 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
         to the pip to use when more than one Python release is installed (e.g.
         ``/usr/bin/pip-2.7`` or ``/usr/bin/pip-2.6``. If a directory path is
         specified, it is assumed to be a virtualenv.
+
+        .. note::
+
+            For Windows, if the pip module is being used to upgrade the pip
+            package, bin_env should be the path to the virtualenv or to the
+            python binary that should be used.  The pip command is unable to
+            upgrade itself in Windows.
 
     use_wheel
         Prefer wheel archives (requires pip>=1.4)
@@ -625,12 +627,6 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
                 editable=git+https://github.com/worldcompany/djangoembed.git#egg=djangoembed upgrade=True no_deps=True
 
     '''
-    if 'no_chown' in kwargs:
-        salt.utils.versions.warn_until(
-            'Flourine',
-            'The no_chown argument has been deprecated and is no longer used. '
-            'Its functionality was removed in Boron.')
-        kwargs.pop('no_chown')
     cmd = _get_pip_bin(bin_env)
     cmd.append('install')
 
@@ -1436,7 +1432,8 @@ def list_all_versions(pkg,
                       include_rc=False,
                       user=None,
                       cwd=None,
-                      index_url=None):
+                      index_url=None,
+                      extra_index_url=None):
     '''
     .. versionadded:: 2017.7.3
 
@@ -1470,6 +1467,10 @@ def list_all_versions(pkg,
         Base URL of Python Package Index
         .. versionadded:: Fluorine
 
+    extra_index_url
+        Additional URL of Python Package Index
+        .. versionadded:: Fluorine
+
     CLI Example:
 
     .. code-block:: bash
@@ -1485,6 +1486,13 @@ def list_all_versions(pkg,
                 '\'{0}\' is not a valid URL'.format(index_url)
             )
         cmd.extend(['--index-url', index_url])
+
+    if extra_index_url:
+        if not salt.utils.url.validate(extra_index_url, VALID_PROTOS):
+            raise CommandExecutionError(
+                '\'{0}\' is not a valid URL'.format(extra_index_url)
+            )
+        cmd.extend(['--extra-index-url', extra_index_url])
 
     cmd_kwargs = dict(cwd=cwd, runas=user, output_loglevel='quiet', redirect_stderr=True)
     if bin_env and os.path.isdir(bin_env):

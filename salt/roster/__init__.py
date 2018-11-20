@@ -51,7 +51,7 @@ def get_roster_file(options):
             template = os.path.join(salt.syspaths.CONFIG_DIR, 'roster')
 
     if not os.path.isfile(template):
-        raise IOError('No roster file found')
+        raise IOError('Roster file "{0}" not found'.format(template))
 
     if not os.access(template, os.R_OK):
         raise IOError('Access denied to roster "{0}"'.format(template))
@@ -76,7 +76,7 @@ class Roster(object):
             self.backends = ['flat']
         utils = salt.loader.utils(self.opts)
         runner = salt.loader.runner(self.opts, utils=utils)
-        self.rosters = salt.loader.roster(self.opts, runner=runner)
+        self.rosters = salt.loader.roster(self.opts, runner=runner, utils=utils)
 
     def _gen_back(self):
         '''
@@ -106,7 +106,7 @@ class Roster(object):
             except salt.exceptions.SaltRenderError as exc:
                 log.error('Unable to render roster file: %s', exc)
             except IOError as exc:
-                pass
+                log.error("Can't access roster for backend %s: %s", back, exc)
 
         log.debug('Matched minions: %s', targets)
         return targets

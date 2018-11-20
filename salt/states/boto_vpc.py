@@ -34,60 +34,60 @@ config:
 .. code-block:: yaml
 
     myprofile:
-        keyid: GKTADJGHEIQSXMKKRBJ08H
-        key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
-        region: us-east-1
+      keyid: GKTADJGHEIQSXMKKRBJ08H
+      key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+      region: us-east-1
 
 .. code-block:: yaml
 
     aws:
-        region:
-            us-east-1:
-                profile:
-                    keyid: GKTADJGHEIQSXMKKRBJ08H
-                    key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
-                    region: us-east-1
+      region:
+        us-east-1:
+          profile:
+            keyid: GKTADJGHEIQSXMKKRBJ08H
+            key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+            region: us-east-1
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     Ensure VPC exists:
-        boto_vpc.present:
-            - name: myvpc
-            - cidr_block: 10.10.11.0/24
-            - dns_hostnames: True
-            - region: us-east-1
-            - keyid: GKTADJGHEIQSXMKKRBJ08H
-            - key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+      boto_vpc.present:
+        - name: myvpc
+        - cidr_block: 10.10.11.0/24
+        - dns_hostnames: True
+        - region: us-east-1
+        - keyid: GKTADJGHEIQSXMKKRBJ08H
+        - key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 
     Ensure subnet exists:
-        boto_vpc.subnet_present:
-            - name: mysubnet
-            - vpc_id: vpc-123456
-            - cidr_block: 10.0.0.0/16
-            - region: us-east-1
-            - profile: myprofile
+      boto_vpc.subnet_present:
+        - name: mysubnet
+        - vpc_id: vpc-123456
+        - cidr_block: 10.0.0.0/16
+        - region: us-east-1
+        - profile: myprofile
 
     {% set profile = salt['pillar.get']('aws:region:us-east-1:profile' ) %}
     Ensure internet gateway exists:
-        boto_vpc.internet_gateway_present:
-            - name: myigw
-            - vpc_name: myvpc
-            - profile: {{ profile }}
+      boto_vpc.internet_gateway_present:
+        - name: myigw
+        - vpc_name: myvpc
+        - profile: {{ profile }}
 
     Ensure route table exists:
-        boto_vpc.route_table_present:
-            - name: my_route_table
-            - vpc_id: vpc-123456
-            - routes:
-              - destination_cidr_block: 0.0.0.0/0
-                instance_id: i-123456
-            - subnet_names:
-              - subnet1
-              - subnet2
-            - region: us-east-1
-            - profile:
-                keyid: GKTADJGHEIQSXMKKRBJ08H
-                key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+      boto_vpc.route_table_present:
+        - name: my_route_table
+        - vpc_id: vpc-123456
+        - routes:
+          - destination_cidr_block: 0.0.0.0/0
+            instance_id: i-123456
+          - subnet_names:
+            - subnet1
+            - subnet2
+          - region: us-east-1
+          - profile:
+            keyid: GKTADJGHEIQSXMKKRBJ08H
+            key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 
 .. versionadded:: 2016.11.0
 
@@ -501,7 +501,7 @@ def subnet_present(name, cidr_block, vpc_name=None, vpc_id=None,
                    availability_zone=None, tags=None,
                    region=None, key=None,
                    keyid=None, profile=None,
-                   route_table_id=None, route_table_name=None):
+                   route_table_id=None, route_table_name=None, auto_assign_public_ipv4=False):
 
     '''
     Ensure a subnet exists.
@@ -610,6 +610,7 @@ def subnet_present(name, cidr_block, vpc_name=None, vpc_id=None,
         r = __salt__['boto_vpc.create_subnet'](subnet_name=name,
                                                cidr_block=cidr_block,
                                                availability_zone=availability_zone,
+                                               auto_assign_public_ipv4=auto_assign_public_ipv4,
                                                vpc_name=vpc_name, vpc_id=vpc_id,
                                                tags=tags, region=region,
                                                key=key, keyid=keyid,
@@ -895,20 +896,20 @@ def route_table_present(name, vpc_name=None, vpc_id=None, routes=None,
     .. code-block:: yaml
 
         boto_vpc.route_table_present:
-            - name: my_route_table
-            - vpc_id: vpc-123456
-            - routes:
-              - destination_cidr_block: 0.0.0.0/0
-                internet_gateway_name: InternetGateway
-              - destination_cidr_block: 10.10.11.0/24
-                instance_id: i-123456
-              - destination_cidr_block: 10.10.12.0/24
-                interface_id: eni-123456
-              - destination_cidr_block: 10.10.13.0/24
-                instance_name: mygatewayserver
-            - subnet_names:
-              - subnet1
-              - subnet2
+          - name: my_route_table
+          - vpc_id: vpc-123456
+          - routes:
+            - destination_cidr_block: 0.0.0.0/0
+              internet_gateway_name: InternetGateway
+            - destination_cidr_block: 10.10.11.0/24
+              instance_id: i-123456
+            - destination_cidr_block: 10.10.12.0/24
+              interface_id: eni-123456
+            - destination_cidr_block: 10.10.13.0/24
+              instance_name: mygatewayserver
+          - subnet_names:
+            - subnet1
+            - subnet2
 
     name
         Name of the route table.
@@ -1306,7 +1307,7 @@ def nat_gateway_present(name, subnet_name=None, subnet_id=None,
     .. code-block:: yaml
 
         boto_vpc.nat_gateway_present:
-            - subnet_name: my-subnet
+          - subnet_name: my-subnet
 
     name
         Name of the state
@@ -1488,12 +1489,12 @@ def accept_vpc_peering_connection(name=None, conn_id=None, conn_name=None,
     .. code-block:: yaml
 
         boto_vpc.accept_vpc_peering_connection:
-            - conn_name: salt_peering_connection
+          - conn_name: salt_peering_connection
 
         # usage with vpc peering connection id and region
         boto_vpc.accept_vpc_peering_connection:
-            - conn_id: pbx-1873d472
-            - region: us-west-2
+          - conn_id: pbx-1873d472
+          - region: us-west-2
 
     '''
     log.debug('Called state to accept VPC peering connection')

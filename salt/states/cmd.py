@@ -12,7 +12,7 @@ A simple example to execute a command:
 .. code-block:: yaml
 
     # Store the current date in a file
-    date > /tmp/salt-run:
+    'date > /tmp/salt-run':
       cmd.run
 
 Only run if another execution failed, in this case truncate syslog if there is
@@ -20,7 +20,7 @@ no disk space:
 
 .. code-block:: yaml
 
-    > /var/log/messages:
+    '> /var/log/messages/:
       cmd.run:
         - unless: echo 'foo' > /tmp/.test && rm -f /tmp/.test
 
@@ -33,11 +33,12 @@ touch /tmp/foo if it does not exist:
       cmd.run:
         - creates: /tmp/foo
 
-``creates`` also accepts a list of files:
+``creates`` also accepts a list of files, in which case this state will
+run if **any** of the files does not exist:
 
 .. code-block:: yaml
 
-    echo 'foo' | tee /tmp/bar > /tmp/baz:
+    "echo 'foo' | tee /tmp/bar > /tmp/baz":
       cmd.run:
         - creates:
           - /tmp/bar
@@ -55,7 +56,7 @@ In situations like this try the following:
 
     run_installer:
       cmd.run:
-        - name: /tmp/installer.bin  > /dev/null 2>&1
+        - name: /tmp/installer.bin > /dev/null 2>&1
 
 Salt determines whether the ``cmd`` state is successfully enforced based on the exit
 code returned by the command. If the command returns a zero exit code, then salt
@@ -402,6 +403,7 @@ def wait(name,
          unless=None,
          creates=None,
          cwd=None,
+         root=None,
          runas=None,
          shell=None,
          env=(),
@@ -435,6 +437,10 @@ def wait(name,
     cwd
         The current working directory to execute the command in, defaults to
         /root
+
+    root
+        Path to the root of the jail to use. If this parameter is set, the command
+        will run inside a chroot
 
     runas
         The user name to run the command as
@@ -472,7 +478,7 @@ def wait(name,
 
         One can still use the existing $PATH by using a bit of Jinja:
 
-        .. code-block:: yaml
+        .. code-block:: jinja
 
             {% set current_path = salt['environ.get']('PATH', '/bin:/usr/bin') %}
 
@@ -490,7 +496,9 @@ def wait(name,
         a state. For more information, see the :ref:`stateful-argument` section.
 
     creates
-        Only run if the file or files specified by ``creates`` do not exist.
+        Only run if the file specified by ``creates`` do not exist. If you
+        specify a list of files then this state will only run if **any** of
+        the files does not exist.
 
         .. versionadded:: 2014.7.0
 
@@ -616,7 +624,7 @@ def wait_script(name,
 
         One can still use the existing $PATH by using a bit of Jinja:
 
-        .. code-block:: yaml
+        .. code-block:: jinja
 
             {% set current_path = salt['environ.get']('PATH', '/bin:/usr/bin') %}
 
@@ -674,6 +682,7 @@ def run(name,
         unless=None,
         creates=None,
         cwd=None,
+        root=None,
         runas=None,
         shell=None,
         env=None,
@@ -706,6 +715,10 @@ def run(name,
     cwd
         The current working directory to execute the command in, defaults to
         /root
+
+    root
+        Path to the root of the jail to use. If this parameter is set, the command
+        will run inside a chroot
 
     runas
         The user name to run the command as
@@ -743,7 +756,7 @@ def run(name,
 
         One can still use the existing $PATH by using a bit of Jinja:
 
-        .. code-block:: yaml
+        .. code-block:: jinja
 
             {% set current_path = salt['environ.get']('PATH', '/bin:/usr/bin') %}
 
@@ -801,7 +814,9 @@ def run(name,
         .. versionadded:: 2015.8.0
 
     creates
-        Only run if the file or files specified by ``creates`` do not exist.
+        Only run if the file specified by ``creates`` do not exist. If you
+        specify a list of files then this state will only run if **any** of
+        the files does not exist.
 
         .. versionadded:: 2014.7.0
 
@@ -882,6 +897,7 @@ def run(name,
 
     cmd_kwargs = copy.deepcopy(kwargs)
     cmd_kwargs.update({'cwd': cwd,
+                       'root': root,
                        'runas': runas,
                        'use_vt': use_vt,
                        'shell': shell or __grains__['shell'],
@@ -912,10 +928,11 @@ def run(name,
 
     # Wow, we passed the test, run this sucker!
     try:
-        cmd_all = __salt__['cmd.run_all'](
-            name, timeout=timeout, python_shell=True, **cmd_kwargs
+        run_cmd = 'cmd.run_all' if not root else 'cmd.run_chroot'
+        cmd_all = __salt__[run_cmd](
+            cmd=name, timeout=timeout, python_shell=True, **cmd_kwargs
         )
-    except CommandExecutionError as err:
+    except Exception as err:
         ret['comment'] = six.text_type(err)
         return ret
 
@@ -1022,7 +1039,7 @@ def script(name,
 
         One can still use the existing $PATH by using a bit of Jinja:
 
-        .. code-block:: yaml
+        .. code-block:: jinja
 
             {% set current_path = salt['environ.get']('PATH', '/bin:/usr/bin') %}
 
@@ -1053,7 +1070,9 @@ def script(name,
         'arg two' arg3"
 
     creates
-        Only run if the file or files specified by ``creates`` do not exist.
+        Only run if the file specified by ``creates`` do not exist. If you
+        specify a list of files then this state will only run if **any** of
+        the files does not exist.
 
         .. versionadded:: 2014.7.0
 
@@ -1304,6 +1323,12 @@ def wait_call(name,
 def mod_watch(name, **kwargs):
     '''
     Execute a cmd function based on a watch call
+
+    .. note::
+        This state exists to support special handling of the ``watch``
+        :ref:`requisite <requisites>`. It should not be called directly.
+
+        Parameters for this function should be set by the state being triggered.
     '''
     if kwargs['sfun'] in ('wait', 'run', 'watch'):
         if kwargs.get('stateful'):

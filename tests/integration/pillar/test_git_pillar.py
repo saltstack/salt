@@ -101,13 +101,13 @@ from salt.utils.gitfs import (
 # Check for requisite components
 try:
     HAS_GITPYTHON = GITPYTHON_VERSION >= GITPYTHON_MINVER
-except ImportError:
+except Exception:
     HAS_GITPYTHON = False
 
 try:
     HAS_PYGIT2 = PYGIT2_VERSION >= PYGIT2_MINVER \
         and LIBGIT2_VERSION >= LIBGIT2_MINVER
-except AttributeError:
+except Exception:
     HAS_PYGIT2 = False
 
 HAS_SSHD = bool(salt.utils.path.which('sshd'))
@@ -358,6 +358,61 @@ class GitPythonMixin(object):
                          "available on the salt master"]}
         )
 
+    def test_root_parameter(self):
+        '''
+        Test root parameter
+        '''
+        expected = {
+            'from_subdir': True
+        }
+
+        ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
+            git_pillar_provider: gitpython
+            cachedir: {cachedir}
+            extension_modules: {extmods}
+            ext_pillar:
+              - git:
+                - master {url}:
+                  - root: subdir
+                - top_only {url}:
+                  - env: base
+            ''')
+        self.assertEqual(ret, expected)
+
+    def test_includes_enabled_solves___env___with_mountpoint(self):
+        '''
+        Test with git_pillar_includes enabled and using "__env__" as the branch
+        name for the configured repositories.
+        The "gitinfo" repository contains top.sls file with a local reference
+        and also referencing external "nowhere.foo" which is provided by "webinfo"
+        repository mounted as "nowhere".
+        '''
+        ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
+            git_pillar_provider: gitpython
+            cachedir: {cachedir}
+            extension_modules: {extmods}
+            ext_pillar:
+              - git:
+                - __env__ {url_extra_repo}:
+                  - name: gitinfo
+                - __env__ {url}:
+                  - name: webinfo
+                  - mountpoint: nowhere
+            ''')
+        self.assertEqual(
+            ret,
+            {'branch': 'master',
+             'motd': 'The force will be with you. Always.',
+             'mylist': ['master'],
+             'mydict': {'master': True,
+                        'nested_list': ['master'],
+                        'nested_dict': {'master': True}}}
+        )
+
 
 @destructiveTest
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -413,7 +468,12 @@ class TestGitPythonAuthenticatedHTTP(TestGitPythonHTTP, GitPythonMixin):
             username=cls.username,
             password=cls.password,
             port=cls.nginx_port)
+        cls.url_extra_repo = 'http://{username}:{password}@127.0.0.1:{port}/extra_repo.git'.format(
+            username=cls.username,
+            password=cls.password,
+            port=cls.nginx_port)
         cls.ext_opts['url'] = cls.url
+        cls.ext_opts['url_extra_repo'] = cls.url_extra_repo
         cls.ext_opts['username'] = cls.username
         cls.ext_opts['password'] = cls.password
 
@@ -1192,6 +1252,132 @@ class TestPygit2SSH(GitPillarSSHTestBase):
             ''')
         self.assertEqual(ret, expected)
 
+    @requires_system_grains
+    def test_root_parameter(self, grains):
+        '''
+        Test root parameter
+        '''
+        expected = {
+            'from_subdir': True
+        }
+
+        # Test with passphraseless key and global credential options
+        ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
+            git_pillar_provider: pygit2
+            git_pillar_pubkey: {pubkey_nopass}
+            git_pillar_privkey: {privkey_nopass}
+            cachedir: {cachedir}
+            extension_modules: {extmods}
+            ext_pillar:
+              - git:
+                - master {url}:
+                  - root: subdir
+                - top_only {url}:
+                  - env: base
+            ''')
+        self.assertEqual(ret, expected)
+
+        # Test with passphraseless key and per-repo credential options
+        ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
+            git_pillar_provider: pygit2
+            cachedir: {cachedir}
+            extension_modules: {extmods}
+            ext_pillar:
+              - git:
+                - master {url}:
+                  - root: subdir
+                  - pubkey: {pubkey_nopass}
+                  - privkey: {privkey_nopass}
+                - top_only {url}:
+                  - pubkey: {pubkey_nopass}
+                  - privkey: {privkey_nopass}
+                  - env: base
+            ''')
+        self.assertEqual(ret, expected)
+
+        if grains['os_family'] == 'Debian':
+            # passphrase-protected currently does not work here
+            return
+
+        # Test with passphrase-protected key and global credential options
+        ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
+            git_pillar_provider: pygit2
+            git_pillar_pubkey: {pubkey_withpass}
+            git_pillar_privkey: {privkey_withpass}
+            git_pillar_passphrase: {passphrase}
+            cachedir: {cachedir}
+            extension_modules: {extmods}
+            ext_pillar:
+              - git:
+                - master {url}:
+                  - root: subdir
+                - top_only {url}:
+                  - env: base
+            ''')
+        self.assertEqual(ret, expected)
+
+        # Test with passphrase-protected key and per-repo credential options
+        ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
+            git_pillar_provider: pygit2
+            cachedir: {cachedir}
+            extension_modules: {extmods}
+            ext_pillar:
+              - git:
+                - master {url}:
+                  - root: subdir
+                  - pubkey: {pubkey_withpass}
+                  - privkey: {privkey_withpass}
+                  - passphrase: {passphrase}
+                - top_only {url}:
+                  - pubkey: {pubkey_withpass}
+                  - privkey: {privkey_withpass}
+                  - passphrase: {passphrase}
+                  - env: base
+            ''')
+        self.assertEqual(ret, expected)
+
+    def test_includes_enabled_solves___env___with_mountpoint(self):
+        '''
+        Test with git_pillar_includes enabled and using "__env__" as the branch
+        name for the configured repositories.
+        The "gitinfo" repository contains top.sls file with a local reference
+        and also referencing external "nowhere.foo" which is provided by "webinfo"
+        repository mounted as "nowhere".
+        '''
+        ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
+            git_pillar_provider: pygit2
+            git_pillar_pubkey: {pubkey_nopass}
+            git_pillar_privkey: {privkey_nopass}
+            cachedir: {cachedir}
+            extension_modules: {extmods}
+            ext_pillar:
+              - git:
+                - __env__ {url_extra_repo}:
+                  - name: gitinfo
+                - __env__ {url}:
+                  - name: webinfo
+                  - mountpoint: nowhere
+            ''')
+        self.assertEqual(
+            ret,
+            {'branch': 'master',
+             'motd': 'The force will be with you. Always.',
+             'mylist': ['master'],
+             'mydict': {'master': True,
+                        'nested_list': ['master'],
+                        'nested_dict': {'master': True}}}
+        )
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(_windows_or_mac(), 'minion is windows or mac')
@@ -1438,6 +1624,61 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
                   - env: base
             ''')
         self.assertEqual(ret, expected)
+
+    def test_root_parameter(self):
+        '''
+        Test root parameter
+        '''
+        expected = {
+            'from_subdir': True
+        }
+
+        ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
+            git_pillar_provider: pygit2
+            cachedir: {cachedir}
+            extension_modules: {extmods}
+            ext_pillar:
+              - git:
+                - master {url}:
+                  - root: subdir
+                - top_only {url}:
+                  - env: base
+            ''')
+        self.assertEqual(ret, expected)
+
+    def test_includes_enabled_solves___env___with_mountpoint(self):
+        '''
+        Test with git_pillar_includes enabled and using "__env__" as the branch
+        name for the configured repositories.
+        The "gitinfo" repository contains top.sls file with a local reference
+        and also referencing external "nowhere.foo" which is provided by "webinfo"
+        repository mounted as "nowhere".
+        '''
+        ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
+            git_pillar_provider: pygit2
+            cachedir: {cachedir}
+            extension_modules: {extmods}
+            ext_pillar:
+              - git:
+                - __env__ {url_extra_repo}:
+                  - name: gitinfo
+                - __env__ {url}:
+                  - name: webinfo
+                  - mountpoint: nowhere
+            ''')
+        self.assertEqual(
+            ret,
+            {'branch': 'master',
+             'motd': 'The force will be with you. Always.',
+             'mylist': ['master'],
+             'mydict': {'master': True,
+                        'nested_list': ['master'],
+                        'nested_dict': {'master': True}}}
+        )
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -1887,3 +2128,70 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
                   - env: base
             ''')
         self.assertEqual(ret, expected)
+
+    def test_root_parameter(self):
+        '''
+        Test root parameter
+        '''
+        expected = {
+            'from_subdir': True
+        }
+
+        ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
+            git_pillar_provider: pygit2
+            git_pillar_user: {user}
+            git_pillar_password: {password}
+            git_pillar_insecure_auth: True
+            cachedir: {cachedir}
+            extension_modules: {extmods}
+            ext_pillar:
+              - git:
+                - master {url}:
+                  - root: subdir
+                - top_only {url}:
+                  - env: base
+            ''')
+        self.assertEqual(ret, expected)
+
+    def test_includes_enabled_solves___env___with_mountpoint(self):
+        '''
+        Test with git_pillar_includes enabled and using "__env__" as the branch
+        name for the configured repositories.
+        The "gitinfo" repository contains top.sls file with a local reference
+        and also referencing external "nowhere.foo" which is provided by "webinfo"
+        repository mounted as "nowhere".
+        '''
+        ret = self.get_pillar('''\
+            file_ignore_regex: []
+            file_ignore_glob: []
+            git_pillar_provider: pygit2
+            git_pillar_user: {user}
+            git_pillar_password: {password}
+            git_pillar_insecure_auth: True
+            cachedir: {cachedir}
+            extension_modules: {extmods}
+            ext_pillar:
+              - git:
+                - __env__ {url_extra_repo}:
+                  - name: gitinfo
+                  - user: {user}
+                  - password: {password}
+                  - insecure_auth: True
+                - __env__ {url}:
+                  - name: webinfo
+                  - mountpoint: nowhere
+                  - user: {user}
+                  - password: {password}
+                  - insecure_auth: True
+            ''')
+        self.assertEqual(
+            ret,
+            {'branch': 'master',
+             'motd': 'The force will be with you. Always.',
+             'mylist': ['master'],
+             'mydict': {'master': True,
+                        'nested_list': ['master'],
+                        'nested_dict': {'master': True}}}
+        )

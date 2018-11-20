@@ -5,45 +5,44 @@ Connection module for Amazon Lambda
 .. versionadded:: 2016.3.0
 
 :depends:
-    - boto
-    - boto3
+
+- boto
+- boto3
 
 The dependencies listed above can be installed via package or pip.
 
 :configuration: This module accepts explicit Lambda credentials but can also
     utilize IAM roles assigned to the instance through Instance Profiles.
     Dynamic credentials are then automatically obtained from AWS API and no
-    further configuration is necessary. More Information available at:
+    further configuration is necessary. More Information available here__.
 
-    .. code-block:: text
+.. __: http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html
 
-        http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html
+If IAM roles are not used you need to specify them either in a pillar or
+in the minion's config file:
 
-    If IAM roles are not used you need to specify them either in a pillar or
-    in the minion's config file:
+.. code-block:: yaml
 
-    .. code-block:: yaml
+    lambda.keyid: GKTADJGHEIQSXMKKRBJ08H
+    lambda.key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 
-        lambda.keyid: GKTADJGHEIQSXMKKRBJ08H
-        lambda.key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+A region may also be specified in the configuration:
 
-    A region may also be specified in the configuration:
+.. code-block:: yaml
 
-    .. code-block:: yaml
+    lambda.region: us-east-1
 
-        lambda.region: us-east-1
+If a region is not specified, the default is us-east-1.
 
-    If a region is not specified, the default is us-east-1.
+It's also possible to specify key, keyid and region via a profile, either
+as a passed in dict, or as a string to pull from pillars or minion config:
 
-    It's also possible to specify key, keyid and region via a profile, either
-    as a passed in dict, or as a string to pull from pillars or minion config:
+.. code-block:: yaml
 
-    .. code-block:: yaml
-
-        myprofile:
-            keyid: GKTADJGHEIQSXMKKRBJ08H
-            key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
-            region: us-east-1
+    myprofile:
+        keyid: GKTADJGHEIQSXMKKRBJ08H
+        key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+        region: us-east-1
 
 .. versionchanged:: 2015.8.0
     All methods now return a dictionary. Create and delete methods return:
@@ -216,21 +215,24 @@ def create_function(FunctionName, Runtime, Role, Handler, ZipFile=None,
                     region=None, key=None, keyid=None, profile=None,
                     VpcConfig=None, Environment=None):
     '''
+    .. versionadded:: 2017.7.0
+
     Given a valid config, create a function.
 
     Environment
         The parent object that contains your environment's configuration
-        settings.  This is a dictionary of the form:
-        {
-            'Variables': {
-                'VariableName': 'VariableValue'
+        settings. This is a dictionary of the form:
+
+        .. code-block:: python
+
+            {
+                'Variables': {
+                    'VariableName': 'VariableValue'
+                }
             }
-        }
 
-        .. versionadded:: 2017.7.0
-
-    Returns {created: true} if the function was created and returns
-    {created: False} if the function was not created.
+    Returns ``{'created': True}`` if the function was created and ``{created:
+    False}`` if the function was not created.
 
     CLI Example:
 
@@ -360,21 +362,24 @@ def update_function_config(FunctionName, Role=None, Handler=None,
                            VpcConfig=None, WaitForRole=False, RoleRetries=5,
                            Environment=None):
     '''
+    .. versionadded:: 2017.7.0
+
     Update the named lambda function to the configuration.
 
     Environment
         The parent object that contains your environment's configuration
-        settings.  This is a dictionary of the form:
-        {
-            'Variables': {
-                'VariableName': 'VariableValue'
+        settings. This is a dictionary of the form:
+
+        .. code-block:: python
+
+            {
+                'Variables': {
+                    'VariableName': 'VariableValue'
+                }
             }
-        }
 
-        .. versionadded:: 2017.7.0
-
-    Returns {updated: true} if the function was updated and returns
-    {updated: False} if the function was not updated.
+    Returns ``{'updated': True}`` if the function was updated, and
+    ``{'updated': False}`` if the function was not updated.
 
     CLI Example:
 

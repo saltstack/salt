@@ -55,7 +55,7 @@ Multiple policy configuration
             - user_policy:
                 Do not process the legacy run list: Enabled
 
-.. code-block:: yaml
+.. code-block:: text
 
     server_policy:
       lgpo.set:
@@ -108,6 +108,7 @@ from __future__ import absolute_import, unicode_literals, print_function
 import logging
 
 # Import salt libs
+import salt.utils.data
 import salt.utils.dictdiffer
 import salt.utils.json
 
@@ -268,11 +269,33 @@ def set_(name,
                     changes = False
                     requested_policy_json = salt.utils.json.dumps(policy_data['requested_policy'][policy_name], sort_keys=True).lower()
                     current_policy_json = salt.utils.json.dumps(current_policy[policy_data['output_section']][pol_id], sort_keys=True).lower()
-                    if requested_policy_json != current_policy_json:
+                    policies_are_equal = False
+
+                    requested_policy_check = salt.utils.json.loads(requested_policy_json)
+                    current_policy_check = salt.utils.json.loads(current_policy_json)
+
+                    # Compared dicts, lists, and strings
+                    if isinstance(requested_policy_check, six.string_types):
+                        policies_are_equal = requested_policy_check == current_policy_check
+                    elif isinstance(requested_policy_check, list):
+                        policies_are_equal = salt.utils.data.compare_lists(
+                            requested_policy_check,
+                            current_policy_check
+                        ) == {}
+                    elif isinstance(requested_policy_check, dict):
+                        policies_are_equal = salt.utils.data.compare_dicts(
+                            requested_policy_check,
+                            current_policy_check
+                        ) == {}
+
+                    if not policies_are_equal:
+                        additional_policy_comments = []
                         if policy_data['policy_lookup'][policy_name]['rights_assignment'] and cumulative_rights_assignments:
                             for user in policy_data['requested_policy'][policy_name]:
                                 if user not in current_policy[policy_data['output_section']][pol_id]:
                                     changes = True
+                                else:
+                                    additional_policy_comments.append('"{0}" is already granted the right'.format(user))
                         else:
                             changes = True
                         if changes:
@@ -283,10 +306,15 @@ def set_(name,
                                 requested_policy_json, current_policy_json
                             )
                             policy_changes.append(policy_name)
+                        else:
+                            if additional_policy_comments:
+                                ret['comment'] = '"{0}" is already set ({1}).\n'.format(policy_name, ', '.join(additional_policy_comments))
+                            else:
+                                ret['comment'] = '"{0}" is already set.\n'.format(policy_name) + ret['comment']
                     else:
                         log.debug('%s current setting matches '
                                   'the requested setting', policy_name)
-                        ret['comment'] = '"{0}" is already set.'.format(policy_name) + ret['comment']
+                        ret['comment'] = '"{0}" is already set.\n'.format(policy_name) + ret['comment']
                 else:
                     policy_changes.append(policy_name)
                     log.debug('policy %s is not set, we will configure it',
@@ -294,8 +322,8 @@ def set_(name,
     if __opts__['test']:
         if policy_changes:
             ret['result'] = None
-            ret['comment'] = 'The following policies are set to change: {0}.'.format(
-                    ', '.join(policy_changes))
+            ret['comment'] = 'The following policies are set to change:\n{0}.'.format(
+                    '\n'.join(policy_changes))
         else:
             ret['comment'] = 'All specified policies are properly configured'
     else:
@@ -306,6 +334,8 @@ def set_(name,
                                         adml_language=adml_language)
             if _ret:
                 ret['result'] = _ret
+                ret['comment'] = 'The following policies changed:\n{0}.'.format(
+                    '\n'.join(policy_changes))
                 ret['changes'] = salt.utils.dictdiffer.deep_diff(
                     current_policy,
                     __salt__['lgpo.get'](policy_class=policy_class,

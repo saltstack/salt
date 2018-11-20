@@ -122,12 +122,6 @@ def beacon(config):
     '''
     log.debug(config)
     ctime = datetime.datetime.utcnow().isoformat()
-    ret = {}
-    if salt.utils.platform.is_windows():
-        return [{
-            'tag': ctime,
-            'data': ret,
-        }]
 
     if len(config) < 1:
         config = [{

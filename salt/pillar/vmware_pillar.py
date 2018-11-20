@@ -14,13 +14,14 @@ The pillar will return an empty dict if the 'os' or 'virtual' grain are not 'VMW
 
 Defaults
 ========
-    The external pillar will search for Virtual Machines with the VM name matching the minion id.
-    Data will be returned into the 'vmware' pillar key.
-    The external pillar has a default set of properties to return for both VirtualMachine and HostSystem types.
+
+- The external pillar will search for Virtual Machines with the VM name matching the minion id.
+- Data will be returned into the 'vmware' pillar key.
+- The external pillar has a default set of properties to return for both VirtualMachine and HostSystem types.
 
 
 Configuring the VMWare pillar
-============================
+=============================
 
 The required minimal configuration in the salt master ext_pillar setup:
 

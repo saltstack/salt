@@ -166,36 +166,46 @@ def hostname(name):
     return ret
 
 
-def join_domain(name, username=None, password=None, account_ou=None,
-                account_exists=False, restart=False):
-
+def join_domain(name,
+                username=None,
+                password=None,
+                account_ou=None,
+                account_exists=False,
+                restart=False):
     '''
-    Checks if a computer is joined to the Domain.
-    If the computer is not in the Domain, it will be joined.
+    Checks if a computer is joined to the Domain. If the computer is not in the
+    Domain, it will be joined.
 
-    name:
-        The name of the Domain.
+    Args:
 
-    username:
-        Username of an account which is authorized to join computers to the
-        specified domain. Need to be either fully qualified like user@domain.tld
-        or simply user.
+        name (str):
+            The name of the Domain.
 
-    password:
-        Password of the account to add the computer to the Domain.
+        username (str):
+            Username of an account which is authorized to join computers to the
+            specified domain. Need to be either fully qualified like
+            user@domain.tld or simply user.
 
-    account_ou:
-        The DN of the OU below which the account for this computer should be
-        created when joining the domain,
-        e.g. ou=computers,ou=departm_432,dc=my-company,dc=com.
+        password (str):
+            Password of the account to add the computer to the Domain.
 
-    account_exists:
-        Needs to be set to True to allow re-using an existing computer account.
+        account_ou (str):
+            The DN of the OU below which the account for this computer should be
+            created when joining the domain,
+            e.g. ou=computers,ou=departm_432,dc=my-company,dc=com.
 
-    restart:
-        Needs to be set to True to restart the computer after a successful join.
+        account_exists (bool):
+            Needs to be set to ``True`` to allow re-using an existing computer
+            account.
 
-    .. code-block::yaml
+        restart (bool):
+            Needs to be set to ``True`` to restart the computer after a
+            successful join.
+
+    Example:
+
+    .. code-block:: yaml
+
         join_to_domain:
           system.join_domain:
             - name: mydomain.local.com
@@ -209,9 +219,6 @@ def join_domain(name, username=None, password=None, account_ou=None,
            'result': True,
            'comment': 'Computer already added to \'{0}\''.format(name)}
 
-    # Set name to domain, needed for the add to domain module.
-    domain = name
-
     current_domain_dic = __salt__['system.get_domain_workgroup']()
     if 'Domain' in current_domain_dic:
         current_domain = current_domain_dic['Domain']
@@ -220,7 +227,7 @@ def join_domain(name, username=None, password=None, account_ou=None,
     else:
         current_domain = None
 
-    if domain == current_domain:
+    if name.lower() == current_domain.lower():
         ret['comment'] = 'Computer already added to \'{0}\''.format(name)
         return ret
 
@@ -229,11 +236,20 @@ def join_domain(name, username=None, password=None, account_ou=None,
         ret['comment'] = 'Computer will be added to \'{0}\''.format(name)
         return ret
 
-    result = __salt__['system.join_domain'](domain, username, password,
-                                            account_ou, account_exists,
-                                            restart)
+    result = __salt__['system.join_domain'](domain=name,
+                                            username=username,
+                                            password=password,
+                                            account_ou=account_ou,
+                                            account_exists=account_exists,
+                                            restart=restart)
     if result is not False:
         ret['comment'] = 'Computer added to \'{0}\''.format(name)
+        if restart:
+            ret['comment'] += '\nSystem will restart'
+        else:
+            ret['comment'] += '\nSystem needs to be restarted'
+        ret['changes'] = {'old': current_domain,
+                          'new': name}
     else:
         ret['comment'] = 'Computer failed to join \'{0}\''.format(name)
         ret['result'] = False

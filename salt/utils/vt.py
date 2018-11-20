@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 
 
     salt.utils.vt
@@ -53,6 +53,7 @@ except ImportError:
 
 # Import salt libs
 import salt.utils.crypt
+import salt.utils.data
 import salt.utils.stringutils
 from salt.ext.six import string_types
 from salt.log.setup import LOG_LEVELS
@@ -502,7 +503,7 @@ class Terminal(object):
                     if tty_fd >= 0:
                         os.close(tty_fd)
                 # which exception, shouldn't we catch explicitly .. ?
-                except:  # pylint: disable=W0702
+                except Exception:
                     # Already disconnected. This happens if running inside cron
                     pass
 
@@ -520,7 +521,7 @@ class Terminal(object):
                             'still possible to open /dev/tty.'
                         )
                 # which exception, shouldn't we catch explicitly .. ?
-                except:  # pylint: disable=W0702
+                except Exception:
                     # Good! We are disconnected from a controlling tty.
                     pass
 
@@ -685,7 +686,7 @@ class Terminal(object):
                         stdout = None
                     else:
                         if self.stream_stdout:
-                            self.stream_stdout.write(stdout)
+                            self.stream_stdout.write(salt.utils.data.encode(stdout))
                             self.stream_stdout.flush()
 
                         if self.stdout_logger:

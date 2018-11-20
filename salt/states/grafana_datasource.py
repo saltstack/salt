@@ -83,7 +83,7 @@ def present(name,
     if isinstance(profile, string_types):
         profile = __salt__['config.option'](profile)
 
-    ret = {'name': name, 'result': None, 'comment': None, 'changes': None}
+    ret = {'name': name, 'result': None, 'comment': None, 'changes': {}}
     datasource = _get_datasource(profile, name)
     data = _get_json_data(name, type, url, access, user, password, database,
         basic_auth, basic_auth_user, basic_auth_password, is_default, json_data)
@@ -126,7 +126,7 @@ def absent(name, profile='grafana'):
     if isinstance(profile, string_types):
         profile = __salt__['config.option'](profile)
 
-    ret = {'result': None, 'comment': None, 'changes': None}
+    ret = {'result': None, 'comment': None, 'changes': {}}
     datasource = _get_datasource(profile, name)
 
     if not datasource:

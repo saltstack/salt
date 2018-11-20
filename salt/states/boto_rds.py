@@ -64,7 +64,6 @@ config:
               - binlog_cache_size: 32768
               - binlog_checksum: CRC32
             - region: eu-west-1
-.. note::
 
 :depends: boto3
 

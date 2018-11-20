@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 
 
     tests.integration.states.pip_state
@@ -41,6 +41,7 @@ import salt.utils.platform
 import salt.utils.versions
 import salt.utils.win_dacl
 import salt.utils.win_functions
+import salt.utils.win_runas
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 from salt.exceptions import CommandExecutionError
 
@@ -219,8 +220,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
 
             # Let's remove the pip binary
             pip_bin = os.path.join(venv_dir, 'bin', 'pip')
-            py_dir = 'python{0}.{1}'.format(*sys.version_info[:2])
-            site_dir = os.path.join(venv_dir, 'lib', py_dir, 'site-packages')
+            site_dir = self.run_function('virtualenv.get_distribution_path', [venv_dir, 'pip'])
             if salt.utils.platform.is_windows():
                 pip_bin = os.path.join(venv_dir, 'Scripts', 'pip.exe')
                 site_dir = os.path.join(venv_dir, 'lib', 'site-packages')
@@ -317,6 +317,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
 
     @destructiveTest
     @skip_if_not_root
+    @skipIf(salt.utils.platform.is_darwin(), 'Test is flaky on macosx')
     @with_system_user('issue-6912', on_existing='delete', delete=True,
                       password='PassWord1!')
     @with_tempdir()
@@ -569,8 +570,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
                     continue
                 self.assertEqual(
                     ret[key]['comment'],
-                    ('Python package carbon < 1.3 was already installed\n'
-                     'All specified packages are already installed'))
+                    ('All packages were successfully installed'))
                 break
             else:
                 raise Exception('Expected state did not run')

@@ -41,7 +41,8 @@ _DEFAULTS = {
     'user': 'sysdba',
     'password': '',
     'database': '',
-    'as_dict': False
+    'as_dict': False,
+    'autocommit': False
 }
 
 
@@ -56,7 +57,7 @@ def __virtual__():
 
 def _get_connection(**kwargs):
     connection_args = {}
-    for arg in ('server', 'port', 'user', 'password', 'database', 'as_dict'):
+    for arg in ('server', 'port', 'user', 'password', 'database', 'as_dict', 'autocommit'):
         if arg in kwargs:
             connection_args[arg] = kwargs[arg]
         else:
@@ -137,7 +138,9 @@ def db_create(database, containment='NONE', new_database_options=None, **kwargs)
     new_database_options can only be a list of strings
 
     CLI Example:
+
     .. code-block:: bash
+
         salt minion mssql.db_create DB_NAME
     '''
     if containment not in ['NONE', 'PARTIAL']:
@@ -173,7 +176,7 @@ def db_remove(database_name, **kwargs):
         salt minion mssql.db_remove database_name='DBNAME'
     '''
     try:
-        if db_exists(database_name) and database_name not in ['master', 'model', 'msdb', 'tempdb']:
+        if db_exists(database_name, **kwargs) and database_name not in ['master', 'model', 'msdb', 'tempdb']:
             conn = _get_connection(**kwargs)
             conn.autocommit(True)
             cur = conn.cursor()
@@ -299,18 +302,22 @@ def login_exists(login, domain='', **kwargs):
 
 def login_create(login, new_login_password=None, new_login_domain='', new_login_roles=None, new_login_options=None, **kwargs):
     '''
-    Creates a new login.
-    Does not update password of existing logins.
-    For Windows authentication, provide new_login_domain.
-    For SQL Server authentication, prvide new_login_password.
-    Since hashed passwords are varbinary values, if the
-    new_login_password is 'int / long', it will be considered
-    to be HASHED.
-    new_login_roles can only be a list of SERVER roles
-    new_login_options can only be a list of strings
+    Creates a new login.  Does not update password of existing logins.  For
+    Windows authentication, provide ``new_login_domain``.  For SQL Server
+    authentication, prvide ``new_login_password``.  Since hashed passwords are
+    *varbinary* values, if the ``new_login_password`` is 'int / long', it will
+    be considered to be HASHED.
+
+    new_login_roles
+        a list of SERVER roles
+
+    new_login_options
+        a list of strings
 
     CLI Example:
+
     .. code-block:: bash
+
         salt minion mssql.login_create LOGIN_NAME database=DBNAME [new_login_password=PASSWORD]
     '''
     # One and only one of password and domain should be specifies
@@ -408,13 +415,14 @@ def user_list(**kwargs):
 
 def user_create(username, login=None, domain='', database=None, roles=None, options=None, **kwargs):
     '''
-    Creates a new user.
-    If login is not specified, the user will be created without a login.
-    domain, if provided, will be prepended to username.
+    Creates a new user.  If login is not specified, the user will be created
+    without a login.  domain, if provided, will be prepended to username.
     options can only be a list of strings
 
     CLI Example:
+
     .. code-block:: bash
+
         salt minion mssql.user_create USERNAME database=DBNAME
     '''
     if domain and not login:

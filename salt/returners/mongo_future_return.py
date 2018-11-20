@@ -5,9 +5,10 @@ Return data to a mongodb server
 Required python modules: pymongo
 
 
-This returner will send data from the minions to a MongoDB server. To
-configure the settings for your MongoDB server, add the following lines
-to the minion config files:
+This returner will send data from the minions to a MongoDB server. MongoDB
+server can be configured by using host, port, db, user and password settings
+or by connection string URI (for pymongo > 2.3). To configure the settings
+for your MongoDB server, add the following lines to the minion config files:
 
 .. code-block:: yaml
 
@@ -16,6 +17,29 @@ to the minion config files:
     mongo.user: <MongoDB username>
     mongo.password: <MongoDB user password>
     mongo.port: 27017
+
+Or single URI:
+
+.. code-block:: yaml
+
+   mongo.uri: URI
+
+where uri is in the format:
+
+.. code-block:: text
+
+    mongodb://[username:password@]host1[:port1][,host2[:port2],...[,hostN[:portN]]][/[database][?options]]
+
+Example:
+
+.. code-block:: text
+
+    mongodb://db1.example.net:27017/mydatabase
+    mongodb://db1.example.net:27017,db2.example.net:2500/?replicaSet=test
+    mongodb://db1.example.net:27017,db2.example.net:2500/?replicaSet=test&connectTimeoutMS=300000
+
+More information on URI format can be found in
+https://docs.mongodb.com/manual/reference/connection-string/
 
 You can also ask for indexes creation on the most common used fields, which
 should greatly improve performance. Indexes are not created by default.
@@ -36,6 +60,11 @@ the default location:
     alternative.mongo.password: <MongoDB user password>
     alternative.mongo.port: 27017
 
+Or single URI:
+
+.. code-block:: yaml
+
+   alternative.mongo.uri: URI
 
 This mongo returner is being developed to replace the default mongodb returner
 in the future and should not be considered API stable yet.
@@ -72,12 +101,12 @@ import logging
 import salt.utils.jid
 import salt.returners
 from salt.ext import six
+from salt.utils.versions import LooseVersion as _LooseVersion
 
 # Import third party libs
 try:
     import pymongo
-    version = pymongo.version
-    version = '.'.join(version.split('.')[:2])
+    PYMONGO_VERSION = _LooseVersion(pymongo.version)
     HAS_PYMONGO = True
 except ImportError:
     HAS_PYMONGO = False
@@ -115,7 +144,8 @@ def _get_options(ret=None):
              'db': 'db',
              'user': 'user',
              'password': 'password',
-             'indexes': 'indexes'}
+             'indexes': 'indexes',
+             'uri': 'uri'}
 
     _options = salt.returners.get_returner_options(__virtualname__,
                                                    ret,
@@ -133,6 +163,7 @@ def _get_conn(ret):
 
     host = _options.get('host')
     port = _options.get('port')
+    uri = _options.get('uri')
     db_ = _options.get('db')
     user = _options.get('user')
     password = _options.get('password')
@@ -141,18 +172,28 @@ def _get_conn(ret):
     # at some point we should remove support for
     # pymongo versions < 2.3 until then there are
     # a bunch of these sections that need to be supported
-
-    if float(version) > 2.3:
-        conn = pymongo.MongoClient(host, port)
+    if uri and PYMONGO_VERSION > _LooseVersion('2.3'):
+        if uri and host:
+            raise salt.exceptions.SaltConfigurationError(
+                    "Mongo returner expects either uri or host configuration. Both were provided")
+        pymongo.uri_parser.parse_uri(uri)
+        conn = pymongo.MongoClient(uri)
+        mdb = conn.get_database()
     else:
-        conn = pymongo.Connection(host, port)
-    mdb = conn[db_]
+        if PYMONGO_VERSION > _LooseVersion('2.3'):
+            conn = pymongo.MongoClient(host, port)
+        else:
+            if uri:
+                raise salt.exceptions.SaltConfigurationError(
+                    "pymongo <= 2.3 does not support uri format")
+            conn = pymongo.Connection(host, port)
 
-    if user and password:
-        mdb.authenticate(user, password)
+        mdb = conn[db_]
+        if user and password:
+            mdb.authenticate(user, password)
 
     if indexes:
-        if float(version) > 2.3:
+        if PYMONGO_VERSION > _LooseVersion('2.3'):
             mdb.saltReturns.create_index('minion')
             mdb.saltReturns.create_index('jid')
             mdb.jobs.create_index('jid')
@@ -193,7 +234,7 @@ def returner(ret):
     #
     # again we run into the issue with deprecated code from previous versions
 
-    if float(version) > 2.3:
+    if PYMONGO_VERSION > _LooseVersion('2.3'):
         #using .copy() to ensure that the original data is not changed, raising issue with pymongo team
         mdb.saltReturns.insert_one(sdata.copy())
     else:
@@ -243,7 +284,7 @@ def save_load(jid, load, minions=None):
     conn, mdb = _get_conn(ret=None)
     to_save = _safe_copy(load)
 
-    if float(version) > 2.3:
+    if PYMONGO_VERSION > _LooseVersion('2.3'):
         #using .copy() to ensure original data for load is unchanged
         mdb.jobs.insert_one(to_save)
     else:
@@ -337,7 +378,7 @@ def event_return(events):
     if isinstance(events, dict):
         log.debug(events)
 
-        if float(version) > 2.3:
+        if PYMONGO_VERSION > _LooseVersion('2.3'):
             mdb.events.insert_one(events.copy())
         else:
             mdb.events.insert(events.copy())

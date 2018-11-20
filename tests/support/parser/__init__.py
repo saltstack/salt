@@ -5,13 +5,14 @@
 
     Salt Tests CLI access classes
 
-    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
     :copyright: Copyright 2013-2017 by the SaltStack Team, see AUTHORS for more details
     :license: Apache 2.0, see LICENSE for more details.
 '''
 # pylint: disable=repr-flag-used-in-string
 
 from __future__ import absolute_import, print_function
+import fnmatch
 import os
 import sys
 import time
@@ -20,6 +21,7 @@ import shutil
 import logging
 import platform
 import optparse
+import re
 import tempfile
 import traceback
 import subprocess
@@ -27,13 +29,20 @@ import warnings
 from functools import partial
 from collections import namedtuple
 
+import tests.support.paths
 from tests.support import helpers
 from tests.support.unit import TestLoader, TextTestRunner
 from tests.support.xmlunit import HAS_XMLRUNNER, XMLTestRunner
 
 # Import 3rd-party libs
 from salt.ext import six
+import salt.utils.data
+import salt.utils.files
+import salt.utils.path
 import salt.utils.platform
+import salt.utils.stringutils
+import salt.utils.yaml
+
 try:
     from tests.support.ext import console
     WIDTH, HEIGHT = console.getTerminalSize()
@@ -184,7 +193,7 @@ class SaltTestingParser(optparse.OptionParser):
             '--name',
             dest='name',
             action='append',
-            default=None,
+            default=[],
             help=('Specific test name to run. A named test is the module path '
                   'relative to the tests directory')
         )
@@ -194,6 +203,29 @@ class SaltTestingParser(optparse.OptionParser):
             default=None,
             help=('The location of a newline delimited file of test names to '
                   'run')
+        )
+        self.test_selection_group.add_option(
+            '--from-filenames',
+            dest='from_filenames',
+            action='append',
+            default=None,
+            help=('Pass a comma-separated list of file paths, and any '
+                  'unit/integration test module which corresponds to the '
+                  'specified file(s) will be run. For example, a path of '
+                  'salt/modules/git.py would result in unit.modules.test_git '
+                  'and integration.modules.test_git being run. Absolute paths '
+                  'are assumed to be files containing relative paths, one per '
+                  'line. Providing the paths in a file can help get around '
+                  'shell character limits when the list of files is long.')
+        )
+        self.test_selection_group.add_option(
+            '--filename-map',
+            dest='filename_map',
+            default=None,
+            help=('Path to a YAML file mapping paths/path globs to a list '
+                  'of test names to run. See tests/filename_map.yml '
+                  'for example usage (when --from-filenames is used, this '
+                  'map file will be the default one used).')
         )
         self.add_option_group(self.test_selection_group)
 
@@ -308,31 +340,164 @@ class SaltTestingParser(optparse.OptionParser):
         self.add_option_group(self.fs_cleanup_options_group)
         self.setup_additional_options()
 
+    @staticmethod
+    def _expand_paths(paths):
+        '''
+        Expand any comma-separated lists of paths, and return a set of all
+        paths to ensure there are no duplicates.
+        '''
+        ret = set()
+        for path in paths:
+            for item in [x.strip() for x in path.split(',')]:
+                if not item:
+                    continue
+                elif os.path.isabs(item):
+                    try:
+                        with salt.utils.files.fopen(item, 'rb') as fp_:
+                            for line in fp_:
+                                line = salt.utils.stringutils.to_unicode(line.strip())
+                                if os.path.isabs(line):
+                                    log.warning(
+                                        'Invalid absolute path %s in %s, '
+                                        'ignoring', line, item
+                                    )
+                                else:
+                                    ret.add(line)
+                    except (IOError, OSError) as exc:
+                        log.error('Failed to read from %s: %s', item, exc)
+                else:
+                    ret.add(item)
+        return ret
+
+    @property
+    def _test_mods(self):
+        '''
+        Use the test_mods generator to get all of the test module names, and
+        then store them in a set so that further references to this attribute
+        will not need to re-walk the test dir.
+        '''
+        try:
+            return self.__test_mods
+        except AttributeError:
+            self.__test_mods = set(tests.support.paths.test_mods())
+            return self.__test_mods
+
+    def _map_files(self, files):
+        '''
+        Map the passed paths to test modules, returning a set of the mapped
+        module names.
+        '''
+        ret = set()
+
+        if self.options.filename_map is not None:
+            try:
+                with salt.utils.files.fopen(self.options.filename_map) as fp_:
+                    filename_map = salt.utils.yaml.safe_load(fp_)
+            except Exception as exc:
+                raise RuntimeError(
+                    'Failed to load filename map: {0}'.format(exc)
+                )
+        else:
+            filename_map = {}
+
+        def _add(comps):
+            '''
+            Helper to add unit and integration tests matching a given mod path
+            '''
+            mod_relname = '.'.join(comps)
+            ret.update(
+                x for x in
+                ['.'.join(('unit', mod_relname)),
+                 '.'.join(('integration', mod_relname))]
+                if x in self._test_mods
+            )
+
+        # First, try a path match
+        for path in files:
+            match = re.match(r'^(salt/|tests/(integration|unit)/)(.+\.py)$', path)
+            if match:
+                comps = match.group(3).split('/')
+
+                # Find matches for a source file
+                if match.group(1) == 'salt/':
+                    if comps[-1] == '__init__.py':
+                        comps.pop(-1)
+                        comps[-1] = 'test_' + comps[-1]
+                    else:
+                        comps[-1] = 'test_{0}'.format(comps[-1][:-3])
+
+                    # Direct name matches
+                    _add(comps)
+
+                    # State matches for execution modules of the same name
+                    # (e.g. unit.states.test_archive if
+                    # unit.modules.test_archive is being run)
+                    try:
+                        if comps[-2] == 'modules':
+                            comps[-2] = 'states'
+                            _add(comps)
+                    except IndexError:
+                        # Not an execution module. This is either directly in
+                        # the salt/ directory, or salt/something/__init__.py
+                        pass
+
+                # Make sure to run a test module if it's been modified
+                elif match.group(1).startswith('tests/'):
+                    comps.insert(0, match.group(2))
+                    if fnmatch.fnmatch(comps[-1], 'test_*.py'):
+                        comps[-1] = comps[-1][:-3]
+                        test_name = '.'.join(comps)
+                        if test_name in self._test_mods:
+                            ret.add(test_name)
+
+        # Next, try the filename_map
+        for path_expr in filename_map:
+            for filename in files:
+                if salt.utils.stringutils.expr_match(filename, path_expr):
+                    ret.update(filename_map[path_expr])
+                    break
+
+        return ret
+
     def parse_args(self, args=None, values=None):
         self.options, self.args = optparse.OptionParser.parse_args(self, args, values)
+
+        file_names = []
         if self.options.names_file:
             with open(self.options.names_file, 'rb') as fp_:  # pylint: disable=resource-leakage
-                lines = []
                 for line in fp_.readlines():
                     if six.PY2:
-                        lines.append(line.strip())
+                        file_names.append(line.strip())
                     else:
-                        lines.append(
+                        file_names.append(
                             line.decode(__salt_system_encoding__).strip())
-            if self.options.name:
-                self.options.name.extend(lines)
-            else:
-                self.options.name = lines
+
         if self.args:
-            if not self.options.name:
-                self.options.name = []
             for fpath in self.args:
                 if os.path.isfile(fpath) and \
                         fpath.endswith('.py') and \
                         os.path.basename(fpath).startswith('test_'):
-                    self.options.name.append(fpath)
+                    if fpath in file_names:
+                        self.options.name.append(fpath)
                     continue
-                self.exit(status=1, msg='\'{}\' is not a valid test module'.format(fpath))
+                self.exit(status=1, msg='\'{}\' is not a valid test module\n'.format(fpath))
+
+        if self.options.from_filenames is not None:
+            self.options.from_filenames = self._expand_paths(self.options.from_filenames)
+
+            # Locate the default map file if one was not passed
+            if self.options.filename_map is None:
+                self.options.filename_map = salt.utils.path.join(
+                    tests.support.paths.TESTS_DIR,
+                    'filename_map.yml'
+                )
+
+            self.options.name.extend(self._map_files(self.options.from_filenames))
+
+        if self.options.name and file_names:
+            self.options.name = list(set(self.options.name).intersection(file_names))
+        elif file_names:
+            self.options.name = file_names
 
         print_header(u'', inline=True, width=self.options.output_columns)
         self.pre_execution_cleanup()
@@ -341,7 +506,7 @@ class SaltTestingParser(optparse.OptionParser):
             if self.source_code_basedir is None:
                 raise RuntimeError(
                     'You need to define the \'source_code_basedir\' attribute '
-                    'in {0!r}.'.format(self.__class__.__name__)
+                    'in \'{0}\'.'.format(self.__class__.__name__)
                 )
 
             if '/' not in self.options.docked:
@@ -440,7 +605,8 @@ class SaltTestingParser(optparse.OptionParser):
         if self.options.tests_logfile:
             filehandler = logging.FileHandler(
                 mode='w',           # Not preserved between re-runs
-                filename=self.options.tests_logfile
+                filename=self.options.tests_logfile,
+                encoding='utf-8',
             )
             # The logs of the file are the most verbose possible
             filehandler.setLevel(logging.DEBUG)

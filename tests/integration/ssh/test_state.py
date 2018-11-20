@@ -27,11 +27,14 @@ class SSHStateTest(SSHCase):
     '''
     testing the state system with salt-ssh
     '''
-    def _check_dict_ret(self, ret, val, exp_ret):
+    def _check_dict_ret(self, ret, val, exp_ret, equal=True):
         self.assertIsInstance(ret, dict)
         for key, value in ret.items():
             self.assertIsInstance(value, dict)
-            self.assertEqual(value[val], exp_ret)
+            if equal:
+                self.assertEqual(value[val], exp_ret)
+            else:
+                self.assertNotEqual(value[val], exp_ret)
 
     def _check_request(self, empty=False):
         check = self.run_function('state.check_request', wipe=False)
@@ -55,11 +58,30 @@ class SSHStateTest(SSHCase):
         '''
         test state.sls_id with salt-ssh
         '''
+        # check state.sls_id with test=True
+        ret = self.run_function('state.sls_id', ['ssh-file-test', SSH_SLS,
+                                                 'test=True'])
+        self._check_dict_ret(ret=ret, val='comment',
+                             exp_ret='The file /tmp/test is set to be changed')
+
+        # check state.sls_id without test=True
         ret = self.run_function('state.sls_id', ['ssh-file-test', SSH_SLS])
         self._check_dict_ret(ret=ret, val='__sls__', exp_ret=SSH_SLS)
 
+        # make sure the other id in the state was not run
+        self._check_dict_ret(ret=ret, val='__id__',
+                             exp_ret='second_id', equal=False)
+
         check_file = self.run_function('file.file_exists', ['/tmp/test'])
         self.assertTrue(check_file)
+
+    def test_state_sls_wrong_id(self):
+        '''
+        test state.sls_id when id does not exist
+        '''
+        # check state.sls_id with test=True
+        ret = self.run_function('state.sls_id', ['doesnotexist', SSH_SLS])
+        assert 'No matches for ID' in ret
 
     def test_state_show_sls(self):
         '''

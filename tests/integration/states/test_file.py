@@ -22,22 +22,27 @@ log = logging.getLogger(__name__)
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
-from tests.support.paths import FILES, TMP, TMP_STATE_TREE
+from tests.support.paths import BASE_FILES, FILES, TMP, TMP_STATE_TREE
 from tests.support.helpers import (
+    destructiveTest,
     skip_if_not_root,
     with_system_user_and_group,
     with_tempdir,
     with_tempfile,
     Webserver,
+    destructiveTest,
+    dedent,
 )
 from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import Salt libs
 import salt.utils.data
 import salt.utils.files
+import salt.utils.json
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
+from salt.utils.versions import LooseVersion as _LooseVersion
 
 HAS_PWD = True
 try:
@@ -59,7 +64,6 @@ IS_WINDOWS = salt.utils.platform.is_windows()
 
 BINARY_FILE = b'GIF89a\x01\x00\x01\x00\x80\x00\x00\x05\x04\x04\x00\x00\x00,\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x02D\x01\x00;'
 
-STATE_DIR = os.path.join(FILES, 'file', 'base')
 if IS_WINDOWS:
     FILEPILLAR = 'C:\\Windows\\Temp\\filepillar-python'
     FILEPILLARDEF = 'C:\\Windows\\Temp\\filepillar-defaultvalue'
@@ -75,7 +79,7 @@ def _test_managed_file_mode_keep_helper(testcase, local=False):
     DRY helper function to run the same test with a local or remote path
     '''
     name = os.path.join(TMP, 'scene33')
-    grail_fs_path = os.path.join(FILES, 'file', 'base', 'grail', 'scene33')
+    grail_fs_path = os.path.join(BASE_FILES, 'grail', 'scene33')
     grail = 'salt://grail/scene33' if not local else grail_fs_path
 
     # Get the current mode so that we can put the file back the way we
@@ -143,11 +147,15 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         remove files created in previous tests
         '''
+        user = 'salt'
+        if user in str(self.run_function('user.list_users', [user])):
+            self.run_function('user.delete', [user])
+
         for path in (FILEPILLAR, FILEPILLARDEF, FILEPILLARGIT):
             try:
                 os.remove(path)
             except OSError as exc:
-                if exc.errno != os.errno.ENOENT:
+                if exc.errno != errno.ENOENT:
                     log.error('Failed to remove %s: %s', path, exc)
 
     def test_symlink(self):
@@ -242,9 +250,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state(
             'file.managed', name=name, source='salt://grail/scene33'
         )
-        src = os.path.join(
-            FILES, 'file', 'base', 'grail', 'scene33'
-        )
+        src = os.path.join(BASE_FILES, 'grail', 'scene33')
         with salt.utils.files.fopen(src, 'r') as fp_:
             master_data = fp_.read()
         with salt.utils.files.fopen(name, 'r') as fp_:
@@ -264,7 +270,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
 
         if IS_WINDOWS:
             expected = 'The \'mode\' option is not supported on Windows'
-            self.assertEqual(ret[ret.keys()[0]]['comment'], expected)
+            self.assertEqual(ret[list(ret)[0]]['comment'], expected)
             self.assertSaltFalseReturn(ret)
             return
 
@@ -300,7 +306,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
 
         if IS_WINDOWS:
             expected = 'The \'mode\' option is not supported on Windows'
-            self.assertEqual(ret[ret.keys()[0]]['comment'], expected)
+            self.assertEqual(ret[list(ret)[0]]['comment'], expected)
             self.assertSaltFalseReturn(ret)
             return
 
@@ -332,7 +338,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
 
         if IS_WINDOWS:
             expected = 'The \'mode\' option is not supported on Windows'
-            self.assertEqual(ret[ret.keys()[0]]['comment'], expected)
+            self.assertEqual(ret[list(ret)[0]]['comment'], expected)
             self.assertSaltFalseReturn(ret)
             return
 
@@ -351,16 +357,19 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         file.
         '''
         grain_path = os.path.join(TMP, 'file-grain-test')
-        self.run_function('grains.set', ['grain_path', grain_path])
         state_file = 'file-grainget'
 
-        self.run_function('state.sls', [state_file])
+        self.run_function('state.sls', [state_file], pillar={'grain_path': grain_path})
         self.assertTrue(os.path.exists(grain_path))
 
         with salt.utils.files.fopen(grain_path, 'r') as fp_:
             file_contents = fp_.readlines()
 
-        self.assertTrue(re.match('^minion$', file_contents[0]))
+        if IS_WINDOWS:
+            match = '^minion\r\n'
+        else:
+            match = '^minion\n'
+        self.assertTrue(re.match(match, file_contents[0]))
 
     def test_managed_file_with_pillar_sls(self):
         '''
@@ -411,7 +420,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         )
         if IS_WINDOWS:
             expected = 'The \'mode\' option is not supported on Windows'
-            self.assertEqual(ret[ret.keys()[0]]['comment'], expected)
+            self.assertEqual(ret[list(ret)[0]]['comment'], expected)
             self.assertSaltFalseReturn(ret)
             return
 
@@ -458,11 +467,11 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         funny_file = salt.utils.files.mkstemp(prefix='?f!le? n@=3&', suffix='.file type')
         funny_file_name = os.path.split(funny_file)[1]
         funny_url = 'salt://|' + funny_file_name
-        funny_url_path = os.path.join(STATE_DIR, funny_file_name)
+        funny_url_path = os.path.join(BASE_FILES, funny_file_name)
 
         state_name = 'funny_file'
         state_file_name = state_name + '.sls'
-        state_file = os.path.join(STATE_DIR, state_file_name)
+        state_file = os.path.join(BASE_FILES, state_file_name)
         state_key = 'file_|-{0}_|-{0}_|-managed'.format(funny_file)
 
         self.addCleanup(os.remove, state_file)
@@ -489,7 +498,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         state_name = 'file-FileTest-test_managed_contents'
         state_filename = state_name + '.sls'
-        state_file = os.path.join(STATE_DIR, state_filename)
+        state_file = os.path.join(BASE_FILES, state_filename)
 
         managed_files = {}
         state_keys = {}
@@ -583,8 +592,11 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         Make sure that we enforce the source_hash even with local files
         '''
         name = os.path.join(TMP, 'local_source_with_source_hash')
-        local_path = os.path.join(FILES, 'file', 'base', 'grail', 'scene33')
+        local_path = os.path.join(BASE_FILES, 'grail', 'scene33')
         actual_hash = '567fd840bf1548edc35c48eb66cdd78bfdfcccff'
+        if IS_WINDOWS:
+            # CRLF vs LF causes a different hash on windows
+            actual_hash = 'f658a0ec121d9c17088795afcc6ff3c43cb9842a'
         # Reverse the actual hash
         bad_hash = actual_hash[::-1]
 
@@ -639,7 +651,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         Make sure that we exit gracefully when a local source doesn't exist
         '''
         name = os.path.join(TMP, 'local_source_does_not_exist')
-        local_path = os.path.join(FILES, 'file', 'base', 'grail', 'scene99')
+        local_path = os.path.join(BASE_FILES, 'grail', 'scene99')
 
         for proto in ('file://', ''):
             source = proto + local_path
@@ -655,6 +667,227 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             # Check that we identified a hash mismatch
             self.assertIn(
                 'does not exist', ret['comment'])
+
+    def test_managed_unicode_jinja_with_tojson_filter(self):
+        '''
+        Using {{ varname }} with a list or dictionary which contains unicode
+        types on Python 2 will result in Jinja rendering the "u" prefix on each
+        string. This tests that using the "tojson" jinja filter will dump them
+        to a format which can be successfully loaded by our YAML loader.
+
+        The two lines that should end up being rendered are meant to test two
+        issues that would trip up PyYAML if the "tojson" filter were not used:
+
+        1. A unicode string type would be loaded as a unicode literal with the
+           leading "u" as well as the quotes, rather than simply being loaded
+           as the proper unicode type which matches the content of the string
+           literal. In other words, u'foo' would be loaded literally as
+           u"u'foo'". This test includes actual non-ascii unicode in one of the
+           strings to confirm that this also handles these international
+           characters properly.
+
+        2. Any unicode string type (such as a URL) which contains a colon would
+           cause a ScannerError in PyYAML, as it would be assumed to delimit a
+           mapping node.
+
+        Dumping the data structure to JSON using the "tojson" jinja filter
+        should produce an inline data structure which is valid YAML and will be
+        loaded properly by our YAML loader.
+        '''
+        test_file = os.path.join(TMP, 'test-tojson.txt')
+        ret = self.run_function(
+            'state.apply',
+            mods='tojson',
+            pillar={'tojson-file': test_file})
+        ret = ret[next(iter(ret))]
+        assert ret['result'], ret
+        with salt.utils.files.fopen(test_file) as fp_:
+            managed = salt.utils.stringutils.to_unicode(fp_.read())
+        expected = dedent('''\
+            Die Webseite ist https://saltstack.com.
+            Der Zucker ist süß.
+
+            ''')
+        assert managed == expected, '{0!r} != {1!r}'.format(managed, expected)  # pylint: disable=repr-flag-used-in-string
+
+    def test_managed_source_hash_indifferent_case(self):
+        '''
+        Test passing a source_hash as an uppercase hash.
+
+        This is a regression test for Issue #38914 and Issue #48230 (test=true use).
+        '''
+        name = os.path.join(TMP, 'source_hash_indifferent_case')
+        state_name = 'file_|-{0}_|' \
+                     '-{0}_|-managed'.format(name)
+        local_path = os.path.join(BASE_FILES, 'hello_world.txt')
+        actual_hash = 'c98c24b677eff44860afea6f493bbaec5bb1c4cbb209c6fc2bbb47f66ff2ad31'
+        if IS_WINDOWS:
+            # CRLF vs LF causes a differnt hash on windows
+            actual_hash = '92b772380a3f8e27a93e57e6deeca6c01da07f5aadce78bb2fbb20de10a66925'
+        uppercase_hash = actual_hash.upper()
+
+        try:
+            # Lay down tmp file to test against
+            self.run_state(
+                'file.managed',
+                name=name,
+                source=local_path,
+                source_hash=actual_hash
+            )
+
+            # Test uppercase source_hash: should return True with no changes
+            ret = self.run_state(
+                'file.managed',
+                name=name,
+                source=local_path,
+                source_hash=uppercase_hash
+            )
+            assert ret[state_name]['result'] is True
+            assert ret[state_name]['changes'] == {}
+
+            # Test uppercase source_hash using test=true
+            # Should return True with no changes
+            ret = self.run_state(
+                'file.managed',
+                name=name,
+                source=local_path,
+                source_hash=uppercase_hash,
+                test=True
+            )
+            assert ret[state_name]['result'] is True
+            assert ret[state_name]['changes'] == {}
+
+        finally:
+            # Clean Up File
+            if os.path.exists(name):
+                os.remove(name)
+
+    @with_tempfile(create=False)
+    def test_managed_latin1_diff(self, name):
+        '''
+        Tests that latin-1 file contents are represented properly in the diff
+        '''
+        # Lay down the initial file
+        ret = self.run_state(
+            'file.managed',
+            name=name,
+            source='salt://issue-48777/old.html')
+        ret = ret[next(iter(ret))]
+        assert ret['result'] is True, ret
+
+        # Replace it with the new file and check the diff
+        ret = self.run_state(
+            'file.managed',
+            name=name,
+            source='salt://issue-48777/new.html')
+        ret = ret[next(iter(ret))]
+        assert ret['result'] is True, ret
+        diff_lines = ret['changes']['diff'].split(os.linesep)
+        assert '+räksmörgås' in diff_lines, diff_lines
+
+    @with_tempfile()
+    def test_managed_keep_source_false_salt(self, name):
+        '''
+        This test ensures that we properly clean the cached file if keep_source
+        is set to False, for source files using a salt:// URL
+        '''
+        source = 'salt://grail/scene33'
+        saltenv = 'base'
+
+        # Run the state
+        ret = self.run_state(
+            'file.managed',
+            name=name,
+            source=source,
+            saltenv=saltenv,
+            keep_source=False)
+        ret = ret[next(iter(ret))]
+        assert ret['result'] is True
+
+        # Now make sure that the file is not cached
+        result = self.run_function('cp.is_cached', [source, saltenv])
+        assert result == '', 'File is still cached at {0}'.format(result)
+
+    @with_tempfile(create=False)
+    @with_tempfile(create=False)
+    def test_file_managed_onchanges(self, file1, file2):
+        '''
+        Test file.managed state with onchanges
+        '''
+        pillar = {'file1': file1,
+                  'file2': file2,
+                  'source': 'salt://testfile',
+                  'req': 'onchanges'}
+
+        # Lay down the file used in the below SLS to ensure that when it is
+        # run, there are no changes.
+        self.run_state(
+            'file.managed',
+            name=pillar['file2'],
+            source=pillar['source'])
+
+        ret = self.repack_state_returns(
+            self.run_function(
+                'state.apply',
+                mods='onchanges_prereq',
+                pillar=pillar,
+                test=True,
+            )
+        )
+        # The file states should both exit with None
+        assert ret['one']['result'] is None, ret['one']['result']
+        assert ret['three']['result'] is True, ret['three']['result']
+        # The first file state should have changes, since a new file was
+        # created. The other one should not, since we already created that file
+        # before applying the SLS file.
+        assert ret['one']['changes']
+        assert not ret['three']['changes'], ret['three']['changes']
+        # The state watching 'one' should have been run due to changes
+        assert ret['two']['comment'] == 'Success!', ret['two']['comment']
+        # The state watching 'three' should not have been run
+        assert ret['four']['comment'] == \
+            'State was not run because none of the onchanges reqs changed', \
+            ret['four']['comment']
+
+    @with_tempfile(create=False)
+    @with_tempfile(create=False)
+    def test_file_managed_prereq(self, file1, file2):
+        '''
+        Test file.managed state with prereq
+        '''
+        pillar = {'file1': file1,
+                  'file2': file2,
+                  'source': 'salt://testfile',
+                  'req': 'prereq'}
+
+        # Lay down the file used in the below SLS to ensure that when it is
+        # run, there are no changes.
+        self.run_state(
+            'file.managed',
+            name=pillar['file2'],
+            source=pillar['source'])
+
+        ret = self.repack_state_returns(
+            self.run_function(
+                'state.apply',
+                mods='onchanges_prereq',
+                pillar=pillar,
+                test=True,
+            )
+        )
+        # The file states should both exit with None
+        assert ret['one']['result'] is None, ret['one']['result']
+        assert ret['three']['result'] is True, ret['three']['result']
+        # The first file state should have changes, since a new file was
+        # created. The other one should not, since we already created that file
+        # before applying the SLS file.
+        assert ret['one']['changes']
+        assert not ret['three']['changes'], ret['three']['changes']
+        # The state watching 'one' should have been run due to changes
+        assert ret['two']['comment'] == 'Success!', ret['two']['comment']
+        # The state watching 'three' should not have been run
+        assert ret['four']['comment'] == 'No changes detected', \
+            ret['four']['comment']
 
     def test_directory(self):
         '''
@@ -689,7 +922,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                 ret = self.run_state(
                     'file.directory', test=True, name=sym_dir,
                     follow_symlinks=True, mode=700)
-
             self.assertSaltTrueReturn(ret)
         finally:
             if os.path.isdir(tmp_dir):
@@ -720,6 +952,13 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         initial_mode = '0111'
         changed_mode = '0555'
 
+        initial_modes = {0: {sub: '0755',
+                             subsub: '0111'},
+                         1: {sub: '0111',
+                             subsub: '0111'},
+                         2: {sub: '0111',
+                             subsub: '0111'}}
+
         if not os.path.isdir(subsub):
             os.makedirs(subsub, int(initial_mode, 8))
 
@@ -735,8 +974,16 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                     self.assertEqual(changed_mode,
                                      _get_oct_mode(changed_dir))
                 for untouched_dir in dirs[depth+1:]:
-                    self.assertEqual(initial_mode,
-                                     _get_oct_mode(untouched_dir))
+                    # Beginning in Python 3.7, os.makedirs no longer sets
+                    # the mode of intermediate directories to the mode that
+                    # is passed.
+                    if sys.version_info >= (3, 7):
+                        _mode = initial_modes[depth][untouched_dir]
+                        self.assertEqual(_mode,
+                                         _get_oct_mode(untouched_dir))
+                    else:
+                        self.assertEqual(initial_mode,
+                                         _get_oct_mode(untouched_dir))
         finally:
             shutil.rmtree(top)
 
@@ -813,10 +1060,14 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertFalse(os.path.exists(strayfile2))
         self.assertTrue(os.path.exists(keepfile))
 
+    @skipIf(IS_WINDOWS, 'Skip on windows')
     @with_tempdir()
     def test_test_directory_clean_exclude(self, base_dir):
         '''
         file.directory with test=True, clean=True and exclude_pat set
+
+        Skipped on windows because clean and exclude_pat not supported by
+        salt.sates.file._check_directory_win
         '''
         name = os.path.join(base_dir, 'directory_clean_dir')
         os.mkdir(name)
@@ -864,7 +1115,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         state_name = 'file-FileTest-test_directory_clean_require_in'
         state_filename = state_name + '.sls'
-        state_file = os.path.join(STATE_DIR, state_filename)
+        state_file = os.path.join(BASE_FILES, state_filename)
 
         directory = tempfile.mkdtemp()
         self.addCleanup(lambda: shutil.rmtree(directory))
@@ -899,7 +1150,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         state_name = 'file-FileTest-test_directory_clean_require_in_with_id'
         state_filename = state_name + '.sls'
-        state_file = os.path.join(STATE_DIR, state_filename)
+        state_file = os.path.join(BASE_FILES, state_filename)
 
         directory = tempfile.mkdtemp()
         self.addCleanup(lambda: shutil.rmtree(directory))
@@ -935,7 +1186,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         state_name = 'file-FileTest-test_directory_clean_require_in_with_id'
         state_filename = state_name + '.sls'
-        state_file = os.path.join(STATE_DIR, state_filename)
+        state_file = os.path.join(BASE_FILES, state_filename)
 
         directory = tempfile.mkdtemp()
         self.addCleanup(lambda: shutil.rmtree(directory))
@@ -965,6 +1216,37 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_function('state.sls', [state_name])
         self.assertTrue(os.path.exists(good_file))
         self.assertFalse(os.path.exists(wrong_file))
+
+    def test_directory_broken_symlink(self):
+        '''
+        Ensure that file.directory works even if a directory
+        contains broken symbolic link
+        '''
+        try:
+            tmp_dir = os.path.join(TMP, 'foo')
+            null_file = '{0}/null'.format(tmp_dir)
+            broken_link = '{0}/broken'.format(tmp_dir)
+
+            if IS_WINDOWS:
+                self.run_function('file.mkdir', [tmp_dir, 'Administrators'])
+            else:
+                os.mkdir(tmp_dir, 0o700)
+
+            self.run_function('file.symlink', [null_file, broken_link])
+
+            if IS_WINDOWS:
+                ret = self.run_state(
+                    'file.directory', name=tmp_dir, recurse={'mode'},
+                    follow_symlinks=True, win_owner='Administrators')
+            else:
+                ret = self.run_state(
+                    'file.directory', name=tmp_dir, recurse={'mode'},
+                    file_mode=644, dir_mode=755)
+
+            self.assertSaltTrueReturn(ret)
+        finally:
+            if os.path.isdir(tmp_dir):
+                self.run_function('file.remove', [tmp_dir])
 
     @with_tempdir(create=False)
     def test_recurse(self, name):
@@ -1108,6 +1390,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertTrue(os.path.isfile(os.path.join(name, '32', 'scene')))
         self.assertTrue(os.path.isfile(os.path.join(name, 'scene34')))
 
+    @skipIf(IS_WINDOWS, 'Skip on windows')
     @with_tempdir()
     def test_recurse_issue_34945(self, base_dir):
         '''
@@ -1123,6 +1406,8 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         repaired.
 
         This was fixed in https://github.com/saltstack/salt/pull/35309
+
+        Skipped on windows because dir_mode is not supported.
         '''
         dir_mode = '2775'
         issue_dir = 'issue-34945'
@@ -1147,8 +1432,15 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                              name=name,
                              source='salt://соль')
         self.assertSaltTrueReturn(ret)
+        if six.PY2 and IS_WINDOWS:
+            # Providing unicode to os.listdir so that we avoid having listdir
+            # try to decode the filenames using the systemencoding on windows
+            # python 2.
+            files = os.listdir(name.decode('utf-8'))
+        else:
+            files = salt.utils.data.decode(os.listdir(name), normalize=True)
         self.assertEqual(
-            sorted(salt.utils.data.decode(os.listdir(name), normalize=True)),
+            sorted(files),
             sorted(['foo.txt', 'спам.txt', 'яйца.txt']),
         )
 
@@ -1364,7 +1656,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         ret = []
         for x in range(0, 3):
             ret.append(self.run_state('file.replace',
-                name=path_test, pattern='^#foo=bar$', repl='foo=salt', append_if_not_found=True))
+                name=path_test, pattern='^#foo=bar($|(?=\r\n))', repl='foo=salt', append_if_not_found=True))
 
         # ensure, the resulting file contains the expected lines
         self.assertTrue(filecmp.cmp(path_test, path_out))
@@ -1448,20 +1740,65 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                     'finally': 'the last item'},
                 formatter='json')
 
-        with salt.utils.files.fopen(path_test, 'r') as fp_:
-            serialized_file = fp_.read()
+        with salt.utils.files.fopen(path_test, 'rb') as fp_:
+            serialized_file = salt.utils.stringutils.to_unicode(fp_.read())
 
-        expected_file = '''{
-  "a_list": [
-    "first_element",
-    "second_element"
-  ],
-  "description": "A basic test",
-  "finally": "the last item",
-  "name": "naive"
-}
-'''
+        # The JSON serializer uses LF even on OSes where os.path.sep is CRLF.
+        expected_file = '\n'.join([
+            '{',
+            '  "a_list": [',
+            '    "first_element",',
+            '    "second_element"',
+            '  ],',
+            '  "description": "A basic test",',
+            '  "finally": "the last item",',
+            '  "name": "naive"',
+            '}',
+            '',
+        ])
         self.assertEqual(serialized_file, expected_file)
+
+    @with_tempfile(create=False)
+    def test_serializer_deserializer_opts(self, name):
+        '''
+        Test the serializer_opts and deserializer_opts options
+        '''
+        data1 = {'foo': {'bar': 'baz'}}
+        data2 = {'foo': {'abc': 123}}
+        merged = {'foo': {'bar': 'baz', 'abc': 123}}
+
+        ret = self.run_state(
+            'file.serialize',
+            name=name,
+            dataset=data1,
+            formatter='json',
+            deserializer_opts=[{'encoding': 'latin-1'}])
+        ret = ret[next(iter(ret))]
+        assert ret['result'], ret
+        # We should have warned about deserializer_opts being used when
+        # merge_if_exists was not set to True.
+        assert 'warnings' in ret
+
+        # Run with merge_if_exists, as well as serializer and deserializer opts
+        ret = self.run_state(
+            'file.serialize',
+            name=name,
+            dataset=data2,
+            formatter='json',
+            merge_if_exists=True,
+            serializer_opts=[{'indent': 8}],
+            deserializer_opts=[{'encoding': 'latin-1'}])
+        ret = ret[next(iter(ret))]
+        assert ret['result'], ret
+
+        with salt.utils.files.fopen(name) as fp_:
+            serialized_data = salt.utils.json.load(fp_)
+
+        # If this test fails, this debug logging will help tell us how the
+        # serialized data differs from what was serialized.
+        log.debug('serialized_data = %r', serialized_data)
+        log.debug('merged = %r', merged)
+        assert serialized_data == merged
 
     @with_tempdir()
     def test_replace_issue_18841_omit_backup(self, base_dir):
@@ -1864,6 +2201,10 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
     def test_issue_8343_accumulated_require_in(self, base_dir):
         template_path = os.path.join(TMP_STATE_TREE, 'issue-8343.sls')
         testcase_filedest = os.path.join(base_dir, 'issue-8343.txt')
+        if os.path.exists(template_path):
+            os.remove(template_path)
+        if os.path.exists(testcase_filedest):
+            os.remove(testcase_filedest)
         sls_template = [
             '{0}:',
             '  file.managed:',
@@ -1926,7 +2267,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             '#-- end salt managed zoneend --',
             '']
 
-        self.assertEqual(expected, contents)
+        self.assertEqual([salt.utils.stringutils.to_str(line) for line in expected], contents)
 
     @with_tempdir()
     def test_issue_11003_immutable_lazy_proxy_sum(self, base_dir):
@@ -2018,6 +2359,10 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                    {korean_3}
                 - replace: True
                 - show_diff: True
+            '''.format(**locals()))
+
+        if not salt.utils.platform.is_windows():
+            template += textwrap.dedent('''\
             some-utf8-file-content-test:
               cmd.run:
                 - name: 'cat "{test_file}"'
@@ -2042,10 +2387,10 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             else:
                 diff = '--- \n+++ \n@@ -1 +1,3 @@\n'
             diff += (
-                '+첫 번째 행\n'
-                ' 한국어 시험\n'
-                '+마지막 행\n'
-            )
+                '+첫 번째 행{0}'
+                ' 한국어 시험{0}'
+                '+마지막 행{0}'
+            ).format(os.linesep)
 
             ret = {x.split('_|-')[1]: y for x, y in six.iteritems(result)}
 
@@ -2068,18 +2413,30 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                 ret['some-utf8-file-create2']['changes'],
                 {'diff': diff}
             )
-
-            # Confirm that the file has the expected contents as specified in
-            # the prior state.
-            self.assertEqual(
-                ret['some-utf8-file-content-test']['comment'],
-                'Command "cat "{0}"" run'.format(test_file_encoded)
-            )
-            self.assertEqual(
-                ret['some-utf8-file-content-test']['changes']['stdout'],
-                '\n'.join((korean_2, korean_1, korean_3))
-            )
-
+            if salt.utils.platform.is_windows():
+                import subprocess
+                import win32api
+                p = subprocess.Popen(
+                    salt.utils.stringutils.to_str(
+                        'type {}'.format(win32api.GetShortPathName(test_file))),
+                    shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                p.poll()
+                out = p.stdout.read()
+                self.assertEqual(
+                        out.decode('utf-8'),
+                        os.linesep.join((korean_2, korean_1, korean_3)) + os.linesep
+                )
+            else:
+                self.assertEqual(
+                    ret['some-utf8-file-content-test']['comment'],
+                    'Command "cat "{0}"" run'.format(
+                        test_file_encoded
+                    )
+                )
+                self.assertEqual(
+                    ret['some-utf8-file-content-test']['changes']['stdout'],
+                    '\n'.join((korean_2, korean_1, korean_3))
+                )
         finally:
             try:
                 os.remove(template_path)
@@ -2211,6 +2568,30 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertTrue(os.path.exists(dest))
         self.assertTrue(filecmp.cmp(source, dest))
 
+        os.remove(source)
+        os.remove(dest)
+
+    @destructiveTest
+    @with_tempfile()
+    def test_file_copy_make_dirs(self, source):
+        '''
+        ensure make_dirs creates correct user perms
+        '''
+        shutil.copyfile(os.path.join(FILES, 'hosts'), source)
+        dest = os.path.join(TMP, 'dir1', 'dir2', 'copied_file.txt')
+
+        user = 'salt'
+        mode = '0644'
+        self.run_function('user.add', [user])
+        ret = self.run_state('file.copy', name=dest, source=source, user=user,
+                             makedirs=True, mode=mode)
+        file_checks = [dest, os.path.join(TMP, 'dir1'), os.path.join(TMP, 'dir1', 'dir2')]
+        for check in file_checks:
+            user_check = self.run_function('file.get_user', [check])
+            mode_check = self.run_function('file.get_mode', [check])
+            assert user_check == user
+            assert salt.utils.files.normalize_mode(mode_check) == mode
+
     def test_contents_pillar_with_pillar_list(self):
         '''
         This tests for any regressions for this issue:
@@ -2278,35 +2659,93 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             except OSError:
                 pass
 
+    @skip_if_not_root
+    @skipIf(not HAS_PWD, "pwd not available. Skipping test")
+    @skipIf(not HAS_GRP, "grp not available. Skipping test")
+    @with_system_user_and_group('user12209', 'group12209',
+                                on_existing='delete', delete=True)
+    @with_tempdir()
+    def test_issue_48336_file_managed_mode_setuid(self, tempdir, user, group):
+        '''
+        Ensure that mode is correct with changing of ownership and group
+        symlinks)
+        '''
+        tempfile = os.path.join(tempdir, 'temp_file_issue_48336')
+
+        # Run the state
+        ret = self.run_state(
+            'file.managed', name=tempfile,
+            user=user, group=group, mode='4750',
+        )
+        self.assertSaltTrueReturn(ret)
+
+        # Check that the owner and group are correct, and
+        # the mode is what we expect
+        temp_file_stats = os.stat(tempfile)
+
+        # Normalize the mode
+        temp_file_mode = six.text_type(oct(stat.S_IMODE(temp_file_stats.st_mode)))
+        temp_file_mode = salt.utils.files.normalize_mode(temp_file_mode)
+
+        self.assertEqual(temp_file_mode, '4750')
+        self.assertEqual(pwd.getpwuid(temp_file_stats.st_uid).pw_name, user)
+        self.assertEqual(grp.getgrgid(temp_file_stats.st_gid).gr_name, group)
+
+    @with_tempdir()
+    def test_issue_48557(self, tempdir):
+        tempfile = os.path.join(tempdir, 'temp_file_issue_48557')
+        with salt.utils.files.fopen(tempfile, 'wb') as fp:
+            fp.write(os.linesep.join([
+                'test1',
+                'test2',
+                'test3',
+                '',
+            ]).encode('utf-8'))
+        ret = self.run_state('file.line',
+                             name=tempfile,
+                             after='test2',
+                             mode='insert',
+                             content='test4')
+        self.assertSaltTrueReturn(ret)
+        with salt.utils.files.fopen(tempfile, 'rb') as fp:
+            content = fp.read()
+        self.assertEqual(content, os.linesep.join([
+            'test1',
+            'test2',
+            'test4',
+            'test3',
+            '',
+        ]).encode('utf-8'))
+
 
 class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
     marker_start = '# start'
     marker_end = '# end'
-    content = textwrap.dedent('''\
+    content = dedent(six.text_type('''\
         Line 1 of block
         Line 2 of block
-        ''')
-    without_block = textwrap.dedent('''\
+        '''))
+    without_block = dedent(six.text_type('''\
         Hello world!
 
         # comment here
-        ''')
-    with_non_matching_block = textwrap.dedent('''\
+        '''))
+    with_non_matching_block = dedent(six.text_type('''\
         Hello world!
 
         # start
         No match here
         # end
         # comment here
-        ''')
-    with_non_matching_block_and_marker_end_not_after_newline = textwrap.dedent('''\
+        '''))
+    with_non_matching_block_and_marker_end_not_after_newline = dedent(six.text_type('''\
         Hello world!
 
         # start
         No match here# end
         # comment here
-        ''')
-    with_matching_block = textwrap.dedent('''\
+        '''))
+    with_matching_block = dedent(six.text_type('''\
         Hello world!
 
         # start
@@ -2314,8 +2753,8 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
         Line 2 of block
         # end
         # comment here
-        ''')
-    with_matching_block_and_extra_newline = textwrap.dedent('''\
+        '''))
+    with_matching_block_and_extra_newline = dedent(six.text_type('''\
         Hello world!
 
         # start
@@ -2324,15 +2763,15 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
 
         # end
         # comment here
-        ''')
-    with_matching_block_and_marker_end_not_after_newline = textwrap.dedent('''\
+        '''))
+    with_matching_block_and_marker_end_not_after_newline = dedent(six.text_type('''\
         Hello world!
 
         # start
         Line 1 of block
         Line 2 of block# end
         # comment here
-        ''')
+        '''))
     content_explicit_posix_newlines = ('Line 1 of block\n'
                                        'Line 2 of block\n')
     content_explicit_windows_newlines = ('Line 1 of block\r\n'
@@ -3481,6 +3920,25 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
             self._read(name),
             self.with_matching_block_and_marker_end_not_after_newline)
 
+    @with_tempfile()
+    def test_issue_49043(self, name):
+        ret = self.run_function(
+            'state.sls',
+            mods='issue-49043',
+            pillar={'name': name},
+        )
+        log.error("ret = %s", repr(ret))
+        diff = '--- \n+++ \n@@ -0,0 +1,3 @@\n'
+        diff += dedent('''\
+        +#-- start managed zone --
+        +äöü
+        +#-- end managed zone --
+        ''')
+        job = 'file_|-somefile-blockreplace_|-{}_|-blockreplace'.format(name)
+        self.assertEqual(
+            ret[job]['changes']['diff'],
+            diff)
+
 
 class RemoteFileTest(ModuleCase, SaltReturnAssertsMixin):
     '''
@@ -3492,7 +3950,11 @@ class RemoteFileTest(ModuleCase, SaltReturnAssertsMixin):
         cls.webserver = Webserver()
         cls.webserver.start()
         cls.source = cls.webserver.url('grail/scene33')
-        cls.source_hash = 'd2feb3beb323c79fc7a0f44f1408b4a3'
+        if IS_WINDOWS:
+            # CRLF vs LF causes a different hash on windows
+            cls.source_hash = '21438b3d5fd2c0028bcab92f7824dc69'
+        else:
+            cls.source_hash = 'd2feb3beb323c79fc7a0f44f1408b4a3'
 
     @classmethod
     def tearDownClass(cls):
@@ -3509,6 +3971,11 @@ class RemoteFileTest(ModuleCase, SaltReturnAssertsMixin):
             if exc.errno != errno.ENOENT:
                 raise exc
 
+    def run_state(self, *args, **kwargs):
+        ret = super(RemoteFileTest, self).run_state(*args, **kwargs)
+        log.debug('ret = %s', ret)
+        return ret
+
     def test_file_managed_http_source_no_hash(self):
         '''
         Test a remote file with no hash
@@ -3517,7 +3984,6 @@ class RemoteFileTest(ModuleCase, SaltReturnAssertsMixin):
                              name=self.name,
                              source=self.source,
                              skip_verify=False)
-        log.debug('ret = %s', ret)
         # This should fail because no hash was provided
         self.assertSaltFalseReturn(ret)
 
@@ -3530,7 +3996,6 @@ class RemoteFileTest(ModuleCase, SaltReturnAssertsMixin):
                              source=self.source,
                              source_hash=self.source_hash,
                              skip_verify=False)
-        log.debug('ret = %s', ret)
         self.assertSaltTrueReturn(ret)
 
     def test_file_managed_http_source_skip_verify(self):
@@ -3541,12 +4006,38 @@ class RemoteFileTest(ModuleCase, SaltReturnAssertsMixin):
                              name=self.name,
                              source=self.source,
                              skip_verify=True)
-        log.debug('ret = %s', ret)
         self.assertSaltTrueReturn(ret)
+
+    def test_file_managed_keep_source_false_http(self):
+        '''
+        This test ensures that we properly clean the cached file if keep_source
+        is set to False, for source files using an http:// URL
+        '''
+        # Run the state
+        ret = self.run_state('file.managed',
+                             name=self.name,
+                             source=self.source,
+                             source_hash=self.source_hash,
+                             keep_source=False)
+        ret = ret[next(iter(ret))]
+        assert ret['result'] is True
+
+        # Now make sure that the file is not cached
+        result = self.run_function('cp.is_cached', [self.source])
+        assert result == '', 'File is still cached at {0}'.format(result)
 
 
 @skipIf(not salt.utils.path.which('patch'), 'patch is not installed')
 class PatchTest(ModuleCase, SaltReturnAssertsMixin):
+    def _check_patch_version(self, min_version):
+        '''
+        patch version check
+        '''
+        version = self.run_function('cmd.run', ['patch --version']).splitlines()[0]
+        version = version.split()[1]
+        if _LooseVersion(version) < _LooseVersion(min_version):
+            self.skipTest('Minimum patch version required: {0}. '
+                          'Patch version installed: {1}'.format(min_version, version))
 
     @classmethod
     def setUpClass(cls):
@@ -3670,6 +4161,7 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         Test file.patch using a patch applied to a directory, with changes
         spanning multiple files.
         '''
+        self._check_patch_version('2.6')
         ret = self.run_state(
             'file.patch',
             name=self.base_dir,
@@ -3697,6 +4189,7 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         Test that we successfuly parse -p/--strip when included in the options
         '''
+        self._check_patch_version('2.6')
         # Run the state using -p1
         ret = self.run_state(
             'file.patch',
@@ -3871,6 +4364,7 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         spanning multiple files, and the patch file coming from a remote
         source.
         '''
+        self._check_patch_version('2.6')
         # Try without a source_hash and without skip_verify=True, this should
         # fail with a message about the source_hash
         ret = self.run_state(
@@ -3945,6 +4439,7 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         spanning multiple files, and with jinja templating applied to the patch
         file.
         '''
+        self._check_patch_version('2.6')
         ret = self.run_state(
             'file.patch',
             name=self.base_dir,
@@ -4024,6 +4519,7 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         spanning multiple files, and the patch file coming from a remote
         source.
         '''
+        self._check_patch_version('2.6')
         # Try without a source_hash and without skip_verify=True, this should
         # fail with a message about the source_hash
         ret = self.run_state(
@@ -4131,3 +4627,54 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         ret = ret[next(iter(ret))]
         self.assertIn('Patch would not apply cleanly', ret['comment'])
         self.assertEqual(ret['changes'], {})
+
+WIN_TEST_FILE = 'c:/testfile'
+
+
+@destructiveTest
+@skipIf(not IS_WINDOWS, 'windows test only')
+class WinFileTest(ModuleCase):
+    '''
+    Test for the file state on Windows
+    '''
+    def setUp(self):
+        self.run_state('file.managed', name=WIN_TEST_FILE, makedirs=True, contents='Only a test')
+
+    def tearDown(self):
+        self.run_state('file.absent', name=WIN_TEST_FILE)
+
+    def test_file_managed(self):
+        '''
+        Test file.managed on Windows
+        '''
+        self.assertTrue(self.run_state('file.exists', name=WIN_TEST_FILE))
+
+    def test_file_copy(self):
+        '''
+        Test file.copy on Windows
+        '''
+        ret = self.run_state('file.copy', name='c:/testfile_copy', makedirs=True, source=WIN_TEST_FILE)
+        self.assertTrue(ret)
+
+    def test_file_comment(self):
+        '''
+        Test file.comment on Windows
+        '''
+        self.run_state('file.comment', name=WIN_TEST_FILE, regex='^Only')
+        with salt.utils.files.fopen(WIN_TEST_FILE, 'r') as fp_:
+            self.assertTrue(fp_.read().startswith('#Only'))
+
+    def test_file_replace(self):
+        '''
+        Test file.replace on Windows
+        '''
+        self.run_state('file.replace', name=WIN_TEST_FILE, pattern='test', repl='testing')
+        with salt.utils.files.fopen(WIN_TEST_FILE, 'r') as fp_:
+            self.assertIn('testing', fp_.read())
+
+    def test_file_absent(self):
+        '''
+        Test file.absent on Windows
+        '''
+        ret = self.run_state('file.absent', name=WIN_TEST_FILE)
+        self.assertTrue(ret)

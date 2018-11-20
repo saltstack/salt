@@ -134,7 +134,8 @@ def __virtual__():
 
         parameters = details['gce']
         pathname = os.path.expanduser(parameters['service_account_private_key'])
-        if salt.utils.cloud.check_key_path_and_mode(
+        # empty pathname will tell libcloud to use instance credentials
+        if pathname and salt.utils.cloud.check_key_path_and_mode(
                 provider, pathname
         ) is False:
             return False
@@ -251,6 +252,12 @@ def _expand_address(addy):
     ret = {}
     ret.update(addy.__dict__)
     ret['extra']['zone'] = addy.region.name
+    return ret
+
+
+def _expand_region(region):
+    ret = {}
+    ret['name'] = region.name
     return ret
 
 
@@ -1250,6 +1257,7 @@ def create_address(kwargs=None, call=None):
     name = kwargs['name']
     ex_region = kwargs['region']
     ex_address = kwargs.get("address", None)
+    kwargs['region'] = _expand_region(kwargs['region'])
 
     conn = get_conn()
 
@@ -1257,7 +1265,7 @@ def create_address(kwargs=None, call=None):
         'event',
         'create address',
         'salt/cloud/address/creating',
-        args=kwargs,
+        args=salt.utils.data.simple_types_filter(kwargs),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -1268,7 +1276,7 @@ def create_address(kwargs=None, call=None):
         'event',
         'created address',
         'salt/cloud/address/created',
-        args=kwargs,
+        args=salt.utils.data.simple_types_filter(kwargs),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -2374,21 +2382,30 @@ def destroy(vm_name, call=None):
 
 def create_attach_volumes(name, kwargs, call=None):
     '''
+    .. versionadded:: 2017.7.0
+
     Create and attach multiple volumes to a node. The 'volumes' and 'node'
     arguments are required, where 'node' is a libcloud node, and 'volumes'
     is a list of maps, where each map contains:
 
-    'size': The size of the new disk in GB. Required.
-    'type': The disk type, either pd-standard or pd-ssd. Optional, defaults to pd-standard.
-    'image': An image to use for this new disk. Optional.
-    'snapshot': A snapshot to use for this new disk. Optional.
-    'auto_delete': An option(bool) to keep or remove the disk upon
-                   instance deletion. Optional, defaults to False.
+    size
+        The size of the new disk in GB. Required.
+
+    type
+        The disk type, either pd-standard or pd-ssd. Optional, defaults to pd-standard.
+
+    image
+        An image to use for this new disk. Optional.
+
+    snapshot
+        A snapshot to use for this new disk. Optional.
+
+    auto_delete
+        An option(bool) to keep or remove the disk upon instance deletion.
+        Optional, defaults to False.
 
     Volumes are attached in the order in which they are given, thus on a new
     node the first volume will be /dev/sdb, the second /dev/sdc, and so on.
-
-    .. versionadded:: 2017.7.0
     '''
     if call != 'action':
         raise SaltCloudSystemExit(
@@ -2468,13 +2485,19 @@ def request_instance(vm_):
 
     if external_ip.lower() == 'ephemeral':
         external_ip = 'ephemeral'
+        vm_['external_ip'] = external_ip
     elif external_ip == 'None':
         external_ip = None
+        vm_['external_ip'] = external_ip
     else:
         region = __get_region(conn, vm_)
         external_ip = __create_orget_address(conn, external_ip, region)
+        vm_['external_ip'] = {
+            'name': external_ip.name,
+            'address': external_ip.address,
+            'region': external_ip.region.name
+        }
     kwargs['external_ip'] = external_ip
-    vm_['external_ip'] = external_ip
 
     if LIBCLOUD_VERSION_INFO > (0, 15, 1):
 

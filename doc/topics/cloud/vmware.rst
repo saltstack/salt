@@ -171,8 +171,8 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
             type: paravirtual
             bus_sharing: physical
         ide:
-          IDE 2
-          IDE 3
+          IDE 2: {}
+          IDE 3: {}
 
       domain: example.com
       dns_servers:
@@ -211,7 +211,7 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
 
       hardware_version: 10
       image: centos64Guest
-      
+
       #For Windows VM
       win_username: Administrator
       win_password: administrator
@@ -232,13 +232,14 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
     the current VM/template\'s vCPU count is used.
 
 ``cores_per_socket``
-    .. versionadded:: 2016.11.0
     Enter the number of cores per vCPU that you want the VM/template to have. If not specified,
-    this will default to 1. 
-    
-    .. note::
+    this will default to 1.
 
-        Cores per socket should be less than or equal to the total number of vCPUs assigned to the VM/template.
+    .. note::
+        Cores per socket should be less than or equal to the total number of
+        vCPUs assigned to the VM/template.
+
+    .. versionadded:: 2016.11.0
 
 ``memory``
     Enter the memory size (in MB or GB) that you want the VM/template to have. If
@@ -362,8 +363,14 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
 
     ide
         Enter the IDE controller specification here. If the IDE controller doesn\'t exist,
-        a new IDE controller will be created. If the IDE controller already exists,
-        no further changes to it will me made.
+        a new IDE controller is created. If the IDE controller already exists,
+        no further changes to it are made. The IDE controller specification is
+        a dictionary.
+
+        .. code-block:: yaml
+
+          ide:
+            IDE 2: {}
 
 ``domain``
     Enter the global domain name to be used for DNS. If not specified and if the VM name
@@ -515,31 +522,31 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
 
 ``win_username``
     Specify windows vm administrator account.
-        
+
     .. note::
-    
+
     	Windows template should have "administrator" account.
 
 ``win_password``
     Specify windows vm administrator account password.
-    
+
     .. note::
 
-        During network configuration (if network specified), it is used to specify new administrator password for the machine. 
+        During network configuration (if network specified), it is used to specify new administrator password for the machine.
 
 ``win_organization_name``
     Specify windows vm user's organization. Default organization name is Organization
    	VMware vSphere documentation:
-	
+
     https://www.vmware.com/support/developer/vc-sdk/visdk25pubs/ReferenceGuide/vim.vm.customization.UserData.html
 
 ``win_user_fullname``
     Specify windows vm user's fullname. Default fullname is "Windows User"
    	VMware vSphere documentation:
-	
+
     https://www.vmware.com/support/developer/vc-sdk/visdk25pubs/ReferenceGuide/vim.vm.customization.UserData.html
 
-``plain_text``    	
+``plain_text``
 	Flag to specify whether or not the password is in plain text, rather than encrypted.
 	VMware vSphere documentation:
 
@@ -547,6 +554,11 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
 
 ``win_installer``
     Specify windows minion client installer path
+
+``win_run_once``
+    Specify a list of commands to run on first login to a windows minion
+
+    https://www.vmware.com/support/developer/vc-sdk/visdk25pubs/ReferenceGuide/vim.vm.customization.GuiRunOnce.html
 
 Cloning a VM
 ============
@@ -599,7 +611,7 @@ Example to reconfigure the memory and number of vCPUs:
       clonefrom: 'test-vm'
 
       memory: 16GB
-      num_cpus: 8 
+      num_cpus: 8
 
 
 Cloning a Template

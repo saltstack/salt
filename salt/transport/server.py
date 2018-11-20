@@ -31,9 +31,6 @@ class ReqServerChannel(object):
         if ttype == 'zeromq':
             import salt.transport.zeromq
             return salt.transport.zeromq.ZeroMQReqServerChannel(opts)
-        elif ttype == 'raet':
-            import salt.transport.raet
-            return salt.transport.raet.RAETReqServerChannel(opts)
         elif ttype == 'tcp':
             import salt.transport.tcp
             return salt.transport.tcp.TCPReqServerChannel(opts)
@@ -41,7 +38,7 @@ class ReqServerChannel(object):
             import salt.transport.local
             return salt.transport.local.LocalServerChannel(opts)
         else:
-            raise Exception('Channels are only defined for ZeroMQ and raet')
+            raise Exception('Channels are only defined for ZeroMQ and TCP')
             # return NewKindOfChannel(opts, **kwargs)
 
     def pre_fork(self, process_manager):
@@ -55,7 +52,7 @@ class ReqServerChannel(object):
         '''
         Do anything you need post-fork. This should handle all incoming payloads
         and call payload_handler. You will also be passed io_loop, for all of your
-        async needs
+        asynchronous needs
         '''
         pass
 
@@ -79,9 +76,6 @@ class PubServerChannel(object):
         if ttype == 'zeromq':
             import salt.transport.zeromq
             return salt.transport.zeromq.ZeroMQPubServerChannel(opts, **kwargs)
-        elif ttype == 'raet':  # TODO:
-            import salt.transport.raet
-            return salt.transport.raet.RAETPubServerChannel(opts, **kwargs)
         elif ttype == 'tcp':
             import salt.transport.tcp
             return salt.transport.tcp.TCPPubServerChannel(opts)
@@ -89,10 +83,10 @@ class PubServerChannel(object):
             import salt.transport.local
             return salt.transport.local.LocalPubServerChannel(opts, **kwargs)
         else:
-            raise Exception('Channels are only defined for ZeroMQ and raet')
+            raise Exception('Channels are only defined for ZeroMQ and TCP')
             # return NewKindOfChannel(opts, **kwargs)
 
-    def pre_fork(self, process_manager):
+    def pre_fork(self, process_manager, kwargs=None):
         '''
         Do anything necessary pre-fork. Since this is on the master side this will
         primarily be used to create IPC channels and create our daemon process to

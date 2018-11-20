@@ -1,3 +1,5 @@
+.. _event-system:
+
 ============
 Event System
 ============
@@ -12,8 +14,8 @@ Event Bus
 The event system is comprised of a two primary components, which make up the
 concept of an Event Bus:
 
-    * The event sockets which publishes events.
-    * The event library which can listen to events and send events into the salt system.
+- The event sockets, which publish events
+- The event library, which can listen to events and send events into the salt system
 
 Events are published onto the event bus and event bus subscribers listen for the
 published events.

@@ -401,13 +401,11 @@ def dvs_configured(name, dvs):
                                 ''.format(dvs_name, datacenter_name)),
                     'result': True})
     else:
-        ret.update({'comment': '\n'.join(comments)})
-        if __opts__['test']:
-            ret.update({'pchanges': changes,
-                        'result': None})
-        else:
-            ret.update({'changes': changes,
-                        'result': True})
+        ret.update({
+            'comment': '\n'.join(comments),
+            'changes': changes,
+            'result': None if __opts__['test'] else True,
+        })
     return ret
 
 
@@ -512,8 +510,10 @@ def portgroups_configured(name, dvs, portgroups):
     log.info('Running state {0} on DVS \'{1}\', datacenter '
              '\'{2}\''.format(name, dvs, datacenter))
     changes_required = False
-    ret = {'name': name, 'changes': {}, 'result': None, 'comment': None,
-           'pchanges': {}}
+    ret = {'name': name,
+           'changes': {},
+           'result': None,
+           'comment': None}
     comments = []
     changes = {}
     changes_required = False
@@ -623,13 +623,11 @@ def portgroups_configured(name, dvs, portgroups):
                                 'Nothing to be done.'.format(dvs, datacenter)),
                     'result': True})
     else:
-        ret.update({'comment': '\n'.join(comments)})
-        if __opts__['test']:
-            ret.update({'pchanges': changes,
-                        'result': None})
-        else:
-            ret.update({'changes': changes,
-                        'result': True})
+        ret.update({
+            'comment': '\n'.join(comments),
+            'changes': changes,
+            'result': None if __opts__['test'] else True,
+        })
     return ret
 
 
@@ -649,8 +647,10 @@ def uplink_portgroup_configured(name, dvs, uplink_portgroup):
     log.info('Running {0} on DVS \'{1}\', datacenter \'{2}\''
              ''.format(name, dvs, datacenter))
     changes_required = False
-    ret = {'name': name, 'changes': {}, 'result': None, 'comment': None,
-           'pchanges': {}}
+    ret = {'name': name,
+           'changes': {},
+           'result': None,
+           'comment': None}
     comments = []
     changes = {}
     changes_required = False
@@ -708,11 +708,9 @@ def uplink_portgroup_configured(name, dvs, uplink_portgroup):
                                 'Nothing to be done.'.format(dvs, datacenter)),
                     'result': True})
     else:
-        ret.update({'comment': '\n'.join(comments)})
-        if __opts__['test']:
-            ret.update({'pchanges': changes,
-                        'result': None})
-        else:
-            ret.update({'changes': changes,
-                        'result': True})
+        ret.update({
+            'comment': '\n'.join(comments),
+            'changes': changes,
+            'result': None if __opts__['test'] else True,
+        })
     return ret

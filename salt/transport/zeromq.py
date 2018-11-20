@@ -18,6 +18,7 @@ from random import randint
 # Import Salt Libs
 import salt.auth
 import salt.crypt
+import salt.log.setup
 import salt.utils.event
 import salt.utils.files
 import salt.utils.minions
@@ -191,9 +192,9 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
         if self.crypt != 'clear':
             # we don't need to worry about auth as a kwarg, since its a singleton
             self.auth = salt.crypt.AsyncAuth(self.opts, io_loop=self._io_loop)
-        log.debug('Connecting the Minion to the Master URI (for the return server): %s', self.master_uri)
+        log.debug('Connecting the Minion to the Master URI (for the return server): %s', self.opts['master_uri'])
         self.message_client = AsyncReqMessageClientPool(self.opts,
-                                                        args=(self.opts, self.master_uri,),
+                                                        args=(self.opts, self.opts['master_uri'],),
                                                         kwargs={'io_loop': self._io_loop})
 
     def __del__(self):
@@ -351,10 +352,13 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
         if self.opts['zmq_filtering']:
             # TODO: constants file for "broadcast"
             self._socket.setsockopt(zmq.SUBSCRIBE, b'broadcast')
-            self._socket.setsockopt(
-                zmq.SUBSCRIBE,
-                salt.utils.stringutils.to_bytes(self.hexid)
-            )
+            if self.opts.get('__role') == 'syndic':
+                self._socket.setsockopt(zmq.SUBSCRIBE, b'syndic')
+            else:
+                self._socket.setsockopt(
+                    zmq.SUBSCRIBE,
+                    salt.utils.stringutils.to_bytes(self.hexid)
+                )
         else:
             self._socket.setsockopt(zmq.SUBSCRIBE, b'')
 
@@ -433,7 +437,14 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
     def connect(self):
         if not self.auth.authenticated:
             yield self.auth.authenticate()
-        self.publish_port = self.auth.creds['publish_port']
+
+        # if this is changed from the default, we assume it was intentional
+        if int(self.opts.get('publish_port', 4506)) != 4506:
+            self.publish_port = self.opts.get('publish_port')
+        # else take the relayed publish_port master reports
+        else:
+            self.publish_port = self.auth.creds['publish_port']
+
         log.debug('Connecting the Minion to the Master publish port, using the URI: %s', self.master_pub)
         self._socket.connect(self.master_pub)
 
@@ -460,7 +471,8 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
             payload = self.serial.loads(messages[0])
         # 2 includes a header which says who should do it
         elif messages_len == 2:
-            if messages[0] not in ('broadcast', self.hexid):
+            if (self.opts.get('__role') != 'syndic' and messages[0] not in ('broadcast', self.hexid)) or \
+                (self.opts.get('__role') == 'syndic' and messages[0] not in ('broadcast', 'syndic')):
                 log.debug('Publish received for not this minion: %s', messages[0])
                 raise tornado.gen.Return(None)
             payload = self.serial.loads(messages[1])
@@ -687,7 +699,7 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin,
             ret, req_opts = yield self.payload_handler(payload)
         except Exception as e:
             # always attempt to return an error to the minion
-            stream.send('Some exception handling minion payload')
+            stream.send(self.serial.dumps('Some exception handling minion payload'))
             log.error('Some exception handling a payload from minion', exc_info=True)
             raise tornado.gen.Return()
 
@@ -704,7 +716,7 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin,
         else:
             log.error('Unknown req_fun %s', req_fun)
             # always attempt to return an error to the minion
-            stream.send('Server-side exception handling payload')
+            stream.send(self.serial.dumps('Server-side exception handling payload'))
         raise tornado.gen.Return()
 
     def __setup_signals(self):
@@ -767,11 +779,15 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
     def connect(self):
         return tornado.gen.sleep(5)
 
-    def _publish_daemon(self):
+    def _publish_daemon(self, log_queue=None):
         '''
         Bind to the interface specified in the configuration file
         '''
         salt.utils.process.appendproctitle(self.__class__.__name__)
+        if log_queue:
+            salt.log.setup.set_multiprocessing_logging_queue(log_queue)
+            salt.log.setup.setup_multiprocessing_logging(log_queue)
+
         # Set up the context
         context = zmq.Context(1)
         # Prepare minion publish socket
@@ -818,8 +834,10 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
                 # Catch and handle EINTR from when this process is sent
                 # SIGUSR1 gracefully so we don't choke and die horribly
                 try:
-                    log.trace('Getting data from puller %s', pull_uri)
+                    log.debug('Publish daemon getting data from puller %s', pull_uri)
                     package = pull_sock.recv()
+                    log.debug('Publish daemon received payload. size=%d', len(package))
+
                     unpacked_package = salt.payload.unpackage(package)
                     if six.PY3:
                         unpacked_package = salt.transport.frame.decode_embedded_strs(unpacked_package)
@@ -832,15 +850,22 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
                                 log.trace('Sending filtered data over publisher %s', pub_uri)
                                 # zmq filters are substring match, hash the topic
                                 # to avoid collisions
-                                htopic = hashlib.sha1(topic).hexdigest()
+                                htopic = salt.utils.stringutils.to_bytes(hashlib.sha1(topic).hexdigest())
                                 pub_sock.send(htopic, flags=zmq.SNDMORE)
                                 pub_sock.send(payload)
                                 log.trace('Filtered data has been sent')
-                                # otherwise its a broadcast
+
+                            # Syndic broadcast
+                            if self.opts.get('order_masters'):
+                                log.trace('Sending filtered data to syndic')
+                                pub_sock.send(b'syndic', flags=zmq.SNDMORE)
+                                pub_sock.send(payload)
+                                log.trace('Filtered data has been sent to syndic')
+                        # otherwise its a broadcast
                         else:
                             # TODO: constants file for "broadcast"
                             log.trace('Sending broadcasted data over publisher %s', pub_uri)
-                            pub_sock.send('broadcast', flags=zmq.SNDMORE)
+                            pub_sock.send(b'broadcast', flags=zmq.SNDMORE)
                             pub_sock.send(payload)
                             log.trace('Broadcasted data has been sent')
                     else:
@@ -863,7 +888,7 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
             if context.closed is False:
                 context.term()
 
-    def pre_fork(self, process_manager):
+    def pre_fork(self, process_manager, kwargs=None):
         '''
         Do anything necessary pre-fork. Since this is on the master side this will
         primarily be used to create IPC channels and create our daemon process to
@@ -871,7 +896,7 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
 
         :param func process_manager: A ProcessManager, from salt.utils.process.ProcessManager
         '''
-        process_manager.add_process(self._publish_daemon)
+        process_manager.add_process(self._publish_daemon, kwargs=kwargs)
 
     def publish(self, load):
         '''
@@ -916,8 +941,14 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
             log.debug("Publish Side Match: %s", match_ids)
             # Send list of miions thru so zmq can target them
             int_payload['topic_lst'] = match_ids
+        payload = self.serial.dumps(int_payload)
+        log.debug(
+            'Sending payload to publish daemon. jid=%s size=%d',
+            load.get('jid', None), len(payload),
+        )
+        pub_sock.send(payload)
+        log.debug('Sent payload to publish daemon.')
 
-        pub_sock.send(self.serial.dumps(int_payload))
         pub_sock.close()
         context.term()
 

@@ -993,6 +993,59 @@ def get_password(vm_):
     )
 
 
+def _decode_linode_plan_label(label):
+    '''
+    Attempts to decode a user-supplied Linode plan label
+    into the format in Linode API output
+
+    label
+        The label, or name, of the plan to decode.
+
+    Example:
+        `Linode 2048` will decode to `Linode 2GB`
+    '''
+    sizes = avail_sizes()
+
+    if label not in sizes:
+        if 'GB' in label:
+            raise SaltCloudException(
+                'Invalid Linode plan ({}) specified - call avail_sizes() for all available options'.format(label)
+            )
+        else:
+            plan = label.split()
+
+            if len(plan) != 2:
+                raise SaltCloudException(
+                    'Invalid Linode plan ({}) specified - call avail_sizes() for all available options'.format(label)
+                )
+
+            plan_type = plan[0]
+            try:
+                plan_size = int(plan[1])
+            except TypeError:
+                plan_size = 0
+                log.debug('Failed to decode Linode plan label in Cloud Profile: %s', label)
+
+            if plan_type == 'Linode' and plan_size == 1024:
+                plan_type = 'Nanode'
+
+            plan_size = plan_size/1024
+            new_label = "{} {}GB".format(plan_type, plan_size)
+
+            if new_label not in sizes:
+                raise SaltCloudException(
+                    'Invalid Linode plan ({}) specified - call avail_sizes() for all available options'.format(new_label)
+                )
+
+            log.warning('An outdated Linode plan label was detected in your Cloud Profile ({}).'
+                        ' Please update the profile to use'
+                        ' the new label format ({}) for the requested Linode plan size.'.format(label, new_label))
+
+            label = new_label
+
+    return sizes[label]['PLANID']
+
+
 def get_plan_id(kwargs=None, call=None):
     '''
     Returns the Linode Plan ID.
@@ -1020,7 +1073,9 @@ def get_plan_id(kwargs=None, call=None):
             'The get_plan_id function requires a \'label\'.'
         )
 
-    return avail_sizes()[label]['PLANID']
+    label = _decode_linode_plan_label(label)
+
+    return label
 
 
 def get_private_ip(vm_):

@@ -4,7 +4,7 @@ Documentation=man:salt-master(1) file:///usr/share/doc/salt/html/contents.html h
 After=network.target
 
 [Service]
-LimitNOFILE=16384
+LimitNOFILE=100000
 Type=simple
 ExecStart=/usr/bin/salt-master
 TasksMax=infinity

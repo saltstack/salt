@@ -4,7 +4,8 @@
 '''
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
-import os
+import errno
+import textwrap
 
 # Import Salt Testing Libs
 from tests.support.unit import TestCase, skipIf
@@ -51,22 +52,23 @@ class IscsiGrainsTestCase(TestCase):
                          ['iqn.localhost.hostid.7f000001'])
 
     def test_linux_iscsi_iqn_grains(self):
-        _iscsi_file = '## DO NOT EDIT OR REMOVE THIS FILE!\n' \
-                      '## If you remove this file, the iSCSI daemon will not start.\n' \
-                      '## If you change the InitiatorName, existing access control lists\n' \
-                      '## may reject this initiator.  The InitiatorName must be unique\n' \
-                      '## for each iSCSI initiator.  Do NOT duplicate iSCSI InitiatorNames.\n' \
-                      'InitiatorName=iqn.1993-08.org.debian:01:d12f7aba36\n'
+        _iscsi_file = textwrap.dedent('''\
+            ## DO NOT EDIT OR REMOVE THIS FILE!
+            ## If you remove this file, the iSCSI daemon will not start.
+            ## If you change the InitiatorName, existing access control lists
+            ## may reject this initiator.  The InitiatorName must be unique
+            ## for each iSCSI initiator.  Do NOT duplicate iSCSI InitiatorNames.
+            InitiatorName=iqn.1993-08.org.debian:01:d12f7aba36
+            ''')
 
-        with patch('salt.utils.files.fopen', mock_open()) as iscsi_initiator_file:
-            iscsi_initiator_file.return_value.__iter__.return_value = _iscsi_file.splitlines()
+        with patch('salt.utils.files.fopen', mock_open(read_data=_iscsi_file)):
             iqn = iscsi._linux_iqn()
 
         assert isinstance(iqn, list)
         assert len(iqn) == 1
         assert iqn == ['iqn.1993-08.org.debian:01:d12f7aba36']
 
-    @patch('salt.utils.files.fopen', MagicMock(side_effect=IOError(os.errno.EPERM,
+    @patch('salt.utils.files.fopen', MagicMock(side_effect=IOError(errno.EPERM,
                                                                    'The cables are not the same length.')))
     @patch('salt.grains.iscsi.log', MagicMock())
     def test_linux_iqn_non_root(self):
@@ -79,10 +81,10 @@ class IscsiGrainsTestCase(TestCase):
         iscsi.log.debug.assert_called()
         assert 'Error while accessing' in iscsi.log.debug.call_args[0][0]
         assert 'cables are not the same' in iscsi.log.debug.call_args[0][2].strerror
-        assert iscsi.log.debug.call_args[0][2].errno == os.errno.EPERM
+        assert iscsi.log.debug.call_args[0][2].errno == errno.EPERM
         assert iscsi.log.debug.call_args[0][1] == '/etc/iscsi/initiatorname.iscsi'
 
-    @patch('salt.utils.files.fopen', MagicMock(side_effect=IOError(os.errno.ENOENT, '')))
+    @patch('salt.utils.files.fopen', MagicMock(side_effect=IOError(errno.ENOENT, '')))
     @patch('salt.grains.iscsi.log', MagicMock())
     def test_linux_iqn_no_iscsii_initiator(self):
         '''

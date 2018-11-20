@@ -3,10 +3,10 @@
 Starting or restarting of services and daemons
 ==============================================
 
-Services are defined as system daemons typically started with system init or
-rc scripts. The service state uses whichever service module that is loaded on
-the minion with the virtualname of ``service``. Services can be defined as
-running or dead.
+Services are defined as system daemons and are typically launched using system
+init or rc scripts. This service state uses whichever service module is loaded
+on the minion with the virtualname of ``service``. Services can be defined as
+either running or dead.
 
 If you need to know if your init system is supported, see the list of supported
 :mod:`service modules <salt.modules.service.py>` for your desired init system
@@ -30,7 +30,7 @@ section of Salt's module documentation to work around possible errors.
     httpd:
       service.running: []
 
-The service can also be set to be started at runtime via the enable option:
+The service can also be set to start at runtime via the enable option:
 
 .. code-block:: yaml
 
@@ -39,8 +39,8 @@ The service can also be set to be started at runtime via the enable option:
         - enable: True
 
 By default if a service is triggered to refresh due to a watch statement the
-service is by default restarted. If the desired behavior is to reload the
-service, then set the reload value to True:
+service is restarted. If the desired behavior is to reload the service, then
+set the reload value to True:
 
 .. code-block:: yaml
 
@@ -255,7 +255,12 @@ def _disable(name, started, result=True, **kwargs):
         return ret
 
     # Service can be disabled
-    before_toggle_disable_status = __salt__['service.disabled'](name)
+    if salt.utils.platform.is_windows():
+        # service.disabled in Windows returns True for services that are set to
+        # Manual start, so we need to check specifically for Disabled
+        before_toggle_disable_status = __salt__['service.info'](name)['StartType'] in ['Disabled']
+    else:
+        before_toggle_disable_status = __salt__['service.disabled'](name)
     if before_toggle_disable_status:
         # Service is disabled
         if started is True:
@@ -432,15 +437,14 @@ def running(name,
         ret['comment'] = 'Service {0} is set to start'.format(name)
         return ret
 
-    if salt.utils.platform.is_windows():
-        if enable is True:
-            ret.update(_enable(name, False, result=False, **kwargs))
-
     # Conditionally add systemd-specific args to call to service.start
     start_kwargs, warnings = \
         _get_systemd_only(__salt__['service.start'], locals())
     if warnings:
         ret.setdefault('warnings', []).extend(warnings)
+
+    if salt.utils.platform.is_windows() and kwargs.get('timeout', False):
+        start_kwargs.update({'timeout': kwargs.get('timeout')})
 
     try:
         func_ret = __salt__['service.start'](name, **start_kwargs)
@@ -556,7 +560,12 @@ def dead(name,
     # command, so it is just an indicator but can not be fully trusted
     before_toggle_status = __salt__['service.status'](name, sig)
     if 'service.enabled' in __salt__:
-        before_toggle_enable_status = __salt__['service.enabled'](name)
+        if salt.utils.platform.is_windows():
+            # service.enabled in Windows returns True for services that are set
+            # to Auto start, but services set to Manual can also be disabled
+            before_toggle_enable_status = __salt__['service.info'](name)['StartType'] in ['Auto', 'Manual']
+        else:
+            before_toggle_enable_status = __salt__['service.enabled'](name)
     else:
         before_toggle_enable_status = True
 
@@ -579,6 +588,9 @@ def dead(name,
     stop_kwargs, warnings = _get_systemd_only(__salt__['service.stop'], kwargs)
     if warnings:
         ret.setdefault('warnings', []).extend(warnings)
+
+    if salt.utils.platform.is_windows() and kwargs.get('timeout', False):
+        stop_kwargs.update({'timeout': kwargs.get('timeout')})
 
     func_ret = __salt__['service.stop'](name, **stop_kwargs)
     if not func_ret:
@@ -820,6 +832,14 @@ def mod_watch(name,
               **kwargs):
     '''
     The service watcher, called to invoke the watch command.
+    When called, it will restart or reload the named service.
+
+    .. note::
+        This state exists to support special handling of the ``watch``
+        :ref:`requisite <requisites>`. It should not be called directly.
+
+        Parameters for this function should be set by the watching service.
+        (i.e. ``service.running``)
 
     name
         The name of the init or rc script used to manage the service
@@ -832,11 +852,13 @@ def mod_watch(name,
         The string to search for when looking for the service process with ps
 
     reload
-        Use reload instead of the default restart (exclusive option with full_restart,
-        defaults to reload if both are used)
+        When set, reload the service instead of restarting it.
+        (i.e. ``service nginx reload``)
 
     full_restart
-        Use service.full_restart instead of restart (exclusive option with reload)
+        Perform a full stop/start of a service by passing ``--full-restart``.
+        This option is ignored if ``reload`` is set and is supported by only a few
+        :py:func:`service modules <salt.modules.service>`.
 
     force
         Use service.force_reload instead of reload (needs reload to be set to True)

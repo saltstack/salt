@@ -178,7 +178,7 @@ class AsyncRemotePillar(RemotePillarMixin):
                 load,
                 dictkey='pillar',
             )
-        except:
+        except Exception:
             log.exception('Exception getting pillar:')
             raise SaltClientError('Exception getting pillar.')
 
@@ -345,8 +345,6 @@ class Pillar(object):
         if pillarenv is None:
             if opts.get('pillarenv_from_saltenv', False):
                 opts['pillarenv'] = saltenv
-        # Store the file_roots path so we can restore later. Issue 5449
-        self.actual_file_roots = opts['file_roots']
         # use the local file client
         self.opts = self.__gen_opts(opts, grains, saltenv=saltenv, pillarenv=pillarenv)
         self.saltenv = saltenv
@@ -366,12 +364,9 @@ class Pillar(object):
         else:
             self.functions = functions
 
-        self.matcher = salt.minion.Matcher(self.opts, self.functions)
+        self.matchers = salt.loader.matchers(self.opts)
         self.rend = salt.loader.render(self.opts, self.functions)
         ext_pillar_opts = copy.deepcopy(self.opts)
-        # Fix self.opts['file_roots'] so that ext_pillars know the real
-        # location of file_roots. Issue 5951
-        ext_pillar_opts['file_roots'] = self.actual_file_roots
         # Keep the incoming opts ID intact, ie, the master id
         if 'id' in opts:
             ext_pillar_opts['id'] = opts['id']
@@ -438,7 +433,6 @@ class Pillar(object):
         The options need to be altered to conform to the file client
         '''
         opts = copy.deepcopy(opts_in)
-        opts['file_roots'] = opts['pillar_roots']
         opts['file_client'] = 'local'
         if not grains:
             opts['grains'] = {}
@@ -463,22 +457,25 @@ class Pillar(object):
                 opts['ext_pillar'].append(self.ext)
             else:
                 opts['ext_pillar'] = [self.ext]
-        if '__env__' in opts['file_roots']:
+        if '__env__' in opts['pillar_roots']:
             env = opts.get('pillarenv') or opts.get('saltenv') or 'base'
-            if env not in opts['file_roots']:
+            if env not in opts['pillar_roots']:
                 log.debug("pillar environment '%s' maps to __env__ pillar_roots directory", env)
-                opts['file_roots'][env] = opts['file_roots'].pop('__env__')
+                opts['pillar_roots'][env] = opts['pillar_roots'].pop('__env__')
             else:
                 log.debug("pillar_roots __env__ ignored (environment '%s' found in pillar_roots)",
                           env)
-                opts['file_roots'].pop('__env__')
+                opts['pillar_roots'].pop('__env__')
         return opts
 
     def _get_envs(self):
         '''
         Pull the file server environments out of the master options
         '''
-        return set(['base']) | set(self.opts.get('file_roots', []))
+        envs = set(['base'])
+        if 'pillar_roots' in self.opts:
+            envs.update(list(self.opts['pillar_roots']))
+        return envs
 
     def get_tops(self):
         '''
@@ -494,11 +491,11 @@ class Pillar(object):
             if self.opts['pillarenv']:
                 # If the specified pillarenv is not present in the available
                 # pillar environments, do not cache the pillar top file.
-                if self.opts['pillarenv'] not in self.opts['file_roots']:
+                if self.opts['pillarenv'] not in self.opts['pillar_roots']:
                     log.debug(
                         'pillarenv \'%s\' not found in the configured pillar '
                         'environments (%s)',
-                        self.opts['pillarenv'], ', '.join(self.opts['file_roots'])
+                        self.opts['pillarenv'], ', '.join(self.opts['pillar_roots'])
                     )
                 else:
                     saltenvs.add(self.opts['pillarenv'])
@@ -649,7 +646,7 @@ class Pillar(object):
                 if saltenv != self.opts['pillarenv']:
                     continue
             for match, data in six.iteritems(body):
-                if self.matcher.confirm_top(
+                if self.matchers['confirm_top.confirm_top'](
                         match,
                         data,
                         self.opts.get('nodegroups', {}),
@@ -761,7 +758,7 @@ class Pillar(object):
                                      '\'{0}\' found'.format(saltenv)]
                                 )
 
-                        for sub_sls in set(matched_pstates):
+                        for sub_sls in matched_pstates:
                             if sub_sls not in mods:
                                 nstate, mods, err = self.render_pstate(
                                         sub_sls,
@@ -960,7 +957,7 @@ class Pillar(object):
                         )
                     )
                     log.error(
-                        'Execption caught loading ext_pillar \'%s\':\n%s',
+                        'Exception caught loading ext_pillar \'%s\':\n%s',
                         key, ''.join(traceback.format_tb(sys.exc_info()[2]))
                     )
             if ext:
@@ -1002,10 +999,15 @@ class Pillar(object):
             mopts = dict(self.opts)
             if 'grains' in mopts:
                 mopts.pop('grains')
-            # Restore the actual file_roots path. Issue 5449
-            mopts['file_roots'] = self.actual_file_roots
             mopts['saltversion'] = __version__
             pillar['master'] = mopts
+        if 'pillar' in self.opts and self.opts.get('ssh_merge_pillar', False):
+            pillar = merge(
+                self.opts['pillar'],
+                pillar,
+                self.merge_strategy,
+                self.opts.get('renderer', 'yaml'),
+                self.opts.get('pillar_merge_lists', False))
         if errors:
             for error in errors:
                 log.critical('Pillar render error: %s', error)
@@ -1022,6 +1024,7 @@ class Pillar(object):
         decrypt_errors = self.decrypt_pillar(pillar)
         if decrypt_errors:
             pillar.setdefault('_errors', []).extend(decrypt_errors)
+
         return pillar
 
     def decrypt_pillar(self, pillar):

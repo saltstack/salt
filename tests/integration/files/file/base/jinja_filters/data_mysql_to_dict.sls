@@ -6,4 +6,4 @@
 
 {% set result = test_mysql_output | mysql_to_dict('Info') %}
 
-{% include 'jinja_filters/common.sls' %}
+{% include 'jinja_filters/tojson.sls' %}

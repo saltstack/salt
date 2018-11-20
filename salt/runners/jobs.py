@@ -70,9 +70,10 @@ def active(display_progress=False):
     for jid in ret:
         returner = _get_returner((__opts__['ext_job_cache'], __opts__['master_job_cache']))
         data = mminion.returners['{0}.get_jid'.format(returner)](jid)
-        for minion in data:
-            if minion not in ret[jid]['Returned']:
-                ret[jid]['Returned'].append(minion)
+        if data:
+            for minion in data:
+                if minion not in ret[jid]['Returned']:
+                    ret[jid]['Returned'].append(minion)
 
     return ret
 
@@ -133,15 +134,16 @@ def lookup_jid(jid,
     targeted_minions = data.get('Minions', [])
     returns = data.get('Result', {})
 
-    for minion in returns:
-        if display_progress:
-            __jid_event__.fire_event({'message': minion}, 'progress')
-        if u'return' in returns[minion]:
-            if returned:
-                ret[minion] = returns[minion].get(u'return')
-        else:
-            if returned:
-                ret[minion] = returns[minion].get('return')
+    if returns:
+        for minion in returns:
+            if display_progress:
+                __jid_event__.fire_event({'message': minion}, 'progress')
+            if u'return' in returns[minion]:
+                if returned:
+                    ret[minion] = returns[minion].get(u'return')
+            else:
+                if returned:
+                    ret[minion] = returns[minion].get('return')
     if missing:
         for minion_id in (x for x in targeted_minions if x not in returns):
             ret[minion_id] = 'Minion did not return'
@@ -151,7 +153,7 @@ def lookup_jid(jid,
     try:
         # Check if the return data has an 'out' key. We'll use that as the
         # outputter in the absence of one being passed on the CLI.
-        outputter = data[next(iter(data))].get('out')
+        outputter = returns[next(iter(returns))].get('out')
     except (StopIteration, AttributeError):
         outputter = None
 
@@ -545,6 +547,10 @@ def _format_job_instance(job):
     '''
     Helper to format a job instance
     '''
+    if not job:
+        ret = {'Error': 'Cannot contact returner or no job with this jid'}
+        return ret
+
     ret = {'Function': job.get('fun', 'unknown-function'),
            'Arguments': list(job.get('arg', [])),
            # unlikely but safeguard from invalid returns

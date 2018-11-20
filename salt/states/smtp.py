@@ -27,7 +27,13 @@ def __virtual__():
     return 'smtp' if 'smtp.send_msg' in __salt__ else False
 
 
-def send_msg(name, recipient, subject, sender=None, profile=None, use_ssl='True'):
+def send_msg(name,
+             recipient,
+             subject,
+             sender=None,
+             profile=None,
+             use_ssl='True',
+             attachments=None):
     '''
     Send a message via SMTP
 
@@ -41,6 +47,9 @@ def send_msg(name, recipient, subject, sender=None, profile=None, use_ssl='True'
             - recipient: admin@example.com
             - sender: admin@example.com
             - use_ssl: True
+            - attachments:
+                - /var/log/syslog
+                - /var/log/messages
 
     name
         The message to send via SMTP
@@ -68,11 +77,17 @@ def send_msg(name, recipient, subject, sender=None, profile=None, use_ssl='True'
         subject=subject,
         sender=sender,
         use_ssl=use_ssl,
+        attachments=attachments,
     )
 
     if command:
         ret['result'] = True
-        ret['comment'] = 'Sent message to {0}: {1}'.format(recipient, name)
+        if attachments:
+            atts = ', '.join(attachments)
+            ret['comment'] = 'Sent message to {0} with attachments ({2}): {1}' \
+                             .format(recipient, name, atts)
+        else:
+            ret['comment'] = 'Sent message to {0}: {1}'.format(recipient, name)
     else:
         ret['result'] = False
         ret['comment'] = 'Unable to send message to {0}: {1}'.format(recipient, name)

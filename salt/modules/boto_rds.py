@@ -53,7 +53,6 @@ import logging
 import time
 
 # Import Salt libs
-import salt.utils.boto3
 import salt.utils.compat
 import salt.utils.odict as odict
 import salt.utils.versions
@@ -153,7 +152,7 @@ def exists(name, tags=None, region=None, key=None, keyid=None, profile=None):
         rds = conn.describe_db_instances(DBInstanceIdentifier=name)
         return {'exists': bool(rds)}
     except ClientError as e:
-        return {'error': salt.utils.boto3.get_error(e)}
+        return {'error': __utils__['boto3.get_error'](e)}
 
 
 def option_group_exists(name, tags=None, region=None, key=None, keyid=None,
@@ -171,7 +170,7 @@ def option_group_exists(name, tags=None, region=None, key=None, keyid=None,
         rds = conn.describe_option_groups(OptionGroupName=name)
         return {'exists': bool(rds)}
     except ClientError as e:
-        return {'error': salt.utils.boto3.get_error(e)}
+        return {'error': __utils__['boto3.get_error'](e)}
 
 
 def parameter_group_exists(name, tags=None, region=None, key=None, keyid=None,
@@ -193,7 +192,7 @@ def parameter_group_exists(name, tags=None, region=None, key=None, keyid=None,
         resp = {}
         if e.response['Error']['Code'] == 'DBParameterGroupNotFound':
             resp['exists'] = False
-        resp['error'] = salt.utils.boto3.get_error(e)
+        resp['error'] = __utils__['boto3.get_error'](e)
         return resp
 
 
@@ -218,7 +217,7 @@ def subnet_group_exists(name, tags=None, region=None, key=None, keyid=None,
         if "DBSubnetGroupNotFoundFault" in e.message:
             return {'exists': False}
         else:
-            return {'error': salt.utils.boto3.get_error(e)}
+            return {'error': __utils__['boto3.get_error'](e)}
 
 
 def create(name, allocated_storage, db_instance_class, engine,
@@ -317,7 +316,7 @@ def create(name, allocated_storage, db_instance_class, engine,
             log.info('Instance status after 10 seconds is: %s', stat)
 
     except ClientError as e:
-        return {'error': salt.utils.boto3.get_error(e)}
+        return {'error': __utils__['boto3.get_error'](e)}
 
 
 def create_read_replica(name, source_name, db_instance_class=None,
@@ -375,7 +374,7 @@ def create_read_replica(name, source_name, db_instance_class=None,
 
         return {'exists': bool(rds_replica)}
     except ClientError as e:
-        return {'error': salt.utils.boto3.get_error(e)}
+        return {'error': __utils__['boto3.get_error'](e)}
 
 
 def create_option_group(name, engine_name, major_engine_version,
@@ -408,7 +407,7 @@ def create_option_group(name, engine_name, major_engine_version,
 
         return {'exists': bool(rds)}
     except ClientError as e:
-        return {'error': salt.utils.boto3.get_error(e)}
+        return {'error': __utils__['boto3.get_error'](e)}
 
 
 def create_parameter_group(name, db_parameter_group_family, description,
@@ -444,7 +443,7 @@ def create_parameter_group(name, db_parameter_group_family, description,
         return {'exists': bool(rds), 'message':
                 'Created RDS parameter group {0}'.format(name)}
     except ClientError as e:
-        return {'error': salt.utils.boto3.get_error(e)}
+        return {'error': __utils__['boto3.get_error'](e)}
 
 
 def create_subnet_group(name, description, subnet_ids, tags=None,
@@ -475,7 +474,7 @@ def create_subnet_group(name, description, subnet_ids, tags=None,
 
         return {'created': bool(rds)}
     except ClientError as e:
-        return {'error': salt.utils.boto3.get_error(e)}
+        return {'error': __utils__['boto3.get_error'](e)}
 
 
 def update_parameter_group(name, parameters, apply_method="pending-reboot",
@@ -520,7 +519,7 @@ def update_parameter_group(name, parameters, apply_method="pending-reboot",
                                              Parameters=param_list)
         return {'results': bool(res)}
     except ClientError as e:
-        return {'error': salt.utils.boto3.get_error(e)}
+        return {'error': __utils__['boto3.get_error'](e)}
 
 
 def describe(name, tags=None, region=None, key=None, keyid=None,
@@ -568,7 +567,7 @@ def describe(name, tags=None, region=None, key=None, keyid=None,
         else:
             return {'rds': None}
     except ClientError as e:
-        return {'error': salt.utils.boto3.get_error(e)}
+        return {'error': __utils__['boto3.get_error'](e)}
     except IndexError:
         return {'rds': None}
 
@@ -597,7 +596,7 @@ def describe_db_instances(name=None, filters=None, jmespath='DBInstances',
     except ClientError as e:
         code = getattr(e, 'response', {}).get('Error', {}).get('Code')
         if code != 'DBInstanceNotFound':
-            log.error(salt.utils.boto3.get_error(e))
+            log.error(__utils__['boto3.get_error'](e))
     return []
 
 
@@ -647,7 +646,7 @@ def get_endpoint(name, tags=None, region=None, key=None, keyid=None,
                     return endpoint
 
         except ClientError as e:
-            return {'error': salt.utils.boto3.get_error(e)}
+            return {'error': __utils__['boto3.get_error'](e)}
 
     return endpoint
 
@@ -706,7 +705,7 @@ def delete(name, skip_final_snapshot=None, final_db_snapshot_identifier=None,
                      'deleted.', timeout, name)
             time.sleep(10)
     except ClientError as e:
-        return {'error': salt.utils.boto3.get_error(e)}
+        return {'error': __utils__['boto3.get_error'](e)}
 
 
 def delete_option_group(name, region=None, key=None, keyid=None, profile=None):
@@ -731,7 +730,7 @@ def delete_option_group(name, region=None, key=None, keyid=None, profile=None):
         return {'deleted': bool(res), 'message':
                 'Deleted RDS option group {0}.'.format(name)}
     except ClientError as e:
-        return {'error': salt.utils.boto3.get_error(e)}
+        return {'error': __utils__['boto3.get_error'](e)}
 
 
 def delete_parameter_group(name, region=None, key=None, keyid=None,
@@ -753,7 +752,7 @@ def delete_parameter_group(name, region=None, key=None, keyid=None,
         return {'deleted': bool(r), 'message':
                 'Deleted RDS parameter group {0}.'.format(name)}
     except ClientError as e:
-        return {'error': salt.utils.boto3.get_error(e)}
+        return {'error': __utils__['boto3.get_error'](e)}
 
 
 def delete_subnet_group(name, region=None, key=None, keyid=None,
@@ -775,7 +774,7 @@ def delete_subnet_group(name, region=None, key=None, keyid=None,
         return {'deleted': bool(r), 'message':
                 'Deleted RDS subnet group {0}.'.format(name)}
     except ClientError as e:
-        return {'error': salt.utils.boto3.get_error(e)}
+        return {'error': __utils__['boto3.get_error'](e)}
 
 
 def describe_parameter_group(name, Filters=None, MaxRecords=None, Marker=None,
@@ -817,7 +816,7 @@ def describe_parameter_group(name, Filters=None, MaxRecords=None, Marker=None,
         return {'results': bool(info), 'message':
                 'Got RDS descrition for group {0}.'.format(name)}
     except ClientError as e:
-        return {'error': salt.utils.boto3.get_error(e)}
+        return {'error': __utils__['boto3.get_error'](e)}
 
 
 def describe_parameters(name, Source=None, MaxRecords=None, Marker=None,
@@ -873,7 +872,7 @@ def describe_parameters(name, Source=None, MaxRecords=None, Marker=None,
         ret['parameters'] = parameters
         return ret
     except ClientError as e:
-        return {'error': salt.utils.boto3.get_error(e)}
+        return {'error': __utils__['boto3.get_error'](e)}
 
 
 def modify_db_instance(name,
@@ -950,7 +949,7 @@ def modify_db_instance(name,
                 'Modified RDS db instance {0}.'.format(name),
                 'results': dict(info)}
     except ClientError as e:
-        return {'error': salt.utils.boto3.get_error(e)}
+        return {'error': __utils__['boto3.get_error'](e)}
 
 
 def _tag_doc(tags):

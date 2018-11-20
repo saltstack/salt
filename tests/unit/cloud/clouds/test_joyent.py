@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Eric Radman <ericshane@eradman.com>`
+    :codeauthor: Eric Radman <ericshane@eradman.com>
 '''
 
 # Import Salt Libs

@@ -148,22 +148,23 @@ Why aren't my custom modules/states/etc. available on my Minions?
 -----------------------------------------------------------------
 
 Custom modules are synced to Minions when
-:mod:`saltutil.sync_modules <salt.modules.saltutil.sync_modules>`,
-or :mod:`saltutil.sync_all <salt.modules.saltutil.sync_all>` is run.
-Custom modules are also synced by :mod:`state.apply` when run without
-any arguments.
+:py:func:`saltutil.sync_modules <salt.modules.saltutil.sync_modules>`,
+or :py:func:`saltutil.sync_all <salt.modules.saltutil.sync_all>` is run.
 
+Similarly, custom states are synced to Minions when :py:func:`saltutil.sync_states
+<salt.modules.saltutil.sync_states>`, or :py:func:`saltutil.sync_all
+<salt.modules.saltutil.sync_all>` is run.
 
-Similarly, custom states are synced to Minions
-when :mod:`state.apply <salt.modules.state.apply_>`,
-:mod:`saltutil.sync_states <salt.modules.saltutil.sync_states>`, or
-:mod:`saltutil.sync_all <salt.modules.saltutil.sync_all>` is run.
+They are both also synced when a :ref:`highstate <running-highstate>` is
+triggered.
 
-Custom states are also synced by :mod:`state.apply<salt.modules.state.apply_>`
-when run without any arguments.
+As of the Fluorine release, as well as 2017.7.7 and 2018.3.2 in their
+respective release cycles, the ``sync`` argument to :py:func:`state.apply
+<salt.modules.state.apply_>`/:py:func:`state.sls <salt.modules.state.sls>` can
+be used to sync custom types when running individual SLS files.
 
 Other custom types (renderers, outputters, etc.) have similar behavior, see the
-documentation for the :mod:`saltutil <salt.modules.saltutil>` module for more
+documentation for the :py:func:`saltutil <salt.modules.saltutil>` module for more
 information.
 
 :ref:`This reactor example <minion-start-reactor>` can be used to automatically

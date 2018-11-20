@@ -44,7 +44,7 @@ at ``/etc/salt/cloud.profiles`` or ``/etc/salt/cloud.profiles.d/*.conf``:
 
     linode_1024:
       provider: my-linode-config
-      size: Linode 2048
+      size: Linode 2GB
       image: CentOS 7
       location: London, England, UK
 
@@ -77,11 +77,13 @@ command:
         ----------
         linode:
             ----------
-            Linode 1024:
+            Linode 2GB:
                 ----------
                 AVAIL:
                     ----------
                     10:
+                        500
+                    11:
                         500
                     2:
                         500
@@ -100,11 +102,19 @@ command:
                 CORES:
                     1
                 DISK:
-                    24
+                    50
                 HOURLY:
                     0.015
                 LABEL:
-                    Linode 1024
+                    Linode 2GB
+                PLANID:
+                    2
+                PRICE:
+                    10.0
+                RAM:
+                    2048
+                XFER:
+                    2000
     ...SNIP...
 
 

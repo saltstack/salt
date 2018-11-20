@@ -54,7 +54,7 @@ connection with the remote device only when required.
 New in 2016.11.0
 ----------------
 
-Proxy minions now support configuration files with names ending in '*.conf'
+Proxy minions now support configuration files with names ending in '\*.conf'
 and placed in /etc/salt/proxy.d.
 
 Proxy minions can now be configured in /etc/salt/proxy or /etc/salt/proxy.d
@@ -387,8 +387,9 @@ Pre 2015.8 the proxymodule also must have an ``id()`` function.  2015.8 and foll
 this function because the proxy's id is required on the command line.
 
 Here is an example proxymodule used to interface to a *very* simple REST
-server.  Code for the server is in the `salt-contrib GitHub repository
-<https://github.com/saltstack/salt-contrib/tree/master/proxyminion_rest_example>`_
+server. Code for the server is in the `salt-contrib GitHub repository`_.
+
+.. _`salt-contrib GitHub repository`: https://github.com/saltstack/salt-contrib/tree/master/proxyminion_rest_example
 
 This proxymodule enables "service" enumeration, starting, stopping, restarting,
 and status; "package" installation, and a ping.
@@ -738,7 +739,7 @@ This sections specifically talks about the SSH proxy module and
 explains the working of the example proxy module ``ssh_sample``.
 
 Here is a simple example proxymodule used to interface to a device over SSH.
-Code for the SSH shell is in the `salt-contrib GitHub repository <https://github.com/saltstack/salt-contrib/proxyminion_ssh_example>`_
+Code for the SSH shell is in the `salt-contrib GitHub repository`_.
 
 This proxymodule enables "package" installation.
 

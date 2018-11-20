@@ -924,7 +924,7 @@ def trust_key(keyid=None,
 
     if user == 'salt':
         homeDir = os.path.join(__salt__['config.get']('config_dir'), 'gpgkeys')
-        cmd.extend([' --homedir', homeDir])
+        cmd.extend(['--homedir', homeDir])
         _user = 'root'
     res = __salt__['cmd.run_all'](cmd,
                                   stdin=stdin,
@@ -1051,16 +1051,15 @@ def verify(text=None,
 
     signature
         Specify the filename of a detached signature.
-    .. versionadded:: 2018.3.0
+
+        .. versionadded:: 2018.3.0
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' gpg.verify text='Hello there.  How are you?'
-
         salt '*' gpg.verify filename='/path/to/important.file'
-
         salt '*' gpg.verify filename='/path/to/important.file' use_passphrase=True
 
     '''

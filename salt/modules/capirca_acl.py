@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
 Capirca ACL
-============
+===========
 
 Generate ACL (firewall) configuration for network devices.
 
@@ -683,7 +683,7 @@ def get_term_config(platform,
         select a source just using the name, instead of specifying a destination_port and protocol.
         Allows the same options as ``source_service``.
 
-    **term_fields
+    term_fields
         Term attributes.
         To see what fields are supported, please consult the list of supported keywords_.
         Some platforms have few other optional_ keywords.

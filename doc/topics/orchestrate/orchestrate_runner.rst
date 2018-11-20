@@ -235,7 +235,7 @@ To get a more dynamic state, use jinja variables together with
 Using the same example but passing on pillar data, the state would be like
 this.
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     # /srv/salt/orch/deploy.sls
     {% set servers = salt['pillar.get']('servers', 'test') %}

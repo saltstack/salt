@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
-Module to provide Palo Alto compatibility to Salt.
+Module to provide Palo Alto compatibility to Salt
 
-:codeauthor: :email:`Spencer Ervin <spencer_ervin@hotmail.com>`
+:codeauthor: ``Spencer Ervin <spencer_ervin@hotmail.com>``
 :maturity:   new
 :depends:    none
 :platform:   unix
@@ -17,7 +17,7 @@ parameters, or as configuration settings in pillar as a Salt proxy.
 Options passed into opts will be ignored if options are passed into pillar.
 
 .. seealso::
-    :prox:`Palo Alto Proxy Module <salt.proxy.panos>`
+    :py:mod:`Palo Alto Proxy Module <salt.proxy.panos>`
 
 About
 =====

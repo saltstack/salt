@@ -23,9 +23,14 @@ Oracle DataBase connection module
 
     .. code-block:: yaml
 
-        oracle.dbs: list of known based
-        oracle.dbs.<db>.uri: connection credentials in format:
-            user/password@host[:port]/sid[ as {sysdba|sysoper}]
+        oracle:
+          dbs:
+            <db>:
+              uri: connection credentials in format:
+            user/password@host[:port]/sid[ servicename as {sysdba|sysoper}]
+              optional keyword servicename will determine whether it is a sid or service_name
+            <db>:
+              uri: .....
 '''
 from __future__ import absolute_import, print_function, unicode_literals
 
@@ -92,9 +97,14 @@ def _connect(uri):
     else:
         credentials = uri_l[0]
         mode = 0
+
+    serv_name = False
     userpass, hostportsid = credentials.split('@')
     user, password = userpass.split('/')
     hostport, sid = hostportsid.split('/')
+    if 'servicename' in sid:
+        serv_name = True
+        sid = sid.split('servicename')[0].strip()
     hostport_l = hostport.split(':')
     if len(hostport_l) == 2:
         host, port = hostport_l
@@ -104,7 +114,12 @@ def _connect(uri):
     log.debug('connect: %s', (user, password, host, port, sid, mode))
     # force UTF-8 client encoding
     os.environ['NLS_LANG'] = '.AL32UTF8'
-    conn = cx_Oracle.connect(user, password,
+    if serv_name:
+        conn = cx_Oracle.connect(user, password,
+                             cx_Oracle.makedsn(host, port, service_name=sid),
+                             mode)
+    else:
+        conn = cx_Oracle.connect(user, password,
                              cx_Oracle.makedsn(host, port, sid),
                              mode)
     conn.outputtypehandler = _unicode_output
