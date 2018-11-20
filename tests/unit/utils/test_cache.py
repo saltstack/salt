@@ -210,6 +210,22 @@ class CacheDiskTestCase(TestCase):
             assert msg % (pth, exc) == ('Error while reading disk cache from /solar/interference: '
                                         'Radial telemetry infiltration')
 
+    @patch('os.path.exists', MagicMock(return_value=True))
+    @patch('salt.utils.files.fopen', MagicMock(side_effect=OSError("The keyboard isn't plugged in")))
+    def test_read_oserror_handling(self):
+        '''
+        Test _read() is handling OSError.
+        :return:
+        '''
+        logger = MagicMock()
+        with patch('salt.utils.cache.log', logger):
+            cache.CacheDisk(0, '/dev/nowhere')
+            assert logger.error.call_count == 1
+            assert len(logger.error.call_args[0]) == 3
+            msg, pth, exc = logger.error.call_args[0]
+            assert msg % (pth, exc) == ('Error while reading disk cache from /dev/nowhere: '
+                                        "The keyboard isn't plugged in")
+
     def test_everything(self):
         '''
         Make sure you can instantiate, add, update, remove, expire
