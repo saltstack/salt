@@ -8,8 +8,8 @@ Return data to a Kafka topic
 :depends: confluent-kafka
 :platform: all
 
-To enable this returner install confluent-kafka and enable the following settings
-in the minion config:
+To enable this returner install confluent-kafka and enable the following
+settings in the minion config:
 
     returner.kafka.bootstrap:
       - "server1:9092"
@@ -39,30 +39,32 @@ log = logging.getLogger(__name__)
 
 __virtualname__ = 'kafka'
 
+
 def __virtual__():
     if not HAS_KAFKA:
         return False, 'Could not import kafka returner; confluent-kafka is not installed.'
     return __virtualname__
 
 
-def _get_conn(ret=None):
+def _get_conn():
     '''
     Return a kafka connection
     '''
     if __salt__['config.option']('returner.kafka.bootstrap'):
         bootstrap = ','.join(__salt__['config.option']('returner.kafka.bootstrap'))
-        return bootstrap
     else:
         log.error('Unable to find kafka returner config option: bootstrap')
+        return None
+    return bootstrap
 
 
 def _delivery_report(err, msg):
-    """ Called once for each message produced to indicate delivery result.
-        Triggered by poll() or flush(). """
+    ''' Called once for each message produced to indicate delivery result.
+        Triggered by poll() or flush(). '''
     if err is not None:
-        print('Message delivery failed: {}'.format(err))
+        log.error('Message delivery failed: %s', err)
     else:
-        print('Message delivered to {} [{}]'.format(msg.topic(), msg.partition()))
+        log.debug('Message delivered to %s [%s]', msg.topic(), msg.partition())
 
 
 def returner(ret):
@@ -72,20 +74,11 @@ def returner(ret):
     if __salt__['config.option']('returner.kafka.topic'):
         topic = __salt__['config.option']('returner.kafka.topic')
 
-        conn = _get_conn(ret)
+        conn = _get_conn()
         producer = Producer({'bootstrap.servers': conn})
-
-        # Trigger any available delivery report callbacks from previous produce() calls
         producer.poll(0)
-	
-        # Asynchronously produce a message, the delivery report callback
-        # will be triggered from poll() above, or flush() below, when the message has
-        # been successfully delivered or failed permanently.
         producer.produce(topic, salt.utils.json.dumps(ret), str(ret).encode('utf-8'), callback=_delivery_report)
 
-        # Wait for any outstanding messages to be delivered and delivery report
-        # callbacks to be triggered.
         producer.flush()
-
     else:
         log.error('Unable to find kafka returner config option: topic')
