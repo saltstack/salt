@@ -730,7 +730,10 @@ Repository 'DUMMY' not found by its alias, number, or URI.
                 ]
             }
             for pkgname, pkginfo in pkgs.items():
-                self.assertItemsEqual(pkginfo, expected_pkg_list[pkgname])
+                if six.PY3:
+                    self.assertCountEqual(pkginfo, expected_pkg_list[pkgname])
+                else:
+                    self.assertItemsEqual(pkginfo, expected_pkg_list[pkgname])
 
     def test_list_patches(self):
         '''
