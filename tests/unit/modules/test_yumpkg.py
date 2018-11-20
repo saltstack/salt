@@ -302,7 +302,10 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
                 ]
             }
             for pkgname, pkginfo in pkgs.items():
-                self.assertItemsEqual(pkginfo, expected_pkg_list[pkgname])
+                if six.PY3:
+                    self.assertCountEqual(pkginfo, expected_pkg_list[pkgname])
+                else:
+                    self.assertItemsEqual(pkginfo, expected_pkg_list[pkgname])
 
     def test_latest_version_with_options(self):
         with patch.object(yumpkg, 'list_pkgs', MagicMock(return_value={})):

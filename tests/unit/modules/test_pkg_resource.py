@@ -150,7 +150,10 @@ class PkgresTestCase(TestCase, LoaderModuleMockMixin):
             'foobar.something': '3:1.1-23.1',
             'foobar.': '3:1.1-23.1',
         }
-        self.assertItemsEqual(pkg_resource.format_pkg_list(packages, False, None), expected_pkg_list)
+        if six.PY3:
+            self.assertCountEqual(pkg_resource.format_pkg_list(packages, False, None), expected_pkg_list)
+        else:
+            self.assertItemsEqual(pkg_resource.format_pkg_list(packages, False, None), expected_pkg_list)
 
     def test_format_pkg_list_with_attr(self):
         '''
@@ -214,7 +217,10 @@ class PkgresTestCase(TestCase, LoaderModuleMockMixin):
                 }
             ]
         }
-        self.assertItemsEqual(pkg_resource.format_pkg_list(packages, False, attr=['epoch', 'release']), expected_pkg_list)
+        if six.PY3:
+            self.assertCountEqual(pkg_resource.format_pkg_list(packages, False, attr=['epoch', 'release']), expected_pkg_list)
+        else:
+            self.assertItemsEqual(pkg_resource.format_pkg_list(packages, False, attr=['epoch', 'release']), expected_pkg_list)
 
     def test_stringify(self):
         '''
