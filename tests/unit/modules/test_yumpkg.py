@@ -16,6 +16,7 @@ from tests.support.mock import (
 )
 
 # Import Salt libs
+from salt.ext import six
 import salt.modules.rpm
 import salt.modules.yumpkg as yumpkg
 import salt.modules.pkg_resource as pkg_resource
