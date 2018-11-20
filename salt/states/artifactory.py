@@ -84,7 +84,7 @@ def downloaded(name, artifact, target_dir='/tmp', target_file=None, use_literal_
            'changes': {},
            'comment': ''}
 
-    if 'test' in __opts__ and __opts__ ['test'] is True:
+    if 'test' in __opts__ and __opts__['test'] is True:
         fetch_result = {}
         fetch_result['status'] = True
         fetch_result['comment'] = 'Artifact would be downloaded from URL: {0}'.format(artifact['artifactory_url'])
