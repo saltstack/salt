@@ -337,6 +337,28 @@ class CacheDiskTestCase(TestCase):
             msg, args = logger.error.call_args[0]
             assert msg % args == 'Error storing cache data to the disk: Your processor does not develop enough heat.'
 
+    @patch('salt.utils.files.fopen', MagicMock())
+    @patch('time.time', MagicMock(return_value=42))
+    def test_store_new_format(self):
+        '''
+        Test store() function saves data in the new format.
+        :return:
+        '''
+        dumper = MagicMock()
+        with patch('salt.utils.cache.msgpack.dump', dumper):
+            c = cache.CacheDisk(0, '/dev/nowhere')
+            c['banana'] = {'status': 'rotten'}
+            stored_data = dumper.call_args[0][0]
+            assert isinstance(stored_data, dict)
+            assert 'CacheDisk_data' in stored_data
+            assert 'CacheDisk_cachetime' in stored_data
+            assert isinstance(stored_data['CacheDisk_data'], dict)
+            assert isinstance(stored_data['CacheDisk_cachetime'], dict)
+            assert 'banana' in stored_data['CacheDisk_data']
+            assert 'banana' in stored_data['CacheDisk_cachetime']
+            assert stored_data['CacheDisk_data']['banana']['status'] == 'rotten'
+            assert stored_data['CacheDisk_cachetime']['banana'] == 42
+
     def test_everything(self):
         '''
         Make sure you can instantiate, add, update, remove, expire
