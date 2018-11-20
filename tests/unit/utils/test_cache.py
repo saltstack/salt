@@ -262,6 +262,29 @@ class CacheDiskTestCase(TestCase):
             assert str(repr(c)) == str(c)
             assert str(c) == '<CacheDisk of 1 entries at 0x42>'
 
+    @patch('os.path.exists', MagicMock(return_value=True))
+    @patch('os.path.getmtime', MagicMock(return_value=42))
+    @patch('salt.utils.files.fopen', MagicMock())
+    @patch('salt.utils.cache.msgpack', MagicMock())
+    @patch('salt.utils.data.decode', MagicMock(return_value={'banana': {'status': 'rotten'}}))
+    def test_read_success_debugging(self):
+        '''
+        Test if CacheDisk adds debug message once successfully read the cache content from the disk.
+        :return:
+        '''
+        logger = MagicMock()
+        logger.isEnabledFor = MagicMock(return_value=True)
+        with patch('salt.utils.cache.log', logger):
+            c = cache.CacheDisk(0, '/dev/nowhere')
+            assert 'banana' in c
+            assert c._key_cache_time['banana'] == 42
+            assert logger.debug.call_count == 1
+            assert len(logger.debug.call_args[0]) == 2
+            msg, args = logger.debug.call_args[0]
+            assert isinstance(args, dict)
+            assert 'banana' in args
+            assert msg % 'Redundant ACLs' == 'Disk cache retrieved: Redundant ACLs'
+
     def test_everything(self):
         '''
         Make sure you can instantiate, add, update, remove, expire
