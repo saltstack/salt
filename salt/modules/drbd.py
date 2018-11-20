@@ -11,6 +11,9 @@ log = logging.getLogger(__name__)
 
 
 def _analyse_overview_field(content):
+    '''
+    Split the field in drbd-overview
+    '''
     if "(" in content:
         # Output like "Connected(2*)" or "UpToDate(2*)"
         return content.split("(")[0], content.split("(")[0]
@@ -22,6 +25,9 @@ def _analyse_overview_field(content):
 
 
 def _count_spaces_startswith(line):
+    '''
+    Count the number of spaces before the first character
+    '''
     if line.split('#')[0].strip() == "":
         return None
 
@@ -34,6 +40,9 @@ def _count_spaces_startswith(line):
 
 
 def _analyse_status_type(line):
+    '''
+    Figure out the sections in drbdadm status
+    '''
     spaces = _count_spaces_startswith(line)
 
     if spaces is None:
@@ -59,6 +68,9 @@ def _analyse_status_type(line):
 
 
 def _add_res(line):
+    '''
+    Analyse the line of local resource of ``drbdadm status``
+    '''
     global resource
     fields = line.strip().split()
 
@@ -73,6 +85,9 @@ def _add_res(line):
 
 
 def _add_volume(line):
+    '''
+    Analyse the line of volumes of ``drbdadm status``
+    '''
     section = _analyse_status_type(line)
     fields = line.strip().split()
 
@@ -88,6 +103,9 @@ def _add_volume(line):
 
 
 def _add_peernode(line):
+    '''
+    Analyse the line of peer nodes of ``drbdadm status``
+    '''
     global lastpnodevolumes
 
     fields = line.strip().split()
@@ -102,15 +120,24 @@ def _add_peernode(line):
 
 
 def _empty(dummy):
+    '''
+    Action of empty line of ``drbdadm status``
+    '''
     pass
 
 
 def _unknown_parser(line):
+    '''
+    Action of unsupported line of ``drbdadm status``
+    '''
     global ret
     ret = {"Unknown parser": line}
 
 
 def _line_parser(line):
+    '''
+    Call action for different lines
+    '''
     section = _analyse_status_type(line)
     fields = line.strip().split()
 
