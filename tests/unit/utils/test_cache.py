@@ -386,6 +386,26 @@ class CacheDiskTestCase(TestCase):
         assert 'backup_destination' not in c
         assert c['backup_destination'] is None
 
+    @patch('os.path.exists', MagicMock(return_value=True))
+    @patch('salt.utils.files.fopen', MagicMock(side_effect=OSError('Boredom in the kernel')))
+    def test_add_remove_operations_stores_data(self):
+        '''
+        Test dict operations set/delete triggering store() function transparently.
+        :return:
+        '''
+        # This should raise the OSError thrice.
+        logger = MagicMock()
+        with patch('salt.utils.cache.log', logger):
+            c = cache.CacheDisk(0, '/dev/nowhere')
+            assert logger.error.call_count == 1
+            c['banana'] = {'status': 'rotten'}
+            assert logger.error.call_count == 2
+            del c['banana']
+            assert logger.error.call_count == 3
+            assert len(logger.error.call_args[0]) == 2
+            msg, arg = logger.error.call_args[0]
+            assert msg % arg == 'Error storing cache data to the disk: Boredom in the kernel'
+
     def test_everything(self):
         '''
         Make sure you can instantiate, add, update, remove, expire
