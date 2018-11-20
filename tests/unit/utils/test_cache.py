@@ -179,6 +179,21 @@ class CacheDiskTestCase(TestCase):
             assert logger.error.call_count == 1
             assert logger.error.call_args[0][0] == 'Cache cannot be read from the disk: msgpack is missing'
 
+    @patch('os.path.exists', MagicMock(return_value=False))
+    def test_read_no_path(self):
+        '''
+        Test _read() is bailing out if no path [yet] exists.
+        :return:
+        '''
+        logger = MagicMock()
+        with patch('salt.utils.cache.log', logger):
+            cache.CacheDisk(0, '/solar/interference')
+            assert logger.error.call_count == 0
+            assert logger.debug.call_count == 1
+            assert len(logger.debug.call_args[0]) == 2
+            msg, arg = logger.debug.call_args[0]
+            assert msg % arg == 'Cache path does not exist for reading: /solar/interference'
+
     def test_everything(self):
         '''
         Make sure you can instantiate, add, update, remove, expire
