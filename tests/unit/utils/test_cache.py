@@ -359,6 +359,18 @@ class CacheDiskTestCase(TestCase):
             assert stored_data['CacheDisk_data']['banana']['status'] == 'rotten'
             assert stored_data['CacheDisk_cachetime']['banana'] == 42
 
+    @patch('salt.utils.cache.msgpack', None)  # Just turn off reading
+    def test_getitem_no_keyerror(self):
+        '''
+        Test get non-existing item raises no keyerror.
+        :return:
+        '''
+        c = cache.CacheDisk(0, '/dev/nowhere')
+        assert c['backup_destination'] is None
+        with patch.object(c, 'store', MagicMock()):
+            c['backup_destination'] = '/dev/null'
+            assert c['backup_destination'] == '/dev/null'
+
     def test_everything(self):
         '''
         Make sure you can instantiate, add, update, remove, expire
