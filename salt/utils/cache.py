@@ -43,6 +43,9 @@ class CacheFactory(object):
 
 
 class CacheAPI(dict):
+    '''
+    Stub to export any cache implementation API
+    '''
     def store(self):
         '''
         Store data in the cache persistence.
