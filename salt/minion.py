@@ -2338,6 +2338,255 @@ class Minion(MinionBase):
             log.warning('Unable to send mine data to master.')
             return None
 
+    def _handle_tag_module_refresh(self, tag, data):
+        '''
+        Handle a module_refresh event
+        '''
+        self.module_refresh(
+            force_refresh=data.get('force_refresh', False),
+            notify=data.get('notify', False)
+        )
+
+    @tornado.gen.coroutine
+    def _handle_tag_pillar_refresh(self, tag, data):
+        '''
+        Handle a pillar_refresh event
+        '''
+        yield self.pillar_refresh(
+            force_refresh=data.get('force_refresh', False)
+        )
+
+    def _handle_tag_beacons_refresh(self, tag, data):
+        '''
+        Handle a beacon_refresh event
+        '''
+        self.beacons_refresh()
+
+    def _handle_tag_matchers_refresh(self, tag, data):
+        '''
+        Handle a matchers_refresh event
+        '''
+        self.matchers_refresh()
+
+    def _handle_tag_manage_schedule(self, tag, data):
+        '''
+        Handle a manage_schedule event
+        '''
+        self.manage_schedule(tag, data)
+
+    def _handle_tag_manage_beacons(self, tag, data):
+        '''
+        Handle a manage_beacons event
+        '''
+        self.manage_beacons(tag, data)
+
+    def _handle_tag_grains_refresh(self, tag, data):
+        '''
+        Handle a grains_refresh event
+        '''
+        if (data.get('force_refresh', False) or
+                self.grains_cache != self.opts['grains']):
+            self.pillar_refresh(force_refresh=True)
+            self.grains_cache = self.opts['grains']
+
+    def _handle_tag_environ_setenv(self, tag, data):
+        '''
+        Handle a environ_setenv event
+        '''
+        self.environ_setenv(tag, data)
+
+    def _handle_tag_minion_mine(self, tag, data):
+        '''
+        Handle a _minion_mine event
+        '''
+        self._mine_send(tag, data)
+
+    def _handle_tag_fire_master(self, tag, data):
+        '''
+        Handle a fire_master event
+        '''
+        if self.connected:
+            log.debug('Forwarding master event tag=%s', data['tag'])
+            self._fire_master(data['data'], data['tag'], data['events'], data['pretag'])
+
+    def _handle_tag_master_disconnected_failback(self, tag, data):
+        '''
+        Handle a master_disconnected_failback event
+        '''
+        # if the master disconnect event is for a different master, raise an exception
+        if tag.startswith(master_event(type='disconnected')) and data['master'] != self.opts['master']:
+            # not mine master, ignore
+            return
+        if tag.startswith(master_event(type='failback')):
+            # if the master failback event is not for the top master, raise an exception
+            if data['master'] != self.opts['master_list'][0]:
+                raise SaltException('Bad master \'{0}\' when mine failback is \'{1}\''.format(
+                    data['master'], self.opts['master']))
+            # if the master failback event is for the current master, raise an exception
+            elif data['master'] == self.opts['master'][0]:
+                raise SaltException('Already connected to \'{0}\''.format(data['master']))
+
+        if self.connected:
+            # we are not connected anymore
+            self.connected = False
+            log.info('Connection to master %s lost', self.opts['master'])
+
+            # we can't use the config default here because the default '0' value is overloaded
+            # to mean 'if 0 disable the job', but when salt detects a timeout it also sets up
+            # these jobs
+            master_alive_interval = self.opts['master_alive_interval'] or 60
+
+            if self.opts['master_type'] != 'failover':
+                # modify the scheduled job to fire on reconnect
+                if self.opts['transport'] != 'tcp':
+                    schedule = {
+                       'function': 'status.master',
+                       'seconds': master_alive_interval,
+                       'jid_include': True,
+                       'maxrunning': 1,
+                       'return_job': False,
+                       'kwargs': {'master': self.opts['master'],
+                                   'connected': False}
+                    }
+                    self.schedule.modify_job(name=master_event(type='alive', master=self.opts['master']),
+                                             schedule=schedule)
+            else:
+                # delete the scheduled job to don't interfere with the failover process
+                if self.opts['transport'] != 'tcp':
+                    self.schedule.delete_job(name=master_event(type='alive', master=self.opts['master']),
+                                             persist=True)
+
+                log.info('Trying to tune in to next master from master-list')
+
+                if hasattr(self, 'pub_channel'):
+                    self.pub_channel.on_recv(None)
+                    if hasattr(self.pub_channel, 'auth'):
+                        self.pub_channel.auth.invalidate()
+                    if hasattr(self.pub_channel, 'close'):
+                        self.pub_channel.close()
+                    del self.pub_channel
+
+                # if eval_master finds a new master for us, self.connected
+                # will be True again on successful master authentication
+                try:
+                    master, self.pub_channel = yield self.eval_master(
+                                                        opts=self.opts,
+                                                        failed=True,
+                                                        failback=tag.startswith(master_event(type='failback')))
+                except SaltClientError:
+                    pass
+
+                if self.connected:
+                    self.opts['master'] = master
+
+                    # re-init the subsystems to work with the new master
+                    log.info(
+                        'Re-initialising subsystems for new master %s',
+                        self.opts['master']
+                    )
+                    # put the current schedule into the new loaders
+                    self.opts['schedule'] = self.schedule.option('schedule')
+                    self.functions, self.returners, self.function_errors, self.executors = self._load_modules()
+                    # make the schedule to use the new 'functions' loader
+                    self.schedule.functions = self.functions
+                    self.pub_channel.on_recv(self._handle_payload)
+                    self._fire_master_minion_start()
+                    log.info('Minion is ready to receive requests!')
+
+                    # update scheduled job to run with the new master addr
+                    if self.opts['transport'] != 'tcp':
+                        schedule = {
+                           'function': 'status.master',
+                           'seconds': master_alive_interval,
+                           'jid_include': True,
+                           'maxrunning': 1,
+                           'return_job': False,
+                           'kwargs': {'master': self.opts['master'],
+                                       'connected': True}
+                        }
+                        self.schedule.modify_job(name=master_event(type='alive', master=self.opts['master']),
+                                                 schedule=schedule)
+
+                        if self.opts['master_failback'] and 'master_list' in self.opts:
+                            if self.opts['master'] != self.opts['master_list'][0]:
+                                schedule = {
+                                   'function': 'status.ping_master',
+                                   'seconds': self.opts['master_failback_interval'],
+                                   'jid_include': True,
+                                   'maxrunning': 1,
+                                   'return_job': False,
+                                   'kwargs': {'master': self.opts['master_list'][0]}
+                                }
+                                self.schedule.modify_job(name=master_event(type='failback'),
+                                                         schedule=schedule)
+                            else:
+                                self.schedule.delete_job(name=master_event(type='failback'), persist=True)
+                else:
+                    self.restart = True
+                    self.io_loop.stop()
+
+    def _handle_tag_master_connected(self, tag, data):
+        '''
+        Handle a master_connected event
+        '''
+        # handle this event only once. otherwise it will pollute the log
+        # also if master type is failover all the reconnection work is done
+        # by `disconnected` event handler and this event must never happen,
+        # anyway check it to be sure
+        if not self.connected and self.opts['master_type'] != 'failover':
+            log.info('Connection to master %s re-established', self.opts['master'])
+            self.connected = True
+            # modify the __master_alive job to only fire,
+            # if the connection is lost again
+            if self.opts['transport'] != 'tcp':
+                if self.opts['master_alive_interval'] > 0:
+                    schedule = {
+                       'function': 'status.master',
+                       'seconds': self.opts['master_alive_interval'],
+                       'jid_include': True,
+                       'maxrunning': 1,
+                       'return_job': False,
+                       'kwargs': {'master': self.opts['master'],
+                                   'connected': True}
+                    }
+
+                    self.schedule.modify_job(name=master_event(type='alive', master=self.opts['master']),
+                                             schedule=schedule)
+                else:
+                    self.schedule.delete_job(name=master_event(type='alive', master=self.opts['master']), persist=True)
+
+    def _handle_tag_schedule_return(self, tag, data):
+        '''
+        Handle a _schedule_return event
+        '''
+        # reporting current connection with master
+        if data['schedule'].startswith(master_event(type='alive', master='')):
+            if data['return']:
+                log.debug(
+                    'Connected to master %s',
+                    data['schedule'].split(master_event(type='alive', master=''))[1]
+                )
+        self._return_pub(data, ret_cmd='_return', sync=False)
+
+    def _handle_tag_salt_error(self, tag, data):
+        '''
+        Handle a _salt_error event
+        '''
+        if self.connected:
+            log.debug('Forwarding salt error event tag=%s', tag)
+            self._fire_master(data, tag)
+
+    def _handle_tag_salt_auth_creds(self, tag, data):
+        '''
+        Handle a salt_auth_creds event
+        '''
+        key = tuple(data['key'])
+        log.debug(
+            'Updating auth data for %s: %s -> %s',
+            key, salt.crypt.AsyncAuth.creds_map.get(key), data['creds']
+        )
+        salt.crypt.AsyncAuth.creds_map[tuple(data['key'])] = data['creds']
+
     @tornado.gen.coroutine
     def handle_event(self, package):
         '''
@@ -2350,196 +2599,29 @@ class Minion(MinionBase):
             'Minion of \'%s\' is handling event tag \'%s\'',
             self.opts['master'], tag
         )
-        if tag.startswith('module_refresh'):
-            self.module_refresh(
-                force_refresh=data.get('force_refresh', False),
-                notify=data.get('notify', False)
-            )
-        elif tag.startswith('pillar_refresh'):
-            yield self.pillar_refresh(
-                force_refresh=data.get('force_refresh', False)
-            )
-        elif tag.startswith('beacons_refresh'):
-            self.beacons_refresh()
-        elif tag.startswith('matchers_refresh'):
-            self.matchers_refresh()
-        elif tag.startswith('manage_schedule'):
-            self.manage_schedule(tag, data)
-        elif tag.startswith('manage_beacons'):
-            self.manage_beacons(tag, data)
-        elif tag.startswith('grains_refresh'):
-            if (data.get('force_refresh', False) or
-                    self.grains_cache != self.opts['grains']):
-                self.pillar_refresh(force_refresh=True)
-                self.grains_cache = self.opts['grains']
-        elif tag.startswith('environ_setenv'):
-            self.environ_setenv(tag, data)
-        elif tag.startswith('_minion_mine'):
-            self._mine_send(tag, data)
-        elif tag.startswith('fire_master'):
-            if self.connected:
-                log.debug('Forwarding master event tag=%s', data['tag'])
-                self._fire_master(data['data'], data['tag'], data['events'], data['pretag'])
-        elif tag.startswith(master_event(type='disconnected')) or tag.startswith(master_event(type='failback')):
-            # if the master disconnect event is for a different master, raise an exception
-            if tag.startswith(master_event(type='disconnected')) and data['master'] != self.opts['master']:
-                # not mine master, ignore
-                return
-            if tag.startswith(master_event(type='failback')):
-                # if the master failback event is not for the top master, raise an exception
-                if data['master'] != self.opts['master_list'][0]:
-                    raise SaltException('Bad master \'{0}\' when mine failback is \'{1}\''.format(
-                        data['master'], self.opts['master']))
-                # if the master failback event is for the current master, raise an exception
-                elif data['master'] == self.opts['master'][0]:
-                    raise SaltException('Already connected to \'{0}\''.format(data['master']))
+        tag_functions = {
+                         'beacons_refresh': self._handle_tag_beacons_refresh,
+                         'environ_setenv': self._handle_tag_environ_setenv,
+                         'fire_master': self._handle_tag_fire_master,
+                         'grains_refresh': self._handle_tag_grains_refresh,
+                         'matchers_refresh': self._handle_tag_matchers_refresh,
+                         'manage_schedule': self._handle_tag_manage_schedule,
+                         'manage_beacons': self._handle_tag_manage_beacons,
+                         '_minion_mine': self._handle_tag_minion_mine,
+                         'module_refresh': self._handle_tag_module_refresh,
+                         'pillar_refresh': self._handle_tag_pillar_refresh,
+                         'salt/auth/creds': self._handle_tag_salt_auth_creds,
+                         '_salt_error': self._handle_tag_salt_error,
+                         '__schedule_return': self._handle_tag_schedule_return,
+                         master_event(type='disconnected'): self._handle_tag_master_disconnected_failback,
+                         master_event(type='failback'): self._handle_tag_master_disconnected_failback,
+                         master_event(type='connected'): self._handle_tag_master_connected,
+                         }
 
-            if self.connected:
-                # we are not connected anymore
-                self.connected = False
-                log.info('Connection to master %s lost', self.opts['master'])
-
-                # we can't use the config default here because the default '0' value is overloaded
-                # to mean 'if 0 disable the job', but when salt detects a timeout it also sets up
-                # these jobs
-                master_alive_interval = self.opts['master_alive_interval'] or 60
-
-                if self.opts['master_type'] != 'failover':
-                    # modify the scheduled job to fire on reconnect
-                    if self.opts['transport'] != 'tcp':
-                        schedule = {
-                           'function': 'status.master',
-                           'seconds': master_alive_interval,
-                           'jid_include': True,
-                           'maxrunning': 1,
-                           'return_job': False,
-                           'kwargs': {'master': self.opts['master'],
-                                       'connected': False}
-                        }
-                        self.schedule.modify_job(name=master_event(type='alive', master=self.opts['master']),
-                                                 schedule=schedule)
-                else:
-                    # delete the scheduled job to don't interfere with the failover process
-                    if self.opts['transport'] != 'tcp':
-                        self.schedule.delete_job(name=master_event(type='alive', master=self.opts['master']),
-                                                 persist=True)
-
-                    log.info('Trying to tune in to next master from master-list')
-
-                    if hasattr(self, 'pub_channel'):
-                        self.pub_channel.on_recv(None)
-                        if hasattr(self.pub_channel, 'auth'):
-                            self.pub_channel.auth.invalidate()
-                        if hasattr(self.pub_channel, 'close'):
-                            self.pub_channel.close()
-                        del self.pub_channel
-
-                    # if eval_master finds a new master for us, self.connected
-                    # will be True again on successful master authentication
-                    try:
-                        master, self.pub_channel = yield self.eval_master(
-                                                            opts=self.opts,
-                                                            failed=True,
-                                                            failback=tag.startswith(master_event(type='failback')))
-                    except SaltClientError:
-                        pass
-
-                    if self.connected:
-                        self.opts['master'] = master
-
-                        # re-init the subsystems to work with the new master
-                        log.info(
-                            'Re-initialising subsystems for new master %s',
-                            self.opts['master']
-                        )
-                        # put the current schedule into the new loaders
-                        self.opts['schedule'] = self.schedule.option('schedule')
-                        self.functions, self.returners, self.function_errors, self.executors = self._load_modules()
-                        # make the schedule to use the new 'functions' loader
-                        self.schedule.functions = self.functions
-                        self.pub_channel.on_recv(self._handle_payload)
-                        self._fire_master_minion_start()
-                        log.info('Minion is ready to receive requests!')
-
-                        # update scheduled job to run with the new master addr
-                        if self.opts['transport'] != 'tcp':
-                            schedule = {
-                               'function': 'status.master',
-                               'seconds': master_alive_interval,
-                               'jid_include': True,
-                               'maxrunning': 1,
-                               'return_job': False,
-                               'kwargs': {'master': self.opts['master'],
-                                           'connected': True}
-                            }
-                            self.schedule.modify_job(name=master_event(type='alive', master=self.opts['master']),
-                                                     schedule=schedule)
-
-                            if self.opts['master_failback'] and 'master_list' in self.opts:
-                                if self.opts['master'] != self.opts['master_list'][0]:
-                                    schedule = {
-                                       'function': 'status.ping_master',
-                                       'seconds': self.opts['master_failback_interval'],
-                                       'jid_include': True,
-                                       'maxrunning': 1,
-                                       'return_job': False,
-                                       'kwargs': {'master': self.opts['master_list'][0]}
-                                    }
-                                    self.schedule.modify_job(name=master_event(type='failback'),
-                                                             schedule=schedule)
-                                else:
-                                    self.schedule.delete_job(name=master_event(type='failback'), persist=True)
-                    else:
-                        self.restart = True
-                        self.io_loop.stop()
-
-        elif tag.startswith(master_event(type='connected')):
-            # handle this event only once. otherwise it will pollute the log
-            # also if master type is failover all the reconnection work is done
-            # by `disconnected` event handler and this event must never happen,
-            # anyway check it to be sure
-            if not self.connected and self.opts['master_type'] != 'failover':
-                log.info('Connection to master %s re-established', self.opts['master'])
-                self.connected = True
-                # modify the __master_alive job to only fire,
-                # if the connection is lost again
-                if self.opts['transport'] != 'tcp':
-                    if self.opts['master_alive_interval'] > 0:
-                        schedule = {
-                           'function': 'status.master',
-                           'seconds': self.opts['master_alive_interval'],
-                           'jid_include': True,
-                           'maxrunning': 1,
-                           'return_job': False,
-                           'kwargs': {'master': self.opts['master'],
-                                       'connected': True}
-                        }
-
-                        self.schedule.modify_job(name=master_event(type='alive', master=self.opts['master']),
-                                                 schedule=schedule)
-                    else:
-                        self.schedule.delete_job(name=master_event(type='alive', master=self.opts['master']), persist=True)
-
-        elif tag.startswith('__schedule_return'):
-            # reporting current connection with master
-            if data['schedule'].startswith(master_event(type='alive', master='')):
-                if data['return']:
-                    log.debug(
-                        'Connected to master %s',
-                        data['schedule'].split(master_event(type='alive', master=''))[1]
-                    )
-            self._return_pub(data, ret_cmd='_return', sync=False)
-        elif tag.startswith('_salt_error'):
-            if self.connected:
-                log.debug('Forwarding salt error event tag=%s', tag)
-                self._fire_master(data, tag)
-        elif tag.startswith('salt/auth/creds'):
-            key = tuple(data['key'])
-            log.debug(
-                'Updating auth data for %s: %s -> %s',
-                key, salt.crypt.AsyncAuth.creds_map.get(key), data['creds']
-            )
-            salt.crypt.AsyncAuth.creds_map[tuple(data['key'])] = data['creds']
+        # Run the appropriate function
+        for tag_function in tag_functions:
+            if tag.startswith(tag_function):
+                tag_functions[tag_function](tag, data)
 
     def _fallback_cleanups(self):
         '''
