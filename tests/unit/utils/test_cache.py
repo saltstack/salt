@@ -226,6 +226,22 @@ class CacheDiskTestCase(TestCase):
             assert msg % (pth, exc) == ('Error while reading disk cache from /dev/nowhere: '
                                         "The keyboard isn't plugged in")
 
+    @patch('os.path.exists', MagicMock(return_value=True))
+    @patch('salt.utils.files.fopen', MagicMock())
+    @patch('salt.utils.cache.msgpack', MagicMock())
+    @patch('salt.utils.cache.id', MagicMock(return_value=66))
+    @patch('salt.utils.data.decode', MagicMock(return_value={'banana': {'status': 'rotten'}}))
+    def test_str_repr(self):
+        '''
+        Test __str__ and __repr__ content
+        :return:
+        '''
+        logger = MagicMock()
+        with patch('salt.utils.cache.log', logger):
+            c = cache.CacheDisk(0, '/dev/nowhere')
+            assert str(repr(c)) == str(c)
+            assert str(c) == '<CacheDisk of 1 entries at 0x42>'
+
     def test_everything(self):
         '''
         Make sure you can instantiate, add, update, remove, expire
