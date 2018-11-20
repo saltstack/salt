@@ -697,6 +697,9 @@ def subvolume_create(name, dest=None, qgroupids=None):
     '''
     Create subvolume `name` in `dest`.
 
+    Return True if the subvolume is created, False is the subvolume is
+    already there.
+
     name
          Name of the new subvolume
 
@@ -720,13 +723,17 @@ def subvolume_create(name, dest=None, qgroupids=None):
     if qgroupids and type(qgroupids) is not list:
         raise CommandExecutionError('Qgroupids parameter must be a list')
 
-    cmd = ['btrfs', 'subvolume', 'create']
+    if dest:
+        name = os.path.join(dest, name)
 
+    # If the subvolume is there, we are done
+    if subvolume_exists(name):
+        return False
+
+    cmd = ['btrfs', 'subvolume', 'create']
     if type(qgroupids) is list:
         cmd.append('-i')
         cmd.extend(qgroupids)
-    if dest:
-        name = os.path.join(dest, name)
     cmd.append(name)
 
     res = __salt__['cmd.run_all'](cmd)
@@ -744,6 +751,9 @@ def subvolume_delete(name=None, names=None, commit=None):
 
     Please, refer to the documentation to understand the implication
     on the transactions, and when the subvolume is really deleted.
+
+    Return True if the subvolume is deleted, False is the subvolume
+    was already missing.
 
     name
         Name of the subvolume to remove
@@ -769,15 +779,20 @@ def subvolume_delete(name=None, names=None, commit=None):
     if commit and commit not in ('after', 'each'):
         raise CommandExecutionError('Value for commit not recognized')
 
+    # Filter the names and take the ones that are still there
+    names = [n for n in itertools.chain([name], names or [])
+             if n and subvolume_exists(n)]
+
+    # If the subvolumes are gone, we are done
+    if not names:
+        return False
+
     cmd = ['btrfs', 'subvolume', 'delete']
     if commit == 'after':
         cmd.append('--commit-after')
     elif commit == 'each':
         cmd.append('--commit-each')
-    if name:
-        cmd.append(name)
-    if type(names) is list:
-        cmd.extend(names)
+    cmd.extend(names)
 
     res = __salt__['cmd.run_all'](cmd)
     salt.utils.fsutils._verify_run(res)
