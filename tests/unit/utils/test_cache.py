@@ -406,12 +406,12 @@ class CacheDiskTestCase(TestCase):
             msg, arg = logger.error.call_args[0]
             assert msg % arg == 'Error storing cache data to the disk: Boredom in the kernel'
 
-    def test_everything(self):
+    def test_persistence_no_mocking(self):
         '''
         Make sure you can instantiate, add, update, remove, expire
         '''
+        tmpdir = tempfile.mkdtemp()
         try:
-            tmpdir = tempfile.mkdtemp()
             path = os.path.join(tmpdir, 'CacheDisk_test')
 
             # test instantiation
@@ -436,6 +436,5 @@ class CacheDiskTestCase(TestCase):
             time.sleep(0.2)
             self.assertNotIn('foo', cd)
             self.assertNotIn('foo', cd2)
-
         finally:
             shutil.rmtree(tmpdir, ignore_errors=True)
