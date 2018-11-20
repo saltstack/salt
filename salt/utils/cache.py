@@ -112,7 +112,11 @@ class CacheDisk(CacheDict):
         Check if the key is ttld out, then do the get
         '''
         self._enforce_ttl_key(key)
-        return self._dict.__getitem__(key)
+        item = None
+        if key in self._dict:
+            item = self._dict.__getitem__(key)
+
+        return item
 
     def __setitem__(self, key, val):
         '''
