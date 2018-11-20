@@ -371,6 +371,21 @@ class CacheDiskTestCase(TestCase):
             c['backup_destination'] = '/dev/null'
             assert c['backup_destination'] == '/dev/null'
 
+    @patch('salt.utils.cache.msgpack', None)  # Just turn off reading
+    def test_add_remove_operations(self):
+        '''
+        Test dict operations set/delete on the cache object.
+        :return:
+        '''
+        c = cache.CacheDisk(0, '/dev/nowhere')
+        assert 'backup_destination' not in c
+        assert c['backup_destination'] is None
+        c['backup_destination'] = '/dev/null'
+        assert c['backup_destination'] == '/dev/null'
+        del c['backup_destination']
+        assert 'backup_destination' not in c
+        assert c['backup_destination'] is None
+
     def test_everything(self):
         '''
         Make sure you can instantiate, add, update, remove, expire
