@@ -121,7 +121,7 @@ class CacheDisk(CacheDict):
         self._key_cache_time[key] = time.time()
         self._dict.__setitem__(key, val)
         # Do the same as the parent but also persist
-        self._write()
+        self.store()
 
     def __delitem__(self, key):
         '''
@@ -130,7 +130,7 @@ class CacheDisk(CacheDict):
         del self._key_cache_time[key]
         self._dict.__delitem__(key)
         # Do the same as the parent but also persist
-        self._write()
+        self.store()
 
     def _read(self):
         '''
@@ -151,7 +151,7 @@ class CacheDisk(CacheDict):
         if log.isEnabledFor(logging.DEBUG):
             log.debug('Disk cache retrieved: %s', cache)
 
-    def _write(self):
+    def store(self):
         '''
         Write content of the entire cache to disk
         '''
