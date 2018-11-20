@@ -365,6 +365,26 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
         self.assertRaises(CommandExecutionError, btrfs.properties,
                           '/dev/sda1', 'subvol', True)
 
+    def test_subvolume_exists(self):
+        '''
+        Test subvolume_exists
+        '''
+        salt_mock = {
+            'cmd.retcode': MagicMock(return_value=0),
+        }
+        with patch.dict(btrfs.__salt__, salt_mock):
+            assert btrfs.subvolume_exists('/mnt/one')
+
+    def test_subvolume_not_exists(self):
+        '''
+        Test subvolume_exists
+        '''
+        salt_mock = {
+            'cmd.retcode': MagicMock(return_value=1),
+        }
+        with patch.dict(btrfs.__salt__, salt_mock):
+            assert not btrfs.subvolume_exists('/mnt/nowhere')
+
     def test_subvolume_create_fails_parameters(self):
         '''
         Test btrfs subvolume create
