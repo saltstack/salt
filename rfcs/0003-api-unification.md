@@ -62,26 +62,26 @@ Example of SMI definition for module `pkg`:
 from salt.interfaces import Interface
 
 class PkgInterface(Interface):
-	__modulename__ = 'pkg'
+    __modulename__ = 'pkg'
 
     def list_installed(self, *names, **kwargs):
         '''
 	    List installed packages.
 	    '''
-		return {}
+        return {}
 
     def upgrade_available(self, name, **kwargs):
         '''
         List available upgrades.
 		'''
-		return {}
+        return {}
 
     @Interface.supported(os=['weirdlinux', 'beos', 'frogbsd'], os_family=['linux'])
     def salute_fireworks(self, name):
         '''
         Launch some fireworks
         '''
-		return {}
+        return {}
 ```
 
 In above incomplete interface example, the list of methods should
@@ -158,7 +158,7 @@ case they should be decorated with the proposed function decorator:
 class SomeModuleInterface(Interface):
     @Interface.not_applicable(osfamily=['Windows', 'NetBSD'])
     def foo(self, name, *args):
-	    return {}
+        return {}
 ```
 
 The decorator would support _any_ kind of grains keys with any of the
