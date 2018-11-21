@@ -846,10 +846,8 @@ def _qemu_image_create(disk, create_overlay=False, saltenv='base'):
     log.debug('Image destination will be %s', img_dest)
     img_dir = os.path.dirname(img_dest)
     log.debug('Image destination directory is %s', img_dir)
-    try:
+    if not os.path.exists(img_dir):
         os.makedirs(img_dir)
-    except OSError:
-        pass
 
     if disk_image:
         log.debug('Create disk from specified image %s', disk_image)
@@ -1638,10 +1636,11 @@ def init(name,
             else:
                 create_overlay = _disk.get('overlay_image', False)
 
-            if _disk['source_file'] and os.path.exists(_disk['source_file']):
-                img_dest = _disk['source_file']
-            elif 'source_file' not in _disk:
-                img_dest = _qemu_image_create(_disk, create_overlay, saltenv)
+            if _disk['source_file']:
+                if os.path.exists(_disk['source_file']):
+                    img_dest = _disk['source_file']
+                else:
+                    img_dest = _qemu_image_create(_disk, create_overlay, saltenv)
             else:
                 img_dest = None
 
@@ -2923,7 +2922,7 @@ def ctrl_alt_del(vm_, **kwargs):
 
 def create_xml_str(xml, **kwargs):  # pylint: disable=redefined-outer-name
     '''
-    Start a domain based on the XML passed to the function
+    Start a transient domain based on the XML passed to the function
 
     :param xml: libvirt XML definition of the domain
     :param connection: libvirt connection URI, overriding defaults
@@ -2950,7 +2949,7 @@ def create_xml_str(xml, **kwargs):  # pylint: disable=redefined-outer-name
 
 def create_xml_path(path, **kwargs):
     '''
-    Start a domain based on the XML-file path passed to the function
+    Start a transient domain based on the XML-file path passed to the function
 
     :param path: path to a file containing the libvirt XML definition of the domain
     :param connection: libvirt connection URI, overriding defaults
@@ -2981,7 +2980,7 @@ def create_xml_path(path, **kwargs):
 
 def define_xml_str(xml, **kwargs):  # pylint: disable=redefined-outer-name
     '''
-    Define a domain based on the XML passed to the function
+    Define a persistent domain based on the XML passed to the function
 
     :param xml: libvirt XML definition of the domain
     :param connection: libvirt connection URI, overriding defaults
@@ -3008,7 +3007,7 @@ def define_xml_str(xml, **kwargs):  # pylint: disable=redefined-outer-name
 
 def define_xml_path(path, **kwargs):
     '''
-    Define a domain based on the XML-file path passed to the function
+    Define a persistent domain based on the XML-file path passed to the function
 
     :param path: path to a file containing the libvirt XML definition of the domain
     :param connection: libvirt connection URI, overriding defaults
@@ -3334,9 +3333,9 @@ def undefine(vm_, **kwargs):
 
 def purge(vm_, dirs=False, removables=None, **kwargs):
     '''
-    Recursively destroy and delete a virtual machine, pass True for dir's to
-    also delete the directories containing the virtual machine disk images -
-    USE WITH EXTREME CAUTION!
+    Recursively destroy and delete a persistent virtual machine, pass True for
+    dir's to also delete the directories containing the virtual machine disk
+    images - USE WITH EXTREME CAUTION!
 
     Pass removables=False to avoid deleting cdrom and floppy images. To avoid
     disruption, the default but dangerous value is True. This will be changed

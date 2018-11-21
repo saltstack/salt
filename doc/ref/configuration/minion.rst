@@ -3292,7 +3292,7 @@ have other services that need to go with it.
 
 .. versionadded:: 2016.11.0
 
-Default: ``0``
+Default: ``1800``
 
 If set to a nonzero integer, then passing ``refresh=True`` to functions in the
 :mod:`windows pkg module <salt.modules.win_pkg>` will not refresh the windows
