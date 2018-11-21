@@ -583,6 +583,7 @@ class Schedule(object):
         '''
         Execute this method in a multiprocess or thread
         '''
+        log.debug('=== calling handle_func with data %s ===', data)
         if salt.utils.platform.is_windows() \
                 or self.opts.get('transport') == 'zeromq':
             # Since function references can't be pickled and pickling
@@ -631,6 +632,22 @@ class Schedule(object):
 
         # TODO: Make it readable! Splt to funcs, remove nested try-except-finally sections.
         try:
+
+            minion_blackout_violation = False
+            if self.opts['pillar'].get('minion_blackout', False):
+                whitelist = self.opts['pillar'].get('minion_blackout_whitelist', [])
+                # this minion is blacked out. Only allow saltutil.refresh_pillar and the whitelist
+                if func != 'saltutil.refresh_pillar' and func not in whitelist:
+                    minion_blackout_violation = True
+            elif self.opts['grains'].get('minion_blackout', False):
+                whitelist = self.opts['grains'].get('minion_blackout_whitelist', [])
+                if func != 'saltutil.refresh_pillar' and func not in whitelist:
+                    minion_blackout_violation = True
+            if minion_blackout_violation:
+                raise SaltInvocationError('Minion in blackout mode. Set \'minion_blackout\' '
+                                          'to False in pillar or grains to resume operations. Only '
+                                          'saltutil.refresh_pillar allowed in blackout mode.')
+
             ret['pid'] = os.getpid()
 
             if not self.standalone:
@@ -709,21 +726,6 @@ class Schedule(object):
                         self.functions[mod_name].__globals__[global_key] = value
 
             self.functions.pack['__context__']['retcode'] = 0
-
-            minion_blackout_violation = False
-            if self.opts['pillar'].get('minion_blackout', False):
-                whitelist = self.opts['pillar'].get('minion_blackout_whitelist', [])
-                # this minion is blacked out. Only allow saltutil.refresh_pillar and the whitelist
-                if func != 'saltutil.refresh_pillar' and func not in whitelist:
-                    minion_blackout_violation = True
-            elif self.opts['grains'].get('minion_blackout', False):
-                whitelist = self.opts['grains'].get('minion_blackout_whitelist', [])
-                if func != 'saltutil.refresh_pillar' and func not in whitelist:
-                    minion_blackout_violation = True
-            if minion_blackout_violation:
-                raise SaltInvocationError('Minion in blackout mode. Set \'minion_blackout\' '
-                                          'to False in pillar or grains to resume operations. Only '
-                                          'saltutil.refresh_pillar allowed in blackout mode.')
 
             ret['return'] = self.functions[func](*args, **kwargs)
 
