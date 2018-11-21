@@ -813,7 +813,7 @@ class LocalClient(object):
                         exit_msg += (
                             '\n\n'
                             'To set up the state run to safely exit, run the following command:\n'
-                            'salt {0} state.soft_kill {1}'.format(self.target_data, jid))
+                            'salt {0} state.soft_kill {1}'.format(self.target_data, self.pub_data['jid']))
                     raise SystemExit(exit_msg)
         finally:
             if not was_listening:
