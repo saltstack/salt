@@ -583,7 +583,6 @@ class Schedule(object):
         '''
         Execute this method in a multiprocess or thread
         '''
-        log.debug('=== calling handle_func with data %s ===', data)
         if salt.utils.platform.is_windows() \
                 or self.opts.get('transport') == 'zeromq':
             # Since function references can't be pickled and pickling
@@ -634,13 +633,13 @@ class Schedule(object):
         try:
 
             minion_blackout_violation = False
-            if self.opts['pillar'].get('minion_blackout', False):
-                whitelist = self.opts['pillar'].get('minion_blackout_whitelist', [])
+            if self.opts.get('pillar', {}).get('minion_blackout', False):
+                whitelist = self.opts.get('pillar', {}).get('minion_blackout_whitelist', [])
                 # this minion is blacked out. Only allow saltutil.refresh_pillar and the whitelist
                 if func != 'saltutil.refresh_pillar' and func not in whitelist:
                     minion_blackout_violation = True
-            elif self.opts['grains'].get('minion_blackout', False):
-                whitelist = self.opts['grains'].get('minion_blackout_whitelist', [])
+            elif self.opts.get('grains', {}).get('minion_blackout', False):
+                whitelist = self.opts.get('grains', {}).get('minion_blackout_whitelist', [])
                 if func != 'saltutil.refresh_pillar' and func not in whitelist:
                     minion_blackout_violation = True
             if minion_blackout_violation:
