@@ -84,12 +84,18 @@ def downloaded(name, artifact, target_dir='/tmp', target_file=None, use_literal_
            'changes': {},
            'comment': ''}
 
-    try:
-        fetch_result = __fetch_from_artifactory(artifact, target_dir, target_file, use_literal_group_id)
-    except Exception as exc:
-        ret['result'] = False
-        ret['comment'] = six.text_type(exc)
-        return ret
+    if 'test' in __opts__ and __opts__['test'] is True:
+        fetch_result = {}
+        fetch_result['status'] = True
+        fetch_result['comment'] = 'Artifact would be downloaded from URL: {0}'.format(artifact['artifactory_url'])
+        fetch_result['changes'] = {}
+    else:
+        try:
+            fetch_result = __fetch_from_artifactory(artifact, target_dir, target_file, use_literal_group_id)
+        except Exception as exc:
+            ret['result'] = False
+            ret['comment'] = six.text_type(exc)
+            return ret
 
     log.debug('fetch_result = %s', fetch_result)
 
