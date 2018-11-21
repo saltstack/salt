@@ -628,28 +628,31 @@ proper relative path. For example, if the ``base`` environment in
 into right location.
 
 
-Configeration options for Minions 2015.8.0 and later
+Configuration options for Minions 2015.8.0 and later
 ====================================================
 
 The :conf_minion:`winrepo_source_dir` config parameter (default:
- ``salt://win/repo-ng/``) controls where :mod:`pkg.refresh_db <salt.modules.win_pkg.refresh_db>` 
-fetches the software package definitions. :mod:`pkg.refresh_db <salt.modules.win_pkg.refresh_db>`
-generates meta database file called :conf_minion:`winrepo_cachefile` on the minion.
+``salt://win/repo-ng/``) controls where :mod:`pkg.refresh_db
+<salt.modules.win_pkg.refresh_db>` fetches the software package definitions.
+:mod:`pkg.refresh_db <salt.modules.win_pkg.refresh_db>` generates meta database
+file called :conf_minion:`winrepo_cachefile` on the minion.
 
-Cache configeration options for Minions 2016.11.0 and later
+Cache configuration options for Minions 2016.11.0 and later
 ===========================================================
 
 Software package definitions are automatically refresh if stale after
-:conf_minion:`winrepo_cache_expire_max`.  Running a highstate normal forces the refresh
-of the package definition and generation of meta database, unless the meta database is younger
-than :conf_minion:`winrepo_cache_expire_max`. Refreshing the package definition can take
-some time, these options were introduced to allow more control of when it occurs.
+:conf_minion:`winrepo_cache_expire_max`.  Running a highstate normal forces the
+refresh of the package definition and generation of meta database, unless the
+meta database is younger than :conf_minion:`winrepo_cache_expire_max`.
+Refreshing the package definition can take some time, these options were
+introduced to allow more control of when it occurs.
 
-It's important use :py:func:`pkg.refresh_db <salt.modules.win_pkg.refresh_db>` to check for errors and ensure
-the latest package definition is on any minion your testing new definitions on.
+It's important use :py:func:`pkg.refresh_db <salt.modules.win_pkg.refresh_db>`
+to check for errors and ensure the latest package definition is on any minion
+your testing new definitions on.
 
 
-Configeration options for Minions before 2015.8.0
+Configuration options for Minions before 2015.8.0
 =================================================
 
 If connected to a master, the minion will by default look for the winrepo
@@ -659,6 +662,7 @@ cachefile is in a different path on the salt fileserver, then
 :conf_minion:`win_repo_cachefile` will need to be updated to reflect the proper
 location.
 
+.. _2015-8-0-winrepo-changes:
 
 Changes in Version 2015.8.0
 ===========================
