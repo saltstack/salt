@@ -76,7 +76,7 @@ class PkgInterface(Interface):
 		'''
 		return {}
 
-    @Interface.supported('weirdlinux', 'beos', 'frogbsd')
+    @Interface.supported(os=['weirdlinux', 'beos', 'frogbsd'], os_family=['linux'])
     def salute_fireworks(self, name):
         '''
         Launch some fireworks
@@ -94,9 +94,15 @@ parameter. Rules apply:
 - If a method is in the SMI class but not in the module, then such
   function is marked as "not implemented".
 
-- If a method has a decorator `@Interface.supported`, only on these
-  platforms unimplemented method will be reported as "not
-  implemented", otherwise "not supported".
+- If a method has a decorator `@Interface.supported`, only on specified
+  systems unimplemented method will be reported as "not
+  implemented", otherwise "not supported". This decorator accepts
+  any grains possible. It then matches them if _any_ specified grain
+  is in proposed lists. From the example above, missing
+  `salute_fireworks` will be reported as "not implemented" if
+  `os_family` grain equals `linux` **or** `os` grain equals
+  `weirdlinux` or `beos` or `frogbsd`.
+
 
 
 ## Usage
