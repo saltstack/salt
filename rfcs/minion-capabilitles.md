@@ -143,6 +143,22 @@ Also iterations works the same way:
 {% endif %}
 ```
 
+...or hashes:
+
+```jinja2
+{% if capable.who.knows.what.is.this['something'] %}
+  ...
+{% endif %}
+```
+
+...or even crazy hashes:
+
+```jinja2
+{% if capable.who['knows'].what['is'].this['something'].there() %}
+  ...
+{% endif %}
+```
+
 ## Bonus Feature
 
 The `capable` variable essentially can replace-or-help to `grains`,
