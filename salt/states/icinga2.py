@@ -27,6 +27,7 @@ import os.path
 from salt.ext import six
 import salt.utils.files
 import salt.utils.stringutils
+from salt.utils.icinga2 import get_certs_path
 
 
 def __virtual__():
@@ -140,8 +141,8 @@ def generate_cert(name):
            'changes': {},
            'result': True,
            'comment': ''}
-    cert = "/etc/icinga2/pki/{0}.crt".format(name)
-    key = "/etc/icinga2/pki/{0}.key".format(name)
+    cert = "{0}{1}.crt".format(get_certs_path(), name)
+    key = "{0}{1}.key".format(get_certs_path(), name)
 
     # Checking if execution is needed.
     if os.path.isfile(cert) and os.path.isfile(key):
@@ -175,7 +176,7 @@ def save_cert(name, master):
            'changes': {},
            'result': True,
            'comment': ''}
-    cert = "/etc/icinga2/pki/trusted-master.crt"
+    cert = "{0}trusted-master.crt".format(get_certs_path())
 
     # Checking if execution is needed.
     if os.path.isfile(cert):
@@ -214,7 +215,7 @@ def request_cert(name, master, ticket, port="5665"):
            'changes': {},
            'result': True,
            'comment': ''}
-    cert = "/etc/icinga2/pki/ca.crt"
+    cert = "{0}ca.crt".format(get_certs_path())
 
     # Checking if execution is needed.
     if os.path.isfile(cert):
@@ -254,8 +255,8 @@ def node_setup(name, master, ticket):
            'changes': {},
            'result': True,
            'comment': ''}
-    cert = "/etc/icinga2/pki/{0}.crt.orig".format(name)
-    key = "/etc/icinga2/pki/{0}.key.orig".format(name)
+    cert = "{0}{1}.crt.orig".format(get_certs_path(), name)
+    key = "{0}{1}.key.orig".format(get_certs_path(), name)
 
     # Checking if execution is needed.
     if os.path.isfile(cert) and os.path.isfile(cert):
