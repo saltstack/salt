@@ -83,7 +83,8 @@ def set_option(file_name, sections=None, separator='='):
     changes = {}
     inifile = _Ini.get_ini_file(file_name, separator=separator)
     changes = inifile.update(sections)
-    inifile.flush()
+    if changes:
+        inifile.flush()
     return changes
 
 
@@ -142,7 +143,8 @@ def remove_option(file_name, section, option, separator='='):
         value = inifile.get(section, {}).pop(option, None)
     else:
         value = inifile.pop(option, None)
-    inifile.flush()
+    if value:
+        inifile.flush()
     return value
 
 
