@@ -5,8 +5,14 @@ Decorators for salt.state
 :codeauthor: :email:`Bo Maryniuk (bo@suse.de)`
 '''
 
+# Import Python libs
 from __future__ import absolute_import, unicode_literals
+import logging
+
+# Import salt libs
 from salt.exceptions import SaltException
+
+log = logging.getLogger(__name__)
 
 
 class OutputUnifier(object):
@@ -24,12 +30,14 @@ class OutputUnifier(object):
             for pls in self.policies:
                 try:
                     result = pls(result)
-                except Exception as ex:
+                except Exception as exc:
+                    log.debug('An exception occurred in this state: %s', exc,
+                              exc_info_on_loglevel=logging.DEBUG)
                     result = {
                         'result': False,
                         'name': 'later',
                         'changes': {},
-                        'comment': 'An exception occurred in this state: {0}'.format(ex)
+                        'comment': 'An exception occurred in this state: {0}'.format(exc)
                     }
             return result
         return _func
