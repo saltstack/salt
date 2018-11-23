@@ -18,6 +18,7 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
       user: myuser@pam or myuser@pve
       password: mypassword
       url: hypervisor.domain.tld
+      port: 8006
       driver: proxmox
       verify_ssl: True
 
@@ -115,9 +116,13 @@ def _authenticate():
     '''
     Retrieve CSRF and API tickets for the Proxmox API
     '''
-    global url, ticket, csrf, verify_ssl
+    global url, port, ticket, csrf, verify_ssl
     url = config.get_cloud_config_value(
         'url', get_configured_provider(), __opts__, search_global=False
+    )
+    port = config.get_cloud_config_value(
+        'port', get_configured_provider(), __opts__,
+        default=8006, search_global=False
     )
     username = config.get_cloud_config_value(
         'user', get_configured_provider(), __opts__, search_global=False
@@ -131,7 +136,7 @@ def _authenticate():
     )
 
     connect_data = {'username': username, 'password': passwd}
-    full_url = 'https://{0}:8006/api2/json/access/ticket'.format(url)
+    full_url = 'https://{0}:{1}/api2/json/access/ticket'.format(url, port)
 
     returned_data = requests.post(
         full_url, verify=verify_ssl, data=connect_data).json()
@@ -148,7 +153,7 @@ def query(conn_type, option, post_data=None):
         log.debug('Not authenticated yet, doing that now..')
         _authenticate()
 
-    full_url = 'https://{0}:8006/api2/json/{1}'.format(url, option)
+    full_url = 'https://{0}:{1}/api2/json/{2}'.format(url, port, option)
 
     log.debug('%s: %s (%s)', conn_type, full_url, post_data)
 
@@ -848,7 +853,7 @@ def _import_api():
     Load this json content into global variable "api"
     '''
     global api
-    full_url = 'https://{0}:8006/pve-docs/api-viewer/apidoc.js'.format(url)
+    full_url = 'https://{0}:{1}/pve-docs/api-viewer/apidoc.js'.format(url, port)
     returned_data = requests.get(full_url, verify=verify_ssl)
 
     re_filter = re.compile('(?<=pveapi =)(.*)(?=^;)', re.DOTALL | re.MULTILINE)
