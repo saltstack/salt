@@ -10,7 +10,14 @@ import xml.parsers.expat
 
 # Import Salt Testing Libs
 from tests.support.unit import TestCase, skipIf
-from tests.support.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON, call, mock_open
+from tests.support.mock import (
+    call,
+    MagicMock,
+    mock_open,
+    NO_MOCK,
+    NO_MOCK_REASON,
+    patch
+)
 from tests.support.mixins import LoaderModuleMockMixin
 
 # Import Salt libs
