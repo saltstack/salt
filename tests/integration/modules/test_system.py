@@ -341,6 +341,12 @@ class WinSystemModuleTest(ModuleCase):
     '''
     Validate the date/time functions in the win_system module
     '''
+
+    @classmethod
+    def tearDownClass(cls):
+        if subprocess.call('w32tm /resync', shell=True) != 0:
+            log.error("Re-syncing time failed")
+
     def test_get_computer_name(self):
         '''
         Test getting the computer name
@@ -373,6 +379,7 @@ class WinSystemModuleTest(ModuleCase):
         self.assertEqual(now.strftime("%I:%M"), ret.rsplit(':', 1)[0])
 
     @destructiveTest
+    @flaky
     def test_set_system_time(self):
         '''
         Test setting the system time
