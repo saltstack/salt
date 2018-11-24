@@ -5078,8 +5078,8 @@ def keyvalue_list(
     # try to open the file and only return a comment if ignore_if_missing is
     # enabled, also mark as an error if not
     try:
-        fd = open(name, 'r')
-    except:
+        fd = salt.utils.fopen(name, 'r')
+    except (OSError, IOError):
         ret['comment'] = 'unable to open {n}'.format(n=name)
         ret['result'] = True if ignore_if_missing else False
         return ret
@@ -5093,7 +5093,7 @@ def keyvalue_list(
     # number of lines changed
     changes = 0
     # keep track of number of times a key was updated
-    diff_count = {k:count for k in key_values.keys()}
+    diff_count = {k: count for k in key_values.keys()}
 
     # read all the lines from the file
     for line in fd.readlines():
@@ -5117,14 +5117,17 @@ def keyvalue_list(
 
                 # if separation was unsuccessful then line_sep is empty so
                 # no need to keep trying. continue instead
-                if line_sep != separator: continue
+                if line_sep != separator:
+                    continue
 
                 # start on the premises the key does not match the actual line
                 keys_match = False
                 if key_ignore_case:
-                    if line_key.lower() == test_key: keys_match = True
+                    if line_key.lower() == test_key:
+                        keys_match = True
                 else:
-                    if line_key == test_key: keys_match = True
+                    if line_key == test_key:
+                        keys_match = True
 
                 # if the key was found in the line and separation was successful
                 if keys_match:
@@ -5149,14 +5152,17 @@ def keyvalue_list(
                         # irrespective of a value, if it was commented out and
                         # changes are still to be made, then it needs to be
                         # commented in
-                        if diff_count[key] > 0: needs_changing = True
+                        if diff_count[key] > 0:
+                            needs_changing = True
                         # but if values did not match but there are really no
                         # changes expected anymore either then leave this line
-                        elif not values_match: values_match = True
+                        elif not values_match:
+                            values_match = True
                     else:
                         # a line needs to be removed if it has been seen enough
                         # times and was not commented out, regardless of value
-                        if diff_count[key] == 0: needs_changing = True
+                        if diff_count[key] == 0:
+                            needs_changing = True
 
                     # then start checking to see if the value needs replacing
                     if not values_match or needs_changing:
@@ -5207,7 +5213,7 @@ def keyvalue_list(
         tmpdiff = []
         for key, value in key_values.items():
             if diff_count[key] > 0:
-                line = tmpl.format(key=key,separator=separator,value=value)
+                line = tmpl.format(key=key, separator=separator, value=value)
                 tmpdiff.append("+ "+line)
                 content.append(line)
                 changes += 1
@@ -5222,7 +5228,7 @@ def keyvalue_list(
         did_diff = False
         for key, value in key_values.items():
             if diff_count[key] > 0:
-                line = tmpl.format(key=key,separator=separator,value=value)
+                line = tmpl.format(key=key, separator=separator, value=value)
                 if not did_diff:
                     diff.insert(0, "  <SOF>\n")
                     did_diff = True
@@ -5238,17 +5244,17 @@ def keyvalue_list(
                 n=name,
                 c=changes)
             if show_changes:
-              # For some reason, giving an actual diff even in test=True mode
-              # will be seen as both a 'changed' and 'unchanged'. this seems to
-              # match the other modules behaviour though
-              ret['pchanges']['diff'] = "".join(diff)
+                # For some reason, giving an actual diff even in test=True mode
+                # will be seen as both a 'changed' and 'unchanged'. this seems to
+                # match the other modules behaviour though
+                ret['pchanges']['diff'] = "".join(diff)
 
-              # add changes to comments for now as well because of how
-              # stateoutputter seems to handle pchanges etc.
-              # See: https://github.com/saltstack/salt/issues/40208
-              ret['comment'] += "\nPredicted diff:\n\r\t\t"
-              ret['comment'] += "\r\t\t".join(diff)
-              ret['result'] = None
+                # add changes to comments for now as well because of how
+                # stateoutputter seems to handle pchanges etc.
+                # See: https://github.com/saltstack/salt/issues/40208
+                ret['comment'] += "\nPredicted diff:\n\r\t\t"
+                ret['comment'] += "\r\t\t".join(diff)
+                ret['result'] = None
 
         # otherwise return the actual diff lines
         else:
@@ -5259,17 +5265,17 @@ def keyvalue_list(
                     c=changes)
             if show_changes: ret['changes']['diff'] = "".join(diff)
     else:
-      ret['result'] = True
-      return ret
+        ret['result'] = True
+        return ret
 
     # if not test=true and not search_only the try and write the file
     if not __opts__['test'] and not search_only:
         try:
-            fd = open(name, 'w')
+            fd = salt.utils.fopen(name, 'w')
             # write all lines to the file which was just truncated
             fd.writelines(content)
             fd.close()
-        except:
+        except (OSError, IOError):
             # return an error if the file was not writable
             ret['comment'] = '{n} not writable'.format(n=name)
             ret['result'] = False
@@ -5302,7 +5308,7 @@ def keyvalue(
 
     return keyvalue_list(
             name,
-            {key:value},
+            {key: value},
             separator,
             append_if_not_found,
             prepend_if_not_found,
