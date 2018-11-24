@@ -2895,7 +2895,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(master_data, minion_data)
         self.assertSaltTrueReturn(ret)
 
-
     @with_tempfile()
     def test_keyvalue(self, name):
         '''
