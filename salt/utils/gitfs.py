@@ -2988,6 +2988,7 @@ class GitPillar(GitBase):
         points at the correct path
         '''
         lcachelink = salt.utils.path.join(repo.linkdir, repo._mountpoint)
+        lcachedest = salt.utils.path.join(repo.cachedir, repo.root()).rstrip(os.sep)
         wipe_linkdir = False
         create_link = False
         try:
@@ -3021,11 +3022,11 @@ class GitPillar(GitBase):
                             )
                             wipe_linkdir = True
                         else:
-                            if ldest != repo.cachedir:
+                            if ldest != lcachedest:
                                 log.debug(
                                     'Destination of %s (%s) does not match '
                                     'the expected value (%s)',
-                                    lcachelink, ldest, repo.cachedir
+                                    lcachelink, ldest, lcachedest
                                 )
                                 # Since we know that the parent dirs of the
                                 # link are set up properly, all we need to do
@@ -3070,16 +3071,16 @@ class GitPillar(GitBase):
 
                 if create_link:
                     try:
-                        os.symlink(repo.cachedir, lcachelink)
+                        os.symlink(lcachedest, lcachelink)
                         log.debug(
                             'Successfully linked %s to cachedir %s',
-                            lcachelink, repo.cachedir
+                            lcachelink, lcachedest
                         )
                         return True
                     except OSError as exc:
                         log.error(
                             'Failed to create symlink to %s at path %s: %s',
-                            repo.cachedir, lcachelink, exc.__str__()
+                            lcachedest, lcachelink, exc.__str__()
                         )
                         return False
         except GitLockError:
