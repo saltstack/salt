@@ -2895,6 +2895,59 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(master_data, minion_data)
         self.assertSaltTrueReturn(ret)
 
+    @with_tempfile()
+    def test_keyvalue(self, name):
+        '''
+        file.keyvalue
+        '''
+        content = dedent(six.text_type('''\
+            # This is the sshd server system-wide configuration file.  See
+            # sshd_config(5) for more information.
+
+            # The strategy used for options in the default sshd_config shipped with
+            # OpenSSH is to specify options with their default value where
+            # possible, but leave them commented.  Uncommented options override the
+            # default value.
+
+            #Port 22
+            #AddressFamily any
+            #ListenAddress 0.0.0.0
+            #ListenAddress ::
+
+            #HostKey /etc/ssh/ssh_host_rsa_key
+            #HostKey /etc/ssh/ssh_host_ecdsa_key
+            #HostKey /etc/ssh/ssh_host_ed25519_key
+
+            # Ciphers and keying
+            #RekeyLimit default none
+
+            # Logging
+            #SyslogFacility AUTH
+            #LogLevel INFO
+
+            # Authentication:
+
+            #LoginGraceTime 2m
+            #PermitRootLogin prohibit-password
+            #StrictModes yes
+            #MaxAuthTries 6
+            #MaxSessions 10
+            '''))
+
+        with salt.utils.files.fopen(name, 'w+') as fp_:
+            fp_.write(content)
+
+        ret = self.run_state('file.keyvalue',
+                name=name, key='permitrootlogin', value='no', separator=" ", uncomment=" #", key_ignore_case=True)
+
+        with salt.utils.files.fopen(name, 'r') as fp_:
+            file_contents = fp_.read()
+            self.assertNotIn('#PermitRootLogin', file_contents)
+            self.assertNotIn('prohibit-password', file_contents)
+            self.assertIn("PermitRootLogin no", file_contents)
+
+        self.assertSaltTrueReturn(ret)
+
 
 @pytest.mark.windows_whitelisted
 class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
