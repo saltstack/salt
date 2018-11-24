@@ -5077,8 +5077,10 @@ def keyvalue_list(
 
     # try to open the file and only return a comment if ignore_if_missing is
     # enabled, also mark as an error if not
+    file_contents = []
     try:
-        fd = salt.utils.fopen(name, 'r')
+        with salt.utils.files.fopen(name, 'r+') as fd:
+            file_contents = fd.readlines()
     except (OSError, IOError):
         ret['comment'] = 'unable to open {n}'.format(n=name)
         ret['result'] = True if ignore_if_missing else False
@@ -5096,7 +5098,7 @@ def keyvalue_list(
     diff_count = {k: count for k in key_values.keys()}
 
     # read all the lines from the file
-    for line in fd.readlines():
+    for line in file_contents:
         test_line = line.lstrip(uncomment)
         did_uncomment = True if len(line) > len(test_line) else False
 
@@ -5195,7 +5197,8 @@ def keyvalue_list(
                     # subtract one from the count if it was larger than 0, so
                     # next lines are removed. if it is less than 0 then count is
                     # ignored and all lines will be updated.
-                    if diff_count[key] > 0: diff_count[key] -= 1
+                    if diff_count[key] > 0:
+                        diff_count[key] -= 1
                     # at this point a continue saves going through the rest of
                     # the keys to see if they match since this line already
                     #matched the current key
@@ -5263,7 +5266,8 @@ def keyvalue_list(
             else:
                 ret['comment'] = 'Not changing {c} lines, search only'.format(
                     c=changes)
-            if show_changes: ret['changes']['diff'] = "".join(diff)
+            if show_changes:
+                ret['changes']['diff'] = "".join(diff)
     else:
         ret['result'] = True
         return ret
@@ -5271,10 +5275,10 @@ def keyvalue_list(
     # if not test=true and not search_only the try and write the file
     if not __opts__['test'] and not search_only:
         try:
-            fd = salt.utils.fopen(name, 'w')
-            # write all lines to the file which was just truncated
-            fd.writelines(content)
-            fd.close()
+            with salt.utils.files.fopen(name, 'w+') as fd:
+                # write all lines to the file which was just truncated
+                fd.writelines(content)
+                fd.close()
         except (OSError, IOError):
             # return an error if the file was not writable
             ret['comment'] = '{n} not writable'.format(n=name)
