@@ -130,7 +130,7 @@ class SchedulerMaxRunningTest(ModuleCase, SaltReturnAssertsMixin):
                          'fun': 'state.orch',
                          'id': 'host'}]
 
-        with patch('salt.utils.master.running',
+        with patch('salt.utils.master.get_running_jobs',
                    MagicMock(return_value=running_data)):
             with patch('salt.utils.process.os_is_running',
                        MagicMock(return_value=True)):
