@@ -67,12 +67,14 @@ _su_cmd() {
 
 
 _get_pid() {
-    cat $PID_FILE 2>/dev/null
+    local pid_file="$1"
+    cat $(eval echo '$'$pid_file) 2>/dev/null
 }
 
 
 _is_running() {
-    [ -n "$(_get_pid)" ] && ps wwwaxu | grep '[s]alt-minion' | awk '{print $2}' | grep -qi "\b$(_get_pid)\b"
+    local pid_file="$1"
+    [ -n "$(_get_pid $pid_file)" ] && ps wwwaxu | grep '[s]alt-minion' | awk '{print $2}' | grep -qi "\b$(_get_pid $pid_file)\b"
 }
 
 
@@ -115,17 +117,23 @@ _make_id_hash() {
 start() {
     # $1 - config dir
     local retval=0
+    local start_pid=$$
 
-    if [ -f $LOCK_FILE ]; then
-        echo "Service $SERVICE:$MINION_USER:$MINION_ID is starting"
+    if [ -f $START_PID_FILE ] && _is_running START_PID_FILE; then
+        echo "Service $SERVICE:$MINION_USER:$MINION_ID already starting"
         return 0
     else
-        touch "$LOCK_FILE"
+        echo $start_pid > "$START_PID_FILE"
     fi
 
-    if _is_running; then
+    # only one wins
+    if [ "X$start_pid" != "X$(_get_pid START_PID_FILE)" ]; then
+        return 0
+    fi
+
+    if _is_running PID_FILE; then
         echo "Service $SERVICE:$MINION_USER:$MINION_ID already running"
-        rm -f "$LOCK_FILE"
+        rm -f "$START_PID_FILE"
         return 0
     fi
 
@@ -144,7 +152,7 @@ start() {
 
     if [ 0 -eq "$retval" ]; then
         local endtime=$(($(date '+%s')+$SALTMINION_TIMEOUT))
-        while ! _is_running; do
+        while ! _is_running PID_FILE; do
             if [ "$endtime" -lt "$(date '+%s')" ]; then
                 echo -n "TIMEOUT "
                 retval=1
@@ -154,7 +162,7 @@ start() {
         done
     fi
 
-    rm -f "$LOCK_FILE"
+    rm -f "$START_PID_FILE"
     if [ 0 -eq "$retval" ]; then
         echo -n "OK"
     else
@@ -180,25 +188,25 @@ stop() {
     # $1 - config dir
     local retval=0
 
-    if ! _is_running; then
+    if ! _is_running PID_FILE; then
         echo "Service $SERVICE:$MINION_USER:$MINION_ID is not running"
         return 0
     fi
         
     echo -n "Stopping $SERVICE:$MINION_USER:$MINION_ID daemon: "
-    local pid="$(_get_pid)"
+    local pid="$(_get_pid PID_FILE)"
 
     # pid below is intentionally not quoted in case there are *multiple*
     # minions running with the same configuration.
     _su_cmd "$MINION_USER" "kill -TERM $pid 2>/dev/null" || retval=$?
     if [ 0 -eq "$retval" ]; then 
         local endtime=$(($(date '+%s')+$SALTMINION_TIMEOUT))
-        while _is_running; do
+        while _is_running PID_FILE; do
             if [ "$endtime" -lt "$(date '+%s')" ]; then
                 # Try one more time with a big hammer
                 _su_cmd "$MINION_USER" "kill -KILL $pid 2>/dev/null" || :
                 sleep $SALTMINION_TICK
-                if _is_running; then
+                if _is_running PID_FILE; then
                     echo -n "TIMEOUT "
                     retval=1
                 fi
@@ -224,9 +232,9 @@ stop() {
 
 status() {
     local retval=0
-    local pid="$(_get_pid)"
+    local pid="$(_get_pid PID_FILE)"
 
-    if _is_running; then
+    if _is_running PID_FILE; then
         # Unquote $pid here to display multiple PIDs in one line
         echo "$SERVICE:$MINION_USER:$MINION_ID is running:" $pid
     else
@@ -287,7 +295,7 @@ main() {
         LOG_FILE="$(_get_salt_config_value log_file)"
         MINION_ID="$(_get_salt_config_value id)"
         MINION_ID_HASH="$(_make_id_hash "$MINION_ID")"
-        LOCK_FILE="/var/lock/subsys/$SERVICE.$MINION_ID_HASH"
+        START_PID_FILE="$(_get_salt_config_value pidfile).$MINION_ID_HASH"
         if [ \
             -z "$SOCK_DIR" \
             -o -z "$PID_FILE" \
@@ -306,7 +314,7 @@ main() {
                 "$1" || RETVAL=$?
                 ;;
             (condrestart|try-restart)
-                if ! _is_running; then
+                if ! _is_running PID_FILE; then
                     RETVAL=7
                 else
                     stop
