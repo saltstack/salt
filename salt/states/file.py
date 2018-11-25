@@ -5079,7 +5079,7 @@ def keyvalue_list(
     # enabled, also mark as an error if not
     file_contents = []
     try:
-        with salt.utils.files.fopen(name, 'r+') as fd:
+        with salt.utils.files.fopen(name, 'r') as fd:
             file_contents = fd.readlines()
     except (OSError, IOError):
         ret['comment'] = 'unable to open {n}'.format(n=name)
@@ -5091,7 +5091,7 @@ def keyvalue_list(
     # store the final content of the file in case it needs to be rewritten
     content = []
     # target format is templated like this
-    tmpl = "{key}{separator}{value}\n"
+    tmpl = '{key}{sep}{value}'+os.linesep
     # number of lines changed
     changes = 0
     # keep track of number of times a key was updated
@@ -5171,8 +5171,8 @@ def keyvalue_list(
                         # the old line always needs to go, so that will be
                         # reflected in the diff (this is the original line from
                         # the file being read)
-                        diff.append("- "+line)
-                        line = ""
+                        diff.append('- {0}'.format(line))
+                        line = line[:0]
 
                         # any non-zero value means something needs to go back in
                         # its place. negative values are replacing all lines not
@@ -5181,18 +5181,19 @@ def keyvalue_list(
                         if diff_count[key] != 0:
                             # rebuild the line using the key and separator found
                             # and insert the correct value.
-                            line = tmpl.format(
-                                key=line_key,
-                                separator=line_sep,
-                                value=value)
+                            line = str(tmpl.format(key=line_key,
+                                                   sep=line_sep,
+                                                   value=value))
 
                             # display a comment in case a value got converted
                             # into a string
                             if not isinstance(value, str):
-                                diff.append("+ {0} (from {1} type)\n".format(
-                                    line.rstrip(), type(value).__name__))
+                                diff.append('+ {0} (from {1} type){2}'.format(
+                                    line.rstrip(),
+                                    type(value).__name__,
+                                    os.linesep))
                             else:
-                                diff.append("+ {0}".format(line))
+                                diff.append('+ {0}'.format(line))
                         changes += 1
                     # subtract one from the count if it was larger than 0, so
                     # next lines are removed. if it is less than 0 then count is
@@ -5216,13 +5217,13 @@ def keyvalue_list(
         tmpdiff = []
         for key, value in key_values.items():
             if diff_count[key] > 0:
-                line = tmpl.format(key=key, separator=separator, value=value)
-                tmpdiff.append("+ "+line)
+                line = tmpl.format(key=key, sep=separator, value=value)
+                tmpdiff.append('+ {0}'.format(line))
                 content.append(line)
                 changes += 1
         if len(tmpdiff):
-            tmpdiff.insert(0, "- <EOF>\n")
-            tmpdiff.append("+ <EOF>\n")
+            tmpdiff.insert(0, '- <EOF>'+os.linesep)
+            tmpdiff.append('+ <EOF>'+os.linesep)
             diff.extend(tmpdiff)
     # only if append_if_not_found was not set should prepend_if_not_found be
     # considered, benefit of this is that the number of counts left does not
@@ -5231,11 +5232,11 @@ def keyvalue_list(
         did_diff = False
         for key, value in key_values.items():
             if diff_count[key] > 0:
-                line = tmpl.format(key=key, separator=separator, value=value)
+                line = tmpl.format(key=key, sep=separator, value=value)
                 if not did_diff:
-                    diff.insert(0, "  <SOF>\n")
+                    diff.insert(0, '  <SOF>'+os.linesep)
                     did_diff = True
-                diff.insert(1, "+ "+line)
+                diff.insert(1, '+ {0}'.format(line))
                 content.insert(0, line)
                 changes += 1
 
@@ -5250,13 +5251,13 @@ def keyvalue_list(
                 # For some reason, giving an actual diff even in test=True mode
                 # will be seen as both a 'changed' and 'unchanged'. this seems to
                 # match the other modules behaviour though
-                ret['pchanges']['diff'] = "".join(diff)
+                ret['pchanges']['diff'] = ''.join(diff)
 
                 # add changes to comments for now as well because of how
                 # stateoutputter seems to handle pchanges etc.
                 # See: https://github.com/saltstack/salt/issues/40208
-                ret['comment'] += "\nPredicted diff:\n\r\t\t"
-                ret['comment'] += "\r\t\t".join(diff)
+                ret['comment'] += '\nPredicted diff:\n\r\t\t'
+                ret['comment'] += '\r\t\t'.join(diff)
                 ret['result'] = None
 
         # otherwise return the actual diff lines
@@ -5267,7 +5268,7 @@ def keyvalue_list(
                 ret['comment'] = 'Not changing {c} lines, search only'.format(
                     c=changes)
             if show_changes:
-                ret['changes']['diff'] = "".join(diff)
+                ret['changes']['diff'] = ''.join(diff)
     else:
         ret['result'] = True
         return ret
@@ -5275,7 +5276,7 @@ def keyvalue_list(
     # if not test=true and not search_only the try and write the file
     if not __opts__['test'] and not search_only:
         try:
-            with salt.utils.files.fopen(name, 'w+') as fd:
+            with salt.utils.files.fopen(name, 'w') as fd:
                 # write all lines to the file which was just truncated
                 fd.writelines(content)
                 fd.close()
@@ -5294,7 +5295,7 @@ def keyvalue(
         name,
         key,
         value,
-        separator="=",
+        separator='=',
         append_if_not_found=False,
         prepend_if_not_found=False,
         search_only=False,
