@@ -55,7 +55,7 @@ def returner(ret):
     '''
     Write the return data to a file on the minion.
     '''
-    opts = _get_options({})  # Pass in empty ret, since this is a list of events
+    opts = _get_options(ret)
     try:
         with salt.utils.files.flopen(opts['filename'], 'a') as logfile:
             salt.utils.json.dump(ret, logfile)

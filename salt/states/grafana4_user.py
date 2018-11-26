@@ -93,21 +93,24 @@ def present(name,
         Default is 'grafana'.
 
 
-    Here is an example for using default_organization and organizations parameters. The user will be added as
-    a viewer to ReadonlyOrg, as an editor to TestOrg and as an admin to AdminOrg. When she logs on, TestOrg
-    will be the default. The state will fail if any organisation is unknown or invalid roles are defined.
-        .. code-block:: yaml
+    Here is an example for using default_organization and organizations
+    parameters. The user will be added as a viewer to ReadonlyOrg, as an editor
+    to TestOrg and as an admin to AdminOrg. When she logs on, TestOrg will be
+    the default. The state will fail if any organisation is unknown or invalid
+    roles are defined.
 
-            add_grafana_test_user:
-              grafana4_user.present:
-                - name: test
-                - password: 1234567890
-                - fullname: 'Test User'
-                - default_organization: TestOrg
-                - organizations:
-                  - ReadonlyOrg
-                  - TestOrg: Editor
-                  - Staging: Admin
+    .. code-block:: yaml
+
+        add_grafana_test_user:
+          grafana4_user.present:
+            - name: test
+            - password: 1234567890
+            - fullname: 'Test User'
+            - default_organization: TestOrg
+            - organizations:
+              - ReadonlyOrg
+              - TestOrg: Editor
+              - Staging: Admin
     '''
     if isinstance(profile, string_types):
         profile = __salt__['config.option'](profile)
