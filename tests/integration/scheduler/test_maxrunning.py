@@ -6,6 +6,8 @@ import copy
 import logging
 import os
 
+import dateutil.parser as dateutil_parser
+
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.mixins import SaltReturnAssertsMixin
@@ -67,7 +69,7 @@ class SchedulerMaxRunningTest(ModuleCase, SaltReturnAssertsMixin):
         }
 
         job_data = {'function': 'test.ping',
-                    'run': False,
+                    'run': True,
                     'name': 'maxrunning_minion',
                     'seconds': 10,
                     '_seconds': 10,
@@ -81,8 +83,10 @@ class SchedulerMaxRunningTest(ModuleCase, SaltReturnAssertsMixin):
                          'jid': '20181018165923360935',
                          'schedule': 'maxrunning_minion',
                          'pid': 15338,
-                         'fun': 'test.sleep',
+                         'fun': 'test.ping',
                          'id': 'host'}]
+
+        run_time = dateutil_parser.parse('11/29/2017 4:00pm')
 
         with patch('salt.utils.minion.running',
                    MagicMock(return_value=running_data)):
@@ -90,7 +94,8 @@ class SchedulerMaxRunningTest(ModuleCase, SaltReturnAssertsMixin):
                        MagicMock(return_value=True)):
                 ret = self.schedule._check_max_running('test.ping',
                                                        job_data,
-                                                       self.schedule.opts)
+                                                       self.schedule.opts,
+                                                       now=run_time)
         self.assertIn('_skip_reason', ret)
         self.assertEqual('maxrunning', ret['_skip_reason'])
         self.assertEqual(False, ret['run'])
@@ -114,7 +119,7 @@ class SchedulerMaxRunningTest(ModuleCase, SaltReturnAssertsMixin):
 
         job_data = {'function': 'state.orch',
                     'fun_args': ['test.orch_test'],
-                    'run': False,
+                    'run': True,
                     'name': 'maxrunning_master',
                     'minutes': 1,
                     'jid_include': True,
@@ -130,13 +135,16 @@ class SchedulerMaxRunningTest(ModuleCase, SaltReturnAssertsMixin):
                          'fun': 'state.orch',
                          'id': 'host'}]
 
+        run_time = dateutil_parser.parse('11/29/2017 4:00pm')
+
         with patch('salt.utils.master.get_running_jobs',
                    MagicMock(return_value=running_data)):
             with patch('salt.utils.process.os_is_running',
                        MagicMock(return_value=True)):
                 ret = self.schedule._check_max_running('state.orch',
                                                        job_data,
-                                                       self.schedule.opts)
+                                                       self.schedule.opts,
+                                                       now=run_time)
         self.assertIn('_skip_reason', ret)
         self.assertEqual('maxrunning', ret['_skip_reason'])
         self.assertEqual(False, ret['run'])
