@@ -12,6 +12,7 @@ Developing Salt
     raet/index
     git/index
     conventions/index
+    modules/index
     ../../ref/internals/index
     ../projects/index
     ../tutorials/writing_tests
