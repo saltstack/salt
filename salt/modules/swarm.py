@@ -413,7 +413,7 @@ def update_node(availability=str,
 
     .. code-block:: bash
 
-        salt '*' docker_util.update_node availability=drain node_name=minion2 \
+        salt '*' swarm.update_node availability=drain node_name=minion2 \
             role=worker node_id=3k9x7t8m4pel9c0nqr3iajnzp version=19
     '''
     client = docker.APIClient(base_url='unix://var/run/docker.sock')
