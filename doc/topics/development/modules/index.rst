@@ -63,6 +63,7 @@ same system and Python environment as the Salt Minion or Master.
 This is done via setuptools entry points:
 
 .. code-block:: python
+
     setup(
         # ...
         entry_points={
