@@ -407,6 +407,13 @@ def _function_code_present(FunctionName, ZipFile, S3Bucket, S3Key,
         key=key, keyid=keyid, profile=profile)['function']
     update = False
     if ZipFile:
+        if '://' in ZipFile:  # Looks like a remote URL to me...
+            dlZipFile = __salt__['cp.cache_file'](path=ZipFile)
+            if dlZipFile is False:
+                ret['result'] = False
+                ret['comment'] = 'Failed to cache ZipFile `{0}`.'.format(ZipFile)
+                return ret
+            ZipFile = dlZipFile
         size = os.path.getsize(ZipFile)
         if size == func['CodeSize']:
             sha = hashlib.sha256()
