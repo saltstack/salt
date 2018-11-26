@@ -343,6 +343,7 @@ class ZMQConfigTest(TestCase):
                                                          master_port=m_port,
                                                          source_port=s_port) == 'tcp://0.0.0.0:{0};{1}:{2}'.format(s_port, m_ip, m_port)
 
+
 class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
 
     @classmethod
