@@ -16,6 +16,11 @@ import time
 # Import salt libs
 import salt.utils.data
 from salt.utils.timeout import wait_for
+import salt.ext.six as six
+
+# Workaround for 'reload' builtin of py2.7
+if six.PY3:
+    from importlib import reload  # pylint: disable=no-name-in-module
 
 log = logging.getLogger(__name__)
 
@@ -135,13 +140,6 @@ def vb_get_manager():
     '''
     global _virtualboxManager
     if _virtualboxManager is None and HAS_LIBS:
-        try:
-            from importlib import reload
-        except ImportError:
-            # If we get here, we are in py2 and reload is a built-in.
-            pass
-
-        # Reloading the API extends sys.paths for subprocesses of multiprocessing, since they seem to share contexts
         reload(vboxapi)
         _virtualboxManager = vboxapi.VirtualBoxManager(None, None)
 

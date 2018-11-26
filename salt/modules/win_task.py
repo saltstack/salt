@@ -17,6 +17,7 @@ from datetime import datetime
 
 # Import Salt libs
 import salt.utils.platform
+from salt.exceptions import ArgumentValueError, CommandExecutionError
 
 # Import 3rd-party libraries
 try:
@@ -155,6 +156,7 @@ results = {0x0: 'The operation completed successfully',
            0x8004130F: 'Credentials became corrupted',
            0x8004131F: 'An instance of this task is already running',
            0x800704DD: 'The service is not available (Run only when logged in?)',
+           0x800710E0: 'The operator or administrator has refused the request',
            0xC000013A: 'The application terminated as a result of CTRL+C',
            0xC06D007E: 'Unknown software exception'}
 
@@ -566,8 +568,9 @@ def create_task_from_xml(name,
         the task to run whether the user is logged in or not, but is currently
         not working.
 
-    :return: True if successful, False if unsuccessful
+    :return: True if successful, False if unsuccessful, A string with the error message if there is an error
     :rtype: bool
+    :raises: CommandExecutionError
 
     CLI Example:
 
@@ -581,7 +584,7 @@ def create_task_from_xml(name,
         return '{0} already exists'.format(name)
 
     if not xml_text and not xml_path:
-        return 'Must specify either xml_text or xml_path'
+        raise ArgumentValueError('Must specify either xml_text or xml_path')
 
     # Create the task service object
     pythoncom.CoInitialize()
@@ -609,6 +612,7 @@ def create_task_from_xml(name,
                 logon_type = TASK_LOGON_INTERACTIVE_TOKEN
     else:
         password = None
+        logon_type = TASK_LOGON_NONE
 
     # Save the task
     try:
@@ -621,21 +625,38 @@ def create_task_from_xml(name,
 
     except pythoncom.com_error as error:
         hr, msg, exc, arg = error.args  # pylint: disable=W0633
-        fc = {-2147216615: 'Required element or attribute missing',
-              -2147216616: 'Value incorrectly formatted or out of range',
-              -2147352571: 'Access denied'}
+        error_code = hex(exc[5] + 2**32)
+        failure_code = error_code
+        fc = {'0x80041319L': 'Required element or attribute missing',
+              '0x80041318L': 'Value incorrectly formatted or out of range',
+              '0x80020005L': 'Access denied',
+              '0x80041309L': "A task's trigger is not found",
+              '0x8004130aL': "One or more of the properties required to run this task have not been set",
+              '0x8004130cL': "The Task Scheduler service is not installed on this computer",
+              '0x8004130dL': "The task object could not be opened",
+              '0x8004130eL': "The object is either an invalid task object or is not a task object",
+              '0x8004130fL': "No account information could be found in the Task Scheduler security database for the task indicated",
+              '0x80041310L': "Unable to establish existence of the account specified",
+              '0x80041311L': "Corruption was detected in the Task Scheduler security database; the database has been reset",
+              '0x80041313L': "The task object version is either unsupported or invalid",
+              '0x80041314L': "The task has been configured with an unsupported combination of account settings and run time options",
+              '0x80041315L': "The Task Scheduler Service is not running",
+              '0x80041316L': "The task XML contains an unexpected node",
+              '0x80041317L': "The task XML contains an element or attribute from an unexpected namespace",
+              '0x8004131aL': "The task XML is malformed",
+              '0x0004131cL': "The task is registered, but may fail to start. Batch logon privilege needs to be enabled for the task principal",
+              '0x8004131dL': "The task XML contains too many nodes of the same type",
+              }
         try:
-            failure_code = fc[exc[5]]
+            failure_code = fc[error_code]
         except KeyError:
-            failure_code = 'Unknown Failure: {0}'.format(error)
-
-        log.debug('Failed to create task: %s', failure_code)
+            failure_code = 'Unknown Failure: {0}'.format(error_code)
+        finally:
+            log.debug('Failed to create task: %s', failure_code)
+        raise CommandExecutionError(failure_code)
 
     # Verify creation
-    if name in list_tasks(location):
-        return True
-    else:
-        return False
+    return name in list_tasks(location)
 
 
 def create_folder(name, location='\\'):
