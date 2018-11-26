@@ -119,7 +119,7 @@ def _enabled_used_error(ret):
     return ret
 
 
-def _enable(name, skip_verify, started, result=True, **kwargs):
+def _enable(name, started, result=True, skip_verify=False, **kwargs):
     '''
     Enable the service
     '''
@@ -222,7 +222,7 @@ def _enable(name, skip_verify, started, result=True, **kwargs):
     return ret
 
 
-def _disable(name, skip_verify, started, result=True, **kwargs):
+def _disable(name, started, result=True, skip_verify=False, **kwargs):
     '''
     Disable the service
     '''
@@ -428,9 +428,9 @@ def running(name,
     if before_toggle_status:
         ret['comment'] = 'The service {0} is already running'.format(name)
         if enable is True and not before_toggle_enable_status:
-            ret.update(_enable(name, False, None, **kwargs))
+            ret.update(_enable(name, None, skip_verify=False, **kwargs))
         elif enable is False and before_toggle_enable_status:
-            ret.update(_disable(name, False, None, **kwargs))
+            ret.update(_disable(name, None, skip_verify=False, **kwargs))
         return ret
 
     # Run the tests
@@ -459,9 +459,9 @@ def running(name,
         ret['result'] = False
         ret['comment'] = 'Service {0} failed to start'.format(name)
         if enable is True:
-            ret.update(_enable(name, False, False, result=False, **kwargs))
+            ret.update(_enable(name, False, result=False, skip_verify=False, **kwargs))
         elif enable is False:
-            ret.update(_disable(name, False, False, result=False, **kwargs))
+            ret.update(_disable(name, False, result=False, skip_verify=False, **kwargs))
         return ret
 
     if init_delay:
@@ -486,9 +486,9 @@ def running(name,
         ret['result'] = False
 
     if enable is True:
-        ret.update(_enable(name, False, after_toggle_status, result=after_toggle_status, **kwargs))
+        ret.update(_enable(name, after_toggle_status, result=after_toggle_status, skip_verify=False, **kwargs))
     elif enable is False:
-        ret.update(_disable(name, False, after_toggle_status, result=after_toggle_status, **kwargs))
+        ret.update(_disable(name, after_toggle_status, result=after_toggle_status, skip_verify=False, **kwargs))
 
     if init_delay:
         ret['comment'] = (
@@ -575,9 +575,9 @@ def dead(name,
     if not before_toggle_status:
         ret['comment'] = 'The service {0} is already dead'.format(name)
         if enable is True and not before_toggle_enable_status:
-            ret.update(_enable(name, False, None, **kwargs))
+            ret.update(_enable(name, None, skip_verify=False, **kwargs))
         elif enable is False and before_toggle_enable_status:
-            ret.update(_disable(name, False, None, **kwargs))
+            ret.update(_disable(name, None, skip_verify=False, **kwargs))
         return ret
 
     # Run the tests
@@ -599,9 +599,9 @@ def dead(name,
         ret['result'] = False
         ret['comment'] = 'Service {0} failed to die'.format(name)
         if enable is True:
-            ret.update(_enable(name, False, True, result=False, **kwargs))
+            ret.update(_enable(name, True, result=False, skip_verify=False, **kwargs))
         elif enable is False:
-            ret.update(_disable(name, False, True, result=False, **kwargs))
+            ret.update(_disable(name, True, result=False, skip_verify=False, **kwargs))
         return ret
 
     if init_delay:
@@ -627,9 +627,9 @@ def dead(name,
         ret['comment'] = 'Service {0} was killed'.format(name)
 
     if enable is True:
-        ret.update(_enable(name, False, after_toggle_status, result=not after_toggle_status, **kwargs))
+        ret.update(_enable(name, after_toggle_status, result=not after_toggle_status, skip_verify=False, **kwargs))
     elif enable is False:
-        ret.update(_disable(name, False, after_toggle_status, result=not after_toggle_status, **kwargs))
+        ret.update(_disable(name, after_toggle_status, result=not after_toggle_status, skip_verify=False, **kwargs))
 
     return ret
 
@@ -656,7 +656,7 @@ def enabled(name,
            'result': True,
            'comment': ''}
 
-    ret.update(_enable(name, skip_verify, None, **kwargs))
+    ret.update(_enable(name, None, skip_verify=skip_verify, **kwargs))
     return ret
 
 
@@ -682,7 +682,7 @@ def disabled(name,
            'result': True,
            'comment': ''}
 
-    ret.update(_disable(name, skip_verify, None, **kwargs))
+    ret.update(_disable(name, None, skip_verify=skip_verify, **kwargs))
     return ret
 
 
