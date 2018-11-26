@@ -10,6 +10,116 @@ The most commonly used modular systems are execution modules and states. But
 the modular systems extend well beyond the more easily exposed components
 and are often added to Salt to make the complete system more flexible.
 
+Loading Modules
+===============
+
+Modules come primarily from several sources:
+
+* The Salt package itself
+* The Salt File Server
+* The extmods directory
+* Secondary packages installed
+
+Using one source to override another is not supported.
+
+The Salt Package
+----------------
+
+Salt itself ships with a large number of modules. These are part of the Salt
+package itself and don't require the user to do anything to use them. (Although
+a number of them have additional dependencies and/or configuration.)
+
+The Salt File Server
+--------------------
+
+The user may add modules by simply placing them in special directories in their
+:ref:`fileserver <file-server>`.
+
+These will be eventually picked up by minions, or users can use
+:py:mod:```saltutil.sync_*`` execution functions <salt.modules.saltutil>` and
+:py:mod:```saltutil.sync_*`` runner functions <salt.runners.saltutil>` to force
+it immediately.
+
+The name of the directory inside of the file server is the directory name prepended
+by ``_``.
+
+Using saltenvs besides ``base`` may not work in all contexts.
+
+The extmods Directory
+---------------------
+
+Any files places in the directory set by ``extension_modules`` settings
+(:conf_minion:`minion <extension_modules>`,
+:conf_master:`master <extension_modules>`, default
+``/var/cache/salt/*/extmods``) can also be loaded as modules. Note that these
+directories are also used by the ``saltutil.sync_*`` functions (mentioned
+above).
+
+Secondary Packages
+------------------
+
+Third-party packages may also add modules to Salt if they are installed in the
+same system and Python environment as the Salt Minion or Master.
+
+This is done via setuptools entry points:
+
+.. code-block:: python
+    setup(
+        # ...
+        entry_points={
+            'salt.loader': [
+                'module_dirs=spirofs.loader:module',
+            ],
+        },
+        # ...
+    )
+
+Note that these are not synced from the Salt Master to the Minion. They must be
+installed indepdendently on the Minion.
+
+Names
+-----
+
+The specific names for each of these methods are as follows. See sections below
+for a short summary of each of these systems.
+
+============ ================================================================ ========================= =====================
+Module Type  Salt Package Name                                                Directory Name            Entry Point
+============ ================================================================ ========================= =====================
+Auth         ``salt.auth`` (:ref:`index <external-logging-handlers>`)         ``auth`` [#no-fs]_        ``auth_dirs``
+Beacon       ``salt.beacons`` (:ref:`index <beacons>`)                        ``beacons``               ``beacons_dirs``
+Cache        ``salt.cache`` (:ref:`index <all-salt.cache>`)                   ``cache``                 ``cache_dirs``
+Cloud        ``salt.cloud.clouds`` (:ref:`index <all-salt.clouds>`)           ``clouds``                ``cloud_dirs``
+Engine       ``salt.engines`` (:ref:`index <engines>`)                        ``engines``               ``engines_dirs``
+Executor     ``salt.executors`` (:ref:`index <all-salt_executors>`)           ``executors`` [#no-fs]_   ``executor_dirs``
+Execution    ``salt.modules`` (:ref:`index <all-salt.modules>`)               ``modules``               ``module_dirs``
+File Server  ``salt.fileserver`` (:ref:`index <file-server>`)                 ``fileserver`` [#no-fs]_  ``fileserver_dirs``
+Grain        ``salt.grains`` (:ref:`index <all-salt.grains>`)                 ``grains``                ``grains_dirs``
+Log Handler  ``salt.log.handlers`` (:ref:`index <external-logging-handlers>`) ``log_handlers``          ``log_handlers_dirs``
+Net API      ``salt.netapi`` (:ref:`index <all-netapi-modules>`)              ``netapi`` [#no-fs]_      ``netapi_dirs``
+Outputter    ``salt.output`` (:ref:`index <all-salt.output>`)                 ``output``                ``outputter_dirs``
+Pillar       ``salt.pillar`` (:ref:`index <all-salt.pillars>`)                ``pillar``                ``pillar_dirs``
+Proxy        ``salt.proxy`` (:ref:`index <all-salt.proxy>`)                   ``proxy``                 ``proxy_dirs``
+Queue        ``salt.queues`` (:ref:`index <all-salt.queues>`)                 ``queues``                ``queue_dirs``
+Renderer     ``salt.renderers`` (:ref:`index <all-salt.renderers>`)           ``renderers``             ``render_dirs``
+Returner     ``salt.returners`` (:ref:`index <all-salt.returners>`)           ``returners``             ``returner_dirs``
+Roster       ``salt.roster`` (:ref:`index <all-salt.roster>`)                 ``roster``                ``roster_dirs``
+Runner       ``salt.runners`` (:ref:`index <all-salt.runners>`)               ``runners``               ``runner_dirs``
+SDB          ``salt.sdb`` (:ref:`index <all-salt.sdb>`)                       ``sdb``                   ``sdb_dirs``
+Search                                                                        ``search`` [#no-fs]_      ``search_dirs``
+Serializer   ``salt.serializers`` (:ref:`index <all-salt.serializers>`)       ``serializers`` [#no-fs]_ ``serializers_dirs``
+SPM pkgdb                                                                     ``pkgdb`` [#no-fs]_       ``pkgdb_dirs``
+SPM pkgfiles                                                                  ``pkgfiles`` [#no-fs]_    ``pkgfiles_dirs``
+SSH Wrapper                                                                   ``wrapper`` [#no-fs]_     ``wrapper_dirs``
+State        ``salt.states`` (:ref:`index <all-salt.states>`)                 ``states``                ``states_dirs``
+Thorium      ``salt.thorium`` (:ref:`index <all-salt.thorium>`)               ``thorium`` [#no-fs]_     ``thorium_dirs``
+Top          ``salt.tops`` (:ref:`index <all-salt.tops>`)                     ``tops``                  ``top_dirs``
+Util         ``salt.utils``                                                   ``utils``                 ``utils_dirs``
+Wheel        ``salt.wheels`` (:ref:`index <all-salt.wheel>`)                  ``wheel``                 ``wheel_dirs``
+============ ================================================================ ========================= =====================
+
+.. [#no-fs] This module cannot be loaded from the Salt File Server.
+
 Execution Modules
 =================
 
