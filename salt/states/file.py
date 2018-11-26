@@ -5103,7 +5103,7 @@ def keyvalue(
 
     if not name:
         return _error(ret, 'Must provide name to file.keyvalue')
-    if not key is None and not value is None:
+    if key is not None and value is not None:
         if type(key_values) is dict:
             return _error(ret,
                     'file.keyvalue can not combine key_values with key and value')
