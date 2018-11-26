@@ -1133,7 +1133,7 @@ def _get_template_texts(source_list=None,
             tmplines = None
             with salt.utils.files.fopen(rndrd_templ_fn, 'rb') as fp_:
                 tmplines = fp_.read()
-                tmplines = tmplines.decode(__salt_system_encoding__)
+                tmplines = salt.utils.stringutils.to_unicode(tmplines)
                 tmplines = tmplines.splitlines(True)
             if not tmplines:
                 msg = 'Failed to read rendered template file {0} ({1})'
@@ -1897,6 +1897,7 @@ def managed(name,
             follow_symlinks=True,
             check_cmd=None,
             skip_verify=False,
+            selinux=None,
             win_owner=None,
             win_perms=None,
             win_deny_perms=None,
@@ -2393,6 +2394,22 @@ def managed(name,
 
         .. versionadded:: 2016.3.0
 
+    selinux : None
+        Allows setting the selinux user, role, type, and range of a managed file
+
+        .. code-block:: yaml
+
+            /tmp/selinux.test
+              file.managed:
+                - user: root
+                - selinux:
+                    seuser: system_u
+                    serole: object_r
+                    setype: system_conf_t
+                    seranage: s0
+
+        .. versionadded:: Neon
+
     win_owner : None
         The owner of the directory. If this is not passed, user will be used. If
         user is not passed, the account under which Salt is running will be
@@ -2475,6 +2492,17 @@ def managed(name,
 
     if attrs is not None and salt.utils.platform.is_windows():
         return _error(ret, 'The \'attrs\' option is not supported on Windows')
+
+    if selinux is not None and not salt.utils.platform.is_linux():
+        return _error(ret, 'The \'selinux\' option is only supported on Linux')
+
+    if selinux:
+        seuser = selinux.get('seuser', None)
+        serole = selinux.get('serole', None)
+        setype = selinux.get('setype', None)
+        serange = selinux.get('serange', None)
+    else:
+        seuser = serole = setype = serange = None
 
     try:
         keep_mode = mode.lower() == 'keep'
@@ -2688,7 +2716,11 @@ def managed(name,
                 reset=win_perms_reset)
         else:
             ret, _ = __salt__['file.check_perms'](
-                name, ret, user, group, mode, attrs, follow_symlinks)
+                name, ret, user, group, mode, attrs, follow_symlinks,
+                seuser=seuser,
+                serole=serole,
+                setype=setype,
+                serange=serange)
         if __opts__['test']:
             ret['comment'] = 'File {0} not updated'.format(name)
         elif not ret['changes'] and ret['result']:
@@ -2721,6 +2753,10 @@ def managed(name,
                     contents,
                     skip_verify,
                     keep_mode,
+                    seuser=seuser,
+                    serole=serole,
+                    setype=setype,
+                    serange=serange,
                     **kwargs
                 )
 
@@ -2830,6 +2866,10 @@ def managed(name,
                 win_perms_reset=win_perms_reset,
                 encoding=encoding,
                 encoding_errors=encoding_errors,
+                seuser=seuser,
+                serole=serole,
+                setype=setype,
+                serange=serange,
                 **kwargs)
         except Exception as exc:
             ret['changes'] = {}
@@ -2907,6 +2947,10 @@ def managed(name,
                 win_perms_reset=win_perms_reset,
                 encoding=encoding,
                 encoding_errors=encoding_errors,
+                seuser=seuser,
+                serole=serole,
+                setype=setype,
+                serange=serange,
                 **kwargs)
         except Exception as exc:
             ret['changes'] = {}
@@ -3381,7 +3425,7 @@ def directory(name,
             # NOTE: Should this be enough to stop the whole check altogether?
     if recurse_set:
         if 'user' in recurse_set:
-            if user:
+            if user or isinstance(user, int):
                 uid = __salt__['file.user_to_uid'](user)
                 # file.user_to_uid returns '' if user does not exist. Above
                 # check for user is not fatal, so we need to be sure user
@@ -3399,7 +3443,7 @@ def directory(name,
         else:
             user = None
         if 'group' in recurse_set:
-            if group:
+            if group or isinstance(group, int):
                 gid = __salt__['file.group_to_gid'](group)
                 # As above with user, we need to make sure group exists.
                 if isinstance(gid, six.string_types):
@@ -3659,20 +3703,19 @@ def recurse(name,
 
     exclude_pat
         Exclude this pattern, or list of patterns, from the source when copying.
-         If both `include_pat` and `exclude_pat` are supplied, then it will apply
-        conditions cumulatively. i.e. first select based on include_pat, and
-        then within that result apply exclude_pat.
+        If both ``include_pat`` and ``exclude_pat`` are supplied, then it will apply
+        conditions cumulatively. i.e. first select based on ``include_pat``, and
+        then within that result apply ``exclude_pat``.
 
-        Also, when 'clean=True', exclude this pattern from the removal
-        list and preserve in the destination.
-        Example:
+        Also, when ``clean=True``, exclude this pattern from the removal list
+        and preserve in the destination. For example:
 
         .. code-block:: text
 
-          - exclude_pat: APPDATA*               :: glob matches APPDATA.01,
-                                                   APPDATA.02,.. for exclusion
-          - exclude_pat: E@(APPDATA)|(TEMPDATA) :: regexp matches APPDATA
-                                                   or TEMPDATA for exclusion
+            # glob matches APPDATA.01, APPDATA.02,.. for exclusion
+            - exclude_pat: APPDATA*
+            # regexp matches APPDATA or TEMPDATA for exclusion
+            - exclude_pat: E@(APPDATA)|(TEMPDATA)
 
         .. versionchanged:: Neon
             List patterns are now supported
@@ -7209,10 +7252,10 @@ def decode(name,
 
     if not (encoded_data or contents_pillar):
         raise CommandExecutionError("Specify either the 'encoded_data' or "
-            "'contents_pillar' argument.")
+                                    "'contents_pillar' argument.")
     elif encoded_data and contents_pillar:
         raise CommandExecutionError("Specify only one 'encoded_data' or "
-            "'contents_pillar' argument.")
+                                    "'contents_pillar' argument.")
     elif encoded_data:
         content = encoded_data
     elif contents_pillar:
@@ -7238,7 +7281,6 @@ def decode(name,
         if not ret['changes']:
             ret['comment'] = 'File is in the correct state.'
             ret['result'] = True
-
             return ret
 
     if __opts__['test'] is True:
