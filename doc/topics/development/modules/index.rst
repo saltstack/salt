@@ -118,7 +118,7 @@ Util         ``salt.utils``                                                   ``
 Wheel        ``salt.wheels`` (:ref:`index <all-salt.wheel>`)                  ``wheel``                 ``wheel_dirs``
 ============ ================================================================ ========================= =====================
 
-.. [#no-fs] This module cannot be loaded from the Salt File Server.
+.. [#no-fs] These modules cannot be loaded from the Salt File Server.
 
 Execution Modules
 =================
