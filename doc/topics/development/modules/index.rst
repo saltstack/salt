@@ -36,8 +36,8 @@ The user may add modules by simply placing them in special directories in their
 :ref:`fileserver <file-server>`.
 
 These will be eventually picked up by minions, or users can use
-:py:mod:```saltutil.sync_*`` execution functions <salt.modules.saltutil>` and
-:py:mod:```saltutil.sync_*`` runner functions <salt.runners.saltutil>` to force
+:py:mod:`saltutil.sync_* execution functions <salt.modules.saltutil>` and
+:py:mod:`saltutil.sync_* runner functions <salt.runners.saltutil>` to force
 it immediately.
 
 The name of the directory inside of the file server is the directory name prepended
