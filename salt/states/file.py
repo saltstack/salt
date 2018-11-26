@@ -4685,6 +4685,7 @@ def keyvalue(
     instead of ``key_values``.
 
     .. code-block:: yaml
+
         sshd_config_harden:
             file.keyvalue:
               - name: /etc/ssh/sshd_config
@@ -4718,7 +4719,7 @@ def keyvalue(
             return _error(ret,
                     'file.keyvalue can not combine key_values with key and value')
         key_values = {str(key): value}
-    elif not type(key_values) is dict:
+    elif type(key_values) is not dict:
         return _error(ret,
                 'file.keyvalue key and value not supplied and key_values empty')
 
