@@ -146,6 +146,7 @@ class BadTestModuleNamesTestCase(TestCase):
             'integration.scheduler.test_eval',
             'integration.scheduler.test_postpone',
             'integration.scheduler.test_skip',
+            'integration.scheduler.test_maxrunning',
             'integration.shell.test_spm',
             'integration.shell.test_cp',
             'integration.shell.test_syndic',
