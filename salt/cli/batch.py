@@ -373,4 +373,3 @@ class Batch(object):
 
             for i in self._update_ret(minion_returns, ret):
                 yield i
-
