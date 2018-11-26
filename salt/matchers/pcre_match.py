@@ -7,8 +7,11 @@ from __future__ import absolute_import, print_function, unicode_literals
 import re
 
 
-def match(tgt):
+def match(tgt, opts=None):
     '''
     Returns true if the passed pcre regex matches
     '''
-    return bool(re.match(tgt, __opts__['id']))
+    if not opts:
+        return bool(re.match(tgt, __opts__['id']))
+    else:
+        return bool(re.match(tgt, opts['id']))

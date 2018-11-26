@@ -846,10 +846,8 @@ def _qemu_image_create(disk, create_overlay=False, saltenv='base'):
     log.debug('Image destination will be %s', img_dest)
     img_dir = os.path.dirname(img_dest)
     log.debug('Image destination directory is %s', img_dir)
-    try:
+    if not os.path.exists(img_dir):
         os.makedirs(img_dir)
-    except OSError:
-        pass
 
     if disk_image:
         log.debug('Create disk from specified image %s', disk_image)
@@ -1117,7 +1115,8 @@ def _complete_nics(interfaces, hypervisor, dmac=None):
 
     for interface in interfaces:
         _normalize_net_types(interface)
-        _assign_mac(interface, hypervisor)
+        if interface.get('mac', None) is None:
+            _assign_mac(interface, hypervisor)
         if hypervisor in overlays:
             _apply_default_overlay(interface)
 
@@ -1244,42 +1243,53 @@ def init(name,
     :param cpu: Number of virtual CPUs to assign to the virtual machine
     :param mem: Amount of memory to allocate to the virtual machine in MiB.
     :param image: Path to a disk image to use as the first disk (Default: ``None``).
-                  Deprecated in favor of the ``disks`` parameter. To set (or change) the image of a
-                  disk, add the following to the disks definitions:
+        Deprecated in favor of the ``disks`` parameter. To set (or change) the
+        image of a disk, add the following to the disks definitions:
 
-                  .. code-block:: python
+        .. code-block:: python
 
-                      {
-                          'name': 'name_of_disk_to_change',
-                          'image': '/path/to/the/image'
-                      }
+            {
+              'name': 'name_of_disk_to_change',
+              'image': '/path/to/the/image'
+            }
 
     :param nic: NIC profile to use (Default: ``'default'``).
-                The profile interfaces can be customized / extended with the interfaces parameter.
-                If set to ``None``, no profile will be used.
+        The profile interfaces can be customized / extended with the interfaces
+        parameter. If set to ``None``, no profile will be used.
+
     :param interfaces:
         List of dictionaries providing details on the network interfaces to create.
         These data are merged with the ones from the nic profile. The structure of
-        each dictionary is documented in :ref:`init-nic-def`.
+        each dictionary is documented in init-nic-def_.
 
         .. versionadded:: Fluorine
-    :param hypervisor: the virtual machine type. By default the value will be computed according
-                       to the virtual host capabilities.
-    :param start: ``True`` to start the virtual machine after having defined it (Default: ``True``)
-    :param disk: Disk profile to use (Default: ``'default'``). If set to ``None``, no profile will be used.
-    :param disks: List of dictionaries providing details on the disk devices to create.
-                  These data are merged with the ones from the disk profile. The structure of
-                  each dictionary is documented in :ref:`init-disk-def`.
 
-                  .. versionadded:: Fluorine
-    :param saltenv: Fileserver environment (Default: ``'base'``).
-                    See :mod:`cp module for more details <salt.modules.cp>`
-    :param seed: ``True`` to seed the disk image. Only used when the ``image`` parameter is provided.
-                 (Default: ``True``)
+    :param hypervisor: the virtual machine type. By default the value will be
+        computed according to the virtual host capabilities.
+
+    :param start: ``True`` to start the virtual machine after having defined it
+        (Default: ``True``)
+
+    :param disk: Disk profile to use (Default: ``'default'``). If set to
+        ``None``, no profile will be used.
+
+    :param disks: List of dictionaries providing details on the disk devices to
+        create. These data are merged with the ones from the disk profile. The
+        structure of each dictionary is documented in init-disk-def_.
+
+        .. versionadded:: Fluorine
+
+    :param saltenv: Fileserver environment (Default: ``'base'``)
+
+    :param seed: ``True`` to seed the disk image. Only used when the ``image``
+        parameter is provided. (Default: ``True``)
+
     :param install: install salt minion if absent (Default: ``True``)
     :param pub_key: public key to seed with (Default: ``None``)
     :param priv_key: public key to seed with (Default: ``None``)
-    :param seed_cmd: Salt command to execute to seed the image. (Default: ``'seed.apply'``)
+    :param seed_cmd: Salt command to execute to seed the image. (Default:
+        ``'seed.apply'``)
+
     :param enable_vnc:
         ``True`` to setup a vnc display for the VM (Default: ``False``)
 
@@ -1291,26 +1301,31 @@ def init(name,
             graphics={'type': 'vnc'}
 
         .. deprecated:: Fluorine
+
     :param graphics:
         Dictionary providing details on the graphics device to create. (Default: ``None``)
-        See :ref:`init-graphics-def` for more details on the possible values.
+        See init-graphics-def_ for more details on the possible values.
 
         .. versionadded:: Fluorine
+
     :param loader:
         Dictionary providing details on the BIOS firmware loader. (Default: ``None``)
-        See :ref:`init-loader-def` for more details on the possible values.
+        See init-loader-def_ for more details on the possible values.
 
         .. versionadded:: Neon
+
     :param os_type:
         type of virtualization as found in the ``//os/type`` element of the libvirt definition.
         The default value is taken from the host capabilities, with a preference for ``hvm``.
 
         .. versionadded:: Fluorine
+
     :param arch:
         architecture of the virtual machine. The default value is taken from the host capabilities,
         but ``x86_64`` is prefed over ``i686``.
 
         .. versionadded:: Fluorine
+
     :param enable_qcow:
         ``True`` to create a QCOW2 overlay image, rather than copying the image
         (Default: ``False``).
@@ -1327,6 +1342,7 @@ def init(name,
             }
 
         .. deprecated:: Fluorine
+
     :param pool:
         Path of the folder where the image files are located for vmware/esx hypervisors.
 
@@ -1341,6 +1357,7 @@ def init(name,
             }
 
         .. deprecated:: Flurorine
+
     :param dmac:
         Default MAC address to use for the network interfaces. By default MAC addresses are
         automatically generated.
@@ -1356,25 +1373,31 @@ def init(name,
             }
 
         .. deprecated:: Fluorine
-    :param config: minion configuration to use when seeding.
-                   See :mod:`seed module for more details <salt.modules.seed>`
+
+    :param config: minion configuration to use when seeding.  See :mod:`seed
+        module <salt.modules.seed>` for more details
+
     :param boot_dev: String of space-separated devices to boot from (Default: ``'hd'``)
-    :param serial_type: Serial device type. One of ``'pty'``, ``'tcp'`` (Default: ``None``)
+    :param serial_type: Serial device type. One of ``'pty'``, ``'tcp'``
+        (Default: ``None``)
     :param telnet_port: Telnet port to use for serial device of type ``tcp``.
-    :param console: ``True`` to add a console device along with serial one (Default: ``True``)
+    :param console: ``True`` to add a console device along with serial one
+        (Default: ``True``)
     :param connection: libvirt connection URI, overriding defaults
 
-                       .. versionadded:: Fluorine
+    .. versionadded:: Fluorine
+
     :param username: username to connect with, overriding defaults
 
-                     .. versionadded:: Fluorine
+    .. versionadded:: Fluorine
+
     :param password: password to connect with, overriding defaults
 
-                     .. versionadded:: Fluorine
+    .. versionadded:: Fluorine
 
     .. _init-nic-def:
 
-    .. rubric:: Network Interfaces Definitions
+    **Network Interface Definitions**
 
     Network interfaces dictionaries can contain the following properties:
 
@@ -1395,7 +1418,7 @@ def init(name,
 
     .. _init-disk-def:
 
-    .. rubric:: Disks Definitions
+    **Disk Definitions**
 
     Disk dictionaries can contain the following properties:
 
@@ -1464,7 +1487,7 @@ def init(name,
 
     .. _init-graphics-def:
 
-    .. rubric:: Graphics Definition
+    **Graphics Definition**
 
     The graphics dictionnary can have the following properties:
 
@@ -1488,7 +1511,9 @@ def init(name,
         By default, not setting the ``listen`` part of the dictionary will default to
         listen on all addresses.
 
-    .. rubric:: Loader Definition
+    .. _init-loader-def:
+
+    **Loader Definition**
 
     The loader dictionary must have the following property:
 
@@ -1498,7 +1523,7 @@ def init(name,
     Optionally, you can provide arbitrary attributes such as ``readonly`` or ``type``. See
     the libvirt documentation for all supported loader parameters.
 
-    .. rubric:: CLI Example
+    CLI Example:
 
     .. code-block:: bash
 
@@ -1611,10 +1636,11 @@ def init(name,
             else:
                 create_overlay = _disk.get('overlay_image', False)
 
-            if _disk['source_file'] and os.path.exists(_disk['source_file']):
-                img_dest = _disk['source_file']
-            elif 'source_file' not in _disk:
-                img_dest = _qemu_image_create(_disk, create_overlay, saltenv)
+            if _disk['source_file']:
+                if os.path.exists(_disk['source_file']):
+                    img_dest = _disk['source_file']
+                else:
+                    img_dest = _qemu_image_create(_disk, create_overlay, saltenv)
             else:
                 img_dest = None
 
@@ -1707,19 +1733,13 @@ def _nics_equal(nic1, nic2):
         '''
         Filter out elements to ignore when comparing nics
         '''
-        nic_copy = copy.deepcopy(nic)
-        for tag in ['mac', 'alias', 'target', 'address', 'model']:
-            element = nic_copy.find(tag)
-            if element is not None:
-                nic_copy.remove(element)
-
-        # Remove the bridge attribute if not needed: it's auto-added by libvirt
-        source = nic_copy.find('source')
-        if 'network' in source.attrib and 'bridge' in source.attrib:
-            del source.attrib['bridge']
-
-        return nic_copy
-    return ElementTree.tostring(_filter_nic(nic1)).strip() == ElementTree.tostring(_filter_nic(nic2)).strip()
+        return {
+            'type': nic.attrib['type'],
+            'source': nic.find('source').attrib[nic.attrib['type']] if nic.find('source') is not None else None,
+            'mac': nic.find('mac').attrib['address'].lower() if nic.find('mac') is not None else None,
+            'model': nic.find('model').attrib['type'] if nic.find('model') is not None else None,
+        }
+    return _filter_nic(nic1) == _filter_nic(nic2)
 
 
 def _graphics_equal(gfx1, gfx2):
@@ -1867,7 +1887,7 @@ def update(name,
         to empty list.
 
     :param graphics:
-        The new graphics definition as defined in :ref:`init-graphics-def`. If not set,
+        The new graphics definition as defined in init-graphics-def_. If not set,
         the graphics will not be changed. To remove a graphics device, set this parameter
         to ``{'type': 'none'}``.
 
@@ -2902,7 +2922,7 @@ def ctrl_alt_del(vm_, **kwargs):
 
 def create_xml_str(xml, **kwargs):  # pylint: disable=redefined-outer-name
     '''
-    Start a domain based on the XML passed to the function
+    Start a transient domain based on the XML passed to the function
 
     :param xml: libvirt XML definition of the domain
     :param connection: libvirt connection URI, overriding defaults
@@ -2929,7 +2949,7 @@ def create_xml_str(xml, **kwargs):  # pylint: disable=redefined-outer-name
 
 def create_xml_path(path, **kwargs):
     '''
-    Start a domain based on the XML-file path passed to the function
+    Start a transient domain based on the XML-file path passed to the function
 
     :param path: path to a file containing the libvirt XML definition of the domain
     :param connection: libvirt connection URI, overriding defaults
@@ -2960,7 +2980,7 @@ def create_xml_path(path, **kwargs):
 
 def define_xml_str(xml, **kwargs):  # pylint: disable=redefined-outer-name
     '''
-    Define a domain based on the XML passed to the function
+    Define a persistent domain based on the XML passed to the function
 
     :param xml: libvirt XML definition of the domain
     :param connection: libvirt connection URI, overriding defaults
@@ -2987,7 +3007,7 @@ def define_xml_str(xml, **kwargs):  # pylint: disable=redefined-outer-name
 
 def define_xml_path(path, **kwargs):
     '''
-    Define a domain based on the XML-file path passed to the function
+    Define a persistent domain based on the XML-file path passed to the function
 
     :param path: path to a file containing the libvirt XML definition of the domain
     :param connection: libvirt connection URI, overriding defaults
@@ -3313,9 +3333,9 @@ def undefine(vm_, **kwargs):
 
 def purge(vm_, dirs=False, removables=None, **kwargs):
     '''
-    Recursively destroy and delete a virtual machine, pass True for dir's to
-    also delete the directories containing the virtual machine disk images -
-    USE WITH EXTREME CAUTION!
+    Recursively destroy and delete a persistent virtual machine, pass True for
+    dir's to also delete the directories containing the virtual machine disk
+    images - USE WITH EXTREME CAUTION!
 
     Pass removables=False to avoid deleting cdrom and floppy images. To avoid
     disruption, the default but dangerous value is True. This will be changed
@@ -4761,45 +4781,55 @@ def pool_define(name,
     Create libvirt pool.
 
     :param name: Pool name
-    :param ptype:
-        Pool type. See `libvirt documentation <https://libvirt.org/storage.html>`_  for the
-        possible values.
+    :param ptype: Pool type. See `libvirt documentation
+        <https://libvirt.org/storage.html>`_  for the possible values.
     :param target: Pool full path target
     :param permissions:
-        Permissions to set on the target folder. This is mostly used for filesystem-based
-        pool types. See :ref:`pool-define-permissions` for more details on this structure.
+        Permissions to set on the target folder. This is mostly used for
+        filesystem-based pool types. See pool-define-permissions_ for more
+        details on this structure.
+
     :param source_devices:
-        List of source devices for pools backed by physical devices. (Default: ``None``)
+        List of source devices for pools backed by physical devices. (Default:
+        ``None``)
 
-        Each item in the list is a dictionary with ``path`` and optionally ``part_separator``
-        keys. The path is the qualified name for iSCSI devices.
+        Each item in the list is a dictionary with ``path`` and optionally
+        ``part_separator`` keys. The path is the qualified name for iSCSI
+        devices.
 
-        Report to `this libvirt page <https://libvirt.org/formatstorage.html#StoragePool>`_
-        for more informations on the use of ``part_separator``
-    :param source_dir:
-        Path to the source directory for pools of type ``dir``, ``netfs`` or ``gluster``.
-        (Default: ``None``)
+        Report to `this libvirt page
+        <https://libvirt.org/formatstorage.html#StoragePool>`_ for more
+        informations on the use of ``part_separator``
+
+    :param source_dir: Path to the source directory for pools of type ``dir``,
+        ``netfs`` or ``gluster``.  (Default: ``None``)
+
     :param source_adapter:
-        SCSI source definition. The value is a dictionary with ``type``, ``name``, ``parent``,
-        ``managed``, ``parent_wwnn``, ``parent_wwpn``, ``parent_fabric_wwn``, ``wwnn``, ``wwpn``
-        and ``parent_address`` keys.
+        SCSI source definition. The value is a dictionary with ``type``,
+        ``name``, ``parent``, ``managed``, ``parent_wwnn``, ``parent_wwpn``,
+        ``parent_fabric_wwn``, ``wwnn``, ``wwpn`` and ``parent_address`` keys.
 
-        The ``parent_address`` value is a dictionary with ``unique_id`` and ``address`` keys.
-        The address represents a PCI address and is itself a dictionary with ``domain``, ``bus``,
-        ``slot`` and ``function`` properties.
-        Report to `this libvirt page <https://libvirt.org/formatstorage.html#StoragePool>`_
-        for the meaning and possible values of these properties.
-    :param source_hosts:
-        List of source for pools backed by storage from remote servers. Each item is the hostname
-        optionally followed by the port separated by a colon. (Default: ``None``)
+        The ``parent_address`` value is a dictionary with ``unique_id`` and
+        ``address`` keys.  The address represents a PCI address and is itself a
+        dictionary with ``domain``, ``bus``, ``slot`` and ``function``
+        properties.  Report to `this libvirt page
+        <https://libvirt.org/formatstorage.html#StoragePool>`_ for the meaning
+        and possible values of these properties.
+
+    :param source_hosts: List of source for pools backed by storage from remote
+        servers. Each item is the hostname optionally followed by the port
+        separated by a colon. (Default: ``None``)
+
     :param source_auth:
         Source authentication details. (Default: ``None``)
 
-        The value is a dictionary with ``type``, ``username`` and ``secret`` keys. The type
-        can be one of ``ceph`` for Ceph RBD or ``chap`` for iSCSI sources.
+        The value is a dictionary with ``type``, ``username`` and ``secret``
+        keys. The type can be one of ``ceph`` for Ceph RBD or ``chap`` for
+        iSCSI sources.
 
-        The ``secret`` value links to a libvirt secret object. It is a dictionary with
-        ``type`` and ``value`` keys. The type value can be either ``uuid`` or ``usage``.
+        The ``secret`` value links to a libvirt secret object. It is a
+        dictionary with ``type`` and ``value`` keys. The type value can be
+        either ``uuid`` or ``usage``.
 
         Examples:
 
@@ -4841,7 +4871,7 @@ def pool_define(name,
 
     .. _pool-define-permissions:
 
-    .. rubric:: Permissions definition
+    **Permissions definition**
 
     The permissions are described by a dictionary containing the following keys:
 
@@ -4858,7 +4888,7 @@ def pool_define(name,
         the SELinux label. (Default: `None`)
 
 
-    .. rubric:: CLI Example:
+    CLI Example:
 
     Local folder pool:
 
