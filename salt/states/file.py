@@ -4959,9 +4959,11 @@ def replace(
     return ret
 
 
-def keyvalue_list(
+def keyvalue(
         name,
-        key_values,
+        key=None,
+        value=None,
+        key_values=None,
         separator="=",
         append_if_not_found=False,
         prepend_if_not_found=False,
@@ -4982,11 +4984,23 @@ def keyvalue_list(
     given value. Should the value be the same as the one already in the file, no
     changes will be made.
 
+    Either supply both ``key`` and ``value`` parameters, or supply a dictionary
+    with key / value pairs. It is an error to supply both.
+
     name
         Name of the file to search/replace in.
 
+    key
+        Key to search for when ensuring a value. Use in combination with a
+        ``value`` parameter.
+
+    value
+        Value to set for a given key. Use in combination with a ``key``
+        parameter.
+
     key_values
-        Key / Value pair list to search for and replace values with.
+        Dictionary of key / value pairs to search for and ensure values for.
+        Used to specify multiple key / values at once.
 
     separator : "="
         Separator which separates key from value.
@@ -5037,18 +5051,34 @@ def keyvalue_list(
         the current value is 'yes', will not result in changes when
         ``value_ignore_case`` is set to True.
 
-    An example of using ``file.keyvalue_list`` to ensure sshd does not allow
+    An example of using ``file.keyvalue`` to ensure sshd does not allow
     for root to login with a password and at the same time setting the
-    login-gracetime to 1 minute:
+    login-gracetime to 1 minute and disabling all forwarding:
 
     .. code-block:: yaml
 
         sshd_config_harden:
-            file.keyvalue_list:
+            file.keyvalue:
               - name: /etc/ssh/sshd_config
               - key_values:
-                  permitrootlogin: without-password
-                  LoginGraceTime: 1m
+                  permitrootlogin: 'without-password'
+                  LoginGraceTime: '1m'
+                  DisableForwarding: 'yes'
+              - separator: ' '
+              - uncomment: '# '
+              - key_ignore_case: True
+              - append_if_not_found: True
+
+    The same example, except for only ensuring PermitRootLogin is set correctly.
+    Thus being able to use the shorthand ``key`` and ``value`` parameters
+    instead of ``key_values``.
+
+    .. code-block:: yaml
+        sshd_config_harden:
+            file.keyvalue:
+              - name: /etc/ssh/sshd_config
+              - key: PermitRootLogin
+              - value: without-password
               - separator: ' '
               - uncomment: '# '
               - key_ignore_case: True
@@ -5056,7 +5086,7 @@ def keyvalue_list(
 
     .. note::
         Notice how the key is not matched case-sensitively, this way it will
-        also correctly identify 'PermitRootLogin' as well as 'permitrootlogin'.
+        correctly identify both 'PermitRootLogin' as well as 'permitrootlogin'.
 
     '''
     name = os.path.expanduser(name)
@@ -5071,9 +5101,15 @@ def keyvalue_list(
         }
 
     if not name:
-        return _error(ret, 'Must provide name to file.keyvalue_list')
-    if not key_values:
-        return _error(ret, 'Must provide key_values to file.keyvalue_list')
+        return _error(ret, 'Must provide name to file.keyvalue')
+    if not key is None and not value is None:
+        if type(key_values) is dict:
+            return _error(ret,
+                    'file.keyvalue can not combine key_values with key and value')
+        key_values = {str(key): value}
+    elif not type(key_values) is dict:
+        return _error(ret,
+                'file.keyvalue key and value not supplied and key_values empty')
 
     # try to open the file and only return a comment if ignore_if_missing is
     # enabled, also mark as an error if not
@@ -5289,40 +5325,6 @@ def keyvalue_list(
         ret['result'] = True
 
     return ret
-
-
-def keyvalue(
-        name,
-        key,
-        value,
-        separator='=',
-        append_if_not_found=False,
-        prepend_if_not_found=False,
-        search_only=False,
-        show_changes=True,
-        ignore_if_missing=False,
-        count=1,
-        uncomment=None,
-        key_ignore_case=False,
-        value_ignore_case=False):
-    '''
-    Do custom Key/Value replace, accepting a ``key`` and ``value`` parameter
-    instead of a list.
-    For explaination of parameters see ``file.keyvalue_list``
-    '''
-
-    return keyvalue_list(
-            name,
-            {key: value},
-            separator,
-            append_if_not_found,
-            prepend_if_not_found,
-            search_only,
-            show_changes,
-            ignore_if_missing,
-            count, uncomment,
-            key_ignore_case,
-            value_ignore_case)
 
 
 def blockreplace(
