@@ -251,15 +251,21 @@ def bridge_delete(br, if_exists=True):
 def bridge_to_parent(br):
     '''
     Returns the parent bridge of a bridge.
+    
     Args:
         br: A string - bridge name
+    
     Returns:
         Name of the parent bridge. This is the same as the bridge name if the
         bridge is not a fake bridge. If the bridge does not exist, False is
         returned.
+
     CLI Example:
+
     .. code-block:: bash
+
         salt '*' openvswitch.bridge_to_parent br0
+
     '''
     cmd = 'ovs-vsctl br-to-parent {0}'.format(br)
     result = __salt__['cmd.run_all'](cmd)
@@ -271,13 +277,18 @@ def bridge_to_parent(br):
 def bridge_to_vlan(br):
     '''
     Returns the VLAN ID of a bridge.
+
     Args:
         br: A string - bridge name
+
     Returns:
         VLAN ID of the bridge. The VLAN ID is 0 if the bridge is not a fake
         bridge.  If the bridge does not exist, False is returned.
+
     CLI Example:
+
     .. code-block:: bash
+
         salt '*' openvswitch.bridge_to_parent br0
     '''
     cmd = 'ovs-vsctl br-to-vlan {0}'.format(br)
