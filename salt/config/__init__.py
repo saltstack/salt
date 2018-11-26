@@ -93,6 +93,7 @@ def _gather_buffer_space():
     # Return the higher number between 5% of the system memory and 10MiB
     return max([total_mem * 0.05, 10 << 20])
 
+
 # For the time being this will be a fixed calculation
 # TODO: Allow user configuration
 _DFLT_IPC_WBUFFER = _gather_buffer_space() * .5
@@ -437,7 +438,7 @@ VALID_OPTS = {
     # If an event is above this size, it will be trimmed before putting it on the event bus
     'max_event_size': int,
 
-    # Enable old style events to be sent on minion_startup. Change default to False in Neon release
+    # Enable old style events to be sent on minion_startup. Change default to False in Sodium release
     'enable_legacy_startup_events': bool,
 
     # Always execute states with test=True if this flag is set
@@ -522,6 +523,7 @@ VALID_OPTS = {
     # The number of seconds to sleep between retrying an attempt to resolve the hostname of a
     # salt master
     'retry_dns': float,
+    'retry_dns_count': (type(None), int),
 
     # In the case when the resolve of the salt master hostname fails, fall back to localhost
     'resolve_dns_fallback': bool,
@@ -1197,6 +1199,9 @@ VALID_OPTS = {
     # Use Adler32 hashing algorithm for server_id (default False until Sodium, "adler32" after)
     # Possible values are: False, adler32, crc32
     'server_id_use_crc': (bool, six.string_types),
+
+    # Disable requisites during State runs
+    'disabled_requisites': (six.string_types, list),
 }
 
 # default configurations
@@ -1407,6 +1412,7 @@ DEFAULT_MINION_OPTS = {
     'update_url': False,
     'update_restart_services': [],
     'retry_dns': 30,
+    'retry_dns_count': None,
     'resolve_dns_fallback': True,
     'recon_max': 10000,
     'recon_default': 1000,
@@ -1419,7 +1425,7 @@ DEFAULT_MINION_OPTS = {
     'winrepo_dir_ng': os.path.join(salt.syspaths.BASE_FILE_ROOTS_DIR, 'win', 'repo-ng'),
     'winrepo_cachefile': 'winrepo.p',
     'winrepo_cache_expire_max': 21600,
-    'winrepo_cache_expire_min': 0,
+    'winrepo_cache_expire_min': 1800,
     'winrepo_remotes': ['https://github.com/saltstack/salt-winrepo.git'],
     'winrepo_remotes_ng': ['https://github.com/saltstack/salt-winrepo-ng.git'],
     'winrepo_branch': 'master',
@@ -1494,6 +1500,7 @@ DEFAULT_MINION_OPTS = {
     'schedule': {},
     'ssh_merge_pillar': True,
     'server_id_use_crc': False,
+    'disabled_requisites': [],
 }
 
 DEFAULT_MASTER_OPTS = {
@@ -3468,7 +3475,7 @@ def check_driver_dependencies(driver, dependencies):
         if value is False:
             log.warning(
                 "Missing dependency: '%s'. The %s driver requires "
-                "'%s' to be installed.", key, key, driver
+                "'%s' to be installed.", key, driver, key
             )
             ret = False
 
@@ -3828,7 +3835,7 @@ def _update_discovery_config(opts):
     if opts.get('discovery') not in (None, False):
         if opts['discovery'] is True:
             opts['discovery'] = {}
-        discovery_config = {'attempts': 3, 'pause': 5, 'port': 4520, 'match': 'any', 'mapping': {}}
+        discovery_config = {'attempts': 3, 'pause': 5, 'port': 4520, 'match': 'any', 'mapping': {}, 'multimaster': False}
         for key in opts['discovery']:
             if key not in discovery_config:
                 raise salt.exceptions.SaltConfigurationError('Unknown discovery option: {0}'.format(key))

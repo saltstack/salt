@@ -432,9 +432,14 @@ class SaltTestingParser(optparse.OptionParser):
                     # State matches for execution modules of the same name
                     # (e.g. unit.states.test_archive if
                     # unit.modules.test_archive is being run)
-                    if comps[-2] == 'modules':
-                        comps[-2] = 'states'
-                        _add(comps)
+                    try:
+                        if comps[-2] == 'modules':
+                            comps[-2] = 'states'
+                            _add(comps)
+                    except IndexError:
+                        # Not an execution module. This is either directly in
+                        # the salt/ directory, or salt/something/__init__.py
+                        pass
 
                 # Make sure to run a test module if it's been modified
                 elif match.group(1).startswith('tests/'):
@@ -600,7 +605,8 @@ class SaltTestingParser(optparse.OptionParser):
         if self.options.tests_logfile:
             filehandler = logging.FileHandler(
                 mode='w',           # Not preserved between re-runs
-                filename=self.options.tests_logfile
+                filename=self.options.tests_logfile,
+                encoding='utf-8',
             )
             # The logs of the file are the most verbose possible
             filehandler.setLevel(logging.DEBUG)

@@ -59,16 +59,16 @@ class SaltCacheLoader(BaseLoader):
         self.opts = opts
         self.saltenv = saltenv
         self.encoding = encoding
-        if self.opts['file_roots'] is self.opts['pillar_roots']:
-            if saltenv not in self.opts['file_roots']:
+        self.pillar_rend = pillar_rend
+        if self.pillar_rend:
+            if saltenv not in self.opts['pillar_roots']:
                 self.searchpath = []
             else:
-                self.searchpath = opts['file_roots'][saltenv]
+                self.searchpath = opts['pillar_roots'][saltenv]
         else:
             self.searchpath = [os.path.join(opts['cachedir'], 'files', saltenv)]
         log.debug('Jinja search path: %s', self.searchpath)
         self.cached = []
-        self.pillar_rend = pillar_rend
         self._file_client = None
         # Instantiate the fileclient
         self.file_client()
@@ -634,6 +634,11 @@ def symmetric_difference(lst1, lst2):
     if isinstance(lst1, collections.Hashable) and isinstance(lst2, collections.Hashable):
         return set(lst1) ^ set(lst2)
     return unique([ele for ele in union(lst1, lst2) if ele not in intersect(lst1, lst2)])
+
+
+@jinja_filter('method_call')
+def method_call(obj, f_name, *f_args, **f_kwargs):
+    return getattr(obj, f_name, lambda *args, **kwargs: None)(*f_args, **f_kwargs)
 
 
 @jinja2.contextfunction

@@ -44,7 +44,7 @@ Installation Prerequisites
 
 :maintainer: Simon Dodsley (simon@purestorage.com)
 :maturity: new
-:requires: purestorage
+:requires: purity_fb
 :platform: all
 
 .. versionadded::  Fluorine
