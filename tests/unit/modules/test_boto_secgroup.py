@@ -96,7 +96,9 @@ class BotoSecgroupTestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
         opts = salt.config.DEFAULT_MASTER_OPTS
-        utils = salt.loader.utils(opts, whitelist=['boto'])
+        utils = salt.loader.utils(
+            opts,
+            whitelist=['boto', 'args', 'systemd', 'path', 'platform'])
         funcs = salt.loader.minion_mods(opts, utils=utils)
         return {
             boto_secgroup: {

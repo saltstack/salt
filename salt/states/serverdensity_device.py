@@ -181,32 +181,31 @@ def monitored(name, group=None, salt_name=True, salt_params=True, agent_version=
         ret['changes'] = {}
         return ret
 
+    if __opts__['test']:
+        if not device_in_sd or not sd_agent_installed:
+            ret['result'] = None
+            ret['comment'] = 'Server Density agent is set to be installed and/or device created in the Server Density DB'
+            return ret
+        else:
+            ret['result'] = None
+            ret['comment'] = 'Server Density agent is already installed, or device already exists'
+            return ret
+
+    elif device_in_sd:
+        device = __salt__['serverdensity_device.ls'](name=name)[0]
+        agent_key = device['agentKey']
+        ret['comment'] = 'Device was already in Server Density db.'
+
     if not device_in_sd:
         device = __salt__['serverdensity_device.create'](name, **params_from_salt)
         agent_key = device['agentKey']
         ret['comment'] = 'Device created in Server Density db.'
         ret['changes'] = {'device_created': device}
-        if __opts__['test']:
-            ret['result'] = None
-            ret['comment'] = 'Device set to be created in Server Density db.'
-            return ret
-    elif device_in_sd:
-        device = __salt__['serverdensity_device.ls'](name=name)[0]
-        agent_key = device['agentKey']
-        ret['comment'] = 'Device was already in Server Density db.'
+
     else:
         ret['result'] = False
         ret['comment'] = 'Failed to create device in Server Density DB and this device does not exist in db either.'
         ret['changes'] = {}
-        if __opts__['test']:
-            ret['result'] = None
-            ret['comment'] = 'Agent is not installed and device is not in the Server Density DB'
-        return ret
-
-    if __opts__['test']:
-        ret['result'] = None
-        ret['comment'] = 'Server Density agent is set to be installed and device created in the Server Density DB'
-        return ret
 
     installed_agent = __salt__['serverdensity_device.install_agent'](agent_key, agent_version)
 

@@ -233,7 +233,6 @@ def runas_unpriv(cmd, username, password, cwd=None):
     '''
     Runas that works for non-priviledged users
     '''
-
     # Create a pipe to set as stdout in the child. The write handle needs to be
     # inheritable.
     c2pread, c2pwrite = salt.platform.win.CreatePipe(

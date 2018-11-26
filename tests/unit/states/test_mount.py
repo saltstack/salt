@@ -236,17 +236,64 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
         mock_swp = MagicMock(return_value=[name])
         mock_fs = MagicMock(return_value={'none': {'device': name,
                                                    'fstype': 'xfs'}})
+        mock_fs_diff = MagicMock(return_value={'none': {'device': 'something_else',
+                                               'fstype': 'xfs'}})
         mock_aixfs = MagicMock(return_value={name: {'dev': name,
                                                    'fstype': 'jfs2'}})
+        mock_emt = MagicMock(return_value={})
+        with patch.dict(mount.__grains__, {'os': 'test'}):
+            with patch.dict(mount.__salt__, {'mount.swaps': mock_swp,
+                                             'mount.fstab': mock_fs_diff,
+                                             'file.is_link': mock_f}):
+                with patch.dict(mount.__opts__, {'test': True}):
+                    comt = ('Swap {0} is set to be added to the '
+                            'fstab and to be activated'.format(name))
+                    ret.update({'comment': comt})
+                    self.assertDictEqual(mount.swap(name), ret)
+
+                with patch.dict(mount.__opts__, {'test': False}):
+                    comt = ('Swap {0} already active'.format(name))
+                    ret.update({'comment': comt, 'result': True})
+                    self.assertDictEqual(mount.swap(name, persist=False), ret)
+
+                    with patch.dict(mount.__salt__, {'mount.fstab': mock_emt,
+                                                     'mount.set_fstab': mock}):
+                        comt = ('Swap {0} already active'.format(name))
+                        ret.update({'comment': comt, 'result': True})
+                        self.assertDictEqual(mount.swap(name), ret)
+
+                        comt = ('Swap /mnt/sdb already active. '
+                                'Added new entry to the fstab.')
+                        ret.update({'comment': comt, 'result': True,
+                                    'changes': {'persist': 'new'}})
+                        self.assertDictEqual(mount.swap(name), ret)
+
+                        comt = ('Swap /mnt/sdb already active. '
+                                'Updated the entry in the fstab.')
+                        ret.update({'comment': comt, 'result': True,
+                                    'changes': {'persist': 'update'}})
+                        self.assertDictEqual(mount.swap(name), ret)
+
+                        comt = ('Swap /mnt/sdb already active. '
+                                'However, the fstab was not found.')
+                        ret.update({'comment': comt, 'result': False,
+                                    'changes': {}})
+                        self.assertDictEqual(mount.swap(name), ret)
+
+        ret = {'name': name,
+               'result': None,
+               'comment': '',
+               'changes': {}}
+
+        mock = MagicMock(side_effect=['present', 'new', 'change', 'bad config'])
         mock_emt = MagicMock(return_value={})
         with patch.dict(mount.__grains__, {'os': 'test'}):
             with patch.dict(mount.__salt__, {'mount.swaps': mock_swp,
                                              'mount.fstab': mock_fs,
                                              'file.is_link': mock_f}):
                 with patch.dict(mount.__opts__, {'test': True}):
-                    comt = ('Swap {0} is set to be added to the '
-                            'fstab and to be activated'.format(name))
-                    ret.update({'comment': comt})
+                    comt = ('Swap {0} already active'.format(name))
+                    ret.update({'comment': comt, 'result': True})
                     self.assertDictEqual(mount.swap(name), ret)
 
                 with patch.dict(mount.__opts__, {'test': False}):
