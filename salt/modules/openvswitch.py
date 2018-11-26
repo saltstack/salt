@@ -251,10 +251,10 @@ def bridge_delete(br, if_exists=True):
 def bridge_to_parent(br):
     '''
     Returns the parent bridge of a bridge.
-    
+
     Args:
         br: A string - bridge name
-    
+
     Returns:
         Name of the parent bridge. This is the same as the bridge name if the
         bridge is not a fake bridge. If the bridge does not exist, False is
