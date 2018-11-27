@@ -106,6 +106,7 @@ def get_dependencies():
 
 
 url = None
+port = None
 ticket = None
 csrf = None
 verify_ssl = None
