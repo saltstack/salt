@@ -1081,3 +1081,25 @@ def test_state_sls_mock_ret(state_tree):
             ret["cmd_|-echo1_|-echo 'This is a test!'_|-run"]["comment"]
             == "Not called, mocked"
         )
+
+
+def test_state_requires_missing(state, state_tree):
+    """
+    this tests missing requisites are found as expected
+    """
+    sls_contents = """
+    changing_state:
+      cmd.run:
+        - name: echo "Changed!"
+    missing_prereq:
+      cmd.run:
+        - name: echo "Changed!"
+        - onchanges_any:
+          - this: is missing
+        - onchanges:
+          - also: missing
+    """
+    with pytest.helpers.temp_file("req_any_missing.sls", sls_contents, state_tree):
+        ret = state.sls("req_any_missing")
+        expected = "test_|-always-passes_|-always-passes_|-succeed_without_changes"
+        assert expected in ret
