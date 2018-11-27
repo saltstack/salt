@@ -2540,9 +2540,7 @@ class State(object):
                                 found = True
                     if not found:
                         lost[requisite].append(req)
-            if lost['require'] or lost['watch'] or lost['prereq'] \
-                        or lost['onfail'] or lost['onchanges'] \
-                        or lost.get('prerequired'):
+            if set(lost.keys()) & (STATE_REQUISITE_KEYWORDS | STATE_REQUISITE_IN_KEYWORDS):
                 comment = 'The following requisites were not found:\n'
                 for requisite, lreqs in six.iteritems(lost):
                     if not lreqs:

@@ -2054,6 +2054,17 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
                 _expected = "'This is ’ test!'"
         self.assertEqual(_expected, ret[key]['changes']['stdout'])
 
+    def test_state_requires_missing(self):
+        '''
+        this tests missing requisites are found as expected
+        '''
+        state_run = self.run_function('state.apply', ['requisites.req_any_missing'])
+        state_id = 'test_|-always-passes_|-always-passes_|-succeed_without_changes'
+
+        self.assertIn(state_id, state_run)
+        self.assertEqual(state_run[state_id]['comment'], 'Success!')
+        self.assertTrue(state_run[state_id]['result'])
+
     def tearDown(self):
         nonbase_file = os.path.join(TMP, 'nonbase_env')
         if os.path.isfile(nonbase_file):
