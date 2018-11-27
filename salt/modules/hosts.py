@@ -9,13 +9,11 @@ import errno
 import os
 
 # Import salt libs
-import salt.utils.files
+import salt.utils
 import salt.utils.odict as odict
-import salt.utils.stringutils
 
 # Import 3rd-party libs
 from salt.ext import six
-from salt.ext.six.moves import range  # pylint: disable=import-error,no-name-in-module,redefined-builtin
 
 
 # pylint: disable=C0103
@@ -40,7 +38,7 @@ def _get_or_create_hostfile():
     if hfn is None:
         hfn = ''
     if not os.path.exists(hfn):
-        with salt.utils.files.fopen(hfn, 'w'):
+        with salt.utils.fopen(hfn, 'w'):
             pass
     return hfn
 
@@ -78,18 +76,36 @@ def _list_hosts():
 
         __context__['hosts._list_hosts'] = ret
         return ret
+    with salt.utils.fopen(hfn) as ifile:
+        for line in ifile:
+            line = salt.utils.to_unicode(line).strip()
+            if not line:
+                continue
+            if line.startswith('#'):
+                ret.setdefault('comment-{0}'.format(count), []).append(line)
+                count += 1
+                continue
+            if '#' in line:
+                line = line[:line.index('#')].strip()
+            comps = line.split()
+            ip = comps.pop(0)
+            ret.setdefault(ip, []).extend(comps)
+    return ret
+
+
+def _has_pair(ip, alias, hosts_list):
+    '''
+    Return true if the alias exists in the ip alias list
+    '''
+    return ip in hosts_list and alias in hosts_list[ip]
 
 
 def list_hosts():
     '''
     Return the hosts found in the hosts file in this format::
-
         {'<ip addr>': ['alias1', 'alias2', ...]}
-
     CLI Example:
-
     .. code-block:: bash
-
         salt '*' hosts.list_hosts
     '''
     # msgpack does not like OrderedDict's
@@ -99,11 +115,8 @@ def list_hosts():
 def get_ip(host):
     '''
     Return the ip associated with the named host
-
     CLI Example:
-
     .. code-block:: bash
-
         salt '*' hosts.get_ip <hostname>
     '''
     hosts = _list_hosts()
@@ -120,31 +133,21 @@ def get_ip(host):
 def get_alias(ip):
     '''
     Return the list of aliases associated with an ip
-
     Aliases (host names) are returned in the order in which they
     appear in the hosts file.  If there are no aliases associated with
     the IP, an empty list is returned.
-
     CLI Example:
-
     .. code-block:: bash
-
         salt '*' hosts.get_alias <ip addr>
     '''
-    hosts = _list_hosts()
-    if ip in hosts:
-        return hosts[ip]
-    return []
+    return _list_hosts().get(ip, list())
 
 
 def has_pair(ip, alias):
     '''
     Return true if the alias is set
-
     CLI Example:
-
     .. code-block:: bash
-
         salt '*' hosts.has_pair <ip> <alias>
     '''
     hosts = _list_hosts()
@@ -152,26 +155,22 @@ def has_pair(ip, alias):
         return alias in hosts[ip]
     except KeyError:
         return False
+    return _has_pair(ip, alias, _list_hosts())
 
 
-def set_host(ip, alias):
+def set_host(ip, alias_list):
     '''
     Set the host entry in the hosts file for the given ip, this will overwrite
     any previous entry for the given ip
-
-    .. versionchanged:: 2016.3.0
+    .. versionchanged:: 2018.09.0
         If ``alias`` does not include any host names (it is the empty
         string or contains only whitespace), all entries for the given
         IP address are removed.
-
     CLI Example:
-
     .. code-block:: bash
-
-        salt '*' hosts.set_host <ip> <alias>
+        salt '*' hosts.set_host <ip> <alias_list    >
     '''
     hfn = _get_or_create_hostfile()
-    ovr = False
     if not os.path.isfile(hfn):
         return False
 
@@ -209,106 +208,109 @@ def set_host(ip, alias):
         lines.append(line)
     with salt.utils.files.fopen(hfn, 'wb') as ofile:
         ofile.writelines(lines)
+    hosts = _list_hosts()
+
+    if not alias_list:
+        del hosts[ip]
+
+    hosts[ip] = alias_list
+
+    _write_hosts(hosts)
     return True
 
 
 def rm_host(ip, alias):
     '''
     Remove a host entry from the hosts file
-
     CLI Example:
-
     .. code-block:: bash
-
         salt '*' hosts.rm_host <ip> <alias>
     '''
     if not has_pair(ip, alias):
         return True
-    # Make sure future calls to _list_hosts() will re-read the file
-    __context__.pop('hosts._list_hosts', None)
     hfn = _get_or_create_hostfile()
-    with salt.utils.files.fopen(hfn, 'rb') as fp_:
-        lines = fp_.readlines()
-    for ind, _ in enumerate(lines):
-        tmpline = lines[ind].strip()
-        if not tmpline:
-            continue
-        if tmpline.startswith(b'#'):
-            continue
-        comps = tmpline.split()
-        b_ip = salt.utils.stringutils.to_bytes(ip)
-        b_alias = salt.utils.stringutils.to_bytes(alias)
-        if comps[0] == b_ip:
-            newline = comps[0] + b'\t\t'
-            for existing in comps[1:]:
-                if existing == b_alias:
-                    continue
-                newline += existing + b' '
-            if newline.strip() == b_ip:
-                # No aliases exist for the line, make it empty
-                lines[ind] = b''
-            else:
-                # Only an alias was removed
-                lines[ind] = newline + salt.utils.stringutils.to_bytes(os.linesep)
-    with salt.utils.files.fopen(hfn, 'wb') as ofile:
-        ofile.writelines(lines)
-    return True
+    if not os.path.isfile(hfn):
+        return False
+
+    hosts = _list_hosts()
+
+    if not _has_pair(ip, alias, hosts):
+        return True
+
+    for i, al in hosts[ip].iteritems:
+        if alias == al:
+            del hosts[ip][i]
+
+    return _write_hosts(hosts)
 
 
 def add_host(ip, alias):
     '''
     Add a host to an existing entry, if the entry is not in place then create
     it with the given host
-
     CLI Example:
-
     .. code-block:: bash
-
         salt '*' hosts.add_host <ip> <alias>
     '''
     hfn = _get_or_create_hostfile()
     if not os.path.isfile(hfn):
         return False
 
-    if has_pair(ip, alias):
-        return True
-
     hosts = _list_hosts()
 
-    # Make sure future calls to _list_hosts() will re-read the file
-    __context__.pop('hosts._list_hosts', None)
+    if _has_pair(ip, alias, hosts):
+        return True
 
-    inserted = False
-    for i, h in six.iteritems(hosts):
-        for j in range(len(h)):
-            if h[j].startswith('#') and i == ip:
-                h.insert(j, alias)
-                inserted = True
-    if not inserted:
-        hosts.setdefault(ip, []).append(alias)
-    _write_hosts(hosts)
-    return True
+    hosts[ip].append(alias)
+
+    return _write_hosts(hosts)
+
+
+def _create_alias_chunks(ip, aliases):
+    '''
+    Split aliases for a given if in order to fix compatibility issues
+        - Max 256 char as per rfc
+        - Max 8 alias per line (windows limitation)
+    '''
+    # https://github.com/saltstack/salt/issues/29592
+    simple_alias = sorted(filter(lambda x: '.' not in x, aliases))
+    fqdn_alias = sorted(filter(lambda x: '.' in x, aliases))
+    sorted_aliases = simple_alias + fqdn_alias
+    aliases_chunks = []
+    # 256 Chars as per rfc - os line break size - chars len ip - 2 (tabs after ip)
+    # https://github.com/saltstack/salt/issues/49889
+    max_chars_alias = 256 - len(os.linesep) - len(ip) - 2
+    while sorted_aliases:
+        # determine max number of alias in a line (max 8)
+        alias_per_chunk = 8 if len(sorted_aliases) >= 8 else len(sorted_aliases)
+        while len(' '.join(sorted_aliases[:alias_per_chunk])) > max_chars_alias:
+            alias_per_chunk = alias_per_chunk - 1
+
+        aliases_chunks.append(sorted_aliases[:alias_per_chunk])
+        del sorted_aliases[:alias_per_chunk]
+    return aliases_chunks
 
 
 def _write_hosts(hosts):
     lines = []
-    for ip, aliases in six.iteritems(hosts):
-        if ip:
-            if ip.startswith('comment'):
-                line = ''.join(aliases)
-            else:
-                line = '{0}\t\t{1}'.format(
-                    ip,
-                    ' '.join(aliases)
-                    )
-        lines.append(line)
+    for ip, aliases in hosts.iteritems():
+        if len(aliases) > 0:
+            chunks = _create_alias_chunks(ip, aliases)
+            for c in chunks:
+                if ip:
+                    if ip.startswith('comment'):
+                        line = ''.join(list(c))
+                    else:
+                        line = '{0}\t\t{1}'.format(ip, ' '.join(list(c)))
+                lines.append(line)
 
     hfn = _get_or_create_hostfile()
-    with salt.utils.files.fopen(hfn, 'w+') as ofile:
+    with salt.utils.fopen(hfn, 'w+') as ofile:
         for line in lines:
             if line.strip():
                 # /etc/hosts needs to end with a newline so that some utils
                 # that read it do not break
-                ofile.write(salt.utils.stringutils.to_str(
+                ofile.write(salt.utils.to_str(
                     line.strip() + six.text_type(os.linesep)
                 ))
+    return True
