@@ -149,16 +149,26 @@ Beacon
 
 * :ref:`Writing Beacons <writing-beacons>`
 
-Beacons are polled event generators. 
+Beacons are polled by the Salt event loop to monitor non-salt processes. See 
+:ref`Beacons <beacons>` for more information about the beacon system.
 
 Cache
 -----
 
+The minion cache is used by the master to store various information about
+minions. See :ref:`Minion Data Cache <cache>` for more information.
+
 Cloud
 -----
 
+Cloud modules are backend implementations used by :ref:`Salt Cloud <salt-cloud>`.
+
 Engine
 ------
+
+Engines are open-ended services managed by the Salt daemon (both master and
+minion). They may interact with event loop, call other modules, or a variety of
+non-salt tasks. See :ref:`Salt Engines <engines>` for complete details.
 
 Execution
 ---------
@@ -183,6 +193,9 @@ object.
 Executor
 --------
 
+Executors control how execution modules get called. The default is to just call
+them, but this can be customized.
+
 File Server
 -----------
 
@@ -202,8 +215,13 @@ dict keys will be added to the grains made available to the minion.
 Log Handler
 -----------
 
+Log handlers allows the logs from salt (master or minion) to be sent to log
+aggregation systems.
+
 Net API
 -------
+
+Net API modules are the actual server implementation used by Salt API.
 
 Output
 ------
@@ -229,6 +247,9 @@ state used to generate and sign libvirt certificates on the fly.
 Proxy
 -----
 
+:ref:`Proxy Minions <proxy-minion>` are a way to manage devices that cannot run
+a full minion directly.
+
 Renderers
 ---------
 
@@ -245,6 +266,8 @@ external job cache. Use the ``redis`` returner as an example.
 
 Roster
 ------
+
+The :ref:`Roster system <ssh-roster>` is used by Salt SSH to enumerate devices.
 
 Runners
 -------
