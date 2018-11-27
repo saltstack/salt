@@ -121,7 +121,7 @@ Search       ``salt.search``                                                  ``
 Serializer   ``salt.serializers`` (:ref:`index <all-salt.serializers>`)       ``serializers`` [#no-fs]_ ``serializers_dirs``
 SPM pkgdb    ``salt.spm.pkgdb``                                               ``pkgdb`` [#no-fs]_       ``pkgdb_dirs``
 SPM pkgfiles ``salt.spm.pkgfiles``                                            ``pkgfiles`` [#no-fs]_    ``pkgfiles_dirs``
-SSH Wrapper  ``salt.client.ssh``                                              ``wrapper`` [#no-fs]_     ``wrapper_dirs``
+SSH Wrapper  ``salt.client.ssh.wrapper``                                      ``wrapper`` [#no-fs]_     ``wrapper_dirs``
 State        ``salt.states`` (:ref:`index <all-salt.states>`)                 ``states``                ``states_dirs``
 Thorium      ``salt.thorium`` (:ref:`index <all-salt.thorium>`)               ``thorium`` [#no-fs]_     ``thorium_dirs``
 Top          ``salt.tops`` (:ref:`index <all-salt.tops>`)                     ``tops``                  ``top_dirs``
