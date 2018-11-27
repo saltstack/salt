@@ -195,7 +195,11 @@ function to execute. The default system outputter is the ``nested`` module.
 Pillar
 ======
 
-See also: :ref:`External Pillars <external-pillars>`
+.. toctree::
+    :maxdepth: 1
+    :glob:
+
+    external_pillars
 
 Used to define optional external pillar systems. The pillar generated via
 the filesystem pillar is passed into external pillars. This is commonly used
