@@ -88,10 +88,10 @@ This is done via setuptools entry points:
 Note that these are not synced from the Salt Master to the Minion. They must be
 installed indepdendently on the Minion.
 
-Names
------
+Module Types
+============
 
-The specific names for each of these methods are as follows. See sections below
+The specific names used by each loading method above are as follows. See sections below
 for a short summary of each of these systems.
 
 ============ ================================================================ ========================= =====================
@@ -132,7 +132,7 @@ Wheel        ``salt.wheels`` (:ref:`index <all-salt.wheel>`)                  ``
 .. [#no-fs] These modules cannot be loaded from the Salt File Server.
 
 Execution Modules
-=================
+-----------------
 
 Execution modules make up the core of the functionality used by Salt to
 interact with client systems. The execution modules create the core system
@@ -152,7 +152,7 @@ For information on writing execution modules, see :ref:`this page
 <writing-execution-modules>`.
 
 State Modules
-=============
+-------------
 
 State modules are used to define the state interfaces used by Salt States.
 These modules are restrictive in that they must follow a number of rules to
@@ -165,35 +165,35 @@ function properly.
     state.
 
 Auth
-====
+----
 
 The auth module system allows for external authentication routines to be easily
 added into Salt. The `auth` function needs to be implemented to satisfy the
 requirements of an auth module. Use the ``pam`` module as an example.
 
 Fileserver
-==========
+----------
 
 The fileserver module system is used to create fileserver backends used by the
 Salt Master. These modules need to implement the functions used in the
 fileserver subsystem. Use the ``gitfs`` module as an example.
 
 Grains
-======
+------
 
 Grain modules define extra routines to populate grains data. All defined
 public functions will be executed and MUST return a Python dict object. The
 dict keys will be added to the grains made available to the minion.
 
 Output
-======
+------
 
 The output modules supply the outputter system with routines to display data
 in the terminal. These modules are very simple and only require the `output`
 function to execute. The default system outputter is the ``nested`` module.
 
 Pillar
-======
+------
 
 .. toctree::
     :maxdepth: 1
@@ -207,32 +207,32 @@ as a bridge to database data for pillar, but is also the backend to the libvirt
 state used to generate and sign libvirt certificates on the fly.
 
 Renderers
-=========
+---------
 
 Renderers are the system used to render sls files into salt highdata for the
 state compiler. They can be as simple as the ``py`` renderer and as complex as
 ``stateconf`` and ``pydsl``.
 
 Returners
-=========
+---------
 
 Returners are used to send data from minions to external sources, commonly
 databases. A full returner will implement all routines to be supported as an
 external job cache. Use the ``redis`` returner as an example.
 
 Runners
-=======
+-------
 
 Runners are purely master-side execution sequences.
 
 Tops
-====
+----
 
 Tops modules are used to convert external data sources into top file data for
 the state system.
 
 Wheel
-=====
+-----
 
 The wheel system is used to manage master side management routines. These
 routines are primarily intended for the API to enable master configuration.
