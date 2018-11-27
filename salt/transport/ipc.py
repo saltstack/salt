@@ -10,6 +10,9 @@ import socket
 import weakref
 import time
 
+# Import 3rd-party libs
+import msgpack
+
 # Import Tornado libs
 import tornado
 import tornado.gen
@@ -21,7 +24,6 @@ from tornado.iostream import IOStream
 # Import Salt libs
 import salt.transport.client
 import salt.transport.frame
-import salt.utils.msgpack as msgpack
 from salt.ext import six
 
 log = logging.getLogger(__name__)
