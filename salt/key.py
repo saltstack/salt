@@ -38,9 +38,10 @@ from salt.ext import six
 from salt.ext.six.moves import input, zip_longest
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
 
-# Import third party libs
+# We do not always need msgpack, so we do not want to fail here if msgpack is
+# not available.
 try:
-    import msgpack
+    import salt.utils.msgpack
 except ImportError:
     pass
 
@@ -1044,7 +1045,7 @@ class RaetKey(Key):
                     if ext == '.json':
                         data = salt.utils.json.load(fp_)
                     elif ext == '.msgpack':
-                        data = msgpack.load(fp_)
+                        data = salt.utils.msgpack.load(fp_)
                     role = salt.utils.stringutils.to_unicode(data['role'])
                     if role not in minions:
                         os.remove(path)

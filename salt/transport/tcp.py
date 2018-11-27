@@ -10,7 +10,6 @@ Wire protocol: "len(payload) msgpack({'head': SOMEHEADER, 'body': SOMEBODY})"
 from __future__ import absolute_import, print_function, unicode_literals
 import errno
 import logging
-import msgpack
 import socket
 import os
 import weakref
@@ -22,6 +21,7 @@ import salt.crypt
 import salt.utils.asynchronous
 import salt.utils.event
 import salt.utils.files
+import salt.utils.msgpack as msgpack
 import salt.utils.platform
 import salt.utils.process
 import salt.utils.verify

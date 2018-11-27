@@ -23,9 +23,8 @@ from __future__ import absolute_import, print_function, unicode_literals
 import logging
 log = logging.getLogger(__name__)
 
-from json import loads, dumps
-
 # salt lib
+from salt.utils.json import loads, dumps
 from salt.ext import six
 # import NAPALM utils
 import salt.utils.napalm

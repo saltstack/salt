@@ -50,6 +50,7 @@ import salt.output
 import salt.version
 import salt.utils.color
 import salt.utils.files
+import salt.utils.msgpack as msgpack
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.process
@@ -68,7 +69,6 @@ except ImportError:
     pass
 
 # Import 3rd-party libs
-import msgpack
 from salt.ext import six
 from salt.ext.six.moves import cStringIO
 

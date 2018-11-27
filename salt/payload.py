@@ -55,6 +55,10 @@ except ImportError:
         #sys.exit(salt.defaults.exitcodes.EX_GENERIC)
 
 
+if HAS_MSGPACK:
+    import salt.utils.msgpack
+
+
 if HAS_MSGPACK and not hasattr(msgpack, 'exceptions'):
     class PackValueError(Exception):
         '''
@@ -75,14 +79,15 @@ def package(payload):
     This method for now just wraps msgpack.dumps, but it is here so that
     we can make the serialization a custom option in the future with ease.
     '''
-    return msgpack.dumps(payload)
+    return salt.utils.msgpack.dumps(payload, _msgpack_module=msgpack)
 
 
 def unpackage(package_):
     '''
     Unpackages a payload
     '''
-    return msgpack.loads(package_, use_list=True)
+    return salt.utils.msgpack.loads(package_, use_list=True,
+                                    _msgpack_module=msgpack)
 
 
 def format_payload(enc, **kwargs):
@@ -142,12 +147,17 @@ class Serial(object):
                 # that under Python 2 we can still work with older versions
                 # of msgpack.
                 try:
-                    ret = msgpack.loads(msg, use_list=True, ext_hook=ext_type_decoder, encoding=encoding)
+                    ret = salt.utils.msgpack.loads(msg, use_list=True,
+                                                   ext_hook=ext_type_decoder,
+                                                   encoding=encoding,
+                                                   _msgpack_module=msgpack)
                 except UnicodeDecodeError:
                     # msg contains binary data
                     ret = msgpack.loads(msg, use_list=True, ext_hook=ext_type_decoder)
             else:
-                ret = msgpack.loads(msg, use_list=True, ext_hook=ext_type_decoder)
+                ret = salt.utils.msgpack.loads(msg, use_list=True,
+                                               ext_hook=ext_type_decoder,
+                                               _msgpack_module=msgpack)
             if six.PY3 and encoding is None and not raw:
                 ret = salt.transport.frame.decode_embedded_strs(ret)
         except Exception as exc:
@@ -214,9 +224,12 @@ class Serial(object):
                 # Due to this, if we don't need it, don't pass it at all so
                 # that under Python 2 we can still work with older versions
                 # of msgpack.
-                return msgpack.dumps(msg, default=ext_type_encoder, use_bin_type=use_bin_type)
+                return salt.utils.msgpack.dumps(msg, default=ext_type_encoder,
+                                                use_bin_type=use_bin_type,
+                                                _msgpack_module=msgpack)
             else:
-                return msgpack.dumps(msg, default=ext_type_encoder)
+                return salt.utils.msgpack.dumps(msg, default=ext_type_encoder,
+                                                _msgpack_module=msgpack)
         except (OverflowError, msgpack.exceptions.PackValueError):
             # msgpack<=0.4.6 don't call ext encoder on very long integers raising the error instead.
             # Convert any very long longs to strings and call dumps again.
@@ -239,9 +252,12 @@ class Serial(object):
 
             msg = verylong_encoder(msg)
             if msgpack.version >= (0, 4, 0):
-                return msgpack.dumps(msg, default=ext_type_encoder, use_bin_type=use_bin_type)
+                return salt.utils.msgpack.dumps(msg, default=ext_type_encoder,
+                                                use_bin_type=use_bin_type,
+                                                _msgpack_module=msgpack)
             else:
-                return msgpack.dumps(msg, default=ext_type_encoder)
+                return salt.utils.msgpack.dumps(msg, default=ext_type_encoder,
+                                                _msgpack_module=msgpack)
 
     def dump(self, msg, fn_):
         '''
