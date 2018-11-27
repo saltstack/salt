@@ -9,8 +9,7 @@ import re
 import time
 import logging
 try:
-    import msgpack
-    HAS_MSGPACK = True
+    import salt.utils.msgpack as msgpack
 except ImportError:
     HAS_MSGPACK = False
 

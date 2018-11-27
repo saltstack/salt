@@ -96,14 +96,17 @@ log = logging.getLogger(__name__)
 try:
     # Attempt to import msgpack
     import msgpack
+    import salt.utils.msgpack
     # There is a serialization issue on ARM and potentially other platforms
     # for some msgpack bindings, check for it
     if msgpack.loads(msgpack.dumps([1, 2, 3]), use_list=True) is None:
         raise ImportError
+    import salt.utils.msgpack
 except ImportError:
     # Fall back to msgpack_pure
     try:
         import msgpack_pure as msgpack
+        import salt.utils.msgpack
     except ImportError:
         # TODO: Come up with a sane way to get a configured logfile
         #       and write to the logfile when this error is hit also
@@ -455,7 +458,7 @@ class FluentSender(object):
         packet = (tag, timestamp, data)
         if self.verbose:
             print(packet)
-        return msgpack.packb(packet)
+        return salt.utils.msgpack.packb(packet, _msgpack_module=msgpack)
 
     def _send(self, bytes_):
         self.lock.acquire()
