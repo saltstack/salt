@@ -508,11 +508,11 @@ def _function_code_present(
     )["function"]
     update = False
     if ZipFile:
-        if '://' in ZipFile:  # Looks like a remote URL to me...
-            dlZipFile = __salt__['cp.cache_file'](path=ZipFile)
+        if "://" in ZipFile:  # Looks like a remote URL to me...
+            dlZipFile = __salt__["cp.cache_file"](path=ZipFile)
             if dlZipFile is False:
-                ret['result'] = False
-                ret['comment'] = 'Failed to cache ZipFile `{0}`.'.format(ZipFile)
+                ret["result"] = False
+                ret["comment"] = "Failed to cache ZipFile `{0}`.".format(ZipFile)
                 return ret
             ZipFile = dlZipFile
         size = os.path.getsize(ZipFile)
