@@ -104,6 +104,26 @@ class HostTestCase(TestCase, LoaderModuleMockMixin):
             ret = host.present(hostname, ip_str)
             assert ret['result'] is True
             assert 'Added host {0} ({1})'.format(hostname, ip_str) in ret['comment']
+            assert 'Host {0} present for IP address {1}'.format(hostname, ip_list[0]) in ret['warnings'][0]
+            assert ret['changes'] == {
+                'added': {
+                    ip_str: [hostname],
+                },
+            }, ret['changes']
+            expected = [call(ip_str, hostname)]
+            assert add_host.mock_calls == expected, add_host.mock_calls
+            assert rm_host.mock_calls == [], rm_host.mock_calls
+
+        # Case 3a: Repeat the above with remove=True
+        add_host.reset_mock()
+        rm_host.reset_mock()
+        with patch.dict(host.__salt__,
+                        {'hosts.list_hosts': list_hosts,
+                         'hosts.add_host': add_host,
+                         'hosts.rm_host': rm_host}):
+            ret = host.present(hostname, ip_str, remove=True)
+            assert ret['result'] is True
+            assert 'Added host {0} ({1})'.format(hostname, ip_str) in ret['comment']
             assert 'Removed host {0} ({1})'.format(hostname, ip_list[0]) in ret['comment']
             assert ret['changes'] == {
                 'added': {
@@ -132,6 +152,27 @@ class HostTestCase(TestCase, LoaderModuleMockMixin):
                          'hosts.add_host': add_host,
                          'hosts.rm_host': rm_host}):
             ret = host.present(hostname, ip_list)
+            assert ret['result'] is True
+            assert 'Added host {0} ({1})'.format(hostname, ip_list[0]) in ret['comment']
+            assert 'Added host {0} ({1})'.format(hostname, ip_list[1]) in ret['comment']
+            assert ret['changes'] == {
+                'added': {
+                    ip_list[0]: [hostname],
+                    ip_list[1]: [hostname],
+                },
+            }, ret['changes']
+            expected = sorted([call(x, hostname) for x in ip_list])
+            assert sorted(add_host.mock_calls) == expected, add_host.mock_calls
+            assert rm_host.mock_calls == [], rm_host.mock_calls
+
+        # Case 4a: Repeat the above with remove=True
+        add_host.reset_mock()
+        rm_host.reset_mock()
+        with patch.dict(host.__salt__,
+                        {'hosts.list_hosts': list_hosts,
+                         'hosts.add_host': add_host,
+                         'hosts.rm_host': rm_host}):
+            ret = host.present(hostname, ip_list, remove=True)
             assert ret['result'] is True
             assert 'Added host {0} ({1})'.format(hostname, ip_list[0]) in ret['comment']
             assert 'Added host {0} ({1})'.format(hostname, ip_list[1]) in ret['comment']
@@ -166,6 +207,25 @@ class HostTestCase(TestCase, LoaderModuleMockMixin):
                          'hosts.add_host': add_host,
                          'hosts.rm_host': rm_host}):
             ret = host.present(hostname, ip_list)
+            assert ret['result'] is True
+            assert 'Added host {0} ({1})'.format(hostname, ip_list[1]) in ret['comment']
+            assert ret['changes'] == {
+                'added': {
+                    ip_list[1]: [hostname],
+                },
+            }, ret['changes']
+            expected = [call(ip_list[1], hostname)]
+            assert add_host.mock_calls == expected, add_host.mock_calls
+            assert rm_host.mock_calls == [], rm_host.mock_calls
+
+        # Case 5a: Repeat the above with remove=True
+        add_host.reset_mock()
+        rm_host.reset_mock()
+        with patch.dict(host.__salt__,
+                        {'hosts.list_hosts': list_hosts,
+                         'hosts.add_host': add_host,
+                         'hosts.rm_host': rm_host}):
+            ret = host.present(hostname, ip_list, remove=True)
             assert ret['result'] is True
             assert 'Added host {0} ({1})'.format(hostname, ip_list[1]) in ret['comment']
             assert 'Removed host {0} ({1})'.format(hostname, cur_ip) in ret['comment']
