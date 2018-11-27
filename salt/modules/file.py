@@ -570,7 +570,7 @@ def lsattr(path):
     for line in result.splitlines():
         if not line.startswith('lsattr: '):
             vals = line.split(None, 1)
-            results[vals[1]] = re.findall(r"[acdijstuADST]", vals[0])
+            results[vals[1]] = re.findall(r"[aAcCdDeijPsStTu]", vals[0])
 
     return results
 
@@ -587,8 +587,8 @@ def chattr(*files, **kwargs):
         should be added or removed from files
 
     attributes
-        One or more of the following characters: ``acdijstuADST``, representing
-        attributes to add to/remove from files
+        One or more of the following characters: ``aAcCdDeijPsStTu``,
+        representing attributes to add to/remove from files
 
     version
         a version number to assign to the file(s)
@@ -613,7 +613,7 @@ def chattr(*files, **kwargs):
         raise SaltInvocationError(
             "Need an operator: 'add' or 'remove' to modify attributes.")
     if attributes is None:
-        raise SaltInvocationError("Need attributes: [AacDdijsTtSu]")
+        raise SaltInvocationError("Need attributes: [aAcCdDeijPsStTu]")
 
     cmd = ['chattr']
 
