@@ -1205,3 +1205,36 @@ def test_state_apply_parallel_spawning_with_unpicklable_context(
         ret["test_|-This should not fail on spawning platforms_|-foo_|-nop"]["result"]
         is True
     )
+
+
+def test_state_requires_missing(state, state_tree):
+    """
+    this tests missing requisites are found as expected
+    """
+    sls_contents = """
+    changing_state:
+      cmd.run:
+        - name: echo "Changed!"
+    missing_prereq:
+      cmd.run:
+        - name: echo "Changed!"
+        - onchanges_any:
+          - this: is missing
+        - onchanges:
+          - also: missing
+    """
+    with pytest.helpers.temp_file("req_any_missing.sls", sls_contents, state_tree):
+        ret = state.sls("req_any_missing")
+        # Ensure we got something back
+        assert ret
+        # If it returns a list of errors (compile failure)
+        if isinstance(ret, list):
+            assert any("Referenced state does not exist" in err for err in ret)
+        else:
+            # If it returns results with errors in comments (runtime discovery)
+            tag = "cmd_|-missing_prereq_|-echo \"Changed!\"_|-run"
+            assert tag in ret
+            assert "The following requisites were not found" in ret[tag]["comment"]
+            assert "onchanges_any" in ret[tag]["comment"]
+            assert "onchanges" in ret[tag]["comment"]
+
