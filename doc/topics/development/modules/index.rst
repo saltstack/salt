@@ -1,3 +1,5 @@
+.. _modular-systems:
+
 ===============
 Modular Systems
 ===============
@@ -42,6 +44,8 @@ a number of them have additional dependencies and/or configuration.)
 
 The Salt File Server
 --------------------
+
+* :ref:`Dynamic Module Distribution <dynamic-module-distribution>`
 
 The user may add modules by simply placing them in special directories in their
 :ref:`fileserver <file-server>`.
@@ -94,6 +98,8 @@ Module Types
 The specific names used by each loading method above are as follows. See sections below
 for a short summary of each of these systems.
 
+.. _module-name-table:
+
 ============ ================================================================ ========================= =====================
 Module Type  Salt Package Name                                                FS/Directory Name         Entry Point
 ============ ================================================================ ========================= =====================
@@ -140,6 +146,10 @@ requirements of an auth module. Use the ``pam`` module as an example.
 
 Beacon
 ------
+
+* :ref:`Writing Beacons <writing-beacons>`
+
+Beacons are polled event generators. 
 
 Cache
 -----

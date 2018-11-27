@@ -16,18 +16,13 @@ be used.
 
 The directories are prepended with an underscore:
 
-- :file:`_beacons`
-- :file:`_clouds`
-- :file:`_engines`
 - :file:`_grains`
 - :file:`_modules`
-- :file:`_output`
-- :file:`_proxy`
-- :file:`_renderers`
-- :file:`_returners`
 - :file:`_states`
-- :file:`_tops`
+- :file:`_runners`
 - :file:`_utils`
+
+See :ref:`Modular Systems <module-name-table>` for the complete list.
 
 The contents of these directories need to be synced over to the minions after
 Python modules have been created in them. There are a number of ways to sync
