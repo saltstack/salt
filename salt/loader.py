@@ -14,6 +14,7 @@ import time
 import logging
 import inspect
 import tempfile
+import threading
 import functools
 import threading
 import traceback
@@ -33,6 +34,7 @@ import salt.utils.files
 import salt.utils.lazy
 import salt.utils.odict
 import salt.utils.platform
+import salt.utils.thread_local_proxy
 import salt.utils.versions
 import salt.utils.stringutils
 from salt.exceptions import LoaderError
@@ -1064,6 +1066,76 @@ def _mod_type(module_path):
     return 'ext'
 
 
+def _inject_into_mod(mod, name, value, force_lock=False):
+    '''
+    Inject a variable into a module. This is used to inject "globals" like
+    ``__salt__``, ``__pillar``, or ``grains``.
+
+    Instead of injecting the value directly, a ``ThreadLocalProxy`` is created.
+    If such a proxy is already present under the specified name, it is updated
+    with the new value. This update only affects the current thread, so that
+    the same name can refer to different values depending on the thread of
+    execution.
+
+    This is important for data that is not truly global. For example, pillar
+    data might be dynamically overriden through function parameters and thus
+    the actual values available in pillar might depend on the thread that is
+    calling a module.
+
+    mod:
+        module object into which the value is going to be injected.
+
+    name:
+        name of the variable that is injected into the module.
+
+    value:
+        value that is injected into the variable. The value is not injected
+        directly, but instead set as the new reference of the proxy that has
+        been created for the variable.
+
+    force_lock:
+        whether the lock should be acquired before checking whether a proxy
+        object for the specified name has already been injected into the
+        module. If ``False`` (the default), this function checks for the
+        module's variable without acquiring the lock and only acquires the lock
+        if a new proxy has to be created and injected.
+    '''
+    from salt.utils.thread_local_proxy import ThreadLocalProxy
+    old_value = getattr(mod, name, None)
+    # We use a double-checked locking scheme in order to avoid taking the lock
+    # when a proxy object has already been injected.
+    # In most programming languages, double-checked locking is considered
+    # unsafe when used without explicit memory barriers because one might read
+    # an uninitialized value. In CPython it is safe due to the global
+    # interpreter lock (GIL). In Python implementations that do not have the
+    # GIL, it could be unsafe, but at least Jython also guarantees that (for
+    # Python objects) memory is not corrupted when writing and reading without
+    # explicit synchronization
+    # (http://www.jython.org/jythonbook/en/1.0/Concurrency.html).
+    # Please note that in order to make this code safe in a runtime environment
+    # that does not make this guarantees, it is not sufficient. The
+    # ThreadLocalProxy must also be created with fallback_to_shared set to
+    # False or a lock must be added to the ThreadLocalProxy.
+    if force_lock:
+        with _inject_into_mod.lock:
+            if isinstance(old_value, ThreadLocalProxy):
+                ThreadLocalProxy.set_reference(old_value, value)
+            else:
+                setattr(mod, name, ThreadLocalProxy(value, True))
+    else:
+        if isinstance(old_value, ThreadLocalProxy):
+            ThreadLocalProxy.set_reference(old_value, value)
+        else:
+            _inject_into_mod(mod, name, value, True)
+
+
+# Lock used when injecting globals. This is needed to avoid a race condition
+# when two threads try to load the same module concurrently. This must be
+# outside the loader because there might be more than one loader for the same
+# namespace.
+_inject_into_mod.lock = threading.RLock()
+
+
 # TODO: move somewhere else?
 class FilterDictWrapper(MutableMapping):
     '''
@@ -1617,7 +1689,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
 
         # pack whatever other globals we were asked to
         for p_name, p_value in six.iteritems(self.pack):
-            setattr(mod, p_name, p_value)
+            _inject_into_mod(mod, p_name, p_value)
 
         module_name = mod.__name__.rsplit('.', 1)[-1]
 

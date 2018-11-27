@@ -13,6 +13,9 @@ except ImportError:
     # Fall back to msgpack_pure
     import msgpack_pure as msgpack  # pylint: disable=import-error
 
+# Import Salt libs
+from salt.utils.thread_local_proxy import ThreadLocalProxy
+
 
 def pack(o, stream, **kwargs):
     '''
@@ -26,7 +29,13 @@ def pack(o, stream, **kwargs):
     msgpack module using the _msgpack_module argument.
     '''
     msgpack_module = kwargs.pop('_msgpack_module', msgpack)
-    return msgpack_module.pack(o, stream, **kwargs)
+    orig_enc_func = kwargs.pop('default', lambda x: x)
+
+    def _enc_func(obj):
+        obj = ThreadLocalProxy.unproxy(obj)
+        return orig_enc_func(obj)
+
+    return msgpack_module.pack(o, stream, default=_enc_func, **kwargs)
 
 
 def packb(o, **kwargs):
@@ -41,7 +50,13 @@ def packb(o, **kwargs):
     msgpack module using the _msgpack_module argument.
     '''
     msgpack_module = kwargs.pop('_msgpack_module', msgpack)
-    return msgpack_module.packb(o, **kwargs)
+    orig_enc_func = kwargs.pop('default', lambda x: x)
+
+    def _enc_func(obj):
+        obj = ThreadLocalProxy.unproxy(obj)
+        return orig_enc_func(obj)
+
+    return msgpack_module.packb(o, default=_enc_func, **kwargs)
 
 
 def unpack(stream, **kwargs):
