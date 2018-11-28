@@ -94,12 +94,10 @@ class BatchAsync(object):
                         self.opts['gather_job_timeout'], self.next)
                     self.initialized = True
 
-        from salt.master import mylogger
         if self.initialized and self.done_minions == self.minions.difference(self.timedout_minions):
             # TODO
             # if not all available minions finish the batch
             # the event handler connection is not closed
-            mylogger.info('Closing: %s %s %s', self.done_minions, self.timedout_minions, self.down_minions)
             self.event.close_pub()
 
     def _get_next(self):
@@ -114,10 +112,8 @@ class BatchAsync(object):
 
     @tornado.gen.coroutine
     def check_find_job(self, minions):
-        from salt.master import mylogger
         did_not_return = minions.difference(self.find_job_returned)
         if did_not_return:
-            mylogger.info('Not returned: %s', did_not_return)
             for minion in did_not_return:
                 if minion in self.find_job_returned:
                     self.find_job_returned.remove(minion)
@@ -130,7 +126,6 @@ class BatchAsync(object):
 
     @tornado.gen.coroutine
     def find_job(self, minions):
-        from salt.master import mylogger
         not_done = minions.difference(self.done_minions)
         ping_return = yield self.local.run_job_async(
             not_done,
