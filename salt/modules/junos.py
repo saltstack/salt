@@ -1378,15 +1378,12 @@ def get_table(table, table_file, path=None, target=None, key=None, key_items=Non
         get_kvargs['args'] = args
     pyez_tables_path = os.path.dirname(os.path.abspath(tables_dir.__file__))
     try:
-        file_loc = glob.glob(os.path.join(path, '{}'.format(table_file))) or \
-                   glob.glob(os.path.join(pyez_tables_path, '{}'.format(table_file)))
+        if path is not None:
+            file_loc = glob.glob(os.path.join(path, '{}'.format(table_file)))
+        else:
+            file_loc = glob.glob(os.path.join(pyez_tables_path, '{}'.format(table_file)))
         if len(file_loc) == 1:
             file_name = file_loc[0]
-        elif len(file_loc) > 1:
-            ret['message'] = 'Given table file %s is located at multiple location'\
-                % table_file
-            ret['out'] = False
-            return ret
         else:
             ret['message'] = 'Given table file %s cannot be located' % table_file
             ret['out'] = False
