@@ -1063,7 +1063,7 @@ def _get_configured_repos(root=None):
             ]
         )
     else:
-        log.error("Repositories not found in {}".format(repos))
+        log.warning("Repositories not found in {}".format(repos))
 
     return repos_cfg
 
