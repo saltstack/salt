@@ -447,7 +447,7 @@ def clean_old_jobs():
                         try:
                             shutil.rmtree(f_path)
                         except OSError as err:
-                            log.error('Unable to remove %s: %s', t_path, err)
+                            log.error('Unable to remove %s: %s', f_path, err)
 
         # Remove empty JID dirs from job cache, if they're old enough.
         # JID dirs may be empty either from a previous cache-clean with the bug
@@ -518,7 +518,7 @@ def save_reg(data):
     try:
         with salt.utils.files.fopen(regfile, 'a') as fh_:
             msgpack.dump(data, fh_)
-    except:
+    except Exception:
         log.error('Could not write to msgpack file %s', __opts__['outdir'])
         raise
 
@@ -532,6 +532,6 @@ def load_reg():
     try:
         with salt.utils.files.fopen(regfile, 'r') as fh_:
             return msgpack.load(fh_)
-    except:
+    except Exception:
         log.error('Could not write to msgpack file %s', __opts__['outdir'])
         raise

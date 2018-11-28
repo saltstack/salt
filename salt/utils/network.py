@@ -60,7 +60,7 @@ def sanitize_host(host):
     Sanitize host string.
     '''
     return ''.join([
-        c for c in host[0:255] if c in (ascii_letters + digits + '.-')
+        c for c in host[0:255] if c in (ascii_letters + digits + '.-_')
     ])
 
 
@@ -198,9 +198,8 @@ def get_fqhostname():
     '''
     Returns the fully qualified hostname
     '''
-    l = [socket.getfqdn()]
-
-    # try socket.getaddrinfo
+    # try getaddrinfo()
+    fqdn = None
     try:
         addrinfo = socket.getaddrinfo(
             socket.gethostname(), 0, socket.AF_UNSPEC, socket.SOCK_STREAM,
@@ -208,12 +207,18 @@ def get_fqhostname():
         )
         for info in addrinfo:
             # info struct [family, socktype, proto, canonname, sockaddr]
-            if len(info) >= 4:
-                l = [info[3]]
+            # On Windows `canonname` can be an empty string
+            # This can cause the function to return `None`
+            if len(info) > 3 and info[3]:
+                fqdn = info[3]
+                break
     except socket.gaierror:
-        pass
-
-    return l and l[0] or None
+        pass  # NOTE: this used to log.error() but it was later disabled
+    except socket.error as err:
+        log.debug('socket.getaddrinfo() failure while finding fqdn: %s', err)
+    if fqdn is None:
+        fqdn = socket.getfqdn()
+    return fqdn
 
 
 def ip_to_host(ip):
@@ -1234,19 +1239,16 @@ def in_subnet(cidr, addr=None):
     try:
         cidr = ipaddress.ip_network(cidr)
     except ValueError:
-        log.error('Invalid CIDR \'{0}\''.format(cidr))
+        log.error('Invalid CIDR \'%s\'', cidr)
         return False
 
     if addr is None:
         addr = ip_addrs()
         addr.extend(ip_addrs6())
-    elif isinstance(addr, six.string_types):
-        return ipaddress.ip_address(addr) in cidr
+    elif not isinstance(addr, (list, tuple)):
+        addr = (addr,)
 
-    for ip_addr in addr:
-        if ipaddress.ip_address(ip_addr) in cidr:
-            return True
-    return False
+    return any(ipaddress.ip_address(item) in cidr for item in addr)
 
 
 def _ip_addrs(interface=None, include_loopback=False, interface_data=None, proto='inet'):
@@ -1352,7 +1354,7 @@ def mac2eui64(mac, prefix=None):
             net = ipaddress.ip_network(prefix, strict=False)
             euil = int('0x{0}'.format(eui64), 16)
             return '{0}/{1}'.format(net[euil], net.prefixlen)
-        except:  # pylint: disable=bare-except
+        except Exception:
             return
 
 
@@ -1846,8 +1848,16 @@ def refresh_dns():
         pass
 
 
+@jinja_filter('connection_check')
+def connection_check(addr, port=80, safe=False, ipv6=None):
+    '''
+    Provides a convenient alias for the dns_check filter.
+    '''
+    return dns_check(addr, port, safe, ipv6)
+
+
 @jinja_filter('dns_check')
-def dns_check(addr, port, safe=False, ipv6=None):
+def dns_check(addr, port=80, safe=False, ipv6=None, attempt_connect=True):
     '''
     Return the ip resolved by dns, but do not exit on failure, only raise an
     exception. Obeys system preference for IPv4/6 address resolution - this
@@ -1859,9 +1869,33 @@ def dns_check(addr, port, safe=False, ipv6=None):
     lookup = addr
     seen_ipv6 = False
     family = socket.AF_INET6 if ipv6 else socket.AF_INET if ipv6 is False else socket.AF_UNSPEC
+
+    hostnames = []
     try:
         refresh_dns()
         hostnames = socket.getaddrinfo(addr, port, family, socket.SOCK_STREAM)
+    except TypeError:
+        err = ('Attempt to resolve address \'{0}\' failed. Invalid or unresolveable address').format(lookup)
+        raise SaltSystemExit(code=42, msg=err)
+    except socket.error:
+        error = True
+
+    # If ipv6 is set to True, attempt another lookup using the IPv4 family,
+    # just in case we're attempting to lookup an IPv4 IP
+    # as an IPv6 hostname.
+    if error and ipv6:
+        try:
+            refresh_dns()
+            hostnames = socket.getaddrinfo(addr, port,
+                                           socket.AF_INET,
+                                           socket.SOCK_STREAM)
+        except TypeError:
+            err = ('Attempt to resolve address \'{0}\' failed. Invalid or unresolveable address').format(lookup)
+            raise SaltSystemExit(code=42, msg=err)
+        except socket.error:
+            error = True
+
+    try:
         if not hostnames:
             error = True
         else:
@@ -1874,17 +1908,24 @@ def dns_check(addr, port, safe=False, ipv6=None):
                     break
 
                 candidate_addr = salt.utils.zeromq.ip_bracket(h[4][0])
+
+                # sometimes /etc/hosts contains ::1 localhost
+                if not ipv6 and candidate_addr == '[::1]':
+                    continue
+
                 candidates.append(candidate_addr)
 
-                try:
-                    s = socket.socket(h[0], socket.SOCK_STREAM)
-                    s.connect((candidate_addr.strip('[]'), h[4][1]))
-                    s.close()
+                if attempt_connect:
+                    try:
+                        s = socket.socket(h[0], socket.SOCK_STREAM)
+                        s.settimeout(2)
+                        s.connect((candidate_addr.strip('[]'), h[4][1]))
+                        s.close()
 
-                    resolved = candidate_addr
-                    break
-                except socket.error:
-                    pass
+                        resolved = candidate_addr
+                        break
+                    except socket.error:
+                        pass
             if not resolved:
                 if len(candidates) > 0:
                     resolved = candidates[0]

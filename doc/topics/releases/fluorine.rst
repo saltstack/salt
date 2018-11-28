@@ -488,6 +488,18 @@ in.  Because of the non-deterministic order that grains are rendered in, the
 only grains that can be relied upon to be passed in are ``core.py`` grains,
 since those are compiled first.
 
+More Precise ``virtual`` Grain
+==============================
+
+This release improves the accuracy of the ``virtual`` grain when running Salt in
+a nested virtualization environment (e.g. ``systemd-nspawn`` container inside a
+VM) and having ``virt-what`` installed.
+
+Until now, the ``virtual`` grain was determined by matching against all output
+lines of ``virt-what`` instead of individual items which could lead to not quite
+precise results (e.g. reporting ``HyperV`` inside a ``systemd-nspawn`` container
+running within a Hyper-V-based VM.
+
 Configurable Module Environment
 ===============================
 
@@ -800,7 +812,7 @@ sent.
 
 The new :conf_minion:`enable_legacy_startup_events` minion config option
 defaults to ``True``, but will be set to default to ``False`` beginning with
-the Neon release of Salt.
+the Sodium release of Salt.
 
 The Salt Syndic currently sends an old style ``syndic_start`` event as well. The
 syndic respects :conf_minion:`enable_legacy_startup_events` as well.
@@ -1171,6 +1183,7 @@ The :py:func:`event.send <salt.states.event.send>` state does not know the
 results of the sent event, so returns changed every state run.  It can now be
 set to return changed or unchanged.
 
+
 :py:mod:`influxdb_user.present <salt.states.influxdb_user>` Influxdb User Module State
 ---------------------------------------------------------------------------------------
 
@@ -1181,7 +1194,7 @@ instance
 
 Old behavior:
 
-.. code-block:: example user in influxdb
+.. code-block:: yaml
 
     influxdb_user.present:
       - name: exampleuser
@@ -1191,13 +1204,25 @@ Old behavior:
 
 New behavior:
 
-.. code-block:: example user in influxdb
+.. code-block:: yaml
 
     influxdb_user.present:
       - name: exampleuser
       - passwd: exampleuserpassword
       - user: admin
       - password: adminpassword
+
+:conf_minion:`winrepo_cache_expire_min` Windows Package Definitions Caching
+---------------------------------------------------------------------------
+
+The :conf_minion:`winrepo_cache_expire_min` has been changed from 0 to 1800 (30 minutes)
+For example if you run highstate the package definitions are normally updated,
+however now if the package definitions are younger than :conf_minion:`winrepo_cache_expire_min`
+(30 minutes) the package definitions will not be refreshed, reducing the amount
+of time taken to run a 2nd highstate. To get the old behaviour change the value
+back to 0 in the minion configuration file. This also effects the behaviour of
+other functions which default to refresh.  The ``pkg.refresh_db`` will always
+refresh the package definitions.
 
 LDAP External Authentication
 ============================

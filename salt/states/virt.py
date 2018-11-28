@@ -254,7 +254,9 @@ def running(name,
             update=False,
             connection=None,
             username=None,
-            password=None):
+            password=None,
+            os_type=None,
+            arch=None):
     '''
     Starts an existing guest, or defines and starts a new VM with specified arguments.
 
@@ -277,7 +279,9 @@ def running(name,
         .. versionadded:: Fluorine
     :param disks:
         List of disk to create for the new virtual machine.
-        See :ref:`init-disk-def` for more details on the items on this list.
+        See the **Disk Definitions** section of the :py:func:`virt.init
+        <salt.modules.virt.init>` function for more details on the items on
+        this list.
 
         .. versionadded:: Fluorine
     :param nic_profile:
@@ -286,17 +290,21 @@ def running(name,
         .. versionadded:: Fluorine
     :param interfaces:
         List of network interfaces to create for the new virtual machine.
-        See :ref:`init-nic-def` for more details on the items on this list.
+        See the **Network Interface Definitions** section of the
+        :py:func:`virt.init <salt.modules.virt.init>` function for more details
+        on the items on this list.
 
         .. versionadded:: Fluorine
     :param graphics:
         Graphics device to create for the new virtual machine.
-        See :ref:`init-graphics-def` for more details on this dictionary
+        See the **Graphics Definition** section of the :py:func:`virt.init
+        <salt.modules.virt.init>` function for more details on this dictionary.
 
         .. versionadded:: Fluorine
     :param loader:
         Firmware loader for the new virtual machine.
-        See :ref:`init-loader-def` for more details on this dictionary
+        See the **Loader Definition** section of the :py:func:`virt.init
+        <salt.modules.virt.init>` function for more details on this dictionary.
 
         .. versionadded:: Fluorine
     :param saltenv:
@@ -332,6 +340,17 @@ def running(name,
     :param password: password to connect with, overriding defaults
 
         .. versionadded:: Fluorine
+    :param os_type:
+        type of virtualization as found in the ``//os/type`` element of the libvirt definition.
+        The default value is taken from the host capabilities, with a preference for ``hvm``.
+        Only used when creating a new virtual machine.
+
+        .. versionadded:: Neon
+    :param arch:
+        architecture of the virtual machine. The default value is taken from the host capabilities,
+        but ``x86_64`` is prefed over ``i686``. Only used when creating a new virtual machine.
+
+        .. versionadded:: Neon
 
     .. rubric:: Example States
 
@@ -435,6 +454,8 @@ def running(name,
             __salt__['virt.init'](name,
                                   cpu=cpu,
                                   mem=mem,
+                                  os_type=os_type,
+                                  arch=arch,
                                   image=image,
                                   hypervisor=vm_type,
                                   disk=disk_profile,
@@ -705,17 +726,21 @@ def pool_running(name,
 
     :param ptype: libvirt pool type
     :param target: full path to the target device or folder. (Default: ``None``)
-    :param permissions:
-        target permissions. See :ref:`pool-define-permissions` for more details on this structure.
+    :param permissions: target permissions. See the **Permissions definition**
+        section of the :py:func:`virt.pool_define
+        <salt.module.virt.pool_define>` documentation for more details on this
+        structure.
     :param source:
         dictionary containing keys matching the ``source_*`` parameters in function
-        :func:`salt.modules.virt.pool_define`.
+        :py:func:`virt.pool_define <salt.modules.virt.pool_define>`.
     :param transient:
-        when set to ``True``, the pool will be automatically undefined after being stopped. (Default: ``False``)
+        when set to ``True``, the pool will be automatically undefined after
+        being stopped. (Default: ``False``)
     :param autostart:
         Whether to start the pool when booting the host. (Default: ``True``)
     :param start:
-        When ``True``, define and start the pool, otherwise the pool will be left stopped.
+        When ``True``, define and start the pool, otherwise the pool will be
+        left stopped.
     :param connection: libvirt connection URI, overriding defaults
     :param username: username to connect with, overriding defaults
     :param password: password to connect with, overriding defaults

@@ -15,7 +15,7 @@ def __virtual__():
     '''
     Only work on Gentoo
     '''
-    if __grains__['os'] == 'Gentoo':
+    if __grains__['os_family'] == 'Gentoo':
         return 'makeconf'
     return (False, 'The makeconf execution module cannot be loaded: only available on Gentoo systems.')
 

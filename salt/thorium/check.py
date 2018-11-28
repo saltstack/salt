@@ -465,7 +465,7 @@ def len_eq(name, value):
         ret['result'] = False
         ret['comment'] = 'Value {0} not in register'.format(name)
         return ret
-    if __reg__[name]['val'] == value:
+    if len(__reg__[name]['val']) == value:
         ret['result'] = True
     return ret
 

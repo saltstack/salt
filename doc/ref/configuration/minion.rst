@@ -218,13 +218,13 @@ minion event bus. The value is expressed in bytes.
 Default: ``True``
 
 When a minion starts up it sends a notification on the event bus with a tag
-that looks like this: `salt/minion/<minion_id>/start`. For historical reasons
+that looks like this: ``salt/minion/<minion_id>/start``. For historical reasons
 the minion also sends a similar event with an event tag like this:
-`minion_start`. This duplication can cause a lot of clutter on the event bus
-when there are many minions. Set `enable_legacy_startup_events: False` in the
-minion config to ensure only the `salt/minion/<minion_id>/start` events are
-sent. Beginning with the `Neon` Salt release this option will default to
-`False`
+``minion_start``. This duplication can cause a lot of clutter on the event bus
+when there are many minions. Set ``enable_legacy_startup_events: False`` in the
+minion config to ensure only the ``salt/minion/<minion_id>/start`` events are
+sent. Beginning with the ``Sodium`` Salt release this option will default to
+``False``.
 
 .. code-block:: yaml
 
@@ -350,6 +350,23 @@ Set to zero if the minion should shutdown and not retry.
 .. code-block:: yaml
 
     retry_dns: 30
+
+.. conf_minion:: retry_dns_count
+
+``retry_dns_count``
+-------------------
+
+.. versionadded:: 2018.3.4
+
+Default: ``None``
+
+Set the number of attempts to perform when resolving
+the master hostname if name resolution fails.
+By default the minion will retry indefinitely.
+
+.. code-block:: yaml
+
+    retry_dns_count: 3
 
 .. conf_minion:: master_port
 
@@ -635,6 +652,35 @@ FQDN (for instance, Solaris).
 
     append_domain: foo.org
 
+.. conf_minion:: minion_id_remove_domain
+
+``minion_id_remove_domain``
+---------------------------
+
+.. versionadded:: Neon
+
+Default: ``False``
+
+Remove a domain when the minion id is generated as a fully qualified domain
+name (either by the user provided ``id_function``, or by Salt). This is useful
+when the minions shall be named like hostnames. Can be a single domain (to
+prevent name clashes), or True, to remove all domains.
+
+Examples:
+ - minion_id_remove_domain = foo.org
+   - FQDN = king_bob.foo.org --> minion_id = king_bob
+   - FQDN = king_bob.bar.org --> minion_id = king_bob.bar.org
+ - minion_id_remove_domain = True
+   - FQDN = king_bob.foo.org --> minion_id = king_bob
+   - FQDN = king_bob.bar.org --> minion_id = king_bob
+
+
+For more information, please see :issue:`49212` and  :pull:`49378`.
+
+.. code-block:: yaml
+
+    minion_id_remove_domain: foo.org
+
 .. conf_minion:: minion_id_lowercase
 
 ``minion_id_lowercase``
@@ -751,6 +797,30 @@ Statically assigns grains to the minion.
       deployment: datacenter4
       cabinet: 13
       cab_u: 14-15
+
+.. conf_minion:: grains_blacklist
+
+``grains_blacklist``
+--------------------
+
+Default: ``[]``
+
+Each grains key will be compared against each of the expressions in this list.
+Any keys which match will be filtered from the grains. Exact matches, glob
+matches, and regular expressions are supported.
+
+.. note::
+    Some states and execution modules depend on grains. Filtering may cause
+    them to be unavailable or run unreliably.
+
+.. versionadded:: Neon
+
+.. code-block:: yaml
+
+    grains_blacklist:
+      - cpu_flags
+      - zmq*
+      - ipv[46]
 
 .. conf_minion:: grains_cache
 
@@ -935,6 +1005,22 @@ The directory where Unix sockets will be kept.
 .. code-block:: yaml
 
     sock_dir: /var/run/salt/minion
+
+.. conf_minion:: enable_gpu_grains
+
+``enable_gpu_grains``
+---------------------
+
+Default: ``True``
+
+Enable GPU hardware data for your master. Be aware that the minion can
+take a while to start up when lspci and/or dmidecode is used to populate the
+grains for the minion, so this can be set to ``False`` if you do not need these
+grains.
+
+.. code-block:: yaml
+
+    enable_gpu_grains: False
 
 .. conf_minion:: outputter_dirs
 
@@ -1317,9 +1403,8 @@ Default: ``zeromq``
 
 Changes the underlying transport layer. ZeroMQ is the recommended transport
 while additional transport layers are under development. Supported values are
-``zeromq``, ``raet`` (experimental), and ``tcp`` (experimental). This setting has
-a significant impact on performance and should not be changed unless you know
-what you are doing!
+``zeromq`` and ``tcp`` (experimental). This setting has a significant impact
+on performance and should not be changed unless you know what you are doing!
 
 .. code-block:: yaml
 
@@ -3207,7 +3292,7 @@ have other services that need to go with it.
 
 .. versionadded:: 2016.11.0
 
-Default: ``0``
+Default: ``1800``
 
 If set to a nonzero integer, then passing ``refresh=True`` to functions in the
 :mod:`windows pkg module <salt.modules.win_pkg>` will not refresh the windows

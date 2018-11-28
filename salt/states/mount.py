@@ -515,16 +515,16 @@ def mounted(name,
                         if re.match(regex, _device):
                             _device_mismatch_is_ignored = _device
                             break
-                if __opts__['test']:
-                    ret['result'] = None
-                    ret['comment'] = "An umount would have been forced " \
-                                     + "because devices do not match.  Watched: " \
-                                     + device
-                elif _device_mismatch_is_ignored:
+                if _device_mismatch_is_ignored:
                     ret['result'] = True
                     ret['comment'] = "An umount will not be forced " \
                                      + "because device matched device_name_regex: " \
                                      + _device_mismatch_is_ignored
+                elif __opts__['test']:
+                    ret['result'] = None
+                    ret['comment'] = "An umount would have been forced " \
+                                     + "because devices do not match.  Watched: " \
+                                     + device
                 else:
                     ret['changes']['umount'] = "Forced unmount because devices " \
                                                + "don't match. Wanted: " + device
@@ -764,7 +764,7 @@ def swap(name, persist=True, config='/etc/fstab'):
         else:
             fstab_data = __salt__['mount.fstab'](config)
         if __opts__['test']:
-            if name not in fstab_data:
+            if name not in fstab_data and name not in [fstab_data[item]['device'] for item in fstab_data]:
                 ret['result'] = None
                 if name in on_:
                     ret['comment'] = ('Swap {0} is set to be added to the '
@@ -930,6 +930,12 @@ def unmounted(name,
 def mod_watch(name, user=None, **kwargs):
     '''
     The mounted watcher, called to invoke the watch command.
+
+    .. note::
+        This state exists to support special handling of the ``watch``
+        :ref:`requisite <requisites>`. It should not be called directly.
+
+        Parameters for this function should be set by the state being triggered.
 
     name
         The name of the mount point

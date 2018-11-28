@@ -33,6 +33,10 @@ import salt.utils.versions
 from salt.exceptions import CommandExecutionError, MinionError
 from salt.ext import six
 
+# Workaround for 'reload' builtin of py2.7
+if six.PY3:
+    from importlib import reload  # pylint: disable=no-name-in-module
+
 # Import third party libs
 HAS_PORTAGE = False
 try:
@@ -60,7 +64,7 @@ def __virtual__():
     '''
     Confirm this module is on a Gentoo based system
     '''
-    if HAS_PORTAGE and __grains__['os'] == 'Gentoo':
+    if HAS_PORTAGE and __grains__['os_family'] == 'Gentoo':
         return __virtualname__
     return (False, 'The ebuild execution module cannot be loaded: either the system is not Gentoo or the portage python library is not available.')
 
@@ -275,6 +279,7 @@ def latest_version(*names, **kwargs):
     if len(names) == 1:
         return ret[names[0]]
     return ret
+
 
 # available_version is being deprecated
 available_version = salt.utils.functools.alias_function(latest_version, 'available_version')

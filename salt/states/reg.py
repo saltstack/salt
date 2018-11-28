@@ -385,7 +385,6 @@ def present(name,
     ret = {'name': name,
            'result': True,
            'changes': {},
-           'pchanges': {},
            'comment': ''}
 
     hive, key = _parse_key(name)
@@ -397,6 +396,8 @@ def present(name,
                                               use_32bit_registry=use_32bit_registry)
 
     # Check if the key already exists
+    # If so, check perms
+    # We check `vdata` and `success` because `vdata` can be None
     if vdata == reg_current['vdata'] and reg_current['success']:
         ret['comment'] = '{0} in {1} is already present' \
                          ''.format(salt.utils.stringutils.to_unicode(vname, 'utf-8') if vname else '(Default)',

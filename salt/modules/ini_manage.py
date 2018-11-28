@@ -25,6 +25,9 @@ from salt.utils.odict import OrderedDict
 # Import 3rd-party libs
 from salt.ext import six
 
+import logging
+log = logging.getLogger(__name__)
+
 __virtualname__ = 'ini'
 
 
@@ -80,7 +83,8 @@ def set_option(file_name, sections=None, separator='='):
     changes = {}
     inifile = _Ini.get_ini_file(file_name, separator=separator)
     changes = inifile.update(sections)
-    inifile.flush()
+    if changes:
+        inifile.flush()
     return changes
 
 
@@ -139,7 +143,8 @@ def remove_option(file_name, section, option, separator='='):
         value = inifile.get(section, {}).pop(option, None)
     else:
         value = inifile.pop(option, None)
-    inifile.flush()
+    if value:
+        inifile.flush()
     return value
 
 
@@ -432,18 +437,25 @@ class _Ini(_Section):
         # the ini file).
         super(_Ini, self).refresh(inicontents.pop())
         for section_name, sect_ini in self._gen_tuples(inicontents):
-            sect_obj = _Section(
-                section_name, sect_ini, separator=self.sep
-            )
-            sect_obj.refresh()
-            self.update({sect_obj.name: sect_obj})
+            try:
+                sect_obj = _Section(
+                    section_name, sect_ini, separator=self.sep
+                )
+                sect_obj.refresh()
+                self.update({sect_obj.name: sect_obj})
+            except StopIteration:
+                pass
 
     def flush(self):
         try:
             with salt.utils.files.fopen(self.name, 'wb') as outfile:
                 ini_gen = self.gen_ini()
                 next(ini_gen)
-                outfile.writelines(salt.utils.data.encode(list(ini_gen)))
+                ini_gen_list = list(ini_gen)
+                # Avoid writing an initial line separator.
+                if len(ini_gen_list):
+                    ini_gen_list[0] = ini_gen_list[0].lstrip(os.linesep)
+                outfile.writelines(salt.utils.data.encode(ini_gen_list))
         except (OSError, IOError) as exc:
             raise CommandExecutionError(
                 "Unable to write file '{0}'. "
@@ -463,6 +475,6 @@ class _Ini(_Section):
                 key = list_object.pop()
                 value = list_object.pop()
             except IndexError:
-                raise StopIteration
+                return
             else:
                 yield key, value

@@ -212,10 +212,6 @@ def merge_subreturn(original_return, sub_return, subkey=None):
         original_return.setdefault('changes', {})
         original_return['changes'][subkey] = sub_return['changes']
 
-    if sub_return.get('pchanges'):  # pchanges may or may not exist
-        original_return.setdefault('pchanges', {})
-        original_return['pchanges'][subkey] = sub_return['pchanges']
-
     return original_return
 
 

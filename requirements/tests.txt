@@ -21,7 +21,8 @@ kubernetes<4.0
 psutil
 pyvmomi
 setproctitle
-cherrypy; sys.platform != 'win32' and sys.platform != 'darwin'
+cherrypy>=3.2.2,<18.0.0; python_version < '3.5' and sys.platform != 'win32' and sys.platform != 'darwin'
+cherrypy>=3.2.2; python_version >= '3.5' and sys.platform != 'win32' and sys.platform != 'darwin'
 ldap; sys.platform != 'win32' and sys.platform != 'darwin'
 pyinotify; sys.platform != 'win32' and sys.platform != 'darwin'
 PyMySQL; sys.platform != 'win32' and sys.platform != 'darwin'
@@ -30,7 +31,6 @@ strict_rfc3339
 rfc3987
 jinja2
 pyOpenSSL
-ioflo
 dnspython
 SaltTesting==2017.6.1
 junos-eznc
@@ -40,3 +40,4 @@ kazoo
 ansible; sys.platform != 'win32' and sys.platform != 'darwin' and python_version >= '3.5'
 ansible; sys.platform != 'win32' and sys.platform != 'darwin' and python_version == '2.7'
 pylxd>=2.2.5; sys.platform != 'win32' and sys.platform != 'darwin'
+jmespath

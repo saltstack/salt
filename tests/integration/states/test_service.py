@@ -41,6 +41,8 @@ class ServiceTest(ModuleCase, SaltReturnAssertsMixin):
                 self.service_name = 'com.apple.AirPlayXPCHelper'
             self.stopped = ''
             self.running = '[0-9]'
+        elif os_family == 'Windows':
+            self.service_name = 'Spooler'
 
         self.pre_srv_enabled = True if self.service_name in self.run_function('service.get_enabled') else False
         self.post_srv_disable = False
@@ -48,7 +50,7 @@ class ServiceTest(ModuleCase, SaltReturnAssertsMixin):
             self.run_function('service.enable', name=self.service_name)
             self.post_srv_disable = True
 
-        if salt.utils.path.which(cmd_name) is None:
+        if os_family != 'Windows' and salt.utils.path.which(cmd_name) is None:
             self.skipTest('{0} is not installed'.format(cmd_name))
 
     def tearDown(self):
