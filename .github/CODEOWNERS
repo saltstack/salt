@@ -13,6 +13,7 @@ salt/*/*boto*                       @saltstack/team-boto
 
 # Team Core
 requirements/*                      @saltstack/team-core
+rfcs/*                              @saltstack/team-core
 salt/auth/*                         @saltstack/team-core
 salt/cache/*                        @saltstack/team-core
 salt/cli/*                          @saltstack/team-core
@@ -73,3 +74,6 @@ salt/modules/reg.py                 @saltstack/team-windows
 salt/states/reg.py                  @saltstack/team-windows
 tests/*/*win*                       @saltstack/team-windows
 tests/*/test_reg.py                 @saltstack/team-windows
+
+# Jenkins Integration
+.ci/*                               @saltstack/saltstack-release-engineering @saltstack/team-core @saltstack/team-windows
