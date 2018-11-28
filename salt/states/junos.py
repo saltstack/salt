@@ -79,7 +79,7 @@ def rpc(name, dest=None, format='xml', args=None, **kwargs):
             *args,
             **kwargs)
     else:
-        ret['changes'] = __salt__['junos.rpc'](name, dest, format, **kwargs)
+        ret['changes'] = __salt__['junos.rpc'](name, dest, **kwargs)
     return ret
 
 
@@ -162,7 +162,7 @@ def commit(name, **kwargs):
 
 
 @resultdecorator
-def rollback(name, id, **kwargs):
+def rollback(name, **kwargs):
     '''
     Rollbacks the committed changes.
 
@@ -192,12 +192,12 @@ def rollback(name, id, **kwargs):
 
     '''
     ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
-    ret['changes'] = __salt__['junos.rollback'](id, **kwargs)
+    ret['changes'] = __salt__['junos.rollback'](**kwargs)
     return ret
 
 
 @resultdecorator
-def diff(name, d_id):
+def diff(name, **kwargs):
     '''
     Gets the difference between the candidate and the current configuration.
 
@@ -214,7 +214,7 @@ def diff(name, d_id):
           The rollback id value [0-49]. (default = 0)
     '''
     ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
-    ret['changes'] = __salt__['junos.diff'](d_id)
+    ret['changes'] = __salt__['junos.diff'](**kwargs)
     return ret
 
 
