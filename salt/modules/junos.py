@@ -1387,8 +1387,8 @@ def get_table(table, table_file, path=None, target=None, key=None, key_items=Non
                 % table_file
             ret['out'] = False
             return ret
-        elif len(file_loc) == 0:
-            ret['message'] = 'Given table file %s cannot be located' % file
+        else:
+            ret['message'] = 'Given table file %s cannot be located' % table_file
             ret['out'] = False
             return ret
         try:
@@ -1398,7 +1398,7 @@ def get_table(table, table_file, path=None, target=None, key=None, key_items=Non
                 globals().update(FactoryLoader().load(ret['table']))
         except IOError as err:
             ret['message'] = 'Uncaught exception during YAML Load - please ' \
-                             'report: {0}'.format(str(err))
+                             'report: {0}'.format(six.text_type(err))
             ret['out'] = False
             return ret
         try:
@@ -1406,7 +1406,7 @@ def get_table(table, table_file, path=None, target=None, key=None, key_items=Non
             data.get(**get_kvargs)
         except KeyError as err:
             ret['message'] = 'Uncaught exception during get API call - please ' \
-                             'report: {0}'.format(str(err))
+                             'report: {0}'.format(six.text_type(err))
             ret['out'] = False
             return ret
         ret['reply'] = json.loads(data.to_json())
