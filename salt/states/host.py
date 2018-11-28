@@ -67,7 +67,7 @@ from salt.ext import six
 import salt.utils.validate.net
 
 
-def present(name, ip, remove=False):  # pylint: disable=C0103
+def present(name, ip, clean=False):  # pylint: disable=C0103
     '''
     Ensures that the named host is present with the given ip
 
@@ -78,7 +78,7 @@ def present(name, ip, remove=False):  # pylint: disable=C0103
         The ip addr(s) to apply to the host. Can be a single IP or a list of IP
         addresses.
 
-    remove : False
+    clean : False
         Remove any entries which don't match those configured in the ``ip``
         option.
 
@@ -107,12 +107,12 @@ def present(name, ip, remove=False):  # pylint: disable=C0103
             if name in aliases:
                 # Found match for hostname, but the corresponding IP is not in
                 # our list, so we need to remove it.
-                if remove:
+                if clean:
                     to_remove.add((addr, name))
                 else:
                     ret.setdefault('warnings', []).append(
                         'Host {0} present for IP address {1}. To get rid of '
-                        'this warning, either run this state with \'remove\' '
+                        'this warning, either run this state with \'clean\' '
                         'set to True to remove {0} from {1}, or add {1} to '
                         'the \'ip\' argument.'.format(name, addr)
                     )
