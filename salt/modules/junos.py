@@ -18,6 +18,11 @@ Refer to :mod:`junos <salt.proxy.junos>` for information on connecting to junos 
 from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
+from functools import wraps
+import traceback
+import json
+import glob
+import yaml
 
 try:
     from lxml import etree
@@ -42,6 +47,11 @@ try:
     import jnpr.junos.utils
     import jnpr.junos.cfg
     import jxmlease
+    from jnpr.junos.factory.optable import OpTable
+    import jnpr.junos.op as tables_dir
+    from jnpr.junos.factory.factory_loader import FactoryLoader
+    import yamlordereddictloader
+    from jnpr.junos.exception import ConnectClosedError
     # pylint: enable=W0611
     HAS_JUNOS = True
 except ImportError:
@@ -65,8 +75,32 @@ def __virtual__():
     if HAS_JUNOS and 'proxy' in __opts__:
         return __virtualname__
     else:
-        return (False, 'The junos module could not be loaded: '
-                       'junos-eznc or jxmlease or proxy could not be loaded.')
+        return (False, 'The junos or dependent module could not be loaded: '
+                       'junos-eznc or jxmlease or or yamlordereddictloader or '
+                       'proxy could not be loaded.')
+
+
+def timeoutDecorator(function):
+    @wraps(function)
+    def wrapper(*args, **kwargs):
+        if 'dev_timeout' in kwargs:
+            conn = __proxy__['junos.conn']()
+            restore_timeout = conn.timeout
+            conn.timeout = kwargs.pop('dev_timeout', None)
+            try:
+                result = function(*args, **kwargs)
+                conn.timeout = restore_timeout
+                return result
+            except Exception:
+                conn.timeout = restore_timeout
+                raise
+        else:
+            try:
+                return function(*args, **kwargs)
+            except Exception:
+                raise
+
+    return wrapper
 
 
 def facts_refresh():
@@ -122,6 +156,7 @@ def facts():
     return ret
 
 
+@timeoutDecorator
 def rpc(cmd=None, dest=None, **kwargs):
     '''
     This function executes the RPC provided as arguments on the junos device.
@@ -183,7 +218,6 @@ def rpc(cmd=None, dest=None, **kwargs):
                 op[key] = value
     else:
         op.update(kwargs)
-    op['dev_timeout'] = six.text_type(op.pop('dev_timeout', conn.timeout))
 
     if cmd in ['get-config', 'get_config']:
         filter_reply = None
@@ -204,7 +238,6 @@ def rpc(cmd=None, dest=None, **kwargs):
             ret['out'] = False
             return ret
     else:
-        op['dev_timeout'] = int(op['dev_timeout'])
         if 'filter' in op:
             log.warning(
                 'Filter ignored as it is only used with "get-config" rpc')
@@ -242,6 +275,7 @@ def rpc(cmd=None, dest=None, **kwargs):
     return ret
 
 
+@timeoutDecorator
 def set_hostname(hostname=None, **kwargs):
     '''
     Set the device's hostname
@@ -251,6 +285,9 @@ def set_hostname(hostname=None, **kwargs):
 
     comment
         Provide a comment to the commit
+
+    dev_timeout : 30
+        The NETCONF RPC timeout (in seconds)
 
     confirm
       Provide time in minutes for commit confirmation. If this option is
@@ -277,9 +314,6 @@ def set_hostname(hostname=None, **kwargs):
                 op.update(kwargs['__pub_arg'][-1])
     else:
         op.update(kwargs)
-
-    # Setting timeout parameter
-    op['timeout'] = op.get('dev_timeout', 30)
 
     # Added to recent versions of JunOs
     # Use text format instead
@@ -315,9 +349,11 @@ def set_hostname(hostname=None, **kwargs):
         ret[
             'message'] = 'Successfully loaded host-name but pre-commit check failed.'
         conn.cu.rollback()
+
     return ret
 
 
+@timeoutDecorator
 def commit(**kwargs):
     '''
     To commit the changes loaded in the candidate configuration.
@@ -370,11 +406,6 @@ def commit(**kwargs):
         op.update(kwargs)
 
     op['detail'] = op.get('detail', False)
-    # Caching value to revert back
-    prev_timeout = conn.timeout
-    # If timeout is given
-    if 'dev_timeout' in op:
-        conn.timeout = op['dev_timeout']
 
     try:
         commit_ok = conn.cu.commit_check()
@@ -406,18 +437,19 @@ def commit(**kwargs):
         ret['message'] = 'Pre-commit check failed.'
         conn.cu.rollback()
 
-    # Reverting timeout back to previous value
-    conn.timeout = prev_timeout
-
     return ret
 
 
+@timeoutDecorator
 def rollback(**kwargs):
     '''
     Roll back the last committed configuration changes and commit
 
     id : 0
         The rollback ID value (0-49)
+
+    dev_timeout : 30
+        The NETCONF RPC timeout (in seconds)
 
     comment
       Provide a comment for the commit
@@ -530,6 +562,7 @@ def diff(**kwargs):
     return ret
 
 
+@timeoutDecorator
 def ping(dest_ip=None, **kwargs):
     '''
     Send a ping RPC to a device
@@ -592,6 +625,7 @@ def ping(dest_ip=None, **kwargs):
     return ret
 
 
+@timeoutDecorator
 def cli(command=None, **kwargs):
     '''
     Executes the CLI commands and returns the output in specified format. \
@@ -602,6 +636,9 @@ def cli(command=None, **kwargs):
 
     format : text
         Format in which to get the CLI output (either ``text`` or ``xml``)
+
+    dev_timeout : 30
+        The NETCONF RPC timeout (in seconds)
 
     dest
         Destination file where the RPC output is stored. Note that the file
@@ -636,7 +673,7 @@ def cli(command=None, **kwargs):
         op.update(kwargs)
 
     try:
-        result = conn.cli(command, format_, op, warning=False)
+        result = conn.cli(command, format_, warning=False)
     except Exception as exception:
         ret['message'] = 'Execution failed due to "{0}"'.format(exception)
         ret['out'] = False
@@ -731,6 +768,7 @@ def shutdown(**kwargs):
     return ret
 
 
+@timeoutDecorator
 def install_config(path=None, **kwargs):
     '''
     Installs the given configuration file into the candidate configuration.
@@ -821,12 +859,6 @@ def install_config(path=None, **kwargs):
                 op.update(kwargs['__pub_arg'][-1])
     else:
         op.update(kwargs)
-
-    # Caching value to revert back
-    prev_timeout = conn.timeout
-    # If timeout is given
-    if 'dev_timeout' in op:
-        conn.timeout = op['dev_timeout']
 
     template_vars = dict()
     if "template_vars" in op:
@@ -935,9 +967,6 @@ def install_config(path=None, **kwargs):
                 exception)
             ret['out'] = False
 
-    # Reverting timeout back to previous value
-    conn.timeout = prev_timeout
-
     return ret
 
 
@@ -964,6 +993,7 @@ def zeroize():
     return ret
 
 
+@timeoutDecorator
 def install_os(path=None, **kwargs):
     '''
     Installs the given image on the device. After the installation is complete\
@@ -1025,10 +1055,6 @@ def install_os(path=None, **kwargs):
     else:
         op.update(kwargs)
 
-    # If timeout is given
-    if 'dev_timeout' in op:
-        conn.timeout = op['dev_timeout']
-
     try:
         conn.sw.install(path, progress=True)
         ret['message'] = 'Installed the os.'
@@ -1049,6 +1075,7 @@ def install_os(path=None, **kwargs):
             ret['out'] = False
             return ret
         ret['message'] = 'Successfully installed and rebooted!'
+
     return ret
 
 
@@ -1096,6 +1123,7 @@ def file_copy(src=None, dest=None):
     except Exception as exception:
         ret['message'] = 'Could not copy file : "{0}"'.format(exception)
         ret['out'] = False
+
     return ret
 
 
@@ -1271,7 +1299,7 @@ def load(path=None, **kwargs):
     except Exception as exception:
         ret['message'] = 'Could not load configuration due to : "{0}"'.format(
             exception)
-        ret['format'] = template_format
+        ret['format'] = op['format']
         ret['out'] = False
         return ret
     finally:
@@ -1300,4 +1328,114 @@ def commit_check():
         ret['message'] = 'Commit check failed with {0}'.format(exception)
         ret['out'] = False
 
+    return ret
+
+
+def get_table(table, table_file, path=None, target=None, key=None, key_items=None,
+              filters=None, args=None):
+    """
+    Retrieve data from a Junos device using Tables/Views
+    Usage:
+    .. code-block:: bash
+        salt 'device_name' junos.get_table
+    Parameters:
+      Required
+        * table:
+          Name of PyEZ Table
+        * table_file:
+          YAML file that has the table specified in table parameter
+      Optional
+        * path:
+          Path of location of the YAML file.
+          defaults to op directory in jnpr.junos.op
+        * target:
+          if command need to run on FPC, can specify fpc target
+        * key:
+          To overwrite key provided in YAML
+        * key_items:
+          To select only given key items
+        * filters:
+          To select only filter for the dictionary from columns
+        * args:
+          key/value pair which should render Jinja template command
+    """
+
+    conn = __proxy__['junos.conn']()
+    ret = dict()
+    ret['out'] = True
+    ret['hostname'] = conn._hostname
+    ret['tablename'] = table
+    get_kvargs = {}
+    if target is not None:
+        get_kvargs['target'] = target
+    if key is not None:
+        get_kvargs['key'] = key
+    if key_items is not None:
+        get_kvargs['key_items'] = key_items
+    if filters is not None:
+        get_kvargs['filters'] = filters
+    if args is not None and isinstance(args, dict):
+        get_kvargs['args'] = args
+    pyez_tables_path = os.path.dirname(os.path.abspath(tables_dir.__file__))
+    try:
+        file_loc = glob.glob(os.path.join(path, '{}'.format(table_file))) or \
+                   glob.glob(os.path.join(pyez_tables_path, '{}'.format(table_file)))
+        if len(file_loc) == 1:
+            file_name = file_loc[0]
+        elif len(file_loc) > 1:
+            ret['message'] = 'Given table file %s is located at multiple location'\
+                % file
+            ret['out'] = False
+            return ret
+        elif len(file_loc) == 0:
+            ret['message'] = 'Given table file %s cannot be located' % file
+            ret['out'] = False
+            return ret
+        try:
+            with salt.utils.fopen(file_name) as fp:
+                ret['table'] = yaml.load(fp.read(),
+                                         Loader=yamlordereddictloader.Loader)
+                globals().update(FactoryLoader().load(ret['table']))
+        except IOError as err:
+            ret['message'] = 'Uncaught exception during YAML Load - please ' \
+                             'report: {0}'.format(str(err))
+            ret['out'] = False
+            return ret
+        try:
+            data = globals()[table](conn)
+            data.get(**get_kvargs)
+        except KeyError as err:
+            ret['message'] = 'Uncaught exception during get API call - please ' \
+                             'report: {0}'.format(str(err))
+            ret['out'] = False
+            return ret
+        ret['reply'] = json.loads(data.to_json())
+        if data.__class__.__bases__[0] == OpTable:
+            # Sets key value if not present in YAML. To be used by returner
+            if ret['table'][table].get('key') is None:
+                ret['table'][table]['key'] = data.ITEM_NAME_XPATH
+            # If key is provided from salt state file.
+            if key is not None:
+                ret['table'][table]['key'] = data.KEY
+        else:
+            if target is not None:
+                ret['table'][table]['target'] = data.TARGET
+            if key is not None:
+                ret['table'][table]['key'] = data.KEY
+            if key_items is not None:
+                ret['table'][table]['key_items'] = data.KEY_ITEMS
+            if args is not None:
+                ret['table'][table]['args'] = data.CMD_ARGS
+                ret['table'][table]['command'] = data.GET_CMD
+    except ConnectClosedError:
+        ret['message'] = 'Got ConnectClosedError exception. Connection lost ' \
+                         'with %s' % conn
+        ret['out'] = False
+        return ret
+    except Exception as err:
+        ret['message'] = 'Uncaught exception - please report: {0}'.format(
+            str(err))
+        traceback.print_exc()
+        ret['out'] = False
+        return ret
     return ret
