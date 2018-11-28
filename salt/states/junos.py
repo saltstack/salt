@@ -32,7 +32,7 @@ def resultdecorator(function):
 
 
 @resultdecorator
-def rpc(name, dest=None, format='xml', args=None, **kwargs):
+def rpc(name, dest=None, **kwargs):
     '''
     Executes the given rpc. The returned data can be stored in a file
     by specifying the destination path with dest as an argument
@@ -71,15 +71,7 @@ def rpc(name, dest=None, format='xml', args=None, **kwargs):
               Name of the interface whose information you want.
     '''
     ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
-    if args is not None:
-        ret['changes'] = __salt__['junos.rpc'](
-            name,
-            dest,
-            format,
-            *args,
-            **kwargs)
-    else:
-        ret['changes'] = __salt__['junos.rpc'](name, dest, **kwargs)
+    ret['changes'] = __salt__['junos.rpc'](name, dest, **kwargs)
     return ret
 
 
