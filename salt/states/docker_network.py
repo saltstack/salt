@@ -299,7 +299,7 @@ def present(name,
     labels
         Add metadata to the network. Labels can be set both with and without
         values, and labels with values can be passed either as ``key=value`` or
-        ``key: value `` pairs. For example, while the below would be very
+        ``key: value`` pairs. For example, while the below would be very
         confusing to read, it is technically valid, and demonstrates the
         different ways in which labels can be passed:
 
@@ -346,7 +346,7 @@ def present(name,
             get an error unless you have set up a fixed IPv6 subnet. Consult
             the `Docker IPv6 docs`_ for information on how to do this.
 
-        .. _`Doocker IPv6 docs`: https://docs.docker.com/engine/userguide/networking/default_network/ipv6/
+            .. _`Docker IPv6 docs`: https://docs.docker.com/v17.09/engine/userguide/networking/default_network/ipv6/
 
     attachable : False
         If ``True``, and the network is in the global scope, non-service
@@ -392,7 +392,7 @@ def present(name,
 
     This state supports networks with either IPv4, or both IPv4 and IPv6. If
     configuring IPv4, then you can pass the :ref:`IPAM pool arguments
-    `<salt-states-docker-network-present-ipam-pool-arguments>` below as
+    <salt-states-docker-network-present-ipam-pool-arguments>` below as
     individual arguments. However, if configuring IPv4 and IPv6, the arguments
     must be passed as a list of dictionaries, in the ``ipam_pools`` argument
     (click :ref:`here <salt-states-docker-network-present-ipam-examples>` for

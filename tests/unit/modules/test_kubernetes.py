@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Jochen Breuer <jbreuer@suse.de>`
+    :codeauthor: Jochen Breuer <jbreuer@suse.de>
 '''
 
 # Import Python Libs
@@ -20,6 +20,7 @@ from tests.support.mock import (
 )
 
 import salt.utils.files
+import salt.utils.platform
 from salt.modules import kubernetes
 
 
@@ -176,7 +177,10 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(kubernetes.__salt__, {'config.option': Mock(side_effect=self.settings)}):
                 mock_kubernetes_lib.config.load_kube_config = Mock()
                 config = kubernetes._setup_conn(kubeconfig_data='MTIzNDU2Nzg5MAo=', context='newcontext')
-                self.assertTrue(config['kubeconfig'].startswith('/tmp/salt-kubeconfig-'))
+                check_path = os.path.join('/tmp', 'salt-kubeconfig-')
+                if salt.utils.platform.is_windows():
+                    check_path = os.path.join(os.environ.get('TMP'), 'salt-kubeconfig-')
+                self.assertTrue(config['kubeconfig'].lower().startswith(check_path.lower()))
                 self.assertTrue(os.path.exists(config['kubeconfig']))
                 with salt.utils.files.fopen(config['kubeconfig'], 'r') as kcfg:
                     self.assertEqual('1234567890\n', kcfg.read())

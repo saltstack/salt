@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 
     tests.conftest
     ~~~~~~~~~~~~~~
@@ -88,9 +88,9 @@ def pytest_addoption(parser):
     parser.addoption(
         '--transport',
         default='zeromq',
-        choices=('zeromq', 'raet', 'tcp'),
+        choices=('zeromq', 'tcp'),
         help=('Select which transport to run the integration tests with, '
-              'zeromq, raet, or tcp. Default: %default')
+              'zeromq or tcp. Default: %default')
     )
     test_selection_group = parser.getgroup('Tests Selection')
     test_selection_group.addoption(
@@ -102,6 +102,14 @@ def pytest_addoption(parser):
         help='Run salt-ssh tests. These tests will spin up a temporary '
              'SSH server on your machine. In certain environments, this '
              'may be insecure! Default: False'
+    )
+    test_selection_group.addoption(
+        '--proxy',
+        '--proxy-tests',
+        dest='proxy',
+        action='store_true',
+        default=False,
+        help='Run proxy tests'
     )
     test_selection_group.addoption(
         '--run-destructive',
@@ -246,11 +254,13 @@ def pytest_runtest_setup(item):
     if destructive_tests_marker is not None:
         if item.config.getoption('--run-destructive') is False:
             pytest.skip('Destructive tests are disabled')
+    os.environ['DESTRUCTIVE_TESTS'] = six.text_type(item.config.getoption('--run-destructive'))
 
     expensive_tests_marker = item.get_marker('expensive_test')
     if expensive_tests_marker is not None:
         if item.config.getoption('--run-expensive') is False:
             pytest.skip('Expensive tests are disabled')
+    os.environ['EXPENSIVE_TESTS'] = six.text_type(item.config.getoption('--run-expensive'))
 
     skip_if_not_root_marker = item.get_marker('skip_if_not_root')
     if skip_if_not_root_marker is not None:
@@ -641,7 +651,8 @@ def test_daemon(request):
               ('sysinfo', request.config.getoption('--sysinfo')),
               ('no_colors', request.config.getoption('--no-colors')),
               ('output_columns', request.config.getoption('--output-columns')),
-              ('ssh', request.config.getoption('--ssh')))
+              ('ssh', request.config.getoption('--ssh')),
+              ('proxy', request.config.getoption('--proxy')))
     options = namedtuple('options', [n for n, v in values])(*[v for n, v in values])
     fake_parser = namedtuple('parser', 'options')(options)
 

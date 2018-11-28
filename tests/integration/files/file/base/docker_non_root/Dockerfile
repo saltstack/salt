@@ -1,4 +1,4 @@
-FROM opensuse/python:latest
+FROM centos:latest
 
 RUN useradd -m daniel
 USER daniel

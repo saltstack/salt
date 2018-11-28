@@ -8,6 +8,7 @@ Provide authentication using simple LDAP binds
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 import logging
+import itertools
 from salt.ext import six
 
 # Import salt libs
@@ -31,6 +32,7 @@ __defopts__ = {'auth.ldap.basedn': '',
                'auth.ldap.uri': '',
                'auth.ldap.server': 'localhost',
                'auth.ldap.port': '389',
+               'auth.ldap.starttls': False,
                'auth.ldap.tls': False,
                'auth.ldap.no_verify': False,
                'auth.ldap.anonymous': False,
@@ -81,7 +83,9 @@ class _LDAPConnection(object):
     Setup an LDAP connection.
     '''
 
-    def __init__(self, uri, server, port, tls, no_verify, binddn, bindpw,
+    def __init__(self, uri, server, port,
+                 starttls, tls, no_verify,
+                 binddn, bindpw,
                  anonymous, accountattributename, activedirectory=False):
         '''
         Bind to an LDAP directory using passed credentials.
@@ -89,8 +93,8 @@ class _LDAPConnection(object):
         self.uri = uri
         self.server = server
         self.port = port
+        self.starttls = starttls
         self.tls = tls
-        schema = 'ldaps' if tls else 'ldap'
         self.binddn = binddn
         self.bindpw = bindpw
         if not HAS_LDAP:
@@ -98,6 +102,13 @@ class _LDAPConnection(object):
                 'LDAP connection could not be made, the python-ldap module is '
                 'not installed. Install python-ldap to use LDAP external auth.'
             )
+        if self.starttls and self.tls:
+            raise CommandExecutionError(
+                'Cannot bind with both starttls and tls enabled.'
+                'Please enable only one of the protocols'
+            )
+
+        schema = 'ldaps' if tls else 'ldap'
         if self.uri == '':
             self.uri = '{0}://{1}:{2}'.format(schema, self.server, self.port)
 
@@ -115,6 +126,8 @@ class _LDAPConnection(object):
                     raise CommandExecutionError(
                         'LDAP bind password is not set: password cannot be empty if auth.ldap.anonymous is False'
                     )
+                if self.starttls:
+                    self.ldap.start_tls_s()
                 self.ldap.simple_bind_s(self.binddn, self.bindpw)
         except Exception as ldap_error:
             raise CommandExecutionError(
@@ -135,7 +148,8 @@ def _bind_for_search(anonymous=False, opts=None):
     connargs = {}
     # config params (auth.ldap.*)
     params = {
-        'mandatory': ['uri', 'server', 'port', 'tls', 'no_verify', 'anonymous',
+        'mandatory': ['uri', 'server', 'port', 'starttls', 'tls',
+                      'no_verify', 'anonymous',
                       'accountattributename', 'activedirectory'],
         'additional': ['binddn', 'bindpw', 'filter', 'groupclass',
                        'auth_by_group_membership_only'],
@@ -179,7 +193,8 @@ def _bind(username, password, anonymous=False, opts=None):
     connargs = {}
     # config params (auth.ldap.*)
     params = {
-        'mandatory': ['uri', 'server', 'port', 'tls', 'no_verify', 'anonymous',
+        'mandatory': ['uri', 'server', 'port', 'starttls', 'tls',
+                      'no_verify', 'anonymous',
                       'accountattributename', 'activedirectory'],
         'additional': ['binddn', 'bindpw', 'filter', 'groupclass',
                        'auth_by_group_membership_only'],
@@ -283,9 +298,15 @@ def auth(username, password):
         log.error('LDAP authentication requires python-ldap module')
         return False
 
-    # If bind credentials are configured, use them instead of user's
+    # If bind credentials are configured, verify that we receive a valid bind
     if _config('binddn', mandatory=False) and _config('bindpw', mandatory=False):
         bind = _bind_for_search(anonymous=_config('anonymous', mandatory=False))
+
+        # If username & password are not None, attempt to verify they are valid
+        if bind and username and password:
+            bind = _bind(username, password,
+                         anonymous=_config('auth_by_group_membership_only', mandatory=False)
+                         and _config('anonymous', mandatory=False))
     else:
         bind = _bind(username, password,
                      anonymous=_config('auth_by_group_membership_only', mandatory=False)
@@ -358,10 +379,11 @@ def groups(username, **kwargs):
             search_results = bind.search_s(search_base,
                                            ldap.SCOPE_SUBTREE,
                                            search_string,
-                                           [salt.utils.stringutils.to_str(_config('accountattributename')), str('cn')])  # future lint: disable=blacklisted-function
+                                           [salt.utils.stringutils.to_str(_config('accountattributename')), salt.utils.stringutils.to_str(_config('groupattribute')), str('cn')])  # future lint: disable=blacklisted-function
 
             for entry, result in search_results:
-                for user in result[_config('accountattributename')]:
+                for user in itertools.chain(result.get(_config('accountattributename'), []),
+                                            result.get(_config('groupattribute'), [])):
                     if username == salt.utils.stringutils.to_unicode(user).split(',')[0].split('=')[-1]:
                         group_list.append(entry.split(',')[0].split('=')[-1])
 

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
-    :codeauthor: :email:`Alexandru Bleotu (alexandru.bleotu@morganstanley.com)`
+    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
+    :codeauthor: Alexandru Bleotu (alexandru.bleotu@morganstanley.com)
 
 
     salt.utils.schema

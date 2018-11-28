@@ -63,7 +63,7 @@ GitFS, as described :ref:`here <gitfs-dependencies>`.
     used for git_pillar remotes. This is the reverse behavior from gitfs, where
     branches/tags make up your environments.
 
-    See :ref:`here <git_pillar-config-opts>` for documentation on the
+    See :ref:`here <git-pillar-config-opts>` for documentation on the
     git_pillar configuration options and their usage.
 
 Here is an example git_pillar configuration:
@@ -144,7 +144,7 @@ The corresponding Pillar top file would look like this:
 
 .. code-block:: yaml
 
-    {{saltenv}}:
+    "{{saltenv}}":
       '*':
         - bar
 
@@ -163,7 +163,7 @@ instead of ``gitfs`` (e.g. :conf_master:`git_pillar_pubkey`,
 .. _GitPython: https://github.com/gitpython-developers/GitPython
 .. _pygit2: https://github.com/libgit2/pygit2
 
-.. _git-pillar-multiple-repos:
+.. _git-pillar-multiple-remotes:
 
 How Multiple Remotes Are Handled
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

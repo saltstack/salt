@@ -1,5 +1,5 @@
-salt.states.infoblox_cname module
-===========================
+salt.states.infoblox_cname
+==========================
 
 .. automodule:: salt.states.infoblox_cname
     :members:

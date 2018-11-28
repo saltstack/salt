@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
 Pass Renderer for Salt
+======================
 
 pass_ is an encrypted on-disk password store.
 

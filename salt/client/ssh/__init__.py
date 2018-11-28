@@ -281,6 +281,10 @@ class SSH(object):
                 salt.config.DEFAULT_MASTER_OPTS['ssh_passwd']
             ),
             'priv': priv,
+            'priv_passwd': self.opts.get(
+                'ssh_priv_passwd',
+                salt.config.DEFAULT_MASTER_OPTS['ssh_priv_passwd']
+            ),
             'timeout': self.opts.get(
                 'ssh_timeout',
                 salt.config.DEFAULT_MASTER_OPTS['ssh_timeout']
@@ -347,7 +351,9 @@ class SSH(object):
             return
 
         hostname = self.opts['tgt'].split('@')[-1]
-        needs_expansion = '*' not in hostname and salt.utils.network.is_reachable_host(hostname)
+        needs_expansion = '*' not in hostname and \
+                          salt.utils.network.is_reachable_host(hostname) and \
+                          salt.utils.network.is_ip(hostname)
         if needs_expansion:
             hostname = salt.utils.network.ip_to_host(hostname)
             if hostname is None:
@@ -407,7 +413,7 @@ class SSH(object):
                 'host': hostname,
                 'user': user,
             }
-            if not self.opts.get('ssh_skip_roster'):
+            if self.opts.get('ssh_update_roster'):
                 self._update_roster()
 
     def get_pubkey(self):
@@ -440,7 +446,7 @@ class SSH(object):
             if target.get('passwd', False) or self.opts['ssh_passwd']:
                 self._key_deploy_run(host, target, False)
             return ret
-        if (ret[host].get('stderr') or '').count('Permission denied'):
+        if ret[host].get('stderr', '').count('Permission denied'):
             target = self.targets[host]
             # permission denied, attempt to auto deploy ssh key
             print(('Permission denied for host {0}, do you want to deploy '
@@ -697,7 +703,7 @@ class SSH(object):
         '''
         Execute the overall routine, print results via outputters
         '''
-        if self.opts['list_hosts']:
+        if self.opts.get('list_hosts'):
             self._get_roster()
             ret = {}
             for roster_file in self.__parsed_rosters:
@@ -824,6 +830,7 @@ class Single(object):
             port=None,
             passwd=None,
             priv=None,
+            priv_passwd=None,
             timeout=30,
             sudo=False,
             tty=False,
@@ -885,6 +892,7 @@ class Single(object):
                 'port': port,
                 'passwd': passwd,
                 'priv': priv,
+                'priv_passwd': priv_passwd,
                 'timeout': timeout,
                 'sudo': sudo,
                 'tty': tty,
@@ -1047,10 +1055,10 @@ class Single(object):
             opts_pkg['module_dirs'] = self.opts['module_dirs']
             opts_pkg['_ssh_version'] = self.opts['_ssh_version']
             opts_pkg['__master_opts__'] = self.context['master_opts']
-            if '_caller_cachedir' in self.opts:
-                opts_pkg['_caller_cachedir'] = self.opts['_caller_cachedir']
             if 'known_hosts_file' in self.opts:
                 opts_pkg['known_hosts_file'] = self.opts['known_hosts_file']
+            if '_caller_cachedir' in self.opts:
+                opts_pkg['_caller_cachedir'] = self.opts['_caller_cachedir']
             else:
                 opts_pkg['_caller_cachedir'] = self.opts['cachedir']
             # Use the ID defined in the roster file
@@ -1243,7 +1251,10 @@ ARGS = {arguments}\n'''.format(config=self.minion_config,
             shim_tmp_file.write(salt.utils.stringutils.to_bytes(cmd_str))
 
         # Copy shim to target system, under $HOME/.<randomized name>
-        target_shim_file = '.{0}.{1}'.format(binascii.hexlify(os.urandom(6)).decode('ascii'), extension)
+        target_shim_file = '.{0}.{1}'.format(
+            binascii.hexlify(os.urandom(6)).decode('ascii'),
+            extension
+        )
         if self.winrm:
             target_shim_file = saltwinshell.get_target_shim_file(self, target_shim_file)
         self.shell.send(shim_tmp_file.name, target_shim_file, makedirs=True)
@@ -1340,12 +1351,20 @@ ARGS = {arguments}\n'''.format(config=self.minion_config,
                     if not self.tty:
                         # If RSTR is not seen in both stdout and stderr then there
                         # was a thin deployment problem.
-                        log.error('ERROR: Failure deploying thin, retrying: %s\n%s', stdout, stderr)
+                        log.error(
+                            'ERROR: Failure deploying thin, retrying:\n'
+                            'STDOUT:\n%s\nSTDERR:\n%s\nRETCODE: %s',
+                            stdout, stderr, retcode
+                        )
                         return self.cmd_block()
                     elif not re.search(RSTR_RE, stdout):
                         # If RSTR is not seen in stdout with tty, then there
                         # was a thin deployment problem.
-                        log.error('ERROR: Failure deploying thin, retrying: %s\n%s', stdout, stderr)
+                        log.error(
+                            'ERROR: Failure deploying thin, retrying:\n'
+                            'STDOUT:\n%s\nSTDERR:\n%s\nRETCODE: %s',
+                            stdout, stderr, retcode
+                        )
                 while re.search(RSTR_RE, stdout):
                     stdout = re.split(RSTR_RE, stdout, 1)[1].strip()
                 if self.tty:
@@ -1387,6 +1406,30 @@ ARGS = {arguments}\n'''.format(config=self.minion_config,
         perm_error_fmt = 'Permissions problem, target user may need '\
                          'to be root or use sudo:\n {0}'
 
+        def _version_mismatch_error():
+            messages = {
+                2: {
+                    6: 'Install Python 2.7 / Python 3 Salt dependencies on the Salt SSH master \n'
+                       'to interact with Python 2.7 / Python 3 targets',
+                    7: 'Install Python 2.6 / Python 3 Salt dependencies on the Salt SSH master \n'
+                       'to interact with Python 2.6 / Python 3 targets',
+                },
+                3: {
+                    'default': '- Install Python 2.6/2.7 Salt dependencies on the Salt SSH \n'
+                               '  master to interact with Python 2.6/2.7 targets\n'
+                               '- Install Python 3 on the target machine(s)',
+                },
+                'default': 'Matching major/minor Python release (>=2.6) needed both on the Salt SSH \n'
+                           'master and target machine',
+            }
+            major, minor = sys.version_info[:2]
+            help_msg = (
+                messages.get(major, {}).get(minor)
+                or messages.get(major, {}).get('default')
+                or messages['default']
+            )
+            return 'Python version error. Recommendation(s) follow:\n' + help_msg
+
         errors = [
             (
                 (),
@@ -1396,7 +1439,7 @@ ARGS = {arguments}\n'''.format(config=self.minion_config,
             (
                 (salt.defaults.exitcodes.EX_THIN_PYTHON_INVALID,),
                 'Python interpreter is too old',
-                'salt requires python 2.6 or newer on target hosts, must have same major version as origin host'
+                _version_mismatch_error()
             ),
             (
                 (salt.defaults.exitcodes.EX_THIN_CHECKSUM,),

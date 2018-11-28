@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 
 
     salt.config.schemas.ssh
@@ -54,6 +54,9 @@ class RosterEntryConfig(Schema):
     priv = StringItem(title='Private Key',
                       description='File path to ssh private key, defaults to salt-ssh.rsa',
                       min_length=1)
+    priv_passwd = SecretItem(title='Private Key passphrase',
+                             description='Passphrase for private key file',
+                             min_length=1)
     passwd_or_priv_requirement = AnyOfItem(items=(RequirementsItem(requirements=['passwd']),
                                                   RequirementsItem(requirements=['priv'])))(flatten=True)
     sudo = BooleanItem(title='Sudo',

@@ -712,14 +712,14 @@ def _wait_for_ip(name, session):
             delta.seconds, name
         )
         if delta.seconds > 180:
-            log.warn('Timeout getting IP address')
+            log.warning('Timeout getting IP address')
             break
         time.sleep(5)
 
 
 def _run_async_task(task=None, session=None):
     '''
-    Run  XenAPI task in async mode to prevent timeouts
+    Run  XenAPI task in asynchronous mode to prevent timeouts
     '''
     if task is None or session is None:
         return None

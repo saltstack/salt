@@ -1,15 +1,15 @@
 # -*- coding: utf-8 -*-
 '''
     Fluent Logging Handler
-    ========================
+    ======================
 
     .. versionadded:: 2015.8.0
 
-    This module provides some `Fluent`_ logging handlers.
+    This module provides some fluentd_ logging handlers.
 
 
     Fluent Logging Handler
-    -------------------
+    ----------------------
 
     In the `fluent` configuration file:
 
@@ -60,16 +60,15 @@
     Log Level
     .........
 
-    The ``fluent_handler``
-    configuration section accepts an additional setting ``log_level``. If not
-    set, the logging level used will be the one defined for ``log_level`` in
-    the global configuration file section.
+    The ``fluent_handler`` configuration section accepts an additional setting
+    ``log_level``. If not set, the logging level used will be the one defined
+    for ``log_level`` in the global configuration file section.
 
     .. admonition:: Inspiration
 
         This work was inspired in `fluent-logger-python`_
 
-    .. _`fluentd`: http://www.fluentd.org
+    .. _fluentd: http://www.fluentd.org
     .. _`fluent-logger-python`: https://github.com/fluent/fluent-logger-python
 
 '''

@@ -91,6 +91,8 @@ Available in
 
 The ``__pillar__`` dictionary contains the pillar for the respective minion.
 
+.. _dunder-context:
+
 __context__
 -----------
 

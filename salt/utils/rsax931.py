@@ -36,6 +36,9 @@ def _load_libcrypto():
             'libcrypto.so*'))[0])
     else:
         lib = find_library('crypto')
+        if not lib and sys.platform.startswith('sunos5'):
+            # ctypes.util.find_library defaults to 32 bit library path on sunos5, test for 64 bit python execution
+            lib = find_library('crypto', sys.maxsize > 2**32)
         if not lib and salt.utils.platform.is_sunos():
             # Solaris-like distribution that use pkgsrc have
             # libraries in a non standard location.
@@ -71,10 +74,9 @@ def _init_libcrypto():
     libcrypto.RSA_public_decrypt.argtypes = (c_int, c_char_p, c_char_p, c_void_p, c_int)
 
     try:
-        if libcrypto.OPENSSL_init_crypto(OPENSSL_INIT_NO_LOAD_CONFIG |
-                                         OPENSSL_INIT_ADD_ALL_CIPHERS |
-                                         OPENSSL_INIT_ADD_ALL_DIGESTS, None) != 1:
-            raise OSError("Failed to initialize OpenSSL library (OPENSSL_init_crypto failed)")
+        libcrypto.OPENSSL_init_crypto(OPENSSL_INIT_NO_LOAD_CONFIG |
+                                      OPENSSL_INIT_ADD_ALL_CIPHERS |
+                                      OPENSSL_INIT_ADD_ALL_DIGESTS, None)
     except AttributeError:
         # Support for OpenSSL < 1.1 (OPENSSL_API_COMPAT < 0x10100000L)
         libcrypto.OPENSSL_no_config()

@@ -11,11 +11,16 @@ import subprocess
 import os
 import plistlib
 import time
+import xml.parsers.expat
+try:
+    import pwd
+except ImportError:
+    # The pwd module is not available on all platforms
+    pass
 
 # Import Salt Libs
 import salt.modules.cmdmod
 import salt.utils.args
-import salt.utils.decorators as decorators
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
@@ -35,6 +40,16 @@ DEFAULT_SHELL = salt.grains.extra.shell()['shell']
 log = logging.getLogger(__name__)
 
 __virtualname__ = 'mac_utils'
+
+__salt__ = {
+    'cmd.run_all': salt.modules.cmdmod._run_all_quiet,
+    'cmd.run': salt.modules.cmdmod._run_quiet,
+}
+
+if six.PY2:
+    class InvalidFileException(Exception):
+        pass
+    plistlib.InvalidFileException = InvalidFileException
 
 
 def __virtual__():
@@ -112,6 +127,18 @@ def _run_all(cmd):
     ret['stderr'] = err
 
     return ret
+
+
+def _check_launchctl_stderr(ret):
+    '''
+    helper class to check the launchctl stderr.
+    launchctl does not always return bad exit code
+    if there is a failure
+    '''
+    err = ret['stderr'].lower()
+    if 'service is disabled' in err:
+        return True
+    return False
 
 
 def execute_return_success(cmd):
@@ -267,10 +294,12 @@ def launchctl(sub_cmd, *args, **kwargs):
 
     # Run command
     kwargs['python_shell'] = False
-    ret = salt.modules.cmdmod.run_all(cmd, **kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
+    ret = __salt__['cmd.run_all'](cmd, **kwargs)
+    error = _check_launchctl_stderr(ret)
 
     # Raise an error or return successful result
-    if ret['retcode']:
+    if ret['retcode'] or error:
         out = 'Failed to {0} service:\n'.format(sub_cmd)
         out += 'stdout: {0}\n'.format(ret['stdout'])
         out += 'stderr: {0}\n'.format(ret['stderr'])
@@ -280,20 +309,39 @@ def launchctl(sub_cmd, *args, **kwargs):
         return ret['stdout'] if return_stdout else True
 
 
-def _available_services():
+def _available_services(refresh=False):
     '''
-    This is a helper function needed for testing. We are using the memoziation
-    decorator on the `available_services` function, which causes the function
-    to run once and then return the results of the first run on subsequent
-    calls. This causes problems when trying to test the functionality of the
-    `available_services` function.
+    This is a helper function for getting the available macOS services.
+
+    The strategy is to look through the known system locations for
+    launchd plist files, parse them, and use their information for
+    populating the list of services. Services can run without a plist
+    file present, but normally services which have an automated startup
+    will have a plist file, so this is a minor compromise.
     '''
+    try:
+        if __context__['available_services'] and not refresh:
+            log.debug('Found context for available services.')
+            __context__['using_cached_services'] = True
+            return __context__['available_services']
+    except KeyError:
+        pass
+
     launchd_paths = [
         '/Library/LaunchAgents',
         '/Library/LaunchDaemons',
         '/System/Library/LaunchAgents',
         '/System/Library/LaunchDaemons',
     ]
+
+    try:
+        for user in os.listdir('/Users/'):
+            agent_path = '/Users/{}/Library/LaunchAgents'.format(user)
+            if os.path.isdir(agent_path):
+                launchd_paths.append(agent_path)
+    except OSError:
+        pass
+
     _available_services = dict()
     for launch_dir in launchd_paths:
         for root, dirs, files in salt.utils.path.os_walk(launch_dir):
@@ -306,47 +354,75 @@ def _available_services():
                 # Follow symbolic links of files in _launchd_paths
                 file_path = os.path.join(root, file_name)
                 true_path = os.path.realpath(file_path)
-
+                log.trace('Gathering service info for %s', true_path)
                 # ignore broken symlinks
                 if not os.path.exists(true_path):
                     continue
 
                 try:
-                    # This assumes most of the plist files
-                    # will be already in XML format
-                    plist = plistlib.readPlist(true_path)
+                    if six.PY2:
+                        # py2 plistlib can't read binary plists, and
+                        # uses a different API than py3.
+                        plist = plistlib.readPlist(true_path)
+                    else:
+                        with salt.utils.files.fopen(true_path, 'rb') as handle:
+                            plist = plistlib.load(handle)
 
-                except Exception:
-                    # If plistlib is unable to read the file we'll need to use
-                    # the system provided plutil program to do the conversion
+                except plistlib.InvalidFileException:
+                    # Raised in python3 if the file is not XML.
+                    # There's nothing we can do; move on to the next one.
+                    msg = 'Unable to parse "%s" as it is invalid XML: InvalidFileException.'
+                    logging.warning(msg, true_path)
+                    continue
+
+                except xml.parsers.expat.ExpatError:
+                    # Raised by py2 for all errors.
+                    # Raised by py3 if the file is XML, but with errors.
+                    if six.PY3:
+                        # There's an error in the XML, so move on.
+                        msg = 'Unable to parse "%s" as it is invalid XML: xml.parsers.expat.ExpatError.'
+                        logging.warning(msg, true_path)
+                        continue
+
+                    # Use the system provided plutil program to attempt
+                    # conversion from binary.
                     cmd = '/usr/bin/plutil -convert xml1 -o - -- "{0}"'.format(
                         true_path)
-                    plist_xml = salt.modules.cmdmod.run(cmd, output_loglevel='quiet')
-                    if six.PY2:
+                    try:
+                        plist_xml = __salt__['cmd.run'](cmd)
                         plist = plistlib.readPlistFromString(plist_xml)
-                    else:
-                        plist = plistlib.loads(
-                            salt.utils.stringutils.to_bytes(plist_xml))
+                    except xml.parsers.expat.ExpatError:
+                        # There's still an error in the XML, so move on.
+                        msg = 'Unable to parse "%s" as it is invalid XML: xml.parsers.expat.ExpatError.'
+                        logging.warning(msg, true_path)
+                        continue
 
                 try:
-                    _available_services[plist.Label.lower()] = {
+                    # not all launchd plists contain a Label key
+                    _available_services[plist['Label'].lower()] = {
                         'file_name': file_name,
                         'file_path': true_path,
                         'plist': plist}
-                except AttributeError:
-                    # Handle malformed plist files
-                    _available_services[os.path.basename(file_name).lower()] = {
-                        'file_name': file_name,
-                        'file_path': true_path,
-                        'plist': plist}
+                except KeyError:
+                    log.debug('Service %s does not contain a'
+                              ' Label key. Skipping.', true_path)
+                    continue
 
-    return _available_services
+    # put this in __context__ as this is a time consuming function.
+    # a fix for this issue. https://github.com/saltstack/salt/issues/48414
+    __context__['available_services'] = _available_services
+    # this is a fresh gathering of services, set cached to false
+    __context__['using_cached_services'] = False
+
+    return __context__['available_services']
 
 
-@decorators.memoize
-def available_services():
+def available_services(refresh=False):
     '''
     Return a dictionary of all available services on the system
+
+    :param bool refresh: If you wish to refresh the available services
+    as this data is cached on the first run.
 
     Returns:
         dict: All available services
@@ -358,4 +434,39 @@ def available_services():
         import salt.utils.mac_service
         salt.utils.mac_service.available_services()
     '''
-    return _available_services()
+    log.debug('Loading available services')
+    return _available_services(refresh)
+
+
+def console_user(username=False):
+    '''
+    Gets the UID or Username of the current console user.
+
+    :return: The uid or username of the console user.
+
+    :param bool username: Whether to return the username of the console
+    user instead of the UID. Defaults to False
+
+    :rtype: Interger of the UID, or a string of the username.
+
+    Raises:
+        CommandExecutionError: If we fail to get the UID.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        import salt.utils.mac_service
+        salt.utils.mac_service.console_user()
+    '''
+    try:
+        # returns the 'st_uid' stat from the /dev/console file.
+        uid = os.stat('/dev/console')[4]
+    except (OSError, IndexError):
+        # we should never get here but raise an error if so
+        raise CommandExecutionError('Failed to get a UID for the console user.')
+
+    if username:
+        return pwd.getpwuid(uid)[0]
+
+    return uid

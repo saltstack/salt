@@ -5,7 +5,7 @@ Apache Libcloud Storage State
 
 Manage cloud storage using libcloud
 
-    :codeauthor: :email:`Anthony Shaw <anthonyshaw@apache.org>`
+:codeauthor: ``Anthony Shaw <anthonyshaw@apache.org>``
 
 Apache Libcloud Storage (object/blob) management for a full list
 of supported clouds, see http://libcloud.readthedocs.io/en/latest/storage/supported_providers.html

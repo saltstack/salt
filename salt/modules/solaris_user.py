@@ -438,8 +438,11 @@ def list_groups(name):
 def list_users():
     '''
     Return a list of all users
+
     CLI Example:
+
     .. code-block:: bash
+
         salt '*' user.list_users
     '''
     return sorted([user.pw_name for user in pwd.getpwall()])

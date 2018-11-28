@@ -434,10 +434,8 @@ def vm_created(name, vm_name, cpu, memory, image, version, interfaces,
               'comment': ''}
 
     if __opts__['test']:
-        result.update({'result': None,
-                       'changes': None,
-                       'comment': 'Virtual machine '
-                                  '{0} will be created'.format(vm_name)})
+        result['comment'] = 'Virtual machine {0} will be created'.format(
+                vm_name)
         return result
 
     service_instance = __salt__['vsphere.get_service_instance_via_proxy']()

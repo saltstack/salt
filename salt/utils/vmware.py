@@ -89,7 +89,6 @@ import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
 
-
 # Import Third Party Libs
 from salt.ext import six
 from salt.ext.six.moves.http_client import BadStatusLine  # pylint: disable=E0611
@@ -119,8 +118,8 @@ def __virtual__():
     '''
     if HAS_PYVMOMI:
         return True
-    else:
-        return False, 'Missing dependency: The salt.utils.vmware module requires pyVmomi.'
+
+    return False, 'Missing dependency: The salt.utils.vmware module requires pyVmomi.'
 
 
 def esxcli(host, user, pwd, cmd, protocol=None, port=None, esxi_host=None, credstore=None):
@@ -227,8 +226,8 @@ def _get_service_instance(host, username, password, protocol,
             log.error('This may mean that a version of PyVmomi EARLIER than 6.0.0.2016.6 is installed.')
             log.error('We recommend updating to that version or later.')
             raise
-    except Exception as exc:
-
+    except Exception as exc:  # pylint: disable=broad-except
+        # pyVmomi's SmartConnect() actually raises Exception in some cases.
         default_msg = 'Could not connect to host \'{0}\'. ' \
                       'Please check the debug log for more information.'.format(host)
 
@@ -236,8 +235,6 @@ def _get_service_instance(host, username, password, protocol,
             if (isinstance(exc, vim.fault.HostConnectFault) and
                 '[SSL: CERTIFICATE_VERIFY_FAILED]' in exc.msg) or \
                '[SSL: CERTIFICATE_VERIFY_FAILED]' in six.text_type(exc):
-
-                import ssl
                 service_instance = SmartConnect(
                     host=host,
                     user=username,
@@ -251,9 +248,9 @@ def _get_service_instance(host, username, password, protocol,
                 log.exception(exc)
                 err_msg = exc.msg if hasattr(exc, 'msg') else default_msg
                 raise salt.exceptions.VMwareConnectionError(err_msg)
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
+            # pyVmomi's SmartConnect() actually raises Exception in some cases.
             if 'certificate verify failed' in six.text_type(exc):
-                import ssl
                 context = ssl.SSLContext(ssl.PROTOCOL_TLSv1)
                 context.verify_mode = ssl.CERT_NONE
                 try:
@@ -362,7 +359,9 @@ def get_service_instance(host, username=None, password=None, protocol=None,
     service_instance = GetSi()
     if service_instance:
         stub = GetStub()
-        if salt.utils.platform.is_proxy() or (hasattr(stub, 'host') and stub.host != ':'.join([host, six.text_type(port)])):
+        if (salt.utils.platform.is_proxy() or
+            (hasattr(stub, 'host') and
+             stub.host != ':'.join([host, six.text_type(port)]))):
             # Proxies will fork and mess up the cached service instance.
             # If this is a proxy or we are connecting to a different host
             # invalidate the service instance to avoid a potential memory leak
@@ -432,9 +431,9 @@ def get_new_service_instance_stub(service_instance, path, ns=None,
         Version of the new stub.
         Default value is None.
     '''
-    #For python 2.7.9 and later, the defaul SSL conext has more strict
-    #connection handshaking rule. We may need turn of the hostname checking
-    #and client side cert verification
+    # For python 2.7.9 and later, the default SSL context has more strict
+    # connection handshaking rule. We may need turn off the hostname checking
+    # and the client side cert verification.
     context = None
     if sys.version_info[:3] > (2, 7, 8):
         context = ssl.create_default_context()
@@ -669,56 +668,54 @@ def get_hardware_grains(service_instance):
     if get_inventory(service_instance).about.apiType == 'HostAgent':
         view = service_instance.content.viewManager.CreateContainerView(service_instance.RetrieveContent().rootFolder,
                                                                         [vim.HostSystem], True)
-        if view:
-            if view.view:
-                if len(view.view) > 0:
-                    hw_grain_data['manufacturer'] = view.view[0].hardware.systemInfo.vendor
-                    hw_grain_data['productname'] = view.view[0].hardware.systemInfo.model
+        if view and view.view:
+            hw_grain_data['manufacturer'] = view.view[0].hardware.systemInfo.vendor
+            hw_grain_data['productname'] = view.view[0].hardware.systemInfo.model
 
-                    for _data in view.view[0].hardware.systemInfo.otherIdentifyingInfo:
-                        if _data.identifierType.key == 'ServiceTag':
-                            hw_grain_data['serialnumber'] = _data.identifierValue
+            for _data in view.view[0].hardware.systemInfo.otherIdentifyingInfo:
+                if _data.identifierType.key == 'ServiceTag':
+                    hw_grain_data['serialnumber'] = _data.identifierValue
 
-                    hw_grain_data['osfullname'] = view.view[0].summary.config.product.fullName
-                    hw_grain_data['osmanufacturer'] = view.view[0].summary.config.product.vendor
-                    hw_grain_data['osrelease'] = view.view[0].summary.config.product.version
-                    hw_grain_data['osbuild'] = view.view[0].summary.config.product.build
-                    hw_grain_data['os_family'] = view.view[0].summary.config.product.name
-                    hw_grain_data['os'] = view.view[0].summary.config.product.name
-                    hw_grain_data['mem_total'] = view.view[0].hardware.memorySize /1024/1024
-                    hw_grain_data['biosversion'] = view.view[0].hardware.biosInfo.biosVersion
-                    hw_grain_data['biosreleasedate'] = view.view[0].hardware.biosInfo.releaseDate.date().strftime('%m/%d/%Y')
-                    hw_grain_data['cpu_model'] = view.view[0].hardware.cpuPkg[0].description
-                    hw_grain_data['kernel'] = view.view[0].summary.config.product.productLineId
-                    hw_grain_data['num_cpu_sockets'] = view.view[0].hardware.cpuInfo.numCpuPackages
-                    hw_grain_data['num_cpu_cores'] = view.view[0].hardware.cpuInfo.numCpuCores
-                    hw_grain_data['num_cpus'] = hw_grain_data['num_cpu_sockets'] * hw_grain_data['num_cpu_cores']
-                    hw_grain_data['ip_interfaces'] = {}
-                    hw_grain_data['ip4_interfaces'] = {}
-                    hw_grain_data['ip6_interfaces'] = {}
-                    hw_grain_data['hwaddr_interfaces'] = {}
-                    for _vnic in view.view[0].configManager.networkSystem.networkConfig.vnic:
-                        hw_grain_data['ip_interfaces'][_vnic.device] = []
-                        hw_grain_data['ip4_interfaces'][_vnic.device] = []
-                        hw_grain_data['ip6_interfaces'][_vnic.device] = []
+            hw_grain_data['osfullname'] = view.view[0].summary.config.product.fullName
+            hw_grain_data['osmanufacturer'] = view.view[0].summary.config.product.vendor
+            hw_grain_data['osrelease'] = view.view[0].summary.config.product.version
+            hw_grain_data['osbuild'] = view.view[0].summary.config.product.build
+            hw_grain_data['os_family'] = view.view[0].summary.config.product.name
+            hw_grain_data['os'] = view.view[0].summary.config.product.name
+            hw_grain_data['mem_total'] = view.view[0].hardware.memorySize /1024/1024
+            hw_grain_data['biosversion'] = view.view[0].hardware.biosInfo.biosVersion
+            hw_grain_data['biosreleasedate'] = view.view[0].hardware.biosInfo.releaseDate.date().strftime('%m/%d/%Y')
+            hw_grain_data['cpu_model'] = view.view[0].hardware.cpuPkg[0].description
+            hw_grain_data['kernel'] = view.view[0].summary.config.product.productLineId
+            hw_grain_data['num_cpu_sockets'] = view.view[0].hardware.cpuInfo.numCpuPackages
+            hw_grain_data['num_cpu_cores'] = view.view[0].hardware.cpuInfo.numCpuCores
+            hw_grain_data['num_cpus'] = hw_grain_data['num_cpu_sockets'] * hw_grain_data['num_cpu_cores']
+            hw_grain_data['ip_interfaces'] = {}
+            hw_grain_data['ip4_interfaces'] = {}
+            hw_grain_data['ip6_interfaces'] = {}
+            hw_grain_data['hwaddr_interfaces'] = {}
+            for _vnic in view.view[0].configManager.networkSystem.networkConfig.vnic:
+                hw_grain_data['ip_interfaces'][_vnic.device] = []
+                hw_grain_data['ip4_interfaces'][_vnic.device] = []
+                hw_grain_data['ip6_interfaces'][_vnic.device] = []
 
-                        hw_grain_data['ip_interfaces'][_vnic.device].append(_vnic.spec.ip.ipAddress)
-                        hw_grain_data['ip4_interfaces'][_vnic.device].append(_vnic.spec.ip.ipAddress)
-                        if _vnic.spec.ip.ipV6Config:
-                            hw_grain_data['ip6_interfaces'][_vnic.device].append(_vnic.spec.ip.ipV6Config.ipV6Address)
-                        hw_grain_data['hwaddr_interfaces'][_vnic.device] = _vnic.spec.mac
-                    hw_grain_data['host'] = view.view[0].configManager.networkSystem.dnsConfig.hostName
-                    hw_grain_data['domain'] = view.view[0].configManager.networkSystem.dnsConfig.domainName
-                    hw_grain_data['fqdn'] = '{0}{1}{2}'.format(
-                            view.view[0].configManager.networkSystem.dnsConfig.hostName,
-                            ('.' if view.view[0].configManager.networkSystem.dnsConfig.domainName else ''),
-                            view.view[0].configManager.networkSystem.dnsConfig.domainName)
+                hw_grain_data['ip_interfaces'][_vnic.device].append(_vnic.spec.ip.ipAddress)
+                hw_grain_data['ip4_interfaces'][_vnic.device].append(_vnic.spec.ip.ipAddress)
+                if _vnic.spec.ip.ipV6Config:
+                    hw_grain_data['ip6_interfaces'][_vnic.device].append(_vnic.spec.ip.ipV6Config.ipV6Address)
+                hw_grain_data['hwaddr_interfaces'][_vnic.device] = _vnic.spec.mac
+            hw_grain_data['host'] = view.view[0].configManager.networkSystem.dnsConfig.hostName
+            hw_grain_data['domain'] = view.view[0].configManager.networkSystem.dnsConfig.domainName
+            hw_grain_data['fqdn'] = '{0}{1}{2}'.format(
+                view.view[0].configManager.networkSystem.dnsConfig.hostName,
+                ('.' if view.view[0].configManager.networkSystem.dnsConfig.domainName else ''),
+                view.view[0].configManager.networkSystem.dnsConfig.domainName)
 
-                    for _pnic in view.view[0].configManager.networkSystem.networkInfo.pnic:
-                        hw_grain_data['hwaddr_interfaces'][_pnic.device] = _pnic.mac
+            for _pnic in view.view[0].configManager.networkSystem.networkInfo.pnic:
+                hw_grain_data['hwaddr_interfaces'][_pnic.device] = _pnic.mac
 
-                    hw_grain_data['timezone'] = view.view[0].configManager.dateTimeSystem.dateTimeInfo.timeZone.name
-                view = None
+            hw_grain_data['timezone'] = view.view[0].configManager.dateTimeSystem.dateTimeInfo.timeZone.name
+        view = None
     return hw_grain_data
 
 
@@ -947,9 +944,9 @@ def get_mors_with_properties(service_instance, object_type, property_list=None,
         content = get_content(*content_args, **content_kwargs)
     except BadStatusLine:
         content = get_content(*content_args, **content_kwargs)
-    except IOError as e:
-        if e.errno != errno.EPIPE:
-            raise e
+    except IOError as exc:
+        if exc.errno != errno.EPIPE:
+            raise exc
         content = get_content(*content_args, **content_kwargs)
 
     object_list = []
@@ -1029,6 +1026,8 @@ def get_network_adapter_type(adapter_type):
     elif adapter_type == 'e1000e':
         return vim.vm.device.VirtualE1000e()
 
+    raise ValueError('An unknown network adapter object type name.')
+
 
 def get_network_adapter_object_type(adapter_object):
     '''
@@ -1047,6 +1046,8 @@ def get_network_adapter_object_type(adapter_object):
         return 'e1000e'
     if isinstance(adapter_object, vim.vm.device.VirtualE1000):
         return 'e1000'
+
+    raise ValueError('An unknown network adapter object type.')
 
 
 def get_dvss(dc_ref, dvs_names=None, get_all_dvss=False):
@@ -1223,8 +1224,8 @@ def get_dvportgroups(parent_ref, portgroup_names=None,
     get_all_portgroups
         Return all portgroups in the parent. Default is False.
     '''
-    if not (isinstance(parent_ref, vim.Datacenter) or
-            isinstance(parent_ref, vim.DistributedVirtualSwitch)):
+    if not (isinstance(parent_ref,
+                       (vim.Datacenter, vim.DistributedVirtualSwitch))):
         raise salt.exceptions.ArgumentValueError(
             'Parent has to be either a datacenter, '
             'or a distributed virtual switch')
@@ -1554,7 +1555,7 @@ def add_license(service_instance, key, description, license_manager=None):
     label.value = description
     log.debug('Adding license \'%s\'', description)
     try:
-        license = license_manager.AddLicense(key, [label])
+        vmware_license = license_manager.AddLicense(key, [label])
     except vim.fault.NoPermission as exc:
         log.exception(exc)
         raise salt.exceptions.VMwareApiError(
@@ -1566,7 +1567,7 @@ def add_license(service_instance, key, description, license_manager=None):
     except vmodl.RuntimeFault as exc:
         log.exception(exc)
         raise salt.exceptions.VMwareRuntimeError(exc.msg)
-    return license
+    return vmware_license
 
 
 def get_assigned_licenses(service_instance, entity_ref=None, entity_name=None,
@@ -1709,9 +1710,10 @@ def assign_license(service_instance, license_key, license_name,
 
     log.trace('Assigning license to \'%s\'', entity_name)
     try:
-        license = license_assignment_manager.UpdateAssignedLicense(
+        vmware_license = license_assignment_manager.UpdateAssignedLicense(
             entity_id,
-            license_key)
+            license_key,
+            license_name)
     except vim.fault.NoPermission as exc:
         log.exception(exc)
         raise salt.exceptions.VMwareApiError(
@@ -1723,7 +1725,7 @@ def assign_license(service_instance, license_key, license_name,
     except vmodl.RuntimeFault as exc:
         log.exception(exc)
         raise salt.exceptions.VMwareRuntimeError(exc.msg)
-    return license
+    return vmware_license
 
 
 def list_datacenters(service_instance):
@@ -1836,7 +1838,7 @@ def get_cluster(dc_ref, cluster):
                                       container_ref=dc_ref,
                                       property_list=['name'],
                                       traversal_spec=traversal_spec)
-            if i['name'] == cluster]
+             if i['name'] == cluster]
     if not items:
         raise salt.exceptions.VMwareObjectRetrievalError(
             'Cluster \'{0}\' was not found in datacenter '
@@ -2189,7 +2191,8 @@ def _get_partition_info(storage_system, device_path):
     return partition_infos[0]
 
 
-def _get_new_computed_partition_spec(hostname, storage_system, device_path,
+def _get_new_computed_partition_spec(storage_system,
+                                     device_path,
                                      partition_info):
     '''
     Computes the new disk partition info when adding a new vmfs partition that
@@ -2198,7 +2201,7 @@ def _get_new_computed_partition_spec(hostname, storage_system, device_path,
     '''
     log.trace('Adding a partition at the end of the disk and getting the new '
               'computed partition spec')
-    #TODO implement support for multiple partitions
+    # TODO implement support for multiple partitions
     # We support adding a partition add the end of the disk with partitions
     free_partitions = [p for p in partition_info.layout.partition
                        if p.type == 'none']
@@ -2282,7 +2285,10 @@ def create_vmfs_datastore(host_ref, datastore_name, disk_ref,
                                          target_disk.devicePath)
     log.trace('partition_info = %s', partition_info)
     new_partition_number, partition_spec = _get_new_computed_partition_spec(
-        hostname, storage_system, target_disk.devicePath, partition_info)
+        storage_system,
+        target_disk.devicePath,
+        partition_info
+    )
     spec = vim.VmfsDatastoreCreateSpec(
         vmfs=vim.HostVmfsSpec(
             majorVersion=vmfs_major_version,
@@ -2355,7 +2361,6 @@ def remove_datastore(service_instance, datastore_ref):
         datastore_ref, ['host', 'info', 'name'])
     ds_name = ds_props['name']
     log.debug('Removing datastore \'%s\'', ds_name)
-    ds_info = ds_props['info']
     ds_hosts = ds_props.get('host')
     if not ds_hosts:
         raise salt.exceptions.VMwareApiError(
@@ -2417,7 +2422,6 @@ def get_hosts(service_instance, datacenter_name=None, host_names=None,
         if cluster_name:
             # Retrieval to test if cluster exists. Cluster existence only makes
             # sense if the datacenter has been specified
-            cluster = get_cluster(start_point, cluster_name)
             properties.append('parent')
 
     # Search for the objects
@@ -2469,7 +2473,6 @@ def _get_scsi_address_to_lun_key_map(service_instance,
     hostname
         Name of the host. Default is None.
     '''
-    map = {}
     if not hostname:
         hostname = get_managed_object_name(host_ref)
     if not storage_system:
@@ -2582,8 +2585,8 @@ def get_scsi_address_to_lun_map(host_ref, storage_system=None, hostname=None):
     if not storage_system:
         storage_system = get_storage_system(si, host_ref, hostname)
     lun_ids_to_scsi_addr_map = \
-            _get_scsi_address_to_lun_key_map(si, host_ref, storage_system,
-                                             hostname)
+        _get_scsi_address_to_lun_key_map(si, host_ref, storage_system,
+                                         hostname)
     luns_to_key_map = {d.key: d for d in
                        get_all_luns(host_ref, storage_system, hostname)}
     return {scsi_addr: luns_to_key_map[lun_key] for scsi_addr, lun_key in
@@ -2834,19 +2837,18 @@ def _check_disks_in_diskgroup(disk_group, cache_disk_id, capacity_disk_ids):
         raise salt.exceptions.ArgumentValueError(
             'Incorrect diskgroup cache disk; got id: \'{0}\'; expected id: '
             '\'{1}\''.format(disk_group.ssd.canonicalName, cache_disk_id))
-    if sorted([d.canonicalName for d in disk_group.nonSsd]) != \
-        sorted(capacity_disk_ids):
-
+    non_ssd_disks = [d.canonicalName for d in disk_group.nonSsd]
+    if sorted(non_ssd_disks) != sorted(capacity_disk_ids):
         raise salt.exceptions.ArgumentValueError(
             'Incorrect capacity disks; got ids: \'{0}\'; expected ids: \'{1}\''
-            ''.format(sorted([d.canonicalName for d in disk_group.nonSsd]),
+            ''.format(sorted(non_ssd_disks),
                       sorted(capacity_disk_ids)))
     log.trace('Checked disks in diskgroup with cache disk id \'%s\'',
               cache_disk_id)
     return True
 
 
-#TODO Support host caches on multiple datastores
+# TODO Support host caches on multiple datastores
 def get_host_cache(host_ref, host_cache_manager=None):
     '''
     Returns a vim.HostScsiDisk if the host cache is configured on the specified
@@ -2887,7 +2889,7 @@ def get_host_cache(host_ref, host_cache_manager=None):
         return results['cacheConfigurationInfo'][0]
 
 
-#TODO Support host caches on multiple datastores
+# TODO Support host caches on multiple datastores
 def configure_host_cache(host_ref, datastore_ref, swap_size_MiB,
                          host_cache_manager=None):
     '''
@@ -3222,8 +3224,9 @@ def get_vm_by_property(service_instance, name, datacenter=None, vm_properties=No
     if not vm_formatted:
         raise salt.exceptions.VMwareObjectRetrievalError('The virtual machine was not found.')
     elif len(vm_formatted) > 1:
-        raise salt.exceptions.VMwareMultipleObjectsError('Multiple virtual machines were found with the '
-                                                  'same name, please specify a container.')
+        raise salt.exceptions.VMwareMultipleObjectsError(' '.join([
+            'Multiple virtual machines were found with the'
+            'same name, please specify a container.']))
     return vm_formatted[0]
 
 
@@ -3250,13 +3253,15 @@ def get_folder(service_instance, datacenter, placement, base_vm_name=None):
         if 'parent' in vm_props:
             folder_object = vm_props['parent']
         else:
-            raise salt.exceptions.VMwareObjectRetrievalError('The virtual machine parent '
-                                                      'object is not defined')
+            raise salt.exceptions.VMwareObjectRetrievalError(' '.join([
+                'The virtual machine parent',
+                'object is not defined']))
     elif 'folder' in placement:
         folder_objects = salt.utils.vmware.get_folders(service_instance, [placement['folder']], datacenter)
         if len(folder_objects) > 1:
-            raise salt.exceptions.VMwareMultipleObjectsError('Multiple instances are available of the '
-                                                      'specified folder {0}'.format(placement['folder']))
+            raise salt.exceptions.VMwareMultipleObjectsError(' '.join([
+                'Multiple instances are available of the',
+                'specified folder {0}'.format(placement['folder'])]))
         folder_object = folder_objects[0]
     elif datacenter:
         datacenter_object = salt.utils.vmware.get_datacenter(service_instance, datacenter)
@@ -3286,10 +3291,13 @@ def get_placement(service_instance, datacenter, placement=None):
     if 'host' in placement:
         host_objects = get_hosts(service_instance, datacenter_name=datacenter, host_names=[placement['host']])
         if not host_objects:
-            raise salt.exceptions.VMwareObjectRetrievalError('The specified host {0} cannot be found.'.format(placement['host']))
+            raise salt.exceptions.VMwareObjectRetrievalError(' '.join([
+                'The specified host',
+                '{0} cannot be found.'.format(placement['host'])]))
         try:
-            host_props = get_properties_of_managed_object(host_objects[0],
-                                                          properties=['resourcePool'])
+            host_props = \
+                get_properties_of_managed_object(host_objects[0],
+                                                 properties=['resourcePool'])
             resourcepool_object = host_props['resourcePool']
         except vmodl.query.InvalidProperty:
             traversal_spec = vmodl.query.PropertyCollector.TraversalSpec(
@@ -3316,16 +3324,18 @@ def get_placement(service_instance, datacenter, placement=None):
                                                   [placement['resourcepool']],
                                                   datacenter_name=datacenter)
         if len(resourcepool_objects) > 1:
-            raise salt.exceptions.VMwareMultipleObjectsError('Multiple instances are available of the '
-                                                      'specified host {}.'.format(placement['host']))
+            raise salt.exceptions.VMwareMultipleObjectsError(' '.join([
+                'Multiple instances are available of the',
+                'specified host {}.'.format(placement['host'])]))
         resourcepool_object = resourcepool_objects[0]
         res_props = get_properties_of_managed_object(resourcepool_object,
                                                      properties=['parent'])
         if 'parent' in res_props:
             placement_object = res_props['parent']
         else:
-            raise salt.exceptions.VMwareObjectRetrievalError('The resource pool\'s parent '
-                                                      'object is not defined')
+            raise salt.exceptions.VMwareObjectRetrievalError(' '.join([
+                'The resource pool\'s parent',
+                'object is not defined']))
     elif 'cluster' in placement:
         datacenter_object = get_datacenter(service_instance, datacenter)
         cluster_object = get_cluster(datacenter_object, placement['cluster'])
@@ -3334,12 +3344,14 @@ def get_placement(service_instance, datacenter, placement=None):
         if 'resourcePool' in clus_props:
             resourcepool_object = clus_props['resourcePool']
         else:
-            raise salt.exceptions.VMwareObjectRetrievalError('The cluster\'s resource pool '
-                                                      'object is not defined')
+            raise salt.exceptions.VMwareObjectRetrievalError(' '.join([
+                'The cluster\'s resource pool',
+                'object is not defined']))
         placement_object = cluster_object
     else:
         # We are checking the schema for this object, this exception should never be raised
-        raise salt.exceptions.VMwareObjectRetrievalError('Placement is not defined.')
+        raise salt.exceptions.VMwareObjectRetrievalError(' '.join([
+            'Placement is not defined.']))
     return (resourcepool_object, placement_object)
 
 
@@ -3409,8 +3421,9 @@ def power_cycle_vm(virtual_machine, action='on'):
     try:
         wait_for_task(task, get_managed_object_name(virtual_machine), task_name)
     except salt.exceptions.VMwareFileNotFoundError as exc:
-        raise salt.exceptions.VMwarePowerOnError('An error occurred during power '
-                                      'operation, a file was not found: {0}'.format(exc))
+        raise salt.exceptions.VMwarePowerOnError(' '.join([
+            'An error occurred during power',
+            'operation, a file was not found: {0}'.format(exc)]))
     return virtual_machine
 
 

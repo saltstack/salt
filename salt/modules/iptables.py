@@ -5,26 +5,25 @@ Support for iptables
 Configuration Options
 ---------------------
 
-The following options can be set in the :ref:`minion config
-<configuration-salt-minion>`, :ref:`minion grains<configuration-minion-grains>`
-, :ref:`minion pillar<configuration-minion-pillar>`, or
-`master config<configuration-salt-master>`.
+The following options can be set in the minion config, grains, pillar, or
+master config. The configuration is read using :py:func:`config.get
+<salt.modules.config.get>`.
 
 - ``iptables.save_filters``: List of REGEX strings to FILTER OUT matching lines
 
-    This is useful for filtering out chains, rules, etc that you do not
-    wish to persist, such as ephemeral Docker rules.
+  This is useful for filtering out chains, rules, etc that you do not wish to
+  persist, such as ephemeral Docker rules.
 
-    The default is to not filter out anything.
+  The default is to not filter out anything.
 
-    .. code-block:: yaml
+  .. code-block:: yaml
 
-        iptables.save_filters:
-           - "-j CATTLE_PREROUTING"
-           - "-j DOCKER"
-           - "-A POSTROUTING"
-           - "-A CATTLE_POSTROUTING"
-           - "-A FORWARD"
+      iptables.save_filters:
+        - "-j CATTLE_PREROUTING"
+        - "-j DOCKER"
+        - "-A POSTROUTING"
+        - "-A CATTLE_POSTROUTING"
+        - "-A FORWARD"
 '''
 from __future__ import absolute_import, unicode_literals, print_function
 
@@ -101,7 +100,7 @@ def _conf(family='ipv4'):
             return '/etc/iptables/rules.v6'
         else:
             return '/etc/iptables/rules.v4'
-    elif __grains__['os'] == 'Gentoo':
+    elif __grains__['os_family'] == 'Gentoo':
         if family == 'ipv6':
             return '/var/lib/ip6tables/rules-save'
         else:
@@ -1036,11 +1035,8 @@ def _parse_conf(conf_file=None, in_mem=False, family='ipv4'):
             if args[-1].startswith('-'):
                 args.append('')
             parsed_args = []
-            if sys.version.startswith('2.6'):
-                (opts, leftover_args) = parser.parse_args(args)
-                parsed_args = vars(opts)
-            else:
-                parsed_args = vars(parser.parse_args(args))
+            opts, _ = parser.parse_known_args(args)
+            parsed_args = vars(opts)
             ret_args = {}
             chain = parsed_args['append']
             for arg in parsed_args:

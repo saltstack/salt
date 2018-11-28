@@ -5,6 +5,15 @@ A REST API for Salt
 
 .. py:currentmodule:: salt.netapi.rest_cherrypy.app
 
+.. note::
+
+    This module is Experimental on Windows platforms, and supports limited
+    configurations:
+
+    - doesn't support PAM authentication (i.e. external_auth: auto)
+    - doesn't support SSL (i.e. disable_ssl: True)
+
+
 :depends:
     - CherryPy Python module.
 
@@ -68,12 +77,12 @@ A REST API for Salt
     debug : ``False``
         Starts the web server in development mode. It will reload itself when
         the underlying code is changed and will output more debugging info.
-    log_access_file
+    log.access_file
         Path to a file to write HTTP access logs.
 
         .. versionadded:: 2016.11.0
 
-    log_error_file
+    log.error_file
         Path to a file to write HTTP error logs.
 
         .. versionadded:: 2016.11.0
@@ -272,8 +281,8 @@ command:
 3.  Fill out the remaining parameters needed for the chosen client.
 
 The ``client`` field is a reference to the main Python classes used in Salt's
-Python API. Read the full :ref:`client interfaces <netapi-clients>`
-documentation, but in short:
+Python API. Read the full :ref:`Client APIs <client-apis>` documentation, but
+in short:
 
 * "local" uses :py:class:`LocalClient <salt.client.LocalClient>` which sends
   commands to Minions. Equivalent to the ``salt`` CLI command.
@@ -289,7 +298,7 @@ documentation, but in short:
 
 Most clients have variants like synchronous or asynchronous execution as well as
 others like batch execution. See the :ref:`full list of client interfaces
-<netapi-clients>`.
+<client-interfaces>`.
 
 Each client requires different arguments and sometimes has different syntax.
 For example, ``LocalClient`` requires the ``tgt`` argument because it forwards
@@ -529,7 +538,7 @@ described above, the most effective and most scalable way to use both Salt and
 salt-api is to run commands asynchronously using the ``local_async``,
 ``runner_async``, and ``wheel_async`` clients.
 
-Running async jobs results in being able to process 3x more commands per second
+Running asynchronous jobs results in being able to process 3x more commands per second
 for ``LocalClient`` and 17x more commands per second for ``RunnerClient``, in
 addition to much less network traffic and memory requirements. Job returns can
 be fetched from Salt's job cache via the ``/jobs/<jid>`` endpoint, or they can
@@ -1167,6 +1176,20 @@ class LowDataAdapter(object):
             if token:
                 chunk['token'] = token
 
+            if 'token' in chunk:
+                # Make sure that auth token is hex
+                try:
+                    int(chunk['token'], 16)
+                except (TypeError, ValueError):
+                    raise cherrypy.HTTPError(401, 'Invalid token')
+
+            if 'token' in chunk:
+                # Make sure that auth token is hex
+                try:
+                    int(chunk['token'], 16)
+                except (TypeError, ValueError):
+                    raise cherrypy.HTTPError(401, 'Invalid token')
+
             if client:
                 chunk['client'] = client
 
@@ -1203,7 +1226,7 @@ class LowDataAdapter(object):
 
             curl -i localhost:8000
 
-        .. code-block:: http
+        .. code-block:: text
 
             GET / HTTP/1.1
             Host: localhost:8000
@@ -1211,7 +1234,7 @@ class LowDataAdapter(object):
 
         **Example response:**
 
-        .. code-block:: http
+        .. code-block:: text
 
             HTTP/1.1 200 OK
             Content-Type: application/json
@@ -1255,7 +1278,7 @@ class LowDataAdapter(object):
                 -H "Content-type: application/json" \\
                 -d '[{"client": "local", "tgt": "*", "fun": "test.ping"}]'
 
-        .. code-block:: http
+        .. code-block:: text
 
             POST / HTTP/1.1
             Host: localhost:8000
@@ -1267,7 +1290,7 @@ class LowDataAdapter(object):
 
         **Example response:**
 
-        .. code-block:: http
+        .. code-block:: text
 
             HTTP/1.1 200 OK
             Content-Length: 200
@@ -1315,7 +1338,7 @@ class Minions(LowDataAdapter):
 
             curl -i localhost:8000/minions/ms-3
 
-        .. code-block:: http
+        .. code-block:: text
 
             GET /minions/ms-3 HTTP/1.1
             Host: localhost:8000
@@ -1323,7 +1346,7 @@ class Minions(LowDataAdapter):
 
         **Example response:**
 
-        .. code-block:: http
+        .. code-block:: text
 
             HTTP/1.1 200 OK
             Content-Length: 129005
@@ -1359,8 +1382,8 @@ class Minions(LowDataAdapter):
             :status 401: |401|
             :status 406: |406|
 
-            :term:`lowstate` data describing Salt commands must be sent in the
-            request body. The ``client`` option will be set to
+            Lowstate data describing Salt commands must be sent in the request
+            body. The ``client`` option will be set to
             :py:meth:`~salt.client.LocalClient.local_async`.
 
         **Example request:**
@@ -1372,7 +1395,7 @@ class Minions(LowDataAdapter):
                 -H "Accept: application/x-yaml" \\
                 -d '[{"tgt": "*", "fun": "status.diskusage"}]'
 
-        .. code-block:: http
+        .. code-block:: text
 
             POST /minions HTTP/1.1
             Host: localhost:8000
@@ -1383,7 +1406,7 @@ class Minions(LowDataAdapter):
 
         **Example response:**
 
-        .. code-block:: http
+        .. code-block:: text
 
             HTTP/1.1 202 Accepted
             Content-Length: 86
@@ -1436,7 +1459,7 @@ class Jobs(LowDataAdapter):
 
             curl -i localhost:8000/jobs
 
-        .. code-block:: http
+        .. code-block:: text
 
             GET /jobs HTTP/1.1
             Host: localhost:8000
@@ -1444,7 +1467,7 @@ class Jobs(LowDataAdapter):
 
         **Example response:**
 
-        .. code-block:: http
+        .. code-block:: text
 
             HTTP/1.1 200 OK
             Content-Length: 165
@@ -1465,7 +1488,7 @@ class Jobs(LowDataAdapter):
 
             curl -i localhost:8000/jobs/20121130104633606931
 
-        .. code-block:: http
+        .. code-block:: text
 
             GET /jobs/20121130104633606931 HTTP/1.1
             Host: localhost:8000
@@ -1473,7 +1496,7 @@ class Jobs(LowDataAdapter):
 
         **Example response:**
 
-        .. code-block:: http
+        .. code-block:: text
 
             HTTP/1.1 200 OK
             Content-Length: 73
@@ -1558,7 +1581,7 @@ class Keys(LowDataAdapter):
 
             curl -i localhost:8000/keys
 
-        .. code-block:: http
+        .. code-block:: text
 
             GET /keys HTTP/1.1
             Host: localhost:8000
@@ -1566,7 +1589,7 @@ class Keys(LowDataAdapter):
 
         **Example response:**
 
-        .. code-block:: http
+        .. code-block:: text
 
             HTTP/1.1 200 OK
             Content-Length: 165
@@ -1587,7 +1610,7 @@ class Keys(LowDataAdapter):
 
             curl -i localhost:8000/keys/jerry
 
-        .. code-block:: http
+        .. code-block:: text
 
             GET /keys/jerry HTTP/1.1
             Host: localhost:8000
@@ -1595,7 +1618,7 @@ class Keys(LowDataAdapter):
 
         **Example response:**
 
-        .. code-block:: http
+        .. code-block:: text
 
             HTTP/1.1 200 OK
             Content-Length: 73
@@ -1672,14 +1695,14 @@ class Keys(LowDataAdapter):
                     -d eauth=pam \
                     -o jerry-salt-keys.tar
 
-        .. code-block:: http
+        .. code-block:: text
 
             POST /keys HTTP/1.1
             Host: localhost:8000
 
         **Example response:**
 
-        .. code-block:: http
+        .. code-block:: text
 
             HTTP/1.1 200 OK
             Content-Length: 10240
@@ -1708,16 +1731,21 @@ class Keys(LowDataAdapter):
         priv_key_file = tarfile.TarInfo('minion.pem')
         priv_key_file.size = len(priv_key)
 
-        fileobj = six.StringIO()
+        fileobj = BytesIO()
         tarball = tarfile.open(fileobj=fileobj, mode='w')
-        tarball.addfile(pub_key_file, six.StringIO(pub_key))
-        tarball.addfile(priv_key_file, six.StringIO(priv_key))
+
+        if six.PY3:
+            pub_key = pub_key.encode(__salt_system_encoding__)
+            priv_key = priv_key.encode(__salt_system_encoding__)
+
+        tarball.addfile(pub_key_file, BytesIO(pub_key))
+        tarball.addfile(priv_key_file, BytesIO(priv_key))
         tarball.close()
 
         headers = cherrypy.response.headers
         headers['Content-Disposition'] = 'attachment; filename="saltkeys-{0}.tar"'.format(lowstate[0]['id_'])
         headers['Content-Type'] = 'application/x-tar'
-        headers['Content-Length'] = fileobj.len
+        headers['Content-Length'] = len(fileobj.getvalue())
         headers['Cache-Control'] = 'no-cache'
 
         fileobj.seek(0)
@@ -1754,7 +1782,7 @@ class Login(LowDataAdapter):
 
             curl -i localhost:8000/login
 
-        .. code-block:: http
+        .. code-block:: text
 
             GET /login HTTP/1.1
             Host: localhost:8000
@@ -1762,7 +1790,7 @@ class Login(LowDataAdapter):
 
         **Example response:**
 
-        .. code-block:: http
+        .. code-block:: text
 
             HTTP/1.1 200 OK
             Content-Type: text/html
@@ -1806,7 +1834,7 @@ class Login(LowDataAdapter):
                     "eauth": "auto"
                 }'
 
-        .. code-block:: http
+        .. code-block:: text
 
             POST / HTTP/1.1
             Host: localhost:8000
@@ -1819,7 +1847,7 @@ class Login(LowDataAdapter):
 
         **Example response:**
 
-        .. code-block:: http
+        .. code-block:: text
 
             HTTP/1.1 200 OK
             Content-Type: application/json
@@ -1955,7 +1983,7 @@ class Token(LowDataAdapter):
 
         **Example response:**
 
-        .. code-block:: http
+        .. code-block:: text
 
             HTTP/1.1 200 OK
             Content-Type: application/json
@@ -2016,8 +2044,8 @@ class Run(LowDataAdapter):
 
         .. http:post:: /run
 
-            An array of :term:`lowstate` data describing Salt commands must be
-            sent in the request body.
+            An array of lowstate data describing Salt commands must be sent in
+            the request body.
 
             :status 200: |200|
             :status 400: |400|
@@ -2054,7 +2082,7 @@ class Run(LowDataAdapter):
                     "token": "<salt eauth token here>"
                 }]'
 
-        .. code-block:: http
+        .. code-block:: text
 
             POST /run HTTP/1.1
             Host: localhost:8000
@@ -2066,7 +2094,7 @@ class Run(LowDataAdapter):
 
         **Example response:**
 
-        .. code-block:: http
+        .. code-block:: text
 
             HTTP/1.1 200 OK
             Content-Length: 73
@@ -2100,7 +2128,7 @@ class Run(LowDataAdapter):
                 -d tgt='*' \\
                 -d fun='test.ping'
 
-        .. code-block:: http
+        .. code-block:: text
 
             POST /run HTTP/1.1
             Host: localhost:8000
@@ -2112,7 +2140,7 @@ class Run(LowDataAdapter):
 
         **Example SSH response:**
 
-        .. code-block:: http
+        .. code-block:: text
 
                 return:
                 - silver:
@@ -2167,7 +2195,11 @@ class Events(object):
 
         :return bool: True if valid, False if not valid.
         '''
-        if auth_token is None:
+        # Make sure that auth token is hex. If it's None, or something other
+        # than hex, this will raise a ValueError.
+        try:
+            int(auth_token, 16)
+        except (TypeError, ValueError):
             return False
 
         # First check if the given token is in our session table; if so it's a
@@ -2212,7 +2244,7 @@ class Events(object):
 
             curl -NsS localhost:8000/events
 
-        .. code-block:: http
+        .. code-block:: text
 
             GET /events HTTP/1.1
             Host: localhost:8000
@@ -2224,7 +2256,7 @@ class Events(object):
         clients to only watch for certain tags without having to deserialze the
         JSON object each time.
 
-        .. code-block:: http
+        .. code-block:: text
 
             HTTP/1.1 200 OK
             Connection: keep-alive
@@ -2410,7 +2442,7 @@ class WebsocketEndpoint(object):
                 -H 'Sec-WebSocket-Key: '"$(echo -n $RANDOM | base64)" \\
                 localhost:8000/ws
 
-        .. code-block:: http
+        .. code-block:: text
 
             GET /ws HTTP/1.1
             Connection: Upgrade
@@ -2423,7 +2455,7 @@ class WebsocketEndpoint(object):
 
         **Example response**:
 
-        .. code-block:: http
+        .. code-block:: text
 
             HTTP/1.1 101 Switching Protocols
             Upgrade: websocket
@@ -2534,7 +2566,7 @@ class WebsocketEndpoint(object):
         parent_pipe, child_pipe = Pipe()
         handler.pipe = parent_pipe
         handler.opts = self.opts
-        # Process to handle async push to a client.
+        # Process to handle asynchronous push to a client.
         # Each GET request causes a process to be kicked off.
         proc = Process(target=event_stream, args=(handler, child_pipe))
         proc.start()
@@ -2582,7 +2614,7 @@ class Webhook(object):
                         -d branch="${TRAVIS_BRANCH}" \
                         -d commit="${TRAVIS_COMMIT}"
 
-    .. seealso:: :ref:`events`, :ref:`reactor`
+    .. seealso:: :ref:`events`, :ref:`reactor <reactor>`
     '''
     exposed = True
     tag_base = ['salt', 'netapi', 'hook']
@@ -2626,7 +2658,7 @@ class Webhook(object):
                 -H 'Content-type: application/json' \\
                 -d '{"foo": "Foo!", "bar": "Bar!"}'
 
-        .. code-block:: http
+        .. code-block:: text
 
             POST /hook HTTP/1.1
             Host: localhost:8000
@@ -2637,7 +2669,7 @@ class Webhook(object):
 
         **Example response**:
 
-        .. code-block:: http
+        .. code-block:: text
 
             HTTP/1.1 200 OK
             Content-Length: 14

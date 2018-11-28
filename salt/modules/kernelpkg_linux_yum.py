@@ -108,7 +108,6 @@ def latest_installed():
         salt '*' kernelpkg.latest_installed
 
     .. note::
-
         This function may not return the same value as
         :py:func:`~salt.modules.kernelpkg_linux_yum.active` if a new kernel
         has been installed and the system has not yet been rebooted.
@@ -157,9 +156,9 @@ def upgrade(reboot=False, at_time=None):
         salt '*' kernelpkg.upgrade reboot=True at_time=1
 
     .. note::
-    An immediate reboot often shuts down the system before the minion
-    has a chance to return, resulting in errors. A minimal delay (1 minute)
-    is useful to ensure the result is delivered to the master.
+        An immediate reboot often shuts down the system before the minion has a
+        chance to return, resulting in errors. A minimal delay (1 minute) is
+        useful to ensure the result is delivered to the master.
     '''
     result = __salt__['pkg.upgrade'](name=_package_name())
     _needs_reboot = needs_reboot()

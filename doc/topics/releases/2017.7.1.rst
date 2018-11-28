@@ -1,58 +1,113 @@
-============================
+===========================
 Salt 2017.7.1 Release Notes
-============================
+===========================
 
 Version 2017.7.1 is a bugfix release for :ref:`2017.7.0 <release-2017-7-0>`.
+
+
+Statistics
+==========
+
+- Total Merges: **16**
+- Total Issue References: **12**
+- Total PR References: **31**
+
+- Contributors: **11** (`Ch3LL`_, `TiteiKo`_, `garethgreenaway`_, `gtmanfred`_, `llua`_, `rallytime`_, `seedickcode`_, `skizunov`_, `terminalmage`_, `twangboy`_, `whiteinge`_)
+
 
 Security Fix
 ============
 
-CVE-2017-12791 Maliciously crafted minion IDs can cause unwanted directory traversals on the Salt-master
+**CVE-2017-12791** Maliciously crafted minion IDs can cause unwanted directory
+traversals on the Salt-master
 
-Correct a flaw in minion id validation which could allow certain minions to authenticate to a master despite not having the correct credentials. To exploit the vulnerability, an attacker must create a salt-minion with an ID containing characters that will cause a directory traversal. Credit for discovering the security flaw goes to: Vernhk@qq.com
-
-Changes for v2017.7.0..v2017.7.1
---------------------------------
-
-Extended changelog courtesy of Todd Stansell (https://github.com/tjstansell/salt-changelogs):
-
-*Generated at: 2017-07-26T01:09:40Z*
-
-Statistics:
-
-- Total Merges: **11**
-- Total Issue references: **9**
-- Total PR references: **22**
-
-Changes:
+Correct a flaw in minion id validation which could allow certain minions to
+authenticate to a master despite not having the correct credentials. To exploit
+the vulnerability, an attacker must create a salt-minion with an ID containing
+characters that will cause a directory traversal. Credit for discovering the
+security flaw goes to: Vernhk@qq.com
 
 
-- **PR** `#42548`_: (*gtmanfred*) pass in empty kwarg for reactor
-  @ *2017-07-26T00:41:20Z*
+Changelog for v2017.7.0..v2017.7.1
+==================================
 
-  - **ISSUE** `#460`_: (*whiteinge*) Add a topic and a ref for modules/states/returners/renderers/runners
-    | refs: `#42548`_
+*Generated at: 2018-05-26 20:28:44 UTC*
+
+* **ISSUE** `saltstack/salt-jenkins#460`_: (`Ch3LL`_) decorator tests failing on python3 (refs: `#42548`_)
+
+* **PR** `#42595`_: (`gtmanfred`_) make sure to pass arg as well
+  @ *2017-07-28 16:21:58 UTC*
+
+  * **PR** `#42548`_: (`gtmanfred`_) pass in empty kwarg for reactor (refs: `#42595`_)
+
+  * a50fe5433a Merge pull request `#42595`_ from gtmanfred/2017.7.1
+
+  * 8f73804b24 make sure to pass arg as well
+
+* **PR** `#42597`_: (`rallytime`_) Back-port `#42590`_ to 2017.7.1
+  @ *2017-07-28 00:20:01 UTC*
+
+  * **PR** `#42590`_: (`TiteiKo`_) Fix missing tornado import (refs: `#42597`_)
+
+  * 3b583330de Merge pull request `#42597`_ from rallytime/bp-42590
+
+  * 8818b06f22 Fix missing tornado import
+
+* **ISSUE** `#42404`_: (`gabekahen`_) [2017.7] file.managed with cmd_check "No such file or directory" (refs: `#42411`_)
+
+* **ISSUE** `#33708`_: (`pepinje`_) visudo check command leaves cache file in /tmp (refs: `#38063`_, `#42411`_)
+
+* **PR** `#42598`_: (`rallytime`_) Back-port `#42411`_ to 2017.7.1
+  @ *2017-07-28 00:19:13 UTC*
+
+  * **PR** `#42411`_: (`seedickcode`_) Fix file.managed check_cmd file not found - Issue `#42404`_ (refs: `#42598`_)
+
+  * **PR** `#38063`_: (`llua`_) tmp file clean up in file.manage - fix for `#33708`_ (refs: `#42411`_)
+
+  * 76f1e53e10 Merge pull request `#42598`_ from rallytime/bp-42411
+
+  * 190cdb8693 Fix file.managed check_cmd file not found - Issue `#42404`_
+
+* **PR** `#42564`_: (`rallytime`_) Back-port `#42555`_ to 2017.7.1
+  @ *2017-07-26 17:32:02 UTC*
+
+  * **PR** `#42555`_: (`Ch3LL`_) add changelog to 2017.7.1 release notes (refs: `#42564`_)
+
+  * 5c7def9a43 Merge pull request `#42564`_ from rallytime/bp-42555
+
+  * 7bcaa5a4cc small markup fix for title
+
+  * d066b599ca add changelog to 2017.7.1 release notes
+
+* **ISSUE** `saltstack/salt-jenkins#460`_: (`Ch3LL`_) decorator tests failing on python3 (refs: `#42548`_)
+
+* **PR** `#42548`_: (`gtmanfred`_) pass in empty kwarg for reactor (refs: `#42595`_)
+  @ *2017-07-26 00:41:20 UTC*
+
   * 711b742c54 Merge pull request `#42548`_ from gtmanfred/2017.7.1
+
   * 0257c1dc32 pass in empty kwarg for reactor
 
   * b948e980d2 update chunk, not kwarg in chunk
 
-- **PR** `#42522`_: (*gtmanfred*) pacman wildcard is only for repository installs
-  @ *2017-07-24T20:51:05Z*
+* **ISSUE** `#42519`_: (`xuhcc`_) Error when installing package from file under Arch Linux (refs: `#42522`_)
 
-  - **ISSUE** `#42519`_: (*xuhcc*) Error when installing package from file under Arch Linux
-    | refs: `#42522`_
+* **PR** `#42522`_: (`gtmanfred`_) pacman wildcard is only for repository installs
+  @ *2017-07-24 20:51:05 UTC*
+
   * 50c1635dcc Merge pull request `#42522`_ from gtmanfred/2017.7.1
+
   * 7787fb9e1b pacman wildcard is only for repository installs
 
-- **PR** `#42508`_: (*rallytime*) Back-port `#42474`_ to 2017.7.1
-  @ *2017-07-24T20:49:51Z*
+* **PR** `#42508`_: (`rallytime`_) Back-port `#42474`_ to 2017.7.1
+  @ *2017-07-24 20:49:51 UTC*
 
-  - **PR** `#42474`_: (*whiteinge*) Cmd arg kwarg parsing test
-    | refs: `#42508`_
-  - **PR** `#39646`_: (*terminalmage*) Handle deprecation of passing string args to load_args_and_kwargs
-    | refs: `#42474`_
-  * 05c07ac049 Merge pull request `#42508`_ from rallytime/`bp-42474`_
+  * **PR** `#42474`_: (`whiteinge`_) Cmd arg kwarg parsing test (refs: `#42508`_)
+
+  * **PR** `#39646`_: (`terminalmage`_) Handle deprecation of passing string args to load_args_and_kwargs (refs: `#42474`_)
+
+  * 05c07ac049 Merge pull request `#42508`_ from rallytime/bp-42474
+
   * 76fb074433 Add a test.arg variant that cleans the pub kwargs by default
 
   * 624f63648e Lint fixes
@@ -61,74 +116,81 @@ Changes:
 
   * 854e098aa0 Add LocalClient.cmd test for arg/kwarg parsing
 
-- **PR** `#42472`_: (*rallytime*) Back-port `#42435`_ to 2017.7.1
-  @ *2017-07-24T15:11:13Z*
+* **ISSUE** `#42427`_: (`grichmond-salt`_) Issue Passing Variables created from load_json as Inline Pillar Between States (refs: `#42435`_)
 
-  - **ISSUE** `#42427`_: (*grichmond-salt*) Issue Passing Variables created from load_json as Inline Pillar Between States
-    | refs: `#42435`_
-  - **PR** `#42435`_: (*terminalmage*) Modify our custom YAML loader to treat unicode literals as unicode strings
-    | refs: `#42472`_
-  * 95fe2558e4 Merge pull request `#42472`_ from rallytime/`bp-42435`_
+* **PR** `#42472`_: (`rallytime`_) Back-port `#42435`_ to 2017.7.1
+  @ *2017-07-24 15:11:13 UTC*
+
+  * **PR** `#42435`_: (`terminalmage`_) Modify our custom YAML loader to treat unicode literals as unicode strings (refs: `#42472`_)
+
+  * 95fe2558e4 Merge pull request `#42472`_ from rallytime/bp-42435
+
   * 5c47af5b98 Modify our custom YAML loader to treat unicode literals as unicode strings
 
-- **PR** `#42473`_: (*rallytime*) Back-port `#42436`_ to 2017.7.1
-  @ *2017-07-24T15:10:29Z*
+* **ISSUE** `#42374`_: (`tyhunt99`_) [2017.7.0] salt-run mange.versions throws exception if minion is offline or unresponsive (refs: `#42436`_)
 
-  - **ISSUE** `#42374`_: (*tyhunt99*) [2017.7.0] salt-run mange.versions throws exception if minion is offline or unresponsive
-    | refs: `#42436`_
-  - **PR** `#42436`_: (*garethgreenaway*) Fixes to versions function in manage runner
-    | refs: `#42473`_
-  * 5b99d45f54 Merge pull request `#42473`_ from rallytime/`bp-42436`_
+* **PR** `#42473`_: (`rallytime`_) Back-port `#42436`_ to 2017.7.1
+  @ *2017-07-24 15:10:29 UTC*
+
+  * **PR** `#42436`_: (`garethgreenaway`_) Fixes to versions function in manage runner (refs: `#42473`_)
+
+  * 5b99d45f54 Merge pull request `#42473`_ from rallytime/bp-42436
+
   * 82ed919803 Updating the versions function inside the manage runner to account for when a minion is offline and we are unable to determine it's version.
 
-- **PR** `#42471`_: (*rallytime*) Back-port `#42399`_ to 2017.7.1
-  @ *2017-07-24T15:09:50Z*
+* **ISSUE** `#42381`_: (`zebooka`_) Git.detached broken in 2017.7.0 (refs: `#42399`_)
 
-  - **ISSUE** `#42381`_: (*zebooka*) Git.detached broken in 2017.7.0
-    | refs: `#42399`_
-  - **ISSUE** `#38878`_: (*tomlaredo*) [Naming consistency] git.latest "rev" option VS git.detached "ref" option
-    | refs: `#38898`_
-  - **PR** `#42399`_: (*rallytime*) Update old "ref" references to "rev" in git.detached state
-    | refs: `#42471`_
-  - **PR** `#38898`_: (*terminalmage*) git.detached: rename ref to rev for consistency
-    | refs: `#42399`_
-  * 3d1a2d3f9f Merge pull request `#42471`_ from rallytime/`bp-42399`_
+* **ISSUE** `#38878`_: (`tomlaredo`_) [Naming consistency] git.latest "rev" option VS git.detached "ref" option (refs: `#38898`_)
+
+* **PR** `#42471`_: (`rallytime`_) Back-port `#42399`_ to 2017.7.1
+  @ *2017-07-24 15:09:50 UTC*
+
+  * **PR** `#42399`_: (`rallytime`_) Update old "ref" references to "rev" in git.detached state (refs: `#42471`_)
+
+  * **PR** `#38898`_: (`terminalmage`_) git.detached: rename ref to rev for consistency (refs: `#42399`_)
+
+  * 3d1a2d3f9f Merge pull request `#42471`_ from rallytime/bp-42399
+
   * b9a4669e5a Update old "ref" references to "rev" in git.detached state
 
-- **PR** `#42470`_: (*rallytime*) Back-port `#42031`_ to 2017.7.1
-  @ *2017-07-24T15:09:30Z*
+* **ISSUE** `#42400`_: (`Enquier`_) Conflict in execution of passing pillar data to orch/reactor event executions 2017.7.0 (refs: `#42031`_)
 
-  - **ISSUE** `#42400`_: (*Enquier*) Conflict in execution of passing pillar data to orch/reactor event executions 2017.7.0
-    | refs: `#42031`_
-  - **PR** `#42031`_: (*skizunov*) Fix: Reactor emits critical error
-    | refs: `#42470`_
-  * 09766bccbc Merge pull request `#42470`_ from rallytime/`bp-42031`_
+* **PR** `#42470`_: (`rallytime`_) Back-port `#42031`_ to 2017.7.1
+  @ *2017-07-24 15:09:30 UTC*
+
+  * **PR** `#42031`_: (`skizunov`_) Fix: Reactor emits critical error (refs: `#42470`_)
+
+  * 09766bccbc Merge pull request `#42470`_ from rallytime/bp-42031
+
   * 0a0c6287a4 Fix: Reactor emits critical error
 
-- **PR** `#42469`_: (*rallytime*) Back-port `#42027`_ to 2017.7.1
-  @ *2017-07-21T22:41:02Z*
+* **ISSUE** `#41949`_: (`jrporcaro`_) Event returner doesn't work with Windows Master (refs: `#42027`_)
 
-  - **ISSUE** `#41949`_: (*jrporcaro*) Event returner doesn't work with Windows Master
-    | refs: `#42027`_
-  - **PR** `#42027`_: (*gtmanfred*) import salt.minion for EventReturn for Windows
-    | refs: `#42469`_
-  * d7b172a15b Merge pull request `#42469`_ from rallytime/`bp-42027`_
+* **PR** `#42469`_: (`rallytime`_) Back-port `#42027`_ to 2017.7.1
+  @ *2017-07-21 22:41:02 UTC*
+
+  * **PR** `#42027`_: (`gtmanfred`_) import salt.minion for EventReturn for Windows (refs: `#42469`_)
+
+  * d7b172a15b Merge pull request `#42469`_ from rallytime/bp-42027
+
   * ed612b4ee7 import salt.minion for EventReturn for Windows
 
-- **PR** `#42466`_: (*rallytime*) Back-port `#42452`_ to 2017.7.1
-  @ *2017-07-21T19:41:24Z*
+* **PR** `#42466`_: (`rallytime`_) Back-port `#42452`_ to 2017.7.1
+  @ *2017-07-21 19:41:24 UTC*
 
-  - **PR** `#42452`_: (*Ch3LL*) update windows urls to new py2/py3 naming scheme
-    | refs: `#42466`_
-  * 8777b1a825 Merge pull request `#42466`_ from rallytime/`bp-42452`_
+  * **PR** `#42452`_: (`Ch3LL`_) update windows urls to new py2/py3 naming scheme (refs: `#42466`_)
+
+  * 8777b1a825 Merge pull request `#42466`_ from rallytime/bp-42452
+
   * c10196f68c update windows urls to new py2/py3 naming scheme
 
-- **PR** `#42439`_: (*rallytime*) Back-port `#42409`_ to 2017.7.1
-  @ *2017-07-21T17:38:10Z*
+* **PR** `#42439`_: (`rallytime`_) Back-port `#42409`_ to 2017.7.1
+  @ *2017-07-21 17:38:10 UTC*
 
-  - **PR** `#42409`_: (*twangboy*) Add Scripts to build Py3 on Mac
-    | refs: `#42439`_
-  * fceaaf41d0 Merge pull request `#42439`_ from rallytime/`bp-42409`_
+  * **PR** `#42409`_: (`twangboy`_) Add Scripts to build Py3 on Mac (refs: `#42439`_)
+
+  * fceaaf41d0 Merge pull request `#42439`_ from rallytime/bp-42409
+
   * 8176964b41 Remove build and dist, sign pkgs
 
   * 2c14d92a07 Fix hard coded pip path
@@ -137,17 +199,20 @@ Changes:
 
   * 2478447246 Update Python and other reqs
 
-- **PR** `#42441`_: (*rallytime*) Back-port `#42433`_ to 2017.7.1
-  @ *2017-07-21T17:37:01Z*
+* **ISSUE** `#42403`_: (`astronouth7303`_) [2017.7] Pillar empty when state is applied from orchestrate (refs: `#42433`_)
 
-  - **ISSUE** `#42403`_: (*astronouth7303*) [2017.7] Pillar empty when state is applied from orchestrate
-    | refs: `#42433`_
-  - **PR** `#42433`_: (*terminalmage*) Only force saltenv/pillarenv to be a string when not None
-    | refs: `#42441`_
-  * 660400560b Merge pull request `#42441`_ from rallytime/`bp-42433`_
+* **PR** `#42441`_: (`rallytime`_) Back-port `#42433`_ to 2017.7.1
+  @ *2017-07-21 17:37:01 UTC*
+
+  * **PR** `#42433`_: (`terminalmage`_) Only force saltenv/pillarenv to be a string when not None (refs: `#42441`_)
+
+  * 660400560b Merge pull request `#42441`_ from rallytime/bp-42433
+
   * 17f347123a Only force saltenv/pillarenv to be a string when not None
 
-
+.. _`#1`: https://github.com/saltstack/salt/issues/1
+.. _`#33708`: https://github.com/saltstack/salt/issues/33708
+.. _`#38063`: https://github.com/saltstack/salt/pull/38063
 .. _`#38878`: https://github.com/saltstack/salt/issues/38878
 .. _`#38898`: https://github.com/saltstack/salt/pull/38898
 .. _`#39646`: https://github.com/saltstack/salt/pull/39646
@@ -159,7 +224,9 @@ Changes:
 .. _`#42399`: https://github.com/saltstack/salt/pull/42399
 .. _`#42400`: https://github.com/saltstack/salt/issues/42400
 .. _`#42403`: https://github.com/saltstack/salt/issues/42403
+.. _`#42404`: https://github.com/saltstack/salt/issues/42404
 .. _`#42409`: https://github.com/saltstack/salt/pull/42409
+.. _`#42411`: https://github.com/saltstack/salt/pull/42411
 .. _`#42427`: https://github.com/saltstack/salt/issues/42427
 .. _`#42433`: https://github.com/saltstack/salt/pull/42433
 .. _`#42435`: https://github.com/saltstack/salt/pull/42435
@@ -178,13 +245,32 @@ Changes:
 .. _`#42519`: https://github.com/saltstack/salt/issues/42519
 .. _`#42522`: https://github.com/saltstack/salt/pull/42522
 .. _`#42548`: https://github.com/saltstack/salt/pull/42548
-.. _`#460`: https://github.com/saltstack/salt/issues/460
-.. _`bp-42027`: https://github.com/saltstack/salt/pull/42027
-.. _`bp-42031`: https://github.com/saltstack/salt/pull/42031
-.. _`bp-42399`: https://github.com/saltstack/salt/pull/42399
-.. _`bp-42409`: https://github.com/saltstack/salt/pull/42409
-.. _`bp-42433`: https://github.com/saltstack/salt/pull/42433
-.. _`bp-42435`: https://github.com/saltstack/salt/pull/42435
-.. _`bp-42436`: https://github.com/saltstack/salt/pull/42436
-.. _`bp-42452`: https://github.com/saltstack/salt/pull/42452
-.. _`bp-42474`: https://github.com/saltstack/salt/pull/42474
+.. _`#42555`: https://github.com/saltstack/salt/pull/42555
+.. _`#42564`: https://github.com/saltstack/salt/pull/42564
+.. _`#42590`: https://github.com/saltstack/salt/pull/42590
+.. _`#42595`: https://github.com/saltstack/salt/pull/42595
+.. _`#42597`: https://github.com/saltstack/salt/pull/42597
+.. _`#42598`: https://github.com/saltstack/salt/pull/42598
+.. _`Ch3LL`: https://github.com/Ch3LL
+.. _`Enquier`: https://github.com/Enquier
+.. _`TiteiKo`: https://github.com/TiteiKo
+.. _`astronouth7303`: https://github.com/astronouth7303
+.. _`gabekahen`: https://github.com/gabekahen
+.. _`garethgreenaway`: https://github.com/garethgreenaway
+.. _`grichmond-salt`: https://github.com/grichmond-salt
+.. _`gtmanfred`: https://github.com/gtmanfred
+.. _`jrporcaro`: https://github.com/jrporcaro
+.. _`llua`: https://github.com/llua
+.. _`pepinje`: https://github.com/pepinje
+.. _`rallytime`: https://github.com/rallytime
+.. _`saltstack/salt-jenkins#460`: https://github.com/saltstack/salt-jenkins/issues/460
+.. _`seedickcode`: https://github.com/seedickcode
+.. _`skizunov`: https://github.com/skizunov
+.. _`terminalmage`: https://github.com/terminalmage
+.. _`thatch45`: https://github.com/thatch45
+.. _`tomlaredo`: https://github.com/tomlaredo
+.. _`twangboy`: https://github.com/twangboy
+.. _`tyhunt99`: https://github.com/tyhunt99
+.. _`whiteinge`: https://github.com/whiteinge
+.. _`xuhcc`: https://github.com/xuhcc
+.. _`zebooka`: https://github.com/zebooka

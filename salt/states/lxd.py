@@ -51,15 +51,18 @@ def __virtual__():
     return __virtualname__ if 'lxd.version' in __salt__ else False
 
 
-def init(storage_backend='dir', trust_password=None, network_address=None,
-         network_port=None, storage_create_device=None,
+def init(name, storage_backend='dir', trust_password=None,
+         network_address=None, network_port=None, storage_create_device=None,
          storage_create_loop=None, storage_pool=None,
-         done_file='%SALT_CONFIG_DIR%/lxd_initialized', name=None):
+         done_file='%SALT_CONFIG_DIR%/lxd_initialized'):
     '''
     Initalizes the LXD Daemon, as LXD doesn't tell if its initialized
     we touch the the done_file and check if it exist.
 
     This can only be called once per host unless you remove the done_file.
+
+    name :
+        Ignore this. This is just here for salt.
 
     storage_backend :
         Storage backend to use (zfs or dir, default: dir)
@@ -86,23 +89,6 @@ def init(storage_backend='dir', trust_password=None, network_address=None,
         Path where we check that this method has been called,
         as it can run only once and theres currently no way
         to ask LXD if init has been called.
-
-    name :
-        Ignore this. This is just here for salt.
-
-    CLI Examples:
-
-    To listen on all IPv4/IPv6 Addresses:
-
-    .. code-block:: bash
-
-        salt '*' lxd.init dir PaSsW0rD [::]
-
-    To not listen on Network:
-
-    .. code-block:: bash
-
-        salt '*' lxd.init
     '''
 
     ret = {
@@ -215,7 +201,7 @@ def config_managed(name, value, force_password=False):
     return _success(ret, result_msg)
 
 
-def authenticate(remote_addr, password, cert, key, verify_cert=True, name=''):
+def authenticate(name, remote_addr, password, cert, key, verify_cert=True):
     '''
     Authenticate with a remote peer.
 
@@ -252,7 +238,7 @@ def authenticate(remote_addr, password, cert, key, verify_cert=True, name=''):
         but in the most cases you want to set it off as LXD
         normaly uses self-signed certificates.
 
-    name :
+    name:
         Ignore this. This is just here for salt.
     '''
     ret = {

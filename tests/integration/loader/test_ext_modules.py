@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 
 
     integration.loader.ext_modules
@@ -20,6 +20,9 @@ from tests.support.paths import TMP
 
 
 class LoaderOverridesTest(ModuleCase):
+
+    def setUp(self):
+        self.run_function('saltutil.sync_modules')
 
     def test_overridden_internal(self):
         # To avoid a race condition on Windows, we need to make sure the

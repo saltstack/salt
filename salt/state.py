@@ -33,10 +33,12 @@ import salt.pillar
 import salt.fileclient
 import salt.utils.args
 import salt.utils.crypt
+import salt.utils.data
 import salt.utils.decorators.state
 import salt.utils.dictupdate
 import salt.utils.event
 import salt.utils.files
+import salt.utils.hashutils
 import salt.utils.immutabletypes as immutabletypes
 import salt.utils.platform
 import salt.utils.process
@@ -49,7 +51,6 @@ from salt.exceptions import (
     SaltReqTimeoutError
 )
 from salt.utils.odict import OrderedDict, DefaultOrderedDict
-from salt.utils.locales import sdecode
 # Explicit late import to avoid circular import. DO NOT MOVE THIS.
 import salt.utils.yamlloader as yamlloader
 
@@ -261,11 +262,21 @@ def find_sls_ids(sls, high):
     '''
     ret = []
     for nid, item in six.iteritems(high):
-        if item['__sls__'] == sls:
-            for st_ in item:
-                if st_.startswith('__'):
-                    continue
-                ret.append((nid, st_))
+        try:
+            sls_tgt = item['__sls__']
+        except TypeError:
+            if nid != '__exclude__':
+                log.error(
+                    'Invalid non-dict item \'%s\' in high data. Value: %r',
+                    nid, item
+                )
+            continue
+        else:
+            if sls_tgt == sls:
+                for st_ in item:
+                    if st_.startswith('__'):
+                        continue
+                    ret.append((nid, st_))
     return ret
 
 
@@ -596,7 +607,7 @@ class Compiler(object):
                 chunk['order'] = chunk['order'] + chunk.pop('name_order') / 10000.0
             if chunk['order'] < 0:
                 chunk['order'] = cap + 1000000 + chunk['order']
-            chunk['name'] = sdecode(chunk['name'])
+            chunk['name'] = salt.utils.data.decode(chunk['name'])
         chunks.sort(key=lambda chunk: (chunk['order'], '{0[state]}{0[name]}{0[fun]}'.format(chunk)))
         return chunks
 
@@ -721,6 +732,7 @@ class State(object):
             except AttributeError:
                 pillar_enc = six.text_type(pillar_enc).lower()
         self._pillar_enc = pillar_enc
+        log.debug('Gathering pillar data for state run')
         if initial_pillar and not self._pillar_override:
             self.opts['pillar'] = initial_pillar
         else:
@@ -734,6 +746,7 @@ class State(object):
                     self.opts.get('pillar_source_merging_strategy', 'smart'),
                     self.opts.get('renderer', 'yaml'),
                     self.opts.get('pillar_merge_lists', False))
+        log.debug('Finished gathering pillar data for state run')
         self.state_con = context or {}
         self.load_modules()
         self.active = set()
@@ -1511,6 +1524,9 @@ class State(object):
         req_in_all = req_in.union({'require', 'watch', 'onfail', 'onfail_stop', 'onchanges'})
         extend = {}
         errors = []
+        disabled_reqs = self.opts.get('disabled_requisites', [])
+        if not isinstance(disabled_reqs, list):
+            disabled_reqs = [disabled_reqs]
         for id_, body in six.iteritems(high):
             if not isinstance(body, dict):
                 continue
@@ -1528,6 +1544,9 @@ class State(object):
                         # Split out the components
                         key = next(iter(arg))
                         if key not in req_in:
+                            continue
+                        if key in disabled_reqs:
+                            log.warning('The %s requisite has been disabled, Ignoring.', key)
                             continue
                         rkey = key.split('_')[0]
                         items = arg[key]
@@ -1753,7 +1772,9 @@ class State(object):
         ret['duration'] = duration
 
         troot = os.path.join(self.opts['cachedir'], self.jid)
-        tfile = os.path.join(troot, _clean_tag(tag))
+        tfile = os.path.join(
+            troot,
+            salt.utils.hashutils.sha1_digest(tag))
         if not os.path.isdir(troot):
             try:
                 os.makedirs(troot)
@@ -1794,6 +1815,11 @@ class State(object):
         Call a state directly with the low data structure, verify data
         before processing.
         '''
+        use_uptime = False
+        if os.path.isfile('/proc/uptime'):
+            use_uptime = True
+            with salt.utils.files.fopen('/proc/uptime', 'r') as fp_:
+                start_uptime = float(fp_.readline().split()[0])
         utc_start_time = datetime.datetime.utcnow()
         local_start_time = utc_start_time - (datetime.datetime.utcnow() - datetime.datetime.now())
         log.info('Running state [%s] at time %s',
@@ -1856,6 +1882,9 @@ class State(object):
             '__lowstate__': immutabletypes.freeze(chunks) if chunks else {}
         }
 
+        if '__env__' in low:
+            inject_globals['__env__'] = six.text_type(low['__env__'])
+
         if self.inject_globals:
             inject_globals.update(self.inject_globals)
 
@@ -1889,11 +1918,6 @@ class State(object):
                     # allow setting the OS environ also make use of the "env"
                     # keyword argument, which is not a string
                     inject_globals['__env__'] = six.text_type(cdata['kwargs']['env'])
-                elif '__env__' in low:
-                    # The user is passing an alternative environment using
-                    # __env__ which is also not the appropriate choice, still,
-                    # handle it
-                    inject_globals['__env__'] = six.text_type(low['__env__'])
 
             if '__env__' not in inject_globals:
                 # Let's use the default environment
@@ -1963,14 +1987,20 @@ class State(object):
         self.__run_num += 1
         format_log(ret)
         self.check_refresh(low, ret)
+        if use_uptime:
+            with salt.utils.files.fopen('/proc/uptime', 'r') as fp_:
+                finish_uptime = float(fp_.readline().split()[0])
         utc_finish_time = datetime.datetime.utcnow()
         timezone_delta = datetime.datetime.utcnow() - datetime.datetime.now()
         local_finish_time = utc_finish_time - timezone_delta
         local_start_time = utc_start_time - timezone_delta
         ret['start_time'] = local_start_time.time().isoformat()
-        delta = (utc_finish_time - utc_start_time)
-        # duration in milliseconds.microseconds
-        duration = (delta.seconds * 1000000 + delta.microseconds) / 1000.0
+        if use_uptime:
+            duration = (finish_uptime - start_uptime) * 1000.0
+        else:
+            delta = (utc_finish_time - utc_start_time)
+            # duration in milliseconds.microseconds
+            duration = (delta.seconds * 1000000 + delta.microseconds) / 1000.0
         ret['duration'] = duration
         ret['__id__'] = low['__id__']
         log.info(
@@ -2050,8 +2080,9 @@ class State(object):
                ('kwargs', cdata['kwargs'].items()))
         for atype, avalues in ctx:
             for ind, arg in avalues:
-                arg = sdecode(arg)
-                if not isinstance(arg, six.string_types) or not arg.startswith('__slot__:'):
+                arg = salt.utils.data.decode(arg, keep=True)
+                if not isinstance(arg, six.text_type) \
+                        or not arg.startswith('__slot__:'):
                     # Not a slot, skip it
                     continue
                 cdata[atype][ind] = self.__eval_slot(arg)
@@ -2138,7 +2169,7 @@ class State(object):
         while True:
             if self.reconcile_procs(running):
                 break
-            time.sleep(0.0001)
+            time.sleep(0.01)
         ret = dict(list(disabled.items()) + list(running.items()))
         return ret
 
@@ -2209,7 +2240,10 @@ class State(object):
             proc = running[tag].get('proc')
             if proc:
                 if not proc.is_alive():
-                    ret_cache = os.path.join(self.opts['cachedir'], self.jid, _clean_tag(tag))
+                    ret_cache = os.path.join(
+                        self.opts['cachedir'],
+                        self.jid,
+                        salt.utils.hashutils.sha1_digest(tag))
                     if not os.path.isfile(ret_cache):
                         ret = {'result': False,
                                'comment': 'Parallel process failed to return',
@@ -2234,6 +2268,9 @@ class State(object):
         Look into the running data to check the status of all requisite
         states
         '''
+        disabled_reqs = self.opts.get('disabled_requisites', [])
+        if not isinstance(disabled_reqs, list):
+            disabled_reqs = [disabled_reqs]
         present = False
         # If mod_watch is not available make it a require
         if 'watch' in low:
@@ -2285,6 +2322,9 @@ class State(object):
             reqs['prerequired'] = []
         for r_state in reqs:
             if r_state in low and low[r_state] is not None:
+                if r_state in disabled_reqs:
+                    log.warning('The %s requisite has been disabled, Ignoring.', r_state)
+                    continue
                 for req in low[r_state]:
                     if isinstance(req, six.string_types):
                         req = {'id': req}
@@ -2334,7 +2374,7 @@ class State(object):
             while True:
                 if self.reconcile_procs(run_dict):
                     break
-                time.sleep(0.0001)
+                time.sleep(0.01)
 
             for chunk in chunks:
                 tag = _gen_tag(chunk)
@@ -2666,6 +2706,7 @@ class State(object):
             else:
                 running[tag] = self.call(low, chunks, running)
         if tag in running:
+            running[tag]['__saltfunc__'] = '{0}.{1}'.format(low['state'], low['fun'])
             self.event(running[tag], len(chunks), fire_event=low.get('fire_event'))
         return running
 
@@ -3012,7 +3053,6 @@ class BaseHighState(object):
                     'top_file_merging_strategy set to \'same\', but no '
                     'default_top configuration option was set'
                 )
-            self.opts['saltenv'] = self.opts['default_top']
 
         if self.opts['saltenv']:
             contents = self.client.cache_file(
@@ -3371,7 +3411,7 @@ class BaseHighState(object):
                 def _filter_matches(_match, _data, _opts):
                     if isinstance(_data, six.string_types):
                         _data = [_data]
-                    if self.matcher.confirm_top(
+                    if self.matchers['confirm_top.confirm_top'](
                             _match,
                             _data,
                             _opts
@@ -4060,7 +4100,7 @@ class HighState(BaseHighState):
                            mocked=mocked,
                            loader=loader,
                            initial_pillar=initial_pillar)
-        self.matcher = salt.minion.Matcher(self.opts)
+        self.matchers = salt.loader.matchers(self.opts)
         self.proxy = proxy
 
         # tracks all pydsl state declarations globally across sls files

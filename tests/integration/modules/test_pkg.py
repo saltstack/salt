@@ -9,6 +9,7 @@ from tests.support.case import ModuleCase
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.helpers import (
     destructiveTest,
+    flaky,
     requires_network,
     requires_salt_modules,
 )
@@ -19,6 +20,7 @@ import salt.utils.pkg
 import salt.utils.platform
 
 
+@flaky
 class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the pkg module
@@ -77,9 +79,9 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         test modifying and deleting a software repository
         '''
         os_grain = self.run_function('grains.item', ['os'])['os']
+        repo = None
 
         try:
-            repo = None
             if os_grain == 'Ubuntu':
                 repo = 'ppa:otto-kesselgulasch/gimp-edge'
                 uri = 'http://ppa.launchpad.net/otto-kesselgulasch/gimp-edge/ubuntu'
@@ -162,6 +164,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
             test_install()
             test_remove()
 
+    @skipIf(salt.utils.platform.is_windows(), "Skip on windows")
     @requires_salt_modules('pkg.hold', 'pkg.unhold')
     @requires_network()
     @destructiveTest
@@ -170,15 +173,15 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         test holding and unholding a package
         '''
         os_family = self.run_function('grains.item', ['os_family'])['os_family']
-        os_major_release = self.run_function('grains.item', ['osmajorrelease'])['osmajorrelease']
         available = self.run_function('sys.doc', ['pkg.hold'])
+        version_lock = None
+        lock_pkg = 'yum-plugin-versionlock'
 
         if available:
             self.run_function('pkg.install', [self.pkg])
             if os_family == 'RedHat':
-                lock_pkg = 'yum-versionlock' if os_major_release == '5' else 'yum-plugin-versionlock'
-                versionlock = self.run_function('pkg.version', [lock_pkg])
-                if not versionlock:
+                version_lock = self.run_function('pkg.version', [lock_pkg])
+                if not version_lock:
                     self.run_function('pkg.install', [lock_pkg])
 
             hold_ret = self.run_function('pkg.hold', [self.pkg])
@@ -190,7 +193,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertTrue(unhold_ret[self.pkg]['result'])
 
             if os_family == 'RedHat':
-                if not versionlock:
+                if not version_lock:
                     self.run_function('pkg.remove', [lock_pkg])
             self.run_function('pkg.remove', [self.pkg])
 
@@ -278,9 +281,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
             # Therefore, we'll choose from several packages to make sure we get
             # one that is suitable for this test.
             packages = ('hwinfo', 'avrdude', 'diffoscope', 'vim')
-
             available = self.run_function('pkg.list_repo_pkgs', packages)
-            versions = self.run_function('pkg.version', packages)
 
             for package in packages:
                 try:
@@ -291,7 +292,6 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
                     continue
                 else:
                     target = package
-                    current = versions[target]
                     break
             else:
                 # None of the packages have more than one version available, so
@@ -324,7 +324,10 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
             if ret == '' or ret == {}:
                 self.skipTest('No updates available for this machine.  Skipping pkg.upgrade test.')
             else:
-                ret = self.run_function(func)
+                args = []
+                if os_family == 'Debian':
+                    args = ['dist_upgrade=True']
+                ret = self.run_function(func, args)
                 self.assertNotEqual(ret, {})
 
     @destructiveTest
@@ -332,19 +335,33 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
     @skipIf(salt.utils.platform.is_darwin(), 'minion is mac')
     def test_pkg_latest_version(self):
         '''
-        check that pkg.latest_version returns the latest version of the uninstalled package (it does not install the package, just checking the version)
+        Check that pkg.latest_version returns the latest version of the uninstalled package.
+        The package is not installed. Only the package version is checked.
         '''
         grains = self.run_function('grains.items')
-        cmd_info = self.run_function('pkg.info_installed', ['htop'])
-        if cmd_info != 'ERROR: package htop is not installed':
-            cmd_remove = self.run_function('pkg.remove', ['htop'])
+        remove = False
+        if salt.utils.platform.is_windows():
+            cmd_info = self.run_function('pkg.version', [self.pkg])
+            remove = False if cmd_info == '' else True
+        else:
+            cmd_info = self.run_function('pkg.info_installed', [self.pkg])
+            if cmd_info != 'ERROR: package {0} is not installed'.format(self.pkg):
+                remove = True
+
+        # remove package if its installed
+        if remove:
+            self.run_function('pkg.remove', [self.pkg])
+
+        cmd_pkg = []
         if grains['os_family'] == 'RedHat':
-            cmd_htop = self.run_function('cmd.run', ['yum list htop'])
+            cmd_pkg = self.run_function('cmd.run', ['yum list {0}'.format(self.pkg)])
+        elif salt.utils.platform.is_windows():
+            cmd_pkg = self.run_function('pkg.list_available', [self.pkg])
         elif grains['os_family'] == 'Debian':
-            cmd_htop = self.run_function('cmd.run', ['apt list htop'])
+            cmd_pkg = self.run_function('cmd.run', ['apt list {0}'.format(self.pkg)])
         elif grains['os_family'] == 'Arch':
-            cmd_htop = self.run_function('cmd.run', ['pacman -Si htop'])
+            cmd_pkg = self.run_function('cmd.run', ['pacman -Si {0}'.format(self.pkg)])
         elif grains['os_family'] == 'Suse':
-            cmd_htop = self.run_function('cmd.run', ['zypper info htop'])
-        pkg_latest = self.run_function('pkg.latest_version', ['htop'])
-        self.assertIn(pkg_latest, cmd_htop)
+            cmd_pkg = self.run_function('cmd.run', ['zypper info {0}'.format(self.pkg)])
+        pkg_latest = self.run_function('pkg.latest_version', [self.pkg])
+        self.assertIn(pkg_latest, cmd_pkg)

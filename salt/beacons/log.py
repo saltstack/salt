@@ -79,6 +79,25 @@ def beacon(config):
               - tags:
                   <tag>:
                     regex: <pattern>
+
+    .. note::
+
+        regex matching is based on the `re`_ module
+
+    .. _re: https://docs.python.org/3.6/library/re.html#regular-expression-syntax
+
+    The defined tag is added to the beacon event tag.
+    This is not the tag in the log.
+
+    .. code-block:: yaml
+
+        beacons:
+            log:
+              - file: /var/log/messages #path to log.
+              - tags:
+                  goodbye/world: # tag added to beacon event tag.
+                    regex: .*good-bye.* # match good-bye string anywhere in the log entry.
+
     '''
     _config = {}
     list(map(_config.update, config))

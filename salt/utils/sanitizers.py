@@ -18,10 +18,12 @@
 from __future__ import absolute_import, print_function, unicode_literals
 import re
 import os.path
+import fnmatch
 
 # Import Salt libs
 from salt.ext import six
 from salt.exceptions import CommandExecutionError
+import salt.utils.stringutils
 
 
 class InputSanitizer(object):
@@ -62,3 +64,32 @@ class InputSanitizer(object):
 
 
 clean = InputSanitizer()
+
+
+def mask_args_value(data, mask):
+    '''
+    Mask a line in the data, which matches "mask".
+
+    This can be used for cases where values in your roster file may contain
+    sensitive data such as IP addresses, passwords, user names, etc.
+
+    Note that this works only when ``data`` is a single string (i.e. when the
+    data in the roster is formatted as ``key: value`` pairs in YAML syntax).
+
+    :param data: String data, already rendered.
+    :param mask: Mask that matches a single line
+
+    :return:
+    '''
+    if not mask:
+        return data
+
+    out = []
+    for line in data.split(os.linesep):
+        if fnmatch.fnmatch(line.strip(), mask) and ':' in line:
+            key, value = line.split(':', 1)
+            out.append('{}: {}'.format(salt.utils.stringutils.to_unicode(key.strip()), '** hidden **'))
+        else:
+            out.append(line)
+
+    return '\n'.join(out)

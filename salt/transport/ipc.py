@@ -130,7 +130,7 @@ class IPCServer(object):
         else:
             self.sock = tornado.netutil.bind_unix_socket(self.socket_path)
 
-        with salt.utils.async.current_ioloop(self.io_loop):
+        with salt.utils.asynchronous.current_ioloop(self.io_loop):
             tornado.netutil.add_accept_handler(
                 self.sock,
                 self.handle_connection,
@@ -196,7 +196,7 @@ class IPCServer(object):
         log.trace('IPCServer: Handling connection '
                   'to address: %s', address)
         try:
-            with salt.utils.async.current_ioloop(self.io_loop):
+            with salt.utils.asynchronous.current_ioloop(self.io_loop):
                 stream = IOStream(
                     connection,
                 )
@@ -329,7 +329,7 @@ class IPCClient(object):
                 break
 
             if self.stream is None:
-                with salt.utils.async.current_ioloop(self.io_loop):
+                with salt.utils.asynchronous.current_ioloop(self.io_loop):
                     self.stream = IOStream(
                         socket.socket(sock_type, socket.SOCK_STREAM),
                     )
@@ -441,16 +441,13 @@ class IPCMessageServer(IPCServer):
 
         # Import Salt libs
         import salt.transport.ipc
-        import salt.config
-
-        opts = salt.config.master_opts()
 
         io_loop = tornado.ioloop.IOLoop.current()
         ipc_server_socket_path = '/var/run/ipc_server.ipc'
-        ipc_server = salt.transport.ipc.IPCMessageServer(opts, io_loop=io_loop
-                                                         stream_handler=print_to_console)
+        ipc_server = salt.transport.ipc.IPCMessageServer(ipc_server_socket_path, io_loop=io_loop,
+                                                         payload_handler=print_to_console)
         # Bind to the socket and prepare to run
-        ipc_server.start(ipc_server_socket_path)
+        ipc_server.start()
 
         # Start the server
         io_loop.start()
@@ -510,7 +507,7 @@ class IPCMessagePublisher(object):
         else:
             self.sock = tornado.netutil.bind_unix_socket(self.socket_path)
 
-        with salt.utils.async.current_ioloop(self.io_loop):
+        with salt.utils.asynchronous.current_ioloop(self.io_loop):
             tornado.netutil.add_accept_handler(
                 self.sock,
                 self.handle_connection,
@@ -549,7 +546,7 @@ class IPCMessagePublisher(object):
             if self.opts['ipc_write_buffer'] > 0:
                 kwargs['max_write_buffer_size'] = self.opts['ipc_write_buffer']
                 log.trace('Setting IPC connection write buffer: %s', (self.opts['ipc_write_buffer']))
-            with salt.utils.async.current_ioloop(self.io_loop):
+            with salt.utils.asynchronous.current_ioloop(self.io_loop):
                 stream = IOStream(
                     connection,
                     **kwargs
@@ -751,9 +748,9 @@ class IPCMessageSubscriber(IPCClient):
             # This will prevent this message from showing up:
             # '[ERROR   ] Future exception was never retrieved:
             # StreamClosedError'
-            if self._read_sync_future is not None:
+            if self._read_sync_future is not None and self._read_sync_future.done():
                 self._read_sync_future.exception()
-            if self._read_stream_future is not None:
+            if self._read_stream_future is not None and self._read_stream_future.done():
                 self._read_stream_future.exception()
 
     def __del__(self):

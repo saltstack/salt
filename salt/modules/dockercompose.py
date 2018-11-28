@@ -43,13 +43,13 @@ In order to use the module if you have no docker-compose file on the server you
 can issue the command create, it takes two arguments the path where the
 docker-compose.yml will be stored and the content of this latter:
 
-.. code-block:: bash
+.. code-block:: text
 
     # salt-call -l debug dockercompose.create /tmp/toto '
-     database:
-     image: mongo:3.0
-     command: mongod --smallfiles --quiet --logpath=/dev/null
-     '
+    database:
+    image: mongo:3.0
+    command: mongod --smallfiles --quiet --logpath=/dev/null
+    '
 
 Then you can execute a list of method defined at the bottom with at least one
 argument (the path where the docker-compose.yml will be read) and an optional

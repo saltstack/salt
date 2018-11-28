@@ -2,7 +2,7 @@
 '''
 Manage DNS records and zones using libcloud
 
-    :codeauthor: :email:`Anthony Shaw <anthonyshaw@apache.org>`
+    :codeauthor: Anthony Shaw <anthonyshaw@apache.org>
 
 .. versionadded:: 2016.11.0
 

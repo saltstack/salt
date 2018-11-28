@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Jayesh Kariya <jayeshk@saltstack.com>`
+    :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 '''
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
@@ -25,12 +25,8 @@ class BotoSqsTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         utils = salt.loader.utils(
             self.opts,
-            whitelist=['boto3', 'yamldumper'],
-            context={}
-        )
-        # Force the LazyDict to populate its references. Otherwise the lookup
-        # will fail inside the unit tests.
-        list(utils)
+            whitelist=['boto3', 'yaml', 'args', 'systemd', 'path', 'platform'],
+            context={})
         return {
             boto_sqs: {
                 '__utils__': utils,
@@ -78,7 +74,7 @@ class BotoSqsTestCase(TestCase, LoaderModuleMockMixin):
                 ret.update({
                     'result': None,
                     'comment': comt,
-                    'pchanges': {'old': None, 'new': 'mysqs'},
+                    'changes': {'old': None, 'new': 'mysqs'},
                 })
                 self.assertDictEqual(boto_sqs.present(name), ret)
                 diff = textwrap.dedent('''\
@@ -105,7 +101,7 @@ class BotoSqsTestCase(TestCase, LoaderModuleMockMixin):
                 ]
                 ret.update({
                     'comment': comt,
-                    'pchanges': {'attributes': {'diff': diff}},
+                    'changes': {'attributes': {'diff': diff}},
                 })
                 self.assertDictEqual(boto_sqs.present(name, attributes), ret)
 
@@ -137,6 +133,6 @@ class BotoSqsTestCase(TestCase, LoaderModuleMockMixin):
                 ret.update({
                     'result': None,
                     'comment': comt,
-                    'pchanges': {'old': name, 'new': None},
+                    'changes': {'old': name, 'new': None},
                 })
                 self.assertDictEqual(boto_sqs.absent(name), ret)

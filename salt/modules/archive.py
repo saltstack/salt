@@ -186,12 +186,13 @@ def list_(name,
                 else {'fileobj': cached.stdout, 'mode': 'r|'}
             with contextlib.closing(tarfile.open(**open_kwargs)) as tar_archive:
                 for member in tar_archive.getmembers():
+                    _member = salt.utils.data.decode(member.name)
                     if member.issym():
-                        links.append(member.name)
+                        links.append(_member)
                     elif member.isdir():
-                        dirs.append(member.name + '/')
+                        dirs.append(_member + '/')
                     else:
-                        files.append(member.name)
+                        files.append(_member)
             return dirs, files, links
 
         except tarfile.ReadError:
@@ -410,9 +411,9 @@ def list_(name,
                 item.sort()
 
         if verbose:
-            ret = {'dirs': sorted(dirs),
-                   'files': sorted(files),
-                   'links': sorted(links)}
+            ret = {'dirs': sorted(salt.utils.data.decode_list(dirs)),
+                   'files': sorted(salt.utils.data.decode_list(files)),
+                   'links': sorted(salt.utils.data.decode_list(links))}
             ret['top_level_dirs'] = [x for x in ret['dirs']
                                      if x.count('/') == 1]
             ret['top_level_files'] = [x for x in ret['files']
@@ -888,7 +889,7 @@ def cmd_unzip(zip_file,
 
     options
         Optional when using ``zip`` archives, ignored when usign other archives
-        files. This is mostly used to overwrite exsiting files with ``o``.
+        files. This is mostly used to overwrite existing files with ``o``.
         This options are only used when ``unzip`` binary is used.
 
         .. versionadded:: 2016.3.1

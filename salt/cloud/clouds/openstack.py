@@ -466,7 +466,10 @@ def show_instance(name, conn=None, call=None):
     ret['public_ips'] = _get_ips(node, 'public')
     ret['floating_ips'] = _get_ips(node, 'floating')
     ret['fixed_ips'] = _get_ips(node, 'fixed')
-    ret['image'] = conn.get_image(node.image.id).name
+    if isinstance(node.image, six.string_types):
+        ret['image'] = node.image
+    else:
+        ret['image'] = conn.get_image(node.image.id).name
     return ret
 
 
@@ -542,7 +545,7 @@ def list_subnets(conn=None, call=None, kwargs=None):
     network
         network to list subnets of
 
-    .. code-block::
+    .. code-block:: bash
 
         salt-cloud -f list_subnets myopenstack network=salt-net
 
@@ -597,6 +600,7 @@ def _clean_create_kwargs(**kwargs):
         'volume_size': int,
         'nat_destination': six.string_types,
         'group': six.string_types,
+        'userdata': six.string_types,
     }
     extra = kwargs.pop('extra', {})
     for key, value in six.iteritems(kwargs.copy()):

@@ -27,7 +27,7 @@ This has also been tested to work with pipes, if needed:
 
 .. code-block:: yaml
 
-    script_args: | head
+    script_args: '| head'
 
 
 Selecting the File Transport
@@ -129,17 +129,6 @@ By default ssh port is set to port 22. If you want to use a custom port in
 provider, profile, or map blocks use ssh_port option.
 
 .. versionadded:: 2015.5.0
-
-.. code-block:: yaml
-
-    ssh_port: 2222
-
-
-SSH Port
-========
-
-By default ssh port is set to port 22. If you want to use a custom port in
-provider, profile, or map blocks use ssh_port option.
 
 .. code-block:: yaml
 

@@ -200,7 +200,7 @@ preferred:
 
 ``/srv/salt/apache/conf.sls``:
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     {% set name = 'httpd' %}
     {% set tmpl = 'salt://apache/files/httpd.conf' %}
@@ -234,7 +234,7 @@ locations within a single state:
 
 ``/srv/salt/apache/conf.sls``:
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     {% from "apache/map.jinja" import apache with context %}
 
@@ -267,7 +267,8 @@ is not very modular to one that is:
 .. code-block:: yaml
 
     httpd:
-      pkg.installed: []
+      pkg:
+        - installed
       service.running:
         - enable: True
 
@@ -331,7 +332,7 @@ modification of static values:
 
 ``/srv/salt/apache/map.jinja``:
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     {% set apache = salt['grains.filter_by']({
         'Debian': {
@@ -357,7 +358,7 @@ modification of static values:
 
 ``/srv/salt/apache/init.sls``:
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     {% from "apache/map.jinja" import apache with context %}
 
@@ -387,7 +388,7 @@ to be broken into two states.
 
 ``/srv/salt/apache/map.jinja``:
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     {% set apache = salt['grains.filter_by']({
         'Debian': {
@@ -414,7 +415,7 @@ to be broken into two states.
 
 ``/srv/salt/apache/init.sls``:
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     {% from "apache/map.jinja" import apache with context %}
 
@@ -427,7 +428,7 @@ to be broken into two states.
 
 ``/srv/salt/apache/conf.sls``:
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     {% from "apache/map.jinja" import apache with context %}
 
@@ -521,7 +522,7 @@ the associated pillar:
 
 ``/srv/salt/mysql/testerdb.sls``:
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     testdb:
       mysql_database.present:
@@ -529,7 +530,7 @@ the associated pillar:
 
 ``/srv/salt/mysql/user.sls``:
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     include:
       - mysql.testerdb

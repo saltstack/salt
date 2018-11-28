@@ -5,8 +5,6 @@ Salt 0.8.0 release notes
 Salt 0.8.0 is ready for general consumption!
 The source tarball is available on GitHub for download:
 
-:download:`salt-0.8.0.tar.gz`
-
 A lot of work has gone into salt since the last release just 2 weeks ago, and
 salt has improved a great deal. A swath of new features are here along with
 performance and threading improvements!

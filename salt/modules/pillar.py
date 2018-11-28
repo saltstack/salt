@@ -40,10 +40,10 @@ def get(key,
     '''
     .. versionadded:: 0.14
 
-    Attempt to retrieve the named value from pillar, if the named value is not
-    available return the passed default. The default return is an empty string
-    except ``__opts__['pillar_raise_on_missing']`` is set to True, in which
-    case a ``KeyError`` exception will be raised.
+    Attempt to retrieve the named value from :ref:`in-memory pillar data
+    <pillar-in-memory>`. If the pillar key is not present in the in-memory
+    pillar, then the value specified in the ``default`` option (described
+    below) will be returned.
 
     If the merge parameter is set to ``True``, the default will be recursively
     merged into the returned pillar data.
@@ -62,8 +62,12 @@ def get(key,
         The pillar key to get value from
 
     default
-        If specified, return this value in case when named pillar value does
-        not exist.
+        The value specified by this option will be returned if the desired
+        pillar key does not exist.
+
+        If a default value is specified, then it will be an empty string,
+        unless :conf_minion:`pillar_raise_on_missing` is set to ``True``, in
+        which case an error will be raised.
 
     merge : ``False``
         If ``True``, the retrieved values will be merged into the passed

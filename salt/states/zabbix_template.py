@@ -24,11 +24,11 @@ log = logging.getLogger(__name__)
 TEMPLATE_RELATIONS = ['groups', 'hosts', 'macros']
 TEMPLATE_COMPONENT_ORDER = ('applications',
                             'items',
-                            'triggers',
                             'gitems',
                             'graphs',
                             'screens',
                             'httpTests',
+                            'triggers',
                             'discoveries')
 DISCOVERYRULE_COMPONENT_ORDER = ('itemprototypes', 'triggerprototypes', 'graphprototypes', 'hostprototypes')
 TEMPLATE_COMPONENT_DEF = {
@@ -380,8 +380,8 @@ def present(name, params, static_host_list=True, **kwargs):
 
     :param name: Zabbix Template name
     :param params: Additional parameters according to Zabbix API documentation
-    :param static_host_list: If hosts assigned to the template are controlled only by this state or can be also
-    assigned externally
+    :param static_host_list: If hosts assigned to the template are controlled
+        only by this state or can be also assigned externally
     :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
     :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
     :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
@@ -501,6 +501,8 @@ def present(name, params, static_host_list=True, **kwargs):
     dry_run = __opts__['test']
     ret = {'name': name, 'result': False, 'comment': '', 'changes': {}}
     params['host'] = name
+
+    del CHANGE_STACK[:]
 
     # Divide template yaml definition into parts
     # - template definition itself

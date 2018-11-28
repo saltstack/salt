@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Jayesh Kariya <jayeshk@saltstack.com>`
+    :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 '''
 # Import Python libs
 from __future__ import absolute_import, unicode_literals, print_function
@@ -175,13 +175,11 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
         name = 'state'
         tgt = 'larry'
 
-        comt = ('Function state will be executed'
-                ' on target {0} as test=False'.format(tgt))
-
         ret = {'name': name,
                'changes': {},
                'result': None,
-               'comment': comt}
+               'comment': 'Function state would be executed '
+                          'on target {0}'.format(tgt)}
 
         with patch.dict(saltmod.__opts__, {'test': True}):
             self.assertDictEqual(saltmod.function(name, tgt), ret)

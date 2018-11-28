@@ -3,10 +3,11 @@
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 import os
+import time
 
 # Import Salt Testing libs
-from tests.support.unit import TestCase
 from tests.support.paths import TMP_CONF_DIR
+from tests.support.unit import TestCase, skipIf
 
 # Import Salt libs
 import salt.config
@@ -35,7 +36,18 @@ class NetapiClientTest(TestCase):
         low.update(self.eauth_creds)
 
         ret = self.netapi.run(low)
-        self.assertEqual(ret, {'minion': True, 'sub_minion': True, 'localhost': True})
+        self.assertEqual(ret, {'minion': True, 'sub_minion': True})
+
+    def test_local_batch(self):
+        low = {'client': 'local_batch', 'tgt': '*', 'fun': 'test.ping'}
+        low.update(self.eauth_creds)
+
+        ret = self.netapi.run(low)
+        rets = []
+        for _ret in ret:
+            rets.append(_ret)
+        self.assertIn({'sub_minion': True}, rets)
+        self.assertIn({'minion': True}, rets)
 
     def test_local_async(self):
         low = {'client': 'local_async', 'tgt': '*', 'fun': 'test.ping'}
@@ -47,7 +59,7 @@ class NetapiClientTest(TestCase):
         self.assertIn('jid', ret)
         ret.pop('jid', None)
         ret['minions'] = sorted(ret['minions'])
-        self.assertEqual(ret, {'minions': sorted(['minion', 'sub_minion', 'localhost'])})
+        self.assertEqual(ret, {'minions': sorted(['minion', 'sub_minion'])})
 
     def test_wheel(self):
         low = {'client': 'wheel', 'fun': 'key.list_all'}
@@ -73,6 +85,8 @@ class NetapiClientTest(TestCase):
         self.assertTrue(set(['master.pem', 'master.pub']).issubset(set(ret['data']['return']['local'])))
 
     def test_wheel_async(self):
+        # Give this test a little breathing room
+        time.sleep(3)
         low = {'client': 'wheel_async', 'fun': 'key.list_all'}
         low.update(self.eauth_creds)
 
@@ -80,6 +94,7 @@ class NetapiClientTest(TestCase):
         self.assertIn('jid', ret)
         self.assertIn('tag', ret)
 
+    @skipIf(True, 'This is not testing anything. Skipping for now.')
     def test_runner(self):
         # TODO: fix race condition in init of event-- right now the event class
         # will finish init even if the underlying zmq socket hasn't connected yet
@@ -91,6 +106,7 @@ class NetapiClientTest(TestCase):
 
         ret = self.netapi.run(low)
 
+    @skipIf(True, 'This is not testing anything. Skipping for now.')
     def test_runner_async(self):
         low = {'client': 'runner', 'fun': 'cache.grains'}
         low.update(self.eauth_creds)

@@ -345,16 +345,19 @@ def hosted_zone_present(name, domain_name=None, private_zone=False, caller_ref=N
                         vpc_id=None, vpc_name=None, vpc_region=None, region=None, key=None,
                         keyid=None, profile=None):
     '''
-    Ensure a hosted zone exists with the given attributes.  Note that most things cannot be
-    modified once a zone is created - it must be deleted and re-spun to update these attributes.
-    If you need the ability to update these attributes, please use the newer boto3_route53
-    module instead:
-        - private_zone (AWS API limitation).
-        - comment (the appropriate call exists in the AWS API and in boto3, but has not, as of
-          this writing, been added to boto2).
-        - vpc_id (boto3 only)
-        - vpc_name (really just a pointer to vpc_id anyway).
-        - vpc_region (again, supported in boto3 but not boto2).
+    Ensure a hosted zone exists with the given attributes. Note that most
+    things cannot be modified once a zone is created - it must be deleted and
+    re-spun to update these attributes:
+
+    - private_zone (AWS API limitation).
+    - comment (the appropriate call exists in the AWS API and in boto3, but has
+      not, as of this writing, been added to boto2).
+    - vpc_id (same story - we really need to rewrite this module with boto3)
+    - vpc_name (really just a pointer to vpc_id anyway).
+    - vpc_region (again, supported in boto3 but not boto2).
+
+    If you need the ability to update these attributes, please use the newer
+    boto3_route53 module instead.
 
     name
         The name of the state definition.
@@ -439,7 +442,7 @@ def hosted_zone_present(name, domain_name=None, private_zone=False, caller_ref=N
             create = True
         else:
             if private_zone:
-                for v, d in deets.get('VPCs', {}).items():
+                for d in deets.get('VPCs', {}):
                     if (d['VPCId'] == vpc_id
                             and d['VPCRegion'] == vpc_region):
                         create = False

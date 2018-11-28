@@ -12,7 +12,7 @@ import textwrap
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
-from tests.support.helpers import destructiveTest, skip_if_not_root
+from tests.support.helpers import destructiveTest, skip_if_not_root, flaky
 
 # Import Salt libs
 import salt.utils.files
@@ -255,6 +255,7 @@ class SystemModuleTest(ModuleCase):
         self.assertTrue(self._same_times(time_now, cmp_time), msg=msg)
         self._test_hwclock_sync()
 
+    @flaky
     @destructiveTest
     @skip_if_not_root
     def test_set_system_time(self):
@@ -366,6 +367,12 @@ class WinSystemModuleTest(ModuleCase):
     '''
     Validate the date/time functions in the win_system module
     '''
+
+    @classmethod
+    def tearDownClass(cls):
+        if subprocess.call('w32tm /resync', shell=True) != 0:
+            log.error("Re-syncing time failed")
+
     def test_get_computer_name(self):
         '''
         Test getting the computer name
@@ -397,7 +404,9 @@ class WinSystemModuleTest(ModuleCase):
         now = datetime.datetime.now()
         self.assertEqual(now.strftime("%I:%M"), ret.rsplit(':', 1)[0])
 
+    @flaky
     @destructiveTest
+    @flaky
     def test_set_system_time(self):
         '''
         Test setting the system time
