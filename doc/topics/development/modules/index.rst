@@ -16,11 +16,10 @@ Additional Information
 ----------------------
 
 .. toctree::
-    :maxdepth: 1
+    :maxdepth: 2
     :glob:
 
     developing
-    dunder_dictionaries
 
 
 Loading Modules
