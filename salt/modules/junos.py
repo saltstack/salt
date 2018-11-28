@@ -116,7 +116,7 @@ def facts_refresh():
         salt 'device_name' junos.facts_refresh
     '''
     conn = __proxy__['junos.conn']()
-    ret = dict()
+    ret = {}
     ret['out'] = True
     try:
         conn.facts_refresh()
@@ -145,7 +145,7 @@ def facts():
 
         salt 'device_name' junos.facts
     '''
-    ret = dict()
+    ret = {}
     try:
         ret['facts'] = __proxy__['junos.get_serialized_facts']()
         ret['out'] = True
@@ -195,7 +195,7 @@ def rpc(cmd=None, dest=None, **kwargs):
     '''
 
     conn = __proxy__['junos.conn']()
-    ret = dict()
+    ret = {}
     ret['out'] = True
 
     if cmd is None:
@@ -301,7 +301,7 @@ def set_hostname(hostname=None, **kwargs):
         salt 'device_name' junos.set_hostname salt-device
     '''
     conn = __proxy__['junos.conn']()
-    ret = dict()
+    ret = {}
     if hostname is None:
         ret['message'] = 'Please provide the hostname.'
         ret['out'] = False
@@ -473,7 +473,7 @@ def rollback(**kwargs):
     '''
     id_ = kwargs.pop('id', 0)
 
-    ret = dict()
+    ret = {}
     conn = __proxy__['junos.conn']()
 
     op = dict()
@@ -550,7 +550,7 @@ def diff(**kwargs):
         salt.utils.args.invalid_kwargs(kwargs)
 
     conn = __proxy__['junos.conn']()
-    ret = dict()
+    ret = {}
     ret['out'] = True
     try:
         ret['message'] = conn.cu.diff(rb_id=id_)
@@ -597,7 +597,7 @@ def ping(dest_ip=None, **kwargs):
         salt 'device_name' junos.ping '8.8.8.8' ttl=1 rapid=True
     '''
     conn = __proxy__['junos.conn']()
-    ret = dict()
+    ret = {}
 
     if dest_ip is None:
         ret['message'] = 'Please specify the destination ip to ping.'
@@ -658,7 +658,7 @@ def cli(command=None, **kwargs):
     if not format_:
         format_ = 'text'
 
-    ret = dict()
+    ret = {}
     if command is None:
         ret['message'] = 'Please provide the CLI command to be executed.'
         ret['out'] = False
@@ -727,10 +727,10 @@ def shutdown(**kwargs):
         salt 'device_name' junos.shutdown shutdown=True
     '''
     conn = __proxy__['junos.conn']()
-    ret = dict()
+    ret = {}
     sw = SW(conn)
 
-    op = dict()
+    op = {}
     if '__pub_arg' in kwargs:
         if kwargs['__pub_arg']:
             if isinstance(kwargs['__pub_arg'][-1], dict):
@@ -843,7 +843,7 @@ def install_config(path=None, **kwargs):
         salt 'device_name' junos.install_config 'salt://syslog_template.conf' template_vars='{"syslog_host": "10.180.222.7"}'
     '''
     conn = __proxy__['junos.conn']()
-    ret = dict()
+    ret = {}
     ret['out'] = True
 
     if path is None:
@@ -852,7 +852,7 @@ def install_config(path=None, **kwargs):
         ret['out'] = False
         return ret
 
-    op = dict()
+    op = {}
     if '__pub_arg' in kwargs:
         if kwargs['__pub_arg']:
             if isinstance(kwargs['__pub_arg'][-1], dict):
@@ -860,7 +860,7 @@ def install_config(path=None, **kwargs):
     else:
         op.update(kwargs)
 
-    template_vars = dict()
+    template_vars = {}
     if "template_vars" in op:
         template_vars = op["template_vars"]
 
@@ -981,7 +981,7 @@ def zeroize():
         salt 'device_name' junos.zeroize
     '''
     conn = __proxy__['junos.conn']()
-    ret = dict()
+    ret = {}
     ret['out'] = True
     try:
         conn.cli('request system zeroize')
@@ -1024,7 +1024,7 @@ def install_os(path=None, **kwargs):
         salt 'device_name' junos.install_os 'salt://junos_16_1.tgz' dev_timeout=300
     '''
     conn = __proxy__['junos.conn']()
-    ret = dict()
+    ret = {}
     ret['out'] = True
 
     if path is None:
@@ -1047,7 +1047,7 @@ def install_os(path=None, **kwargs):
         return ret
     path = image_cached_path
 
-    op = dict()
+    op = {}
     if '__pub_arg' in kwargs:
         if kwargs['__pub_arg']:
             if isinstance(kwargs['__pub_arg'][-1], dict):
@@ -1096,7 +1096,7 @@ def file_copy(src=None, dest=None):
         salt 'device_name' junos.file_copy /home/m2/info.txt info_copy.txt
     '''
     conn = __proxy__['junos.conn']()
-    ret = dict()
+    ret = {}
     ret['out'] = True
 
     if src is None:
@@ -1145,7 +1145,7 @@ def lock():
         salt 'device_name' junos.lock
     '''
     conn = __proxy__['junos.conn']()
-    ret = dict()
+    ret = {}
     ret['out'] = True
     try:
         conn.cu.lock()
@@ -1168,7 +1168,7 @@ def unlock():
         salt 'device_name' junos.unlock
     '''
     conn = __proxy__['junos.conn']()
-    ret = dict()
+    ret = {}
     ret['out'] = True
     try:
         conn.cu.unlock()
@@ -1235,7 +1235,7 @@ def load(path=None, **kwargs):
         salt 'device_name' junos.load 'salt://syslog_template.conf' template_vars='{"syslog_host": "10.180.222.7"}'
     '''
     conn = __proxy__['junos.conn']()
-    ret = dict()
+    ret = {}
     ret['out'] = True
 
     if path is None:
@@ -1244,7 +1244,7 @@ def load(path=None, **kwargs):
         ret['out'] = False
         return ret
 
-    op = dict()
+    op = {}
     if '__pub_arg' in kwargs:
         if kwargs['__pub_arg']:
             if isinstance(kwargs['__pub_arg'][-1], dict):
@@ -1252,7 +1252,7 @@ def load(path=None, **kwargs):
     else:
         op.update(kwargs)
 
-    template_vars = dict()
+    template_vars = {}
     if "template_vars" in op:
         template_vars = op["template_vars"]
 
@@ -1319,7 +1319,7 @@ def commit_check():
         salt 'device_name' junos.commit_check
     '''
     conn = __proxy__['junos.conn']()
-    ret = dict()
+    ret = {}
     ret['out'] = True
     try:
         conn.cu.commit_check()
@@ -1333,7 +1333,7 @@ def commit_check():
 
 def get_table(table, table_file, path=None, target=None, key=None, key_items=None,
               filters=None, args=None):
-    """
+    '''
     Retrieve data from a Junos device using Tables/Views
     Usage:
     .. code-block:: bash
@@ -1358,10 +1358,10 @@ def get_table(table, table_file, path=None, target=None, key=None, key_items=Non
           To select only filter for the dictionary from columns
         * args:
           key/value pair which should render Jinja template command
-    """
+    '''
 
     conn = __proxy__['junos.conn']()
-    ret = dict()
+    ret = {}
     ret['out'] = True
     ret['hostname'] = conn._hostname
     ret['tablename'] = table
