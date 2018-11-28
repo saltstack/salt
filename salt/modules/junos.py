@@ -1384,7 +1384,7 @@ def get_table(table, table_file, path=None, target=None, key=None, key_items=Non
             file_name = file_loc[0]
         elif len(file_loc) > 1:
             ret['message'] = 'Given table file %s is located at multiple location'\
-                % file
+                % table_file
             ret['out'] = False
             return ret
         elif len(file_loc) == 0:
