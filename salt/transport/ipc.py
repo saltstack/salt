@@ -450,7 +450,7 @@ class IPCMessageServer(IPCServer):
         ipc_server = salt.transport.ipc.IPCMessageServer(opts, io_loop=io_loop,
                                                          payload_handler=print_to_console)
         # Bind to the socket and prepare to run
-        ipc_server.start(ipc_server_socket_path)
+        ipc_server.start()
 
         # Start the server
         io_loop.start()
