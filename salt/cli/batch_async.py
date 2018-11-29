@@ -49,6 +49,7 @@ class BatchAsync(object):
         self.minions = set()
         self.down_minions = set()
         self.done = set()
+        self.to_run = set()
         self.active = []
         self.initialized = False
         self.ping_jid = jid_gen()
@@ -85,25 +86,28 @@ class BatchAsync(object):
                     self.down_minions.remove(minion)
                     self.batch_size = _get_bnum(self.opts, self.minions, True)
                     self.to_run = self.minions.difference(self.done).difference(self.active)
-                if not self.initialized:
-                    #start batching even if not all minions respond to ping
-                    self.event.io_loop.call_later(
-                        self.opts['gather_job_timeout'], self.next)
-                    self.initialized = True
                 elif op == 'batch_run':
                     if minion in self.active:
                         self.active.remove(minion)
                         self.done.add(minion)
                     if len(self.done) >= len(self.minions):
+                        # TODO
+                        # if not all available minions finish the batch
+                        # the event handler connection is not closed
                         self.event.close_pub()
                     else:
                         # call later so that we maybe gather more returns
                         self.event.io_loop.call_later(1, self.next)
+                if not self.initialized:
+                    #start batching even if not all minions respond to ping
+                    self.event.io_loop.call_later(
+                        self.opts['gather_job_timeout'], self.next)
+                    self.initialized = True
 
     def _get_next(self):
         next_batch_size = min(
             len(self.to_run),                   # partial batch (all left)
-            self.batch_size - len(self.active)  # full batch
+            self.batch_size - len(self.active)  # full batch or available slots
         )
         next_batch = []
         for i in range(next_batch_size):
