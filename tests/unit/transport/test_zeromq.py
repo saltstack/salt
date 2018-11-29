@@ -31,6 +31,7 @@ import salt.config
 import salt.log.setup
 from salt.ext import six
 import salt.utils.process
+import salt.utils.platform
 import salt.transport.server
 import salt.transport.client
 import salt.exceptions
@@ -434,7 +435,7 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
                 results.append(payload['jid'])
         return results
 
-    @skipIf(salt.utils.is_windows(), 'Skip on Windows OS')
+    @skipIf(salt.utils.platform.is_windows(), 'Skip on Windows OS')
     def test_publish_to_pubserv_ipc(self):
         '''
         Test sending 10K messags to ZeroMQPubServerChannel using IPC transport
@@ -534,7 +535,7 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
         server_channel.pub_close()
         assert len(results) == send_num, (len(results), set(expect).difference(results))
 
-    @skipIf(salt.utils.is_windows(), 'Skip on Windows OS')
+    @skipIf(salt.utils.platform.is_windows(), 'Skip on Windows OS')
     def test_issue_36469_udp(self):
         '''
         Test sending both large and small messags to publisher using UDP
