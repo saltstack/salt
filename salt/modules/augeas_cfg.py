@@ -43,6 +43,7 @@ except ImportError:
 # Import salt libs
 import salt.utils.args
 import salt.utils.data
+import salt.utils.stringutils
 from salt.exceptions import SaltInvocationError
 
 log = logging.getLogger(__name__)
@@ -494,7 +495,7 @@ def ls(path, load_path=None):  # pylint: disable=C0103
     def _match(path):
         ''' Internal match function '''
         try:
-            matches = aug.match(path)
+            matches = aug.match(salt.utils.stringutils.to_str(path))
         except RuntimeError:
             return {}
 
