@@ -717,6 +717,22 @@ accessible from the minions.
 
     master_job_cache: redis
 
+.. conf_master:: job_cache_store_endtime
+
+``job_cache_store_endtime``
+---------------------------
+
+.. versionadded:: 2015.8.0
+
+Default: ``False``
+
+Specify whether the Salt Master should store end times for jobs as returns
+come in.
+
+.. code-block:: yaml
+
+    job_cache_store_endtime: False
+
 .. conf_master:: enforce_mine_cache
 
 ``enforce_mine_cache``
