@@ -4628,6 +4628,7 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertIn('Patch would not apply cleanly', ret['comment'])
         self.assertEqual(ret['changes'], {})
 
+
 WIN_TEST_FILE = 'c:/testfile'
 
 
