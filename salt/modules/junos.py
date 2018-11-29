@@ -445,7 +445,7 @@ def rollback(**kwargs):
     '''
     Roll back the last committed configuration changes and commit
 
-    r_id : 0
+    id : 0
         The rollback ID value (0-49)
 
     dev_timeout : 30
@@ -471,7 +471,7 @@ def rollback(**kwargs):
 
         salt 'device_name' junos.rollback 10
     '''
-    id_ = kwargs.pop('r_id', 0)
+    id_ = kwargs.pop('id', 0)
 
     ret = {}
     conn = __proxy__['junos.conn']()
