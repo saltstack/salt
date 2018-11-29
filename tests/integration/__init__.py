@@ -807,13 +807,32 @@ class TestDaemon(object):
                 RUNTIME_VARS.TMP_PRODENV_STATE_TREE
             ]
         }
-        master_opts.setdefault('reactor', []).append(
-            {
-                'salt/minion/*/start': [
-                    os.path.join(FILES, 'reactor-sync-minion.sls')
-                ],
-            }
-        )
+        master_opts.setdefault('reactor', []).append({
+            'salt/minion/*/start': [
+                os.path.join(FILES, 'reactor-sync-minion.sls')
+            ],
+        })
+        master_opts['reactor'].append({
+            'salt/test/reactor/local': [
+                os.path.join(FILES, 'reactor-test-local.sls')
+            ],
+        })
+        master_opts['reactor'].append({
+            'salt/test/reactor/runner': [
+                os.path.join(FILES, 'reactor-test-runner.sls')
+            ],
+        })
+        master_opts['reactor'].append({
+            'salt/test/reactor/wheel': [
+                os.path.join(FILES, 'reactor-test-wheel.sls')
+            ],
+        })
+        master_opts['reactor'].append({
+            'salt/test/reactor/legacy': [
+                os.path.join(FILES, 'reactor-test-legacy.sls')
+            ],
+        })
+
         for opts_dict in (master_opts, syndic_master_opts):
             if 'ext_pillar' not in opts_dict:
                 opts_dict['ext_pillar'] = []

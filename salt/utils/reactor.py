@@ -10,10 +10,12 @@ import collections
 import fnmatch
 import glob
 import logging
+import os
 import time
 
 # Import salt libs
 import salt.client
+import salt.config
 import salt.runner
 import salt.state
 import salt.utils.args
@@ -21,6 +23,7 @@ import salt.utils.cache
 import salt.utils.data
 import salt.utils.event
 import salt.utils.files
+import salt.utils.master
 import salt.utils.process
 import salt.utils.yaml
 import salt.wheel
@@ -315,13 +318,10 @@ class ReactWrap(object):
 
     def __init__(self, opts):
         self.opts = opts
+        self.client_opts = salt.config.client_config(os.path.join(opts['config_dir'], 'master'))
+
         if ReactWrap.client_cache is None:
             ReactWrap.client_cache = salt.utils.cache.CacheDict(opts['reactor_refresh_interval'])
-
-        self.pool = salt.utils.process.ThreadPool(
-            self.opts['reactor_worker_threads'],  # number of workers for runner/wheel
-            queue_size=self.opts['reactor_worker_hwm']  # queue size for those workers
-        )
 
     def populate_client_cache(self, low):
         '''
@@ -334,7 +334,7 @@ class ReactWrap(object):
                 # Reaction types that run locally on the master want the full
                 # opts passed.
                 self.client_cache[reaction_type] = \
-                    self.reaction_class[reaction_type](self.opts)
+                    self.reaction_class[reaction_type](self.client_opts)
                 # The len() function will cause the module functions to load if
                 # they aren't already loaded. We want to load them so that the
                 # spawned threads don't need to load them. Loading in the
@@ -373,6 +373,8 @@ class ReactWrap(object):
                 # Replace ``state`` kwarg which comes from high data compiler.
                 # It breaks some runner functions and seems unnecessary.
                 kwargs['__state__'] = kwargs.pop('state')
+                # needed for cmd_async eauth
+                kwargs['key'] = salt.utils.master.get_master_key('root', self.opts)
                 # NOTE: if any additional keys are added here, they will also
                 # need to be added to filter_kwargs()
 
@@ -415,6 +417,7 @@ class ReactWrap(object):
                 # Legacy configuration
                 react_call = {}
                 if low['state'] in ('runner', 'wheel'):
+                    low['key'] = salt.utils.master.get_master_key('root', self.opts)
                     if 'arg' not in kwargs or 'kwarg' not in kwargs:
                         # Runner/wheel execute on the master, so we can use
                         # format_call to get the functions args/kwargs
@@ -442,15 +445,7 @@ class ReactWrap(object):
             # and kwargs['kwarg'] contain the positional and keyword arguments
             # that will be passed to the client interface to execute the
             # desired runner/wheel/remote-exec/etc. function.
-            ret = l_fun(*args, **kwargs)
-
-            if ret is False:
-                log.error('Reactor \'%s\' failed  to execute %s \'%s\': '
-                            'TaskPool queue is full!'
-                            ' Consider tuning reactor_worker_threads and/or'
-                            ' reactor_worker_hwm',
-                            low['__id__'], low['state'], low['fun']
-                )
+            l_fun(*args, **kwargs)
 
         except SystemExit:
             log.warning(
@@ -466,13 +461,15 @@ class ReactWrap(object):
         '''
         Wrap RunnerClient for executing :ref:`runner modules <all-salt.runners>`
         '''
-        return self.pool.fire_async(self.client_cache['runner'].low, args=(fun, kwargs))
+        kwargs['fun'] = fun
+        return self.client_cache['runner'].cmd_async(kwargs)
 
     def wheel(self, fun, **kwargs):
         '''
         Wrap Wheel to enable executing :ref:`wheel modules <all-salt.wheel>`
         '''
-        return self.pool.fire_async(self.client_cache['wheel'].low, args=(fun, kwargs))
+        kwargs['fun'] = fun
+        return self.client_cache['wheel'].cmd_async(kwargs)
 
     def local(self, fun, tgt, **kwargs):
         '''
