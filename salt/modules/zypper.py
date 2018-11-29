@@ -960,7 +960,7 @@ def _get_configured_repos(root=None):
     if os.path.exists(repos):
         repos_cfg.read([repos + '/' + fname for fname in os.listdir(repos) if fname.endswith(".repo")])
     else:
-        log.error('Repositories not found in {}'.format(repos))
+        log.warning('Repositories not found in {}'.format(repos))
 
     return repos_cfg
 
