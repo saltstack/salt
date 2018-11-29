@@ -164,6 +164,7 @@ import copy
 # Import Salt Libs
 import salt.exceptions
 import salt.utils.stringutils
+from salt.utils.locales import sdecode
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -557,8 +558,8 @@ def certificate_managed(name,
     if (current_comp == new_comp and
             current_days_remaining > days_remaining and
             __salt__['x509.verify_signature'](name, new_issuer_public_key)):
-        certificate = __salt__['x509.get_pem_entry'](
-            name, pem_type='CERTIFICATE')
+        certificate = sdecode(__salt__['x509.get_pem_entry'](
+            name, pem_type='CERTIFICATE'))
     else:
         if rotate_private_key and not new_private_key:
             new_private_key = True
@@ -566,7 +567,7 @@ def certificate_managed(name,
                 text=True, bits=private_key_args['bits'], verbose=private_key_args['verbose'])
             kwargs['public_key'] = private_key
         new_certificate = True
-        certificate = __salt__['x509.create_certificate'](text=True, **kwargs)
+        certificate = sdecode(__salt__['x509.create_certificate'](text=True, **kwargs))
 
     file_args['contents'] = ''
     private_ret = {}
