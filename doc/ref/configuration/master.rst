@@ -4151,6 +4151,55 @@ The queue size for workers in the reactor.
     reactor_worker_hwm: 10000
 
 
+.. _salt-api-master-settings:
+
+Salt-API Master Settings
+========================
+
+There are some settings for :ref:`salt-api <netapi-introduction>` that can be
+configured on the Salt Master.
+
+.. conf_master:: api_logfile
+
+``api_logfile``
+---------------
+
+Default: ``/var/log/salt/api``
+
+The logfile location for ``salt-api``.
+
+.. code-block:: yaml
+
+    api_logfile: /var/log/salt/api
+
+.. conf_master:: api_pidfile
+
+``api_pidfile``
+---------------
+
+Default: /var/run/salt-api.pid
+
+If this master will be running ``salt-api``, specify the pidfile of the
+``salt-api`` daemon.
+
+.. code-block:: yaml
+
+    api_pidfile: /var/run/salt-api.pid
+
+.. conf_master:: rest_timeout
+
+``rest_timeout``
+----------------
+
+Default: ``300``
+
+Used by ``salt-api`` for the master requests timeout.
+
+.. code-block:: yaml
+
+    rest_timeout: 300
+
+
 .. _syndic-server-settings:
 
 Syndic Server Settings
