@@ -18,10 +18,13 @@ from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import salt libs
+import salt.config
+import salt.utils.master
 import salt.utils.reactor
 import salt.syspaths
 import salt.utils.event
 import salt.utils.process
+import salt.transport
 from salt.ext.six import string_types
 
 log = logging.getLogger(__name__)
@@ -48,9 +51,11 @@ def list_(saltenv='base', test=None):
             opts=__opts__,
             listen=True)
 
-    __jid_event__.fire_event({}, 'salt/reactors/manage/list')
+    master_key = salt.utils.master.get_master_key('root', __opts__) + 'a'
+    sevent.fire_event({'key': master_key}, 'salt/reactors/manage/list')
 
     results = sevent.get_event(wait=30, tag='salt/reactors/manage/list-results')
+
     reactors = results['reactors']
     return reactors
 
@@ -75,9 +80,11 @@ def add(event, reactors, saltenv='base', test=None):
             opts=__opts__,
             listen=True)
 
-    __jid_event__.fire_event({'event': event,
-                              'reactors': reactors},
-                             'salt/reactors/manage/add')
+    master_key = salt.utils.master.get_master_key('root', __opts__)
+    sevent.fire_master({'event': event,
+                        'reactors': reactors,
+                        'key': master_key},
+                        'salt/reactors/manage/add')
 
     res = sevent.get_event(wait=30, tag='salt/reactors/manage/add-complete')
     return res['result']
@@ -100,7 +107,8 @@ def delete(event, saltenv='base', test=None):
             opts=__opts__,
             listen=True)
 
-    __jid_event__.fire_event({'event': event}, 'salt/reactors/manage/delete')
+    master_key = salt.utils.master.get_master_key('root', __opts__)
+    sevent.fire_event({'event': event, 'key': master_key}, 'salt/reactors/manage/delete')
 
     res = sevent.get_event(wait=30, tag='salt/reactors/manage/delete-complete')
     return res['result']

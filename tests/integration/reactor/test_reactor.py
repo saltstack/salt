@@ -61,7 +61,6 @@ class ReactorTest(ShellTestCase, SaltMinionEventAssertsMixin):
 
         self.assertMinionEventReceived({'a': 'b'})
 
-
     @skipIf(salt.utils.platform.is_windows(), 'no sigalarm on windows')
     def test_reactor_local_reaction(self):
         '''
@@ -86,7 +85,6 @@ class ReactorTest(ShellTestCase, SaltMinionEventAssertsMixin):
                     break
         finally:
             signal.alarm(0)
-
 
     @skipIf(salt.utils.platform.is_windows(), 'no sigalarm on windows')
     def test_reactor_runner_reaction(self):

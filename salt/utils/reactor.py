@@ -267,6 +267,13 @@ class Reactor(salt.utils.process.SignalHandlingMultiprocessingProcess, salt.stat
             if data['data'].get('user') == self.wrap.event_user:
                 continue
 
+            # NOTE: these events must contain the masters key in order to be accepted
+            # see salt.runners.reactor for the requesting interface
+            if 'salt/reactors/manage' in data['tag']:
+                master_key = salt.utils.master.get_master_key('root', self.opts)
+                if data['data'].get('key') != master_key:
+                    log.error('received salt/reactors/manage event without matching master_key. discarding')
+                    continue
             if data['tag'].endswith('salt/reactors/manage/add'):
                 _data = data['data']
                 res = self.add_reactor(_data['event'], _data['reactors'])
