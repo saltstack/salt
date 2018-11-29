@@ -1101,10 +1101,10 @@ class Single(object):
 
             # Once pillar has been compiled, restore priority of minion opts
             if self.fun not in master_centric_funcs:
-                log.debug(self.fun+" is a minion centric function")
+                log.debug('%s is a minion function', self.fun)
                 popts.update(opts_pkg)
             else:
-                log.debug(self.fun+" is a master centric function")
+                log.debug('%s is a master function', self.fun)
 
             # TODO: cache minion opts in datap in master.py
             data = {'opts': opts_pkg,
