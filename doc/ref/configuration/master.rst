@@ -6,16 +6,16 @@ Configuring the Salt Master
 
 The Salt system is amazingly simple and easy to configure, the two components
 of the Salt system each have a respective configuration file. The
-:command:`salt-master` is configured via the master configuration file, and the
-:command:`salt-minion` is configured via the minion configuration file.
+``salt-master`` is configured via the master configuration file, and the
+``salt-minion`` is configured via the minion configuration file.
 
 .. seealso::
+
     :ref:`Example master configuration file <configuration-examples-master>`.
 
-The configuration file for the salt-master is located at
-:file:`/etc/salt/master` by default.  A notable exception is FreeBSD, where the
-configuration file is located at :file:`/usr/local/etc/salt`.  The available
-options are as follows:
+The configuration file for the salt-master is located at ``/etc/salt/master``
+by default. A notable exception is FreeBSD, where the configuration file is
+located at ``/usr/local/etc/salt``. The available options are as follows:
 
 
 .. _primary-master-configuration:
@@ -4524,6 +4524,9 @@ Node Groups
 ===========
 
 .. conf_master:: nodegroups
+
+``nodegroups``
+--------------
 
 Default: ``{}``
 
