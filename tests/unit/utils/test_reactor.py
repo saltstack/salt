@@ -2,6 +2,7 @@
 
 from __future__ import absolute_import, print_function, unicode_literals
 import codecs
+import copy
 import glob
 import logging
 import os
@@ -251,37 +252,35 @@ LOW_CHUNKS = {
 }
 
 WRAPPER_CALLS = {
-    'old_runner': (
-        'error.error',
-        {
-            '__state__': 'runner',
-            '__id__': 'raise_error',
-            '__sls__': '/srv/reactor/old_runner.sls',
-            '__user__': 'Reactor',
-            'order': 1,
-            'arg': [],
-            'kwarg': {
-                'name': 'Exception',
-                'message': 'This is an error',
-            },
+    'old_runner': {
+        '__state__': 'runner',
+        '__id__': 'raise_error',
+        '__sls__': '/srv/reactor/old_runner.sls',
+        '__user__': 'Reactor',
+        'fun': 'error.error',
+        'order': 1,
+        'key': '',
+        'arg': [],
+        'kwarg': {
             'name': 'Exception',
             'message': 'This is an error',
         },
-    ),
-    'old_wheel': (
-        'key.delete',
-        {
-            '__state__': 'wheel',
-            '__id__': 'remove_key',
-            'name': 'remove_key',
-            '__sls__': '/srv/reactor/old_wheel.sls',
-            'order': 1,
-            '__user__': 'Reactor',
-            'arg': ['foo'],
-            'kwarg': {},
-            'match': 'foo',
-        },
-    ),
+        'name': 'Exception',
+        'message': 'This is an error',
+    },
+    'old_wheel': {
+        '__state__': 'wheel',
+        '__id__': 'remove_key',
+        'name': 'remove_key',
+        '__sls__': '/srv/reactor/old_wheel.sls',
+        'fun': 'key.delete',
+        'order': 1,
+        '__user__': 'Reactor',
+        'arg': [],
+        'key': '',
+        'kwarg': {'match': 'foo', 'name': 'remove_key'},
+        'match': 'foo',
+    },
     'old_local': {
         'args': ('test', 'state.single'),
         'kwargs': {
@@ -310,35 +309,33 @@ WRAPPER_CALLS = {
         'args': ('file.touch', '/tmp/foo'),
         'kwargs': {},
     },
-    'new_runner': (
-        'error.error',
-        {
-            '__state__': 'runner',
-            '__id__': 'raise_error',
-            'name': 'raise_error',
-            '__sls__': '/srv/reactor/new_runner.sls',
-            '__user__': 'Reactor',
-            'order': 1,
-            'arg': (),
-            'kwarg': {
-                'name': 'Exception',
-                'message': 'This is an error',
-            },
+    'new_runner': {
+        '__state__': 'runner',
+        '__id__': 'raise_error',
+        'fun': 'error.error',
+        'name': 'raise_error',
+        '__sls__': '/srv/reactor/new_runner.sls',
+        '__user__': 'Reactor',
+        'key': '',
+        'order': 1,
+        'arg': (),
+        'kwarg': {
+            'name': 'Exception',
+            'message': 'This is an error',
         },
-    ),
-    'new_wheel': (
-        'key.delete',
-        {
-            '__state__': 'wheel',
-            '__id__': 'remove_key',
-            'name': 'remove_key',
-            '__sls__': '/srv/reactor/new_wheel.sls',
-            'order': 1,
-            '__user__': 'Reactor',
-            'arg': (),
-            'kwarg': {'match': 'foo'},
-        },
-    ),
+    },
+    'new_wheel': {
+        '__state__': 'wheel',
+        '__id__': 'remove_key',
+        'name': 'remove_key',
+        '__sls__': '/srv/reactor/new_wheel.sls',
+        'fun': 'key.delete',
+        'key': '',
+        'order': 1,
+        '__user__': 'Reactor',
+        'arg': (),
+        'kwarg': {'match': 'foo'},
+    },
     'new_local': {
         'args': ('test', 'state.single'),
         'kwargs': {
@@ -397,6 +394,7 @@ class TestReactor(TestCase, AdaptedConfigurationTestCaseMixin):
         cls.reaction_map = salt.utils.data.repack_dictlist(reactor_config['reactor'])
         renderers = salt.loader.render(cls.opts, {})
         cls.render_pipe = [(renderers[x], '') for x in ('jinja', 'yaml')]
+        cls.LOW_CHUNKS = copy.deepcopy(LOW_CHUNKS)
 
     @classmethod
     def tearDownClass(cls):
@@ -459,7 +457,7 @@ class TestReactor(TestCase, AdaptedConfigurationTestCaseMixin):
                                         'test_reactions: %s reactions: %s',
                                         tag, reactions
                                     )
-                                    self.assertEqual(reactions, LOW_CHUNKS[tag])
+                                    self.assertEqual(reactions, self.LOW_CHUNKS[tag])
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -470,6 +468,7 @@ class TestReactWrap(TestCase, AdaptedConfigurationTestCaseMixin):
     @classmethod
     def setUpClass(cls):
         cls.wrap = reactor.ReactWrap(cls.get_temp_config('master'))
+        cls.LOW_CHUNKS = copy.deepcopy(LOW_CHUNKS)
 
     @classmethod
     def tearDownClass(cls):
@@ -481,14 +480,13 @@ class TestReactWrap(TestCase, AdaptedConfigurationTestCaseMixin):
         '''
         for schema in ('old', 'new'):
             tag = '_'.join((schema, 'runner'))
-            chunk = LOW_CHUNKS[tag][0]
-            thread_pool = Mock()
-            thread_pool.fire_async = Mock()
-            with patch.object(self.wrap, 'pool', thread_pool):
+            chunk = self.LOW_CHUNKS[tag][0]
+            client_cache = {'runner': Mock()}
+            client_cache['runner'].cmd_async = Mock()
+            with patch.object(self.wrap, 'client_cache', client_cache):
                 self.wrap.run(chunk)
-            thread_pool.fire_async.assert_called_with(
-                self.wrap.client_cache['runner'].low,
-                args=WRAPPER_CALLS[tag]
+            client_cache['runner'].cmd_async.assert_called_with(
+                WRAPPER_CALLS[tag]
             )
 
     def test_wheel(self):
@@ -497,14 +495,13 @@ class TestReactWrap(TestCase, AdaptedConfigurationTestCaseMixin):
         '''
         for schema in ('old', 'new'):
             tag = '_'.join((schema, 'wheel'))
-            chunk = LOW_CHUNKS[tag][0]
-            thread_pool = Mock()
-            thread_pool.fire_async = Mock()
-            with patch.object(self.wrap, 'pool', thread_pool):
+            chunk = self.LOW_CHUNKS[tag][0]
+            client_cache = {'wheel': Mock()}
+            client_cache['wheel'].cmd_async = Mock()
+            with patch.object(self.wrap, 'client_cache', client_cache):
                 self.wrap.run(chunk)
-            thread_pool.fire_async.assert_called_with(
-                self.wrap.client_cache['wheel'].low,
-                args=WRAPPER_CALLS[tag]
+            client_cache['wheel'].cmd_async.assert_called_with(
+                WRAPPER_CALLS[tag]
             )
 
     def test_local(self):
@@ -513,7 +510,7 @@ class TestReactWrap(TestCase, AdaptedConfigurationTestCaseMixin):
         '''
         for schema in ('old', 'new'):
             tag = '_'.join((schema, 'local'))
-            chunk = LOW_CHUNKS[tag][0]
+            chunk = self.LOW_CHUNKS[tag][0]
             client_cache = {'local': Mock()}
             client_cache['local'].cmd_async = Mock()
             with patch.object(self.wrap, 'client_cache', client_cache):
@@ -530,7 +527,7 @@ class TestReactWrap(TestCase, AdaptedConfigurationTestCaseMixin):
         '''
         for schema in ('old', 'new'):
             tag = '_'.join((schema, 'cmd'))
-            chunk = LOW_CHUNKS[tag][0]
+            chunk = self.LOW_CHUNKS[tag][0]
             client_cache = {'local': Mock()}
             client_cache['local'].cmd_async = Mock()
             with patch.object(self.wrap, 'client_cache', client_cache):
@@ -546,7 +543,7 @@ class TestReactWrap(TestCase, AdaptedConfigurationTestCaseMixin):
         '''
         for schema in ('old', 'new'):
             tag = '_'.join((schema, 'caller'))
-            chunk = LOW_CHUNKS[tag][0]
+            chunk = self.LOW_CHUNKS[tag][0]
             client_cache = {'caller': Mock()}
             client_cache['caller'].cmd = Mock()
             with patch.object(self.wrap, 'client_cache', client_cache):

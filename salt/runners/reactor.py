@@ -51,7 +51,7 @@ def list_(saltenv='base', test=None):
             opts=__opts__,
             listen=True)
 
-    master_key = salt.utils.master.get_master_key('root', __opts__) + 'a'
+    master_key = salt.utils.master.get_master_key('root', __opts__)
     sevent.fire_event({'key': master_key}, 'salt/reactors/manage/list')
 
     results = sevent.get_event(wait=30, tag='salt/reactors/manage/list-results')

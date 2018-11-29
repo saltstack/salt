@@ -38,9 +38,9 @@ log = logging.getLogger(__name__)
 REACTOR_INTERNAL_KEYWORDS = frozenset([
     '__id__',
     '__sls__',
-    'name',
     'order',
     'fun',
+    'key',
     'state',
 ])
 
@@ -436,13 +436,11 @@ class ReactWrap(object):
                                 low['__id__'], low['state'], low['fun']
                             )
                             return
-
                         react_call = salt.utils.args.format_call(
                             react_fun,
                             low,
                             expected_extra_kws=REACTOR_INTERNAL_KEYWORDS
                         )
-
                 if 'arg' not in kwargs:
                     kwargs['arg'] = react_call.get('args', ())
                 if 'kwarg' not in kwargs:
