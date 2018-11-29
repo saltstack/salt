@@ -5013,11 +5013,6 @@ def keyvalue(
         Prepend the key/value to the beginning of the file if not found. Note
         that ``append_if_not_found`` takes precedence.
 
-    search_only : False
-        Only search, do not actually replace. This is effectively a dry-run.
-        Functionally almost the same as running the state with test=True, which
-        does not pretend to write the file back.
-
     show_changes : True
         Show a diff of the resulting removals and inserts.
 
@@ -5299,19 +5294,15 @@ def keyvalue(
 
         # otherwise return the actual diff lines
         else:
-            if search_only:
-                ret['comment'] = 'Changed {c} lines'.format(c=changes)
-            else:
-                ret['comment'] = 'Not changing {c} lines, search only'.format(
-                    c=changes)
+            ret['comment'] = 'Changed {c} lines'.format(c=changes)
             if show_changes:
                 ret['changes']['diff'] = ''.join(diff)
     else:
         ret['result'] = True
         return ret
 
-    # if not test=true and not search_only the try and write the file
-    if not __opts__['test'] and not search_only:
+    # if not test=true, try and write the file
+    if not __opts__['test']:
         try:
             with salt.utils.files.fopen(name, 'w') as fd:
                 # write all lines to the file which was just truncated
