@@ -156,6 +156,7 @@ results = {0x0: 'The operation completed successfully',
            0x8004130F: 'Credentials became corrupted',
            0x8004131F: 'An instance of this task is already running',
            0x800704DD: 'The service is not available (Run only when logged in?)',
+           0x800710E0: 'The operator or administrator has refused the request',
            0xC000013A: 'The application terminated as a result of CTRL+C',
            0xC06D007E: 'Unknown software exception'}
 

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Manage groups on Solaris
+Manage groups on AIX
 
 .. important::
     If you feel that Salt should be using this module to manage groups on a

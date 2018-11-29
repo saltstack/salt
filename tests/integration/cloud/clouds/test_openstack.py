@@ -26,7 +26,7 @@ try:
     from libcloud.common.openstack_identity import OpenStackIdentityTokenScope
     HAS_KEYSTONE = True
 except ImportError:
-    HAS_KEYSTONE = True
+    HAS_KEYSTONE = False
 
 # Import Third-Party Libs
 try:

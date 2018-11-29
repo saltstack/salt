@@ -73,7 +73,9 @@ def info(package, conn=None):
     '''
     List info for a package
     '''
+    close = False
     if conn is None:
+        close = True
         conn = init()
 
     fields = (
@@ -94,6 +96,8 @@ def info(package, conn=None):
         (package, )
     )
     row = data.fetchone()
+    if close:
+        conn.close()
     if not row:
         return None
 
@@ -107,7 +111,9 @@ def list_packages(conn=None):
     '''
     List files for an installed package
     '''
+    close = False
     if conn is None:
+        close = True
         conn = init()
 
     ret = []
@@ -115,6 +121,8 @@ def list_packages(conn=None):
     for pkg in data.fetchall():
         ret.append(pkg)
 
+    if close:
+        conn.close()
     return ret
 
 
@@ -122,17 +130,23 @@ def list_files(package, conn=None):
     '''
     List files for an installed package
     '''
+    close = False
     if conn is None:
+        close = True
         conn = init()
 
     data = conn.execute('SELECT package FROM packages WHERE package=?', (package, ))
     if not data.fetchone():
+        if close:
+            conn.close()
         return None
 
     ret = []
     data = conn.execute('SELECT path, sum FROM files WHERE package=?', (package, ))
     for file_ in data.fetchall():
         ret.append(file_)
+    if close:
+        conn.close()
 
     return ret
 
@@ -141,7 +155,9 @@ def register_pkg(name, formula_def, conn=None):
     '''
     Register a package in the package database
     '''
+    close = False
     if conn is None:
+        close = True
         conn = init()
 
     conn.execute('INSERT INTO packages VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', (
@@ -157,13 +173,17 @@ def register_pkg(name, formula_def, conn=None):
         formula_def['summary'],
         formula_def['description'],
     ))
+    if close:
+        conn.close()
 
 
 def register_file(name, member, path, digest='', conn=None):
     '''
     Register a file in the package database
     '''
+    close = False
     if conn is None:
+        close = True
         conn = init()
 
     conn.execute('INSERT INTO files VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', (
@@ -180,6 +200,8 @@ def register_file(name, member, path, digest='', conn=None):
         member.gname,
         member.mtime
     ))
+    if close:
+        conn.close()
 
 
 def unregister_pkg(name, conn=None):
@@ -196,10 +218,14 @@ def unregister_file(path, pkg=None, conn=None):  # pylint: disable=W0612
     '''
     Unregister a file from the package database
     '''
+    close = False
     if conn is None:
+        close = True
         conn = init()
 
     conn.execute('DELETE FROM files WHERE path=?', (path, ))
+    if close:
+        conn.close()
 
 
 def db_exists(db_):
