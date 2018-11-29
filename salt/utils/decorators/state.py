@@ -6,6 +6,7 @@ Decorators for salt.state
 '''
 
 from __future__ import absolute_import, unicode_literals
+import traceback
 from salt.exceptions import SaltException
 
 
@@ -25,11 +26,12 @@ class OutputUnifier(object):
                 try:
                     result = pls(result)
                 except Exception as ex:
+                    trb = traceback.format_exc()
                     result = {
                         'result': False,
                         'name': 'later',
                         'changes': {},
-                        'comment': 'An exception occurred in this state: {0}'.format(ex)
+                        'comment': 'An exception occurred in this state: {0}'.format(trb)
                     }
             return result
         return _func

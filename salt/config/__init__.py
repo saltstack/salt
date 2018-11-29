@@ -93,6 +93,7 @@ def _gather_buffer_space():
     # Return the higher number between 5% of the system memory and 10MiB
     return max([total_mem * 0.05, 10 << 20])
 
+
 # For the time being this will be a fixed calculation
 # TODO: Allow user configuration
 _DFLT_IPC_WBUFFER = _gather_buffer_space() * .5
@@ -437,7 +438,7 @@ VALID_OPTS = {
     # If an event is above this size, it will be trimmed before putting it on the event bus
     'max_event_size': int,
 
-    # Enable old style events to be sent on minion_startup. Change default to False in Neon release
+    # Enable old style events to be sent on minion_startup. Change default to False in Sodium release
     'enable_legacy_startup_events': bool,
 
     # Always execute states with test=True if this flag is set
@@ -1424,7 +1425,7 @@ DEFAULT_MINION_OPTS = {
     'winrepo_dir_ng': os.path.join(salt.syspaths.BASE_FILE_ROOTS_DIR, 'win', 'repo-ng'),
     'winrepo_cachefile': 'winrepo.p',
     'winrepo_cache_expire_max': 21600,
-    'winrepo_cache_expire_min': 0,
+    'winrepo_cache_expire_min': 1800,
     'winrepo_remotes': ['https://github.com/saltstack/salt-winrepo.git'],
     'winrepo_remotes_ng': ['https://github.com/saltstack/salt-winrepo-ng.git'],
     'winrepo_branch': 'master',
@@ -3474,7 +3475,7 @@ def check_driver_dependencies(driver, dependencies):
         if value is False:
             log.warning(
                 "Missing dependency: '%s'. The %s driver requires "
-                "'%s' to be installed.", key, key, driver
+                "'%s' to be installed.", key, driver, key
             )
             ret = False
 
@@ -3834,7 +3835,7 @@ def _update_discovery_config(opts):
     if opts.get('discovery') not in (None, False):
         if opts['discovery'] is True:
             opts['discovery'] = {}
-        discovery_config = {'attempts': 3, 'pause': 5, 'port': 4520, 'match': 'any', 'mapping': {}}
+        discovery_config = {'attempts': 3, 'pause': 5, 'port': 4520, 'match': 'any', 'mapping': {}, 'multimaster': False}
         for key in opts['discovery']:
             if key not in discovery_config:
                 raise salt.exceptions.SaltConfigurationError('Unknown discovery option: {0}'.format(key))

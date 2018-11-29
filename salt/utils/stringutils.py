@@ -179,6 +179,19 @@ def to_num(text):
             return text
 
 
+def to_bool(text):
+    '''
+    Convert the string name of a boolean to that boolean value.
+    '''
+    downcased_text = six.text_type(text).strip().lower()
+
+    if downcased_text == 'false':
+        return False
+    elif downcased_text == 'true':
+        return True
+    return text
+
+
 def to_none(text):
     '''
     Convert a string to None if the string is empty or contains only spaces.

@@ -435,3 +435,9 @@ class Beacon(object):
                        tag='/salt/minion/minion_beacon_disabled_complete')
 
         return True
+
+    def reset(self):
+        '''
+        Reset the beacons to defaults
+        '''
+        self.opts['beacons'] = {}
