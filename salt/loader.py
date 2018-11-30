@@ -139,11 +139,11 @@ def static_loader(
 
 
 def _format_entrypoint_target(ep):
-    """
+    '''
     Makes a string describing the target of an EntryPoint object.
 
     Base strongly on EntryPoint.__str__().
-    """
+    '''
     s = ep.module_name
     if ep.attrs:
         s += ':' + '.'.join(ep.attrs)
