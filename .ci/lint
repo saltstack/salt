@@ -14,7 +14,7 @@ pipeline {
         stage('github-pending') {
             steps {
                 githubNotify credentialsId: 'test-jenkins-credentials',
-                    description: 'Python lint on changes...',
+                    description: 'Python lint on changes begins...',
                     status: 'PENDING',
                     context: "jenkins/pr/lint"
             }
@@ -29,9 +29,10 @@ pipeline {
                 gawk 'BEGIN {FS="\\t"} {if ($1 != "D") {print $NF}}' file-list-status.log > file-list-changed.log
                 gawk 'BEGIN {FS="\\t"} {if ($1 == "D") {print $NF}}' file-list-status.log > file-list-deleted.log
                 (git diff --name-status -l99999 -C "origin/$CHANGE_TARGET" "origin/$BRANCH_NAME";echo "---";git diff --name-status -l99999 -C "origin/$BRANCH_NAME";printenv|grep -E '=[0-9a-z]{40,}+$|COMMIT=|BRANCH') > file-list-experiment.log
-                touch pylint-report-salt.log pylint-report-tests.log
                 echo 254 > pylint-salt-chg.exit # assume failure
+                echo 254 > pylint-salt-full.exit # assume failure
                 echo 254 > pylint-tests-chg.exit # assume failure
+                echo 254 > pylint-tests-full.exit # assume failure
                 eval "$(pyenv init -)"
                 pyenv --version
                 pyenv install --skip-existing 2.7.14
@@ -45,7 +46,7 @@ pipeline {
         }
         stage('linting chg') {
             parallel {
-                stage('lint salt') {
+                stage('lint salt chg') {
                     when {
                         expression { return readFile('file-list-changed.log') =~ /(?i)(^|\n)(salt\/.*\.py|setup\.py)\n/ }
                     }
@@ -53,16 +54,16 @@ pipeline {
                         sh '''
                         eval "$(pyenv init - --no-rehash)"
                         # tee makes the exit/return code always 0
-                        grep -Ei '^salt/.*\\.py$|^setup\\.py$' file-list-changed.log | (xargs -r '--delimiter=\\n' tox -e pylint-salt;echo "$?" >  pylint-salt-chg.exit) | tee pylint-report-salt.log
+                        grep -Ei '^salt/.*\\.py$|^setup\\.py$' file-list-changed.log | (xargs -r '--delimiter=\\n' tox -e pylint-salt ; echo "$?" >  pylint-salt-chg.exit) | tee pylint-report-salt-chg.log
                         # remove color escape coding
-                        sed -ri 's/\\x1B\\[([0-9]{1,2}(;[0-9]{1,2})?)?[m|K]//g' pylint-report-salt.log
+                        sed -ri 's/\\x1B\\[([0-9]{1,2}(;[0-9]{1,2})?)?[m|K]//g' pylint-report-salt-chg.log
                         read rc_exit < pylint-salt-chg.exit
                         exit "$rc_exit"
                         '''
-                        archiveArtifacts artifacts: 'pylint-report-salt.log'
+                        archiveArtifacts artifacts: 'pylint-report-salt-chg.log'
                     }
                 }
-                stage('lint test') {
+                stage('lint test chg') {
                     when {
                         expression { return readFile('file-list-changed.log') =~ /(?i)(^|\n)tests\/.*\.py\n/ }
                     }
@@ -70,13 +71,13 @@ pipeline {
                         sh '''
                         eval "$(pyenv init - --no-rehash)"
                         # tee makes the exit/return code always 0
-                        grep -Ei '^tests/.*\\.py$' file-list-changed.log | (xargs -r '--delimiter=\\n' tox -e pylint-tests;echo "$?" > pylint-tests-chg.exit) | tee pylint-report-tests.log
+                        grep -Ei '^tests/.*\\.py$' file-list-changed.log | (xargs -r '--delimiter=\\n' tox -e pylint-tests ; echo "$?" > pylint-tests-chg.exit) | tee pylint-report-tests-chg.log
                         # remove color escape coding
-                        sed -ri 's/\\x1B\\[([0-9]{1,2}(;[0-9]{1,2})?)?[m|K]//g' pylint-report-tests.log
+                        sed -ri 's/\\x1B\\[([0-9]{1,2}(;[0-9]{1,2})?)?[m|K]//g' pylint-report-tests-chg.log
                         read rc_exit < pylint-tests-chg.exit
                         exit "$rc_exit"
                         '''
-                        archiveArtifacts artifacts: 'pylint-report-tests.log'
+                        archiveArtifacts artifacts: 'pylint-report-tests-chg.log'
                     }
                 }
             }
@@ -95,21 +96,21 @@ pipeline {
                 }
             }
         }
-        stage('lint all') {
+        stage('linting all') {
             // perform a full linit if this is a merge forward and the change only lint passed.
             when {
-                expression { return params.BRANCH_NAME =~ /(?i)^merge-/ && readFile('file-list-changed.log') =~ /^0/ }
+                expression { return params.BRANCH_NAME =~ /(?i)^merge-/ }
             }
             parallel {
-                stage('begin') {
+                stage('setup full') {
                     steps {
                         githubNotify credentialsId: 'test-jenkins-credentials',
-                            description: 'Python lint on everything...',
+                            description: 'Python lint on everything begins...',
                             status: 'PENDING',
                             context: "jenkins/pr/lint"
                     }
                 }
-                stage('lint salt') {
+                stage('lint salt full') {
                     steps {
                         sh '''
                         eval "$(pyenv init - --no-rehash)"
@@ -122,7 +123,7 @@ pipeline {
                         archiveArtifacts artifacts: 'pylint-report-salt-full.log'
                     }
                 }
-                stage('lint test') {
+                stage('lint test full') {
                     steps {
                         sh '''
                         eval "$(pyenv init - --no-rehash)"
@@ -158,13 +159,13 @@ pipeline {
         }
         success {
             githubNotify credentialsId: 'test-jenkins-credentials',
-                description: 'The lint job has passed',
+                description: 'Python lint test has passed',
                 status: 'SUCCESS',
                 context: "jenkins/pr/lint"
         }
         failure {
             githubNotify credentialsId: 'test-jenkins-credentials',
-                description: 'The lint test has failed',
+                description: 'Python lint test has failed',
                 status: 'FAILURE',
                 context: "jenkins/pr/lint"
             slackSend channel: "#jenkins-prod-pr", 
