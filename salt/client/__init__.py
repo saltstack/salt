@@ -1580,7 +1580,12 @@ class LocalClient(object):
                                 id_: {
                                     'out': 'no_return',
                                     'ret': 'Minion did not return. [No response]',
-                                    'retcode': salt.defaults.exitcodes.EX_GENERIC
+                                    'retcode': salt.defaults.exitcodes.EX_GENERIC,'\n\n',
+                                    'The minions may not have all finished running and any '
+                                    'remaining minions will return upon completion. To look '
+                                    'up the return data for this job later, run the following '
+                                    'command:\n\n'
+                                    'salt-run jobs.lookup_jid {0}'.format(jid)
                                 }
                             }
                 else:
