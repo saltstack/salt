@@ -125,7 +125,7 @@ SCRIPT_TEMPLATES = {
 }
 
 
-def test_mods():
+def list_test_mods():
     '''
     A generator which returns all of the test files
     '''
