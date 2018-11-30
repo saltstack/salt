@@ -5,23 +5,11 @@ Execute batch runs
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
-import math
-import time
-import copy
 import tornado
-from datetime import datetime, timedelta
 
 # Import salt libs
-import salt.utils.stringutils
-import salt.utils.event
 import salt.client
-import salt.output
-import salt.exceptions
 
-# Import 3rd-party libs
-# pylint: disable=import-error,no-name-in-module,redefined-builtin
-from salt.ext import six
-from salt.ext.six.moves import range
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
 import logging
 import fnmatch
