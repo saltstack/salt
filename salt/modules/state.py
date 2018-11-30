@@ -20,6 +20,7 @@ import sys
 import tarfile
 import tempfile
 import time
+import psutil
 
 # Import salt libs
 import salt.config
@@ -376,7 +377,23 @@ def running(concurrent=False):
     if concurrent:
         return ret
     active = __salt__['saltutil.is_running']('state.*')
+    ancestors = []
+    pid = os.getpid()
+    cur_pid = pid
+    init_found = False
+    # Build list of ancestor processes
+    while not init_found:
+        cur_ppid = psutil.Process(cur_pid).ppid
+        ancestors.append(cur_ppid)
+        cur_pid = cur_ppid
+        if cur_pid in [0, 1]:
+            init_found = True
+    
     for data in active:
+        # If the pid that is concurrent is one an ancestor process, then
+        # ignore this process, as we are probably running a sudo setup.
+        if data['pid'] in ancestors:
+            continue
         err = (
             'The function "{0}" is running as PID {1} and was started at '
             '{2} with jid {3}'
