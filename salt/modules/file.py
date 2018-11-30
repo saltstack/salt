@@ -3215,7 +3215,7 @@ def touch(name, atime=None, mtime=None):
 
 def tail(path, lines):
     '''
-    .. versionadded:: 2018.3.4
+    .. versionadded:: Neon
 
     Read the last n lines from a file
 
