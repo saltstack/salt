@@ -57,13 +57,16 @@ import salt.log.mixins
 from salt.utils.odict import OrderedDict
 
 # Define the pytest plugins we rely on
-pytest_plugins = ['tempdir', 'helpers_namespace', 'salt-from-filenames']  # pylint: disable=invalid-name
+# pylint: disable=invalid-name
+pytest_plugins = ['tempdir', 'helpers_namespace']
 
 # Define where not to collect tests from
 collect_ignore = ['setup.py']
+# pylint: enable=invalid-name
 
 
 # Patch PyTest logging handlers
+# pylint: disable=protected-access
 class LogCaptureHandler(salt.log.mixins.ExcInfoOnLogLevelFormatMixIn,
                         _pytest.logging.LogCaptureHandler):
     '''
@@ -84,6 +87,7 @@ class LiveLoggingStreamHandler(salt.log.mixins.ExcInfoOnLogLevelFormatMixIn,
 
 
 _pytest.logging._LiveLoggingStreamHandler = LiveLoggingStreamHandler
+# pylint: enable=protected-access
 
 # Reset logging root handlers
 for handler in logging.root.handlers[:]:
@@ -613,7 +617,7 @@ def cli_bin_dir(tempdir,
         script_path = os.path.join(cli_bin_dir_path, script_name)
 
         if not os.path.isfile(script_path):
-            log.info('Generating {0}'.format(script_path))
+            log.info('Generating %s', script_path)
 
             with salt.utils.files.fopen(script_path, 'w') as sfh:
                 script_template = script_templates.get(original_script_name, None)
