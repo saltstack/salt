@@ -12,9 +12,6 @@ The most commonly used modular systems are execution modules and states. But
 the modular systems extend well beyond the more easily exposed components
 and are often added to Salt to make the complete system more flexible.
 
-Additional Information
-----------------------
-
 .. toctree::
     :maxdepth: 2
     :glob:
@@ -44,19 +41,42 @@ a number of them have additional dependencies and/or configuration.)
 The Salt File Server
 --------------------
 
-* :ref:`Dynamic Module Distribution <dynamic-module-distribution>`
-
 The user may add modules by simply placing them in special directories in their
 :ref:`fileserver <file-server>`.
 
-These will be eventually picked up by minions, or users can use
-the ``saltutil.sync_*`` :py:mod:`execution functions <salt.modules.saltutil>`
-and :py:mod:`runner functions <salt.runners.saltutil>` to force it immediately.
-
 The name of the directory inside of the file server is the directory name
-prepended by ``_``.
+prepended by underscore, such as:
 
-Using saltenvs besides ``base`` may not work in all contexts.
+- :file:`_grains`
+- :file:`_modules`
+- :file:`_states`
+
+Modules must be synced before they can be used. This can happen a few ways,
+discussed below.
+
+.. note:
+    Using saltenvs besides ``base`` may not work in all contexts.
+
+Sync Via States
+~~~~~~~~~~~~~~~
+
+The minion configuration contains an option ``autoload_dynamic_modules``
+which defaults to ``True``. This option makes the state system refresh all
+dynamic modules when states are run. To disable this behavior set
+:conf_minion:`autoload_dynamic_modules` to ``False`` in the minion config.
+
+When dynamic modules are autoloaded via states, only the modules defined in the
+same saltenvs as the states currently being run.
+
+Sync Via the saltutil Module
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The saltutil module has a number of functions that can be used to sync all
+or specific dynamic modules. The ``saltutil.sync_*`` 
+:py:mod:`execution functions <salt.modules.saltutil>` and
+:py:mod:`runner functions <salt.runners.saltutil>` can be used to sync modules
+to minions and the master, respectively.
+
 
 The extmods Directory
 ---------------------
@@ -66,7 +86,7 @@ Any files places in the directory set by ``extension_modules`` settings
 :conf_master:`master <extension_modules>`, default
 ``/var/cache/salt/*/extmods``) can also be loaded as modules. Note that these
 directories are also used by the ``saltutil.sync_*`` functions (mentioned
-above).
+above) and files may be overwritten.
 
 Secondary Packages
 ------------------
