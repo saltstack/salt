@@ -143,6 +143,9 @@ The auth module system allows for external authentication routines to be easily
 added into Salt. The `auth` function needs to be implemented to satisfy the
 requirements of an auth module. Use the ``pam`` module as an example.
 
+See :ref:`External Authentication System <acl-eauth>` for more about
+authentication in Salt.
+
 Beacon
 ------
 
@@ -202,6 +205,8 @@ The file server module system is used to create file server backends used by the
 Salt Master. These modules need to implement the functions used in the
 fileserver subsystem. Use the ``gitfs`` module as an example.
 
+See :ref:`File Server Backends <file-server-backends>` for more information.
+
 Grains
 ------
 
@@ -210,6 +215,8 @@ Grains
 Grain modules define extra routines to populate grains data. All defined
 public functions will be executed and MUST return a Python dict object. The
 dict keys will be added to the grains made available to the minion.
+
+See :ref:`Grains <grains>` for more.
 
 Log Handler
 -----------
@@ -282,11 +289,20 @@ Runners are purely master-side execution sequences.
 SDB
 ---
 
+* :ref:`Writing SDB Modules <sdb-writing-modules>`
+
+SDB is a way to store data that's not associated with a minion. See 
+:ref:`Storing Data in Other Databases <sdb>`.
+
 Search
 ------
 
+A system for indexing the file server and pillars. Removed in 2018.3.
+
 Serializer
 ----------
+
+Primarily used with :py:func:`file.serialize <salt.states.file.serialize>`.
 
 State
 -----
