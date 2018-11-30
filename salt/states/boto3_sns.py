@@ -208,7 +208,8 @@ def topic_present(name, subscriptions=None, attributes=None,
             subscribe += [sub]
     for sub in curr_subs:
         if {'Protocol': sub['Protocol'], 'Endpoint': sub['Endpoint']} not in want_obfuscated:
-            unsubscribe += [sub['SubscriptionArn']]
+            if sub['SubscriptionArn'].startswith('arn:aws:sns:'):
+                unsubscribe += [sub['SubscriptionArn']]
     for sub in subscribe:
         ret = _create_or_update_subscription(ret, sub, curr_subs, mutable_attrs, TopicArn,
                                                 region, key, keyid, profile)
