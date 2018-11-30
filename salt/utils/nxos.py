@@ -1,4 +1,18 @@
 # -*- coding: utf-8 -*-
+# Copyright (c) 2018 Cisco and/or its affiliates.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 '''
 Util functions for the NXOS modules.
 '''
@@ -9,11 +23,15 @@ import json
 import logging
 import os
 import socket
-# from stat import *
-from salt.exceptions import CommandExecutionError
+import re
+import collections
+from salt.ext.six import string_types
+from salt.exceptions import (NxosClientError, NxosError,
+                             NxosRequestNotSupported, CommandExecutionError)
 
 # Import salt libs
 import salt.utils.http
+from salt.ext.six.moves import zip
 try:
     from salt.utils.args import clean_kwargs
 except ImportError:
@@ -71,17 +89,18 @@ class NxapiClient(object):
         parameters must be provided.
         '''
         self.nxargs = self._prepare_conn_args(clean_kwargs(**nxos_kwargs))
-        log.info('nxapi connection arguments: {0}'.format(self.nxargs))
         # Default: Connect to unix domain socket on localhost.
         if self.nxargs['connect_over_uds']:
             if not os.path.exists(self.NXAPI_UDS):
-                raise RuntimeError("No host specified and no UDS found at {0}\n".format(self.NXAPI_UDS))
+                raise NxosClientError("No host specified and no UDS found at {0}\n".format(self.NXAPI_UDS))
 
             # Create UHTTPConnection object for NX-API communication over UDS.
+            log.info('Nxapi connection arguments: {0}'.format(self.nxargs))
             log.info('Connecting over unix domain socket')
             self.connection = UHTTPConnection(self.NXAPI_UDS)
         else:
             # Remote connection - Proxy Minion, connect over http(s)
+            log.info('Nxapi connection arguments: {0}'.format(self.nxargs))
             log.info('Connecting over {}'.format(self.nxargs['transport']))
             self.connection = salt.utils.http.query
 
@@ -176,15 +195,25 @@ class NxapiClient(object):
                                        decode=True,
                                        decode_type='json',
                                        **self.nxargs)
-            response = response['dict']
 
-        return self.parse_response(response)
+        return self.parse_response(response, command_list)
 
-    def parse_response(self, response):
+    def parse_response(self, response, command_list):
         '''
         Parse NX-API JSON response from the NX-OS device.
         '''
-        body = response
+        # Check for 500 level NX-API Server Errors
+        if isinstance(response, collections.Iterable) and 'status' in response:
+            if int(response['status']) >= 500:
+                raise NxosError('{}'.format(response))
+            else:
+                raise NxosError('NX-API Request Not Supported: {}'.format(response))
+
+        if isinstance(response, collections.Iterable):
+            body = response['dict']
+        else:
+            body = response
+
         if self.nxargs['connect_over_uds']:
             body = json.loads(response.read().decode('utf-8'))
 
@@ -192,28 +221,49 @@ class NxapiClient(object):
         # Don't just return body['ins_api']['outputs']['output'] directly.
         output = body.get('ins_api')
         if output is None:
-            raise RuntimeError('Unexpected JSON output\n{0}'.format(body))
+            raise NxosClientError('Unexpected JSON output\n{0}'.format(body))
         if output.get('outputs'):
             output = output['outputs']
         if output.get('output'):
             output = output['output']
 
-        result = list()
-        if isinstance(output, list):
-            for each in output:
-                log.info('PARSE_RESPONSE: {0} {1}'.format(each.get('code'), each.get('msg')))
-                if each.get('code') != '200':
-                    msg = '{0} {1}'.format(each.get('code'), each.get('msg'))
-                    raise CommandExecutionError(msg)
-                else:
-                    result.append(each['body'])
-        else:
-            log.info('PARSE_RESPONSE: {0} {1}'.format(output.get('code'), output.get('msg')))
-            if output.get('code') != '200':
-                msg = '{0} {1}'.format(output.get('code'), output.get('msg'))
-                raise CommandExecutionError(msg)
+        # The result list stores results for each command that was sent to
+        # nxapi.
+        result = []
+        # Keep track of successful commands using previous_commands list so
+        # they can be displayed if a specific command fails in a chain of
+        # commands.
+        previous_commands = []
+
+        # Make sure output and command_list lists to be processed in the
+        # subesequent loop.
+        if not isinstance(output, list):
+            output = [output]
+        if isinstance(command_list, string_types):
+            command_list = [cmd.strip() for cmd in command_list.split(';')]
+        if not isinstance(command_list, list):
+            command_list = [command_list]
+
+        for cmd_result, cmd in zip(output, command_list):
+            code = cmd_result.get('code')
+            msg = cmd_result.get('msg')
+            log.info('command {}:'.format(cmd))
+            log.info('PARSE_RESPONSE: {0} {1}'.format(code, msg))
+            if code == '400':
+                raise CommandExecutionError({
+                    'rejected_input': cmd,
+                    'code': code,
+                    'message': msg,
+                    'cli_error': cmd_result.get('clierror'),
+                    'previous_commands': previous_commands,
+                })
+            elif code == '413':
+                raise NxosRequestNotSupported('Error 413: {}'.format(msg))
+            elif code != '200':
+                raise NxosError('Unknown Error: {}, Code: {}'.format(msg, code))
             else:
-                result.append(output['body'])
+                previous_commands.append(cmd)
+                result.append(cmd_result['body'])
 
         return result
 
@@ -268,3 +318,67 @@ def ping(**kwargs):
     Verify connection to the NX-OS device over UDS.
     '''
     return NxapiClient(**kwargs).nxargs['connect_over_uds']
+
+# Grains Functions
+
+
+def _parser(block):
+    return re.compile('^{block}\n(?:^[ \n].*$\n?)+'.format(block=block), re.MULTILINE)
+
+
+def _parse_software(data):
+    '''
+    Internal helper function to parse sotware grain information.
+    '''
+    ret = {'software': {}}
+    software = _parser('Software').search(data).group(0)
+    matcher = re.compile('^  ([^:]+): *([^\n]+)', re.MULTILINE)
+    for line in matcher.finditer(software):
+        key, val = line.groups()
+        ret['software'][key] = val
+    return ret['software']
+
+
+def _parse_hardware(data):
+    '''
+    Internal helper function to parse hardware grain information.
+    '''
+    ret = {'hardware': {}}
+    hardware = _parser('Hardware').search(data).group(0)
+    matcher = re.compile('^  ([^:\n]+): *([^\n]+)', re.MULTILINE)
+    for line in matcher.finditer(hardware):
+        key, val = line.groups()
+        ret['hardware'][key] = val
+    return ret['hardware']
+
+
+def _parse_plugins(data):
+    '''
+    Internal helper function to parse plugin grain information.
+    '''
+    ret = {'plugins': []}
+    plugins = _parser('plugin').search(data).group(0)
+    matcher = re.compile('^  (?:([^,]+), )+([^\n]+)', re.MULTILINE)
+    for line in matcher.finditer(plugins):
+        ret['plugins'].extend(line.groups())
+    return ret['plugins']
+
+
+def version_info():
+    client = NxapiClient()
+    return client.request('cli_show_ascii', 'show version')[0]
+
+
+def system_info(data):
+    '''
+    Helper method to return parsed system_info
+    from the 'show version' command.
+    '''
+    if not data:
+        return {}
+    info = {
+        'software': _parse_software(data),
+        'hardware': _parse_hardware(data),
+        'plugins': _parse_plugins(data),
+    }
+    return {'nxos': info}

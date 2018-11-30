@@ -164,7 +164,7 @@ def expensiveTest(caller):
     return wrap
 
 
-def flaky(caller=None, condition=True):
+def flaky(caller=None, condition=True, attempts=4):
     '''
     Mark a test as flaky. The test will attempt to run five times,
     looking for a successful run. After an immediate second try,
@@ -179,7 +179,7 @@ def flaky(caller=None, condition=True):
             pass
     '''
     if caller is None:
-        return functools.partial(flaky, condition=condition)
+        return functools.partial(flaky, condition=condition, attempts=attempts)
 
     if isinstance(condition, bool) and condition is False:
         # Don't even decorate
@@ -196,7 +196,7 @@ def flaky(caller=None, condition=True):
                 function = getattr(caller, attrname)
                 if not inspect.isfunction(function) and not inspect.ismethod(function):
                     continue
-                setattr(caller, attrname, flaky(caller=function, condition=condition))
+                setattr(caller, attrname, flaky(caller=function, condition=condition, attempts=attempts))
             except Exception as exc:
                 log.exception(exc)
                 continue
@@ -204,14 +204,17 @@ def flaky(caller=None, condition=True):
 
     @functools.wraps(caller)
     def wrap(cls):
-        for attempt in range(0, 4):
+        for attempt in range(0, attempts):
             try:
                 return caller(cls)
             except Exception as exc:
-                if attempt >= 3:
+                if attempt >= attempts -1:
                     raise exc
                 backoff_time = attempt ** 2
-                log.info('Found Exception. Waiting %s seconds to retry.', backoff_time)
+                log.info(
+                    'Found Exception. Waiting %s seconds to retry.',
+                    backoff_time
+                )
                 time.sleep(backoff_time)
         return cls
     return wrap
@@ -1591,7 +1594,11 @@ def win32_kill_process_tree(pid, sig=signal.SIGTERM, include_parent=True,
     '''
     if pid == os.getpid():
         raise RuntimeError("I refuse to kill myself")
-    parent = psutil.Process(pid)
+    try:
+        parent = psutil.Process(pid)
+    except psutil.NoSuchProcess:
+        log.debug("PID not found alive: %d", pid)
+        return ([], [])
     children = parent.children(recursive=True)
     if include_parent:
         children.append(parent)

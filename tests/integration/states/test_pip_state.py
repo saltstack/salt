@@ -317,6 +317,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
 
     @destructiveTest
     @skip_if_not_root
+    @skipIf(salt.utils.platform.is_darwin(), 'Test is flaky on macosx')
     @with_system_user('issue-6912', on_existing='delete', delete=True,
                       password='PassWord1!')
     @with_tempdir()

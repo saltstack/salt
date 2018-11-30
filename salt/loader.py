@@ -22,6 +22,7 @@ from zipimport import zipimporter
 
 # Import salt libs
 import salt.config
+import salt.defaults.events
 import salt.defaults.exitcodes
 import salt.syspaths
 import salt.utils.args
@@ -34,6 +35,7 @@ import salt.utils.lazy
 import salt.utils.odict
 import salt.utils.platform
 import salt.utils.versions
+import salt.utils.stringutils
 from salt.exceptions import LoaderError
 from salt.template import check_render_pipe_str
 from salt.utils.decorators import Depends
@@ -261,7 +263,8 @@ def minion_mods(
 
     if notify:
         evt = salt.utils.event.get_event('minion', opts=opts, listen=False)
-        evt.fire_event({'complete': True}, tag='/salt/minion/minion_mod_complete')
+        evt.fire_event({'complete': True},
+                       tag=salt.defaults.events.MINION_MOD_COMPLETE)
 
     return ret
 
@@ -292,6 +295,29 @@ def raw_mod(opts, name, functions, mod='modules'):
 
     loader._load_module(name)  # load a single module (the one passed in)
     return dict(loader._dict)  # return a copy of *just* the funcs for `name`
+
+
+def metaproxy(opts):
+    '''
+    Return functions used in the meta proxy
+    '''
+
+    return LazyLoader(
+        _module_dirs(opts, 'metaproxy'),
+        opts,
+        tag='metaproxy'
+    )
+
+
+def matchers(opts):
+    '''
+    Return the matcher services plugins
+    '''
+    return LazyLoader(
+        _module_dirs(opts, 'matchers'),
+        opts,
+        tag='matchers'
+    )
 
 
 def engines(opts, functions, runners, utils, proxy=None):
@@ -736,6 +762,7 @@ def grains(opts, force_refresh=False, proxy=None):
         opts['grains'] = {}
 
     grains_data = {}
+    blist = opts.get('grains_blacklist', [])
     funcs = grain_funcs(opts, proxy=proxy)
     if force_refresh:  # if we refresh, lets reload grain modules
         funcs.clear()
@@ -747,6 +774,14 @@ def grains(opts, force_refresh=False, proxy=None):
         ret = funcs[key]()
         if not isinstance(ret, dict):
             continue
+        if blist:
+            for key in list(ret):
+                for block in blist:
+                    if salt.utils.stringutils.expr_match(key, block):
+                        del ret[key]
+                        log.trace('Filtering %s grain', key)
+            if not ret:
+                continue
         if grains_deep_merge:
             salt.utils.dictupdate.update(grains_data, ret)
         else:
@@ -782,6 +817,14 @@ def grains(opts, force_refresh=False, proxy=None):
             continue
         if not isinstance(ret, dict):
             continue
+        if blist:
+            for key in list(ret):
+                for block in blist:
+                    if salt.utils.stringutils.expr_match(key, block):
+                        del ret[key]
+                        log.trace('Filtering %s grain', key)
+            if not ret:
+                continue
         if grains_deep_merge:
             salt.utils.dictupdate.update(grains_data, ret)
         else:

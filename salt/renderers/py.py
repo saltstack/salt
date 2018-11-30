@@ -17,7 +17,7 @@ dictionaries as values. For example the following state declaration in YAML:
           - curl
           - vim
 
-tranlastes to:
+translates to:
 
 .. code-block:: python
 

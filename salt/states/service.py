@@ -3,10 +3,10 @@
 Starting or restarting of services and daemons
 ==============================================
 
-Services are defined as system daemons typically started with system init or
-rc scripts. The service state uses whichever service module that is loaded on
-the minion with the virtualname of ``service``. Services can be defined as
-running or dead.
+Services are defined as system daemons and are typically launched using system
+init or rc scripts. This service state uses whichever service module is loaded
+on the minion with the virtualname of ``service``. Services can be defined as
+either running or dead.
 
 If you need to know if your init system is supported, see the list of supported
 :mod:`service modules <salt.modules.service.py>` for your desired init system
@@ -30,7 +30,7 @@ section of Salt's module documentation to work around possible errors.
     httpd:
       service.running: []
 
-The service can also be set to be started at runtime via the enable option:
+The service can also be set to start at runtime via the enable option:
 
 .. code-block:: yaml
 
@@ -39,8 +39,8 @@ The service can also be set to be started at runtime via the enable option:
         - enable: True
 
 By default if a service is triggered to refresh due to a watch statement the
-service is by default restarted. If the desired behavior is to reload the
-service, then set the reload value to True:
+service is restarted. If the desired behavior is to reload the service, then
+set the reload value to True:
 
 .. code-block:: yaml
 
@@ -66,6 +66,7 @@ import salt.utils.data
 import salt.utils.platform
 from salt.utils.args import get_function_argspec as _argspec
 from salt.exceptions import CommandExecutionError
+from salt.state import _gen_tag
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -825,13 +826,20 @@ def unmasked(name, runtime=False):
 def mod_watch(name,
               sfun=None,
               sig=None,
-              reload=False,
               full_restart=False,
               init_delay=None,
               force=False,
               **kwargs):
     '''
     The service watcher, called to invoke the watch command.
+    When called, it will restart or reload the named service.
+
+    .. note::
+        This state exists to support special handling of the ``watch``
+        :ref:`requisite <requisites>`. It should not be called directly.
+
+        Parameters for this function should be set by the watching service.
+        (i.e. ``service.running``)
 
     name
         The name of the init or rc script used to manage the service
@@ -844,11 +852,19 @@ def mod_watch(name,
         The string to search for when looking for the service process with ps
 
     reload
-        Use reload instead of the default restart (exclusive option with full_restart,
-        defaults to reload if both are used)
+        If True use reload instead of the default restart. If value is a list of
+        requisites; reload only if all watched changes are contained in the reload list.
+        Otherwise watch will restart.
 
     full_restart
-        Use service.full_restart instead of restart (exclusive option with reload)
+        Use service.full_restart instead of restart.
+        When set, reload the service instead of restarting it.
+        (i.e. ``service nginx reload``)
+
+    full_restart
+        Perform a full stop/start of a service by passing ``--full-restart``.
+        This option is ignored if ``reload`` is set and is supported by only a few
+        :py:func:`service modules <salt.modules.service>`.
 
     force
         Use service.force_reload instead of reload (needs reload to be set to True)
@@ -856,6 +872,7 @@ def mod_watch(name,
     init_delay
         Add a sleep command (in seconds) before the service is restarted/reloaded
     '''
+    reload_ = kwargs.pop('reload', False)
     ret = {'name': name,
            'changes': {},
            'result': True,
@@ -873,13 +890,40 @@ def mod_watch(name,
             return ret
     elif sfun == 'running':
         if __salt__['service.status'](name, sig):
-            if 'service.reload' in __salt__ and reload:
-                if 'service.force_reload' in __salt__ and force:
-                    func = __salt__['service.force_reload']
-                    verb = 'forcefully reload'
+            if 'service.reload' in __salt__ and reload_:
+                if isinstance(reload_, list):
+                    only_reload_needed = True
+                    for watch_item in kwargs['__reqs__']['watch']:
+                        if __running__[_gen_tag(watch_item)]['changes']:
+                            match_found = False
+                            for this_reload in reload_:
+                                for state, id_ in six.iteritems(this_reload):
+                                    if state == watch_item['state'] \
+                                            and id_ == watch_item['__id__']:
+                                        match_found = True
+                            if not match_found:
+                                only_reload_needed = False
+                    if only_reload_needed:
+                        if 'service.force_reload' in __salt__ and force:
+                            func = __salt__['service.force_reload']
+                            verb = 'forcefully reload'
+                        else:
+                            func = __salt__['service.reload']
+                            verb = 'reload'
+                    else:
+                        if 'service.full_restart' in __salt__ and full_restart:
+                            func = __salt__['service.full_restart']
+                            verb = 'fully restart'
+                        else:
+                            func = __salt__['service.restart']
+                            verb = 'restart'
                 else:
-                    func = __salt__['service.reload']
-                    verb = 'reload'
+                    if 'service.force_reload' in __salt__ and force:
+                        func = __salt__['service.force_reload']
+                        verb = 'forcefully reload'
+                    else:
+                        func = __salt__['service.reload']
+                        verb = 'reload'
             elif 'service.full_restart' in __salt__ and full_restart:
                 func = __salt__['service.full_restart']
                 verb = 'fully restart'

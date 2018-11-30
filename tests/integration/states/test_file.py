@@ -42,6 +42,7 @@ import salt.utils.json
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
+from salt.utils.versions import LooseVersion as _LooseVersion
 
 HAS_PWD = True
 try:
@@ -154,7 +155,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             try:
                 os.remove(path)
             except OSError as exc:
-                if exc.errno != os.errno.ENOENT:
+                if exc.errno != errno.ENOENT:
                     log.error('Failed to remove %s: %s', path, exc)
 
     def test_symlink(self):
@@ -356,10 +357,9 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         file.
         '''
         grain_path = os.path.join(TMP, 'file-grain-test')
-        self.run_function('grains.set', ['grain_path', grain_path])
         state_file = 'file-grainget'
 
-        self.run_function('state.sls', [state_file])
+        self.run_function('state.sls', [state_file], pillar={'grain_path': grain_path})
         self.assertTrue(os.path.exists(grain_path))
 
         with salt.utils.files.fopen(grain_path, 'r') as fp_:
@@ -681,7 +681,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         1. A unicode string type would be loaded as a unicode literal with the
            leading "u" as well as the quotes, rather than simply being loaded
            as the proper unicode type which matches the content of the string
-           literal. In other wordss, u'foo' would be loaded literally as
+           literal. In other words, u'foo' would be loaded literally as
            u"u'foo'". This test includes actual non-ascii unicode in one of the
            strings to confirm that this also handles these international
            characters properly.
@@ -703,7 +703,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         assert ret['result'], ret
         with salt.utils.files.fopen(test_file) as fp_:
             managed = salt.utils.stringutils.to_unicode(fp_.read())
-        expected = textwrap.dedent('''\
+        expected = dedent('''\
             Die Webseite ist https://saltstack.com.
             Der Zucker ist süß.
 
@@ -743,7 +743,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                 source_hash=uppercase_hash
             )
             assert ret[state_name]['result'] is True
-            assert ret[state_name]['pchanges'] == {}
             assert ret[state_name]['changes'] == {}
 
             # Test uppercase source_hash using test=true
@@ -756,7 +755,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                 test=True
             )
             assert ret[state_name]['result'] is True
-            assert ret[state_name]['pchanges'] == {}
             assert ret[state_name]['changes'] == {}
 
         finally:
@@ -809,6 +807,87 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         # Now make sure that the file is not cached
         result = self.run_function('cp.is_cached', [source, saltenv])
         assert result == '', 'File is still cached at {0}'.format(result)
+
+    @with_tempfile(create=False)
+    @with_tempfile(create=False)
+    def test_file_managed_onchanges(self, file1, file2):
+        '''
+        Test file.managed state with onchanges
+        '''
+        pillar = {'file1': file1,
+                  'file2': file2,
+                  'source': 'salt://testfile',
+                  'req': 'onchanges'}
+
+        # Lay down the file used in the below SLS to ensure that when it is
+        # run, there are no changes.
+        self.run_state(
+            'file.managed',
+            name=pillar['file2'],
+            source=pillar['source'])
+
+        ret = self.repack_state_returns(
+            self.run_function(
+                'state.apply',
+                mods='onchanges_prereq',
+                pillar=pillar,
+                test=True,
+            )
+        )
+        # The file states should both exit with None
+        assert ret['one']['result'] is None, ret['one']['result']
+        assert ret['three']['result'] is True, ret['three']['result']
+        # The first file state should have changes, since a new file was
+        # created. The other one should not, since we already created that file
+        # before applying the SLS file.
+        assert ret['one']['changes']
+        assert not ret['three']['changes'], ret['three']['changes']
+        # The state watching 'one' should have been run due to changes
+        assert ret['two']['comment'] == 'Success!', ret['two']['comment']
+        # The state watching 'three' should not have been run
+        assert ret['four']['comment'] == \
+            'State was not run because none of the onchanges reqs changed', \
+            ret['four']['comment']
+
+    @with_tempfile(create=False)
+    @with_tempfile(create=False)
+    def test_file_managed_prereq(self, file1, file2):
+        '''
+        Test file.managed state with prereq
+        '''
+        pillar = {'file1': file1,
+                  'file2': file2,
+                  'source': 'salt://testfile',
+                  'req': 'prereq'}
+
+        # Lay down the file used in the below SLS to ensure that when it is
+        # run, there are no changes.
+        self.run_state(
+            'file.managed',
+            name=pillar['file2'],
+            source=pillar['source'])
+
+        ret = self.repack_state_returns(
+            self.run_function(
+                'state.apply',
+                mods='onchanges_prereq',
+                pillar=pillar,
+                test=True,
+            )
+        )
+        # The file states should both exit with None
+        assert ret['one']['result'] is None, ret['one']['result']
+        assert ret['three']['result'] is True, ret['three']['result']
+        # The first file state should have changes, since a new file was
+        # created. The other one should not, since we already created that file
+        # before applying the SLS file.
+        assert ret['one']['changes']
+        assert not ret['three']['changes'], ret['three']['changes']
+        # The state watching 'one' should have been run due to changes
+        assert ret['two']['comment'] == 'Success!', ret['two']['comment']
+        # The state watching 'three' should not have been run
+        assert ret['four']['comment'] == 'No changes detected', \
+            ret['four']['comment']
 
     def test_directory(self):
         '''
@@ -873,6 +952,13 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         initial_mode = '0111'
         changed_mode = '0555'
 
+        initial_modes = {0: {sub: '0755',
+                             subsub: '0111'},
+                         1: {sub: '0111',
+                             subsub: '0111'},
+                         2: {sub: '0111',
+                             subsub: '0111'}}
+
         if not os.path.isdir(subsub):
             os.makedirs(subsub, int(initial_mode, 8))
 
@@ -888,8 +974,16 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                     self.assertEqual(changed_mode,
                                      _get_oct_mode(changed_dir))
                 for untouched_dir in dirs[depth+1:]:
-                    self.assertEqual(initial_mode,
-                                     _get_oct_mode(untouched_dir))
+                    # Beginning in Python 3.7, os.makedirs no longer sets
+                    # the mode of intermediate directories to the mode that
+                    # is passed.
+                    if sys.version_info >= (3, 7):
+                        _mode = initial_modes[depth][untouched_dir]
+                        self.assertEqual(_mode,
+                                         _get_oct_mode(untouched_dir))
+                    else:
+                        self.assertEqual(initial_mode,
+                                         _get_oct_mode(untouched_dir))
         finally:
             shutil.rmtree(top)
 
@@ -1646,10 +1740,11 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                     'finally': 'the last item'},
                 formatter='json')
 
-        with salt.utils.files.fopen(path_test, 'r') as fp_:
-            serialized_file = fp_.read()
+        with salt.utils.files.fopen(path_test, 'rb') as fp_:
+            serialized_file = salt.utils.stringutils.to_unicode(fp_.read())
 
-        expected_file = os.linesep.join([
+        # The JSON serializer uses LF even on OSes where os.path.sep is CRLF.
+        expected_file = '\n'.join([
             '{',
             '  "a_list": [',
             '    "first_element",',
@@ -2321,7 +2416,9 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             if salt.utils.platform.is_windows():
                 import subprocess
                 import win32api
-                p = subprocess.Popen(salt.utils.stringutils.to_str('type {}'.format(win32api.GetShortPathName(test_file))),
+                p = subprocess.Popen(
+                    salt.utils.stringutils.to_str(
+                        'type {}'.format(win32api.GetShortPathName(test_file))),
                     shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                 p.poll()
                 out = p.stdout.read()
@@ -3823,6 +3920,25 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
             self._read(name),
             self.with_matching_block_and_marker_end_not_after_newline)
 
+    @with_tempfile()
+    def test_issue_49043(self, name):
+        ret = self.run_function(
+            'state.sls',
+            mods='issue-49043',
+            pillar={'name': name},
+        )
+        log.error("ret = %s", repr(ret))
+        diff = '--- \n+++ \n@@ -0,0 +1,3 @@\n'
+        diff += dedent('''\
+        +#-- start managed zone --
+        +äöü
+        +#-- end managed zone --
+        ''')
+        job = 'file_|-somefile-blockreplace_|-{}_|-blockreplace'.format(name)
+        self.assertEqual(
+            ret[job]['changes']['diff'],
+            diff)
+
 
 class RemoteFileTest(ModuleCase, SaltReturnAssertsMixin):
     '''
@@ -3913,6 +4029,15 @@ class RemoteFileTest(ModuleCase, SaltReturnAssertsMixin):
 
 @skipIf(not salt.utils.path.which('patch'), 'patch is not installed')
 class PatchTest(ModuleCase, SaltReturnAssertsMixin):
+    def _check_patch_version(self, min_version):
+        '''
+        patch version check
+        '''
+        version = self.run_function('cmd.run', ['patch --version']).splitlines()[0]
+        version = version.split()[1]
+        if _LooseVersion(version) < _LooseVersion(min_version):
+            self.skipTest('Minimum patch version required: {0}. '
+                          'Patch version installed: {1}'.format(min_version, version))
 
     @classmethod
     def setUpClass(cls):
@@ -4036,6 +4161,7 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         Test file.patch using a patch applied to a directory, with changes
         spanning multiple files.
         '''
+        self._check_patch_version('2.6')
         ret = self.run_state(
             'file.patch',
             name=self.base_dir,
@@ -4063,6 +4189,7 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         Test that we successfuly parse -p/--strip when included in the options
         '''
+        self._check_patch_version('2.6')
         # Run the state using -p1
         ret = self.run_state(
             'file.patch',
@@ -4237,6 +4364,7 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         spanning multiple files, and the patch file coming from a remote
         source.
         '''
+        self._check_patch_version('2.6')
         # Try without a source_hash and without skip_verify=True, this should
         # fail with a message about the source_hash
         ret = self.run_state(
@@ -4311,6 +4439,7 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         spanning multiple files, and with jinja templating applied to the patch
         file.
         '''
+        self._check_patch_version('2.6')
         ret = self.run_state(
             'file.patch',
             name=self.base_dir,
@@ -4390,6 +4519,7 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         spanning multiple files, and the patch file coming from a remote
         source.
         '''
+        self._check_patch_version('2.6')
         # Try without a source_hash and without skip_verify=True, this should
         # fail with a message about the source_hash
         ret = self.run_state(
