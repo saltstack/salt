@@ -3213,6 +3213,48 @@ def touch(name, atime=None, mtime=None):
     return os.path.exists(name)
 
 
+def tail(path, lines):
+    '''
+    .. versionadded:: 2018.3.4
+
+    Read the last n lines from a file
+
+    path
+        path to file
+
+    lines
+        number of lines to read
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.tail /path/to/file 10
+    '''
+    path = os.path.expanduser(path)
+    lines_found = []
+
+    try:
+        with open(path) as tail_fh:
+            tail_fh.seek(0, os.SEEK_END)
+            position = tail_fh.tell()
+            line = ''
+            while position >= 0:
+                tail_fh.seek(position)
+                next_char = tail_fh.read(1)
+                if next_char == os.linesep:
+                    lines_found.append(line[::-1])
+                    line = ''
+                else:
+                    line += next_char
+                position -= 1
+                if len(lines_found) == lines:
+                    return lines_found[::-1]
+            lines_found.append(line[::-1])
+    finally:
+        return lines_found[::-1]
+
+
 def seek_read(path, size, offset):
     '''
     .. versionadded:: 2014.1.0
