@@ -390,7 +390,7 @@ def _passphrase_callback(passphrase):
     Returns a callback function used to supply a passphrase for private keys
     '''
     def f(*args):
-        return salt.utils.stringutils.to_str(passphrase)
+        return salt.utils.stringutils.to_bytes(passphrase)
     return f
 
 
@@ -790,7 +790,7 @@ def write_pem(text, path, overwrite=True, pem_type=None):
         with salt.utils.files.fopen(path, 'w') as _fp:
             if pem_type and pem_type == 'CERTIFICATE' and _private_key:
                 _fp.write(salt.utils.stringutils.to_str(_private_key))
-            _fp.write(text)
+            _fp.write(salt.utils.stringutils.to_str(text))
             if pem_type and pem_type == 'CERTIFICATE' and _dhparams:
                 _fp.write(salt.utils.stringutils.to_str(_dhparams))
     return 'PEM written to {0}'.format(path)
@@ -977,8 +977,8 @@ def create_crl(  # pylint: disable=too-many-arguments,too-many-locals
         rev_date = rev_date.strftime('%Y%m%d%H%M%SZ')
 
         rev = OpenSSL.crypto.Revoked()
-        rev.set_serial(serial_number)
-        rev.set_rev_date(rev_date)
+        rev.set_serial(salt.utils.stringutils.to_bytes(serial_number))
+        rev.set_rev_date(salt.utils.stringutils.to_bytes(rev_date))
 
         if 'reason' in rev_item:
             # Same here for OpenSSL bindings and non-unicode strings
@@ -1004,7 +1004,7 @@ def create_crl(  # pylint: disable=too-many-arguments,too-many-locals
         'days': days_valid
     }
     if digest:
-        export_kwargs['digest'] = bytes(digest)
+        export_kwargs['digest'] = salt.utils.stringutils.to_bytes(digest)
     else:
         log.warning('No digest specified. The default md5 digest will be used.')
 
