@@ -72,7 +72,7 @@ def __global_logging_exception_handler(exc_type, exc_value, exc_traceback,
     # Log the exception
     try:
         msg = (
-            'An un-handled exception was caught by salt-testing\'s global exception handler:\n{}: {}\n{}'.format(
+            'An un-handled exception was caught by salt\'s testing global exception handler:\n{}: {}\n{}'.format(
                 exc_type.__name__,
                 exc_value,
                 ''.join(_format_exception(exc_type, exc_value, exc_traceback)).strip()
@@ -402,7 +402,7 @@ class SaltTestingParser(optparse.OptionParser):
         try:
             return self.__test_mods
         except AttributeError:
-            self.__test_mods = set(tests.support.paths.test_mods())
+            self.__test_mods = set(tests.support.paths.list_test_mods())
             return self.__test_mods
 
     def _map_files(self, files):
