@@ -3234,6 +3234,19 @@ def tail(path, lines):
     path = os.path.expanduser(path)
     lines_found = []
 
+    if not os.path.isfile(path):
+        raise SaltInvocationError('File not found: {0}'.format(path))
+
+    if not __utils__['files.is_text'](path):
+        raise SaltInvocationError(
+            'Cannot tail a binary file: {0}'.format(path))
+
+    try:
+        lines = int(lines)
+    except ValueError:
+        log.error('file.tail: \'lines\' value must be an integer')
+        lines = 10
+
     try:
         with open(path) as tail_fh:
             tail_fh.seek(0, os.SEEK_END)
