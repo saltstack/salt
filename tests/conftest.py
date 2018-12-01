@@ -196,7 +196,7 @@ class SaltTerminalReporter(TerminalReporter):
             self._tw.write(line)
             return
         else:
-            self.ensure_newline()
+            self.section('Statistics', sep='-', bold=True)
             template = ' {}  -  CPU: {:6.2f} %   MEM: {:6.2f} %   SWAP: {:6.2f} %\n'
             self._tw.write(
                 template.format(
