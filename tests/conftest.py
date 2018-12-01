@@ -42,6 +42,7 @@ from tests.integration import TestDaemon
 
 # Import pytest libs
 import pytest
+import _pytest.logging
 from _pytest.terminal import TerminalReporter
 
 # Import 3rd-party libs
@@ -52,6 +53,7 @@ from salt.ext import six
 import salt.utils.files
 import salt.utils.path
 import salt.log.setup
+import salt.log.mixins
 from salt.utils.odict import OrderedDict
 
 # Define the pytest plugins we rely on
@@ -60,11 +62,35 @@ pytest_plugins = ['tempdir', 'helpers_namespace', 'salt-from-filenames']  # pyli
 # Define where not to collect tests from
 collect_ignore = ['setup.py']
 
-log = logging.getLogger('salt.testsuite')
+
+# Patch PyTest logging handlers
+class LogCaptureHandler(salt.log.mixins.ExcInfoOnLogLevelFormatMixIn,
+                        _pytest.logging.LogCaptureHandler):
+    '''
+    Subclassing PyTest's LogCaptureHandler in order to add the
+    exc_info_on_loglevel functionality.
+    '''
+
+
+_pytest.logging.LogCaptureHandler = LogCaptureHandler
+
+
+class LiveLoggingStreamHandler(salt.log.mixins.ExcInfoOnLogLevelFormatMixIn,
+                               _pytest.logging._LiveLoggingStreamHandler):
+    '''
+    Subclassing PyTest's LiveLoggingStreamHandler in order to add the
+    exc_info_on_loglevel functionality.
+    '''
+
+
+_pytest.logging._LiveLoggingStreamHandler = LiveLoggingStreamHandler
 
 # Reset logging root handlers
-for handler in logging.root.handlers:
+for handler in logging.root.handlers[:]:
     logging.root.removeHandler(handler)
+
+
+log = logging.getLogger('salt.testsuite')
 
 
 def pytest_tempdir_basename():
