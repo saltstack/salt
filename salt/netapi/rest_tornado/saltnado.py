@@ -934,8 +934,9 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
                 ret.append('Unexpected exception while handling request: {0}'.format(ex))
                 log.error('Unexpected exception while handling request:', exc_info=True)
 
-        self.write(self.serialize({'return': ret}))
-        self.finish()
+        if not self._finished:
+            self.write(self.serialize({'return': ret}))
+            self.finish()
 
     @tornado.gen.coroutine
     def _disbatch_local(self, chunk):
