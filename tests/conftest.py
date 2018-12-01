@@ -187,6 +187,10 @@ def pytest_configure(config):
     config.addinivalue_line('norecursedirs', os.path.join(CODE_DIR, 'templates'))
     config.addinivalue_line('norecursedirs', os.path.join(CODE_DIR, 'tests/support'))
     config.addinivalue_line(
+        'filterwarnings',
+        r'once:encoding is deprecated, Use raw=False instead\.:DeprecationWarning'
+    )
+    config.addinivalue_line(
         'markers',
         'destructive_test: Run destructive tests. These tests can include adding '
         'or removing users from your system for example.'
