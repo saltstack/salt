@@ -172,7 +172,7 @@ Beacon
 * :ref:`Writing Beacons <writing-beacons>`
 
 Beacons are polled by the Salt event loop to monitor non-salt processes. See 
-:ref`Beacons <beacons>` for more information about the beacon system.
+:ref:`Beacons <beacons>` for more information about the beacon system.
 
 Cache
 -----
@@ -346,14 +346,26 @@ function properly.
 SPM pkgdb
 ---------
 
+* :ref:`SPM Development Guide: Package Database <spm-development-pkgdb>`
+
+pkgdb modules provides storage backends to the package database.
+
 SPM pkgfiles
 ------------
+
+* :ref:`SPM Development Guide: Package Database <spm-development-pkgfiles>`
+
+pkgfiles modules handle the actual installation.
 
 SSH Wrapper
 -----------
 
+Replacement execution modules for :ref:`Salt SSH <salt-ssh>`.
+
 Thorium
 -------
+
+Modules for use in the :ref:`Thorium <thorium-reactor>` event reactor.
 
 Tops
 ----
@@ -363,6 +375,9 @@ the state system.
 
 Util
 ----
+
+Just utility modules to use with other modules via ``__utils__`` (see 
+:ref:`Dunder Dictionaries <dunder-dictionaries>`).
 
 Wheel
 -----

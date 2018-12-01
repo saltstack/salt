@@ -93,6 +93,8 @@ __func_alias__
 __outputter__
 -------------
 
+.. _dunder-dictionaries:
+
 Dunder Dictionaries
 ===================
 
