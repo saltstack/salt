@@ -2096,6 +2096,8 @@ def replace(path,
                 # Just search; bail as early as a match is found
                 if re.search(cpattern, r_data):
                     return True  # `with` block handles file closure
+                else:
+                    return False
             else:
                 result, nrepl = re.subn(cpattern,
                                         repl.replace('\\', '\\\\') if backslash_literal else repl,
@@ -5653,6 +5655,7 @@ def list_backups(path, limit=None):
         [files[x] for x in sorted(files, reverse=True)[:limit]]
     )))
 
+
 list_backup = salt.utils.alias_function(list_backups, 'list_backup')
 
 
@@ -5824,6 +5827,7 @@ def delete_backup(path, backup_id):
         ret['comment'] = 'Successfully removed {0}'.format(backup['Location'])
 
     return ret
+
 
 remove_backup = salt.utils.alias_function(delete_backup, 'remove_backup')
 
