@@ -60,7 +60,6 @@ pipeline {
                         read rc_exit < pylint-salt-chg.exit
                         exit "$rc_exit"
                         '''
-                        archiveArtifacts artifacts: 'pylint-report-salt-chg.log'
                     }
                 }
                 stage('lint test chg') {
@@ -77,16 +76,16 @@ pipeline {
                         read rc_exit < pylint-tests-chg.exit
                         exit "$rc_exit"
                         '''
-                        archiveArtifacts artifacts: 'pylint-report-tests-chg.log'
                     }
                 }
             }
             post {
                 always {
+                    archiveArtifacts artifacts: 'pylint-report-*-chg.log', allowEmptyArchive: true
                     step([$class: 'WarningsPublisher',
                         parserConfigurations: [[
                             parserName: 'PyLint',
-                            pattern: 'pylint-report*chg.log'
+                            pattern: 'pylint-report-*-chg.log'
                         ]],
                         failedTotalAll: '0',
                         useDeltaValues: false,
@@ -99,7 +98,7 @@ pipeline {
         stage('linting all') {
             // perform a full linit if this is a merge forward and the change only lint passed.
             when {
-                expression { return params.BRANCH_NAME =~ /(?i)^merge-/ }
+                expression { return params.CHANGE_BRANCH =~ /(?i)^merge[._-]/ }
             }
             parallel {
                 stage('setup full') {
@@ -120,7 +119,6 @@ pipeline {
                         read rc_exit <  pylint-salt-full.exit
                         exit "$rc_exit"
                         '''
-                        archiveArtifacts artifacts: 'pylint-report-salt-full.log'
                     }
                 }
                 stage('lint test full') {
@@ -133,16 +131,16 @@ pipeline {
                         read rc_exit <  pylint-tests-full.exit
                         exit "$rc_exit"
                         '''
-                        archiveArtifacts artifacts: 'pylint-report-tests-full.log'
                     }
                 }
             }
             post {
                 always {
+                    archiveArtifacts artifacts: 'pylint-report-*-full.log', allowEmptyArchive: true
                     step([$class: 'WarningsPublisher',
                         parserConfigurations: [[
                             parserName: 'PyLint',
-                            pattern: 'pylint-report*full.log'
+                            pattern: 'pylint-report-*-full.log'
                         ]],
                         failedTotalAll: '0',
                         useDeltaValues: false,
