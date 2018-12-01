@@ -709,7 +709,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
                                 'Docker'
                             )
 
-    @skipIf(salt.utils.platform.is_windows(), 'System is Windows')
+    @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
     def test_xen_virtual(self):
         '''
         Test if OS grains are parsed correctly in Ubuntu Xenial Xerus
