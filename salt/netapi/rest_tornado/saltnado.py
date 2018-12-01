@@ -1037,7 +1037,7 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
                         raise tornado.gen.Return(chunk_ret)
 
             except TimeoutException:
-                pass
+                break
 
             if f == events[0]:
                 events[0] = self.application.event_listener.get_event(self, tag='salt/job/'+chunk['jid'])
