@@ -108,8 +108,8 @@ This is done via setuptools entry points:
         # ...
     )
 
-Note that these are not synced from the Salt Master to the Minion. They must be
-installed indepdendently on the Minion.
+Note that these are not synced from the Salt Master to the Minions. They must be
+installed indepdendently on each Minion.
 
 Module Types
 ============
