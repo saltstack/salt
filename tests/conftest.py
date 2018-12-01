@@ -189,13 +189,7 @@ class SaltTerminalReporter(TerminalReporter):
         if self.config.getoption('--sys-stats') is False:
             return
 
-        test_daemon = getattr(self._session, 'test_daemon', None)
-        if self.verbosity == 1:
-            line = ' [CPU:{0}%|MEM:{1}%]'.format(psutil.cpu_percent(),
-                                               psutil.virtual_memory().percent)
-            self._tw.write(line)
-            return
-        else:
+        if self.verbosity > 1:
             self.section('Statistics', sep='-', bold=True)
             template = ' {}  -  CPU: {:6.2f} %   MEM: {:6.2f} %   SWAP: {:6.2f} %\n'
             self._tw.write(
@@ -212,6 +206,18 @@ class SaltTerminalReporter(TerminalReporter):
                     mem = psproc.memory_percent('vms')
                     swap = psproc.memory_percent('swap')
                     self._tw.write(template.format(name, cpu, mem, swap))
+
+    def _get_progress_information_message(self):
+        msg = TerminalReporter._get_progress_information_message(self)
+        if self.verbosity <= 0:
+            return msg
+        if self.config.getoption('--sys-stats') is False:
+            return msg
+        if self.verbosity == 1:
+            msg = ' [CPU:{}%] [MEM:{}%]{}'.format(psutil.cpu_percent(),
+                                                  psutil.virtual_memory().percent,
+                                                  msg)
+        return msg
 
 
 def pytest_sessionstart(session):
