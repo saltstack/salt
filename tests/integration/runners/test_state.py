@@ -142,6 +142,7 @@ class StateRunnerTest(ShellCase):
                         'test_|-test fail with changes_|-test fail with changes_|-fail_with_changes': {
                             '__id__': 'test fail with changes',
                             '__run_num__': 0,
+                            '__saltfunc__': 'test.fail_with_changes',
                             '__sls__': 'orch.issue43204.fail_with_changes',
                             'changes': {
                                 'testing': {
@@ -228,7 +229,7 @@ class StateRunnerTest(ShellCase):
         self.assertIn('Succeeded: 4 (changed=4)\n', ret)
 
         # scrub ephemeral output
-        ret = re.sub('\d', 'x', ret)
+        ret = re.sub(r'\d', 'x', ret)
         ret = re.sub('Duration: .*', 'Duration: x', ret)
         ret = re.sub('Started: .*', 'Started: x', ret)
 
