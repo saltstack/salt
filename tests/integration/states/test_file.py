@@ -701,7 +701,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             pillar={'tojson-file': test_file})
         ret = ret[next(iter(ret))]
         assert ret['result'], ret
-        with salt.utils.files.fopen(test_file, encoding='utf-8') as fp_:
+        with salt.utils.files.fopen(test_file, mode='rb') as fp_:
             managed = salt.utils.stringutils.to_unicode(fp_.read())
         expected = dedent('''\
             Die Webseite ist https://saltstack.com.

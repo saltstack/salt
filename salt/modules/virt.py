@@ -1806,7 +1806,7 @@ def update(name,
                     _qemu_image_create(all_disks[idx])
 
         try:
-            conn.defineXML(ElementTree.tostring(desc))
+            conn.defineXML(salt.utils.stringutils.to_str(ElementTree.tostring(desc)))
             status['definition'] = True
         except libvirt.libvirtError as err:
             conn.close()
@@ -1830,12 +1830,12 @@ def update(name,
                 for added in changes[dev_type].get('new', []):
                     commands.append({'device': dev_type,
                                      'cmd': 'attachDevice',
-                                     'args': [ElementTree.tostring(added)]})
+                                     'args': [salt.utils.stringutils.to_str(ElementTree.tostring(added))]})
 
                 for removed in changes[dev_type].get('deleted', []):
                     commands.append({'device': dev_type,
                                      'cmd': 'detachDevice',
-                                     'args': [ElementTree.tostring(removed)]})
+                                     'args': [salt.utils.stringutils.to_str(ElementTree.tostring(removed))]})
 
         for cmd in commands:
             try:
@@ -4174,7 +4174,7 @@ def cpu_baseline(full=False, migratable=False, out='libvirt', **kwargs):
     conn = __get_conn(**kwargs)
     caps = ElementTree.fromstring(conn.getCapabilities())
     cpu = caps.find('host/cpu')
-    log.debug('Host CPU model definition: %s', ElementTree.tostring(cpu))
+    log.debug('Host CPU model definition: %s', salt.utils.stringutils.to_str(ElementTree.tostring(cpu)))
 
     flags = 0
     if migratable:
@@ -4189,7 +4189,7 @@ def cpu_baseline(full=False, migratable=False, out='libvirt', **kwargs):
         # This one is only in 1.1.3+
         flags += libvirt.VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES
 
-    cpu = ElementTree.fromstring(conn.baselineCPU([ElementTree.tostring(cpu)], flags))
+    cpu = ElementTree.fromstring(conn.baselineCPU([salt.utils.stringutils.to_str(ElementTree.tostring(cpu))], flags))
     conn.close()
 
     if full and not getattr(libvirt, 'VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES', False):
