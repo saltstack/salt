@@ -502,7 +502,7 @@ class ShellCase(ShellTestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixi
                                arg_str,
                                with_retcode=with_retcode,
                                catch_stderr=catch_stderr,
-                               timeout=60)
+                               timeout=timeout + 10)
 
     def run_run_plus(self, fun, *arg, **kwargs):
         '''
