@@ -545,10 +545,10 @@ class ShellCase(ShellTestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixi
                                                                timeout=timeout,
                                                                async_flag=' --async' if asynchronous else '')
         ret = self.run_script('salt-run',
-                              arg_str,
-                              with_retcode=with_retcode,
-                              catch_stderr=catch_stderr,
-                              timeout=60)
+                               arg_str,
+                               with_retcode=with_retcode,
+                               catch_stderr=catch_stderr,
+                               timeout=timeout + 10)
         log.debug('Result of run_run for command \'%s\': %s', arg_str, ret)
         return ret
 
