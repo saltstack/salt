@@ -76,4 +76,4 @@ tests/*/*win*                       @saltstack/team-windows
 tests/*/test_reg.py                 @saltstack/team-windows
 
 # Jenkins Integration
-.ci/*                               @saltstack/saltstack-release-engineering @saltstack/team-core @saltstack/team-windows
+.ci/*                               @saltstack/saltstack-sre-team @saltstack/team-core
