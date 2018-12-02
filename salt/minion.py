@@ -86,6 +86,7 @@ import salt.utils.schedule
 import salt.utils.ssdp
 import salt.utils.user
 import salt.utils.zeromq
+import salt.defaults.events
 import salt.defaults.exitcodes
 import salt.cli.daemons
 import salt.log.setup
@@ -2215,12 +2216,12 @@ class Minion(MinionBase):
 
     # TODO: only allow one future in flight at a time?
     @tornado.gen.coroutine
-    def pillar_refresh(self, force_refresh=False):
+    def pillar_refresh(self, force_refresh=False, notify=False):
         '''
         Refresh the pillar
         '''
         if self.connected:
-            log.debug('Refreshing pillar')
+            log.debug('Refreshing pillar. Notify: %s', notify)
             try:
                 self.opts['pillar'] = yield salt.pillar.get_async_pillar(
                     self.opts,
@@ -2229,11 +2230,14 @@ class Minion(MinionBase):
                     self.opts['saltenv'],
                     pillarenv=self.opts.get('pillarenv'),
                 ).compile_pillar()
+                if notify:
+                    evt = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
+                    evt.fire_event({'complete': True}, tag=salt.defaults.events.MINION_PILLAR_COMPLETE)
             except SaltClientError:
                 # Do not exit if a pillar refresh fails.
                 log.error('Pillar data could not be refreshed. '
                           'One or more masters may be down!')
-        self.module_refresh(force_refresh)
+        self.module_refresh(force_refresh, notify)
 
     def manage_schedule(self, tag, data):
         '''
@@ -2377,7 +2381,8 @@ class Minion(MinionBase):
         Handle a pillar_refresh event
         '''
         yield self.pillar_refresh(
-            force_refresh=data.get('force_refresh', False)
+            force_refresh=data.get('force_refresh', False),
+            notify=data.get('notify', False)
         )
 
     def _handle_tag_beacons_refresh(self, tag, data):
