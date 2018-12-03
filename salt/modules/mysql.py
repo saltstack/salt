@@ -1245,7 +1245,7 @@ def user_exists(user,
         args['password'] = password_hash
 
     if run_verify:
-        if not verify_login(user, host, password):
+        if not verify_login(user, password, **connection_args):
             return False
     try:
         _execute(cur, qry, args)
@@ -2233,7 +2233,7 @@ def showglobal(**connection_args):
     return rtnv
 
 
-def verify_login(user, host='localhost', password=None, **connection_args):
+def verify_login(user, password=None, **connection_args):
     '''
     Attempt to login using the provided credentials.
     If successful, return true.  Otherwise, return False.
@@ -2242,11 +2242,10 @@ def verify_login(user, host='localhost', password=None, **connection_args):
 
     .. code-block:: bash
 
-        salt '*' mysql.verify_login root localhost password
+        salt '*' mysql.verify_login root password
     '''
-    # Override the connection args
+    # Override the connection args for username and password
     connection_args['connection_user'] = user
-    connection_args['connection_host'] = host
     connection_args['connection_pass'] = password
 
     dbc = _connect(**connection_args)
