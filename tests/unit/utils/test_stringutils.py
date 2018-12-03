@@ -114,6 +114,14 @@ class StringutilsTestCase(TestCase):
         self.assertTrue(salt.utils.stringutils.contains_whitespace(does_contain_whitespace))
         self.assertFalse(salt.utils.stringutils.contains_whitespace(does_not_contain_whitespace))
 
+    def test_to_bool(self):
+        self.assertFalse(salt.utils.stringutils.to_bool('false'))
+        self.assertTrue(salt.utils.stringutils.to_bool('true'))
+        self.assertEqual('', salt.utils.stringutils.to_bool(''))
+        self.assertIsInstance(salt.utils.stringutils.to_bool(''), six.text_type)
+        self.assertEqual('0', salt.utils.stringutils.to_bool('0'))
+        self.assertIsInstance(salt.utils.stringutils.to_bool('0'), six.text_type)
+
     def test_to_num(self):
         self.assertEqual(7, salt.utils.stringutils.to_num('7'))
         self.assertIsInstance(salt.utils.stringutils.to_num('7'), int)
@@ -121,6 +129,13 @@ class StringutilsTestCase(TestCase):
         self.assertIsInstance(salt.utils.stringutils.to_num('7.0'), float)
         self.assertEqual(salt.utils.stringutils.to_num('Seven'), 'Seven')
         self.assertIsInstance(salt.utils.stringutils.to_num('Seven'), six.text_type)
+
+    def test_to_none(self):
+        self.assertIsNone(salt.utils.stringutils.to_none(''))
+        self.assertIsNone(salt.utils.stringutils.to_none('  '))
+        # Ensure that we do not inadvertently convert certain strings or 0 to None
+        self.assertIsNotNone(salt.utils.stringutils.to_none('None'))
+        self.assertIsNotNone(salt.utils.stringutils.to_none(0))
 
     def test_is_binary(self):
         self.assertFalse(salt.utils.stringutils.is_binary(LOREM_IPSUM))
@@ -548,3 +563,18 @@ class StringutilsTestCase(TestCase):
             salt.utils.stringutils.check_whitelist_blacklist,
             'foo', blacklist=123
         )
+
+    def test_check_include_exclude_empty(self):
+        self.assertTrue(salt.utils.stringutils.check_include_exclude("/some/test"))
+
+    def test_check_include_exclude_exclude(self):
+        self.assertFalse(salt.utils.stringutils.check_include_exclude("/some/test", None, "*test*"))
+
+    def test_check_include_exclude_exclude_list(self):
+        self.assertFalse(salt.utils.stringutils.check_include_exclude("/some/test", None, ["*test"]))
+
+    def test_check_include_exclude_exclude_include(self):
+        self.assertTrue(salt.utils.stringutils.check_include_exclude("/some/test", "*test*", "/some/"))
+
+    def test_check_include_exclude_regex(self):
+        self.assertFalse(salt.utils.stringutils.check_include_exclude("/some/test", None, "E@/some/(test|other)"))

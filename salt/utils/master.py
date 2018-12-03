@@ -38,6 +38,98 @@ from salt.utils.zeromq import zmq
 log = logging.getLogger(__name__)
 
 
+def get_running_jobs(opts):
+    '''
+    Return the running jobs on this minion
+    '''
+
+    ret = []
+    proc_dir = os.path.join(opts['cachedir'], 'proc')
+    if not os.path.isdir(proc_dir):
+        return ret
+    for fn_ in os.listdir(proc_dir):
+        path = os.path.join(proc_dir, fn_)
+        try:
+            data = _read_proc_file(path, opts)
+            if data is not None:
+                ret.append(data)
+        except (IOError, OSError):
+            # proc files may be removed at any time during this process by
+            # the master process that is executing the JID in question, so
+            # we must ignore ENOENT during this process
+            log.trace('%s removed during processing by master process', path)
+    return ret
+
+
+def _read_proc_file(path, opts):
+    '''
+    Return a dict of JID metadata, or None
+    '''
+    serial = salt.payload.Serial(opts)
+    with salt.utils.files.fopen(path, 'rb') as fp_:
+        buf = fp_.read()
+        fp_.close()
+        if buf:
+            data = serial.loads(buf)
+        else:
+            # Proc file is empty, remove
+            try:
+                os.remove(path)
+            except IOError:
+                log.debug('Unable to remove proc file %s.', path)
+            return None
+    if not isinstance(data, dict):
+        # Invalid serial object
+        return None
+    if not salt.utils.process.os_is_running(data['pid']):
+        # The process is no longer running, clear out the file and
+        # continue
+        try:
+            os.remove(path)
+        except IOError:
+            log.debug('Unable to remove proc file %s.', path)
+        return None
+
+    if not _check_cmdline(data):
+        pid = data.get('pid')
+        if pid:
+            log.warning(
+                'PID %s exists but does not appear to be a salt process.', pid
+            )
+        try:
+            os.remove(path)
+        except IOError:
+            log.debug('Unable to remove proc file %s.', path)
+        return None
+    return data
+
+
+def _check_cmdline(data):
+    '''
+    In some cases where there are an insane number of processes being created
+    on a system a PID can get recycled or assigned to a non-Salt process.
+    On Linux this fn checks to make sure the PID we are checking on is actually
+    a Salt process.
+
+    For non-Linux systems we punt and just return True
+    '''
+    if not salt.utils.platform.is_linux():
+        return True
+    pid = data.get('pid')
+    if not pid:
+        return False
+    if not os.path.isdir('/proc'):
+        return True
+    path = os.path.join('/proc/{0}/cmdline'.format(pid))
+    if not os.path.isfile(path):
+        return False
+    try:
+        with salt.utils.files.fopen(path, 'rb') as fp_:
+            return b'salt' in fp_.read()
+    except (OSError, IOError):
+        return False
+
+
 class MasterPillarUtil(object):
     '''
     Helper utility for easy access to targeted minion grain and
@@ -189,16 +281,16 @@ class MasterPillarUtil(object):
             cret = dict([(minion_id, mcache) for (minion_id, mcache) in six.iteritems(cached_grains) if mcache])
             missed_minions = [minion_id for minion_id in minion_ids if minion_id not in cret]
             log.debug('Missed cached minion grains for: %s', missed_minions)
-            if self.grains_fallback:
+            if self.grains_fallback and missed_minions:
                 lret = self._get_live_minion_grains(missed_minions)
-            ret = dict(list(six.iteritems(dict([(minion_id, {}) for minion_id in minion_ids]))) + list(lret.items()) + list(cret.items()))
+            ret = {key: value for key, value in [(minion_id, {}) for minion_id in minion_ids] + list(six.iteritems(cret)) + list(six.iteritems(lret))}
         else:
             lret = self._get_live_minion_grains(minion_ids)
             missed_minions = [minion_id for minion_id in minion_ids if minion_id not in lret]
             log.debug('Missed live minion grains for: %s', missed_minions)
-            if self.grains_fallback:
+            if self.grains_fallback and missed_minions:
                 cret = dict([(minion_id, mcache) for (minion_id, mcache) in six.iteritems(cached_grains) if mcache])
-            ret = dict(list(six.iteritems(dict([(minion_id, {}) for minion_id in minion_ids]))) + list(lret.items()) + list(cret.items()))
+            ret = {key: value for key, value in [(minion_id, {}) for minion_id in minion_ids] + list(six.iteritems(cret)) + list(six.iteritems(lret))}
         return ret
 
     def _get_minion_pillar(self, *minion_ids, **kwargs):
@@ -214,16 +306,16 @@ class MasterPillarUtil(object):
             cret = dict([(minion_id, mcache) for (minion_id, mcache) in six.iteritems(cached_pillar) if mcache])
             missed_minions = [minion_id for minion_id in minion_ids if minion_id not in cret]
             log.debug('Missed cached minion pillars for: %s', missed_minions)
-            if self.pillar_fallback:
+            if self.pillar_fallback and missed_minions:
                 lret = dict([(minion_id, self._get_live_minion_pillar(minion_id, grains.get(minion_id, {}))) for minion_id in missed_minions])
-            ret = dict(list(six.iteritems(dict([(minion_id, {}) for minion_id in minion_ids]))) + list(lret.items()) + list(cret.items()))
+            ret = {key: value for key, value in [(minion_id, {}) for minion_id in minion_ids] + list(six.iteritems(cret)) + list(six.iteritems(lret))}
         else:
             lret = dict([(minion_id, self._get_live_minion_pillar(minion_id, grains.get(minion_id, {}))) for minion_id in minion_ids])
             missed_minions = [minion_id for minion_id in minion_ids if minion_id not in lret]
             log.debug('Missed live minion pillars for: %s', missed_minions)
-            if self.pillar_fallback:
+            if self.pillar_fallback and missed_minions:
                 cret = dict([(minion_id, mcache) for (minion_id, mcache) in six.iteritems(cached_pillar) if mcache])
-            ret = dict(list(six.iteritems(dict([(minion_id, {}) for minion_id in minion_ids]))) + list(lret.items()) + list(cret.items()))
+            ret = {key: value for key, value in [(minion_id, {}) for minion_id in minion_ids] + list(six.iteritems(cret)) + list(six.iteritems(lret))}
         return ret
 
     def _tgt_to_list(self):
@@ -721,6 +813,7 @@ def get_values_of_matching_keys(pattern_dict, user_name):
         if salt.utils.stringutils.expr_match(user_name, expr):
             ret.extend(pattern_dict[expr])
     return ret
+
 
 # test code for the ConCache class
 if __name__ == '__main__':

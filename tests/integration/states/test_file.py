@@ -359,7 +359,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         grain_path = os.path.join(TMP, 'file-grain-test')
         state_file = 'file-grainget'
 
-        self.run_function('state.sls', [state_file])
+        self.run_function('state.sls', [state_file], pillar={'grain_path': grain_path})
         self.assertTrue(os.path.exists(grain_path))
 
         with salt.utils.files.fopen(grain_path, 'r') as fp_:
@@ -681,7 +681,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         1. A unicode string type would be loaded as a unicode literal with the
            leading "u" as well as the quotes, rather than simply being loaded
            as the proper unicode type which matches the content of the string
-           literal. In other wordss, u'foo' would be loaded literally as
+           literal. In other words, u'foo' would be loaded literally as
            u"u'foo'". This test includes actual non-ascii unicode in one of the
            strings to confirm that this also handles these international
            characters properly.
@@ -701,9 +701,9 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             pillar={'tojson-file': test_file})
         ret = ret[next(iter(ret))]
         assert ret['result'], ret
-        with salt.utils.files.fopen(test_file) as fp_:
+        with salt.utils.files.fopen(test_file, mode='rb') as fp_:
             managed = salt.utils.stringutils.to_unicode(fp_.read())
-        expected = textwrap.dedent('''\
+        expected = dedent('''\
             Die Webseite ist https://saltstack.com.
             Der Zucker ist süß.
 
@@ -2717,6 +2717,59 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             '',
         ]).encode('utf-8'))
 
+    @with_tempfile()
+    def test_keyvalue(self, name):
+        '''
+        file.keyvalue
+        '''
+        content = dedent(six.text_type('''\
+            # This is the sshd server system-wide configuration file.  See
+            # sshd_config(5) for more information.
+
+            # The strategy used for options in the default sshd_config shipped with
+            # OpenSSH is to specify options with their default value where
+            # possible, but leave them commented.  Uncommented options override the
+            # default value.
+
+            #Port 22
+            #AddressFamily any
+            #ListenAddress 0.0.0.0
+            #ListenAddress ::
+
+            #HostKey /etc/ssh/ssh_host_rsa_key
+            #HostKey /etc/ssh/ssh_host_ecdsa_key
+            #HostKey /etc/ssh/ssh_host_ed25519_key
+
+            # Ciphers and keying
+            #RekeyLimit default none
+
+            # Logging
+            #SyslogFacility AUTH
+            #LogLevel INFO
+
+            # Authentication:
+
+            #LoginGraceTime 2m
+            #PermitRootLogin prohibit-password
+            #StrictModes yes
+            #MaxAuthTries 6
+            #MaxSessions 10
+            '''))
+
+        with salt.utils.files.fopen(name, 'w+') as fp_:
+            fp_.write(content)
+
+        ret = self.run_state('file.keyvalue',
+                name=name, key='permitrootlogin', value='no', separator=" ", uncomment=" #", key_ignore_case=True)
+
+        with salt.utils.files.fopen(name, 'r') as fp_:
+            file_contents = fp_.read()
+            self.assertNotIn('#PermitRootLogin', file_contents)
+            self.assertNotIn('prohibit-password', file_contents)
+            self.assertIn("PermitRootLogin no", file_contents)
+
+        self.assertSaltTrueReturn(ret)
+
 
 class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
     marker_start = '# start'
@@ -3920,6 +3973,25 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
             self._read(name),
             self.with_matching_block_and_marker_end_not_after_newline)
 
+    @with_tempfile()
+    def test_issue_49043(self, name):
+        ret = self.run_function(
+            'state.sls',
+            mods='issue-49043',
+            pillar={'name': name},
+        )
+        log.error("ret = %s", repr(ret))
+        diff = '--- \n+++ \n@@ -0,0 +1,3 @@\n'
+        diff += dedent('''\
+        +#-- start managed zone --
+        +äöü
+        +#-- end managed zone --
+        ''')
+        job = 'file_|-somefile-blockreplace_|-{}_|-blockreplace'.format(name)
+        self.assertEqual(
+            ret[job]['changes']['diff'],
+            diff)
+
 
 class RemoteFileTest(ModuleCase, SaltReturnAssertsMixin):
     '''
@@ -4014,11 +4086,10 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         patch version check
         '''
-        if not salt.utils.path.which('patch'):
-            self.skipTest('patch is not installed')
-        version = re.search(r'\d\.\d\.\d', self.run_function('cmd.run', ['patch --version'])).group(0)
+        version = self.run_function('cmd.run', ['patch --version']).splitlines()[0]
+        version = version.split()[1]
         if _LooseVersion(version) < _LooseVersion(min_version):
-            self.skipTest('Mininum patch version required: {0}.'
+            self.skipTest('Minimum patch version required: {0}. '
                           'Patch version installed: {1}'.format(min_version, version))
 
     @classmethod
@@ -4143,7 +4214,7 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         Test file.patch using a patch applied to a directory, with changes
         spanning multiple files.
         '''
-        self._check_patch_version('2.6.1')
+        self._check_patch_version('2.6')
         ret = self.run_state(
             'file.patch',
             name=self.base_dir,
@@ -4171,7 +4242,7 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         Test that we successfuly parse -p/--strip when included in the options
         '''
-        self._check_patch_version('2.6.1')
+        self._check_patch_version('2.6')
         # Run the state using -p1
         ret = self.run_state(
             'file.patch',
@@ -4346,7 +4417,7 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         spanning multiple files, and the patch file coming from a remote
         source.
         '''
-        self._check_patch_version('2.6.1')
+        self._check_patch_version('2.6')
         # Try without a source_hash and without skip_verify=True, this should
         # fail with a message about the source_hash
         ret = self.run_state(
@@ -4421,7 +4492,7 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         spanning multiple files, and with jinja templating applied to the patch
         file.
         '''
-        self._check_patch_version('2.6.1')
+        self._check_patch_version('2.6')
         ret = self.run_state(
             'file.patch',
             name=self.base_dir,
@@ -4501,7 +4572,7 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         spanning multiple files, and the patch file coming from a remote
         source.
         '''
-        self._check_patch_version('2.6.1')
+        self._check_patch_version('2.6')
         # Try without a source_hash and without skip_verify=True, this should
         # fail with a message about the source_hash
         ret = self.run_state(
@@ -4609,6 +4680,7 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         ret = ret[next(iter(ret))]
         self.assertIn('Patch would not apply cleanly', ret['comment'])
         self.assertEqual(ret['changes'], {})
+
 
 WIN_TEST_FILE = 'c:/testfile'
 

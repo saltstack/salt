@@ -19,17 +19,19 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 
-def match(tgt):
+def match(tgt, opts=None):
     '''
     Runs the compound target check
     '''
-    nodegroups = __opts__.get('nodegroups', {})
-    matchers = salt.loader.matchers(__opts__)
+    if not opts:
+        opts = __opts__
+    nodegroups = opts.get('nodegroups', {})
+    matchers = salt.loader.matchers(opts)
 
     if not isinstance(tgt, six.string_types) and not isinstance(tgt, (list, tuple)):
         log.error('Compound target received that is neither string, list nor tuple')
         return False
-    log.debug('compound_match: %s ? %s', __opts__['id'], tgt)
+    log.debug('compound_match: %s ? %s', opts['id'], tgt)
     ref = {'G': 'grain',
            'P': 'grain_pcre',
            'I': 'pillar',
@@ -102,7 +104,7 @@ def match(tgt):
             results.append(six.text_type(matchers['glob_match.match'](word)))
 
     results = ' '.join(results)
-    log.debug('compound_match %s ? "%s" => "%s"', __opts__['id'], tgt, results)
+    log.debug('compound_match %s ? "%s" => "%s"', opts['id'], tgt, results)
     try:
         return eval(results)  # pylint: disable=W0123
     except Exception:
