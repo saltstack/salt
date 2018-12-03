@@ -3248,7 +3248,7 @@ def tail(path, lines):
         lines = 10
 
     try:
-        with open(path) as tail_fh:
+        with salt.utils.fopen(path) as tail_fh:
             tail_fh.seek(0, os.SEEK_END)
             position = tail_fh.tell()
             line = ''
@@ -3264,8 +3264,10 @@ def tail(path, lines):
                 if len(lines_found) == lines:
                     return lines_found[::-1]
             lines_found.append(line[::-1])
-    finally:
         return lines_found[::-1]
+    except (OSError, IOError):
+        raise CommandExecutionError('Could not tail \'{0}\''.format(path))
+
 
 
 def seek_read(path, size, offset):
