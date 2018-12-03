@@ -67,6 +67,7 @@ class BatchAsync(object):
             (find_job_return_pattern, 'find_job_return')
         }
         if not self.event.subscriber.connected():
+            # TODO is there a way to subscribe to only some tags?
             self.event.set_event_handler(self.__event_handler)
 
     def __event_handler(self, raw):
@@ -85,14 +86,6 @@ class BatchAsync(object):
                     if minion in self.active:
                         self.active.remove(minion)
                         self.done_minions.add(minion)
-                    from salt.master import mylogger
-                    if self.done_minions == self.minions.difference(self.timedout_minions):
-                        # TODO
-                        # if not all available minions finish the batch
-                        # the event handler connection is not closed
-                        mylogger.info('Closing: %s %s %s', self.done_minions, self.timedout_minions, self.down_minions)
-                        self.event.close_pub()
-                    else:
                         # call later so that we maybe gather more returns
                         self.event.io_loop.call_later(1, self.next)
                 if not self.initialized:
@@ -100,6 +93,14 @@ class BatchAsync(object):
                     self.event.io_loop.call_later(
                         self.opts['gather_job_timeout'], self.next)
                     self.initialized = True
+
+        from salt.master import mylogger
+        if self.initialized and self.done_minions == self.minions.difference(self.timedout_minions):
+            # TODO
+            # if not all available minions finish the batch
+            # the event handler connection is not closed
+            mylogger.info('Closing: %s %s %s', self.done_minions, self.timedout_minions, self.down_minions)
+            self.event.close_pub()
 
     def _get_next(self):
         next_batch_size = min(
