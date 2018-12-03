@@ -86,6 +86,10 @@ def user_present(name, password=None, roles=None, encrypted=False, crypt_salt=No
 
     old_user = __salt__['nxos.cmd']('get_user', username=name)
 
+    if not old_user and password is None:
+        ret['comment'] = 'User cannot be created without password'
+        return ret
+
     if not any([change_password, change_roles, not old_user]):
         ret['result'] = True
         ret['comment'] = 'User already exists'
