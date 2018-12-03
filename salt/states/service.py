@@ -426,8 +426,8 @@ def running(name,
     # See if the service is already running
     if before_toggle_status:
         ret['comment'] = '\n'.join(
-            filter(None, ['The service {0} is already running'.format(name),
-                          unmask_ret['comment']])
+            [_f for _f in ['The service {0} is already running'.format(name),
+                           unmask_ret['comment']] if _f]
         )
         if enable is True and not before_toggle_enable_status:
             ret.update(_enable(name, None, **kwargs))
@@ -439,9 +439,8 @@ def running(name,
     if __opts__['test']:
         ret['result'] = None
         ret['comment'] = '\n'.join(
-            filter(None, ['Service {0} is set to start'.format(name),
-                          unmask_ret['comment']]
-                   ))
+            [_f for _f in ['Service {0} is set to start'.format(name),
+                           unmask_ret['comment']] if _f])
         return ret
 
     # Conditionally add systemd-specific args to call to service.start
