@@ -226,6 +226,22 @@ class FileReplaceTestCase(TestCase, LoaderModuleMockMixin):
         '''
         filemod.replace(self.tfile.name, r'Etiam', 123)
 
+    def test_search_only_return_true(self):
+        ret = filemod.replace(self.tfile.name,
+                              r'Etiam', 'Salticus',
+                              search_only=True)
+
+        self.assertIsInstance(ret, bool)
+        self.assertEqual(ret, True)
+
+    def test_search_only_return_false(self):
+        ret = filemod.replace(self.tfile.name,
+                              r'Etian', 'Salticus',
+                              search_only=True)
+
+        self.assertIsInstance(ret, bool)
+        self.assertEqual(ret, False)
+
 
 class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
