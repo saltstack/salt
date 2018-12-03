@@ -8,6 +8,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import errno
 import logging
 import os
+import re
 import shutil
 import signal
 import tempfile
@@ -141,6 +142,7 @@ class StateRunnerTest(ShellCase):
                         'test_|-test fail with changes_|-test fail with changes_|-fail_with_changes': {
                             '__id__': 'test fail with changes',
                             '__run_num__': 0,
+                            '__saltfunc__': 'test.fail_with_changes',
                             '__sls__': 'orch.issue43204.fail_with_changes',
                             'changes': {
                                 'testing': {
@@ -215,6 +217,82 @@ class StateRunnerTest(ShellCase):
                        '        Name: runtests_helpers.failure\n'
                        '      Result: False'):
             self.assertIn(result, ret)
+
+    def test_orchestrate_retcode_async(self):
+        '''
+        Test orchestration with nonzero retcode set in __context__ for async
+        '''
+        self.run_run('saltutil.sync_runners')
+        self.run_run('saltutil.sync_wheel')
+        ret = "\n".join(self.run_run('state.orchestrate orch.retcode_async'))
+
+        self.assertIn('Succeeded: 4 (changed=4)\n', ret)
+
+        # scrub ephemeral output
+        ret = re.sub(r'\d', 'x', ret)
+        ret = re.sub('Duration: .*', 'Duration: x', ret)
+        ret = re.sub('Started: .*', 'Started: x', ret)
+
+        result = textwrap.dedent('''
+                  ID: test_runner_success
+            Function: salt.runner
+                Name: runtests_helpers.success
+              Result: True
+             Comment: Runner function 'runtests_helpers.success' executed.
+             Started: x
+            Duration: x
+             Changes:   
+                      ----------
+                      return:
+                          ----------
+                          jid:
+                              xxxxxxxxxxxxxxxxxxxx
+                          tag:
+                              salt/run/xxxxxxxxxxxxxxxxxxxx
+        ----------
+                  ID: test_wheel_sucess
+            Function: salt.wheel
+                Name: runtests_helpers.success
+              Result: True
+             Comment: wheel submitted successfully.
+             Started: x
+            Duration: x
+             Changes:   
+                      ----------
+                      jid:
+                          xxxxxxxxxxxxxxxxxxxx
+                      tag:
+                          salt/wheel/xxxxxxxxxxxxxxxxxxxx
+        ----------
+                  ID: test_function_sucess
+            Function: salt.function
+                Name: runtests_helpers.success
+              Result: True
+             Comment: Function submitted successfully.
+             Started: x
+            Duration: x
+             Changes:   
+                      ----------
+                      jid:
+                          xxxxxxxxxxxxxxxxxxxx
+                      minions:
+                          - minion
+        ----------
+                  ID: test_state_sucess
+            Function: salt.state
+              Result: True
+             Comment: State submitted successfully.
+             Started: x
+            Duration: x
+             Changes:   
+                      ----------
+                      jid:
+                          xxxxxxxxxxxxxxxxxxxx
+                      minions:
+                          - minion
+        ''')
+
+        self.assertIn(result, ret)
 
     def test_orchestrate_target_doesnt_exist(self):
         '''
