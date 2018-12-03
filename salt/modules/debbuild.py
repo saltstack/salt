@@ -804,7 +804,6 @@ def make_repo(repodir,
             local_keys2_keygrip = __salt__['cmd.run'](cmd, runas=runas, env=env)
             local_keys2 = iter(local_keys2_keygrip.splitlines())
             try:
-                log.debug("DGM make_repo local_keys2 \'{0}\'".format(local_keys2))
                 for line in local_keys2:
                     if line.startswith('sec'):
                         log.debug("DGM make_repo local_keys2 line \'{0}\'".format(line))
@@ -878,10 +877,54 @@ def make_repo(repodir,
                     number_retries = timeout / interval
                     times_looped = 0
                     error_msg = 'Failed to debsign file {0}'.format(abs_file)
-                    cmd = 'debsign --re-sign -k {0} {1}'.format(local_key_fingerprint, abs_file)
-                    ## cmd = 'debsign --re-sign -k {0} {1}'.format(keyid, abs_file)
-                    log.debug("DGM make_repo gpg2 debsign cmd \'{0}\'".format(cmd))
-                    retrc |= __salt__['cmd.retcode'](cmd, runas=runas, cwd=repodir, use_vt=True, env=env)
+                    if __grains__['os'] in ['Debian'] or (__grains__['os'] in ['Ubuntu'] and __grains__['osmajorrelease'] >= 18):
+                        cmd = 'debsign --re-sign -k {0} {1}'.format(local_key_fingerprint, abs_file)
+                        log.debug("DGM make_repo debian gpg2 debsign cmd \'{0}\'".format(cmd))
+                        retrc |= __salt__['cmd.retcode'](cmd, runas=runas, cwd=repodir, use_vt=True, env=env)
+                    else:
+                        cmd = 'debsign --re-sign -k {0} {1}'.format(keyid, abs_file)
+                        log.debug("DGM make_repo ubuntu gpg2 debsign cmd \'{0}\'".format(cmd))
+                        ##DGM retrc |= __salt__['cmd.retcode'](cmd, runas=runas, cwd=repodir, use_vt=True, env=env)
+                        try:
+                            proc = salt.utils.vt.Terminal(
+                                cmd,
+                                env=env,
+                                shell=True,
+                                stream_stdout=True,
+                                stream_stderr=True
+                            )
+                            while proc.has_unread_data:
+                                stdout, _ = proc.recv()
+                                if stdout and SIGN_PROMPT_RE.search(stdout):
+                                    # have the prompt for inputting the passphrase
+                                    proc.sendline(phrase)
+                                else:
+                                    times_looped += 1
+
+                                if times_looped > number_retries:
+                                    raise SaltInvocationError(
+                                        'Attempting to sign file {0} failed, timed out after {1} seconds'.format(
+                                            abs_file,
+                                            int(times_looped * interval))
+                                    )
+                                time.sleep(interval)
+
+                            proc_exitstatus = proc.exitstatus
+                            if proc_exitstatus != 0:
+                                raise SaltInvocationError(
+                                    'Signing file {0} failed with proc.status {1}'.format(
+                                        abs_file,
+                                        proc_exitstatus)
+                                )
+                        except salt.utils.vt.TerminalException as err:
+                            trace = traceback.format_exc()
+                            log.error(error_msg, err, trace)
+                            res = {
+                                    'retcode': 1,
+                                    'stdout': '',
+                                    'stderr': trace}
+                        finally:
+                            proc.close(terminate=True, kill=True)
 
                 number_retries = timeout / interval
                 times_looped = 0
@@ -889,8 +932,53 @@ def make_repo(repodir,
                 cmd = 'reprepro --ignore=wrongdistribution --component=main -Vb . includedsc {0} {1}'.format(
                         codename,
                         abs_file)
-                log.debug("DGM make_repo gpg2 reprepro cmd \'{0}\'".format(cmd))
-                retrc |= __salt__['cmd.retcode'](cmd, runas=runas, cwd=repodir, use_vt=True, env=env)
+                if __grains__['os'] in ['Debian'] or (__grains__['os'] in ['Ubuntu'] and __grains__['osmajorrelease'] >= 18):
+                    log.debug("DGM make_repo debian gpg2 reprepro cmd \'{0}\'".format(cmd))
+                    retrc |= __salt__['cmd.retcode'](cmd, runas=runas, cwd=repodir, use_vt=True, env=env)
+                else:
+                    log.debug("DGM make_repo ubuntu gpg2 reprepro cmd \'{0}\'".format(cmd))
+                    try:
+                        proc = salt.utils.vt.Terminal(
+                                cmd,
+                                env=env,
+                                shell=True,
+                                cwd=repodir,
+                                stream_stdout=True,
+                                stream_stderr=True
+                                )
+                        while proc.has_unread_data:
+                            stdout, _ = proc.recv()
+                            if stdout and REPREPRO_SIGN_PROMPT_RE.search(stdout):
+                                # have the prompt for inputting the passphrase
+                                proc.sendline(phrase)
+                            else:
+                                times_looped += 1
+
+                            if times_looped > number_retries:
+                                raise SaltInvocationError(
+                                        'Attempting to reprepro includedsc for file {0} failed, timed out after {1} loops'
+                                        .format(abs_file, times_looped)
+                                 )
+                            time.sleep(interval)
+
+                        proc_exitstatus = proc.exitstatus
+                        if proc_exitstatus != 0:
+                            raise SaltInvocationError(
+                                 'Reprepro includedsc for codename {0} and file {1} failed with proc.status {2}'.format(
+                                    codename,
+                                    abs_file,
+                                    proc_exitstatus)
+                            )
+                    except salt.utils.vt.TerminalException as err:
+                        trace = traceback.format_exc()
+                        log.error(error_msg, err, trace)
+                        res = {
+                                'retcode': 1,
+                                'stdout': '',
+                                'stderr': trace
+                                }
+                    finally:
+                        proc.close(terminate=True, kill=True)
 
         if retrc != 0:
             raise SaltInvocationError(
