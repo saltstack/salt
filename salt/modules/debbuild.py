@@ -877,11 +877,7 @@ def make_repo(repodir,
                     number_retries = timeout / interval
                     times_looped = 0
                     error_msg = 'Failed to debsign file {0}'.format(abs_file)
-                    if __grains__['os'] in ['Debian'] or (__grains__['os'] in ['Ubuntu'] and __grains__['osmajorrelease'] >= 18):
-                        cmd = 'debsign --re-sign -k {0} {1}'.format(local_key_fingerprint, abs_file)
-                        log.debug("DGM make_repo debian gpg2 debsign cmd \'{0}\'".format(cmd))
-                        retrc |= __salt__['cmd.retcode'](cmd, runas=runas, cwd=repodir, use_vt=True, env=env)
-                    else:
+                    if __grains__['os'] in ['Ubuntu'] and __grains__['osmajorrelease'] < 18:
                         cmd = 'debsign --re-sign -k {0} {1}'.format(keyid, abs_file)
                         log.debug("DGM make_repo ubuntu gpg2 debsign cmd \'{0}\'".format(cmd))
                         ##DGM retrc |= __salt__['cmd.retcode'](cmd, runas=runas, cwd=repodir, use_vt=True, env=env)
@@ -925,6 +921,10 @@ def make_repo(repodir,
                                     'stderr': trace}
                         finally:
                             proc.close(terminate=True, kill=True)
+                    else:
+                        cmd = 'debsign --re-sign -k {0} {1}'.format(local_key_fingerprint, abs_file)
+                        log.debug("DGM make_repo debian gpg2 debsign cmd \'{0}\'".format(cmd))
+                        retrc |= __salt__['cmd.retcode'](cmd, runas=runas, cwd=repodir, use_vt=True, env=env)
 
                 number_retries = timeout / interval
                 times_looped = 0
@@ -932,10 +932,7 @@ def make_repo(repodir,
                 cmd = 'reprepro --ignore=wrongdistribution --component=main -Vb . includedsc {0} {1}'.format(
                         codename,
                         abs_file)
-                if __grains__['os'] in ['Debian'] or (__grains__['os'] in ['Ubuntu'] and __grains__['osmajorrelease'] >= 18):
-                    log.debug("DGM make_repo debian gpg2 reprepro cmd \'{0}\'".format(cmd))
-                    retrc |= __salt__['cmd.retcode'](cmd, runas=runas, cwd=repodir, use_vt=True, env=env)
-                else:
+                if __grains__['os'] in ['Ubuntu'] and __grains__['osmajorrelease'] < 18:
                     log.debug("DGM make_repo ubuntu gpg2 reprepro cmd \'{0}\'".format(cmd))
                     try:
                         proc = salt.utils.vt.Terminal(
@@ -979,6 +976,9 @@ def make_repo(repodir,
                                 }
                     finally:
                         proc.close(terminate=True, kill=True)
+                else:
+                    log.debug("DGM make_repo debian gpg2 reprepro cmd \'{0}\'".format(cmd))
+                    retrc |= __salt__['cmd.retcode'](cmd, runas=runas, cwd=repodir, use_vt=True, env=env)
 
         if retrc != 0:
             raise SaltInvocationError(
