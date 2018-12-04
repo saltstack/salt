@@ -7,6 +7,7 @@
 
     Prepare py.test for our test suite
 '''
+# pylint: disable=ungrouped-imports,wrong-import-position,redefined-outer-name,missing-docstring
 
 # Import python libs
 from __future__ import absolute_import
@@ -65,7 +66,7 @@ collect_ignore = ['setup.py']
 
 
 # Patch PyTest logging handlers
-# pylint: disable=protected-access
+# pylint: disable=protected-access,too-many-ancestors
 class LogCaptureHandler(salt.log.mixins.ExcInfoOnLogLevelFormatMixIn,
                         _pytest.logging.LogCaptureHandler):
     '''
@@ -86,7 +87,7 @@ class LiveLoggingStreamHandler(salt.log.mixins.ExcInfoOnLogLevelFormatMixIn,
 
 
 _pytest.logging._LiveLoggingStreamHandler = LiveLoggingStreamHandler
-# pylint: enable=protected-access
+# pylint: enable=protected-access,too-many-ancestors
 
 # Reset logging root handlers
 for handler in logging.root.handlers[:]:
@@ -382,6 +383,7 @@ if six.PY2:
         """
         _mock = pytest.importorskip('mock', minversion='2.0.0')
 
+        # pylint: disable=unused-argument
         def _readlines_side_effect(*args, **kwargs):
             if handle.readlines.return_value is not None:
                 return handle.readlines.return_value
@@ -391,6 +393,7 @@ if six.PY2:
             if handle.read.return_value is not None:
                 return handle.read.return_value
             return ''.join(_data)
+        # pylint: enable=unused-argument
 
         def _readline_side_effect():
             if handle.readline.return_value is not None:
@@ -399,7 +402,7 @@ if six.PY2:
             for line in _data:
                 yield line
 
-        global file_spec
+        global file_spec  # pylint: disable=global-statement
         if file_spec is None:
             file_spec = file  # pylint: disable=undefined-variable
 
