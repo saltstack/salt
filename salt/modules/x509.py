@@ -385,7 +385,7 @@ def _passphrase_callback(passphrase):
     Returns a callback function used to supply a passphrase for private keys
     '''
     def f(*args):
-        return salt.utils.stringutils.to_str(passphrase)
+        return salt.utils.stringutils.to_bytes(passphrase)
     return f
 
 
@@ -970,8 +970,8 @@ def create_crl(  # pylint: disable=too-many-arguments,too-many-locals
         rev_date = rev_date.strftime('%Y%m%d%H%M%SZ')
 
         rev = OpenSSL.crypto.Revoked()
-        rev.set_serial(serial_number)
-        rev.set_rev_date(rev_date)
+        rev.set_serial(salt.utils.stringutils.to_bytes(serial_number))
+        rev.set_rev_date(salt.utils.stringutils.to_bytes(rev_date))
 
         if 'reason' in rev_item:
             # Same here for OpenSSL bindings and non-unicode strings
@@ -997,7 +997,7 @@ def create_crl(  # pylint: disable=too-many-arguments,too-many-locals
         'days': days_valid
     }
     if digest:
-        export_kwargs['digest'] = bytes(digest)
+        export_kwargs['digest'] = salt.utils.stringutils.to_bytes(digest)
     else:
         log.warning('No digest specified. The default md5 digest will be used.')
 
