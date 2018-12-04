@@ -251,22 +251,18 @@ def _create_pbuilders(env, runas='root'):
             boolean ``True`` and ``False`` values, and must be enclosed in
             quotes to be used as strings. More info on this (and other) PyYAML
             idiosyncrasies can be found :ref:`here <yaml-idiosyncrasies>`.
-    
+
     runas : root
         .. versionadded:: fluorine
 
-        User to create the files and directories 
+        User to create the files and directories
 
         .. note::
 
             Ensure the user has correct permissions to any files and
             directories which are to be utilized.
     '''
-    log.debug("DGM _create_pbuilders entry for runas \'{0}\'".format(runas))
-
     home = os.path.expanduser('~{0}'.format(runas))
-
-    log.debug("DGM _create_pbuilders home \'{0}\' for runas \'{1}\'".format(home, runas))
     pbuilderrc = os.path.join(home, '.pbuilderrc')
     if not os.path.isfile(pbuilderrc):
         raise SaltInvocationError(
@@ -278,7 +274,6 @@ def _create_pbuilders(env, runas='root'):
         with salt.utils.files.fopen(pbuilderrc, 'a') as fow:
             fow.write(salt.utils.stringutils.to_str(env_overrides))
     cmd = "chown {0}:{0} {1}".format(runas, pbuilderrc)
-    log.debug("DGM _create_pbuilders ensure rights pbuilderrc \'{0}\' for runas \'{1}\'".format(pbuilderrc, runas))
     retrc = __salt__['cmd.retcode'](cmd, runas='root')
     if retrc != 0:
         raise SaltInvocationError(
@@ -336,7 +331,7 @@ def make_src_pkg(dest_dir, spec, sources, env=None, saltenv='base', runas='root'
 
     This example command should build the libnacl SOURCE package and place it in
     /var/www/html/ on the minion
-    
+
     dest_dir
         Absolute path for directory to write source package
 
@@ -362,7 +357,7 @@ def make_src_pkg(dest_dir, spec, sources, env=None, saltenv='base', runas='root'
             boolean ``True`` and ``False`` values, and must be enclosed in
             quotes to be used as strings. More info on this (and other) PyYAML
             idiosyncrasies can be found :ref:`here <yaml-idiosyncrasies>`.
-    
+
     saltenv: base
 
         Salt environment variables
@@ -371,14 +366,13 @@ def make_src_pkg(dest_dir, spec, sources, env=None, saltenv='base', runas='root'
     runas : root
         .. versionadded:: fluorine
 
-        User to create the files and directories 
+        User to create the files and directories
 
         .. note::
 
             Ensure the user has correct permissions to any files and
             directories which are to be utilized.
     '''
-    log.debug("DGM make_src_pkg entry for runas \'{0}\'".format(runas))
     _create_pbuilders(env, runas)
     tree_base = _mk_tree()
     ret = []
@@ -389,7 +383,6 @@ def make_src_pkg(dest_dir, spec, sources, env=None, saltenv='base', runas='root'
     root_user = 'root'
     retrc = 0
     cmd = "chown {0}:{0} {1}".format(runas, tree_base)
-    log.debug("DGM make_src_pkg ensure rights tree_base \'{0}\' for runas \'{1}\'".format(tree_base, runas))
     retrc = __salt__['cmd.retcode'](cmd, runas='root')
     if retrc != 0:
         raise SaltInvocationError(
@@ -398,10 +391,9 @@ def make_src_pkg(dest_dir, spec, sources, env=None, saltenv='base', runas='root'
                 tree_base,
                 retrc)
         )
- 
+
     cmd = "chown {0}:{0} {1}".format(runas, dest_dir)
-    log.debug("DGM make_src_pkg ensure rights dest_dir \'{0}\' for runas \'{1}\'".format(dest_dir, runas))
-    retrc = __salt__['cmd.retcode'](cmd, runas='root')
+    retrc = __salt__['cmd.retcode'](cmd, runas=root_user)
     if retrc != 0:
         raise SaltInvocationError(
              "make_src_pkg ensuring dest_dir \'{0}\' ownership failed with return error \'{1}\', "
@@ -409,7 +401,6 @@ def make_src_pkg(dest_dir, spec, sources, env=None, saltenv='base', runas='root'
                 dest_dir,
                 retrc)
         )
-
 
     spec_pathfile = _get_spec(tree_base, spec, saltenv)
 
@@ -463,8 +454,6 @@ def make_src_pkg(dest_dir, spec, sources, env=None, saltenv='base', runas='root'
     retrc |= __salt__['cmd.retcode'](cmd, cwd=abspath_debname, runas=root_user)
     cmd = 'debuild -S -uc -us -sa'
     retrc |= __salt__['cmd.retcode'](cmd, cwd=abspath_debname, runas=root_user, python_shell=True, env=env)
-
-    log.debug("DGM make_src_pkg about to remove abspath_debname \'{0}\',  retrc \'{1}\'".format(abspath_debname, retrc))
     cmd = 'rm -fR {0}'.format(abspath_debname)
     retrc |= __salt__['cmd.retcode'](cmd, runas=root_user)
     if retrc != 0:
@@ -477,17 +466,12 @@ def make_src_pkg(dest_dir, spec, sources, env=None, saltenv='base', runas='root'
                 retrc)
         )
 
-    log.debug("DGM make_src_pkg about to copy retrc \'{0}\'".format(retrc))
-
     for dfile in os.listdir(tree_base):
         if not dfile.endswith('.build'):
             full = os.path.join(tree_base, dfile)
             trgt = os.path.join(dest_dir, dfile)
-            log.debug("DGM make_src_pkg copying full \'{0}\' to trgt \'{1}\'".format(full, trgt))
             shutil.copy(full, trgt)
             ret.append(trgt)
-
-    log.debug("DGM make_src_pkg exit")
 
     return ret
 
@@ -519,8 +503,6 @@ def build(runas,
     This example command should build the libnacl package for Debian using pbuilder
     and place it in /var/www/html/ on the minion
     '''
-    log.debug("DGM build entry")
-
     ret = {}
     retrc = 0
     try:
@@ -532,33 +514,27 @@ def build(runas,
     try:
         dscs = make_src_pkg(dsc_dir, spec, sources, env, saltenv, runas)
     except Exception as exc:
-        log.debug('DGM Failed to make src package, dsc_dir \'{0}\', exception \'{1}\''.format(dsc_dir, exc))
         shutil.rmtree(dsc_dir)
         log.error('Failed to make src package, exception \'{0}\''.format(exc))
         return ret
-
-    log.debug("DGM build about to pbuilder create")
 
     root_user = 'root'
 
     #ensure pbuilder setup from runas if other than root
     if runas != root_user:
-        log.debug("DGM build copy pbuilders for runas \'{0}\'".format(runas))
         user_home = os.path.expanduser('~{0}'.format(runas))
         root_home = os.path.expanduser('~root')
-        cmd =  'cp {0}/.pbuilderrc {1}/'.format(user_home, root_home)
+        cmd = 'cp {0}/.pbuilderrc {1}/'.format(user_home, root_home)
         retrc = __salt__['cmd.retcode'](cmd, runas=root_user, python_shell=True, env=env)
-        cmd =  'cp -R {0}/.pbuilder-hooks {1}/'.format(user_home, root_home)
+        cmd = 'cp -R {0}/.pbuilder-hooks {1}/'.format(user_home, root_home)
         retrc = __salt__['cmd.retcode'](cmd, runas=root_user, python_shell=True, env=env)
         if retrc != 0:
             raise SaltInvocationError(
                  "build copy pbuilder files from \'{0}\' to \'{1}\' returned error \'{2}\', "
                  "check logs for further details".format(user_home, root_home, retrc))
 
-
     cmd = '/usr/sbin/pbuilder --create'
     retrc = __salt__['cmd.retcode'](cmd, runas=root_user, python_shell=True, env=env)
-    ## retrc = __salt__['cmd.retcode'](cmd, runas=runas, python_shell=True, env=env)
     if retrc != 0:
         raise SaltInvocationError(
              'pbuilder create failed with return error \'{0}\', '
@@ -568,10 +544,8 @@ def build(runas,
     results_dir = '/var/cache/pbuilder/result'
 
     # ensure clean
-    cmd =  'rm -fR {0}'.format(results_dir)
+    cmd = 'rm -fR {0}'.format(results_dir)
     retrc |= __salt__['cmd.retcode'](cmd, runas=root_user, python_shell=True, env=env)
-
-    log.debug("DGM build about to run through pbuilder dsc handling")
 
     # dscs should only contain salt orig and debian tarballs and dsc file
     for dsc in dscs:
@@ -581,19 +555,12 @@ def build(runas,
         if dsc.endswith('.dsc'):
             dbase = os.path.dirname(dsc)
             try:
-                log.debug("DGM build pbuilder dsc handling, chown runas \'{0}\', dbase \'{1}\'".format(runas, dbase))
                 cmd = 'chown {0}:{0} -R {1}'.format(runas, dbase)
                 retrc |= __salt__['cmd.retcode'](cmd, runas=root_user, python_shell=True, env=env)
-
-                log.debug("DGM build pbuilder dsc handling, update")
                 cmd = '/usr/sbin/pbuilder update --override-config'
                 retrc |= __salt__['cmd.retcode'](cmd, runas=root_user, python_shell=True, env=env)
-
-                log.debug("DGM build pbuilder dsc handling, build dsc \'{0}\'".format(dsc))
                 cmd = '/usr/sbin/pbuilder build --debbuildopts "-sa" {0}'.format(dsc)
                 retrc |= __salt__['cmd.retcode'](cmd, runas=root_user, python_shell=True, env=env)
-
-                log.debug("DGM build pbuilder dsc handling, done loop")
                 if retrc != 0:
                     raise SaltInvocationError(
                          'pbuilder build or update failed with return error {0}, '
@@ -611,18 +578,15 @@ def build(runas,
             except Exception as exc:
                 log.error('Error building from \'{0}\', execption \'{1}\''.format(dsc, exc))
 
-
     # remove any Packages file created for local dependency processing
     for pkgzfile in os.listdir(dest_dir):
         if pkgzfile == 'Packages':
             pkgzabsfile = os.path.join(dest_dir, pkgzfile)
             os.remove(pkgzabsfile)
 
-    log.debug("DGM build, dest_dir product chown runas \'{0}\', dest_dir \'{1}\'".format(runas, dest_dir))
     cmd = 'chown {0}:{0} -R {1}'.format(runas, dest_dir)
     __salt__['cmd.retcode'](cmd, runas=root_user, python_shell=True, env=env)
 
-    log.debug("DGM build exit, removing directory dsc_dir \'{0}\'".format(dsc_dir))
     shutil.rmtree(dsc_dir)
     return ret
 
@@ -708,10 +672,6 @@ def make_repo(repodir,
         salt '*' pkgbuild.make_repo /var/www/html
 
     '''
-    log.debug("DGM make_repo start repodir \'{0}\', keyid \'{1}\', env \'{2}\', use_passphrase \'{3}\', "
-            "gnupghome \'{4}\', runas \'{5}\', timeout \'{6}\'"
-            .format(repodir, keyid, env, use_passphrase, gnupghome, runas, timeout ))
-
     res = {
             'retcode': 1,
             'stdout': '',
@@ -739,7 +699,6 @@ def make_repo(repodir,
         fow.write(salt.utils.stringutils.to_str(repocfg_opts))
 
     cmd = 'chown {0}:{1} -R {2}'.format(runas, runas, repoconf)
-    log.debug("DGM make_repo ensure right to repoconf \{0}\', with command cmd \'{1}\'".format(repoconf, cmd))
     retrc = __salt__['cmd.retcode'](cmd, runas='root')
     if retrc != 0:
         raise SaltInvocationError(
@@ -787,8 +746,6 @@ def make_repo(repodir,
         local_keys = __salt__['gpg.list_keys'](user=runas, gnupghome=gnupghome)
         for gpg_key in local_keys:
             if keyid == gpg_key['keyid'][8:]:
-                log.debug("DGM make_repo gpg_key \'{0}\'".format(gpg_key))
-
                 local_keygrip_to_use = gpg_key['fingerprint']
                 local_key_fingerprint = gpg_key['fingerprint']
                 local_keyid = gpg_key['keyid']
@@ -806,9 +763,7 @@ def make_repo(repodir,
             try:
                 for line in local_keys2:
                     if line.startswith('sec'):
-                        log.debug("DGM make_repo local_keys2 line \'{0}\'".format(line))
                         line_fingerprint = next(local_keys2).lstrip().rstrip()
-                        log.debug("DGM make_repo local_keys2 line_fingerprint \'{0}\'".format(line_fingerprint))
                         if local_key_fingerprint == line_fingerprint:
                             lkeygrip = next(local_keys2).split('=')
                             local_keygrip_to_use = lkeygrip[1].lstrip().rstrip()
@@ -879,8 +834,6 @@ def make_repo(repodir,
                     error_msg = 'Failed to debsign file {0}'.format(abs_file)
                     if __grains__['os'] in ['Ubuntu'] and __grains__['osmajorrelease'] < 18:
                         cmd = 'debsign --re-sign -k {0} {1}'.format(keyid, abs_file)
-                        log.debug("DGM make_repo ubuntu gpg2 debsign cmd \'{0}\'".format(cmd))
-                        ##DGM retrc |= __salt__['cmd.retcode'](cmd, runas=runas, cwd=repodir, use_vt=True, env=env)
                         try:
                             proc = salt.utils.vt.Terminal(
                                 cmd,
@@ -923,7 +876,6 @@ def make_repo(repodir,
                             proc.close(terminate=True, kill=True)
                     else:
                         cmd = 'debsign --re-sign -k {0} {1}'.format(local_key_fingerprint, abs_file)
-                        log.debug("DGM make_repo debian gpg2 debsign cmd \'{0}\'".format(cmd))
                         retrc |= __salt__['cmd.retcode'](cmd, runas=runas, cwd=repodir, use_vt=True, env=env)
 
                 number_retries = timeout / interval
@@ -933,7 +885,6 @@ def make_repo(repodir,
                         codename,
                         abs_file)
                 if __grains__['os'] in ['Ubuntu'] and __grains__['osmajorrelease'] < 18:
-                    log.debug("DGM make_repo ubuntu gpg2 reprepro cmd \'{0}\'".format(cmd))
                     try:
                         proc = salt.utils.vt.Terminal(
                                 cmd,
@@ -977,7 +928,6 @@ def make_repo(repodir,
                     finally:
                         proc.close(terminate=True, kill=True)
                 else:
-                    log.debug("DGM make_repo debian gpg2 reprepro cmd \'{0}\'".format(cmd))
                     retrc |= __salt__['cmd.retcode'](cmd, runas=runas, cwd=repodir, use_vt=True, env=env)
 
         if retrc != 0:
