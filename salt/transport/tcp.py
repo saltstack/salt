@@ -76,10 +76,12 @@ if USE_LOAD_BALANCER:
 
 log = logging.getLogger(__name__)
 
+
 def _get_socket(opts):
     sock = socket.socket(socket.AF_INET6 if opts['ipv6'] else socket.AF_INET,
                          socket.SOCK_STREAM)
     return sock
+
 
 def _set_tcp_keepalive(sock, opts):
     '''
