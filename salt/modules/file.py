@@ -3269,7 +3269,6 @@ def tail(path, lines):
         raise CommandExecutionError('Could not tail \'{0}\''.format(path))
 
 
-
 def seek_read(path, size, offset):
     '''
     .. versionadded:: 2014.1.0
