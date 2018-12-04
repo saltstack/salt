@@ -388,7 +388,6 @@ def running(concurrent=False):
         cur_pid = cur_ppid
         if cur_pid in [0, 1]:
             init_found = True
-    
     for data in active:
         # If the pid that is concurrent is one an ancestor process, then
         # ignore this process, as we are probably running a sudo setup.
