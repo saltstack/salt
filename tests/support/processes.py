@@ -128,7 +128,7 @@ def start_daemon(daemon_name=None,
     '''
     Returns a running salt daemon
     '''
-    daemon_config['pytest_port'] = daemon_config['runtests_conn_check_port']
+    daemon_config['pytest_engine_port'] = daemon_config['runtests_conn_check_port']
     request = None
     if fail_hard:
         fail_method = RuntimeError
