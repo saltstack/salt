@@ -17,6 +17,7 @@ and are often added to Salt to make the complete system more flexible.
     :glob:
 
     developing
+    configuration
 
 
 Loading Modules
