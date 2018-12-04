@@ -576,31 +576,6 @@ def cli_bin_dir(tempdir,
 
 
 # ----- Salt Configuration ------------------------------------------------------------------------------------------>
-@pytest.fixture(scope='session')
-def session_integration_files_dir(request):
-    '''
-    Fixture which returns the salt integration files directory path.
-    Creates the directory if it does not yet exist.
-    '''
-    return request.config.startdir.join('tests').join('integration').join('files')
-
-
-@pytest.fixture(scope='session')
-def session_state_tree_root_dir(session_integration_files_dir):
-    '''
-    Fixture which returns the salt state tree root directory path.
-    Creates the directory if it does not yet exist.
-    '''
-    return session_integration_files_dir.join('file')
-
-
-@pytest.fixture(scope='session')
-def session_pillar_tree_root_dir(session_integration_files_dir):
-    '''
-    Fixture which returns the salt pillar tree root directory path.
-    Creates the directory if it does not yet exist.
-    '''
-    return session_integration_files_dir.join('pillar')
 # <---- Salt Configuration -------------------------------------------------------------------------------------------
 
 
