@@ -1051,26 +1051,6 @@ def install_os(path=None, **kwargs):
     ret = {}
     ret['out'] = True
 
-    if path is None:
-        ret['message'] = \
-            'Please provide the salt path where the junos image is present.'
-        ret['out'] = False
-        return ret
-
-    image_cached_path = salt.utils.files.mkstemp()
-    __salt__['cp.get_file'](path, image_cached_path)
-
-    if not os.path.isfile(image_cached_path):
-        ret['message'] = 'Invalid image path.'
-        ret['out'] = False
-        return ret
-
-    if os.path.getsize(image_cached_path) == 0:
-        ret['message'] = 'Failed to copy image'
-        ret['out'] = False
-        return ret
-    path = image_cached_path
-
     op = {}
     if '__pub_arg' in kwargs:
         if kwargs['__pub_arg']:
@@ -1078,6 +1058,29 @@ def install_os(path=None, **kwargs):
                 op.update(kwargs['__pub_arg'][-1])
     else:
         op.update(kwargs)
+
+    no_copy_ = op.get('no_copy', False)
+
+    if path is None:
+        ret['message'] = \
+            'Please provide the salt path where the junos image is present.'
+        ret['out'] = False
+        return ret
+
+    if not no_copy_:
+        image_cached_path = salt.utils.files.mkstemp()
+        __salt__['cp.get_file'](path, image_cached_path)
+
+        if not os.path.isfile(image_cached_path):
+            ret['message'] = 'Invalid image path.'
+            ret['out'] = False
+            return ret
+
+        if os.path.getsize(image_cached_path) == 0:
+            ret['message'] = 'Failed to copy image'
+            ret['out'] = False
+            return ret
+        path = image_cached_path
 
     try:
         conn.sw.install(path, progress=True, **op)
@@ -1087,7 +1090,8 @@ def install_os(path=None, **kwargs):
         ret['out'] = False
         return ret
     finally:
-        salt.utils.files.safe_rm(image_cached_path)
+        if not no_copy_:
+            salt.utils.files.safe_rm(image_cached_path)
 
     if 'reboot' in op and op['reboot'] is True:
         try:
