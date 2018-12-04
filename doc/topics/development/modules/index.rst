@@ -156,6 +156,13 @@ Wheel        ``salt.wheels`` (:ref:`index <all-salt.wheel>`)                  ``
 
 .. [#no-fs] These modules cannot be loaded from the Salt File Server.
 
+.. note:
+    While it is possible to import modules directly with the import statement,
+    it is strongly recommended that the appropriate
+    :ref:`dunder dictionary <dunder-dictionaries>` is used to access them
+    instead. This is because a number of factors affect module names, module
+    selection, and module overloading.
+
 Auth
 ----
 
