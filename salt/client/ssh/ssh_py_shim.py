@@ -222,18 +222,21 @@ def main(argv):  # pylint: disable=W0613
     if OPTIONS.cmd_umask is not None:
         old_umask = os.umask(OPTIONS.cmd_umask)
     if OPTIONS.tty:
-        stdout, _ = subprocess.Popen(salt_argv, stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()
+        proc = subprocess.Popen(salt_argv, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stdout, _ = proc.communicate()
         sys.stdout.write(stdout)
         sys.stdout.flush()
+        retcode = proc.returncode
         if OPTIONS.wipe:
             shutil.rmtree(OPTIONS.saltdir)
     elif OPTIONS.wipe:
-        subprocess.call(salt_argv)
+        retcode = subprocess.call(salt_argv)
         shutil.rmtree(OPTIONS.saltdir)
     else:
-        subprocess.call(salt_argv)
+        retcode = subprocess.call(salt_argv)
     if OPTIONS.cmd_umask is not None:
         os.umask(old_umask)
+    return retcode
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv))
