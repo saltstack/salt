@@ -29,6 +29,7 @@ EXCLUDED_DIRS = [
     os.path.join('tests', 'unit', 'files'),
     os.path.join('tests', 'integration', 'cloud', 'helpers'),
     os.path.join('tests', 'kitchen', 'tests'),
+    os.path.join('tests', 'unit', 'modules', 'nxos'),
 ]
 INCLUDED_DIRS = [
     os.path.join('tests', 'kitchen', 'tests', '*', 'tests', '*'),
