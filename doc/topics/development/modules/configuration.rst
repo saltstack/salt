@@ -13,7 +13,7 @@ list of them:
 * ``extension_modules`` (:conf_master:`Master <extension_modules>`)
 * ``extmod_whitelist`` (:conf_minion:`Minion <extmod_whitelist>`, :conf_master:`Master <extmod_whitelist>`)
 * ``extmod_blacklist`` (:conf_minion:`Minion <extmod_blacklist>`, :conf_master:`Master <extmod_blacklist>`)
-* ``whitelist_modules`` (:conf_minion:`Minion <whitelist_modules>`)
+* ``whitelist_modules`` (:conf_minion:`Minion <enable_whitelist_modules>`)
 * ``grains_dirs`` (:conf_minion:`Minion <grains_dirs>`)
 * ``module_dirs`` (:conf_minion:`Minion <module_dirs>`, :conf_master:`Master <module_dirs>`)
 * ``outputter_dirs`` (:conf_minion:`Minion <outputter_dirs>`, :conf_master:`Master <outputter_dirs>`)
