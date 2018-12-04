@@ -103,7 +103,7 @@ SCRIPT_TEMPLATES = {
 }
 
 
-def test_mods():
+def list_test_mods():
     '''
     A generator which returns all of the test files
     '''
@@ -134,7 +134,7 @@ class ScriptPathMixin(object):
                                    'cli_{0}.py'.format(script_name.replace('-', '_')))
 
         if not os.path.isfile(script_path):
-            log.info('Generating {0}'.format(script_path))
+            log.info('Generating %s', script_path)
 
             # Late import
             import salt.utils.files
