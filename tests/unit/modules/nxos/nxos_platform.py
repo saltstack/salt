@@ -26,7 +26,7 @@ from string import Template
 # pylint: disable-msg=R0902
 
 
-class NXOSPlatform:
+class NXOSPlatform(object):
 
     """ Cisco Systems Base Platform Unit Test Object """
 
