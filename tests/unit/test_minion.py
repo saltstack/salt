@@ -299,7 +299,8 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                                    'source_address': '111.1.0.1',
                                    'source_interface_name': 'bond0.1234',
                                    'source_ret_port': 49017,
-                                   'source_publish_port': 49018}), \
+                                   'source_publish_port': 49018,
+                                   'transport': None}), \
             patch('salt.utils.network.interfaces',
                   MagicMock(return_value=interfaces)):
             expected = {'source_publish_port': 49018,
@@ -315,7 +316,8 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         '''
         with patch.dict(__opts__, {'ipv6': False, 'master': 'dummy',
                                    'master_port': '4555',
-                                   'retry_dns': 1, 'retry_dns_count': 3}):
+                                   'retry_dns': 1, 'retry_dns_count': 3,
+                                   'transport': None}):
             self.assertRaises(SaltMasterUnresolvableError,
                               salt.minion.resolve_dns, __opts__)
 
