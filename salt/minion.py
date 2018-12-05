@@ -127,6 +127,33 @@ log = logging.getLogger(__name__)
 # 6. Handle publications
 
 
+def child_minion_process(minion_instance, opts, data, connected):
+    '''
+    On a process pool, we cann not use a member function
+    We need to instanciate the minion in a function
+    '''
+    if not minion_instance:
+        minion_instance = Minion(opts, pool=False)
+        minion_instance.connected = connected
+        if not hasattr(minion_instance, 'functions'):
+            functions, returners, function_errors, executors = (
+                minion_instance._load_modules(grains=opts['grains'])
+                )
+            minion_instance.functions = functions
+            minion_instance.returners = returners
+            minion_instance.function_errors = function_errors
+            minion_instance.executors = executors
+        if not hasattr(minion_instance, 'serial'):
+            minion_instance.serial = salt.payload.Serial(opts)
+        if not hasattr(minion_instance, 'proc_dir'):
+            uid = salt.utils.user.get_uid(user=opts.get('user', None))
+            minion_instance.proc_dir = (
+                get_proc_dir(opts['cachedir'], uid=uid)
+                )
+
+    return minion_instance._target(minion_instance, opts, data, connected)
+
+
 def resolve_dns(opts, fallback=True):
     '''
     Resolves the master_ip and master_uri options
@@ -1112,7 +1139,7 @@ class Minion(MinionBase):
     This class instantiates a minion, runs connections for a minion,
     and loads all of the functions into the minion
     '''
-    def __init__(self, opts, timeout=60, safe=True, loaded_base_name=None, io_loop=None, jid_queue=None):  # pylint: disable=W0231
+    def __init__(self, opts, timeout=60, safe=True, loaded_base_name=None, io_loop=None, jid_queue=None, pool=True):  # pylint: disable=W0231
         '''
         Pass in the options dict
         '''
@@ -1120,6 +1147,16 @@ class Minion(MinionBase):
         super(Minion, self).__init__(opts)
         self.timeout = timeout
         self.safe = safe
+
+        # We want the process pool on our main process
+        # Check if there is a max process count,
+        # if not we will use the same way to create a process as before, Process() 
+        self.pool = None
+        process_count_max = self.opts.get('process_count_max')
+        if not hasattr(self, '_is_child') and pool and process_count_max > 0:
+            multiprocessing.Process = SignalHandlingMultiprocessingProcess
+            if process_count_max > 0:
+                self.pool = multiprocessing.Pool(processes=process_count_max)
 
         self._running = None
         self.win_proc = []
@@ -1532,6 +1569,7 @@ class Minion(MinionBase):
         # python needs to be able to reconstruct the reference on the other
         # side.
         instance = self
+        process = None
         multiprocessing_enabled = self.opts.get('multiprocessing', True)
         if multiprocessing_enabled:
             if sys.platform.startswith('win'):
@@ -1539,9 +1577,13 @@ class Minion(MinionBase):
                 # running on windows
                 instance = None
             with default_signals(signal.SIGINT, signal.SIGTERM):
-                process = SignalHandlingMultiprocessingProcess(
-                    target=self._target, args=(instance, self.opts, data, self.connected)
-                )
+                if self.pool:
+                    self.pool.apply_async(child_minion_process, (instance, self.opts, data, self.connected))
+                else:
+                    process = SignalHandlingMultiprocessingProcess(
+                        target=self._target, args=(instance, self.opts, data, self.connected)
+                    )
+
         else:
             process = threading.Thread(
                 target=self._target,
@@ -1549,19 +1591,21 @@ class Minion(MinionBase):
                 name=data['jid']
             )
 
+
+        # Reset current signals before starting the process in
+        # order not to inherit the current signal handlers
         if multiprocessing_enabled:
             with default_signals(signal.SIGINT, signal.SIGTERM):
-                # Reset current signals before starting the process in
-                # order not to inherit the current signal handlers
-                process.start()
+                if process:
+                    process.start()
         else:
             process.start()
 
         # TODO: remove the windows specific check?
-        if multiprocessing_enabled and not salt.utils.platform.is_windows():
+        if process and multiprocessing_enabled and not salt.utils.platform.is_windows():
             # we only want to join() immediately if we are daemonizing a process
             process.join()
-        else:
+        elif process:
             self.win_proc.append(process)
 
     def ctx(self):
