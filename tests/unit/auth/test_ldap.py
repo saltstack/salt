@@ -10,8 +10,6 @@ import salt.auth.ldap
 from tests.support.mock import patch, NO_MOCK, NO_MOCK_REASON
 from tests.support.unit import skipIf, TestCase
 
-from unittest import TestCase
-
 salt.auth.ldap.__opts__ = {}
 
 
