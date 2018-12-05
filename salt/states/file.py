@@ -5100,12 +5100,12 @@ def keyvalue(
     if not name:
         return _error(ret, "Must provide name to file.keyvalue")
     if key is not None and value is not None:
-        if type(key_values) is dict:
+        if isinstance(key_values, dict):
             return _error(
                 ret, "file.keyvalue can not combine key_values with key and value"
             )
         key_values = {str(key): value}
-    elif type(key_values) is not dict:
+    elif not isinstance(key_values, dict):
         return _error(
             ret, "file.keyvalue key and value not supplied and key_values empty"
         )
