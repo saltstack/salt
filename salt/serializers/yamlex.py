@@ -128,9 +128,18 @@ log = logging.getLogger(__name__)
 available = True
 
 # prefer C bindings over python when available
-# CSafeDumper causes test failures under python3
 BaseLoader = getattr(yaml, 'CSafeLoader', yaml.SafeLoader)
-BaseDumper = yaml.SafeDumper if six.PY3 else getattr(yaml, 'CSafeDumper', yaml.SafeDumper)
+if six.PY3:
+    # CSafeDumper causes repr errors in python3, so use the pure Python one
+    try:
+        # Depending on how PyYAML was built, yaml.SafeDumper may actually be
+        # yaml.cyaml.CSafeDumper (i.e. the C dumper instead of pure Python).
+        BaseDumper = yaml.dumper.SafeDumper
+    except AttributeError:
+        # Here just in case, but yaml.dumper.SafeDumper should always exist
+        BaseDumper = yaml.SafeDumper
+else:
+    BaseDumper = getattr(yaml, 'CSafeDumper', yaml.SafeDumper)
 
 ERROR_MAP = {
     ("found character '\\t' "
@@ -388,6 +397,7 @@ class Dumper(BaseDumper):  # pylint: disable=W0232
     '''
     def represent_odict(self, data):
         return self.represent_mapping('tag:yaml.org,2002:map', list(data.items()))
+
 
 Dumper.add_multi_representer(type(None), Dumper.represent_none)
 if six.PY2:
