@@ -42,6 +42,7 @@ from tests.integration import TestDaemon
 
 # Import pytest libs
 import pytest
+import _pytest.logging
 from _pytest.terminal import TerminalReporter
 
 # Import 3rd-party libs
@@ -52,19 +53,48 @@ from salt.ext import six
 import salt.utils.files
 import salt.utils.path
 import salt.log.setup
+import salt.log.mixins
 from salt.utils.odict import OrderedDict
 
 # Define the pytest plugins we rely on
-pytest_plugins = ['tempdir', 'helpers_namespace']  # pylint: disable=invalid-name
+# pylint: disable=invalid-name
+pytest_plugins = ['tempdir', 'helpers_namespace']
 
 # Define where not to collect tests from
 collect_ignore = ['setup.py']
+# pylint: enable=invalid-name
 
-log = logging.getLogger('salt.testsuite')
+
+# Patch PyTest logging handlers
+# pylint: disable=protected-access
+class LogCaptureHandler(salt.log.mixins.ExcInfoOnLogLevelFormatMixIn,
+                        _pytest.logging.LogCaptureHandler):
+    '''
+    Subclassing PyTest's LogCaptureHandler in order to add the
+    exc_info_on_loglevel functionality.
+    '''
+
+
+_pytest.logging.LogCaptureHandler = LogCaptureHandler
+
+
+class LiveLoggingStreamHandler(salt.log.mixins.ExcInfoOnLogLevelFormatMixIn,
+                               _pytest.logging._LiveLoggingStreamHandler):
+    '''
+    Subclassing PyTest's LiveLoggingStreamHandler in order to add the
+    exc_info_on_loglevel functionality.
+    '''
+
+
+_pytest.logging._LiveLoggingStreamHandler = LiveLoggingStreamHandler
+# pylint: enable=protected-access
 
 # Reset logging root handlers
-for handler in logging.root.handlers:
+for handler in logging.root.handlers[:]:
     logging.root.removeHandler(handler)
+
+
+log = logging.getLogger('salt.testsuite')
 
 
 def pytest_tempdir_basename():
@@ -169,14 +199,8 @@ class SaltTerminalReporter(TerminalReporter):
         if self.config.getoption('--sys-stats') is False:
             return
 
-        test_daemon = getattr(self._session, 'test_daemon', None)
-        if self.verbosity == 1:
-            line = ' [CPU:{0}%|MEM:{1}%]'.format(psutil.cpu_percent(),
-                                               psutil.virtual_memory().percent)
-            self._tw.write(line)
-            return
-        else:
-            self.ensure_newline()
+        if self.verbosity > 1:
+            self.section('Statistics', sep='-', bold=True)
             template = ' {}  -  CPU: {:6.2f} %   MEM: {:6.2f} %   SWAP: {:6.2f} %\n'
             self._tw.write(
                 template.format(
@@ -192,6 +216,18 @@ class SaltTerminalReporter(TerminalReporter):
                     mem = psproc.memory_percent('vms')
                     swap = psproc.memory_percent('swap')
                     self._tw.write(template.format(name, cpu, mem, swap))
+
+    def _get_progress_information_message(self):
+        msg = TerminalReporter._get_progress_information_message(self)
+        if self.verbosity <= 0:
+            return msg
+        if self.config.getoption('--sys-stats') is False:
+            return msg
+        if self.verbosity == 1:
+            msg = ' [CPU:{}%] [MEM:{}%]{}'.format(psutil.cpu_percent(),
+                                                  psutil.virtual_memory().percent,
+                                                  msg)
+        return msg
 
 
 def pytest_sessionstart(session):
@@ -210,6 +246,7 @@ def pytest_configure(config):
     and all plugins and initial conftest files been loaded.
     '''
     config.addinivalue_line('norecursedirs', os.path.join(CODE_DIR, 'templates'))
+    config.addinivalue_line('norecursedirs', os.path.join(CODE_DIR, 'tests/support'))
     config.addinivalue_line(
         'markers',
         'destructive_test: Run destructive tests. These tests can include adding '
@@ -586,7 +623,7 @@ def cli_bin_dir(tempdir,
         script_path = os.path.join(cli_bin_dir_path, script_name)
 
         if not os.path.isfile(script_path):
-            log.info('Generating {0}'.format(script_path))
+            log.info('Generating %s', script_path)
 
             with salt.utils.files.fopen(script_path, 'w') as sfh:
                 script_template = script_templates.get(original_script_name, None)
