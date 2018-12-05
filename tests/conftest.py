@@ -833,7 +833,7 @@ def session_syndic_minion_default_options(request, session_root_dir):
         return opts
 
 
-@pytest.fixture(scope='session')
+@pytest.fixture(scope='session', autouse=True)
 def bridge_pytest_and_runtests(session_root_dir,
                                session_conf_dir,
                                session_secondary_conf_dir,
@@ -865,6 +865,23 @@ def bridge_pytest_and_runtests(session_root_dir,
     RUNTIME_VARS.RUNTIME_CONFIGS['syndic_master'] = freeze(session_master_of_masters_config)
     RUNTIME_VARS.RUNTIME_CONFIGS['syndic'] = freeze(session_syndic_config)
     RUNTIME_VARS.RUNTIME_CONFIGS['client_config'] = freeze(session_master_config)
+
+    # Copy configuration files and directories which are not automatically generated
+    for entry in os.listdir(RUNTIME_VARS.CONF_DIR):
+        if entry in ('master', 'minion', 'sub_minion', 'syndic', 'syndic_master', 'proxy'):
+            # These have runtime computed values and are handled by pytest-salt fixtures
+            continue
+        entry_path = os.path.join(RUNTIME_VARS.CONF_DIR, entry)
+        if os.path.isfile(entry_path):
+            shutil.copy(
+                entry_path,
+                os.path.join(RUNTIME_VARS.TMP_CONF_DIR, entry)
+            )
+        elif os.path.isdir(entry_path):
+            shutil.copytree(
+                entry_path,
+                os.path.join(RUNTIME_VARS.TMP_CONF_DIR, entry)
+            )
 # <---- Salt Configuration -------------------------------------------------------------------------------------------
 
 
@@ -877,7 +894,6 @@ def default_session_daemons(request,
                             salt_log_port,
                             engines_dir,
                             log_handlers_dir,
-                            bridge_pytest_and_runtests,
                             session_salt_master,
                             session_salt_minion,
                             session_secondary_salt_minion,
