@@ -139,11 +139,11 @@ def start_daemon(daemon_name=None,
     process = None
     while attempts <= 3:  # pylint: disable=too-many-nested-blocks
         attempts += 1
-        process = daemon_class(request,
-                               daemon_config,
-                               daemon_config_dir,
-                               bin_dir_path,
-                               daemon_log_prefix,
+        process = daemon_class(request=request,
+                               config=daemon_config,
+                               config_dir=daemon_config_dir,
+                               bin_dir_path=bin_dir_path,
+                               log_prefix=daemon_log_prefix,
                                cli_script_name=daemon_cli_script_name,
                                slow_stop=slow_stop,
                                environ=environ,
