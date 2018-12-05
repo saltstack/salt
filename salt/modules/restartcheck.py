@@ -495,7 +495,7 @@ def restartcheck(ignorelist=None, blacklist=None, excludepid=None, verbose=True)
         paths = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
 
         while True:
-            line = paths.stdout.readline()
+            line = salt.utils.stringutils.to_unicode(paths.stdout.readline())
             if not line:
                 break
             pth = line[:-1]
