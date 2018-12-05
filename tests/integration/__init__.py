@@ -253,16 +253,6 @@ class TestDaemon(object):
         finally:
             self.post_setup_minions()
 
-    def start_daemon(self, cls, opts, start_fun):
-        def start(cls, opts, start_fun):
-            salt.utils.process.appendproctitle('{0}-{1}'.format(self.__class__.__name__, cls.__name__))
-            daemon = cls(opts)
-            getattr(daemon, start_fun)()
-        process = multiprocessing.Process(target=start,
-                                          args=(cls, opts, start_fun))
-        process.start()
-        return process
-
     def start_zeromq_daemons(self):
         '''
         Fire up the daemons used for zeromq tests
