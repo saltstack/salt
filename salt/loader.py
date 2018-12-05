@@ -140,6 +140,18 @@ def static_loader(
     return ret
 
 
+def _format_entrypoint_target(ep):
+    '''
+    Makes a string describing the target of an EntryPoint object.
+
+    Base strongly on EntryPoint.__str__().
+    '''
+    s = ep.module_name
+    if ep.attrs:
+        s += ':' + '.'.join(ep.attrs)
+    return s
+
+
 def _module_dirs(
         opts,
         ext_type,
@@ -162,9 +174,13 @@ def _module_dirs(
             ext_type_types.extend(opts[ext_type_dirs])
         if HAS_PKG_RESOURCES and ext_type_dirs:
             for entry_point in pkg_resources.iter_entry_points('salt.loader', ext_type_dirs):
-                loaded_entry_point = entry_point.load()
-                for path in loaded_entry_point():
-                    ext_type_types.append(path)
+                try:
+                    loaded_entry_point = entry_point.load()
+                    for path in loaded_entry_point():
+                        ext_type_types.append(path)
+                except Exception as exc:
+                    log.error("Error getting module directories from %s: %s", _format_entrypoint_target(entry_point), exc)
+                    log.debug("Full backtrace for module directories error", exc_info=True)
 
     cli_module_dirs = []
     # The dirs can be any module dir, or a in-tree _{ext_type} dir

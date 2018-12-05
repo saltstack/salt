@@ -303,7 +303,7 @@ extensions = [
     'httpdomain',
     'youtube',
     #'saltautodoc', # Must be AFTER autodoc
-    'shorturls',
+    #'shorturls',
 ]
 
 try:

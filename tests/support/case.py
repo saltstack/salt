@@ -551,7 +551,7 @@ class ShellCase(ShellTestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixi
                               arg_str,
                               with_retcode=with_retcode,
                               catch_stderr=catch_stderr,
-                              timeout=60)
+                              timeout=timeout + 10)
         log.debug('Result of run_run for command \'%s\': %s', arg_str, ret)
         return ret
 
