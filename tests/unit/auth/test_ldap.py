@@ -10,6 +10,8 @@ import salt.auth.ldap
 from tests.support.mock import patch, NO_MOCK, NO_MOCK_REASON
 from tests.support.unit import skipIf, TestCase
 
+from unittest import TestCase
+
 salt.auth.ldap.__opts__ = {}
 
 
@@ -86,3 +88,8 @@ class LDAPAuthTestCase(TestCase):
         with patch.dict(salt.auth.ldap.__opts__, self.opts):
             with patch('salt.auth.ldap.auth', return_value=Bind):
                 self.assertIn('saltusers', salt.auth.ldap.groups('saltuser', password='password'))
+
+    def test_auth_nopass(self):
+        with patch.dict(salt.auth.ldap.__opts__, self.opts):
+            with patch('salt.auth.ldap._bind_for_search', return_value=Bind):
+                assert salt.auth.ldap.auth('foo', None) == False
