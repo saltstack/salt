@@ -1183,7 +1183,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             mock_commit_check.return_value = False
 
             ret = dict()
-            ret['message'] = 'Loaded configuration but commit check failed.'
+            ret['message'] = 'Loaded configuration but commit check failed, hence rolling back configuration.'
             ret['out'] = False
             self.assertEqual(junos.install_config('actual/path/config.xml'), ret)
 

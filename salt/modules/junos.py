@@ -955,13 +955,13 @@ def install_config(path=None, **kwargs):
                 ret['out'] = False
                 return ret
         elif not check:
-            ret['message'] = 'Loaded configuration but commit check failed.'
+            cu.rollback()
+            ret['message'] = 'Loaded configuration but commit check failed, hence rolling back configuration.'
             ret['out'] = False
-            cu.rollback()
         else:
-            ret['message'] = 'Commit check passed, but skipping commit for dry-run.'
-            ret['out'] = True
             cu.rollback()
+            ret['message'] = 'Commit check passed, but skipping commit for dry-run and rolling back configuration.'
+            ret['out'] = True
 
         try:
             if write_diff and config_diff is not None:
