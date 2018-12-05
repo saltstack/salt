@@ -984,6 +984,11 @@ class GitProvider(object):
         Resolve dynamically-set branch
         '''
         if self.role == 'git_pillar' and self.branch == '__env__':
+            try:
+                return self.all_saltenvs
+            except AttributeError:
+                # all_saltenvs not configured for this remote
+                pass
             target = self.opts.get('pillarenv') \
                 or self.opts.get('saltenv') \
                 or 'base'
@@ -2971,7 +2976,11 @@ class GitPillar(GitBase):
             cachedir = self.do_checkout(repo)
             if cachedir is not None:
                 # Figure out which environment this remote should be assigned
-                if repo.env:
+                if repo.branch == '__env__' and hasattr(repo, 'all_saltenvs'):
+                    env = self.opts.get('pillarenv') \
+                        or self.opts.get('saltenv') \
+                        or self.opts.get('git_pillar_base')
+                elif repo.env:
                     env = repo.env
                 else:
                     env = 'base' if repo.branch == repo.base else repo.get_checkout_target()
