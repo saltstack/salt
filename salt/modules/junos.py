@@ -860,6 +860,7 @@ def install_config(path=None, **kwargs):
     else:
         op.update(kwargs)
 
+    test = op.pop('test', False)
     template_vars = {}
     if "template_vars" in op:
         template_vars = op["template_vars"]
@@ -914,7 +915,7 @@ def install_config(path=None, **kwargs):
         except Exception as exception:
             ret['message'] = 'Could not load configuration due to : "{0}"'.format(
                 exception)
-            ret['format'] = template_format
+            ret['format'] = op['format']
             ret['out'] = False
             return ret
 
@@ -943,7 +944,7 @@ def install_config(path=None, **kwargs):
             ret['out'] = False
             return ret
 
-        if check:
+        if check and not test:
             try:
                 cu.commit(**commit_params)
                 ret['message'] = 'Successfully loaded and committed!'
@@ -953,10 +954,14 @@ def install_config(path=None, **kwargs):
                     .format(exception)
                 ret['out'] = False
                 return ret
-        else:
-            ret['message'] = 'Loaded configuration but commit check failed.'
-            ret['out'] = False
+        elif not check:
             cu.rollback()
+            ret['message'] = 'Loaded configuration but commit check failed, hence rolling back configuration.'
+            ret['out'] = False
+        else:
+            cu.rollback()
+            ret['message'] = 'Commit check passed, but skipping commit for dry-run and rolling back configuration.'
+            ret['out'] = True
 
         try:
             if write_diff and config_diff is not None:
@@ -1406,6 +1411,11 @@ def get_table(table, table_file, path=None, target=None, key=None, key_items=Non
                              'report: {0}'.format(six.text_type(err))
             ret['out'] = False
             return ret
+        except ConnectClosedError:
+            ret['message'] = 'Got ConnectClosedError exception. Connection lost ' \
+                             'with %s' % conn
+            ret['out'] = False
+            return ret
         ret['reply'] = json.loads(data.to_json())
         if data.__class__.__bases__[0] == OpTable:
             # Sets key value if not present in YAML. To be used by returner
@@ -1424,11 +1434,6 @@ def get_table(table, table_file, path=None, target=None, key=None, key_items=Non
             if args is not None:
                 ret['table'][table]['args'] = data.CMD_ARGS
                 ret['table'][table]['command'] = data.GET_CMD
-    except ConnectClosedError:
-        ret['message'] = 'Got ConnectClosedError exception. Connection lost ' \
-                         'with %s' % conn
-        ret['out'] = False
-        return ret
     except Exception as err:
         ret['message'] = 'Uncaught exception - please report: {0}'.format(
             str(err))
