@@ -92,18 +92,18 @@ class LDAPAuthTestCase(TestCase):
         opts['auth.ldap.bindpw'] = 'p@ssw0rd!'
         with patch.dict(salt.auth.ldap.__opts__, opts):
             with patch('salt.auth.ldap._bind_for_search', return_value=Bind):
-                assert salt.auth.ldap.auth('foo', None) == False
+                self.assertFalse(salt.auth.ldap.auth('foo', None))
 
     def test_auth_nouser(self):
         opts = self.opts.copy()
         opts['auth.ldap.bindpw'] = 'p@ssw0rd!'
         with patch.dict(salt.auth.ldap.__opts__, opts):
             with patch('salt.auth.ldap._bind_for_search', return_value=Bind):
-                assert salt.auth.ldap.auth(None, 'foo') == False
+                self.assertFalse(salt.auth.ldap.auth(None, 'foo'))
 
     def test_auth_nouserandpass(self):
         opts = self.opts.copy()
         opts['auth.ldap.bindpw'] = 'p@ssw0rd!'
         with patch.dict(salt.auth.ldap.__opts__, opts):
             with patch('salt.auth.ldap._bind_for_search', return_value=Bind):
-                assert salt.auth.ldap.auth(None, None) == False
+                self.assertFalse(salt.auth.ldap.auth(None, None))
