@@ -206,6 +206,8 @@ def pytest_configure(config):
         'requires_network(only_local_network=False): Skip if no networking is set up. '
         'If \'only_local_network\' is \'True\', only the local network is checked.'
     )
+    # Make sure the test suite "knows" this is a pytest test run
+    RUNTIME_VARS.PYTEST_SESSION = True
 # <---- Register Markers ---------------------------------------------------------------------------------------------
 
 
