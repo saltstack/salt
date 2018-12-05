@@ -3057,6 +3057,16 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
 
         self.assertSaltTrueReturn(ret)
 
+        ret = self.run_state('file.keyvalue',
+                name=name, key_values={'logingracetime':'1m'}, separator=" ", uncomment=" #", key_ignore_case=True)
+
+        with salt.utils.files.fopen(name, 'r') as fp_:
+            file_contents = fp_.read()
+            self.assertNotIn('#LoginGraceTime 2m', file_contents)
+            self.assertIn("LoginGraceTime 1m", file_contents)
+
+        self.assertSaltTrueReturn(ret)
+
 
 @pytest.mark.windows_whitelisted
 class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
