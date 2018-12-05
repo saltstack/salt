@@ -1150,7 +1150,7 @@ class Minion(MinionBase):
 
         # We want the process pool on our main process
         # Check if there is a max process count,
-        # if not we will use the same way to create a process as before, Process() 
+        # if not we will use the same way to create a process as before, Process()
         self.pool = None
         process_count_max = self.opts.get('process_count_max')
         if not hasattr(self, '_is_child') and pool and process_count_max > 0:
@@ -1590,7 +1590,6 @@ class Minion(MinionBase):
                 args=(instance, self.opts, data, self.connected),
                 name=data['jid']
             )
-
 
         # Reset current signals before starting the process in
         # order not to inherit the current signal handlers
