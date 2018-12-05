@@ -210,8 +210,6 @@ def delete_rule(name,
 
         remoteip (Optional[str]): The remote IP of the rule.
 
-        .. versionadded:: Neon
-
     Example:
 
     .. code-block:: yaml
