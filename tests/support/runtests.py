@@ -204,6 +204,7 @@ RUNTIME_VARS = RuntimeVars(
     PILLAR_DIR=paths.PILLAR_DIR,
     ENGINES_DIR=paths.ENGINES_DIR,
     LOG_HANDLERS_DIR=paths.LOG_HANDLERS_DIR,
+    TMP_ROOT_DIR=paths.TMP_ROOT_DIR,
     TMP_CONF_DIR=paths.TMP_CONF_DIR,
     TMP_CONF_MASTER_INCLUDES=os.path.join(paths.TMP_CONF_DIR, 'master.d'),
     TMP_CONF_MINION_INCLUDES=os.path.join(paths.TMP_CONF_DIR, 'minion.d'),
