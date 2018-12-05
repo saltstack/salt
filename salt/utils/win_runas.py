@@ -127,6 +127,9 @@ def runas(cmdLine, username, password=None, cwd=None):
         # Login without a password. This always returns an elevated token.
         user_token = salt.platform.win.logon_msv1_s4u(username).Token
 
+    # Make sure the user's profile is loaded.
+    handle_reg = win32profile.LoadUserProfile(user_token, {'UserName': username})
+
     # Get a linked user token to elevate if needed
     elevation_type = win32security.GetTokenInformation(
         user_token, win32security.TokenElevationType
@@ -139,9 +142,6 @@ def runas(cmdLine, username, password=None, cwd=None):
 
     # Elevate the user token
     salt.platform.win.elevate_token(user_token)
-
-    # Make sure the user's profile is loaded.
-    handle_reg = win32profile.LoadUserProfile(user_token, {'UserName': username})
 
     # Make sure the user's token has access to a windows station and desktop
     salt.platform.win.grant_winsta_and_desktop(user_token)
