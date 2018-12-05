@@ -53,7 +53,6 @@ Connection module for Amazon CloudFront
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 import logging
-import jmespath
 
 # Import Salt libs
 import salt.ext.six as six
@@ -502,7 +501,7 @@ def get_distribution_v2(region=None, key=None, keyid=None, profile=None, **kwarg
         except botocore.exceptions.ParamValidationError as err:
             raise SaltInvocationError(str(err))
         except botocore.exceptions.ClientError as err:
-            if retries and jmespath.search('Error.Code', err.response) == 'Throttling':
+            if retries and err.response.get('Error', {}).get('Code') == 'Throttling':
                 retries -= 1
                 log.debug('Throttled by AWS API, retrying in %s seconds...', sleep)
                 time.sleep(sleep)
@@ -552,7 +551,7 @@ def get_distribution_config(region=None, key=None, keyid=None, profile=None, **k
         except botocore.exceptions.ParamValidationError as err:
             raise SaltInvocationError(str(err))
         except botocore.exceptions.ClientError as err:
-            if retries and jmespath.search('Error.Code', err.response) == 'Throttling':
+            if retries and err.response.get('Error', {}).get('Code') == 'Throttling':
                 retries -= 1
                 log.debug('Throttled by AWS API, retrying in %s seconds...', sleep)
                 time.sleep(sleep)
@@ -601,7 +600,7 @@ def list_distributions(region=None, key=None, keyid=None, profile=None):
         except botocore.exceptions.ParamValidationError as err:
             raise SaltInvocationError(str(err))
         except botocore.exceptions.ClientError as err:
-            if retries and jmespath.search('Error.Code', err.response) == 'Throttling':
+            if retries and err.response.get('Error', {}).get('Code') == 'Throttling':
                 retries -= 1
                 log.debug('Throttled by AWS API, retrying in %s seconds...', sleep)
                 time.sleep(sleep)
@@ -809,7 +808,7 @@ def create_distribution_v2(region=None, key=None, keyid=None, profile=None, **kw
     sleep = 6
     kwargs = {k: v for k, v in kwargs.items() if not k.startswith('_')}
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-    Comment = jmespath.search('DistributionConfig.Comment', kwargs)
+    Comment = kwargs.get('DistributionConfig', {}).get('Comment')
     while retries:
         try:
             log.debug('Creating CloudFront distribution `%s`.', Comment)
@@ -818,7 +817,7 @@ def create_distribution_v2(region=None, key=None, keyid=None, profile=None, **kw
         except botocore.exceptions.ParamValidationError as err:
             raise SaltInvocationError(str(err))
         except botocore.exceptions.ClientError as err:
-            if retries and jmespath.search('Error.Code', err.response) == 'Throttling':
+            if retries and err.response.get('Error', {}).get('Code') == 'Throttling':
                 retries -= 1
                 log.debug('Throttled by AWS API, retrying in %s seconds...', sleep)
                 time.sleep(sleep)
@@ -956,7 +955,7 @@ def update_distribution_v2(region=None, key=None, keyid=None, profile=None, **kw
     sleep = 6
     kwargs = {k: v for k, v in kwargs.items() if not k.startswith('_')}
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-    Comment = jmespath.search('DistributionConfig.Comment', kwargs)
+    Comment = kwargs.get('DistributionConfig', {}).get('Comment')
     while retries:
         try:
             log.debug('Updating CloudFront distribution `%s`.', Comment)
@@ -965,7 +964,7 @@ def update_distribution_v2(region=None, key=None, keyid=None, profile=None, **kw
         except botocore.exceptions.ParamValidationError as err:
             raise SaltInvocationError(str(err))
         except botocore.exceptions.ClientError as err:
-            if retries and jmespath.search('Error.Code', err.response) == 'Throttling':
+            if retries and err.response.get('Error', {}).get('Code') == 'Throttling':
                 retries -= 1
                 log.debug('Throttled by AWS API, retrying in %s seconds...', sleep)
                 time.sleep(sleep)
@@ -1026,7 +1025,7 @@ def disable_distribution(region=None, key=None, keyid=None, profile=None, **kwar
         except botocore.exceptions.ParamValidationError as err:
             raise SaltInvocationError(str(err))
         except botocore.exceptions.ClientError as err:
-            if retries and jmespath.search('Error.Code', err.response) == 'Throttling':
+            if retries and err.response.get('Error', {}).get('Code') == 'Throttling':
                 retries -= 1
                 log.debug('Throttled by AWS API, retrying in %s seconds...', sleep)
                 time.sleep(sleep)
@@ -1074,7 +1073,7 @@ def delete_distribution(region=None, key=None, keyid=None, profile=None, **kwarg
         except botocore.exceptions.ParamValidationError as err:
             raise SaltInvocationError(str(err))
         except botocore.exceptions.ClientError as err:
-            if retries and jmespath.search('Error.Code', err.response) == 'Throttling':
+            if retries and err.response.get('Error', {}).get('Code') == 'Throttling':
                 retries -= 1
                 log.debug('Throttled by AWS API, retrying in %s seconds...', sleep)
                 time.sleep(sleep)
@@ -1122,7 +1121,7 @@ def list_cloud_front_origin_access_identities(region=None, key=None, keyid=None,
         except botocore.exceptions.ParamValidationError as err:
             raise SaltInvocationError(str(err))
         except botocore.exceptions.ClientError as err:
-            if retries and jmespath.search('Error.Code', err.response) == 'Throttling':
+            if retries and err.response.get('Error', {}).get('Code') == 'Throttling':
                 retries -= 1
                 log.debug('Throttled by AWS API, retrying in %s seconds...', sleep)
                 time.sleep(sleep)
@@ -1172,7 +1171,7 @@ def get_cloud_front_origin_access_identity(region=None, key=None, keyid=None, pr
         except botocore.exceptions.ParamValidationError as err:
             raise SaltInvocationError(str(err))
         except botocore.exceptions.ClientError as err:
-            if retries and jmespath.search('Error.Code', err.response) == 'Throttling':
+            if retries and err.response.get('Error', {}).get('Code') == 'Throttling':
                 retries -= 1
                 log.debug('Throttled by AWS API, retrying in %s seconds...', sleep)
                 time.sleep(sleep)
@@ -1223,7 +1222,7 @@ def get_cloud_front_origin_access_identity_config(region=None, key=None, keyid=N
         except botocore.exceptions.ParamValidationError as err:
             raise SaltInvocationError(str(err))
         except botocore.exceptions.ClientError as err:
-            if retries and jmespath.search('Error.Code', err.response) == 'Throttling':
+            if retries and err.response.get('Error', {}).get('Code') == 'Throttling':
                 retries -= 1
                 log.debug('Throttled by AWS API, retrying in %s seconds...', sleep)
                 time.sleep(sleep)
@@ -1326,7 +1325,7 @@ def create_cloud_front_origin_access_identity(region=None, key=None, keyid=None,
         except botocore.exceptions.ParamValidationError as err:
             raise SaltInvocationError(str(err))
         except botocore.exceptions.ClientError as err:
-            if retries and jmespath.search('Error.Code', err.response) == 'Throttling':
+            if retries and err.response.get('Error', {}).get('Code') == 'Throttling':
                 retries -= 1
                 log.debug('Throttled by AWS API, retrying in %s seconds...', sleep)
                 time.sleep(sleep)
@@ -1389,7 +1388,7 @@ def update_cloud_front_origin_access_identity(region=None, key=None, keyid=None,
         except botocore.exceptions.ParamValidationError as err:
             raise SaltInvocationError(str(err))
         except botocore.exceptions.ClientError as err:
-            if retries and jmespath.search('Error.Code', err.response) == 'Throttling':
+            if retries and err.response.get('Error', {}).get('Code') == 'Throttling':
                 retries -= 1
                 log.debug('Throttled by AWS API, retrying in %s seconds...', sleep)
                 time.sleep(sleep)
@@ -1439,7 +1438,7 @@ def delete_cloud_front_origin_access_identity(region=None, key=None, keyid=None,
         except botocore.exceptions.ParamValidationError as err:
             raise SaltInvocationError(str(err))
         except botocore.exceptions.ClientError as err:
-            if retries and jmespath.search('Error.Code', err.response) == 'Throttling':
+            if retries and err.response.get('Error', {}).get('Code') == 'Throttling':
                 retries -= 1
                 log.debug('Throttled by AWS API, retrying in %s seconds...', sleep)
                 time.sleep(sleep)
@@ -1521,7 +1520,7 @@ def list_tags_for_resource(region=None, key=None, keyid=None, profile=None, **kw
         except botocore.exceptions.ParamValidationError as err:
             raise SaltInvocationError(str(err))
         except botocore.exceptions.ClientError as err:
-            if retries and jmespath.search('Error.Code', err.response) == 'Throttling':
+            if retries and err.response.get('Error', {}).get('Code') == 'Throttling':
                 retries -= 1
                 log.debug('Throttled by AWS API, retrying in %s seconds...', sleep)
                 time.sleep(sleep)
@@ -1575,7 +1574,7 @@ def tag_resource(region=None, key=None, keyid=None, profile=None, **kwargs):
         except botocore.exceptions.ParamValidationError as err:
             raise SaltInvocationError(str(err))
         except botocore.exceptions.ClientError as err:
-            if retries and jmespath.search('Error.Code', err.response) == 'Throttling':
+            if retries and err.response.get('Error', {}).get('Code') == 'Throttling':
                 retries -= 1
                 log.debug('Throttled by AWS API, retrying in %s seconds...', sleep)
                 time.sleep(sleep)
@@ -1628,7 +1627,7 @@ def untag_resource(region=None, key=None, keyid=None, profile=None, **kwargs):
         except botocore.exceptions.ParamValidationError as err:
             raise SaltInvocationError(str(err))
         except botocore.exceptions.ClientError as err:
-            if retries and jmespath.search('Error.Code', err.response) == 'Throttling':
+            if retries and err.response.get('Error', {}).get('Code') == 'Throttling':
                 retries -= 1
                 log.debug('Throttled by AWS API, retrying in %s seconds...', sleep)
                 time.sleep(sleep)
