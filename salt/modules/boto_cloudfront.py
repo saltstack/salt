@@ -714,6 +714,7 @@ def create_distribution_v2(region=None, key=None, keyid=None, profile=None, **kw
     CLI Example:
 
     .. code-block:: bash
+
         # Note that, minus the Aliases section, this is pretty close to the minimal config I've
         # found which AWS will accept for a create_distribution() call...
         salt myminion boto_cloudfront.create_distribution_v2 DistributionConfig='{
@@ -861,6 +862,7 @@ def update_distribution_v2(region=None, key=None, keyid=None, profile=None, **kw
     CLI Example:
 
     .. code-block:: bash
+
         # Note that, minus the Aliases section, this is pretty close to the minimal config I've
         # found which AWS will accept for a update_distribution() call...
         salt myminion boto_cloudfront.update_distribution_v2 Id=ET123456789AB IfMatch=E2QWRUHABCDEF0 DistributionConfig='{
@@ -1304,6 +1306,7 @@ def create_cloud_front_origin_access_identity(region=None, key=None, keyid=None,
     CLI Example:
 
     .. code-block:: bash
+
         salt myminion boto_cloudfront.create_cloud_front_origin_access_identity \
                 CloudFrontOriginAccessIdentityConfig='{
                     "CallerReference": "28deef17-cc47-4169-b1a2-eff30c997bf0",
@@ -1367,6 +1370,7 @@ def update_cloud_front_origin_access_identity(region=None, key=None, keyid=None,
     CLI Example:
 
     .. code-block:: bash
+
         salt myminion boto_cloudfront.update_cloud_front_origin_access_identity Id=ET123456789AB \\
                 IfMatch=E2QWRUHABCDEF0 CloudFrontOriginAccessIdentityConfig='{
                     "CallerReference": "28deef17-cc47-4169-b1a2-eff30c997bf0",
