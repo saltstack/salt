@@ -2112,6 +2112,50 @@ def remove_lock(packages, root=None, **kwargs):  # pylint: disable=unused-argume
     return {"removed": len(removed), "not_found": missing}
 
 
+def hold(name=None, pkgs=None, **kwargs):
+    """
+    Add a package lock. Specify packages to lock by exact name.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.add_lock <package name>
+        salt '*' pkg.add_lock <package1>,<package2>,<package3>
+        salt '*' pkg.add_lock pkgs='["foo", "bar"]'
+
+    :param name:
+    :param pkgs:
+    :param kwargs:
+    :return:
+    """
+    ret = {}
+    if (not name and not pkgs) or (name and pkgs):
+        raise CommandExecutionError("Name or packages must be specified.")
+    elif name:
+        pkgs = [name]
+
+    locks = list_locks()
+    added = []
+    try:
+        pkgs = list(__salt__["pkg_resource.parse_targets"](pkgs)[0].keys())
+    except MinionError as exc:
+        raise CommandExecutionError(exc)
+
+    for pkg in pkgs:
+        ret[pkg] = {"name": pkg, "changes": {}, "result": False, "comment": ""}
+        if not locks.get(pkg):
+            added.append(pkg)
+            ret[pkg]["comment"] = "Package {0} is now being held.".format(pkg)
+        else:
+            ret[pkg]["comment"] = "Package {0} is already set to be held.".format(pkg)
+
+    if added:
+        __zypper__.call("al", *added)
+
+    return ret
+
+
 def add_lock(packages, root=None, **kwargs):  # pylint: disable=unused-argument
     """
     Add a package lock. Specify packages to lock by exact name.
