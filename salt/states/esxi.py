@@ -1031,29 +1031,31 @@ def diskgroups_configured(name, diskgroups, erase_disks=False):
     '''
     Configures the disk groups to use for vsan.
 
-    It will do the following:
-    (1) checks for if all disks in the diskgroup spec exist and errors if they
-    don't
-    (2) creates diskgroups with the correct disk configurations if diskgroup
-    (identified by the cache disk canonical name) doesn't exist
-    (3) adds extra capacity disks to the existing diskgroup
+    This function will do the following:
 
-    State input example
-    -------------------
+    1. Check whether or not all disks in the diskgroup spec exist, and raises
+       and errors if they do not.
+
+    2. Create diskgroups with the correct disk configurations if diskgroup
+       (identified by the cache disk canonical name) doesn't exist
+
+    3. Adds extra capacity disks to the existing diskgroup
+
+    Example:
 
     .. code:: python
 
-    {
-        'cache_scsi_addr': 'vmhba1:C0:T0:L0',
-        'capacity_scsi_addrs': [
-            'vmhba2:C0:T0:L0',
-            'vmhba3:C0:T0:L0',
-            'vmhba4:C0:T0:L0',
-        ]
-    }
+        {
+            'cache_scsi_addr': 'vmhba1:C0:T0:L0',
+            'capacity_scsi_addrs': [
+                'vmhba2:C0:T0:L0',
+                'vmhba3:C0:T0:L0',
+                'vmhba4:C0:T0:L0',
+            ]
+        }
 
     name
-        Mandatory state name.
+        Mandatory state name
 
     diskgroups
         Disk group representation containing scsi disk addresses.
@@ -1068,8 +1070,10 @@ def diskgroups_configured(name, diskgroups, erase_disks=False):
                else proxy_details['esxi_host']
     log.info('Running state {0} for host \'{1}\''.format(name, hostname))
     # Variable used to return the result of the invocation
-    ret = {'name': name, 'result': None, 'changes': {},
-           'pchanges': {}, 'comments': None}
+    ret = {'name': name,
+           'result': None,
+           'changes': {},
+           'comments': None}
     # Signals if errors have been encountered
     errors = False
     # Signals if changes are required
@@ -1292,12 +1296,8 @@ def diskgroups_configured(name, diskgroups, erase_disks=False):
               None if __opts__['test'] else  # running in test mode
               False if errors else True)  # found errors; defaults to True
     ret.update({'result': result,
-                'comment': '\n'.join(comments)})
-    if changes:
-        if __opts__['test']:
-            ret['pchanges'] = diskgroup_changes
-        elif changes:
-            ret['changes'] = diskgroup_changes
+                'comment': '\n'.join(comments),
+                'changes': diskgroup_changes})
     return ret
 
 
@@ -1310,47 +1310,49 @@ def host_cache_configured(name, enabled, datastore, swap_size='100%',
     Configures the host cache used for swapping.
 
     It will do the following:
-    (1) checks if backing disk exists
-    (2) creates the VMFS datastore if doesn't exist (datastore partition will
-        be created and use the entire disk
-    (3) raises an error if dedicated_backing_disk is True and partitions
-        already exist on the backing disk
-    (4) configures host_cache to use a portion of the datastore for caching
-        (either a specific size or a percentage of the datastore)
 
-    State input examples
-    --------------------
+    1. Checks if backing disk exists
+
+    2. Creates the VMFS datastore if doesn't exist (datastore partition will be
+       created and use the entire disk)
+
+    3. Raises an error if ``dedicated_backing_disk`` is ``True`` and partitions
+       already exist on the backing disk
+
+    4. Configures host_cache to use a portion of the datastore for caching
+       (either a specific size or a percentage of the datastore)
+
+    Examples
 
     Percentage swap size (can't be 100%)
 
     .. code:: python
 
-    {
-        'enabled': true,
-        'datastore': {
-            'backing_disk_scsi_addr': 'vmhba0:C0:T0:L0',
-            'vmfs_version': 5,
-            'name': 'hostcache'
-            }
-        'dedicated_backing_disk': false
-        'swap_size': '98%',
-    }
-
-
-    .. code:: python
+        {
+            'enabled': true,
+            'datastore': {
+                'backing_disk_scsi_addr': 'vmhba0:C0:T0:L0',
+                'vmfs_version': 5,
+                'name': 'hostcache'
+                }
+            'dedicated_backing_disk': false
+            'swap_size': '98%',
+        }
 
     Fixed sized swap size
 
-    {
-        'enabled': true,
-        'datastore': {
-            'backing_disk_scsi_addr': 'vmhba0:C0:T0:L0',
-            'vmfs_version': 5,
-            'name': 'hostcache'
-            }
-        'dedicated_backing_disk': true
-        'swap_size': '10GiB',
-    }
+    .. code:: python
+
+        {
+            'enabled': true,
+            'datastore': {
+                'backing_disk_scsi_addr': 'vmhba0:C0:T0:L0',
+                'vmfs_version': 5,
+                'name': 'hostcache'
+                }
+            'dedicated_backing_disk': true
+            'swap_size': '10GiB',
+        }
 
     name
         Mandatory state name.
@@ -1383,8 +1385,10 @@ def host_cache_configured(name, enabled, datastore, swap_size='100%',
                else proxy_details['esxi_host']
     log.trace('hostname = %s', hostname)
     log.info('Running host_cache_swap_configured for host \'%s\'', hostname)
-    ret = {'name': hostname, 'comment': 'Default comments',
-           'result': None, 'changes': {}, 'pchanges': {}}
+    ret = {'name': hostname,
+           'comment': 'Default comments',
+           'result': None,
+           'changes': {}}
     result = None if __opts__['test'] else True  # We assume success
     needs_setting = False
     comments = []
@@ -1578,11 +1582,8 @@ def host_cache_configured(name, enabled, datastore, swap_size='100%',
         __salt__['vsphere.disconnect'](si)
         log.info(comments[-1])
         ret.update({'comment': '\n'.join(comments),
-                    'result': result})
-        if __opts__['test']:
-            ret['pchanges'] = changes
-        else:
-            ret['changes'] = changes
+                    'result': result,
+                    'changes': changes})
         return ret
     except CommandExecutionError as err:
         log.error('Error: %s.', err)

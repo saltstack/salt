@@ -293,9 +293,10 @@ def set_main(key, value, path=MAIN_CF):
     pairs, conf_list = _parse_main(path)
 
     new_conf = []
+    key_line_match = re.compile("^{0}([\\s=]|$)".format(re.escape(key)))
     if key in pairs:
         for line in conf_list:
-            if line.startswith(key):
+            if re.match(key_line_match, line):
                 new_conf.append('{0} = {1}'.format(key, value))
             else:
                 new_conf.append(line)

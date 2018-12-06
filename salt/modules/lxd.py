@@ -50,12 +50,12 @@ from salt.ext.six.moves import zip
 # Import 3rd-party libs
 try:
     import pylxd
-    PYLXD_AVAILABLE = True
+    HAS_PYLXD = True
 
     import urllib3
     urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 except ImportError:
-    PYLXD_AVAILABLE = False
+    HAS_PYLXD = False
 
 # Set up logging
 import logging
@@ -87,7 +87,7 @@ _connection_pool = {}
 
 
 def __virtual__():
-    if PYLXD_AVAILABLE:
+    if HAS_PYLXD:
         if (LooseVersion(pylxd_version()) <
                 LooseVersion(_pylxd_minimal_version)):
             return (
@@ -3213,8 +3213,42 @@ def image_alias_delete(image,
 #####################
 
 
-def snapshots_all(container=None, remote_addr=None,
-                  cert=None, key=None, verify_cert=True):
+def snapshots_all(container, remote_addr=None, cert=None, key=None, verify_cert=True):
+    '''
+    Get all snapshots for a container
+
+    container :
+        The name of the container to get.
+
+    remote_addr :
+        An URL to a remote server. The 'cert' and 'key' fields must also be
+        provided if 'remote_addr' is defined.
+
+        Examples:
+            https://myserver.lan:8443
+            /var/lib/mysocket.sock
+
+    cert :
+        PEM Formatted SSL Certificate.
+
+        Examples:
+            ~/.config/lxc/client.crt
+
+    key :
+        PEM Formatted SSL Key.
+
+        Examples:
+            ~/.config/lxc/client.key
+
+    verify_cert : True
+        Verify the ssl certificate.  Default: True
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        $ salt '*' lxd.snapshots_all test-container
+    '''
     containers = container_get(
         container, remote_addr, cert, key, verify_cert, _raw=True
     )
@@ -3230,6 +3264,44 @@ def snapshots_all(container=None, remote_addr=None,
 
 def snapshots_create(container, name=None, remote_addr=None,
                      cert=None, key=None, verify_cert=True):
+    '''
+    Create a snapshot for a container
+
+    container :
+        The name of the container to get.
+
+    name :
+        The name of the snapshot.
+
+    remote_addr :
+        An URL to a remote server. The 'cert' and 'key' fields must also be
+        provided if 'remote_addr' is defined.
+
+        Examples:
+            https://myserver.lan:8443
+            /var/lib/mysocket.sock
+
+    cert :
+        PEM Formatted SSL Certificate.
+
+        Examples:
+            ~/.config/lxc/client.crt
+
+    key :
+        PEM Formatted SSL Key.
+
+        Examples:
+            ~/.config/lxc/client.key
+
+    verify_cert : True
+        Verify the ssl certificate.  Default: True
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        $ salt '*' lxd.snapshots_create test-container test-snapshot
+    '''
     cont = container_get(
         container, remote_addr, cert, key, verify_cert, _raw=True
     )
@@ -3247,6 +3319,44 @@ def snapshots_create(container, name=None, remote_addr=None,
 
 def snapshots_delete(container, name, remote_addr=None,
                      cert=None, key=None, verify_cert=True):
+    '''
+    Delete a snapshot for a container
+
+    container :
+        The name of the container to get.
+
+    name :
+        The name of the snapshot.
+
+    remote_addr :
+        An URL to a remote server. The 'cert' and 'key' fields must also be
+        provided if 'remote_addr' is defined.
+
+        Examples:
+            https://myserver.lan:8443
+            /var/lib/mysocket.sock
+
+    cert :
+        PEM Formatted SSL Certificate.
+
+        Examples:
+            ~/.config/lxc/client.crt
+
+    key :
+        PEM Formatted SSL Key.
+
+        Examples:
+            ~/.config/lxc/client.key
+
+    verify_cert : True
+        Verify the ssl certificate.  Default: True
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        $ salt '*' lxd.snapshots_delete test-container test-snapshot
+    '''
     cont = container_get(
         container, remote_addr, cert, key, verify_cert, _raw=True
     )
@@ -3264,6 +3374,44 @@ def snapshots_delete(container, name, remote_addr=None,
 
 def snapshots_get(container, name, remote_addr=None,
                   cert=None, key=None, verify_cert=True):
+    '''
+    Get information about snapshot for a container
+
+    container :
+        The name of the container to get.
+
+    name :
+        The name of the snapshot.
+
+    remote_addr :
+        An URL to a remote server. The 'cert' and 'key' fields must also be
+        provided if 'remote_addr' is defined.
+
+        Examples:
+            https://myserver.lan:8443
+            /var/lib/mysocket.sock
+
+    cert :
+        PEM Formatted SSL Certificate.
+
+        Examples:
+            ~/.config/lxc/client.crt
+
+    key :
+        PEM Formatted SSL Key.
+
+        Examples:
+            ~/.config/lxc/client.key
+
+    verify_cert : True
+        Verify the ssl certificate.  Default: True
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        $ salt '*' lxd.snapshots_get test-container test-snapshot
+    '''
     container = container_get(
         container, remote_addr, cert, key, verify_cert, _raw=True
     )
@@ -3275,14 +3423,17 @@ def snapshots_get(container, name, remote_addr=None,
 
 
 def normalize_input_values(config, devices):
-    # This is special for pcdummy and his ext_pillar mongo usage.
-    #
-    # It translates:
-    #    [{key: key1, value: value1}, {key: key2, value: value2}]
-    # to:
-    #    {key1: value1, key2: value2}
-    #
-    # MongoDB doesn't like dots in field names.
+    '''
+    normalize config input so returns can be put into mongodb, which doesn't like `.`
+
+    This is not meant to be used on the commandline.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' lxd.normalize_input_values config={} devices={}
+    '''
     if isinstance(config, list):
         if (config and
                 'key' in config[0] and
@@ -3567,7 +3718,7 @@ def _verify_image(image,
 
 
 def _pylxd_model_to_dict(obj):
-    """Translates a plyxd model object to a dict"""
+    '''Translates a plyxd model object to a dict'''
     marshalled = {}
     for key in obj.__attributes__.keys():
         if hasattr(obj, key):
@@ -3579,40 +3730,39 @@ def _pylxd_model_to_dict(obj):
 # Monkey patching for missing functionality in pylxd
 #
 
-import pylxd.exceptions     # NOQA
+if HAS_PYLXD:
+    import pylxd.exceptions     # NOQA
 
-if not hasattr(pylxd.exceptions, 'NotFound'):
-    # Old version of pylxd
+    if not hasattr(pylxd.exceptions, 'NotFound'):
+        # Old version of pylxd
 
-    class NotFound(pylxd.exceptions.LXDAPIException):
-        """An exception raised when an object is not found."""
+        class NotFound(pylxd.exceptions.LXDAPIException):
+            '''An exception raised when an object is not found.'''
 
-    pylxd.exceptions.NotFound = NotFound
+        pylxd.exceptions.NotFound = NotFound
 
-try:
-    from pylxd.container import Container
-except ImportError:
-    from pylxd.models.container import Container
+    try:
+        from pylxd.container import Container
+    except ImportError:
+        from pylxd.models.container import Container
 
+    class FilesManager(Container.FilesManager):
 
-class FilesManager(Container.FilesManager):
+        def put(self, filepath, data, mode=None, uid=None, gid=None):
+            headers = {}
+            if mode is not None:
+                if isinstance(mode, int):
+                    mode = oct(mode)
+                elif not mode.startswith('0'):
+                    mode = '0{0}'.format(mode)
+                headers['X-LXD-mode'] = mode
+            if uid is not None:
+                headers['X-LXD-uid'] = six.text_type(uid)
+            if gid is not None:
+                headers['X-LXD-gid'] = six.text_type(gid)
+            response = self._client.api.containers[
+                self._container.name].files.post(
+                params={'path': filepath}, data=data, headers=headers)
+            return response.status_code == 200
 
-    def put(self, filepath, data, mode=None, uid=None, gid=None):
-        headers = {}
-        if mode is not None:
-            if isinstance(mode, int):
-                mode = oct(mode)
-            elif not mode.startswith('0'):
-                mode = '0{0}'.format(mode)
-            headers['X-LXD-mode'] = mode
-        if uid is not None:
-            headers['X-LXD-uid'] = six.text_type(uid)
-        if gid is not None:
-            headers['X-LXD-gid'] = six.text_type(gid)
-        response = self._client.api.containers[
-            self._container.name].files.post(
-            params={'path': filepath}, data=data, headers=headers)
-        return response.status_code == 200
-
-
-Container.FilesManager = FilesManager
+    Container.FilesManager = FilesManager

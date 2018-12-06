@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Alexander Schwartz <alexander.schwartz@gmx.net>`
+    :codeauthor: Alexander Schwartz <alexander.schwartz@gmx.net>
 '''
 
 # Import Python libs

@@ -134,7 +134,7 @@ def add(name, beacon_data, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' beacons.add ps "[{'salt-master': 'stopped', 'apache2': 'stopped'}]"
+        salt '*' beacons.add ps "[{'salt-master': 'stopped'}, {'apache2': 'stopped'}]"
 
     '''
     ret = {'comment': 'Failed to add beacon {0}.'.format(name),
@@ -144,8 +144,16 @@ def add(name, beacon_data, **kwargs):
         ret['comment'] = 'Beacon {0} is already configured.'.format(name)
         return ret
 
-    if name not in list_available(return_yaml=False):
-        ret['comment'] = 'Beacon "{0}" is not available.'.format(name)
+    # Check to see if a beacon_module is specified, if so, verify it is
+    # valid and available beacon type.
+    if any('beacon_module' in key for key in beacon_data):
+        res = next(value for value in beacon_data if 'beacon_module' in value)
+        beacon_name = res['beacon_module']
+    else:
+        beacon_name = name
+
+    if beacon_name not in list_available(return_yaml=False):
+        ret['comment'] = 'Beacon "{0}" is not available.'.format(beacon_name)
         return ret
 
     if 'test' in kwargs and kwargs['test']:
@@ -207,7 +215,7 @@ def modify(name, beacon_data, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' beacons.modify ps "[{'salt-master': 'stopped', 'apache2': 'stopped'}]"
+        salt '*' beacons.modify ps "[{'salt-master': 'stopped'}, {'apache2': 'stopped'}]"
     '''
 
     ret = {'comment': '',
@@ -563,6 +571,41 @@ def disable_beacon(name, **kwargs):
                     else:
                         ret['result'] = False
                         ret['comment'] = 'Failed to disable beacon on minion.'
+                else:
+                    ret['result'] = False
+                    ret['comment'] = event_ret['comment']
+                return ret
+        except KeyError:
+            # Effectively a no-op, since we can't really return without an event system
+            ret['comment'] = 'Event module not available. Beacon disable job failed.'
+    return ret
+
+
+def reset(**kwargs):
+    '''
+    Resest beacon configuration on the minion
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' beacons.reset
+    '''
+
+    ret = {'comment': [],
+           'result': True}
+
+    if 'test' in kwargs and kwargs['test']:
+        ret['comment'] = 'Beacons would be reset.'
+    else:
+        try:
+            eventer = salt.utils.event.get_event('minion', opts=__opts__)
+            res = __salt__['event.fire']({'func': 'reset'}, 'manage_beacons')
+            if res:
+                event_ret = eventer.get_event(tag='/salt/minion/minion_beacon_reset_complete', wait=30)
+                if event_ret and event_ret['complete']:
+                    ret['result'] = True
+                    ret['comment'] = 'Beacon configuration reset.'
                 else:
                     ret['result'] = False
                     ret['comment'] = event_ret['comment']

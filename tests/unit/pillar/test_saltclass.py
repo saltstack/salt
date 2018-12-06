@@ -32,12 +32,9 @@ class SaltclassPillarTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {saltclass: {'__opts__': fake_opts,
                             '__salt__': fake_salt,
-                            '__grains__': fake_grains
-                           }}
+                            '__grains__': fake_grains}}
 
     def _runner(self, expected_ret):
-        full_ret = {}
-        parsed_ret = []
         try:
             full_ret = saltclass.ext_pillar(fake_minion_id, fake_pillar, fake_args)
             parsed_ret = full_ret['__saltclass__']['classes']
@@ -48,5 +45,31 @@ class SaltclassPillarTestCase(TestCase, LoaderModuleMockMixin):
         self.assertListEqual(parsed_ret, expected_ret)
 
     def test_succeeds(self):
-        ret = ['default.users', 'default.motd', 'default', 'roles.app']
+        ret = ['default.users', 'default.motd', 'default.empty', 'default', 'roles.app', 'roles.nginx']
+        self._runner(ret)
+
+
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+class SaltclassPillarTestCaseListExpansion(TestCase, LoaderModuleMockMixin):
+    '''
+    Tests for salt.pillar.saltclass variable expansion in list
+    '''
+    def setup_loader_modules(self):
+        return {saltclass: {'__opts__': fake_opts,
+                            '__salt__': fake_salt,
+                            '__grains__': fake_grains
+                           }}
+
+    def _runner(self, expected_ret):
+        try:
+            full_ret = saltclass.ext_pillar(fake_minion_id, fake_pillar, fake_args)
+            parsed_ret = full_ret['test_list']
+        # Fail the test if we hit our NoneType error
+        except TypeError as err:
+            self.fail(err)
+        # Else give the parsed content result
+        self.assertListEqual(parsed_ret, expected_ret)
+
+    def test_succeeds(self):
+        ret = [{'a': '192.168.10.10'}, '192.168.10.20']
         self._runner(ret)

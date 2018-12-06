@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Rupesh Tare <rupesht@saltstack.com>`
+    :codeauthor: Rupesh Tare <rupesht@saltstack.com>
 '''
 
 # Import Python libs
@@ -41,9 +41,11 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
        X11 Model: pc105
     '''
     locale_ctl_notset = '''
-   System Locale: n/a
+       System Locale: n/a
+
        VC Keymap: n/a
       X11 Layout: n/a
+       X11 Model: n/a
     '''
     locale_ctl_out_empty = ''
     locale_ctl_out_broken = '''

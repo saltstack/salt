@@ -1,0 +1,108 @@
+pipeline {
+    agent { label 'pr-lint-slave' }
+    options {
+        timestamps()
+        ansiColor('xterm')
+        timeout(time: 1, unit: 'HOURS') 
+    }
+    environment {
+        PYENV_ROOT = "/usr/local/pyenv"
+        PATH = "$PYENV_ROOT/bin:$PATH"
+        PY_COLORS = 1
+    }
+    stages {
+        stage('github-pending') {
+            steps {
+                githubNotify credentialsId: 'test-jenkins-credentials',
+                    description: 'Testing lint...',
+                    status: 'PENDING',
+                    context: "jenkins/pr/lint"
+            }
+        }
+        stage('setup') {
+            steps {
+                sh '''
+                # Need -M to detect renames otherwise they are reported as Delete and Add, need -C to detect copies, -C includes -M
+                # -M is on by default in git 2.9+
+                git diff --name-status -l99999 -C "origin/$CHANGE_TARGET" "origin/$BRANCH_NAME" > file-list-status.log
+                # the -l increase the search limit, lets use awk so we do not need to repeat the search above.
+                gawk 'BEGIN {FS="\\t"} {if ($1 != "D") {print $NF}}' file-list-status.log > file-list-changed.log
+                gawk 'BEGIN {FS="\\t"} {if ($1 == "D") {print $NF}}' file-list-status.log > file-list-deleted.log
+                (git diff --name-status -l99999 -C "origin/$CHANGE_TARGET";echo "---";git diff --name-status -l99999 -C "origin/$BRANCH_NAME";printenv|grep -E '=[0-9a-z]{40,}+$|COMMIT=|BRANCH') > file-list-experiment.log
+                touch pylint-report-salt.log pylint-report-tests.log
+                eval "$(pyenv init -)"
+                pyenv --version
+                pyenv install --skip-existing 2.7.14
+                pyenv local 2.7.14
+                pyenv shell 2.7.14
+                python --version
+                pip install tox
+                '''
+                archiveArtifacts artifacts: 'file-list-status.log,file-list-changed.log,file-list-deleted.log,file-list-experiment.log'
+            }
+        }
+        stage('linting') {
+            failFast false
+            parallel {
+                stage('salt linting') {
+                    when {
+                        expression { return readFile('file-list-changed.log') =~ /(?i)(^|\n)(salt\/.*\.py|setup\.py)\n/ }
+                    }
+                    steps {
+                        sh '''
+                        eval "$(pyenv init - --no-rehash)"
+                        grep -Ei '^salt/.*\\.py$|^setup\\.py$' file-list-changed.log | xargs -r '--delimiter=\\n' tox -e pylint-salt | tee pylint-report-salt.log
+                        # remove color escape coding
+                        sed -ri 's/\\x1B\\[([0-9]{1,2}(;[0-9]{1,2})?)?[m|K]//g' pylint-report-salt.log
+                        '''
+                        archiveArtifacts artifacts: 'pylint-report-salt.log'
+                    }
+                }
+                stage('test linting') {
+                    when {
+                        expression { return readFile('file-list-changed.log') =~ /(?i)(^|\n)tests\/.*\.py\n/ }
+                    }
+                    steps {
+                        sh '''
+                        eval "$(pyenv init - --no-rehash)"
+                        grep -Ei '^tests/.*\\.py$' file-list-changed.log | xargs -r '--delimiter=\\n' tox -e pylint-tests | tee pylint-report-tests.log
+                        # remove color escape coding
+                        sed -ri 's/\\x1B\\[([0-9]{1,2}(;[0-9]{1,2})?)?[m|K]//g' pylint-report-tests.log
+                        '''
+                        archiveArtifacts artifacts: 'pylint-report-tests.log'
+                    }
+                }
+            }
+        }
+    }
+    post {
+        always {
+            step([$class: 'WarningsPublisher',
+                parserConfigurations: [[
+                    parserName: 'PyLint',
+                    pattern: 'pylint-report*.log'
+                ]],
+                failedTotalAll: '0',
+                useDeltaValues: false,
+                canRunOnFailed: true,
+                usePreviousBuildAsReference: true
+            ])
+            cleanWs()
+        }
+        success {
+            githubNotify credentialsId: 'test-jenkins-credentials',
+                description: 'The lint job has passed',
+                status: 'SUCCESS',
+                context: "jenkins/pr/lint"
+        }
+        failure {
+            githubNotify credentialsId: 'test-jenkins-credentials',
+                description: 'The lint job has failed',
+                status: 'FAILURE',
+                context: "jenkins/pr/lint"
+            slackSend channel: "#jenkins-prod-pr", 
+                color: '#FF0000', 
+                message: "FAILED: PR-Job: '${env.JOB_NAME} [${env.BUILD_NUMBER}]' (${env.BUILD_URL})"
+        }
+    }
+}

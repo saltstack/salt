@@ -66,14 +66,30 @@ def _gen_checksum(path):
 
 
 def _checksum_file_path(path):
-    relpath = '.'.join((os.path.relpath(path, __opts__['cachedir']), 'hash'))
-    if re.match(r'..[/\\]', relpath):
-        # path is a local file
-        relpath = salt.utils.path.join(
-            'local',
-            os.path.splitdrive(path)[-1].lstrip('/\\'),
-        )
-    return salt.utils.path.join(__opts__['cachedir'], 'archive_hash', relpath)
+    try:
+        relpath = '.'.join((os.path.relpath(path, __opts__['cachedir']), 'hash'))
+        if re.match(r'..[/\\]', relpath):
+            # path is a local file
+            relpath = salt.utils.path.join(
+                'local',
+                os.path.splitdrive(path)[-1].lstrip('/\\'),
+            )
+    except ValueError as exc:
+        # The path is on a different drive (Windows)
+        if six.text_type(exc).startswith('path is on'):
+            drive, path = os.path.splitdrive(path)
+            relpath = salt.utils.path.join(
+                'local',
+                drive.rstrip(':'),
+                path.lstrip('/\\'),
+            )
+        elif str(exc).startswith('Cannot mix UNC'):
+            relpath = salt.utils.path.join('unc', path)
+        else:
+            raise
+    ret = salt.utils.path.join(__opts__['cachedir'], 'archive_hash', relpath)
+    log.debug('Using checksum file %s for cached archive file %s', ret, path)
+    return ret
 
 
 def _update_checksum(path):
@@ -437,7 +453,7 @@ def extracted(name,
 
         If this argument is not used, then the minion will attempt to use
         Python's native tarfile_/zipfile_ support to extract it. For zip
-        archives, this argument is mostly used to overwrite exsiting files with
+        archives, this argument is mostly used to overwrite existing files with
         ``o``.
 
         Using this argument means that the ``tar`` or ``unzip`` command will be
@@ -1090,7 +1106,7 @@ def extracted(name,
                                          and not stat.S_ISDIR(x)),
                      (contents['links'], stat.S_ISLNK)):
                 for path in path_list:
-                    full_path = os.path.join(name, path)
+                    full_path = salt.utils.path.join(name, path)
                     try:
                         path_mode = os.lstat(full_path.rstrip(os.sep)).st_mode
                         if not func(path_mode):
@@ -1259,7 +1275,7 @@ def extracted(name,
                 if options is None:
                     try:
                         with closing(tarfile.open(cached, 'r')) as tar:
-                            tar.extractall(name)
+                            tar.extractall(salt.utils.stringutils.to_str(name))
                             files = tar.getnames()
                             if trim_output:
                                 files = files[:trim_output]
@@ -1415,25 +1431,19 @@ def extracted(name,
                 dir_result = __states__['file.directory'](full_path,
                                                           user=user,
                                                           group=group,
-                                                          recurse=recurse,
-                                                          test=__opts__['test'])
+                                                          recurse=recurse)
                 log.debug('file.directory: %s', dir_result)
 
-                if __opts__['test']:
-                    if dir_result.get('pchanges'):
-                        ret['changes']['updated ownership'] = True
-                else:
-                    try:
-                        if dir_result['result']:
-                            if dir_result['changes']:
-                                ret['changes']['updated ownership'] = True
-                        else:
-                            enforce_failed.append(full_path)
-                    except (KeyError, TypeError):
-                        log.warning(
-                            'Bad state return %s for file.directory state on %s',
-                            dir_result, dirname
-                        )
+                if dir_result.get('changes'):
+                    ret['changes']['updated ownership'] = True
+                try:
+                    if not dir_result['result']:
+                        enforce_failed.append(full_path)
+                except (KeyError, TypeError):
+                    log.warning(
+                        'Bad state return %s for file.directory state on %s',
+                        dir_result, dirname
+                    )
 
         for filename in enforce_files + enforce_links:
             full_path = os.path.join(name, filename)

@@ -21,6 +21,7 @@ from tests.support.mock import (
 
 # Import Salt Libs
 import salt.modules.gpg as gpg
+import salt.utils.path
 
 
 try:
@@ -30,6 +31,7 @@ except ImportError:
     HAS_GPG = False
 
 
+@skipIf(not salt.utils.path.which('gpg'), 'GPG not installed. Skipping')
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class GpgTestCase(TestCase, LoaderModuleMockMixin):
     '''

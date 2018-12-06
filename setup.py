@@ -15,6 +15,8 @@ import os
 import sys
 import glob
 import time
+import operator
+import platform
 try:
     from urllib2 import urlopen
 except ImportError:
@@ -29,6 +31,7 @@ from distutils.command.build import build
 from distutils.command.clean import clean
 from distutils.command.sdist import sdist
 from distutils.command.install_lib import install_lib
+from distutils.version import LooseVersion  # pylint: disable=blacklisted-module
 from ctypes.util import find_library
 # pylint: enable=E0611
 
@@ -73,7 +76,7 @@ else:
     # os.uname() not available on Windows.
     IS_SMARTOS_PLATFORM = os.uname()[0] == 'SunOS' and os.uname()[3].startswith('joyent_')
 
-# Store a reference wether if we're running under Python 3 and above
+# Store a reference whether if we're running under Python 3 and above
 IS_PY3 = sys.version_info > (3,)
 
 # Use setuptools only if the user opts-in by setting the USE_SETUPTOOLS env var
@@ -121,7 +124,6 @@ SALT_VERSION_HARDCODED = os.path.join(os.path.abspath(SETUP_DIRNAME), 'salt', '_
 SALT_SYSPATHS_HARDCODED = os.path.join(os.path.abspath(SETUP_DIRNAME), 'salt', '_syspaths.py')
 SALT_REQS = os.path.join(os.path.abspath(SETUP_DIRNAME), 'requirements', 'base.txt')
 SALT_ZEROMQ_REQS = os.path.join(os.path.abspath(SETUP_DIRNAME), 'requirements', 'zeromq.txt')
-SALT_RAET_REQS = os.path.join(os.path.abspath(SETUP_DIRNAME), 'requirements', 'raet.txt')
 SALT_WINDOWS_REQS = os.path.join(os.path.abspath(SETUP_DIRNAME), 'pkg', 'windows', 'req.txt')
 
 # Salt SSH Packaging Detection
@@ -135,6 +137,74 @@ exec(compile(open(SALT_VERSION).read(), SALT_VERSION, 'exec'))
 
 
 # ----- Helper Functions -------------------------------------------------------------------------------------------->
+
+def _parse_op(op):
+    '''
+    >>> _parse_op('>')
+    'gt'
+    >>> _parse_op('>=')
+    'ge'
+    >>> _parse_op('=>')
+    'ge'
+    >>> _parse_op('=> ')
+    'ge'
+    >>> _parse_op('<')
+    'lt'
+    >>> _parse_op('<=')
+    'le'
+    >>> _parse_op('==')
+    'eq'
+    >>> _parse_op(' <= ')
+    'le'
+    '''
+    op = op.strip()
+    if '>' in op:
+        if '=' in op:
+            return 'ge'
+        else:
+            return 'gt'
+    elif '<' in op:
+        if '=' in op:
+            return 'le'
+        else:
+            return 'lt'
+    elif '!' in op:
+        return 'ne'
+    else:
+        return 'eq'
+
+
+def _parse_ver(ver):
+    '''
+    >>> _parse_ver("'3.4'  # pyzmq 17.1.0 stopped building wheels for python3.4")
+    '3.4'
+    >>> _parse_ver('"3.4"')
+    '3.4'
+    >>> _parse_ver('"2.6.17"')
+    '2.6.17'
+    '''
+    if '#' in ver:
+        ver, _ = ver.split('#', 1)
+        ver = ver.strip()
+    return ver.strip('\'').strip('"')
+
+
+def _check_ver(pyver, op, wanted):
+    '''
+    >>> _check_ver('2.7.15', 'gt', '2.7')
+    True
+    >>> _check_ver('2.7.15', 'gt', '2.7.15')
+    False
+    >>> _check_ver('2.7.15', 'ge', '2.7.15')
+    True
+    >>> _check_ver('2.7.15', 'eq', '2.7.15')
+    True
+    '''
+    pyver = distutils.version.LooseVersion(pyver)
+    wanted = distutils.version.LooseVersion(wanted)
+    return getattr(operator, '__{}__'.format(op))(pyver, wanted)
+
+
 def _parse_requirements_file(requirements_file):
     parsed_requirements = []
     with open(requirements_file) as rfh:
@@ -145,15 +215,20 @@ def _parse_requirements_file(requirements_file):
             if IS_WINDOWS_PLATFORM:
                 if 'libcloud' in line:
                     continue
-                if 'm2crypto' in line.lower() and __saltstack_version__.info < (2015, 8):  # pylint: disable=undefined-variable
-                    # In Windows, we're installing M2CryptoWin{32,64} which comes
-                    # compiled
-                    continue
             if IS_PY3 and 'futures' in line.lower():
                 # Python 3 already has futures, installing it will only break
                 # the current python installation whenever futures is imported
                 continue
-            parsed_requirements.append(line)
+            try:
+                pkg, pyverspec = line.rsplit(';', 1)
+            except ValueError:
+                pkg, pyverspec = line, ''
+            pyverspec = pyverspec.strip()
+            if pyverspec:
+                _, op, ver = pyverspec.split(' ', 2)
+                if not _check_ver(platform.python_version(), _parse_op(op), _parse_ver(ver)):
+                    continue
+            parsed_requirements.append(pkg)
     return parsed_requirements
 # <---- Helper Functions ---------------------------------------------------------------------------------------------
 
@@ -313,12 +388,6 @@ if WITH_SETUPTOOLS:
 
         def run(self):
             if IS_WINDOWS_PLATFORM:
-                if __saltstack_version__.info < (2015, 8):  # pylint: disable=undefined-variable
-                    # Install M2Crypto first
-                    self.distribution.salt_installing_m2crypto_windows = True
-                    self.run_command('install-m2crypto-windows')
-                    self.distribution.salt_installing_m2crypto_windows = None
-
                 # Download the required DLLs
                 self.distribution.salt_download_windows_dlls = True
                 self.run_command('download-windows-dlls')
@@ -337,52 +406,6 @@ if WITH_SETUPTOOLS:
             develop.run(self)
 
 
-class InstallM2CryptoWindows(Command):
-
-    description = 'Install M2CryptoWindows'
-
-    def initialize_options(self):
-        pass
-
-    def finalize_options(self):
-        pass
-
-    def run(self):
-        if getattr(self.distribution, 'salt_installing_m2crypto_windows', None) is None:
-            print('This command is not meant to be called on it\'s own')
-            exit(1)
-        import platform
-        from pip.utils import call_subprocess
-        from pip.utils.logging import indent_log
-        platform_bits, _ = platform.architecture()
-        with indent_log():
-            call_subprocess(
-                ['pip', 'install', '--egg', 'M2CryptoWin{0}'.format(platform_bits[:2])]
-            )
-
-
-def uri_to_resource(resource_file):
-    # ## Returns the URI for a resource
-    # The basic case is that the resource is on saltstack.com
-    # It could be the case that the resource is cached.
-    salt_uri = 'https://repo.saltstack.com/windows/dependencies/' + resource_file
-    if os.getenv('SALTREPO_LOCAL_CACHE') is None:
-        # if environment variable not set, return the basic case
-        return salt_uri
-    if not os.path.isdir(os.getenv('SALTREPO_LOCAL_CACHE')):
-        # if environment variable is not a directory, return the basic case
-        return salt_uri
-    cached_resource = os.path.join(os.getenv('SALTREPO_LOCAL_CACHE'), resource_file)
-    cached_resource = cached_resource.replace('/', '\\')
-    if not os.path.isfile(cached_resource):
-        # if file does not exist, return the basic case
-        return salt_uri
-    if os.path.getsize(cached_resource) == 0:
-        # if file has zero size, return the basic case
-        return salt_uri
-    return cached_resource
-
-
 class DownloadWindowsDlls(Command):
 
     description = 'Download required DLL\'s for windows'
@@ -397,13 +420,17 @@ class DownloadWindowsDlls(Command):
         if getattr(self.distribution, 'salt_download_windows_dlls', None) is None:
             print('This command is not meant to be called on it\'s own')
             exit(1)
-        import platform
-        from pip.utils.logging import indent_log
+        import pip
+        # pip has moved many things to `_internal` starting with pip 10
+        if LooseVersion(pip.__version__) < LooseVersion('10.0'):
+            from pip.utils.logging import indent_log  # pylint: disable=no-name-in-module
+        else:
+            from pip._internal.utils.logging import indent_log  # pylint: disable=no-name-in-module
         platform_bits, _ = platform.architecture()
         url = 'https://repo.saltstack.com/windows/dependencies/{bits}/{fname}.dll'
         dest = os.path.join(os.path.dirname(sys.executable), '{fname}.dll')
         with indent_log():
-            for fname in ('libeay32', 'ssleay32', 'libsodium', 'msvcr120'):
+            for fname in ('libeay32', 'ssleay32', 'msvcr120'):
                 # See if the library is already on the system
                 if find_library(fname):
                     continue
@@ -699,12 +726,6 @@ class Install(install):
             self.build_lib, 'salt', '_version.py'
         )
         if IS_WINDOWS_PLATFORM:
-            if __saltstack_version__.info < (2015, 8):  # pylint: disable=undefined-variable
-                # Install M2Crypto first
-                self.distribution.salt_installing_m2crypto_windows = True
-                self.run_command('install-m2crypto-windows')
-                self.distribution.salt_installing_m2crypto_windows = None
-
             # Download the required DLLs
             self.distribution.salt_download_windows_dlls = True
             self.run_command('download-windows-dlls')
@@ -765,8 +786,9 @@ class SaltDistribution(distutils.dist.Distribution):
     '''
     global_options = distutils.dist.Distribution.global_options + [
         ('ssh-packaging', None, 'Run in SSH packaging mode'),
-        ('salt-transport=', None, 'The transport to prepare salt for. Choices are \'zeromq\' '
-                                  '\'raet\' or \'both\'. Defaults to \'zeromq\'', 'zeromq')] + [
+        ('salt-transport=', None, 'The transport to prepare salt for. Currently, the only choice '
+                                  'is \'zeromq\'. This may be expanded in the future. Defaults to '
+                                  '\'zeromq\'', 'zeromq')] + [
         ('with-salt-version=', None, 'Set a fixed version for Salt instead calculating it'),
         # Salt's Paths Configuration Settings
         ('salt-root-dir=', None,
@@ -848,8 +870,6 @@ class SaltDistribution(distutils.dist.Distribution):
                                   'install_lib': InstallLib})
         if IS_WINDOWS_PLATFORM:
             self.cmdclass.update({'download-windows-dlls': DownloadWindowsDlls})
-            if __saltstack_version__.info < (2015, 8):  # pylint: disable=undefined-variable
-                self.cmdclass.update({'install-m2crypto-windows': InstallM2CryptoWindows})
 
         if WITH_SETUPTOOLS:
             self.cmdclass.update({'develop': Develop})
@@ -946,7 +966,8 @@ class SaltDistribution(distutils.dist.Distribution):
             return data_files
 
         if IS_WINDOWS_PLATFORM:
-            data_files[0][1].extend(['doc/man/salt-cp.1',
+            data_files[0][1].extend(['doc/man/salt-api.1',
+                                     'doc/man/salt-cp.1',
                                      'doc/man/salt-key.1',
                                      'doc/man/salt-master.1',
                                      'doc/man/salt-minion.1',
@@ -975,19 +996,10 @@ class SaltDistribution(distutils.dist.Distribution):
 
         if self.salt_transport == 'zeromq':
             install_requires += _parse_requirements_file(SALT_ZEROMQ_REQS)
-        elif self.salt_transport == 'raet':
-            install_requires += _parse_requirements_file(SALT_RAET_REQS)
 
         if IS_WINDOWS_PLATFORM:
             install_requires = _parse_requirements_file(SALT_WINDOWS_REQS)
-
         return install_requires
-
-    @property
-    def _property_extras_require(self):
-        if self.ssh_packaging:
-            return {}
-        return {'RAET': _parse_requirements_file(SALT_RAET_REQS)}
 
     @property
     def _property_scripts(self):
@@ -1002,6 +1014,7 @@ class SaltDistribution(distutils.dist.Distribution):
 
         if IS_WINDOWS_PLATFORM:
             scripts.extend(['scripts/salt',
+                            'scripts/salt-api',
                             'scripts/salt-cp',
                             'scripts/salt-key',
                             'scripts/salt-master',
@@ -1018,6 +1031,7 @@ class SaltDistribution(distutils.dist.Distribution):
                         'scripts/salt-key',
                         'scripts/salt-master',
                         'scripts/salt-minion',
+                        'scripts/salt-support',
                         'scripts/salt-ssh',
                         'scripts/salt-syndic',
                         'scripts/salt-unity',
@@ -1039,6 +1053,7 @@ class SaltDistribution(distutils.dist.Distribution):
 
         if IS_WINDOWS_PLATFORM:
             scripts.extend(['salt = salt.scripts:salt_main',
+                            'salt-api = salt.scripts:salt_api',
                             'salt-cp = salt.scripts:salt_cp',
                             'salt-key = salt.scripts:salt_key',
                             'salt-master = salt.scripts:salt_master',
@@ -1055,6 +1070,7 @@ class SaltDistribution(distutils.dist.Distribution):
                         'salt-key = salt.scripts:salt_key',
                         'salt-master = salt.scripts:salt_master',
                         'salt-minion = salt.scripts:salt_minion',
+                        'salt-support = salt.scripts:salt_support',
                         'salt-ssh = salt.scripts:salt_ssh',
                         'salt-syndic = salt.scripts:salt_syndic',
                         'salt-unity = salt.scripts:salt_unity',
@@ -1124,13 +1140,14 @@ class SaltDistribution(distutils.dist.Distribution):
                 'wmi',
                 'site',
                 'psutil',
+                'pytz',
             ])
         elif IS_SMARTOS_PLATFORM:
             # we have them as requirements in pkg/smartos/esky/requirements.txt
             # all these should be safe to force include
             freezer_includes.extend([
                 'cherrypy',
-                'dateutils',
+                'python-dateutil',
                 'pyghmi',
                 'croniter',
                 'mako',
@@ -1157,15 +1174,7 @@ class SaltDistribution(distutils.dist.Distribution):
                         freezer_includes.append(str(os.path.basename(mod.identifier)))
             except ImportError:
                 pass
-            # Include C extension that convinces esky to package up the libsodium C library
-            # This is needed for ctypes to find it in libnacl which is in turn needed for raet
-            # see pkg/smartos/esky/sodium_grabber{.c,_installer.py}
-            freezer_includes.extend([
-                'sodium_grabber',
-                'ioflo',
-                'raet',
-                'libnacl',
-            ])
+
         return freezer_includes
     # <---- Esky Setup -----------------------------------------------------------------------------------------------
 
@@ -1182,10 +1191,10 @@ class SaltDistribution(distutils.dist.Distribution):
         elif self.salt_transport is None:
             self.salt_transport = 'zeromq'
 
-        if self.salt_transport not in ('zeromq', 'raet', 'both', 'ssh', 'none'):
+        if self.salt_transport not in ('zeromq', 'both', 'ssh', 'none'):
             raise DistutilsArgError(
                 'The value of --salt-transport needs be \'zeromq\', '
-                '\'raet\', \'both\', \'ssh\' or \'none\' not \'{0}\''.format(
+                '\'both\', \'ssh\', or \'none\' not \'{0}\''.format(
                     self.salt_transport
                 )
             )

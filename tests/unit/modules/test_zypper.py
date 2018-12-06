@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Bo Maryniuk <bo@suse.de>`
+    :codeauthor: Bo Maryniuk <bo@suse.de>
 '''
 
 # Import Python Libs
@@ -40,6 +40,9 @@ class ZyppCallMock(object):
         return self
 
     def __call__(self, *args, **kwargs):
+        # If the call is for a configuration modifier, we return self
+        if any(i in kwargs for i in ('no_repo_failure', 'systemd_scope', 'root')):
+            return self
         return MagicMock(return_value=self.__return_value)()
 
 
@@ -113,6 +116,7 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
                 self.assertIn(pkg, upgrades)
                 self.assertEqual(upgrades[pkg], version)
 
+    @patch('salt.utils.environment.get_module_environment', MagicMock(return_value={'SALT_RUNNING': "1"}))
     def test_zypper_caller(self):
         '''
         Test Zypper caller.
@@ -412,6 +416,7 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
                    ZyppCallMock(return_value=get_test_data('zypper-available.txt'))), \
                 patch('salt.modules.zypper.refresh_db', MagicMock(return_value=True)):
             self.assertEqual(zypper.latest_version('vim'), '7.4.326-2.62')
+            self.assertDictEqual(zypper.latest_version('vim', 'fakepkg'), {'vim': '7.4.326-2.62', 'fakepkg': ''})
 
     def test_upgrade_success(self):
         '''
@@ -429,7 +434,13 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
                     zypper_mock.assert_any_call('update', '--auto-agree-with-licenses')
 
                 with patch('salt.modules.zypper.list_pkgs',
-                           MagicMock(side_effect=[{"vim": "1.1"}, {"vim": "1.1,1.2"}])):
+                           MagicMock(side_effect=[{"kernel-default": "1.1"}, {"kernel-default": "1.1,1.2"}])):
+                    ret = zypper.upgrade()
+                    self.assertDictEqual(ret, {"kernel-default": {"old": "1.1", "new": "1.1,1.2"}})
+                    zypper_mock.assert_any_call('update', '--auto-agree-with-licenses')
+
+                with patch('salt.modules.zypper.list_pkgs',
+                           MagicMock(side_effect=[{"vim": "1.1"}, {"vim": "1.2"}])):
                     ret = zypper.upgrade()
                     self.assertDictEqual(ret, {"vim": {"old": "1.1", "new": "1.2"}})
                     zypper_mock.assert_any_call('update', '--auto-agree-with-licenses')
@@ -475,7 +486,7 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
                     with patch('salt.modules.zypper.list_pkgs', MagicMock(side_effect=[
                         {"kernel-default": "3.12.49-11.1"}, {"kernel-default": "3.12.49-11.1,3.12.51-60.20.2"}])):
                         ret = zypper.install('kernel-default', '--auto-agree-with-licenses')
-                        self.assertDictEqual(ret, {"kernel-default": {"old": "3.12.49-11.1", "new": "3.12.51-60.20.2"}})
+                        self.assertDictEqual(ret, {"kernel-default": {"old": "3.12.49-11.1", "new": "3.12.49-11.1,3.12.51-60.20.2"}})
 
     def test_upgrade_failure(self):
         '''
@@ -540,27 +551,36 @@ Repository 'DUMMY' not found by its alias, number, or URI.
             data.setdefault(key, []).append(value)
 
         rpm_out = [
-            'protobuf-java_|-2.6.1_|-3.1.develHead_|-noarch_|-_|-1499257756',
-            'yast2-ftp-server_|-3.1.8_|-8.1_|-x86_64_|-_|-1499257798',
-            'jose4j_|-0.4.4_|-2.1.develHead_|-noarch_|-_|-1499257756',
-            'apache-commons-cli_|-1.2_|-1.233_|-noarch_|-_|-1498636510',
-            'jakarta-commons-discovery_|-0.4_|-129.686_|-noarch_|-_|-1498636511',
-            'susemanager-build-keys-web_|-12.0_|-5.1.develHead_|-noarch_|-_|-1498636510',
+            'protobuf-java_|-(none)_|-2.6.1_|-3.1.develHead_|-noarch_|-(none)_|-1499257756',
+            'yast2-ftp-server_|-(none)_|-3.1.8_|-8.1_|-x86_64_|-(none)_|-1499257798',
+            'jose4j_|-(none)_|-0.4.4_|-2.1.develHead_|-noarch_|-(none)_|-1499257756',
+            'apache-commons-cli_|-(none)_|-1.2_|-1.233_|-noarch_|-(none)_|-1498636510',
+            'jakarta-commons-discovery_|-(none)_|-0.4_|-129.686_|-noarch_|-(none)_|-1498636511',
+            'susemanager-build-keys-web_|-(none)_|-12.0_|-5.1.develHead_|-noarch_|-(none)_|-1498636510',
+            'gpg-pubkey_|-(none)_|-39db7c82_|-5847eb1f_|-(none)_|-(none)_|-1519203802',
+            'gpg-pubkey_|-(none)_|-8a7c64f9_|-5aaa93ca_|-(none)_|-(none)_|-1529925595',
+            'kernel-default_|-(none)_|-4.4.138_|-94.39.1_|-x86_64_|-(none)_|-1529936067',
+            'kernel-default_|-(none)_|-4.4.73_|-5.1_|-x86_64_|-(none)_|-1503572639',
+            'perseus-dummy_|-(none)_|-1.1_|-1.1_|-i586_|-(none)_|-1529936062',
         ]
-        with patch.dict(zypper.__salt__, {'cmd.run': MagicMock(return_value=os.linesep.join(rpm_out))}), \
+        with patch.dict(zypper.__grains__, {'osarch': 'x86_64'}), \
+             patch.dict(zypper.__salt__, {'cmd.run': MagicMock(return_value=os.linesep.join(rpm_out))}), \
              patch.dict(zypper.__salt__, {'pkg_resource.add_pkg': _add_data}), \
              patch.dict(zypper.__salt__, {'pkg_resource.format_pkg_list': pkg_resource.format_pkg_list}), \
              patch.dict(zypper.__salt__, {'pkg_resource.stringify': MagicMock()}):
             pkgs = zypper.list_pkgs(versions_as_list=True)
+            self.assertFalse(pkgs.get('gpg-pubkey', False))
             for pkg_name, pkg_version in {
-                'jakarta-commons-discovery': '0.4-129.686',
-                'yast2-ftp-server': '3.1.8-8.1',
-                'protobuf-java': '2.6.1-3.1.develHead',
-                'susemanager-build-keys-web': '12.0-5.1.develHead',
-                'apache-commons-cli': '1.2-1.233',
-                'jose4j': '0.4.4-2.1.develHead'}.items():
+                'jakarta-commons-discovery': ['0.4-129.686'],
+                'yast2-ftp-server': ['3.1.8-8.1'],
+                'protobuf-java': ['2.6.1-3.1.develHead'],
+                'susemanager-build-keys-web': ['12.0-5.1.develHead'],
+                'apache-commons-cli': ['1.2-1.233'],
+                'kernel-default': ['4.4.138-94.39.1', '4.4.73-5.1'],
+                'perseus-dummy.i586': ['1.1-1.1'],
+                'jose4j': ['0.4.4-2.1.develHead']}.items():
                 self.assertTrue(pkgs.get(pkg_name))
-                self.assertEqual(pkgs[pkg_name], [pkg_version])
+                self.assertEqual(pkgs[pkg_name], pkg_version)
 
     def test_list_pkgs_with_attr(self):
         '''
@@ -572,57 +592,82 @@ Repository 'DUMMY' not found by its alias, number, or URI.
             data.setdefault(key, []).append(value)
 
         rpm_out = [
-            'protobuf-java_|-2.6.1_|-3.1.develHead_|-noarch_|-_|-1499257756',
-            'yast2-ftp-server_|-3.1.8_|-8.1_|-x86_64_|-_|-1499257798',
-            'jose4j_|-0.4.4_|-2.1.develHead_|-noarch_|-_|-1499257756',
-            'apache-commons-cli_|-1.2_|-1.233_|-noarch_|-_|-1498636510',
-            'jakarta-commons-discovery_|-0.4_|-129.686_|-noarch_|-_|-1498636511',
-            'susemanager-build-keys-web_|-12.0_|-5.1.develHead_|-noarch_|-_|-1498636510',
+            'protobuf-java_|-(none)_|-2.6.1_|-3.1.develHead_|-noarch_|-(none)_|-1499257756',
+            'yast2-ftp-server_|-(none)_|-3.1.8_|-8.1_|-x86_64_|-(none)_|-1499257798',
+            'jose4j_|-(none)_|-0.4.4_|-2.1.develHead_|-noarch_|-(none)_|-1499257756',
+            'apache-commons-cli_|-(none)_|-1.2_|-1.233_|-noarch_|-(none)_|-1498636510',
+            'jakarta-commons-discovery_|-(none)_|-0.4_|-129.686_|-noarch_|-(none)_|-1498636511',
+            'susemanager-build-keys-web_|-(none)_|-12.0_|-5.1.develHead_|-noarch_|-(none)_|-1498636510',
+            'gpg-pubkey_|-(none)_|-39db7c82_|-5847eb1f_|-(none)_|-(none)_|-1519203802',
+            'gpg-pubkey_|-(none)_|-8a7c64f9_|-5aaa93ca_|-(none)_|-(none)_|-1529925595',
+            'kernel-default_|-(none)_|-4.4.138_|-94.39.1_|-x86_64_|-(none)_|-1529936067',
+            'kernel-default_|-(none)_|-4.4.73_|-5.1_|-x86_64_|-(none)_|-1503572639',
+            'perseus-dummy_|-(none)_|-1.1_|-1.1_|-i586_|-(none)_|-1529936062',
         ]
         with patch.dict(zypper.__salt__, {'cmd.run': MagicMock(return_value=os.linesep.join(rpm_out))}), \
+             patch.dict(zypper.__grains__, {'osarch': 'x86_64'}), \
              patch.dict(zypper.__salt__, {'pkg_resource.add_pkg': _add_data}), \
              patch.dict(zypper.__salt__, {'pkg_resource.format_pkg_list': pkg_resource.format_pkg_list}), \
              patch.dict(zypper.__salt__, {'pkg_resource.stringify': MagicMock()}):
             pkgs = zypper.list_pkgs(attr=['epoch', 'release', 'arch', 'install_date_time_t'])
+            self.assertFalse(pkgs.get('gpg-pubkey', False))
             for pkg_name, pkg_attr in {
-                'jakarta-commons-discovery': {
+                'jakarta-commons-discovery': [{
                     'version': '0.4',
                     'release': '129.686',
                     'arch': 'noarch',
                     'install_date_time_t': 1498636511,
-                },
-                'yast2-ftp-server': {
+                }],
+                'yast2-ftp-server': [{
                     'version': '3.1.8',
                     'release': '8.1',
                     'arch': 'x86_64',
                     'install_date_time_t': 1499257798,
-                },
-                'protobuf-java': {
+                }],
+                'protobuf-java': [{
                     'version': '2.6.1',
                     'release': '3.1.develHead',
                     'install_date_time_t': 1499257756,
                     'arch': 'noarch',
-                },
-                'susemanager-build-keys-web': {
+                }],
+                'susemanager-build-keys-web': [{
                     'version': '12.0',
                     'release': '5.1.develHead',
                     'arch': 'noarch',
                     'install_date_time_t': 1498636510,
-                },
-                'apache-commons-cli': {
+                }],
+                'apache-commons-cli': [{
                     'version': '1.2',
                     'release': '1.233',
                     'arch': 'noarch',
                     'install_date_time_t': 1498636510,
+                }],
+                'kernel-default': [{
+                    'version': '4.4.138',
+                    'release': '94.39.1',
+                    'arch': 'x86_64',
+                    'install_date_time_t': 1529936067
                 },
-                'jose4j': {
+                {
+                    'version': '4.4.73',
+                    'release': '5.1',
+                    'arch': 'x86_64',
+                    'install_date_time_t': 1503572639,
+                }],
+                'perseus-dummy.i586': [{
+                    'version': '1.1',
+                    'release': '1.1',
+                    'arch': 'i586',
+                    'install_date_time_t': 1529936062,
+                }],
+                'jose4j': [{
                     'arch': 'noarch',
                     'version': '0.4.4',
                     'release': '2.1.develHead',
                     'install_date_time_t': 1499257756,
-                }}.items():
+                }]}.items():
                 self.assertTrue(pkgs.get(pkg_name))
-                self.assertEqual(pkgs[pkg_name], [pkg_attr])
+                self.assertEqual(pkgs[pkg_name], pkg_attr)
 
     def test_list_patches(self):
         '''
@@ -810,7 +855,7 @@ Repository 'DUMMY' not found by its alias, number, or URI.
                     'pico': '0.1.1',
                 }
 
-            def __call__(self):
+            def __call__(self, root=None):
                 pkgs = self._pkgs.copy()
                 for target in self._packages:
                     if self._pkgs.get(target):
@@ -876,10 +921,10 @@ Repository 'DUMMY' not found by its alias, number, or URI.
         with zypper_patcher:
             zypper.mod_repo(name, **{'url': url})
             self.assertEqual(
-                zypper.__zypper__.xml.call.call_args_list,
+                zypper.__zypper__(root=None).xml.call.call_args_list,
                 [call('ar', url, name)]
             )
-            self.assertTrue(zypper.__zypper__.refreshable.xml.call.call_count == 0)
+            self.assertTrue(zypper.__zypper__(root=None).refreshable.xml.call.call_count == 0)
 
     def test_repo_noadd_nomod_noref(self):
         '''
@@ -901,8 +946,8 @@ Repository 'DUMMY' not found by its alias, number, or URI.
             self.assertEqual(
                 out['comment'],
                 'Specified arguments did not result in modification of repo')
-            self.assertTrue(zypper.__zypper__.xml.call.call_count == 0)
-            self.assertTrue(zypper.__zypper__.refreshable.xml.call.call_count == 0)
+            self.assertTrue(zypper.__zypper__(root=None).xml.call.call_count == 0)
+            self.assertTrue(zypper.__zypper__(root=None).refreshable.xml.call.call_count == 0)
 
     def test_repo_noadd_modbaseurl_ref(self):
         '''
@@ -930,9 +975,11 @@ Repository 'DUMMY' not found by its alias, number, or URI.
                 'priority': 1,
                 'cache': False,
                 'keeppackages': False,
-                'type': 'rpm-md'}
-            self.assertTrue(zypper.mod_repo.call_count == 2)
-            self.assertTrue(zypper.mod_repo.mock_calls[1] == call(name, **expected_params))
+                'type': 'rpm-md',
+                'root': None,
+            }
+            self.assertEqual(zypper.mod_repo.call_count, 2)
+            self.assertEqual(zypper.mod_repo.mock_calls[1], call(name, **expected_params))
 
     def test_repo_add_mod_noref(self):
         '''
@@ -948,10 +995,10 @@ Repository 'DUMMY' not found by its alias, number, or URI.
         with zypper_patcher:
             zypper.mod_repo(name, **{'url': url, 'refresh': True})
             self.assertEqual(
-                zypper.__zypper__.xml.call.call_args_list,
+                zypper.__zypper__(root=None).xml.call.call_args_list,
                 [call('ar', url, name)]
             )
-            zypper.__zypper__.refreshable.xml.call.assert_called_once_with(
+            zypper.__zypper__(root=None).refreshable.xml.call.assert_called_once_with(
                 'mr', '--refresh', name
             )
 
@@ -970,8 +1017,8 @@ Repository 'DUMMY' not found by its alias, number, or URI.
             'salt.modules.zypper', **self.zypper_patcher_config)
         with zypper_patcher:
             zypper.mod_repo(name, **{'url': url, 'refresh': True})
-            self.assertTrue(zypper.__zypper__.xml.call.call_count == 0)
-            zypper.__zypper__.refreshable.xml.call.assert_called_once_with(
+            self.assertTrue(zypper.__zypper__(root=None).xml.call.call_count == 0)
+            zypper.__zypper__(root=None).refreshable.xml.call.assert_called_once_with(
                 'mr', '--refresh', name
             )
 
@@ -990,13 +1037,13 @@ Repository 'DUMMY' not found by its alias, number, or URI.
         with zypper_patcher:
             zypper.mod_repo(name, **{'url': url, 'gpgautoimport': True})
             self.assertEqual(
-                zypper.__zypper__.xml.call.call_args_list,
+                zypper.__zypper__(root=None).xml.call.call_args_list,
                 [
                     call('ar', url, name),
                     call('--gpg-auto-import-keys', 'refresh', name)
                 ]
             )
-            self.assertTrue(zypper.__zypper__.refreshable.xml.call.call_count == 0)
+            self.assertTrue(zypper.__zypper__(root=None).refreshable.xml.call.call_count == 0)
 
     def test_repo_noadd_nomod_ref(self):
         '''
@@ -1017,10 +1064,10 @@ Repository 'DUMMY' not found by its alias, number, or URI.
         with zypper_patcher:
             zypper.mod_repo(name, **{'url': url, 'gpgautoimport': True})
             self.assertEqual(
-                zypper.__zypper__.xml.call.call_args_list,
+                zypper.__zypper__(root=None).xml.call.call_args_list,
                 [call('--gpg-auto-import-keys', 'refresh', name)]
             )
-            self.assertTrue(zypper.__zypper__.refreshable.xml.call.call_count == 0)
+            self.assertTrue(zypper.__zypper__(root=None).refreshable.xml.call.call_count == 0)
 
     def test_repo_add_mod_ref(self):
         '''
@@ -1041,13 +1088,13 @@ Repository 'DUMMY' not found by its alias, number, or URI.
                 **{'url': url, 'refresh': True, 'gpgautoimport': True}
             )
             self.assertEqual(
-                zypper.__zypper__.xml.call.call_args_list,
+                zypper.__zypper__(root=None).xml.call.call_args_list,
                 [
                     call('ar', url, name),
                     call('--gpg-auto-import-keys', 'refresh', name)
                 ]
             )
-            zypper.__zypper__.refreshable.xml.call.assert_called_once_with(
+            zypper.__zypper__(root=None).refreshable.xml.call.assert_called_once_with(
                 '--gpg-auto-import-keys', 'mr', '--refresh', name
             )
 
@@ -1073,10 +1120,10 @@ Repository 'DUMMY' not found by its alias, number, or URI.
                 **{'url': url, 'refresh': True, 'gpgautoimport': True}
             )
             self.assertEqual(
-                zypper.__zypper__.xml.call.call_args_list,
+                zypper.__zypper__(root=None).xml.call.call_args_list,
                 [call('--gpg-auto-import-keys', 'refresh', name)]
             )
-            zypper.__zypper__.refreshable.xml.call.assert_called_once_with(
+            zypper.__zypper__(root=None).refreshable.xml.call.assert_called_once_with(
                 '--gpg-auto-import-keys', 'mr', '--refresh', name
             )
 

@@ -92,7 +92,7 @@ data in pillar. Here's an example pillar structure:
 And to go with it, here's an example state that pulls the data from the
 pillar stated above:
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     {% set details = pillar.get('proxy:chassis', {}) %}
     standup-step1:
@@ -179,15 +179,16 @@ def blade_idrac(name, idrac_password=None, idrac_ipmi=None,
     Set parameters for iDRAC in a blade.
 
     :param idrac_password: Password to use to connect to the iDRACs directly
-    (idrac_ipmi and idrac_dnsname must be set directly on the iDRAC.  They
-    can't be set through the CMC.  If this password is present, use it
-    instead of the CMC password)
+        (idrac_ipmi and idrac_dnsname must be set directly on the iDRAC.  They
+        can't be set through the CMC.  If this password is present, use it
+        instead of the CMC password)
     :param idrac_ipmi: Enable/Disable IPMI over LAN
     :param idrac_ip: Set IP address for iDRAC
     :param idrac_netmask: Set netmask for iDRAC
     :param idrac_gateway: Set gateway for iDRAC
-    :param idrac_dhcp: Turn on DHCP for iDRAC (True turns on, False does nothing
-      becaause setting a static IP will disable DHCP).
+    :param idrac_dhcp: Turn on DHCP for iDRAC (True turns on, False does
+        nothing becaause setting a static IP will disable DHCP).
+
     :return: A standard Salt changes dictionary
 
     NOTE: If any of the IP address settings is configured, all of ip, netmask,

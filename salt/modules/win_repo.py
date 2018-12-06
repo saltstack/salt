@@ -28,7 +28,8 @@ from salt.runners.winrepo import (
     genrepo as _genrepo,
     update_git_repos as _update_git_repos,
     PER_REMOTE_OVERRIDES,
-    PER_REMOTE_ONLY
+    PER_REMOTE_ONLY,
+    GLOBAL_ONLY
 )
 from salt.ext import six
 try:
@@ -127,6 +128,7 @@ def update_git_repos(clean=False):
 def show_sls(name, saltenv='base'):
     r'''
     .. versionadded:: 2015.8.0
+
     Display the rendered software definition from a specific sls file in the
     local winrepo cache. This will parse all Jinja. Run pkg.refresh_db to pull
     the latest software definitions from the master.

@@ -119,6 +119,21 @@ Matchers for more examples.
     ext_pillar:
       - consul: my_consul_config root=salt target="L@salt.example.com and G@osarch:x86_64"
 
+The data from Consul can be merged into a nested key in Pillar.
+
+.. code-block:: yaml
+
+    ext_pillar:
+      - consul: my_consul_config pillar_root=consul_data
+
+By default, keys containing YAML data will be deserialized before being merged into Pillar.
+This behavior can be disabled by setting ``expand_keys`` to ``false``.
+
+.. code-block:: yaml
+
+    ext_pillar:
+      - consul: my_consul_config expand_keys=false
+
 '''
 from __future__ import absolute_import, print_function, unicode_literals
 
@@ -134,10 +149,10 @@ import salt.utils.yaml
 # Import third party libs
 try:
     import consul
-    HAS_CONSUL = True
-    CONSUL_VERSION = consul.__version__
+    if not hasattr(consul, '__version__'):
+        consul.__version__ = '0.1'  # Some packages has no version, and so this pillar crashes on access to it.
 except ImportError:
-    HAS_CONSUL = False
+    consul = None
 
 __virtualname__ = 'consul'
 
@@ -149,7 +164,7 @@ def __virtual__():
     '''
     Only return if python-consul is installed
     '''
-    return __virtualname__ if HAS_CONSUL else False
+    return __virtualname__ if consul is not None else False
 
 
 def ext_pillar(minion_id,
@@ -168,16 +183,25 @@ def ext_pillar(minion_id,
         checker = salt.utils.minions.CkMinions(__opts__)
         _res = checker.check_minions(opts['target'], 'compound')
         minions = _res['minions']
+        log.debug('Targeted minions: %r', minions)
         if minion_id not in minions:
             return {}
 
-    root_re = re.compile('root=(\S*)')  # pylint: disable=W1401
+    root_re = re.compile('(?<!_)root=(\S*)')  # pylint: disable=W1401
     match = root_re.search(temp)
     if match:
-        opts['root'] = match.group(1)
+        opts['root'] = match.group(1).rstrip('/')
         temp = temp.replace(match.group(0), '')
     else:
         opts['root'] = ""
+
+    pillar_root_re = re.compile('pillar_root=(\S*)')  # pylint: disable=W1401
+    match = pillar_root_re.search(temp)
+    if match:
+        opts['pillar_root'] = match.group(1).rstrip('/')
+        temp = temp.replace(match.group(0), '')
+    else:
+        opts['pillar_root'] = ""
 
     profile_re = re.compile('(?:profile=)?(\S+)')  # pylint: disable=W1401
     match = profile_re.search(temp)
@@ -186,6 +210,14 @@ def ext_pillar(minion_id,
         temp = temp.replace(match.group(0), '')
     else:
         opts['profile'] = None
+
+    expand_keys_re = re.compile('expand_keys=False', re.IGNORECASE)  # pylint: disable=W1401
+    match = expand_keys_re.search(temp)
+    if match:
+        opts['expand_keys'] = False
+        temp = temp.replace(match.group(0), '')
+    else:
+        opts['expand_keys'] = True
 
     client = get_conn(__opts__, opts['profile'])
 
@@ -199,7 +231,22 @@ def ext_pillar(minion_id,
     }
 
     try:
-        pillar = fetch_tree(client, opts['root'])
+        pillar_tree = fetch_tree(client, opts['root'], opts['expand_keys'])
+        if opts['pillar_root']:
+            log.debug('Merging consul path %s/ into pillar at %s/', opts['root'], opts['pillar_root'])
+
+            pillar = {}
+            branch = pillar
+            keys = opts['pillar_root'].split('/')
+
+            for i, k in enumerate(keys):
+                if i == len(keys) - 1:
+                    branch[k] = pillar_tree
+                else:
+                    branch[k] = {}
+                    branch = branch[k]
+        else:
+            pillar = pillar_tree
     except KeyError:
         log.error('No such key in consul profile %s: %s', opts['profile'], opts['root'])
         pillar = {}
@@ -211,16 +258,18 @@ def consul_fetch(client, path):
     '''
     Query consul for all keys/values within base path
     '''
-    return client.kv.get(path, recurse=True)
+    # Unless the root path is blank, it needs a trailing slash for
+    # the kv get from Consul to work as expected
+    return client.kv.get('' if not path else path.rstrip('/') + '/', recurse=True)
 
 
-def fetch_tree(client, path):
+def fetch_tree(client, path, expand_keys):
     '''
     Grab data from consul, trim base path and remove any keys which
     are folders. Take the remaining data and send it to be formatted
     in such a way as to be used as pillar data.
     '''
-    index, items = consul_fetch(client, path)
+    _, items = consul_fetch(client, path)
     ret = {}
     has_children = re.compile(r'/$')
 
@@ -229,18 +278,18 @@ def fetch_tree(client, path):
     if items is None:
         return ret
     for item in reversed(items):
-        key = re.sub(r'^' + path + '/?', '', item['Key'])
+        key = re.sub(r'^' + re.escape(path) + '/?', '', item['Key'])
         if key != '':
-            log.debug('key/path - %s: %s', path, key)
+            log.debug('path/key - %s: %s', path, key)
             log.debug('has_children? %r', has_children.search(key))
         if has_children.search(key) is None:
-            ret = pillar_format(ret, key.split('/'), item['Value'])
+            ret = pillar_format(ret, key.split('/'), item['Value'], expand_keys)
             log.debug('Fetching subkeys for key: %r', item)
 
     return ret
 
 
-def pillar_format(ret, keys, value):
+def pillar_format(ret, keys, value, expand_keys):
     '''
     Perform data formatting to be used as pillar data and
     merge it with the current pillar data
@@ -250,9 +299,12 @@ def pillar_format(ret, keys, value):
         return ret
 
     # If value is not None then it's a string
-    # Use YAML to parse the data
     # YAML strips whitespaces unless they're surrounded by quotes
-    pillar_value = salt.utils.yaml.safe_load(value)
+    # If expand_keys is true, deserialize the YAML data
+    if expand_keys:
+        pillar_value = salt.utils.yaml.safe_load(value)
+    else:
+        pillar_value = value
 
     keyvalue = keys.pop()
     pil = {keyvalue: pillar_value}
@@ -290,9 +342,9 @@ def get_conn(opts, profile):
         pillarenv = opts_merged.get('pillarenv') or 'base'
         params['dc'] = _resolve_datacenter(params['dc'], pillarenv)
 
-    if HAS_CONSUL:
+    if consul:
         # Sanity check. ACL Tokens are supported on python-consul 0.4.7 onwards only.
-        if CONSUL_VERSION < '0.4.7' and params.get('target'):
+        if consul.__version__ < '0.4.7' and params.get('target'):
             params.pop('target')
         return consul.Consul(**params)
     else:

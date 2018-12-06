@@ -74,7 +74,6 @@ except ImportError:
 
 
 # Import Salt libs
-import salt.utils.boto3
 import salt.utils.compat
 import salt.utils.json
 import salt.utils.odict as odict
@@ -886,7 +885,7 @@ def enter_standby(name, instance_ids, should_decrement_desired_capacity=False,
             AutoScalingGroupName=name,
             ShouldDecrementDesiredCapacity=should_decrement_desired_capacity)
     except ClientError as e:
-        err = salt.utils.boto3.get_error(e)
+        err = __utils__['boto3.get_error'](e)
         if e.response.get('Error', {}).get('Code') == 'ResourceNotFoundException':
             return {'exists': False}
         return {'error': err}
@@ -912,7 +911,7 @@ def exit_standby(name, instance_ids, should_decrement_desired_capacity=False,
             InstanceIds=instance_ids,
             AutoScalingGroupName=name)
     except ClientError as e:
-        err = salt.utils.boto3.get_error(e)
+        err = __utils__['boto3.get_error'](e)
         if e.response.get('Error', {}).get('Code') == 'ResourceNotFoundException':
             return {'exists': False}
         return {'error': err}

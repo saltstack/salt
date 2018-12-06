@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Rahul Handay <rahulha@saltstack.com>`
+    :codeauthor: Rahul Handay <rahulha@saltstack.com>
 '''
 
 # Import Python Libs
@@ -23,6 +23,7 @@ import salt.modules.win_service as win_service
 try:
     WINAPI = True
     import win32serviceutil
+    import pywintypes
 except ImportError:
     WINAPI = False
 
@@ -119,18 +120,38 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock_true = MagicMock(return_value=True)
         mock_false = MagicMock(return_value=False)
-        mock_info = MagicMock(side_effect=[{'Status': 'Stopped'},
-                                           {'Status': 'Start Pending'},
-                                           {'Status': 'Running'}])
+        mock_info = MagicMock(side_effect=[{'Status': 'Running'}])
 
-        with patch.object(win_service, 'status', mock_true):
+        with patch.object(win32serviceutil, 'StartService', mock_true), \
+                patch.object(win_service, 'disabled', mock_false), \
+                patch.object(win_service, 'info', mock_info):
             self.assertTrue(win_service.start('spongebob'))
 
-        with patch.object(win_service, 'status', mock_false):
-            with patch.object(win32serviceutil, 'StartService', mock_true):
-                with patch.object(win_service, 'info', mock_info):
-                    with patch.object(win_service, 'status', mock_true):
-                        self.assertTrue(win_service.start('spongebob'))
+        mock_info = MagicMock(side_effect=[{'Status': 'Stopped', 'Status_WaitHint': 0},
+                                           {'Status': 'Start Pending', 'Status_WaitHint': 0},
+                                           {'Status': 'Running'}])
+
+        with patch.object(win32serviceutil, 'StartService', mock_true), \
+                patch.object(win_service, 'disabled', mock_false), \
+                patch.object(win_service, 'info', mock_info), \
+                patch.object(win_service, 'status', mock_true):
+            self.assertTrue(win_service.start('spongebob'))
+
+    @skipIf(not WINAPI, 'pywintypes not available')
+    def test_start_already_running(self):
+        '''
+        Test starting a service that is already running
+        '''
+        mock_false = MagicMock(return_value=False)
+        mock_error = MagicMock(
+            side_effect=pywintypes.error(1056,
+                                         'StartService',
+                                         'Service is running'))
+        mock_info = MagicMock(side_effect=[{'Status': 'Running'}])
+        with patch.object(win32serviceutil, 'StartService', mock_error), \
+                 patch.object(win_service, 'disabled', mock_false), \
+                 patch.object(win_service, '_status_wait', mock_info):
+            self.assertTrue(win_service.start('spongebob'))
 
     @skipIf(not WINAPI, 'win32serviceutil not available')
     def test_stop(self):
@@ -139,17 +160,33 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock_true = MagicMock(return_value=True)
         mock_false = MagicMock(return_value=False)
-        mock_info = MagicMock(side_effect=[{'Status': 'Running'},
-                                           {'Status': 'Stop Pending'},
-                                           {'Status': 'Stopped'}])
+        mock_info = MagicMock(side_effect=[{'Status': 'Stopped'}])
 
-        with patch.dict(win_service.__salt__, {'cmd.run': MagicMock(return_value="service was stopped")}):
+        with patch.object(win32serviceutil, 'StopService', mock_true), \
+                patch.object(win_service, '_status_wait', mock_info):
             self.assertTrue(win_service.stop('spongebob'))
 
-        with patch.dict(win_service.__salt__, {'cmd.run': MagicMock(return_value="service was stopped")}), \
-                patch.object(win32serviceutil, 'StopService', mock_true), \
+        mock_info = MagicMock(side_effect=[{'Status': 'Running', 'Status_WaitHint': 0},
+                                           {'Status': 'Stop Pending', 'Status_WaitHint': 0},
+                                           {'Status': 'Stopped'}])
+
+        with patch.object(win32serviceutil, 'StopService', mock_true), \
                 patch.object(win_service, 'info', mock_info), \
                 patch.object(win_service, 'status', mock_false):
+            self.assertTrue(win_service.stop('spongebob'))
+
+    @skipIf(not WINAPI, 'pywintypes not available')
+    def test_stop_not_running(self):
+        '''
+        Test stopping a service that is already stopped
+        '''
+        mock_error = MagicMock(
+            side_effect=pywintypes.error(1062,
+                                         'StopService',
+                                         'Service is not running'))
+        mock_info = MagicMock(side_effect=[{'Status': 'Stopped'}])
+        with patch.object(win32serviceutil, 'StopService', mock_error), \
+                patch.object(win_service, '_status_wait', mock_info):
             self.assertTrue(win_service.stop('spongebob'))
 
     def test_restart(self):
@@ -241,6 +278,18 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
             self.assertTrue(win_service.enabled('spongebob'))
             self.assertFalse(win_service.enabled('squarepants'))
 
+    def test_enabled_with_space_in_name(self):
+        '''
+            Test to check to see if the named
+            service is enabled to start on boot
+            when have space in service name
+        '''
+        mock = MagicMock(side_effect=[{'StartType': 'Auto'},
+                                      {'StartType': 'Disabled'}])
+        with patch.object(win_service, 'info', mock):
+            self.assertTrue(win_service.enabled('spongebob test'))
+            self.assertFalse(win_service.enabled('squarepants test'))
+
     def test_disabled(self):
         '''
             Test to check to see if the named
@@ -250,3 +299,26 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(win_service, 'enabled', mock):
             self.assertTrue(win_service.disabled('spongebob'))
             self.assertFalse(win_service.disabled('squarepants'))
+
+    def test_cmd_quote(self):
+        '''
+        Make sure the command gets quoted correctly
+        '''
+        # Should always return command wrapped in double quotes
+        expected = r'"C:\Program Files\salt\test.exe"'
+
+        # test no quotes
+        bin_path = r'C:\Program Files\salt\test.exe'
+        self.assertEqual(win_service._cmd_quote(bin_path), expected)
+
+        # test single quotes
+        bin_path = r"'C:\Program Files\salt\test.exe'"
+        self.assertEqual(win_service._cmd_quote(bin_path), expected)
+
+        # test double quoted single quotes
+        bin_path = '"\'C:\\Program Files\\salt\\test.exe\'"'
+        self.assertEqual(win_service._cmd_quote(bin_path), expected)
+
+        # test single quoted, double quoted, single quotes
+        bin_path = "\'\"\'C:\\Program Files\\salt\\test.exe\'\"\'"
+        self.assertEqual(win_service._cmd_quote(bin_path), expected)

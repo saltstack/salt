@@ -14,6 +14,7 @@ import logging
 import os
 import shutil
 import signal
+import socket
 import subprocess
 import sys
 import tempfile
@@ -390,7 +391,10 @@ class TestProgram(six.with_metaclass(TestProgramMeta, object)):
             # Always ensure that the test tree is searched first for python modules
             if CODE_DIR != env_pypath[0]:
                 env_pypath.insert(0, CODE_DIR)
-            env_delta['PYTHONPATH'] = ':'.join(env_pypath)
+            if salt.utils.platform.is_windows():
+                env_delta['PYTHONPATH'] = ';'.join(env_pypath)
+            else:
+                env_delta['PYTHONPATH'] = ':'.join(env_pypath)
 
         cmd_env = dict(os.environ)
         cmd_env.update(env_delta)
@@ -415,7 +419,10 @@ class TestProgram(six.with_metaclass(TestProgramMeta, object)):
 
             popen_kwargs['preexec_fn'] = detach_from_parent_group
 
-        self.argv = [self.program]
+        if salt.utils.platform.is_windows():
+            self.argv = ['python.exe', self.program]
+        else:
+            self.argv = [self.program]
         self.argv.extend(args)
         log.debug('TestProgram.run: %s Environment %s', self.argv, env_delta)
         process = subprocess.Popen(self.argv, **popen_kwargs)
@@ -590,8 +597,24 @@ class TestSaltProgram(six.with_metaclass(TestSaltProgramMeta, TestProgram)):
         'log_dir',
         'script_dir',
     ])
+
+    pub_port = 4505
+    ret_port = 4506
+    for port in [pub_port, ret_port]:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        try:
+            connect = sock.bind(('localhost', port))
+        except (socket.error, OSError):
+            # these ports are already in use, use different ones
+            pub_port = 4606
+            ret_port = 4607
+            break
+        sock.close()
+
     config_base = {
         'root_dir': '{test_dir}',
+        'publish_port': pub_port,
+        'ret_port': ret_port,
     }
     configs = {}
     config_dir = os.path.join('etc', 'salt')

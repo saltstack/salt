@@ -5,12 +5,13 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest
+from tests.support.helpers import destructiveTest, flaky
 from tests.support.unit import skipIf
 
 # Import Salt libs
 import salt.utils.path
 import salt.utils.platform
+import salt.utils.systemd
 
 
 @destructiveTest
@@ -24,6 +25,8 @@ class ServiceModuleTest(ModuleCase):
         os_family = self.run_function('grains.get', ['os_family'])
         os_release = self.run_function('grains.get', ['osrelease'])
         if os_family == 'RedHat':
+            if os_release[0] == '7':
+                self.skipTest('Disabled on CentOS 7 until we can fix SSH connection issues.')
             self.service_name = 'crond'
         elif os_family == 'Arch':
             self.service_name = 'sshd'
@@ -61,6 +64,7 @@ class ServiceModuleTest(ModuleCase):
                 self.run_function('service.disable', [self.service_name])
         del self.service_name
 
+    @flaky
     def test_service_status_running(self):
         '''
         test service.status execution module
@@ -103,7 +107,47 @@ class ServiceModuleTest(ModuleCase):
         self.assertTrue(self.run_function('service.enable', [self.service_name]))
 
         self.assertTrue(self.run_function('service.disable', [self.service_name]))
-        self.assertIn(self.service_name, self.run_function('service.get_disabled'))
+        if salt.utils.platform.is_darwin():
+            self.assertTrue(self.run_function('service.disabled', [self.service_name]))
+        else:
+            self.assertIn(self.service_name, self.run_function('service.get_disabled'))
+
+    def test_service_disable_doesnot_exist(self):
+        '''
+        test service.get_disabled and service.disable module
+        when service name does not exist
+        '''
+        # enable service before test
+        srv_name = 'doesnotexist'
+        enable = self.run_function('service.enable', [srv_name])
+        systemd = salt.utils.systemd.booted()
+
+        # check service was not enabled
+        try:
+            self.assertFalse(enable)
+        except AssertionError:
+            self.assertIn('ERROR', enable)
+
+        # check service was not disabled
+        if tuple(self.run_function('grains.item', ['osrelease_info'])['osrelease_info']) == (14, 0o4) and not systemd:
+            # currently upstart does not have a mechanism to report if disabling a service fails if does not exist
+            self.assertTrue(self.run_function('service.disable', [srv_name]))
+        elif self.run_function('grains.item', ['os'])['os'] == 'Debian' and \
+             self.run_function('grains.item', ['osmajorrelease'])['osmajorrelease'] < 9 and systemd:
+             # currently disabling a service via systemd that does not exist
+             # on Debian 8 results in a True return code
+            self.assertTrue(self.run_function('service.disable', [srv_name]))
+        else:
+            try:
+                disable = self.run_function('service.disable', [srv_name])
+                self.assertFalse(disable)
+            except AssertionError:
+                self.assertTrue('error' in disable.lower())
+
+        if salt.utils.platform.is_darwin():
+            self.assertFalse(self.run_function('service.disabled', [srv_name]))
+        else:
+            self.assertNotIn(srv_name, self.run_function('service.get_disabled'))
 
     @skipIf(not salt.utils.platform.is_windows(), 'Windows Only Test')
     def test_service_get_service_name(self):

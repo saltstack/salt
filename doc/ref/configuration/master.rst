@@ -428,7 +428,7 @@ to False.
 .. conf_master:: color_theme
 
 ``color_theme``
----------
+---------------
 
 Default: ``""``
 
@@ -472,11 +472,15 @@ communication.
 ``enable_gpu_grains``
 ---------------------
 
-Default: ``True``
+Default: ``False``
 
 Enable GPU hardware data for your master. Be aware that the master can
 take a while to start up when lspci and/or dmidecode is used to populate the
 grains for the master.
+
+.. code-block:: yaml
+
+    enable_gpu_grains: True
 
 .. conf_master:: job_cache
 
@@ -728,31 +732,6 @@ master event bus. The value is expressed in bytes.
 
     max_event_size: 1048576
 
-.. conf_master:: ping_on_rotate
-
-``ping_on_rotate``
-------------------
-
-.. versionadded:: 2014.7.0
-
-Default:  ``False``
-
-By default, the master AES key rotates every 24 hours. The next command
-following a key rotation will trigger a key refresh from the minion which may
-result in minions which do not respond to the first command after a key refresh.
-
-To tell the master to ping all minions immediately after an AES key refresh, set
-ping_on_rotate to ``True``. This should mitigate the issue where a minion does not
-appear to initially respond after a key is rotated.
-
-Note that ping_on_rotate may cause high load on the master immediately after
-the key rotation event as minions reconnect. Consider this carefully if this
-salt master is managing a large number of minions.
-
-.. code-block:: yaml
-
-    ping_on_rotate: False
-
 .. conf_master:: master_job_cache
 
 ``master_job_cache``
@@ -828,8 +807,7 @@ Causes the master to periodically look for actively connected minions.
 :ref:`Presence events <event-master_presence>` are fired on the event bus on a
 regular interval with a list of connected minions, as well as events with lists
 of newly connected or disconnected minions. This is a master-only operation
-that does not send executions to minions. Note, this does not detect minions
-that connect to a master via localhost.
+that does not send executions to minions.
 
 .. code-block:: yaml
 
@@ -839,6 +817,8 @@ that connect to a master via localhost.
 
 ``ping_on_rotate``
 ------------------
+
+.. versionadded:: 2014.7.0
 
 Default: ``False``
 
@@ -850,9 +830,9 @@ To tell the master to ping all minions immediately after an AES key refresh,
 set ``ping_on_rotate`` to ``True``. This should mitigate the issue where a
 minion does not appear to initially respond after a key is rotated.
 
-Note that ping_on_rotate may cause high load on the master immediately after
-the key rotation event as minions reconnect. Consider this carefully if this
-salt master is managing a large number of minions.
+Note that enabling this may cause high load on the master immediately after the
+key rotation event as minions reconnect. Consider this carefully if this salt
+master is managing a large number of minions.
 
 If disabled, it is recommended to handle this event by listening for the
 ``aes_key_rotate`` event with the ``key`` tag and acting appropriately.
@@ -870,10 +850,8 @@ Default: ``zeromq``
 
 Changes the underlying transport layer. ZeroMQ is the recommended transport
 while additional transport layers are under development. Supported values are
-``zeromq``, ``raet`` (experimental), and ``tcp`` (experimental). This setting has
-a significant impact on performance and should not be changed unless you know
-what you are doing! Transports are explained in :ref:`Salt Transports
-<transports>`.
+``zeromq`` and ``tcp`` (experimental). This setting has a significant impact on
+performance and should not be changed unless you know what you are doing!
 
 .. code-block:: yaml
 
@@ -886,10 +864,10 @@ what you are doing! Transports are explained in :ref:`Salt Transports
 
 Default: ``{}``
 
-(experimental) Starts multiple transports and overrides options for each transport with the provided dictionary
-This setting has a significant impact on performance and should not be changed unless you know
-what you are doing! Transports are explained in :ref:`Salt Transports
-<transports>`. The following example shows how to start a TCP transport alongside a ZMQ transport.
+(experimental) Starts multiple transports and overrides options for each
+transport with the provided dictionary This setting has a significant impact on
+performance and should not be changed unless you know what you are doing!  The
+following example shows how to start a TCP transport alongside a ZMQ transport.
 
 .. code-block:: yaml
 
@@ -908,8 +886,8 @@ Default: False
 
 Turning on the master stats enables runtime throughput and statistics events
 to be fired from the master event bus. These events will report on what
-functions have been run on the master and how long these runs have, on
-average, taken over a given period of time.
+functions have been run on the master along with their average latency and
+duration, taken over a given period of time.
 
 .. conf_master:: master_stats_event_iter
 
@@ -1031,7 +1009,7 @@ a minion performs an authentication check with the master.
 .. conf_master:: minion_data_cache_events
 
 ``minion_data_cache_events``
---------------------
+----------------------------
 
 .. versionadded:: 2017.7.3
 
@@ -1096,6 +1074,23 @@ Define the default salt-ssh roster module to use
 
     roster: cache
 
+.. conf_master:: roster_defaults
+
+``roster_defaults``
+-------------------
+
+.. versionadded:: 2017.7.0
+
+Default settings which will be inherited by all rosters.
+
+.. code-block:: yaml
+
+    roster_defaults:
+      user: daniel
+      sudo: True
+      priv: /root/.ssh/id_rsa
+      tty: True
+
 .. conf_master:: roster_file
 
 ``roster_file``
@@ -1103,24 +1098,27 @@ Define the default salt-ssh roster module to use
 
 Default: ``/etc/salt/roster``
 
-Pass in an alternative location for the salt-ssh `flat` roster file.
+Pass in an alternative location for the salt-ssh :py:mod:`flat
+<salt.roster.flat>` roster file.
 
 .. code-block:: yaml
 
     roster_file: /root/roster
 
-.. conf_master:: roster_file
+.. conf_master:: rosters
 
 ``rosters``
----------------
+-----------
 
-Default: None
+Default: ``None``
 
-Define locations for `flat` roster files so they can be chosen when using Salt API.
-An administrator can place roster files into these locations.
-Then when calling Salt API, parameter 'roster_file' should contain a relative path to these locations.
-That is, "roster_file=/foo/roster" will be resolved as "/etc/salt/roster.d/foo/roster" etc.
-This feature prevents passing insecure custom rosters through the Salt API.
+Define locations for :py:mod:`flat <salt.roster.flat>` roster files so they can
+be chosen when using Salt API. An administrator can place roster files into
+these locations. Then, when calling Salt API, the :conf_master:`roster_file`
+parameter should contain a relative path to these locations. That is,
+``roster_file=/foo/roster`` will be resolved as
+``/etc/salt/roster.d/foo/roster`` etc. This feature prevents passing insecure
+custom rosters through the Salt API.
 
 .. code-block:: yaml
 
@@ -1140,6 +1138,19 @@ The ssh password to log in with.
 .. code-block:: yaml
 
     ssh_passwd: ''
+
+.. conf_master:: ssh_priv_passwd
+
+``ssh_priv_passwd``
+-------------------
+
+Default: ``''``
+
+Passphrase for ssh private key file.
+
+.. code-block:: yaml
+
+    ssh_priv_passwd: ''
 
 .. conf_master:: ssh_port
 
@@ -1740,10 +1751,10 @@ constant names without ssl module prefix: ``CERT_REQUIRED`` or ``PROTOCOL_SSLv23
         certfile: <path_to_certfile>
         ssl_version: PROTOCOL_TLSv1_2
 
-.. conf_master:: allow_minion_key_revoke
+.. conf_master:: preserve_minion_cache
 
-``allow_minion_key_revoke``
----------------------------
+``preserve_minion_cache``
+-------------------------
 
 Default: ``False``
 
@@ -1772,8 +1783,27 @@ the master will drop the request and the minion's key will remain accepted.
 
 .. code-block:: yaml
 
-    rotate_aes_key: True
+    allow_minion_key_revoke: False
 
+.. conf_master:: optimization_order
+
+``optimization_order``
+----------------------
+
+Default: ``[0, 1, 2]``
+
+In cases where Salt is distributed without .py files, this option determines
+the priority of optimization level(s) Salt's module loader should prefer.
+
+.. note::
+    This option is only supported on Python 3.5+.
+
+.. code-block:: yaml
+
+    optimization_order:
+      - 2
+      - 0
+      - 1
 
 Master Large Scale Tuning Settings
 ==================================
@@ -1861,40 +1891,6 @@ The listen queue size of the ZeroMQ backlog.
 .. code-block:: yaml
 
     zmq_backlog: 1000
-
-.. conf_master:: salt_event_pub_hwm
-.. conf_master:: event_publisher_pub_hwm
-
-``salt_event_pub_hwm`` and ``event_publisher_pub_hwm``
-------------------------------------------------------
-
-These two ZeroMQ High Water Mark settings, ``salt_event_pub_hwm`` and
-``event_publisher_pub_hwm`` are significant for masters with thousands of
-minions. When these are insufficiently high it will manifest in random
-responses missing in the CLI and even missing from the job cache. Masters
-that have fast CPUs and many cores with appropriate ``worker_threads``
-will not need these set as high.
-
-The ZeroMQ high-water-mark for the ``SaltEvent`` pub socket default is:
-
-.. code-block:: yaml
-
-    salt_event_pub_hwm: 20000
-
-The ZeroMQ high-water-mark for the ``EventPublisher`` pub socket default is:
-
-.. code-block:: yaml
-
-    event_publisher_pub_hwm: 10000
-
-As an example, on single master deployment with 8,000 minions, 2.4GHz CPUs,
-24 cores, and 32GiB memory has these settings:
-
-.. code-block:: yaml
-
-    salt_event_pub_hwm: 128000
-    event_publisher_pub_hwm: 64000
-
 
 .. _master-module-management:
 
@@ -2078,23 +2074,6 @@ following configuration:
     master_tops:
       ext_nodes: <Shell command which returns yaml>
 
-.. conf_master:: external_nodes
-
-``external_nodes``
-------------------
-
-Default: None
-
-The external_nodes option allows Salt to gather data that would normally be
-placed in a top file from and external node controller. The external_nodes
-option is the executable that will return the ENC data. Remember that Salt
-will look for external nodes AND top files and combine the results if both
-are enabled and available!
-
-.. code-block:: yaml
-
-    external_nodes: cobbler-ext-nodes
-
 .. conf_master:: renderer
 
 ``renderer``
@@ -2197,6 +2176,7 @@ Example using line statements and line comments to increase ease of use:
 If your configuration options are
 
 .. code-block:: yaml
+
     jinja_sls_env:
       line_statement_prefix: '%'
       line_comment_prefix: '##'
@@ -2206,7 +2186,7 @@ as a jinja statement and will interpret anything after a ``##`` as a comment.
 
 This allows the following more convenient syntax to be used:
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     ## (this comment will not stay once rendered)
     # (this comment remains in the rendered template)
@@ -2220,7 +2200,7 @@ This allows the following more convenient syntax to be used:
 The following less convenient but equivalent syntax would have to
 be used if you had not set the line_statement and line_comment options:
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     {# (this comment will not stay once rendered) #}
     # (this comment remains in the rendered template)
@@ -2467,6 +2447,12 @@ Master will not be returned to the Minion.
 ------------------------------
 
 .. versionadded:: 2014.1.0
+.. deprecated:: 2018.3.4
+   This option is now ignored. Firstly, it only traversed
+   :conf_master:`file_roots`, which means it did not work for the other
+   fileserver backends. Secondly, since this option was added we have added
+   caching to the code that traverses the file_roots (and gitfs, etc.), which
+   greatly reduces the amount of traversal that is done.
 
 Default: ``False``
 
@@ -4354,7 +4340,7 @@ Default: ``['+refs/heads/*:refs/remotes/origin/*', '+refs/tags/*:refs/tags/*']``
 When fetching from remote repositories, by default Salt will fetch branches and
 tags. This parameter can be used to override the default and specify
 alternate refspecs to be fetched. This parameter works similarly to its
-:ref:`GitFS counterpart <git_pillar-custom-refspecs>`, in that it can be
+:ref:`GitFS counterpart <gitfs-custom-refspecs>`, in that it can be
 configured both globally and for individual remotes.
 
 .. code-block:: yaml
@@ -4402,12 +4388,14 @@ The pillar_source_merging_strategy option allows you to configure merging
 strategy between different sources. It accepts 5 values:
 
 * ``none``:
-.. versionadded:: 2016.3.4
+
   It will not do any merging at all and only parse the pillar data from the passed environment and 'base' if no environment was specified.
+
+  .. versionadded:: 2016.3.4
 
 * ``recurse``:
 
-  it will merge recursively mapping of data. For example, theses 2 sources:
+  It will recursively merge data. For example, theses 2 sources:
 
   .. code-block:: yaml
 
@@ -4581,7 +4569,7 @@ Default: ``3600``
 
 If and only if a master has set ``pillar_cache: True``, the cache TTL controls the amount
 of time, in seconds, before the cache is considered invalid by a master and a fresh
-pillar is recompiled and stored.
+pillar is recompiled and stored. A value of 0 will cause the cache to always be valid.
 
 .. conf_master:: pillar_cache_backend
 
@@ -5095,6 +5083,21 @@ https://github.com/ytoolshed/range/wiki/%22yamlfile%22-module-file-spec
 Include Configuration
 =====================
 
+Configuration can be loaded from multiple files. The order in which this is
+done is:
+
+1. The master config file itself
+
+2. The files matching the glob in :conf_master:`default_include`
+
+3. The files matching the glob in :conf_master:`include` (if defined)
+
+Each successive step overrides any values defined in the previous steps.
+Therefore, any config options defined in one of the
+:conf_master:`default_include` files would override the same value in the
+master config file, and any options defined in :conf_master:`include` would
+override both.
+
 .. conf_master:: default_include
 
 ``default_include``
@@ -5509,7 +5512,7 @@ Default: ``['+refs/heads/*:refs/remotes/origin/*', '+refs/tags/*:refs/tags/*']``
 When fetching from remote repositories, by default Salt will fetch branches and
 tags. This parameter can be used to override the default and specify
 alternate refspecs to be fetched. This parameter works similarly to its
-:ref:`GitFS counterpart <winrepo-custom-refspecs>`, in that it can be
+:ref:`GitFS counterpart <gitfs-custom-refspecs>`, in that it can be
 configured both globally and for individual remotes.
 
 .. code-block:: yaml

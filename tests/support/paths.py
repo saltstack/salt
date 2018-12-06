@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
     :copyright: Copyright 2017 by the SaltStack Team, see AUTHORS for more details.
     :license: Apache 2.0, see LICENSE for more details.
 
@@ -14,10 +14,13 @@
 # Import python libs
 from __future__ import absolute_import
 import os
+import re
 import sys
 import stat
 import logging
 import tempfile
+
+import salt.utils.path
 
 log = logging.getLogger(__name__)
 
@@ -30,6 +33,7 @@ if sys.platform.startswith('win'):
 CODE_DIR = os.path.dirname(TESTS_DIR)
 if sys.platform.startswith('win'):
     CODE_DIR = CODE_DIR.replace('\\', '\\\\')
+UNIT_TEST_DIR = os.path.join(TESTS_DIR, 'unit')
 INTEGRATION_TEST_DIR = os.path.join(TESTS_DIR, 'integration')
 
 # Let's inject CODE_DIR so salt is importable if not there already
@@ -99,6 +103,24 @@ SCRIPT_TEMPLATES = {
 }
 
 
+def list_test_mods():
+    '''
+    A generator which returns all of the test files
+    '''
+    test_re = re.compile(r'^test_.+\.py$')
+    for dirname in (UNIT_TEST_DIR, INTEGRATION_TEST_DIR):
+        test_type = os.path.basename(dirname)
+        for root, _, files in salt.utils.path.os_walk(dirname):
+            parent_mod = root[len(dirname):].lstrip(os.sep).replace(os.sep, '.')
+            for filename in files:
+                if test_re.match(filename):
+                    mod_name = test_type
+                    if parent_mod:
+                        mod_name += '.' + parent_mod
+                    mod_name += '.' + filename[:-3]
+                    yield mod_name
+
+
 class ScriptPathMixin(object):
 
     def get_script_path(self, script_name):
@@ -112,7 +134,7 @@ class ScriptPathMixin(object):
                                    'cli_{0}.py'.format(script_name.replace('-', '_')))
 
         if not os.path.isfile(script_path):
-            log.info('Generating {0}'.format(script_path))
+            log.info('Generating %s', script_path)
 
             # Late import
             import salt.utils.files

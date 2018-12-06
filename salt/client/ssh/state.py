@@ -74,7 +74,7 @@ class SSHHighState(salt.state.BaseHighState):
         self.client = fsclient
         salt.state.BaseHighState.__init__(self, opts)
         self.state = SSHState(opts, pillar, wrapper)
-        self.matcher = salt.minion.Matcher(self.opts)
+        self.matchers = salt.loader.matchers(self.opts)
         self.tops = salt.loader.tops(self.opts)
 
         self._pydsl_all_decls = {}
@@ -167,7 +167,7 @@ def salt_refs(data, ret=None):
     return ret
 
 
-def prep_trans_tar(opts, file_client, chunks, file_refs, pillar=None, id_=None, roster_grains=None):
+def prep_trans_tar(file_client, chunks, file_refs, pillar=None, id_=None, roster_grains=None):
     '''
     Generate the execution package from the saltenv file refs and a low state
     data structure

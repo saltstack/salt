@@ -26,12 +26,8 @@ class BotoCloudfrontTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         utils = salt.loader.utils(
             self.opts,
-            whitelist=['boto3', 'dictdiffer', 'yamldumper'],
-            context={},
-        )
-        # Force the LazyDict to populate its references. Otherwise the lookup
-        # will fail inside the unit tests.
-        list(utils)
+            whitelist=['boto3', 'dictdiffer', 'yaml', 'args', 'systemd', 'path', 'platform'],
+            context={})
         return {
             boto_cloudfront: {
                 '__utils__': utils,
@@ -95,7 +91,7 @@ class BotoCloudfrontTestCase(TestCase, LoaderModuleMockMixin):
                 self.base_ret_with({
                     'result': None,
                     'comment': comment,
-                    'pchanges': {'old': None, 'new': self.name},
+                    'changes': {'old': None, 'new': self.name},
                 }),
             )
 
@@ -195,7 +191,7 @@ class BotoCloudfrontTestCase(TestCase, LoaderModuleMockMixin):
                 self.base_ret_with({
                     'result': None,
                     'comment': '\n'.join([header, diff]),
-                    'pchanges': {'diff': diff},
+                    'changes': {'diff': diff},
                 }),
             )
 

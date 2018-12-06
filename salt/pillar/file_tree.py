@@ -156,6 +156,7 @@ import salt.utils.files
 import salt.utils.minions
 import salt.utils.path
 import salt.utils.stringio
+import salt.utils.stringutils
 import salt.template
 from salt.ext import six
 
@@ -251,7 +252,7 @@ def _construct_pillar(top_dir,
             else:
                 data = contents
                 if template is True:
-                    data = salt.template.compile_template_str(template=contents,
+                    data = salt.template.compile_template_str(template=salt.utils.stringutils.to_unicode(contents),
                                                               renderers=renderers,
                                                               default=render_default,
                                                               blacklist=renderer_blacklist,
@@ -287,7 +288,7 @@ def ext_pillar(minion_id,
         Templating/rendering has been added. You can now specify a default
         render pipeline and a black- and whitelist of (dis)allowed renderers.
 
-        :param:`template` must be set to ``True`` for templating to happen.
+        ``template`` must be set to ``True`` for templating to happen.
 
         .. code-block:: yaml
 
@@ -326,7 +327,7 @@ def ext_pillar(minion_id,
         .. warning::
 
             Care should be exercised when enabling this option as it will
-            follow links that point outside of :param:`root_dir`.
+            follow links that point outside of ``root_dir``.
 
         .. warning::
 
@@ -354,7 +355,7 @@ def ext_pillar(minion_id,
             can now be a list of globs, allowing for more granular control over
             which pillar values keep their end-of-file newline. The globs match
             paths relative to the directories named for Minion IDs and
-            Nodegroup namess underneath the :param:`root_dir`.
+            Nodegroup namess underneath the ``root_dir``.
 
             .. code-block:: yaml
 

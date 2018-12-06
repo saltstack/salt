@@ -1,21 +1,22 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 
     tests.conftest
     ~~~~~~~~~~~~~~
 
     Prepare py.test for our test suite
 '''
+# pylint: disable=ungrouped-imports,wrong-import-position,redefined-outer-name,missing-docstring
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import sys
 import stat
+import shutil
 import socket
 import logging
-from collections import namedtuple
 
 TESTS_DIR = os.path.dirname(
     os.path.normpath(os.path.abspath(__file__))
@@ -37,14 +38,15 @@ except ImportError:
     sys.path.insert(0, CODE_DIR)
 
 # Import test libs
-import tests.support.paths  # pylint: disable=unused-import
-from tests.integration import TestDaemon
+from tests.support import paths  # pylint: disable=unused-import
+from tests.support.runtests import RUNTIME_VARS
 
 # Import pytest libs
 import pytest
-from _pytest.terminal import TerminalReporter
+import _pytest.logging
 
 # Import 3rd-party libs
+import yaml
 import psutil
 from salt.ext import six
 
@@ -52,19 +54,50 @@ from salt.ext import six
 import salt.utils.files
 import salt.utils.path
 import salt.log.setup
+import salt.log.mixins
+import salt.utils.platform
 from salt.utils.odict import OrderedDict
+from salt.utils.immutabletypes import freeze
 
 # Define the pytest plugins we rely on
-pytest_plugins = ['tempdir', 'helpers_namespace']  # pylint: disable=invalid-name
+# pylint: disable=invalid-name
+pytest_plugins = ['tempdir', 'helpers_namespace']
 
 # Define where not to collect tests from
 collect_ignore = ['setup.py']
+# pylint: enable=invalid-name
 
-log = logging.getLogger('salt.testsuite')
+
+# Patch PyTest logging handlers
+# pylint: disable=protected-access,too-many-ancestors
+class LogCaptureHandler(salt.log.mixins.ExcInfoOnLogLevelFormatMixIn,
+                        _pytest.logging.LogCaptureHandler):
+    '''
+    Subclassing PyTest's LogCaptureHandler in order to add the
+    exc_info_on_loglevel functionality.
+    '''
+
+
+_pytest.logging.LogCaptureHandler = LogCaptureHandler
+
+
+class LiveLoggingStreamHandler(salt.log.mixins.ExcInfoOnLogLevelFormatMixIn,
+                               _pytest.logging._LiveLoggingStreamHandler):
+    '''
+    Subclassing PyTest's LiveLoggingStreamHandler in order to add the
+    exc_info_on_loglevel functionality.
+    '''
+
+
+_pytest.logging._LiveLoggingStreamHandler = LiveLoggingStreamHandler
+# pylint: enable=protected-access,too-many-ancestors
 
 # Reset logging root handlers
-for handler in logging.root.handlers:
+for handler in logging.root.handlers[:]:
     logging.root.removeHandler(handler)
+
+
+log = logging.getLogger('salt.testsuite')
 
 
 def pytest_tempdir_basename():
@@ -88,9 +121,9 @@ def pytest_addoption(parser):
     parser.addoption(
         '--transport',
         default='zeromq',
-        choices=('zeromq', 'raet', 'tcp'),
+        choices=('zeromq', 'tcp'),
         help=('Select which transport to run the integration tests with, '
-              'zeromq, raet, or tcp. Default: %default')
+              'zeromq or tcp. Default: %default')
     )
     test_selection_group = parser.getgroup('Tests Selection')
     test_selection_group.addoption(
@@ -102,6 +135,14 @@ def pytest_addoption(parser):
         help='Run salt-ssh tests. These tests will spin up a temporary '
              'SSH server on your machine. In certain environments, this '
              'may be insecure! Default: False'
+    )
+    test_selection_group.addoption(
+        '--proxy',
+        '--proxy-tests',
+        dest='proxy',
+        action='store_true',
+        default=False,
+        help='Run proxy tests'
     )
     test_selection_group.addoption(
         '--run-destructive',
@@ -133,65 +174,7 @@ def pytest_addoption(parser):
         action='store_true',
         help='Disable colour printing.'
     )
-    output_options_group.addoption(
-        '--sys-stats',
-        default=False,
-        action='store_true',
-        help='Print System CPU and MEM statistics after each test execution.'
-    )
 # <---- CLI Options Setup --------------------------------------------------------------------------------------------
-
-
-# ----- CLI Terminal Reporter --------------------------------------------------------------------------------------->
-class SaltTerminalReporter(TerminalReporter):
-    def __init__(self, config):
-        TerminalReporter.__init__(self, config)
-
-    @pytest.hookimpl(trylast=True)
-    def pytest_sessionstart(self, session):
-        TerminalReporter.pytest_sessionstart(self, session)
-        self._session = session
-
-    def pytest_runtest_logreport(self, report):
-        TerminalReporter.pytest_runtest_logreport(self, report)
-        if self.verbosity <= 0:
-            return
-        if report.when != 'call':
-            return
-        if self.config.getoption('--sys-stats') is False:
-            return
-
-        test_daemon = getattr(self._session, 'test_daemon', None)
-        if self.verbosity == 1:
-            line = ' [CPU:{0}%|MEM:{1}%]'.format(psutil.cpu_percent(),
-                                               psutil.virtual_memory().percent)
-            self._tw.write(line)
-            return
-        else:
-            self.ensure_newline()
-            template = ' {}  -  CPU: {:6.2f} %   MEM: {:6.2f} %   SWAP: {:6.2f} %\n'
-            self._tw.write(
-                template.format(
-                    '            System',
-                    psutil.cpu_percent(),
-                    psutil.virtual_memory().percent,
-                    psutil.swap_memory().percent
-                )
-            )
-            for name, psproc in self._session.stats_processes.items():
-                with psproc.oneshot():
-                    cpu = psproc.cpu_percent()
-                    mem = psproc.memory_percent('vms')
-                    swap = psproc.memory_percent('swap')
-                    self._tw.write(template.format(name, cpu, mem, swap))
-
-
-def pytest_sessionstart(session):
-    session.stats_processes = OrderedDict((
-        #('Log Server', test_daemon.log_server),
-        ('    Test Suite Run', psutil.Process(os.getpid())),
-    ))
-# <---- CLI Terminal Reporter ----------------------------------------------------------------------------------------
 
 
 # ----- Register Markers -------------------------------------------------------------------------------------------->
@@ -202,6 +185,7 @@ def pytest_configure(config):
     and all plugins and initial conftest files been loaded.
     '''
     config.addinivalue_line('norecursedirs', os.path.join(CODE_DIR, 'templates'))
+    config.addinivalue_line('norecursedirs', os.path.join(CODE_DIR, 'tests/support'))
     config.addinivalue_line(
         'markers',
         'destructive_test: Run destructive tests. These tests can include adding '
@@ -222,17 +206,6 @@ def pytest_configure(config):
         'requires_network(only_local_network=False): Skip if no networking is set up. '
         'If \'only_local_network\' is \'True\', only the local network is checked.'
     )
-
-    # Register our terminal reporter
-    if not getattr(config, 'slaveinput', None):
-        standard_reporter = config.pluginmanager.getplugin('terminalreporter')
-        salt_reporter = SaltTerminalReporter(standard_reporter.config)
-
-        config.pluginmanager.unregister(standard_reporter)
-        config.pluginmanager.register(salt_reporter, 'terminalreporter')
-
-    # Transplant configuration
-    TestDaemon.transplant_configs(transport=config.getoption('--transport'))
 # <---- Register Markers ---------------------------------------------------------------------------------------------
 
 
@@ -246,11 +219,13 @@ def pytest_runtest_setup(item):
     if destructive_tests_marker is not None:
         if item.config.getoption('--run-destructive') is False:
             pytest.skip('Destructive tests are disabled')
+    os.environ['DESTRUCTIVE_TESTS'] = six.text_type(item.config.getoption('--run-destructive'))
 
     expensive_tests_marker = item.get_marker('expensive_test')
     if expensive_tests_marker is not None:
         if item.config.getoption('--run-expensive') is False:
             pytest.skip('Expensive tests are disabled')
+    os.environ['EXPENSIVE_TESTS'] = six.text_type(item.config.getoption('--run-expensive'))
 
     skip_if_not_root_marker = item.get_marker('skip_if_not_root')
     if skip_if_not_root_marker is not None:
@@ -350,8 +325,8 @@ def pytest_collection_modifyitems(items):
     for item in items:
         fspath = str(item.fspath)
         if '/integration/' in fspath:
-            if 'test_daemon' not in item.fixturenames:
-                item.fixturenames.append('test_daemon')
+            if 'default_session_daemons' not in item.fixturenames:
+                item.fixturenames.append('default_session_daemons')
             item.add_marker(pytest.mark.integration)
             for kind in ('cli', 'client', 'cloud', 'fileserver', 'loader', 'minion', 'modules',
                          'netapi', 'output', 'reactor', 'renderers', 'runners', 'sdb', 'shell',
@@ -411,6 +386,7 @@ if six.PY2:
         """
         _mock = pytest.importorskip('mock', minversion='2.0.0')
 
+        # pylint: disable=unused-argument
         def _readlines_side_effect(*args, **kwargs):
             if handle.readlines.return_value is not None:
                 return handle.readlines.return_value
@@ -420,6 +396,7 @@ if six.PY2:
             if handle.read.return_value is not None:
                 return handle.read.return_value
             return ''.join(_data)
+        # pylint: enable=unused-argument
 
         def _readline_side_effect():
             if handle.readline.return_value is not None:
@@ -428,7 +405,7 @@ if six.PY2:
             for line in _data:
                 yield line
 
-        global file_spec
+        global file_spec  # pylint: disable=global-statement
         if file_spec is None:
             file_spec = file  # pylint: disable=undefined-variable
 
@@ -535,7 +512,8 @@ def cli_bin_dir(tempdir,
                 cli_call_script_name,
                 cli_key_script_name,
                 cli_run_script_name,
-                cli_ssh_script_name):
+                cli_ssh_script_name,
+                cli_syndic_script_name):
     '''
     Return the path to the CLI script directory to use
     '''
@@ -571,12 +549,13 @@ def cli_bin_dir(tempdir,
                         cli_key_script_name,
                         cli_run_script_name,
                         cli_salt_script_name,
-                        cli_ssh_script_name):
+                        cli_ssh_script_name,
+                        cli_syndic_script_name):
         original_script_name = script_name.split('cli_')[-1].replace('_', '-')
         script_path = os.path.join(cli_bin_dir_path, script_name)
 
         if not os.path.isfile(script_path):
-            log.info('Generating {0}'.format(script_path))
+            log.info('Generating %s', script_path)
 
             with salt.utils.files.fopen(script_path, 'w') as sfh:
                 script_template = script_templates.get(original_script_name, None)
@@ -606,55 +585,310 @@ def cli_bin_dir(tempdir,
 
 # ----- Salt Configuration ------------------------------------------------------------------------------------------>
 @pytest.fixture(scope='session')
-def session_integration_files_dir(request):
+def session_master_of_masters_id():
     '''
-    Fixture which returns the salt integration files directory path.
-    Creates the directory if it does not yet exist.
+    Returns the master of masters id
     '''
-    return request.config.startdir.join('tests').join('integration').join('files')
+    return 'syndic_master'
 
 
 @pytest.fixture(scope='session')
-def session_state_tree_root_dir(session_integration_files_dir):
+def session_master_id():
     '''
-    Fixture which returns the salt state tree root directory path.
-    Creates the directory if it does not yet exist.
+    Returns the session scoped master id
     '''
-    return session_integration_files_dir.join('file')
+    return 'master'
 
 
 @pytest.fixture(scope='session')
-def session_pillar_tree_root_dir(session_integration_files_dir):
+def session_minion_id():
     '''
-    Fixture which returns the salt pillar tree root directory path.
-    Creates the directory if it does not yet exist.
+    Returns the session scoped minion id
     '''
-    return session_integration_files_dir.join('pillar')
+    return 'minion'
+
+
+@pytest.fixture(scope='session')
+def session_secondary_minion_id():
+    '''
+    Returns the session scoped secondary minion id
+    '''
+    return 'sub_minion'
+
+
+@pytest.fixture(scope='session')
+def session_syndic_id():
+    '''
+    Returns the session scoped syndic id
+    '''
+    return 'syndic'
+
+
+@pytest.fixture(scope='session')
+def salt_fail_hard():
+    '''
+    Return the salt fail hard value
+    '''
+    return True
+
+
+@pytest.fixture(scope='session')
+def session_master_default_options(request, session_root_dir):
+    with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.CONF_DIR, 'master')) as rfh:
+        opts = yaml.load(rfh.read())
+
+        tests_known_hosts_file = session_root_dir.join('salt_ssh_known_hosts').strpath
+        with salt.utils.files.fopen(tests_known_hosts_file, 'w') as known_hosts:
+            known_hosts.write('')
+
+        opts['known_hosts_file'] = tests_known_hosts_file
+        opts['syndic_master'] = 'localhost'
+        opts['transport'] = request.config.getoption('--transport')
+
+        return opts
+
+
+@pytest.fixture(scope='session')
+def session_master_config_overrides(session_root_dir):
+    if salt.utils.platform.is_windows():
+        ext_pillar = {'cmd_yaml': 'type {0}'.format(os.path.join(RUNTIME_VARS.FILES, 'ext.yaml'))}
+    else:
+        ext_pillar = {'cmd_yaml': 'cat {0}'.format(os.path.join(RUNTIME_VARS.FILES, 'ext.yaml'))}
+
+    # We need to copy the extension modules into the new master root_dir or
+    # it will be prefixed by it
+    extension_modules_path = session_root_dir.join('extension_modules').strpath
+    if not os.path.exists(extension_modules_path):
+        shutil.copytree(
+            os.path.join(
+                paths.INTEGRATION_TEST_DIR, 'files', 'extension_modules'
+            ),
+            extension_modules_path
+        )
+
+    # Copy the autosign_file to the new  master root_dir
+    autosign_file_path = session_root_dir.join('autosign_file').strpath
+    shutil.copyfile(
+        os.path.join(paths.INTEGRATION_TEST_DIR, 'files', 'autosign_file'),
+        autosign_file_path
+    )
+    # all read, only owner write
+    autosign_file_permissions = stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH | stat.S_IWUSR
+    os.chmod(autosign_file_path, autosign_file_permissions)
+
+    return {
+        'ext_pillar': [ext_pillar],
+        'extension_modules': extension_modules_path,
+        'file_roots': {
+            'base': [
+                os.path.join(RUNTIME_VARS.FILES, 'file', 'base'),
+            ],
+            # Alternate root to test __env__ choices
+            'prod': [
+                os.path.join(RUNTIME_VARS.FILES, 'file', 'prod'),
+            ]
+        },
+        'pillar_roots': {
+            'base': [
+                os.path.join(RUNTIME_VARS.FILES, 'pillar', 'base'),
+            ]
+        },
+        'reactor': [
+            {
+                'salt/minion/*/start': [
+                    os.path.join(RUNTIME_VARS.FILES, 'reactor-sync-minion.sls')
+                ],
+            }
+        ]
+    }
+
+
+@pytest.fixture(scope='session')
+def session_minion_default_options(request, session_root_dir):
+    with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.CONF_DIR, 'minion')) as rfh:
+        opts = yaml.load(rfh.read())
+
+        opts['hosts.file'] = session_root_dir.join('hosts').strpath
+        opts['aliases.file'] = session_root_dir.join('aliases').strpath
+        opts['transport'] = request.config.getoption('--transport')
+
+        return opts
+
+
+@pytest.fixture(scope='session')
+def session_minion_config_overrides():
+    return {
+        'file_roots': {
+            'base': [
+                os.path.join(RUNTIME_VARS.FILES, 'file', 'base'),
+            ],
+            # Alternate root to test __env__ choices
+            'prod': [
+                os.path.join(RUNTIME_VARS.FILES, 'file', 'prod'),
+            ]
+        },
+        'pillar_roots': {
+            'base': [
+                os.path.join(RUNTIME_VARS.FILES, 'pillar', 'base'),
+            ]
+        },
+    }
+
+
+@pytest.fixture(scope='session')
+def session_secondary_minion_default_options(request, session_root_dir):
+    with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.CONF_DIR, 'sub_minion')) as rfh:
+        opts = yaml.load(rfh.read())
+
+        opts['hosts.file'] = session_root_dir.join('hosts').strpath
+        opts['aliases.file'] = session_root_dir.join('aliases').strpath
+        opts['transport'] = request.config.getoption('--transport')
+
+        return opts
+
+
+@pytest.fixture(scope='session')
+def session_master_of_masters_default_options(request, session_root_dir):
+    with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.CONF_DIR, 'syndic_master')) as rfh:
+        opts = yaml.load(rfh.read())
+
+        opts['hosts.file'] = session_root_dir.join('hosts').strpath
+        opts['aliases.file'] = session_root_dir.join('aliases').strpath
+        opts['transport'] = request.config.getoption('--transport')
+
+        return opts
+
+
+@pytest.fixture(scope='session')
+def session_master_of_masters_config_overrides(session_master_of_masters_root_dir):
+    if salt.utils.platform.is_windows():
+        ext_pillar = {'cmd_yaml': 'type {0}'.format(os.path.join(RUNTIME_VARS.FILES, 'ext.yaml'))}
+    else:
+        ext_pillar = {'cmd_yaml': 'cat {0}'.format(os.path.join(RUNTIME_VARS.FILES, 'ext.yaml'))}
+
+    # We need to copy the extension modules into the new master root_dir or
+    # it will be prefixed by it
+    extension_modules_path = session_master_of_masters_root_dir.join('extension_modules').strpath
+    if not os.path.exists(extension_modules_path):
+        shutil.copytree(
+            os.path.join(
+                paths.INTEGRATION_TEST_DIR, 'files', 'extension_modules'
+            ),
+            extension_modules_path
+        )
+
+    # Copy the autosign_file to the new  master root_dir
+    autosign_file_path = session_master_of_masters_root_dir.join('autosign_file').strpath
+    shutil.copyfile(
+        os.path.join(paths.INTEGRATION_TEST_DIR, 'files', 'autosign_file'),
+        autosign_file_path
+    )
+    # all read, only owner write
+    autosign_file_permissions = stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH | stat.S_IWUSR
+    os.chmod(autosign_file_path, autosign_file_permissions)
+
+    return {
+        'ext_pillar': [ext_pillar],
+        'extension_modules': extension_modules_path,
+        'file_roots': {
+            'base': [
+                os.path.join(RUNTIME_VARS.FILES, 'file', 'base'),
+            ],
+            # Alternate root to test __env__ choices
+            'prod': [
+                os.path.join(RUNTIME_VARS.FILES, 'file', 'prod'),
+            ]
+        },
+        'pillar_roots': {
+            'base': [
+                os.path.join(RUNTIME_VARS.FILES, 'pillar', 'base'),
+            ]
+        },
+    }
+
+
+@pytest.fixture(scope='session')
+def session_syndic_master_default_options(request, session_root_dir):
+    with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.CONF_DIR, 'syndic_master')) as rfh:
+        opts = yaml.load(rfh.read())
+
+        opts['hosts.file'] = session_root_dir.join('hosts').strpath
+        opts['aliases.file'] = session_root_dir.join('aliases').strpath
+        opts['transport'] = request.config.getoption('--transport')
+
+        return opts
+
+
+@pytest.fixture(scope='session')
+def session_syndic_minion_default_options(request, session_root_dir):
+    with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.CONF_DIR, 'syndic')) as rfh:
+        opts = yaml.load(rfh.read())
+
+        opts['hosts.file'] = session_root_dir.join('hosts').strpath
+        opts['aliases.file'] = session_root_dir.join('aliases').strpath
+        opts['transport'] = request.config.getoption('--transport')
+
+        return opts
+
+
+@pytest.fixture(scope='session')
+def bridge_pytest_and_runtests(session_root_dir,
+                               session_conf_dir,
+                               session_secondary_conf_dir,
+                               session_syndic_conf_dir,
+                               session_master_of_masters_conf_dir,
+                               session_state_tree_root_dir,
+                               session_pillar_tree_root_dir,
+                               session_prod_env_state_tree_root_dir,
+                               session_master_config,
+                               session_minion_config,
+                               session_secondary_minion_config,
+                               session_master_of_masters_config,
+                               session_syndic_config):
+
+    # Make sure unittest2 classes know their paths
+    RUNTIME_VARS.TMP = RUNTIME_VARS.SYS_TMP_DIR = session_root_dir.realpath().strpath
+    RUNTIME_VARS.TMP_CONF_DIR = session_conf_dir.realpath().strpath
+    RUNTIME_VARS.TMP_SUB_MINION_CONF_DIR = session_secondary_conf_dir.realpath().strpath
+    RUNTIME_VARS.TMP_SYNDIC_MASTER_CONF_DIR = session_master_of_masters_conf_dir.realpath().strpath
+    RUNTIME_VARS.TMP_SYNDIC_MINION_CONF_DIR = session_syndic_conf_dir.realpath().strpath
+    RUNTIME_VARS.TMP_PILLAR_TREE = session_pillar_tree_root_dir.realpath().strpath
+    RUNTIME_VARS.TMP_STATE_TREE = session_state_tree_root_dir.realpath().strpath
+    RUNTIME_VARS.TMP_PRODENV_STATE_TREE = session_prod_env_state_tree_root_dir.realpath().strpath
+
+    # Make sure unittest2 uses the pytest generated configuration
+    RUNTIME_VARS.RUNTIME_CONFIGS['master'] = freeze(session_master_config)
+    RUNTIME_VARS.RUNTIME_CONFIGS['minion'] = freeze(session_minion_config)
+    RUNTIME_VARS.RUNTIME_CONFIGS['sub_minion'] = freeze(session_secondary_minion_config)
+    RUNTIME_VARS.RUNTIME_CONFIGS['syndic_master'] = freeze(session_master_of_masters_config)
+    RUNTIME_VARS.RUNTIME_CONFIGS['syndic'] = freeze(session_syndic_config)
+    RUNTIME_VARS.RUNTIME_CONFIGS['client_config'] = freeze(session_master_config)
 # <---- Salt Configuration -------------------------------------------------------------------------------------------
 
 
 # <---- Fixtures Overrides -------------------------------------------------------------------------------------------
 # ----- Custom Fixtures Definitions --------------------------------------------------------------------------------->
+# pylint: disable=unused-argument
 @pytest.fixture(scope='session')
-def test_daemon(request):
-    values = (('transport', request.config.getoption('--transport')),
-              ('sysinfo', request.config.getoption('--sysinfo')),
-              ('no_colors', request.config.getoption('--no-colors')),
-              ('output_columns', request.config.getoption('--output-columns')),
-              ('ssh', request.config.getoption('--ssh')))
-    options = namedtuple('options', [n for n, v in values])(*[v for n, v in values])
-    fake_parser = namedtuple('parser', 'options')(options)
+def default_session_daemons(request,
+                            log_server,
+                            salt_log_port,
+                            engines_dir,
+                            log_handlers_dir,
+                            bridge_pytest_and_runtests,
+                            session_salt_master,
+                            session_salt_minion,
+                            session_secondary_salt_minion,
+                            session_salt_master_of_masters,
+                            session_salt_syndic
+                            ):
 
-    test_daemon = TestDaemon(fake_parser)
-    with test_daemon as test_daemon_running:
-        request.session.test_daemon = test_daemon_running
-        request.session.stats_processes.update(OrderedDict((
-            ('       Salt Master', psutil.Process(test_daemon.master_process.pid)),
-            ('       Salt Minion', psutil.Process(test_daemon.minion_process.pid)),
-            ('   Salt Sub Minion', psutil.Process(test_daemon.sub_minion_process.pid)),
-            ('Salt Syndic Master', psutil.Process(test_daemon.smaster_process.pid)),
-            ('       Salt Syndic', psutil.Process(test_daemon.syndic_process.pid)),
-        )).items())
-        yield
-    TestDaemon.clean()
+    request.session.stats_processes.update(OrderedDict((
+        ('       Salt Master', psutil.Process(session_salt_master.pid)),
+        ('       Salt Minion', psutil.Process(session_salt_minion.pid)),
+        ('   Salt Sub Minion', psutil.Process(session_secondary_salt_minion.pid)),
+        ('Salt Syndic Master', psutil.Process(session_salt_master_of_masters.pid)),
+        ('       Salt Syndic', psutil.Process(session_salt_syndic.pid)),
+    )).items())
+# pylint: enable=unused-argument
 # <---- Custom Fixtures Definitions ----------------------------------------------------------------------------------

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Logilab <contact@logilab.fr>`
+    :codeauthor: Logilab <contact@logilab.fr>
 '''
 # Import Python libs
 from __future__ import absolute_import, unicode_literals, print_function

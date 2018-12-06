@@ -1,6 +1,17 @@
 # -*- coding: utf-8 -*-
 '''
 A convenience system to manage reactors
+
+Beginning in the 2017.7 release, the reactor runner requires that the reactor
+system is running.  This is accomplished one of two ways, either
+by having reactors configured or by including ``reactor`` in the
+engine configuration for the Salt master.
+
+    .. code-block:: yaml
+
+    engines:
+        - reactor
+
 '''
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals

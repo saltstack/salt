@@ -43,7 +43,7 @@ from salt.ext import six
 from salt.exceptions import CommandExecutionError, TimedProcTimeoutError, \
     SaltInvocationError
 from salt.log import LOG_LEVELS
-from salt.ext.six.moves import range, zip
+from salt.ext.six.moves import range, zip, map
 
 # Only available on POSIX systems, nonfatal on windows
 try:
@@ -397,10 +397,6 @@ def _run(cmd,
         log.info(log_callback(msg))
 
     if runas and salt.utils.platform.is_windows():
-        if not password:
-            msg = 'password is a required argument for runas on Windows'
-            raise CommandExecutionError(msg)
-
         if not HAS_WIN_RUNAS:
             msg = 'missing salt/utils/win_runas.py'
             raise CommandExecutionError(msg)
@@ -409,6 +405,19 @@ def _run(cmd,
             cmd = ' '.join(cmd)
 
         return win_runas(cmd, runas, password, cwd)
+
+    if runas and salt.utils.platform.is_darwin():
+        # we need to insert the user simulation into the command itself and not
+        # just run it from the environment on macOS as that
+        # method doesn't work properly when run as root for certain commands.
+        if isinstance(cmd, (list, tuple)):
+            cmd = ' '.join(map(_cmd_quote, cmd))
+
+        cmd = 'su -l {0} -c "{1}"'.format(runas, cmd)
+        # set runas to None, because if you try to run `su -l` as well as
+        # simulate the environment macOS will prompt for the password of the
+        # user and will cause salt to hang.
+        runas = None
 
     if runas:
         # Save the original command before munging it
@@ -642,21 +651,12 @@ def _run(cmd,
         except (OSError, IOError) as exc:
             msg = (
                 'Unable to run command \'{0}\' with the context \'{1}\', '
-                'reason: '.format(
+                'reason: {2}'.format(
                     cmd if output_loglevel is not None else 'REDACTED',
-                    new_kwargs
+                    new_kwargs,
+                    exc
                 )
             )
-            try:
-                if exc.filename is None:
-                    msg += 'command not found'
-                else:
-                    msg += '{0}: {1}'.format(exc, exc.filename)
-            except AttributeError:
-                # Both IOError and OSError have the filename attribute, so this
-                # is a precaution in case the exception classes in the previous
-                # try/except are changed.
-                msg += 'unknown'
             raise CommandExecutionError(msg)
 
         try:
@@ -953,12 +953,22 @@ def run(cmd,
         cases where sensitive information must be read from standard input.
 
     :param str runas: Specify an alternate user to run the command. The default
-        behavior is to run as the user under which Salt is running. If running
-        on a Windows minion you must also use the ``password`` argument, and
-        the target user account must be in the Administrators group.
+        behavior is to run as the user under which Salt is running.
+
+        .. warning::
+
+            For versions 2018.3.3 and above on macosx while using runas,
+            to pass special characters to the command you need to escape
+            the characters on the shell.
+
+            Example:
+
+            .. code-block:: bash
+
+                cmd.run 'echo '\''h=\"baz\"'\''' runas=macuser
 
     :param str group: Group to run command as. Not currently supported
-      on Windows.
+        on Windows.
 
     :param str password: Windows only. Required when specifying ``runas``. This
         parameter will be ignored on non-Windows platforms.
@@ -1074,11 +1084,9 @@ def run(cmd,
 
       .. versionadded:: Fluorine
 
-    :param bool stdin_raw_newlines : False
-        Normally, newlines present in ``stdin`` as ``\\n`` will be 'unescaped',
-        i.e. replaced with a ``\n``. Set this parameter to ``True`` to leave
-        the newlines as-is. This should be used when you are supplying data
-        using ``stdin`` that should not be modified.
+    :param bool stdin_raw_newlines: False
+        If ``True``, Salt will not automatically convert the characters ``\\n``
+        present in the ``stdin`` value to newlines.
 
       .. versionadded:: Fluorine
 
@@ -1216,6 +1224,18 @@ def shell(cmd,
         on a Windows minion you must also use the ``password`` argument, and
         the target user account must be in the Administrators group.
 
+        .. warning::
+
+            For versions 2018.3.3 and above on macosx while using runas,
+            to pass special characters to the command you need to escape
+            the characters on the shell.
+
+            Example:
+
+            .. code-block:: bash
+
+                cmd.shell 'echo '\\''h=\\"baz\\"'\\\''' runas=macuser
+
     :param str group: Group to run command as. Not currently supported
       on Windows.
 
@@ -1316,11 +1336,9 @@ def shell(cmd,
 
       .. versionadded:: Fluorine
 
-    :param bool stdin_raw_newlines : False
-        Normally, newlines present in ``stdin`` as ``\\n`` will be 'unescaped',
-        i.e. replaced with a ``\n``. Set this parameter to ``True`` to leave
-        the newlines as-is. This should be used when you are supplying data
-        using ``stdin`` that should not be modified.
+    :param bool stdin_raw_newlines: False
+        If ``True``, Salt will not automatically convert the characters ``\\n``
+        present in the ``stdin`` value to newlines.
 
       .. versionadded:: Fluorine
 
@@ -1436,6 +1454,18 @@ def run_stdout(cmd,
         on a Windows minion you must also use the ``password`` argument, and
         the target user account must be in the Administrators group.
 
+        .. warning::
+
+            For versions 2018.3.3 and above on macosx while using runas,
+            to pass special characters to the command you need to escape
+            the characters on the shell.
+
+            Example:
+
+            .. code-block:: bash
+
+                cmd.run_stdout 'echo '\\''h=\\"baz\\"'\\\''' runas=macuser
+
     :param str password: Windows only. Required when specifying ``runas``. This
         parameter will be ignored on non-Windows platforms.
 
@@ -1531,11 +1561,9 @@ def run_stdout(cmd,
 
       .. versionadded:: Fluorine
 
-    :param bool stdin_raw_newlines : False
-        Normally, newlines present in ``stdin`` as ``\\n`` will be 'unescaped',
-        i.e. replaced with a ``\n``. Set this parameter to ``True`` to leave
-        the newlines as-is. This should be used when you are supplying data
-        using ``stdin`` that should not be modified.
+    :param bool stdin_raw_newlines: False
+        If ``True``, Salt will not automatically convert the characters ``\\n``
+        present in the ``stdin`` value to newlines.
 
       .. versionadded:: Fluorine
 
@@ -1634,6 +1662,18 @@ def run_stderr(cmd,
         on a Windows minion you must also use the ``password`` argument, and
         the target user account must be in the Administrators group.
 
+        .. warning::
+
+            For versions 2018.3.3 and above on macosx while using runas,
+            to pass special characters to the command you need to escape
+            the characters on the shell.
+
+            Example:
+
+            .. code-block:: bash
+
+                cmd.run_stderr 'echo '\\''h=\\"baz\\"'\\\''' runas=macuser
+
     :param str password: Windows only. Required when specifying ``runas``. This
         parameter will be ignored on non-Windows platforms.
 
@@ -1729,11 +1769,9 @@ def run_stderr(cmd,
 
       .. versionadded:: Fluorine
 
-    :param bool stdin_raw_newlines : False
-        Normally, newlines present in ``stdin`` as ``\\n`` will be 'unescaped',
-        i.e. replaced with a ``\n``. Set this parameter to ``True`` to leave
-        the newlines as-is. This should be used when you are supplying data
-        using ``stdin`` that should not be modified.
+    :param bool stdin_raw_newlines: False
+        If ``True``, Salt will not automatically convert the characters ``\\n``
+        present in the ``stdin`` value to newlines.
 
       .. versionadded:: Fluorine
 
@@ -1833,6 +1871,18 @@ def run_all(cmd,
         behavior is to run as the user under which Salt is running. If running
         on a Windows minion you must also use the ``password`` argument, and
         the target user account must be in the Administrators group.
+
+        .. warning::
+
+            For versions 2018.3.3 and above on macosx while using runas,
+            to pass special characters to the command you need to escape
+            the characters on the shell.
+
+            Example:
+
+            .. code-block:: bash
+
+                cmd.run_all 'echo '\\''h=\\"baz\\"'\\\''' runas=macuser
 
     :param str password: Windows only. Required when specifying ``runas``. This
         parameter will be ignored on non-Windows platforms.
@@ -1951,11 +2001,9 @@ def run_all(cmd,
 
       .. versionadded:: Fluorine
 
-    :param bool stdin_raw_newlines : False
-        Normally, newlines present in ``stdin`` as ``\\n`` will be 'unescaped',
-        i.e. replaced with a ``\n``. Set this parameter to ``True`` to leave
-        the newlines as-is. This should be used when you are supplying data
-        using ``stdin`` that should not be modified.
+    :param bool stdin_raw_newlines: False
+        If ``True``, Salt will not automatically convert the characters ``\\n``
+        present in the ``stdin`` value to newlines.
 
       .. versionadded:: Fluorine
 
@@ -2056,6 +2104,18 @@ def retcode(cmd,
         on a Windows minion you must also use the ``password`` argument, and
         the target user account must be in the Administrators group.
 
+        .. warning::
+
+            For versions 2018.3.3 and above on macosx while using runas,
+            to pass special characters to the command you need to escape
+            the characters on the shell.
+
+            Example:
+
+            .. code-block:: bash
+
+                cmd.retcode 'echo '\\''h=\\"baz\\"'\\\''' runas=macuser
+
     :param str password: Windows only. Required when specifying ``runas``. This
         parameter will be ignored on non-Windows platforms.
 
@@ -2140,11 +2200,9 @@ def retcode(cmd,
 
       .. versionadded:: Fluorine
 
-    :param bool stdin_raw_newlines : False
-        Normally, newlines present in ``stdin`` as ``\\n`` will be 'unescaped',
-        i.e. replaced with a ``\n``. Set this parameter to ``True`` to leave
-        the newlines as-is. This should be used when you are supplying data
-        using ``stdin`` that should not be modified.
+    :param bool stdin_raw_newlines: False
+        If ``True``, Salt will not automatically convert the characters ``\\n``
+        present in the ``stdin`` value to newlines.
 
       .. versionadded:: Fluorine
 
@@ -2170,6 +2228,9 @@ def retcode(cmd,
 
         salt '*' cmd.retcode "grep f" stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
     '''
+    python_shell = _python_shell_default(python_shell,
+                                         kwargs.get('__pub_jid', ''))
+
     ret = _run(cmd,
                runas=runas,
                group=group,
@@ -2388,11 +2449,9 @@ def script(source,
 
       .. versionadded:: Fluorine
 
-    :param bool stdin_raw_newlines : False
-        Normally, newlines present in ``stdin`` as ``\\n`` will be 'unescaped',
-        i.e. replaced with a ``\n``. Set this parameter to ``True`` to leave
-        the newlines as-is. This should be used when you are supplying data
-        using ``stdin`` that should not be modified.
+    :param bool stdin_raw_newlines: False
+        If ``True``, Salt will not automatically convert the characters ``\\n``
+        present in the ``stdin`` value to newlines.
 
       .. versionadded:: Fluorine
 
@@ -2472,9 +2531,12 @@ def script(source,
         os.chmod(path, 320)
         os.chown(path, __salt__['file.user_to_uid'](runas), -1)
 
-    path = _cmd_quote(path)
+    if salt.utils.platform.is_windows() and shell.lower() != 'powershell':
+        cmd_path = _cmd_quote(path, escape=False)
+    else:
+        cmd_path = _cmd_quote(path)
 
-    ret = _run(path + ' ' + six.text_type(args) if args else path,
+    ret = _run(cmd_path + ' ' + six.text_type(args) if args else cmd_path,
                cwd=cwd,
                stdin=stdin,
                output_encoding=output_encoding,
@@ -2634,11 +2696,9 @@ def script_retcode(source,
 
       .. versionadded:: Fluorine
 
-    :param bool stdin_raw_newlines : False
-        Normally, newlines present in ``stdin`` as ``\\n`` will be 'unescaped',
-        i.e. replaced with a ``\n``. Set this parameter to ``True`` to leave
-        the newlines as-is. This should be used when you are supplying data
-        using ``stdin`` that should not be modified.
+    :param bool stdin_raw_newlines: False
+        If ``True``, Salt will not automatically convert the characters ``\\n``
+        present in the ``stdin`` value to newlines.
 
       .. versionadded:: Fluorine
 
@@ -2957,7 +3017,8 @@ def run_chroot(root,
         the return code will be overridden with zero.
 
       .. versionadded:: Fluorine
-CLI Example:
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -3440,11 +3501,9 @@ def powershell(cmd,
 
       .. versionadded:: Fluorine
 
-    :param bool stdin_raw_newlines : False
-        Normally, newlines present in ``stdin`` as ``\\n`` will be 'unescaped',
-        i.e. replaced with a ``\n``. Set this parameter to ``True`` to leave
-        the newlines as-is. This should be used when you are supplying data
-        using ``stdin`` that should not be modified.
+    :param bool stdin_raw_newlines: False
+        If ``True``, Salt will not automatically convert the characters ``\\n``
+        present in the ``stdin`` value to newlines.
 
       .. versionadded:: Fluorine
 
@@ -3744,11 +3803,9 @@ def powershell_all(cmd,
 
       .. versionadded:: Fluorine
 
-    :param bool stdin_raw_newlines : False
-        Normally, newlines present in ``stdin`` as ``\\n`` will be 'unescaped',
-        i.e. replaced with a ``\n``. Set this parameter to ``True`` to leave
-        the newlines as-is. This should be used when you are supplying data
-        using ``stdin`` that should not be modified.
+    :param bool stdin_raw_newlines: False
+        If ``True``, Salt will not automatically convert the characters ``\\n``
+        present in the ``stdin`` value to newlines.
 
       .. versionadded:: Fluorine
 
@@ -3944,6 +4001,18 @@ def run_bg(cmd,
         on a Windows minion you must also use the ``password`` argument, and
         the target user account must be in the Administrators group.
 
+        .. warning::
+
+            For versions 2018.3.3 and above on macosx while using runas,
+            to pass special characters to the command you need to escape
+            the characters on the shell.
+
+            Example:
+
+            .. code-block:: bash
+
+                cmd.run_bg 'echo '\''h=\"baz\"'\''' runas=macuser
+
     :param str password: Windows only. Required when specifying ``runas``. This
         parameter will be ignored on non-Windows platforms.
 
@@ -4003,11 +4072,9 @@ def run_bg(cmd,
 
       .. versionadded:: Fluorine
 
-    :param bool stdin_raw_newlines : False
-        Normally, newlines present in ``stdin`` as ``\\n`` will be 'unescaped',
-        i.e. replaced with a ``\n``. Set this parameter to ``True`` to leave
-        the newlines as-is. This should be used when you are supplying data
-        using ``stdin`` that should not be modified.
+    :param bool stdin_raw_newlines: False
+        If ``True``, Salt will not automatically convert the characters ``\\n``
+        present in the ``stdin`` value to newlines.
 
       .. versionadded:: Fluorine
 

@@ -17,6 +17,7 @@ from tests.support.helpers import destructiveTest
 # Import salt libs
 import salt.utils.files
 import salt.utils.path
+import salt.utils.platform
 import salt.utils.stringutils
 
 # Import 3rd party libs
@@ -47,40 +48,48 @@ class ArchiveTest(ModuleCase):
         self.arch = os.path.join(self.base_path, 'archive.{0}'.format(arch_fmt))
         self.dst = os.path.join(self.base_path, '{0}_dst_dir'.format(arch_fmt))
 
-    def _set_up(self, arch_fmt):
+    def _set_up(self, arch_fmt, unicode_filename=False):
         '''
         Create source file tree and destination directory
 
         :param str arch_fmt: The archive format used in the test
         '''
-        # Setup artifact paths
         self._set_artifact_paths(arch_fmt)
 
         # Remove the artifacts if any present
         if any([os.path.exists(f) for f in (self.src, self.arch, self.dst)]):
             self._tear_down()
+            self._set_artifact_paths(arch_fmt)
 
         # Create source
         os.makedirs(self.src)
-        with salt.utils.files.fopen(os.path.join(self.src, 'file'), 'w') as theorem:
-            theorem.write(textwrap.dedent(salt.utils.stringutils.to_str(r'''\
+        if unicode_filename:
+            filename = 'file®'
+        else:
+            filename = 'file'
+        with salt.utils.files.fopen(os.path.join(self.src, filename), 'wb') as theorem:
+            if six.PY3 and salt.utils.platform.is_windows():
+                encoding = 'utf-8'
+            else:
+                encoding = None
+            theorem.write(salt.utils.stringutils.to_bytes(textwrap.dedent('''\
                 Compression theorem of computational complexity theory:
 
                 Given a Gödel numbering $φ$ of the computable functions and a
                 Blum complexity measure $Φ$ where a complexity class for a
                 boundary function $f$ is defined as
 
-                    $\mathrm C(f) := \{φ_i ∈ \mathbb R^{(1)} | (∀^∞ x) Φ_i(x) ≤ f(x)\}$.
+                    $\\mathrm C(f) := \\{φ_i ∈ \\mathbb R^{(1)} | (∀^∞ x) Φ_i(x) ≤ f(x)\\}$.
 
                 Then there exists a total computable function $f$ so that for
                 all $i$
 
-                    $\mathrm{Dom}(φ_i) = \mathrm{Dom}(φ_{f(i)})$
+                    $\\mathrm{Dom}(φ_i) = \\mathrm{Dom}(φ_{f(i)})$
 
                 and
 
-                    $\mathrm C(φ_i) ⊊ \mathrm{C}(φ_{f(i)})$.
-            ''')))
+                    $\\mathrm C(φ_i) ⊊ \\mathrm{C}(φ_{f(i)})$.
+            '''), encoding=encoding))
 
         # Create destination
         os.makedirs(self.dst)
@@ -100,19 +109,32 @@ class ArchiveTest(ModuleCase):
         del self.arch
         del self.src_file
 
-    def _assert_artifacts_in_ret(self, ret, file_only=False):
+    def _assert_artifacts_in_ret(self, ret, file_only=False, unix_sep=False):
         '''
         Assert that the artifact source files are printed in the source command
         output
         '''
+
+        def normdir(path):
+            normdir = os.path.normcase(os.path.abspath(path))
+            if salt.utils.platform.is_windows():
+                # Remove the drive portion of path
+                if len(normdir) >= 2 and normdir[1] == ':':
+                    normdir = normdir.split(':', 1)[1]
+            normdir = normdir.lstrip(os.path.sep)
+            # Unzipped paths might have unix line endings
+            if unix_sep:
+                normdir = normdir.replace(os.path.sep, '/')
+            return normdir
+
         # Try to find source directory and file in output lines
         dir_in_ret = None
         file_in_ret = None
         for line in ret:
-            if self.src.lstrip('/') in line \
-            and not self.src_file.lstrip('/') in line:
+            if normdir(self.src) in os.path.normcase(line) \
+            and not normdir(self.src_file) in os.path.normcase(line):
                 dir_in_ret = True
-            if self.src_file.lstrip('/') in line:
+            if normdir(self.src_file) in os.path.normcase(line):
                 file_in_ret = True
 
         # Assert number of lines, reporting of source directory and file
@@ -145,6 +167,50 @@ class ArchiveTest(ModuleCase):
 
         # Test extract archive
         ret = self.run_function('archive.tar', ['-xvf', self.arch], dest=self.dst)
+        self.assertTrue(isinstance(ret, list), six.text_type(ret))
+        self._assert_artifacts_in_ret(ret)
+
+        self._tear_down()
+
+    @skipIf(not salt.utils.path.which('tar'), 'Cannot find tar executable')
+    def test_tar_pack_unicode(self):
+        '''
+        Validate using the tar function to create archives
+        '''
+        self._set_up(arch_fmt='tar', unicode_filename=True)
+
+        # Test create archive
+        ret = self.run_function('archive.tar', ['-cvf', self.arch], sources=self.src)
+        self.assertTrue(isinstance(ret, list), six.text_type(ret))
+        self._assert_artifacts_in_ret(ret)
+
+        self._tear_down()
+
+    @skipIf(not salt.utils.path.which('tar'), 'Cannot find tar executable')
+    def test_tar_unpack_unicode(self):
+        '''
+        Validate using the tar function to extract archives
+        '''
+        self._set_up(arch_fmt='tar', unicode_filename=True)
+        self.run_function('archive.tar', ['-cvf', self.arch], sources=self.src)
+
+        # Test extract archive
+        ret = self.run_function('archive.tar', ['-xvf', self.arch], dest=self.dst)
+        self.assertTrue(isinstance(ret, list), six.text_type(ret))
+        self._assert_artifacts_in_ret(ret)
+
+        self._tear_down()
+
+    @skipIf(not salt.utils.path.which('tar'), 'Cannot find tar executable')
+    def test_tar_list_unicode(self):
+        '''
+        Validate using the tar function to extract archives
+        '''
+        self._set_up(arch_fmt='tar', unicode_filename=True)
+        self.run_function('archive.tar', ['-cvf', self.arch], sources=self.src)
+
+        # Test list archive
+        ret = self.run_function('archive.list', name=self.arch)
         self.assertTrue(isinstance(ret, list), six.text_type(ret))
         self._assert_artifacts_in_ret(ret)
 
@@ -235,7 +301,7 @@ class ArchiveTest(ModuleCase):
         # Test create archive
         ret = self.run_function('archive.unzip', [self.arch, self.dst])
         self.assertTrue(isinstance(ret, list), six.text_type(ret))
-        self._assert_artifacts_in_ret(ret)
+        self._assert_artifacts_in_ret(ret, unix_sep=False)
 
         self._tear_down()
 

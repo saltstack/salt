@@ -18,6 +18,7 @@ from salt.utils import thin
 from salt.utils import json
 import salt.utils.stringutils
 from salt.utils.stringutils import to_bytes as bts
+from salt.ext.six.moves import range
 
 try:
     import pytest
@@ -90,10 +91,11 @@ class SSHThinTestCase(TestCase):
 
         with pytest.raises(Exception) as err:
             thin.get_ext_tops(cfg)
-        assert 'Missing dependencies' in str(err)
-        assert thin.log.error.called
-        assert 'Missing dependencies' in thin.log.error.call_args[0][0]
-        assert 'jinja2, yaml, tornado, msgpack' in thin.log.error.call_args[0][0]
+        self.assertIn('Missing dependencies', str(err.value))
+        self.assertTrue(thin.log.error.called)
+        self.assertIn('Missing dependencies', thin.log.error.call_args[0][0])
+        self.assertIn('jinja2, yaml, tornado, msgpack',
+                      thin.log.error.call_args[0][0])
 
     @patch('salt.exceptions.SaltSystemExit', Exception)
     @patch('salt.utils.thin.log', MagicMock())
@@ -108,7 +110,7 @@ class SSHThinTestCase(TestCase):
                              'dependencies': []}}
         with pytest.raises(salt.exceptions.SaltSystemExit) as err:
             thin.get_ext_tops(cfg)
-        assert 'missing specific locked Python version' in str(err)
+        self.assertIn('missing specific locked Python version', str(err.value))
 
     @patch('salt.exceptions.SaltSystemExit', Exception)
     @patch('salt.utils.thin.log', MagicMock())
@@ -125,7 +127,8 @@ class SSHThinTestCase(TestCase):
 
         with pytest.raises(salt.exceptions.SaltSystemExit) as err:
             thin.get_ext_tops(cfg)
-        assert 'specific locked Python version should be a list of major/minor version' in str(err)
+        self.assertIn('specific locked Python version should be a list of '
+                      'major/minor version', str(err.value))
 
     @patch('salt.exceptions.SaltSystemExit', Exception)
     @patch('salt.utils.thin.log', MagicMock())
@@ -167,14 +170,17 @@ class SSHThinTestCase(TestCase):
 
         with pytest.raises(salt.exceptions.SaltSystemExit) as err:
             thin.get_ext_tops(cfg)
-        assert 'Missing dependencies for the alternative version in the external configuration' in str(err)
+
+        self.assertIn('Missing dependencies for the alternative version in the '
+                      'external configuration', str(err.value))
 
         messages = {}
         for cl in thin.log.warning.mock_calls:
             messages[cl[1][1]] = cl[1][0] % (cl[1][1], cl[1][2])
         for mod in ['tornado', 'yaml', 'msgpack']:
-            assert 'not a Python importable module' in messages[mod]
-        assert 'configured with not a file or does not exist' in messages['jinja2']
+            self.assertIn('not a Python importable module', messages[mod])
+        self.assertIn('configured with not a file or does not exist',
+                      messages['jinja2'])
 
     @patch('salt.exceptions.SaltSystemExit', Exception)
     @patch('salt.utils.thin.log', MagicMock())
@@ -224,7 +230,9 @@ class SSHThinTestCase(TestCase):
 
         :return:
         '''
-        assert thin.thin_path('/path/to') == '/path/to/thin/thin.tgz'
+        path = os.sep + os.path.join('path', 'to')
+        expected = os.path.join(path, 'thin', 'thin.tgz')
+        self.assertEqual(thin.thin_path(path), expected)
 
     def test_get_salt_call_script(self):
         '''
@@ -280,6 +288,7 @@ class SSHThinTestCase(TestCase):
     @patch('salt.utils.thin.ssl_match_hostname', type(str('ssl_match_hostname'), (), {'__file__': '/site-packages/ssl_mh'}))
     @patch('salt.utils.thin.markupsafe', type(str('markupsafe'), (), {'__file__': '/site-packages/markupsafe'}))
     @patch('salt.utils.thin.backports_abc', type(str('backports_abc'), (), {'__file__': '/site-packages/backports_abc'}))
+    @patch('salt.utils.thin.concurrent', type(str('concurrent'), (), {'__file__': '/site-packages/concurrent'}))
     @patch('salt.utils.thin.log', MagicMock())
     def test_get_tops(self):
         '''
@@ -289,7 +298,7 @@ class SSHThinTestCase(TestCase):
         base_tops = ['/site-packages/salt', '/site-packages/jinja2', '/site-packages/yaml',
                      '/site-packages/tornado', '/site-packages/msgpack', '/site-packages/certifi',
                      '/site-packages/sdp', '/site-packages/sdp_hlp', '/site-packages/ssl_mh',
-                     '/site-packages/markupsafe', '/site-packages/backports_abc']
+                     '/site-packages/markupsafe', '/site-packages/backports_abc', '/site-packages/concurrent']
 
         tops = thin.get_tops()
         assert len(tops) == len(base_tops)
@@ -306,23 +315,36 @@ class SSHThinTestCase(TestCase):
     @patch('salt.utils.thin.ssl_match_hostname', type(str('ssl_match_hostname'), (), {'__file__': '/site-packages/ssl_mh'}))
     @patch('salt.utils.thin.markupsafe', type(str('markupsafe'), (), {'__file__': '/site-packages/markupsafe'}))
     @patch('salt.utils.thin.backports_abc', type(str('backports_abc'), (), {'__file__': '/site-packages/backports_abc'}))
+    @patch('salt.utils.thin.concurrent', type(str('concurrent'), (), {'__file__': '/site-packages/concurrent'}))
     @patch('salt.utils.thin.log', MagicMock())
     def test_get_tops_extra_mods(self):
         '''
         Test thin.get_tops to get extra-modules alongside the top directories, based on the interpreter.
         :return:
         '''
-        base_tops = ['/site-packages/salt', '/site-packages/jinja2', '/site-packages/yaml',
-                     '/site-packages/tornado', '/site-packages/msgpack', '/site-packages/certifi',
-                     '/site-packages/sdp', '/site-packages/sdp_hlp', '/site-packages/ssl_mh',
-                     '/site-packages/markupsafe', '/site-packages/backports_abc', '/custom/foo', '/custom/bar.py']
+        base_tops = ['/site-packages/salt',
+                     '/site-packages/jinja2',
+                     '/site-packages/yaml',
+                     '/site-packages/tornado',
+                     '/site-packages/msgpack',
+                     '/site-packages/certifi',
+                     '/site-packages/sdp',
+                     '/site-packages/sdp_hlp',
+                     '/site-packages/ssl_mh',
+                     '/site-packages/concurrent',
+                     '/site-packages/markupsafe',
+                     '/site-packages/backports_abc',
+                     os.sep + os.path.join('custom', 'foo'),
+                     os.sep + os.path.join('custom', 'bar.py')]
         builtins = sys.version_info.major == 3 and 'builtins' or '__builtin__'
+        foo = {'__file__': os.sep + os.path.join('custom', 'foo', '__init__.py')}
+        bar = {'__file__': os.sep + os.path.join('custom', 'bar')}
         with patch('{}.__import__'.format(builtins),
-                   MagicMock(side_effect=[type(str('foo'), (), {'__file__': '/custom/foo/__init__.py'}),
-                                          type(str('bar'), (), {'__file__': '/custom/bar'})])):
+                   MagicMock(side_effect=[type(str('foo'), (), foo),
+                                          type(str('bar'), (), bar)])):
             tops = thin.get_tops(extra_mods='foo,bar')
-        assert len(tops) == len(base_tops)
-        assert sorted(tops) == sorted(base_tops)
+        self.assertEqual(len(tops), len(base_tops))
+        self.assertListEqual(sorted(tops), sorted(base_tops))
 
     @patch('salt.utils.thin.salt', type(str('salt'), (), {'__file__': '/site-packages/salt'}))
     @patch('salt.utils.thin.jinja2', type(str('jinja2'), (), {'__file__': '/site-packages/jinja2'}))
@@ -335,6 +357,7 @@ class SSHThinTestCase(TestCase):
     @patch('salt.utils.thin.ssl_match_hostname', type(str('ssl_match_hostname'), (), {'__file__': '/site-packages/ssl_mh'}))
     @patch('salt.utils.thin.markupsafe', type(str('markupsafe'), (), {'__file__': '/site-packages/markupsafe'}))
     @patch('salt.utils.thin.backports_abc', type(str('backports_abc'), (), {'__file__': '/site-packages/backports_abc'}))
+    @patch('salt.utils.thin.concurrent', type(str('concurrent'), (), {'__file__': '/site-packages/concurrent'}))
     @patch('salt.utils.thin.log', MagicMock())
     def test_get_tops_so_mods(self):
         '''
@@ -343,7 +366,7 @@ class SSHThinTestCase(TestCase):
         '''
         base_tops = ['/site-packages/salt', '/site-packages/jinja2', '/site-packages/yaml',
                      '/site-packages/tornado', '/site-packages/msgpack', '/site-packages/certifi',
-                     '/site-packages/sdp', '/site-packages/sdp_hlp', '/site-packages/ssl_mh',
+                     '/site-packages/sdp', '/site-packages/sdp_hlp', '/site-packages/ssl_mh', '/site-packages/concurrent',
                      '/site-packages/markupsafe', '/site-packages/backports_abc', '/custom/foo.so', '/custom/bar.so']
         builtins = sys.version_info.major == 3 and 'builtins' or '__builtin__'
         with patch('{}.__import__'.format(builtins),
@@ -397,7 +420,8 @@ class SSHThinTestCase(TestCase):
         with pytest.raises(salt.exceptions.SaltSystemExit) as err:
             thin.sys.exc_clear = lambda: None
             thin.gen_thin('')
-        assert 'The minimum required python version to run salt-ssh is "2.6"' in str(err)
+        self.assertIn('The minimum required python version to run salt-ssh is '
+                      '"2.6"', str(err.value))
 
     @patch('salt.exceptions.SaltSystemExit', Exception)
     @patch('salt.utils.thin.log', MagicMock())
@@ -472,10 +496,11 @@ class SSHThinTestCase(TestCase):
         '''
         thin.gen_thin('')
         arc_name, arc_mode = thin.tarfile.method_calls[0][1]
-        assert arc_name == 'thin/thin.tgz'
-        assert arc_mode == 'w:gz'
+        self.assertEqual(arc_name, os.path.join('thin', 'thin.tgz'))
+        self.assertEqual(arc_mode, 'w:gz')
         for idx, fname in enumerate(['version', '.thin-gen-py-version', 'salt-call', 'supported-versions']):
-            assert thin.tarfile.open().method_calls[idx + 4][1][0] == fname
+            name = thin.tarfile.open().method_calls[idx + 4][1][0]
+            self.assertEqual(name, fname)
         thin.tarfile.open().close.assert_called()
 
     @patch('salt.exceptions.SaltSystemExit', Exception)
@@ -513,17 +538,17 @@ class SSHThinTestCase(TestCase):
         :return:
         '''
         thin.gen_thin('')
-        files = [
-            'py2/root/r1', 'py2/root/r2', 'py2/root/r3', 'py2/root2/r4', 'py2/root2/r5', 'py2/root2/r6',
-            'py2/root/r1', 'py2/root/r2', 'py2/root/r3', 'py2/root2/r4', 'py2/root2/r5', 'py2/root2/r6',
-            'py3/root/r1', 'py3/root/r2', 'py3/root/r3', 'py3/root2/r4', 'py3/root2/r5', 'py3/root2/r6',
-            'pyall/root/r1', 'pyall/root/r2', 'pyall/root/r3', 'pyall/root2/r4', 'pyall/root2/r5', 'pyall/root2/r6'
-        ]
+        files = []
+        for py in ('py2', 'py2', 'py3', 'pyall'):
+            for i in range(1, 4):
+                files.append(os.path.join(py, 'root', 'r{0}'.format(i)))
+            for i in range(4, 7):
+                files.append(os.path.join(py, 'root2', 'r{0}'.format(i)))
         for cl in thin.tarfile.open().method_calls[:-6]:
             arcname = cl[2].get('arcname')
-            assert arcname in files
+            self.assertIn(arcname, files)
             files.pop(files.index(arcname))
-        assert not bool(files)
+        self.assertFalse(files)
 
     @patch('salt.exceptions.SaltSystemExit', Exception)
     @patch('salt.utils.thin.log', MagicMock())
@@ -563,18 +588,20 @@ class SSHThinTestCase(TestCase):
         :return:
         '''
         thin.gen_thin('')
-        files = ['namespace/pyall/root/r1', 'namespace/pyall/root/r2', 'namespace/pyall/root/r3',
-                 'namespace/pyall/root2/r4', 'namespace/pyall/root2/r5', 'namespace/pyall/root2/r6',
-                 'namespace/pyall/root/r1', 'namespace/pyall/root/r2', 'namespace/pyall/root/r3',
-                 'namespace/pyall/root2/r4', 'namespace/pyall/root2/r5', 'namespace/pyall/root2/r6',
-                 'namespace/py2/root/r1', 'namespace/py2/root/r2', 'namespace/py2/root/r3',
-                 'namespace/py2/root2/r4', 'namespace/py2/root2/r5', 'namespace/py2/root2/r6'
-        ]
+        files = []
+        for py in ('pyall', 'pyall', 'py2'):
+            for i in range(1, 4):
+                files.append(
+                    os.path.join('namespace', py, 'root', 'r{0}'.format(i)))
+            for i in range(4, 7):
+                files.append(
+                    os.path.join('namespace', py, 'root2', 'r{0}'.format(i)))
+
         for idx, cl in enumerate(thin.tarfile.open().method_calls[12:-6]):
             arcname = cl[2].get('arcname')
-            assert arcname in files
+            self.assertIn(arcname, files)
             files.pop(files.index(arcname))
-        assert not bool(files)
+        self.assertFalse(files)
 
     def test_get_supported_py_config_typecheck(self):
         '''
@@ -594,10 +621,10 @@ class SSHThinTestCase(TestCase):
         tops = {'3': ['/groundkeepers', '/stole'], '2': ['/the-root', '/password']}
         ext_cfg = {}
         out = salt.utils.stringutils.to_str(thin._get_supported_py_config(
-            tops=tops, extended_cfg=ext_cfg)).strip().split('\n')
-        assert len(out) == 2
+            tops=tops, extended_cfg=ext_cfg)).strip().split(os.linesep)
+        self.assertEqual(len(out), 2)
         for t_line in ['py3:3:0', 'py2:2:7']:
-            assert t_line in out
+            self.assertIn(t_line, out)
 
     def test_get_supported_py_config_ext_tops(self):
         '''
@@ -605,8 +632,12 @@ class SSHThinTestCase(TestCase):
         :return:
         '''
         tops = {}
-        ext_cfg = {'solar-interference': {'py-version': [2, 6]}, 'second-system-effect': {'py-version': [2, 7]}}
+        ext_cfg = {
+            'solar-interference': {
+                'py-version': [2, 6]},
+            'second-system-effect': {
+                'py-version': [2, 7]}}
         out = salt.utils.stringutils.to_str(thin._get_supported_py_config(
-            tops=tops, extended_cfg=ext_cfg)).strip().split('\n')
+            tops=tops, extended_cfg=ext_cfg)).strip().split(os.linesep)
         for t_line in ['second-system-effect:2:7', 'solar-interference:2:6']:
-            assert t_line in out
+            self.assertIn(t_line, out)

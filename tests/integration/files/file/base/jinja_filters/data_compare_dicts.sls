@@ -3,4 +3,4 @@
 
 {% set result = dict_one | compare_dicts(dict_two) %}
 
-{% include 'jinja_filters/common.sls' %}
+{% include 'jinja_filters/tojson.sls' %}

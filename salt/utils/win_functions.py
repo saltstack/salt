@@ -119,9 +119,15 @@ def get_sid_from_name(name):
     return win32security.ConvertSidToStringSid(sid)
 
 
-def get_current_user():
+def get_current_user(with_domain=True):
     '''
     Gets the user executing the process
+
+    Args:
+
+        with_domain (bool):
+            ``True`` will prepend the user name with the machine name or domain
+            separated by a backslash
 
     Returns:
         str: The user name
@@ -136,6 +142,8 @@ def get_current_user():
                 user_name = 'SYSTEM'
             elif get_sid_from_name(test_user) == 'S-1-5-18':
                 user_name = 'SYSTEM'
+        elif not with_domain:
+            user_name = win32api.GetUserName()
     except pywintypes.error as exc:
         raise CommandExecutionError(
             'Failed to get current user: {0}'.format(exc))
@@ -173,7 +181,7 @@ def enable_ctrl_logoff_handler():
         )
 
 
-def escape_argument(arg):
+def escape_argument(arg, escape=True):
     '''
     Escape the argument for the cmd.exe shell.
     See http://blogs.msdn.com/b/twistylittlepassagesallalike/archive/2011/04/23/everyone-quotes-arguments-the-wrong-way.aspx
@@ -184,12 +192,19 @@ def escape_argument(arg):
     Args:
         arg (str): a single command line argument to escape for the cmd.exe shell
 
+    Kwargs:
+        escape (bool): True will call the escape_for_cmd_exe() function
+                       which escapes the characters '()%!^"<>&|'. False
+                       will not call the function and only quotes the cmd
+
     Returns:
         str: an escaped string suitable to be passed as a program argument to the cmd.exe shell
     '''
     if not arg or re.search(r'(["\s])', arg):
         arg = '"' + arg.replace('"', r'\"') + '"'
 
+    if not escape:
+        return arg
     return escape_for_cmd_exe(arg)
 
 

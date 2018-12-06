@@ -218,13 +218,13 @@ minion event bus. The value is expressed in bytes.
 Default: ``True``
 
 When a minion starts up it sends a notification on the event bus with a tag
-that looks like this: `salt/minion/<minion_id>/start`. For historical reasons
+that looks like this: ``salt/minion/<minion_id>/start``. For historical reasons
 the minion also sends a similar event with an event tag like this:
-`minion_start`. This duplication can cause a lot of clutter on the event bus
-when there are many minions. Set `enable_legacy_startup_events: False` in the
-minion config to ensure only the `salt/minion/<minion_id>/start` events are
-sent. Beginning with the `Neon` Salt release this option will default to
-`False`
+``minion_start``. This duplication can cause a lot of clutter on the event bus
+when there are many minions. Set ``enable_legacy_startup_events: False`` in the
+minion config to ensure only the ``salt/minion/<minion_id>/start`` events are
+sent. Beginning with the ``Sodium`` Salt release this option will default to
+``False``.
 
 .. code-block:: yaml
 
@@ -286,13 +286,14 @@ to the next master in the list if it finds the existing one is dead.
 ------------------
 
 .. versionadded:: 2014.7.0
+.. deprecated:: Fluorine
 
 Default: ``False``
 
-If :conf_minion:`master` is a list of addresses and :conf_minion`master_type`
-is ``failover``, shuffle them before trying to connect to distribute the
-minions over all available masters. This uses Python's :func:`random.shuffle
-<python2:random.shuffle>` method.
+.. warning::
+
+    This option has been deprecated in Salt ``Fluorine``. Please use
+    :conf_minion:`random_master` instead.
 
 .. code-block:: yaml
 
@@ -303,16 +304,37 @@ minions over all available masters. This uses Python's :func:`random.shuffle
 ``random_master``
 -----------------
 
+.. versionadded:: 2014.7.0
+.. versionchanged:: Fluorine
+    The :conf_minion:`master_failback` option can be used in conjunction with
+    ``random_master`` to force the minion to fail back to the first master in the
+    list if the first master is back online. Note that :conf_minion:`master_type`
+    must be set to ``failover`` in order for the ``master_failback`` setting to
+    work.
+
 Default: ``False``
 
-If :conf_minion:`master` is a list of addresses, and :conf_minion`master_type`
-is set to ``failover`` shuffle them before trying to connect to distribute the
-minions over all available masters. This uses Python's :func:`random.shuffle
-<python2:random.shuffle>` method.
+If :conf_minion:`master` is a list of addresses, shuffle them before trying to
+connect to distribute the minions over all available masters. This uses Python's
+:func:`random.shuffle <python2:random.shuffle>` method.
+
+If multiple masters are specified in the 'master' setting as a list, the default
+behavior is to always try to connect to them in the order they are listed. If
+``random_master`` is set to True, the order will be randomized instead upon Minion
+startup. This can be helpful in distributing the load of many minions executing
+``salt-call`` requests, for example, from a cron job. If only one master is listed,
+this setting is ignored and a warning is logged.
 
 .. code-block:: yaml
 
     random_master: True
+
+.. note::
+
+    When the ``failover``, ``master_failback``, and ``random_master`` options are
+    used together, only the "secondary masters" will be shuffled. The first master
+    in the list is ignored in the :func:`random.shuffle <python2:random.shuffle>`
+    call. See :conf_minion:`master_failback` for more information.
 
 .. conf_minion:: retry_dns
 
@@ -328,6 +350,23 @@ Set to zero if the minion should shutdown and not retry.
 .. code-block:: yaml
 
     retry_dns: 30
+
+.. conf_minion:: retry_dns_count
+
+``retry_dns_count``
+-------------------
+
+.. versionadded:: 2018.3.4
+
+Default: ``None``
+
+Set the number of attempts to perform when resolving
+the master hostname if name resolution fails.
+By default the minion will retry indefinitely.
+
+.. code-block:: yaml
+
+    retry_dns_count: 3
 
 .. conf_minion:: master_port
 
@@ -346,7 +385,7 @@ option on the Salt master.
 .. conf_minion:: publish_port
 
 ``publish_port``
----------------
+----------------
 
 Default: ``4505``
 
@@ -583,7 +622,7 @@ ids.
 
 Default: ``True``
 
-Caches the minion id to a file when the minion's :minion_conf:`id` is not
+Caches the minion id to a file when the minion's :conf_minion:`id` is not
 statically defined in the minion config. This setting prevents potential
 problems when automatic minion id resolution changes, which can cause the
 minion to lose connection with the master. To turn off minion id caching,
@@ -612,6 +651,35 @@ FQDN (for instance, Solaris).
 .. code-block:: yaml
 
     append_domain: foo.org
+
+.. conf_minion:: minion_id_remove_domain
+
+``minion_id_remove_domain``
+---------------------------
+
+.. versionadded:: Neon
+
+Default: ``False``
+
+Remove a domain when the minion id is generated as a fully qualified domain
+name (either by the user provided ``id_function``, or by Salt). This is useful
+when the minions shall be named like hostnames. Can be a single domain (to
+prevent name clashes), or True, to remove all domains.
+
+Examples:
+ - minion_id_remove_domain = foo.org
+   - FQDN = king_bob.foo.org --> minion_id = king_bob
+   - FQDN = king_bob.bar.org --> minion_id = king_bob.bar.org
+ - minion_id_remove_domain = True
+   - FQDN = king_bob.foo.org --> minion_id = king_bob
+   - FQDN = king_bob.bar.org --> minion_id = king_bob
+
+
+For more information, please see :issue:`49212` and  :pull:`49378`.
+
+.. code-block:: yaml
+
+    minion_id_remove_domain: foo.org
 
 .. conf_minion:: minion_id_lowercase
 
@@ -645,7 +713,7 @@ This directory may contain sensitive data and should be protected accordingly.
 .. conf_master:: color_theme
 
 ``color_theme``
----------
+---------------
 
 Default: ``""``
 
@@ -729,6 +797,30 @@ Statically assigns grains to the minion.
       deployment: datacenter4
       cabinet: 13
       cab_u: 14-15
+
+.. conf_minion:: grains_blacklist
+
+``grains_blacklist``
+--------------------
+
+Default: ``[]``
+
+Each grains key will be compared against each of the expressions in this list.
+Any keys which match will be filtered from the grains. Exact matches, glob
+matches, and regular expressions are supported.
+
+.. note::
+    Some states and execution modules depend on grains. Filtering may cause
+    them to be unavailable or run unreliably.
+
+.. versionadded:: Neon
+
+.. code-block:: yaml
+
+    grains_blacklist:
+      - cpu_flags
+      - zmq*
+      - ipv[46]
 
 .. conf_minion:: grains_cache
 
@@ -914,6 +1006,22 @@ The directory where Unix sockets will be kept.
 
     sock_dir: /var/run/salt/minion
 
+.. conf_minion:: enable_gpu_grains
+
+``enable_gpu_grains``
+---------------------
+
+Default: ``True``
+
+Enable GPU hardware data for your master. Be aware that the minion can
+take a while to start up when lspci and/or dmidecode is used to populate the
+grains for the minion, so this can be set to ``False`` if you do not need these
+grains.
+
+.. code-block:: yaml
+
+    enable_gpu_grains: False
+
 .. conf_minion:: outputter_dirs
 
 ``outputter_dirs``
@@ -1029,7 +1137,7 @@ is appropriate if you expect occasional downtime from the master(s).
 
     master_tries: 1
 
-.. conf_minion:: acceptance_wait_time_max
+.. conf_minion:: auth_tries
 
 ``auth_tries``
 --------------
@@ -1295,10 +1403,8 @@ Default: ``zeromq``
 
 Changes the underlying transport layer. ZeroMQ is the recommended transport
 while additional transport layers are under development. Supported values are
-``zeromq``, ``raet`` (experimental), and ``tcp`` (experimental). This setting has
-a significant impact on performance and should not be changed unless you know
-what you are doing! Transports are explained in :ref:`Salt Transports
-<transports>`.
+``zeromq`` and ``tcp`` (experimental). This setting has a significant impact
+on performance and should not be changed unless you know what you are doing!
 
 .. code-block:: yaml
 
@@ -1404,6 +1510,58 @@ The password used for HTTP proxy access.
 
     proxy_password: obolus
 
+.. conf_minion:: no_proxy
+
+``no_proxy``
+------------
+
+.. versionadded:: Fluorine
+
+Default: ``[]``
+
+List of hosts to bypass HTTP proxy
+
+.. note::
+    This key does nothing unless proxy_host etc is configured, it does not
+    support any kind of wildcards.
+
+.. code-block:: yaml
+
+    no_proxy: [ '127.0.0.1', 'foo.tld' ]
+
+Docker Configuration
+====================
+
+.. conf_minion:: docker.update_mine
+
+``docker.update_mine``
+----------------------
+
+.. versionadded:: 2017.7.8,2018.3.3
+.. versionchanged:: Fluorine
+    The default value is now ``False``
+
+Default: ``True``
+
+If enabled, when containers are added, removed, stopped, started, etc., the
+:ref:`mine <salt-mine>` will be updated with the results of :py:func:`docker.ps
+verbose=True all=True host=True <salt.modules.dockermod.ps>`. This mine data is
+used by :py:func:`mine.get_docker <salt.modules.mine.get_docker>`. Set this
+option to ``False`` to keep Salt from updating the mine with this information.
+
+.. note::
+    This option can also be set in Grains or Pillar data, with Grains
+    overriding Pillar and the minion config file overriding Grains.
+
+.. note::
+    Disabling this will of course keep :py:func:`mine.get_docker
+    <salt.modules.mine.get_docker>` from returning any information for a given
+    minion.
+
+.. code-block:: yaml
+
+    docker.update_mine: False
+
 .. conf_minion:: docker.compare_container_networks
 
 ``docker.compare_container_networks``
@@ -1437,6 +1595,26 @@ Specifies which keys are examined by
         - Gateway
         - GlobalIPv6Address
         - IPv6Gateway
+
+.. conf_minion:: optimization_order
+
+``optimization_order``
+----------------------
+
+Default: ``[0, 1, 2]``
+
+In cases where Salt is distributed without .py files, this option determines
+the priority of optimization level(s) Salt's module loader should prefer.
+
+.. note::
+    This option is only supported on Python 3.5+.
+
+.. code-block:: yaml
+
+    optimization_order:
+      - 2
+      - 0
+      - 1
 
 Minion Execution Module Management
 ==================================
@@ -1647,7 +1825,7 @@ below.
 Default: ``-1``
 
 Specify a max size (in bytes) for modules on import. This feature is currently
-only supported on *nix operating systems and requires psutil.
+only supported on \*NIX operating systems and requires psutil.
 
 .. code-block:: yaml
 
@@ -2714,7 +2892,7 @@ Thread Settings
 .. conf_minion:: multiprocessing
 
 ``multiprocessing``
--------
+-------------------
 
 Default: ``True``
 
@@ -2731,7 +2909,7 @@ executed in a thread.
 .. conf_minion:: process_count_max
 
 ``process_count_max``
--------
+---------------------
 
 .. versionadded:: 2018.3.0
 
@@ -2795,7 +2973,7 @@ The level of messages to send to the console. See also :conf_log:`log_level`.
 ``log_level_logfile``
 ---------------------
 
-Default: ``info``
+Default: ``warning``
 
 The level of messages to send to the log file. See also
 :conf_log:`log_level_logfile`. When it is not set explicitly
@@ -2951,7 +3129,22 @@ at the moment a single state fails
 Include Configuration
 =====================
 
-.. conf_minion:: include
+Configuration can be loaded from multiple files. The order in which this is
+done is:
+
+1. The minion config file itself
+
+2. The files matching the glob in :conf_minion:`default_include`
+
+3. The files matching the glob in :conf_minion:`include` (if defined)
+
+Each successive step overrides any values defined in the previous steps.
+Therefore, any config options defined in one of the
+:conf_minion:`default_include` files would override the same value in the
+minion config file, and any options defined in :conf_minion:`include` would
+override both.
+
+.. conf_minion:: default_include
 
 ``default_include``
 -------------------
@@ -2969,6 +3162,7 @@ file.
     files are prefixed with an underscore. A common example of this is the
     ``_schedule.conf`` file.
 
+.. conf_minion:: include
 
 ``include``
 -----------
@@ -3098,7 +3292,7 @@ have other services that need to go with it.
 
 .. versionadded:: 2016.11.0
 
-Default: ``0``
+Default: ``1800``
 
 If set to a nonzero integer, then passing ``refresh=True`` to functions in the
 :mod:`windows pkg module <salt.modules.win_pkg>` will not refresh the windows
@@ -3275,3 +3469,31 @@ URL of the repository:
 Replace ``<commit_id>`` with the SHA1 hash of a commit ID. Specifying a commit
 ID is useful in that it allows one to revert back to a previous version in the
 event that an error is introduced in the latest revision of the repo.
+
+``ssh_merge_pillar``
+--------------------
+
+.. versionadded:: 2018.3.2
+
+Default: ``True``
+
+Merges the compiled pillar data with the pillar data already available globally.
+This is useful when using ``salt-ssh`` or ``salt-call --local`` and overriding the pillar
+data in a state file:
+
+.. code-block:: yaml
+
+    apply_showpillar:
+      module.run:
+        - name: state.apply
+        - mods:
+          - showpillar
+        - kwargs:
+              pillar:
+                  test: "foo bar"
+
+If set to ``True`` the ``showpillar`` state will have access to the
+global pillar data.
+
+If set to ``False`` only the overriding pillar data will be available
+to the ``showpillar`` state.

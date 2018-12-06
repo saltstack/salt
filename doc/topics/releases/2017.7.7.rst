@@ -1,0 +1,89 @@
+===========================
+Salt 2017.7.7 Release Notes
+===========================
+
+Version 2017.7.7 is a bugfix release for :ref:`2017.7.0 <release-2017-7-0>`.
+
+The ``2017.7.7`` release contains only a small number of fixes, which are detailed
+below.
+
+This release fixes two critical issues.
+
+The first is Issue `#48038`_, which is a critical bug that occurs in a multi-syndic
+setup where the same job is run multiple times on a minion.
+
+The second issue is `#48130`_. This bug appears in certain setups where the Master
+reports a Minion time-out, even though the job is still running on the Minion.
+
+Both of these issues have been fixed with this release.
+
+Statistics
+==========
+
+- Total Merges: **5**
+- Total Issue References: **2**
+- Total PR References: **6**
+
+- Contributors: **3** (`garethgreenaway`_, `gtmanfred`_, `rallytime`_)
+
+Changelog for v2017.7.6..v2017.7.7
+==================================
+
+*Generated at: 2018-06-17 19:26:52 UTC*
+
+* **ISSUE** `#48130`_: (`rmarchei`_) Minion timeouts with 2018.3.1 (refs: `#48157`_)
+
+* **PR** `#48157`_: (`gtmanfred`_) always listen when gathering job info
+  @ *2018-06-17 19:04:09 UTC*
+
+  * 8af4452134 Merge pull request `#48157`_ from gtmanfred/2017.7.7
+
+  * d8209e8a40 always listen when gathering job info
+
+* **PR** `#48140`_: (`rallytime`_) Update man pages for 2017.7.7
+  @ *2018-06-14 21:22:43 UTC*
+
+  * b98c52ee51 Merge pull request `#48140`_ from rallytime/man-pages-2017.7.7
+
+  * 8893bf0d4c Update man pages for 2017.7.7
+
+* **PR** `#48136`_: (`gtmanfred`_) [2017.7.7] bootstrap kitchen branch tests with 2017.7.6
+  @ *2018-06-14 21:20:16 UTC*
+
+  * baa0363336 Merge pull request `#48136`_ from gtmanfred/2017.7.7
+
+  * fce1c31146 bootstrap kitchen branch tests with 2017.7.6
+
+* **PR** `#48134`_: (`rallytime`_) Add release notes file for 2017.7.7
+  @ *2018-06-14 16:31:34 UTC*
+
+  * b0ba08f4d9 Merge pull request `#48134`_ from rallytime/release-notes-2017.7.7
+
+  * 217005b8f1 Add missing `v` for tag reference
+
+  * d53569d1e3 Add release notes file for 2017.7.7
+
+* **ISSUE** `#48038`_: (`austinpapp`_) jobs are not dedup'ing minion side (refs: `#48075`_)
+
+* **PR** `#48098`_: (`rallytime`_) Back-port `#48075`_ to 2017.7.7
+  @ *2018-06-14 12:53:42 UTC*
+
+  * **PR** `#48075`_: (`garethgreenaway`_) [2017.7] Ensure that the shared list of jids is passed (refs: `#48098`_)
+
+  * 084de927fe Merge pull request `#48098`_ from rallytime/bp-48075-2017.7.7
+
+  * e4e62e8b3a Ensure that the shared list of jids is passed when creating the Minion.  Fixes an issue when minions are pointed at multiple syndics.
+
+.. _`#48038`: https://github.com/saltstack/salt/issues/48038
+.. _`#48075`: https://github.com/saltstack/salt/pull/48075
+.. _`#48098`: https://github.com/saltstack/salt/pull/48098
+.. _`#48130`: https://github.com/saltstack/salt/issues/48130
+.. _`#48134`: https://github.com/saltstack/salt/pull/48134
+.. _`#48136`: https://github.com/saltstack/salt/pull/48136
+.. _`#48140`: https://github.com/saltstack/salt/pull/48140
+.. _`#48157`: https://github.com/saltstack/salt/pull/48157
+.. _`austinpapp`: https://github.com/austinpapp
+.. _`garethgreenaway`: https://github.com/garethgreenaway
+.. _`gtmanfred`: https://github.com/gtmanfred
+.. _`rallytime`: https://github.com/rallytime
+.. _`rmarchei`: https://github.com/rmarchei

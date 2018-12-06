@@ -2,8 +2,10 @@
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+import logging
 import os
 import shutil
+import sys
 import tempfile
 import textwrap
 import threading
@@ -13,10 +15,11 @@ import time
 from tests.support.case import ModuleCase
 from tests.support.helpers import with_tempdir
 from tests.support.unit import skipIf
-from tests.support.paths import FILES, TMP, TMP_PILLAR_TREE
+from tests.support.paths import BASE_FILES, TMP, TMP_PILLAR_TREE
 from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import Salt libs
+import salt.utils.atomicfile
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
@@ -26,7 +29,6 @@ from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 # Import 3rd-party libs
 from salt.ext import six
 
-import logging
 log = logging.getLogger(__name__)
 
 
@@ -68,12 +70,22 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
 
     maxDiff = None
 
-    def setUp(self):
-        super(StateModuleTest, self).setUp()
-        destpath = os.path.join(FILES, 'file', 'base', 'testappend', 'firstif')
-        reline(destpath, destpath, force=True)
-        destpath = os.path.join(FILES, 'file', 'base', 'testappend', 'secondif')
-        reline(destpath, destpath, force=True)
+    @classmethod
+    def setUpClass(cls):
+        def _reline(path, ending=DEFAULT_ENDING):
+            '''
+            Normalize the line endings of a file.
+            '''
+            with salt.utils.files.fopen(path, 'rb') as fhr:
+                lines = fhr.read().splitlines()
+            with salt.utils.atomicfile.atomic_open(path, 'wb') as fhw:
+                for line in lines:
+                    fhw.write(line + ending)
+
+        destpath = os.path.join(BASE_FILES, 'testappend', 'firstif')
+        _reline(destpath)
+        destpath = os.path.join(BASE_FILES, 'testappend', 'secondif')
+        _reline(destpath)
 
     def test_show_highstate(self):
         '''
@@ -311,6 +323,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
 
         '''
         testfile = os.path.join(TMP, 'issue-1876')
+
         sls = self.run_function('state.sls', mods='issue-1876')
         self.assertIn(
             'ID \'{0}\' in SLS \'issue-1876\' contains multiple state '
@@ -1004,6 +1017,81 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertReturnNonEmptySaltType(ret)
         self.assertEqual(expected_result, result)
 
+    def test_requisites_onfail_all(self):
+        '''
+        Call sls file containing several onfail-all
+
+        Ensure that some of them are failing and that the order is right.
+        '''
+        expected_result = {
+            'cmd_|-a_|-exit 0_|-run': {
+                '__run_num__': 0,
+                'changes': True,
+                'comment': 'Command "exit 0" run',
+                'result': True
+            },
+            'cmd_|-b_|-exit 0_|-run': {
+                '__run_num__': 1,
+                'changes': True,
+                'comment': 'Command "exit 0" run',
+                'result': True
+            },
+            'cmd_|-c_|-exit 0_|-run': {
+                '__run_num__': 2,
+                'changes': True,
+                'comment': 'Command "exit 0" run',
+                'result': True
+            },
+            'cmd_|-d_|-exit 1_|-run': {
+                '__run_num__': 3,
+                'changes': True,
+                'comment': 'Command "exit 1" run',
+                'result': False
+            },
+            'cmd_|-e_|-exit 1_|-run': {
+                '__run_num__': 4,
+                'changes': True,
+                'comment': 'Command "exit 1" run',
+                'result': False
+            },
+            'cmd_|-f_|-exit 1_|-run': {
+                '__run_num__': 5,
+                'changes': True,
+                'comment': 'Command "exit 1" run',
+                'result': False
+            },
+            'cmd_|-reqs also met_|-echo itonfailed_|-run': {
+                '__run_num__': 9,
+                'changes': True,
+                'comment': 'Command "echo itonfailed" run',
+                'result': True
+            },
+            'cmd_|-reqs also not met_|-echo italsodidnonfail_|-run': {
+                '__run_num__': 7,
+                'changes': False,
+                'comment':
+                'State was not run because onfail req did not change',
+                'result': True
+            },
+            'cmd_|-reqs met_|-echo itonfailed_|-run': {
+                '__run_num__': 8,
+                'changes': True,
+                'comment': 'Command "echo itonfailed" run',
+                'result': True
+            },
+            'cmd_|-reqs not met_|-echo itdidntonfail_|-run': {
+                '__run_num__': 6,
+                'changes': False,
+                'comment':
+                'State was not run because onfail req did not change',
+                'result': True
+            }
+        }
+        ret = self.run_function('state.sls', mods='requisites.onfail_all')
+        result = self.normalize_ret(ret)
+        self.assertReturnNonEmptySaltType(ret)
+        self.assertEqual(expected_result, result)
+
     def test_requisites_full_sls(self):
         '''
         Teste the sls special command in requisites
@@ -1549,6 +1637,12 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         stdout = state_run['cmd_|-d_|-echo d_|-run']['changes']['stdout']
         self.assertEqual(stdout, 'd')
 
+        comment = state_run['cmd_|-e_|-echo e_|-run']['comment']
+        self.assertEqual(comment, 'State was not run because onfail req did not change')
+
+        stdout = state_run['cmd_|-f_|-echo f_|-run']['changes']['stdout']
+        self.assertEqual(stdout, 'f')
+
     def test_multiple_onfail_requisite_with_required_no_run(self):
         '''
         test to ensure multiple states are not run
@@ -1827,18 +1921,50 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         test state.sls with saltenv using a nonbase environment
         with a salt source
         '''
-        file_name = os.path.join(TMP, 'nonbase_env')
-        state_run = self.run_function(
+        filename = os.path.join(TMP, 'nonbase_env')
+        try:
+            ret = self.run_function(
+                'state.sls',
+                mods='non-base-env',
+                saltenv='prod'
+            )
+            ret = ret[next(iter(ret))]
+            assert ret['result']
+            assert ret['comment'] == 'File {0} updated'.format(filename)
+            assert os.path.isfile(filename)
+        finally:
+            try:
+                os.remove(filename)
+            except OSError:
+                pass
+
+    @skipIf(sys.platform.startswith('win'), 'Skipped until parallel states can be fixed on Windows')
+    def test_parallel_state_with_long_tag(self):
+        '''
+        This tests the case where the state being executed has a long ID dec or
+        name and states are being run in parallel. The filenames used for the
+        parallel state cache were previously based on the tag for each chunk,
+        and longer ID decs or name params can cause the cache file to be longer
+        than the operating system's max file name length. To counter this we
+        instead generate a SHA1 hash of the chunk's tag to use as the cache
+        filename. This test will ensure that long tags don't cause caching
+        failures.
+
+        See https://github.com/saltstack/salt/issues/49738 for more info.
+        '''
+        short_command = 'helloworld'
+        long_command = short_command * 25
+
+        ret = self.run_function(
             'state.sls',
-            mods='non-base-env',
-            saltenv='prod'
+            mods='issue-49738',
+            pillar={'short_command': short_command,
+                    'long_command': long_command}
         )
-        state_id = 'file_|-test_file_|-{0}_|-managed'.format(file_name)
-        self.assertEqual(state_run[state_id]['comment'],
-                         'File {0} updated'.format(file_name))
-        self.assertTrue(
-            state_run['file_|-test_file_|-{0}_|-managed'.format(file_name)]['result'])
-        self.assertTrue(os.path.isfile(file_name))
+        comments = sorted([x['comment'] for x in six.itervalues(ret)])
+        expected = sorted(['Command "{0}" run'.format(x)
+                           for x in (short_command, long_command)])
+        assert comments == expected, '{0} != {1}'.format(comments, expected)
 
     def _add_runtime_pillar(self, pillar):
         '''
@@ -1871,7 +1997,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
 
         for key, val in ret.items():
             self.assertEqual(val['comment'], comment)
-            self.assertEqual(val['changes'], {})
+            self.assertEqual(val['changes'], {'newfile': testfile})
 
     def test_state_sls_id_test_state_test_post_run(self):
         '''
@@ -1904,7 +2030,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertEqual(
                 val['comment'],
                 'The file {0} is set to be changed'.format(file_name))
-            self.assertEqual(val['changes'], {})
+            self.assertEqual(val['changes'], {'newfile': file_name})
 
     def test_state_sls_id_test_true_post_run(self):
         '''
@@ -1954,29 +2080,28 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         # command in the state. If the comment reads "unless condition is true", or similar,
         # then the unless state run bailed out after the first unless command succeeded,
         # which is the bug we're regression testing for.
-        _expected = {'file_|-unless_false_onlyif_false_|-{0}/test.txt_|-managed'.format(TMP):
+        _expected = {'file_|-unless_false_onlyif_false_|-{0}{1}test.txt_|-managed'.format(TMP, os.path.sep):
                      {'comment': 'onlyif condition is false\nunless condition is false',
-                      'name': '{0}/test.txt'.format(TMP),
+                      'name': '{0}{1}test.txt'.format(TMP, os.path.sep),
                       'skip_watch': True,
                       'changes': {},
                       'result': True},
-                     'file_|-unless_false_onlyif_true_|-{0}/test.txt_|-managed'.format(TMP):
+                     'file_|-unless_false_onlyif_true_|-{0}{1}test.txt_|-managed'.format(TMP, os.path.sep):
                      {'comment': 'Empty file',
-                      'pchanges': {},
-                      'name': '{0}/test.txt'.format(TMP),
+                      'name': '{0}{1}test.txt'.format(TMP, os.path.sep),
                       'start_time': '18:10:20.341753',
                       'result': True,
-                      'changes': {'new': 'file {0}/test.txt created'.format(TMP)}},
-                     'file_|-unless_true_onlyif_false_|-{0}/test.txt_|-managed'.format(TMP):
+                      'changes': {'new': 'file {0}{1}test.txt created'.format(TMP, os.path.sep)}},
+                     'file_|-unless_true_onlyif_false_|-{0}{1}test.txt_|-managed'.format(TMP, os.path.sep):
                      {'comment': 'onlyif condition is false\nunless condition is true',
-                      'name': '{0}/test.txt'.format(TMP),
+                      'name': '{0}{1}test.txt'.format(TMP, os.path.sep),
                       'start_time': '18:10:22.936446',
                       'skip_watch': True,
                       'changes': {},
                       'result': True},
-                     'file_|-unless_true_onlyif_true_|-{0}/test.txt_|-managed'.format(TMP):
+                     'file_|-unless_true_onlyif_true_|-{0}{1}test.txt_|-managed'.format(TMP, os.path.sep):
                      {'comment': 'onlyif condition is true\nunless condition is true',
-                      'name': '{0}/test.txt'.format(TMP),
+                      'name': '{0}{1}test.txt'.format(TMP, os.path.sep),
                       'skip_watch': True,
                       'changes': {},
                       'result': True}}
@@ -1992,6 +2117,23 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
 
         _expected = "cmd_|-echo1_|-echo 'This is Æ test!'_|-run"
         self.assertIn(_expected, ret)
+
+    def test_state_sls_unicode_characters_cmd_output(self):
+        '''
+        test the output from running and echo command with non-ascii
+        characters.
+        '''
+        ret = self.run_function('state.sls', ['issue-46672-a'])
+        key = list(ret.keys())[0]
+        log.debug('== ret %s ==', type(ret))
+        _expected = 'This is Æ test!'
+        if salt.utils.platform.is_windows():
+            # Windows cmd.exe will mangle the output using cmd's codepage.
+            if six.PY2:
+                _expected = "'This is A+ test!'"
+            else:
+                _expected = "'This is ’ test!'"
+        self.assertEqual(_expected, ret[key]['changes']['stdout'])
 
     def tearDown(self):
         nonbase_file = os.path.join(TMP, 'nonbase_env')
@@ -2013,3 +2155,19 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         state_file = os.path.join(TMP, 'test.txt')
         if os.path.isfile(state_file):
             os.remove(state_file)
+
+    def test_state_sls_integer_name(self):
+        '''
+        This tests the case where the state file is named
+        only with integers
+        '''
+        state_run = self.run_function(
+            'state.sls',
+            mods='12345'
+        )
+
+        state_id = 'test_|-always-passes_|-always-passes_|-succeed_without_changes'
+        self.assertIn(state_id, state_run)
+        self.assertEqual(state_run[state_id]['comment'],
+                         'Success!')
+        self.assertTrue(state_run[state_id]['result'])

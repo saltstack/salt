@@ -85,6 +85,10 @@ def usage(args=None):
     '''
     Return usage information for volumes mounted on this minion
 
+    .. versionchanged:: Fluorine
+
+        Default for SunOS changed to 1 kilobyte blocks
+
     CLI Example:
 
     .. code-block:: bash
@@ -103,6 +107,8 @@ def usage(args=None):
         cmd = 'df -P'
     elif __grains__['kernel'] == 'OpenBSD' or __grains__['kernel'] == 'AIX':
         cmd = 'df -kP'
+    elif __grains__['kernel'] == 'SunOS':
+        cmd = 'df -k'
     else:
         cmd = 'df'
     if flags:
@@ -262,10 +268,16 @@ def percent(args=None):
 
 
 @salt.utils.decorators.path.which('blkid')
-def blkid(device=None):
+def blkid(device=None, token=None):
     '''
     Return block device attributes: UUID, LABEL, etc. This function only works
     on systems where blkid is available.
+
+    device
+        Device name from the system
+
+    token
+        Any valid token used for the search
 
     CLI Example:
 
@@ -273,13 +285,17 @@ def blkid(device=None):
 
         salt '*' disk.blkid
         salt '*' disk.blkid /dev/sda
+        salt '*' disk.blkid token='UUID=6a38ee5-7235-44e7-8b22-816a403bad5d'
+        salt '*' disk.blkid token='TYPE=ext4'
     '''
-    args = ""
+    cmd = ['blkid']
     if device:
-        args = " " + device
+        cmd.append(device)
+    elif token:
+        cmd.extend(['-t', token])
 
     ret = {}
-    blkid_result = __salt__['cmd.run_all']('blkid' + args, python_shell=False)
+    blkid_result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if blkid_result['retcode'] > 0:
         return ret
@@ -594,7 +610,7 @@ def hdparms(disks, args=None):
                     try:
                         val = int(val)
                         rvals.append(val)
-                    except:  # pylint: disable=bare-except
+                    except Exception:
                         if '=' in val:
                             deep_key, val = val.split('=', 1)
                             deep_key = deep_key.strip()
@@ -661,7 +677,7 @@ def hpa(disks, size=None):
     for disk, data in hpa_data.items():
         try:
             size = data['total'] - int(size)
-        except:  # pylint: disable=bare-except
+        except Exception:
             if '%' in size:
                 size = int(size.strip('%'))
                 size = (100 - size) * data['total']
@@ -726,17 +742,17 @@ def smart_attributes(dev, attributes=None, values=None):
         data = dict(zip(fields, line[1:]))
         try:
             del data['_']
-        except:  # pylint: disable=bare-except
+        except Exception:
             pass
 
         for field in data:
             val = data[field]
             try:
                 val = int(val)
-            except:  # pylint: disable=bare-except
+            except Exception:
                 try:
                     val = [int(value) for value in val.split(' ')]
-                except:  # pylint: disable=bare-except
+                except Exception:
                     pass
             data[field] = val
 

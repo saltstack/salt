@@ -60,7 +60,12 @@ import hashlib
 import logging
 import datetime
 import sys
-from collections import MutableMapping
+
+try:
+    from collections.abc import MutableMapping
+except ImportError:
+    from collections import MutableMapping
+
 from multiprocessing.util import Finalize
 from salt.ext.six.moves import range
 
@@ -72,7 +77,7 @@ import tornado.iostream
 # Import salt libs
 import salt.config
 import salt.payload
-import salt.utils.async
+import salt.utils.asynchronous
 import salt.utils.cache
 import salt.utils.dicttrim
 import salt.utils.files
@@ -123,27 +128,20 @@ def get_event(
     '''
     sock_dir = sock_dir or opts['sock_dir']
     # TODO: AIO core is separate from transport
-    if transport in ('zeromq', 'tcp'):
-        if node == 'master':
-            return MasterEvent(sock_dir,
-                               opts,
-                               listen=listen,
-                               io_loop=io_loop,
-                               keep_loop=keep_loop,
-                               raise_errors=raise_errors)
-        return SaltEvent(node,
-                         sock_dir,
-                         opts,
-                         listen=listen,
-                         io_loop=io_loop,
-                         keep_loop=keep_loop,
-                         raise_errors=raise_errors)
-    elif transport == 'raet':
-        import salt.utils.raetevent
-        return salt.utils.raetevent.RAETEvent(node,
-                                              sock_dir=sock_dir,
-                                              listen=listen,
-                                              opts=opts)
+    if node == 'master':
+        return MasterEvent(sock_dir,
+                           opts,
+                           listen=listen,
+                           io_loop=io_loop,
+                           keep_loop=keep_loop,
+                           raise_errors=raise_errors)
+    return SaltEvent(node,
+                     sock_dir,
+                     opts,
+                     listen=listen,
+                     io_loop=io_loop,
+                     keep_loop=keep_loop,
+                     raise_errors=raise_errors)
 
 
 def get_master_event(opts, sock_dir, listen=True, io_loop=None, raise_errors=False):
@@ -153,11 +151,6 @@ def get_master_event(opts, sock_dir, listen=True, io_loop=None, raise_errors=Fal
     # TODO: AIO core is separate from transport
     if opts['transport'] in ('zeromq', 'tcp', 'detect'):
         return MasterEvent(sock_dir, opts, listen=listen, io_loop=io_loop, raise_errors=raise_errors)
-    elif opts['transport'] == 'raet':
-        import salt.utils.raetevent
-        return salt.utils.raetevent.MasterEvent(
-            opts=opts, sock_dir=sock_dir, listen=listen
-        )
 
 
 def fire_args(opts, jid, tag_data, prefix=''):
@@ -207,6 +200,32 @@ def tagify(suffix='', prefix='', base=SALT):
     return TAGPARTER.join([part for part in parts if part])
 
 
+def update_stats(stats, start_time, data):
+    '''
+    Calculate the master stats and return the updated stat info
+    '''
+    end_time = time.time()
+    cmd = data['cmd']
+    # the jid is used as the create time
+    try:
+        jid = data['jid']
+    except KeyError:
+        try:
+            jid = data['data']['__pub_jid']
+        except KeyError:
+            log.info('jid not found in data, stats not updated')
+            return stats
+    create_time = int(time.mktime(time.strptime(jid, '%Y%m%d%H%M%S%f')))
+    latency = start_time - create_time
+    duration = end_time - start_time
+
+    stats[cmd]['runs'] += 1
+    stats[cmd]['latency'] = (stats[cmd]['latency'] * (stats[cmd]['runs'] - 1) + latency) / stats[cmd]['runs']
+    stats[cmd]['mean'] = (stats[cmd]['mean'] * (stats[cmd]['runs'] - 1) + duration) / stats[cmd]['runs']
+
+    return stats
+
+
 class SaltEvent(object):
     '''
     Warning! Use the get_event function or the code will not be
@@ -225,7 +244,7 @@ class SaltEvent(object):
         :param Bool keep_loop: Pass a boolean to determine if we want to keep
                                the io loop or destroy it when the event handle
                                is destroyed. This is useful when using event
-                               loops from within third party async code
+                               loops from within third party asynchronous code
         '''
         self.serial = salt.payload.Serial({'serial': 'msgpack'})
         self.keep_loop = keep_loop
@@ -361,7 +380,7 @@ class SaltEvent(object):
             return True
 
         if self._run_io_loop_sync:
-            with salt.utils.async.current_ioloop(self.io_loop):
+            with salt.utils.asynchronous.current_ioloop(self.io_loop):
                 if self.subscriber is None:
                     self.subscriber = salt.transport.ipc.IPCMessageSubscriber(
                     self.puburi,
@@ -380,7 +399,7 @@ class SaltEvent(object):
                 io_loop=self.io_loop
             )
 
-            # For the async case, the connect will be defered to when
+            # For the asynchronous case, the connect will be defered to when
             # set_event_handler() is invoked.
             self.cpub = True
         return self.cpub
@@ -406,7 +425,7 @@ class SaltEvent(object):
             return True
 
         if self._run_io_loop_sync:
-            with salt.utils.async.current_ioloop(self.io_loop):
+            with salt.utils.asynchronous.current_ioloop(self.io_loop):
                 if self.pusher is None:
                     self.pusher = salt.transport.ipc.IPCMessageClient(
                         self.pulluri,
@@ -424,7 +443,7 @@ class SaltEvent(object):
                     self.pulluri,
                     io_loop=self.io_loop
                 )
-            # For the async case, the connect will be deferred to when
+            # For the asynchronous case, the connect will be deferred to when
             # fire_event() is invoked.
             self.cpush = True
         return self.cpush
@@ -629,7 +648,7 @@ class SaltEvent(object):
 
         ret = self._check_pending(tag, match_func)
         if ret is None:
-            with salt.utils.async.current_ioloop(self.io_loop):
+            with salt.utils.asynchronous.current_ioloop(self.io_loop):
                 if auto_reconnect:
                     raise_errors = self.raise_errors
                     self.raise_errors = True
@@ -740,7 +759,7 @@ class SaltEvent(object):
             serialized_data])
         msg = salt.utils.stringutils.to_bytes(event, 'utf-8')
         if self._run_io_loop_sync:
-            with salt.utils.async.current_ioloop(self.io_loop):
+            with salt.utils.asynchronous.current_ioloop(self.io_loop):
                 try:
                     self.io_loop.run_sync(lambda: self.pusher.send(msg))
                 except Exception as ex:
@@ -873,7 +892,7 @@ class SaltEvent(object):
         # shutdown-- where globals start going missing
         try:
             self.destroy()
-        except:  # pylint: disable=W0702
+        except Exception:
             pass
 
 
@@ -931,10 +950,10 @@ class MinionEvent(SaltEvent):
     RAET compatible
     Create a master event management object
     '''
-    def __init__(self, opts, listen=True, io_loop=None, raise_errors=False):
+    def __init__(self, opts, listen=True, io_loop=None, keep_loop=False, raise_errors=False):
         super(MinionEvent, self).__init__(
             'minion', sock_dir=opts.get('sock_dir'),
-            opts=opts, listen=listen, io_loop=io_loop,
+            opts=opts, listen=listen, io_loop=io_loop, keep_loop=keep_loop,
             raise_errors=raise_errors)
 
 
@@ -1087,7 +1106,7 @@ class EventPublisher(salt.utils.process.SignalHandlingMultiprocessingProcess):
         '''
         salt.utils.process.appendproctitle(self.__class__.__name__)
         self.io_loop = tornado.ioloop.IOLoop()
-        with salt.utils.async.current_ioloop(self.io_loop):
+        with salt.utils.asynchronous.current_ioloop(self.io_loop):
             if self.opts['ipc_mode'] == 'tcp':
                 epub_uri = int(self.opts['tcp_master_pub_port'])
                 epull_uri = int(self.opts['tcp_master_pull_port'])

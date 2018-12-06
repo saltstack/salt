@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Erik Johnson <erik@saltstack.com>`
+    :codeauthor: Erik Johnson <erik@saltstack.com>
 '''
 
 # Import Python libs
@@ -8,6 +8,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
 import socket
+import textwrap
 
 # Import Salt Testing Libs
 try:
@@ -30,14 +31,12 @@ import salt.utils.dns
 import salt.utils.files
 import salt.utils.network
 import salt.utils.platform
+import salt.utils.path
 import salt.grains.core as core
 
 # Import 3rd-party libs
 from salt.ext import six
-if six.PY3:
-    import ipaddress
-else:
-    import salt.ext.ipaddress as ipaddress
+from salt._compat import ipaddress
 
 log = logging.getLogger(__name__)
 
@@ -52,6 +51,7 @@ IP6_ADD1 = '2001:4860:4860::8844'
 IP6_ADD2 = '2001:4860:4860::8888'
 IP6_ADD_SCOPE = 'fe80::6238:e0ff:fe06:3f6b%enp2s0'
 OS_RELEASE_DIR = os.path.join(os.path.dirname(__file__), "os-releases")
+SOLARIS_DIR = os.path.join(os.path.dirname(__file__), 'solaris')
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -67,10 +67,11 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
     def test_parse_etc_os_release(self, path_isfile_mock):
         path_isfile_mock.side_effect = lambda x: x == "/usr/lib/os-release"
         with salt.utils.files.fopen(os.path.join(OS_RELEASE_DIR, "ubuntu-17.10")) as os_release_file:
-            os_release_content = os_release_file.readlines()
-        with patch("salt.utils.files.fopen", mock_open()) as os_release_file:
-            os_release_file.return_value.__iter__.return_value = os_release_content
-            os_release = core._parse_os_release(["/etc/os-release", "/usr/lib/os-release"])
+            os_release_content = os_release_file.read()
+        with patch("salt.utils.files.fopen", mock_open(read_data=os_release_content)):
+            os_release = core._parse_os_release(
+                '/etc/os-release',
+                '/usr/lib/os-release')
         self.assertEqual(os_release, {
             "NAME": "Ubuntu",
             "VERSION": "17.10 (Artful Aardvark)",
@@ -86,10 +87,53 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
             "UBUNTU_CODENAME": "artful",
         })
 
-    @patch("os.path.isfile")
-    def test_missing_os_release(self, path_isfile_mock):
-        path_isfile_mock.return_value = False
-        os_release = core._parse_os_release(["/etc/os-release", "/usr/lib/os-release"])
+    def test_parse_cpe_name_wfn(self):
+        '''
+        Parse correct CPE_NAME data WFN formatted
+        :return:
+        '''
+        for cpe, cpe_ret in [('cpe:/o:opensuse:leap:15.0',
+                              {'phase': None, 'version': '15.0', 'product': 'leap',
+                               'vendor': 'opensuse', 'part': 'operating system'}),
+                             ('cpe:/o:vendor:product:42:beta',
+                              {'phase': 'beta', 'version': '42', 'product': 'product',
+                               'vendor': 'vendor', 'part': 'operating system'})]:
+            ret = core._parse_cpe_name(cpe)
+            for key in cpe_ret:
+                assert key in ret
+                assert cpe_ret[key] == ret[key]
+
+    def test_parse_cpe_name_v23(self):
+        '''
+        Parse correct CPE_NAME data v2.3 formatted
+        :return:
+        '''
+        for cpe, cpe_ret in [('cpe:2.3:o:microsoft:windows_xp:5.1.601:beta:*:*:*:*:*:*',
+                              {'phase': 'beta', 'version': '5.1.601', 'product': 'windows_xp',
+                               'vendor': 'microsoft', 'part': 'operating system'}),
+                             ('cpe:2.3:h:corellian:millenium_falcon:1.0:*:*:*:*:*:*:*',
+                              {'phase': None, 'version': '1.0', 'product': 'millenium_falcon',
+                               'vendor': 'corellian', 'part': 'hardware'}),
+                             ('cpe:2.3:*:dark_empire:light_saber:3.0:beta:*:*:*:*:*:*',
+                              {'phase': 'beta', 'version': '3.0', 'product': 'light_saber',
+                               'vendor': 'dark_empire', 'part': None})]:
+            ret = core._parse_cpe_name(cpe)
+            for key in cpe_ret:
+                assert key in ret
+                assert cpe_ret[key] == ret[key]
+
+    def test_parse_cpe_name_broken(self):
+        '''
+        Parse broken CPE_NAME data
+        :return:
+        '''
+        for cpe in ['cpe:broken', 'cpe:broken:in:all:ways:*:*:*:*',
+                    'cpe:x:still:broken:123', 'who:/knows:what:is:here']:
+            assert core._parse_cpe_name(cpe) == {}
+
+    def test_missing_os_release(self):
+        with patch('salt.utils.files.fopen', mock_open(read_data={})):
+            os_release = core._parse_os_release('/etc/os-release', '/usr/lib/os-release')
         self.assertEqual(os_release, {})
 
     @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
@@ -102,7 +146,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         }
         _path_isfile_map = {}
         _cmd_run_map = {
-            'dpkg --print-architecture': 'amd64'
+            'dpkg --print-architecture': 'amd64',
         }
 
         path_exists_mock = MagicMock(side_effect=lambda x: _path_exists_map[x])
@@ -125,60 +169,35 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
                 raise ImportError('No module named lsb_release')
             return orig_import(name, *args)
 
-        # Skip the first if statement
+        # - Skip the first if statement
+        # - Skip the selinux/systemd stuff (not pertinent)
+        # - Skip the init grain compilation (not pertinent)
+        # - Ensure that lsb_release fails to import
+        # - Skip all the /etc/*-release stuff (not pertinent)
+        # - Mock linux_distribution to give us the OS name that we want
+        # - Make a bunch of functions return empty dicts, we don't care about
+        #   these grains for the purposes of this test.
+        # - Mock the osarch
+        distro_mock = MagicMock(return_value=('Debian GNU/Linux', '8.3', ''))
         with patch.object(salt.utils.platform, 'is_proxy',
-                          MagicMock(return_value=False)):
-            # Skip the selinux/systemd stuff (not pertinent)
-            with patch.object(core, '_linux_bin_exists',
-                              MagicMock(return_value=False)):
-                # Skip the init grain compilation (not pertinent)
-                with patch.object(os.path, 'exists', path_exists_mock):
-                    # Ensure that lsb_release fails to import
-                    with patch('{0}.__import__'.format(built_in),
-                               side_effect=_import_mock):
-                        # Skip all the /etc/*-release stuff (not pertinent)
-                        with patch.object(os.path, 'isfile', path_isfile_mock):
-                            # Mock linux_distribution to give us the OS name
-                            # that we want.
-                            distro_mock = MagicMock(
-                                return_value=('Debian GNU/Linux', '8.3', '')
-                            )
-                            with patch.object(
-                                    core,
-                                    'linux_distribution',
-                                    distro_mock):
-                                # Make a bunch of functions return empty dicts,
-                                # we don't care about these grains for the
-                                # purposes of this test.
-                                with patch.object(
-                                        core,
-                                        '_linux_cpudata',
-                                        empty_mock):
-                                    with patch.object(
-                                            core,
-                                            '_linux_gpu_data',
-                                            empty_mock):
-                                        with patch.object(
-                                                core,
-                                                '_memdata',
-                                                empty_mock):
-                                            with patch.object(
-                                                    core,
-                                                    '_hw_data',
-                                                    empty_mock):
-                                                with patch.object(
-                                                        core,
-                                                        '_virtual',
-                                                        empty_mock):
-                                                    with patch.object(
-                                                            core,
-                                                            '_ps',
-                                                            empty_mock):
-                                                        # Mock the osarch
-                                                        with patch.dict(
-                                                                core.__salt__,
-                                                                {'cmd.run': cmd_run_mock}):
-                                                            os_grains = core.os_data()
+                          MagicMock(return_value=False)), \
+                patch.object(core, '_linux_bin_exists',
+                             MagicMock(return_value=False)), \
+                patch.object(os.path, 'exists', path_exists_mock), \
+                patch('{0}.__import__'.format(built_in), side_effect=_import_mock), \
+                patch.object(os.path, 'isfile', path_isfile_mock), \
+                patch.object(core, '_parse_lsb_release', empty_mock), \
+                patch.object(core, '_parse_os_release', empty_mock), \
+                patch.object(core, '_parse_lsb_release', empty_mock), \
+                patch.object(core, 'linux_distribution', distro_mock), \
+                patch.object(core, '_linux_cpudata', empty_mock), \
+                patch.object(core, '_linux_gpu_data', empty_mock), \
+                patch.object(core, '_memdata', empty_mock), \
+                patch.object(core, '_hw_data', empty_mock), \
+                patch.object(core, '_virtual', empty_mock), \
+                patch.object(core, '_ps', empty_mock), \
+                patch.dict(core.__salt__, {'cmd.run': cmd_run_mock}):
+            os_grains = core.os_data()
 
         self.assertEqual(os_grains.get('os_family'), 'Debian')
 
@@ -216,33 +235,34 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
                 raise ImportError('No module named lsb_release')
             return orig_import(name, *args)
 
-        # Skip the first if statement
+        distro_mock = MagicMock(
+            return_value=('SUSE Linux Enterprise Server ', '12', 'x86_64')
+        )
+
+        # - Skip the first if statement
+        # - Skip the selinux/systemd stuff (not pertinent)
+        # - Skip the init grain compilation (not pertinent)
+        # - Ensure that lsb_release fails to import
+        # - Skip all the /etc/*-release stuff (not pertinent)
+        # - Mock linux_distribution to give us the OS name that we want
+        # - Mock the osarch
         with patch.object(salt.utils.platform, 'is_proxy',
-                          MagicMock(return_value=False)):
-            # Skip the selinux/systemd stuff (not pertinent)
-            with patch.object(core, '_linux_bin_exists',
-                              MagicMock(return_value=False)):
-                # Skip the init grain compilation (not pertinent)
-                with patch.object(os.path, 'exists', path_exists_mock):
-                    # Ensure that lsb_release fails to import
-                    with patch('{0}.__import__'.format(built_in),
-                               side_effect=_import_mock):
-                        # Skip all the /etc/*-release stuff (not pertinent)
-                        with patch.object(os.path, 'isfile', MagicMock(return_value=False)):
-                            with patch.object(core, '_parse_os_release', os_release_mock):
-                                # Mock linux_distribution to give us the OS
-                                # name that we want.
-                                distro_mock = MagicMock(
-                                    return_value=('SUSE Linux Enterprise Server ', '12', 'x86_64')
-                                )
-                                with patch.object(core, 'linux_distribution', distro_mock):
-                                    with patch.object(core, '_linux_gpu_data', empty_mock):
-                                        with patch.object(core, '_hw_data', empty_mock):
-                                            with patch.object(core, '_linux_cpudata', empty_mock):
-                                                with patch.object(core, '_virtual', empty_mock):
-                                                    # Mock the osarch
-                                                    with patch.dict(core.__salt__, {'cmd.run': osarch_mock}):
-                                                        os_grains = core.os_data()
+                          MagicMock(return_value=False)), \
+                patch.object(core, '_linux_bin_exists',
+                             MagicMock(return_value=False)), \
+                patch.object(os.path, 'exists', path_exists_mock), \
+                patch('{0}.__import__'.format(built_in),
+                      side_effect=_import_mock), \
+                patch.object(os.path, 'isfile', MagicMock(return_value=False)), \
+                patch.object(core, '_parse_os_release', os_release_mock), \
+                patch.object(core, '_parse_lsb_release', empty_mock), \
+                patch.object(core, 'linux_distribution', distro_mock), \
+                patch.object(core, '_linux_gpu_data', empty_mock), \
+                patch.object(core, '_hw_data', empty_mock), \
+                patch.object(core, '_linux_cpudata', empty_mock), \
+                patch.object(core, '_virtual', empty_mock), \
+                patch.dict(core.__salt__, {'cmd.run': osarch_mock}):
+            os_grains = core.os_data()
 
         self.assertEqual(os_grains.get('os_family'), 'Suse')
         self.assertEqual(os_grains.get('os'), 'SUSE')
@@ -253,7 +273,8 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         osarch_mock = MagicMock(return_value="amd64")
         if os_release_filename:
             os_release_data = core._parse_os_release(
-                [os.path.join(OS_RELEASE_DIR, os_release_filename)])
+                os.path.join(OS_RELEASE_DIR, os_release_filename)
+            )
         else:
             os_release_data = os_release_map.get('os_release_file', {})
         os_release_mock = MagicMock(return_value=os_release_data)
@@ -269,35 +290,34 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
                 raise ImportError('No module named lsb_release')
             return orig_import(name, *args)
 
-        # Skip the first if statement
-        with patch.object(salt.utils.platform, 'is_proxy',
-                          MagicMock(return_value=False)):
-            # Skip the selinux/systemd stuff (not pertinent)
-            with patch.object(core, '_linux_bin_exists',
-                              MagicMock(return_value=False)):
-                # Skip the init grain compilation (not pertinent)
-                with patch.object(os.path, 'exists', path_isfile_mock):
-                    # Ensure that lsb_release fails to import
-                    with patch('{0}.__import__'.format(built_in),
-                               side_effect=_import_mock):
-                        # Skip all the /etc/*-release stuff (not pertinent)
-                        with patch.object(os.path, 'isfile', path_isfile_mock):
-                            with patch.object(core, '_parse_os_release', os_release_mock):
-                                # Mock linux_distribution to give us the OS
-                                # name that we want.
-                                distro_mock = MagicMock(
-                                    return_value=os_release_map['linux_distribution']
-                                )
-                                with patch('salt.utils.files.fopen', mock_open()) as suse_release_file:
-                                    suse_release_file.return_value.__iter__.return_value = \
-                                        os_release_map.get('suse_release_file', '').splitlines()
-                                    with patch.object(core, 'linux_distribution', distro_mock):
-                                        with patch.object(core, '_linux_gpu_data', empty_mock):
-                                            with patch.object(core, '_linux_cpudata', empty_mock):
-                                                with patch.object(core, '_virtual', empty_mock):
-                                                    # Mock the osarch
-                                                    with patch.dict(core.__salt__, {'cmd.run': osarch_mock}):
-                                                        os_grains = core.os_data()
+        suse_release_file = os_release_map.get('suse_release_file')
+
+        file_contents = {'/proc/1/cmdline': ''}
+        if suse_release_file:
+            file_contents['/etc/SuSE-release'] = suse_release_file
+
+        # - Skip the first if statement
+        # - Skip the selinux/systemd stuff (not pertinent)
+        # - Skip the init grain compilation (not pertinent)
+        # - Ensure that lsb_release fails to import
+        # - Skip all the /etc/*-release stuff (not pertinent)
+        # - Mock linux_distribution to give us the OS name that we want
+        # - Mock the osarch
+        distro_mock = MagicMock(return_value=os_release_map['linux_distribution'])
+        with patch.object(salt.utils.platform, 'is_proxy', MagicMock(return_value=False)), \
+                patch.object(core, '_linux_bin_exists', MagicMock(return_value=False)), \
+                patch.object(os.path, 'exists', path_isfile_mock), \
+                patch('{0}.__import__'.format(built_in), side_effect=_import_mock), \
+                patch.object(os.path, 'isfile', path_isfile_mock), \
+                patch.object(core, '_parse_os_release', os_release_mock), \
+                patch.object(core, '_parse_lsb_release', empty_mock), \
+                patch('salt.utils.files.fopen', mock_open(read_data=file_contents)), \
+                patch.object(core, 'linux_distribution', distro_mock), \
+                patch.object(core, '_linux_gpu_data', empty_mock), \
+                patch.object(core, '_linux_cpudata', empty_mock), \
+                patch.object(core, '_virtual', empty_mock), \
+                patch.dict(core.__salt__, {'cmd.run': osarch_mock}):
+            os_grains = core.os_data()
 
         grains = {k: v for k, v in os_grains.items()
                   if k in set(["os", "os_family", "osfullname", "oscodename", "osfinger",
@@ -316,10 +336,11 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         Test if OS grains are parsed correctly in SLES 11 SP3
         '''
         _os_release_map = {
-            'suse_release_file': '''SUSE Linux Enterprise Server 11 (x86_64)
-VERSION = 11
-PATCHLEVEL = 3
-''',
+            'suse_release_file': textwrap.dedent('''
+                SUSE Linux Enterprise Server 11 (x86_64)
+                VERSION = 11
+                PATCHLEVEL = 3
+                '''),
             'files': ["/etc/SuSE-release"],
         }
         expectation = {
@@ -562,92 +583,39 @@ PATCHLEVEL = 3
         }
         self._run_os_grains_tests("ubuntu-17.10", _os_release_map, expectation)
 
+    @skipIf(not salt.utils.platform.is_windows(), 'System is not Windows')
+    def test_windows_platform_data(self):
+        '''
+        Test the _windows_platform_data function
+        '''
+        grains = ['biosversion', 'kernelrelease', 'kernelversion',
+                  'manufacturer', 'motherboard', 'osfullname', 'osmanufacturer',
+                  'osrelease', 'osservicepack', 'osversion', 'productname',
+                  'serialnumber', 'timezone', 'virtual', 'windowsdomain',
+                  'windowsdomaintype']
+        returned_grains = core._windows_platform_data()
+        for grain in grains:
+            self.assertIn(grain, returned_grains)
+
+        valid_types = ['Unknown', 'Unjoined', 'Workgroup', 'Domain']
+        self.assertIn(returned_grains['windowsdomaintype'], valid_types)
+        valid_releases = ['Vista', '7', '8', '8.1', '10', '2008Server',
+                          '2008ServerR2', '2012Server', '2012ServerR2',
+                          '2016Server']
+        self.assertIn(returned_grains['osrelease'], valid_releases)
+
     @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
     def test_linux_memdata(self):
         '''
         Test memdata on Linux systems
         '''
-        _path_exists_map = {
-            '/proc/1/cmdline': False,
-            '/proc/meminfo': True
-        }
-        _path_isfile_map = {
-            '/proc/meminfo': True
-        }
-        _cmd_run_map = {
-            'dpkg --print-architecture': 'amd64',
-            'rpm --eval %{_host_cpu}': 'x86_64'
-        }
-
-        path_exists_mock = MagicMock(side_effect=lambda x: _path_exists_map[x])
-        path_isfile_mock = MagicMock(
-            side_effect=lambda x: _path_isfile_map.get(x, False)
-        )
-        cmd_run_mock = MagicMock(
-            side_effect=lambda x: _cmd_run_map[x]
-        )
-        empty_mock = MagicMock(return_value={})
-
-        _proc_meminfo_file = '''MemTotal:       16277028 kB
-SwapTotal:       4789244 kB'''
-
-        orig_import = __import__
-        if six.PY2:
-            built_in = '__builtin__'
-        else:
-            built_in = 'builtins'
-
-        def _import_mock(name, *args):
-            if name == 'lsb_release':
-                raise ImportError('No module named lsb_release')
-            return orig_import(name, *args)
-
-        # Skip the first if statement
-        with patch.object(salt.utils.platform, 'is_proxy',
-                          MagicMock(return_value=False)):
-            # Skip the selinux/systemd stuff (not pertinent)
-            with patch.object(core, '_linux_bin_exists',
-                              MagicMock(return_value=False)):
-                # Skip the init grain compilation (not pertinent)
-                with patch.object(os.path, 'exists', path_exists_mock):
-                    # Ensure that lsb_release fails to import
-                    with patch('{0}.__import__'.format(built_in),
-                               side_effect=_import_mock):
-                        # Skip all the /etc/*-release stuff (not pertinent)
-                        with patch.object(os.path, 'isfile', path_isfile_mock):
-                            # Make a bunch of functions return empty dicts,
-                            # we don't care about these grains for the
-                            # purposes of this test.
-                            with patch.object(
-                                    core,
-                                    '_linux_cpudata',
-                                    empty_mock):
-                                with patch.object(
-                                        core,
-                                        '_linux_gpu_data',
-                                        empty_mock):
-                                    with patch('salt.utils.files.fopen', mock_open()) as _proc_meminfo:
-                                        _proc_meminfo.return_value.__iter__.return_value = _proc_meminfo_file.splitlines()
-                                        with patch.object(
-                                                core,
-                                                '_hw_data',
-                                                empty_mock):
-                                            with patch.object(
-                                                    core,
-                                                    '_virtual',
-                                                    empty_mock):
-                                                with patch.object(
-                                                        core,
-                                                        '_ps',
-                                                        empty_mock):
-                                                    # Mock the osarch
-                                                    with patch.dict(
-                                                            core.__salt__,
-                                                            {'cmd.run': cmd_run_mock}):
-                                                        os_grains = core.os_data()
-
-        self.assertEqual(os_grains.get('mem_total'), 15895)
-        self.assertEqual(os_grains.get('swap_total'), 4676)
+        _proc_meminfo = textwrap.dedent('''\
+            MemTotal:       16277028 kB
+            SwapTotal:       4789244 kB''')
+        with patch('salt.utils.files.fopen', mock_open(read_data=_proc_meminfo)):
+            memdata = core._linux_memdata()
+        self.assertEqual(memdata.get('mem_total'), 15895)
+        self.assertEqual(memdata.get('swap_total'), 4676)
 
     @skipIf(salt.utils.platform.is_windows(), 'System is Windows')
     def test_bsd_memdata(self):
@@ -740,6 +708,22 @@ SwapTotal:       4789244 kB'''
                                 core._virtual({'kernel': 'Linux'}).get('virtual_subtype'),
                                 'Docker'
                             )
+
+    @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
+    def test_xen_virtual(self):
+        '''
+        Test if OS grains are parsed correctly in Ubuntu Xenial Xerus
+        '''
+        with patch.object(os.path, 'isfile', MagicMock(return_value=False)):
+            with patch.dict(core.__salt__, {'cmd.run': MagicMock(return_value='')}), \
+                patch.object(os.path,
+                             'isfile',
+                             MagicMock(side_effect=lambda x: True if x == '/sys/bus/xen/drivers/xenconsole' else False)):
+                log.debug('Testing Xen')
+                self.assertEqual(
+                    core._virtual({'kernel': 'Linux'}).get('virtual_subtype'),
+                    'Xen PV DomU'
+                )
 
     def _check_ipaddress(self, value, ip_v):
         '''
@@ -863,7 +847,7 @@ SwapTotal:       4789244 kB'''
             assert core.dns() == ret
 
     @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
-    @patch.object(salt.utils, 'is_windows', MagicMock(return_value=False))
+    @patch.object(salt.utils.platform, 'is_windows', MagicMock(return_value=False))
     @patch('salt.utils.network.ip_addrs', MagicMock(return_value=['1.2.3.4', '5.6.7.8']))
     @patch('salt.utils.network.ip_addrs6',
            MagicMock(return_value=['fe80::a8b2:93ff:fe00:0', 'fe80::a8b2:93ff:dead:beef']))
@@ -901,3 +885,229 @@ SwapTotal:       4789244 kB'''
                     osdata = {'kernel': 'test', }
                     ret = core._virtual(osdata)
                     self.assertEqual(ret['virtual'], virt)
+
+    def test_solaris_sparc_s7zone(self):
+        '''
+        verify productname grain for s7 zone
+        '''
+        expectation = {
+                'productname': 'SPARC S7-2',
+                'product': 'SPARC S7-2',
+        }
+        with salt.utils.files.fopen(os.path.join(SOLARIS_DIR, 'prtconf.s7-zone')) as sparc_return_data:
+            this_sparc_return_data = '\n'.join(sparc_return_data.readlines())
+            this_sparc_return_data += '\n'
+        self._check_solaris_sparc_productname_grains(this_sparc_return_data, expectation)
+
+    def test_solaris_sparc_s7(self):
+        '''
+        verify productname grain for s7
+        '''
+        expectation = {
+                'productname': 'SPARC S7-2',
+                'product': 'SPARC S7-2',
+        }
+        with salt.utils.files.fopen(os.path.join(SOLARIS_DIR, 'prtdiag.s7')) as sparc_return_data:
+            this_sparc_return_data = '\n'.join(sparc_return_data.readlines())
+            this_sparc_return_data += '\n'
+        self._check_solaris_sparc_productname_grains(this_sparc_return_data, expectation)
+
+    def test_solaris_sparc_t5220(self):
+        '''
+        verify productname grain for t5220
+        '''
+        expectation = {
+                'productname': 'SPARC Enterprise T5220',
+                'product': 'SPARC Enterprise T5220',
+        }
+        with salt.utils.files.fopen(os.path.join(SOLARIS_DIR, 'prtdiag.t5220')) as sparc_return_data:
+            this_sparc_return_data = '\n'.join(sparc_return_data.readlines())
+            this_sparc_return_data += '\n'
+        self._check_solaris_sparc_productname_grains(this_sparc_return_data, expectation)
+
+    def test_solaris_sparc_t5220zone(self):
+        '''
+        verify productname grain for t5220 zone
+        '''
+        expectation = {
+                'productname': 'SPARC Enterprise T5220',
+                'product': 'SPARC Enterprise T5220',
+        }
+        with salt.utils.files.fopen(os.path.join(SOLARIS_DIR, 'prtconf.t5220-zone')) as sparc_return_data:
+            this_sparc_return_data = '\n'.join(sparc_return_data.readlines())
+            this_sparc_return_data += '\n'
+        self._check_solaris_sparc_productname_grains(this_sparc_return_data, expectation)
+
+    def _check_solaris_sparc_productname_grains(self, prtdata, expectation):
+        '''
+        verify product grains on solaris sparc
+        '''
+        import platform
+        path_isfile_mock = MagicMock(side_effect=lambda x: x in ['/etc/release'])
+        with salt.utils.files.fopen(os.path.join(OS_RELEASE_DIR, "solaris-11.3")) as os_release_file:
+            os_release_content = os_release_file.readlines()
+        uname_mock = MagicMock(return_value=(
+            'SunOS', 'testsystem', '5.11', '11.3', 'sunv4', 'sparc'
+        ))
+        with patch.object(platform, 'uname', uname_mock), \
+                patch.object(salt.utils.platform, 'is_proxy',
+                             MagicMock(return_value=False)), \
+                patch.object(salt.utils.platform, 'is_linux',
+                             MagicMock(return_value=False)), \
+                patch.object(salt.utils.platform, 'is_windows',
+                             MagicMock(return_value=False)), \
+                patch.object(salt.utils.platform, 'is_smartos',
+                             MagicMock(return_value=False)), \
+                patch.object(salt.utils.path, 'which_bin',
+                             MagicMock(return_value=None)), \
+                patch.object(os.path, 'isfile', path_isfile_mock), \
+                patch('salt.utils.files.fopen',
+                      mock_open(read_data=os_release_content)) as os_release_file, \
+                patch.object(core, '_sunos_cpudata',
+                             MagicMock(return_value={
+                                 'cpuarch': 'sparcv9',
+                                 'num_cpus': '1',
+                                 'cpu_model': 'MOCK_CPU_MODEL',
+                                 'cpu_flags': []})), \
+                patch.object(core, '_memdata',
+                             MagicMock(return_value={'mem_total': 16384})), \
+                patch.object(core, '_virtual',
+                             MagicMock(return_value={})), \
+                patch.object(core, '_ps', MagicMock(return_value={})), \
+                patch.object(salt.utils.path, 'which',
+                             MagicMock(return_value=True)), \
+                patch.dict(core.__salt__,
+                           {'cmd.run': MagicMock(return_value=prtdata)}):
+            os_grains = core.os_data()
+        grains = {k: v for k, v in os_grains.items()
+                  if k in set(['product', 'productname'])}
+        self.assertEqual(grains, expectation)
+
+    @patch('os.path.isfile')
+    @patch('os.path.isdir')
+    def test_core_virtual_unicode(self, mock_file, mock_dir):
+        '''
+        test virtual grain with unicode character in product_name file
+        '''
+        def path_side_effect(path):
+            if path == '/sys/devices/virtual/dmi/id/product_name':
+                return True
+            return False
+
+        virt = 'kvm'
+        mock_file.side_effect = path_side_effect
+        mock_dir.side_effect = path_side_effect
+        with patch.object(salt.utils.platform, 'is_windows',
+                          MagicMock(return_value=False)):
+            with patch.object(salt.utils.path, 'which',
+                              MagicMock(return_value=True)):
+                with patch.dict(core.__salt__, {'cmd.run_all':
+                                                MagicMock(return_value={'pid': 78,
+                                                                        'retcode': 0,
+                                                                        'stderr': '',
+                                                                        'stdout': virt})}):
+                    with patch('salt.utils.files.fopen',
+                               mock_open(read_data='嗨')):
+                        osdata = {'kernel': 'Linux', }
+                        ret = core._virtual(osdata)
+                        self.assertEqual(ret['virtual'], virt)
+
+    @patch('salt.utils.path.which', MagicMock(return_value='/usr/sbin/sysctl'))
+    def test_osx_memdata_with_comma(self):
+        '''
+        test osx memdata method when comma returns
+        '''
+        def _cmd_side_effect(cmd):
+            if 'hw.memsize' in cmd:
+                return '4294967296'
+            elif 'vm.swapusage' in cmd:
+                return 'total = 1024,00M  used = 160,75M  free = 863,25M  (encrypted)'
+        with patch.dict(core.__salt__, {'cmd.run': MagicMock(side_effect=_cmd_side_effect)}):
+            ret = core._osx_memdata()
+            assert ret['swap_total'] == 1024
+            assert ret['mem_total'] == 4096
+
+    @patch('salt.utils.path.which', MagicMock(return_value='/usr/sbin/sysctl'))
+    def test_osx_memdata(self):
+        '''
+        test osx memdata
+        '''
+        def _cmd_side_effect(cmd):
+            if 'hw.memsize' in cmd:
+                return '4294967296'
+            elif 'vm.swapusage' in cmd:
+                return 'total = 0.00M  used = 0.00M  free = 0.00M  (encrypted)'
+        with patch.dict(core.__salt__, {'cmd.run': MagicMock(side_effect=_cmd_side_effect)}):
+            ret = core._osx_memdata()
+            assert ret['swap_total'] == 0
+            assert ret['mem_total'] == 4096
+
+    @patch('salt.utils.path.which', MagicMock(return_value='/usr/sbin/lspci'))
+    def test_linux_gpus(self):
+        '''
+        Test GPU detection on Linux systems
+        '''
+        def _cmd_side_effect(cmd):
+            ret = ''
+            for device in devices:
+                ret += textwrap.dedent('''
+                                          Class:	{0}
+                                          Vendor:	{1}
+                                          Device:	{2}
+                                          SVendor:	Evil Corp.
+                                          SDevice:	Graphics XXL
+                                          Rev:	c1
+                                          NUMANode:	0''').format(*device)
+                ret += '\n'
+            return ret.strip()
+        devices = [["VGA compatible controller", "Advanced Micro Devices, Inc. [AMD/ATI]",
+                    "Vega [Radeon RX Vega]]", "amd"],  # AMD
+                   ["Audio device", "Advanced Micro Devices, Inc. [AMD/ATI]",
+                    "Device aaf8", None],  # non-GPU device
+                   ["VGA compatible controller", "NVIDIA Corporation",
+                    "GK208 [GeForce GT 730]", "nvidia"],  # Nvidia
+                   ["VGA compatible controller", "Intel Corporation",
+                    "Device 5912", "intel"],  # Intel
+                   ["VGA compatible controller", "ATI Technologies Inc",
+                    "RC410 [Radeon Xpress 200M]", "ati"],  # ATI
+                   ["3D controller", "NVIDIA Corporation",
+                    "GeForce GTX 950M", "nvidia"]  # 3D controller
+                  ]
+        with patch.dict(core.__salt__, {'cmd.run': MagicMock(side_effect=_cmd_side_effect)}):
+            ret = core._linux_gpu_data()['gpus']
+            count = 0
+            for device in devices:
+                if device[3] is None:
+                    continue
+                assert ret[count]['model'] == device[2]
+                assert ret[count]['vendor'] == device[3]
+                count += 1
+
+    @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
+    def test_kernelparams_return(self):
+        expectations = [
+            ('BOOT_IMAGE=/vmlinuz-3.10.0-693.2.2.el7.x86_64',
+             {'kernelparams': [('BOOT_IMAGE', '/vmlinuz-3.10.0-693.2.2.el7.x86_64')]}),
+            ('root=/dev/mapper/centos_daemon-root',
+             {'kernelparams': [('root', '/dev/mapper/centos_daemon-root')]}),
+            ('rhgb quiet ro',
+             {'kernelparams': [('rhgb', None), ('quiet', None), ('ro', None)]}),
+            ('param="value1"',
+             {'kernelparams': [('param', 'value1')]}),
+            ('param="value1 value2 value3"',
+             {'kernelparams': [('param', 'value1 value2 value3')]}),
+            ('param="value1 value2 value3" LANG="pl" ro',
+             {'kernelparams': [('param', 'value1 value2 value3'), ('LANG', 'pl'), ('ro', None)]}),
+            ('ipv6.disable=1',
+             {'kernelparams': [('ipv6.disable', '1')]}),
+            ('param="value1:value2:value3"',
+             {'kernelparams': [('param', 'value1:value2:value3')]}),
+            ('param="value1,value2,value3"',
+             {'kernelparams': [('param', 'value1,value2,value3')]}),
+            ('param="value1" param="value2" param="value3"',
+             {'kernelparams': [('param', 'value1'), ('param', 'value2'), ('param', 'value3')]}),
+        ]
+
+        for cmdline, expectation in expectations:
+            with patch('salt.utils.files.fopen', mock_open(read_data=cmdline)):
+                self.assertEqual(core.kernelparams(), expectation)

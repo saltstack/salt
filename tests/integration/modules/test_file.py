@@ -214,3 +214,59 @@ class FileModuleTest(ModuleCase):
         with salt.utils.files.fopen(self.myfile, 'r') as fp:
             content = fp.read()
         self.assertEqual(content, 'Hello' + os.linesep + 'Goodbye' + os.linesep)
+
+    def test_file_line_duplicate_insert_after(self):
+        """
+        Test file.line duplicates line.
+
+        Issue #50254
+        """
+        with salt.utils.files.fopen(self.myfile, 'a') as fp:
+            fp.write(salt.utils.stringutils.to_str('Goodbye' + os.linesep))
+        self.minion_run('file.line', self.myfile, 'Goodbye',
+                        mode='insert', after='Hello')
+        with salt.utils.files.fopen(self.myfile, 'r') as fp:
+            content = fp.read()
+        self.assertEqual(content, 'Hello' + os.linesep + 'Goodbye' + os.linesep)
+
+    def test_file_line_duplicate_insert_before(self):
+        """
+        Test file.line duplicates line.
+
+        Issue #50254
+        """
+        with salt.utils.files.fopen(self.myfile, 'a') as fp:
+            fp.write(salt.utils.stringutils.to_str('Goodbye' + os.linesep))
+        self.minion_run('file.line', self.myfile, 'Hello',
+                        mode='insert', before='Goodbye')
+        with salt.utils.files.fopen(self.myfile, 'r') as fp:
+            content = fp.read()
+        self.assertEqual(content, 'Hello' + os.linesep + 'Goodbye' + os.linesep)
+
+    def test_file_line_duplicate_ensure_after(self):
+        """
+        Test file.line duplicates line.
+
+        Issue #50254
+        """
+        with salt.utils.files.fopen(self.myfile, 'a') as fp:
+            fp.write(salt.utils.stringutils.to_str('Goodbye' + os.linesep))
+        self.minion_run('file.line', self.myfile, 'Goodbye',
+                        mode='ensure', after='Hello')
+        with salt.utils.files.fopen(self.myfile, 'r') as fp:
+            content = fp.read()
+        self.assertEqual(content, 'Hello' + os.linesep + 'Goodbye' + os.linesep)
+
+    def test_file_line_duplicate_ensure_before(self):
+        """
+        Test file.line duplicates line.
+
+        Issue #50254
+        """
+        with salt.utils.files.fopen(self.myfile, 'a') as fp:
+            fp.write(salt.utils.stringutils.to_str('Goodbye' + os.linesep))
+        self.minion_run('file.line', self.myfile, 'Hello',
+                        mode='ensure', before='Goodbye')
+        with salt.utils.files.fopen(self.myfile, 'r') as fp:
+            content = fp.read()
+        self.assertEqual(content, 'Hello' + os.linesep + 'Goodbye' + os.linesep)

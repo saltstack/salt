@@ -20,11 +20,10 @@ matching minion:
     salt -G 'cpuarch:x86_64' grains.item num_cpus
 
 Additionally, globs can be used in grain matches, and grains that are nested in
-a :ref:`dictionary <python2:typesmapping>` can be matched by adding a colon for
-each level that is traversed. For example, the following will match hosts that
-have a grain called ``ec2_tags``, which itself is a
-:ref:`dict <python2:typesmapping>` with a key named ``environment``, which
-has a value that contains the word ``production``:
+a dictionary can be matched by adding a colon for each level that is traversed.
+For example, the following will match hosts that have a grain called
+``ec2_tags``, which itself is a dictionary with a key named ``environment``,
+which has a value that contains the word ``production``:
 
 .. code-block:: bash
 

@@ -785,6 +785,7 @@ Pull Requests:
 .. _`#25216`: https://github.com/saltstack/salt/pull/25216
 .. _`#25219`: https://github.com/saltstack/salt/pull/25219
 .. _`#25222`: https://github.com/saltstack/salt/pull/25222
+.. _`#25223`: https://github.com/saltstack/salt/issues/25223
 .. _`#25225`: https://github.com/saltstack/salt/pull/25225
 .. _`#25226`: https://github.com/saltstack/salt/pull/25226
 .. _`#25234`: https://github.com/saltstack/salt/pull/25234
@@ -873,12 +874,14 @@ Pull Requests:
 .. _`#25433`: https://github.com/saltstack/salt/pull/25433
 .. _`#25438`: https://github.com/saltstack/salt/pull/25438
 .. _`#25439`: https://github.com/saltstack/salt/pull/25439
+.. _`#25448`: https://github.com/saltstack/salt/issues/25448
 .. _`#25449`: https://github.com/saltstack/salt/pull/25449
 .. _`#25451`: https://github.com/saltstack/salt/pull/25451
 .. _`#25457`: https://github.com/saltstack/salt/pull/25457
 .. _`#25459`: https://github.com/saltstack/salt/pull/25459
 .. _`#25461`: https://github.com/saltstack/salt/pull/25461
 .. _`#25462`: https://github.com/saltstack/salt/pull/25462
+.. _`#25463`: https://github.com/saltstack/salt/issues/25463
 .. _`#25464`: https://github.com/saltstack/salt/pull/25464
 .. _`#25465`: https://github.com/saltstack/salt/pull/25465
 .. _`#25467`: https://github.com/saltstack/salt/pull/25467
@@ -889,6 +892,7 @@ Pull Requests:
 .. _`#25487`: https://github.com/saltstack/salt/pull/25487
 .. _`#25489`: https://github.com/saltstack/salt/pull/25489
 .. _`#25491`: https://github.com/saltstack/salt/pull/25491
+.. _`#25492`: https://github.com/saltstack/salt/issues/25492
 .. _`#25498`: https://github.com/saltstack/salt/pull/25498
 .. _`#25501`: https://github.com/saltstack/salt/pull/25501
 .. _`#25505`: https://github.com/saltstack/salt/pull/25505
@@ -1389,6 +1393,7 @@ Pull Requests:
 .. _`#26646`: https://github.com/saltstack/salt/pull/26646
 .. _`#26648`: https://github.com/saltstack/salt/pull/26648
 .. _`#26649`: https://github.com/saltstack/salt/pull/26649
+.. _`#26650`: https://github.com/saltstack/salt/pull/26650
 .. _`#26651`: https://github.com/saltstack/salt/pull/26651
 .. _`#26653`: https://github.com/saltstack/salt/pull/26653
 .. _`#26654`: https://github.com/saltstack/salt/pull/26654

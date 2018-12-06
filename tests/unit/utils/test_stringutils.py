@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
-
 from __future__ import absolute_import, print_function, unicode_literals
+import re
+import sys
 import textwrap
 
 # Import Salt libs
@@ -18,6 +19,92 @@ STR = BYTES = UNICODE.encode('utf-8')
 # code points. Do not modify it.
 EGGS = '\u044f\u0438\u0306\u0446\u0430'
 
+LATIN1_UNICODE = 'räksmörgås'
+LATIN1_BYTES = LATIN1_UNICODE.encode('latin-1')
+
+DOUBLE_TXT = '''\
+# set variable identifying the chroot you work in (used in the prompt below)
+if [ -z "$debian_chroot" ] && [ -r /etc/debian_chroot ]; then
+    debian_chroot=$(cat /etc/debian_chroot)
+fi
+'''
+
+SINGLE_TXT = '''\
+# set variable identifying the chroot you work in (used in the prompt below)
+if [ -z '$debian_chroot' ] && [ -r /etc/debian_chroot ]; then
+    debian_chroot=$(cat /etc/debian_chroot)
+fi
+'''
+
+SINGLE_DOUBLE_TXT = '''\
+# set variable identifying the chroot you work in (used in the prompt below)
+if [ -z '$debian_chroot' ] && [ -r /etc/debian_chroot ]; then
+    debian_chroot=$(cat /etc/debian_chroot)
+fi
+
+# set variable identifying the chroot you work in (used in the prompt below)
+if [ -z "$debian_chroot" ] && [ -r /etc/debian_chroot ]; then
+    debian_chroot=$(cat /etc/debian_chroot)
+fi
+'''
+
+SINGLE_DOUBLE_SAME_LINE_TXT = '''\
+# set variable identifying the chroot you work in (used in the prompt below)
+if [ -z '$debian_chroot' ] && [ -r "/etc/debian_chroot" ]; then
+    debian_chroot=$(cat /etc/debian_chroot)
+fi
+'''
+
+MATCH = '''\
+# set variable identifying the chroot you work in (used in the prompt below)
+if [ -z '$debian_chroot' ] && [ -r /etc/debian_chroot ]; then
+    debian_chroot=$(cat /etc/debian_chroot)
+fi
+
+
+# set variable identifying the chroot you work in (used in the prompt below)
+if [ -z "$debian_chroot" ] && [ -r /etc/debian_chroot ]; then
+    debian_chroot=$(cat /etc/debian_chroot)
+fi
+
+
+# set variable identifying the chroot you work in (used in the prompt below)
+if [ -z "$debian_chroot" ] && [ -r /etc/debian_chroot ]; then
+    debian_chroot=$(cat /etc/debian_chroot)
+fi
+
+
+# set variable identifying the chroot you work in (used in the prompt below)
+if [ -z '$debian_chroot' ] && [ -r /etc/debian_chroot ]; then
+    debian_chroot=$(cat /etc/debian_chroot)
+fi
+
+
+# set variable identifying the chroot you work in (used in the prompt below)
+if [ -z '$debian_chroot' ] && [ -r "/etc/debian_chroot" ]; then
+    debian_chroot=$(cat /etc/debian_chroot)
+fi
+'''
+
+
+class TestBuildWhitespaceRegex(TestCase):
+
+    def test_single_quotes(self):
+        regex = salt.utils.stringutils.build_whitespace_split_regex(SINGLE_TXT)
+        self.assertTrue(re.search(regex, MATCH))
+
+    def test_double_quotes(self):
+        regex = salt.utils.stringutils.build_whitespace_split_regex(DOUBLE_TXT)
+        self.assertTrue(re.search(regex, MATCH))
+
+    def test_single_and_double_quotes(self):
+        regex = salt.utils.stringutils.build_whitespace_split_regex(SINGLE_DOUBLE_TXT)
+        self.assertTrue(re.search(regex, MATCH))
+
+    def test_issue_2227(self):
+        regex = salt.utils.stringutils.build_whitespace_split_regex(SINGLE_DOUBLE_SAME_LINE_TXT)
+        self.assertTrue(re.search(regex, MATCH))
+
 
 class StringutilsTestCase(TestCase):
     def test_contains_whitespace(self):
@@ -27,6 +114,14 @@ class StringutilsTestCase(TestCase):
         self.assertTrue(salt.utils.stringutils.contains_whitespace(does_contain_whitespace))
         self.assertFalse(salt.utils.stringutils.contains_whitespace(does_not_contain_whitespace))
 
+    def test_to_bool(self):
+        self.assertFalse(salt.utils.stringutils.to_bool('false'))
+        self.assertTrue(salt.utils.stringutils.to_bool('true'))
+        self.assertEqual('', salt.utils.stringutils.to_bool(''))
+        self.assertIsInstance(salt.utils.stringutils.to_bool(''), six.text_type)
+        self.assertEqual('0', salt.utils.stringutils.to_bool('0'))
+        self.assertIsInstance(salt.utils.stringutils.to_bool('0'), six.text_type)
+
     def test_to_num(self):
         self.assertEqual(7, salt.utils.stringutils.to_num('7'))
         self.assertIsInstance(salt.utils.stringutils.to_num('7'), int)
@@ -34,6 +129,13 @@ class StringutilsTestCase(TestCase):
         self.assertIsInstance(salt.utils.stringutils.to_num('7.0'), float)
         self.assertEqual(salt.utils.stringutils.to_num('Seven'), 'Seven')
         self.assertIsInstance(salt.utils.stringutils.to_num('Seven'), six.text_type)
+
+    def test_to_none(self):
+        self.assertIsNone(salt.utils.stringutils.to_none(''))
+        self.assertIsNone(salt.utils.stringutils.to_none('  '))
+        # Ensure that we do not inadvertently convert certain strings or 0 to None
+        self.assertIsNotNone(salt.utils.stringutils.to_none('None'))
+        self.assertIsNotNone(salt.utils.stringutils.to_none(0))
 
     def test_is_binary(self):
         self.assertFalse(salt.utils.stringutils.is_binary(LOREM_IPSUM))
@@ -134,6 +236,13 @@ class StringutilsTestCase(TestCase):
             'яйца'
         )
 
+        self.assertEqual(
+            salt.utils.stringutils.to_unicode(
+                LATIN1_BYTES, encoding='latin-1'
+            ),
+            LATIN1_UNICODE
+        )
+
         if six.PY3:
             self.assertEqual(salt.utils.stringutils.to_unicode('plugh'), 'plugh')
             self.assertEqual(salt.utils.stringutils.to_unicode('áéíóúý'), 'áéíóúý')
@@ -150,9 +259,20 @@ class StringutilsTestCase(TestCase):
             with patch.object(builtins, '__salt_system_encoding__', 'CP1252'):
                 self.assertEqual(salt.utils.stringutils.to_unicode('Ψ'.encode('utf-8')), 'Ψ')
 
+    def test_to_unicode_multi_encoding(self):
+        result = salt.utils.stringutils.to_unicode(LATIN1_BYTES, encoding=('utf-8', 'latin1'))
+        assert result == LATIN1_UNICODE
+
     def test_build_whitespace_split_regex(self):
-        expected_regex = '(?m)^(?:[\\s]+)?Lorem(?:[\\s]+)?ipsum(?:[\\s]+)?dolor(?:[\\s]+)?sit(?:[\\s]+)?amet\\,' \
-                         '(?:[\\s]+)?$'
+        # With 3.7+,  re.escape only escapes special characters, no longer
+        # escaping all characters other than ASCII letters, numbers and
+        # underscores.  This includes commas.
+        if sys.version_info >= (3, 7):
+            expected_regex = '(?m)^(?:[\\s]+)?Lorem(?:[\\s]+)?ipsum(?:[\\s]+)?dolor(?:[\\s]+)?sit(?:[\\s]+)?amet,' \
+                             '(?:[\\s]+)?$'
+        else:
+            expected_regex = '(?m)^(?:[\\s]+)?Lorem(?:[\\s]+)?ipsum(?:[\\s]+)?dolor(?:[\\s]+)?sit(?:[\\s]+)?amet\\,' \
+                             '(?:[\\s]+)?$'
         ret = salt.utils.stringutils.build_whitespace_split_regex(' '.join(LOREM_IPSUM.split()[:5]))
         self.assertEqual(ret, expected_regex)
 
@@ -443,3 +563,18 @@ class StringutilsTestCase(TestCase):
             salt.utils.stringutils.check_whitelist_blacklist,
             'foo', blacklist=123
         )
+
+    def test_check_include_exclude_empty(self):
+        self.assertTrue(salt.utils.stringutils.check_include_exclude("/some/test"))
+
+    def test_check_include_exclude_exclude(self):
+        self.assertFalse(salt.utils.stringutils.check_include_exclude("/some/test", None, "*test*"))
+
+    def test_check_include_exclude_exclude_list(self):
+        self.assertFalse(salt.utils.stringutils.check_include_exclude("/some/test", None, ["*test"]))
+
+    def test_check_include_exclude_exclude_include(self):
+        self.assertTrue(salt.utils.stringutils.check_include_exclude("/some/test", "*test*", "/some/"))
+
+    def test_check_include_exclude_regex(self):
+        self.assertFalse(salt.utils.stringutils.check_include_exclude("/some/test", None, "E@/some/(test|other)"))
