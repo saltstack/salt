@@ -33,6 +33,7 @@ import salt.utils.pkg
 import salt.utils.pkg.rpm
 import salt.utils.stringutils
 import salt.utils.systemd
+import salt.utils.versions
 from salt.exceptions import CommandExecutionError, MinionError, SaltInvocationError
 from salt.utils.versions import LooseVersion
 
@@ -2132,6 +2133,9 @@ def remove_lock(packages, root=None, **kwargs):  # pylint: disable=unused-argume
         salt '*' pkg.remove_lock pkgs='["foo", "bar"]'
     """
 
+    salt.utils.versions.warn_until(
+        "Sodium", "This function is deprecated. Please use unhold() instead."
+    )
     locks = list_locks(root)
     try:
         packages = list(__salt__["pkg_resource.parse_targets"](packages)[0].keys())
@@ -2211,6 +2215,9 @@ def add_lock(packages, root=None, **kwargs):  # pylint: disable=unused-argument
         salt '*' pkg.add_lock <package1>,<package2>,<package3>
         salt '*' pkg.add_lock pkgs='["foo", "bar"]'
     """
+    salt.utils.versions.warn_until(
+        "Sodium", "This function is deprecated. Please use hold() instead."
+    )
     locks = list_locks(root)
     added = []
     try:
