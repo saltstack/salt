@@ -292,7 +292,7 @@ def _parse_qemu_img_info(info):
                    'file format': disk_infos['format'],
                    'disk size': disk_infos['actual-size'],
                    'virtual size': disk_infos['virtual-size'],
-                   'cluster size': disk_infos['cluster-size']
+                   'cluster size': disk_infos['cluster-size'] if 'cluster-size' in disk_infos else None,
                }
 
         if 'full-backing-filename' in disk_infos.keys():
