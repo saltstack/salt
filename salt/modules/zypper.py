@@ -1968,7 +1968,6 @@ def hold(name=None, pkgs=None, **kwargs):
         else:
             ret[pkg]['comment'] = 'Package {0} is already set to be held.'.format(pkg)
 
-
     if added:
         __zypper__(root=root).call('al', *added)
 
