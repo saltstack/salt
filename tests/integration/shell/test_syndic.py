@@ -22,12 +22,13 @@ import salt.utils.files
 import salt.utils.yaml
 import salt.utils.platform
 
+# Import 3rd-party libs
+import pytest
+
 log = logging.getLogger(__name__)
 
 
-SIGKILL = 9
-
-
+@pytest.mark.usefixtures('session_salt_syndic')
 class SyndicTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin):
     '''
     Test the salt-syndic command
