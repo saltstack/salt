@@ -275,6 +275,7 @@ class TestDaemon(object):
                 daemon_class=SaltMaster,
                 bin_dir_path=SCRIPT_DIR,
                 fail_hard=True,
+                event_listener_config_dir=RUNTIME_VARS.TMP_CONF_DIR,
                 start_timeout=120)
             sys.stdout.write(
                 '\r{0}\r'.format(
@@ -312,6 +313,7 @@ class TestDaemon(object):
                 daemon_class=SaltMinion,
                 bin_dir_path=SCRIPT_DIR,
                 fail_hard=True,
+                event_listener_config_dir=RUNTIME_VARS.TMP_CONF_DIR,
                 start_timeout=120)
             sys.stdout.write(
                 '\r{0}\r'.format(
@@ -349,6 +351,7 @@ class TestDaemon(object):
                 daemon_class=SaltMinion,
                 bin_dir_path=SCRIPT_DIR,
                 fail_hard=True,
+                event_listener_config_dir=RUNTIME_VARS.TMP_CONF_DIR,
                 start_timeout=120)
             sys.stdout.write(
                 '\r{0}\r'.format(
@@ -387,6 +390,7 @@ class TestDaemon(object):
                 daemon_class=SaltMaster,
                 bin_dir_path=SCRIPT_DIR,
                 fail_hard=True,
+                event_listener_config_dir=RUNTIME_VARS.TMP_SYNDIC_MASTER_CONF_DIR,
                 start_timeout=120)
             sys.stdout.write(
                 '\r{0}\r'.format(
@@ -424,6 +428,7 @@ class TestDaemon(object):
                 daemon_class=SaltSyndic,
                 bin_dir_path=SCRIPT_DIR,
                 fail_hard=True,
+                event_listener_config_dir=RUNTIME_VARS.TMP_CONF_DIR,
                 start_timeout=120)
             sys.stdout.write(
                 '\r{0}\r'.format(
