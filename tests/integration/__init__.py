@@ -720,6 +720,10 @@ class TestDaemon(object):
         master_opts['root_dir'] = os.path.join(TMP_ROOT_DIR)
         master_opts['pki_dir'] = 'pki'
         master_opts['syndic_master'] = 'localhost'
+        pytest_stop_sending_events_file = os.path.join(TMP_ROOT_DIR, 'pytest_stop_sending_events_file_master')
+        with salt.utils.files.fopen(pytest_stop_sending_events_file, 'w') as wfh:
+            wfh.write('')
+        master_opts['pytest_stop_sending_events_file'] = pytest_stop_sending_events_file
         file_tree = {
             'root_dir':  os.path.join(FILES, 'pillar', 'base', 'file_tree'),
             'follow_dir_links': False,
@@ -792,6 +796,10 @@ class TestDaemon(object):
         syndic_master_opts['user'] = RUNTIME_VARS.RUNNING_TESTS_USER
         syndic_master_opts['root_dir'] = os.path.join(TMP, 'rootdir-syndic-master')
         syndic_master_opts['pki_dir'] = 'pki'
+        pytest_stop_sending_events_file = os.path.join(TMP_ROOT_DIR, 'pytest_stop_sending_events_file_syndic_master')
+        with salt.utils.files.fopen(pytest_stop_sending_events_file, 'w') as wfh:
+            wfh.write('')
+        syndic_master_opts['pytest_stop_sending_events_file'] = pytest_stop_sending_events_file
 
         # This is the syndic for master
         # Let's start with a copy of the syndic master configuration
