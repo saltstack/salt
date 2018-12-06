@@ -15,6 +15,7 @@ from __future__ import absolute_import
 import logging
 
 # Import pytest-salt libs
+import pytestsalt.version
 from pytestsalt.utils import SaltRunEventListener as PytestSaltRunEventListener
 from pytestsalt.utils import collect_child_processes, terminate_process, terminate_process_list  # pylint: disable=unused-import
 from pytestsalt.fixtures.daemons import Salt as PytestSalt
@@ -37,6 +38,11 @@ class SaltRunEventListener(ScriptPathMixin, PytestSaltRunEventListener):
     Override this class's __init__ because there's no request argument since we're still
     not running under pytest
     '''
+
+    def run(self, tags=(), timeout=10):  # pylint: disable=arguments-differ
+        if pytestsalt.version.__version_info__ <= (2018, 9, 28):
+            log.info('%s checking for tags: %s', self.__class__.__name__, tags)
+        return super(SaltRunEventListener, self).run(tags=tags, timeout=timeout)
 
 
 class GetSaltRunFixtureMixin(ScriptPathMixin):
