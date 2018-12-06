@@ -999,7 +999,12 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
             min_wait_time = tornado.gen.sleep(self.application.opts['syndic_wait'])
 
         # To ensure job_not_running and all_return are terminated by each other, communicate using a future
+<<<<<<< HEAD
         is_finished = tornado.gen.sleep(self.application.opts['gather_job_timeout'])
+=======
+        is_timed_out = tornado.gen.sleep(self.application.opts['gather_job_timeout'])
+        is_finished = Future()
+>>>>>>> f803928c56... saltnado: fix timeout handling
 
         # ping until the job is not running, while doing so, if we see new minions returning
         # that they are running the job, add them to the list
@@ -1021,18 +1026,18 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
         # early if gather_job_timeout has been exceeded
         chunk_ret = {}
         while True:
-            to_wait = events+[is_finished]
+            to_wait = events+[is_finished, is_timed_out]
             if not min_wait_time.done():
                 to_wait += [min_wait_time]
 
             def cancel_inflight_futures():
                 for event in to_wait:
-                    if not event.done():
+                    if not event.done() and event is not is_timed_out:
                         event.set_result(None)
             f = yield Any(to_wait)
             try:
                 # When finished entire routine, cleanup other futures and return result
-                if f is is_finished:
+                if f is is_finished or f is is_timed_out:
                     cancel_inflight_futures()
                     raise tornado.gen.Return(chunk_ret)
                 elif f is min_wait_time:
@@ -1087,7 +1092,14 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
                     raise tornado.gen.Return(True)
                 event = f.result()
             except TimeoutException:
+<<<<<<< HEAD
                 if not minion_running:
+=======
+                if not event.done():
+                    event.set_result(None)
+
+                if not minion_running or is_finished.done():
+>>>>>>> f803928c56... saltnado: fix timeout handling
                     raise tornado.gen.Return(True)
                 else:
                     ping_pub_data = yield self.saltclients['local'](tgt,
