@@ -14,6 +14,7 @@
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
+import os
 import sys
 import errno
 import socket
@@ -49,6 +50,7 @@ class PyTestEngine(object):
     def __init__(self, opts):
         self.opts = opts
         self.sock = None
+        self.stop_sending_events_file = opts.get('pytest_stop_sending_events_file')
 
     def start(self):
         self.io_loop = ioloop.IOLoop()
@@ -104,6 +106,8 @@ class PyTestEngine(object):
         # for pytest-salt to pickup that the master is running
         timeout = 30
         while True:
+            if self.stop_sending_events_file and not os.path.exists(self.stop_sending_events_file):
+                break
             timeout -= 1
             try:
                 event_bus.fire_event(load, start_event_tag, timeout=500)
