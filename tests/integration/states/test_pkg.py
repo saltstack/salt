@@ -856,9 +856,11 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertFalse(realver)
 
         try:
-            # install the package already
+            # install the package
             ret = self.run_state('pkg.installed', name=realpkg, refresh=False)
+            self.assertSaltTrueReturn(ret)
 
+            # Try to install again. Nothing should be installed this time.
             ret = self.run_state('pkg.installed', name=target, refresh=False, resolve_capabilities=True, test=True)
             self.assertInSaltComment("All specified packages are already installed", ret)
 
