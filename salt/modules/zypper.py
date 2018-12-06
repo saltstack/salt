@@ -1845,6 +1845,50 @@ def clean_locks(root=None):
     return out
 
 
+def unhold(name=None, pkgs=None, **kwargs):
+    '''
+    Remove specified package lock.
+
+    root
+        operate on a different root directory.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.remove_lock <package name>
+        salt '*' pkg.remove_lock <package1>,<package2>,<package3>
+        salt '*' pkg.remove_lock pkgs='["foo", "bar"]'
+    '''
+    ret = {}
+    root = kwargs.get('root')
+    if (not name and not pkgs) or (name and pkgs):
+        raise CommandExecutionError('Name or packages must be specified.')
+    elif name:
+        pkgs = [name]
+
+    locks = list_locks(root)
+    try:
+        pkgs = list(__salt__['pkg_resource.parse_targets'](pkgs)[0].keys())
+    except MinionError as exc:
+        raise CommandExecutionError(exc)
+
+    removed = []
+    missing = []
+    for pkg in pkgs:
+        if locks.get(pkg):
+            removed.append(pkg)
+            ret[pkg]['comment'] = 'Package {0} is no longer held.'.format(pkg)
+        else:
+            missing.append(pkg)
+            ret[pkg]['comment'] = 'Package {0} unable to be unheld.'.format(pkg)
+
+    if removed:
+        __zypper__(root=root).call('rl', *removed)
+
+    return ret
+
+
 def remove_lock(packages, root=None, **kwargs):  # pylint: disable=unused-argument
     '''
     Remove specified package lock.
@@ -1881,7 +1925,7 @@ def remove_lock(packages, root=None, **kwargs):  # pylint: disable=unused-argume
     return {'removed': len(removed), 'not_found': missing}
 
 
-def hold(name=None, pkgs=None,  **kwargs):
+def hold(name=None, pkgs=None, **kwargs):
     '''
     Add a package lock. Specify packages to lock by exact name.
 
@@ -1928,7 +1972,6 @@ def hold(name=None, pkgs=None,  **kwargs):
         __zypper__(root=root).call('al', *added)
 
     return ret
-
 
 
 def add_lock(packages, root=None, **kwargs):  # pylint: disable=unused-argument
