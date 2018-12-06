@@ -24,7 +24,6 @@ from string import Template
 
 # pylint: disable-msg=C0103
 # pylint: disable-msg=R0902
-# pylint: disable-msg=R0205
 # pylint: disable-msg=W0613
 # pylint: disable-msg=C0301
 
