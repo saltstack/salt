@@ -3819,9 +3819,12 @@ def _parse_caps_guest(guest):
     # Note that some features have no default and toggle attributes.
     # This may not be a perfect match, but represent them as enabled by default
     # without possibility to toggle them.
-    result['features'] = {child.tag: {'toggle': True if child.get('toggle') == 'yes' else False,
-                                      'default': True if child.get('default') == 'no' else True}
-                          for child in guest.find('features')}
+    # Some guests may also have no feature at all (xen pv for instance)
+    features_nodes = guest.find('features')
+    if features_nodes is not None:
+        result['features'] = {child.tag: {'toggle': True if child.get('toggle') == 'yes' else False,
+                                          'default': True if child.get('default') == 'no' else True}
+                              for child in features_nodes}
 
     return result
 
