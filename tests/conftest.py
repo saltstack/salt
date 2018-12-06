@@ -822,7 +822,7 @@ def session_syndic_master_default_options(request, session_root_dir):
 
 
 @pytest.fixture(scope='session')
-def session_syndic_minion_default_options(request, session_root_dir):
+def session_syndic_default_options(request, session_root_dir):
     with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.CONF_DIR, 'syndic')) as rfh:
         opts = yaml.load(rfh.read())
 
@@ -889,6 +889,15 @@ def bridge_pytest_and_runtests(session_root_dir,
 # ----- Custom Fixtures Definitions --------------------------------------------------------------------------------->
 # pylint: disable=unused-argument
 @pytest.fixture(scope='session')
+def session_salt_syndic(request, session_salt_master_of_masters, session_salt_syndic):
+    request.session.stats_processes.update(OrderedDict((
+        ('Salt Syndic Master', psutil.Process(session_salt_master_of_masters.pid)),
+        ('       Salt Syndic', psutil.Process(session_salt_syndic.pid)),
+    )).items())
+    return session_salt_syndic
+
+
+@pytest.fixture(scope='session')
 def default_session_daemons(request,
                             log_server,
                             salt_log_port,
@@ -897,16 +906,12 @@ def default_session_daemons(request,
                             session_salt_master,
                             session_salt_minion,
                             session_secondary_salt_minion,
-                            session_salt_master_of_masters,
-                            session_salt_syndic
                             ):
 
     request.session.stats_processes.update(OrderedDict((
         ('       Salt Master', psutil.Process(session_salt_master.pid)),
         ('       Salt Minion', psutil.Process(session_salt_minion.pid)),
         ('   Salt Sub Minion', psutil.Process(session_secondary_salt_minion.pid)),
-        ('Salt Syndic Master', psutil.Process(session_salt_master_of_masters.pid)),
-        ('       Salt Syndic', psutil.Process(session_salt_syndic.pid)),
     )).items())
 # pylint: enable=unused-argument
 # <---- Custom Fixtures Definitions ----------------------------------------------------------------------------------
