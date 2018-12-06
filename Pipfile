@@ -28,8 +28,7 @@ version = ">=2.0"
 markers = "python_version < '3.0'"
 
 [dev-packages.pytest-salt]
-git = "git://github.com/saltstack/pytest-salt.git"
-ref = "master"
+version = ">=2018.12.6"
 
 [dev-packages.httpretty]
 # httpretty Needs to be here for now even though it's a dependency of boto.
