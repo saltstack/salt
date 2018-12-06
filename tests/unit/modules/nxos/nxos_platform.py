@@ -24,6 +24,9 @@ from string import Template
 
 # pylint: disable-msg=C0103
 # pylint: disable-msg=R0902
+# pylint: disable-msg=R0205
+# pylint: disable-msg=W0613
+# pylint: disable-msg=C0301
 
 
 class NXOSPlatform(object):
@@ -105,6 +108,14 @@ Module       Image                  Running-Version(pri:alt)           New-Versi
     install_all_non_disruptive_success = None
 
     def __init__(self, *args, **kwargs):
+
+        """
+         ckimage - current kickstart image
+         cimage - current system image
+         nkimage - new kickstart image
+         nimage - new system image
+        """
+
         self.ckimage = kwargs.get('ckimage', None)
         self.cimage = kwargs.get('cimage', None)
         self.nkimage = kwargs.get('nkimage', None)
