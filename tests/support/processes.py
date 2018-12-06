@@ -12,6 +12,8 @@
 
 # Import python libs
 from __future__ import absolute_import
+import os
+import sys
 import logging
 
 # Import pytest-salt libs
@@ -42,7 +44,17 @@ class SaltRunEventListener(ScriptPathMixin, PytestSaltRunEventListener):
     def run(self, tags=(), timeout=10):  # pylint: disable=arguments-differ
         if pytestsalt.version.__version_info__ <= (2018, 9, 28):
             log.info('%s checking for tags: %s', self.__class__.__name__, tags)
-        return super(SaltRunEventListener, self).run(tags=tags, timeout=timeout)
+        result = super(SaltRunEventListener, self).run(tags=tags, timeout=timeout)
+        if pytestsalt.version.__version_info__ > (2018, 9, 28):
+            return result
+        if result.exitcode != 0:
+            return result
+        if not result.json['unmatched']:
+            stop_sending_events_file = self.config.get('pytest_stop_sending_events_file')
+            if stop_sending_events_file and os.path.exists(stop_sending_events_file):
+                log.warning('Removing pytest_stop_sending_events_file: %s', stop_sending_events_file)
+                os.unlink(stop_sending_events_file)
+        return result
 
 
 class GetSaltRunFixtureMixin(ScriptPathMixin):
