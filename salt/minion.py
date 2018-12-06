@@ -129,8 +129,8 @@ log = logging.getLogger(__name__)
 
 def child_minion_process(minion_instance, opts, data, connected):
     '''
-    On a process pool, we cann not use a member function
-    We need to instanciate the minion in a function
+    On a process pool, we can not use a member function
+    We need to instantiate the minion in a function
     '''
     if not minion_instance:
         minion_instance = Minion(opts, pool=False)
