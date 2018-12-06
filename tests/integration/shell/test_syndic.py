@@ -26,9 +26,13 @@ import salt.utils.files
 import salt.utils.yaml
 import salt.utils.platform
 
+# Import 3rd-party libs
+import pytest
+
 log = logging.getLogger(__name__)
 
 
+@pytest.mark.usefixtures('session_salt_syndic')
 class SyndicTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin):
     '''
     Test the salt-syndic command
@@ -57,7 +61,7 @@ class SyndicTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMix
                 with salt.utils.files.fopen(os.path.join(config_dir, fname), 'w') as fhw:
                     salt.utils.yaml.safe_dump(config, fhw, default_flow_style=False)
 
-        ret = self.run_script(
+        self.run_script(
             self._call_binary_,
             '--config-dir={0} --pid-file={1} -l debug'.format(
                 config_dir,
