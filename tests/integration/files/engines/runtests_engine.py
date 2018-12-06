@@ -76,8 +76,6 @@ class PyTestEngine(object):
 
         if self.opts['__role'] == 'master':
             yield self.fire_master_started_event()
-        else:
-            yield self.listen_to_connected_event()
 
     def handle_connection(self, connection, address):
         log.warning('Accepted connection from %s. Role: %s', address, self.opts['__role'])
