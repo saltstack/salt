@@ -693,17 +693,15 @@ class TestDaemon(object):
 
     @classmethod
     def transplant_configs(cls, transport='zeromq'):
-        if os.path.isdir(RUNTIME_VARS.TMP_CONF_DIR):
-            shutil.rmtree(RUNTIME_VARS.TMP_CONF_DIR)
-        if os.path.isdir(RUNTIME_VARS.TMP_ROOT_DIR):
-            shutil.rmtree(RUNTIME_VARS.TMP_ROOT_DIR)
+        if os.path.isdir(RUNTIME_VARS.TMP):
+            shutil.rmtree(RUNTIME_VARS.TMP)
+        os.makedirs(RUNTIME_VARS.TMP)
         os.makedirs(RUNTIME_VARS.TMP_ROOT_DIR)
         os.makedirs(RUNTIME_VARS.TMP_CONF_DIR)
         os.makedirs(RUNTIME_VARS.TMP_SUB_MINION_CONF_DIR)
         os.makedirs(RUNTIME_VARS.TMP_SYNDIC_MASTER_CONF_DIR)
         os.makedirs(RUNTIME_VARS.TMP_SYNDIC_MINION_CONF_DIR)
-        if not os.path.exists(RUNTIME_VARS.TMP):
-            os.makedirs(RUNTIME_VARS.TMP)
+
         print(' * Transplanting configuration files to \'{0}\''.format(RUNTIME_VARS.TMP_CONF_DIR))
         tests_known_hosts_file = os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'salt_ssh_known_hosts')
         with salt.utils.files.fopen(tests_known_hosts_file, 'w') as known_hosts:
