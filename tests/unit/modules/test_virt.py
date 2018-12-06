@@ -1787,6 +1787,16 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
     </features>
   </guest>
 
+  <guest>
+    <os_type>xen</os_type>
+    <arch name='x86_64'>
+      <wordsize>64</wordsize>
+      <emulator>/usr/bin/qemu-system-x86_64</emulator>
+      <machine>xenpv</machine>
+      <domain type='xen'/>
+    </arch>
+  </guest>
+
 </capabilities>
         '''
         self.mock_conn.getCapabilities.return_value = xml  # pylint: disable=no-member
@@ -1914,6 +1924,23 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                         'disksnapshot': {'default': True, 'toggle': False},
                         'acpi': {'default': True, 'toggle': True},
                         'apic': {'default': True, 'toggle': False}
+                    }
+                },
+                {
+                    'os_type': 'xen',
+                    'arch': {
+                        'name': 'x86_64',
+                        'wordsize': 64,
+                        'emulator': '/usr/bin/qemu-system-x86_64',
+                        'machines': {
+                            'xenpv': {'alternate_names': []}
+                        },
+                        'domains': {
+                            'xen': {
+                                'emulator': None,
+                                'machines': {}
+                            }
+                        }
                     }
                 }
             ]
