@@ -96,7 +96,7 @@ class NxosUpgradeTestCase(TestCase, LoaderModuleMockMixin):
     @staticmethod
     def test_check_upgrade_impact_input_validation():
 
-        """ UT: nxos_upgrade module:check_upgrade_inpact method - input validation """
+        """ UT: nxos_upgrade module:check_upgrade_impact method - input validation """
 
         result = nxos_upgrade.check_upgrade_impact('dummy-platform-image.bin', issu=1)
         assert 'Input Error' in result
