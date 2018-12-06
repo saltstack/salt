@@ -2076,6 +2076,46 @@ def clean_locks(root=None):
     return out
 
 
+def unhold(name=None, pkgs=None, **kwargs):
+    """
+    Remove specified package lock.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.remove_lock <package name>
+        salt '*' pkg.remove_lock <package1>,<package2>,<package3>
+        salt '*' pkg.remove_lock pkgs='["foo", "bar"]'
+    """
+    ret = {}
+    if (not name and not pkgs) or (name and pkgs):
+        raise CommandExecutionError("Name or packages must be specified.")
+    elif name:
+        pkgs = [name]
+
+    locks = list_locks()
+    try:
+        pkgs = list(__salt__["pkg_resource.parse_targets"](pkgs)[0].keys())
+    except MinionError as exc:
+        raise CommandExecutionError(exc)
+
+    removed = []
+    missing = []
+    for pkg in pkgs:
+        if locks.get(pkg):
+            removed.append(pkg)
+            ret[pkg]["comment"] = "Package {0} is no longer held.".format(pkg)
+        else:
+            missing.append(pkg)
+            ret[pkg]["comment"] = "Package {0} unable to be unheld.".format(pkg)
+
+    if removed:
+        __zypper__.call("rl", *removed)
+
+    return ret
+
+
 def remove_lock(packages, root=None, **kwargs):  # pylint: disable=unused-argument
     """
     Remove specified package lock.
