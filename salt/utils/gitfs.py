@@ -584,10 +584,20 @@ class GitProvider(object):
         '''
         cleaned = []
         cmd_str = 'git remote prune origin'
+
+        # Attempt to force all output to plain ascii english, which is what some parsing code
+        # may expect.
+        # According to stackoverflow (http://goo.gl/l74GC8), we are setting LANGUAGE as well
+        # just to be sure.
+        env = os.environ.copy()
+        env["LANGUAGE"] = "C"
+        env["LC_ALL"] = "C"
+
         cmd = subprocess.Popen(
             shlex.split(cmd_str),
             close_fds=not salt.utils.platform.is_windows(),
             cwd=os.path.dirname(self.gitdir),
+            env=env,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT)
         output = cmd.communicate()[0]
