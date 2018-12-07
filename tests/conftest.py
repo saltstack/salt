@@ -839,8 +839,8 @@ def bridge_pytest_and_runtests(session_root_dir,
                                session_secondary_conf_dir,
                                session_syndic_conf_dir,
                                session_master_of_masters_conf_dir,
-                               session_state_tree_root_dir,
                                session_pillar_tree_root_dir,
+                               session_base_env_state_tree_root_dir,
                                session_prod_env_state_tree_root_dir,
                                session_master_config,
                                session_minion_config,
@@ -855,7 +855,7 @@ def bridge_pytest_and_runtests(session_root_dir,
     RUNTIME_VARS.TMP_SYNDIC_MASTER_CONF_DIR = session_master_of_masters_conf_dir.realpath().strpath
     RUNTIME_VARS.TMP_SYNDIC_MINION_CONF_DIR = session_syndic_conf_dir.realpath().strpath
     RUNTIME_VARS.TMP_PILLAR_TREE = session_pillar_tree_root_dir.realpath().strpath
-    RUNTIME_VARS.TMP_STATE_TREE = session_state_tree_root_dir.realpath().strpath
+    RUNTIME_VARS.TMP_STATE_TREE = session_base_env_state_tree_root_dir.realpath().strpath
     RUNTIME_VARS.TMP_PRODENV_STATE_TREE = session_prod_env_state_tree_root_dir.realpath().strpath
 
     # Make sure unittest2 uses the pytest generated configuration
