@@ -434,6 +434,21 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(system['model'], 'virtio')
             self.assertTrue(int(system['size']) >= 1)
 
+    def test_default_disk_profile_hypervisor_xen(self):
+        '''
+        Test virt._disk_profile() default XEN profile
+        '''
+        mock = MagicMock(return_value={})
+        with patch.dict(virt.__salt__, {'config.get': mock}):  # pylint: disable=no-member
+            ret = virt._disk_profile('nonexistent', 'xen')
+            self.assertTrue(len(ret) == 1)
+            found = [disk for disk in ret if disk['name'] == 'system']
+            self.assertTrue(bool(found))
+            system = found[0]
+            self.assertEqual(system['format'], 'qcow2')
+            self.assertEqual(system['model'], 'xen')
+            self.assertTrue(int(system['size']) >= 1)
+
     def test_default_nic_profile_hypervisor_esxi(self):
         '''
         Test virt._nic_profile() default ESXi profile
@@ -461,6 +476,20 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(eth0['type'], 'bridge')
             self.assertEqual(eth0['source'], 'br0')
             self.assertEqual(eth0['model'], 'virtio')
+
+    def test_default_nic_profile_hypervisor_xen(self):
+        '''
+        Test virt._nic_profile() default XEN profile
+        '''
+        mock = MagicMock(return_value={})
+        with patch.dict(virt.__salt__, {'config.get': mock}):  # pylint: disable=no-member
+            ret = virt._nic_profile('nonexistent', 'xen')
+            self.assertTrue(len(ret) == 1)
+            eth0 = ret[0]
+            self.assertEqual(eth0['name'], 'eth0')
+            self.assertEqual(eth0['type'], 'bridge')
+            self.assertEqual(eth0['source'], 'br0')
+            self.assertFalse(eth0['model'])
 
     def test_gen_vol_xml(self):
         '''
@@ -558,6 +587,48 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         mac = iface.find('mac').attrib['address']
         self.assertTrue(
               re.match('^([0-9A-F]{2}[:-]){5}([0-9A-F]{2})$', mac, re.I))
+
+    def test_gen_xml_for_xen_default_profile(self):
+        '''
+        Test virt._gen_xml(), XEN PV default profile case
+        '''
+        diskp = virt._disk_profile('default', 'xen', [], 'hello')
+        nicp = virt._nic_profile('default', 'xen')
+        with patch.dict(virt.__grains__, {'os_family': 'Suse'}):
+            xml_data = virt._gen_xml(
+                'hello',
+                1,
+                512,
+                diskp,
+                nicp,
+                'xen',
+                'xen',
+                'x86_64',
+                )
+            root = ET.fromstring(xml_data)
+            self.assertEqual(root.attrib['type'], 'xen')
+            self.assertEqual(root.find('vcpu').text, '1')
+            self.assertEqual(root.find('memory').text, six.text_type(512 * 1024))
+            self.assertEqual(root.find('memory').attrib['unit'], 'KiB')
+            self.assertEqual(root.find('.//kernel').text, '/usr/lib/grub2/x86_64-xen/grub.xen')
+
+            disks = root.findall('.//disk')
+            self.assertEqual(len(disks), 1)
+            disk = disks[0]
+            root_dir = salt.config.DEFAULT_MINION_OPTS.get('root_dir')
+            self.assertTrue(disk.find('source').attrib['file'].startswith(root_dir))
+            self.assertTrue('hello_system' in disk.find('source').attrib['file'])
+            self.assertEqual(disk.find('target').attrib['dev'], 'xvda')
+            self.assertEqual(disk.find('target').attrib['bus'], 'xen')
+            self.assertEqual(disk.find('driver').attrib['name'], 'qemu')
+            self.assertEqual(disk.find('driver').attrib['type'], 'qcow2')
+
+            interfaces = root.findall('.//interface')
+            self.assertEqual(len(interfaces), 1)
+            iface = interfaces[0]
+            self.assertEqual(iface.attrib['type'], 'bridge')
+            self.assertEqual(iface.find('source').attrib['bridge'], 'br0')
+            self.assertIsNone(iface.find('model'))
 
     def test_gen_xml_for_esxi_custom_profile(self):
         '''
