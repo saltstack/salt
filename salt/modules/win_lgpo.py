@@ -55,6 +55,7 @@ import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
+import salt.utils.win_lgpo_netsh
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -224,7 +225,7 @@ class _policy_info(object):
              Access"
     =======  ===================================================================
 
-    LsaRights mechanism
+    LsaRights Mechanism
     -------------------
 
     LSA Rights policies are configured via the LsaRights mechanism. The value of
@@ -237,7 +238,7 @@ class _policy_info(object):
             **SeNetworkLogonRight**
     ======  ====================================================================
 
-    NetUserModal mechanism
+    NetUserModal Mechanism
     ----------------------
 
     Some policies are configurable by the **NetUserModalGet** and
@@ -253,6 +254,34 @@ class _policy_info(object):
     Option  The name of the structure member which contains the data for the
             policy, for example **max_passwd_age**
     ======  ====================================================================
+
+    NetSH Mechanism
+    ---------------
+
+    The firewall policies are configured by the ``netsh.exe`` executable. The
+    value of this key is a dict with the following make-up:
+
+    =======  ===================================================================
+    Key      Value
+    =======  ===================================================================
+    Profile  The firewall profile to modify. Can be one of Domain, Private, or
+             Public
+    Section  The section of the firewall to modify. Can be one of state,
+             firewallpolicy, settings, or logging.
+    Option   The setting within that section
+    Value    The value of the setting
+    =======  ===================================================================
+
+    More information can be found in the advfirewall context in netsh. This can
+    be access by opening a netsh prompt. At a command prompt type the following:
+
+    c:\>netsh
+    netsh>advfirewall
+    netsh advfirewall>set help
+    netsh advfirewall>set domain help
+
+    Transforms
+    ----------
 
     Optionally, each policy definition can contain a "Transform" key. The
     Transform key is used to handle data that is stored and viewed differently.
@@ -368,6 +397,13 @@ class _policy_info(object):
             'Local Policies',
             'Security Options'
         ]
+        self.windows_firewall_gpedit_path = [
+            'Computer Configuration',
+            'Windows Settings',
+            'Security Settings',
+            'Windows Firewall with Advanced Security',
+            'Windows Firewall with Advanced Security - Local Group Policy Object'
+        ]
         self.password_policy_gpedit_path = [
             'Computer Configuration',
             'Windows Settings',
@@ -435,6 +471,12 @@ class _policy_info(object):
             2: 'User must enter a password each time they use a key',
             None: 'Not Defined',
             '(value not set)': 'Not Defined'
+        }
+        self.firewall_connections = {
+            'blockinbound': 'Block (default)',
+            'blockinboundalways': 'Block all connections',
+            'allowinbound': 'Allow',
+            'notconfigured': 'Not Configured'
         }
         self.krb_encryption_types = {
             0: 'No minimum',
@@ -813,6 +855,33 @@ class _policy_info(object):
                             },
                             'PutArgs': {
                                 'lookup': self.force_guest,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'wfw_DomainInboundConnections': {
+                        'Policy': 'Network firewall: Domain: Inbound connections',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - Block (default)
+                        # - Block all connections
+                        # - Allow
+                        # - Not Configured
+                        'Settings': self.firewall_connections.keys(),
+                        'NetSH': {
+                            'Profile': 'domain',
+                            'Section': 'firewallpolicy',
+                            'Option': 'Inbound'
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_connections,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_connections,
                                 'value_lookup': True,
                             },
                         },
@@ -3571,6 +3640,23 @@ def _buildElementNsmap(using_elements):
     return thisMap
 
 
+def _findOptionValueNetSH(profile, option):
+    settings = salt.utils.win_lgpo_netsh.get_all_settings(profile=profile,
+                                                          store='lgpo')
+    return settings[option]
+
+
+def _setOptionValueNetSH(profile, section, option, value):
+    if section == 'firewallpolicy':
+        if option not in ('Inbound', 'Outbound'):
+            raise CommandExecutionError('Invalid option: {0}'.format(option))
+        return salt.utils.win_lgpo_netsh.set_firewall_settings(
+            profile=profile,
+            inbound=value if option == 'Inbound' else None,
+            outbound=value if option == 'Outbound' else None,
+            store='lgpo')
+
+
 def _findOptionValueInSeceditFile(option):
     '''
     helper function to dump/parse a `secedit /export` file for a particular option
@@ -5939,6 +6025,12 @@ def get(policy_class=None, return_full_policy_names=True,
                     else:
                         msg = 'An error occurred attempting to get the value of policy {0} from secedit'
                         raise CommandExecutionError(msg.format(policy_name))
+                elif 'NetSH' in _pol:
+                    # get value from netsh
+                    class_vals[policy_name] = _findOptionValueNetSH(
+                        profile=_pol['NetSH']['Profile'],
+                        option=_pol['NetSH']['Option'])
+
                 elif 'NetUserModal' in _pol:
                     # get value from UserNetMod
                     if _pol['NetUserModal']['Modal'] not in modal_returns:
@@ -6160,6 +6252,7 @@ def set_(computer_policy=None, user_policy=None,
     if policies:
         for p_class in policies:
             _secedits = {}
+            _netshs = {}
             _modal_sets = {}
             _admTemplateData = {}
             _regedits = {}
@@ -6199,6 +6292,15 @@ def set_(computer_policy=None, user_policy=None,
                             _secedits[_pol['Secedit']['Section']].append(
                                     ' '.join([_pol['Secedit']['Option'],
                                              '=', six.text_type(_value)]))
+                        elif 'NetSH' in _pol:
+                            # set value with netsh
+                            log.debug('%s is a NetSH policy', policy_name)
+                            _netshs.setdefault(policy_name, {
+                                'profile': _pol['NetSH']['Profile'],
+                                'section': _pol['NetSH']['Section'],
+                                'option': _pol['NetSH']['Option'],
+                                'value': six.text_type(_value)
+                            })
                         elif 'NetUserModal' in _pol:
                             # set value via NetUserModal
                             log.debug('%s is a NetUserModal policy', policy_name)
@@ -6388,6 +6490,13 @@ def set_(computer_policy=None, user_policy=None,
                         msg = ('Error while attempting to set policies via secedit.'
                                '  Some changes may not be applied as expected')
                         raise CommandExecutionError(msg)
+                if _netshs:
+                    # we've got netsh settings to make
+                    for setting in _netshs:
+                        log.debug('Setting firewall policy: {0}'.format(setting))
+                        log.debug(_netshs[setting])
+                        _setOptionValueNetSH(**_netshs[setting])
+
                 if _modal_sets:
                     # we've got modalsets to make
                     log.debug(_modal_sets)
