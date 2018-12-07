@@ -472,11 +472,21 @@ class _policy_info(object):
             None: 'Not Defined',
             '(value not set)': 'Not Defined'
         }
-        self.firewall_connections = {
+        self.firewall_inbound_connections = {
             'blockinbound': 'Block (default)',
             'blockinboundalways': 'Block all connections',
             'allowinbound': 'Allow',
-            'notconfigured': 'Not Configured'
+            'notconfigured': 'Not configured'
+        }
+        self.firewall_outbound_connections = {
+            'blockoutbound': 'Block',
+            'allowoutbound': 'Allow (default)',
+            'notconfigured': 'Not configured'
+        }
+        self.firewall_rule_merging = {
+            'enable': 'Yes (default)',
+            'disable': 'No',
+            'notconfigured': 'Not configured'
         }
         self.krb_encryption_types = {
             0: 'No minimum',
@@ -859,15 +869,15 @@ class _policy_info(object):
                             },
                         },
                     },
-                    'wfw_DomainInboundConnections': {
+                    'WfwDomainInboundConnections': {
                         'Policy': 'Network firewall: Domain: Inbound connections',
                         'lgpo_section': self.windows_firewall_gpedit_path,
                         # Settings available are:
                         # - Block (default)
                         # - Block all connections
                         # - Allow
-                        # - Not Configured
-                        'Settings': self.firewall_connections.keys(),
+                        # - Not configured
+                        'Settings': self.firewall_inbound_connections.keys(),
                         'NetSH': {
                             'Profile': 'domain',
                             'Section': 'firewallpolicy',
@@ -877,11 +887,89 @@ class _policy_info(object):
                             'Get': '_dict_lookup',
                             'Put': '_dict_lookup',
                             'GetArgs': {
-                                'lookup': self.firewall_connections,
+                                'lookup': self.firewall_inbound_connections,
                                 'value_lookup': False,
                             },
                             'PutArgs': {
-                                'lookup': self.firewall_connections,
+                                'lookup': self.firewall_inbound_connections,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwDomainOutboundConnections': {
+                        'Policy': 'Network firewall: Domain: Outbound connections',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - Block
+                        # - Allow (default)
+                        # - Not configured
+                        'Settings': self.firewall_outbound_connections.keys(),
+                        'NetSH': {
+                            'Profile': 'domain',
+                            'Section': 'firewallpolicy',
+                            'Option': 'Outbound'
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_outbound_connections,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_outbound_connections,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwDomainSettingsLocalFirewallRules': {
+                        'Policy': 'Network firewall: Domain: Settings: Apply local firewall rules',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - Yes (default)
+                        # - No
+                        # - Not configured
+                        'Settings': self.firewall_rule_merging.keys(),
+                        'NetSH': {
+                            'Profile': 'domain',
+                            'Section': 'settings',
+                            'Option': 'LocalFirewallRules'
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_rule_merging,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_rule_merging,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwDomainSettingsLocalConnectionRules': {
+                        'Policy': 'Network firewall: Domain: Settings: Apply local connection security rules',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - Yes (default)
+                        # - No
+                        # - Not configured
+                        'Settings': self.firewall_rule_merging.keys(),
+                        'NetSH': {
+                            'Profile': 'domain',
+                            'Section': 'settings',
+                            'Option': 'LocalConSecRules'
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_rule_merging,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_rule_merging,
                                 'value_lookup': True,
                             },
                         },
@@ -3648,12 +3736,16 @@ def _findOptionValueNetSH(profile, option):
 
 def _setOptionValueNetSH(profile, section, option, value):
     if section == 'firewallpolicy':
-        if option not in ('Inbound', 'Outbound'):
-            raise CommandExecutionError('Invalid option: {0}'.format(option))
         return salt.utils.win_lgpo_netsh.set_firewall_settings(
             profile=profile,
             inbound=value if option == 'Inbound' else None,
             outbound=value if option == 'Outbound' else None,
+            store='lgpo')
+    if section == 'settings':
+        return salt.utils.win_lgpo_netsh.set_settings(
+            profile=profile,
+            setting=option,
+            value=value,
             store='lgpo')
 
 

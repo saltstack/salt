@@ -504,13 +504,13 @@ def set_settings(profile, setting, value, store='local'):
     # Input validation
     if profile.lower() not in ('domain', 'public', 'private'):
         raise ValueError('Incorrect profile: {0}'.format(profile))
-    if setting not in ('localfirewallrules',
-                       'localconsecrules',
-                       'inboundusernotification',
-                       'remotemanagement',
-                       'unicastresponsetomulticast'):
+    if setting.lower() not in ('localfirewallrules',
+                               'localconsecrules',
+                               'inboundusernotification',
+                               'remotemanagement',
+                               'unicastresponsetomulticast'):
         raise ValueError('Incorrect setting: {0}'.format(setting))
-    if value not in ('enable', 'disable', 'notconfigured'):
+    if value.lower() not in ('enable', 'disable', 'notconfigured'):
         raise ValueError('Incorrect value: {0}'.format(value))
 
     # Run the command
