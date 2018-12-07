@@ -241,7 +241,7 @@ def present(
 def _fix_quantities(tree):
     '''
     Stupidly simple function to fix any Items/Quantity disparities inside a
-    DistributionConfig block before use.  Since AWS only accepts JSON-encodable
+    DistributionConfig block before use. Since AWS only accepts JSON-encodable
     data types, this implementation is "good enough" for our purposes.
     '''
     if isinstance(tree, dict):
@@ -261,41 +261,55 @@ def distribution_present(name, region=None, key=None, keyid=None, profile=None, 
     '''
     Ensure the given CloudFront distribution exists in the described state.
 
-    The implementation of this function, and all those following, is orthagonal to that of
-    `present()` above.  Resources created with `present()` will not be correctly managed by
-    this function, as a different method is used to store Salt's state signifier.  This function
-    and those following are a suite, designed to work together.  As an extra bonus, they correctly
-    process updates of the managed resources, so it is recommended to use them in preference to
-    `present()` above.
+    The implementation of this function, and all those following, is orthagonal
+    to that of :py:mod:`boto_cloudfront.present
+    <salt.states.boto_cloudfront.present>`. Resources created with
+    :py:mod:`boto_cloudfront.present <salt.states.boto_cloudfront.present>`
+    will not be correctly managed by this function, as a different method is
+    used to store Salt's state signifier. This function and those following are
+    a suite, designed to work together. As an extra bonus, they correctly
+    process updates of the managed resources, so it is recommended to use them
+    in preference to :py:mod:`boto_cloudfront.present
+    <salt.states.boto_cloudfront.present>` above.
 
-    Note that the semantics of DistributionConfig (below) are rather arcane, and vary wildly
-    depending on whether the distribution already exists or not (e.g. is being initially created,
-    or being updated in place).  Lots more details can be found at
-    __: https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/distribution-overview-required-fields.html
+    Note that the semantics of DistributionConfig (below) are rather arcane,
+    and vary wildly depending on whether the distribution already exists or not
+    (e.g. is being initially created, or being updated in place). Many more
+    details can be found here__.
+
+    .. __: https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/distribution-overview-required-fields.html
 
     name (string)
         Name of the state definition.
 
     Name (string)
-        Name of the resource (for purposes of Salt's idempotency).  If not provided, the value of
-        `name` will be used.
+        Name of the resource (for purposes of Salt's idempotency). If not
+        provided, the value of ``name`` will be used.
 
     DistributionConfig (dict)
         Configuration for the distribution.
+
         Notes:
-        - The CallerReference field should NOT be provided - it will be autopopulated by Salt.
-        - A large number of sub- (and sub-sub-) fields require a `Quantity` element, which simply
-          COUNTS the number of items in the `Items` element.  This is bluntly stupid, so as a
-          convenience, Salt will traverse the provided configuration, and add (or fix) a `Quantity`
-          element for any `Items` elements of list-type it encounters.  This adds a bit of sanity
-          to an otherwise error-prone situation.  Note that for this to work, zero-length lists
-          must be inlined as `[]`.
-        - Due to the unavailibity of a better way to store stateful idempotency information about
-          Distributions, the Comment sub-element (as the only user-settable attribute without weird
-          self-blocking semantics, and which is available from the core `get_distribution()` API
-          call) is utilized to store the Salt state signifier, which is used to determine resource
-          existence and state.  That said, to enable SOME usability of this field, only the value
-          up to the first colon character is taken as the signifier, with everything afterward
+
+        - The CallerReference field should NOT be provided - it will be
+          autopopulated by Salt.
+
+        - A large number of sub- (and sub-sub-) fields require a ``Quantity``
+          element, which simply COUNTS the number of items in the ``Items``
+          element. This is bluntly stupid, so as a convenience, Salt will
+          traverse the provided configuration, and add (or fix) a ``Quantity``
+          element for any ``Items`` elements of list-type it encounters. This
+          adds a bit of sanity to an otherwise error-prone situation. Note
+          that for this to work, zero-length lists must be inlined as ``[]``.
+
+        - Due to the unavailibity of a better way to store stateful idempotency
+          information about Distributions, the Comment sub-element (as the only
+          user-settable attribute without weird self-blocking semantics, and
+          which is available from the core ``get_distribution()`` API call) is
+          utilized to store the Salt state signifier, which is used to
+          determine resource existence and state. That said, to enable **some**
+          usability of this field, only the value up to the first colon
+          character is taken as the signifier, with everything afterward
           free-form, and ignored (but preserved) by Salt.
 
     Tags (dict)
@@ -394,7 +408,7 @@ def distribution_present(name, region=None, key=None, keyid=None, profile=None, 
     #  For instance, origin access identities must be of the form
     #  `origin-access-identity/cloudfront/ID-of-origin-access-identity`, but we can't really
     #  know that ID apriori, so any OAI state names inside the config data must be resolved
-    #  and converted into that format before submission.  Be aware that the `state names` of
+    #  and converted into that format before submission. Be aware that the `state names` of
     #  salt managed OAIs are stored in their Comment fields for lack of any better place...
     for item in range(len(DistributionConfig.get('Origins', {}).get('Items', []))):
         oai = DistributionConfig['Origins']['Items'][item].get('S3OriginConfig',
@@ -572,21 +586,22 @@ def oai_bucket_policy_present(name, Bucket, OAI, Policy,
         The name of the state definition
 
     Bucket
-        The S3 bucket which CloudFront needs access to.  Note that this policy is exclusive - it
-        will be the only policy definition on the bucket (and objects inside the bucket if you
-        specify such permissions in the policy).  Note that this likely SHOULD reflect the bucket
-        mentioned in the Resource section of the Policy, but this is not enforced...
+        The S3 bucket which CloudFront needs access to. Note that this policy
+        is exclusive - it will be the only policy definition on the bucket (and
+        objects inside the bucket if you specify such permissions in the
+        policy). Note that this likely SHOULD reflect the bucket mentioned in
+        the Resource section of the Policy, but this is not enforced...
 
     OAI
-        The value of `Name` passed to the state definition for the origin access identity which
-        will be accessing the bucket.
+        The value of `Name` passed to the state definition for the origin
+        access identity which will be accessing the bucket.
 
     Policy
-        The full policy document which should be set on the S3 bucket.
-        If a `Principal` clause is not provided in the policy, one will be automatically added, and
-        pointed at the correct value as dereferenced from the OAI provided above.
-        If one IS provided, then this is not done, and you are responsible for providing the correct
-        values.
+        The full policy document which should be set on the S3 bucket. If a
+        ``Principal`` clause is not provided in the policy, one will be
+        automatically added, and pointed at the correct value as dereferenced
+        from the OAI provided above. If one IS provided, then this is not
+        done, and you are responsible for providing the correct values.
 
     region (string)
         Region to connect to.
@@ -653,7 +668,7 @@ def oai_bucket_policy_present(name, Bucket, OAI, Policy,
     #   Principal: {'S3CanonicalUserId': someCrazyLongMagicValueAsDerivedAbove}
     # BUT, they RETURN the Principal as something WILDLY different
     #   Principal: {'AWS': arn:aws:iam::cloudfront:user/CloudFront Origin Access Identity E30ABCDEF12345}
-    # which obviously compare different on every run...  So we fake it thusly.
+    # which obviously compare different on every run... So we fake it thusly.
     fake_Policy = copy.deepcopy(Policy)
     for stanza in range(len(fake_Policy.get('Statement', []))):
         # Warning: unavoidable hardcoded magic values HO!
@@ -683,40 +698,51 @@ def oai_bucket_policy_present(name, Bucket, OAI, Policy,
 
 def route53_alias_present(name, region=None, key=None, keyid=None, profile=None, **kwargs):
     '''
-    Ensure a Route53 Alias exists and is pointing at the given CloudFront distribution.
-    An `A` record is always created, and if IPV6 is enabled on the given distribution, an
-    `AAAA` record will be created as well.  Also be aware that Alias records for CloudFront
-    distributions are only permitted in non-private zones.
+    Ensure a Route53 Alias exists and is pointing at the given CloudFront
+    distribution. An ``A`` record is always created, and if IPV6 is enabled on
+    the given distribution, an ``AAAA`` record will be created as well. Also be
+    aware that Alias records for CloudFront distributions are only permitted in
+    non-private zones.
 
     name
         The name of the state definition.
 
     Distribution
-        The name of the CloudFront distribution.  Defaults to the value of `name` if not provided.
+        The name of the CloudFront distribution. Defaults to the value of
+        ``name`` if not provided.
 
     HostedZoneId
         Id of the Route53 hosted zone within which the records should be created.
 
     DomainName
-        The domain name associated with the Hosted Zone.  Exclusive with HostedZoneId.
+        The domain name associated with the Hosted Zone. Exclusive with HostedZoneId.
 
     ResourceRecordSet
-        A Route53 Record Set (with AliasTarget section, suitable for use as an `Alias` record,
-        if non-default settings are needed on the Alias) which should be pointed at the provided
-        CloudFront distribution.  Note that this MUST correlate with the Aliases set within the
+        A Route53 Record Set (with AliasTarget section, suitable for use as an
+        ``Alias`` record, if non-default settings are needed on the Alias)
+        which should be pointed at the provided CloudFront distribution. Note
+        that this MUST correlate with the Aliases set within the
         DistributionConfig section of the distribution.
 
-        Some notes SPECIFICALLY about the `AliasTarget` subsection of the ResourceRecordSet:
-        - If not specified, the `DNSName` sub-field will be populated by dereferencing
-          `Distribution` above to the value of its `DomainName` attribute.
-        - The HostedZoneId sub-field should not be provided -- it will be automatically
-          populated with a `magic` AWS value.
-        - The EvaluateTargetHealth can only be False on a CloudFront Alias.
-        - The above items taken all together imply that, for most use-cases, the AliasTarget
-          sub-section can be entirely omitted, as seen in the first code sample below.
+        Some notes *specifically* about the ``AliasTarget`` subsection of the
+        ResourceRecordSet:
 
-        Lastly, note that if you set `name` to the desired ResourceRecordSet Name, you can
-        entirely omit this parameter, as shown in the second example below.
+        - If not specified, the ``DNSName`` sub-field will be populated by
+          dereferencing ``Distribution`` above to the value of its
+          ``DomainName`` attribute.
+
+        - The HostedZoneId sub-field should not be provided -- it will be
+          automatically populated with a ``magic`` AWS value.
+
+        - The EvaluateTargetHealth can only be False on a CloudFront Alias.
+
+        - The above items taken all together imply that, for most use-cases,
+          the AliasTarget sub-section can be entirely omitted, as seen in the
+          first code sample below.
+
+        Lastly, note that if you set ``name`` to the desired ResourceRecordSet
+        Name, you can entirely omit this parameter, as shown in the second
+        example below.
 
     .. code-block:: yaml
 
@@ -813,19 +839,20 @@ def distribution_absent(name, region=None, key=None, keyid=None, profile=None, *
     '''
     Ensure a distribution with the given Name tag does not exist.
 
-    Note that CloudFront does not allow directly deleting an enabled Distribution.  If such
-    is requested, Salt will attempt to first update the distribution's status to Disabled,
-    and once that returns success, to then delete the resource.  THIS CAN TAKE SOME TIME, so
-    be patient :)
+    Note that CloudFront does not allow directly deleting an enabled
+    Distribution. If such is requested, Salt will attempt to first update the
+    distribution's status to Disabled, and once that returns success, to then
+    delete the resource. THIS CAN TAKE SOME TIME, so be patient :)
 
     name (string)
         Name of the state definition.
 
     Name (string)
-        Name of the CloudFront distribution to be managed.  If not provided, the value of `name`
-        will be used as a default.  The purpose of this parameter is only to resolve it to a
-        Resource ID, so be aware that an explicit value for `Id` below will override any value
-        provided, or defaulted, here.
+        Name of the CloudFront distribution to be managed. If not provided, the
+        value of ``name`` will be used as a default. The purpose of this
+        parameter is only to resolve it to a Resource ID, so be aware that an
+        explicit value for ``Id`` below will override any value provided, or
+        defaulted, here.
 
     Id (string)
         The Resource ID of a CloudFront distribution to be managed.
@@ -933,18 +960,21 @@ def origin_access_identity_present(name, region=None, key=None, keyid=None, prof
     '''
     Ensure a given CloudFront Origin Access Identity exists.
 
-    Implementation Note:  Due to the unavailibity of ANY other way to store stateful idempotency
-    information about Origin Access Identities (including resource tags), the Comment attribute (as
-    the only user-settable attribute without weird self-blocking semantics) is necessarily utilized
-    to store the Salt state signifier, which is used to determine resource existence and state.  That
-    said, to enable SOME usability of this field, only the value up to the first colon character
-    is taken as the signifier, while anything afterward is free-form and ignored by Salt.
+    .. note::
+        Due to the unavailibity of ANY other way to store stateful idempotency
+        information about Origin Access Identities (including resource tags),
+        the Comment attribute (as the only user-settable attribute without
+        weird self-blocking semantics) is necessarily utilized to store the
+        Salt state signifier, which is used to determine resource existence and
+        state. That said, to enable SOME usability of this field, only the
+        value up to the first colon character is taken as the signifier, while
+        anything afterward is free-form and ignored by Salt.
 
     name (string)
         Name of the state definition.
 
     Name (string)
-        Name of the resource (for purposes of Salt's idempotency).  If not provided, the value of
+        Name of the resource (for purposes of Salt's idempotency). If not provided, the value of
         `name` will be used.
 
     Comment
@@ -1057,8 +1087,8 @@ def origin_access_identity_absent(name, region=None, key=None, keyid=None, profi
         The name of the state definition.
 
     Name (string)
-        Name of the resource (for purposes of Salt's idempotency).  If not provided, the value of
-        `name` will be used.
+        Name of the resource (for purposes of Salt's idempotency). If not
+        provided, the value of ``name`` will be used.
 
     Id (string)
         The Resource ID of a CloudFront origin access identity to be managed.
