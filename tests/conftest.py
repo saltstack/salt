@@ -104,7 +104,7 @@ def pytest_tempdir_basename():
     '''
     Return the temporary directory basename for the salt test suite.
     '''
-    return 'salt-tests-tmp'
+    return 'salt-tests-tmpdir'
 
 
 # ----- CLI Options Setup ------------------------------------------------------------------------------------------->
