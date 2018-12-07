@@ -2,6 +2,9 @@
 '''
 A salt util for modifying firewall settings.
 
+.. versionadded:: 2018.3.4
+.. versionadded:: Fluorine
+
 This util allows you to modify firewall settings in the local group policy in
 addition to the normal firewall settings. Parameters are taken from the
 netsh advfirewall prompt.
