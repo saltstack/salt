@@ -1496,8 +1496,10 @@ def init(name,
             '\'enable_vnc\' will be removed in {version}. ')
         graphics = {'type': 'vnc'}
 
-    os_type = 'hvm' if 'hvm' in os_types else os_types[0]
-    arch = 'x86_64' if 'x86_64' in arches else arches[0]
+    if os_type is None:
+        os_type = 'hvm' if 'hvm' in os_types else os_types[0]
+    if arch is None:
+        arch = 'x86_64' if 'x86_64' in arches else arches[0]
 
     vm_xml = _gen_xml(name, cpu, mem, diskp, nicp, hypervisor, os_type, arch, graphics, **kwargs)
     conn = __get_conn(**kwargs)
