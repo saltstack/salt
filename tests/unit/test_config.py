@@ -323,7 +323,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 'root_dir: {}\n'
                 'log_file: {}\n'.format(root_dir, fpath)
             )
-        #with patch('salt.sysRUNTIME_VARS.ROOT_DIR', TMP):
+        #with patch('salt.sysRUNTIME_VARS.ROOT_DIR', RUNTIME_VARS.TMP):
         config = salt.config.master_config(fpath)
         self.assertEqual(config['log_file'], fpath)
 
