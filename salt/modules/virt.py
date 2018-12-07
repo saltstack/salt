@@ -1368,25 +1368,26 @@ def init(name,
     caps = capabilities(**kwargs)
     os_types = sorted({guest['os_type'] for guest in caps['guests']})
     arches = sorted({guest['arch']['name'] for guest in caps['guests']})
-    hypervisors = sorted({x for y in [guest['arch']['domains'].keys() for guest in caps['guests']] for x in y})
-    hypervisor = __salt__['config.get']('libvirt:hypervisor', hypervisor)
-    if hypervisor is not None:
-        salt.utils.versions.warn_until(
-            'Sodium',
-            '\'libvirt:hypervisor\' configuration property has been deprecated. '
-            'Rather use the \'virt:connection:uri\' to properly define the libvirt '
-            'URI or alias of the host to connect to. \'libvirt:hypervisor\' will '
-            'stop being used in {version}.'
-        )
-    else:
-        # Use the machine types as possible values
-        # Prefer 'kvm' over the others if available
-        hypervisor = 'kvm' if 'kvm' in hypervisors else hypervisors[0]
+    if not hypervisor:
+        hypervisor = __salt__['config.get']('libvirt:hypervisor', hypervisor)
+        if hypervisor is not None:
+            salt.utils.versions.warn_until(
+                'Sodium',
+                '\'libvirt:hypervisor\' configuration property has been deprecated. '
+                'Rather use the \'virt:connection:uri\' to properly define the libvirt '
+                'URI or alias of the host to connect to. \'libvirt:hypervisor\' will '
+                'stop being used in {version}.'
+            )
+        else:
+            # Use the machine types as possible values
+            # Prefer 'kvm' over the others if available
+            hypervisors = sorted({x for y in [guest['arch']['domains'].keys() for guest in caps['guests']] for x in y})
+            hypervisor = 'kvm' if 'kvm' in hypervisors else hypervisors[0]
 
     # esxi used to be a possible value for the hypervisor: map it to vmware since it's the same
     hypervisor = 'vmware' if hypervisor == 'esxi' else hypervisor
 
-    log.debug('Using hyperisor %s', hypervisor)
+    log.debug('Using hypervisor %s', hypervisor)
 
     # the NICs are computed as follows:
     # 1 - get the default NICs from the profile
