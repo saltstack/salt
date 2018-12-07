@@ -56,7 +56,7 @@ def _try_path(dir, rel, lpaths):
 
     for full_path in full_paths:
         if os.path.isfile(full_path):
-            with open(full_path) as f:
+            with salt.utils.files.fopen(full_path) as f:
                 return full_path, f.read()
     return full_paths[0], None
 
