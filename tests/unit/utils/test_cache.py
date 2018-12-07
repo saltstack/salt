@@ -229,7 +229,7 @@ class CacheDiskTestCase(TestCase):
     @patch('os.path.exists', MagicMock(return_value=True))
     @patch('os.path.getmtime', MagicMock(return_value=42))
     @patch('salt.utils.files.fopen', MagicMock())
-    @patch('salt.utils.cache.msgpack', MagicMock())
+    @patch('salt.utils.cache.msgpack.load', MagicMock())
     @patch('salt.utils.data.decode', MagicMock(return_value={'banana': {'status': 'rotten'}}))
     def test_read_old_format_support(self):
         '''
@@ -249,7 +249,7 @@ class CacheDiskTestCase(TestCase):
     @patch('os.path.exists', MagicMock(return_value=True))
     @patch('os.path.getmtime', MagicMock(return_value=42))
     @patch('salt.utils.files.fopen', MagicMock())
-    @patch('salt.utils.cache.msgpack', MagicMock())
+    @patch('salt.utils.cache.msgpack.load', MagicMock())
     @patch('salt.utils.data.decode', MagicMock(
         return_value={'CacheDisk_cachetime': {'banana': 42}, 'CacheDisk_data': {'banana': {'status': 'rotten'}}}))
     def test_read_new_format_support(self):
@@ -269,7 +269,7 @@ class CacheDiskTestCase(TestCase):
 
     @patch('os.path.exists', MagicMock(return_value=True))
     @patch('salt.utils.files.fopen', MagicMock())
-    @patch('salt.utils.cache.msgpack', MagicMock())
+    @patch('salt.utils.cache.msgpack.load', MagicMock())
     @patch('salt.utils.cache.id', MagicMock(return_value=66))
     @patch('salt.utils.data.decode', MagicMock(return_value={'banana': {'status': 'rotten'}}))
     def test_str_repr(self):
@@ -286,7 +286,7 @@ class CacheDiskTestCase(TestCase):
     @patch('os.path.exists', MagicMock(return_value=True))
     @patch('os.path.getmtime', MagicMock(return_value=42))
     @patch('salt.utils.files.fopen', MagicMock())
-    @patch('salt.utils.cache.msgpack', MagicMock())
+    @patch('salt.utils.cache.msgpack.load', MagicMock())
     @patch('salt.utils.data.decode', MagicMock(return_value={'banana': {'status': 'rotten'}}))
     def test_read_success_debugging(self):
         '''
@@ -359,7 +359,7 @@ class CacheDiskTestCase(TestCase):
             assert stored_data['CacheDisk_data']['banana']['status'] == 'rotten'
             assert stored_data['CacheDisk_cachetime']['banana'] == 42
 
-    @patch('salt.utils.cache.msgpack', None)  # Just turn off reading
+    @patch('salt.utils.cache.msgpack.load', None)  # Just turn off reading
     def test_getitem_no_keyerror(self):
         '''
         Test get non-existing item raises no keyerror.
@@ -371,7 +371,7 @@ class CacheDiskTestCase(TestCase):
             c['backup_destination'] = '/dev/null'
             assert c['backup_destination'] == '/dev/null'
 
-    @patch('salt.utils.cache.msgpack', None)  # Just turn off reading
+    @patch('salt.utils.cache.msgpack.load', None)  # Just turn off reading
     def test_add_remove_operations(self):
         '''
         Test dict operations set/delete on the cache object.

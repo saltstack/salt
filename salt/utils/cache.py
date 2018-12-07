@@ -9,7 +9,7 @@ import re
 import time
 import logging
 try:
-    import salt.utils.msgpack as msgpack
+    from salt.utils.msgpack import msgpack, PackValueError, UnpackValueError
 except ImportError:
     msgpack = None
 
@@ -191,8 +191,10 @@ class CacheDisk(CacheDict):
                         self._key_cache_time[key] = timestamp
                 if log.isEnabledFor(logging.DEBUG):
                     log.debug('Disk cache retrieved: %s', cache)
-            except (IOError, OSError) as err:
+            except (IOError, OSError, UnpackValueError) as err:
                 log.error('Error while reading disk cache from %s: %s', self._path, err)
+                if salt.utils.files.is_empty(self._path):
+                    salt.utils.files.remove(self._path)
 
     def store(self):
         '''
@@ -209,8 +211,10 @@ class CacheDisk(CacheDict):
                         "CacheDisk_cachetime": self._key_cache_time
                     }
                     msgpack.dump(cache, fp_, use_bin_type=True)
-            except (IOError, OSError) as err:
+            except (IOError, OSError, PackValueError) as err:
                 log.error('Error storing cache data to the disk: %s', err)
+                if salt.utils.files.is_empty(self._path):
+                    salt.utils.files.remove(self._path)
 
 
 class CacheCli(object):
