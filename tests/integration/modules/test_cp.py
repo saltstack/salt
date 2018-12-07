@@ -15,6 +15,7 @@ import textwrap
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.helpers import (
+    flaky,
     get_unused_localhost_port,
     skip_if_not_root,
     with_tempfile)
@@ -385,6 +386,7 @@ class CPModuleTest(ModuleCase):
             ])
         self.assertEqual(ret, False)
 
+    @flaky
     def test_get_file_str_https(self):
         '''
         cp.get_file_str with https:// source given
