@@ -14,11 +14,12 @@ import re
 import tempfile
 
 # Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf, TestCase
 from tests.support.case import ModuleCase
 from tests.support.helpers import flaky
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock, Mock
-from tests.support.paths import BASE_FILES, TMP, TMP_CONF_DIR
+from tests.support.paths import BASE_FILES
 
 # Import Salt libs
 import salt.config
@@ -52,7 +53,7 @@ try:
 except ImportError:
     HAS_TIMELIB = False
 
-CACHEDIR = os.path.join(TMP, 'jinja-template-cache')
+CACHEDIR = os.path.join(RUNTIME_VARS.TMP, 'jinja-template-cache')
 BLINESEP = salt.utils.stringutils.to_bytes(os.linesep)
 
 
@@ -1343,7 +1344,7 @@ class TestDotNotationLookup(ModuleCase):
             'mocktest.ping': lambda: True,
             'mockgrains.get': lambda x: 'jerry',
         }
-        minion_opts = salt.config.minion_config(os.path.join(TMP_CONF_DIR, 'minion'))
+        minion_opts = salt.config.minion_config(os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'minion'))
         render = salt.loader.render(minion_opts, functions)
         self.jinja = render.get('jinja')
 

@@ -11,10 +11,10 @@ import os
 import shutil
 
 # Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.integration import AdaptedConfigurationTestCaseMixin
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import patch, Mock, MagicMock, NO_MOCK, NO_MOCK_REASON
-from tests.support.paths import TMP
 from tests.support.unit import TestCase, skipIf
 
 # Import Salt libs
@@ -73,8 +73,8 @@ class FileclientTestCase(TestCase):
 
 
 SALTENVS = ('base', 'dev')
-FS_ROOT = os.path.join(TMP, 'fileclient_fs_root')
-CACHE_ROOT = os.path.join(TMP, 'fileclient_cache_root')
+FS_ROOT = os.path.join(RUNTIME_VARS.TMP, 'fileclient_fs_root')
+CACHE_ROOT = os.path.join(RUNTIME_VARS.TMP, 'fileclient_cache_root')
 SUBDIR = 'subdir'
 SUBDIR_FILES = ('foo.txt', 'bar.txt', 'baz.txt')
 
@@ -238,7 +238,7 @@ class FileclientCacheTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderMod
         '''
         patched_opts = dict((x, y) for x, y in six.iteritems(self.minion_opts))
         patched_opts.update(MOCKED_OPTS)
-        alt_cachedir = os.path.join(TMP, 'abs_cachedir')
+        alt_cachedir = os.path.join(RUNTIME_VARS.TMP, 'abs_cachedir')
 
         with patch.dict(fileclient.__opts__, patched_opts):
             client = fileclient.get_file_client(fileclient.__opts__, pillar=False)
@@ -347,7 +347,7 @@ class FileclientCacheTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderMod
         '''
         patched_opts = dict((x, y) for x, y in six.iteritems(self.minion_opts))
         patched_opts.update(MOCKED_OPTS)
-        alt_cachedir = os.path.join(TMP, 'abs_cachedir')
+        alt_cachedir = os.path.join(RUNTIME_VARS.TMP, 'abs_cachedir')
 
         with patch.dict(fileclient.__opts__, patched_opts):
             client = fileclient.get_file_client(fileclient.__opts__, pillar=False)

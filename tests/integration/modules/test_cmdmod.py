@@ -16,7 +16,7 @@ from tests.support.helpers import (
     skip_if_not_root,
     this_user,
 )
-from tests.support.paths import TMP
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
 
 # Import salt libs
@@ -189,7 +189,7 @@ class CMDModuleTest(ModuleCase):
         '''
         cmd.script with cwd
         '''
-        tmp_cwd = tempfile.mkdtemp(dir=TMP)
+        tmp_cwd = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         args = 'saltines crackers biscuits=yes'
         script = 'salt://script.py'
         ret = self.run_function('cmd.script', [script, args], cwd=tmp_cwd)
@@ -199,7 +199,7 @@ class CMDModuleTest(ModuleCase):
         '''
         cmd.script with cwd
         '''
-        tmp_cwd = "{0}{1}test 2".format(tempfile.mkdtemp(dir=TMP), os.path.sep)
+        tmp_cwd = "{0}{1}test 2".format(tempfile.mkdtemp(dir=RUNTIME_VARS.TMP), os.path.sep)
         os.mkdir(tmp_cwd)
 
         args = 'saltines crackers biscuits=yes'
