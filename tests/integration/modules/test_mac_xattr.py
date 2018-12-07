@@ -8,15 +8,15 @@ from __future__ import absolute_import, unicode_literals, print_function
 import os
 
 # Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ModuleCase
-from tests.support.paths import TMP
 
 # Import Salt libs
 import salt.utils.path
 import salt.utils.platform
 
-TEST_FILE = os.path.join(TMP, 'xattr_test_file.txt')
-NO_FILE = os.path.join(TMP, 'xattr_no_file.txt')
+TEST_FILE = os.path.join(RUNTIME_VARS.TMP, 'xattr_test_file.txt')
+NO_FILE = os.path.join(RUNTIME_VARS.TMP, 'xattr_no_file.txt')
 
 
 class MacXattrModuleTest(ModuleCase):

@@ -12,6 +12,7 @@ from __future__ import absolute_import
 
 # Import salt test libs
 import tests.integration.utils
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ShellCase
 from tests.support.mixins import ShellCaseCommonTestsMixin
 from tests.support.unit import skipIf

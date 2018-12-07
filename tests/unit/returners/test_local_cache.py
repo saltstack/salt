@@ -18,7 +18,7 @@ import time
 # Import Salt Testing libs
 from tests.integration import AdaptedConfigurationTestCaseMixin
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.paths import TMP
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -37,7 +37,7 @@ from salt.ext import six
 
 log = logging.getLogger(__name__)
 
-TMP_CACHE_DIR = os.path.join(TMP, 'salt_test_job_cache')
+TMP_CACHE_DIR = os.path.join(RUNTIME_VARS.TMP, 'salt_test_job_cache')
 TMP_JID_DIR = os.path.join(TMP_CACHE_DIR, 'jobs')
 
 
@@ -182,7 +182,7 @@ class LocalCacheCleanOldJobsTestCase(TestCase, LoaderModuleMockMixin):
 
         This emulates salt.utils.jid.jid_dir() by creating this structure:
 
-        TMP_JID_DIR dir/
+        RUNTIME_VARS.TMP_JID_DIR dir/
           random dir from tempfile.mkdtemp/
             'jid' directory/
               'jid' file
@@ -224,7 +224,7 @@ class Local_CacheTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleM
 
     @classmethod
     def setUpClass(cls):
-        cls.TMP_CACHE_DIR = os.path.join(TMP, 'rootdir', 'cache')
+        cls.TMP_CACHE_DIR = os.path.join(RUNTIME_VARS.TMP, 'rootdir', 'cache')
         cls.JOBS_DIR = os.path.join(cls.TMP_CACHE_DIR, 'jobs')
         cls.JID_DIR = os.path.join(cls.JOBS_DIR, '31', 'c56eed380a4e899ae12bc42563cfdfc53066fb4a6b53e2378a08ac49064539')
         cls.JID_FILE = os.path.join(cls.JID_DIR, 'jid')

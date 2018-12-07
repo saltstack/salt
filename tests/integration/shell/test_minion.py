@@ -17,6 +17,7 @@ import logging
 
 # Import Salt Testing libs
 import tests.integration.utils
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ShellCase
 from tests.support.unit import skipIf
 from tests.support.paths import CODE_DIR

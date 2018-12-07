@@ -15,8 +15,9 @@ from salt.ext.six.moves.urllib.request import urlopen
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
 
 # Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.paths import FILES, TMP
+from tests.support.paths import FILES
 from tests.support.unit import TestCase, skipIf
 from tests.support.helpers import requires_network, skip_if_binaries_missing
 
@@ -68,9 +69,9 @@ class Base(TestCase, LoaderModuleMockMixin):
 
     @classmethod
     def setUpClass(cls):
-        if not os.path.isdir(TMP):
-            os.makedirs(TMP)
-        cls.rdir = tempfile.mkdtemp(dir=TMP)
+        if not os.path.isdir(RUNTIME_VARS.TMP):
+            os.makedirs(RUNTIME_VARS.TMP)
+        cls.rdir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         cls.tdir = os.path.join(cls.rdir, 'test')
         for idx, url in six.iteritems(buildout._URL_VERSIONS):
             log.debug('Downloading bootstrap from %s', url)

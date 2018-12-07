@@ -12,10 +12,11 @@ import threading
 import time
 
 # Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ModuleCase
 from tests.support.helpers import with_tempdir, flaky
 from tests.support.unit import skipIf
-from tests.support.paths import BASE_FILES, TMP, TMP_PILLAR_TREE, TMP_STATE_TREE
+from tests.support.paths import BASE_FILES
 from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import Salt libs
@@ -93,7 +94,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         state.show_highstate
         '''
         high = self.run_function('state.show_highstate')
-        destpath = os.path.join(TMP, 'testfile')
+        destpath = os.path.join(RUNTIME_VARS.TMP, 'testfile')
         self.assertTrue(isinstance(high, dict))
         self.assertTrue(destpath in high)
         self.assertEqual(high[destpath]['__env__'], 'base')
@@ -123,7 +124,8 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         Test state.show_states with a sls file
         defined in a top file is missing
         '''
-        with salt.utils.files.fopen(os.path.join(TMP_STATE_TREE, 'top.sls'), 'w') as top_file:
+        topfile = os.path.join(RUNTIME_VARS.TMP_STATE_TREE, 'top.sls')
+        with salt.utils.files.fopen(topfile, 'w') as top_file:
             top_file.write(textwrap.dedent('''\
                                            base:
                                              '*':
@@ -338,7 +340,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
                 - text: foo
 
         '''
-        testfile = os.path.join(TMP, 'issue-1876')
+        testfile = os.path.join(RUNTIME_VARS.TMP, 'issue-1876')
 
         sls = self.run_function('state.sls', mods='issue-1876')
         self.assertIn(
@@ -364,7 +366,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
             expected = os.linesep.join(new_contents)
             expected += os.linesep
 
-        testfile = os.path.join(TMP, 'issue-1879')
+        testfile = os.path.join(RUNTIME_VARS.TMP, 'issue-1879')
         # Delete if exiting
         if os.path.isfile(testfile):
             os.unlink(testfile)
@@ -413,7 +415,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
                 os.unlink(testfile)
 
     def test_include(self):
-        tempdir = tempfile.mkdtemp(dir=TMP)
+        tempdir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         self.addCleanup(shutil.rmtree, tempdir, ignore_errors=True)
         pillar = {}
         for path in ('include-test', 'to-include-test', 'exclude-test'):
@@ -425,7 +427,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertFalse(os.path.isfile(pillar['exclude-test']))
 
     def test_exclude(self):
-        tempdir = tempfile.mkdtemp(dir=TMP)
+        tempdir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         self.addCleanup(shutil.rmtree, tempdir, ignore_errors=True)
         pillar = {}
         for path in ('include-test', 'exclude-test', 'to-include-test'):
@@ -439,7 +441,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
     @skipIf(salt.utils.path.which_bin(KNOWN_BINARY_NAMES) is None, 'virtualenv not installed')
     def test_issue_2068_template_str(self):
         venv_dir = os.path.join(
-            TMP, 'issue-2068-template-str'
+            RUNTIME_VARS.TMP, 'issue-2068-template-str'
         )
 
         try:
@@ -1366,7 +1368,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertEqual(descr['comment'], 'onlyif condition is false')
 
     def test_get_file_from_env_in_top_match(self):
-        tgt = os.path.join(TMP, 'prod-cheese-file')
+        tgt = os.path.join(RUNTIME_VARS.TMP, 'prod-cheese-file')
         try:
             ret = self.run_function(
                 'state.highstate', minion_tgt='sub_minion'
@@ -1764,7 +1766,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         test a state with the retry option that should return True immedietly (i.e. no retries)
         '''
-        testfile = os.path.join(TMP, 'retry_file')
+        testfile = os.path.join(RUNTIME_VARS.TMP, 'retry_file')
         state_run = self.run_function(
             'state.sls',
             mods='retry.retry_success'
@@ -1777,7 +1779,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         helper function to wait 30 seconds and then create the temp retry file
         '''
-        testfile = os.path.join(TMP, 'retry_file')
+        testfile = os.path.join(RUNTIME_VARS.TMP, 'retry_file')
         time.sleep(30)
         with salt.utils.files.fopen(testfile, 'a'):
             pass
@@ -1788,7 +1790,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         test a state with the retry option that should return True after at least 4 retry attmempt
         but never run 15 attempts
         '''
-        testfile = os.path.join(TMP, 'retry_file')
+        testfile = os.path.join(RUNTIME_VARS.TMP, 'retry_file')
         create_thread = threading.Thread(target=self.run_create)
         create_thread.start()
         state_run = self.run_function(
@@ -1861,7 +1863,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         test state.sls with saltenv using a nonbase environment
         with a salt source
         '''
-        filename = os.path.join(TMP, 'nonbase_env')
+        filename = os.path.join(RUNTIME_VARS.TMP, 'nonbase_env')
         try:
             ret = self.run_function(
                 'state.sls',
@@ -1912,11 +1914,11 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         helper class to add pillar data at runtime
         '''
         import salt.utils.yaml
-        with salt.utils.files.fopen(os.path.join(TMP_PILLAR_TREE,
+        with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.TMP_PILLAR_TREE,
                                                  'pillar.sls'), 'w') as fp:
             salt.utils.yaml.safe_dump(pillar, fp)
 
-        with salt.utils.files.fopen(os.path.join(TMP_PILLAR_TREE, 'top.sls'), 'w') as fp:
+        with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.TMP_PILLAR_TREE, 'top.sls'), 'w') as fp:
             fp.write(textwrap.dedent('''\
                      base:
                        '*':
@@ -1932,7 +1934,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         to true in pillar data
         '''
         self._add_runtime_pillar(pillar={'test': True})
-        testfile = os.path.join(TMP, 'testfile')
+        testfile = os.path.join(RUNTIME_VARS.TMP, 'testfile')
         comment = 'The file {0} is set to be changed\nNote: No changes made, actual changes may\nbe different due to other states.'.format(testfile)
         ret = self.run_function('state.sls', ['core'])
 
@@ -1945,7 +1947,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         test state.sls_id when test is set to
         true post the state already being run previously
         '''
-        file_name = os.path.join(TMP, 'testfile')
+        file_name = os.path.join(RUNTIME_VARS.TMP, 'testfile')
         ret = self.run_function('state.sls', ['core'])
         for key, val in ret.items():
             self.assertEqual(val['comment'],
@@ -1965,7 +1967,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         test state.sls_id when test=True is passed as arg
         '''
-        file_name = os.path.join(TMP, 'testfile')
+        file_name = os.path.join(RUNTIME_VARS.TMP, 'testfile')
         ret = self.run_function('state.sls', ['core'], test=True)
         for key, val in ret.items():
             self.assertEqual(
@@ -1978,7 +1980,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         test state.sls_id when test is set to true as an
         arg post the state already being run previously
         '''
-        file_name = os.path.join(TMP, 'testfile')
+        file_name = os.path.join(RUNTIME_VARS.TMP, 'testfile')
         ret = self.run_function('state.sls', ['core'])
         for key, val in ret.items():
             self.assertEqual(val['comment'],
@@ -1999,7 +2001,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         arg and minion_state_test is set to True. Should
         return test=False.
         '''
-        file_name = os.path.join(TMP, 'testfile')
+        file_name = os.path.join(RUNTIME_VARS.TMP, 'testfile')
         self._add_runtime_pillar(pillar={'test': True})
         ret = self.run_function('state.sls', ['core'], test=False)
 
@@ -2022,29 +2024,29 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         # command in the state. If the comment reads "unless condition is true", or similar,
         # then the unless state run bailed out after the first unless command succeeded,
         # which is the bug we're regression testing for.
-        _expected = {'file_|-unless_false_onlyif_false_|-{0}{1}test.txt_|-managed'.format(TMP, os.path.sep):
+        _expected = {'file_|-unless_false_onlyif_false_|-{0}{1}test.txt_|-managed'.format(RUNTIME_VARS.TMP, os.path.sep):
                      {'comment': 'onlyif condition is false\nunless condition is false',
-                      'name': '{0}{1}test.txt'.format(TMP, os.path.sep),
+                      'name': '{0}{1}test.txt'.format(RUNTIME_VARS.TMP, os.path.sep),
                       'skip_watch': True,
                       'changes': {},
                       'result': True},
-                     'file_|-unless_false_onlyif_true_|-{0}{1}test.txt_|-managed'.format(TMP, os.path.sep):
+                     'file_|-unless_false_onlyif_true_|-{0}{1}test.txt_|-managed'.format(RUNTIME_VARS.TMP, os.path.sep):
                      {'comment': 'Empty file',
                       'pchanges': {},
-                      'name': '{0}{1}test.txt'.format(TMP, os.path.sep),
+                      'name': '{0}{1}test.txt'.format(RUNTIME_VARS.TMP, os.path.sep),
                       'start_time': '18:10:20.341753',
                       'result': True,
-                      'changes': {'new': 'file {0}{1}test.txt created'.format(TMP, os.path.sep)}},
-                     'file_|-unless_true_onlyif_false_|-{0}{1}test.txt_|-managed'.format(TMP, os.path.sep):
+                      'changes': {'new': 'file {0}{1}test.txt created'.format(RUNTIME_VARS.TMP, os.path.sep)}},
+                     'file_|-unless_true_onlyif_false_|-{0}{1}test.txt_|-managed'.format(RUNTIME_VARS.TMP, os.path.sep):
                      {'comment': 'onlyif condition is false\nunless condition is true',
-                      'name': '{0}{1}test.txt'.format(TMP, os.path.sep),
+                      'name': '{0}{1}test.txt'.format(RUNTIME_VARS.TMP, os.path.sep),
                       'start_time': '18:10:22.936446',
                       'skip_watch': True,
                       'changes': {},
                       'result': True},
-                     'file_|-unless_true_onlyif_true_|-{0}{1}test.txt_|-managed'.format(TMP, os.path.sep):
+                     'file_|-unless_true_onlyif_true_|-{0}{1}test.txt_|-managed'.format(RUNTIME_VARS.TMP, os.path.sep):
                      {'comment': 'onlyif condition is true\nunless condition is true',
-                      'name': '{0}{1}test.txt'.format(TMP, os.path.sep),
+                      'name': '{0}{1}test.txt'.format(RUNTIME_VARS.TMP, os.path.sep),
                       'skip_watch': True,
                       'changes': {},
                       'result': True}}
@@ -2081,18 +2083,18 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(_expected, ret[key]['changes']['stdout'])
 
     def tearDown(self):
-        rm_files = [os.path.join(TMP, 'nonbase_env'),
-                    os.path.join(TMP, 'testfile'),
-                    os.path.join(TMP, 'test.txt'),
-                    os.path.join(TMP_STATE_TREE, 'top.sls')]
+        rm_files = [os.path.join(RUNTIME_VARS.TMP, 'nonbase_env'),
+                    os.path.join(RUNTIME_VARS.TMP, 'testfile'),
+                    os.path.join(RUNTIME_VARS.TMP, 'test.txt'),
+                    os.path.join(RUNTIME_VARS.TMP_STATE_TREE, 'top.sls')]
 
         for file_ in rm_files:
             if os.path.isfile(file_):
                 os.remove(file_)
 
         # remove old pillar data
-        for filename in os.listdir(TMP_PILLAR_TREE):
-            os.remove(os.path.join(TMP_PILLAR_TREE, filename))
+        for filename in os.listdir(RUNTIME_VARS.TMP_PILLAR_TREE):
+            os.remove(os.path.join(RUNTIME_VARS.TMP_PILLAR_TREE, filename))
         self.run_function('saltutil.refresh_pillar')
         self.run_function('test.sleep', [5])
 
