@@ -923,7 +923,8 @@ class _policy_info(object):
                         },
                     },
                     'WfwDomainSettingsLocalFirewallRules': {
-                        'Policy': 'Network firewall: Domain: Settings: Apply local firewall rules',
+                        'Policy': 'Network firewall: Domain: Settings: Apply '
+                                  'local firewall rules',
                         'lgpo_section': self.windows_firewall_gpedit_path,
                         # Settings available are:
                         # - Yes (default)
@@ -949,7 +950,8 @@ class _policy_info(object):
                         },
                     },
                     'WfwDomainSettingsLocalConnectionRules': {
-                        'Policy': 'Network firewall: Domain: Settings: Apply local connection security rules',
+                        'Policy': 'Network firewall: Domain: Settings: Apply '
+                                  'local connection security rules',
                         'lgpo_section': self.windows_firewall_gpedit_path,
                         # Settings available are:
                         # - Yes (default)
