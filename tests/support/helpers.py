@@ -44,7 +44,7 @@ from pytestsalt.utils import get_unused_localhost_port
 # Import Salt Tests Support libs
 from tests.support.unit import skip, _id, SkipTest
 from tests.support.mock import patch
-from tests.support.paths import FILES, TMP
+from tests.support.runtests import RUNTIME_VARS
 
 # Import Salt libs
 import salt.utils.files
@@ -72,7 +72,7 @@ def no_symlinks():
     try:
         output = subprocess.Popen(
             ['git', 'config', '--get', 'core.symlinks'],
-            cwd=TMP,
+            cwd=RUNTIME_VARS.TMP,
             stdout=subprocess.PIPE).communicate()[0]
     except OSError as exc:
         if exc.errno != errno.ENOENT:
@@ -1013,7 +1013,7 @@ class WithTempfile(object):
     def __init__(self, **kwargs):
         self.create = kwargs.pop('create', True)
         if 'dir' not in kwargs:
-            kwargs['dir'] = TMP
+            kwargs['dir'] = RUNTIME_VARS.TMP
         if 'prefix' not in kwargs:
             kwargs['prefix'] = '__salt.test.'
         self.kwargs = kwargs
@@ -1044,7 +1044,7 @@ class WithTempdir(object):
     def __init__(self, **kwargs):
         self.create = kwargs.pop('create', True)
         if 'dir' not in kwargs:
-            kwargs['dir'] = TMP
+            kwargs['dir'] = RUNTIME_VARS.TMP
         self.kwargs = kwargs
 
     def __call__(self, func):
@@ -1517,7 +1517,7 @@ class Webserver(object):
             raise ValueError('port must be an integer')
 
         if root is None:
-            root = os.path.join(FILES, 'file', 'base')
+            root = RUNTIME_VARS.BASE_FILES
         try:
             self.root = os.path.realpath(root)
         except AttributeError:
