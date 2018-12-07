@@ -13,11 +13,9 @@
 # Import python libs
 from __future__ import absolute_import
 import os
-import sys
 import logging
 
 # Import pytest-salt libs
-import pytestsalt.version
 from pytestsalt.utils import SaltRunEventListener as PytestSaltRunEventListener
 from pytestsalt.utils import collect_child_processes, terminate_process, terminate_process_list  # pylint: disable=unused-import
 from pytestsalt.fixtures.daemons import Salt as PytestSalt
@@ -28,6 +26,10 @@ from pytestsalt.fixtures.daemons import SaltMaster as PytestSaltMaster
 from pytestsalt.fixtures.daemons import SaltMinion as PytestSaltMinion
 from pytestsalt.fixtures.daemons import SaltSyndic as PytestSaltSyndic
 from pytestsalt.fixtures.daemons import SaltProxy as PytestSaltProxy
+try:
+    from pytestsalt.version import __version_info__ as __pytestsalt_version_info__
+except ImportError:
+    from pytestsalt import __version_info__ as __pytestsalt_version_info__
 
 # Import tests support libs
 from tests.support.paths import ScriptPathMixin
@@ -42,10 +44,10 @@ class SaltRunEventListener(ScriptPathMixin, PytestSaltRunEventListener):
     '''
 
     def run(self, tags=(), timeout=10):  # pylint: disable=arguments-differ
-        if pytestsalt.version.__version_info__ <= (2018, 9, 28):
+        if __pytestsalt_version_info__ <= (2018, 9, 28):
             log.info('%s checking for tags: %s', self.__class__.__name__, tags)
         result = super(SaltRunEventListener, self).run(tags=tags, timeout=timeout)
-        if pytestsalt.version.__version_info__ > (2018, 9, 28):
+        if __pytestsalt_version_info__ > (2018, 9, 28):
             return result
         if result.exitcode != 0:
             return result
