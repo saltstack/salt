@@ -699,11 +699,11 @@ class TestDaemon(object):
         # This master connects to syndic_master via a syndic
         master_opts = salt.config._read_conf_file(os.path.join(RUNTIME_VARS.CONF_DIR, 'master'))
         master_opts['known_hosts_file'] = tests_known_hosts_file
-        master_opts['cachedir'] = os.path.join(TMP_ROOT_DIR, 'cache')
+        master_opts['cachedir'] = 'cache'
         master_opts['user'] = RUNTIME_VARS.RUNNING_TESTS_USER
         master_opts['config_dir'] = RUNTIME_VARS.TMP_CONF_DIR
         master_opts['root_dir'] = os.path.join(TMP_ROOT_DIR)
-        master_opts['pki_dir'] = os.path.join(TMP_ROOT_DIR, 'pki', 'master')
+        master_opts['pki_dir'] = 'pki'
         master_opts['syndic_master'] = 'localhost'
         pytest_stop_sending_events_file = os.path.join(TMP_ROOT_DIR, 'pytest_stop_sending_events_file_master')
         with salt.utils.files.fopen(pytest_stop_sending_events_file, 'w') as wfh:
@@ -712,31 +712,31 @@ class TestDaemon(object):
 
         # This minion connects to master
         minion_opts = salt.config._read_conf_file(os.path.join(RUNTIME_VARS.CONF_DIR, 'minion'))
-        minion_opts['cachedir'] = os.path.join(TMP_ROOT_DIR, 'cache')
+        minion_opts['cachedir'] = 'cache'
         minion_opts['user'] = RUNTIME_VARS.RUNNING_TESTS_USER
         minion_opts['config_dir'] = RUNTIME_VARS.TMP_CONF_DIR
         minion_opts['root_dir'] = os.path.join(TMP_ROOT_DIR)
-        minion_opts['pki_dir'] = os.path.join(TMP_ROOT_DIR, 'pki')
+        minion_opts['pki_dir'] = 'pki'
         minion_opts['hosts.file'] = os.path.join(TMP_ROOT_DIR, 'hosts')
         minion_opts['aliases.file'] = os.path.join(TMP_ROOT_DIR, 'aliases')
 
         # This sub_minion also connects to master
         sub_minion_opts = salt.config._read_conf_file(os.path.join(RUNTIME_VARS.CONF_DIR, 'sub_minion'))
-        sub_minion_opts['cachedir'] = os.path.join(TMP, 'rootdir-sub-minion', 'cache')
+        sub_minion_opts['cachedir'] = 'cache'
         sub_minion_opts['user'] = RUNTIME_VARS.RUNNING_TESTS_USER
         sub_minion_opts['config_dir'] = RUNTIME_VARS.TMP_SUB_MINION_CONF_DIR
         sub_minion_opts['root_dir'] = os.path.join(TMP, 'rootdir-sub-minion')
-        sub_minion_opts['pki_dir'] = os.path.join(TMP, 'rootdir-sub-minion', 'pki', 'minion')
+        sub_minion_opts['pki_dir'] = 'pki'
         sub_minion_opts['hosts.file'] = os.path.join(TMP_ROOT_DIR, 'hosts')
         sub_minion_opts['aliases.file'] = os.path.join(TMP_ROOT_DIR, 'aliases')
 
         # This is the master of masters
         syndic_master_opts = salt.config._read_conf_file(os.path.join(RUNTIME_VARS.CONF_DIR, 'syndic_master'))
-        syndic_master_opts['cachedir'] = os.path.join(TMP, 'rootdir-syndic-master', 'cache')
+        syndic_master_opts['cachedir'] = 'cache'
         syndic_master_opts['user'] = RUNTIME_VARS.RUNNING_TESTS_USER
         syndic_master_opts['config_dir'] = RUNTIME_VARS.TMP_SYNDIC_MASTER_CONF_DIR
         syndic_master_opts['root_dir'] = os.path.join(TMP, 'rootdir-syndic-master')
-        syndic_master_opts['pki_dir'] = os.path.join(TMP, 'rootdir-syndic-master', 'pki', 'master')
+        syndic_master_opts['pki_dir'] = 'pki'
         pytest_stop_sending_events_file = os.path.join(TMP_ROOT_DIR, 'pytest_stop_sending_events_file_syndic_master')
         with salt.utils.files.fopen(pytest_stop_sending_events_file, 'w') as wfh:
             wfh.write('')
@@ -748,20 +748,16 @@ class TestDaemon(object):
         # Let's update with the syndic configuration
         syndic_opts.update(salt.config._read_conf_file(os.path.join(RUNTIME_VARS.CONF_DIR, 'syndic')))
         syndic_opts['config_dir'] = RUNTIME_VARS.TMP_SYNDIC_MINION_CONF_DIR
-        syndic_opts['cachedir'] = os.path.join(TMP_ROOT_DIR, 'cache')
+        syndic_opts['cachedir'] = 'cache'
         syndic_opts['root_dir'] = os.path.join(TMP_ROOT_DIR)
 
         # This proxy connects to master
         proxy_opts = salt.config._read_conf_file(os.path.join(CONF_DIR, 'proxy'))
-        proxy_opts['cachedir'] = os.path.join(TMP, 'rootdir-proxy', 'cache')
-        if not os.path.exists(proxy_opts['cachedir']):
-            os.makedirs(proxy_opts['cachedir'])
+        proxy_opts['cachedir'] = 'cache'
         # proxy_opts['user'] = running_tests_user
         proxy_opts['config_dir'] = RUNTIME_VARS.TMP_CONF_DIR
         proxy_opts['root_dir'] = os.path.join(TMP, 'rootdir-proxy')
-        proxy_opts['pki_dir'] = os.path.join(TMP, 'rootdir-proxy', 'pki')
-        if not os.path.exists(proxy_opts['pki_dir']):
-            os.makedirs(proxy_opts['pki_dir'])
+        proxy_opts['pki_dir'] = 'pki'
         proxy_opts['hosts.file'] = os.path.join(TMP, 'rootdir-proxy', 'hosts')
         proxy_opts['aliases.file'] = os.path.join(TMP, 'rootdir-proxy', 'aliases')
 
