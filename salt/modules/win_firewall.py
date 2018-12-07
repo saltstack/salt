@@ -350,6 +350,9 @@ def get_settings(profile, section, store='local'):
     Get the firewall property from the specified profile in the specified store
     as returned by ``netsh advfirewall``.
 
+    .. versionadded:: 2018.3.4
+    .. versionadded:: Fluorine
+
     Args:
 
         profile (str):
@@ -405,6 +408,9 @@ def get_all_settings(domain, store='local'):
     '''
     Gets all the properties for the specified profile in the specified store
 
+    .. versionadded:: 2018.3.4
+    .. versionadded:: Fluorine
+
     Args:
 
         profile (str):
@@ -444,6 +450,9 @@ def get_all_profiles(store='local'):
     '''
     Gets all properties for all profiles in the specified store
 
+    .. versionadded:: 2018.3.4
+    .. versionadded:: Fluorine
+
     Args:
 
         store (str):
@@ -477,6 +486,9 @@ def set_firewall_settings(profile, inbound=None, outbound=None, store='local'):
     '''
     Set the firewall inbound/outbound settings for the specified profile and
     store
+
+    .. versionadded:: 2018.3.4
+    .. versionadded:: Fluorine
 
     Args:
 
@@ -549,6 +561,9 @@ def set_firewall_settings(profile, inbound=None, outbound=None, store='local'):
 def set_logging_settings(profile, setting, value, store='local'):
     '''
     Configure logging settings for the Windows firewall.
+
+    .. versionadded:: 2018.3.4
+    .. versionadded:: Fluorine
 
     Args:
 
@@ -641,6 +656,9 @@ def set_settings(profile, setting, value, store='local'):
     '''
     Configure firewall settings.
 
+    .. versionadded:: 2018.3.4
+    .. versionadded:: Fluorine
+
     Args:
 
         profile (str):
@@ -704,6 +722,9 @@ def set_settings(profile, setting, value, store='local'):
 def set_state(profile, state, store='local'):
     '''
     Configure the firewall state.
+
+    .. versionadded:: 2018.3.4
+    .. versionadded:: Fluorine
 
     Args:
 
