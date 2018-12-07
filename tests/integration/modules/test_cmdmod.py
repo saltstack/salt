@@ -16,7 +16,7 @@ from tests.support.helpers import (
     skip_if_not_root,
     this_user,
 )
-from tests.support.paths import TMP
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
 
 # Import salt libs
@@ -189,7 +189,7 @@ class CMDModuleTest(ModuleCase):
         '''
         cmd.script with cwd
         '''
-        tmp_cwd = tempfile.mkdtemp(dir=TMP)
+        tmp_cwd = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         args = 'saltines crackers biscuits=yes'
         script = 'salt://script.py'
         ret = self.run_function('cmd.script', [script, args], cwd=tmp_cwd)
@@ -199,7 +199,7 @@ class CMDModuleTest(ModuleCase):
         '''
         cmd.script with cwd
         '''
-        tmp_cwd = "{0}{1}test 2".format(tempfile.mkdtemp(dir=TMP), os.path.sep)
+        tmp_cwd = "{0}{1}test 2".format(tempfile.mkdtemp(dir=RUNTIME_VARS.TMP), os.path.sep)
         os.mkdir(tmp_cwd)
 
         args = 'saltines crackers biscuits=yes'
@@ -338,7 +338,7 @@ class CMDModuleTest(ModuleCase):
         or not runas is in use.
         '''
         cmd = 'pwd'
-        tmp_cwd = tempfile.mkdtemp(dir=TMP)
+        tmp_cwd = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         os.chmod(tmp_cwd, 0o711)
 
         cwd_normal = self.run_function('cmd.run_stdout', [cmd], cwd=tmp_cwd).rstrip('\n')
@@ -377,7 +377,7 @@ class CMDModuleTest(ModuleCase):
         buggy behaviour, but its purpose is to ensure that the greater bug of
         running commands after failing to cd does not occur.
         '''
-        tmp_cwd = tempfile.mkdtemp(dir=TMP)
+        tmp_cwd = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         os.chmod(tmp_cwd, 0o700)
 
         with self._ensure_user_exists(self.runas_usr):
