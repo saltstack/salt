@@ -137,7 +137,7 @@ except ImportError:
 
 
 class _policy_info(object):
-    '''
+    r'''
     Policy Helper Class
     ===================
 
