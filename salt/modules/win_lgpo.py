@@ -488,6 +488,21 @@ class _policy_info(object):
             'disable': 'No',
             'notconfigured': 'Not configured'
         }
+        self.firewall_log_packets_connections = {
+            'enable': 'Yes',
+            'disable': 'No (default)',
+            'notconfigured': 'Not configured'
+        }
+        self.firewall_notification = {
+            'enable': 'Yes',
+            'disable': 'No',
+            'notconfigured': 'Not configured'
+        }
+        self.firewall_state = {
+            'on': 'On (recommended)',
+            'off': 'Off',
+            'notconfigured': 'Not configured'
+        }
         self.krb_encryption_types = {
             0: 'No minimum',
             1: 'DES_CBC_CRC',
@@ -869,6 +884,84 @@ class _policy_info(object):
                             },
                         },
                     },
+                    'WfwDomainState': {
+                        'Policy': 'Network firewall: Domain: State',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - On (recommended)
+                        # - Off
+                        # - Not configured
+                        'Settings': self.firewall_state.keys(),
+                        'NetSH': {
+                            'Profile': 'domain',
+                            'Section': 'state',
+                            'Option': 'State'  # Unused, but needed
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_state,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_state,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwPrivateState': {
+                        'Policy': 'Network firewall: Private: State',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - On (recommended)
+                        # - Off
+                        # - Not configured
+                        'Settings': self.firewall_state.keys(),
+                        'NetSH': {
+                            'Profile': 'private',
+                            'Section': 'state',
+                            'Option': 'State'  # Unused, but needed
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_state,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_state,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwPublicState': {
+                        'Policy': 'Network firewall: Public: State',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - On (recommended)
+                        # - Off
+                        # - Not configured
+                        'Settings': self.firewall_state.keys(),
+                        'NetSH': {
+                            'Profile': 'public',
+                            'Section': 'state',
+                            'Option': 'State'  # Unused, but needed
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_state,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_state,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
                     'WfwDomainInboundConnections': {
                         'Policy': 'Network firewall: Domain: Inbound connections',
                         'lgpo_section': self.windows_firewall_gpedit_path,
@@ -880,6 +973,60 @@ class _policy_info(object):
                         'Settings': self.firewall_inbound_connections.keys(),
                         'NetSH': {
                             'Profile': 'domain',
+                            'Section': 'firewallpolicy',
+                            'Option': 'Inbound'
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_inbound_connections,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_inbound_connections,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwPrivateInboundConnections': {
+                        'Policy': 'Network firewall: Private: Inbound connections',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - Block (default)
+                        # - Block all connections
+                        # - Allow
+                        # - Not configured
+                        'Settings': self.firewall_inbound_connections.keys(),
+                        'NetSH': {
+                            'Profile': 'private',
+                            'Section': 'firewallpolicy',
+                            'Option': 'Inbound'
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_inbound_connections,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_inbound_connections,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwPublicInboundConnections': {
+                        'Policy': 'Network firewall: Public: Inbound connections',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - Block (default)
+                        # - Block all connections
+                        # - Allow
+                        # - Not configured
+                        'Settings': self.firewall_inbound_connections.keys(),
+                        'NetSH': {
+                            'Profile': 'public',
                             'Section': 'firewallpolicy',
                             'Option': 'Inbound'
                         },
@@ -922,6 +1069,136 @@ class _policy_info(object):
                             },
                         },
                     },
+                    'WfwPrivateOutboundConnections': {
+                        'Policy': 'Network firewall: Private: Outbound connections',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - Block
+                        # - Allow (default)
+                        # - Not configured
+                        'Settings': self.firewall_outbound_connections.keys(),
+                        'NetSH': {
+                            'Profile': 'private',
+                            'Section': 'firewallpolicy',
+                            'Option': 'Outbound'
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_outbound_connections,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_outbound_connections,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwPublicOutboundConnections': {
+                        'Policy': 'Network firewall: Public: Outbound connections',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - Block
+                        # - Allow (default)
+                        # - Not configured
+                        'Settings': self.firewall_outbound_connections.keys(),
+                        'NetSH': {
+                            'Profile': 'public',
+                            'Section': 'firewallpolicy',
+                            'Option': 'Outbound'
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_outbound_connections,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_outbound_connections,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwDomainSettingsNotification': {
+                        'Policy': 'Network firewall: Domain: Settings: Display a notification',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - Yes
+                        # - No
+                        # - Not configured
+                        'Settings': self.firewall_notification.keys(),
+                        'NetSH': {
+                            'Profile': 'domain',
+                            'Section': 'settings',
+                            'Option': 'InboundUserNotification'
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_notification,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_notification,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwPrivateSettingsNotification': {
+                        'Policy': 'Network firewall: Private: Settings: Display a notification',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - Yes
+                        # - No
+                        # - Not configured
+                        'Settings': self.firewall_notification.keys(),
+                        'NetSH': {
+                            'Profile': 'private',
+                            'Section': 'settings',
+                            'Option': 'InboundUserNotification'
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_notification,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_notification,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwPublicSettingsNotification': {
+                        'Policy': 'Network firewall: Public: Settings: Display a notification',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - Yes
+                        # - No
+                        # - Not configured
+                        'Settings': self.firewall_notification.keys(),
+                        'NetSH': {
+                            'Profile': 'public',
+                            'Section': 'settings',
+                            'Option': 'InboundUserNotification'
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_notification,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_notification,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
                     'WfwDomainSettingsLocalFirewallRules': {
                         'Policy': 'Network firewall: Domain: Settings: Apply '
                                   'local firewall rules',
@@ -933,6 +1210,60 @@ class _policy_info(object):
                         'Settings': self.firewall_rule_merging.keys(),
                         'NetSH': {
                             'Profile': 'domain',
+                            'Section': 'settings',
+                            'Option': 'LocalFirewallRules'
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_rule_merging,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_rule_merging,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwPrivateSettingsLocalFirewallRules': {
+                        'Policy': 'Network firewall: Private: Settings: Apply '
+                                  'local firewall rules',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - Yes (default)
+                        # - No
+                        # - Not configured
+                        'Settings': self.firewall_rule_merging.keys(),
+                        'NetSH': {
+                            'Profile': 'private',
+                            'Section': 'settings',
+                            'Option': 'LocalFirewallRules'
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_rule_merging,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_rule_merging,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwPublicSettingsLocalFirewallRules': {
+                        'Policy': 'Network firewall: Public: Settings: Apply '
+                                  'local firewall rules',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - Yes (default)
+                        # - No
+                        # - Not configured
+                        'Settings': self.firewall_rule_merging.keys(),
+                        'NetSH': {
+                            'Profile': 'public',
                             'Section': 'settings',
                             'Option': 'LocalFirewallRules'
                         },
@@ -972,6 +1303,294 @@ class _policy_info(object):
                             },
                             'PutArgs': {
                                 'lookup': self.firewall_rule_merging,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwPrivateSettingsLocalConnectionRules': {
+                        'Policy': 'Network firewall: Private: Settings: Apply '
+                                  'local connection security rules',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - Yes (default)
+                        # - No
+                        # - Not configured
+                        'Settings': self.firewall_rule_merging.keys(),
+                        'NetSH': {
+                            'Profile': 'private',
+                            'Section': 'settings',
+                            'Option': 'LocalConSecRules'
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_rule_merging,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_rule_merging,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwPublicSettingsLocalConnectionRules': {
+                        'Policy': 'Network firewall: Public: Settings: Apply '
+                                  'local connection security rules',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - Yes (default)
+                        # - No
+                        # - Not configured
+                        'Settings': self.firewall_rule_merging.keys(),
+                        'NetSH': {
+                            'Profile': 'public',
+                            'Section': 'settings',
+                            'Option': 'LocalConSecRules'
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_rule_merging,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_rule_merging,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwDomainLoggingName': {
+                        'Policy': 'Network firewall: Domain: Logging: Name',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - <a full path to a file>
+                        # - Not configured
+                        'Settings': None,
+                        'NetSH': {
+                            'Profile': 'domain',
+                            'Section': 'logging',
+                            'Option': 'FileName'
+                        }
+                    },
+                    'WfwPrivateLoggingName': {
+                        'Policy': 'Network firewall: Private: Logging: Name',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - <a full path to a file>
+                        # - Not configured
+                        'Settings': None,
+                        'NetSH': {
+                            'Profile': 'private',
+                            'Section': 'logging',
+                            'Option': 'FileName'
+                        }
+                    },
+                    'WfwPublicLoggingName': {
+                        'Policy': 'Network firewall: Public: Logging: Name',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - <a full path to a file>
+                        # - Not configured
+                        'Settings': None,
+                        'NetSH': {
+                            'Profile': 'public',
+                            'Section': 'logging',
+                            'Option': 'FileName'
+                        }
+                    },
+                    'WfwDomainLoggingMaxFileSize': {
+                        'Policy': 'Network firewall: Domain: Logging: Size limit (KB)',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - <int between 1 and 32767>
+                        # - Not configured
+                        'Settings': None,
+                        'NetSH': {
+                            'Profile': 'domain',
+                            'Section': 'logging',
+                            'Option': 'MaxFileSize'
+                        }
+                    },
+                    'WfwPrivateLoggingMaxFileSize': {
+                        'Policy': 'Network firewall: Private: Logging: Size limit (KB)',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - <int between 1 and 32767>
+                        # - Not configured
+                        'Settings': None,
+                        'NetSH': {
+                            'Profile': 'private',
+                            'Section': 'logging',
+                            'Option': 'MaxFileSize'
+                        }
+                    },
+                    'WfwPublicLoggingMaxFileSize': {
+                        'Policy': 'Network firewall: Public: Logging: Size limit (KB)',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - <int between 1 and 32767>
+                        # - Not configured
+                        'Settings': None,
+                        'NetSH': {
+                            'Profile': 'public',
+                            'Section': 'logging',
+                            'Option': 'MaxFileSize'
+                        }
+                    },
+                    'WfwDomainLoggingAllowedConnections': {
+                        'Policy': 'Network firewall: Domain: Logging: Log successful connections',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - Yes
+                        # - No (default)
+                        # - Not configured
+                        'Settings': self.firewall_log_packets_connections.keys(),
+                        'NetSH': {
+                            'Profile': 'domain',
+                            'Section': 'logging',
+                            'Option': 'LogAllowedConnections'
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_log_packets_connections,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_log_packets_connections,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwPrivateLoggingAllowedConnections': {
+                        'Policy': 'Network firewall: Private: Logging: Log successful connections',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - Yes
+                        # - No (default)
+                        # - Not configured
+                        'Settings': self.firewall_log_packets_connections.keys(),
+                        'NetSH': {
+                            'Profile': 'private',
+                            'Section': 'logging',
+                            'Option': 'LogAllowedConnections'
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_log_packets_connections,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_log_packets_connections,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwPublicLoggingAllowedConnections': {
+                        'Policy': 'Network firewall: Public: Logging: Log successful connections',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - Yes
+                        # - No (default)
+                        # - Not configured
+                        'Settings': self.firewall_log_packets_connections.keys(),
+                        'NetSH': {
+                            'Profile': 'public',
+                            'Section': 'logging',
+                            'Option': 'LogAllowedConnections'
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_log_packets_connections,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_log_packets_connections,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwDomainLoggingDroppedConnections': {
+                        'Policy': 'Network firewall: Domain: Logging: Log dropped packets',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - Yes
+                        # - No (default)
+                        # - Not configured
+                        'Settings': self.firewall_log_packets_connections.keys(),
+                        'NetSH': {
+                            'Profile': 'domain',
+                            'Section': 'logging',
+                            'Option': 'LogDroppedConnections'
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_log_packets_connections,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_log_packets_connections,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwPrivateLoggingDroppedConnections': {
+                        'Policy': 'Network firewall: Private: Logging: Log dropped packets',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - Yes
+                        # - No (default)
+                        # - Not configured
+                        'Settings': self.firewall_log_packets_connections.keys(),
+                        'NetSH': {
+                            'Profile': 'private',
+                            'Section': 'logging',
+                            'Option': 'LogDroppedConnections'
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_log_packets_connections,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_log_packets_connections,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwPublicLoggingDroppedConnections': {
+                        'Policy': 'Network firewall: Public: Logging: Log dropped packets',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - Yes
+                        # - No (default)
+                        # - Not configured
+                        'Settings': self.firewall_log_packets_connections.keys(),
+                        'NetSH': {
+                            'Profile': 'public',
+                            'Section': 'logging',
+                            'Option': 'LogDroppedConnections'
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_log_packets_connections,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_log_packets_connections,
                                 'value_lookup': True,
                             },
                         },
@@ -3731,24 +4350,51 @@ def _buildElementNsmap(using_elements):
 
 
 def _findOptionValueNetSH(profile, option):
-    settings = salt.utils.win_lgpo_netsh.get_all_settings(profile=profile,
-                                                          store='lgpo')
-    return settings[option]
+    if 'lgpo.netsh_data' not in __context__:
+        __context__['lgpo.netsh_data'] = {}
+
+    if profile not in __context__['lgpo.netsh_data']:
+        log.debug('LGPO: Loading netsh data for {0} profile'.format(profile))
+        settings = salt.utils.win_lgpo_netsh.get_all_settings(profile=profile,
+                                                              store='lgpo')
+        __context__['lgpo.netsh_data'].update({profile: settings})
+    log.debug('LGPO: netsh returning value: {0}'
+              ''.format(__context__['lgpo.netsh_data'][profile][option]))
+    return __context__['lgpo.netsh_data'][profile][option]
 
 
 def _setOptionValueNetSH(profile, section, option, value):
+    if section not in ('firewallpolicy', 'settings', 'logging', 'state'):
+        raise ValueError('LGPO: Invalid section: {0}'.format(section))
+    log.debug('LGPO: Setting the following\n'
+              'Profile: {0}\n'
+              'Section: {1}\n'
+              'Option: {2}\n'
+              'Value: {3}'.format(profile, section, option, value))
     if section == 'firewallpolicy':
-        return salt.utils.win_lgpo_netsh.set_firewall_settings(
+        salt.utils.win_lgpo_netsh.set_firewall_settings(
             profile=profile,
             inbound=value if option == 'Inbound' else None,
             outbound=value if option == 'Outbound' else None,
             store='lgpo')
     if section == 'settings':
-        return salt.utils.win_lgpo_netsh.set_settings(
-            profile=profile,
-            setting=option,
-            value=value,
-            store='lgpo')
+        salt.utils.win_lgpo_netsh.set_settings(
+            profile=profile, setting=option, value=value, store='lgpo')
+    if section == 'state':
+        salt.utils.win_lgpo_netsh.set_state(
+            profile=profile, state=value, store='lgpo')
+    if section == 'logging':
+        if option in ('FileName', 'MaxFileSize'):
+            if value == 'Not configured':
+                value = 'notconfigured'
+        # Trim log for the two logging options
+        if option.startswith('Log'):
+            option = option[3:]
+        salt.utils.win_lgpo_netsh.set_logging_settings(
+            profile=profile, setting=option, value=value, store='lgpo')
+    log.debug('LGPO: Clearing netsh data for {0} profile'.format(profile))
+    __context__['lgpo.netsh_data'].pop(profile)
+    return True
 
 
 def _findOptionValueInSeceditFile(option):
