@@ -559,7 +559,7 @@ def set_firewall_settings(profile, inbound=None, outbound=None, store='local'):
 
 
 def set_logging_settings(profile, setting, value, store='local'):
-    '''
+    r'''
     Configure logging settings for the Windows firewall.
 
     .. versionadded:: 2018.3.4

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+r'''
 A salt util for modifying firewall settings.
 
 .. versionadded:: 2018.3.4
@@ -195,7 +195,7 @@ def get_settings(profile, section, store='local'):
     ret = {}
     # Skip the first 2 lines. Add everything else to a dictionary
     for line in results[3:]:
-        ret.update(dict(map(None, *[iter(re.split(r"\s{2,}", line))]*2)))
+        ret.update(dict(map(None, *[iter(re.split(r"\s{2,}", line))]*2)))  # pylint: disable=incompatible-py3-code
 
     # Remove spaces from the values so that `Not Configured` is detected
     # correctly
