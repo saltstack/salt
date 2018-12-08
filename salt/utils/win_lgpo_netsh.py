@@ -443,7 +443,7 @@ def set_logging_settings(profile, setting, value, store='local'):
                 int(value)
             except ValueError:
                 raise ValueError('Incorrect value: {0}'.format(value))
-            if not 1 >= int(value) <= 32767:
+            if not 1 <= int(value) <= 32767:
                 raise ValueError('Incorrect value: {0}'.format(value))
     # Run the command
     command = 'set {0}profile logging {1} {2}'.format(profile, setting, value)
