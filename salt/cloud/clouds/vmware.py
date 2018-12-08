@@ -1861,6 +1861,50 @@ def list_datastores(kwargs=None, call=None):
     return {"Datastores": salt.utils.vmware.list_datastores(_get_si())}
 
 
+def list_datastores_full(kwargs=None, call=None):
+    """
+    List all the datastores for this VMware environment, with extra information
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f list_datastores_full my-vmware-config
+    """
+    if call != "function":
+        raise SaltCloudSystemExit(
+            "The list_datastores_full function must be called with " "-f or --function."
+        )
+
+    return {"Datastores": salt.utils.vmware.list_datastores_full(_get_si())}
+
+
+def list_datastore_full(kwargs=None, call=None, datastore=None):
+    """
+    Returns a dictionary with basic information for the given datastore
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f list_datastore_full my-vmware-config datastore=datastore-name
+    """
+    if call != "function":
+        raise SaltCloudSystemExit(
+            "The list_datastore_full function must be called with " "-f or --function."
+        )
+
+    if kwargs and "datastore" in kwargs and kwargs["datastore"]:
+        datastore = kwargs["datastore"]
+
+    if not datastore:
+        raise SaltCloudSystemExit(
+            "The list_datastore_full function requires a datastore."
+        )
+
+    return {datastore: salt.utils.vmware.list_datastore_full(_get_si(), datastore)}
+
+
 def list_hosts(kwargs=None, call=None):
     """
     List all the hosts for this VMware environment
