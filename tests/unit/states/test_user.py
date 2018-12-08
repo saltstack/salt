@@ -5,7 +5,6 @@
 
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
-import os
 import logging
 
 # Import Salt Testing Libs
@@ -23,6 +22,7 @@ from tests.support.mock import (
 import salt.states.user as user
 
 log = logging.getLogger(__name__)
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class UserTestCase(TestCase, LoaderModuleMockMixin):
@@ -217,18 +217,21 @@ class UserTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test salt.states.user._changes
         '''
-        mock_info = MagicMock(return_value=
-            {'uid': 5000,
-             'gid': 5000,
-             'groups': ['foo'],
-             'home': '/home/foo',
-             'fullname': 'Foo Bar'}
+        mock_info = MagicMock(
+            return_value={
+                'uid': 5000,
+                 'gid': 5000,
+                 'groups': ['foo'],
+                 'home': '/home/foo',
+                 'fullname': 'Foo Bar',
+            }
         )
-        shadow_info = MagicMock(return_value=
-            {'min': 2 ,
-             'max': 88888,
-             'inact': 77,
-             'warn': 14,
+        shadow_info = MagicMock(
+            return_value={
+                'min': 2,
+                'max': 88888,
+                'inact': 77,
+                'warn': 14,
             }
         )
         shadow_hash = MagicMock(return_value='abcd')
@@ -237,11 +240,14 @@ class UserTestCase(TestCase, LoaderModuleMockMixin):
                        'shadow.default_hash': shadow_hash,
                        'file.group_to_gid': MagicMock(side_effect=['foo']),
                        'file.gid_to_group': MagicMock(side_effect=[5000])}
+        def mock_exists(*args):
+            return True
+
         # side_effect used because these mocks should only be called once
         with patch.dict(user.__grains__, {'kernel': 'Linux'}), \
                 patch.dict(user.__salt__, dunder_salt), \
                 patch.dict(user.__opts__, {"test": False}), \
-                patch('os.path.isdir', lambda x : True):
+                patch('os.path.isdir', mock_exists):
             ret = user._changes('foo', maxdays=999999, inactdays=0, warndays=7)
             assert ret == {
                 'maxdays': 999999,
