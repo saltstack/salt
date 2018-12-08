@@ -77,6 +77,7 @@ import tempfile
 
 import salt.modules.cmdmod
 from salt.exceptions import CommandExecutionError
+from salt.ext.six.moves import map
 
 log = logging.getLogger(__name__)
 __hostname__ = socket.gethostname()
