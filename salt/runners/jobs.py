@@ -153,9 +153,14 @@ def lookup_jid(jid,
     try:
         # Check if the return data has an 'out' key. We'll use that as the
         # outputter in the absence of one being passed on the CLI.
-        outputter = returns[next(iter(returns))].get('out')
-    except (StopIteration, AttributeError):
         outputter = None
+        _ret = returns[next(iter(returns))]
+        if 'out' in _ret:
+            outputter = _ret['out']
+        elif 'outputter' in _ret.get('return', {}).get('return', {}):
+            outputter = _ret['return']['return']['outputter']
+    except (StopIteration, AttributeError):
+        pass
 
     if outputter:
         return {'outputter': outputter, 'data': ret}
