@@ -204,7 +204,7 @@ def snapshot_absent(name, force=False, recursive=False, recursive_all=False):
                'result': False,
                'comment': 'invalid snapshot name: {0}'.format(name)}
     else:
-        ret = _absent(name, 'snapshot', force, recursive)
+        ret = _absent(name, 'snapshot', force, recursive, recursive_all)
     return ret
 
 
