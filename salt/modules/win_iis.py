@@ -211,7 +211,7 @@ def list_sites():
     ps_cmd = ['Get-ChildItem',
               '-Path', r"'IIS:\Sites'",
               '|',
-              'Select-Object applicationPool, Bindings, ID, Name, PhysicalPath, State']
+              'Select-Object applicationPool, applicationDefaults, Bindings, ID, Name, PhysicalPath, State']
 
     keep_keys = ('certificateHash', 'certificateStoreName', 'protocol', 'sslFlags')
 
@@ -244,8 +244,16 @@ def list_sites():
                                      'port': port})
             bindings[binding['bindingInformation']] = filtered_binding
 
+        # ApplicationDefaults
+        application_defaults = dict()
+
+        for attribute in item['applicationDefaults']['Attributes']:
+            application_defaults.update({attribute['Name']: attribute['Value']})
+        # ApplicationDefaults
+
         ret[item['name']] = {'apppool': item['applicationPool'],
                              'bindings': bindings,
+                             'applicationDefaults': application_defaults,
                              'id': item['id'],
                              'state': item['state'],
                              'sourcepath': item['physicalPath']}
@@ -257,7 +265,7 @@ def list_sites():
 
 
 def create_site(name, sourcepath, apppool='', hostheader='',
-                ipaddress='*', port=80, protocol='http'):
+                ipaddress='*', port=80, protocol='http', preload=''):
     '''
     Create a basic website in IIS.
 
@@ -277,6 +285,7 @@ def create_site(name, sourcepath, apppool='', hostheader='',
         port (int): The TCP port of the binding.
         protocol (str): The application protocol of the binding. (http, https,
             etc.)
+        preload (bool): Whether preloading should be enabled
 
     Returns:
         bool: True if successful, otherwise False.
@@ -290,7 +299,7 @@ def create_site(name, sourcepath, apppool='', hostheader='',
 
     .. code-block:: bash
 
-        salt '*' win_iis.create_site name='My Test Site' sourcepath='c:\\stage' apppool='TestPool'
+        salt '*' win_iis.create_site name='My Test Site' sourcepath='c:\\stage' apppool='TestPool' preload=True
     '''
     protocol = six.text_type(protocol).lower()
     site_path = r'IIS:\Sites\{0}'.format(name)
@@ -323,7 +332,13 @@ def create_site(name, sourcepath, apppool='', hostheader='',
         ps_cmd.extend(['Set-ItemProperty',
                        '-Path', "'{0}'".format(site_path),
                        '-Name', 'ApplicationPool',
-                       '-Value', "'{0}'".format(apppool)])
+                       '-Value', "'{0}';".format(apppool)])
+
+    if preload:
+        ps_cmd.extend(['Set-ItemProperty',
+                       '-Path', "'{0}'".format(site_path),
+                       '-Name', 'applicationDefaults.preloadEnabled',
+                       '-Value', "{0};".format(preload)])
 
     cmd_ret = _srvmgr(ps_cmd)
 
@@ -336,7 +351,7 @@ def create_site(name, sourcepath, apppool='', hostheader='',
     return True
 
 
-def modify_site(name, sourcepath=None, apppool=None):
+def modify_site(name, sourcepath=None, apppool=None, preload=None):
     '''
     Modify a basic website in IIS.
 
@@ -346,6 +361,7 @@ def modify_site(name, sourcepath=None, apppool=None):
         name (str): The IIS site name.
         sourcepath (str): The physical path of the IIS site.
         apppool (str): The name of the IIS application pool.
+        preload (bool): Whether preloading should be enabled
 
     Returns:
         bool: True if successful, otherwise False.
@@ -359,7 +375,7 @@ def modify_site(name, sourcepath=None, apppool=None):
 
     .. code-block:: bash
 
-        salt '*' win_iis.modify_site name='My Test Site' sourcepath='c:\\new_path' apppool='NewTestPool'
+        salt '*' win_iis.modify_site name='My Test Site' sourcepath='c:\\new_path' apppool='NewTestPool' preload=True
     '''
     site_path = r'IIS:\Sites\{0}'.format(name)
     current_sites = list_sites()
@@ -393,6 +409,12 @@ def modify_site(name, sourcepath=None, apppool=None):
                        '-Path', r"'{0}'".format(site_path),
                        '-Name', 'ApplicationPool',
                        '-Value', r"'{0}'".format(apppool)])
+
+    if preload:
+        ps_cmd.extend(['Set-ItemProperty',
+                       '-Path', "'{0}'".format(site_path),
+                       '-Name', 'applicationDefaults.preloadEnabled',
+                       '-Value', "{0};".format(preload)])
 
     cmd_ret = _srvmgr(ps_cmd)
 
