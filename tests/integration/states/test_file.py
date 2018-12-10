@@ -13,7 +13,6 @@ import re
 import sys
 import shutil
 import stat
-import tempfile
 import textwrap
 import filecmp
 
@@ -501,15 +500,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         managed_files = {}
         state_keys = {}
         for typ in ('bool', 'str', 'int', 'float', 'list', 'dict'):
-            fd_, managed_files[typ] = tempfile.mkstemp()
-
-            # Release the handle so they can be removed in Windows
-            try:
-                os.close(fd_)
-            except OSError as exc:
-                if exc.errno != errno.EBADF:
-                    raise exc
-
+            managed_files[typ] = salt.utils.files.mkstemp()
             state_keys[typ] = 'file_|-{0} file_|-{1}_|-managed'.format(typ, managed_files[typ])
         try:
             with salt.utils.files.fopen(state_file, 'w') as fd_:
@@ -986,7 +977,8 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertIn(strayfile2, comment)
         self.assertNotIn(keepfile, comment)
 
-    def test_directory_clean_require_in(self):
+    @with_tempdir()
+    def test_directory_clean_require_in(self, name):
         '''
         file.directory test with clean=True and require_in file
         '''
@@ -994,33 +986,31 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         state_filename = state_name + '.sls'
         state_file = os.path.join(BASE_FILES, state_filename)
 
-        directory = tempfile.mkdtemp()
-        self.addCleanup(lambda: shutil.rmtree(directory))
-
-        wrong_file = os.path.join(directory, "wrong")
+        wrong_file = os.path.join(name, "wrong")
         with salt.utils.files.fopen(wrong_file, "w") as fp:
             fp.write("foo")
-        good_file = os.path.join(directory, "bar")
+        good_file = os.path.join(name, "bar")
 
         with salt.utils.files.fopen(state_file, 'w') as fp:
             self.addCleanup(lambda: os.remove(state_file))
             fp.write(textwrap.dedent('''\
                 some_dir:
                   file.directory:
-                    - name: {directory}
+                    - name: {name}
                     - clean: true
 
                 {good_file}:
                   file.managed:
                     - require_in:
                       - file: some_dir
-                '''.format(directory=directory, good_file=good_file)))
+                '''.format(name=name, good_file=good_file)))
 
         ret = self.run_function('state.sls', [state_name])
         self.assertTrue(os.path.exists(good_file))
         self.assertFalse(os.path.exists(wrong_file))
 
-    def test_directory_clean_require_in_with_id(self):
+    @with_tempdir()
+    def test_directory_clean_require_in_with_id(self, name):
         '''
         file.directory test with clean=True and require_in file with an ID
         different from the file name
@@ -1029,20 +1019,17 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         state_filename = state_name + '.sls'
         state_file = os.path.join(BASE_FILES, state_filename)
 
-        directory = tempfile.mkdtemp()
-        self.addCleanup(lambda: shutil.rmtree(directory))
-
-        wrong_file = os.path.join(directory, "wrong")
+        wrong_file = os.path.join(name, "wrong")
         with salt.utils.files.fopen(wrong_file, "w") as fp:
             fp.write("foo")
-        good_file = os.path.join(directory, "bar")
+        good_file = os.path.join(name, "bar")
 
         with salt.utils.files.fopen(state_file, 'w') as fp:
             self.addCleanup(lambda: os.remove(state_file))
             fp.write(textwrap.dedent('''\
                 some_dir:
                   file.directory:
-                    - name: {directory}
+                    - name: {name}
                     - clean: true
 
                 some_file:
@@ -1050,13 +1037,14 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                     - name: {good_file}
                     - require_in:
                       - file: some_dir
-                '''.format(directory=directory, good_file=good_file)))
+                '''.format(name=name, good_file=good_file)))
 
         ret = self.run_function('state.sls', [state_name])
         self.assertTrue(os.path.exists(good_file))
         self.assertFalse(os.path.exists(wrong_file))
 
-    def test_directory_clean_require_with_name(self):
+    @with_tempdir()
+    def test_directory_clean_require_with_name(self, name):
         '''
         file.directory test with clean=True and require with a file state
         relatively to the state's name, not its ID.
@@ -1065,20 +1053,17 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         state_filename = state_name + '.sls'
         state_file = os.path.join(BASE_FILES, state_filename)
 
-        directory = tempfile.mkdtemp()
-        self.addCleanup(lambda: shutil.rmtree(directory))
-
-        wrong_file = os.path.join(directory, "wrong")
+        wrong_file = os.path.join(name, "wrong")
         with salt.utils.files.fopen(wrong_file, "w") as fp:
             fp.write("foo")
-        good_file = os.path.join(directory, "bar")
+        good_file = os.path.join(name, "bar")
 
         with salt.utils.files.fopen(state_file, 'w') as fp:
             self.addCleanup(lambda: os.remove(state_file))
             fp.write(textwrap.dedent('''\
                 some_dir:
                   file.directory:
-                    - name: {directory}
+                    - name: {name}
                     - clean: true
                     - require:
                       # This requirement refers to the name of the following
@@ -1088,7 +1073,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                 some_file:
                   file.managed:
                     - name: {good_file}
-                '''.format(directory=directory, good_file=good_file)))
+                '''.format(name=name, good_file=good_file)))
 
         ret = self.run_function('state.sls', [state_name])
         self.assertTrue(os.path.exists(good_file))
