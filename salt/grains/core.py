@@ -910,7 +910,7 @@ def _virtual(osdata):
                 # Tested on CentOS 5.4 / 2.6.18-164.15.1.el5xen
                 grains['virtual_subtype'] = 'Xen Dom0'
             else:
-                if grains.get('productname', '') == 'HVM domU':
+                if osdata.get('productname', '') == 'HVM domU':
                     # Requires dmidecode!
                     grains['virtual_subtype'] = 'Xen HVM DomU'
                 elif os.path.isfile('/proc/xen/capabilities') and \
@@ -927,9 +927,8 @@ def _virtual(osdata):
                 elif isdir('/sys/bus/xen'):
                     if 'xen:' in __salt__['cmd.run']('dmesg').lower():
                         grains['virtual_subtype'] = 'Xen PV DomU'
-                    elif os.listdir('/sys/bus/xen/drivers'):
-                        # An actual DomU will have several drivers
-                        # whereas a paravirt ops kernel will  not.
+                    elif os.path.isfile('/sys/bus/xen/drivers/xenconsole'):
+                        # An actual DomU will have the xenconsole driver
                         grains['virtual_subtype'] = 'Xen PV DomU'
             # If a Dom0 or DomU was detected, obviously this is xen
             if 'dom' in grains.get('virtual_subtype', '').lower():
