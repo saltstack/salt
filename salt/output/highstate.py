@@ -141,7 +141,7 @@ def output(data, **kwargs):  # pylint: disable=unused-argument
     if len(data.keys()) == 1:
         # account for nested orchs via saltutil.runner
         if 'return' in data:
-           data = data['return']
+            data = data['return']
 
         # account for envelope data if being passed lookup_jid ret
         if isinstance(data, dict):
