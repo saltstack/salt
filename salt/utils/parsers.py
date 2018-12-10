@@ -3156,6 +3156,11 @@ class SaltSSHOptionParser(six.with_metaclass(OptionParserMeta,
             help='If hostname is not found in the roster, store the information'
                  'into the default roster file (flat).'
         )
+        auth_group.add_option(
+            '--pki-dir',
+            dest="pki_dir",
+            help=("Set the directory to load the pki keys.")
+        )
         self.add_option_group(auth_group)
 
         scan_group = optparse.OptionGroup(
