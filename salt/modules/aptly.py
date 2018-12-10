@@ -169,6 +169,12 @@ def get_repo(name, config_path=_DEFAULT_CONFIG_PATH, with_packages=False):
 
     :return: A dictionary containing information about the repository.
     :rtype: dict
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' aptly.get_repo name="test-repo"
     '''
     _validate_config(config_path)
     with_packages = six.text_type(bool(with_packages)).lower()
@@ -225,7 +231,7 @@ def new_repo(name, config_path=_DEFAULT_CONFIG_PATH, comment=None, component=Non
     '''
     _validate_config(config_path)
 
-    current_repo = __salt__['aptly.get_repo'](name=name)
+    current_repo = __salt__['aptly.get_repo'](name=name, config_path=config_path)
 
     if current_repo:
         log.debug('Repository already exists: %s', name)
@@ -242,7 +248,7 @@ def new_repo(name, config_path=_DEFAULT_CONFIG_PATH, comment=None, component=Non
         cmd.extend(['from', 'snapshot', from_snapshot])
 
     _cmd_run(cmd)
-    repo = __salt__['aptly.get_repo'](name=name)
+    repo = __salt__['aptly.get_repo'](name=name, config_path=config_path)
 
     if repo:
         log.debug('Created repo: %s', name)
@@ -286,7 +292,7 @@ def set_repo(name, config_path=_DEFAULT_CONFIG_PATH, comment=None, component=Non
         if settings[setting] is None:
             settings.pop(setting, None)
 
-    current_settings = __salt__['aptly.get_repo'](name=name)
+    current_settings = __salt__['aptly.get_repo'](name=name, config_path=config_path)
 
     if not current_settings:
         log.error('Unable to get repo: %s', name)
@@ -312,7 +318,7 @@ def set_repo(name, config_path=_DEFAULT_CONFIG_PATH, comment=None, component=Non
     cmd.append(name)
 
     _cmd_run(cmd)
-    new_settings = __salt__['aptly.get_repo'](name=name)
+    new_settings = __salt__['aptly.get_repo'](name=name, config_path=config_path)
 
     # Check the new repo settings to see if they have the desired values.
     for setting in settings:
@@ -347,7 +353,7 @@ def delete_repo(name, config_path=_DEFAULT_CONFIG_PATH, force=False):
     _validate_config(config_path)
     force = six.text_type(bool(force)).lower()
 
-    current_repo = __salt__['aptly.get_repo'](name=name)
+    current_repo = __salt__['aptly.get_repo'](name=name, config_path=config_path)
 
     if not current_repo:
         log.debug('Repository already absent: %s', name)
@@ -357,7 +363,7 @@ def delete_repo(name, config_path=_DEFAULT_CONFIG_PATH, force=False):
            '-force={}'.format(force), name]
 
     _cmd_run(cmd)
-    repo = __salt__['aptly.get_repo'](name=name)
+    repo = __salt__['aptly.get_repo'](name=name, config_path=config_path)
 
     if repo:
         log.error('Unable to remove repo: %s', name)

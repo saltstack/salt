@@ -12,7 +12,7 @@ from salt.netapi.rest_tornado import saltnado
 from salt.utils.versions import StrictVersion
 
 # Import Salt Testing Libs
-from tests.unit.netapi.rest_tornado.test_handlers import SaltnadoTestCase
+from tests.unit.netapi.test_rest_tornado import SaltnadoTestCase
 from tests.support.helpers import flaky
 from tests.support.unit import skipIf
 
