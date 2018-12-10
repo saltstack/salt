@@ -17,10 +17,10 @@ import textwrap
 import threading
 
 # Import Salt Testing Libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ShellCase
 from tests.support.helpers import flaky, expensiveTest
 from tests.support.mock import MagicMock, patch
-from tests.support.paths import TMP
 from tests.support.unit import skipIf
 
 # Import Salt Libs
@@ -232,6 +232,8 @@ class StateRunnerTest(ShellCase):
         ret = re.sub(r'\d', 'x', ret)
         ret = re.sub('Duration: .*', 'Duration: x', ret)
         ret = re.sub('Started: .*', 'Started: x', ret)
+        #ret = re.sub('^([\s]+)Changes:([\s]+)$', r'\1Changes:\n', ret)
+        ret = re.sub(r'\n([\s]+)Changes:([\s]+)\n', r'\n\1Changes:\n', ret)
 
         result = textwrap.dedent('''
                   ID: test_runner_success
@@ -241,7 +243,7 @@ class StateRunnerTest(ShellCase):
              Comment: Runner function 'runtests_helpers.success' executed.
              Started: x
             Duration: x
-             Changes:   
+             Changes:
                       ----------
                       return:
                           ----------
@@ -257,7 +259,7 @@ class StateRunnerTest(ShellCase):
              Comment: wheel submitted successfully.
              Started: x
             Duration: x
-             Changes:   
+             Changes:
                       ----------
                       jid:
                           xxxxxxxxxxxxxxxxxxxx
@@ -271,7 +273,7 @@ class StateRunnerTest(ShellCase):
              Comment: Function submitted successfully.
              Started: x
             Duration: x
-             Changes:   
+             Changes:
                       ----------
                       jid:
                           xxxxxxxxxxxxxxxxxxxx
@@ -284,7 +286,7 @@ class StateRunnerTest(ShellCase):
              Comment: State submitted successfully.
              Started: x
             Duration: x
-             Changes:   
+             Changes:
                       ----------
                       jid:
                           xxxxxxxxxxxxxxxxxxxx
@@ -344,7 +346,7 @@ class StateRunnerTest(ShellCase):
         '''
         test orchestration state using subset
         '''
-        ret = self.run_run('state.orchestrate orch.subset')
+        ret = self.run_run('state.orchestrate orch.subset', timeout=500)
 
         def count(thing, listobj):
             return sum([obj.strip() == thing for obj in listobj])
@@ -399,7 +401,7 @@ class OrchEventTest(ShellCase):
             dir=self.master_d_dir,
             delete=True,
         )
-        self.base_env = tempfile.mkdtemp(dir=TMP)
+        self.base_env = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         self.addCleanup(shutil.rmtree, self.base_env)
         self.addCleanup(self.conf.close)
         for attr in ('timeout', 'master_d_dir', 'conf', 'base_env'):
@@ -786,7 +788,7 @@ class OrchEventTest(ShellCase):
                 __reload_config=True).get('jid')
         finally:
             try:
-                os.remove(os.path.join(TMP, 'orch.req_test'))
+                os.remove(os.path.join(RUNTIME_VARS.TMP, 'orch.req_test'))
             except OSError:
                 pass
 

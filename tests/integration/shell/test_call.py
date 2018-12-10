@@ -17,9 +17,10 @@ from datetime import datetime
 import logging
 
 # Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ShellCase
 from tests.support.unit import skipIf
-from tests.support.paths import FILES, TMP
+from tests.support.paths import FILES
 from tests.support.mixins import ShellCaseCommonTestsMixin
 from tests.support.helpers import flaky, with_tempfile
 from tests.integration.utils import testprogram
@@ -154,36 +155,22 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
     @skipIf(sys.platform.startswith('win'), 'This test does not apply on Win')
     @flaky
     def test_issue_2731_masterless(self):
-        root_dir = os.path.join(TMP, 'issue-2731')
-        config_dir = os.path.join(root_dir, 'conf')
-        minion_config_file = os.path.join(config_dir, 'minion')
-        logfile = os.path.join(root_dir, 'minion_test_issue_2731')
-
-        if not os.path.isdir(config_dir):
-            os.makedirs(config_dir)
-
-        with salt.utils.files.fopen(self.get_config_file_path('master')) as fhr:
-            master_config = salt.utils.yaml.safe_load(fhr)
-
-        master_root_dir = master_config['root_dir']
-        this_minion_key = os.path.join(
-            master_root_dir, 'pki', 'master', 'minions', 'minion_test_issue_2731'
+        minion_id = 'minion_test_issue_2731'
+        root_dir = os.path.join(RUNTIME_VARS.TMP, 'issue-2731')
+        minion_config = self.get_temp_config(
+            'minion',
+            id=minion_id,
+            root_dir=root_dir,
         )
+        import pprint
+        pprint.pprint(minion_config)
+        config_dir = minion_config['config_dir']
+        minion_config_file = minion_config['conf_file']
+        logfile = minion_config['log_file']
 
-        minion_config = {
-            'id': 'minion_test_issue_2731',
-            'master': 'localhost',
-            'master_port': 64506,
-            'root_dir': master_root_dir,
-            'pki_dir': 'pki',
-            'cachedir': 'cachedir',
-            'sock_dir': 'minion_sock',
-            'open_mode': True,
-            'log_file': logfile,
-            'log_level': 'quiet',
-            'log_level_logfile': 'info',
-            'transport': self.master_opts['transport'],
-        }
+        master_config = self.get_config('master')
+        this_minion_key = os.path.join(master_config['pki_dir'], 'minions', minion_id)
+
         try:
             # Remove existing logfile
             if os.path.isfile(logfile):
@@ -192,8 +179,6 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
             start = datetime.now()
             # Let's first test with a master running
 
-            with salt.utils.files.fopen(minion_config_file, 'w') as fh_:
-                salt.utils.yaml.safe_dump(minion_config, fh_, default_flow_style=False)
             ret = self.run_script(
                 'salt-call',
                 '--config-dir {0} cmd.run "echo foo"'.format(
@@ -283,7 +268,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
     @skipIf(salt.utils.platform.is_windows(), 'Skip on Windows')
     def test_issue_7754(self):
         old_cwd = os.getcwd()
-        config_dir = os.path.join(TMP, 'issue-7754')
+        config_dir = os.path.join(RUNTIME_VARS.TMP, 'issue-7754')
         if not os.path.isdir(config_dir):
             os.makedirs(config_dir)
 
@@ -323,7 +308,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
         test when log_file is set to a syslog file that does not exist
         '''
         old_cwd = os.getcwd()
-        config_dir = os.path.join(TMP, 'log_file_incorrect')
+        config_dir = os.path.join(RUNTIME_VARS.TMP, 'log_file_incorrect')
         if not os.path.isdir(config_dir):
             os.makedirs(config_dir)
 
@@ -363,7 +348,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
     @skipIf(True, 'This test is unreliable. Need to investigate why more deeply.')
     @flaky
     def test_issue_15074_output_file_append(self):
-        output_file_append = os.path.join(TMP, 'issue-15074')
+        output_file_append = os.path.join(RUNTIME_VARS.TMP, 'issue-15074')
         try:
             # Let's create an initial output file with some data
             _ = self.run_script(
@@ -397,7 +382,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
     @skipIf(True, 'This test is unreliable. Need to investigate why more deeply.')
     @flaky
     def test_issue_14979_output_file_permissions(self):
-        output_file = os.path.join(TMP, 'issue-14979')
+        output_file = os.path.join(RUNTIME_VARS.TMP, 'issue-14979')
         with salt.utils.files.set_umask(0o077):
             try:
                 # Let's create an initial output file with some data
@@ -523,7 +508,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
         '''
         ret = self.run_call('state.highstate', local=True)
 
-        destpath = os.path.join(TMP, 'testfile')
+        destpath = os.path.join(RUNTIME_VARS.TMP, 'testfile')
         exp_out = ['    Function: file.managed', '      Result: True',
                    '          ID: {0}'.format(destpath)]
 
