@@ -583,6 +583,27 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         }
         self._run_os_grains_tests("ubuntu-17.10", _os_release_map, expectation)
 
+    @skipIf(not salt.utils.platform.is_windows(), 'System is not Windows')
+    def test_windows_platform_data(self):
+        '''
+        Test the _windows_platform_data function
+        '''
+        grains = ['biosversion', 'kernelrelease', 'kernelversion',
+                  'manufacturer', 'motherboard', 'osfullname', 'osmanufacturer',
+                  'osrelease', 'osservicepack', 'osversion', 'productname',
+                  'serialnumber', 'timezone', 'virtual', 'windowsdomain',
+                  'windowsdomaintype']
+        returned_grains = core._windows_platform_data()
+        for grain in grains:
+            self.assertIn(grain, returned_grains)
+
+        valid_types = ['Unknown', 'Unjoined', 'Workgroup', 'Domain']
+        self.assertIn(returned_grains['windowsdomaintype'], valid_types)
+        valid_releases = ['Vista', '7', '8', '8.1', '10', '2008Server',
+                          '2008ServerR2', '2012Server', '2012ServerR2',
+                          '2016Server']
+        self.assertIn(returned_grains['osrelease'], valid_releases)
+
     @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
     def test_linux_memdata(self):
         '''
@@ -687,6 +708,22 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
                                 core._virtual({'kernel': 'Linux'}).get('virtual_subtype'),
                                 'Docker'
                             )
+
+    @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
+    def test_xen_virtual(self):
+        '''
+        Test if OS grains are parsed correctly in Ubuntu Xenial Xerus
+        '''
+        with patch.object(os.path, 'isfile', MagicMock(return_value=False)):
+            with patch.dict(core.__salt__, {'cmd.run': MagicMock(return_value='')}), \
+                patch.object(os.path,
+                             'isfile',
+                             MagicMock(side_effect=lambda x: True if x == '/sys/bus/xen/drivers/xenconsole' else False)):
+                log.debug('Testing Xen')
+                self.assertEqual(
+                    core._virtual({'kernel': 'Linux'}).get('virtual_subtype'),
+                    'Xen PV DomU'
+                )
 
     def _check_ipaddress(self, value, ip_v):
         '''

@@ -99,6 +99,7 @@ Create a firewall policy
 
     sudo salt-cloud -f create_firewall_policy oneandone name='1salttest'
     description='salt_test_desc' rules='[{"protocol":"TCP", "port":"80", "description":"salt_fw_rule_desc"}]'
+
 List baremetal models
 
 .. code-block:: bash

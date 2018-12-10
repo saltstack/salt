@@ -910,7 +910,7 @@ def _virtual(osdata):
                 # Tested on CentOS 5.4 / 2.6.18-164.15.1.el5xen
                 grains['virtual_subtype'] = 'Xen Dom0'
             else:
-                if grains.get('productname', '') == 'HVM domU':
+                if osdata.get('productname', '') == 'HVM domU':
                     # Requires dmidecode!
                     grains['virtual_subtype'] = 'Xen HVM DomU'
                 elif os.path.isfile('/proc/xen/capabilities') and \
@@ -927,9 +927,8 @@ def _virtual(osdata):
                 elif isdir('/sys/bus/xen'):
                     if 'xen:' in __salt__['cmd.run']('dmesg').lower():
                         grains['virtual_subtype'] = 'Xen PV DomU'
-                    elif os.listdir('/sys/bus/xen/drivers'):
-                        # An actual DomU will have several drivers
-                        # whereas a paravirt ops kernel will  not.
+                    elif os.path.isfile('/sys/bus/xen/drivers/xenconsole'):
+                        # An actual DomU will have the xenconsole driver
                         grains['virtual_subtype'] = 'Xen PV DomU'
             # If a Dom0 or DomU was detected, obviously this is xen
             if 'dom' in grains.get('virtual_subtype', '').lower():
@@ -1207,6 +1206,7 @@ def _windows_platform_data():
     #    osfullname
     #    timezone
     #    windowsdomain
+    #    windowsdomaintype
     #    motherboard.productname
     #    motherboard.serialnumber
     #    virtual
@@ -1238,6 +1238,7 @@ def _windows_platform_data():
         os_release = platform.release()
         kernel_version = platform.version()
         info = salt.utils.win_osinfo.get_os_version_info()
+        net_info = salt.utils.win_osinfo.get_join_info()
         server = {'Vista': '2008Server',
                   '7': '2008ServerR2',
                   '8': '2012Server',
@@ -1272,7 +1273,8 @@ def _windows_platform_data():
             'serialnumber': _clean_value('serialnumber', biosinfo.SerialNumber),
             'osfullname': _clean_value('osfullname', osinfo.Caption),
             'timezone': _clean_value('timezone', timeinfo.Description),
-            'windowsdomain': _clean_value('windowsdomain', systeminfo.Domain),
+            'windowsdomain': _clean_value('windowsdomain', net_info['Domain']),
+            'windowsdomaintype': _clean_value('windowsdomaintype', net_info['DomainType']),
             'motherboard': {
                 'productname': _clean_value('motherboard.productname', motherboard['product']),
                 'serialnumber': _clean_value('motherboard.serialnumber', motherboard['serial']),
@@ -1335,6 +1337,7 @@ def id_():
     Return the id
     '''
     return {'id': __opts__.get('id', '')}
+
 
 _REPLACE_LINUX_RE = re.compile(r'\W(?:gnu/)?linux', re.IGNORECASE)
 
@@ -1427,6 +1430,7 @@ _OS_FAMILY_MAP = {
     'GCEL': 'Debian',
     'Linaro': 'Debian',
     'elementary OS': 'Debian',
+    'elementary': 'Debian',
     'Univention': 'Debian',
     'ScientificLinux': 'RedHat',
     'Raspbian': 'Debian',

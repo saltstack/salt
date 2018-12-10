@@ -25,8 +25,8 @@ from salt.ext import six
 from salt.ext.six.moves import range
 
 # Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.mock import MagicMock
-from tests.support.paths import TMP
 from tests.support.unit import skipIf
 
 log = logging.getLogger(__name__)
@@ -40,7 +40,7 @@ class BaseIPCReqCase(tornado.testing.AsyncTestCase):
     def setUp(self):
         super(BaseIPCReqCase, self).setUp()
         #self._start_handlers = dict(self.io_loop._handlers)
-        self.socket_path = os.path.join(TMP, 'ipc_test.ipc')
+        self.socket_path = os.path.join(RUNTIME_VARS.TMP, 'ipc_test.ipc')
 
         self.server_channel = salt.transport.ipc.IPCMessageServer(
             self.socket_path,
@@ -54,12 +54,7 @@ class BaseIPCReqCase(tornado.testing.AsyncTestCase):
     def tearDown(self):
         super(BaseIPCReqCase, self).tearDown()
         #failures = []
-        try:
-            self.server_channel.close()
-        except socket.error as exc:
-            if exc.errno != errno.EBADF:
-                # If its not a bad file descriptor error, raise
-                raise
+        del self.channel
         os.unlink(self.socket_path)
         #for k, v in six.iteritems(self.io_loop._handlers):
         #    if self._start_handlers.get(k) != v:
@@ -98,13 +93,13 @@ class IPCMessageClient(BaseIPCReqCase):
         self.channel = self._get_channel()
 
     def tearDown(self):
-        super(IPCMessageClient, self).tearDown()
         try:
-            self.channel.close()
+            self.channel._close()
         except socket.error as exc:
             if exc.errno != errno.EBADF:
                 # If its not a bad file descriptor error, raise
                 raise
+        super(IPCMessageClient, self).tearDown()
 
     def test_basic_send(self):
         msg = {'foo': 'bar', 'stop': True}

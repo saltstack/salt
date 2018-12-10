@@ -60,7 +60,7 @@ def sanitize_host(host):
     Sanitize host string.
     '''
     return ''.join([
-        c for c in host[0:255] if c in (ascii_letters + digits + '.-')
+        c for c in host[0:255] if c in (ascii_letters + digits + '.-_')
     ])
 
 
@@ -198,9 +198,8 @@ def get_fqhostname():
     '''
     Returns the fully qualified hostname
     '''
-    l = [socket.getfqdn()]
-
-    # try socket.getaddrinfo
+    # try getaddrinfo()
+    fqdn = None
     try:
         addrinfo = socket.getaddrinfo(
             socket.gethostname(), 0, socket.AF_UNSPEC, socket.SOCK_STREAM,
@@ -210,12 +209,16 @@ def get_fqhostname():
             # info struct [family, socktype, proto, canonname, sockaddr]
             # On Windows `canonname` can be an empty string
             # This can cause the function to return `None`
-            if len(info) >= 4 and info[3]:
-                l = [info[3]]
+            if len(info) > 3 and info[3]:
+                fqdn = info[3]
+                break
     except socket.gaierror:
-        pass
-
-    return l and l[0] or None
+        pass  # NOTE: this used to log.error() but it was later disabled
+    except socket.error as err:
+        log.debug('socket.getaddrinfo() failure while finding fqdn: %s', err)
+    if fqdn is None:
+        fqdn = socket.getfqdn()
+    return fqdn
 
 
 def ip_to_host(ip):
@@ -1854,7 +1857,7 @@ def connection_check(addr, port=80, safe=False, ipv6=None):
 
 
 @jinja_filter('dns_check')
-def dns_check(addr, port=80, safe=False, ipv6=None):
+def dns_check(addr, port=80, safe=False, ipv6=None, attempt_connect=True):
     '''
     Return the ip resolved by dns, but do not exit on failure, only raise an
     exception. Obeys system preference for IPv4/6 address resolution - this
@@ -1905,18 +1908,24 @@ def dns_check(addr, port=80, safe=False, ipv6=None):
                     break
 
                 candidate_addr = salt.utils.zeromq.ip_bracket(h[4][0])
+
+                # sometimes /etc/hosts contains ::1 localhost
+                if not ipv6 and candidate_addr == '[::1]':
+                    continue
+
                 candidates.append(candidate_addr)
 
-                try:
-                    s = socket.socket(h[0], socket.SOCK_STREAM)
-                    s.settimeout(2)
-                    s.connect((candidate_addr.strip('[]'), h[4][1]))
-                    s.close()
+                if attempt_connect:
+                    try:
+                        s = socket.socket(h[0], socket.SOCK_STREAM)
+                        s.settimeout(2)
+                        s.connect((candidate_addr.strip('[]'), h[4][1]))
+                        s.close()
 
-                    resolved = candidate_addr
-                    break
-                except socket.error:
-                    pass
+                        resolved = candidate_addr
+                        break
+                    except socket.error:
+                        pass
             if not resolved:
                 if len(candidates) > 0:
                     resolved = candidates[0]

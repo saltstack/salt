@@ -46,6 +46,9 @@ class SysctlTestCase(TestCase, LoaderModuleMockMixin):
 
         ret = {'name': name, 'result': None, 'changes': {}, 'comment': comment}
 
+        comment_empty = ('Sysctl option {0} would be changed to {1}'
+                         ''.format(name, value))
+
         comment1 = ('Sysctl option {0} set to be changed to {1}'
                     .format(name, value))
 
@@ -91,8 +94,13 @@ class SysctlTestCase(TestCase, LoaderModuleMockMixin):
             return [name]
 
         with patch.dict(sysctl.__opts__, {'test': True}):
-            mock = MagicMock(return_value=False)
+            mock = MagicMock(return_value=None)
             with patch.dict(sysctl.__salt__, {'sysctl.show': mock}):
+                self.assertDictEqual(sysctl.present(name, value), ret)
+
+            mock = MagicMock(return_value=[])
+            with patch.dict(sysctl.__salt__, {'sysctl.show': mock}):
+                ret.update({'comment': comment_empty})
                 self.assertDictEqual(sysctl.present(name, value), ret)
 
             with patch.dict(sysctl.__salt__, {'sysctl.show': mock_current}):
