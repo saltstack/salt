@@ -155,36 +155,22 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
     @skipIf(sys.platform.startswith('win'), 'This test does not apply on Win')
     @flaky
     def test_issue_2731_masterless(self):
+        minion_id = 'minion_test_issue_2731'
         root_dir = os.path.join(RUNTIME_VARS.TMP, 'issue-2731')
-        config_dir = os.path.join(root_dir, 'conf')
-        minion_config_file = os.path.join(config_dir, 'minion')
-        logfile = os.path.join(root_dir, 'minion_test_issue_2731')
-
-        if not os.path.isdir(config_dir):
-            os.makedirs(config_dir)
-
-        with salt.utils.files.fopen(self.get_config_file_path('master')) as fhr:
-            master_config = salt.utils.yaml.safe_load(fhr)
-
-        master_root_dir = master_config['root_dir']
-        this_minion_key = os.path.join(
-            master_root_dir, 'pki', 'master', 'minions', 'minion_test_issue_2731'
+        minion_config = self.get_temp_config(
+            'minion',
+            id=minion_id,
+            root_dir=root_dir,
         )
+        import pprint
+        pprint.pprint(minion_config)
+        config_dir = minion_config['config_dir']
+        minion_config_file = minion_config['conf_file']
+        logfile = minion_config['log_file']
 
-        minion_config = {
-            'id': 'minion_test_issue_2731',
-            'master': 'localhost',
-            'master_port': 64506,
-            'root_dir': master_root_dir,
-            'pki_dir': 'pki',
-            'cachedir': 'cachedir',
-            'sock_dir': 'minion_sock',
-            'open_mode': True,
-            'log_file': logfile,
-            'log_level': 'quiet',
-            'log_level_logfile': 'info',
-            'transport': self.master_opts['transport'],
-        }
+        master_config = self.get_config('master')
+        this_minion_key = os.path.join(master_config['pki_dir'], 'minions', minion_id)
+
         try:
             # Remove existing logfile
             if os.path.isfile(logfile):
@@ -193,8 +179,6 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
             start = datetime.now()
             # Let's first test with a master running
 
-            with salt.utils.files.fopen(minion_config_file, 'w') as fh_:
-                salt.utils.yaml.safe_dump(minion_config, fh_, default_flow_style=False)
             ret = self.run_script(
                 'salt-call',
                 '--config-dir {0} cmd.run "echo foo"'.format(
