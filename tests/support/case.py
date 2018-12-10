@@ -783,15 +783,20 @@ class ModuleCase(TestCase, SaltClientTestCaseMixin):
                                timeout=timeout,
                                kwarg=kwargs)
 
+        if RUNTIME_VARS.PYTEST_SESSION:
+            fail_or_skip_func = self.fail
+        else:
+            fail_or_skip_func = self.skipTest
+
         if minion_tgt not in orig:
-            self.skipTest(
+            fail_or_skip_func(
                 'WARNING(SHOULD NOT HAPPEN #1935): Failed to get a reply '
                 'from the minion \'{0}\'. Command output: {1}'.format(
                     minion_tgt, orig
                 )
             )
         elif orig[minion_tgt] is None and function not in known_to_return_none:
-            self.skipTest(
+            fail_or_skip_func(
                 'WARNING(SHOULD NOT HAPPEN #1935): Failed to get \'{0}\' from '
                 'the minion \'{1}\'. Command output: {2}'.format(
                     function, minion_tgt, orig
@@ -857,8 +862,12 @@ class SyndicCase(TestCase, SaltClientTestCaseMixin):
         behavior of the raw function call
         '''
         orig = self.client.cmd('minion', function, arg, timeout=25)
+        if RUNTIME_VARS.PYTEST_SESSION:
+            fail_or_skip_func = self.fail
+        else:
+            fail_or_skip_func = self.skipTest
         if 'minion' not in orig:
-            self.skipTest(
+            fail_or_skip_func(
                 'WARNING(SHOULD NOT HAPPEN #1935): Failed to get a reply '
                 'from the minion. Command output: {0}'.format(orig)
             )
