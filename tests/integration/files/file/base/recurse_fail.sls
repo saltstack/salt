@@ -10,4 +10,3 @@ mysql:
     - source: salt://master.cnf
     - require:
       - service: mysql
-

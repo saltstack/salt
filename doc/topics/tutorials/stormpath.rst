@@ -194,4 +194,3 @@ Ensure that an account does not exist on Stormpath. As with
 ``email`` address associated with this account. Salt will use this, with or
 without the ``directory`` ID that is configured for the minion. However, lookups
 will be much faster with a directory ID specified.
-

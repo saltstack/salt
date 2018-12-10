@@ -25,4 +25,3 @@ B:
     # B should run before A
     - require_in:
       - cmd: A
-

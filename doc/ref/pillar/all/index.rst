@@ -52,4 +52,3 @@ pillar modules
     venafi
     virtkey
     vmware_pillar
-

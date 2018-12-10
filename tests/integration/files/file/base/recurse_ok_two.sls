@@ -12,4 +12,3 @@ nagios-nrpe-server:
     - source: salt://baseserver/nrpe.cfg
     - require:
       - pkg: nagios-nrpe-server
-

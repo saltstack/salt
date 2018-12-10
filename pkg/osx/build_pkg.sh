@@ -187,4 +187,3 @@ productbuild --resources=pkg-resources \
              --distribution=distribution.xml  \
              --package-path=salt-src-$VERSION-py$PYVER-$CPUARCH.pkg \
              --version=$VERSION salt-$VERSION-py$PYVER-$CPUARCH.pkg
-

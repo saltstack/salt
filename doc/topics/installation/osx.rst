@@ -80,4 +80,3 @@ Post-installation tasks
 =======================
 
 Now go to the :ref:`Configuring Salt<configuring-salt>` page.
-

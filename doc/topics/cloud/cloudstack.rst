@@ -166,4 +166,3 @@ assigned to the VM.
       security_group:
         - default
         - salt-master
-

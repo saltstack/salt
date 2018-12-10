@@ -55,4 +55,3 @@ See :ref:`Installing SPM Packages <spm-master>`
     config
     spm_formula
     dev
-

@@ -101,4 +101,3 @@ Execute a query and return all information about the nodes running on configured
 .. note::
 
     Additional documentation about Scaleway can be found at `<https://www.scaleway.com/docs>`_.
-
