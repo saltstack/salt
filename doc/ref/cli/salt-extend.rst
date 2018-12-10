@@ -43,7 +43,7 @@ Options
 
     The path to the salt installation, defaults to .
 
-.. option::  --name, -n 
+.. option::  --name, -n
 
     The module name for the new module
 

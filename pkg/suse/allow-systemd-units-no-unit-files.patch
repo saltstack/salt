@@ -38,8 +38,8 @@ index 57b55f5..e2cfb1d 100644
 +++ b/salt/modules/systemd.py
 @@ -72,6 +72,28 @@ def _systemctl_cmd(action, name):
      return 'systemctl {0} {1}'.format(action, _canonical_unit_name(name))
- 
- 
+
+
 +def _get_all_units():
 +    '''
 +    Get all units and their state. Units ending in .service
@@ -66,14 +66,14 @@ index 57b55f5..e2cfb1d 100644
      '''
      Get all unit files and their state. Unit files ending in .service
 @@ -173,7 +195,7 @@ def get_all():
- 
+
          salt '*' service.get_all
      '''
 -    return sorted(_get_all_unit_files().keys())
 +    return sorted(_get_all_units().keys())
- 
- 
+
+
  def available(name):
--- 
+--
 1.9.3
 

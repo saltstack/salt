@@ -198,7 +198,7 @@ prepended with the ``test_`` naming syntax, as described above.
 If a function does not start with ``test_``, then the function acts as a "normal"
 function and is not considered a testing function. It will not be included in the
 test run or testing output. The same principle applies to unit test files that
-do not have the ``test_*.py`` naming syntax. This test file naming convention 
+do not have the ``test_*.py`` naming syntax. This test file naming convention
 is how the test runner recognizes that a test file contains unit tests.
 
 
@@ -513,7 +513,7 @@ This function contains two raise statements and one return statement, so we
 know that we will need (at least) three tests.  It has two function arguments
 and many references to non-builtin functions.  In the tests below you will see
 that MagicMock's ``patch()`` method may be used as a context manager or as a
-decorator. When patching the salt dunders however, please use the context 
+decorator. When patching the salt dunders however, please use the context
 manager approach.
 
 There are three test functions, one for each raise and return statement in the

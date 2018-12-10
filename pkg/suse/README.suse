@@ -8,7 +8,7 @@ Why an extra user
 
 While the current setup runs the master as root user, this is considered a security issue
 and not in line with the other configuration management tools (eg. puppet) which runs as a
-dedicated user. 
+dedicated user.
 
 How can I undo the change
 =========================

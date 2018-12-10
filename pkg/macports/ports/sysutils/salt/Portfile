@@ -104,7 +104,7 @@ This port configures a LaunchItem for salt-minion.
 It also installs LaunchItems for the salt-master, api, and the salt-syndic.
 
 To start the salt-master, api, or syndic via launchd, run
-    
+
 sudo launchctl load -w /Library/LaunchDaemons/org.macports.salt-master.plist
 sudo launchctl load -w /Library/LaunchDaemons/org.macports.salt-api.plist
 sudo launchctl load -w /Library/LaunchDaemons/org.macports.salt-syndic.plist

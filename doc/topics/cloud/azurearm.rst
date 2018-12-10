@@ -251,7 +251,7 @@ Optional. Default is ``False``. Normally when a VM is deleted, its associated
 interfaces and IPs are retained. This is useful if you expect the deleted VM
 to be recreated with the same name and network settings. If you would like
 interfaces and IPs to be deleted when their associated VM is deleted, set this
-to ``True``. 
+to ``True``.
 
 userdata
 --------

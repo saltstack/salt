@@ -136,7 +136,7 @@ Wed Oct  7 19:15:54 UTC 2015 - mrueckert@suse.de
 -------------------------------------------------------------------
 Wed Oct  7 14:34:18 UTC 2015 - mrueckert@suse.de
 
-- package all directories in /var/cache/salt and /etc/salt and 
+- package all directories in /var/cache/salt and /etc/salt and
   have permissions set for non root salt master
 - update use-salt-user-for-master.patch:
   - also patch the logrotate file to include the su option
@@ -243,7 +243,7 @@ Wed Jul  8 08:47:32 UTC 2015 - aboe76@gmail.com
 Thu Jun  4 19:46:19 UTC 2015 - aboe76@gmail.com
 
 - New Bugfix release 2015.5.2
-  
+
   for more details:
   http://docs.saltstack.com/en/latest/topics/releases/2015.5.2.html
 

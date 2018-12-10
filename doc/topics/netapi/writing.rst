@@ -47,7 +47,7 @@ Multiple instances
 
 :py:mod:`~salt.netapi.rest_cherrypy` and :py:mod:`~salt.netapi.rest_tornado`
 support running multiple instances by copying and renaming entire directory
-of those. To start the copied multiple :py:mod:`~salt.netapi` modules, add 
+of those. To start the copied multiple :py:mod:`~salt.netapi` modules, add
 configuration blocks for the copied :py:mod:`~salt.netapi` modules in the
 Salt Master config. The name of each added configuration block must match
 with the name of each directory of the copied :py:mod:`~salt.netapi` module.

@@ -71,7 +71,7 @@ _salt(){
     case "${pprev}" in
     -G|--grain|--grain-pcre)
     if [ "${cur}" = ":" ]; then
-        COMPREPLY=($(compgen -W "`_salt_get_grain_values ${prev}`"  ))	
+        COMPREPLY=($(compgen -W "`_salt_get_grain_values ${prev}`"  ))
         return 0
     fi
     ;;

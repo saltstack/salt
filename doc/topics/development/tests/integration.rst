@@ -474,7 +474,7 @@ to test states:
                 output = fp_.read()
                 self.assertIn('{0}\t\t{1}'.format(ip, name), output)
 
-To access the integration files, a variable named ``FILES`` points to the 
+To access the integration files, a variable named ``FILES`` points to the
 ``tests/integration/files`` directory. This is where the referenced
 ``host.present`` sls file resides.
 
