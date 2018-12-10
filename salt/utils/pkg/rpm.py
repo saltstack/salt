@@ -9,6 +9,9 @@ import collections
 import datetime
 import logging
 import subprocess
+import platform
+import salt.utils.stringutils
+import salt.utils.path
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -44,13 +47,17 @@ def get_osarch():
     '''
     Get the os architecture using rpm --eval
     '''
-    ret = subprocess.Popen(
-        'rpm --eval "%{_host_cpu}"',
-        shell=True,
-        close_fds=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE).communicate()[0]
-    return ret or 'unknown'
+    if salt.utils.path.which('rpm'):
+        ret = subprocess.Popen(
+            'rpm --eval "%{_host_cpu}"',
+            shell=True,
+            close_fds=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE).communicate()[0]
+    else:
+        ret = ''.join([x for x in platform.uname()[-2:] if x][-1:])
+
+    return salt.utils.stringutils.to_str(ret).strip() or 'unknown'
 
 
 def check_32(arch, osarch=None):

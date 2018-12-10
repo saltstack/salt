@@ -28,6 +28,12 @@ warnings.filterwarnings(
     '^Module backports was already imported from (.*), but (.*) is being added to sys.path$',
     UserWarning
 )
+# Only show msgpack encoding deprecation warnings once
+warnings.filterwarnings(
+    'once',
+    r'encoding is deprecated, Use raw=False instead\.',
+    DeprecationWarning,
+)
 
 
 def __define_global_system_encoding_variable__():

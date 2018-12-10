@@ -13,10 +13,10 @@ import shutil
 import tempfile
 
 # Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.helpers import with_tempdir
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
-from tests.support.paths import TMP
 
 # Import salt libs
 import salt.fileclient
@@ -338,7 +338,7 @@ class PillarTestCase(TestCase):
             'extension_modules': '',
         }
         pillar = salt.pillar.Pillar(opts, {}, 'mocked-minion', 'base', pillarenv='dev')
-        self.assertEqual(pillar.opts['file_roots'],
+        self.assertEqual(pillar.opts['pillar_roots'],
                          {'base': ['/srv/pillar/base'], 'dev': ['/srv/pillar/__env__']})
 
     def test_ignored_dynamic_pillarenv(self):
@@ -353,7 +353,7 @@ class PillarTestCase(TestCase):
             'extension_modules': '',
         }
         pillar = salt.pillar.Pillar(opts, {}, 'mocked-minion', 'base', pillarenv='base')
-        self.assertEqual(pillar.opts['file_roots'], {'base': ['/srv/pillar/base']})
+        self.assertEqual(pillar.opts['pillar_roots'], {'base': ['/srv/pillar/base']})
 
     @patch('salt.fileclient.Client.list_states')
     def test_malformed_pillar_sls(self, mock_list_states):
@@ -554,7 +554,7 @@ class PillarTestCase(TestCase):
         }
 
         def _run_test(nodegroup_order, glob_order, expected):
-            tempdir = tempfile.mkdtemp(dir=TMP)
+            tempdir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
             try:
                 sls_files = self._setup_test_topfile_sls(
                     tempdir,

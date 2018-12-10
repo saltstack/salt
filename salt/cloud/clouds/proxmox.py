@@ -18,6 +18,7 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
       user: myuser@pam or myuser@pve
       password: mypassword
       url: hypervisor.domain.tld
+      port: 8006
       driver: proxmox
       verify_ssl: True
 
@@ -105,6 +106,7 @@ def get_dependencies():
 
 
 url = None
+port = None
 ticket = None
 csrf = None
 verify_ssl = None
@@ -115,9 +117,13 @@ def _authenticate():
     '''
     Retrieve CSRF and API tickets for the Proxmox API
     '''
-    global url, ticket, csrf, verify_ssl
+    global url, port, ticket, csrf, verify_ssl
     url = config.get_cloud_config_value(
         'url', get_configured_provider(), __opts__, search_global=False
+    )
+    port = config.get_cloud_config_value(
+        'port', get_configured_provider(), __opts__,
+        default=8006, search_global=False
     )
     username = config.get_cloud_config_value(
         'user', get_configured_provider(), __opts__, search_global=False
@@ -131,7 +137,7 @@ def _authenticate():
     )
 
     connect_data = {'username': username, 'password': passwd}
-    full_url = 'https://{0}:8006/api2/json/access/ticket'.format(url)
+    full_url = 'https://{0}:{1}/api2/json/access/ticket'.format(url, port)
 
     returned_data = requests.post(
         full_url, verify=verify_ssl, data=connect_data).json()
@@ -148,7 +154,7 @@ def query(conn_type, option, post_data=None):
         log.debug('Not authenticated yet, doing that now..')
         _authenticate()
 
-    full_url = 'https://{0}:8006/api2/json/{1}'.format(url, option)
+    full_url = 'https://{0}:{1}/api2/json/{2}'.format(url, port, option)
 
     log.debug('%s: %s (%s)', conn_type, full_url, post_data)
 
@@ -595,17 +601,16 @@ def create(vm_):
     host = data['node']       # host which we have received
     nodeType = data['technology']  # VM tech (Qemu / OpenVZ)
 
-    # Determine which IP to use in order of preference:
-    if 'ip_address' in vm_:
-        ip_address = six.text_type(vm_['ip_address'])
-    elif 'public_ips' in data:
-        ip_address = six.text_type(data['public_ips'][0])  # first IP
-    elif 'private_ips' in data:
-        ip_address = six.text_type(data['private_ips'][0])  # first IP
-    else:
-        raise SaltCloudExecutionFailure("Could not determine an IP address to use")
-
-    log.debug('Using IP address %s', ip_address)
+    if 'agent_get_ip' not in vm_ or vm_['agent_get_ip'] == 0:
+        # Determine which IP to use in order of preference:
+        if 'ip_address' in vm_:
+            ip_address = six.text_type(vm_['ip_address'])
+        elif 'public_ips' in data:
+            ip_address = six.text_type(data['public_ips'][0])  # first IP
+        elif 'private_ips' in data:
+            ip_address = six.text_type(data['private_ips'][0])  # first IP
+        else:
+            raise SaltCloudExecutionFailure("Could not determine an IP address to use")
 
     # wait until the vm has been created so we can start it
     if not wait_for_created(data['upid'], timeout=300):
@@ -772,6 +777,42 @@ def create(vm_):
     if not wait_for_state(vmid, 'running'):
         return {'Error': 'Unable to start {0}, command timed out'.format(name)}
 
+    # For QEMU VMs, we can get the IP Address from qemu-agent
+    if 'agent_get_ip' in vm_ and vm_['agent_get_ip'] == 1:
+        def __find_agent_ip(vm_):
+            log.debug("Waiting for qemu-agent to start...")
+            endpoint = 'nodes/{0}/qemu/{1}/agent/network-get-interfaces'.format(vm_['host'], vmid)
+            interfaces = query('get', endpoint)
+            # If we get a result from the agent, parse it
+            if 'result' in interfaces:
+                for interface in interfaces['result']:
+                    if_name = interface['name']
+                    # Only check ethernet type interfaces, as they are not returned in any order
+                    if if_name.startswith('eth') or if_name.startswith('ens'):
+                        for if_addr in interface['ip-addresses']:
+                            ip_addr = if_addr['ip-address']
+                            # Ensure interface has a valid IPv4 address
+                            if if_addr['ip-address-type'] == 'ipv4' and ip_addr is not None:
+                                return six.text_type(ip_addr)
+            raise SaltCloudExecutionFailure
+
+        # We have to wait for a bit for qemu-agent to start
+        try:
+            ip_address = __utils__['cloud.wait_for_fun'](
+                __find_agent_ip,
+                vm_=vm_
+            )
+        except (SaltCloudExecutionTimeout, SaltCloudExecutionFailure) as exc:
+            try:
+                # If VM was created but we can't connect, destroy it.
+                destroy(vm_['name'])
+            except SaltCloudSystemExit:
+                pass
+            finally:
+                raise SaltCloudSystemExit(six.text_type(exc))
+
+    log.debug('Using IP address %s', ip_address)
+
     ssh_username = config.get_cloud_config_value(
         'ssh_username', vm_, __opts__, default='root'
     )
@@ -813,7 +854,7 @@ def _import_api():
     Load this json content into global variable "api"
     '''
     global api
-    full_url = 'https://{0}:8006/pve-docs/api-viewer/apidoc.js'.format(url)
+    full_url = 'https://{0}:{1}/pve-docs/api-viewer/apidoc.js'.format(url, port)
     returned_data = requests.get(full_url, verify=verify_ssl)
 
     re_filter = re.compile('(?<=pveapi =)(.*)(?=^;)', re.DOTALL | re.MULTILINE)
@@ -914,6 +955,9 @@ def create_node(vm_, newid):
                                     static_props):
             if prop in vm_:  # if the property is set, use it for the VM request
                 newnode[prop] = vm_[prop]
+
+        if 'pubkey' in vm_:
+            newnode['ssh-public-keys'] = vm_['pubkey']
 
         # inform user the "disk" option is not supported for LXC hosts
         if 'disk' in vm_:
@@ -1111,7 +1155,7 @@ def destroy(name, call=None):
 
         # required to wait a bit here, otherwise the VM is sometimes
         # still locked and destroy fails.
-        time.sleep(1)
+        time.sleep(3)
 
         query('delete', 'nodes/{0}/{1}'.format(
             vmobj['node'], vmobj['id']

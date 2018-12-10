@@ -385,7 +385,7 @@ def _passphrase_callback(passphrase):
     Returns a callback function used to supply a passphrase for private keys
     '''
     def f(*args):
-        return salt.utils.stringutils.to_str(passphrase)
+        return salt.utils.stringutils.to_bytes(passphrase)
     return f
 
 
@@ -970,8 +970,8 @@ def create_crl(  # pylint: disable=too-many-arguments,too-many-locals
         rev_date = rev_date.strftime('%Y%m%d%H%M%SZ')
 
         rev = OpenSSL.crypto.Revoked()
-        rev.set_serial(serial_number)
-        rev.set_rev_date(rev_date)
+        rev.set_serial(salt.utils.stringutils.to_bytes(serial_number))
+        rev.set_rev_date(salt.utils.stringutils.to_bytes(rev_date))
 
         if 'reason' in rev_item:
             # Same here for OpenSSL bindings and non-unicode strings
@@ -997,7 +997,7 @@ def create_crl(  # pylint: disable=too-many-arguments,too-many-locals
         'days': days_valid
     }
     if digest:
-        export_kwargs['digest'] = bytes(digest)
+        export_kwargs['digest'] = salt.utils.stringutils.to_bytes(digest)
     else:
         log.warning('No digest specified. The default md5 digest will be used.')
 
@@ -1129,7 +1129,7 @@ def create_certificate(
     ca_server:
         Request a remotely signed certificate from ca_server. For this to
         work, a ``signing_policy`` must be specified, and that same policy
-        must be configured on the ca_server. See ``signing_policy`` for
+        must be configured on the ca_server (name or list of ca server). See ``signing_policy`` for
         details. Also the salt master must permit peers to call the
         ``sign_remote_certificate`` function.
 
@@ -1388,18 +1388,25 @@ def create_certificate(
         for ignore in list(_STATE_INTERNAL_KEYWORDS) + ['listen_in', 'preqrequired', '__prerequired__']:
             kwargs.pop(ignore, None)
 
-        certs = __salt__['publish.publish'](
-            tgt=ca_server,
-            fun='x509.sign_remote_certificate',
-            arg=six.text_type(kwargs))
+        if not isinstance(ca_server, list):
+            ca_server = [ca_server]
+        random.shuffle(ca_server)
+        for server in ca_server:
+            certs = __salt__['publish.publish'](
+                tgt=server,
+                fun='x509.sign_remote_certificate',
+                arg=six.text_type(kwargs))
+            if certs is None or not any(certs):
+                continue
+            else:
+                cert_txt = certs[server]
+                break
 
         if not any(certs):
             raise salt.exceptions.SaltInvocationError(
                     'ca_server did not respond'
                     ' salt master must permit peers to'
                     ' call the sign_remote_certificate function.')
-
-        cert_txt = certs[ca_server]
 
         if path:
             return write_pem(

@@ -14,11 +14,12 @@ import re
 import tempfile
 
 # Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf, TestCase
 from tests.support.case import ModuleCase
 from tests.support.helpers import flaky
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock, Mock
-from tests.support.paths import BASE_FILES, TMP, TMP_CONF_DIR
+from tests.support.paths import BASE_FILES
 
 # Import Salt libs
 import salt.config
@@ -52,7 +53,7 @@ try:
 except ImportError:
     HAS_TIMELIB = False
 
-CACHEDIR = os.path.join(TMP, 'jinja-template-cache')
+CACHEDIR = os.path.join(RUNTIME_VARS.TMP, 'jinja-template-cache')
 BLINESEP = salt.utils.stringutils.to_bytes(os.linesep)
 
 
@@ -1231,6 +1232,33 @@ class TestCustomExtensions(TestCase):
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
         self.assertEqual(rendered, '1, 4')
 
+    def test_method_call(self):
+        '''
+        Test the `method_call` Jinja filter.
+        '''
+        rendered = render_jinja_tmpl("{{ 6|method_call('bit_length') }}",
+                                     dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
+        self.assertEqual(rendered, "3")
+        rendered = render_jinja_tmpl("{{ 6.7|method_call('is_integer') }}",
+                                     dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
+        self.assertEqual(rendered, "False")
+        rendered = render_jinja_tmpl("{{ 'absaltba'|method_call('strip', 'ab') }}",
+                                     dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
+        self.assertEqual(rendered, "salt")
+        rendered = render_jinja_tmpl("{{ [1, 2, 1, 3, 4]|method_call('index', 1, 1, 3) }}",
+                                     dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
+        self.assertEqual(rendered, "2")
+
+        # have to use `dictsort` to keep test result deterministic
+        rendered = render_jinja_tmpl("{{ {}|method_call('fromkeys', ['a', 'b', 'c'], 0)|dictsort }}",
+                                     dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
+        self.assertEqual(rendered, "[('a', 0), ('b', 0), ('c', 0)]")
+
+        # missing object method test
+        rendered = render_jinja_tmpl("{{ 6|method_call('bit_width') }}",
+                                     dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
+        self.assertEqual(rendered, "None")
+
     def test_md5(self):
         '''
         Test the `md5` Jinja filter.
@@ -1285,6 +1313,16 @@ class TestCustomExtensions(TestCase):
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
         self.assertEqual(rendered, 'random')
 
+    def test_json_query(self):
+        '''
+        Test the `json_query` Jinja filter.
+        '''
+        rendered = render_jinja_tmpl(
+            "{{ [1, 2, 3] | json_query('[1]')}}",
+            dict(opts=self.local_opts, saltenv='test', salt=self.local_salt)
+        )
+        self.assertEqual(rendered, '2')
+
     # def test_print(self):
     #     env = Environment(extensions=[SerializerExtension])
     #     source = '{% import_yaml "toto.foo" as docu %}'
@@ -1306,7 +1344,7 @@ class TestDotNotationLookup(ModuleCase):
             'mocktest.ping': lambda: True,
             'mockgrains.get': lambda x: 'jerry',
         }
-        minion_opts = salt.config.minion_config(os.path.join(TMP_CONF_DIR, 'minion'))
+        minion_opts = salt.config.minion_config(os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'minion'))
         render = salt.loader.render(minion_opts, functions)
         self.jinja = render.get('jinja')
 

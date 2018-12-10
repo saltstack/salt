@@ -172,14 +172,18 @@ if USE_LOAD_BALANCER:
                 'log_queue_level': self.log_queue_level
             }
 
-        def close(self):
+        def _close(self):
+            '''
+            This class is a singleton so close have to be called only once during
+            garbage collection when nobody uses this instance.
+            '''
             if self._socket is not None:
                 self._socket.shutdown(socket.SHUT_RDWR)
                 self._socket.close()
                 self._socket = None
 
         def __del__(self):
-            self.close()
+            self._close()
 
         def run(self):
             '''
@@ -509,9 +513,16 @@ class AsyncTCPPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.tran
             if not self.auth.authenticated:
                 yield self.auth.authenticate()
             if self.auth.authenticated:
+                # if this is changed from the default, we assume it was intentional
+                if int(self.opts.get('publish_port', 4505)) != 4505:
+                    self.publish_port = self.opts.get('publish_port')
+                # else take the relayed publish_port master reports
+                else:
+                    self.publish_port = self.auth.creds['publish_port']
+
                 self.message_client = SaltMessageClientPool(
                     self.opts,
-                    args=(self.opts, self.opts['master_ip'], int(self.auth.creds['publish_port']),),
+                    args=(self.opts, self.opts['master_ip'], int(self.publish_port),),
                     kwargs={'io_loop': self.io_loop,
                             'connect_callback': self.connect_callback,
                             'disconnect_callback': self.disconnect_callback,
@@ -1296,7 +1307,7 @@ class PubServer(tornado.tcpserver.TCPServer, object):
                 self.clients.discard(client)
                 break
             except Exception as e:
-                log.error('Exception parsing response', exc_info=True)
+                log.error('Exception parsing response from %s', client.address, exc_info=True)
                 continue
 
     def handle_stream(self, stream, address):
@@ -1417,21 +1428,12 @@ class TCPPubServerChannel(salt.transport.server.PubServerChannel):
         except (KeyboardInterrupt, SystemExit):
             salt.log.setup.shutdown_multiprocessing_logging()
 
-    def pre_fork(self, process_manager):
+    def pre_fork(self, process_manager, kwargs=None):
         '''
         Do anything necessary pre-fork. Since this is on the master side this will
         primarily be used to create IPC channels and create our daemon process to
         do the actual publishing
         '''
-        kwargs = {}
-        if salt.utils.platform.is_windows():
-            kwargs['log_queue'] = (
-                salt.log.setup.get_multiprocessing_logging_queue()
-            )
-            kwargs['log_queue_level'] = (
-                salt.log.setup.get_multiprocessing_logging_level()
-            )
-
         process_manager.add_process(self._publish_daemon, kwargs=kwargs)
 
     def publish(self, load):
