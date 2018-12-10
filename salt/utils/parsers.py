@@ -3093,6 +3093,7 @@ class SaltSSHOptionParser(
     OutputOptionsMixIn,
     SaltfileMixIn,
     HardCrashMixin,
+    CacheDirMixIn,
     NoParseMixin,
     JIDMixin,
     metaclass=OptionParserMeta,
