@@ -6,7 +6,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
-from tests.support.helpers import TestsLoggingHandler, flaky
+from tests.support.helpers import TstSuiteLoggingHandler, flaky
 
 import logging
 import salt.ext.six as six
@@ -22,8 +22,8 @@ class LoggingJIDsTest(ModuleCase):
         Set up
         '''
         log_format = '[%(levelname)-8s] %(jid)s %(message)s'
-        self.handler = TestsLoggingHandler(format=log_format,
-                                           level=logging.DEBUG)
+        self.handler = TstSuiteLoggingHandler(format=log_format,
+                                              level=logging.DEBUG)
 
     @flaky
     def test_jid_in_logs(self):
