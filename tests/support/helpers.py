@@ -332,7 +332,7 @@ class RedirectStdStreams(object):
                 pass
 
 
-class TestsLoggingHandler(object):
+class TstSuiteLoggingHandler(object):
     '''
     Simple logging handler which can be used to test if certain logging
     messages get emitted or not:
