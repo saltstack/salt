@@ -232,6 +232,8 @@ class StateRunnerTest(ShellCase):
         ret = re.sub(r'\d', 'x', ret)
         ret = re.sub('Duration: .*', 'Duration: x', ret)
         ret = re.sub('Started: .*', 'Started: x', ret)
+        #ret = re.sub('^([\s]+)Changes:([\s]+)$', r'\1Changes:\n', ret)
+        ret = re.sub(r'\n([\s]+)Changes:([\s]+)\n', r'\n\1Changes:\n', ret)
 
         result = textwrap.dedent('''
                   ID: test_runner_success
