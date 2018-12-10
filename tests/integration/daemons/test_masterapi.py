@@ -7,8 +7,9 @@ import shutil
 import stat
 
 # Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ShellCase
-from tests.support.paths import TMP, INTEGRATION_TEST_DIR
+from tests.support.paths import INTEGRATION_TEST_DIR
 
 # Import 3rd-party libs
 
@@ -18,7 +19,7 @@ import salt.utils.stringutils
 
 # all read, only owner write
 autosign_file_permissions = stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH | stat.S_IWUSR
-autosign_file_path = os.path.join(TMP, 'rootdir', 'autosign_file')
+autosign_file_path = os.path.join(RUNTIME_VARS.TMP, 'rootdir', 'autosign_file')
 
 
 class AutosignGrainsTest(ShellCase):
