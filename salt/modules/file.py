@@ -3242,29 +3242,13 @@ def tail(path, lines):
             'Cannot tail a binary file: {0}'.format(path))
 
     try:
-        lines = int(lines)
-    except ValueError:
-        log.error('file.tail: \'lines\' value must be an integer')
-        lines = 10
-
-    try:
         with salt.utils.fopen(path) as tail_fh:
-            tail_fh.seek(0, os.SEEK_END)
-            position = tail_fh.tell()
-            line = ''
-            while position >= 0:
-                tail_fh.seek(position)
-                next_char = tail_fh.read(1)
-                if next_char == os.linesep:
-                    lines_found.append(line[::-1])
-                    line = ''
-                else:
-                    line += next_char
-                position -= 1
-                if len(lines_found) == lines:
-                    return lines_found[::-1]
-            lines_found.append(line[::-1])
-        return lines_found[::-1]
+            block_counter = -1
+            while len(lines_found) < lines:
+                tail_fh.seek(block_counter * _buffer, os.SEEK_END)
+                lines_found = tail_fh.readlines()
+                block_counter -= 1
+        return lines_found[-lines:]
     except (OSError, IOError):
         raise CommandExecutionError('Could not tail \'{0}\''.format(path))
 
