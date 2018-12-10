@@ -7,8 +7,8 @@ from __future__ import absolute_import, print_function, unicode_literals
 import os
 
 # Import Salt Testing Libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.paths import TMP
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     NO_MOCK,
@@ -20,7 +20,7 @@ from tests.support.mock import (
 # Import Salt Libs
 import salt.states.beacon as beacon
 
-SOCK_DIR = os.path.join(TMP, 'test-socks')
+SOCK_DIR = os.path.join(RUNTIME_VARS.TMP, 'test-socks')
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)

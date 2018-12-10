@@ -12,6 +12,7 @@
 
 # Import python libs
 from __future__ import absolute_import
+import os
 import logging
 
 # Import pytest-salt libs
@@ -25,6 +26,10 @@ from pytestsalt.fixtures.daemons import SaltMaster as PytestSaltMaster
 from pytestsalt.fixtures.daemons import SaltMinion as PytestSaltMinion
 from pytestsalt.fixtures.daemons import SaltSyndic as PytestSaltSyndic
 from pytestsalt.fixtures.daemons import SaltProxy as PytestSaltProxy
+try:
+    from pytestsalt.version import __version_info__ as __pytestsalt_version_info__
+except ImportError:
+    from pytestsalt import __version_info__ as __pytestsalt_version_info__
 
 # Import tests support libs
 from tests.support.paths import ScriptPathMixin
@@ -38,6 +43,21 @@ class SaltRunEventListener(ScriptPathMixin, PytestSaltRunEventListener):
     not running under pytest
     '''
 
+    def run(self, tags=(), timeout=10):  # pylint: disable=arguments-differ
+        if __pytestsalt_version_info__ <= (2018, 9, 28):
+            log.info('%s checking for tags: %s', self.__class__.__name__, tags)
+        result = super(SaltRunEventListener, self).run(tags=tags, timeout=timeout)
+        if __pytestsalt_version_info__ > (2018, 9, 28):
+            return result
+        if result.exitcode != 0:
+            return result
+        if not result.json['unmatched']:
+            stop_sending_events_file = self.config.get('pytest_stop_sending_events_file')
+            if stop_sending_events_file and os.path.exists(stop_sending_events_file):
+                log.warning('Removing pytest_stop_sending_events_file: %s', stop_sending_events_file)
+                os.unlink(stop_sending_events_file)
+        return result
+
 
 class GetSaltRunFixtureMixin(ScriptPathMixin):
     '''
@@ -48,12 +68,20 @@ class GetSaltRunFixtureMixin(ScriptPathMixin):
         pass
 
     def get_salt_run_event_listener(self):
-        return SaltRunEventListener(None,
-                                    self.config,
-                                    self.config_dir,
-                                    self.bin_dir_path,
-                                    self.log_prefix,
-                                    cli_script_name='run')
+        try:
+            return SaltRunEventListener(None,
+                                        self.config,
+                                        self.event_listener_config_dir or self.config_dir,
+                                        self.bin_dir_path,
+                                        self.log_prefix,
+                                        cli_script_name='run')
+        except AttributeError:
+            return SaltRunEventListener(None,
+                                        self.config,
+                                        self.config_dir,
+                                        self.bin_dir_path,
+                                        self.log_prefix,
+                                        cli_script_name='run')
 
 
 class Salt(ScriptPathMixin, PytestSalt):
@@ -124,11 +152,15 @@ def start_daemon(daemon_name=None,
                  start_timeout=10,
                  slow_stop=False,
                  environ=None,
-                 cwd=None):
+                 cwd=None,
+                 event_listener_config_dir=None):
     '''
     Returns a running salt daemon
     '''
+    # Old config name
     daemon_config['pytest_port'] = daemon_config['runtests_conn_check_port']
+    # New config name
+    daemon_config['pytest_engine_port'] = daemon_config['runtests_conn_check_port']
     request = None
     if fail_hard:
         fail_method = RuntimeError
@@ -139,15 +171,27 @@ def start_daemon(daemon_name=None,
     process = None
     while attempts <= 3:  # pylint: disable=too-many-nested-blocks
         attempts += 1
-        process = daemon_class(request,
-                               daemon_config,
-                               daemon_config_dir,
-                               bin_dir_path,
-                               daemon_log_prefix,
-                               cli_script_name=daemon_cli_script_name,
-                               slow_stop=slow_stop,
-                               environ=environ,
-                               cwd=cwd)
+        try:
+            process = daemon_class(request=request,
+                                   config=daemon_config,
+                                   config_dir=daemon_config_dir,
+                                   bin_dir_path=bin_dir_path,
+                                   log_prefix=daemon_log_prefix,
+                                   cli_script_name=daemon_cli_script_name,
+                                   slow_stop=slow_stop,
+                                   environ=environ,
+                                   cwd=cwd,
+                                   event_listener_config_dir=event_listener_config_dir)
+        except TypeError:
+            process = daemon_class(request=request,
+                                   config=daemon_config,
+                                   config_dir=daemon_config_dir,
+                                   bin_dir_path=bin_dir_path,
+                                   log_prefix=daemon_log_prefix,
+                                   cli_script_name=daemon_cli_script_name,
+                                   slow_stop=slow_stop,
+                                   environ=environ,
+                                   cwd=cwd)
         process.start()
         if process.is_alive():
             try:
@@ -176,12 +220,6 @@ def start_daemon(daemon_name=None,
                 attempts
             )
 
-            def stop_daemon():
-                log.info('[%s] Stopping pytest %s(%s)', daemon_log_prefix, daemon_name, daemon_id)
-                terminate_process(process.pid, kill_children=True, slow_stop=slow_stop)
-                log.info('[%s] pytest %s(%s) stopped', daemon_log_prefix, daemon_name, daemon_id)
-
-            # request.addfinalizer(stop_daemon)
             return process
         else:
             terminate_process(process.pid, kill_children=True, slow_stop=slow_stop)
