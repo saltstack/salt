@@ -1,0 +1,14 @@
+========================================
+In Progress: Salt 2018.3.4 Release Notes
+========================================
+
+Version 2018.3.4 is an **unreleased** bugfix release for :ref:`2018.3.0 <release-2018-3-0>`.
+This release is still in progress and has not been released yet.
+
+
+State Changes
+=============
+
+- The :py:func:`host.present <salt.states.host.present>` state can now remove
+  the specified hostname from IPs not specified in the state. This can be done
+  by setting the newly-added ``clean`` argument to ``True``.

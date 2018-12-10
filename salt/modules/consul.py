@@ -214,7 +214,7 @@ def get(consul_url=None, key=None, token=None, recurse=False, decode=False, raw=
     if ret['res']:
         if decode:
             for item in ret['data']:
-                if item['Value'] != None:
+                if item['Value'] is not None:
                     item['Value'] = base64.b64decode(item['Value'])
                 else:
                     item['Value'] = ""
@@ -2264,7 +2264,7 @@ def acl_info(consul_url=None, **kwargs):
     function = 'acl/info/{0}'.format(kwargs['id'])
     ret = _query(consul_url=consul_url,
                  data=data,
-                 method='PUT',
+                 method='GET',
                  function=function)
     return ret
 

@@ -37,6 +37,7 @@ import salt.utils.decorators.state
 import salt.utils.dictupdate
 import salt.utils.event
 import salt.utils.files
+import salt.utils.hashutils
 import salt.utils.immutabletypes as immutabletypes
 import salt.utils.platform
 import salt.utils.process
@@ -731,6 +732,7 @@ class State(object):
             except AttributeError:
                 pillar_enc = six.text_type(pillar_enc).lower()
         self._pillar_enc = pillar_enc
+        log.debug('Gathering pillar data for state run')
         if initial_pillar and not self._pillar_override:
             self.opts['pillar'] = initial_pillar
         else:
@@ -744,6 +746,7 @@ class State(object):
                     self.opts.get('pillar_source_merging_strategy', 'smart'),
                     self.opts.get('renderer', 'yaml'),
                     self.opts.get('pillar_merge_lists', False))
+        log.debug('Finished gathering pillar data for state run')
         self.state_con = context or {}
         self.load_modules()
         self.active = set()
@@ -1733,14 +1736,15 @@ class State(object):
         try:
             ret = self.states[cdata['full']](*cdata['args'],
                                              **cdata['kwargs'])
-        except Exception:
+        except Exception as exc:
+            log.debug('An exception occurred in this state: %s', exc,
+                      exc_info_on_loglevel=logging.DEBUG)
             trb = traceback.format_exc()
             ret = {
                 'result': False,
                 'name': name,
                 'changes': {},
-                'comment': 'An exception occurred in this state: {0}'.format(
-                    trb)
+                'comment': 'An exception occurred in this state: {0}'.format(trb)
             }
 
         utc_finish_time = datetime.datetime.utcnow()
@@ -1750,7 +1754,9 @@ class State(object):
         ret['duration'] = duration
 
         troot = os.path.join(self.opts['cachedir'], self.jid)
-        tfile = os.path.join(troot, _clean_tag(tag))
+        tfile = os.path.join(
+            troot,
+            salt.utils.hashutils.sha1_digest(tag))
         if not os.path.isdir(troot):
             try:
                 os.makedirs(troot)
@@ -1914,7 +1920,9 @@ class State(object):
                 self.states.inject_globals = {}
             if 'check_cmd' in low and '{0[state]}.mod_run_check_cmd'.format(low) not in self.states:
                 ret.update(self._run_check_cmd(low))
-        except Exception:
+        except Exception as exc:
+            log.debug('An exception occurred in this state: %s', exc,
+                      exc_info_on_loglevel=logging.DEBUG)
             trb = traceback.format_exc()
             # There are a number of possibilities to not have the cdata
             # populated with what we might have expected, so just be smart
@@ -1929,8 +1937,7 @@ class State(object):
                 'result': False,
                 'name': name,
                 'changes': {},
-                'comment': 'An exception occurred in this state: {0}'.format(
-                    trb)
+                'comment': 'An exception occurred in this state: {0}'.format(trb)
             }
         finally:
             if low.get('__prereq__'):
@@ -2204,7 +2211,10 @@ class State(object):
             proc = running[tag].get('proc')
             if proc:
                 if not proc.is_alive():
-                    ret_cache = os.path.join(self.opts['cachedir'], self.jid, _clean_tag(tag))
+                    ret_cache = os.path.join(
+                        self.opts['cachedir'],
+                        self.jid,
+                        salt.utils.hashutils.sha1_digest(tag))
                     if not os.path.isfile(ret_cache):
                         ret = {'result': False,
                                'comment': 'Parallel process failed to return',

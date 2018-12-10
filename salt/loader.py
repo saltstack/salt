@@ -18,7 +18,6 @@ import functools
 import threading
 import traceback
 import types
-from collections import MutableMapping
 from zipimport import zipimporter
 
 # Import salt libs
@@ -49,6 +48,11 @@ if sys.version_info[:2] >= (3, 5):
 else:
     import imp
     USE_IMPORTLIB = False
+
+try:
+    from collections.abc import MutableMapping
+except ImportError:
+    from collections import MutableMapping
 
 try:
     import pkg_resources
@@ -135,6 +139,18 @@ def static_loader(
     return ret
 
 
+def _format_entrypoint_target(ep):
+    '''
+    Makes a string describing the target of an EntryPoint object.
+
+    Base strongly on EntryPoint.__str__().
+    '''
+    s = ep.module_name
+    if ep.attrs:
+        s += ':' + '.'.join(ep.attrs)
+    return s
+
+
 def _module_dirs(
         opts,
         ext_type,
@@ -157,9 +173,13 @@ def _module_dirs(
             ext_type_types.extend(opts[ext_type_dirs])
         if HAS_PKG_RESOURCES and ext_type_dirs:
             for entry_point in pkg_resources.iter_entry_points('salt.loader', ext_type_dirs):
-                loaded_entry_point = entry_point.load()
-                for path in loaded_entry_point():
-                    ext_type_types.append(path)
+                try:
+                    loaded_entry_point = entry_point.load()
+                    for path in loaded_entry_point():
+                        ext_type_types.append(path)
+                except Exception as exc:
+                    log.error("Error getting module directories from %s: %s", _format_entrypoint_target(entry_point), exc)
+                    log.debug("Full backtrace for module directories error", exc_info=True)
 
     cli_module_dirs = []
     # The dirs can be any module dir, or a in-tree _{ext_type} dir
@@ -1380,11 +1400,11 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         '''
         if '__grains__' not in self.pack:
             self.context_dict['grains'] = opts.get('grains', {})
-            self.pack['__grains__'] = salt.utils.context.NamespacedDictWrapper(self.context_dict, 'grains', override_name='grains')
+            self.pack['__grains__'] = salt.utils.context.NamespacedDictWrapper(self.context_dict, 'grains')
 
         if '__pillar__' not in self.pack:
             self.context_dict['pillar'] = opts.get('pillar', {})
-            self.pack['__pillar__'] = salt.utils.context.NamespacedDictWrapper(self.context_dict, 'pillar', override_name='pillar')
+            self.pack['__pillar__'] = salt.utils.context.NamespacedDictWrapper(self.context_dict, 'pillar')
 
         mod_opts = {}
         for key, val in list(opts.items()):

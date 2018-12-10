@@ -13,11 +13,13 @@ import signal
 import hashlib
 import logging
 import weakref
+import threading
 from random import randint
 
 # Import Salt Libs
 import salt.auth
 import salt.crypt
+import salt.log.setup
 import salt.utils.event
 import salt.utils.files
 import salt.utils.minions
@@ -759,6 +761,9 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
     '''
     Encapsulate synchronous operations for a publisher channel
     '''
+
+    _sock_data = threading.local()
+
     def __init__(self, opts):
         self.opts = opts
         self.serial = salt.payload.Serial(self.opts)  # TODO: in init?
@@ -767,11 +772,15 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
     def connect(self):
         return tornado.gen.sleep(5)
 
-    def _publish_daemon(self):
+    def _publish_daemon(self, log_queue=None):
         '''
         Bind to the interface specified in the configuration file
         '''
         salt.utils.process.appendproctitle(self.__class__.__name__)
+        if log_queue:
+            salt.log.setup.set_multiprocessing_logging_queue(log_queue)
+            salt.log.setup.setup_multiprocessing_logging(log_queue)
+
         # Set up the context
         context = zmq.Context(1)
         # Prepare minion publish socket
@@ -790,9 +799,11 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
             # IPv6 sockets work for both IPv6 and IPv4 addresses
             pub_sock.setsockopt(zmq.IPV4ONLY, 0)
         pub_sock.setsockopt(zmq.BACKLOG, self.opts.get('zmq_backlog', 1000))
+        pub_sock.setsockopt(zmq.LINGER, -1)
         pub_uri = 'tcp://{interface}:{publish_port}'.format(**self.opts)
         # Prepare minion pull socket
         pull_sock = context.socket(zmq.PULL)
+        pull_sock.setsockopt(zmq.LINGER, -1)
 
         if self.opts.get('ipc_mode', '') == 'tcp':
             pull_uri = 'tcp://127.0.0.1:{0}'.format(
@@ -818,8 +829,10 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
                 # Catch and handle EINTR from when this process is sent
                 # SIGUSR1 gracefully so we don't choke and die horribly
                 try:
-                    log.trace('Getting data from puller %s', pull_uri)
+                    log.debug('Publish daemon getting data from puller %s', pull_uri)
                     package = pull_sock.recv()
+                    log.debug('Publish daemon received payload. size=%d', len(package))
+
                     unpacked_package = salt.payload.unpackage(package)
                     if six.PY3:
                         unpacked_package = salt.transport.frame.decode_embedded_strs(unpacked_package)
@@ -853,17 +866,16 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
                     raise exc
 
         except KeyboardInterrupt:
-            # Cleanly close the sockets if we're shutting down
-            if pub_sock.closed is False:
-                pub_sock.setsockopt(zmq.LINGER, 1)
-                pub_sock.close()
-            if pull_sock.closed is False:
-                pull_sock.setsockopt(zmq.LINGER, 1)
-                pull_sock.close()
-            if context.closed is False:
-                context.term()
+            log.trace('Publish daemon caught Keyboard interupt, tearing down')
+        # Cleanly close the sockets if we're shutting down
+        if pub_sock.closed is False:
+            pub_sock.close()
+        if pull_sock.closed is False:
+            pull_sock.close()
+        if context.closed is False:
+            context.term()
 
-    def pre_fork(self, process_manager):
+    def pre_fork(self, process_manager, kwargs=None):
         '''
         Do anything necessary pre-fork. Since this is on the master side this will
         primarily be used to create IPC channels and create our daemon process to
@@ -871,25 +883,31 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
 
         :param func process_manager: A ProcessManager, from salt.utils.process.ProcessManager
         '''
-        process_manager.add_process(self._publish_daemon)
+        process_manager.add_process(self._publish_daemon, kwargs=kwargs)
 
-    def publish(self, load):
+    @property
+    def pub_sock(self):
         '''
-        Publish "load" to minions
-
-        :param dict load: A load to be sent across the wire to minions
+        This thread's zmq publisher socket. This socket is stored on the class
+        so that multiple instantiations in the same thread will re-use a single
+        zmq socket.
         '''
-        payload = {'enc': 'aes'}
+        try:
+            return self._sock_data.sock
+        except AttributeError:
+            pass
 
-        crypticle = salt.crypt.Crypticle(self.opts, salt.master.SMaster.secrets['aes']['secret'].value)
-        payload['load'] = crypticle.dumps(load)
-        if self.opts['sign_pub_messages']:
-            master_pem_path = os.path.join(self.opts['pki_dir'], 'master.pem')
-            log.debug("Signing data packet")
-            payload['sig'] = salt.crypt.sign_message(master_pem_path, payload['load'])
-        # Send 0MQ to the publisher
-        context = zmq.Context(1)
-        pub_sock = context.socket(zmq.PUSH)
+    def pub_connect(self):
+        '''
+        Create and connect this thread's zmq socket. If a publisher socket
+        already exists "pub_close" is called before creating and connecting a
+        new socket.
+        '''
+        if self.pub_sock:
+            self.pub_close()
+        ctx = zmq.Context.instance()
+        self._sock_data.sock = ctx.socket(zmq.PUSH)
+        self.pub_sock.setsockopt(zmq.LINGER, -1)
         if self.opts.get('ipc_mode', '') == 'tcp':
             pull_uri = 'tcp://127.0.0.1:{0}'.format(
                 self.opts.get('tcp_master_publish_pull', 4514)
@@ -898,7 +916,33 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
             pull_uri = 'ipc://{0}'.format(
                 os.path.join(self.opts['sock_dir'], 'publish_pull.ipc')
                 )
-        pub_sock.connect(pull_uri)
+        log.debug("Connecting to pub server: %s", pull_uri)
+        self.pub_sock.connect(pull_uri)
+        return self._sock_data.sock
+
+    def pub_close(self):
+        '''
+        Disconnect an existing publisher socket and remove it from the local
+        thread's cache.
+        '''
+        if hasattr(self._sock_data, 'sock'):
+            self._sock_data.sock.close()
+            delattr(self._sock_data, 'sock')
+
+    def publish(self, load):
+        '''
+        Publish "load" to minions. This send the load to the publisher daemon
+        process with does the actual sending to minions.
+
+        :param dict load: A load to be sent across the wire to minions
+        '''
+        payload = {'enc': 'aes'}
+        crypticle = salt.crypt.Crypticle(self.opts, salt.master.SMaster.secrets['aes']['secret'].value)
+        payload['load'] = crypticle.dumps(load)
+        if self.opts['sign_pub_messages']:
+            master_pem_path = os.path.join(self.opts['pki_dir'], 'master.pem')
+            log.debug("Signing data packet")
+            payload['sig'] = salt.crypt.sign_message(master_pem_path, payload['load'])
         int_payload = {'payload': self.serial.dumps(payload)}
 
         # add some targeting stuff for lists only (for now)
@@ -916,10 +960,15 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
             log.debug("Publish Side Match: %s", match_ids)
             # Send list of miions thru so zmq can target them
             int_payload['topic_lst'] = match_ids
-
-        pub_sock.send(self.serial.dumps(int_payload))
-        pub_sock.close()
-        context.term()
+        payload = self.serial.dumps(int_payload)
+        log.debug(
+            'Sending payload to publish daemon. jid=%s size=%d',
+            load.get('jid', None), len(payload),
+        )
+        if not self.pub_sock:
+            self.pub_connect()
+        self.pub_sock.send(payload)
+        log.debug('Sent payload to publish daemon.')
 
 
 class AsyncReqMessageClientPool(salt.transport.MessageClientPool):

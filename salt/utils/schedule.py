@@ -32,6 +32,7 @@ import salt.utils.error
 import salt.utils.event
 import salt.utils.files
 import salt.utils.jid
+import salt.utils.master
 import salt.utils.minion
 import salt.utils.platform
 import salt.utils.process
@@ -46,6 +47,10 @@ import salt.exceptions
 import salt.log.setup as log_setup
 import salt.defaults.exitcodes
 from salt.utils.odict import OrderedDict
+
+from salt.exceptions import (
+    SaltInvocationError
+)
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -173,7 +178,11 @@ class Schedule(object):
         data['run'] = True
         if 'jid_include' not in data or data['jid_include']:
             jobcount = 0
-            for job in salt.utils.minion.running(self.opts):
+            if self.opts['__role'] == 'master':
+                current_jobs = salt.utils.master.get_running_jobs(self.opts)
+            else:
+                current_jobs = salt.utils.minion.running(self.opts)
+            for job in current_jobs:
                 if 'schedule' in job:
                     log.debug(
                         'schedule.handle_func: Checking job against fun '
@@ -609,6 +618,7 @@ class Schedule(object):
                 log.warning('schedule: The metadata parameter must be '
                             'specified as a dictionary.  Ignoring.')
 
+        data_returner = data.get('returner', None)
         salt.utils.process.appendproctitle('{0} {1}'.format(self.__class__.__name__, ret['jid']))
 
         if not self.standalone:
@@ -626,6 +636,22 @@ class Schedule(object):
 
         # TODO: Make it readable! Splt to funcs, remove nested try-except-finally sections.
         try:
+
+            minion_blackout_violation = False
+            if self.opts.get('pillar', {}).get('minion_blackout', False):
+                whitelist = self.opts.get('pillar', {}).get('minion_blackout_whitelist', [])
+                # this minion is blacked out. Only allow saltutil.refresh_pillar and the whitelist
+                if func != 'saltutil.refresh_pillar' and func not in whitelist:
+                    minion_blackout_violation = True
+            elif self.opts.get('grains', {}).get('minion_blackout', False):
+                whitelist = self.opts.get('grains', {}).get('minion_blackout_whitelist', [])
+                if func != 'saltutil.refresh_pillar' and func not in whitelist:
+                    minion_blackout_violation = True
+            if minion_blackout_violation:
+                raise SaltInvocationError('Minion in blackout mode. Set \'minion_blackout\' '
+                                          'to False in pillar or grains to resume operations. Only '
+                                          'saltutil.refresh_pillar allowed in blackout mode.')
+
             ret['pid'] = os.getpid()
 
             if not self.standalone:
@@ -704,6 +730,7 @@ class Schedule(object):
                         self.functions[mod_name].__globals__[global_key] = value
 
             self.functions.pack['__context__']['retcode'] = 0
+
             ret['return'] = self.functions[func](*args, **kwargs)
 
             if not self.standalone:
@@ -713,7 +740,6 @@ class Schedule(object):
 
                 ret['success'] = True
 
-                data_returner = data.get('returner', None)
                 if data_returner or self.schedule_returner:
                     if 'return_config' in data:
                         ret['ret_config'] = data['return_config']
@@ -828,6 +854,12 @@ class Schedule(object):
                 splay_ = random.randint(1, splaytime)
             return splay_
 
+        def _chop_ms(dt):
+            '''
+            Remove the microseconds from a datetime object
+            '''
+            return dt - datetime.timedelta(microseconds=dt.microsecond)
+
         schedule = self._get_schedule()
         if not isinstance(schedule, dict):
             raise ValueError('Schedule must be of type dict.')
@@ -846,6 +878,11 @@ class Schedule(object):
             if job in _hidden:
                 continue
 
+            # Clear these out between runs
+            for item in ['_skipped',
+                         '_skip_reason']:
+                if item in data:
+                    del data[item]
             # Clear out _skip_reason from previous runs
             if '_skip_reason' in data:
                 del data['_skip_reason']
@@ -1048,6 +1085,13 @@ class Schedule(object):
                         # last scheduled time in the past.
                         when = _when[0]
 
+                        if when < now - loop_interval and \
+                                not data.get('_run', False) and \
+                                not run and \
+                                not data['_splay']:
+                            data['_next_fire_time'] = None
+                            continue
+
                         if '_run' not in data:
                             # Prevent run of jobs from the past
                             data['_run'] = bool(when >= now - loop_interval)
@@ -1145,7 +1189,7 @@ class Schedule(object):
             else:
                 continue
 
-            seconds = int((data['_next_fire_time'] - now).total_seconds())
+            seconds = int((_chop_ms(data['_next_fire_time']) - _chop_ms(now)).total_seconds())
 
             if 'splay' in data:
                 # Got "splay" configured, make decision to run a job based on that
@@ -1168,6 +1212,8 @@ class Schedule(object):
                 if data['_splay']:
                     # The "splay" configuration has been already processed, just use it
                     seconds = (data['_splay'] - now).total_seconds()
+                    if 'when' in data:
+                        data['_next_fire_time'] = data['_splay']
 
             if '_seconds' in data:
                 if seconds <= 0:
@@ -1419,38 +1465,45 @@ class Schedule(object):
                 utils = self.utils
                 self.utils = {}
             try:
-                # Job is disabled, continue
-                if 'enabled' in data and not data['enabled']:
-                    log.debug('Job: %s is disabled', job)
-                    data['_skip_reason'] = 'disabled'
-                    continue
-                else:
-                    if not self.standalone:
-                        data = self._check_max_running(func, data, self.opts)
-                        run = data['run']
+                if run:
+                    # Job is disabled, continue
+                    if 'enabled' in data and not data['enabled']:
+                        log.debug('Job: %s is disabled', job)
+                        data['_skip_reason'] = 'disabled'
+                        continue
+                    else:
+                        if not self.standalone:
+                            data = self._check_max_running(func, data, self.opts)
+                            run = data['run']
 
-                    if run:
-                        if multiprocessing_enabled:
-                            thread_cls = salt.utils.process.SignalHandlingMultiprocessingProcess
-                        else:
-                            thread_cls = threading.Thread
-                        proc = thread_cls(target=self.handle_func, args=(multiprocessing_enabled, func, data))
+                        if run:
+                            if multiprocessing_enabled:
+                                thread_cls = salt.utils.process.SignalHandlingMultiprocessingProcess
+                            else:
+                                thread_cls = threading.Thread
+                            proc = thread_cls(target=self.handle_func, args=(multiprocessing_enabled, func, data))
 
-                        if multiprocessing_enabled:
-                            with salt.utils.process.default_signals(signal.SIGINT, signal.SIGTERM):
-                                # Reset current signals before starting the process in
-                                # order not to inherit the current signal handlers
+                            if multiprocessing_enabled:
+                                with salt.utils.process.default_signals(signal.SIGINT, signal.SIGTERM):
+                                    # Reset current signals before starting the process in
+                                    # order not to inherit the current signal handlers
+                                    proc.start()
+                            else:
                                 proc.start()
-                        else:
-                            proc.start()
 
-                        if multiprocessing_enabled:
-                            proc.join()
+                            if multiprocessing_enabled:
+                                proc.join()
             finally:
+                if run:
+                    data['_last_run'] = now
+                    data['_splay'] = None
                 if '_seconds' in data:
-                    data['_next_fire_time'] = now + datetime.timedelta(seconds=data['_seconds'])
-                data['_last_run'] = now
-                data['_splay'] = None
+                    if self.standalone:
+                        data['_next_fire_time'] = now + datetime.timedelta(seconds=data['_seconds'])
+                    elif '_skipped' in data and data['_skipped']:
+                        data['_next_fire_time'] = now + datetime.timedelta(seconds=data['_seconds'])
+                    elif run:
+                        data['_next_fire_time'] = now + datetime.timedelta(seconds=data['_seconds'])
             if salt.utils.platform.is_windows():
                 # Restore our function references.
                 self.functions = functions

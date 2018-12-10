@@ -658,8 +658,6 @@ def _get_properties(path="", method="GET", forced_params=None):
         props = sub['info'][method]['parameters']['properties'].keys()
     except KeyError as exc:
         log.error('method not found: "%s"', exc)
-    except:
-        raise
     for prop in props:
         numerical = re.match(r'(\w+)\[n\]', prop)
         # generate (arbitrarily) 10 properties for duplicatable properties identified by:
@@ -727,6 +725,9 @@ def create_node(vm_, newid):
                                     static_props):
             if prop in vm_:  # if the property is set, use it for the VM request
                 newnode[prop] = vm_[prop]
+
+        if 'pubkey' in vm_:
+            newnode['ssh-public-keys'] = vm_['pubkey']
 
         # inform user the "disk" option is not supported for LXC hosts
         if 'disk' in vm_:
@@ -893,7 +894,7 @@ def destroy(name, call=None):
 
         # required to wait a bit here, otherwise the VM is sometimes
         # still locked and destroy fails.
-        time.sleep(1)
+        time.sleep(3)
 
         query('delete', 'nodes/{0}/{1}'.format(
             vmobj['node'], vmobj['id']

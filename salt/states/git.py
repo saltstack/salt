@@ -158,7 +158,12 @@ def _uptodate(ret, target, comments=None, local_changes=False):
         # Shouldn't be making any changes if the repo was up to date, but
         # report on them so we are alerted to potential problems with our
         # logic.
-        ret['comment'] += '\n\nChanges made: ' + comments
+        ret['comment'] += (
+            '\n\nChanges {0}made: {1}'.format(
+                'that would be ' if __opts__['test'] else '',
+                _format_comments(comments)
+            )
+        )
     return ret
 
 
@@ -171,8 +176,7 @@ def _neutral_test(ret, comment):
 def _fail(ret, msg, comments=None):
     ret['result'] = False
     if comments:
-        msg += '\n\nChanges already made: '
-        msg += _format_comments(comments)
+        msg += '\n\nChanges already made: ' + _format_comments(comments)
     ret['comment'] = msg
     return ret
 
@@ -184,8 +188,12 @@ def _already_cloned(ret, target, branch=None, comments=None):
         ' and is checked out to branch \'{0}\''.format(branch) if branch else ''
     )
     if comments:
-        ret['comment'] += '\n\nChanges already made: '
-        ret['comment'] += _format_comments(comments)
+        ret['comment'] += (
+            '\n\nChanges {0}made: {1}'.format(
+                'that would be ' if __opts__['test'] else '',
+                _format_comments(comments)
+            )
+        )
     return ret
 
 
@@ -268,12 +276,13 @@ def latest(name,
            mirror=False,
            remote='origin',
            fetch_tags=True,
+           sync_tags=True,
            depth=None,
            identity=None,
            https_user=None,
            https_pass=None,
-           onlyif=False,
-           unless=False,
+           onlyif=None,
+           unless=None,
            refspec_branch='*',
            refspec_tag='*',
            output_encoding=None,
@@ -459,6 +468,12 @@ def latest(name,
     fetch_tags : True
         If ``True``, then when a fetch is performed all tags will be fetched,
         even those which are not reachable by any branch on the remote.
+
+    sync_tags : True
+        If ``True``, then Salt will delete tags which exist in the local clone
+        but are not found on the remote repository.
+
+        .. versionadded:: 2018.3.4
 
     depth
         Defines depth in history when git a clone is needed in order to ensure
@@ -851,11 +866,14 @@ def latest(name,
                 user=user,
                 password=password,
                 output_encoding=output_encoding)
-            all_local_tags = __salt__['git.list_tags'](
-                target,
-                user=user,
-                password=password,
-                output_encoding=output_encoding)
+            all_local_tags = set(
+                __salt__['git.list_tags'](
+                    target,
+                    user=user,
+                    password=password,
+                    output_encoding=output_encoding
+                )
+            )
             local_rev, local_branch = _get_local_rev_and_branch(
                 target,
                 user,
@@ -1370,11 +1388,43 @@ def latest(name,
                         ignore_retcode=True,
                         output_encoding=output_encoding) if '^{}' not in x
                 ])
-                if set(all_local_tags) != remote_tags:
+                if all_local_tags != remote_tags:
                     has_remote_rev = False
-                    ret['changes']['new_tags'] = list(remote_tags.symmetric_difference(
-                        all_local_tags
-                    ))
+                    new_tags = remote_tags - all_local_tags
+                    deleted_tags = all_local_tags - remote_tags
+                    if new_tags:
+                        ret['changes']['new_tags'] = new_tags
+                    if sync_tags and deleted_tags:
+                        # Delete the local copy of the tags to keep up with the
+                        # remote repository.
+                        for tag_name in deleted_tags:
+                            try:
+                                if not __opts__['test']:
+                                    __salt__['git.tag'](
+                                        target,
+                                        tag_name,
+                                        opts='-d',
+                                        user=user,
+                                        password=password,
+                                        output_encoding=output_encoding)
+                            except CommandExecutionError as exc:
+                                ret.setdefault('warnings', []).append(
+                                    'Failed to remove local tag \'{0}\':\n\n'
+                                    '{1}\n\n'.format(tag_name, exc)
+                                )
+                            else:
+                                ret['changes'].setdefault(
+                                    'deleted_tags', []).append(tag_name)
+
+                        if ret['changes'].get('deleted_tags'):
+                            comments.append(
+                                'The following tags {0} removed from the local '
+                                'checkout: {1}'.format(
+                                    'would be' if __opts__['test']
+                                        else 'were',
+                                    ', '.join(ret['changes']['deleted_tags'])
+                                )
+                            )
 
                 if not has_remote_rev:
                     try:
@@ -2147,8 +2197,8 @@ def detached(name,
            identity=None,
            https_user=None,
            https_pass=None,
-           onlyif=False,
-           unless=False,
+           onlyif=None,
+           unless=None,
            output_encoding=None,
            **kwargs):
     '''
@@ -2682,7 +2732,7 @@ def cloned(name,
            https_pass=None,
            output_encoding=None):
     '''
-    .. versionadded:: 2018.3.3, Fluorine
+    .. versionadded:: 2018.3.3,Fluorine
 
     Ensure that a repository has been cloned to the specified target directory.
     If not, clone that repository. No fetches will be performed once cloned.
@@ -3359,18 +3409,65 @@ def mod_run_check(cmd_kwargs, onlyif, unless):
     Otherwise, returns ``True``
     '''
     cmd_kwargs = copy.deepcopy(cmd_kwargs)
-    cmd_kwargs['python_shell'] = True
-    if onlyif:
-        if __salt__['cmd.retcode'](onlyif, **cmd_kwargs) != 0:
+    cmd_kwargs.update({
+        'use_vt': False,
+        'bg': False,
+        'ignore_retcode': True,
+        'python_shell': True,
+    })
+
+    if onlyif is not None:
+        if not isinstance(onlyif, list):
+            onlyif = [onlyif]
+
+        for command in onlyif:
+            if not isinstance(command, six.string_types) and command:
+                # Boolean or some other non-string which resolves to True
+                continue
+            try:
+                if __salt__['cmd.retcode'](command, **cmd_kwargs) == 0:
+                    # Command exited with a zero retcode
+                    continue
+            except Exception as exc:
+                log.exception(
+                    'The following onlyif command raised an error: %s',
+                    command
+                )
+                return {
+                    'comment': 'onlyif raised error ({0}), see log for '
+                               'more details'.format(exc),
+                    'result': False
+                }
+
             return {'comment': 'onlyif condition is false',
                     'skip_watch': True,
                     'result': True}
 
-    if unless:
-        if __salt__['cmd.retcode'](unless, **cmd_kwargs) == 0:
+    if unless is not None:
+        if not isinstance(unless, list):
+            unless = [unless]
+
+        for command in unless:
+            if not isinstance(command, six.string_types) and not command:
+                # Boolean or some other non-string which resolves to False
+                break
+            try:
+                if __salt__['cmd.retcode'](command, **cmd_kwargs) != 0:
+                    # Command exited with a non-zero retcode
+                    break
+            except Exception as exc:
+                log.exception(
+                    'The following unless command raised an error: %s',
+                    command
+                )
+                return {
+                    'comment': 'unless raised error ({0}), see log for '
+                               'more details'.format(exc),
+                    'result': False
+                }
+        else:
             return {'comment': 'unless condition is true',
                     'skip_watch': True,
                     'result': True}
 
-    # No reason to stop, return True
     return True

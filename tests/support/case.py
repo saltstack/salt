@@ -251,6 +251,7 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                    # FIXME A timeout of zero or disabling timeouts may not return results!
                    timeout=15,
                    raw=False,
+                   popen_kwargs=None,
                    log_output=None):
         '''
         Execute a script with the given argument string
@@ -260,35 +261,37 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         or not logged. If it is None, then the return code of the subprocess
         determines whether or not to log results.
         '''
+
+        import salt.utils
+
         script_path = self.get_script_path(script)
         if not os.path.isfile(script_path):
             return False
 
-        python_path = os.environ.get('PYTHONPATH', None)
-
-        if sys.platform.startswith('win'):
-            cmd = 'set PYTHONPATH='
+        if salt.utils.platform.is_windows():
+            cmd = 'python '
         else:
             cmd = 'PYTHONPATH='
+            python_path = os.environ.get('PYTHONPATH', None)
+            if python_path is not None:
+                cmd += '{0}:'.format(python_path)
 
-        if python_path is not None:
-            cmd += '{0}:'.format(python_path)
-
-        if sys.version_info[0] < 3:
-            cmd += '{0} '.format(':'.join(sys.path[1:]))
-        else:
-            cmd += '{0} '.format(':'.join(sys.path[0:]))
-        cmd += 'python{0}.{1} '.format(*sys.version_info)
+            if sys.version_info[0] < 3:
+                cmd += '{0} '.format(':'.join(sys.path[1:]))
+            else:
+                cmd += '{0} '.format(':'.join(sys.path[0:]))
+            cmd += 'python{0}.{1} '.format(*sys.version_info)
         cmd += '{0} '.format(script_path)
         cmd += '{0} '.format(arg_str)
 
         tmp_file = tempfile.SpooledTemporaryFile()
 
-        popen_kwargs = {
+        popen_kwargs = popen_kwargs or {}
+        popen_kwargs = dict({
             'shell': True,
             'stdout': tmp_file,
-            'universal_newlines': True
-        }
+            'universal_newlines': True,
+        }, **popen_kwargs)
 
         if catch_stderr is True:
             popen_kwargs['stderr'] = subprocess.PIPE
@@ -487,7 +490,7 @@ class ShellCase(ShellTestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixi
         except OSError:
             os.chdir(INTEGRATION_TEST_DIR)
 
-    def run_salt(self, arg_str, with_retcode=False, catch_stderr=False, timeout=60):  # pylint: disable=W0221
+    def run_salt(self, arg_str, with_retcode=False, catch_stderr=False, timeout=60, popen_kwargs=None):  # pylint: disable=W0221
         '''
         Execute salt
         '''
@@ -496,7 +499,8 @@ class ShellCase(ShellTestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixi
                               arg_str,
                               with_retcode=with_retcode,
                               catch_stderr=catch_stderr,
-                              timeout=timeout)
+                              timeout=timeout,
+                              popen_kwargs=popen_kwargs)
         log.debug('Result of run_salt for command \'%s\': %s', arg_str, ret)
         return ret
 
@@ -547,7 +551,7 @@ class ShellCase(ShellTestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixi
                               arg_str,
                               with_retcode=with_retcode,
                               catch_stderr=catch_stderr,
-                              timeout=60)
+                              timeout=timeout + 10)
         log.debug('Result of run_run for command \'%s\': %s', arg_str, ret)
         return ret
 
@@ -765,6 +769,7 @@ class SPMCase(TestCase, AdaptedConfigurationTestCaseMixin):
     def run_spm(self, cmd, config, arg=None):
         client = self._spm_client(config)
         spm_cmd = client.run([cmd, arg])
+        client._close()
         return self.ui._status
 
 
@@ -780,7 +785,7 @@ class ModuleCase(TestCase, SaltClientTestCaseMixin):
         '''
         return self.run_function(_function, args, **kw)
 
-    def run_function(self, function, arg=(), minion_tgt='minion', timeout=90, **kwargs):
+    def run_function(self, function, arg=(), minion_tgt='minion', timeout=300, **kwargs):
         '''
         Run a single salt function and condition the return down to match the
         behavior of the raw function call
@@ -925,6 +930,7 @@ class ClientCase(AdaptedConfigurationTestCaseMixin, TestCase):
                 pass
             else:
                 raise
+
 
 # ----- Backwards Compatible Imports -------------------------------------------------------------------------------->
 from tests.support.mixins import ShellCaseCommonTestsMixin  # pylint: disable=unused-import

@@ -321,7 +321,9 @@ class Maintenance(salt.utils.process.SignalHandlingMultiprocessingProcess):
         '''
         Fire presence events if enabled
         '''
-        if self.presence_events:
+        # On the first run it may need more time for the EventPublisher
+        # to come up and be ready. Set the timeout to account for this.
+        if self.presence_events and self.event.connect_pull(timeout=3):
             present = self.ckminions.connected_ids()
             new = present.difference(old_present)
             lost = old_present.difference(present)
@@ -331,9 +333,7 @@ class Maintenance(salt.utils.process.SignalHandlingMultiprocessingProcess):
                         'lost': list(lost)}
                 self.event.fire_event(data, tagify('change', 'presence'))
             data = {'present': list(present)}
-            # On the first run it may need more time for the EventPublisher
-            # to come up and be ready. Set the timeout to account for this.
-            self.event.fire_event(data, tagify('present', 'presence'), timeout=3)
+            self.event.fire_event(data, tagify('present', 'presence'))
             old_present.clear()
             old_present.update(present)
 
@@ -660,9 +660,10 @@ class Master(SMaster):
             self.process_manager = salt.utils.process.ProcessManager(wait_for_kill=5)
             pub_channels = []
             log.info('Creating master publisher process')
+            log_queue = salt.log.setup.get_multiprocessing_logging_queue()
             for transport, opts in iter_transport_opts(self.opts):
                 chan = salt.transport.server.PubServerChannel.factory(opts)
-                chan.pre_fork(self.process_manager)
+                chan.pre_fork(self.process_manager, kwargs={'log_queue': log_queue})
                 pub_channels.append(chan)
 
             log.info('Creating master event publisher process')
@@ -719,7 +720,7 @@ class Master(SMaster):
             log.info('Creating master request server process')
             kwargs = {}
             if salt.utils.platform.is_windows():
-                kwargs['log_queue'] = salt.log.setup.get_multiprocessing_logging_queue()
+                kwargs['log_queue'] = log_queue
                 kwargs['secrets'] = SMaster.secrets
 
             self.process_manager.add_process(
@@ -1139,7 +1140,7 @@ class AESFuncs(object):
         self._file_list_emptydirs = self.fs_.file_list_emptydirs
         self._dir_list = self.fs_.dir_list
         self._symlink_list = self.fs_.symlink_list
-        self._file_envs = self.fs_.envs
+        self._file_envs = self.fs_.file_envs
 
     def __verify_minion(self, id_, token):
         '''

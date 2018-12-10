@@ -122,6 +122,13 @@ class StringutilsTestCase(TestCase):
         self.assertEqual(salt.utils.stringutils.to_num('Seven'), 'Seven')
         self.assertIsInstance(salt.utils.stringutils.to_num('Seven'), six.text_type)
 
+    def test_to_none(self):
+        self.assertIsNone(salt.utils.stringutils.to_none(''))
+        self.assertIsNone(salt.utils.stringutils.to_none('  '))
+        # Ensure that we do not inadvertently convert certain strings or 0 to None
+        self.assertIsNotNone(salt.utils.stringutils.to_none('None'))
+        self.assertIsNotNone(salt.utils.stringutils.to_none(0))
+
     def test_is_binary(self):
         self.assertFalse(salt.utils.stringutils.is_binary(LOREM_IPSUM))
         # Also test bytestring

@@ -5,12 +5,13 @@ File server pluggable modules and generic backend functions
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
-import collections
+
 import errno
 import fnmatch
 import logging
 import os
 import re
+import sys
 import time
 
 # Import salt libs
@@ -22,6 +23,11 @@ import salt.utils.url
 import salt.utils.versions
 from salt.utils.args import get_function_argspec as _argspec
 from salt.utils.decorators import ensure_unicode_args
+
+try:
+    from collections.abc import Sequence
+except ImportError:
+    from collections import Sequence
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -125,16 +131,29 @@ def check_file_list_cache(opts, form, list_cache, w_lock):
                 if os.path.exists(list_cache):
                     # calculate filelist age is possible
                     cache_stat = os.stat(list_cache)
-                    age = time.time() - cache_stat.st_mtime
+                    # st_time can have a greater precision than time, removing
+                    # float precision makes sure age will never be a negative
+                    # number.
+                    current_time = int(time.time())
+                    file_mtime = int(cache_stat.st_mtime)
+                    if file_mtime > current_time:
+                        log.debug(
+                            'Cache file modified time is in the future, ignoring. '
+                            'file=%s mtime=%s current_time=%s',
+                            list_cache, current_time, file_mtime
+                        )
+                        age = 0
+                    else:
+                        age = current_time - file_mtime
                 else:
                     # if filelist does not exists yet, mark it as expired
                     age = opts.get('fileserver_list_cache_time', 20) + 1
                 if age < opts.get('fileserver_list_cache_time', 20):
                     # Young enough! Load this sucker up!
                     with salt.utils.files.fopen(list_cache, 'rb') as fp_:
-                        log.trace(
-                            'Returning file_lists cache data from %s',
-                            list_cache
+                        log.debug(
+                            "Returning file list from cache: age=%s cache_time=%s %s",
+                            age, opts.get('fileserver_list_cache_time', 20), list_cache
                         )
                         return salt.utils.data.decode(serial.load(fp_).get(form, [])), False, False
                 elif _lock_cache(w_lock):
@@ -187,12 +206,14 @@ def generate_mtime_map(opts, path_map):
     file_map = {}
     for saltenv, path_list in six.iteritems(path_map):
         for path in path_list:
-            for directory, dirnames, filenames in salt.utils.path.os_walk(path):
-                # Don't walk any directories that match file_ignore_regex or glob
-                dirnames[:] = [d for d in dirnames if not is_file_ignored(opts, d)]
+            for directory, _, filenames in salt.utils.path.os_walk(path):
                 for item in filenames:
                     try:
                         file_path = os.path.join(directory, item)
+                        # Don't walk any directories that match
+                        # file_ignore_regex or glob
+                        if is_file_ignored(opts, file_path):
+                            continue
                         file_map[file_path] = os.path.getmtime(file_path)
                     except (OSError, IOError):
                         # skip dangling symlinks
@@ -339,7 +360,7 @@ class Fileserver(object):
                 except AttributeError:
                     back = six.text_type(back).split(',')
 
-        if isinstance(back, collections.Sequence):
+        if isinstance(back, Sequence):
             # The test suite uses an ImmutableList type (based on
             # collections.Sequence) for lists, which breaks this function in
             # the test suite. This normalizes the value from the opts into a
@@ -350,6 +371,10 @@ class Fileserver(object):
         if not isinstance(back, list):
             return ret
 
+        # Avoid error logging when performing lookups in the LazyDict by
+        # instead doing the membership check on the result of a call to its
+        # .keys() attribute rather than on the LaztDict itself.
+        server_funcs = self.servers.keys()
         try:
             subtract_only = all((x.startswith('-') for x in back))
         except AttributeError:
@@ -359,16 +384,16 @@ class Fileserver(object):
                 # Only subtracting backends from enabled ones
                 ret = self.opts['fileserver_backend']
                 for sub in back:
-                    if '{0}.envs'.format(sub[1:]) in self.servers:
+                    if '{0}.envs'.format(sub[1:]) in server_funcs:
                         ret.remove(sub[1:])
-                    elif '{0}.envs'.format(sub[1:-2]) in self.servers:
+                    elif '{0}.envs'.format(sub[1:-2]) in server_funcs:
                         ret.remove(sub[1:-2])
                 return ret
 
         for sub in back:
-            if '{0}.envs'.format(sub) in self.servers:
+            if '{0}.envs'.format(sub) in server_funcs:
                 ret.append(sub)
-            elif '{0}.envs'.format(sub[:-2]) in self.servers:
+            elif '{0}.envs'.format(sub[:-2]) in server_funcs:
                 ret.append(sub[:-2])
         return ret
 
@@ -508,6 +533,15 @@ class Fileserver(object):
         if sources:
             return ret
         return list(ret)
+
+    def file_envs(self, load=None):
+        '''
+        Return environments for all backends for requests from fileclient
+        '''
+        if load is None:
+            load = {}
+        load.pop('cmd', None)
+        return self.envs(**load)
 
     def init(self, back=None):
         '''
@@ -863,8 +897,6 @@ class FSChan(object):
         cmd = load['cmd'].lstrip('_')
         if cmd in self.cmd_stub:
             return self.cmd_stub[cmd]
-        if cmd == 'file_envs':
-            return self.fs.envs()
         if not hasattr(self.fs, cmd):
             log.error('Malformed request, invalid cmd: %s', load)
             return {}

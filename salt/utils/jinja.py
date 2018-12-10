@@ -59,16 +59,16 @@ class SaltCacheLoader(BaseLoader):
         self.opts = opts
         self.saltenv = saltenv
         self.encoding = encoding
-        if self.opts['file_roots'] is self.opts['pillar_roots']:
-            if saltenv not in self.opts['file_roots']:
+        self.pillar_rend = pillar_rend
+        if self.pillar_rend:
+            if saltenv not in self.opts['pillar_roots']:
                 self.searchpath = []
             else:
-                self.searchpath = opts['file_roots'][saltenv]
+                self.searchpath = opts['pillar_roots'][saltenv]
         else:
             self.searchpath = [os.path.join(opts['cachedir'], 'files', saltenv)]
         log.debug('Jinja search path: %s', self.searchpath)
         self.cached = []
-        self.pillar_rend = pillar_rend
         self._file_client = None
         # Instantiate the fileclient
         self.file_client()
@@ -817,14 +817,21 @@ class SerializerExtension(Extension, object):
         return explore(data)
 
     def format_json(self, value, sort_keys=True, indent=None):
-        return Markup(salt.utils.json.dumps(value, sort_keys=sort_keys, indent=indent).strip())
+        json_txt = salt.utils.json.dumps(value, sort_keys=sort_keys, indent=indent).strip()
+        try:
+            return Markup(json_txt)
+        except UnicodeDecodeError:
+            return Markup(salt.utils.stringutils.to_unicode(json_txt))
 
     def format_yaml(self, value, flow_style=True):
         yaml_txt = salt.utils.yaml.safe_dump(
             value, default_flow_style=flow_style).strip()
-        if yaml_txt.endswith('\n...'):
+        if yaml_txt.endswith(str('\n...')):  # future lint: disable=blacklisted-function
             yaml_txt = yaml_txt[:len(yaml_txt)-4]
-        return Markup(yaml_txt)
+        try:
+            return Markup(yaml_txt)
+        except UnicodeDecodeError:
+            return Markup(salt.utils.stringutils.to_unicode(yaml_txt))
 
     def format_xml(self, value):
         """Render a formatted multi-line XML string from a complex Python

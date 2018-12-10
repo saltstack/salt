@@ -3,6 +3,8 @@
 Managing software RAID with mdadm
 ==================================
 
+:depends:    mdadm
+
 A state module for creating or destroying software RAID devices.
 
 .. code-block:: yaml

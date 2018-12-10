@@ -1598,6 +1598,10 @@ class Pygit2(GitProvider):
         will let the calling function know whether or not a new repo was
         initialized by this function.
         '''
+        # https://github.com/libgit2/pygit2/issues/339
+        # https://github.com/libgit2/libgit2/issues/2122
+        home = os.path.expanduser('~')
+        pygit2.settings.search_path[pygit2.GIT_CONFIG_LEVEL_GLOBAL] = home
         new = False
         if not os.listdir(self.cachedir):
             # Repo cachedir is empty, initialize a new repo there
@@ -1606,17 +1610,7 @@ class Pygit2(GitProvider):
         else:
             # Repo cachedir exists, try to attach
             try:
-                try:
-                    self.repo = pygit2.Repository(self.cachedir)
-                except GitError as exc:
-                    import pwd
-                    # https://github.com/libgit2/pygit2/issues/339
-                    # https://github.com/libgit2/libgit2/issues/2122
-                    if "Error stat'ing config file" not in six.text_type(exc):
-                        raise
-                    home = pwd.getpwnam(salt.utils.user.get_user()).pw_dir
-                    pygit2.settings.search_path[pygit2.GIT_CONFIG_LEVEL_GLOBAL] = home
-                    self.repo = pygit2.Repository(self.cachedir)
+                self.repo = pygit2.Repository(self.cachedir)
             except KeyError:
                 log.error(_INVALID_REPO, self.cachedir, self.url, self.role)
                 return new
@@ -2980,7 +2974,7 @@ class GitPillar(GitBase):
                 if repo.env:
                     env = repo.env
                 else:
-                    env = 'base' if repo.branch == repo.base else repo.branch
+                    env = 'base' if repo.branch == repo.base else repo.get_checkout_target()
                 if repo._mountpoint:
                     if self.link_mountpoint(repo):
                         self.pillar_dirs[repo.linkdir] = env
@@ -2994,6 +2988,7 @@ class GitPillar(GitBase):
         points at the correct path
         '''
         lcachelink = salt.utils.path.join(repo.linkdir, repo._mountpoint)
+        lcachedest = salt.utils.path.join(repo.cachedir, repo.root()).rstrip(os.sep)
         wipe_linkdir = False
         create_link = False
         try:
@@ -3027,11 +3022,11 @@ class GitPillar(GitBase):
                             )
                             wipe_linkdir = True
                         else:
-                            if ldest != repo.cachedir:
+                            if ldest != lcachedest:
                                 log.debug(
                                     'Destination of %s (%s) does not match '
                                     'the expected value (%s)',
-                                    lcachelink, ldest, repo.cachedir
+                                    lcachelink, ldest, lcachedest
                                 )
                                 # Since we know that the parent dirs of the
                                 # link are set up properly, all we need to do
@@ -3076,16 +3071,16 @@ class GitPillar(GitBase):
 
                 if create_link:
                     try:
-                        os.symlink(repo.cachedir, lcachelink)
+                        os.symlink(lcachedest, lcachelink)
                         log.debug(
                             'Successfully linked %s to cachedir %s',
-                            lcachelink, repo.cachedir
+                            lcachelink, lcachedest
                         )
                         return True
                     except OSError as exc:
                         log.error(
                             'Failed to create symlink to %s at path %s: %s',
-                            repo.cachedir, lcachelink, exc.__str__()
+                            lcachedest, lcachelink, exc.__str__()
                         )
                         return False
         except GitLockError:

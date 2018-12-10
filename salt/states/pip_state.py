@@ -23,7 +23,11 @@ requisite to a pkg.installed state for the package which provides pip
 from __future__ import absolute_import, print_function, unicode_literals
 import re
 import logging
-import pkg_resources
+try:
+    import pkg_resources
+    HAS_PKG_RESOURCES = True
+except ImportError:
+    HAS_PKG_RESOURCES = False
 
 # Import salt libs
 import salt.utils.versions
@@ -42,10 +46,15 @@ except ImportError:
 if HAS_PIP is True:
     try:
         from pip.req import InstallRequirement
+        _from_line = InstallRequirement.from_line
     except ImportError:
         # pip 10.0.0 move req module under pip._internal
         try:
-            from pip._internal.req import InstallRequirement
+            try:
+                from pip._internal.req import InstallRequirement
+                _from_line = InstallRequirement.from_line
+            except AttributeError:
+                from pip._internal.req.constructors import install_req_from_line as _from_line
         except ImportError:
             HAS_PIP = False
             # Remove references to the loaded pip module above so reloading works
@@ -71,6 +80,8 @@ def __virtual__():
     '''
     Only load if the pip module is available in __salt__
     '''
+    if HAS_PKG_RESOURCES is False:
+        return False, 'The pkg_resources python library is not installed'
     if 'pip.list' in __salt__:
         return __virtualname__
     return False
@@ -131,7 +142,7 @@ def _check_pkg_version_format(pkg):
             # The next line is meant to trigger an AttributeError and
             # handle lower pip versions
             log.debug('Installed pip version: %s', pip.__version__)
-            install_req = InstallRequirement.from_line(pkg)
+            install_req = _from_line(pkg)
         except AttributeError:
             log.debug('Installed pip version is lower than 1.2')
             supported_vcs = ('git', 'svn', 'hg', 'bzr')
@@ -139,12 +150,12 @@ def _check_pkg_version_format(pkg):
                 for vcs in supported_vcs:
                     if pkg.startswith(vcs):
                         from_vcs = True
-                        install_req = InstallRequirement.from_line(
+                        install_req = _from_line(
                             pkg.split('{0}+'.format(vcs))[-1]
                         )
                         break
             else:
-                install_req = InstallRequirement.from_line(pkg)
+                install_req = _from_line(pkg)
     except (ValueError, InstallationError) as exc:
         ret['result'] = False
         if not from_vcs and '=' in pkg and '==' not in pkg:

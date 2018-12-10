@@ -26,10 +26,7 @@ from binascii import crc32
 # Import Salt Libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 from salt.ext import six
-if six.PY3:
-    import ipaddress
-else:
-    import salt.ext.ipaddress as ipaddress
+from salt._compat import ipaddress
 from salt.ext.six.moves import range
 from salt.utils.zeromq import zmq, ZMQDefaultLoop, install_zmq, ZMQ_VERSION_INFO
 
@@ -118,6 +115,7 @@ from salt.exceptions import (
     SaltSystemExit,
     SaltDaemonNotRunning,
     SaltException,
+    SaltMasterUnresolvableError
 )
 
 
@@ -157,8 +155,13 @@ def resolve_dns(opts, fallback=True):
                 True,
                 opts['ipv6'])
         except SaltClientError:
+            retry_dns_count = opts.get('retry_dns_count', None)
             if opts['retry_dns']:
                 while True:
+                    if retry_dns_count is not None:
+                        if retry_dns_count == 0:
+                            raise SaltMasterUnresolvableError
+                        retry_dns_count -= 1
                     import salt.log
                     msg = ('Master hostname: \'{0}\' not found or not responsive. '
                            'Retrying in {1} seconds').format(opts['master'], opts['retry_dns'])
@@ -408,6 +411,13 @@ def master_event(type, master=None):
         return '{0}_{1}'.format(event_map.get(type), master)
 
     return event_map.get(type, None)
+
+
+def service_name():
+    '''
+    Return the proper service name based on platform
+    '''
+    return 'salt_minion' if 'bsd' in sys.platform else 'salt-minion'
 
 
 class MinionBase(object):
@@ -958,7 +968,17 @@ class MinionManager(MinionBase):
                       loaded_base_name=loaded_base_name,
                       jid_queue=jid_queue)
 
-    def _spawn_minions(self):
+    def _check_minions(self):
+        '''
+        Check the size of self.minions and raise an error if it's empty
+        '''
+        if not self.minions:
+            err = ('Minion unable to successfully connect to '
+                   'a Salt Master.  Exiting.')
+            log.error(err)
+            raise SaltSystemExit(code=42, msg=err)
+
+    def _spawn_minions(self, timeout=60):
         '''
         Spawn all the coroutines which will sign in to masters
         '''
@@ -977,8 +997,9 @@ class MinionManager(MinionBase):
                                                 loaded_base_name='salt.loader.{0}'.format(s_opts['master']),
                                                 jid_queue=self.jid_queue,
                                                )
-            self.minions.append(minion)
-            self.io_loop.spawn_callback(self._connect_minion, minion)
+
+            self._connect_minion(minion)
+        self.io_loop.call_later(timeout, self._check_minions)
 
     @tornado.gen.coroutine
     def _connect_minion(self, minion):
@@ -996,6 +1017,7 @@ class MinionManager(MinionBase):
                     minion.setup_scheduler(before_connect=True)
                 yield minion.connect_master(failed=failed)
                 minion.tune_in(start=False)
+                self.minions.append(minion)
                 break
             except SaltClientError as exc:
                 failed = True
@@ -1007,6 +1029,11 @@ class MinionManager(MinionBase):
                 if auth_wait < self.max_auth_wait:
                     auth_wait += self.auth_wait
                 yield tornado.gen.sleep(auth_wait)  # TODO: log?
+            except SaltMasterUnresolvableError:
+                err = 'Master address: \'{0}\' could not be resolved. Invalid or unresolveable address. ' \
+                      'Set \'master\' value in minion config.'.format(minion.opts['master'])
+                log.error(err)
+                break
             except Exception as e:
                 failed = True
                 log.critical(
@@ -1242,6 +1269,7 @@ class Minion(MinionBase):
                     'minutes': self.opts['mine_interval'],
                     'jid_include': True,
                     'maxrunning': 2,
+                    'run_on_start': True,
                     'return_job': self.opts.get('mine_return_job', False)
                 }
             }, persist=True)
@@ -1561,7 +1589,7 @@ class Minion(MinionBase):
 
         sdata = {'pid': os.getpid()}
         sdata.update(data)
-        log.info('Starting a new job with PID %s', sdata['pid'])
+        log.info('Starting a new job %s with PID %s', data['jid'], sdata['pid'])
         with salt.utils.files.fopen(fn_, 'w+b') as fp_:
             fp_.write(minion_instance.serial.dumps(sdata))
         ret = {'success': False}
@@ -2186,6 +2214,8 @@ class Minion(MinionBase):
             self.beacons.list_available_beacons()
         elif func == 'validate_beacon':
             self.beacons.validate_beacon(name, beacon_data)
+        elif func == 'reset':
+            self.beacons.reset()
 
     def environ_setenv(self, tag, data):
         '''
@@ -2618,8 +2648,17 @@ class Minion(MinionBase):
                             log.error('** Master Ping failed. Attempting to restart minion**')
                             delay = self.opts.get('random_reauth_delay', 5)
                             log.info('delaying random_reauth_delay %ss', delay)
-                            # regular sys.exit raises an exception -- which isn't sufficient in a thread
-                            os._exit(salt.defaults.exitcodes.SALT_KEEPALIVE)
+                            try:
+                                self.functions['service.restart'](service_name())
+                            except KeyError:
+                                # Probably no init system (running in docker?)
+                                log.warning(
+                                    'ping_interval reached without response '
+                                    'from the master, but service.restart '
+                                    'could not be run to restart the minion '
+                                    'daemon. ping_interval requires that the '
+                                    'minion is running under an init system.'
+                                )
 
                     self._fire_master('ping', 'minion_ping', sync=False, timeout_handler=ping_timeout_handler)
                 except Exception:
@@ -3331,11 +3370,11 @@ class Matcher(object):
         try:
             # Target is an address?
             tgt = ipaddress.ip_address(tgt)
-        except:  # pylint: disable=bare-except
+        except Exception:
             try:
                 # Target is a network?
                 tgt = ipaddress.ip_network(tgt)
-            except:  # pylint: disable=bare-except
+            except Exception:
                 log.error('Invalid IP/CIDR target: %s', tgt)
                 return []
         proto = 'ipv{0}'.format(tgt.version)
@@ -3626,6 +3665,7 @@ class ProxyMinion(Minion):
                         'minutes': self.opts['mine_interval'],
                         'jid_include': True,
                         'maxrunning': 2,
+                        'run_on_start': True,
                         'return_job': self.opts.get('mine_return_job', False)
                     }
             }, persist=True)

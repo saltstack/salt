@@ -28,7 +28,8 @@ from salt.runners.winrepo import (
     genrepo as _genrepo,
     update_git_repos as _update_git_repos,
     PER_REMOTE_OVERRIDES,
-    PER_REMOTE_ONLY
+    PER_REMOTE_ONLY,
+    GLOBAL_ONLY
 )
 from salt.ext import six
 try:

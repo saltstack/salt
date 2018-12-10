@@ -314,7 +314,7 @@ class PillarTestCase(TestCase):
             'extension_modules': '',
         }
         pillar = salt.pillar.Pillar(opts, {}, 'mocked-minion', 'base', pillarenv='dev')
-        self.assertEqual(pillar.opts['file_roots'],
+        self.assertEqual(pillar.opts['pillar_roots'],
                          {'base': ['/srv/pillar/base'], 'dev': ['/srv/pillar/__env__']})
 
     def test_ignored_dynamic_pillarenv(self):
@@ -329,7 +329,7 @@ class PillarTestCase(TestCase):
             'extension_modules': '',
         }
         pillar = salt.pillar.Pillar(opts, {}, 'mocked-minion', 'base', pillarenv='base')
-        self.assertEqual(pillar.opts['file_roots'], {'base': ['/srv/pillar/base']})
+        self.assertEqual(pillar.opts['pillar_roots'], {'base': ['/srv/pillar/base']})
 
     def test_malformed_pillar_sls(self):
         with patch('salt.pillar.compile_template') as compile_template:

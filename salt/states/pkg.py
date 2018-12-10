@@ -1720,7 +1720,7 @@ def installed(
         try:
             action = 'pkg.hold' if kwargs['hold'] else 'pkg.unhold'
             hold_ret = __salt__[action](
-                name=name, pkgs=desired, sources=sources
+                name=name, pkgs=desired
             )
         except (CommandExecutionError, SaltInvocationError) as exc:
             comment.append(six.text_type(exc))
@@ -3258,6 +3258,12 @@ def mod_aggregate(low, chunks, running):
 def mod_watch(name, **kwargs):
     '''
     Install/reinstall a package based on a watch requisite
+
+    .. note::
+        This state exists to support special handling of the ``watch``
+        :ref:`requisite <requisites>`. It should not be called directly.
+
+        Parameters for this function should be set by the state being triggered.
     '''
     sfun = kwargs.pop('sfun', None)
     mapfun = {'purged': purged,

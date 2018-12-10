@@ -445,7 +445,7 @@ class SSH(object):
             if target.get('passwd', False) or self.opts['ssh_passwd']:
                 self._key_deploy_run(host, target, False)
             return ret
-        if (ret[host].get('stderr') or '').count('Permission denied'):
+        if ret[host].get('stderr', '').count('Permission denied'):
             target = self.targets[host]
             # permission denied, attempt to auto deploy ssh key
             print(('Permission denied for host {0}, do you want to deploy '
@@ -702,7 +702,7 @@ class SSH(object):
         '''
         Execute the overall routine, print results via outputters
         '''
-        if self.opts['list_hosts']:
+        if self.opts.get('list_hosts'):
             self._get_roster()
             ret = {}
             for roster_file in self.__parsed_rosters:
@@ -1052,10 +1052,10 @@ class Single(object):
             opts_pkg['module_dirs'] = self.opts['module_dirs']
             opts_pkg['_ssh_version'] = self.opts['_ssh_version']
             opts_pkg['__master_opts__'] = self.context['master_opts']
-            if '_caller_cachedir' in self.opts:
-                opts_pkg['_caller_cachedir'] = self.opts['_caller_cachedir']
             if 'known_hosts_file' in self.opts:
                 opts_pkg['known_hosts_file'] = self.opts['known_hosts_file']
+            if '_caller_cachedir' in self.opts:
+                opts_pkg['_caller_cachedir'] = self.opts['_caller_cachedir']
             else:
                 opts_pkg['_caller_cachedir'] = self.opts['cachedir']
             # Use the ID defined in the roster file
@@ -1347,12 +1347,20 @@ ARGS = {10}\n'''.format(self.minion_config,
                     if not self.tty:
                         # If RSTR is not seen in both stdout and stderr then there
                         # was a thin deployment problem.
-                        log.error('ERROR: Failure deploying thin, retrying: %s\n%s', stdout, stderr)
+                        log.error(
+                            'ERROR: Failure deploying thin, retrying:\n'
+                            'STDOUT:\n%s\nSTDERR:\n%s\nRETCODE: %s',
+                            stdout, stderr, retcode
+                        )
                         return self.cmd_block()
                     elif not re.search(RSTR_RE, stdout):
                         # If RSTR is not seen in stdout with tty, then there
                         # was a thin deployment problem.
-                        log.error('ERROR: Failure deploying thin, retrying: %s\n%s', stdout, stderr)
+                        log.error(
+                            'ERROR: Failure deploying thin, retrying:\n'
+                            'STDOUT:\n%s\nSTDERR:\n%s\nRETCODE: %s',
+                            stdout, stderr, retcode
+                        )
                 while re.search(RSTR_RE, stdout):
                     stdout = re.split(RSTR_RE, stdout, 1)[1].strip()
                 if self.tty:

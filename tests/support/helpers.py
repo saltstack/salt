@@ -80,7 +80,10 @@ def no_symlinks():
         return not HAS_SYMLINKS
     output = ''
     try:
-        output = subprocess.check_output('git config --get core.symlinks', shell=True)
+        output = subprocess.Popen(
+            ['git', 'config', '--get', 'core.symlinks'],
+            cwd=TMP,
+            stdout=subprocess.PIPE).communicate()[0]
     except OSError as exc:
         if exc.errno != errno.ENOENT:
             raise
@@ -205,7 +208,7 @@ def flaky(caller=None, condition=True):
             try:
                 return caller(cls)
             except Exception as exc:
-                if attempt == 4:
+                if attempt >= 3:
                     raise exc
                 backoff_time = attempt ** 2
                 log.info('Found Exception. Waiting %s seconds to retry.', backoff_time)
@@ -1588,7 +1591,11 @@ def win32_kill_process_tree(pid, sig=signal.SIGTERM, include_parent=True,
     '''
     if pid == os.getpid():
         raise RuntimeError("I refuse to kill myself")
-    parent = psutil.Process(pid)
+    try:
+        parent = psutil.Process(pid)
+    except psutil.NoSuchProcess:
+        log.debug("PID not found alive: %d", pid)
+        return ([], [])
     children = parent.children(recursive=True)
     if include_parent:
         children.append(parent)

@@ -371,6 +371,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                                    'replication': None,
                                    'password': 'test_password',
                                    'connections': '-1',
+                                   'groups': '',
                                    'expiry time': '',
                                    'defaults variables': None
                                    }])):
@@ -402,6 +403,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                                    'can login': 't',
                                    'replication': None,
                                    'connections': '-1',
+                                   'groups': '',
                                    'expiry time': '2017-08-16 08:57:46',
                                    'defaults variables': None
                                }])):

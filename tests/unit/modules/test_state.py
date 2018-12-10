@@ -29,6 +29,7 @@ from tests.support.mock import (
 import salt.config
 import salt.loader
 import salt.state
+import salt.utils.args
 import salt.utils.files
 import salt.utils.json
 import salt.utils.hashutils
@@ -344,7 +345,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         utils = salt.loader.utils(
             salt.config.DEFAULT_MINION_OPTS,
-            whitelist=['state']
+            whitelist=['state', 'args', 'systemd', 'path', 'platform']
         )
         utils.keys()
         patcher = patch('salt.modules.state.salt.state', MockState())
@@ -533,7 +534,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
                 mock = MagicMock(return_value={"test": ""})
                 with patch.object(salt.utils.state, 'get_sls_opts', mock):
                     mock = MagicMock(return_value=True)
-                    with patch.object(salt.utils, 'test_mode', mock):
+                    with patch.object(salt.utils.args, 'test_mode', mock):
                         self.assertRaises(SaltInvocationError,
                                           state.single,
                                           "pkg.installed",
@@ -637,7 +638,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
                 )
                 with patch.object(salt.utils.state, 'get_sls_opts', mock):
                     mock = MagicMock(return_value=True)
-                    with patch.object(salt.utils, 'test_mode', mock):
+                    with patch.object(salt.utils.args, 'test_mode', mock):
                         MockState.State.flag = True
                         MockState.HighState.flag = True
                         self.assertEqual(state.sls_id("apache", "http"), 2)
@@ -686,7 +687,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
                 )
                 with patch.object(salt.utils.state, 'get_sls_opts', mock):
                     mock = MagicMock(return_value=True)
-                    with patch.object(salt.utils, 'test_mode', mock):
+                    with patch.object(salt.utils.args, 'test_mode', mock):
                         self.assertRaises(SaltInvocationError,
                                           state.show_sls,
                                           "foo",
@@ -717,7 +718,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
                     mock = MagicMock(return_value={'test': True})
                     with patch.object(salt.utils.state, 'get_sls_opts', mock):
                         mock = MagicMock(return_value=True)
-                        with patch.object(salt.utils, 'test_mode', mock):
+                        with patch.object(salt.utils.args, 'test_mode', mock):
                             self.assertRaises(SaltInvocationError,
                                               state.top,
                                               "reverse_top.sls",
@@ -787,28 +788,24 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
             Test to clear out the state execution request without executing it
         '''
         mock = MagicMock(return_value=True)
-        with patch.object(os.path, 'join', mock):
-            mock = MagicMock(return_value=True)
-            with patch.object(salt.payload, 'Serial', mock):
-                mock = MagicMock(side_effect=[False, True, True])
-                with patch.object(os.path, 'isfile', mock):
-                    self.assertTrue(state.clear_request("A"))
+        with patch.object(salt.payload, 'Serial', mock):
+            mock = MagicMock(side_effect=[False, True, True])
+            with patch.object(os.path, 'isfile', mock):
+                self.assertTrue(state.clear_request("A"))
 
-                    mock = MagicMock(return_value=True)
-                    with patch.object(os, 'remove', mock):
-                        self.assertTrue(state.clear_request())
+                mock = MagicMock(return_value=True)
+                with patch.object(os, 'remove', mock):
+                    self.assertTrue(state.clear_request())
 
-                    mock = MagicMock(return_value={})
-                    with patch.object(state, 'check_request', mock):
-                        self.assertFalse(state.clear_request("A"))
+                mock = MagicMock(return_value={})
+                with patch.object(state, 'check_request', mock):
+                    self.assertFalse(state.clear_request("A"))
 
     def test_check_request(self):
         '''
             Test to return the state request information
         '''
-        mock = MagicMock(return_value=True)
-        with patch.object(os.path, 'join', mock), \
-                patch('salt.modules.state.salt.payload', MockSerial):
+        with patch('salt.modules.state.salt.payload', MockSerial):
             mock = MagicMock(side_effect=[True, True, False])
             with patch.object(os.path, 'isfile', mock):
                 with patch('salt.utils.files.fopen', mock_open()):
@@ -878,7 +875,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
                                                        "saltenv": None})
                         with patch.object(salt.utils.state, 'get_sls_opts', mock):
                             mock = MagicMock(return_value=True)
-                            with patch.object(salt.utils,
+                            with patch.object(salt.utils.args,
                                               'test_mode',
                                               mock):
                                 self.assertRaises(

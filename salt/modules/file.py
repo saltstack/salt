@@ -1694,6 +1694,8 @@ def _starts_till(src, probe, strip_comments=True):
     if not src or not probe:
         return no_match
 
+    src = src.rstrip('\n\r')
+    probe = probe.rstrip('\n\r')
     if src == probe:
         return equal
 
@@ -2275,6 +2277,8 @@ def replace(path,
                 # Just search; bail as early as a match is found
                 if re.search(cpattern, r_data):
                     return True  # `with` block handles file closure
+                else:
+                    return False
             else:
                 result, nrepl = re.subn(cpattern,
                                         repl.replace('\\', '\\\\') if backslash_literal else repl,
@@ -2404,7 +2408,7 @@ def replace(path,
             except OSError:
                 os.remove(symlink_backup)
                 os.symlink(target_backup, symlink_backup)
-            except:
+            except Exception:
                 raise CommandExecutionError(
                     "Unable create backup symlink '{0}'. "
                     "Target was '{1}'. "
@@ -4119,7 +4123,7 @@ def get_managed(
                     msg = (
                         'Unable to verify upstream hash of source file {0}, '
                         'please set source_hash or set skip_verify to True'
-                        .format(source)
+                        .format(salt.utils.url.redact_http_basic_auth(source))
                     )
                     return '', {}, msg
 
@@ -4151,12 +4155,14 @@ def get_managed(
             except Exception as exc:
                 # A 404 or other error code may raise an exception, catch it
                 # and return a comment that will fail the calling state.
-                return '', {}, 'Failed to cache {0}: {1}'.format(source, exc)
+                _source = salt.utils.url.redact_http_basic_auth(source)
+                return '', {}, 'Failed to cache {0}: {1}'.format(_source, exc)
 
         # If cache failed, sfn will be False, so do a truth check on sfn first
         # as invoking os.path.exists() on a bool raises a TypeError.
         if not sfn or not os.path.exists(sfn):
-            return sfn, {}, 'Source file \'{0}\' not found'.format(source)
+            _source = salt.utils.url.redact_http_basic_auth(source)
+            return sfn, {}, 'Source file \'{0}\' not found'.format(_source)
         if sfn == name:
             raise SaltInvocationError(
                 'Source file cannot be the same as destination'
@@ -4464,7 +4470,10 @@ def check_perms(name, ret, user, group, mode, attrs=None, follow_symlinks=False)
     is_dir = os.path.isdir(name)
     is_link = os.path.islink(name)
     if not salt.utils.platform.is_windows() and not is_dir and not is_link:
-        lattrs = lsattr(name)
+        try:
+            lattrs = lsattr(name)
+        except SaltInvocationError:
+            lattrs = None
         if lattrs is not None:
             # List attributes on file
             perms['lattrs'] = ''.join(lattrs.get(name, ''))
@@ -5459,11 +5468,11 @@ def manage_file(name,
             # Write the static contents to a temporary file
             tmp = salt.utils.files.mkstemp(prefix=salt.utils.files.TEMPFILE_PREFIX,
                                            text=True)
-            if salt.utils.platform.is_windows():
-                contents = os.linesep.join(
-                    _splitlines_preserving_trailing_newline(contents))
             with salt.utils.files.fopen(tmp, 'wb') as tmp_:
                 if encoding:
+                    if salt.utils.platform.is_windows():
+                        contents = os.linesep.join(
+                            _splitlines_preserving_trailing_newline(contents))
                     log.debug('File will be encoded with %s', encoding)
                     tmp_.write(contents.encode(encoding=encoding, errors=encoding_errors))
                 else:
@@ -5996,6 +6005,7 @@ def list_backups(path, limit=None):
         [files[x] for x in sorted(files, reverse=True)[:limit]]
     )))
 
+
 list_backup = salt.utils.functools.alias_function(list_backups, 'list_backup')
 
 
@@ -6168,6 +6178,7 @@ def delete_backup(path, backup_id):
 
     return ret
 
+
 remove_backup = salt.utils.functools.alias_function(delete_backup, 'remove_backup')
 
 
@@ -6283,7 +6294,7 @@ def open_files(by_pid=False):
 
         #try:
         #    fd_.append(os.path.realpath('{0}/task/{1}exe'.format(ppath, tid)))
-        #except:
+        #except Exception:
         #    pass
 
         for fpath in os.listdir('{0}/fd'.format(ppath)):

@@ -63,7 +63,7 @@ class Listener(object):
             tag = 'salt/engine/redis_sentinel'
         super(Listener, self).__init__()
         self.tag = tag
-        self.redis = redis.StrictRedis(host=host, port=port)
+        self.redis = redis.StrictRedis(host=host, port=port, decode_responses=True)
         self.pubsub = self.redis.pubsub()
         self.pubsub.psubscribe(channels)
         self.fire_master = salt.utils.event.get_master_event(__opts__, __opts__['sock_dir']).fire_event

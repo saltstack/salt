@@ -472,11 +472,15 @@ communication.
 ``enable_gpu_grains``
 ---------------------
 
-Default: ``True``
+Default: ``False``
 
 Enable GPU hardware data for your master. Be aware that the master can
 take a while to start up when lspci and/or dmidecode is used to populate the
 grains for the master.
+
+.. code-block:: yaml
+
+    enable_gpu_grains: True
 
 .. conf_master:: job_cache
 
@@ -1843,40 +1847,6 @@ The listen queue size of the ZeroMQ backlog.
 
     zmq_backlog: 1000
 
-.. conf_master:: salt_event_pub_hwm
-.. conf_master:: event_publisher_pub_hwm
-
-``salt_event_pub_hwm`` and ``event_publisher_pub_hwm``
-------------------------------------------------------
-
-These two ZeroMQ High Water Mark settings, ``salt_event_pub_hwm`` and
-``event_publisher_pub_hwm`` are significant for masters with thousands of
-minions. When these are insufficiently high it will manifest in random
-responses missing in the CLI and even missing from the job cache. Masters
-that have fast CPUs and many cores with appropriate ``worker_threads``
-will not need these set as high.
-
-The ZeroMQ high-water-mark for the ``SaltEvent`` pub socket default is:
-
-.. code-block:: yaml
-
-    salt_event_pub_hwm: 20000
-
-The ZeroMQ high-water-mark for the ``EventPublisher`` pub socket default is:
-
-.. code-block:: yaml
-
-    event_publisher_pub_hwm: 10000
-
-As an example, on single master deployment with 8,000 minions, 2.4GHz CPUs,
-24 cores, and 32GiB memory has these settings:
-
-.. code-block:: yaml
-
-    salt_event_pub_hwm: 128000
-    event_publisher_pub_hwm: 64000
-
-
 .. _master-module-management:
 
 Master Module Management
@@ -2058,23 +2028,6 @@ following configuration:
 
     master_tops:
       ext_nodes: <Shell command which returns yaml>
-
-.. conf_master:: external_nodes
-
-``external_nodes``
-------------------
-
-Default: None
-
-The external_nodes option allows Salt to gather data that would normally be
-placed in a top file from and external node controller. The external_nodes
-option is the executable that will return the ENC data. Remember that Salt
-will look for external nodes AND top files and combine the results if both
-are enabled and available!
-
-.. code-block:: yaml
-
-    external_nodes: cobbler-ext-nodes
 
 .. conf_master:: renderer
 
@@ -2449,6 +2402,12 @@ Master will not be returned to the Minion.
 ------------------------------
 
 .. versionadded:: 2014.1.0
+.. deprecated:: 2018.3.4
+   This option is now ignored. Firstly, it only traversed
+   :conf_master:`file_roots`, which means it did not work for the other
+   fileserver backends. Secondly, since this option was added we have added
+   caching to the code that traverses the file_roots (and gitfs, etc.), which
+   greatly reduces the amount of traversal that is done.
 
 Default: ``False``
 

@@ -1463,7 +1463,8 @@ def install(name=None,
                     # provided. It could either be the OS architecture, or
                     # 'noarch', and we don't make that distinction in the
                     # pkg.list_pkgs return data.
-                    version_num = version_num.split(':', 1)[-1]
+                    if ignore_epoch is True:
+                        version_num = version_num.split(':', 1)[-1]
                 arch = ''
                 try:
                     namepart, archpart = pkgname.rsplit('.', 1)
@@ -1491,23 +1492,24 @@ def install(name=None,
                         )
                         continue
 
-                pkgstr = '{0}-{1}{2}'.format(pkgname, version_num, arch)
+                if ignore_epoch is True:
+                    pkgstr = '{0}-{1}{2}'.format(pkgname, version_num, arch)
+                else:
+                    pkgstr = '{0}-{1}{2}'.format(pkgname, version_num.split(':', 1)[-1], arch)
+
             else:
                 pkgstr = pkgpath
 
             # Lambda to trim the epoch from the currently-installed version if
             # no epoch is specified in the specified version
-            norm_epoch = lambda x, y: x.split(':', 1)[-1] \
-                if ':' not in y \
-                else x
             cver = old_as_list.get(pkgname, [])
             if reinstall and cver:
                 for ver in cver:
-                    ver = norm_epoch(ver, version_num)
                     if salt.utils.versions.compare(ver1=version_num,
                                                    oper='==',
                                                    ver2=ver,
-                                                   cmp_func=version_cmp):
+                                                   cmp_func=version_cmp,
+                                                   ignore_epoch=ignore_epoch):
                         # This version is already installed, so we need to
                         # reinstall.
                         to_reinstall.append((pkgname, pkgstr))
@@ -1517,11 +1519,11 @@ def install(name=None,
                     to_install.append((pkgname, pkgstr))
                 else:
                     for ver in cver:
-                        ver = norm_epoch(ver, version_num)
                         if salt.utils.versions.compare(ver1=version_num,
                                                        oper='>=',
                                                        ver2=ver,
-                                                       cmp_func=version_cmp):
+                                                   cmp_func=version_cmp,
+                                                   ignore_epoch=ignore_epoch):
                             to_install.append((pkgname, pkgstr))
                             break
                     else:
@@ -2905,7 +2907,7 @@ def owner(*paths):
     .. versionadded:: 2014.7.0
 
     Return the name of the package that owns the file. Multiple file paths can
-    be passed. Like :mod:`pkg.version <salt.modules.yumpkg.version`, if a
+    be passed. Like :mod:`pkg.version <salt.modules.yumpkg.version>`, if a
     single path is passed, a string will be returned, and if multiple paths are
     passed, a dictionary of file/package name pairs will be returned.
 

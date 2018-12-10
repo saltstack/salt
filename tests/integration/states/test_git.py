@@ -8,18 +8,24 @@ from __future__ import absolute_import, print_function, unicode_literals
 import functools
 import inspect
 import os
+import shutil
 import socket
 import string
+import tempfile
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.helpers import with_tempdir
 from tests.support.mixins import SaltReturnAssertsMixin
+from tests.support.paths import TMP
 
 # Import salt libs
 import salt.utils.files
 import salt.utils.path
 from salt.utils.versions import LooseVersion as _LooseVersion
+from salt.ext.six.moves.urllib.parse import urlparse  # pylint: disable=no-name-in-module
+
+TEST_REPO = 'https://github.com/saltstack/salt-test-repo.git'
 
 
 def __check_git_version(caller, min_version, skip_msg):
@@ -68,6 +74,9 @@ def ensure_min_git(caller=None, min_version='1.6.5'):
 def uses_git_opts(caller):
     '''
     Skip test if git_opts is not supported
+
+    IMPORTANT! This decorator should be at the bottom of any decorators added
+    to a given function.
     '''
     min_version = '1.7.2'
     return __check_git_version(
@@ -77,14 +86,63 @@ def uses_git_opts(caller):
     )
 
 
+class WithGitMirror(object):
+    def __init__(self, repo_url, **kwargs):
+        self.repo_url = repo_url
+        if 'dir' not in kwargs:
+            kwargs['dir'] = TMP
+        self.kwargs = kwargs
+
+    def __call__(self, func):
+        self.func = func
+        return functools.wraps(func)(
+            lambda testcase, *args, **kwargs: self.wrap(testcase, *args, **kwargs)  # pylint: disable=W0108
+        )
+
+    def wrap(self, testcase, *args, **kwargs):
+        # Get temp dir paths
+        mirror_dir = tempfile.mkdtemp(**self.kwargs)
+        admin_dir = tempfile.mkdtemp(**self.kwargs)
+        clone_dir = tempfile.mkdtemp(**self.kwargs)
+        # Clean up the directories, we want git to actually create them
+        os.rmdir(mirror_dir)
+        os.rmdir(admin_dir)
+        os.rmdir(clone_dir)
+        # Create a URL to clone
+        mirror_url = 'file://' + mirror_dir
+        # Mirror the repo
+        testcase.run_function(
+            'git.clone', [mirror_dir], url=TEST_REPO, opts='--mirror')
+        # Make sure the directory for the mirror now exists
+        assert os.path.exists(mirror_dir)
+        # Clone to the admin dir
+        ret = testcase.run_state('git.latest', name=mirror_url, target=admin_dir)
+        ret = ret[next(iter(ret))]
+        assert os.path.exists(admin_dir)
+
+        try:
+            # Run the actual function with three arguments added:
+            #   1. URL for the test to use to clone
+            #   2. Cloned admin dir for making/pushing changes to the mirror
+            #   3. Yet-nonexistant clone_dir for the test function to use as a
+            #      destination for cloning.
+            return self.func(testcase, mirror_url, admin_dir, clone_dir, *args, **kwargs)
+        finally:
+            shutil.rmtree(mirror_dir, ignore_errors=True)
+            shutil.rmtree(admin_dir, ignore_errors=True)
+            shutil.rmtree(clone_dir, ignore_errors=True)
+
+
+with_git_mirror = WithGitMirror
+
+
 @ensure_min_git
 class GitTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the git state
     '''
     def setUp(self):
-        domain = 'github.com'
-        self.test_repo = 'https://{0}/saltstack/salt-test-repo.git'.format(domain)
+        domain = urlparse(TEST_REPO).netloc
         try:
             if hasattr(socket, 'setdefaulttimeout'):
                 # 10 second dns timeout
@@ -98,6 +156,9 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         # Reset the dns timeout after the test is over
         socket.setdefaulttimeout(None)
 
+    def _head(self, cwd):
+        return self.run_function('git.rev_parse', [cwd, 'HEAD'])
+
     @with_tempdir(create=False)
     def test_latest(self, target):
         '''
@@ -105,7 +166,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         ret = self.run_state(
             'git.latest',
-            name=self.test_repo,
+            name=TEST_REPO,
             target=target
         )
         self.assertSaltTrueReturn(ret)
@@ -118,7 +179,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         ret = self.run_state(
             'git.latest',
-            name=self.test_repo,
+            name=TEST_REPO,
             rev='develop',
             target=target,
             submodules=True
@@ -148,7 +209,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         ret = self.run_state(
             'git.latest',
-            name=self.test_repo,
+            name=TEST_REPO,
             rev='develop',
             target=target,
             submodules=True
@@ -164,7 +225,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         ret = self.run_state(
             'git.latest',
-            name=self.test_repo,
+            name=TEST_REPO,
             rev='develop',
             target=target,
             unless='test -e {0}'.format(target),
@@ -180,7 +241,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         ret = self.run_state(
             'git.latest',
-            name=self.test_repo,
+            name=TEST_REPO,
             rev=0.11,
             target=target,
             submodules=True,
@@ -198,7 +259,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         # Clone repo
         ret = self.run_state(
             'git.latest',
-            name=self.test_repo,
+            name=TEST_REPO,
             target=target
         )
         self.assertSaltTrueReturn(ret)
@@ -214,7 +275,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         # Re-run state with force_reset=False
         ret = self.run_state(
             'git.latest',
-            name=self.test_repo,
+            name=TEST_REPO,
             target=target,
             force_reset=False
         )
@@ -228,7 +289,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         # Now run the state with force_reset=True
         ret = self.run_state(
             'git.latest',
-            name=self.test_repo,
+            name=TEST_REPO,
             target=target,
             force_reset=True
         )
@@ -237,37 +298,21 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         # Make sure that we no longer have uncommitted changes
         self.assertFalse(self.run_function('git.diff', [target, 'HEAD']))
 
+    @with_git_mirror(TEST_REPO)
     @uses_git_opts
-    @with_tempdir(create=False)
-    @with_tempdir(create=False)
-    @with_tempdir(create=False)
-    def test_latest_fast_forward(self, mirror_dir, admin_dir, clone_dir):
+    def test_latest_fast_forward(self, mirror_url, admin_dir, clone_dir):
         '''
         Test running git.latest state a second time after changes have been
         made to the remote repo.
         '''
-        def _head(cwd):
-            return self.run_function('git.rev_parse', [cwd, 'HEAD'])
-
-        mirror_url = 'file://' + mirror_dir
-
-        # Mirror the repo
-        self.run_function(
-            'git.clone', [mirror_dir], url=self.test_repo, opts='--mirror')
-
-        # Make sure the directory for the mirror now exists
-        self.assertTrue(os.path.exists(mirror_dir))
-
-        # Clone the mirror twice, once to the admin location and once to
-        # the clone_dir
-        ret = self.run_state('git.latest', name=mirror_url, target=admin_dir)
-        self.assertSaltTrueReturn(ret)
+        # Clone the repo
         ret = self.run_state('git.latest', name=mirror_url, target=clone_dir)
-        self.assertSaltTrueReturn(ret)
+        ret = ret[next(iter(ret))]
+        assert ret['result']
 
         # Make a change to the repo by editing the file in the admin copy
         # of the repo and committing.
-        head_pre = _head(admin_dir)
+        head_pre = self._head(admin_dir)
         with salt.utils.files.fopen(os.path.join(admin_dir, 'LICENSE'), 'a') as fp_:
             fp_.write('Hello world!')
         self.run_function(
@@ -277,8 +322,8 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         )
         # Make sure HEAD is pointing to a new SHA so we know we properly
         # committed our change.
-        head_post = _head(admin_dir)
-        self.assertNotEqual(head_pre, head_post)
+        head_post = self._head(admin_dir)
+        assert head_pre != head_post
 
         # Push the change to the mirror
         # NOTE: the test will fail if the salt-test-repo's default branch
@@ -287,10 +332,11 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
 
         # Re-run the git.latest state on the clone_dir
         ret = self.run_state('git.latest', name=mirror_url, target=clone_dir)
-        self.assertSaltTrueReturn(ret)
+        ret = ret[next(iter(ret))]
+        assert ret['result']
 
         # Make sure that the clone_dir now has the correct SHA
-        self.assertEqual(head_post, _head(clone_dir))
+        assert head_post == self._head(clone_dir)
 
     @with_tempdir(create=False)
     def _changed_local_branch_helper(self, target, rev, hint):
@@ -301,7 +347,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         # Clone repo
         ret = self.run_state(
             'git.latest',
-            name=self.test_repo,
+            name=TEST_REPO,
             rev=rev,
             target=target
         )
@@ -322,7 +368,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         # comment field.
         ret = self.run_state(
             'git.latest',
-            name=self.test_repo,
+            name=TEST_REPO,
             rev=rev,
             target=target
         )
@@ -411,7 +457,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         ret = self.run_state(
             'git.latest',
-            name=self.test_repo,
+            name=TEST_REPO,
             rev='HEAD',
             target=target,
             depth=1
@@ -425,13 +471,71 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
 
         ret = self.run_state(
             'git.latest',
-            name=self.test_repo,
+            name=TEST_REPO,
             rev='non-default-branch',
             target=target,
             depth=1
         )
         self.assertSaltTrueReturn(ret)
         self.assertTrue(os.path.isdir(os.path.join(target, '.git')))
+
+    @with_git_mirror(TEST_REPO)
+    @uses_git_opts
+    def test_latest_sync_tags(self, mirror_url, admin_dir, clone_dir):
+        '''
+        Test that a removed tag is properly reported as such and removed in the
+        local clone, and that new tags are reported as new.
+        '''
+        tag1 = 'mytag1'
+        tag2 = 'mytag2'
+
+        # Add and push a tag
+        self.run_function('git.tag', [admin_dir, tag1])
+        self.run_function('git.push', [admin_dir, 'origin', tag1])
+
+        # Clone the repo
+        ret = self.run_state('git.latest', name=mirror_url, target=clone_dir)
+        ret = ret[next(iter(ret))]
+        assert ret['result']
+
+        # Now remove the tag
+        self.run_function('git.push', [admin_dir, 'origin', ':{0}'.format(tag1)])
+        # Add and push another tag
+        self.run_function('git.tag', [admin_dir, tag2])
+        self.run_function('git.push', [admin_dir, 'origin', tag2])
+
+        # Re-run the state with sync_tags=False. This should NOT delete the tag
+        # from the local clone, but should report that a tag has been added.
+        ret = self.run_state('git.latest',
+                             name=mirror_url,
+                             target=clone_dir,
+                             sync_tags=False)
+        ret = ret[next(iter(ret))]
+        assert ret['result']
+        # Make ABSOLUTELY SURE both tags are present, since we shouldn't have
+        # removed tag1.
+        all_tags = self.run_function('git.list_tags', [clone_dir])
+        assert tag1 in all_tags
+        assert tag2 in all_tags
+        # Make sure the reported changes are correct
+        expected_changes = {'new_tags': [tag2]}
+        assert ret['changes'] == expected_changes, ret['changes']
+
+        # Re-run the state with sync_tags=True. This should remove the local
+        # tag, since it doesn't exist in the remote repository.
+        ret = self.run_state('git.latest',
+                             name=mirror_url,
+                             target=clone_dir,
+                             sync_tags=True)
+        ret = ret[next(iter(ret))]
+        assert ret['result']
+        # Make ABSOLUTELY SURE the expected tags are present/gone
+        all_tags = self.run_function('git.list_tags', [clone_dir])
+        assert tag1 not in all_tags
+        assert tag2 in all_tags
+        # Make sure the reported changes are correct
+        expected_changes = {'deleted_tags': [tag1]}
+        assert ret['changes'] == expected_changes, ret['changes']
 
     @with_tempdir(create=False)
     def test_cloned(self, target):
@@ -441,35 +545,35 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         # Test mode
         ret = self.run_state(
             'git.cloned',
-            name=self.test_repo,
+            name=TEST_REPO,
             target=target,
             test=True)
         ret = ret[next(iter(ret))]
         assert ret['result'] is None
         assert ret['changes'] == {
-            'new': '{0} => {1}'.format(self.test_repo, target)
+            'new': '{0} => {1}'.format(TEST_REPO, target)
         }
         assert ret['comment'] == '{0} would be cloned to {1}'.format(
-            self.test_repo,
+            TEST_REPO,
             target
         )
 
         # Now actually run the state
         ret = self.run_state(
             'git.cloned',
-            name=self.test_repo,
+            name=TEST_REPO,
             target=target)
         ret = ret[next(iter(ret))]
         assert ret['result'] is True
         assert ret['changes'] == {
-            'new': '{0} => {1}'.format(self.test_repo, target)
+            'new': '{0} => {1}'.format(TEST_REPO, target)
         }
-        assert ret['comment'] == '{0} cloned to {1}'.format(self.test_repo, target)
+        assert ret['comment'] == '{0} cloned to {1}'.format(TEST_REPO, target)
 
         # Run the state again to test idempotence
         ret = self.run_state(
             'git.cloned',
-            name=self.test_repo,
+            name=TEST_REPO,
             target=target)
         ret = ret[next(iter(ret))]
         assert ret['result'] is True
@@ -479,7 +583,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         # Run the state again to test idempotence (test mode)
         ret = self.run_state(
             'git.cloned',
-            name=self.test_repo,
+            name=TEST_REPO,
             target=target,
             test=True)
         ret = ret[next(iter(ret))]
@@ -499,18 +603,18 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         # Test mode
         ret = self.run_state(
             'git.cloned',
-            name=self.test_repo,
+            name=TEST_REPO,
             target=target,
             branch=old_branch,
             test=True)
         ret = ret[next(iter(ret))]
         assert ret['result'] is None
         assert ret['changes'] == {
-            'new': '{0} => {1}'.format(self.test_repo, target)
+            'new': '{0} => {1}'.format(TEST_REPO, target)
         }
         assert ret['comment'] == (
             '{0} would be cloned to {1} with branch \'{2}\''.format(
-                self.test_repo,
+                TEST_REPO,
                 target,
                 old_branch
             )
@@ -519,17 +623,17 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         # Now actually run the state
         ret = self.run_state(
             'git.cloned',
-            name=self.test_repo,
+            name=TEST_REPO,
             target=target,
             branch=old_branch)
         ret = ret[next(iter(ret))]
         assert ret['result'] is True
         assert ret['changes'] == {
-            'new': '{0} => {1}'.format(self.test_repo, target)
+            'new': '{0} => {1}'.format(TEST_REPO, target)
         }
         assert ret['comment'] == (
             '{0} cloned to {1} with branch \'{2}\''.format(
-                self.test_repo,
+                TEST_REPO,
                 target,
                 old_branch
             )
@@ -538,7 +642,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         # Run the state again to test idempotence
         ret = self.run_state(
             'git.cloned',
-            name=self.test_repo,
+            name=TEST_REPO,
             target=target,
             branch=old_branch)
         ret = ret[next(iter(ret))]
@@ -552,7 +656,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         # Run the state again to test idempotence (test mode)
         ret = self.run_state(
             'git.cloned',
-            name=self.test_repo,
+            name=TEST_REPO,
             target=target,
             test=True,
             branch=old_branch)
@@ -567,7 +671,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         # Change branch (test mode)
         ret = self.run_state(
             'git.cloned',
-            name=self.test_repo,
+            name=TEST_REPO,
             target=target,
             branch=new_branch,
             test=True)
@@ -583,7 +687,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         # Now really change the branch
         ret = self.run_state(
             'git.cloned',
-            name=self.test_repo,
+            name=TEST_REPO,
             target=target,
             branch=new_branch)
         ret = ret[next(iter(ret))]
@@ -600,7 +704,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         # locally, as that would fail.
         ret = self.run_state(
             'git.cloned',
-            name=self.test_repo,
+            name=TEST_REPO,
             target=target,
             branch=old_branch)
         ret = ret[next(iter(ret))]
@@ -615,7 +719,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         # Test switching to a nonexistant branch. This should fail.
         ret = self.run_state(
             'git.cloned',
-            name=self.test_repo,
+            name=TEST_REPO,
             target=target,
             branch=bad_branch)
         ret = ret[next(iter(ret))]
@@ -636,7 +740,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         # Test mode
         ret = self.run_state(
             'git.cloned',
-            name=self.test_repo,
+            name=TEST_REPO,
             target=target,
             branch=branch,
             test=True)
@@ -645,7 +749,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         assert ret['changes']
         assert ret['comment'] == (
             '{0} would be cloned to {1} with branch \'{2}\''.format(
-                self.test_repo,
+                TEST_REPO,
                 target,
                 branch
             )
@@ -654,7 +758,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         # Now actually run the state
         ret = self.run_state(
             'git.cloned',
-            name=self.test_repo,
+            name=TEST_REPO,
             target=target,
             branch=branch)
         ret = ret[next(iter(ret))]

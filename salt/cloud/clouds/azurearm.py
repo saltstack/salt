@@ -60,6 +60,7 @@ import logging
 import pprint
 import base64
 import collections
+import pkgutil
 import salt.cache
 import salt.config as config
 import salt.utils.cloud
@@ -67,7 +68,6 @@ import salt.utils.data
 import salt.utils.files
 import salt.utils.stringutils
 import salt.utils.yaml
-from salt.utils.versions import LooseVersion
 from salt.ext import six
 import salt.version
 from salt.exceptions import (
@@ -117,9 +117,12 @@ try:
     from azure.mgmt.storage import StorageManagementClient
     from azure.mgmt.web import WebSiteManagementClient
     from msrestazure.azure_exceptions import CloudError
-    from azure.multiapi.storage.v2016_05_31 import CloudStorageAccount
-    from azure.cli import core
-    HAS_LIBS = LooseVersion(core.__version__) >= LooseVersion("2.0.12")
+    if pkgutil.find_loader('azure.multiapi'):
+        # use multiapi version if available
+        from azure.multiapi.storage.v2016_05_31 import CloudStorageAccount
+    else:
+        from azure.storage import CloudStorageAccount
+    HAS_LIBS = True
 except ImportError:
     pass
 # pylint: enable=wrong-import-position,wrong-import-order
@@ -152,8 +155,7 @@ def __virtual__():
             False,
             'The following dependencies are required to use the AzureARM driver: '
             'Microsoft Azure SDK for Python >= 2.0rc5, '
-            'Microsoft Azure Storage SDK for Python >= 0.32, '
-            'Microsoft Azure CLI >= 2.0.12'
+            'Microsoft Azure Storage SDK for Python >= 0.32'
         )
 
     global cache  # pylint: disable=global-statement,invalid-name
@@ -926,7 +928,7 @@ def create_interface(call=None, kwargs=None):  # pylint: disable=unused-argument
                 )
                 if pub_ip_data.ip_address:  # pylint: disable=no-member
                     ip_kwargs['public_ip_address'] = PublicIPAddress(
-                        six.text_type(pub_ip_data.id),  # pylint: disable=no-member
+                        id=six.text_type(pub_ip_data.id),  # pylint: disable=no-member
                     )
                     ip_configurations = [
                         NetworkInterfaceIPConfiguration(

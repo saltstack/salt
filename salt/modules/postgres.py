@@ -852,6 +852,10 @@ def user_list(user=None, host=None, port=None, maintenance_db=None,
         'pg_roles.rolcanlogin as "can login", '
         '{1} as "replication", '
         'pg_roles.rolconnlimit as "connections", '
+        '(SELECT array_agg(pg_roles2.rolname)'
+        '    FROM pg_catalog.pg_auth_members'
+        '    JOIN pg_catalog.pg_roles pg_roles2 ON (pg_auth_members.roleid = pg_roles2.oid)'
+        '    WHERE pg_auth_members.member = pg_roles.oid) as "groups",'
         'pg_roles.rolvaliduntil::timestamp(0) as "expiry time", '
         'pg_roles.rolconfig  as "defaults variables" '
         , _x(', COALESCE(pg_shadow.passwd, pg_authid.rolpassword) as "password" '),
@@ -894,37 +898,10 @@ def user_list(user=None, host=None, port=None, maintenance_db=None,
         retrow['defaults variables'] = row['defaults variables']
         if return_password:
             retrow['password'] = row['password']
+        # use csv reader to handle quoted roles correctly
+        retrow['groups'] = list(csv.reader([row['groups'].strip('{}')]))[0]
         ret[row['name']] = retrow
 
-    # for each role, determine the inherited roles
-    for role in six.iterkeys(ret):
-        rdata = ret[role]
-        groups = rdata.setdefault('groups', [])
-        query = (
-            'select rolname'
-            ' from pg_user'
-            ' join pg_auth_members'
-            '      on (pg_user.usesysid=pg_auth_members.member)'
-            ' join pg_roles '
-            '      on (pg_roles.oid=pg_auth_members.roleid)'
-            ' where pg_user.usename=\'{0}\''
-        ).format(role)
-        try:
-            rows = psql_query(query,
-                              runas=runas,
-                              host=host,
-                              user=user,
-                              port=port,
-                              maintenance_db=maintenance_db,
-                              password=password)
-            for row in rows:
-                if row['rolname'] not in groups:
-                    groups.append(row['rolname'])
-        except Exception:
-            # do not fail here, it is just a bonus
-            # to try to determine groups, but the query
-            # is not portable amongst all pg versions
-            continue
     return ret
 
 

@@ -144,6 +144,36 @@ class DataTestCase(TestCase):
             )
         )
 
+    def test_subdict_match_with_wildcards(self):
+        '''
+        Tests subdict matching when wildcards are used in the expression
+        '''
+        data = {
+            'a': {
+                'b': {
+                    'ç': 'd',
+                    'é': ['eff', 'gee', '8ch'],
+                    'ĩ': {'j': 'k'}
+                }
+            }
+        }
+        assert salt.utils.data.subdict_match(data, '*:*:*:*')
+        assert salt.utils.data.subdict_match(data, 'a:*:*:*')
+        assert salt.utils.data.subdict_match(data, 'a:b:*:*')
+        assert salt.utils.data.subdict_match(data, 'a:b:ç:*')
+        assert salt.utils.data.subdict_match(data, 'a:b:*:d')
+        assert salt.utils.data.subdict_match(data, 'a:*:ç:d')
+        assert salt.utils.data.subdict_match(data, '*:b:ç:d')
+        assert salt.utils.data.subdict_match(data, '*:*:ç:d')
+        assert salt.utils.data.subdict_match(data, '*:*:*:d')
+        assert salt.utils.data.subdict_match(data, 'a:*:*:d')
+        assert salt.utils.data.subdict_match(data, 'a:b:*:ef*')
+        assert salt.utils.data.subdict_match(data, 'a:b:*:g*')
+        assert salt.utils.data.subdict_match(data, 'a:b:*:j:*')
+        assert salt.utils.data.subdict_match(data, 'a:b:*:j:k')
+        assert salt.utils.data.subdict_match(data, 'a:b:*:*:k')
+        assert salt.utils.data.subdict_match(data, 'a:b:*:*:*')
+
     def test_traverse_dict(self):
         test_two_level_dict = {'foo': {'bar': 'baz'}}
 

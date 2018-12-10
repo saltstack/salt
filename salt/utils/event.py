@@ -60,7 +60,12 @@ import hashlib
 import logging
 import datetime
 import sys
-from collections import MutableMapping
+
+try:
+    from collections.abc import MutableMapping
+except ImportError:
+    from collections import MutableMapping
+
 from multiprocessing.util import Finalize
 from salt.ext.six.moves import range
 
@@ -876,7 +881,7 @@ class SaltEvent(object):
         # shutdown-- where globals start going missing
         try:
             self.destroy()
-        except:  # pylint: disable=W0702
+        except Exception:
             pass
 
 

@@ -307,6 +307,23 @@ Set to zero if the minion should shutdown and not retry.
 
     retry_dns: 30
 
+.. conf_minion:: retry_dns_count
+
+``retry_dns_count``
+-------------------
+
+.. versionadded:: 2018.3.4
+
+Default: ``None``
+
+Set the number of attempts to perform when resolving
+the master hostname if name resolution fails.
+By default the minion will retry indefinitely.
+
+.. code-block:: yaml
+
+    retry_dns_count: 3
+
 .. conf_minion:: master_port
 
 ``master_port``
@@ -891,6 +908,22 @@ The directory where Unix sockets will be kept.
 .. code-block:: yaml
 
     sock_dir: /var/run/salt/minion
+
+.. conf_minion:: enable_gpu_grains
+
+``enable_gpu_grains``
+---------------------
+
+Default: ``True``
+
+Enable GPU hardware data for your master. Be aware that the minion can
+take a while to start up when lspci and/or dmidecode is used to populate the
+grains for the minion, so this can be set to ``False`` if you do not need these
+grains.
+
+.. code-block:: yaml
+
+    enable_gpu_grains: False
 
 .. conf_minion:: outputter_dirs
 

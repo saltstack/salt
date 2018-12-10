@@ -96,6 +96,12 @@ class SaltSyndicMasterError(SaltException):
     '''
 
 
+class SaltMasterUnresolvableError(SaltException):
+    '''
+    Problem resolving the name of the Salt master
+    '''
+
+
 class MasterExit(SystemExit):
     '''
     Rise when the master exits

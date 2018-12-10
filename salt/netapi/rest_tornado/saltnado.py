@@ -185,9 +185,8 @@ a return like::
 .. |406| replace:: requested Content-Type not available
 .. |500| replace:: internal server error
 '''
-from __future__ import absolute_import, print_function, unicode_literals
-
 # Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 import time
 import fnmatch
 import logging
@@ -616,7 +615,7 @@ class SaltAuthHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
     '''
     def get(self):
         '''
-        All logins are done over post, this is a parked enpoint
+        All logins are done over post, this is a parked endpoint
 
         .. http:get:: /login
 
@@ -629,7 +628,7 @@ class SaltAuthHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
 
             curl -i localhost:8000/login
 
-        .. code-block:: http
+        .. code-block:: text
 
             GET /login HTTP/1.1
             Host: localhost:8000
@@ -637,7 +636,7 @@ class SaltAuthHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
 
         **Example response:**
 
-        .. code-block:: http
+        .. code-block:: text
 
             HTTP/1.1 401 Unauthorized
             Content-Type: application/json
@@ -656,7 +655,7 @@ class SaltAuthHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
     # TODO: make asynchronous? Underlying library isn't... and we ARE making disk calls :(
     def post(self):
         '''
-        :ref:`Authenticate  <rest_tornado-auth>` against Salt's eauth system
+        :ref:`Authenticate <rest_tornado-auth>` against Salt's eauth system
 
         .. http:post:: /login
 
@@ -684,7 +683,7 @@ class SaltAuthHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
                     -d password='saltpass' \\
                     -d eauth='pam'
 
-        .. code-block:: http
+        .. code-block:: text
 
             POST / HTTP/1.1
             Host: localhost:8000
@@ -696,7 +695,7 @@ class SaltAuthHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
 
         **Example response:**
 
-        .. code-block:: http
+        .. code-block:: text
 
             HTTP/1.1 200 OK
             Content-Type: application/json
@@ -777,7 +776,7 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
     '''
     def get(self):
         '''
-        An enpoint to determine salt-api capabilities
+        An endpoint to determine salt-api capabilities
 
         .. http:get:: /
 
@@ -793,7 +792,7 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
 
             curl -i localhost:8000
 
-        .. code-block:: http
+        .. code-block:: text
 
             GET / HTTP/1.1
             Host: localhost:8000
@@ -801,7 +800,7 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
 
         **Example response:**
 
-        .. code-block:: http
+        .. code-block:: text
 
             HTTP/1.1 200 OK
             Content-Type: application/json
@@ -845,7 +844,7 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
                     -d fun='test.ping' \\
                     -d arg
 
-        .. code-block:: http
+        .. code-block:: text
 
             POST / HTTP/1.1
             Host: localhost:8000
@@ -857,11 +856,12 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
             fun=test.ping&arg&client=local&tgt=*
 
         **Example response:**
+
         Responses are an in-order list of the lowstate's return data. In the
         event of an exception running a command the return will be a string
         instead of a mapping.
 
-        .. code-block:: http
+        .. code-block:: text
 
             HTTP/1.1 200 OK
             Content-Length: 200
@@ -876,10 +876,11 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
                 ms-4: true
 
         .. admonition:: multiple commands
+
             Note that if multiple :term:`lowstate` structures are sent, the Salt
             API will execute them in serial, and will not stop execution upon failure
             of a previous job. If you need to have commands executed in order and
-            stop on failure please use compount-command-execution.
+            stop on failure please use compound-command-execution.
 
         '''
         # if you aren't authenticated, redirect to login
@@ -977,7 +978,8 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
                                                       is_finished)
 
         def more_todo():
-            '''Check if there are any more minions we are waiting on returns from
+            '''
+            Check if there are any more minions we are waiting on returns from
             '''
             return any(x is False for x in six.itervalues(minions))
 
@@ -1090,13 +1092,15 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
         '''
         Disbatch runner client commands
         '''
+        full_return = chunk.pop('full_return', False)
         pub_data = self.saltclients['runner'](chunk)
         tag = pub_data['tag'] + '/ret'
         try:
             event = yield self.application.event_listener.get_event(self, tag=tag)
 
             # only return the return data
-            raise tornado.gen.Return(event['data']['return'])
+            ret = event if full_return else event['data']['return']
+            raise tornado.gen.Return(ret)
         except TimeoutException:
             raise tornado.gen.Return('Timeout waiting for runner to execute')
 
@@ -1144,7 +1148,7 @@ class MinionSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
 
             curl -i localhost:8000/minions/ms-3
 
-        .. code-block:: http
+        .. code-block:: text
 
             GET /minions/ms-3 HTTP/1.1
             Host: localhost:8000
@@ -1152,7 +1156,7 @@ class MinionSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
 
         **Example response:**
 
-        .. code-block:: http
+        .. code-block:: text
 
             HTTP/1.1 200 OK
             Content-Length: 129005
@@ -1205,7 +1209,7 @@ class MinionSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
                 -d tgt='*' \\
                 -d fun='status.diskusage'
 
-        .. code-block:: http
+        .. code-block:: text
 
             POST /minions HTTP/1.1
             Host: localhost:8000
@@ -1217,7 +1221,7 @@ class MinionSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
 
         **Example response:**
 
-        .. code-block:: http
+        .. code-block:: text
 
             HTTP/1.1 202 Accepted
             Content-Length: 86
@@ -1272,7 +1276,7 @@ class JobsSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
 
             curl -i localhost:8000/jobs
 
-        .. code-block:: http
+        .. code-block:: text
 
             GET /jobs HTTP/1.1
             Host: localhost:8000
@@ -1280,7 +1284,7 @@ class JobsSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
 
         **Example response:**
 
-        .. code-block:: http
+        .. code-block:: text
 
             HTTP/1.1 200 OK
             Content-Length: 165
@@ -1301,7 +1305,7 @@ class JobsSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
 
             curl -i localhost:8000/jobs/20121130104633606931
 
-        .. code-block:: http
+        .. code-block:: text
 
             GET /jobs/20121130104633606931 HTTP/1.1
             Host: localhost:8000
@@ -1309,7 +1313,7 @@ class JobsSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
 
         **Example response:**
 
-        .. code-block:: http
+        .. code-block:: text
 
             HTTP/1.1 200 OK
             Content-Length: 73
@@ -1390,7 +1394,7 @@ class RunSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
                 -d password='saltdev' \\
                 -d eauth='pam'
 
-        .. code-block:: http
+        .. code-block:: text
 
             POST /run HTTP/1.1
             Host: localhost:8000
@@ -1402,7 +1406,7 @@ class RunSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
 
         **Example response:**
 
-        .. code-block:: http
+        .. code-block:: text
 
             HTTP/1.1 200 OK
             Content-Length: 73
@@ -1449,14 +1453,14 @@ class EventsSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
 
             curl -NsS localhost:8000/events
 
-        .. code-block:: http
+        .. code-block:: text
 
             GET /events HTTP/1.1
             Host: localhost:8000
 
         **Example response:**
 
-        .. code-block:: http
+        .. code-block:: text
 
             HTTP/1.1 200 OK
             Connection: keep-alive
@@ -1604,7 +1608,7 @@ class WebhookSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
 
             curl -sS localhost:8000/hook -d foo='Foo!' -d bar='Bar!'
 
-        .. code-block:: http
+        .. code-block:: text
 
             POST /hook HTTP/1.1
             Host: localhost:8000
@@ -1615,7 +1619,7 @@ class WebhookSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
 
         **Example response**:
 
-        .. code-block:: http
+        .. code-block:: text
 
             HTTP/1.1 200 OK
             Content-Length: 14
@@ -1628,7 +1632,9 @@ class WebhookSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
         ``http://localhost:8000/hook/mycompany/build/success`` which contains
         the result of a build and the SHA of the version that was built as
         JSON. That would then produce the following event in Salt that could be
-        used to kick off a deployment via Salt's Reactor::
+        used to kick off a deployment via Salt's Reactor:
+
+        .. code-block:: text
 
             Event fired at Fri Feb 14 17:40:11 2014
             *************************
@@ -1653,7 +1659,7 @@ class WebhookSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
 
         And finally deploy the new build:
 
-        .. code-block:: yaml
+        .. code-block:: jinja
 
             {% set secret_key = data.get('headers', {}).get('X-My-Secret-Key') %}
             {% set build = data.get('post', {}) %}
@@ -1708,9 +1714,9 @@ class WebhookSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
 
 
 def _check_cors_origin(origin, allowed_origins):
-    """
+    '''
     Check if an origin match cors allowed origins
-    """
+    '''
     if isinstance(allowed_origins, list):
         if origin in allowed_origins:
             return origin

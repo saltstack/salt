@@ -49,11 +49,9 @@ from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 try:
-    HAS_VARSTACK = False
     import varstack
-    HAS_VARSTACK = True
 except ImportError:
-    pass
+    varstack = None
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -63,10 +61,7 @@ __virtualname__ = 'varstack'
 
 
 def __virtual__():
-    if not HAS_VARSTACK:
-        log.error("Can't find varstack master_top")
-        return False
-    return __virtualname__
+    return (False, 'varstack not installed') if varstack is None else __virtualname__
 
 
 def top(**kwargs):
