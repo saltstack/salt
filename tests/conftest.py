@@ -104,7 +104,7 @@ def pytest_tempdir_basename():
     '''
     Return the temporary directory basename for the salt test suite.
     '''
-    return 'salt-tests-tmp'
+    return 'salt-tests-tmpdir'
 
 
 # ----- CLI Options Setup ------------------------------------------------------------------------------------------->
@@ -206,6 +206,18 @@ def pytest_configure(config):
         'requires_network(only_local_network=False): Skip if no networking is set up. '
         'If \'only_local_network\' is \'True\', only the local network is checked.'
     )
+    # Make sure the test suite "knows" this is a pytest test run
+    RUNTIME_VARS.PYTEST_SESSION = True
+
+    # Provide a global timeout for each test(pytest-timeout).
+    if config._env_timeout is None:
+        # If no timeout is set, set it to the default timeout value
+        # Right now, we set it to 5 minutes which is absurd, but let's see how it goes
+        config._env_timeout = 5 * 60
+
+    # We always want deferred timeouts. Ie, only take into account the test function time
+    # to run, exclude fixture setup/teardown
+    config._env_timeout_func_only = True
 # <---- Register Markers ---------------------------------------------------------------------------------------------
 
 
@@ -820,7 +832,7 @@ def session_syndic_master_default_options(request, session_root_dir):
 
 
 @pytest.fixture(scope='session')
-def session_syndic_minion_default_options(request, session_root_dir):
+def session_syndic_default_options(request, session_root_dir):
     with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.CONF_DIR, 'syndic')) as rfh:
         opts = yaml.load(rfh.read())
 
@@ -831,14 +843,14 @@ def session_syndic_minion_default_options(request, session_root_dir):
         return opts
 
 
-@pytest.fixture(scope='session')
+@pytest.fixture(scope='session', autouse=True)
 def bridge_pytest_and_runtests(session_root_dir,
                                session_conf_dir,
                                session_secondary_conf_dir,
                                session_syndic_conf_dir,
                                session_master_of_masters_conf_dir,
-                               session_state_tree_root_dir,
-                               session_pillar_tree_root_dir,
+                               session_base_env_pillar_tree_root_dir,
+                               session_base_env_state_tree_root_dir,
                                session_prod_env_state_tree_root_dir,
                                session_master_config,
                                session_minion_config,
@@ -852,8 +864,8 @@ def bridge_pytest_and_runtests(session_root_dir,
     RUNTIME_VARS.TMP_SUB_MINION_CONF_DIR = session_secondary_conf_dir.realpath().strpath
     RUNTIME_VARS.TMP_SYNDIC_MASTER_CONF_DIR = session_master_of_masters_conf_dir.realpath().strpath
     RUNTIME_VARS.TMP_SYNDIC_MINION_CONF_DIR = session_syndic_conf_dir.realpath().strpath
-    RUNTIME_VARS.TMP_PILLAR_TREE = session_pillar_tree_root_dir.realpath().strpath
-    RUNTIME_VARS.TMP_STATE_TREE = session_state_tree_root_dir.realpath().strpath
+    RUNTIME_VARS.TMP_PILLAR_TREE = session_base_env_pillar_tree_root_dir.realpath().strpath
+    RUNTIME_VARS.TMP_STATE_TREE = session_base_env_state_tree_root_dir.realpath().strpath
     RUNTIME_VARS.TMP_PRODENV_STATE_TREE = session_prod_env_state_tree_root_dir.realpath().strpath
 
     # Make sure unittest2 uses the pytest generated configuration
@@ -863,6 +875,23 @@ def bridge_pytest_and_runtests(session_root_dir,
     RUNTIME_VARS.RUNTIME_CONFIGS['syndic_master'] = freeze(session_master_of_masters_config)
     RUNTIME_VARS.RUNTIME_CONFIGS['syndic'] = freeze(session_syndic_config)
     RUNTIME_VARS.RUNTIME_CONFIGS['client_config'] = freeze(session_master_config)
+
+    # Copy configuration files and directories which are not automatically generated
+    for entry in os.listdir(RUNTIME_VARS.CONF_DIR):
+        if entry in ('master', 'minion', 'sub_minion', 'syndic', 'syndic_master', 'proxy'):
+            # These have runtime computed values and are handled by pytest-salt fixtures
+            continue
+        entry_path = os.path.join(RUNTIME_VARS.CONF_DIR, entry)
+        if os.path.isfile(entry_path):
+            shutil.copy(
+                entry_path,
+                os.path.join(RUNTIME_VARS.TMP_CONF_DIR, entry)
+            )
+        elif os.path.isdir(entry_path):
+            shutil.copytree(
+                entry_path,
+                os.path.join(RUNTIME_VARS.TMP_CONF_DIR, entry)
+            )
 # <---- Salt Configuration -------------------------------------------------------------------------------------------
 
 
@@ -870,25 +899,29 @@ def bridge_pytest_and_runtests(session_root_dir,
 # ----- Custom Fixtures Definitions --------------------------------------------------------------------------------->
 # pylint: disable=unused-argument
 @pytest.fixture(scope='session')
+def session_salt_syndic(request, session_salt_master_of_masters, session_salt_syndic):
+    request.session.stats_processes.update(OrderedDict((
+        ('Salt Syndic Master', psutil.Process(session_salt_master_of_masters.pid)),
+        ('       Salt Syndic', psutil.Process(session_salt_syndic.pid)),
+    )).items())
+    return session_salt_syndic
+
+
+@pytest.fixture(scope='session')
 def default_session_daemons(request,
                             log_server,
                             salt_log_port,
                             engines_dir,
                             log_handlers_dir,
-                            bridge_pytest_and_runtests,
                             session_salt_master,
                             session_salt_minion,
                             session_secondary_salt_minion,
-                            session_salt_master_of_masters,
-                            session_salt_syndic
                             ):
 
     request.session.stats_processes.update(OrderedDict((
         ('       Salt Master', psutil.Process(session_salt_master.pid)),
         ('       Salt Minion', psutil.Process(session_salt_minion.pid)),
         ('   Salt Sub Minion', psutil.Process(session_secondary_salt_minion.pid)),
-        ('Salt Syndic Master', psutil.Process(session_salt_master_of_masters.pid)),
-        ('       Salt Syndic', psutil.Process(session_salt_syndic.pid)),
     )).items())
 # pylint: enable=unused-argument
 # <---- Custom Fixtures Definitions ----------------------------------------------------------------------------------

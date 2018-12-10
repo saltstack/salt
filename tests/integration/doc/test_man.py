@@ -11,14 +11,14 @@ import shutil
 import salt.utils.platform
 
 # Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ModuleCase
-from tests.support.paths import TMP
 from tests.support.unit import skipIf
 
 
 @skipIf(salt.utils.platform.is_windows(), 'minion is windows')
 class ManTest(ModuleCase):
-    rootdir = os.path.join(TMP, 'mantest')
+    rootdir = os.path.join(RUNTIME_VARS.TMP, 'mantest')
     # Map filenames to search strings which should be in the manpage
     manpages = {
         'salt-cp.1': [
