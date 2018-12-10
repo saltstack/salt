@@ -3240,12 +3240,16 @@ def tail(path, lines):
     if not __utils__['files.is_text'](path):
         raise SaltInvocationError(
             'Cannot tail a binary file: {0}'.format(path))
+    try:
+        lines = int(lines)
+    except ValueError:
+        raise SaltInvocationError('file.tail: \'lines\' value must be an integer')
 
     try:
         with salt.utils.fopen(path) as tail_fh:
             block_counter = -1
             while len(lines_found) < lines:
-                tail_fh.seek(block_counter * _buffer, os.SEEK_END)
+                tail_fh.seek(block_counter * 4098, os.SEEK_END)
                 lines_found = tail_fh.readlines()
                 block_counter -= 1
         return lines_found[-lines:]
