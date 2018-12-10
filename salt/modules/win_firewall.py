@@ -443,7 +443,7 @@ def get_all_settings(domain, store='local'):
         # defined by local group policy
         salt * win_firewall.get_all_settings domain lgpo
     '''
-    return salt.utils.win_lgpo_netsh.get_all_settings(domain=domain,
+    return salt.utils.win_lgpo_netsh.get_all_settings(profile=domain,
                                                       store=store)
 
 
