@@ -66,6 +66,19 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
                             password='BLUECOW'
             )
 
+        with patch.object(mysql, 'version', return_value='8.0.11'):
+            self._test_call(mysql.user_exists,
+                            {'sql': ('SELECT User,Host FROM mysql.user WHERE '
+                                     'User = %(user)s AND Host = %(host)s'),
+                             'sql_args': {'host': '%',
+                                          'user': 'mytestuser'
+                                         }
+                            },
+                            user='mytestuser',
+                            host='%',
+                            password='BLUECOW'
+            )
+
         # test_user_create_when_user_exists(self):
         # ensure we don't try to create a user when one already exists
         # mock the version of MySQL

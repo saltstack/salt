@@ -552,7 +552,7 @@ def restartcheck(ignorelist=None, blacklist=None, excludepid=None, **kwargs):
 
         while True:
             _check_timeout(start_time, timeout)
-            line = paths.stdout.readline()
+            line = salt.utils.stringutils.to_unicode(paths.stdout.readline())
             if not line:
                 break
             pth = line[:-1]
