@@ -311,7 +311,7 @@ def _decrypt_ciphertexts(cipher, translate_newlines=False):
         return ret.rstrip('\n')
     else:
         # Possibly just encrypted data without begin/end marks
-        return _decrypt_ciphertext(cipher)
+        return cipher
 
 
 def _decrypt_object(obj, translate_newlines=False):
