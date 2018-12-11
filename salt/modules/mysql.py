@@ -1778,7 +1778,7 @@ def user_grants(user,
         return False
 
     ret = []
-    results = cur.fetchall()
+    results = salt.utils.data.decode(cur.fetchall())
     for grant in results:
         tmp = grant[0].split(' IDENTIFIED BY')[0]
         if 'WITH GRANT OPTION' in grant[0] and 'WITH GRANT OPTION' not in tmp:
