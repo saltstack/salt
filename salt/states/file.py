@@ -7887,7 +7887,7 @@ def serialize(
     if isinstance(existing_data, dict) and isinstance(merged_data, dict):
         ret["changes"]["diff"] = salt.utils.dictdiffer.recursive_diff(
             existing_data, merged_data
-        )
+        ).diffs
 
     return ret
 
