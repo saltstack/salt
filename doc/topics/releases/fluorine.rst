@@ -61,7 +61,7 @@ Ansible Playbook State and Execution Modules
 ============================================
 
 Along with the including the :py:mod:`ansible modules
-<salt.module.ansiblegate>` in the Oxygen release, running playbooks has been
+<salt.modules.ansiblegate>` in the Oxygen release, running playbooks has been
 added in Fluorine with the :py:func:`playbooks function
 <salt.modules.ansiblegate.playbooks>`.  This also includes an :py:func:`ansible
 playbooks state module <salt.states.ansiblegate.playbooks>` which can be used
