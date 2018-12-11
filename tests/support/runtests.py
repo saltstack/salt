@@ -186,6 +186,7 @@ class RuntimeVars(object):
         self._vars[name] = value
 # <---- Helper Methods -----------------------------------------------------------------------------------------------
 
+
 # ----- Global Variables -------------------------------------------------------------------------------------------->
 XML_OUTPUT_DIR = os.environ.get('SALT_XML_TEST_REPORTS_DIR', os.path.join(paths.TMP, 'xml-test-reports'))
 # <---- Global Variables ---------------------------------------------------------------------------------------------
@@ -201,6 +202,7 @@ RUNTIME_VARS = RuntimeVars(
     PILLAR_DIR=paths.PILLAR_DIR,
     ENGINES_DIR=paths.ENGINES_DIR,
     LOG_HANDLERS_DIR=paths.LOG_HANDLERS_DIR,
+    TMP_ROOT_DIR=paths.TMP_ROOT_DIR,
     TMP_CONF_DIR=paths.TMP_CONF_DIR,
     TMP_CONF_MASTER_INCLUDES=os.path.join(paths.TMP_CONF_DIR, 'master.d'),
     TMP_CONF_MINION_INCLUDES=os.path.join(paths.TMP_CONF_DIR, 'minion.d'),
@@ -216,6 +218,7 @@ RUNTIME_VARS = RuntimeVars(
     TMP_PILLAR_TREE=paths.TMP_PILLAR_TREE,
     TMP_PRODENV_STATE_TREE=paths.TMP_PRODENV_STATE_TREE,
     RUNNING_TESTS_USER=RUNNING_TESTS_USER,
-    RUNTIME_CONFIGS={}
+    RUNTIME_CONFIGS={},
+    PYTEST_SESSION=False
 )
 # <---- Tests Runtime Variables --------------------------------------------------------------------------------------

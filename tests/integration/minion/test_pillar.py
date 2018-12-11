@@ -14,8 +14,8 @@ import textwrap
 import subprocess
 
 # Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ModuleCase
-from tests.support.paths import TMP, TMP_CONF_DIR
 from tests.support.unit import skipIf
 from tests.support.helpers import requires_system_grains
 
@@ -29,15 +29,15 @@ import salt.pillar as pillar
 log = logging.getLogger(__name__)
 
 
-GPG_HOMEDIR = os.path.join(TMP_CONF_DIR, 'gpgkeys')
-PILLAR_BASE = os.path.join(TMP, 'test-decrypt-pillar', 'pillar')
+GPG_HOMEDIR = os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'gpgkeys')
+PILLAR_BASE = os.path.join(RUNTIME_VARS.TMP, 'test-decrypt-pillar', 'pillar')
 TOP_SLS = os.path.join(PILLAR_BASE, 'top.sls')
 GPG_SLS = os.path.join(PILLAR_BASE, 'gpg.sls')
 DEFAULT_OPTS = {
-    'cachedir': os.path.join(TMP, 'rootdir', 'cache'),
-    'config_dir': TMP_CONF_DIR,
+    'cachedir': os.path.join(RUNTIME_VARS.TMP, 'rootdir', 'cache'),
+    'config_dir': RUNTIME_VARS.TMP_CONF_DIR,
     'optimization_order': [0, 1, 2],
-    'extension_modules': os.path.join(TMP,
+    'extension_modules': os.path.join(RUNTIME_VARS.TMP,
                                       'test-decrypt-pillar',
                                       'extmods'),
     'pillar_roots': {'base': [PILLAR_BASE]},

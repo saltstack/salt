@@ -7,8 +7,8 @@ import shutil
 import tempfile
 
 # Import Salt Testing Libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.paths import TMP
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON
 
@@ -80,9 +80,9 @@ class WinrepoTest(TestCase, LoaderModuleMockMixin):
     Test the winrepo runner
     '''
     def setup_loader_modules(self):
-        self.winrepo_dir = tempfile.mkdtemp(dir=TMP)
+        self.winrepo_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         self.addCleanup(shutil.rmtree, self.winrepo_dir, ignore_errors=True)
-        self.extmods_dir = tempfile.mkdtemp(dir=TMP)
+        self.extmods_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         self.addCleanup(shutil.rmtree, self.extmods_dir, ignore_errors=True)
         self.winrepo_sls_dir = os.path.join(self.winrepo_dir, 'repo_sls')
         os.mkdir(self.winrepo_sls_dir)
