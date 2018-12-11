@@ -768,6 +768,7 @@ def msi_conformant_version():
         noc = 65535
     return '{}.{}.{}'.format(short_year, 20*(month-1)+bugfix, noc)
 
+
 if __name__ == '__main__':
     if len(sys.argv) == 2 and sys.argv[1] == 'msi':
         # Building the msi requires an msi-conformant version
