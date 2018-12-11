@@ -148,7 +148,7 @@ def add(name,
         User ID of the new account
 
     gid
-        Name or ID of the primary group of the new accoun
+        Name or ID of the primary group of the new account
 
     groups
         List of supplementary groups of the new account
@@ -160,7 +160,7 @@ def add(name,
         Login shell of the new account
 
     unique
-        Allow to create users with duplicate
+        If not True, the user account can have a non-unique UID
 
     system
         Create a system account
