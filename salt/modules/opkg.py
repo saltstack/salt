@@ -94,7 +94,7 @@ def _get_restartcheck_result(errors):
     return rs_result
 
 
-def _process_restartcheck_result(rs_result):
+def _process_restartcheck_result(rs_result, **kwargs):
     '''
     Check restartcheck output to see if system/service restarts were requested
     and take appropriate action.
@@ -436,7 +436,7 @@ def install(name=None,
     restart_services
         Whether to restart services even if a reboot is required. Default is True.
 
-		Returns a dict containing the new package names and versions::
+    Returns a dict containing the new package names and versions::
 
         {'<package>': {'old': '<old-version>',
                        'new': '<new-version>'}}
