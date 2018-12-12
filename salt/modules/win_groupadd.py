@@ -124,7 +124,7 @@ def add(name, **kwargs):
             return False
     else:
         log.warning('The group {0} already exists.'.format(name))
-
+        return False
     return True
 
 
@@ -158,6 +158,7 @@ def delete(name, **kwargs):
             return False
     else:
         log.warning('The group {0} does not exists.'.format(name))
+        return False
 
     return True
 
@@ -187,7 +188,7 @@ def info(name):
     except pywintypes.com_error as exc:
         msg = 'Failed to access group {0}. {1}'.format(
             name, win32api.FormatMessage(exc.excepinfo[5]))
-        log.error(msg)
+        log.debug(msg)
         return False
 
     if not gr_name:
@@ -275,6 +276,7 @@ def adduser(name, username, **kwargs):
             log.info('Added user {0}'.format(username))
         else:
             log.warning('User {0} is already a member of {1}'.format(username, name))
+            return False
     except pywintypes.com_error as exc:
         msg = 'Failed to add {0} to group {1}. {2}'.format(
             username, name, win32api.FormatMessage(exc.excepinfo[5]))
@@ -321,10 +323,12 @@ def deluser(name, username, **kwargs):
             log.info('Removed user {0}'.format(username))
         else:
             log.warning('User {0} is not a member of {1}'.format(username, name))
+            return False
     except pywintypes.com_error as exc:
         msg = 'Failed to remove {0} from group {1}. {2}'.format(
             username, name, win32api.FormatMessage(exc.excepinfo[5]))
         log.error(msg)
+        return False
 
     return True
 
