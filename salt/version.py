@@ -766,6 +766,7 @@ def msi_conformant_version():
     commi = __saltstack_version__.noc
     return '{0}.{1}.{2}.{3}'.format(year2, month, minor, commi)
 
+
 if __name__ == '__main__':
     if len(sys.argv) == 2 and sys.argv[1] == 'msi':
         # Building the msi requires an msi-conformant version
