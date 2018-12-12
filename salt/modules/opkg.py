@@ -98,7 +98,7 @@ def _process_restartcheck_result(rs_result, **kwargs):
             _update_nilrt_module_dep_info()
             __salt__['system.set_reboot_required_witnessed']()
             reboot_required = True
-    if kwargs.get('restart_services', True) or not reboot_required:
+    if kwargs.get('always_restart_services', True) or not reboot_required:
         for rstr in rs_result:
             if 'System restart required' not in rstr:
                 service = os.path.join('/etc/init.d', rstr)
@@ -418,7 +418,7 @@ def install(name=None,
 
         .. versionadded:: 2017.7.0
 
-    restart_services
+    always_restart_services
         Whether to restart services even if a reboot is required. Default is True.
 
     Returns a dict containing the new package names and versions::
