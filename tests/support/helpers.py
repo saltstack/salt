@@ -201,7 +201,7 @@ def flaky(caller=None, condition=True, attempts=4):
             try:
                 return caller(cls)
             except Exception as exc:
-                if log.isEnabledFor(logging.DEBUG):
+                if not isinstance(exc, (AssertionError, SkipTest)) and log.isEnabledFor(logging.DEBUG):
                     log.exception(exc, exc_info=True)
                 if attempt >= attempts -1:
                     raise exc
