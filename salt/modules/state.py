@@ -383,7 +383,7 @@ def running(concurrent=False):
     init_found = False
     # Build list of ancestor processes
     while not init_found:
-        cur_ppid = psutil.Process(cur_pid).ppid
+        cur_ppid = psutil.Process(cur_pid).ppid()
         ancestors.append(cur_ppid)
         cur_pid = cur_ppid
         if cur_pid in [0, 1]:
