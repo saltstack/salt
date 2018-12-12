@@ -77,7 +77,7 @@ import tempfile
 
 import salt.modules.cmdmod
 from salt.exceptions import CommandExecutionError
-from salt.ext.six.moves import map
+from salt.ext.six.moves import zip
 
 log = logging.getLogger(__name__)
 __hostname__ = socket.gethostname()
@@ -196,7 +196,7 @@ def get_settings(profile, section, store='local'):
     ret = {}
     # Skip the first 2 lines. Add everything else to a dictionary
     for line in results[3:]:
-        ret.update(dict(zip(*[iter(re.split(r"\s{2,}", line))]*2)))
+        ret.update(dict(list(zip(*[iter(re.split(r"\s{2,}", line))]*2))))
 
     # Remove spaces from the values so that `Not Configured` is detected
     # correctly
