@@ -142,17 +142,6 @@ class PsTestCase(TestCase):
                  'fstype': 'hfs'},
                 ps.disk_partitions()[0])
 
-    ## Should only be tested in integration
-    # def test_total_physical_memory(self):
-    #     pass
-
-    ## Should only be tested in integration
-    # def test_num_cpus(self):
-    #     pass
-
-    ## Should only be tested in integration
-    # def test_boot_time(self):
-    #     pass
     def test_network_io_counters(self):
         with patch('salt.utils.psutil_compat.net_io_counters',
                    MagicMock(return_value=STUB_NETWORK_IO)):
