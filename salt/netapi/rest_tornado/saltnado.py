@@ -743,17 +743,22 @@ class SaltAuthHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
         try:
             eauth = self.application.opts['external_auth'][token['eauth']]
             # Get sum of '*' perms, user-specific perms, and group-specific perms
-            perms = eauth.get(token['name'], [])
-            perms.extend(eauth.get('*', []))
+            _perms = eauth.get(token['name'], [])
+            _perms.extend(eauth.get('*', []))
 
             if 'groups' in token and token['groups']:
                 user_groups = set(token['groups'])
                 eauth_groups = set([i.rstrip('%') for i in eauth.keys() if i.endswith('%')])
 
                 for group in user_groups & eauth_groups:
-                    perms.extend(eauth['{0}%'.format(group)])
+                    _perms.extend(eauth['{0}%'.format(group)])
 
-            perms = sorted(list(set(perms)))
+            # dedup. perm can be a complex dict, so we cant use set
+            perms = []
+            for perm in _perms:
+                if perm not in perms:
+                    perms.append(perm)
+
         # If we can't find the creds, then they aren't authorized
         except KeyError:
             self.send_error(401)
