@@ -376,3 +376,20 @@ class PartedTestCase(TestCase, LoaderModuleMockMixin):
                 }
             }
             self.assertEqual(output, expected)
+
+    def test_disk_set(self):
+        with patch('salt.modules.parted_partition._validate_device', MagicMock()):
+            self.cmdrun.return_value = ''
+            output = parted.disk_set('/dev/sda', 'pmbr_boot', 'on')
+            self.cmdrun.assert_called_once_with(
+                ['parted', '-m', '-s', '/dev/sda', 'disk_set',
+                 'pmbr_boot', 'on'])
+            assert output == []
+
+    def test_disk_toggle(self):
+        with patch('salt.modules.parted_partition._validate_device', MagicMock()):
+            self.cmdrun.return_value = ''
+            output = parted.disk_toggle('/dev/sda', 'pmbr_boot')
+            self.cmdrun.assert_called_once_with(
+                ['parted', '-m', '-s', '/dev/sda', 'disk_toggle', 'pmbr_boot'])
+            assert output == []
