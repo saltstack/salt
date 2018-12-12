@@ -19,10 +19,11 @@ except ImportError:
     pass
 
 # Import Salt Testing Libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch
-from tests.support.paths import TMP, FILES
+from tests.support.paths import FILES
 
 # Import salt libs
 import salt.fileserver.gitfs as gitfs
@@ -126,11 +127,11 @@ class GitfsConfigTestCase(TestCase, LoaderModuleMockMixin):
         # for this test class.
         _clear_instance_map()
 
-        cls.tmp_repo_dir = os.path.join(TMP, 'gitfs_root')
+        cls.tmp_repo_dir = os.path.join(RUNTIME_VARS.TMP, 'gitfs_root')
         if salt.utils.platform.is_windows():
             cls.tmp_repo_dir = cls.tmp_repo_dir.replace('\\', '/')
-        cls.tmp_cachedir = tempfile.mkdtemp(dir=TMP)
-        cls.tmp_sock_dir = tempfile.mkdtemp(dir=TMP)
+        cls.tmp_cachedir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
+        cls.tmp_sock_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
 
     @classmethod
     def tearDownClass(cls):
@@ -387,11 +388,11 @@ class GitFSTestBase(object):
     @classmethod
     def setUpClass(cls):
 
-        cls.tmp_repo_dir = os.path.join(TMP, 'gitfs_root')
+        cls.tmp_repo_dir = os.path.join(RUNTIME_VARS.TMP, 'gitfs_root')
         if salt.utils.platform.is_windows():
             cls.tmp_repo_dir = cls.tmp_repo_dir.replace('\\', '/')
-        cls.tmp_cachedir = tempfile.mkdtemp(dir=TMP)
-        cls.tmp_sock_dir = tempfile.mkdtemp(dir=TMP)
+        cls.tmp_cachedir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
+        cls.tmp_sock_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
 
         try:
             shutil.rmtree(cls.tmp_repo_dir)

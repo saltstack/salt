@@ -129,7 +129,8 @@ def __mount_device(action):
 
 @__mount_device
 def subvolume_created(name, device, qgroupids=None, set_default=False,
-                      copy_on_write=True, __dest=None):
+                      copy_on_write=True, force_set_default=True,
+                      __dest=None):
     '''
     Makes sure that a btrfs subvolume is present.
 
@@ -149,6 +150,10 @@ def subvolume_created(name, device, qgroupids=None, set_default=False,
 
     copy_on_write
         If false, set the subvolume with chattr +C
+
+    force_set_default
+        If false and the subvolume is already present, it will not
+        force it as default if ``set_default`` is True
 
     '''
     ret = {
@@ -190,7 +195,10 @@ def subvolume_created(name, device, qgroupids=None, set_default=False,
 
         ret['changes'][name] = 'Created subvolume {}'.format(name)
 
-    if set_default and not _is_default(path, __dest, name):
+    # If the volume was already present, we can opt-out the check for
+    # default subvolume.
+    if (not exists or (exists and force_set_default)) and \
+       set_default and not _is_default(path, __dest, name):
         ret['changes'][name + '_default'] = _set_default(path, __dest, name)
 
     if not copy_on_write and _is_cow(path):
