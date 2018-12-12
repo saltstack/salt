@@ -46,6 +46,12 @@ VALID_UNITS = set(['s', 'B', 'kB', 'MB', 'MiB', 'GB', 'GiB', 'TB', 'TiB', '%',
 VALID_DISK_FLAGS = set(['cylinder_alignment', 'pmbr_boot',
                         'implicit_partition_table'])
 
+VALID_PARTITION_FLAGS = set(['boot', 'root', 'swap', 'hidden', 'raid',
+                             'lvm', 'lba', 'hp-service', 'palo',
+                             'prep', 'msftres', 'bios_grub', 'atvrecv',
+                             'diag', 'legacy_boot', 'msftdata', 'irst',
+                             'esp', 'type'])
+
 
 def __virtual__():
     '''
@@ -632,8 +638,25 @@ def set_(device, minor, flag, state):
     :ref:`YAML Idiosyncrasies <yaml-idiosyncrasies>`). Some or all of these
     flags will be available, depending on what disk label you are using.
 
-    Valid flags are: bios_grub, legacy_boot, boot, lba, root, swap, hidden, raid,
-        LVM, PALO, PREP, DIAG
+    Valid flags are:
+      * boot
+      * root
+      * swap
+      * hidden
+      * raid
+      * lvm
+      * lba
+      * hp-service
+      * palo
+      * prep
+      * msftres
+      * bios_grub
+      * atvrecv
+      * diag
+      * legacy_boot
+      * msftdata
+      * irst
+      * esp type
 
     CLI Example:
 
@@ -650,8 +673,7 @@ def set_(device, minor, flag, state):
             'Invalid minor number passed to partition.set'
         )
 
-    if flag not in set(['bios_grub', 'legacy_boot', 'boot', 'lba', 'root',
-                        'swap', 'hidden', 'raid', 'LVM', 'PALO', 'PREP', 'DIAG']):
+    if flag not in VALID_PARTITION_FLAGS:
         raise CommandExecutionError('Invalid flag passed to partition.set')
 
     if state not in set(['on', 'off']):
@@ -682,8 +704,7 @@ def toggle(device, partition, flag):
             'Invalid partition number passed to partition.toggle'
         )
 
-    if flag not in set(['bios_grub', 'legacy_boot', 'boot', 'lba', 'root',
-                        'swap', 'hidden', 'raid', 'LVM', 'PALO', 'PREP', 'DIAG']):
+    if flag not in VALID_PARTITION_FLAGS:
         raise CommandExecutionError('Invalid flag passed to partition.toggle')
 
     cmd = 'parted -m -s {0} toggle {1} {2}'.format(device, partition, flag)
