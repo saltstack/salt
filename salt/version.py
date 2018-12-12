@@ -10,10 +10,14 @@ import sys
 import platform
 
 # linux_distribution deprecated in py3.7
-try:
+LINUX_DIST_AVAIL = True
+if sys.version_info[:2] >= (3, 7):
+    try:
+        from distro import linux_distribution
+    except ImportError:
+        LINUX_DIST_AVAIL = False
+else:
     from platform import linux_distribution
-except ImportError:
-    from distro import linux_distribution
 
 # pylint: disable=invalid-name,redefined-builtin
 # Import 3rd-party libs
@@ -626,7 +630,13 @@ def system_information():
         '''
         Return host system version.
         '''
-        lin_ver = linux_distribution()
+        if LINUX_DIST_AVAIL:
+            lin_ver = linux_distribution()
+        else:
+            lin_ver = ('Unknown OS Name',
+                       'Unknown OS Release',
+                       'Unknown OS Codename')
+
         mac_ver = platform.mac_ver()
         win_ver = platform.win32_ver()
 
@@ -663,9 +673,16 @@ def system_information():
         _, ver, sp, extra = platform.win32_ver()
         version = ' '.join([release, ver, sp, extra])
 
+    if not LINUX_DIST_AVAIL:
+        full_distribution_name = ('Unknown OS Name',
+                                  'Unknown OS Release',
+                                  'Unknown OS Codename')
+    else:
+        full_distribution_name = linux_distribution(full_distribution_name=False)
+
     system = [
         ('system', platform.system()),
-        ('dist', ' '.join(linux_distribution(full_distribution_name=False))),
+        ('dist', ' '.join(full_distribution_name)),
         ('release', release),
         ('machine', platform.machine()),
         ('version', version),
@@ -750,6 +767,7 @@ def msi_conformant_version():
     if noc == 0:
         noc = 65535
     return '{}.{}.{}'.format(short_year, 20*(month-1)+bugfix, noc)
+
 
 if __name__ == '__main__':
     if len(sys.argv) == 2 and sys.argv[1] == 'msi':
