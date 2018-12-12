@@ -5,7 +5,8 @@
 {% if interface.hwaddress                   %}    hwaddress {{interface.hwaddress}}
 {%endif%}{% if interface.vlan_raw_device    %}    vlan-raw-device {{interface.vlan_raw_device}}
 {%endif%}{% if interface.address            %}    address {{interface.address}}
-{%endif%}{% if interface.netmask            %}    netmask {{interface.netmask}}
+{%endif%}{% if interface.addresses          %}{%for addr in interface.addresses %}    address {{addr}}
+{%endfor%}{%endif%}{% if interface.netmask  %}    netmask {{interface.netmask}}
 {%endif%}{% if interface.broadcast          %}    broadcast {{interface.broadcast}}
 {%endif%}{% if interface.metric             %}    metric {{interface.metric}}
 {%endif%}{% if interface.gateway            %}    gateway {{interface.gateway}}
@@ -30,8 +31,12 @@
 {%endif%}{% if interface.unit               %}    unit {{interface.unit}}
 {%endif%}{% if interface.options            %}    options {{interface.options}}
 {%endif%}{% if interface.master             %}    bond-master {{interface.master}}
-{%endif%}{% if interface.dns_nameservers    %}    dns-nameservers {%for item in interface.dns_nameservers %}{{item}} {%endfor%}
-{%endif%}{% if interface.dns_search         %}    dns-search {% for item in interface.dns_search %}{{item}} {%endfor%}
+{%endif%}{% if interface.dns_nameservers    %}    dns-nameservers {%
+    if interface.dns_nameservers is string %}{{ interface.dns_nameservers }}{%
+    else %}{{ interface.dns_nameservers|join(" ") }}{% endif %}
+{%endif%}{% if interface.dns_search         %}    dns-search {%
+    if interface.dns_search is string %}{{interface.dns_search }}{%
+    else %}{{ interface.dns_search|join(" ") }}{% endif %}
 {%endif%}{% if interface.ethtool            %}{%for item in interface.ethtool_keys %}    {{item}} {{interface.ethtool[item]}}
 {%endfor%}{%endif%}{% if interface.bonding  %}{%for item in interface.bonding_keys %}    bond-{{item}} {{interface.bonding[item]}}
 {%endfor%}{%endif%}{% if interface.bridging %}{%for item in interface.bridging_keys %}    bridge_{{item}} {{interface.bridging[item]}}
@@ -69,7 +74,8 @@
 {%endif%}{% if interface.dhcp               %}    dhcp {{interface.dhcp}}{# END V6ONLOPTS #}
 {%endif%}{% if interface.vlan_raw_device    %}    vlan-raw-device {{interface.vlan_raw_device}}
 {%endif%}{% if interface.address            %}    address {{interface.address}}
-{%endif%}{% if interface.netmask            %}    netmask {{interface.netmask}}
+{%endif%}{% if interface.addresses          %}{% for addr in interface.addresses %}    address {{addr}}
+{%endfor%}{%endif%}{% if interface.netmask  %}    netmask {{interface.netmask}}
 {%endif%}{% if interface.broadcast          %}    broadcast {{interface.broadcast}}
 {%endif%}{% if interface.metric             %}    metric {{interface.metric}}
 {%endif%}{% if interface.gateway            %}    gateway {{interface.gateway}}
@@ -94,8 +100,12 @@
 {%endif%}{% if interface.unit               %}    unit {{interface.unit}}
 {%endif%}{% if interface.options            %}    options {{interface.options}}
 {%endif%}{% if interface.master             %}    bond-master {{interface.master}}
-{%endif%}{% if interface.dns_nameservers    %}    dns-nameservers {%for item in interface.dns_nameservers %}{{item}} {%endfor%}
-{%endif%}{% if interface.dns_search         %}    dns-search {% for item in interface.dns_search %}{{item}} {%endfor%}
+{%endif%}{% if interface.dns_nameservers    %}    dns-nameservers {%
+    if interface.dns_nameservers is string %}{{ interface.dns_nameservers }}{%
+    else %}{{ interface.dns_nameservers|join(" ") }}{% endif %}
+{%endif%}{% if interface.dns_search         %}    dns-search {%
+    if interface.dns_search is string %}{{interface.dns_search }}{%
+    else %}{{ interface.dns_search|join(" ") }}{% endif %}
 {%endif%}{% if interface.ethtool            %}{%for item in interface.ethtool_keys %}    {{item}} {{interface.ethtool[item]}}
 {%endfor%}{%endif%}{% if interface.bonding  %}{%for item in interface.bonding_keys %}    bond-{{item}} {{interface.bonding[item]}}
 {%endfor%}{%endif%}{% if interface.bridging %}{%for item in interface.bridging_keys %}    bridge_{{item}} {{interface.bridging[item]}}
