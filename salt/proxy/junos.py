@@ -129,45 +129,12 @@ def alive(opts):
 
     dev = conn()
 
-    # Check that the underlying netconf connection still exists.
-    if dev._conn is None:
-        return False
+    thisproxy['conn'].connected = ping()
 
-    # call rpc only if ncclient queue is empty. If not empty that means other
-    # rpc call is going on.
-    if hasattr(dev._conn, '_session'):
-        if dev._conn._session._transport.is_active():
-            # there is no on going rpc call.
-            if dev._conn._session._q.empty():
-                thisproxy['conn'].connected = ping()
-        else:
-            # ssh connection is lost
-            dev.connected = False
-    else:
-        # other connection modes, like telnet
-        thisproxy['conn'].connected = ping()
+    if not dev.connected:
+        __salt__['event.fire_master']({}, 'junos/proxy/{}/stop'.format(
+            opts['proxy']['host']))
     return dev.connected
-
-
-def proxytype():
-    '''
-    Returns the name of this proxy
-    '''
-    return 'junos'
-
-
-def get_serialized_facts():
-    facts = dict(thisproxy['conn'].facts)
-    if 'version_info' in facts:
-        facts['version_info'] = \
-            dict(facts['version_info'])
-    # For backward compatibility. 'junos_info' is present
-    # only of in newer versions of facts.
-    if 'junos_info' in facts:
-        for re in facts['junos_info']:
-            facts['junos_info'][re]['object'] = \
-                dict(facts['junos_info'][re]['object'])
-    return facts
 
 
 def ping():
@@ -176,14 +143,50 @@ def ping():
     '''
 
     dev = conn()
+    # Check that the underlying netconf connection still exists.
+    if dev._conn is None:
+        return False
+
+    # call rpc only if ncclient queue is empty. If not empty that means other
+    # rpc call is going on.
+    if hasattr(dev._conn, '_session'):
+        if dev._conn._session._transport.is_active():
+            # there is no on going rpc call. buffer tell can be 1 as it stores
+            # remaining char after "]]>]]>" which can be a new line char
+            if dev._conn._session._buffer.tell() <= 1 and \
+                    dev._conn._session._q.empty():
+                return _rpc_file_list(dev)
+            else:
+                log.debug('skipped ping() call as proxy already getting data')
+                return True
+        else:
+            # ssh connection is lost
+            return False
+    else:
+        # other connection modes, like telnet
+        return _rpc_file_list(dev)
+
+
+def _rpc_file_list(dev):
     try:
-        dev.rpc.file_list(path='/dev/null', dev_timeout=2)
+        dev.rpc.file_list(path='/dev/null', dev_timeout=5)
         return True
     except (RpcTimeoutError, ConnectClosedError):
         try:
             dev.close()
+            return False
         except (RpcError, ConnectError, TimeoutExpiredError):
             return False
+    except AttributeError as ex:
+        if "'NoneType' object has no attribute 'timeout'" in ex:
+            return False
+
+
+def proxytype():
+    '''
+    Returns the name of this proxy
+    '''
+    return 'junos'
 
 
 def shutdown(opts):
