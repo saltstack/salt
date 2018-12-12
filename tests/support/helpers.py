@@ -52,7 +52,7 @@ except ImportError:
         return port
 
 # Import Salt Tests Support libs
-from tests.support.unit import skip, _id
+from tests.support.unit import skip, _id, SkipTest
 from tests.support.mock import patch
 from tests.support.paths import FILES, TMP
 
@@ -208,7 +208,7 @@ def flaky(caller=None, condition=True, attempts=4):
             try:
                 return caller(cls)
             except Exception as exc:
-                if log.isEnabledFor(logging.DEBUG):
+                if not isinstance(exc, (AssertionError, SkipTest)) and log.isEnabledFor(logging.DEBUG):
                     log.exception(exc, exc_info=True)
                 if attempt >= attempts -1:
                     raise exc
