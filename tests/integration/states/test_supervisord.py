@@ -11,9 +11,9 @@ import time
 import subprocess
 
 # Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
-from tests.support.paths import TMP
 from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import salt libs
@@ -34,7 +34,7 @@ class SupervisordTest(ModuleCase, SaltReturnAssertsMixin):
     def setUp(self):
         super(SupervisordTest, self).setUp()
 
-        self.venv_test_dir = os.path.join(TMP, 'supervisortests')
+        self.venv_test_dir = os.path.join(RUNTIME_VARS.TMP, 'supervisortests')
         self.venv_dir = os.path.join(self.venv_test_dir, 'venv')
         self.supervisor_sock = os.path.join(self.venv_dir, 'supervisor.sock')
 
