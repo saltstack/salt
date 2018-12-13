@@ -172,18 +172,14 @@ if USE_LOAD_BALANCER:
                 'log_queue_level': self.log_queue_level
             }
 
-        def _close(self):
-            '''
-            This class is a singleton so close have to be called only once during
-            garbage collection when nobody uses this instance.
-            '''
+        def close(self):
             if self._socket is not None:
                 self._socket.shutdown(socket.SHUT_RDWR)
                 self._socket.close()
                 self._socket = None
 
         def __del__(self):
-            self._close()
+            self.close()
 
         def run(self):
             '''
