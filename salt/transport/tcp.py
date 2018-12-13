@@ -1407,22 +1407,20 @@ class TCPPubServerChannel(salt.transport.server.PubServerChannel):
         else:
             pull_uri = os.path.join(self.opts['sock_dir'], 'publish_pull.ipc')
 
-        pull_sock = salt.transport.ipc.IPCMessageServer(
-            pull_uri,
-            io_loop=self.io_loop,
-            payload_handler=pub_server.publish_payload,
-        )
+        with salt.transport.ipc.IPCMessageServer(
+                pull_uri,
+                io_loop=self.io_loop,
+                payload_handler=pub_server.publish_payload) as pull_sock:
+            # Securely create socket
+            log.info('Starting the Salt Puller on %s', pull_uri)
+            with salt.utils.files.set_umask(0o177):
+                pull_sock.start()
 
-        # Securely create socket
-        log.info('Starting the Salt Puller on %s', pull_uri)
-        with salt.utils.files.set_umask(0o177):
-            pull_sock.start()
-
-        # run forever
-        try:
-            self.io_loop.start()
-        except (KeyboardInterrupt, SystemExit):
-            salt.log.setup.shutdown_multiprocessing_logging()
+            # run forever
+            try:
+                self.io_loop.start()
+            except (KeyboardInterrupt, SystemExit):
+                salt.log.setup.shutdown_multiprocessing_logging()
 
     def pre_fork(self, process_manager, kwargs=None):
         '''

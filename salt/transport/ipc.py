@@ -237,14 +237,19 @@ class IPCClient(object):
                                 localhost connection.
     '''
 
-    # Create singleton map between two sockets
+    # Create singleton map between the io_loop and the socket_path
     instance_map = weakref.WeakKeyDictionary()
+    # Keep track of instance references to know when to actually close
+    instance_ref_tracking = weakref.WeakKeyDictionary()
 
     def __new__(cls, socket_path, io_loop=None):
         io_loop = io_loop or tornado.ioloop.IOLoop.current()
-        if io_loop not in IPCClient.instance_map:
-            IPCClient.instance_map[io_loop] = weakref.WeakValueDictionary()
-        loop_instance_map = IPCClient.instance_map[io_loop]
+        if io_loop not in cls.instance_map:
+            cls.instance_map[io_loop] = weakref.WeakValueDictionary()
+        if io_loop not in cls.instance_ref_tracking:
+            cls.instance_ref_tracking[io_loop] = {}
+        loop_instance_map = cls.instance_map[io_loop]
+        instance_ref_tracking = cls.instance_ref_tracking[io_loop]
 
         # FIXME
         key = six.text_type(socket_path)
@@ -254,10 +259,12 @@ class IPCClient(object):
             log.debug('Initializing new IPCClient for path: %s', key)
             client = object.__new__(cls)
             # FIXME
-            client.__singleton_init__(io_loop=io_loop, socket_path=socket_path)
+            client.__singleton_init__(socket_path=socket_path, io_loop=io_loop)
             loop_instance_map[key] = client
         else:
             log.debug('Re-using IPCClient for %s', key)
+
+        instance_ref_tracking.setdefault(key, []).append(client)
         return client
 
     def __singleton_init__(self, socket_path, io_loop=None):
@@ -282,6 +289,12 @@ class IPCClient(object):
     def __init__(self, socket_path, io_loop=None):
         # Handled by singleton __new__
         pass
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.close()
 
     def connected(self):
         return self.stream is not None and not self.stream.closed()
@@ -363,7 +376,23 @@ class IPCClient(object):
         '''
         if self._closing:
             return
+
+        if self.io_loop in self.__class__.instance_ref_tracking:
+            instance_ref_tracking = self.__class__.instance_ref_tracking[self.io_loop]
+            if self.socket_path in instance_ref_tracking:
+                instance_ref_tracking[self.socket_path].remove(self)
+                if instance_ref_tracking[self.socket_path]:
+                    # There are still references, don't close just yet
+                    return
+                # No more references, remove socket_path from the ref counter
+                del instance_ref_tracking[self.socket_path]
+
+            if not instance_ref_tracking:
+                # No more references, remove the io_loop from the refcounter
+                del self.__class__.instance_ref_tracking[self.io_loop]
+
         self._closing = True
+        log.debug('Closing %s', self)
         if self.stream is not None and not self.stream.closed():
             self.stream.close()
 
@@ -371,11 +400,13 @@ class IPCClient(object):
         # that a closed entry may not be reused.
         # This forces this operation even if the reference
         # count of the entry has not yet gone to zero.
-        if self.io_loop in IPCClient.instance_map:
-            loop_instance_map = IPCClient.instance_map[self.io_loop]
+        if self.io_loop in self.__class__.instance_map:
+            loop_instance_map = self.__class__.instance_map[self.io_loop]
             key = six.text_type(self.socket_path)
             if key in loop_instance_map:
                 del loop_instance_map[key]
+            if not loop_instance_map:
+                del self.__class__.instance_map[self.io_loop]
 
 
 class IPCMessageClient(IPCClient):

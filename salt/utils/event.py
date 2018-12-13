@@ -59,6 +59,7 @@ import fnmatch
 import hashlib
 import logging
 import datetime
+import weakref
 import sys
 
 try:
@@ -232,10 +233,9 @@ class SaltEvent(object):
     RAET compatible
     The base class used to manage salt events
     '''
-    def __init__(
-            self, node, sock_dir=None,
-            opts=None, listen=True, io_loop=None,
-            keep_loop=False, raise_errors=False):
+    def __init__(self, node, sock_dir=None,
+                 opts=None, listen=True, io_loop=None,
+                 keep_loop=False, raise_errors=False):
         '''
         :param IOLoop io_loop: Pass in an io_loop if you want asynchronous
                                operation for obtaining events. Eg use of
@@ -259,6 +259,12 @@ class SaltEvent(object):
         self.subscriber = None
         self.pusher = None
         self.raise_errors = raise_errors
+
+        try:
+            weakref.finalize(self, self.destroy)
+        except AttributeError:
+            # Python 2
+            pass
 
         if opts is None:
             opts = {}
@@ -887,13 +893,14 @@ class SaltEvent(object):
         # This will handle reconnects
         return self.subscriber.read_async(event_handler)
 
-    def __del__(self):
-        # skip exceptions in destroy-- since destroy() doesn't cover interpreter
-        # shutdown-- where globals start going missing
-        try:
-            self.destroy()
-        except Exception:
-            pass
+    if six.PY2:
+        def __del__(self):
+            # skip exceptions in destroy-- since destroy() doesn't cover interpreter
+            # shutdown-- where globals start going missing
+            try:
+                self.destroy()
+            except Exception:
+                pass
 
 
 class MasterEvent(SaltEvent):
