@@ -245,8 +245,12 @@ class CkMinions(object):
         try:
             if self.opts['key_cache'] and os.path.exists(pki_cache_fn):
                 log.debug('Returning cached minion list')
-                with salt.utils.files.fopen(pki_cache_fn) as fn_:
-                    return self.serial.load(fn_)
+                if six.PY2:
+                    with salt.utils.files.fopen(pki_cache_fn) as fn_:
+                        return self.serial.load(fn_)
+                else:
+                    with salt.utils.files.fopen(pki_cache_fn, mode='rb') as fn_:
+                        return self.serial.load(fn_)
             else:
                 for fn_ in salt.utils.data.sorted_ignorecase(os.listdir(os.path.join(self.opts['pki_dir'], self.acc))):
                     if not fn_.startswith('.') and os.path.isfile(os.path.join(self.opts['pki_dir'], self.acc, fn_)):
