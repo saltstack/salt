@@ -974,9 +974,8 @@ class MinionManager(MinionBase):
         '''
         if not self.minions:
             err = ('Minion unable to successfully connect to '
-                   'a Salt Master.  Exiting.')
+                   'a Salt Master.')
             log.error(err)
-            raise SaltSystemExit(code=42, msg=err)
 
     def _spawn_minions(self, timeout=60):
         '''
