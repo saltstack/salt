@@ -24,6 +24,7 @@ import os
 import time
 import random
 import logging
+import weakref
 from datetime import datetime
 
 # Import salt libs
@@ -145,6 +146,12 @@ class LocalClient(object):
                                set_event_handler() API. Otherwise,
                                operation will be synchronous.
         '''
+        try:
+            weakref.finalize(self, self.destroy)
+        except AttributeError:
+            # FIXME when we go Py3 only
+            pass
+
         if mopts:
             self.opts = mopts
         else:
@@ -1911,7 +1918,7 @@ class LocalClient(object):
         raise tornado.gen.Return({'jid': payload['load']['jid'],
                                   'minions': payload['load']['minions']})
 
-    def __del__(self):
+    def destroy(self):
         # This IS really necessary!
         # When running tests, if self.events is not destroyed, we leak 2
         # threads per test case which uses self.client
@@ -1923,6 +1930,10 @@ class LocalClient(object):
         if self.opts.get('order_masters'):
             self.event.unsubscribe('syndic/.*/{0}'.format(job_id), 'regex')
         self.event.unsubscribe('salt/job/{0}'.format(job_id))
+
+    if six.PY2:
+        def __del__(self):
+            self.destroy()
 
 
 class FunctionWrapper(dict):

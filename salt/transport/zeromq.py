@@ -176,6 +176,11 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
 
     # an init for the singleton instance to call
     def __singleton_init__(self, opts, **kwargs):
+        try:
+            weakref.finalize(self, self.destroy)
+        except AttributeError:
+            # FIXME when we go Py3 only
+            pass
         self.opts = dict(opts)
         self.ttype = 'zeromq'
 
@@ -198,7 +203,7 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
                                                         args=(self.opts, self.opts['master_uri'],),
                                                         kwargs={'io_loop': self._io_loop})
 
-    def __del__(self):
+    def destroy(self):
         '''
         Since the message_client creates sockets and assigns them to the IOLoop we have to
         specifically destroy them, since we aren't the only ones with references to the FDs
@@ -207,6 +212,10 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
             self.message_client.destroy()
         else:
             log.debug('No message_client attr for AsyncZeroMQReqChannel found. Not destroying sockets.')
+
+    if six.PY2:
+        def __del__(self):
+            self.destroy()
 
     @property
     def master_uri(self):
@@ -336,6 +345,11 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
     def __init__(self,
                  opts,
                  **kwargs):
+        try:
+            weakref.finalize(self, self.destroy)
+        except AttributeError:
+            # FIXME when we go Py3 only
+            pass
         self.opts = opts
         self.ttype = 'zeromq'
         self.io_loop = kwargs.get('io_loop')
@@ -430,8 +444,9 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
         if hasattr(self, 'context') and self.context.closed is False:
             self.context.term()
 
-    def __del__(self):
-        self.destroy()
+    if six.PY2:
+        def __del__(self):
+            self.destroy()
 
     # TODO: this is the time to see if we are connected, maybe use the req channel to guess?
     @tornado.gen.coroutine
@@ -995,9 +1010,15 @@ class AsyncReqMessageClientPool(salt.transport.MessageClientPool):
     '''
     def __init__(self, opts, args=None, kwargs=None):
         super(AsyncReqMessageClientPool, self).__init__(AsyncReqMessageClient, opts, args=args, kwargs=kwargs)
+        try:
+            weakref.finalize(self, self.destroy)
+        except AttributeError:
+            # FIXME when we go Py3 only
+            pass
 
-    def __del__(self):
-        self.destroy()
+    if six.PY2:
+        def __del__(self):
+            self.destroy()
 
     def destroy(self):
         for message_client in self.message_clients:
@@ -1028,6 +1049,11 @@ class AsyncReqMessageClient(object):
                            http://api.zeromq.org/2-1:zmq-setsockopt [ZMQ_LINGER]
         :param IOLoop io_loop: A Tornado IOLoop event scheduler [tornado.ioloop.IOLoop]
         '''
+        try:
+            weakref.finalize(self, self.destroy)
+        except AttributeError:
+            # FIXME when we go Py3 only
+            pass
         self.opts = opts
         self.addr = addr
         self.linger = linger
@@ -1067,8 +1093,9 @@ class AsyncReqMessageClient(object):
         if self.context.closed is False:
             self.context.term()
 
-    def __del__(self):
-        self.destroy()
+    if six.PY2:
+        def __del__(self):
+            self.destroy()
 
     def _init_socket(self):
         if hasattr(self, 'stream'):

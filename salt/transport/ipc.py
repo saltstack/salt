@@ -103,6 +103,11 @@ class IPCServer(object):
         :param func payload_handler: A function to customize handling of
                                      incoming data.
         '''
+        try:
+            weakref.finalize(self, self.close)
+        except AttributeError:
+            # FIXME when we go Py3 only
+            pass
         self.socket_path = socket_path
         self._started = False
         self.payload_handler = payload_handler
@@ -216,8 +221,15 @@ class IPCServer(object):
         if hasattr(self.sock, 'close'):
             self.sock.close()
 
-    def __del__(self):
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
         self.close()
+
+    if six.PY2:
+        def __del__(self):
+            self.close()
 
 
 class IPCClient(object):
@@ -276,6 +288,11 @@ class IPCClient(object):
         to the server.
 
         '''
+        try:
+            weakref.finalize(self, self.close)
+        except AttributeError:
+            # FIXME when we go Py3 only
+            pass
         self.io_loop = io_loop or tornado.ioloop.IOLoop.current()
         self.socket_path = socket_path
         self._closing = False
@@ -365,8 +382,9 @@ class IPCClient(object):
 
                 yield tornado.gen.sleep(1)
 
-    def __del__(self):
-        self.close()
+    if six.PY2:
+        def __del__(self):
+            self.close()
 
     def close(self):
         '''
@@ -510,6 +528,11 @@ class IPCMessagePublisher(object):
                                     for a tcp localhost connection.
         :param IOLoop io_loop: A Tornado ioloop to handle scheduling
         '''
+        try:
+            weakref.finalize(self, self.close)
+        except AttributeError:
+            # FIXME when we go Py3 only
+            pass
         self.opts = opts
         self.socket_path = socket_path
         self._started = False
@@ -606,8 +629,9 @@ class IPCMessagePublisher(object):
         if hasattr(self.sock, 'close'):
             self.sock.close()
 
-    def __del__(self):
-        self.close()
+    if six.PY2:
+        def __del__(self):
+            self.close()
 
 
 class IPCMessageSubscriber(IPCClient):
@@ -646,6 +670,11 @@ class IPCMessageSubscriber(IPCClient):
     def __singleton_init__(self, socket_path, io_loop=None):
         super(IPCMessageSubscriber, self).__singleton_init__(
             socket_path, io_loop=io_loop)
+        try:
+            weakref.finalize(self, self.close)
+        except AttributeError:
+            # FIXME when we go Py3 only
+            pass
         self._read_sync_future = None
         self._read_stream_future = None
         self._sync_ioloop_running = False
@@ -784,6 +813,7 @@ class IPCMessageSubscriber(IPCClient):
             if self._read_stream_future is not None and self._read_stream_future.done():
                 self._read_stream_future.exception()
 
-    def __del__(self):
-        if IPCMessageSubscriber in globals():
-            self.close()
+    if six.PY2:
+        def __del__(self):
+            if IPCMessageSubscriber in globals():
+                self.close()

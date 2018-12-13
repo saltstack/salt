@@ -29,6 +29,7 @@ import errno
 import signal
 import select
 import logging
+import weakref
 
 # Import salt libs
 from salt.ext import six
@@ -120,6 +121,12 @@ class Terminal(object):
                  stream_stdout=None,
                  stream_stderr=None,
                  ):
+
+        try:
+            weakref.finalize(self, self.close)
+        except AttributeError:
+            # FIXME when we go Py3 only
+            pass
 
         # Let's avoid Zombies!!!
         _cleanup()
@@ -931,7 +938,7 @@ class Terminal(object):
     # <---- Linux Methods ----------------------------------------------------
 
     # ----- Cleanup!!! ------------------------------------------------------>
-    def __del__(self, _maxsize=sys.maxsize, _active=_ACTIVE):  # pylint: disable=W0102
+    def destroy(self, _maxsize=sys.maxsize, _active=_ACTIVE):  # pylint: disable=W0102
         # I've disabled W0102 above which is regarding a dangerous default
         # value of [] for _ACTIVE, though, this is how Python itself handles
         # their subprocess clean up code.
@@ -945,5 +952,8 @@ class Terminal(object):
         if self.isalive() and _ACTIVE is not None:
             # Child is still running, keep us alive until we can wait on it.
             _ACTIVE.append(self)
+    if six.PY2:
+        def __del__(self, _maxsize=sys.maxsize, _active=_ACTIVE):  # pylint: disable=W0102
+            self.destroy(_maxsize=_maxsize, _active=_active)
     # <---- Cleanup!!! -------------------------------------------------------
 # <---- Platform Specific Methods --------------------------------------------

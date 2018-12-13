@@ -11,6 +11,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import gc
 import datetime
+import weakref
 
 # Import salt libs
 import salt.log
@@ -266,6 +267,11 @@ class SREQ(object):
     Create a generic interface to wrap salt zeromq req calls.
     '''
     def __init__(self, master, id_='', serial='msgpack', linger=0, opts=None):
+        try:
+            weakref.finalize(self, self.destroy)
+        except AttributeError:
+            # FIXME when we go Py3 only
+            pass
         self.master = master
         self.id_ = id_
         self.serial = Serial(serial)
@@ -391,5 +397,6 @@ class SREQ(object):
         if self.context.closed is False:
             self.context.term()
 
-    def __del__(self):
-        self.destroy()
+    if six.PY2:
+        def __del__(self):
+            self.destroy()
