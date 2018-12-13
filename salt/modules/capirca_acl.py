@@ -78,6 +78,7 @@ def __virtual__():
 # underlying library, Capirca
 _TERM_FIELDS = {}
 
+
 # IP-type fields
 # when it comes to IP fields, Capirca does not ingest raw text
 # but they need to be converted to `nacaddr.IP`
