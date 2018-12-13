@@ -908,7 +908,9 @@ def session_salt_syndic(request, session_salt_master_of_masters, session_salt_sy
         ('Salt Syndic Master', psutil.Process(session_salt_master_of_masters.pid)),
         ('       Salt Syndic', psutil.Process(session_salt_syndic.pid)),
     )).items())
-    return session_salt_syndic
+    yield session_salt_syndic
+    request.session.stats_processes.pop('Salt Syndic Master')
+    request.session.stats_processes.pop('       Salt Syndic')
 
 
 @pytest.fixture(scope='session')
