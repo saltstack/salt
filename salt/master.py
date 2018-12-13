@@ -19,7 +19,7 @@ import logging
 import collections
 import multiprocessing
 import threading
-import salt.serializers.msgpack
+import weakref
 
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 from salt.ext import six
@@ -67,6 +67,7 @@ import salt.utils.stringutils
 import salt.utils.user
 import salt.utils.verify
 import salt.utils.zeromq
+import salt.serializers.msgpack
 from salt.config import DEFAULT_INTERVAL
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.transport import iter_transport_opts
@@ -833,6 +834,11 @@ class ReqServer(salt.utils.process.SignalHandlingMultiprocessingProcess):
         :returns: Request server
         '''
         super(ReqServer, self).__init__(**kwargs)
+        try:
+            weakref.finalize(self, self.destroy)
+        except AttributeError:
+            # FIXME when we go Py3 only
+            pass
         self.opts = opts
         self.master_key = mkey
         # Prepare the AES key
@@ -942,8 +948,9 @@ class ReqServer(salt.utils.process.SignalHandlingMultiprocessingProcess):
             self.process_manager.send_signal_to_processes(signum)
             self.process_manager.kill_children()
 
-    def __del__(self):
-        self.destroy()
+    if six.PY2:
+        def __del__(self):
+            self.destroy()
 
 
 class MWorker(salt.utils.process.SignalHandlingMultiprocessingProcess):

@@ -3,11 +3,17 @@
 Helpers/utils for working with tornado asynchronous stuff
 '''
 
+# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+import weakref
+import contextlib
 
+# Import 3rd-party libs
 import tornado.ioloop
 import tornado.concurrent
-import contextlib
+
+# Import Salt libs
+from salt.ext import six
 from salt.utils import zeromq
 
 
@@ -39,6 +45,11 @@ class SyncWrapper(object):
     ret = sync.async_method()
     '''
     def __init__(self, method, args=tuple(), kwargs=None):
+        try:
+            weakref.finalize(self, self.close)
+        except AttributeError:
+            # FIXME when we go Py3 only
+            pass
         if kwargs is None:
             kwargs = {}
 
@@ -73,7 +84,7 @@ class SyncWrapper(object):
         self.io_loop.start()
         return future.result()
 
-    def __del__(self):
+    def close(self):
         '''
         On deletion of the asynchronous wrapper, make sure to clean up the asynchronous stuff
         '''
@@ -89,3 +100,7 @@ class SyncWrapper(object):
         elif hasattr(self, 'io_loop'):
             self.io_loop.close()
             del self.io_loop
+
+    if six.PY2:
+        def __del__(self):
+            self.close()

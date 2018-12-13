@@ -8,8 +8,10 @@ from __future__ import absolute_import, print_function, unicode_literals
 import glob
 import sys
 import os
+import weakref
 
 # Import Salt libs
+from salt.ext import six
 import salt.utils.platform
 import salt.utils.stringutils
 
@@ -101,15 +103,24 @@ class RSAX931Signer(object):
 
         :param str keydata: The RSA private key in PEM format
         '''
+        try:
+            weakref.finalize(self, self.destroy)
+        except AttributeError:
+            # FIXME when we go Py3 only
+            pass
         keydata = salt.utils.stringutils.to_bytes(keydata, 'ascii')
         self._bio = libcrypto.BIO_new_mem_buf(keydata, len(keydata))
         self._rsa = c_void_p(libcrypto.RSA_new())
         if not libcrypto.PEM_read_bio_RSAPrivateKey(self._bio, pointer(self._rsa), None, None):
             raise ValueError('invalid RSA private key')
 
-    def __del__(self):
+    def destroy(self):
         libcrypto.BIO_free(self._bio)
         libcrypto.RSA_free(self._rsa)
+
+    if six.PY2:
+        def __del__(self):
+            self.destroy()
 
     def sign(self, msg):
         '''
@@ -138,6 +149,11 @@ class RSAX931Verifier(object):
 
         :param str pubdata: The RSA public key in PEM format
         '''
+        try:
+            weakref.finalize(self, self.destroy)
+        except AttributeError:
+            # FIXME when we go Py3 only
+            pass
         pubdata = salt.utils.stringutils.to_bytes(pubdata, 'ascii')
         pubdata = pubdata.replace(b'RSA ', b'')
         self._bio = libcrypto.BIO_new_mem_buf(pubdata, len(pubdata))
@@ -145,9 +161,13 @@ class RSAX931Verifier(object):
         if not libcrypto.PEM_read_bio_RSA_PUBKEY(self._bio, pointer(self._rsa), None, None):
             raise ValueError('invalid RSA public key')
 
-    def __del__(self):
+    def destroy(self):
         libcrypto.BIO_free(self._bio)
         libcrypto.RSA_free(self._rsa)
+
+    if six.PY2:
+        def __del__(self):
+            self.destroy()
 
     def verify(self, signed):
         '''

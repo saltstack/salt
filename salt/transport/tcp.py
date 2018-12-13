@@ -147,6 +147,11 @@ if USE_LOAD_BALANCER:
 
         def __init__(self, opts, socket_queue, **kwargs):
             super(LoadBalancerServer, self).__init__(**kwargs)
+            try:
+                weakref.finalize(self, self.close)
+            except AttributeError:
+                # FIXME when we go Py3 only
+                pass
             self.opts = opts
             self.socket_queue = socket_queue
             self._socket = None
@@ -178,8 +183,9 @@ if USE_LOAD_BALANCER:
                 self._socket.close()
                 self._socket = None
 
-        def __del__(self):
-            self.close()
+        if six.PY2:
+            def __del__(self):
+                self.close()
 
         def run(self):
             '''
@@ -261,6 +267,11 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
 
     # an init for the singleton instance to call
     def __singleton_init__(self, opts, **kwargs):
+        try:
+            weakref.finalize(self, self.close)
+        except AttributeError:
+            # FIXME when we go Py3 only
+            pass
         self.opts = dict(opts)
 
         self.serial = salt.payload.Serial(self.opts)
@@ -291,8 +302,9 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
         self._closing = True
         self.message_client.close()
 
-    def __del__(self):
-        self.close()
+    if six.PY2:
+        def __del__(self):
+            self.close()
 
     def _package_load(self, load):
         return {
@@ -376,6 +388,11 @@ class AsyncTCPPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.tran
     def __init__(self,
                  opts,
                  **kwargs):
+        try:
+            weakref.finalize(self, self.close)
+        except AttributeError:
+            # FIXME when we go Py3 only
+            pass
         self.opts = opts
 
         self.serial = salt.payload.Serial(self.opts)
@@ -398,8 +415,9 @@ class AsyncTCPPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.tran
         if hasattr(self, 'message_client'):
             self.message_client.close()
 
-    def __del__(self):
-        self.close()
+    if six.PY2:
+        def __del__(self):
+            self.close()
 
     def _package_load(self, load):
         return {
@@ -559,6 +577,11 @@ class TCPReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.tra
 
     def __init__(self, opts):
         salt.transport.server.ReqServerChannel.__init__(self, opts)
+        try:
+            weakref.finalize(self, self.close)
+        except AttributeError:
+            # FIXME when we go Py3 only
+            pass
         self._socket = None
 
     @property
@@ -584,8 +607,9 @@ class TCPReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.tra
             except Exception as exc:
                 log.exception('TCPReqServerChannel close generated an exception: %s', str(exc))
 
-    def __del__(self):
-        self.close()
+    if six.PY2:
+        def __del__(self):
+            self.close()
 
     def pre_fork(self, process_manager):
         '''
@@ -829,9 +853,15 @@ class SaltMessageClientPool(salt.transport.MessageClientPool):
     '''
     def __init__(self, opts, args=None, kwargs=None):
         super(SaltMessageClientPool, self).__init__(SaltMessageClient, opts, args=args, kwargs=kwargs)
+        try:
+            weakref.finalize(self, self.close)
+        except AttributeError:
+            # FIXME when we go Py3 only
+            pass
 
-    def __del__(self):
-        self.close()
+    if six.PY2:
+        def __del__(self):
+            self.close()
 
     def close(self):
         for message_client in self.message_clients:
@@ -870,6 +900,11 @@ class SaltMessageClient(object):
     def __init__(self, opts, host, port, io_loop=None, resolver=None,
                  connect_callback=None, disconnect_callback=None,
                  source_ip=None, source_port=None):
+        try:
+            weakref.finalize(self, self.close)
+        except AttributeError:
+            # FIXME when we go Py3 only
+            pass
         self.opts = opts
         self.host = host
         self.port = port
@@ -936,8 +971,9 @@ class SaltMessageClient(object):
         self.connect_callback = None
         self.disconnect_callback = None
 
-    def __del__(self):
-        self.close()
+    if six.PY2:
+        def __del__(self):
+            self.close()
 
     def connect(self):
         '''
@@ -1156,6 +1192,11 @@ class Subscriber(object):
     Client object for use with the TCP publisher server
     '''
     def __init__(self, stream, address):
+        try:
+            weakref.finalize(self, self.close)
+        except AttributeError:
+            # FIXME when we go Py3 only
+            pass
         self.stream = stream
         self.address = address
         self._closing = False
@@ -1177,8 +1218,9 @@ class Subscriber(object):
                 # 'StreamClosedError' when the stream is closed.
                 self._read_until_future.exception()
 
-    def __del__(self):
-        self.close()
+    if six.PY2:
+        def __del__(self):
+            self.close()
 
 
 class PubServer(tornado.tcpserver.TCPServer, object):
@@ -1187,6 +1229,11 @@ class PubServer(tornado.tcpserver.TCPServer, object):
     '''
     def __init__(self, opts, io_loop=None):
         super(PubServer, self).__init__(ssl_options=opts.get('ssl'))
+        try:
+            weakref.finalize(self, self.close)
+        except AttributeError:
+            # FIXME when we go Py3 only
+            pass
         self.io_loop = io_loop
         self.opts = opts
         self._closing = False
@@ -1217,8 +1264,9 @@ class PubServer(tornado.tcpserver.TCPServer, object):
             return
         self._closing = True
 
-    def __del__(self):
-        self.close()
+    if six.PY2:
+        def __del__(self):
+            self.close()
 
     def _add_client_present(self, client):
         id_ = client.id_

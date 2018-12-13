@@ -971,6 +971,11 @@ class AsyncEventPublisher(object):
     TODO: remove references to "minion_event" whenever we need to use this for other things
     '''
     def __init__(self, opts, io_loop=None):
+        try:
+            weakref.finalize(self, self.close)
+        except AttributeError:
+            # FIXME when we go Py3 only
+            pass
         self.opts = salt.config.DEFAULT_MINION_OPTS.copy()
         default_minion_sock_dir = self.opts['sock_dir']
         self.opts.update(opts)
@@ -1074,8 +1079,9 @@ class AsyncEventPublisher(object):
         if hasattr(self, 'puller'):
             self.puller.close()
 
-    def __del__(self):
-        self.close()
+    if six.PY2:
+        def __del__(self):
+            self.close()
 
 
 class EventPublisher(salt.utils.process.SignalHandlingMultiprocessingProcess):
@@ -1085,6 +1091,11 @@ class EventPublisher(salt.utils.process.SignalHandlingMultiprocessingProcess):
     '''
     def __init__(self, opts, **kwargs):
         super(EventPublisher, self).__init__(**kwargs)
+        try:
+            weakref.finalize(self, self.close)
+        except AttributeError:
+            # FIXME when we go Py3 only
+            pass
         self.opts = salt.config.DEFAULT_MASTER_OPTS.copy()
         self.opts.update(opts)
         self._closing = False
@@ -1183,8 +1194,9 @@ class EventPublisher(salt.utils.process.SignalHandlingMultiprocessingProcess):
         self.close()
         super(EventPublisher, self)._handle_signals(signum, sigframe)
 
-    def __del__(self):
-        self.close()
+    if six.PY2:
+        def __del__(self):
+            self.close()
 
 
 class EventReturn(salt.utils.process.SignalHandlingMultiprocessingProcess):

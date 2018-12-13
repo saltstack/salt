@@ -13,6 +13,7 @@ import types
 import signal
 import random
 import logging
+import weakref
 import threading
 import traceback
 import contextlib
@@ -945,6 +946,11 @@ class MinionManager(MinionBase):
     '''
     def __init__(self, opts):
         super(MinionManager, self).__init__(opts)
+        try:
+            weakref.finalize(self, self.destroy)
+        except AttributeError:
+            # FIXME when we go Py3 only
+            pass
         self.auth_wait = self.opts['acceptance_wait_time']
         self.max_auth_wait = self.opts['acceptance_wait_time_max']
         self.minions = []
@@ -955,8 +961,9 @@ class MinionManager(MinionBase):
         self.process_manager = ProcessManager(name='MultiMinionProcessManager')
         self.io_loop.spawn_callback(self.process_manager.run, **{'asynchronous': True})  # Tornado backward compat
 
-    def __del__(self):
-        self.destroy()
+    if six.PY2:
+        def __del__(self):
+            self.destroy()
 
     def _bind(self):
         # start up the event publisher, so we can see events during startup
@@ -1117,6 +1124,11 @@ class Minion(MinionBase):
         Pass in the options dict
         '''
         # this means that the parent class doesn't know *which* master we connect to
+        try:
+            weakref.finalize(self, self.destroy)
+        except AttributeError:
+            # FIXME when we go Py3 only
+            pass
         super(Minion, self).__init__(opts)
         self.timeout = timeout
         self.safe = safe
@@ -2923,8 +2935,9 @@ class Minion(MinionBase):
             for cb in six.itervalues(self.periodic_callbacks):
                 cb.stop()
 
-    def __del__(self):
-        self.destroy()
+    if six.PY2:
+        def __del__(self):
+            self.destroy()
 
 
 class Syndic(Minion):
