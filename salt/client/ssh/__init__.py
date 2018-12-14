@@ -1075,8 +1075,22 @@ class Single(object):
                     opts_pkg['grains'][grain] = self.target['grains'][grain]
 
             popts = {}
-            popts.update(opts_pkg['__master_opts__'])
             popts.update(opts_pkg)
+
+            # Master centric operations such as mine.get must have master option loaded.
+            # The pillar must then be compiled by passing master opts found in opts_pkg['__master_opts__']
+            # which causes the pillar renderer to loose track of salt master options
+            #
+            # Depending on popts merge order, it will overwrite some options found in opts_pkg['__master_opts__']
+            master_centric_funcs = [
+              "pillar.items",
+              "mine.get"
+            ]
+
+            # Pillar compilation is a master centric operation.
+            # Master options take precedence during Pillar compilation
+            popts.update(opts_pkg['__master_opts__'])
+
             pillar = salt.pillar.Pillar(
                     popts,
                     opts_pkg['grains'],
@@ -1084,6 +1098,13 @@ class Single(object):
                     opts_pkg.get('saltenv', 'base')
                     )
             pillar_data = pillar.compile_pillar()
+
+            # Once pillar has been compiled, restore priority of minion opts
+            if self.fun not in master_centric_funcs:
+                log.debug('%s is a minion function', self.fun)
+                popts.update(opts_pkg)
+            else:
+                log.debug('%s is a master function', self.fun)
 
             # TODO: cache minion opts in datap in master.py
             data = {'opts': opts_pkg,

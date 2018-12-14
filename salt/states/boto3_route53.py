@@ -634,7 +634,8 @@ def rr_present(name, HostedZoneId=None, DomainName=None, PrivateZone=False, Name
             if locals().get(u) != rrset.get(u):
                 update = True
                 break
-        if 'ResourceRecords' in rrset and ResourceRecords != sorted(rrset.get('ResourceRecords'), key=lambda x: x['Value']):
+        if 'ResourceRecords' in rrset and ResourceRecords != sorted(rrset.get('ResourceRecords', {}),
+                key=lambda x: x['Value']):
             update = True
 
     if not create and not update:
