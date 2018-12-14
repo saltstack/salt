@@ -95,9 +95,6 @@ class BatchAsync(object):
                     self.initialized = True
 
         if self.initialized and self.done_minions == self.minions.difference(self.timedout_minions):
-            # TODO
-            # if not all available minions finish the batch
-            # the event handler connection is not closed
             self.event.close_pub()
 
     def _get_next(self):
