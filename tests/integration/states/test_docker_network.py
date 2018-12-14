@@ -12,10 +12,11 @@ import subprocess
 import tempfile
 
 # Import Salt Testing Libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
 from tests.support.case import ModuleCase
 from tests.support.docker import with_network, random_name
-from tests.support.paths import FILES, TMP
+from tests.support.paths import FILES
 from tests.support.helpers import destructiveTest, requires_system_grains
 from tests.support.mixins import SaltReturnAssertsMixin
 
@@ -58,7 +59,7 @@ def container_name(func):
     '''
     def build_image():
         # Create temp dir
-        image_build_rootdir = tempfile.mkdtemp(dir=TMP)
+        image_build_rootdir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         script_path = \
             os.path.join(FILES, 'file/base/mkimage-busybox-static')
         cmd = [script_path, image_build_rootdir, IMAGE_NAME]

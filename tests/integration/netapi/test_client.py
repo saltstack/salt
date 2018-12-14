@@ -6,7 +6,7 @@ import os
 import time
 
 # Import Salt Testing libs
-from tests.support.paths import TMP_CONF_DIR
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
 
 # Import Salt libs
@@ -25,7 +25,7 @@ class NetapiClientTest(TestCase):
         '''
         Set up a NetapiClient instance
         '''
-        opts = salt.config.client_config(os.path.join(TMP_CONF_DIR, 'master'))
+        opts = salt.config.client_config(os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'master'))
         self.netapi = salt.netapi.NetapiClient(opts)
 
     def tearDown(self):

@@ -238,6 +238,9 @@ State Changes
 - Added new :py:func:`saltutil <salt.states.saltutil>` state to use instead of
   ``module.run`` to more easily handle change.
 
+- Added new `onfail_all` requisite form to allow for AND logic when adding
+  onfail states.
+
 Module Changes
 ==============
 
