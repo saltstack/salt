@@ -84,6 +84,12 @@ class SyncWrapper(object):
         self.io_loop.start()
         return future.result()
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.close()
+
     def close(self):
         '''
         On deletion of the asynchronous wrapper, make sure to clean up the asynchronous stuff
