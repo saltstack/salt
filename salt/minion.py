@@ -613,6 +613,7 @@ class MinionBase(object):
                 opts.update(prep_ip_port(opts))
                 opts['master_uri_list'].append(resolve_dns(opts)['master_uri'])
 
+            pub_channel = None
             while True:
                 if attempts != 0:
                     # Give up a little time between connection attempts
@@ -676,6 +677,8 @@ class MinionBase(object):
                     self.tok = pub_channel.auth.gen_token(b'salt')
                     self.connected = True
                     raise tornado.gen.Return((opts['master'], pub_channel))
+            if pub_channel is not None:
+                pub_channel.close()
 
         # single master sign in
         else:
@@ -1435,8 +1438,8 @@ class Minion(MinionBase):
             sig = salt.crypt.sign_message(minion_privkey_path, salt.serializers.msgpack.serialize(load))
             load['sig'] = sig
 
-        channel = salt.transport.Channel.factory(self.opts)
-        return channel.send(load, timeout=timeout)
+        with salt.transport.Channel.factory(self.opts) as channel:
+            return channel.send(load, timeout=timeout)
 
     @tornado.gen.coroutine
     def _send_req_async(self, load, timeout):
@@ -1447,9 +1450,9 @@ class Minion(MinionBase):
             sig = salt.crypt.sign_message(minion_privkey_path, salt.serializers.msgpack.serialize(load))
             load['sig'] = sig
 
-        channel = salt.transport.client.AsyncReqChannel.factory(self.opts)
-        ret = yield channel.send(load, timeout=timeout)
-        raise tornado.gen.Return(ret)
+        with salt.transport.client.AsyncReqChannel.factory(self.opts) as channel:
+            ret = yield channel.send(load, timeout=timeout)
+            raise tornado.gen.Return(ret)
 
     def _fire_master(self, data=None, tag=None, events=None, pretag=None, timeout=60, sync=True, timeout_handler=None):
         '''
@@ -2369,14 +2372,14 @@ class Minion(MinionBase):
         '''
         Send mine data to the master
         '''
-        channel = salt.transport.Channel.factory(self.opts)
-        data['tok'] = self.tok
-        try:
-            ret = channel.send(data)
-            return ret
-        except SaltReqTimeoutError:
-            log.warning('Unable to send mine data to master.')
-            return None
+        with salt.transport.Channel.factory(self.opts) as channel:
+            data['tok'] = self.tok
+            try:
+                ret = channel.send(data)
+                return ret
+            except SaltReqTimeoutError:
+                log.warning('Unable to send mine data to master.')
+                return None
 
     def _handle_tag_module_refresh(self, tag, data):
         '''
