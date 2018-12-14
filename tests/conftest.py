@@ -222,6 +222,63 @@ def pytest_configure(config):
     # We always want deferred timeouts. Ie, only take into account the test function time
     # to run, exclude fixture setup/teardown
     config._env_timeout_func_only = True
+
+
+def set_max_open_files_limits(min_soft=3072, min_hard=4096):
+
+    # Get current limits
+    if salt.utils.platform.is_windows():
+        import win32file
+        prev_hard = win32file._getmaxstdio()
+        prev_soft = 512
+    else:
+        import resource
+        prev_soft, prev_hard = resource.getrlimit(resource.RLIMIT_NOFILE)
+
+    # Check minimum required limits
+    set_limits = False
+    if prev_soft < min_soft:
+        soft = min_soft
+        set_limits = True
+    else:
+        soft = prev_soft
+
+    if prev_hard < min_hard:
+        hard = min_hard
+        set_limits = True
+    else:
+        hard = prev_hard
+
+    # Increase limits
+    if set_limits:
+        log.debug(
+            ' * Max open files settings is too low (soft: %s, hard: %s) for running the tests. '
+            'Trying to raise the limits to soft: %s, hard: %s',
+            prev_soft,
+            prev_hard,
+            soft,
+            hard
+        )
+        try:
+            if salt.utils.platform.is_windows():
+                hard = 2048 if hard > 2048 else hard
+                win32file._setmaxstdio(hard)
+            else:
+                resource.setrlimit(resource.RLIMIT_NOFILE, (soft, hard))
+        except Exception as err:
+            log.error(
+                'Failed to raise the max open files settings -> %s. Please issue the following command '
+                'on your console: \'ulimit -u %s\'',
+                err,
+                soft,
+            )
+            exit(1)
+    return soft, hard
+
+
+def pytest_report_header(config):
+    soft, hard = set_max_open_files_limits()
+    return 'max open files; soft: {}; hard: {}'.format(soft, hard)
 # <---- Register Markers ---------------------------------------------------------------------------------------------
 
 
