@@ -68,7 +68,6 @@ class BatchAsync(object):
             (find_job_return_pattern, 'find_job_return')
         }
         if not self.event.subscriber.connected():
-            # TODO is there a way to subscribe to only some tags?
             self.event.set_event_handler(self.__event_handler)
 
     def __event_handler(self, raw):
