@@ -530,11 +530,11 @@ class LocalClient(object):
         '''
         # Late import - not used anywhere else in this file
         import salt.cli.batch
-        opts = salt.cli.batch._batch_get_opts(
+        opts = salt.cli.batch.batch_get_opts(
             tgt, fun, batch, self.opts,
             arg=arg, tgt_type=tgt_type, ret=ret, kwarg=kwarg, **kwargs)
 
-        eauth = salt.cli.batch._batch_get_eauth(kwargs)
+        eauth = salt.cli.batch.batch_get_eauth(kwargs)
 
         batch = salt.cli.batch.Batch(opts, eauth=eauth, quiet=True)
         for ret in batch.run():

@@ -26,7 +26,7 @@ import logging
 log = logging.getLogger(__name__)
 
 
-def _get_bnum(opts, minions, quiet):
+def get_bnum(opts, minions, quiet):
     '''
     Return the active number of minions to maintain
     '''
@@ -46,7 +46,7 @@ def _get_bnum(opts, minions, quiet):
                       'form of %10, 10% or 3'.format(opts['batch']))
 
 
-def _batch_get_opts(
+def batch_get_opts(
         tgt,
         fun,
         batch,
@@ -86,7 +86,7 @@ def _batch_get_opts(
     return opts
 
 
-def _batch_get_eauth(kwargs):
+def batch_get_eauth(kwargs):
     eauth = {}
     if 'eauth' in kwargs:
         eauth['eauth'] = kwargs.pop('eauth')
@@ -153,7 +153,7 @@ class Batch(object):
         return (list(fret), ping_gen, nret.difference(fret))
 
     def get_bnum(self):
-        return _get_bnum(self.opts, self.minions, self.quiet)
+        return get_bnum(self.opts, self.minions, self.quiet)
 
     def __update_wait(self, wait):
         now = datetime.now()
