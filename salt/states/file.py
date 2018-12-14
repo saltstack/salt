@@ -284,6 +284,7 @@ import salt.loader
 import salt.payload
 import salt.utils.data
 import salt.utils.dateutils
+import salt.utils.dictdiffer
 import salt.utils.dictupdate
 import salt.utils.files
 import salt.utils.hashutils
@@ -7210,6 +7211,7 @@ def serialize(name,
             salt.utils.data.repack_dictlist(deserializer_opts)
         )
 
+    existing_data = None
     if merge_if_exists:
         if os.path.isfile(name):
             if deserializer_name not in __serializers__:
@@ -7286,25 +7288,32 @@ def serialize(name,
         else:
             ret['result'] = True
             ret['comment'] = 'The file {0} is in the correct state'.format(name)
-        return ret
+    else:
+        ret = __salt__['file.manage_file'](
+            name=name,
+            sfn='',
+            ret=ret,
+            source=None,
+            source_sum={},
+            user=user,
+            group=group,
+            mode=mode,
+            attrs=None,
+            saltenv=__env__,
+            backup=backup,
+            makedirs=makedirs,
+            template=None,
+            show_changes=show_changes,
+            encoding=encoding,
+            encoding_errors=encoding_errors,
+            contents=contents
+        )
 
-    return __salt__['file.manage_file'](name=name,
-                                        sfn='',
-                                        ret=ret,
-                                        source=None,
-                                        source_sum={},
-                                        user=user,
-                                        group=group,
-                                        mode=mode,
-                                        attrs=None,
-                                        saltenv=__env__,
-                                        backup=backup,
-                                        makedirs=makedirs,
-                                        template=None,
-                                        show_changes=show_changes,
-                                        encoding=encoding,
-                                        encoding_errors=encoding_errors,
-                                        contents=contents)
+    if isinstance(existing_data, dict) and isinstance(merged_data, dict):
+        ret['changes']['diff'] = salt.utils.dictdiffer.recursive_diff(
+            existing_data, merged_data).diffs
+
+    return ret
 
 
 def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode='0600'):

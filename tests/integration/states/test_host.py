@@ -9,15 +9,16 @@ import os
 import shutil
 
 # Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ModuleCase
-from tests.support.paths import FILES, TMP
+from tests.support.paths import FILES
 from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import salt libs
 import salt.utils.files
 import salt.utils.stringutils
 
-HFILE = os.path.join(TMP, 'hosts')
+HFILE = os.path.join(RUNTIME_VARS.TMP, 'hosts')
 
 
 class HostTest(ModuleCase, SaltReturnAssertsMixin):
