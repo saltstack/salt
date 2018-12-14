@@ -293,7 +293,7 @@ def _parse_qemu_img_info(info):
                    'file format': disk_infos['format'],
                    'disk size': disk_infos['actual-size'],
                    'virtual size': disk_infos['virtual-size'],
-                   'cluster size': disk_infos['cluster-size']
+                   'cluster size': disk_infos['cluster-size'] if 'cluster-size' in disk_infos else None,
                }
 
         if 'full-backing-filename' in disk_infos.keys():
@@ -600,6 +600,13 @@ def _gen_xml(name,
         context['boot_dev'] = ['hd']
 
     context['loader'] = loader
+
+    if os_type == 'xen':
+        # Compute the Xen PV boot method
+        if __grains__['os_family'] == 'Suse':
+            context['kernel'] = '/usr/lib/grub2/x86_64-xen/grub.xen'
+            context['boot_dev'] = []
+
     if 'serial_type' in kwargs:
         context['serial_type'] = kwargs['serial_type']
     if 'serial_type' in context and context['serial_type'] == 'tcp':
@@ -973,6 +980,10 @@ def _disk_profile(profile, hypervisor, disks=None, vm_name=None, image=None, poo
                    'device': 'disk',
                    'model': 'virtio',
                    'sparse_volume': False}
+    elif hypervisor == 'xen':
+        overlay = {'format': 'qcow2',
+                   'device': 'disk',
+                   'model': 'xen'}
     else:
         overlay = {}
 
@@ -1023,7 +1034,7 @@ def _fill_disk_filename(vm_name, disk, hypervisor, **kwargs):
     Compute the disk file name and update it in the disk value.
     '''
     base_dir = disk.get('pool', None)
-    if hypervisor in ['qemu', 'kvm']:
+    if hypervisor in ['qemu', 'kvm', 'xen']:
         # Compute the base directory from the pool property. We may have either a path
         # or a libvirt pool name there.
         # If the pool is a known libvirt one with a target path, use it as target path
@@ -1056,7 +1067,9 @@ def _complete_nics(interfaces, hypervisor, dmac=None):
     vmware_overlay = {'type': 'bridge', 'source': 'DEFAULT', 'model': 'e1000'}
     kvm_overlay = {'type': 'bridge', 'source': 'br0', 'model': 'virtio'}
     bhyve_overlay = {'type': 'bridge', 'source': 'bridge0', 'model': 'virtio'}
+    xen_overlay = {'type': 'bridge', 'source': 'br0', 'model': None}
     overlays = {
+            'xen': xen_overlay,
             'kvm': kvm_overlay,
             'qemu': kvm_overlay,
             'vmware': vmware_overlay,
@@ -1546,25 +1559,26 @@ def init(name,
     caps = capabilities(**kwargs)
     os_types = sorted({guest['os_type'] for guest in caps['guests']})
     arches = sorted({guest['arch']['name'] for guest in caps['guests']})
-    hypervisors = sorted({x for y in [guest['arch']['domains'].keys() for guest in caps['guests']] for x in y})
-    hypervisor = __salt__['config.get']('libvirt:hypervisor', hypervisor)
-    if hypervisor is not None:
-        salt.utils.versions.warn_until(
-            'Sodium',
-            '\'libvirt:hypervisor\' configuration property has been deprecated. '
-            'Rather use the \'virt:connection:uri\' to properly define the libvirt '
-            'URI or alias of the host to connect to. \'libvirt:hypervisor\' will '
-            'stop being used in {version}.'
-        )
-    else:
-        # Use the machine types as possible values
-        # Prefer 'kvm' over the others if available
-        hypervisor = 'kvm' if 'kvm' in hypervisors else hypervisors[0]
+    if not hypervisor:
+        hypervisor = __salt__['config.get']('libvirt:hypervisor', hypervisor)
+        if hypervisor is not None:
+            salt.utils.versions.warn_until(
+                'Sodium',
+                '\'libvirt:hypervisor\' configuration property has been deprecated. '
+                'Rather use the \'virt:connection:uri\' to properly define the libvirt '
+                'URI or alias of the host to connect to. \'libvirt:hypervisor\' will '
+                'stop being used in {version}.'
+            )
+        else:
+            # Use the machine types as possible values
+            # Prefer 'kvm' over the others if available
+            hypervisors = sorted({x for y in [guest['arch']['domains'].keys() for guest in caps['guests']] for x in y})
+            hypervisor = 'kvm' if 'kvm' in hypervisors else hypervisors[0]
 
     # esxi used to be a possible value for the hypervisor: map it to vmware since it's the same
     hypervisor = 'vmware' if hypervisor == 'esxi' else hypervisor
 
-    log.debug('Using hyperisor %s', hypervisor)
+    log.debug('Using hypervisor %s', hypervisor)
 
     # the NICs are computed as follows:
     # 1 - get the default NICs from the profile
@@ -1623,7 +1637,7 @@ def init(name,
                 )
                 define_vol_xml_str(vol_xml)
 
-        elif hypervisor in ['qemu', 'kvm']:
+        elif hypervisor in ['qemu', 'kvm', 'xen']:
 
             create_overlay = enable_qcow
             if create_overlay:
@@ -1684,8 +1698,10 @@ def init(name,
             '\'enable_vnc\' will be removed in {version}. ')
         graphics = {'type': 'vnc'}
 
-    os_type = 'hvm' if 'hvm' in os_types else os_types[0]
-    arch = 'x86_64' if 'x86_64' in arches else arches[0]
+    if os_type is None:
+        os_type = 'hvm' if 'hvm' in os_types else os_types[0]
+    if arch is None:
+        arch = 'x86_64' if 'x86_64' in arches else arches[0]
 
     vm_xml = _gen_xml(name, cpu, mem, diskp, nicp, hypervisor, os_type, arch, graphics, loader, **kwargs)
     conn = __get_conn(**kwargs)
@@ -4061,9 +4077,13 @@ def _parse_caps_guest(guest):
     # Note that some features have no default and toggle attributes.
     # This may not be a perfect match, but represent them as enabled by default
     # without possibility to toggle them.
-    result['features'] = {child.tag: {'toggle': True if child.get('toggle') == 'yes' else False,
-                                      'default': True if child.get('default') == 'no' else True}
-                          for child in guest.find('features') or []}
+    # Some guests may also have no feature at all (xen pv for instance)
+    features_nodes = guest.find('features')
+    if features_nodes is not None:
+        result['features'] = {child.tag: {'toggle': True if child.get('toggle') == 'yes' else False,
+                                          'default': True if child.get('default') == 'no' else True}
+                              for child in features_nodes}
+
     return result
 
 
