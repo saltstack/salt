@@ -86,6 +86,9 @@ def _absent(name, dataset_type, force=False, recursive=False, recursive_all=Fals
         try harder to destroy the dataset
     recursive : boolean
         also destroy all the child datasets
+    recursive_all : boolean
+        recursively destroy all dependents, including cloned file systems
+        outside the target hierarchy. (-R)
 
     '''
     ret = {'name': name,
