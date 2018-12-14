@@ -208,8 +208,7 @@ class WebserverMixin(ModuleCase, ProcessManager, SaltReturnAssertsMixin):
     @requires_system_grains
     def spawn_server(self, grains):
         auth_enabled = hasattr(self, 'username') and hasattr(self, 'password')
-        pillar = {'git_pillar': {'config_dir': self.config_dir,
-                                 'git_dir': self.git_dir,
+        pillar = {'git_pillar': {'git_dir': self.git_dir,
                                  'venv_dir': self.venv_dir,
                                  'root_dir': self.root_dir,
                                  'nginx_port': self.nginx_port,
