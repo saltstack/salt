@@ -17,7 +17,7 @@ from salt.ext.six.moves import range
 
 log = logging.getLogger(__name__)
 
-from salt.cli.batch import _get_bnum, _batch_get_opts, _batch_get_eauth
+from salt.cli.batch import get_bnum, batch_get_opts, batch_get_eauth
 
 
 class BatchAsync(object):
@@ -28,13 +28,13 @@ class BatchAsync(object):
         ioloop = tornado.ioloop.IOLoop.current()
         self.local = salt.client.get_local_client(parent_opts['conf_file'])
         clear_load['gather_job_timeout'] = clear_load['kwargs'].pop('gather_job_timeout')
-        self.opts = _batch_get_opts(
+        self.opts = batch_get_opts(
             clear_load.pop('tgt'),
             clear_load.pop('fun'),
             clear_load['kwargs'].pop('batch'),
             self.local.opts,
             **clear_load)
-        self.eauth = _batch_get_eauth(clear_load['kwargs'])
+        self.eauth = batch_get_eauth(clear_load['kwargs'])
         self.minions = set()
         self.down_minions = set()
         self.timedout_minions = set()
@@ -79,7 +79,7 @@ class BatchAsync(object):
                 if op == 'ping_return':
                     self.minions.add(minion)
                     self.down_minions.remove(minion)
-                    self.batch_size = _get_bnum(self.opts, self.minions, True)
+                    self.batch_size = get_bnum(self.opts, self.minions, True)
                     self.to_run = self.minions.difference(self.done_minions).difference(self.active)
                 elif op == 'find_job_return':
                     self.find_job_returned.add(minion)
