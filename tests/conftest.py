@@ -51,6 +51,7 @@ import psutil
 from salt.ext import six
 
 # Import salt libs
+import salt.config
 import salt.utils.files
 import salt.utils.path
 import salt.log.setup
@@ -969,7 +970,9 @@ def bridge_pytest_and_runtests(reap_stray_processes,
     RUNTIME_VARS.RUNTIME_CONFIGS['sub_minion'] = freeze(session_secondary_minion_config)
     RUNTIME_VARS.RUNTIME_CONFIGS['syndic_master'] = freeze(session_master_of_masters_config)
     RUNTIME_VARS.RUNTIME_CONFIGS['syndic'] = freeze(session_syndic_config)
-    RUNTIME_VARS.RUNTIME_CONFIGS['client_config'] = freeze(session_master_config)
+    RUNTIME_VARS.RUNTIME_CONFIGS['client_config'] = freeze(
+        salt.config.client_config(session_conf_dir.join('master').strpath)
+    )
 
     # Copy configuration files and directories which are not automatically generated
     for entry in os.listdir(RUNTIME_VARS.CONF_DIR):
