@@ -196,6 +196,9 @@ def snapshot_absent(name, force=False, recursive=False, recursive_all=False):
         try harder to destroy the dataset (zfs destroy -f)
     recursive : boolean
         also destroy all the child datasets (zfs destroy -r)
+    recursive_all : boolean
+        recursively destroy all dependents, including cloned file systems
+        outside the target hierarchy. (-R)
 
     '''
     if not __utils__['zfs.is_snapshot'](name):
