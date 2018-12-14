@@ -196,7 +196,7 @@ class ScheduleTestCase(TestCase, LoaderModuleMockMixin):
         Test if it save all scheduled jobs on the minion.
         '''
         comm1 = 'Schedule (non-pillar items) saved.'
-        with patch.dict(schedule.__opts__, {'config_dir': '', 'schedule': {},
+        with patch.dict(schedule.__opts__, {'schedule': {},
                                             'default_include': '/tmp',
                                             'sock_dir': SOCK_DIR}):
 

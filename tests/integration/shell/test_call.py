@@ -162,10 +162,8 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
             id=minion_id,
             root_dir=root_dir,
         )
-        import pprint
-        pprint.pprint(minion_config)
-        config_dir = minion_config['config_dir']
         minion_config_file = minion_config['conf_file']
+        config_dir = os.path.dirname(minion_config_file)
         logfile = minion_config['log_file']
 
         master_config = self.get_config('master')

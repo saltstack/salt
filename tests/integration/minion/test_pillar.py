@@ -35,7 +35,6 @@ TOP_SLS = os.path.join(PILLAR_BASE, 'top.sls')
 GPG_SLS = os.path.join(PILLAR_BASE, 'gpg.sls')
 DEFAULT_OPTS = {
     'cachedir': os.path.join(RUNTIME_VARS.TMP, 'rootdir', 'cache'),
-    'config_dir': RUNTIME_VARS.TMP_CONF_DIR,
     'optimization_order': [0, 1, 2],
     'extension_modules': os.path.join(RUNTIME_VARS.TMP,
                                       'test-decrypt-pillar',
