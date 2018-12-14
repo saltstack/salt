@@ -13,6 +13,7 @@ import re
 import sys
 import shutil
 import stat
+import tempfile
 import textwrap
 import filecmp
 
