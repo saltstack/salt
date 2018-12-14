@@ -673,7 +673,7 @@ def session_master_config_overrides(session_root_dir):
     if not os.path.exists(extension_modules_path):
         shutil.copytree(
             os.path.join(
-                paths.INTEGRATION_TEST_DIR, 'files', 'extension_modules'
+                RUNTIME_VARS.FILES, 'extension_modules'
             ),
             extension_modules_path
         )
@@ -681,7 +681,7 @@ def session_master_config_overrides(session_root_dir):
     # Copy the autosign_file to the new  master root_dir
     autosign_file_path = session_root_dir.join('autosign_file').strpath
     shutil.copyfile(
-        os.path.join(paths.INTEGRATION_TEST_DIR, 'files', 'autosign_file'),
+        os.path.join(RUNTIME_VARS.FILES, 'autosign_file'),
         autosign_file_path
     )
     # all read, only owner write
@@ -784,7 +784,7 @@ def session_master_of_masters_config_overrides(session_master_of_masters_root_di
     if not os.path.exists(extension_modules_path):
         shutil.copytree(
             os.path.join(
-                paths.INTEGRATION_TEST_DIR, 'files', 'extension_modules'
+                RUNTIME_VARS.FILES, 'extension_modules'
             ),
             extension_modules_path
         )
@@ -792,7 +792,7 @@ def session_master_of_masters_config_overrides(session_master_of_masters_root_di
     # Copy the autosign_file to the new  master root_dir
     autosign_file_path = session_master_of_masters_root_dir.join('autosign_file').strpath
     shutil.copyfile(
-        os.path.join(paths.INTEGRATION_TEST_DIR, 'files', 'autosign_file'),
+        os.path.join(RUNTIME_VARS.FILES, 'autosign_file'),
         autosign_file_path
     )
     # all read, only owner write
