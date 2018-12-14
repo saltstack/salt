@@ -226,6 +226,8 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
     # This class is only a singleton per minion/master pair
     # mapping of io_loop -> {key -> channel}
     instance_map = weakref.WeakKeyDictionary()
+    # Keep track of class references to know when to actually close
+    instance_ref_tracking = weakref.WeakKeyDictionary()
 
     def __new__(cls, opts, **kwargs):
         '''
@@ -235,7 +237,10 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
         io_loop = kwargs.get('io_loop') or tornado.ioloop.IOLoop.current()
         if io_loop not in cls.instance_map:
             cls.instance_map[io_loop] = weakref.WeakValueDictionary()
+        if io_loop not in cls.instance_ref_tracking:
+            cls.instance_ref_tracking[io_loop] = {}
         loop_instance_map = cls.instance_map[io_loop]
+        instance_ref_tracking = cls.instance_ref_tracking[io_loop]
 
         key = cls.__key(opts, **kwargs)
         obj = loop_instance_map.get(key)
@@ -245,10 +250,12 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
             # it in a WeakValueDictionary-- which will remove the item if no one
             # references it-- this forces a reference while we return to the caller
             obj = object.__new__(cls)
-            obj.__singleton_init__(opts, **kwargs)
+            obj.__singleton_init__(key, opts, **kwargs)
             loop_instance_map[key] = obj
         else:
             log.debug('Re-using AsyncTCPReqChannel for %s', key)
+
+        instance_ref_tracking.setdefault(key, []).append(obj)
         return obj
 
     @classmethod
@@ -266,12 +273,13 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
         pass
 
     # an init for the singleton instance to call
-    def __singleton_init__(self, opts, **kwargs):
+    def __singleton_init__(self, instance_key, opts, **kwargs):
         try:
             weakref.finalize(self, self.close)
         except AttributeError:
             # FIXME when we go Py3 only
             pass
+        self.__instance_key = instance_key
         self.opts = dict(opts)
 
         self.serial = salt.payload.Serial(self.opts)
@@ -299,8 +307,35 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
     def close(self):
         if self._closing:
             return
+
+        if self.io_loop in self.__class__.instance_ref_tracking:
+            instance_ref_tracking = self.__class__.instance_ref_tracking[self.io_loop]
+            if self.__instance_key in instance_ref_tracking:
+                instance_ref_tracking[self.__instance_key].remove(self)
+                if instance_ref_tracking[self.__instance_key]:
+                    # There are still references, don't close just yet
+                    return
+                # No more references, remove instance_key from the ref counter
+                del instance_ref_tracking[self.__instance_key]
+
+            if not instance_ref_tracking:
+                # No more references, remove the io_loop from the refcounter
+                del self.__class__.instance_ref_tracking[self.io_loop]
+
         self._closing = True
+        log.debug('Closing %s', self)
         self.message_client.close()
+
+        # Remove the entry from the instance map so that a closed entry may not
+        # be reused.
+        # This forces this operation even if the reference count of the entry
+        # has not yet gone to zero.
+        if self.io_loop in self.__class__.instance_map:
+            loop_instance_map = self.__class__.instance_map[self.io_loop]
+            if self.__instance_key in loop_instance_map:
+                del loop_instance_map[self.__instance_key]
+            if not loop_instance_map:
+                del self.__class__.instance_map[self.io_loop]
 
     if six.PY2:
         def __del__(self):
