@@ -14,10 +14,10 @@ from __future__ import absolute_import, print_function, unicode_literals
 import os
 import sys
 import stat
+import pprint
 import shutil
 import socket
 import logging
-
 TESTS_DIR = os.path.dirname(
     os.path.normpath(os.path.abspath(__file__))
 )
@@ -847,8 +847,42 @@ def session_syndic_default_options(request, session_root_dir):
         return opts
 
 
+@pytest.fixture(scope='session')
+def reap_stray_processes():
+    # Run tests
+    yield
+
+    children = psutil.Process(os.getpid()).children(recursive=True)
+    if not children:
+        log.info('No astray processes found')
+        return
+
+    def on_terminate(proc):
+        log.debug('Process %s terminated with exit code %s', proc, proc.returncode)
+
+    if children:
+        # Reverse the order, sublings first, parents after
+        children.reverse()
+        log.warning(
+            'Test suite left %d astray processes running. Killing those processes:\n%s',
+            len(children),
+            pprint.pformat(children)
+        )
+
+        gone, alive = psutil.wait_procs(children, timeout=3, callback=on_terminate)
+        for child in alive:
+            child.kill()
+
+        gone, alive = psutil.wait_procs(alive, timeout=3, callback=on_terminate)
+        if alive:
+            # Give up
+            for child in alive:
+                log.warning('Process %s survived SIGKILL, giving up:\n%s', child, pprint.pformat(child.as_dict()))
+
+
 @pytest.fixture(scope='session', autouse=True)
-def bridge_pytest_and_runtests(session_root_dir,
+def bridge_pytest_and_runtests(reap_stray_processes,
+                               session_root_dir,
                                session_conf_dir,
                                session_secondary_conf_dir,
                                session_syndic_conf_dir,
