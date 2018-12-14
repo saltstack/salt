@@ -1993,7 +1993,6 @@ def list_datastore_full(service_instance, datastore):
 
 
 def get_mor_by_name(si, obj_type, obj_name):
-    
     '''
     Get reference to an object of specified object type and name
 
@@ -2012,10 +2011,9 @@ def get_mor_by_name(si, obj_type, obj_name):
         if item.name == obj_name:
             return item
     return None
-    
+
 
 def get_mor_by_moid(si, obj_type, obj_moid):
-    
     '''
     Get reference to an object of specified object type and id
 

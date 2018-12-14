@@ -1660,11 +1660,11 @@ def list_datastores_full(kwargs=None, call=None):
 
     return {'Datastores': salt.utils.vmware.list_datastores_full(_get_si())}
 
-    
+
 def list_datastore_full(kwargs=None, call=None, datastore=None):
     '''
     Returns a dictionary with basic information for the given datastore
-    
+
     CLI Example:
 
     .. code-block:: bash
