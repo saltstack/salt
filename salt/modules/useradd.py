@@ -136,7 +136,8 @@ def add(name,
         createhome=True,
         loginclass=None,
         nologinit=False,
-        root=None):
+        root=None,
+        usergroup=None):
     '''
     Add a user to the minion
 
@@ -147,7 +148,7 @@ def add(name,
         User ID of the new account
 
     gid
-        Name or ID of the primary group of the new accoun
+        Name or ID of the primary group of the new account
 
     groups
         List of supplementary groups of the new account
@@ -159,7 +160,7 @@ def add(name,
         Login shell of the new account
 
     unique
-        Allow to create users with duplicate
+        If not True, the user account can have a non-unique UID
 
     system
         Create a system account
@@ -191,6 +192,9 @@ def add(name,
     root
         Directory to chroot into
 
+    usergroup
+        Create and add the user to a new primary group of the same name
+
     CLI Example:
 
     .. code-block:: bash
@@ -204,6 +208,10 @@ def add(name,
         cmd.extend(['-u', uid])
     if gid not in (None, ''):
         cmd.extend(['-g', gid])
+    elif usergroup:
+        cmd.append('-U')
+        if __grains__['kernel'] != 'Linux':
+            log.warning("'usergroup' is only supported on GNU/Linux hosts.")
     elif groups is not None and name in groups:
         defs_file = '/etc/login.defs'
         if __grains__['kernel'] != 'OpenBSD':
@@ -244,6 +252,11 @@ def add(name,
             except OSError:
                 # /etc/usermgmt.conf not present: defaults will be used
                 pass
+    # Setting usergroup to False adds the -N command argument. If
+    # usergroup is None, no arguments are added to allow useradd to go
+    # with the defaults defined for the OS.
+    if usergroup is False:
+        cmd.append('-N')
 
     if createhome:
         cmd.append('-m')
