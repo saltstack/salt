@@ -14,6 +14,7 @@ import tornado.gen
 import sys
 import traceback
 import inspect
+import weakref
 
 # Import salt libs
 import salt.loader
@@ -137,6 +138,11 @@ class AsyncRemotePillar(RemotePillarMixin):
     '''
     def __init__(self, opts, grains, minion_id, saltenv, ext=None, functions=None,
                  pillar_override=None, pillarenv=None, extra_minion_data=None):
+        try:
+            weakref.finalize(self, self.destroy)
+        except AttributeError:
+            # FIXME when we go Py3 only
+            pass
         self.opts = opts
         self.opts['saltenv'] = saltenv
         self.ext = ext
@@ -189,6 +195,15 @@ class AsyncRemotePillar(RemotePillarMixin):
             # raise an exception! Pillar isn't empty, we can't sync it!
             raise SaltClientError(msg)
         raise tornado.gen.Return(ret_pillar)
+
+    def destroy(self):
+        if self.channel:
+            self.channel.close()
+            self.channel = None
+
+    if six.PY2:
+        def __del__(self):
+            self.destroy()
 
 
 class RemotePillar(RemotePillarMixin):
