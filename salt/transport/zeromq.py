@@ -184,7 +184,7 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
     # an init for the singleton instance to call
     def __singleton_init__(self, instance_key, opts, **kwargs):
         try:
-            weakref.finalize(self, self.destroy)
+            weakref.finalize(self, self.close)
         except AttributeError:
             # FIXME when we go Py3 only
             pass
@@ -212,7 +212,13 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
                                                         args=(self.opts, self.opts['master_uri'],),
                                                         kwargs={'io_loop': self._io_loop})
 
-    def destroy(self):
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.close()
+
+    def close(self):
         '''
         Since the message_client creates sockets and assigns them to the IOLoop we have to
         specifically destroy them, since we aren't the only ones with references to the FDs
@@ -239,7 +245,7 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
         try:
             self.message_client.close()
         except AttributeError:
-            log.debug('No message_client attr for AsyncZeroMQReqChannel found. Not destroying sockets.')
+            log.debug('No message_client attr for AsyncZeroMQReqChannel found. Not destroying sockets.', exc_info=True)
 
         # Remove the entry from the instance map so that a closed entry may not
         # be reused.
@@ -254,7 +260,7 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
 
     if six.PY2:
         def __del__(self):
-            self.destroy()
+            self.close()
 
     @property
     def master_uri(self):
@@ -385,7 +391,7 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
                  opts,
                  **kwargs):
         try:
-            weakref.finalize(self, self.destroy)
+            weakref.finalize(self, self.close)
         except AttributeError:
             # FIXME when we go Py3 only
             pass
@@ -467,7 +473,7 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
             self._monitor = ZeroMQSocketMonitor(self._socket)
             self._monitor.start_io_loop(self.io_loop)
 
-    def destroy(self):
+    def close(self):
         if hasattr(self, '_monitor') and self._monitor is not None:
             self._monitor.stop()
             self._monitor = None
@@ -485,7 +491,7 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
 
     if six.PY2:
         def __del__(self):
-            self.destroy()
+            self.close()
 
     # TODO: this is the time to see if we are connected, maybe use the req channel to guess?
     @tornado.gen.coroutine
@@ -1050,18 +1056,18 @@ class AsyncReqMessageClientPool(salt.transport.MessageClientPool):
     def __init__(self, opts, args=None, kwargs=None):
         super(AsyncReqMessageClientPool, self).__init__(AsyncReqMessageClient, opts, args=args, kwargs=kwargs)
         try:
-            weakref.finalize(self, self.destroy)
+            weakref.finalize(self, self.close)
         except AttributeError:
             # FIXME when we go Py3 only
             pass
 
     if six.PY2:
         def __del__(self):
-            self.destroy()
+            self.close()
 
-    def destroy(self):
+    def close(self):
         for message_client in self.message_clients:
-            message_client.destroy()
+            message_client.close()
         self.message_clients = []
 
     def send(self, *args, **kwargs):
@@ -1089,7 +1095,7 @@ class AsyncReqMessageClient(object):
         :param IOLoop io_loop: A Tornado IOLoop event scheduler [tornado.ioloop.IOLoop]
         '''
         try:
-            weakref.finalize(self, self.destroy)
+            weakref.finalize(self, self.close)
         except AttributeError:
             # FIXME when we go Py3 only
             pass
@@ -1115,7 +1121,7 @@ class AsyncReqMessageClient(object):
         self.send_timeout_map = {}  # message -> timeout
 
     # TODO: timeout all in-flight sessions, or error
-    def destroy(self):
+    def close(self):
         if hasattr(self, 'stream') and self.stream is not None:
             if ZMQ_VERSION_INFO < (14, 3, 0):
                 # stream.close() doesn't work properly on pyzmq < 14.3.0
@@ -1134,7 +1140,7 @@ class AsyncReqMessageClient(object):
 
     if six.PY2:
         def __del__(self):
-            self.destroy()
+            self.close()
 
     def _init_socket(self):
         if hasattr(self, 'stream'):
