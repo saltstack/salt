@@ -416,6 +416,8 @@ class SaltTestingParser(optparse.OptionParser):
             match = re.match(r'^(salt/|tests/(integration|unit)/)(.+\.py)$', path)
             if match:
                 comps = match.group(3).split('/')
+                if len(comps) < 2:
+                    continue
 
                 # Find matches for a source file
                 if match.group(1) == 'salt/':
