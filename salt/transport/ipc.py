@@ -9,6 +9,7 @@ import logging
 import socket
 import weakref
 import time
+import gc
 
 # Import 3rd-party libs
 import msgpack
@@ -232,7 +233,16 @@ class IPCServer(object):
             self.close()
 
 
-class IPCClient(object):
+class BorgSingleton(object):
+    __state = {}
+
+    def __init__(self, state_key):
+        if state_key not in self.__state:
+            self.__state[state_key] = {}
+        self.__dict__ = self.__state[state_key]
+
+
+class IPCClient(BorgSingleton):
     '''
     A Tornado IPC client very similar to Tornado's TCPClient class
     but using either UNIX domain sockets or TCP sockets
@@ -249,47 +259,21 @@ class IPCClient(object):
                                 localhost connection.
     '''
 
-    # Create singleton map between the io_loop and the socket_path
-    instance_map = weakref.WeakKeyDictionary()
-    # Keep track of instance references to know when to actually close
-    instance_ref_tracking = weakref.WeakKeyDictionary()
-
-    def __new__(cls, socket_path, io_loop=None):
+    def __init__(self, socket_path, io_loop=None):
         io_loop = io_loop or tornado.ioloop.IOLoop.current()
-        if io_loop not in cls.instance_map:
-            cls.instance_map[io_loop] = weakref.WeakValueDictionary()
-        if io_loop not in cls.instance_ref_tracking:
-            cls.instance_ref_tracking[io_loop] = {}
-        loop_instance_map = cls.instance_map[io_loop]
-        instance_ref_tracking = cls.instance_ref_tracking[io_loop]
-
         # FIXME
         key = six.text_type(socket_path)
-
-        client = loop_instance_map.get(key)
-        if client is None:
-            log.debug('Initializing new IPCClient for path: %s', key)
-            client = object.__new__(cls)
-            # FIXME
-            client.__singleton_init__(socket_path=socket_path, io_loop=io_loop)
-            loop_instance_map[key] = client
-        else:
+        BorgSingleton.__init__(self, (key, io_loop))
+        # Is this a clean state?
+        if '_closing' in self.__dict__:
             log.debug('Re-using IPCClient for %s', key)
+        else:
+            log.debug('Initializing new IPCClient for path: %s', key)
+            self.__singleton_init__(socket_path, io_loop)
 
-        instance_ref_tracking.setdefault(key, []).append(client)
-        return client
-
-    def __singleton_init__(self, socket_path, io_loop=None):
-        '''
-        Create a new IPC client
-
-        IPC clients cannot bind to ports, but must connect to
-        existing IPC servers. Clients can then send messages
-        to the server.
-
-        '''
+    def __singleton_init__(self, socket_path, io_loop):
         try:
-            weakref.finalize(self, self.close)
+            weakref.finalize(self, self.close, force=True)
         except AttributeError:
             # FIXME when we go Py3 only
             pass
@@ -302,10 +286,6 @@ class IPCClient(object):
         else:
             encoding = 'utf-8'
         self.unpacker = msgpack.Unpacker(encoding=encoding)
-
-    def __init__(self, socket_path, io_loop=None):
-        # Handled by singleton __new__
-        pass
 
     def __enter__(self):
         return self
@@ -384,9 +364,9 @@ class IPCClient(object):
 
     if six.PY2:
         def __del__(self):
-            self.close()
+            self.close(force=True)
 
-    def close(self):
+    def close(self, force=False):
         '''
         Routines to handle any cleanup before the instance shuts down.
         Sockets and filehandles should be closed explicitly, to prevent
@@ -395,36 +375,38 @@ class IPCClient(object):
         if self._closing:
             return
 
-        if self.io_loop in self.__class__.instance_ref_tracking:
-            instance_ref_tracking = self.__class__.instance_ref_tracking[self.io_loop]
-            if self.socket_path in instance_ref_tracking:
-                instance_ref_tracking[self.socket_path].remove(self)
-                if instance_ref_tracking[self.socket_path]:
-                    # There are still references, don't close just yet
-                    return
-                # No more references, remove socket_path from the ref counter
-                del instance_ref_tracking[self.socket_path]
+        def reset_state():
+            state_keys = list(self.__dict__)
+            new_state = {'_closing': True}
+            for key in state_keys:
+                if key in new_state:
+                    continue
+                new_state[key] = None
+            return new_state
 
-            if not instance_ref_tracking:
-                # No more references, remove the io_loop from the refcounter
-                del self.__class__.instance_ref_tracking[self.io_loop]
+        refcount = len(gc.get_referrers(self.__dict__))
+        # A single instance of the same state has a refcount of 2,
+        # the borg singleton and this instance
 
+        if refcount > 2:
+            # This is not the last reference
+            # Reduce refcount, "detach" state and reset state keys
+            self.__dict__ = reset_state()
+            return
+        elif refcount == 2 and force is False:
+            # Don't close the last reference just yet
+            return
+
+        # By now this is the last reference, are we're being told to actually close
         self._closing = True
         log.debug('Closing %s', self)
+        self.__close__()
+        # Reset the actual Borg singleton state
+        self.__dict__.update(reset_state())
+
+    def __close__(self):
         if self.stream is not None and not self.stream.closed():
             self.stream.close()
-
-        # Remove the entry from the instance map so
-        # that a closed entry may not be reused.
-        # This forces this operation even if the reference
-        # count of the entry has not yet gone to zero.
-        if self.io_loop in self.__class__.instance_map:
-            loop_instance_map = self.__class__.instance_map[self.io_loop]
-            key = six.text_type(self.socket_path)
-            if key in loop_instance_map:
-                del loop_instance_map[key]
-            if not loop_instance_map:
-                del self.__class__.instance_map[self.io_loop]
 
 
 class IPCMessageClient(IPCClient):
@@ -671,7 +653,7 @@ class IPCMessageSubscriber(IPCClient):
         super(IPCMessageSubscriber, self).__singleton_init__(
             socket_path, io_loop=io_loop)
         try:
-            weakref.finalize(self, self.close)
+            weakref.finalize(self, self.close, force=True)
         except AttributeError:
             # FIXME when we go Py3 only
             pass
@@ -797,23 +779,22 @@ class IPCMessageSubscriber(IPCClient):
                 yield tornado.gen.sleep(1)
         yield self._read_async(callback)
 
-    def close(self):
+    def __close__(self):
         '''
         Routines to handle any cleanup before the instance shuts down.
         Sockets and filehandles should be closed explicitly, to prevent
         leaks.
         '''
-        if not self._closing:
-            IPCClient.close(self)
-            # This will prevent this message from showing up:
-            # '[ERROR   ] Future exception was never retrieved:
-            # StreamClosedError'
-            if self._read_sync_future is not None and self._read_sync_future.done():
-                self._read_sync_future.exception()
-            if self._read_stream_future is not None and self._read_stream_future.done():
-                self._read_stream_future.exception()
+        IPCClient.__close__(self)
+        # This will prevent this message from showing up:
+        # '[ERROR   ] Future exception was never retrieved:
+        # StreamClosedError'
+        if self._read_sync_future is not None and self._read_sync_future.done():
+            self._read_sync_future.exception()
+        if self._read_stream_future is not None and self._read_stream_future.done():
+            self._read_stream_future.exception()
 
     if six.PY2:
         def __del__(self):
             if IPCMessageSubscriber in globals():
-                self.close()
+                self.close(force=True)
