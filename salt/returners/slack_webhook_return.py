@@ -154,33 +154,36 @@ def _generate_payload(author_icon, title, report):
 
     unchanged = {
         'color': 'good',
-        'title': 'Unchanged: ' + str(report['unchanged'].get('counter', None))
+        'title': 'Unchanged: {unchanged}'.format(unchanged=report['unchanged'].get('counter', None))
     }
 
     changed = {
         'color': 'warning',
-        'title': 'Changed: ' + str(report['changed'].get('counter', None))
+        'title': 'Changed: {changed}'.format(changed=report['changed'].get('counter', None))
     }
 
     if len(report['changed'].get('tasks', [])) > 0:
-        changed['fields'] = map(_format_task, report['changed'].get('tasks'))
+        changed['fields'] = list(
+            map(_format_task, report['changed'].get('tasks')))
 
     failed = {
         'color': 'danger',
-        'title': 'Failed: ' + str(report['failed'].get('counter', None))
+        'title': 'Failed: {failed}'.format(failed=report['failed'].get('counter', None))
     }
 
     if len(report['failed'].get('tasks', [])) > 0:
-        failed['fields'] = map(_format_task, report['failed'].get('tasks'))
+        failed['fields'] = list(
+            map(_format_task, report['failed'].get('tasks')))
 
-    text = "Function: %s\n" % (report.get('function'))
+    text = 'Function: {function}\n'.format(function=report.get('function'))
     if len(report.get('arguments', [])) > 0:
-        text += 'Function Args: ' + \
-            str(map(str, report.get('arguments'))) + '\n'
+        text += 'Function Args: {arguments}\n'.format(
+            arguments=str(list(map(str, report.get('arguments')))))
 
-    text += "JID: %s\n" % (report.get('jid'))
-    text += "Total: %s\n" % (report.get('total'))
-    text += "Duration: %0.2f secs" % (float(report.get('duration', None)))
+    text += 'JID: {jid}\n'.format(jid=report.get('jid'))
+    text += 'Total: {total}\n'.format(total=report.get('total'))
+    text += 'Duration: {duration:.2f} secs'.format(
+        duration=float(report.get('duration')))
 
     payload = {
         'attachments': [
@@ -190,7 +193,7 @@ def _generate_payload(author_icon, title, report):
                 'author_name': _sprinkle('{id}'),
                 'author_link': _sprinkle('{localhost}'),
                 'author_icon': author_icon,
-                'title': "Success: %s" % (str(report.get('success'))),
+                'title': 'Success: {success}'.format(success=str(report.get('success'))),
                 'text': text
             },
             unchanged,
@@ -229,7 +232,8 @@ def _generate_report(ret, show_tasks):
     for state, data in sorted_data:
         # state: module, stateid, name, function
         _, stateid, _, _ = state.split('_|-')
-        task = "%s.sls | %s" % (str(data.get('__sls__')), stateid)
+        task = '{filename}.sls | {taskname}'.format(
+            filename=str(data.get('__sls__')), taskname=stateid)
 
         if not data.get('result', True):
             failed += 1
@@ -298,7 +302,7 @@ def _post_message(webhook, author_icon, title, report):
     if query_result['body'] == 'ok' or query_result['status'] <= 201:
         return True
     else:
-        log.error('Slack message post result: %s', query_result)
+        log.error('Slack incoming webhook message post result: %s', query_result)
         return {
             'res': False,
             'message': query_result.get('body', query_result['status'])
