@@ -57,20 +57,21 @@ To use the alternative configuration, append '--return_config alternative' to th
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
-import pprint
 import logging
+import json
 
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 import salt.ext.six.moves.http_client
 from salt.ext.six.moves.urllib.parse import urlencode as _urlencode
 from salt.ext import six
+from salt.ext.six.moves import map
+from salt.ext.six.moves import range
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
 
 # Import Salt Libs
 import salt.returners
 import salt.utils.http
 import salt.utils.yaml
-import json
 
 log = logging.getLogger(__name__)
 
