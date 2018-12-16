@@ -229,7 +229,7 @@ def sync_proxymodules(saltenv='base', extmod_whitelist=None, extmod_blacklist=No
 
     .. code-block:: bash
 
-        salt-run saltutil.sync_proxy
+        salt-run saltutil.sync_proxymodules
     '''
     return salt.utils.extmods.sync(__opts__, 'proxy', saltenv=saltenv, extmod_whitelist=extmod_whitelist,
                                    extmod_blacklist=extmod_blacklist)[0]

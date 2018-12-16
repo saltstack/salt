@@ -223,6 +223,17 @@ salt/utils/schedule.py:
   - integration.scheduler.test_eval
   - integration.scheduler.test_postpone
   - integration.scheduler.test_skip
+  - integration.scheduler.test_maxrunning
+
+salt/utils/vt.py:
+  - integration.cli.test_custom_module
+  - integration.cli.test_grains
+  - integration.ssh.test_grains
+  - integration.ssh.test_jinja_filters
+  - integration.ssh.test_mine
+  - integration.ssh.test_pillar
+  - integration.ssh.test_raw
+  - integration.ssh.test_state
 
 salt/wheel/*:
   - integration.wheel.test_client

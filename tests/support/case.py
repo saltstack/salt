@@ -251,6 +251,7 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                    # FIXME A timeout of zero or disabling timeouts may not return results!
                    timeout=15,
                    raw=False,
+                   popen_kwargs=None,
                    log_output=None):
         '''
         Execute a script with the given argument string
@@ -285,11 +286,12 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
         tmp_file = tempfile.SpooledTemporaryFile()
 
-        popen_kwargs = {
+        popen_kwargs = popen_kwargs or {}
+        popen_kwargs = dict({
             'shell': True,
             'stdout': tmp_file,
             'universal_newlines': True,
-        }
+        }, **popen_kwargs)
 
         if catch_stderr is True:
             popen_kwargs['stderr'] = subprocess.PIPE
@@ -485,7 +487,7 @@ class ShellCase(ShellTestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixi
         except OSError:
             os.chdir(INTEGRATION_TEST_DIR)
 
-    def run_salt(self, arg_str, with_retcode=False, catch_stderr=False, timeout=60):  # pylint: disable=W0221
+    def run_salt(self, arg_str, with_retcode=False, catch_stderr=False, timeout=90, popen_kwargs=None):  # pylint: disable=W0221
         '''
         Execute salt
         '''
@@ -494,7 +496,8 @@ class ShellCase(ShellTestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixi
                               arg_str,
                               with_retcode=with_retcode,
                               catch_stderr=catch_stderr,
-                              timeout=timeout)
+                              timeout=timeout,
+                              popen_kwargs=popen_kwargs)
         log.debug('Result of run_salt for command \'%s\': %s', arg_str, ret)
         return ret
 
@@ -545,7 +548,7 @@ class ShellCase(ShellTestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixi
                               arg_str,
                               with_retcode=with_retcode,
                               catch_stderr=catch_stderr,
-                              timeout=60)
+                              timeout=timeout + 10)
         log.debug('Result of run_run for command \'%s\': %s', arg_str, ret)
         return ret
 
@@ -763,6 +766,7 @@ class SPMCase(TestCase, AdaptedConfigurationTestCaseMixin):
     def run_spm(self, cmd, config, arg=None):
         client = self._spm_client(config)
         spm_cmd = client.run([cmd, arg])
+        client._close()
         return self.ui._status
 
 
@@ -923,6 +927,7 @@ class ClientCase(AdaptedConfigurationTestCaseMixin, TestCase):
                 pass
             else:
                 raise
+
 
 # ----- Backwards Compatible Imports -------------------------------------------------------------------------------->
 from tests.support.mixins import ShellCaseCommonTestsMixin  # pylint: disable=unused-import

@@ -218,13 +218,13 @@ minion event bus. The value is expressed in bytes.
 Default: ``True``
 
 When a minion starts up it sends a notification on the event bus with a tag
-that looks like this: `salt/minion/<minion_id>/start`. For historical reasons
+that looks like this: ``salt/minion/<minion_id>/start``. For historical reasons
 the minion also sends a similar event with an event tag like this:
-`minion_start`. This duplication can cause a lot of clutter on the event bus
-when there are many minions. Set `enable_legacy_startup_events: False` in the
-minion config to ensure only the `salt/minion/<minion_id>/start` events are
-sent. Beginning with the `Neon` Salt release this option will default to
-`False`
+``minion_start``. This duplication can cause a lot of clutter on the event bus
+when there are many minions. Set ``enable_legacy_startup_events: False`` in the
+minion config to ensure only the ``salt/minion/<minion_id>/start`` events are
+sent. Beginning with the ``Sodium`` Salt release this option will default to
+``False``.
 
 .. code-block:: yaml
 
@@ -3292,7 +3292,7 @@ have other services that need to go with it.
 
 .. versionadded:: 2016.11.0
 
-Default: ``0``
+Default: ``1800``
 
 If set to a nonzero integer, then passing ``refresh=True`` to functions in the
 :mod:`windows pkg module <salt.modules.win_pkg>` will not refresh the windows

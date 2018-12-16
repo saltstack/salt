@@ -26,9 +26,8 @@ class BotoCloudfrontTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         utils = salt.loader.utils(
             self.opts,
-            whitelist=['boto3', 'dictdiffer', 'yaml'],
-            context={},
-        )
+            whitelist=['boto3', 'dictdiffer', 'yaml', 'args', 'systemd', 'path', 'platform'],
+            context={})
         return {
             boto_cloudfront: {
                 '__utils__': utils,

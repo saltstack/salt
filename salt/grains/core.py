@@ -41,10 +41,16 @@ _supported_dists += ('arch', 'mageia', 'meego', 'vmware', 'bluewhite64',
                      'slamd64', 'ovs', 'system', 'mint', 'oracle', 'void')
 
 # linux_distribution deprecated in py3.7
-try:
+LINUX_DIST_AVAIL = True
+if sys.version_info[:2] >= (3, 7):
+    USE_DISTRO_LINUX_DIST = True
+    try:
+        from distro import linux_distribution
+    except ImportError:
+        LINUX_DIST_AVAIL = False
+else:
+    USE_DISTRO_LINUX_DIST = False
     from platform import linux_distribution
-except ImportError:
-    from distro import linux_distribution
 
 # Import salt libs
 import salt.exceptions
@@ -54,6 +60,7 @@ import salt.utils.dns
 import salt.utils.files
 import salt.utils.network
 import salt.utils.path
+import salt.utils.pkg.rpm
 import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.versions
@@ -621,6 +628,8 @@ def _windows_virtual(osdata):
     if osdata['kernel'] != 'Windows':
         return grains
 
+    grains['virtual'] = 'physical'
+
     # It is possible that the 'manufacturer' and/or 'productname' grains
     # exist but have a value of None.
     manufacturer = osdata.get('manufacturer', '')
@@ -785,6 +794,7 @@ def _virtual(osdata):
                 grains['virtual'] = 'LXC'
                 break
         elif command == 'virt-what':
+            output = output.splitlines()[-1]
             if output in ('kvm', 'qemu', 'uml', 'xen', 'lxc'):
                 grains['virtual'] = output
                 break
@@ -906,7 +916,7 @@ def _virtual(osdata):
                 # Tested on CentOS 5.4 / 2.6.18-164.15.1.el5xen
                 grains['virtual_subtype'] = 'Xen Dom0'
             else:
-                if grains.get('productname', '') == 'HVM domU':
+                if osdata.get('productname', '') == 'HVM domU':
                     # Requires dmidecode!
                     grains['virtual_subtype'] = 'Xen HVM DomU'
                 elif os.path.isfile('/proc/xen/capabilities') and \
@@ -923,9 +933,8 @@ def _virtual(osdata):
                 elif isdir('/sys/bus/xen'):
                     if 'xen:' in __salt__['cmd.run']('dmesg').lower():
                         grains['virtual_subtype'] = 'Xen PV DomU'
-                    elif os.listdir('/sys/bus/xen/drivers'):
-                        # An actual DomU will have several drivers
-                        # whereas a paravirt ops kernel will  not.
+                    elif os.path.isfile('/sys/bus/xen/drivers/xenconsole'):
+                        # An actual DomU will have the xenconsole driver
                         grains['virtual_subtype'] = 'Xen PV DomU'
             # If a Dom0 or DomU was detected, obviously this is xen
             if 'dom' in grains.get('virtual_subtype', '').lower():
@@ -1203,6 +1212,7 @@ def _windows_platform_data():
     #    osfullname
     #    timezone
     #    windowsdomain
+    #    windowsdomaintype
     #    motherboard.productname
     #    motherboard.serialnumber
     #    virtual
@@ -1234,6 +1244,7 @@ def _windows_platform_data():
         os_release = platform.release()
         kernel_version = platform.version()
         info = salt.utils.win_osinfo.get_os_version_info()
+        net_info = salt.utils.win_osinfo.get_join_info()
         server = {'Vista': '2008Server',
                   '7': '2008ServerR2',
                   '8': '2012Server',
@@ -1268,7 +1279,8 @@ def _windows_platform_data():
             'serialnumber': _clean_value('serialnumber', biosinfo.SerialNumber),
             'osfullname': _clean_value('osfullname', osinfo.Caption),
             'timezone': _clean_value('timezone', timeinfo.Description),
-            'windowsdomain': _clean_value('windowsdomain', systeminfo.Domain),
+            'windowsdomain': _clean_value('windowsdomain', net_info['Domain']),
+            'windowsdomaintype': _clean_value('windowsdomaintype', net_info['DomainType']),
             'motherboard': {
                 'productname': _clean_value('motherboard.productname', motherboard['product']),
                 'serialnumber': _clean_value('motherboard.serialnumber', motherboard['serial']),
@@ -1331,6 +1343,7 @@ def id_():
     Return the id
     '''
     return {'id': __opts__.get('id', '')}
+
 
 _REPLACE_LINUX_RE = re.compile(r'\W(?:gnu/)?linux', re.IGNORECASE)
 
@@ -1423,6 +1436,7 @@ _OS_FAMILY_MAP = {
     'GCEL': 'Debian',
     'Linaro': 'Debian',
     'elementary OS': 'Debian',
+    'elementary': 'Debian',
     'Univention': 'Debian',
     'ScientificLinux': 'RedHat',
     'Raspbian': 'Debian',
@@ -1525,6 +1539,34 @@ def _parse_os_release(*os_release_files):
             break
         except (IOError, OSError):
             pass
+
+    return ret
+
+
+def _parse_cpe_name(cpe):
+    '''
+    Parse CPE_NAME data from the os-release
+
+    Info: https://csrc.nist.gov/projects/security-content-automation-protocol/scap-specifications/cpe
+
+    :param cpe:
+    :return:
+    '''
+    part = {
+        'o': 'operating system',
+        'h': 'hardware',
+        'a': 'application',
+    }
+    ret = {}
+    cpe = (cpe or '').split(':')
+    if len(cpe) > 4 and cpe[0] == 'cpe':
+        if cpe[1].startswith('/'):  # WFN to URI
+            ret['vendor'], ret['product'], ret['version'] = cpe[2:5]
+            ret['phase'] = cpe[5] if len(cpe) > 5 else None
+            ret['part'] = part.get(cpe[1][1:])
+        elif len(cpe) == 13 and cpe[1] == '2.3':  # WFN to a string
+            ret['vendor'], ret['product'], ret['version'], ret['phase'] = [x if x != '*' else None for x in cpe[3:7]]
+            ret['part'] = part.get(cpe[2])
 
     return ret
 
@@ -1725,13 +1767,20 @@ def os_data():
                                 codename = codename_match.group(1)
                         grains['lsb_distrib_codename'] = codename
                     if 'CPE_NAME' in os_release:
-                        if ":suse:" in os_release['CPE_NAME'] or ":opensuse:" in os_release['CPE_NAME']:
+                        cpe = _parse_cpe_name(os_release['CPE_NAME'])
+                        if not cpe:
+                            log.error('Broken CPE_NAME format in /etc/os-release!')
+                        elif cpe.get('vendor', '').lower() in ['suse', 'opensuse']:
                             grains['os'] = "SUSE"
                             # openSUSE `osfullname` grain normalization
                             if os_release.get("NAME") == "openSUSE Leap":
                                 grains['osfullname'] = "Leap"
                             elif os_release.get("VERSION") == "Tumbleweed":
                                 grains['osfullname'] = os_release["VERSION"]
+                            # Override VERSION_ID, if CPE_NAME around
+                            if cpe.get('version') and cpe.get('vendor') == 'opensuse':  # Keep VERSION_ID for SLES
+                                grains['lsb_distrib_release'] = cpe['version']
+
                 elif os.path.isfile('/etc/SuSE-release'):
                     log.trace('Parsing distrib info from /etc/SuSE-release')
                     grains['lsb_distrib_id'] = 'SUSE'
@@ -1823,13 +1872,29 @@ def os_data():
 
         # Use the already intelligent platform module to get distro info
         # (though apparently it's not intelligent enough to strip quotes)
-        log.trace(
-            'Getting OS name, release, and codename from '
-            'platform.linux_distribution()'
-        )
-        (osname, osrelease, oscodename) = \
-            [x.strip('"').strip("'") for x in
-             linux_distribution(supported_dists=_supported_dists)]
+        if USE_DISTRO_LINUX_DIST:
+            if LINUX_DIST_AVAIL:
+                log.trace(
+                    'Getting OS name, release, and codename from '
+                    'distro.linux_distribution()'
+                )
+                (osname, osrelease, oscodename) = \
+                    [x.strip('"').strip("'") for x in
+                     linux_distribution()]
+            else:
+                log.warning('distro library unavailable.')
+                (osname, osrelease, oscodename) = \
+                    ('Unknown OS Name',
+                     'Unknown OS Release',
+                     'Unknown OS Codename')
+        else:
+            log.trace(
+                'Getting OS name, release, and codename from '
+                'platform.linux_distribution()'
+            )
+            (osname, osrelease, oscodename) = \
+                [x.strip('"').strip("'") for x in
+                 linux_distribution(supported_dists=_supported_dists)]
         # Try to assign these three names based on the lsb info, they tend to
         # be more accurate than what python gets from /etc/DISTRO-release.
         # It's worth noting that Ubuntu has patched their Python distribution
@@ -1849,8 +1914,7 @@ def os_data():
             # Commit introducing this comment should be reverted after the upstream bug is released.
             if 'CentOS Linux 7' in grains.get('lsb_distrib_codename', ''):
                 grains.pop('lsb_distrib_release', None)
-            grains['osrelease'] = \
-                grains.get('lsb_distrib_release', osrelease).strip()
+            grains['osrelease'] = grains.get('lsb_distrib_release', osrelease).strip()
         grains['oscodename'] = grains.get('lsb_distrib_codename', '').strip() or oscodename
         if 'Red Hat' in grains['oscodename']:
             grains['oscodename'] = oscodename
@@ -1888,8 +1952,7 @@ def os_data():
                         r'((?:Open|Oracle )?Solaris|OpenIndiana|OmniOS) (Development)?'
                         r'\s*(\d+\.?\d*|v\d+)\s?[A-Z]*\s?(r\d+|\d+\/\d+|oi_\S+|snv_\S+)?'
                     )
-                    osname, development, osmajorrelease, osminorrelease = \
-                        release_re.search(rel_data).groups()
+                    osname, development, osmajorrelease, osminorrelease = release_re.search(rel_data).groups()
                 except AttributeError:
                     # Set a blank osrelease grain and fallback to 'Solaris'
                     # as the 'os' grain.
@@ -1976,8 +2039,8 @@ def os_data():
     # architecture.
     if grains.get('os_family') == 'Debian':
         osarch = __salt__['cmd.run']('dpkg --print-architecture').strip()
-    elif grains.get('os_family') == 'RedHat':
-        osarch = __salt__['cmd.run']('rpm --eval %{_host_cpu}').strip()
+    elif grains.get('os_family') in ['RedHat', 'Suse']:
+        osarch = salt.utils.pkg.rpm.get_osarch()
     elif grains.get('os_family') in ('NILinuxRT', 'Poky'):
         archinfo = {}
         for line in __salt__['cmd.run']('opkg print-architecture').splitlines():
@@ -2631,7 +2694,7 @@ def _hw_data(osdata):
                     break
     elif osdata['kernel'] == 'AIX':
         cmd = salt.utils.path.which('prtconf')
-        if data:
+        if cmd:
             data = __salt__['cmd.run']('{0}'.format(cmd)) + os.linesep
             for dest, regstring in (('serialnumber', r'(?im)^\s*Machine\s+Serial\s+Number:\s+(\S+)'),
                                     ('systemfirmware', r'(?im)^\s*Firmware\s+Version:\s+(.*)')):

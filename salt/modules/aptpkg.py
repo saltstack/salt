@@ -14,7 +14,6 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import copy
-import fnmatch
 import os
 import re
 import logging
@@ -273,6 +272,7 @@ def latest_version(*names, **kwargs):
     if len(names) == 1:
         return ret[names[0]]
     return ret
+
 
 # available_version is being deprecated
 available_version = salt.utils.functools.alias_function(latest_version, 'available_version')
@@ -1543,12 +1543,22 @@ def list_repo_pkgs(*args, **kwargs):  # pylint: disable=unused-import
         salt '*' pkg.list_repo_pkgs
         salt '*' pkg.list_repo_pkgs foo bar baz
     '''
-    out = _call_apt(['apt-cache', 'dump'], scope=False, ignore_retcode=True)
+    if args:
+        # Get only information about packages in args
+        cmd = ['apt-cache', 'show'] + [arg for arg in args]
+    else:
+        # Get information about all available packages
+        cmd = ['apt-cache', 'dump']
+
+    out = _call_apt(cmd, scope=False, ignore_retcode=True)
+
     ret = {}
     pkg_name = None
     skip_pkg = False
     new_pkg = re.compile('^Package: (.+)')
     for line in salt.utils.itertools.split(out['stdout'], '\n'):
+        if not line.strip():
+            continue
         try:
             cur_pkg = new_pkg.match(line).group(1)
         except AttributeError:
@@ -1556,24 +1566,33 @@ def list_repo_pkgs(*args, **kwargs):  # pylint: disable=unused-import
         else:
             if cur_pkg != pkg_name:
                 pkg_name = cur_pkg
-                if args:
-                    for arg in args:
-                        if fnmatch.fnmatch(pkg_name, arg):
-                            skip_pkg = False
-                            break
-                    else:
-                        # Package doesn't match any of the passed args, skip it
-                        skip_pkg = True
-                else:
-                    # No args passed, we're getting all packages
-                    skip_pkg = False
                 continue
-        if not skip_pkg:
-            comps = line.strip().split(None, 1)
-            if comps[0] == 'Version:':
-                ret.setdefault(pkg_name, []).append(comps[1])
+        comps = line.strip().split(None, 1)
+        if comps[0] == 'Version:':
+            ret.setdefault(pkg_name, []).append(comps[1])
 
     return ret
+
+
+def _skip_source(source):
+    '''
+    Decide to skip source or not.
+
+    :param source:
+    :return:
+    '''
+    if source.invalid:
+        if source.uri and source.type and source.type in ("deb", "deb-src", "rpm", "rpm-src"):
+            pieces = source.mysplit(source.line)
+            if pieces[1].strip()[0] == "[":
+                options = pieces.pop(1).strip("[]").split()
+                if len(options) > 0:
+                    log.debug("Source %s will be included although is marked invalid", source.uri)
+                    return False
+            return True
+        else:
+            return True
+    return False
 
 
 def list_repos():
@@ -1591,12 +1610,13 @@ def list_repos():
     repos = {}
     sources = sourceslist.SourcesList()
     for source in sources.list:
-        if source.invalid:
+        if _skip_source(source):
             continue
         repo = {}
         repo['file'] = source.file
         repo['comps'] = getattr(source, 'comps', [])
         repo['disabled'] = source.disabled
+        repo['enabled'] = not repo['disabled']  # This is for compatibility with the other modules
         repo['dist'] = source.dist
         repo['type'] = source.type
         repo['uri'] = source.uri.rstrip('/')
@@ -2763,6 +2783,15 @@ def info_installed(*names, **kwargs):
 
         .. versionadded:: 2016.11.3
 
+    attr
+        Comma-separated package attributes. If no 'attr' is specified, all available attributes returned.
+
+        Valid attributes are:
+            version, vendor, release, build_date, build_date_time_t, install_date, install_date_time_t,
+            build_host, group, source_rpm, arch, epoch, size, license, signature, packager, url, summary, description.
+
+        .. versionadded:: Neon
+
     CLI example:
 
     .. code-block:: bash
@@ -2773,11 +2802,15 @@ def info_installed(*names, **kwargs):
     '''
     kwargs = salt.utils.args.clean_kwargs(**kwargs)
     failhard = kwargs.pop('failhard', True)
+    kwargs.pop('errors', None)                # Only for compatibility with RPM
+    attr = kwargs.pop('attr', None)           # Package attributes to return
+    all_versions = kwargs.pop('all_versions', False)  # This is for backward compatible structure only
+
     if kwargs:
         salt.utils.args.invalid_kwargs(kwargs)
 
     ret = dict()
-    for pkg_name, pkg_nfo in __salt__['lowpkg.info'](*names, failhard=failhard).items():
+    for pkg_name, pkg_nfo in __salt__['lowpkg.info'](*names, failhard=failhard, attr=attr).items():
         t_nfo = dict()
         # Translate dpkg-specific keys to a common structure
         for key, value in pkg_nfo.items():
@@ -2794,7 +2827,10 @@ def info_installed(*names, **kwargs):
             else:
                 t_nfo[key] = value
 
-        ret[pkg_name] = t_nfo
+        if all_versions:
+            ret.setdefault(pkg_name, []).append(t_nfo)
+        else:
+            ret[pkg_name] = t_nfo
 
     return ret
 

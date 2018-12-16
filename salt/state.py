@@ -71,6 +71,7 @@ STATE_REQUISITE_KEYWORDS = frozenset([
     'onchanges_any',
     'onfail',
     'onfail_any',
+    'onfail_all',
     'onfail_stop',
     'prereq',
     'prerequired',
@@ -732,6 +733,7 @@ class State(object):
             except AttributeError:
                 pillar_enc = six.text_type(pillar_enc).lower()
         self._pillar_enc = pillar_enc
+        log.debug('Gathering pillar data for state run')
         if initial_pillar and not self._pillar_override:
             self.opts['pillar'] = initial_pillar
         else:
@@ -745,6 +747,7 @@ class State(object):
                     self.opts.get('pillar_source_merging_strategy', 'smart'),
                     self.opts.get('renderer', 'yaml'),
                     self.opts.get('pillar_merge_lists', False))
+        log.debug('Finished gathering pillar data for state run')
         self.state_con = context or {}
         self.load_modules()
         self.active = set()
@@ -1522,6 +1525,9 @@ class State(object):
         req_in_all = req_in.union({'require', 'watch', 'onfail', 'onfail_stop', 'onchanges'})
         extend = {}
         errors = []
+        disabled_reqs = self.opts.get('disabled_requisites', [])
+        if not isinstance(disabled_reqs, list):
+            disabled_reqs = [disabled_reqs]
         for id_, body in six.iteritems(high):
             if not isinstance(body, dict):
                 continue
@@ -1539,6 +1545,9 @@ class State(object):
                         # Split out the components
                         key = next(iter(arg))
                         if key not in req_in:
+                            continue
+                        if key in disabled_reqs:
+                            log.warning('The %s requisite has been disabled, Ignoring.', key)
                             continue
                         rkey = key.split('_')[0]
                         items = arg[key]
@@ -1747,14 +1756,15 @@ class State(object):
         try:
             ret = self.states[cdata['full']](*cdata['args'],
                                              **cdata['kwargs'])
-        except Exception:
+        except Exception as exc:
+            log.debug('An exception occurred in this state: %s', exc,
+                      exc_info_on_loglevel=logging.DEBUG)
             trb = traceback.format_exc()
             ret = {
                 'result': False,
                 'name': name,
                 'changes': {},
-                'comment': 'An exception occurred in this state: {0}'.format(
-                    trb)
+                'comment': 'An exception occurred in this state: {0}'.format(trb)
             }
 
         utc_finish_time = datetime.datetime.utcnow()
@@ -1935,7 +1945,9 @@ class State(object):
                 self.states.inject_globals = {}
             if 'check_cmd' in low and '{0[state]}.mod_run_check_cmd'.format(low) not in self.states:
                 ret.update(self._run_check_cmd(low))
-        except Exception:
+        except Exception as exc:
+            log.debug('An exception occurred in this state: %s', exc,
+                      exc_info_on_loglevel=logging.DEBUG)
             trb = traceback.format_exc()
             # There are a number of possibilities to not have the cdata
             # populated with what we might have expected, so just be smart
@@ -1950,8 +1962,7 @@ class State(object):
                 'result': False,
                 'name': name,
                 'changes': {},
-                'comment': 'An exception occurred in this state: {0}'.format(
-                    trb)
+                'comment': 'An exception occurred in this state: {0}'.format(trb)
             }
         finally:
             if low.get('__prereq__'):
@@ -2260,6 +2271,9 @@ class State(object):
         Look into the running data to check the status of all requisite
         states
         '''
+        disabled_reqs = self.opts.get('disabled_requisites', [])
+        if not isinstance(disabled_reqs, list):
+            disabled_reqs = [disabled_reqs]
         present = False
         # If mod_watch is not available make it a require
         if 'watch' in low:
@@ -2290,6 +2304,8 @@ class State(object):
             present = True
         if 'onfail_any' in low:
             present = True
+        if 'onfail_all' in low:
+            present = True
         if 'onchanges' in low:
             present = True
         if 'onchanges_any' in low:
@@ -2305,12 +2321,16 @@ class State(object):
                 'prereq': [],
                 'onfail': [],
                 'onfail_any': [],
+                'onfail_all': [],
                 'onchanges': [],
                 'onchanges_any': []}
         if pre:
             reqs['prerequired'] = []
         for r_state in reqs:
             if r_state in low and low[r_state] is not None:
+                if r_state in disabled_reqs:
+                    log.warning('The %s requisite has been disabled, Ignoring.', r_state)
+                    continue
                 for req in low[r_state]:
                     if isinstance(req, six.string_types):
                         req = {'id': req}
@@ -2393,7 +2413,7 @@ class State(object):
                 else:
                     if run_dict[tag].get('__state_ran__', True):
                         req_stats.add('met')
-            if r_state.endswith('_any'):
+            if r_state.endswith('_any') or r_state == 'onfail':
                 if 'met' in req_stats or 'change' in req_stats:
                     if 'fail' in req_stats:
                         req_stats.remove('fail')
@@ -2403,8 +2423,14 @@ class State(object):
                     if 'fail' in req_stats:
                         req_stats.remove('fail')
                 if 'onfail' in req_stats:
-                    if 'fail' in req_stats:
+                    # a met requisite in this case implies a success
+                    if 'met' in req_stats:
                         req_stats.remove('onfail')
+            if r_state.endswith('_all'):
+                if 'onfail' in req_stats:
+                    # a met requisite in this case implies a failure
+                    if 'met' in req_stats:
+                        req_stats.remove('met')
             fun_stats.update(req_stats)
 
         if 'unmet' in fun_stats:
@@ -2416,8 +2442,8 @@ class State(object):
                 status = 'met'
             else:
                 status = 'pre'
-        elif 'onfail' in fun_stats and 'met' not in fun_stats:
-            status = 'onfail'  # all onfail states are OK
+        elif 'onfail' in fun_stats and 'onchangesmet' not in fun_stats:
+            status = 'onfail'
         elif 'onchanges' in fun_stats and 'onchangesmet' not in fun_stats:
             status = 'onchanges'
         elif 'change' in fun_stats:
@@ -2692,6 +2718,7 @@ class State(object):
             else:
                 running[tag] = self.call(low, chunks, running)
         if tag in running:
+            running[tag]['__saltfunc__'] = '{0}.{1}'.format(low['state'], low['fun'])
             self.event(running[tag], len(chunks), fire_event=low.get('fire_event'))
         return running
 

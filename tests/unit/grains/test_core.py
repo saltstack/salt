@@ -87,6 +87,50 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
             "UBUNTU_CODENAME": "artful",
         })
 
+    def test_parse_cpe_name_wfn(self):
+        '''
+        Parse correct CPE_NAME data WFN formatted
+        :return:
+        '''
+        for cpe, cpe_ret in [('cpe:/o:opensuse:leap:15.0',
+                              {'phase': None, 'version': '15.0', 'product': 'leap',
+                               'vendor': 'opensuse', 'part': 'operating system'}),
+                             ('cpe:/o:vendor:product:42:beta',
+                              {'phase': 'beta', 'version': '42', 'product': 'product',
+                               'vendor': 'vendor', 'part': 'operating system'})]:
+            ret = core._parse_cpe_name(cpe)
+            for key in cpe_ret:
+                assert key in ret
+                assert cpe_ret[key] == ret[key]
+
+    def test_parse_cpe_name_v23(self):
+        '''
+        Parse correct CPE_NAME data v2.3 formatted
+        :return:
+        '''
+        for cpe, cpe_ret in [('cpe:2.3:o:microsoft:windows_xp:5.1.601:beta:*:*:*:*:*:*',
+                              {'phase': 'beta', 'version': '5.1.601', 'product': 'windows_xp',
+                               'vendor': 'microsoft', 'part': 'operating system'}),
+                             ('cpe:2.3:h:corellian:millenium_falcon:1.0:*:*:*:*:*:*:*',
+                              {'phase': None, 'version': '1.0', 'product': 'millenium_falcon',
+                               'vendor': 'corellian', 'part': 'hardware'}),
+                             ('cpe:2.3:*:dark_empire:light_saber:3.0:beta:*:*:*:*:*:*',
+                              {'phase': 'beta', 'version': '3.0', 'product': 'light_saber',
+                               'vendor': 'dark_empire', 'part': None})]:
+            ret = core._parse_cpe_name(cpe)
+            for key in cpe_ret:
+                assert key in ret
+                assert cpe_ret[key] == ret[key]
+
+    def test_parse_cpe_name_broken(self):
+        '''
+        Parse broken CPE_NAME data
+        :return:
+        '''
+        for cpe in ['cpe:broken', 'cpe:broken:in:all:ways:*:*:*:*',
+                    'cpe:x:still:broken:123', 'who:/knows:what:is:here']:
+            assert core._parse_cpe_name(cpe) == {}
+
     def test_missing_os_release(self):
         with patch('salt.utils.files.fopen', mock_open(read_data={})):
             os_release = core._parse_os_release('/etc/os-release', '/usr/lib/os-release')
@@ -539,6 +583,27 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         }
         self._run_os_grains_tests("ubuntu-17.10", _os_release_map, expectation)
 
+    @skipIf(not salt.utils.platform.is_windows(), 'System is not Windows')
+    def test_windows_platform_data(self):
+        '''
+        Test the _windows_platform_data function
+        '''
+        grains = ['biosversion', 'kernelrelease', 'kernelversion',
+                  'manufacturer', 'motherboard', 'osfullname', 'osmanufacturer',
+                  'osrelease', 'osservicepack', 'osversion', 'productname',
+                  'serialnumber', 'timezone', 'virtual', 'windowsdomain',
+                  'windowsdomaintype']
+        returned_grains = core._windows_platform_data()
+        for grain in grains:
+            self.assertIn(grain, returned_grains)
+
+        valid_types = ['Unknown', 'Unjoined', 'Workgroup', 'Domain']
+        self.assertIn(returned_grains['windowsdomaintype'], valid_types)
+        valid_releases = ['Vista', '7', '8', '8.1', '10', '2008Server',
+                          '2008ServerR2', '2012Server', '2012ServerR2',
+                          '2016Server']
+        self.assertIn(returned_grains['osrelease'], valid_releases)
+
     @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
     def test_linux_memdata(self):
         '''
@@ -643,6 +708,22 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
                                 core._virtual({'kernel': 'Linux'}).get('virtual_subtype'),
                                 'Docker'
                             )
+
+    @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
+    def test_xen_virtual(self):
+        '''
+        Test if OS grains are parsed correctly in Ubuntu Xenial Xerus
+        '''
+        with patch.object(os.path, 'isfile', MagicMock(return_value=False)):
+            with patch.dict(core.__salt__, {'cmd.run': MagicMock(return_value='')}), \
+                patch.object(os.path,
+                             'isfile',
+                             MagicMock(side_effect=lambda x: True if x == '/sys/bus/xen/drivers/xenconsole' else False)):
+                log.debug('Testing Xen')
+                self.assertEqual(
+                    core._virtual({'kernel': 'Linux'}).get('virtual_subtype'),
+                    'Xen PV DomU'
+                )
 
     def _check_ipaddress(self, value, ip_v):
         '''
