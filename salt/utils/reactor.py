@@ -21,6 +21,7 @@ import salt.utils.cache
 import salt.utils.data
 import salt.utils.event
 import salt.utils.files
+import salt.utils.master
 import salt.utils.process
 import salt.utils.yaml
 import salt.wheel
@@ -38,6 +39,7 @@ REACTOR_INTERNAL_KEYWORDS = frozenset([
     'name',
     'order',
     'fun',
+    'key',
     'state',
 ])
 
@@ -264,6 +266,13 @@ class Reactor(salt.utils.process.SignalHandlingMultiprocessingProcess, salt.stat
             # skip all events fired by ourselves
             if data['data'].get('user') == self.wrap.event_user:
                 continue
+            # NOTE: these events must contain the masters key in order to be accepted
+            # see salt.runners.reactor for the requesting interface
+            if 'salt/reactors/manage' in data['tag']:
+                master_key = salt.utils.master.get_master_key('root', self.opts)
+                if data['data'].get('key') != master_key:
+                    log.error('received salt/reactors/manage event without matching master_key. discarding')
+                    continue
             if data['tag'].endswith('salt/reactors/manage/is_leader'):
                 self.event.fire_event({'result': self.is_leader},
                                        'salt/reactors/manage/leader/value')
@@ -288,6 +297,7 @@ class Reactor(salt.utils.process.SignalHandlingMultiprocessingProcess, salt.stat
             elif data['tag'].endswith('salt/reactors/manage/list'):
                 self.event.fire_event({'reactors': self.list_all()},
                                       'salt/reactors/manage/list-results')
+
             # do not handle any reactions if not leader in cluster
             if not self.is_leader:
                 continue
