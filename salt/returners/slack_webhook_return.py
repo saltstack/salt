@@ -296,7 +296,7 @@ def _post_message(webhook, author_icon, title, report):
         'payload': json.dumps(payload, ensure_ascii=False)
     })
 
-    webhook_url = 'https://hooks.slack.com/services/{webhook}'.format(webhook)
+    webhook_url = 'https://hooks.slack.com/services/{webhook}'.format(webhook=webhook)
     query_result = salt.utils.http.query(webhook_url, 'POST', data=data)
 
     if query_result['body'] == 'ok' or query_result['status'] <= 201:
