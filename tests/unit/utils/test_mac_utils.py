@@ -5,15 +5,25 @@ mac_utils tests
 
 # Import python libs
 from __future__ import absolute_import, unicode_literals
+import plistlib
+import xml.parsers.expat
 import os
 
 # Import Salt Testing Libs
 from tests.support.unit import TestCase, skipIf
-from tests.support.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON, call, mock_open
+from tests.support.mock import (
+    call,
+    MagicMock,
+    mock_open,
+    NO_MOCK,
+    NO_MOCK_REASON,
+    patch
+)
 from tests.support.mixins import LoaderModuleMockMixin
 
 # Import Salt libs
 import salt.utils.mac_utils as mac_utils
+import salt.utils.platform
 from salt.exceptions import SaltInvocationError, CommandExecutionError
 
 # Import 3rd-party libs
@@ -215,295 +225,237 @@ class MacUtilsTestCase(TestCase, LoaderModuleMockMixin):
 
     @patch('salt.utils.path.os_walk')
     @patch('os.path.exists')
-    @patch('plistlib.readPlist' if six.PY2 else 'plistlib.load')
-    def test_available_services(self, mock_read_plist, mock_exists, mock_os_walk):
+    def test_available_services_result(self, mock_exists, mock_os_walk):
         '''
-        test available_services
+        test available_services results are properly formed dicts.
         '''
-        def walk_side_effect(*args, **kwargs):
-            path = args[0]
-            results = {
-                '/Library/LaunchAgents': ['com.apple.lla1.plist', 'com.apple.lla2.plist'],
-                '/Library/LaunchDaemons': ['com.apple.lld1.plist', 'com.apple.lld2.plist'],
-                '/System/Library/LaunchAgents': ['com.apple.slla1.plist', 'com.apple.slla2.plist'],
-                '/System/Library/LaunchDaemons': ['com.apple.slld1.plist', 'com.apple.slld2.plist']}
-            files = results.get(path, [])
-            return [(path, [], files)]
-
-        mock_os_walk.side_effect = walk_side_effect
-        mock_read_plist.side_effect = [
-            MagicMock(Label='com.apple.lla1'),
-            MagicMock(Label='com.apple.lla2'),
-            MagicMock(Label='com.apple.lld1'),
-            MagicMock(Label='com.apple.lld2'),
-            MagicMock(Label='com.apple.slla1'),
-            MagicMock(Label='com.apple.slla2'),
-            MagicMock(Label='com.apple.slld1'),
-            MagicMock(Label='com.apple.slld2'),
-        ]
-
+        results = {'/Library/LaunchAgents': ['com.apple.lla1.plist']}
+        mock_os_walk.side_effect = _get_walk_side_effects(results)
         mock_exists.return_value = True
 
-        if six.PY3:
-            # Py3's plistlib.load does not handle opening and closing a
-            # file, unlike py2's plistlib.readPlist. Therefore, we have
-            # to patch open for py3 since we're using it in addition
-            # to the plistlib.load call.
-            with patch('salt.utils.files.fopen', mock_open()):
-                ret = mac_utils._available_services()
-        else:
-            ret = mac_utils._available_services()
+        plists = [{'Label': 'com.apple.lla1'}]
+        ret = _run_available_services(plists)
 
-        # Make sure it's a dict with 8 items
-        self.assertTrue(isinstance(ret, dict))
-        self.assertEqual(len(ret), 8)
+        file_path = os.sep + os.path.join('Library', 'LaunchAgents', 'com.apple.lla1.plist')
+        if salt.utils.platform.is_windows():
+            file_path = 'c:' + file_path
 
-        self.assertEqual(
-            ret['com.apple.lla1']['file_name'],
-            'com.apple.lla1.plist')
+        expected = {
+            'com.apple.lla1': {
+                'file_name': 'com.apple.lla1.plist',
+                'file_path': file_path,
+                'plist': plists[0]}}
+        self.assertEqual(ret, expected)
 
-        self.assertEqual(
-            ret['com.apple.lla1']['file_path'],
-            os.path.realpath(
-                os.path.join('/Library/LaunchAgents', 'com.apple.lla1.plist')))
+    @patch('salt.utils.path.os_walk')
+    @patch('os.path.exists')
+    @patch('os.listdir')
+    @patch('os.path.isdir')
+    def test_available_services_dirs(self,
+                                     mock_isdir,
+                                     mock_listdir,
+                                     mock_exists,
+                                     mock_os_walk):
+        '''
+        test available_services checks all of the expected dirs.
+        '''
+        results = {
+            '/Library/LaunchAgents': ['com.apple.lla1.plist'],
+            '/Library/LaunchDaemons': ['com.apple.lld1.plist'],
+            '/System/Library/LaunchAgents': ['com.apple.slla1.plist'],
+            '/System/Library/LaunchDaemons': ['com.apple.slld1.plist'],
+            '/Users/saltymcsaltface/Library/LaunchAgents': [
+                'com.apple.uslla1.plist']}
 
-        self.assertEqual(
-            ret['com.apple.slld2']['file_name'],
-            'com.apple.slld2.plist')
+        mock_os_walk.side_effect = _get_walk_side_effects(results)
+        mock_listdir.return_value = ['saltymcsaltface']
+        mock_isdir.return_value = True
+        mock_exists.return_value = True
 
-        self.assertEqual(
-            ret['com.apple.slld2']['file_path'],
-            os.path.realpath(
-                os.path.join('/System/Library/LaunchDaemons', 'com.apple.slld2.plist')))
+        plists = [
+            {'Label': 'com.apple.lla1'},
+            {'Label': 'com.apple.lld1'},
+            {'Label': 'com.apple.slla1'},
+            {'Label': 'com.apple.slld1'},
+            {'Label': 'com.apple.uslla1'}]
+        ret = _run_available_services(plists)
+
+        self.assertEqual(len(ret), 5)
 
     @patch('salt.utils.path.os_walk')
     @patch('os.path.exists')
     @patch('plistlib.readPlist' if six.PY2 else 'plistlib.load')
     def test_available_services_broken_symlink(self, mock_read_plist, mock_exists, mock_os_walk):
         '''
-        test available_services
+        test available_services when it encounters a broken symlink.
         '''
-        def walk_side_effect(*args, **kwargs):
-            path = args[0]
-            results = {
-                '/Library/LaunchAgents': ['com.apple.lla1.plist', 'com.apple.lla2.plist'],
-                '/Library/LaunchDaemons': ['com.apple.lld1.plist', 'com.apple.lld2.plist'],
-                '/System/Library/LaunchAgents': ['com.apple.slla1.plist', 'com.apple.slla2.plist'],
-                '/System/Library/LaunchDaemons': ['com.apple.slld1.plist', 'com.apple.slld2.plist']}
-            files = results.get(path, [])
-            return [(path, [], files)]
+        results = {'/Library/LaunchAgents': ['com.apple.lla1.plist', 'com.apple.lla2.plist']}
+        mock_os_walk.side_effect = _get_walk_side_effects(results)
+        mock_exists.side_effect = [True, False]
 
-        mock_os_walk.side_effect = walk_side_effect
+        plists = [{'Label': 'com.apple.lla1'}]
+        ret = _run_available_services(plists)
 
-        mock_read_plist.side_effect = [
-            MagicMock(Label='com.apple.lla1'),
-            MagicMock(Label='com.apple.lla2'),
-            MagicMock(Label='com.apple.lld1'),
-            MagicMock(Label='com.apple.lld2'),
-            MagicMock(Label='com.apple.slld1'),
-            MagicMock(Label='com.apple.slld2'),
-        ]
+        file_path = os.sep + os.path.join('Library', 'LaunchAgents', 'com.apple.lla1.plist')
+        if salt.utils.platform.is_windows():
+            file_path = 'c:' + file_path
 
-        mock_exists.side_effect = [True, True, True, True, False, False, True, True]
-        if six.PY3:
-            # Py3's plistlib.load does not handle opening and closing a
-            # file, unlike py2's plistlib.readPlist. Therefore, we have
-            # to patch open for py3 since we're using it in addition
-            # to the plistlib.load call.
-            with patch('salt.utils.files.fopen', mock_open()):
-                ret = mac_utils._available_services()
-        else:
+        expected = {
+            'com.apple.lla1': {
+                'file_name': 'com.apple.lla1.plist',
+                'file_path': file_path,
+                'plist': plists[0]}}
+        self.assertEqual(ret, expected)
+
+    @patch('salt.utils.path.os_walk')
+    @patch('os.path.exists')
+    @patch('plistlib.readPlist')
+    @patch('salt.utils.mac_utils.__salt__')
+    @patch('plistlib.readPlistFromString', create=True)
+    def test_available_services_binary_plist(self,
+                                             mock_read_plist_from_string,
+                                             mock_run,
+                                             mock_read_plist,
+                                             mock_exists,
+                                             mock_os_walk):
+        '''
+        test available_services handles binary plist files.
+        '''
+        results = {'/Library/LaunchAgents': ['com.apple.lla1.plist']}
+        mock_os_walk.side_effect = _get_walk_side_effects(results)
+        mock_exists.return_value = True
+
+        plists = [{'Label': 'com.apple.lla1'}]
+
+        file_path = os.sep + os.path.join('Library', 'LaunchAgents', 'com.apple.lla1.plist')
+        if salt.utils.platform.is_windows():
+            file_path = 'c:' + file_path
+
+        if six.PY2:
+            attrs = {'cmd.run': MagicMock()}
+
+            def getitem(name):
+                return attrs[name]
+
+            mock_run.__getitem__.side_effect = getitem
+            mock_run.configure_mock(**attrs)
+            cmd = '/usr/bin/plutil -convert xml1 -o - -- "{}"'.format(file_path)
+            calls = [call.cmd.run(cmd)]
+
+            mock_read_plist.side_effect = xml.parsers.expat.ExpatError
+            mock_read_plist_from_string.side_effect = plists
             ret = mac_utils._available_services()
+        else:
+            # Py3 plistlib knows how to handle binary plists without
+            # any extra work, so this test doesn't really do anything
+            # new.
+            ret = _run_available_services(plists)
 
-        # Make sure it's a dict with 6 items
-        self.assertTrue(isinstance(ret, dict))
-        self.assertEqual(len(ret), 6)
+        expected = {
+            'com.apple.lla1': {
+                'file_name': 'com.apple.lla1.plist',
+                'file_path': file_path,
+                'plist': plists[0]}}
+        self.assertEqual(ret, expected)
 
-        self.assertEqual(
-            ret['com.apple.lla1']['file_name'],
-            'com.apple.lla1.plist')
-
-        self.assertEqual(
-            ret['com.apple.lla1']['file_path'],
-            os.path.realpath(
-                os.path.join('/Library/LaunchAgents', 'com.apple.lla1.plist')))
-
-        self.assertEqual(
-            ret['com.apple.slld2']['file_name'],
-            'com.apple.slld2.plist')
-
-        self.assertEqual(
-            ret['com.apple.slld2']['file_path'],
-            os.path.realpath(
-                os.path.join('/System/Library/LaunchDaemons', 'com.apple.slld2.plist')))
+        if six.PY2:
+            mock_run.assert_has_calls(calls, any_order=True)
 
     @patch('salt.utils.path.os_walk')
     @patch('os.path.exists')
-    @patch('plistlib.readPlist')
+    def test_available_services_invalid_file(self, mock_exists, mock_os_walk):
+        '''
+        test available_services excludes invalid files.
+
+        The py3 plistlib raises an InvalidFileException when a plist
+        file cannot be parsed. This test only asserts things for py3.
+        '''
+        if six.PY3:
+            results = {'/Library/LaunchAgents': ['com.apple.lla1.plist']}
+            mock_os_walk.side_effect = _get_walk_side_effects(results)
+            mock_exists.return_value = True
+
+            plists = [{'Label': 'com.apple.lla1'}]
+
+            mock_load = MagicMock()
+            mock_load.side_effect = plistlib.InvalidFileException
+            with patch('salt.utils.files.fopen', mock_open()):
+                with patch('plistlib.load', mock_load):
+                    ret = mac_utils._available_services()
+
+            self.assertEqual(len(ret), 0)
+
     @patch('salt.utils.mac_utils.__salt__')
-    @patch('plistlib.readPlistFromString' if six.PY2 else 'plistlib.loads')
-    def test_available_services_non_xml(self,
-                                        mock_read_plist_from_string,
-                                        mock_run,
-                                        mock_read_plist,
-                                        mock_exists,
-                                        mock_os_walk):
-        '''
-        test available_services
-        '''
-        def walk_side_effect(*args, **kwargs):
-            path = args[0]
-            results = {
-                '/Library/LaunchAgents': ['com.apple.lla1.plist', 'com.apple.lla2.plist'],
-                '/Library/LaunchDaemons': ['com.apple.lld1.plist', 'com.apple.lld2.plist'],
-                '/System/Library/LaunchAgents': ['com.apple.slla1.plist', 'com.apple.slla2.plist'],
-                '/System/Library/LaunchDaemons': ['com.apple.slld1.plist', 'com.apple.slld2.plist']}
-            files = results.get(path, [])
-            return [(path, [], files)]
-
-        mock_os_walk.side_effect = walk_side_effect
-        attrs = {'cmd.run': MagicMock(return_value='<some xml>')}
-
-        def getitem(name):
-            return attrs[name]
-
-        mock_run.__getitem__.side_effect = getitem
-        mock_run.configure_mock(**attrs)
-        mock_exists.return_value = True
-        mock_read_plist.side_effect = Exception()
-        mock_read_plist_from_string.side_effect = [
-            MagicMock(Label='com.apple.lla1'),
-            MagicMock(Label='com.apple.lla2'),
-            MagicMock(Label='com.apple.lld1'),
-            MagicMock(Label='com.apple.lld2'),
-            MagicMock(Label='com.apple.slla1'),
-            MagicMock(Label='com.apple.slla2'),
-            MagicMock(Label='com.apple.slld1'),
-            MagicMock(Label='com.apple.slld2'),
-        ]
-
-        ret = mac_utils._available_services()
-
-        cmd = '/usr/bin/plutil -convert xml1 -o - -- "{0}"'
-        calls = [
-            call.cmd.run(cmd.format(os.path.realpath(os.path.join(
-                         '/Library/LaunchAgents', 'com.apple.lla1.plist'))),),
-            call.cmd.run(cmd.format(os.path.realpath(os.path.join(
-                         '/Library/LaunchAgents', 'com.apple.lla2.plist'))),),
-            call.cmd.run(cmd.format(os.path.realpath(os.path.join(
-                         '/Library/LaunchDaemons', 'com.apple.lld1.plist'))),),
-            call.cmd.run(cmd.format(os.path.realpath(os.path.join(
-                         '/Library/LaunchDaemons', 'com.apple.lld2.plist'))),),
-            call.cmd.run(cmd.format(os.path.realpath(os.path.join(
-                         '/System/Library/LaunchAgents', 'com.apple.slla1.plist'))),),
-            call.cmd.run(cmd.format(os.path.realpath(os.path.join(
-                         '/System/Library/LaunchAgents', 'com.apple.slla2.plist'))),),
-            call.cmd.run(cmd.format(os.path.realpath(os.path.join(
-                         '/System/Library/LaunchDaemons', 'com.apple.slld1.plist'))),),
-            call.cmd.run(cmd.format(os.path.realpath(os.path.join(
-                         '/System/Library/LaunchDaemons', 'com.apple.slld2.plist'))),),
-        ]
-        mock_run.assert_has_calls(calls, any_order=True)
-
-        # Make sure it's a dict with 8 items
-        self.assertTrue(isinstance(ret, dict))
-        self.assertEqual(len(ret), 8)
-
-        self.assertEqual(
-            ret['com.apple.lla1']['file_name'],
-            'com.apple.lla1.plist')
-
-        self.assertEqual(
-            ret['com.apple.lla1']['file_path'],
-            os.path.realpath(
-                os.path.join('/Library/LaunchAgents', 'com.apple.lla1.plist')))
-
-        self.assertEqual(
-            ret['com.apple.slld2']['file_name'],
-            'com.apple.slld2.plist')
-
-        self.assertEqual(
-            ret['com.apple.slld2']['file_path'],
-            os.path.realpath(
-                os.path.join('/System/Library/LaunchDaemons', 'com.apple.slld2.plist')))
-
+    @patch('plistlib.readPlist')
     @patch('salt.utils.path.os_walk')
     @patch('os.path.exists')
-    @patch('plistlib.readPlist')
-    @patch('salt.utils.mac_utils.__salt__')
-    @patch('plistlib.readPlistFromString' if six.PY2 else 'plistlib.loads')
-    def test_available_services_non_xml_malformed_plist(self,
-                                                        mock_read_plist_from_string,
-                                                        mock_run,
-                                                        mock_read_plist,
-                                                        mock_exists,
-                                                        mock_os_walk):
+    def test_available_services_expat_error(self,
+                                            mock_exists,
+                                            mock_os_walk,
+                                            mock_read_plist,
+                                            mock_run):
         '''
-        test available_services
+        test available_services excludes files with expat errors.
+
+        Poorly formed XML will raise an ExpatError on py2. It will
+        also be raised by some almost-correct XML on py3.
         '''
-        def walk_side_effect(*args, **kwargs):
-            path = args[0]
-            results = {
-                '/Library/LaunchAgents': ['com.apple.lla1.plist', 'com.apple.lla2.plist'],
-                '/Library/LaunchDaemons': ['com.apple.lld1.plist', 'com.apple.lld2.plist'],
-                '/System/Library/LaunchAgents': ['com.apple.slla1.plist', 'com.apple.slla2.plist'],
-                '/System/Library/LaunchDaemons': ['com.apple.slld1.plist', 'com.apple.slld2.plist']}
-            files = results.get(path, [])
-            return [(path, [], files)]
-
-        mock_os_walk.side_effect = walk_side_effect
-        attrs = {'cmd.run': MagicMock(return_value='<some xml>')}
-
-        def getitem(name):
-            return attrs[name]
-
-        mock_run.__getitem__.side_effect = getitem
-        mock_run.configure_mock(**attrs)
+        results = {'/Library/LaunchAgents': ['com.apple.lla1.plist']}
+        mock_os_walk.side_effect = _get_walk_side_effects(results)
         mock_exists.return_value = True
-        mock_read_plist.side_effect = Exception()
-        mock_read_plist_from_string.return_value = 'malformedness'
 
-        ret = mac_utils._available_services()
+        file_path = os.sep + os.path.join('Library', 'LaunchAgents', 'com.apple.lla1.plist')
+        if salt.utils.platform.is_windows():
+            file_path = 'c:' + file_path
 
-        cmd = '/usr/bin/plutil -convert xml1 -o - -- "{0}"'
-        calls = [
-            call.cmd.run(cmd.format(os.path.realpath(os.path.join(
-                         '/Library/LaunchAgents', 'com.apple.lla1.plist'))),),
-            call.cmd.run(cmd.format(os.path.realpath(os.path.join(
-                         '/Library/LaunchAgents', 'com.apple.lla2.plist'))),),
-            call.cmd.run(cmd.format(os.path.realpath(os.path.join(
-                         '/Library/LaunchDaemons', 'com.apple.lld1.plist'))),),
-            call.cmd.run(cmd.format(os.path.realpath(os.path.join(
-                         '/Library/LaunchDaemons', 'com.apple.lld2.plist'))),),
-            call.cmd.run(cmd.format(os.path.realpath(os.path.join(
-                         '/System/Library/LaunchAgents', 'com.apple.slla1.plist'))),),
-            call.cmd.run(cmd.format(os.path.realpath(os.path.join(
-                         '/System/Library/LaunchAgents', 'com.apple.slla2.plist'))),),
-            call.cmd.run(cmd.format(os.path.realpath(os.path.join(
-                         '/System/Library/LaunchDaemons', 'com.apple.slld1.plist'))),),
-            call.cmd.run(cmd.format(os.path.realpath(os.path.join(
-                         '/System/Library/LaunchDaemons', 'com.apple.slld2.plist'))),),
-        ]
-        mock_run.assert_has_calls(calls, any_order=True)
+        if six.PY3:
+            mock_load = MagicMock()
+            mock_load.side_effect = xml.parsers.expat.ExpatError
+            with patch('salt.utils.files.fopen', mock_open()):
+                with patch('plistlib.load', mock_load):
+                    ret = mac_utils._available_services()
+        else:
+            attrs = {'cmd.run': MagicMock()}
 
-        # Make sure it's a dict with 8 items
-        self.assertTrue(isinstance(ret, dict))
-        self.assertEqual(len(ret), 8)
+            def getitem(name):
+                return attrs[name]
 
-        self.assertEqual(
-            ret['com.apple.lla1.plist']['file_name'],
-            'com.apple.lla1.plist')
+            mock_run.__getitem__.side_effect = getitem
+            mock_run.configure_mock(**attrs)
+            cmd = '/usr/bin/plutil -convert xml1 -o - -- "{}"'.format(file_path)
+            calls = [call.cmd.run(cmd)]
 
-        self.assertEqual(
-            ret['com.apple.lla1.plist']['file_path'],
-            os.path.realpath(
-                os.path.join('/Library/LaunchAgents', 'com.apple.lla1.plist')))
+            mock_raise_expat_error = MagicMock(
+                side_effect=xml.parsers.expat.ExpatError)
 
-        self.assertEqual(
-            ret['com.apple.slld2.plist']['file_name'],
-            'com.apple.slld2.plist')
+            with patch('plistlib.readPlist', mock_raise_expat_error):
+                with patch('plistlib.readPlistFromString', mock_raise_expat_error):
+                    ret = mac_utils._available_services()
 
-        self.assertEqual(
-            ret['com.apple.slld2.plist']['file_path'],
-            os.path.realpath(
-                os.path.join('/System/Library/LaunchDaemons', 'com.apple.slld2.plist')))
+            mock_run.assert_has_calls(calls, any_order=True)
+
+        self.assertEqual(len(ret), 0)
+
+
+def _get_walk_side_effects(results):
+    '''
+    Data generation helper function for service tests.
+    '''
+    def walk_side_effect(*args, **kwargs):
+        return [(args[0], [], results.get(args[0], []))]
+    return walk_side_effect
+
+
+def _run_available_services(plists):
+    if six.PY2:
+        mock_read_plist = MagicMock()
+        mock_read_plist.side_effect = plists
+        with patch('plistlib.readPlist', mock_read_plist):
+            ret = mac_utils._available_services()
+    else:
+        mock_load = MagicMock()
+        mock_load.side_effect = plists
+        with patch('salt.utils.files.fopen', mock_open()):
+            with patch('plistlib.load', mock_load):
+                ret = mac_utils._available_services()
+    return ret

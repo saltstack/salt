@@ -7,10 +7,10 @@ import shutil
 import time
 
 # Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ShellCase
 from tests.support.helpers import flaky
 from tests.support.mixins import ShellCaseCommonTestsMixin
-from tests.support.paths import TMP
 from tests.support.unit import skipIf
 
 # Import salt libs
@@ -340,29 +340,6 @@ class MatchTest(ShellCase, ShellCaseCommonTestsMixin):
         data = self.run_salt('-d "*" user')
         self.assertIn('user.add:', data)
 
-    @flaky
-    def test_salt_documentation_arguments_not_assumed(self):
-        '''
-        Test to see if we're not auto-adding '*' and 'sys.doc' to the call
-        '''
-        os_family = self.run_call('--local grains.get os_family')[1].strip()
-        if os_family == 'Arch':
-            self.skipTest('This test is failing in Arch due to a bug in salt-testing. '
-                          'Skipping until salt-testing can be upgraded. For more information, '
-                          'see https://github.com/saltstack/salt-jenkins/issues/324.')
-        data = self.run_salt('-d -t 20')
-        if data:
-            assert 'user.add:' in data
-        data = self.run_salt('"*" -d -t 20')
-        if data:
-            assert 'user.add:' in data
-        data = self.run_salt('"*" -d user -t 20')
-        assert 'user.add:' in data
-        data = self.run_salt('"*" sys.doc -d user -t 20')
-        assert 'user.add:' in data
-        data = self.run_salt('"*" sys.doc user -t 20')
-        assert 'user.add:' in data
-
     def test_salt_documentation_too_many_arguments(self):
         '''
         Test to see if passing additional arguments shows an error
@@ -376,7 +353,7 @@ class MatchTest(ShellCase, ShellCaseCommonTestsMixin):
         Skip on Windows because Syslog is not installed
         '''
         old_cwd = os.getcwd()
-        config_dir = os.path.join(TMP, 'issue-7754')
+        config_dir = os.path.join(RUNTIME_VARS.TMP, 'issue-7754')
         if not os.path.isdir(config_dir):
             os.makedirs(config_dir)
 

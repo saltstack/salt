@@ -22,6 +22,7 @@ from zipimport import zipimporter
 
 # Import salt libs
 import salt.config
+import salt.defaults.events
 import salt.defaults.exitcodes
 import salt.syspaths
 import salt.utils.args
@@ -262,7 +263,8 @@ def minion_mods(
 
     if notify:
         evt = salt.utils.event.get_event('minion', opts=opts, listen=False)
-        evt.fire_event({'complete': True}, tag='/salt/minion/minion_mod_complete')
+        evt.fire_event({'complete': True},
+                       tag=salt.defaults.events.MINION_MOD_COMPLETE)
 
     return ret
 
@@ -293,6 +295,18 @@ def raw_mod(opts, name, functions, mod='modules'):
 
     loader._load_module(name)  # load a single module (the one passed in)
     return dict(loader._dict)  # return a copy of *just* the funcs for `name`
+
+
+def metaproxy(opts):
+    '''
+    Return functions used in the meta proxy
+    '''
+
+    return LazyLoader(
+        _module_dirs(opts, 'metaproxy'),
+        opts,
+        tag='metaproxy'
+    )
 
 
 def matchers(opts):
@@ -1874,20 +1888,6 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                     # The module is renaming itself. Updating the module name
                     # with the new name
                     log.trace('Loaded %s as virtual %s', module_name, virtual)
-
-                    if not hasattr(mod, '__virtualname__'):
-                        salt.utils.versions.warn_until(
-                            'Hydrogen',
-                            'The \'{0}\' module is renaming itself in its '
-                            '__virtual__() function ({1} => {2}). Please '
-                            'set it\'s virtual name as the '
-                            '\'__virtualname__\' module attribute. '
-                            'Example: "__virtualname__ = \'{2}\'"'.format(
-                                mod.__name__,
-                                module_name,
-                                virtual
-                            )
-                        )
 
                     if virtualname != virtual:
                         # The __virtualname__ attribute does not match what's
