@@ -9,7 +9,7 @@ import re
 import time
 import logging
 try:
-    from salt.utils.msgpack import msgpack, PackValueError, UnpackValueError
+    from salt.utils.msgpack import msgpack, UnpackValueError, PackValueError  # pylint: disable=unused-import
 except ImportError:
     msgpack = None
 

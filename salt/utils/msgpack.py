@@ -9,9 +9,13 @@ from __future__ import absolute_import
 try:
     # Attempt to import msgpack
     import msgpack
+    from msgpack import PackValueError, UnpackValueError
 except ImportError:
     # Fall back to msgpack_pure
     import msgpack_pure as msgpack  # pylint: disable=import-error
+    # msgpack_pure doesnt have these exception classes
+    PackValueError = RuntimeError
+    UnpackValueError = RuntimeError
 
 # Import Salt libs
 from salt.utils.thread_local_proxy import ThreadLocalProxy
