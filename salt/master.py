@@ -31,6 +31,7 @@ import tornado.gen  # pylint: disable=F0401
 
 # Import salt libs
 import salt.crypt
+import salt.cli.batch_async
 import salt.client
 import salt.client.ssh.client
 import salt.exceptions
@@ -2034,10 +2035,9 @@ class ClearFuncs(object):
             return False
         return self.loadauth.get_tok(clear_load['token'])
 
-    def publish_batch(self, batch, clear_load):
+    def publish_batch(self, clear_load):
         batch_load = {}
         batch_load.update(clear_load)
-        batch_load['kwargs']['batch'] = batch
         import salt.cli.batch_async
         batch = salt.cli.batch_async.BatchAsync(
             self.local.opts,
@@ -2062,7 +2062,6 @@ class ClearFuncs(object):
         by the LocalClient.
         '''
         extra = clear_load.get('kwargs', {})
-        batch = extra.pop('batch', None)
 
         publisher_acl = salt.acl.PublisherACL(self.opts['publisher_acl_blacklist'])
 
@@ -2148,8 +2147,8 @@ class ClearFuncs(object):
                         'error': 'Master could not resolve minions for target {0}'.format(clear_load['tgt'])
                     }
                 }
-        if batch:
-            return self.publish_batch(batch, clear_load)
+        if extra.get('batch', None):
+            return self.publish_batch(clear_load)
         else:
             jid = self._prep_jid(clear_load, extra)
             if jid is None:
