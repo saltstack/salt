@@ -8,8 +8,8 @@ from __future__ import absolute_import, print_function, unicode_literals
 import os
 
 # Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ModuleCase
-from tests.support.paths import TMP
 from tests.support.helpers import destructiveTest, skip_if_not_root
 
 # Import Salt libs
@@ -18,7 +18,7 @@ import salt.utils.platform
 
 TEST_PKG_URL = 'https://distfiles.macports.org/MacPorts/MacPorts-2.3.4-10.11-ElCapitan.pkg'
 TEST_PKG_NAME = 'org.macports.MacPorts'
-TEST_PKG = os.path.join(TMP, 'MacPorts-2.3.4-10.11-ElCapitan.pkg')
+TEST_PKG = os.path.join(RUNTIME_VARS.TMP, 'MacPorts-2.3.4-10.11-ElCapitan.pkg')
 
 
 @skip_if_not_root
