@@ -8,7 +8,7 @@ import os
 
 # Import test libs
 from tests.support.mixins import LoaderModuleMockMixin, XMLEqualityMixin
-from tests.support.mock import patch, mock_open, PropertyMock, call
+from tests.support.mock import patch, mock_open, PropertyMock, call, ANY
 from tests.support.unit import skipIf, TestCase
 
 # Import 3rd-party libs
@@ -1316,6 +1316,51 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
                 'Installation successful but reboot failed due to : "Test exception"'
             ret['out'] = False
             self.assertEqual(junos.install_os('path', **args), ret)
+
+    def test_install_os_no_copy(self):
+        with patch('jnpr.junos.utils.sw.SW.install') as mock_install, \
+                patch('salt.utils.files.safe_rm') as mock_safe_rm, \
+                patch('salt.utils.files.mkstemp') as mock_mkstemp, \
+                patch('os.path.isfile') as mock_isfile, \
+                patch('os.path.getsize') as mock_getsize:
+            mock_getsize.return_value = 10
+            mock_isfile.return_value = True
+            ret = dict()
+            ret['out'] = True
+            ret['message'] = 'Installed the os.'
+            self.assertEqual(junos.install_os('path', no_copy=True), ret)
+            mock_install.assert_called_with(u'path', no_copy=True, progress=True)
+            mock_mkstemp.assert_not_called()
+            mock_safe_rm.assert_not_called()
+
+    def test_install_os_issu(self):
+        with patch('jnpr.junos.utils.sw.SW.install') as mock_install, \
+                patch('salt.utils.files.safe_rm') as mock_safe_rm, \
+                patch('salt.utils.files.mkstemp') as mock_mkstemp, \
+                patch('os.path.isfile') as mock_isfile, \
+                patch('os.path.getsize') as mock_getsize:
+            mock_getsize.return_value = 10
+            mock_isfile.return_value = True
+            ret = dict()
+            ret['out'] = True
+            ret['message'] = 'Installed the os.'
+            self.assertEqual(junos.install_os('path', issu=True), ret)
+            mock_install.assert_called_with(ANY, issu=True, progress=True)
+
+    def test_install_os_add_params(self):
+        with patch('jnpr.junos.utils.sw.SW.install') as mock_install, \
+                patch('salt.utils.files.safe_rm') as mock_safe_rm, \
+                patch('salt.utils.files.mkstemp') as mock_mkstemp, \
+                patch('os.path.isfile') as mock_isfile, \
+                patch('os.path.getsize') as mock_getsize:
+            mock_getsize.return_value = 10
+            mock_isfile.return_value = True
+            ret = dict()
+            ret['out'] = True
+            ret['message'] = 'Installed the os.'
+            remote_path = '/path/to/file'
+            self.assertEqual(junos.install_os('path', remote_path=remote_path, nssu=True, validate=True), ret)
+            mock_install.assert_called_with(ANY, nssu=True, remote_path=remote_path, progress=True, validate=True)
 
     def test_file_copy_without_args(self):
         ret = dict()
