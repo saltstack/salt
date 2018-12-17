@@ -305,7 +305,6 @@ class PillarCache(object):
                               self.saltenv,
                               ext=self.ext,
                               functions=self.functions,
-                              pillar_override=self.pillar_override,
                               pillarenv=self.pillarenv)
         return fresh_pillar.compile_pillar()
 
@@ -339,6 +338,16 @@ class PillarCache(object):
             self.cache[self.minion_id] = {self.pillarenv: pillar_data}
             log.debug('Pillar cache has been added for minion %s', self.minion_id)
             log.debug('Current pillar cache: %s', self.cache[self.minion_id])
+
+        # we dont want the pillar_override baked into the cached fetch_pillar from above
+        if self.pillar_override:
+            pillar_data = merge(
+                pillar_data,
+                self.pillar_override,
+                self.opts.get('pillar_source_merging_strategy', 'smart'),
+                self.opts.get('renderer', 'yaml'),
+                self.opts.get('pillar_merge_lists', False))
+            pillar_data.update(self.pillar_override)
 
         return pillar_data
 
@@ -591,6 +600,9 @@ class Pillar(object):
                         states = OrderedDict()
                         orders[saltenv][tgt] = 0
                         ignore_missing = False
+                        # handle a pillar sls target written in shorthand form
+                        if isinstance(ctop[saltenv][tgt], six.string_types):
+                            ctop[saltenv][tgt] = [ctop[saltenv][tgt]]
                         for comp in ctop[saltenv][tgt]:
                             if isinstance(comp, dict):
                                 if 'match' in comp:
