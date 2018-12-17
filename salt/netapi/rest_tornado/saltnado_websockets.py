@@ -291,7 +291,7 @@ Setup
 '''
 from __future__ import absolute_import, print_function, unicode_literals
 
-import tornado.websocket
+from tornado.websocket import WebSocketHandler
 from . import event_processor
 from .saltnado import _check_cors_origin
 
@@ -306,7 +306,7 @@ import logging
 log = logging.getLogger(__name__)
 
 
-class AllEventsHandler(tornado.websocket.WebSocketHandler):  # pylint: disable=W0223,W0232
+class AllEventsHandler(WebSocketHandler):  # pylint: disable=W0223,W0232
     '''
     Server side websocket handler.
     '''

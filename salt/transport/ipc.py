@@ -12,11 +12,10 @@ import socket
 import time
 
 # Import Tornado libs
-import tornado
 import tornado.gen as tornado_gen
-import tornado.netutil
-import tornado.concurrent
+from tornado.concurrent import Future as TornadoFuture
 from tornado.locks import Lock
+from tornado.netutil import add_accept_handler, bind_unix_socket
 from tornado.ioloop import IOLoop, TimeoutError as TornadoTimeoutError
 from tornado.iostream import IOStream, StreamClosedError
 # Import Salt libs
@@ -37,7 +36,7 @@ def future_with_timeout_callback(future):
         future._future_with_timeout._done_callback(future)
 
 
-class FutureWithTimeout(tornado.concurrent.Future):
+class FutureWithTimeout(TornadoFuture):
     def __init__(self, io_loop, future, timeout):
         super(FutureWithTimeout, self).__init__()
         self.io_loop = io_loop
@@ -127,10 +126,10 @@ class IPCServer(object):
             # Based on default used in tornado.netutil.bind_sockets()
             self.sock.listen(128)
         else:
-            self.sock = tornado.netutil.bind_unix_socket(self.socket_path)
+            self.sock = bind_unix_socket(self.socket_path)
 
         with salt.utils.asynchronous.current_ioloop(self.io_loop):
-            tornado.netutil.add_accept_handler(
+            add_accept_handler(
                 self.sock,
                 self.handle_connection,
             )
@@ -256,7 +255,7 @@ class IPCClient(object):
         to the server.
 
         '''
-        self.io_loop = io_loop or tornado.ioloop.IOLoop.current()
+        self.io_loop = io_loop or IOLoop.current()
         self.socket_path = socket_path
         self._closing = False
         self.stream = None
@@ -284,7 +283,7 @@ class IPCClient(object):
             if hasattr(self, '_connecting_future'):
                 # read previous future result to prevent the "unhandled future exception" error
                 self._connecting_future.exception()  # pylint: disable=E0203
-            future = tornado.concurrent.Future()
+            future = TornadoFuture()
             self._connecting_future = future
             self._connect(timeout=timeout)
 
@@ -498,10 +497,10 @@ class IPCMessagePublisher(object):
             # Based on default used in tornado.netutil.bind_sockets()
             self.sock.listen(128)
         else:
-            self.sock = tornado.netutil.bind_unix_socket(self.socket_path)
+            self.sock = bind_unix_socket(self.socket_path)
 
         with salt.utils.asynchronous.current_ioloop(self.io_loop):
-            tornado.netutil.add_accept_handler(
+            add_accept_handler(
                 self.sock,
                 self.handle_connection,
             )

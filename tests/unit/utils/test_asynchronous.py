@@ -4,7 +4,7 @@
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import 3rd-party libs
-import tornado.testing
+from tornado.testing import gen_test
 import tornado.gen as tornado_gen
 from tornado.testing import AsyncTestCase
 
@@ -35,7 +35,7 @@ class HelperB(object):
 
 
 class TestSyncWrapper(AsyncTestCase):
-    @tornado.testing.gen_test
+    @gen_test
     def test_helpers(self):
         '''
         Test that the helper classes do what we expect within a regular asynchronous env

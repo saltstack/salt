@@ -18,11 +18,13 @@ log = logging.getLogger(__virtualname__)
 min_tornado_version = '4.0'
 has_tornado = False
 try:
-    import tornado
-    if _StrictVersion(tornado.version) >= _StrictVersion(min_tornado_version):
+    from tornado import version as tornado_version
+    if _StrictVersion(tornado_version) >= _StrictVersion(min_tornado_version):
         has_tornado = True
     else:
         log.error('rest_tornado requires at least tornado %s', min_tornado_version)
+    from tornado.ioloop import IOLoop
+    from tornado.web import Application
 except (ImportError, TypeError) as err:
     has_tornado = False
     log.error('ImportError! %s', err)
@@ -76,7 +78,7 @@ def get_application(opts):
             (formatted_events_pattern, saltnado_websockets.FormattedEventsHandler),
         ]
 
-    application = tornado.web.Application(paths, debug=mod_opts.get('debug', False))
+    application = Application(paths, debug=mod_opts.get('debug', False))
 
     application.opts = opts
     application.mod_opts = mod_opts
@@ -115,8 +117,8 @@ def start():
             ssl_opts.update({'keyfile': mod_opts['ssl_key']})
         kwargs['ssl_options'] = ssl_opts
 
-    import tornado.httpserver
-    http_server = tornado.httpserver.HTTPServer(get_application(__opts__), **kwargs)
+    from tornado.httpserver import HTTPServer
+    http_server = HTTPServer(get_application(__opts__), **kwargs)
     try:
         http_server.bind(mod_opts['port'],
                          address=mod_opts.get('address'),
@@ -128,6 +130,6 @@ def start():
         raise SystemExit(1)
 
     try:
-        tornado.ioloop.IOLoop.current().start()
+        IOLoop.current().start()
     except KeyboardInterrupt:
         raise SystemExit(0)

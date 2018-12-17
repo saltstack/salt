@@ -13,7 +13,7 @@ import logging
 
 import tornado.gen as tornado_gen
 import tornado.ioloop
-import tornado.testing
+from tornado.testing import AsyncTestCase
 
 import salt.config
 import salt.exceptions
@@ -34,7 +34,7 @@ log = logging.getLogger(__name__)
 
 
 @skipIf(salt.utils.platform.is_windows(), 'Windows does not support Posix IPC')
-class BaseIPCReqCase(tornado.testing.AsyncTestCase):
+class BaseIPCReqCase(AsyncTestCase):
     '''
     Test the req server/client pair
     '''
@@ -174,7 +174,7 @@ class IPCMessageClient(BaseIPCReqCase):
 
 
 @skipIf(salt.utils.platform.is_windows(), 'Windows does not support Posix IPC')
-class IPCMessagePubSubCase(tornado.testing.AsyncTestCase):
+class IPCMessagePubSubCase(AsyncTestCase):
     '''
     Test all of the clear msg stuff
     '''

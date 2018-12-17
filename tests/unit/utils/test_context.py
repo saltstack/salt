@@ -5,7 +5,7 @@
 '''
 # Import python libs
 from __future__ import absolute_import
-import tornado.stack_context
+from tornado.stack_context import StackContext, run_with_stack_context
 import tornado.gen as tornado_gen
 from tornado.testing import AsyncTestCase, gen_test
 import threading
@@ -95,8 +95,8 @@ class ContextDictTests(AsyncTestCase):
             s = self.num_concurrent_tasks - x
             over = self.cd.clone()
 
-            f = tornado.stack_context.run_with_stack_context(
-                tornado.stack_context.StackContext(lambda: over),  # pylint: disable=W0640
+            f = run_with_stack_context(
+                StackContext(lambda: over),  # pylint: disable=W0640
                 lambda: tgt(x, s/5.0, over),  # pylint: disable=W0640
             )
             futures.append(f)

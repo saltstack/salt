@@ -111,7 +111,8 @@ from salt.exceptions import (
 
 
 import tornado.gen as tornado_gen  # pylint: disable=F0401
-import tornado.ioloop  # pylint: disable=F0401
+from tornado.ioloop import PeriodicCallback  # pylint: disable=F0401
+from tornado.stack_context import ExceptionStackContext, StackContext
 
 log = logging.getLogger(__name__)
 
@@ -1471,7 +1472,7 @@ class Minion(MinionBase):
                     return True
                 timeout_handler = handle_timeout
 
-            with tornado.stack_context.ExceptionStackContext(timeout_handler):
+            with ExceptionStackContext(timeout_handler):
                 self._send_req_async(load, timeout, callback=lambda f: None)  # pylint: disable=unexpected-keyword-arg
         return True
 
@@ -1599,9 +1600,8 @@ class Minion(MinionBase):
             else:
                 return Minion._thread_return(minion_instance, opts, data)
 
-        with tornado.stack_context.StackContext(functools.partial(RequestContext,
-                                                                  {'data': data, 'opts': opts})):
-            with tornado.stack_context.StackContext(minion_instance.ctx):
+        with StackContext(functools.partial(RequestContext, {'data': data, 'opts': opts})):
+            with StackContext(minion_instance.ctx):
                 run_func(minion_instance, opts, data)
 
     @classmethod
@@ -2010,7 +2010,7 @@ class Minion(MinionBase):
                 timeout_handler()
                 return ''
         else:
-            with tornado.stack_context.ExceptionStackContext(timeout_handler):
+            with ExceptionStackContext(timeout_handler):
                 ret_val = self._send_req_async(load, timeout=timeout, callback=lambda f: None)  # pylint: disable=unexpected-keyword-arg
 
         log.trace('ret_val = %s', ret_val)  # pylint: disable=no-member
@@ -2096,7 +2096,7 @@ class Minion(MinionBase):
                 timeout_handler()
                 return ''
         else:
-            with tornado.stack_context.ExceptionStackContext(timeout_handler):
+            with ExceptionStackContext(timeout_handler):
                 ret_val = self._send_req_async(load, timeout=timeout, callback=lambda f: None)  # pylint: disable=unexpected-keyword-arg
 
         log.trace('ret_val = %s', ret_val)  # pylint: disable=no-member
@@ -2673,7 +2673,7 @@ class Minion(MinionBase):
         '''
         if name in self.periodic_callbacks:
             return False
-        self.periodic_callbacks[name] = tornado.ioloop.PeriodicCallback(
+        self.periodic_callbacks[name] = PeriodicCallback(
             method, interval * 1000,
         )
         self.periodic_callbacks[name].start()
@@ -2883,7 +2883,7 @@ class Syndic(Minion):
             log.warning('Unable to forward pub data: %s', args[1])
             return True
 
-        with tornado.stack_context.ExceptionStackContext(timeout_handler):
+        with ExceptionStackContext(timeout_handler):
             self.local.pub_async(data['tgt'],
                                  data['fun'],
                                  data['arg'],
@@ -3222,9 +3222,9 @@ class SyndicManager(MinionBase):
         self.io_loop.add_future(future, self.reconnect_event_bus)
 
         # forward events every syndic_event_forward_timeout
-        self.forward_events = tornado.ioloop.PeriodicCallback(self._forward_events,
-                                                              self.opts['syndic_event_forward_timeout'] * 1000,
-                                                              )
+        self.forward_events = PeriodicCallback(self._forward_events,
+                                               self.opts['syndic_event_forward_timeout'] * 1000,
+                                               )
         self.forward_events.start()
 
         # Make sure to gracefully handle SIGUSR1

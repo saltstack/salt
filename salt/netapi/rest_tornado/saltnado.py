@@ -195,10 +195,10 @@ from collections import defaultdict
 
 # pylint: disable=import-error
 import cgi
-import tornado.escape
+from tornado.escape import native_str
 import tornado.httpserver
-import tornado.ioloop
-import tornado.web
+from tornado.ioloop import IOLoop
+from tornado.web import RequestHandler, asynchronous
 import tornado.gen as tornado_gen
 from tornado.concurrent import Future
 # pylint: enable=import-error
@@ -285,7 +285,7 @@ class EventListener(object):
             opts['transport'],
             opts=opts,
             listen=True,
-            io_loop=tornado.ioloop.IOLoop.current()
+            io_loop=IOLoop.current()
         )
 
         # tag -> list of futures
@@ -310,7 +310,7 @@ class EventListener(object):
             self._timeout_future(tag, matcher, future)
             # remove the timeout
             if future in self.timeout_map:
-                tornado.ioloop.IOLoop.current().remove_timeout(self.timeout_map[future])
+                IOLoop.current().remove_timeout(self.timeout_map[future])
                 del self.timeout_map[future]
 
         del self.request_map[request]
@@ -347,14 +347,14 @@ class EventListener(object):
         future = Future()
         if callback is not None:
             def handle_future(future):
-                tornado.ioloop.IOLoop.current().add_callback(callback, future)
+                IOLoop.current().add_callback(callback, future)
             future.add_done_callback(handle_future)
         # add this tag and future to the callbacks
         self.tag_map[(tag, matcher)].append(future)
         self.request_map[request].append((tag, matcher, future))
 
         if timeout:
-            timeout_future = tornado.ioloop.IOLoop.current().call_later(timeout, self._timeout_future, tag, matcher, future)
+            timeout_future = IOLoop.current().call_later(timeout, self._timeout_future, tag, matcher, future)
             self.timeout_map[future] = timeout_future
 
         return future
@@ -394,11 +394,11 @@ class EventListener(object):
                 future.set_result({'data': data, 'tag': mtag})
                 self.tag_map[(tag, matcher)].remove(future)
                 if future in self.timeout_map:
-                    tornado.ioloop.IOLoop.current().remove_timeout(self.timeout_map[future])
+                    IOLoop.current().remove_timeout(self.timeout_map[future])
                     del self.timeout_map[future]
 
 
-class BaseSaltAPIHandler(tornado.web.RequestHandler):  # pylint: disable=W0223
+class BaseSaltAPIHandler(RequestHandler):  # pylint: disable=W0223
     ct_out_map = (
         ('application/json', _json_dumps),
         ('application/x-yaml', salt.utils.yaml.safe_dump),
@@ -549,7 +549,7 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler):  # pylint: disable=W0223
         try:
             # Use cgi.parse_header to correctly separate parameters from value
             value, parameters = cgi.parse_header(self.request.headers['Content-Type'])
-            return ct_in_map[value](tornado.escape.native_str(data))
+            return ct_in_map[value](native_str(data))
         except KeyError:
             self.send_error(406)
         except ValueError:
@@ -826,7 +826,7 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
                "return": "Welcome"}
         self.write(self.serialize(ret))
 
-    @tornado.web.asynchronous
+    @asynchronous
     def post(self):  # pylint: disable=arguments-differ
         '''
         Send one or more Salt commands (lowstates) in the request body
@@ -1004,11 +1004,11 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
 
         # ping until the job is not running, while doing so, if we see new minions returning
         # that they are running the job, add them to the list
-        tornado.ioloop.IOLoop.current().spawn_callback(self.job_not_running, pub_data['jid'],
-                                                      chunk['tgt'],
-                                                      f_call['kwargs']['tgt_type'],
-                                                      minions,
-                                                      is_finished)
+        IOLoop.current().spawn_callback(self.job_not_running, pub_data['jid'],
+                                        chunk['tgt'],
+                                        f_call['kwargs']['tgt_type'],
+                                        minions,
+                                        is_finished)
 
         def more_todo():
             '''
@@ -1149,7 +1149,7 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
             salt.client.LocalClient.run_job,
             chunk,
             is_class_method=True)
-        f_call.get('kwargs', {})['io_loop'] = tornado.ioloop.IOLoop.current()
+        f_call.get('kwargs', {})['io_loop'] = IOLoop.current()
         return f_call
 
 
@@ -1157,7 +1157,7 @@ class MinionSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
     '''
     A convenience endpoint for minion related functions
     '''
-    @tornado.web.asynchronous
+    @asynchronous
     def get(self, mid=None):  # pylint: disable=W0221
         '''
         A convenience URL for getting lists of minions or getting minion
@@ -1209,7 +1209,7 @@ class MinionSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
         }]
         self.disbatch()
 
-    @tornado.web.asynchronous
+    @asynchronous
     def post(self):
         '''
         Start an execution command and immediately return the job id
@@ -1286,7 +1286,7 @@ class JobsSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
     '''
     A convenience endpoint for job cache data
     '''
-    @tornado.web.asynchronous
+    @asynchronous
     def get(self, jid=None):  # pylint: disable=W0221
         '''
         A convenience URL for getting lists of previously run jobs or getting
@@ -1392,7 +1392,7 @@ class RunSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
     '''
     Endpoint to run commands without normal session handling
     '''
-    @tornado.web.asynchronous
+    @asynchronous
     def post(self):
         '''
         Run commands bypassing the :ref:`normal session handling

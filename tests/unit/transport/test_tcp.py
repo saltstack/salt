@@ -10,8 +10,8 @@ import socket
 import logging
 
 import tornado.gen as tornado_gen
-import tornado.ioloop
-import tornado.concurrent
+from tornado.ioloop import IOLoop, TimeoutError as TornadoTimeoutError
+from tornado.concurrent import Future as TornadoFuture
 from tornado.testing import AsyncTestCase, gen_test
 
 import salt.config
@@ -72,7 +72,7 @@ class BaseTCPReqCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
         cls.server_channel = salt.transport.server.ReqServerChannel.factory(cls.master_config)
         cls.server_channel.pre_fork(cls.process_manager)
-        cls.io_loop = tornado.ioloop.IOLoop()
+        cls.io_loop = IOLoop()
         cls.stop = threading.Event()
         cls.server_channel.post_fork(cls._handle_payload, io_loop=cls.io_loop)
         cls.server_thread = threading.Thread(
@@ -190,7 +190,7 @@ class BaseTCPPubCase(AsyncTestCase, AdaptedConfigurationTestCaseMixin):
         # we also require req server for auth
         cls.req_server_channel = salt.transport.server.ReqServerChannel.factory(cls.master_config)
         cls.req_server_channel.pre_fork(cls.process_manager)
-        cls.io_loop = tornado.ioloop.IOLoop()
+        cls.io_loop = IOLoop()
         cls.stop = threading.Event()
         cls.req_server_channel.post_fork(cls._handle_payload, io_loop=cls.io_loop)
         cls.server_thread = threading.Thread(
@@ -308,7 +308,7 @@ class SaltMessageClientPoolTest(AsyncTestCase):
             yield self.message_client_pool.connect()
 
         for message_client_mock in self.message_client_pool.message_clients:
-            future = tornado.concurrent.Future()
+            future = TornadoFuture()
             future.set_result('foo')
             message_client_mock.connect.return_value = future
 
@@ -320,12 +320,12 @@ class SaltMessageClientPoolTest(AsyncTestCase):
             yield self.message_client_pool.connect()
 
         for idx, message_client_mock in enumerate(self.message_client_pool.message_clients):
-            future = tornado.concurrent.Future()
+            future = TornadoFuture()
             if idx % 2 == 0:
                 future.set_result('foo')
             message_client_mock.connect.return_value = future
 
-        with self.assertRaises(tornado.ioloop.TimeoutError):
+        with self.assertRaises(TornadoTimeoutError):
             test_connect(self)
 
 
@@ -347,7 +347,7 @@ class SaltMessageClientCleanupTest(TestCase, AdaptedConfigurationTestCaseMixin):
         '''
         test message client cleanup on close
         '''
-        orig_loop = tornado.ioloop.IOLoop()
+        orig_loop = IOLoop()
         orig_loop.make_current()
         opts = self.get_temp_config('master')
         client = SaltMessageClient(opts, self.listen_on, self.port)

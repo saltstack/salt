@@ -64,8 +64,8 @@ import socket
 import ssl
 from collections import namedtuple
 
-import tornado.ioloop
-import tornado.iostream
+from tornado.ioloop import IOLoop
+from tornado.iostream import IOStream, SSLIOStream
 
 import logging
 log = logging.getLogger(__name__)
@@ -96,16 +96,16 @@ class IRCClient(object):
         self.allow_hosts = allow_hosts
         self.allow_nicks = allow_nicks
         self.disable_query = disable_query
-        self.io_loop = tornado.ioloop.IOLoop(make_current=False)
+        self.io_loop = IOLoop(make_current=False)
         self.io_loop.make_current()
         self._connect()
 
     def _connect(self):
         _sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM, 0)
         if self.ssl is True:
-            self._stream = tornado.iostream.SSLIOStream(_sock, ssl_options={'cert_reqs': ssl.CERT_NONE})
+            self._stream = SSLIOStream(_sock, ssl_options={'cert_reqs': ssl.CERT_NONE})
         else:
-            self._stream = tornado.iostream.IOStream(_sock)
+            self._stream = IOStream(_sock)
         self._stream.set_close_callback(self.on_closed)
         self._stream.connect((self.host, self.port), self.on_connect)
 
@@ -184,9 +184,9 @@ class IRCClient(object):
         event = self._event(raw)
 
         if event.code == "PING":
-            tornado.ioloop.IOLoop.current().spawn_callback(self.send_message, "PONG {0}".format(event.line))
+            IOLoop.current().spawn_callback(self.send_message, "PONG {0}".format(event.line))
         elif event.code == 'PRIVMSG':
-            tornado.ioloop.IOLoop.current().spawn_callback(self._privmsg, event)
+            IOLoop.current().spawn_callback(self._privmsg, event)
         self.read_messages()
 
     def join_channel(self, channel):

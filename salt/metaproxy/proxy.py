@@ -64,6 +64,7 @@ from salt.utils.process import (default_signals,
 
 import tornado.gen as tornado_gen  # pylint: disable=F0401
 import tornado.ioloop  # pylint: disable=F0401
+from tornado.stack_context import StackContext
 
 log = logging.getLogger(__name__)
 
@@ -321,7 +322,7 @@ def target(cls, minion_instance, opts, data, connected):
                 salt.minion.get_proc_dir(opts['cachedir'], uid=uid)
             )
 
-    with tornado.stack_context.StackContext(minion_instance.ctx):
+    with StackContext(minion_instance.ctx):
         if isinstance(data['fun'], tuple) or isinstance(data['fun'], list):
             ProxyMinion._thread_multi_return(minion_instance, opts, data)
         else:

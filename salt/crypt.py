@@ -23,6 +23,8 @@ import binascii
 import weakref
 import getpass
 import tornado.gen as tornado_gen
+from tornado.ioloop import IOLoop
+from tornado.concurrent import Future as TornadoFuture
 
 # Import third party libs
 from salt.ext.six.moves import zip  # pylint: disable=import-error,redefined-builtin
@@ -453,7 +455,7 @@ class AsyncAuth(object):
         Only create one instance of AsyncAuth per __key()
         '''
         # do we have any mapping for this io_loop
-        io_loop = io_loop or tornado.ioloop.IOLoop.current()
+        io_loop = io_loop or IOLoop.current()
         if io_loop not in AsyncAuth.instance_map:
             AsyncAuth.instance_map[io_loop] = weakref.WeakValueDictionary()
         loop_instance_map = AsyncAuth.instance_map[io_loop]
@@ -507,7 +509,7 @@ class AsyncAuth(object):
         if not os.path.isfile(self.pub_path):
             self.get_keys()
 
-        self.io_loop = io_loop or tornado.ioloop.IOLoop.current()
+        self.io_loop = io_loop or IOLoop.current()
 
         salt.utils.crypt.reinit_crypto()
         key = self.__key(self.opts)
@@ -516,7 +518,7 @@ class AsyncAuth(object):
             creds = AsyncAuth.creds_map[key]
             self._creds = creds
             self._crypticle = Crypticle(self.opts, creds['aes'])
-            self._authenticate_future = tornado.concurrent.Future()
+            self._authenticate_future = TornadoFuture()
             self._authenticate_future.set_result(True)
         else:
             self.authenticate()
@@ -566,7 +568,7 @@ class AsyncAuth(object):
         if hasattr(self, '_authenticate_future') and not self._authenticate_future.done():
             future = self._authenticate_future
         else:
-            future = tornado.concurrent.Future()
+            future = TornadoFuture()
             self._authenticate_future = future
             self.io_loop.add_callback(self._authenticate)
 
