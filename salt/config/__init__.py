@@ -1501,6 +1501,7 @@ DEFAULT_MINION_OPTS = {
     'ssh_merge_pillar': True,
     'server_id_use_crc': False,
     'disabled_requisites': [],
+    'worker_threads': 3,
 }
 
 DEFAULT_MASTER_OPTS = {

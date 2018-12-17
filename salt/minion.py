@@ -870,7 +870,7 @@ class SMinion(MinionBase):
                 self.utils,
                 self.serializers)
         self.rend = salt.loader.render(self.opts, self.functions)
-#        self.matcher = Matcher(self.opts, self.functions)
+        # self.matcher = Matcher(self.opts, self.functions)
         self.matchers = salt.loader.matchers(self.opts)
         self.functions['sys.reload_modules'] = self.gen_modules
         self.executors = salt.loader.executors(self.opts)
@@ -950,10 +950,9 @@ class MinionManager(MinionBase):
         self.minions = []
         self.jid_queue = []
 
+        self.process_manager = ProcessManager(name='MultiMinionProcessManager')
         install_zmq()
         self.io_loop = ZMQDefaultLoop.current()
-        self.process_manager = ProcessManager(name='MultiMinionProcessManager')
-        self.io_loop.spawn_callback(self.process_manager.run, **{'asynchronous': True})  # Tornado backward compat
 
     def __del__(self):
         self.destroy()
@@ -971,6 +970,21 @@ class MinionManager(MinionBase):
     @tornado.gen.coroutine
     def handle_event(self, package):
         yield [minion.handle_event(package) for minion in self.minions]
+
+    def _spawn_workers(self):
+        if self.opts.get('ipc_mode', '') == 'tcp':
+            pull_uri = int(self.opts.get('tcp_minion_workers', 4516))
+        else:
+            pull_uri = os.path.join(self.opts['sock_dir'], 'worker_pull.ipc')
+        req_chan = salt.transport.ipc.IPCMessageServer(pull_uri)
+        req_chan.pre_fork()
+        for ind in range(int(self.opts['worker_threads'])):
+            name = 'MinionWorker-{0}'.format(ind)
+            self.process_manager.add_process(Worker,
+                                             args=(self.opts,
+                                                   req_chan,
+                                                   name),
+                                             name=name)
 
     def _create_minion_object(self, opts, timeout, safe,
                               io_loop=None, loaded_base_name=None,
@@ -1022,7 +1036,7 @@ class MinionManager(MinionBase):
                                                 jid_queue=self.jid_queue,
                                                )
 
-            self._connect_minion(minion)
+            self.io_loop.spawn_callback(self._connect_minion, minion)
         self.io_loop.call_later(timeout, self._check_minions)
 
     @tornado.gen.coroutine
@@ -1079,11 +1093,11 @@ class MinionManager(MinionBase):
         to yet, but once the initial connection is made it is up to ZMQ to do the
         reconnect (don't know of an API to get the state here in salt)
         '''
+        self._spawn_workers()
         self._bind()
-
         # Fire off all the minion coroutines
         self._spawn_minions()
-
+        self.io_loop.spawn_callback(self.process_manager.run, **{'asynchronous': True})  # Tornado backward compat
         # serve forever!
         self.io_loop.start()
 
@@ -1272,6 +1286,9 @@ class Minion(MinionBase):
                 pillarenv=self.opts.get('pillarenv')
             ).compile_pillar()
 
+            event = salt.utils.event.get_event('minion', opts=self.opts, listen=False) #, sync=False)
+            event.fire_event({'master': master, 'master_uri': self.opts['master_uri']}, master_event(type='connected'))
+
         if not self.ready:
             self._setup_core()
         elif self.connected and self.opts['pillar']:
@@ -1423,6 +1440,8 @@ class Minion(MinionBase):
             sig = salt.crypt.sign_message(minion_privkey_path, salt.serializers.msgpack.serialize(load))
             load['sig'] = sig
 
+        if not self.opts.get('master_uri', None):
+            log.error("No master uri %s", self.__class__)
         channel = salt.transport.Channel.factory(self.opts)
         return channel.send(load, timeout=timeout)
 
@@ -1443,6 +1462,7 @@ class Minion(MinionBase):
         '''
         Fire an event on the master, or drop message if unable to send.
         '''
+        log.debug('FIRE_MASTER: data=%s; tag=%s; events=%s; sync=%s', data, tag, events, sync)
         load = {'id': self.opts['id'],
                 'cmd': '_minion_event',
                 'pretag': pretag,
@@ -1532,37 +1552,13 @@ class Minion(MinionBase):
         # python needs to be able to reconstruct the reference on the other
         # side.
         instance = self
-        multiprocessing_enabled = self.opts.get('multiprocessing', True)
-        if multiprocessing_enabled:
-            if sys.platform.startswith('win'):
-                # let python reconstruct the minion on the other side if we're
-                # running on windows
-                instance = None
-            with default_signals(signal.SIGINT, signal.SIGTERM):
-                process = SignalHandlingMultiprocessingProcess(
-                    target=self._target, args=(instance, self.opts, data, self.connected)
-                )
+        if self.opts.get('ipc_mode', '') == 'tcp':
+            pull_uri = int(self.opts.get('tcp_minion_workers', 4516))
         else:
-            process = threading.Thread(
-                target=self._target,
-                args=(instance, self.opts, data, self.connected),
-                name=data['jid']
-            )
-
-        if multiprocessing_enabled:
-            with default_signals(signal.SIGINT, signal.SIGTERM):
-                # Reset current signals before starting the process in
-                # order not to inherit the current signal handlers
-                process.start()
-        else:
-            process.start()
-
-        # TODO: remove the windows specific check?
-        if multiprocessing_enabled and not salt.utils.platform.is_windows():
-            # we only want to join() immediately if we are daemonizing a process
-            process.join()
-        else:
-            self.win_proc.append(process)
+            pull_uri = os.path.join(self.opts['sock_dir'], 'worker_pull.ipc')
+        log.error("CLINT SEND %s", data)
+        client = salt.transport.ipc.IPCMessageClient(pull_uri)
+        yield client.send({'data': data, 'connected': self.connected})
 
     def ctx(self):
         '''
@@ -1583,7 +1579,10 @@ class Minion(MinionBase):
 
     @classmethod
     def _target(cls, minion_instance, opts, data, connected):
+        log.debug("TARGET %s", data)
         if not minion_instance:
+            if 'pillar' not in opts:
+                opts['pillar'] = {}
             minion_instance = cls(opts)
             minion_instance.connected = connected
             if not hasattr(minion_instance, 'functions'):
@@ -1601,192 +1600,218 @@ class Minion(MinionBase):
                 minion_instance.proc_dir = (
                     get_proc_dir(opts['cachedir'], uid=uid)
                     )
-
-        def run_func(minion_instance, opts, data):
-            if isinstance(data['fun'], tuple) or isinstance(data['fun'], list):
-                return Minion._thread_multi_return(minion_instance, opts, data)
-            else:
-                return Minion._thread_return(minion_instance, opts, data)
-
+        if data is None:
+            return minion_instance
         with tornado.stack_context.StackContext(functools.partial(RequestContext,
                                                                   {'data': data, 'opts': opts})):
             with tornado.stack_context.StackContext(minion_instance.ctx):
-                run_func(minion_instance, opts, data)
+                ZMQDefaultLoop.current().spawn_callback(
+                        Minion._thread_return, minion_instance, opts, data)
+        return minion_instance
+
 
     @classmethod
+    @tornado.gen.coroutine
     def _thread_return(cls, minion_instance, opts, data):
         '''
         This method should be used as a threading target, start the actual
         minion side execution.
         '''
         fn_ = os.path.join(minion_instance.proc_dir, data['jid'])
-
-        if opts['multiprocessing'] and not salt.utils.platform.is_windows():
-            # Shutdown the multiprocessing before daemonizing
-            salt.log.setup.shutdown_multiprocessing_logging()
-
-            salt.utils.process.daemonize_if(opts)
-
-            # Reconfigure multiprocessing logging after daemonizing
-            salt.log.setup.setup_multiprocessing_logging()
-
-        salt.utils.process.appendproctitle('{0}._thread_return {1}'.format(cls.__name__, data['jid']))
-
         sdata = {'pid': os.getpid()}
         sdata.update(data)
         log.info('Starting a new job %s with PID %s', data['jid'], sdata['pid'])
         with salt.utils.files.fopen(fn_, 'w+b') as fp_:
             fp_.write(minion_instance.serial.dumps(sdata))
-        ret = {'success': False}
-        function_name = data['fun']
         executors = data.get('module_executors') or \
                     getattr(minion_instance, 'module_executors', []) or \
                     opts.get('module_executors', ['direct_call'])
-        allow_missing_funcs = any([
-            minion_instance.executors['{0}.allow_missing_func'.format(executor)](function_name)
-            for executor in executors
-            if '{0}.allow_missing_func' in minion_instance.executors
-        ])
-        if function_name in minion_instance.functions or allow_missing_funcs is True:
-            try:
-                minion_blackout_violation = False
-                if minion_instance.connected and minion_instance.opts['pillar'].get('minion_blackout', False):
-                    whitelist = minion_instance.opts['pillar'].get('minion_blackout_whitelist', [])
-                    # this minion is blacked out. Only allow saltutil.refresh_pillar and the whitelist
-                    if function_name != 'saltutil.refresh_pillar' and function_name not in whitelist:
-                        minion_blackout_violation = True
-                # use minion_blackout_whitelist from grains if it exists
-                if minion_instance.opts['grains'].get('minion_blackout', False):
-                    whitelist = minion_instance.opts['grains'].get('minion_blackout_whitelist', [])
-                    if function_name != 'saltutil.refresh_pillar' and function_name not in whitelist:
-                        minion_blackout_violation = True
-                if minion_blackout_violation:
-                    raise SaltInvocationError('Minion in blackout mode. Set \'minion_blackout\' '
-                                             'to False in pillar or grains to resume operations. Only '
-                                             'saltutil.refresh_pillar allowed in blackout mode.')
+        multi = isinstance(data['fun'], (tuple, list))
 
-                if function_name in minion_instance.functions:
-                    func = minion_instance.functions[function_name]
-                    args, kwargs = load_args_and_kwargs(
-                        func,
-                        data['arg'],
-                        data)
-                else:
-                    # only run if function_name is not in minion_instance.functions and allow_missing_funcs is True
-                    func = function_name
-                    args, kwargs = data['arg'], data
-                minion_instance.functions.pack['__context__']['retcode'] = 0
-                if isinstance(executors, six.string_types):
-                    executors = [executors]
-                elif not isinstance(executors, list) or not executors:
-                    raise SaltInvocationError("Wrong executors specification: {0}. String or non-empty list expected".
-                        format(executors))
-                if opts.get('sudo_user', '') and executors[-1] != 'sudo':
-                    executors[-1] = 'sudo'  # replace the last one with sudo
-                log.trace('Executors list %s', executors)  # pylint: disable=no-member
-
-                for name in executors:
-                    fname = '{0}.execute'.format(name)
-                    if fname not in minion_instance.executors:
-                        raise SaltInvocationError("Executor '{0}' is not available".format(name))
-                    return_data = minion_instance.executors[fname](opts, data, func, args, kwargs)
-                    if return_data is not None:
-                        break
-
-                if isinstance(return_data, types.GeneratorType):
-                    ind = 0
-                    iret = {}
-                    for single in return_data:
-                        if isinstance(single, dict) and isinstance(iret, dict):
-                            iret.update(single)
-                        else:
-                            if not iret:
-                                iret = []
-                            iret.append(single)
-                        tag = tagify([data['jid'], 'prog', opts['id'], six.text_type(ind)], 'job')
-                        event_data = {'return': single}
-                        minion_instance._fire_master(event_data, tag)
-                        ind += 1
-                    ret['return'] = iret
-                else:
-                    ret['return'] = return_data
-
-                retcode = minion_instance.functions.pack['__context__'].get(
-                    'retcode',
-                    salt.defaults.exitcodes.EX_OK
-                )
-                if retcode == salt.defaults.exitcodes.EX_OK:
-                    # No nonzero retcode in __context__ dunder. Check if return
-                    # is a dictionary with a "result" or "success" key.
-                    try:
-                        func_result = all(return_data.get(x, True)
-                                          for x in ('result', 'success'))
-                    except Exception:
-                        # return data is not a dict
-                        func_result = True
-                    if not func_result:
-                        retcode = salt.defaults.exitcodes.EX_GENERIC
-
-                ret['retcode'] = retcode
-                ret['success'] = retcode == salt.defaults.exitcodes.EX_OK
-            except CommandNotFoundError as exc:
-                msg = 'Command required for \'{0}\' not found'.format(
-                    function_name
-                )
-                log.debug(msg, exc_info=True)
-                ret['return'] = '{0}: {1}'.format(msg, exc)
-                ret['out'] = 'nested'
-                ret['retcode'] = salt.defaults.exitcodes.EX_GENERIC
-            except CommandExecutionError as exc:
-                log.error(
-                    'A command in \'%s\' had a problem: %s',
-                    function_name, exc,
-                    exc_info_on_loglevel=logging.DEBUG
-                )
-                ret['return'] = 'ERROR: {0}'.format(exc)
-                ret['out'] = 'nested'
-                ret['retcode'] = salt.defaults.exitcodes.EX_GENERIC
-            except SaltInvocationError as exc:
-                log.error(
-                    'Problem executing \'%s\': %s',
-                    function_name, exc,
-                    exc_info_on_loglevel=logging.DEBUG
-                )
-                ret['return'] = 'ERROR executing \'{0}\': {1}'.format(
-                    function_name, exc
-                )
-                ret['out'] = 'nested'
-                ret['retcode'] = salt.defaults.exitcodes.EX_GENERIC
-            except TypeError as exc:
-                msg = 'Passed invalid arguments to {0}: {1}\n{2}'.format(
-                    function_name, exc, func.__doc__ or ''
-                )
-                log.warning(msg, exc_info_on_loglevel=logging.DEBUG)
-                ret['return'] = msg
-                ret['out'] = 'nested'
-                ret['retcode'] = salt.defaults.exitcodes.EX_GENERIC
-            except Exception:
-                msg = 'The minion function caused an exception'
-                log.warning(msg, exc_info_on_loglevel=True)
-                salt.utils.error.fire_exception(salt.exceptions.MinionError(msg), opts, job=data)
-                ret['return'] = '{0}: {1}'.format(msg, traceback.format_exc())
-                ret['out'] = 'nested'
-                ret['retcode'] = salt.defaults.exitcodes.EX_GENERIC
-        else:
-            docs = minion_instance.functions['sys.doc']('{0}*'.format(function_name))
-            if docs:
-                docs[function_name] = minion_instance.functions.missing_fun_string(function_name)
-                ret['return'] = docs
+        if multi:
+            multifunc_ordered = opts.get('multifunc_ordered', False)
+            num_funcs = len(data['fun'])
+            if multifunc_ordered:
+                ret = {
+                    'return': [None] * num_funcs,
+                    'retcode': [None] * num_funcs,
+                    'success': [False] * num_funcs,
+                    'out': [None] * num_funcs
+                }
             else:
-                ret['return'] = minion_instance.functions.missing_fun_string(function_name)
-                mod_name = function_name.split('.')[0]
-                if mod_name in minion_instance.function_errors:
-                    ret['return'] += ' Possible reasons: \'{0}\''.format(
-                        minion_instance.function_errors[mod_name]
+                ret = {
+                    'return': {},
+                    'retcode': {},
+                    'success': {},
+                    'out': {}
+                }
+        else:
+            ret = {'success': False}
+            function_name = data['fun']
+            num_funcs = 1
+
+        for ind in range(0, num_funcs):
+            if multi:
+                function_name = data['fun'][ind]
+                if multifunc_ordered:
+                    ret_ind = ind
+                else:
+                    ret_ind = function_name
+                    ret['success'][ret_ind] = False
+            if multi:
+                single_ret = {}
+            else:
+                single_ret = ret
+
+            allow_missing_funcs = any([
+                minion_instance.executors['{0}.allow_missing_func'.format(executor)](function_name)
+                for executor in executors
+                if '{0}.allow_missing_func' in minion_instance.executors
+            ])
+            if function_name in minion_instance.functions or allow_missing_funcs is True:
+                try:
+                    minion_blackout_violation = False
+                    if minion_instance.connected and minion_instance.opts['pillar'].get('minion_blackout', False):
+                        whitelist = minion_instance.opts['pillar'].get('minion_blackout_whitelist', [])
+                        # this minion is blacked out. Only allow saltutil.refresh_pillar and the whitelist
+                        if function_name != 'saltutil.refresh_pillar' and function_name not in whitelist:
+                            minion_blackout_violation = True
+                    # use minion_blackout_whitelist from grains if it exists
+                    if minion_instance.opts['grains'].get('minion_blackout', False):
+                        whitelist = minion_instance.opts['grains'].get('minion_blackout_whitelist', [])
+                        if function_name != 'saltutil.refresh_pillar' and function_name not in whitelist:
+                            minion_blackout_violation = True
+                    if minion_blackout_violation:
+                        raise SaltInvocationError('Minion in blackout mode. Set \'minion_blackout\' '
+                                                 'to False in pillar or grains to resume operations. Only '
+                                                 'saltutil.refresh_pillar allowed in blackout mode.')
+
+                    if function_name in minion_instance.functions:
+                        func = minion_instance.functions[function_name]
+                        args, kwargs = load_args_and_kwargs(
+                            func,
+                            data['arg'][ind] if multi else data['arg'],
+                            data)
+                    else:
+                        # only run if function_name is not in minion_instance.functions and allow_missing_funcs is True
+                        func = function_name
+                        args, kwargs = data['arg'][ind] if multi else data['arg'], data
+                    minion_instance.functions.pack['__context__']['retcode'] = 0
+                    if isinstance(executors, six.string_types):
+                        executors = [executors]
+                    elif not isinstance(executors, list) or not executors:
+                        raise SaltInvocationError("Wrong executors specification: {0}. String or non-empty list expected".
+                            format(executors))
+                    if opts.get('sudo_user', '') and executors[-1] != 'sudo':
+                        executors[-1] = 'sudo'  # replace the last one with sudo
+                    log.trace('Executors list %s', executors)  # pylint: disable=no-member
+
+                    for name in executors:
+                        fname = '{0}.execute'.format(name)
+                        if fname not in minion_instance.executors:
+                            raise SaltInvocationError("Executor '{0}' is not available".format(name))
+                        return_data = minion_instance.executors[fname](opts, data, func, args, kwargs)
+                        if return_data is not None:
+                            break
+                    # If that was an coroutine, wait for the actual return
+                    if isinstance(return_data, tornado.gen.Future):
+                        return_data = yield return_data
+
+                    if isinstance(return_data, types.GeneratorType):
+                        iind = 0
+                        iret = {}
+                        for single in return_data:
+                            if isinstance(single, dict) and isinstance(iret, dict):
+                                iret.update(single)
+                            else:
+                                if not iret:
+                                    iret = []
+                                iret.append(single)
+                            tag = tagify([data['jid'], 'prog', opts['id'], six.text_type(iind)], 'job')
+                            event_data = {'return': single}
+                            minion_instance._fire_master(event_data, tag, sync=False)
+                            iind += 1
+                        return_data = iret
+                    single_ret['return'] = return_data
+
+                    retcode = minion_instance.functions.pack['__context__'].get(
+                        'retcode',
+                        salt.defaults.exitcodes.EX_OK
                     )
-            ret['success'] = False
-            ret['retcode'] = salt.defaults.exitcodes.EX_GENERIC
-            ret['out'] = 'nested'
+                    if retcode == salt.defaults.exitcodes.EX_OK:
+                        # No nonzero retcode in __context__ dunder. Check if return
+                        # is a dictionary with a "result" or "success" key.
+                        try:
+                            func_result = all(return_data.get(x, True)
+                                              for x in ('result', 'success'))
+                        except Exception:
+                            # return data is not a dict
+                            func_result = True
+                        if not func_result:
+                            retcode = salt.defaults.exitcodes.EX_GENERIC
+
+                    single_ret['retcode'] = retcode
+                    single_ret['success'] = retcode == salt.defaults.exitcodes.EX_OK
+                except CommandNotFoundError as exc:
+                    msg = 'Command required for \'{0}\' not found'.format(
+                        function_name
+                    )
+                    log.debug(msg, exc_info=True)
+                    single_ret['return'] = '{0}: {1}'.format(msg, exc)
+                    single_ret['out'] = 'nested'
+                    single_ret['retcode'] = salt.defaults.exitcodes.EX_GENERIC
+                except CommandExecutionError as exc:
+                    log.error(
+                        'A command in \'%s\' had a problem: %s',
+                        function_name, exc,
+                        exc_info_on_loglevel=logging.DEBUG
+                    )
+                    single_ret['return'] = 'ERROR: {0}'.format(exc)
+                    single_ret['out'] = 'nested'
+                    single_ret['retcode'] = salt.defaults.exitcodes.EX_GENERIC
+                except SaltInvocationError as exc:
+                    log.error(
+                        'Problem executing \'%s\': %s',
+                        function_name, exc,
+                        exc_info_on_loglevel=logging.DEBUG
+                    )
+                    single_ret['return'] = 'ERROR executing \'{0}\': {1}'.format(
+                        function_name, exc
+                    )
+                    single_ret['out'] = 'nested'
+                    single_ret['retcode'] = salt.defaults.exitcodes.EX_GENERIC
+                except TypeError as exc:
+                    msg = 'Passed invalid arguments to {0}: {1}\n{2}'.format(
+                        function_name, exc, func.__doc__ or ''
+                    )
+                    log.warning(msg, exc_info_on_loglevel=logging.DEBUG)
+                    single_ret['return'] = msg
+                    single_ret['out'] = 'nested'
+                    single_ret['retcode'] = salt.defaults.exitcodes.EX_GENERIC
+                except Exception as ex:
+                    msg = 'The minion function caused an exception'
+                    log.warning(msg, exc_info_on_loglevel=True)
+                    salt.utils.error.fire_exception(salt.exceptions.MinionError(msg), opts, job=data)
+                    single_ret['return'] = '{0}: {1}'.format(msg, traceback.format_exc())
+                    single_ret['out'] = 'nested'
+            else:
+                docs = minion_instance.functions['sys.doc']('{0}*'.format(function_name))
+                if docs:
+                    docs[function_name] = minion_instance.functions.missing_fun_string(function_name)
+                    single_ret['return'] = docs
+                else:
+                    single_ret['return'] = minion_instance.functions.missing_fun_string(function_name)
+                    mod_name = function_name.split('.')[0]
+                    if mod_name in minion_instance.function_errors:
+                        single_ret['return'] += ' Possible reasons: \'{0}\''.format(
+                            minion_instance.function_errors[mod_name]
+                        )
+                single_ret['success'] = False
+                single_ret['retcode'] = salt.defaults.exitcodes.EX_GENERIC
+                single_ret['out'] = 'nested'
+            if multi:
+                for key in single_ret:
+                    ret[key][ret_ind] = single_ret[key]
 
         ret['jid'] = data['jid']
         ret['fun'] = data['fun']
@@ -1834,126 +1859,6 @@ class Minion(MinionBase):
                 except Exception as exc:
                     log.exception(
                         'The return failed for job %s: %s', data['jid'], exc
-                    )
-
-    @classmethod
-    def _thread_multi_return(cls, minion_instance, opts, data):
-        '''
-        This method should be used as a threading target, start the actual
-        minion side execution.
-        '''
-        fn_ = os.path.join(minion_instance.proc_dir, data['jid'])
-
-        if opts['multiprocessing'] and not salt.utils.platform.is_windows():
-            # Shutdown the multiprocessing before daemonizing
-            salt.log.setup.shutdown_multiprocessing_logging()
-
-            salt.utils.process.daemonize_if(opts)
-
-            # Reconfigure multiprocessing logging after daemonizing
-            salt.log.setup.setup_multiprocessing_logging()
-
-        salt.utils.process.appendproctitle('{0}._thread_multi_return {1}'.format(cls.__name__, data['jid']))
-
-        sdata = {'pid': os.getpid()}
-        sdata.update(data)
-        log.info('Starting a new job with PID %s', sdata['pid'])
-        with salt.utils.files.fopen(fn_, 'w+b') as fp_:
-            fp_.write(minion_instance.serial.dumps(sdata))
-
-        multifunc_ordered = opts.get('multifunc_ordered', False)
-        num_funcs = len(data['fun'])
-        if multifunc_ordered:
-            ret = {
-                'return': [None] * num_funcs,
-                'retcode': [None] * num_funcs,
-                'success': [False] * num_funcs
-            }
-        else:
-            ret = {
-                'return': {},
-                'retcode': {},
-                'success': {}
-            }
-
-        for ind in range(0, num_funcs):
-            if not multifunc_ordered:
-                ret['success'][data['fun'][ind]] = False
-            try:
-                minion_blackout_violation = False
-                if minion_instance.connected and minion_instance.opts['pillar'].get('minion_blackout', False):
-                    whitelist = minion_instance.opts['pillar'].get('minion_blackout_whitelist', [])
-                    # this minion is blacked out. Only allow saltutil.refresh_pillar and the whitelist
-                    if data['fun'][ind] != 'saltutil.refresh_pillar' and data['fun'][ind] not in whitelist:
-                        minion_blackout_violation = True
-                elif minion_instance.opts['grains'].get('minion_blackout', False):
-                    whitelist = minion_instance.opts['grains'].get('minion_blackout_whitelist', [])
-                    if data['fun'][ind] != 'saltutil.refresh_pillar' and data['fun'][ind] not in whitelist:
-                        minion_blackout_violation = True
-                if minion_blackout_violation:
-                    raise SaltInvocationError('Minion in blackout mode. Set \'minion_blackout\' '
-                                             'to False in pillar or grains to resume operations. Only '
-                                             'saltutil.refresh_pillar allowed in blackout mode.')
-
-                func = minion_instance.functions[data['fun'][ind]]
-
-                args, kwargs = load_args_and_kwargs(
-                    func,
-                    data['arg'][ind],
-                    data)
-                minion_instance.functions.pack['__context__']['retcode'] = 0
-                key = ind if multifunc_ordered else data['fun'][ind]
-                ret['return'][key] = func(*args, **kwargs)
-                retcode = minion_instance.functions.pack['__context__'].get(
-                    'retcode',
-                    0
-                )
-                if retcode == 0:
-                    # No nonzero retcode in __context__ dunder. Check if return
-                    # is a dictionary with a "result" or "success" key.
-                    try:
-                        func_result = all(ret['return'][key].get(x, True)
-                                          for x in ('result', 'success'))
-                    except Exception:
-                        # return data is not a dict
-                        func_result = True
-                    if not func_result:
-                        retcode = 1
-
-                ret['retcode'][key] = retcode
-                ret['success'][key] = retcode == 0
-            except Exception as exc:
-                trb = traceback.format_exc()
-                log.warning('The minion function caused an exception: %s', exc)
-                if multifunc_ordered:
-                    ret['return'][ind] = trb
-                else:
-                    ret['return'][data['fun'][ind]] = trb
-            ret['jid'] = data['jid']
-            ret['fun'] = data['fun']
-            ret['fun_args'] = data['arg']
-        if 'metadata' in data:
-            ret['metadata'] = data['metadata']
-        if minion_instance.connected:
-            minion_instance._return_pub(
-                ret,
-                timeout=minion_instance._return_retry_timer()
-            )
-        if data['ret']:
-            if 'ret_config' in data:
-                ret['ret_config'] = data['ret_config']
-            if 'ret_kwargs' in data:
-                ret['ret_kwargs'] = data['ret_kwargs']
-            for returner in set(data['ret'].split(',')):
-                ret['id'] = opts['id']
-                try:
-                    minion_instance.returners['{0}.returner'.format(
-                        returner
-                    )](ret)
-                except Exception as exc:
-                    log.error(
-                        'The return failed for job %s: %s',
-                        data['jid'], exc
                     )
 
     def _return_pub(self, ret, ret_cmd='_return', timeout=60, sync=True):
@@ -2196,9 +2101,9 @@ class Minion(MinionBase):
         '''
         log.debug('Refreshing modules. Notify=%s', notify)
         self.functions, self.returners, _, self.executors = self._load_modules(force_refresh, notify=notify)
-
-        self.schedule.functions = self.functions
-        self.schedule.returners = self.returners
+        if hasattr(self, 'schedule'):
+            self.schedule.functions = self.functions
+            self.schedule.returners = self.returners
 
     def beacons_refresh(self):
         '''
@@ -2230,6 +2135,7 @@ class Minion(MinionBase):
                     self.opts['saltenv'],
                     pillarenv=self.opts.get('pillarenv'),
                 ).compile_pillar()
+#                self.event.fire_event(self.opts['pillar'], 'new_pillar')
                 if notify:
                     evt = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
                     evt.fire_event({'complete': True}, tag=salt.defaults.events.MINION_PILLAR_COMPLETE)
@@ -2365,6 +2271,16 @@ class Minion(MinionBase):
         except SaltReqTimeoutError:
             log.warning('Unable to send mine data to master.')
             return None
+
+    def _handle_minion_return(self, tag, data):
+        if self.connected:
+            log.debug('CALLING RETURN_PUB')
+            self._return_pub(
+                data,
+                timeout=self._return_retry_timer(),
+                sync=False
+            )
+            log.debug('DONE RETURN_PUB')
 
     def _handle_tag_module_refresh(self, tag, data):
         '''
@@ -2558,6 +2474,14 @@ class Minion(MinionBase):
         '''
         Handle a master_connected event
         '''
+        #if self.opts.get('ipc_mode', '') == 'tcp':
+        #    pull_uri = int(self.opts.get('tcp_minion_workers', 4516))
+        #else:
+        #    pull_uri = os.path.join(self.opts['sock_dir'], 'worker_pull.ipc')
+        #client = salt.transport.ipc.IPCMessageClient(pull_uri)
+        #client.send({'data': data, 'connected': True})
+        self.opts['master'] = data['master']
+        self.opts['master_uri'] = data['master_uri']
         # handle this event only once. otherwise it will pollute the log
         # also if master type is failover all the reconnection work is done
         # by `disconnected` event handler and this event must never happen,
@@ -2625,8 +2549,8 @@ class Minion(MinionBase):
             raise tornado.gen.Return()
         tag, data = salt.utils.event.SaltEvent.unpack(package)
         log.debug(
-            'Minion of \'%s\' is handling event tag \'%s\'',
-            self.opts['master'], tag
+            'Minion of \'%s\' is handling event tag \'%s\' with data \'%s\'',
+            self.opts['master'], tag, data
         )
         tag_functions = {
                          'beacons_refresh': self._handle_tag_beacons_refresh,
@@ -2638,6 +2562,7 @@ class Minion(MinionBase):
                          'manage_beacons': self._handle_tag_manage_beacons,
                          '_minion_mine': self._handle_tag_minion_mine,
                          'module_refresh': self._handle_tag_module_refresh,
+                         'minion_return': self._handle_minion_return,
                          'pillar_refresh': self._handle_tag_pillar_refresh,
                          'salt/auth/creds': self._handle_tag_salt_auth_creds,
                          '_salt_error': self._handle_tag_salt_error,
@@ -2681,7 +2606,7 @@ class Minion(MinionBase):
             self.functions, self.returners, self.function_errors, self.executors = self._load_modules()
             self.serial = salt.payload.Serial(self.opts)
             self.mod_opts = self._prep_mod_opts()
-#            self.matcher = Matcher(self.opts, self.functions)
+            # self.matcher = Matcher(self.opts, self.functions)
             self.matchers = salt.loader.matchers(self.opts)
             self.beacons = salt.beacons.Beacon(self.opts, self.functions)
             uid = salt.utils.user.get_uid(user=self.opts.get('user', None))
@@ -3582,3 +3507,102 @@ class SProxyMinion(SMinion):
         self.functions['saltutil.sync_grains'](saltenv='base')
         self.grains_cache = self.opts['grains']
         self.ready = True
+
+
+class WorkerMinion(Minion):
+    '''
+    '''
+    @tornado.gen.coroutine
+    def handle_event(self, package):
+        '''
+        Handle an event from the epull_sock (all local minion events)
+        '''
+        try:
+            tag, data = salt.utils.event.SaltEvent.unpack(package)
+            if tag.startswith('new_pillar'):
+                self.opts['pillar'] = data
+                self.module_refresh()
+            elif tag.startswith(master_event(type='connected')):
+                self.opts['master'] = data['master']
+                self.opts.update(prep_ip_port(self.opts))
+                self.opts.update(resolve_dns(self.opts))
+                self.module_refresh()
+        except:
+            log.exception("EXCEPTION in workerminion handle_event")
+
+
+class Worker(salt.utils.process.SignalHandlingMultiprocessingProcess):
+    '''
+    The worker multiprocess instance to manage the backend operations for the
+    salt master.
+    '''
+    def __init__(self,
+                 opts,
+                 req_chan,
+                 name,
+                 **kwargs):
+        '''
+        Create a salt master worker process
+
+        :param dict opts: The salt options
+        :param dict mkey: The user running the salt master and the AES key
+        :param dict key: The user running the salt master and the RSA key
+
+        :rtype: Worker
+        :return: Master worker
+        '''
+        super(Worker, self).__init__(**kwargs)
+        self.opts = opts
+        self.name = name
+        self.req_chan = req_chan
+        self._minion = None
+
+    def __bind(self):
+        '''
+        Bind to the local port
+        '''
+        # using ZMQIOLoop since we *might* need zmq in there
+        install_zmq()
+        tornado.ioloop.IOLoop.clear_current()
+        tornado.ioloop.IOLoop().make_current()
+        io_loop = tornado.ioloop.IOLoop.current()
+        #io_loop = ZMQDefaultLoop.current()
+        self.req_chan.post_fork(payload_handler=self.handle_payload, io_loop=io_loop)
+        io_loop.spawn_callback(self.handle_payload, {'connected': False}, None)
+        self.event = salt.utils.event.get_event('minion', opts=self.opts, io_loop=io_loop) #, sync=False)
+        self.event.subscribe('')
+        self.event.set_event_handler(self.handle_event)
+        try:
+            io_loop.start()
+        except (KeyboardInterrupt, SystemExit):
+            # Tornado knows what to do
+            pass
+
+    def handle_event(self, package):
+        tag, data = salt.utils.event.SaltEvent.unpack(package)
+        if tag == '__master_connected':
+            self.opts.update(data)
+
+        if self._minion:
+            self._minion.handle_event(package)
+
+    def handle_payload(self, payload, something):
+        log.debug('Payload: %s', payload)
+        log.debug('Something: %s', something)
+        connected = payload.get('connected', True)
+        data = payload.get('data')
+        if connected is not None and self._minion:
+            self._minion.connected = connected
+        minion = WorkerMinion._target(self._minion, self.opts, data, connected)
+        if not self._minion:
+            self._minion = minion
+
+    def run(self):
+        '''
+        Start a Master Worker
+        '''
+        log.debug('Worker %s starting', self.name)
+        salt.utils.process.appendproctitle(self.name)
+        salt.utils.crypt.reinit_crypto()
+        log.debug('Worker %s binding', self.name)
+        self.__bind()
