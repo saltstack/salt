@@ -788,10 +788,12 @@ def _check_directory_win(name,
     if not os.path.isdir(name):
         changes = {name: {'directory': 'new'}}
     else:
-        # Check owner
+        # Check owner by SID
         if win_owner is not None:
-            owner = salt.utils.win_dacl.get_owner(name)
-            if not owner.lower() == win_owner.lower():
+            current_owner = salt.utils.win_dacl.get_owner(name)
+            current_owner_sid = salt.utils.win_functions.get_sid_from_name(current_owner)
+            expected_owner_sid = salt.utils.win_functions.get_sid_from_name(win_owner)
+            if not current_owner_sid == expected_owner_sid:
                 changes['owner'] = win_owner
 
         # Check perms
