@@ -103,7 +103,7 @@ class SchedulerErrorTest(ModuleCase, SaltReturnAssertsMixin):
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status('job1')
         self.assertEqual(ret['_error'],
-                         'Invalid date string. Ignoring job job1.')
+                         'Invalid date string 13/29/2017 1:00pm. Ignoring job job1.')
 
     def test_eval_whens_grain_not_dict(self):
         '''
