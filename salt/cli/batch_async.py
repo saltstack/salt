@@ -28,6 +28,7 @@ class BatchAsync(object):
         ioloop = tornado.ioloop.IOLoop.current()
         self.local = salt.client.get_local_client(parent_opts['conf_file'])
         clear_load['gather_job_timeout'] = clear_load['kwargs'].pop('gather_job_timeout')
+        self.batch_delay = clear_load['kwargs'].get('batch_delay', 1)
         self.opts = batch_get_opts(
             clear_load.pop('tgt'),
             clear_load.pop('fun'),
@@ -62,6 +63,7 @@ class BatchAsync(object):
         find_job_return_pattern = 'salt/job/{0}/ret/*'.format(self.find_job_jid)
         self.event.subscribe(ping_return_pattern, match_type='glob')
         self.event.subscribe(batch_return_pattern, match_type='glob')
+        self.event.subscribe(find_job_return_pattern, match_type='glob')
         self.event.patterns = {
             (ping_return_pattern, 'ping_return'),
             (batch_return_pattern, 'batch_run'),
@@ -71,6 +73,8 @@ class BatchAsync(object):
             self.event.set_event_handler(self.__event_handler)
 
     def __event_handler(self, raw):
+        if not self.event:
+            return
         mtag, data = self.event.unpack(raw, self.event.serial)
         for (pattern, op) in self.event.patterns:
             if fnmatch.fnmatch(mtag, pattern):
@@ -87,7 +91,7 @@ class BatchAsync(object):
                         self.active.remove(minion)
                         self.done_minions.add(minion)
                         # call later so that we maybe gather more returns
-                        self.event.io_loop.call_later(1, self.next)
+                        self.event.io_loop.call_later(self.batch_delay, self.next)
                 if not self.initialized:
                     #start batching even if not all minions respond to ping
                     self.event.io_loop.call_later(
@@ -95,7 +99,8 @@ class BatchAsync(object):
                     self.initialized = True
 
         if self.initialized and self.done_minions == self.minions.difference(self.timedout_minions):
-            self.event.close_pub()
+            # TODO how to really close this event handler?
+            del self.event
 
     def _get_next(self):
         next_batch_size = min(
