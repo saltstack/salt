@@ -62,7 +62,7 @@ from salt.utils.process import (default_signals,
                                 SignalHandlingProcess)
 
 
-import tornado.gen  # pylint: disable=F0401
+import tornado.gen as tornado_gen  # pylint: disable=F0401
 import tornado.ioloop  # pylint: disable=F0401
 
 log = logging.getLogger(__name__)
@@ -710,7 +710,7 @@ def handle_decoded_payload(self, data):
         process_count = len(salt.utils.minion.running(self.opts))
         while process_count >= process_count_max:
             log.warning("Maximum number of processes reached while executing jid {0}, waiting...".format(data['jid']))
-            yield tornado.gen.sleep(10)
+            yield tornado_gen.sleep(10)
             process_count = len(salt.utils.minion.running(self.opts))
 
     # We stash an instance references to allow for the socket

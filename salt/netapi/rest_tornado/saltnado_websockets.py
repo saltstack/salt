@@ -295,7 +295,7 @@ import tornado.websocket
 from . import event_processor
 from .saltnado import _check_cors_origin
 
-import tornado.gen
+import tornado.gen as tornado_gen
 
 import salt.utils.json
 import salt.netapi
@@ -334,7 +334,7 @@ class AllEventsHandler(tornado.websocket.WebSocketHandler):  # pylint: disable=W
         '''
         self.connected = False
 
-    @tornado.gen.coroutine
+    @tornado_gen.coroutine
     def on_message(self, message):
         """Listens for a "websocket client ready" message.
         Once that message is received an asynchronous job
@@ -387,7 +387,7 @@ class AllEventsHandler(tornado.websocket.WebSocketHandler):  # pylint: disable=W
 
 class FormattedEventsHandler(AllEventsHandler):  # pylint: disable=W0223,W0232
 
-    @tornado.gen.coroutine
+    @tornado_gen.coroutine
     def on_message(self, message):
         """Listens for a "websocket client ready" message.
         Once that message is received an asynchronous job

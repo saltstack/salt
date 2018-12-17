@@ -9,7 +9,7 @@ import threading
 import socket
 import logging
 
-import tornado.gen
+import tornado.gen as tornado_gen
 import tornado.ioloop
 import tornado.concurrent
 from tornado.testing import AsyncTestCase, gen_test
@@ -90,12 +90,12 @@ class BaseTCPReqCase(TestCase, AdaptedConfigurationTestCaseMixin):
         del cls.server_channel
 
     @classmethod
-    @tornado.gen.coroutine
+    @tornado_gen.coroutine
     def _handle_payload(cls, payload):
         '''
         TODO: something besides echo
         '''
-        raise tornado.gen.Return((payload, {'fun': 'send_clear'}))
+        raise tornado_gen.Return((payload, {'fun': 'send_clear'}))
 
 
 @skipIf(salt.utils.platform.is_darwin(), 'hanging test suite on MacOS')
@@ -111,12 +111,12 @@ class ClearReqTestCases(BaseTCPReqCase, ReqChannelMixin):
         del self.channel
 
     @classmethod
-    @tornado.gen.coroutine
+    @tornado_gen.coroutine
     def _handle_payload(cls, payload):
         '''
         TODO: something besides echo
         '''
-        raise tornado.gen.Return((payload, {'fun': 'send_clear'}))
+        raise tornado_gen.Return((payload, {'fun': 'send_clear'}))
 
 
 @skipIf(salt.utils.platform.is_darwin(), 'hanging test suite on MacOS')
@@ -129,12 +129,12 @@ class AESReqTestCases(BaseTCPReqCase, ReqChannelMixin):
         del self.channel
 
     @classmethod
-    @tornado.gen.coroutine
+    @tornado_gen.coroutine
     def _handle_payload(cls, payload):
         '''
         TODO: something besides echo
         '''
-        raise tornado.gen.Return((payload, {'fun': 'send'}))
+        raise tornado_gen.Return((payload, {'fun': 'send'}))
 
     # TODO: make failed returns have a specific framing so we can raise the same exception
     # on encrypted channels

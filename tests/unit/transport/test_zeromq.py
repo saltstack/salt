@@ -24,7 +24,7 @@ import zmq.eventloop.ioloop
 if not hasattr(zmq.eventloop.ioloop, 'ZMQIOLoop'):
     zmq.eventloop.ioloop.ZMQIOLoop = zmq.eventloop.ioloop.IOLoop
 from tornado.testing import AsyncTestCase
-import tornado.gen
+import tornado.gen as tornado_gen
 
 # Import Salt libs
 import salt.config
@@ -137,12 +137,12 @@ class ClearReqTestCases(BaseZMQReqCase, ReqChannelMixin):
         del self.channel
 
     @classmethod
-    @tornado.gen.coroutine
+    @tornado_gen.coroutine
     def _handle_payload(cls, payload):
         '''
         TODO: something besides echo
         '''
-        raise tornado.gen.Return((payload, {'fun': 'send_clear'}))
+        raise tornado_gen.Return((payload, {'fun': 'send_clear'}))
 
     def test_master_uri_override(self):
         '''
@@ -167,12 +167,12 @@ class AESReqTestCases(BaseZMQReqCase, ReqChannelMixin):
         del self.channel
 
     @classmethod
-    @tornado.gen.coroutine
+    @tornado_gen.coroutine
     def _handle_payload(cls, payload):
         '''
         TODO: something besides echo
         '''
-        raise tornado.gen.Return((payload, {'fun': 'send'}))
+        raise tornado_gen.Return((payload, {'fun': 'send'}))
 
     # TODO: make failed returns have a specific framing so we can raise the same exception
     # on encrypted channels

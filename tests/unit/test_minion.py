@@ -19,6 +19,7 @@ import salt.utils.event as event
 from salt.exceptions import SaltSystemExit, SaltMasterUnresolvableError
 import salt.syspaths
 import tornado
+import tornado.gen as tornado_gen
 import tornado.testing
 from salt.ext.six.moves import range
 import salt.utils.crypt
@@ -212,7 +213,7 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 class SleepCalledException(Exception):
                     """Thrown when sleep is called"""
 
-                tornado.gen.sleep.return_value.set_exception(SleepCalledException())
+                tornado_gen.sleep.return_value.set_exception(SleepCalledException())
 
                 # up until process_count_max: gen.sleep does not get called, processes are started normally
                 for i in range(process_count_max):

@@ -11,7 +11,7 @@ import socket
 import threading
 import logging
 
-import tornado.gen
+import tornado.gen as tornado_gen
 import tornado.ioloop
 import tornado.testing
 
@@ -72,7 +72,7 @@ class BaseIPCReqCase(tornado.testing.AsyncTestCase):
         del self.server_channel
         #del self._start_handlers
 
-    @tornado.gen.coroutine
+    @tornado_gen.coroutine
     def _handle_payload(self, payload, reply_func):
         self.payloads.append(payload)
         yield reply_func(payload)

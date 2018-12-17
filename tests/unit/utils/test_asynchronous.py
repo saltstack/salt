@@ -5,7 +5,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Import 3rd-party libs
 import tornado.testing
-import tornado.gen
+import tornado.gen as tornado_gen
 from tornado.testing import AsyncTestCase
 
 import salt.utils.asynchronous as asynchronous
@@ -15,10 +15,10 @@ class HelperA(object):
     def __init__(self, io_loop=None):
         pass
 
-    @tornado.gen.coroutine
+    @tornado_gen.coroutine
     def sleep(self):
-        yield tornado.gen.sleep(0.5)
-        raise tornado.gen.Return(True)
+        yield tornado_gen.sleep(0.5)
+        raise tornado_gen.Return(True)
 
 
 class HelperB(object):
@@ -27,11 +27,11 @@ class HelperB(object):
             a = asynchronous.SyncWrapper(HelperA)
         self.a = a
 
-    @tornado.gen.coroutine
+    @tornado_gen.coroutine
     def sleep(self):
-        yield tornado.gen.sleep(0.5)
+        yield tornado_gen.sleep(0.5)
         self.a.sleep()
-        raise tornado.gen.Return(False)
+        raise tornado_gen.Return(False)
 
 
 class TestSyncWrapper(AsyncTestCase):

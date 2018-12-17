@@ -24,7 +24,7 @@ from salt.utils.cache import CacheCli
 
 # Import Third Party Libs
 from salt.ext import six
-import tornado.gen
+import tornado.gen as tornado_gen
 try:
     from M2Crypto import RSA
     HAS_M2 = True
@@ -51,7 +51,7 @@ class AESPubClientMixin(object):
             if not salt.crypt.verify_signature(master_pubkey_path, payload['load'], payload.get('sig')):
                 raise salt.crypt.AuthenticationError('Message signature failed to validate.')
 
-    @tornado.gen.coroutine
+    @tornado_gen.coroutine
     def _decode_payload(self, payload):
         # we need to decrypt it
         log.trace('Decoding payload: %s', payload)
@@ -63,7 +63,7 @@ class AESPubClientMixin(object):
                 yield self.auth.authenticate()
                 payload['load'] = self.auth.crypticle.loads(payload['load'])
 
-        raise tornado.gen.Return(payload)
+        raise tornado_gen.Return(payload)
 
 
 # TODO: rename?

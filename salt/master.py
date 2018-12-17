@@ -27,7 +27,7 @@ from salt.ext.six.moves import range
 from salt.utils.zeromq import zmq, ZMQDefaultLoop, install_zmq, ZMQ_VERSION_INFO
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
 
-import tornado.gen  # pylint: disable=F0401
+import tornado.gen as tornado_gen  # pylint: disable=F0401
 
 # Import salt libs
 import salt.crypt
@@ -1037,7 +1037,7 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
             # Tornado knows what to do
             pass
 
-    @tornado.gen.coroutine
+    @tornado_gen.coroutine
     def _handle_payload(self, payload):
         '''
         The _handle_payload method is the key method used to figure out what
@@ -1063,7 +1063,7 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         load = payload['load']
         ret = {'aes': self._handle_aes,
                'clear': self._handle_clear}[key](load)
-        raise tornado.gen.Return(ret)
+        raise tornado_gen.Return(ret)
 
     def _post_stats(self, start, cmd):
         '''

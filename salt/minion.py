@@ -110,7 +110,7 @@ from salt.exceptions import (
 )
 
 
-import tornado.gen  # pylint: disable=F0401
+import tornado.gen as tornado_gen  # pylint: disable=F0401
 import tornado.ioloop  # pylint: disable=F0401
 
 log = logging.getLogger(__name__)
@@ -488,7 +488,7 @@ class MinionBase(object):
                 return self.beacons.process(b_conf, self.opts['grains'])  # pylint: disable=no-member
         return []
 
-    @tornado.gen.coroutine
+    @tornado_gen.coroutine
     def eval_master(self,
                     opts,
                     timeout=60,
@@ -514,7 +514,7 @@ class MinionBase(object):
         if opts['master_type'] == 'disable':
             log.warning('Master is set to disable, skipping connection')
             self.connected = False
-            raise tornado.gen.Return((None, None))
+            raise tornado_gen.Return((None, None))
 
         # Run masters discovery over SSDP. This may modify the whole configuration,
         # depending of the networking and sets of masters.
@@ -650,7 +650,7 @@ class MinionBase(object):
                 if attempts != 0:
                     # Give up a little time between connection attempts
                     # to allow the IOLoop to run any other scheduled tasks.
-                    yield tornado.gen.sleep(opts['acceptance_wait_time'])
+                    yield tornado_gen.sleep(opts['acceptance_wait_time'])
                 attempts += 1
                 if tries > 0:
                     log.debug(
@@ -712,7 +712,7 @@ class MinionBase(object):
                 else:
                     self.tok = pub_channel.auth.gen_token(b'salt')
                     self.connected = True
-                    raise tornado.gen.Return((opts['master'], pub_channel))
+                    raise tornado_gen.Return((opts['master'], pub_channel))
 
         # single master sign in
         else:
@@ -723,7 +723,7 @@ class MinionBase(object):
                 if attempts != 0:
                     # Give up a little time between connection attempts
                     # to allow the IOLoop to run any other scheduled tasks.
-                    yield tornado.gen.sleep(opts['acceptance_wait_time'])
+                    yield tornado_gen.sleep(opts['acceptance_wait_time'])
                 attempts += 1
                 if tries > 0:
                     log.debug(
@@ -755,7 +755,7 @@ class MinionBase(object):
                         yield pub_channel.connect()
                     self.tok = pub_channel.auth.gen_token(b'salt')
                     self.connected = True
-                    raise tornado.gen.Return((opts['master'], pub_channel))
+                    raise tornado_gen.Return((opts['master'], pub_channel))
                 except SaltClientError:
                     if attempts == tries:
                         # Exhausted all attempts. Return exception.
@@ -967,7 +967,7 @@ class MinionManager(MinionBase):
         self.event.subscribe('')
         self.event.set_event_handler(self.handle_event)
 
-    @tornado.gen.coroutine
+    @tornado_gen.coroutine
     def handle_event(self, package):
         for minion in self.minions:
             minion.handle_event(package)
@@ -1019,7 +1019,7 @@ class MinionManager(MinionBase):
             self.io_loop.spawn_callback(self._connect_minion, minion)
         self.io_loop.call_later(timeout, self._check_minions)
 
-    @tornado.gen.coroutine
+    @tornado_gen.coroutine
     def _connect_minion(self, minion):
         '''
         Create a minion, and asynchronously connect it to a master
@@ -1046,7 +1046,7 @@ class MinionManager(MinionBase):
                 last = time.time()
                 if auth_wait < self.max_auth_wait:
                     auth_wait += self.auth_wait
-                yield tornado.gen.sleep(auth_wait)  # TODO: log?
+                yield tornado_gen.sleep(auth_wait)  # TODO: log?
             except SaltMasterUnresolvableError:
                 err = 'Master address: \'{0}\' could not be resolved. Invalid or unresolveable address. ' \
                       'Set \'master\' value in minion config.'.format(minion.opts['master'])
@@ -1226,7 +1226,7 @@ class Minion(MinionBase):
         if timeout and self._sync_connect_master_success is False:
             raise SaltDaemonNotRunning('Failed to connect to the salt-master')
 
-    @tornado.gen.coroutine
+    @tornado_gen.coroutine
     def connect_master(self, failed=False):
         '''
         Return a future which will complete when you are connected to a master
@@ -1235,7 +1235,7 @@ class Minion(MinionBase):
         yield self._post_master_init(master)
 
     # TODO: better name...
-    @tornado.gen.coroutine
+    @tornado_gen.coroutine
     def _post_master_init(self, master):
         '''
         Function to finish init after connecting to a master
@@ -1418,7 +1418,7 @@ class Minion(MinionBase):
         with salt.transport.client.ReqChannel.factory(self.opts) as channel:
             return channel.send(load, timeout=timeout)
 
-    @tornado.gen.coroutine
+    @tornado_gen.coroutine
     def _send_req_async(self, load, timeout):
 
         if self.opts['minion_sign_messages']:
@@ -1429,7 +1429,7 @@ class Minion(MinionBase):
 
         with salt.transport.client.AsyncReqChannel.factory(self.opts) as channel:
             ret = yield channel.send(load, timeout=timeout)
-            raise tornado.gen.Return(ret)
+            raise tornado_gen.Return(ret)
 
     def _fire_master(self, data=None, tag=None, events=None, pretag=None, timeout=60, sync=True, timeout_handler=None, include_startup_grains=False):
         '''
@@ -1475,7 +1475,7 @@ class Minion(MinionBase):
                 self._send_req_async(load, timeout, callback=lambda f: None)  # pylint: disable=unexpected-keyword-arg
         return True
 
-    @tornado.gen.coroutine
+    @tornado_gen.coroutine
     def _handle_decoded_payload(self, data):
         '''
         Override this method if you wish to handle the decoded data
@@ -1517,7 +1517,7 @@ class Minion(MinionBase):
             process_count = len(salt.utils.minion.running(self.opts))
             while process_count >= process_count_max:
                 log.warning("Maximum number of processes reached while executing jid %s, waiting...", data['jid'])
-                yield tornado.gen.sleep(10)
+                yield tornado_gen.sleep(10)
                 process_count = len(salt.utils.minion.running(self.opts))
 
         # We stash an instance references to allow for the socket
@@ -2197,7 +2197,7 @@ class Minion(MinionBase):
         self.matchers = salt.loader.matchers(self.opts)
 
     # TODO: only allow one future in flight at a time?
-    @tornado.gen.coroutine
+    @tornado_gen.coroutine
     def pillar_refresh(self, force_refresh=False):
         '''
         Refresh the pillar
@@ -2363,13 +2363,13 @@ class Minion(MinionBase):
                 log.warning('Unable to send mine data to master.')
                 return None
 
-    @tornado.gen.coroutine
+    @tornado_gen.coroutine
     def handle_event(self, package):
         '''
         Handle an event from the epull_sock (all local minion events)
         '''
         if not self.ready:
-            raise tornado.gen.Return()
+            raise tornado_gen.Return()
         tag, data = salt.utils.event.SaltEvent.unpack(package)
         log.debug(
             'Minion of \'%s\' is handling event tag \'%s\'',
@@ -2409,7 +2409,7 @@ class Minion(MinionBase):
             # if the master disconnect event is for a different master, raise an exception
             if tag.startswith(master_event(type='disconnected')) and data['master'] != self.opts['master']:
                 # not mine master, ignore
-                raise tornado.gen.Return()
+                raise tornado_gen.Return()
             if tag.startswith(master_event(type='failback')):
                 # if the master failback event is not for the top master, raise an exception
                 if data['master'] != self.opts['master_list'][0]:
@@ -2938,7 +2938,7 @@ class Syndic(Minion):
         # In the future, we could add support for some clearfuncs, but
         # the syndic currently has no need.
 
-    @tornado.gen.coroutine
+    @tornado_gen.coroutine
     def reconnect(self):
         if hasattr(self, 'pub_channel'):
             self.pub_channel.on_recv(None)
@@ -2955,7 +2955,7 @@ class Syndic(Minion):
             self.pub_channel.on_recv(self._process_cmd_socket)
             log.info('Minion is ready to receive requests!')
 
-        raise tornado.gen.Return(self)
+        raise tornado_gen.Return(self)
 
     def destroy(self):
         '''
@@ -3038,7 +3038,7 @@ class SyndicManager(MinionBase):
             s_opts['master'] = master
             self._syndics[master] = self._connect_syndic(s_opts)
 
-    @tornado.gen.coroutine
+    @tornado_gen.coroutine
     def _connect_syndic(self, opts):
         '''
         Create a syndic, and asynchronously connect it to a master
@@ -3078,7 +3078,7 @@ class SyndicManager(MinionBase):
                 last = time.time()
                 if auth_wait < self.max_auth_wait:
                     auth_wait += self.auth_wait
-                yield tornado.gen.sleep(auth_wait)  # TODO: log?
+                yield tornado_gen.sleep(auth_wait)  # TODO: log?
             except (KeyboardInterrupt, SystemExit):  # pylint: disable=try-except-raise
                 raise
             except Exception:  # pylint: disable=broad-except
@@ -3088,7 +3088,7 @@ class SyndicManager(MinionBase):
                     opts['master'], exc_info=True
                 )
 
-        raise tornado.gen.Return(syndic)
+        raise tornado_gen.Return(syndic)
 
     def _mark_master_dead(self, master):
         '''
@@ -3346,7 +3346,7 @@ class ProxyMinion(Minion):
     '''
 
     # TODO: better name...
-    @tornado.gen.coroutine
+    @tornado_gen.coroutine
     def _post_master_init(self, master):
         '''
         Function to finish init after connecting to a master
@@ -3375,7 +3375,7 @@ class ProxyMinion(Minion):
         mp_call = _metaproxy_call(self.opts, 'handle_payload')
         return mp_call(self, payload)
 
-    @tornado.gen.coroutine
+    @tornado_gen.coroutine
     def _handle_decoded_payload(self, data):
         mp_call = _metaproxy_call(self.opts, 'handle_decoded_payload')
         return mp_call(self, data)
