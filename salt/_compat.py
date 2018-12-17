@@ -9,6 +9,7 @@ from __future__ import absolute_import, unicode_literals, print_function
 import sys
 import types
 import logging
+import weakref
 
 # Import 3rd-party libs
 from salt.exceptions import SaltException
@@ -20,21 +21,24 @@ log = logging.getLogger(__name__)
 try:
     # Python >2.5
     import xml.etree.cElementTree as ElementTree
-except Exception:
+except Exception:  # pylint: disable=broad-except
     try:
         # Python >2.5
         import xml.etree.ElementTree as ElementTree
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         try:
             # normal cElementTree install
             import elementtree.cElementTree as ElementTree
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             try:
                 # normal ElementTree install
                 import elementtree.ElementTree as ElementTree
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 ElementTree = None
 
+
+# True if we are running on Python 2.
+PY2 = sys.version_info.major == 2
 
 # True if we are running on Python 3.
 PY3 = sys.version_info.major == 3
@@ -308,3 +312,8 @@ if ipaddress:
         ipaddress.IPv6Interface = IPv6InterfaceScoped
     ipaddress.ip_address = ip_address
     ipaddress.ip_interface = ip_interface
+
+
+if PY2:
+    from salt.ext.weakref_finalize import finalize as weakref_finalize
+    weakref.finalize = weakref_finalize
