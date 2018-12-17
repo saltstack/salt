@@ -353,16 +353,13 @@ class IPCClient(object):
                 yield tornado.gen.sleep(1)
 
     def __del__(self):
-        self._close()
+        self.close()
 
-    def _close(self):
+    def close(self):
         '''
         Routines to handle any cleanup before the instance shuts down.
         Sockets and filehandles should be closed explicitly, to prevent
         leaks.
-
-        This class is a singleton so close have to be called only once during
-        garbage collection when nobody uses this instance.
         '''
         if self._closing:
             return
@@ -740,17 +737,14 @@ class IPCMessageSubscriber(IPCClient):
                 yield tornado.gen.sleep(1)
         yield self._read_async(callback)
 
-    def _close(self):
+    def close(self):
         '''
         Routines to handle any cleanup before the instance shuts down.
         Sockets and filehandles should be closed explicitly, to prevent
         leaks.
-
-        This class is a singleton so close have to be called only once during
-        garbage collection when nobody uses this instance.
         '''
         if not self._closing:
-            IPCClient._close(self)
+            IPCClient.close(self)
             # This will prevent this message from showing up:
             # '[ERROR   ] Future exception was never retrieved:
             # StreamClosedError'
@@ -761,4 +755,4 @@ class IPCMessageSubscriber(IPCClient):
 
     def __del__(self):
         if IPCMessageSubscriber in globals():
-            self._close()
+            self.close()
