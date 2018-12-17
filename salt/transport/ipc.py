@@ -149,7 +149,6 @@ class IPCServer(object):
         self.pre_fork()
         self.post_fork()
 
-
     @tornado.gen.coroutine
     def handle_stream(self, stream):
         '''
@@ -763,6 +762,7 @@ class IPCMessageSubscriber(IPCClient):
         '''
         if not self._closing:
             IPCClient._close(self)
+
             # This will prevent this message from showing up:
             # '[ERROR   ] Future exception was never retrieved:
             # StreamClosedError'

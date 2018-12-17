@@ -97,9 +97,6 @@ from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.utils.debug import enable_sigusr1_handler
 from salt.utils.event import tagify
 from salt.utils.odict import OrderedDict
-from salt.utils.process import (default_signals,
-                                SignalHandlingMultiprocessingProcess,
-                                ProcessManager)
 from salt.exceptions import (
     CommandExecutionError,
     CommandNotFoundError,
@@ -950,7 +947,7 @@ class MinionManager(MinionBase):
         self.minions = []
         self.jid_queue = []
 
-        self.process_manager = ProcessManager(name='MultiMinionProcessManager')
+        self.process_manager = salt.utils.process.ProcessManager(name='MultiMinionProcessManager')
         install_zmq()
         self.io_loop = ZMQDefaultLoop.current()
 
@@ -1192,7 +1189,7 @@ class Minion(MinionBase):
             )
             time.sleep(sleep_time)
 
-        self.process_manager = ProcessManager(name='MinionProcessManager')
+        self.process_manager = salt.utils.process.ProcessManager(name='MinionProcessManager')
         self.io_loop.spawn_callback(self.process_manager.run, **{'asynchronous': True})
         # We don't have the proxy setup yet, so we can't start engines
         # Engines need to be able to access __proxy__
@@ -1276,7 +1273,6 @@ class Minion(MinionBase):
         '''
         if self.connected:
             self.opts['master'] = master
-
             # Initialize pillar before loader to make pillar accessible in modules
             self.opts['pillar'] = yield salt.pillar.get_async_pillar(
                 self.opts,
@@ -1286,7 +1282,7 @@ class Minion(MinionBase):
                 pillarenv=self.opts.get('pillarenv')
             ).compile_pillar()
 
-            event = salt.utils.event.get_event('minion', opts=self.opts, listen=False) #, sync=False)
+            event = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
             event.fire_event({'master': master, 'master_uri': self.opts['master_uri']}, master_event(type='connected'))
 
         if not self.ready:
@@ -1608,7 +1604,6 @@ class Minion(MinionBase):
                 ZMQDefaultLoop.current().spawn_callback(
                         Minion._thread_return, minion_instance, opts, data)
         return minion_instance
-
 
     @classmethod
     @tornado.gen.coroutine
@@ -3517,18 +3512,15 @@ class WorkerMinion(Minion):
         '''
         Handle an event from the epull_sock (all local minion events)
         '''
-        try:
-            tag, data = salt.utils.event.SaltEvent.unpack(package)
-            if tag.startswith('new_pillar'):
-                self.opts['pillar'] = data
-                self.module_refresh()
-            elif tag.startswith(master_event(type='connected')):
-                self.opts['master'] = data['master']
-                self.opts.update(prep_ip_port(self.opts))
-                self.opts.update(resolve_dns(self.opts))
-                self.module_refresh()
-        except:
-            log.exception("EXCEPTION in workerminion handle_event")
+        tag, data = salt.utils.event.SaltEvent.unpack(package)
+        if tag.startswith('new_pillar'):
+            self.opts['pillar'] = data
+            self.module_refresh()
+        elif tag.startswith(master_event(type='connected')):
+            self.opts['master'] = data['master']
+            self.opts.update(prep_ip_port(self.opts))
+            self.opts.update(resolve_dns(self.opts))
+            self.module_refresh()
 
 
 class Worker(salt.utils.process.SignalHandlingMultiprocessingProcess):
@@ -3561,15 +3553,15 @@ class Worker(salt.utils.process.SignalHandlingMultiprocessingProcess):
         '''
         Bind to the local port
         '''
+
         # using ZMQIOLoop since we *might* need zmq in there
         install_zmq()
         tornado.ioloop.IOLoop.clear_current()
         tornado.ioloop.IOLoop().make_current()
         io_loop = tornado.ioloop.IOLoop.current()
-        #io_loop = ZMQDefaultLoop.current()
         self.req_chan.post_fork(payload_handler=self.handle_payload, io_loop=io_loop)
         io_loop.spawn_callback(self.handle_payload, {'connected': False}, None)
-        self.event = salt.utils.event.get_event('minion', opts=self.opts, io_loop=io_loop) #, sync=False)
+        self.event = salt.utils.event.get_event('minion', opts=self.opts, io_loop=io_loop)
         self.event.subscribe('')
         self.event.set_event_handler(self.handle_event)
         try:
