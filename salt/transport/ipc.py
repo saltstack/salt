@@ -95,6 +95,7 @@ class IPCServer(object):
         """
         Create a new Tornado IPC server
 
+        :param dict opts: Salt options
         :param str/int socket_path: Path on the filesystem for the
                                     socket to bind to. This socket does
                                     not need to exist prior to calling
@@ -127,10 +128,18 @@ class IPCServer(object):
         if isinstance(self.socket_path, int):
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            if self.opts.get("ipc_so_sndbuf"):
+                self.sock.setsockopt(
+                    socket.SOL_SOCKET, socket.SO_SNDBUF, self.opts["ipc_so_sndbuf"]
+                )
+            if self.opts.get("ipc_so_rcvbuf"):
+                self.sock.setsockopt(
+                    socket.SOL_SOCKET, socket.SO_RCVBUF, self.opts["ipc_so_rcvbuf"]
+                )
             self.sock.setblocking(0)
             self.sock.bind(("127.0.0.1", self.socket_path))
             # Based on default used in tornado.netutil.bind_sockets()
-            self.sock.listen(128)
+            self.sock.listen(self.opts["ipc_so_backlog"])
         else:
             self.sock = salt.ext.tornado.netutil.bind_unix_socket(self.socket_path)
 
@@ -508,6 +517,14 @@ class IPCMessagePublisher(object):
         if isinstance(self.socket_path, int):
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            if self.opts.get("ipc_so_sndbuf"):
+                self.sock.setsockopt(
+                    socket.SOL_SOCKET, socket.SO_SNDBUF, self.opts["ipc_so_sndbuf"]
+                )
+            if self.opts.get("ipc_so_rcvbuf"):
+                self.sock.setsockopt(
+                    socket.SOL_SOCKET, socket.SO_RCVBUF, self.opts["ipc_so_rcvbuf"]
+                )
             self.sock.setblocking(0)
             self.sock.bind(("127.0.0.1", self.socket_path))
             # Based on default used in salt.ext.tornado.netutil.bind_sockets()
