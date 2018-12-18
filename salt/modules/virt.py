@@ -1786,11 +1786,12 @@ def update(name,
         need_update = True
 
     # Update the memory, note that libvirt outputs all memory sizes in KiB
-    mem_node = desc.find('memory')
-    if mem and int(mem_node.text) != mem * 1024:
-        mem_node.text = six.text_type(mem)
-        mem_node.set('unit', 'MiB')
-        need_update = True
+    for mem_node_name in ['memory', 'currentMemory']:
+        mem_node = desc.find(mem_node_name)
+        if mem and int(mem_node.text) != mem * 1024:
+            mem_node.text = six.text_type(mem)
+            mem_node.set('unit', 'MiB')
+            need_update = True
 
     # Update the XML definition with the new disks and diff changes
     devices_node = desc.find('devices')
