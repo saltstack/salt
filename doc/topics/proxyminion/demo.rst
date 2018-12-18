@@ -58,7 +58,7 @@ Now, configure your salt-proxy.
 
 
 This says that Salt's pillar should load some values for the proxy ``p8000``
-from the file /srv/pillar/p8000.sls (if you have not changed your default pillar_roots)
+from the file ``/srv/pillar/p8000.sls`` (if you have not changed your default pillar_roots)
 
 3. In the pillar root for your base environment, create the ``p8000.sls`` file with the
    following contents:
