@@ -217,6 +217,23 @@ def _warn_software_properties(repo):
     log.warning('Best guess at ppa format: %s', repo)
 
 
+def normalize_name(name):
+    '''
+    Strips the architecture from the specified package name, if necessary.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.normalize_name zsh:amd64
+    '''
+    try:
+        name, arch = name.rsplit(':', 1)
+    except ValueError:
+        return name
+    return name
+
+
 def latest_version(*names, **kwargs):
     '''
     Return the latest version of the named package available for upgrade or
