@@ -19,7 +19,6 @@ import logging
 import stat
 import traceback
 import binascii
-import weakref
 import getpass
 import tornado.gen
 
@@ -71,6 +70,7 @@ import salt.utils.stringutils
 import salt.utils.user
 import salt.utils.verify
 import salt.version
+from salt._compat import weakref
 from salt.exceptions import (
     AuthenticationError, SaltClientError, SaltReqTimeoutError, MasterExit
 )
@@ -467,6 +467,13 @@ class AsyncAuth(object):
             auth = object.__new__(cls)
             auth.__singleton_init__(opts, io_loop=io_loop)
             loop_instance_map[key] = auth
+            # Don't pass any strong refereces to the instance . That's why
+            # __singleton_destroy__ is a class method. To access the instance
+            # attributes, we pass the instance dictionary. This way, the
+            # finalize code does not have any strong references to the instance
+            # thus allowing weakref's finalize to kick in as soon as the
+            # instance looses all it's references
+            weakref.finalize(auth, auth.__singleton_destroy__, key, auth.__dict__)
         else:
             log.debug('Re-using AsyncAuth for %s', key)
         return auth
@@ -519,6 +526,41 @@ class AsyncAuth(object):
             self._authenticate_future.set_result(True)
         else:
             self.authenticate()
+
+    @classmethod
+    def __singleton_destroy__(cls, instance_key, instance_dict):
+        '''
+        Routines to handle any cleanup before the instance shuts down.
+        Sockets and filehandles should be closed explicitly, to prevent
+        leaks.
+        '''
+        if instance_dict.get('_closing') or False:
+            return
+
+        log.debug(
+            'Destroying %s instance with map key of: %s',
+            cls.__name__,
+            instance_key
+        )
+
+        instance_dict['_closing'] = True
+
+        # Cleanup creds
+        if instance_key in cls.creds_map:
+            del cls.creds_map[instance_key]
+
+        # Remove the entry from the instance map so that a closed entry may
+        # not be reused.
+        # This forces this operation even if the reference count of the entry
+        # has not yet gone to zero.
+        io_loop = instance_dict.get('io_loop')
+        if io_loop and io_loop in cls.instance_map:
+            loop_instance_map = cls.instance_map[io_loop]
+            if instance_key in loop_instance_map:
+                del loop_instance_map[instance_key]
+            if not loop_instance_map:
+                del cls.instance_map[io_loop]
+            instance_dict['io_loop'] = None
 
     def __deepcopy__(self, memo):
         cls = self.__class__
@@ -1140,6 +1182,13 @@ class SAuth(AsyncAuth):
             auth = object.__new__(cls)
             auth.__singleton_init__(opts)
             SAuth.instances[key] = auth
+            # Don't pass any strong refereces to the instance . That's why
+            # __singleton_destroy__ is a class method. To access the instance
+            # attributes, we pass the instance dictionary. This way, the
+            # finalize code does not have any strong references to the instance
+            # thus allowing weakref's finalize to kick in as soon as the
+            # instance looses all it's references
+            weakref.finalize(auth, auth.__singleton_destroy__, key, auth.__dict__)
         else:
             log.debug('Re-using SAuth for %s', key)
         return auth
@@ -1180,6 +1229,29 @@ class SAuth(AsyncAuth):
             self.mpub = 'minion_master.pub'
         if not os.path.isfile(self.pub_path):
             self.get_keys()
+
+    @classmethod
+    def __singleton_destroy__(cls, instance_key, instance_dict):
+        '''
+        Routines to handle any cleanup before the instance shuts down.
+        Sockets and filehandles should be closed explicitly, to prevent
+        leaks.
+        '''
+        if instance_dict.get('_closing') or False:
+            return
+
+        log.debug(
+            'Destroying %s instance with map key of: %s',
+            cls.__name__,
+            instance_key
+        )
+
+        # Cleanup instances
+        if instance_key in cls.instances:
+            del cls.instances[instance_key]
+
+        # Call super()'s __singleton_destroy__ for the remaining cleanup
+        super(SAuth, cls).__singleton_destroy__(instance_key, instance_dict)
 
     @property
     def creds(self):

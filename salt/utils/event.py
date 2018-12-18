@@ -88,6 +88,7 @@ import salt.utils.zeromq
 import salt.log.setup
 import salt.defaults.exitcodes
 import salt.transport.ipc
+from salt._compat import weakref
 
 log = logging.getLogger(__name__)
 
@@ -271,6 +272,7 @@ class SaltEvent(object):
             # and don't read out events from the buffer on an on-going basis,
             # the buffer will grow resulting in big memory usage.
             self.connect_pub()
+        weakref.finalize(self, self.__destroy__, self.__dict__)
 
     @classmethod
     def __load_cache_regex(cls):
@@ -397,7 +399,6 @@ class SaltEvent(object):
         if not self.cpub:
             return
 
-        self.subscriber.close()
         self.subscriber = None
         self.pending_events = []
         self.cpub = False
@@ -771,12 +772,32 @@ class SaltEvent(object):
         return self.fire_event(msg, "fire_master", timeout)
 
     def destroy(self):
-        if self.subscriber is not None:
-            self.subscriber.close()
-        if self.pusher is not None:
-            self.pusher.close()
-        if self._run_io_loop_sync and not self.keep_loop:
-            self.io_loop.close()
+        salt.utils.versions.warn_until(
+            'Sodium',
+            'Explicitly destroying {} is deprecated and will happen as soon as there are '
+            'no other references to the class instance'.format(self.__class__.__name__),
+            stacklevel=3
+        )
+
+    @classmethod
+    def __destroy__(cls, instance_dict):
+        log.debug('Destroying %s instance', cls.__name__)
+        subscriber = instance_dict.get('subscriber')
+        if subscriber is not None:
+            subscriber.close()
+            instance_dict['subscriber'] = None
+
+        pusher = instance_dict.get('pusher')
+        if pusher is not None:
+            pusher.close()
+            instance_dict['pusher'] = None
+
+        io_loop = instance_dict.get('io_loop')
+        keep_loop = instance_dict['keep_loop']
+        run_io_loop_sync = instance_dict.get('_run_io_loop_sync')
+        if run_io_loop_sync and not keep_loop and io_loop:
+            io_loop.close()
+            instance_dict['io_loop'] = None
 
     def _fire_ret_load_specific_fun(self, load, fun_index=0):
         '''
@@ -872,14 +893,6 @@ class SaltEvent(object):
             self.connect_pub()
         # This will handle reconnects
         return self.subscriber.read_async(event_handler)
-
-    def __del__(self):
-        # skip exceptions in destroy-- since destroy() doesn't cover interpreter
-        # shutdown-- where globals start going missing
-        try:
-            self.destroy()
-        except Exception:
-            pass
 
 
 class MasterEvent(SaltEvent):
@@ -981,16 +994,9 @@ class AsyncEventPublisher(object):
             epub_uri = epub_sock_path
             epull_uri = epull_sock_path
 
-        log.debug(
-            '{0} PUB socket URI: {1}'.format(
-                self.__class__.__name__, epub_uri
-            )
-        )
-        log.debug(
-            '{0} PULL socket URI: {1}'.format(
-                self.__class__.__name__, epull_uri
-            )
-        )
+        log.debug('%s PUB socket URI: %s', self.__class__.__name__, epub_uri)
+        log.debug('%s PULL socket URI: %s', self.__class__.__name__, epull_uri)
+        weakref.finalize(self, self.__destroy__, self.__dict__)
 
         minion_sock_dir = self.opts['sock_dir']
 
@@ -1045,16 +1051,31 @@ class AsyncEventPublisher(object):
             return None
 
     def close(self):
-        if self._closing:
-            return
-        self._closing = True
-        if hasattr(self, 'publisher'):
-            self.publisher.close()
-        if hasattr(self, 'puller'):
-            self.puller.close()
+        salt.utils.versions.warn_until(
+            'Sodium',
+            'Explicitly closing {} is deprecated and will happen as soon as there are '
+            'no other references to the class instance'.format(self.__class__.__name__),
+            stacklevel=3
+        )
 
-    def __del__(self):
-        self.close()
+    @classmethod
+    def __destroy__(cls, instance_dict):
+        if instance_dict.get('_closing') or False:
+            return
+
+        log.debug('Destroying %s instance', cls.__name__)
+
+        instance_dict['_closing'] = True
+
+        publisher = instance_dict.get('publisher')
+        if publisher is not None:
+            publisher.close()
+            instance_dict['publisher'] = None
+
+        puller = instance_dict.get('puller')
+        if puller is not None:
+            puller.close()
+            instance_dict['puller'] = None
 
 
 class EventPublisher(salt.utils.process.SignalHandlingMultiprocessingProcess):
@@ -1067,6 +1088,7 @@ class EventPublisher(salt.utils.process.SignalHandlingMultiprocessingProcess):
         self.opts = salt.config.DEFAULT_MASTER_OPTS.copy()
         self.opts.update(opts)
         self._closing = False
+        weakref.finalize(self, self.__destroy__, self.__dict__)
 
     # __setstate__ and __getstate__ are only used on Windows.
     # We do this so that __init__ will be invoked on Windows in the child
@@ -1147,23 +1169,41 @@ class EventPublisher(salt.utils.process.SignalHandlingMultiprocessingProcess):
                          exc_info=True)
             return None
 
-    def close(self):
-        if self._closing:
-            return
-        self._closing = True
-        if hasattr(self, 'publisher'):
-            self.publisher.close()
-        if hasattr(self, 'puller'):
-            self.puller.close()
-        if hasattr(self, 'io_loop'):
-            self.io_loop.close()
-
     def _handle_signals(self, signum, sigframe):
         self.close()
         super(EventPublisher, self)._handle_signals(signum, sigframe)
 
-    def __del__(self):
-        self.close()
+    def close(self):
+        salt.utils.versions.warn_until(
+            'Sodium',
+            'Explicitly closing {} is deprecated and will happen as soon as there are '
+            'no other references to the class instance'.format(self.__class__.__name__),
+            stacklevel=3
+        )
+
+    @classmethod
+    def __destroy__(cls, instance_dict):
+        if instance_dict.get('_closing') or False:
+            return
+
+        log.debug('Destroying %s instance', cls.__name__)
+
+        instance_dict['_closing'] = True
+
+        publisher = instance_dict.get('publisher')
+        if publisher is not None:
+            publisher.close()
+            instance_dict['publisher'] = None
+
+        puller = instance_dict.get('puller')
+        if puller is not None:
+            puller.close()
+            instance_dict['puller'] = None
+
+        io_loop = instance_dict.get('io_loop')
+        if io_loop is not None:
+            io_loop.close()
+            instance_dict['io_loop'] = None
 
 
 class EventReturn(salt.utils.process.SignalHandlingMultiprocessingProcess):

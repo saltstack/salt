@@ -308,8 +308,9 @@ class AsyncReqMessageClientPoolTest(TestCase):
         self.assertEqual([1], self.message_client_pool.send())
 
     def test_destroy(self):
-        self.message_client_pool.destroy()
-        self.assertEqual([], self.message_client_pool.message_clients)
+        message_client_pool_dict = self.message_client_pool.__dict__
+        del self.message_client_pool
+        self.assertEqual([], message_client_pool_dict['message_clients'])
 
 
 class ZMQConfigTest(TestCase):

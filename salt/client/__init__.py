@@ -44,6 +44,7 @@ import salt.utils.user
 import salt.utils.verify
 import salt.utils.zeromq
 import salt.syspaths as syspaths
+from salt._compat import weakref
 from salt.exceptions import (
     AuthenticationError,
     AuthorizationError,
@@ -174,6 +175,7 @@ class LocalClient(object):
         self.utils = salt.loader.utils(self.opts)
         self.functions = salt.loader.minion_mods(self.opts, utils=self.utils)
         self.returners = salt.loader.returners(self.opts, self.functions)
+        weakref.finalize(self, self.__destroy__, self.__dict__)
 
     def __read_master_key(self):
         '''
@@ -1882,13 +1884,17 @@ class LocalClient(object):
         raise tornado.gen.Return({'jid': payload['load']['jid'],
                                   'minions': payload['load']['minions']})
 
-    def __del__(self):
-        # This IS really necessary!
-        # When running tests, if self.events is not destroyed, we leak 2
-        # threads per test case which uses self.client
-        if hasattr(self, 'event'):
-            # The call below will take care of calling 'self.event.destroy()'
-            del self.event
+    @classmethod
+    def __destroy__(cls, instance_dict):
+        log.debug('Destroying %s instance', cls.__name__)
+        event = instance_dict.get('event')
+        if event is not None:
+            # This IS really necessary!
+            # When running tests, if self.events is not destroyed, we leak 2
+            # threads per test case which uses self.client
+            # The calls below will take care of calling 'self.event.destroy()'
+            del event
+            del instance_dict['event']
 
     def _clean_up_subscriptions(self, job_id):
         if self.opts.get('order_masters'):

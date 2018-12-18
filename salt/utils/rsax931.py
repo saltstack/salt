@@ -8,14 +8,18 @@ from __future__ import absolute_import, print_function, unicode_literals
 import glob
 import sys
 import os
+import logging
 
 # Import Salt libs
 import salt.utils.platform
 import salt.utils.stringutils
+from salt._compat import weakref
 
 # Import 3rd-party libs
 from ctypes import cdll, c_char_p, c_int, c_void_p, pointer, create_string_buffer
 from ctypes.util import find_library
+
+log = logging.getLogger(__name__)
 
 # Constants taken from openssl-1.1.0c/include/openssl/crypto.h
 OPENSSL_INIT_ADD_ALL_CIPHERS = 0x00000004
@@ -103,10 +107,19 @@ class RSAX931Signer(object):
         self._rsa = c_void_p(libcrypto.RSA_new())
         if not libcrypto.PEM_read_bio_RSAPrivateKey(self._bio, pointer(self._rsa), None, None):
             raise ValueError('invalid RSA private key')
+        weakref.finalize(self, self.__destroy__, self.__dict__)
 
-    def __del__(self):
-        libcrypto.BIO_free(self._bio)
-        libcrypto.RSA_free(self._rsa)
+    @classmethod
+    def __destroy__(cls, instance_dict):
+        log.debug('Destroying %s instance', cls.__name__)
+        bio = instance_dict.get('_bio')
+        if bio is not None:
+            libcrypto.BIO_free(bio)
+            instance_dict['_bio'] = None
+        rsa = instance_dict.get('_rsa')
+        if rsa is not None:
+            libcrypto.RSA_free(rsa)
+            instance_dict['_rsa'] = None
 
     def sign(self, msg):
         '''
@@ -141,10 +154,19 @@ class RSAX931Verifier(object):
         self._rsa = c_void_p(libcrypto.RSA_new())
         if not libcrypto.PEM_read_bio_RSA_PUBKEY(self._bio, pointer(self._rsa), None, None):
             raise ValueError('invalid RSA public key')
+        weakref.finalize(self, self.__destroy__, self.__dict__)
 
-    def __del__(self):
-        libcrypto.BIO_free(self._bio)
-        libcrypto.RSA_free(self._rsa)
+    @classmethod
+    def __destroy__(cls, instance_dict):
+        log.debug('Destroying %s instance', cls.__name__)
+        bio = instance_dict.get('_bio')
+        if bio is not None:
+            libcrypto.BIO_free(bio)
+            instance_dict['_bio'] = None
+        rsa = instance_dict.get('_rsa')
+        if rsa is not None:
+            libcrypto.RSA_free(rsa)
+            instance_dict['_rsa'] = None
 
     def verify(self, signed):
         '''
