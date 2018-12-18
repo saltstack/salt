@@ -1072,6 +1072,151 @@ Should be greater than overall download time.
 
     http_request_timeout: 3600
 
+.. conf_master:: req_server_niceness
+
+``req_server_niceness``
+------------------------
+
+.. versionadded:: neon
+
+Default: ``None``
+
+Process priority level of the ReqServer subprocess of the master.
+Supported on POSIX platforms only.
+
+.. code-block:: yaml
+
+    req_server_niceness: 9
+
+.. conf_master:: pub_server_niceness
+
+``pub_server_niceness``
+------------------------
+
+.. versionadded:: neon
+
+Default: ``None``
+
+Process priority level of the PubServer subprocess of the master.
+Supported on POSIX platforms only.
+
+.. code-block:: yaml
+
+    pub_server_niceness: 9
+
+.. conf_master:: fileserver_update_niceness
+
+``fileserver_update_niceness``
+------------------------
+
+.. versionadded:: neon
+
+Default: ``None``
+
+Process priority level of the FileServerUpdate subprocess of the master.
+Supported on POSIX platforms only.
+
+.. code-block:: yaml
+
+    fileserver_update_niceness: 9
+
+.. conf_master:: maintenance_niceness
+
+``maintenance_niceness``
+------------------------
+
+.. versionadded:: neon
+
+Default: ``None``
+
+Process priority level of the Maintenance subprocess of the master.
+Supported on POSIX platforms only.
+
+.. code-block:: yaml
+
+    maintenance_niceness: 9
+
+.. conf_master:: mworker_niceness
+
+``mworker_niceness``
+------------------------
+
+.. versionadded:: neon
+
+Default: ``None``
+
+Process priority level of the MWorker subprocess of the master.
+Supported on POSIX platforms only.
+
+.. code-block:: yaml
+
+    mworker_niceness: 9
+
+.. conf_master:: mworker_queue_niceness
+
+``mworker_queue_niceness``
+------------------------
+
+.. versionadded:: neon
+
+default: ``None``
+
+process priority level of the MWorkerQueue subprocess of the master.
+supported on POSIX platforms only.
+
+.. code-block:: yaml
+
+    mworker_queue_niceness: 9
+
+.. conf_master:: event_return_niceness
+
+``event_return_niceness``
+------------------------
+
+.. versionadded:: neon
+
+default: ``None``
+
+process priority level of the EventReturn subprocess of the master.
+supported on POSIX platforms only.
+
+.. code-block:: yaml
+
+    event_return_niceness: 9
+
+
+.. conf_master:: event_publisher_niceness
+
+``event_publisher_niceness``
+------------------------
+
+.. versionadded:: neon
+
+default: ``none``
+
+process priority level of the EventPublisher subprocess of the master.
+supported on POSIX platforms only.
+
+.. code-block:: yaml
+
+    event_publisher_niceness: 9
+
+.. conf_master:: reactor_niceness
+
+``reactor_niceness``
+------------------------
+
+.. versionadded:: neon
+
+default: ``None``
+
+process priority level of the Reactor subprocess of the master.
+supported on POSIX platforms only.
+
+.. code-block:: yaml
+
+    reactor_niceness: 9
+
 .. _salt-ssh-configuration:
 
 Salt-SSH Configuration
