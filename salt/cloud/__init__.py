@@ -1282,13 +1282,11 @@ class Cloud(object):
             pass
 
         try:
-            alias, driver = vm_['provider'].split(':')
-            func = '{0}.create'.format(driver)
             with salt.utils.context.func_globals_inject(
                 self.clouds[fun],
                 __active_provider_name__=':'.join([alias, driver])
             ):
-                output = self.clouds[func](vm_)
+                output = self.clouds[fun](vm_)
             if output is not False and 'sync_after_install' in self.opts:
                 if self.opts['sync_after_install'] not in (
                         'all', 'modules', 'states', 'grains'):

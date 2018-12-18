@@ -172,6 +172,9 @@ class KeyCLI(object):
                 ret.pop('local', None)
             return ret
 
+        if cmd in ('accept', 'reject', 'delete'):
+            cmd += '_dict'
+            self.opts['match'] = self.opts.get('dict_match')
         fstr = 'key.{0}'.format(cmd)
         fun = self.client.functions[fstr]
         args, kwargs = self._get_args_kwargs(fun, args)

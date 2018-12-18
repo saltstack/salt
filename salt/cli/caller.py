@@ -30,6 +30,8 @@ from salt.log import LOG_LEVELS
 
 # Import 3rd-party libs
 from salt.ext import six
+import tornado.gen
+import tornado.ioloop
 
 # Custom exceptions
 from salt.exceptions import (
@@ -203,13 +205,14 @@ class BaseCaller(object):
                         self.opts.get('module_executors', ['direct_call'])
             if isinstance(executors, six.string_types):
                 executors = [executors]
+            return_data = None
             try:
                 for name in executors:
                     fname = '{0}.execute'.format(name)
                     if fname not in self.minion.executors:
                         raise SaltInvocationError("Executor '{0}' is not available".format(name))
-                    ret['return'] = self.minion.executors[fname](self.opts, data, func, args, kwargs)
-                    if ret['return'] is not None:
+                    return_data = self.minion.executors[fname](self.opts, data, func, args, kwargs)
+                    if return_data is not None:
                         break
             except TypeError as exc:
                 sys.stderr.write('\nPassed invalid arguments: {0}.\n\nUsage:\n'.format(exc))
@@ -225,6 +228,13 @@ class BaseCaller(object):
                     func.__module__].__context__.get('retcode', 0)
             except AttributeError:
                 retcode = salt.defaults.exitcodes.EX_GENERIC
+            # If that was an coroutine, wait for the actual return
+            if isinstance(return_data, tornado.gen.Future):
+                @tornado.gen.coroutine
+                def wait_future():
+                    yield return_data
+                return_data = tornado.ioloop.IOLoop.current().run_sync(wait_future)
+            ret['return'] = return_data
 
             if retcode == 0:
                 # No nonzero retcode in __context__ dunder. Check if return

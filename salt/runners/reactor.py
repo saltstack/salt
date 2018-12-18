@@ -31,6 +31,34 @@ __func_alias__ = {
 }
 
 
+def __read_master_key():
+    '''
+    Read in the rotating master authentication key
+    '''
+    key_user = self.salt_user
+    if key_user == 'root':
+        if self.opts.get('user', 'root') != 'root':
+            key_user = self.opts.get('user', 'root')
+    if key_user.startswith('sudo_'):
+        key_user = self.opts.get('user', 'root')
+    if salt.utils.platform.is_windows():
+        # The username may contain '\' if it is in Windows
+        # 'DOMAIN\username' format. Fix this for the keyfile path.
+        key_user = key_user.replace('\\', '_')
+    keyfile = os.path.join(self.opts['cachedir'],
+                           '.{0}_key'.format(key_user))
+    try:
+        # Make sure all key parent directories are accessible
+        salt.utils.verify.check_path_traversal(self.opts['cachedir'],
+                                               key_user,
+                                               self.skip_perm_errors)
+        with salt.utils.files.fopen(keyfile, 'r') as key:
+            return salt.utils.stringutils.to_unicode(key.read())
+    except (OSError, IOError, SaltClientError):
+        # Fall back to eauth
+        return ''
+
+
 def list_(saltenv='base', test=None):
     '''
     List currently configured reactors

@@ -1549,7 +1549,7 @@ class Minion(MinionBase):
         # side.
         instance = self
         if self.opts.get('ipc_mode', '') == 'tcp':
-            pull_uri = int(self.opts.get('tcp_minion_workers', 4516))
+            pull_uri = self.opts['tcp_minion_workers']
         else:
             pull_uri = os.path.join(self.opts['sock_dir'], 'worker_pull.ipc')
         client = salt.transport.ipc.IPCMessageClient(pull_uri, singleton=False)

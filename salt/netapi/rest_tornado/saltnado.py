@@ -429,7 +429,6 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler):  # pylint: disable=W0223
             local_client = salt.client.get_local_client(mopts=self.application.opts)
             self.saltclients = {
                 'local': local_client.run_job_async,
-                # not the actual client we'll use.. but its what we'll use to get args
                 'local_async': local_client.run_job_async,
                 'runner': salt.runner.RunnerClient(opts=self.application.opts).cmd_async,
                 'runner_async': None,  # empty, since we use the same client as `runner`
@@ -951,7 +950,9 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
             self.application.event_listener.get_event(self, tag='syndic/job/'+chunk['jid']),
         ]
 
-        f_call = self._format_call_run_job_async(chunk)
+        f_call = salt.utils.args.format_call(self.saltclients['local'],
+                                             chunk,
+                                             is_class_method=True)
         # fire a job off
         pub_data = yield self.saltclients['local'](*f_call.get('args', ()), **f_call.get('kwargs', {}))
 
@@ -1090,7 +1091,9 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
         '''
         Disbatch local client_async commands
         '''
-        f_call = self._format_call_run_job_async(chunk)
+        f_call = salt.utils.args.format_call(self.saltclients['local_async'],
+                                             chunk,
+                                             is_class_method=True)
         # fire a job off
         pub_data = yield self.saltclients['local_async'](*f_call.get('args', ()), **f_call.get('kwargs', {}))
 
@@ -1120,16 +1123,6 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
         '''
         pub_data = self.saltclients['runner'](chunk)
         raise tornado.gen.Return(pub_data)
-
-    # salt.utils.args.format_call doesn't work for functions having the
-    # annotation tornado.gen.coroutine
-    # DK: Now it can! So sometime we can update this code.
-    def _format_call_run_job_async(self, chunk):
-        f_call = salt.utils.args.format_call(
-            salt.client.LocalClient.run_job,
-            chunk,
-            is_class_method=True)
-        return f_call
 
 
 class MinionSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
