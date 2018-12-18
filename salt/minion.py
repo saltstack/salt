@@ -27,6 +27,7 @@ from binascii import crc32
 from salt.ext import six
 from salt.ext.six.moves import range
 from salt.utils.zeromq import zmq, ZMQDefaultLoop, install_zmq, ZMQ_VERSION_INFO
+from salt._compat import weakref
 import salt.defaults.exitcodes
 
 from salt.utils.ctx import RequestContext
@@ -939,9 +940,7 @@ class MinionManager(MinionBase):
         self.io_loop = ZMQDefaultLoop.current()
         self.process_manager = ProcessManager(name='MultiMinionProcessManager')
         self.io_loop.spawn_callback(self.process_manager.run, **{'asynchronous': True})  # Tornado backward compat
-
-    def __del__(self):
-        self.destroy()
+        weakref.finalize(self, self.__destroy__, self.__dict__)
 
     def _bind(self):
         # start up the event publisher, so we can see events during startup
@@ -1075,8 +1074,19 @@ class MinionManager(MinionBase):
             minion.destroy()
 
     def destroy(self):
-        for minion in self.minions:
-            minion.destroy()
+        salt.utils.versions.warn_until(
+            'Sodium',
+            'Explicitly destroying {} is deprecated and will happen as soon as there are '
+            'no other references to the class instance'.format(self.__class__.__name__)
+        )
+
+    @classmethod
+    def __destroy__(cls, instance_dict):
+        minions = instance_dict.get('minions')
+        if minions is not None:
+            for minion in minions:
+                minion.destroy()
+            instance_dict['minions'] = []
 
 
 class Minion(MinionBase):
@@ -1166,6 +1176,7 @@ class Minion(MinionBase):
         if signal.getsignal(signal.SIGTERM) is signal.SIG_DFL:
             # No custom signal handling was added, install our own
             signal.signal(signal.SIGTERM, self._handle_signals)
+        weakref.finalize(self, self.__destroy__, self.__dict__)
 
     def _handle_signals(self, signum, sigframe):  # pylint: disable=unused-argument
         self._running = False
@@ -2779,6 +2790,14 @@ class Minion(MinionBase):
         return True
 
     def destroy(self):
+        salt.utils.versions.warn_until(
+            'Sodium',
+            'Explicitly destroying {} is deprecated and will happen as soon as there are '
+            'no other references to the class instance'.format(self.__class__.__name__)
+        )
+
+    @classmethod
+    def __destroy__(cls, instance_dict):
         '''
         Tear down the minion
         '''
@@ -2794,8 +2813,6 @@ class Minion(MinionBase):
             for cb in six.itervalues(self.periodic_callbacks):
                 cb.stop()
 
-    def __del__(self):
-        self.destroy()
 
 
 class Syndic(Minion):

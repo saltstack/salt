@@ -12,7 +12,6 @@ import errno
 import signal
 import hashlib
 import logging
-import weakref
 import threading
 from random import randint
 
@@ -33,6 +32,7 @@ import salt.transport.server
 import salt.transport.mixins.auth
 from salt.ext import six
 from salt.exceptions import SaltReqTimeoutError
+from salt._compat import weakref
 
 from salt.utils.zeromq import zmq, ZMQDefaultLoop, install_zmq, ZMQ_VERSION_INFO, LIBZMQ_VERSION_INFO
 import zmq.error
@@ -136,6 +136,12 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
             loop_instance_map[key] = obj
             log.trace('Inserted key into loop_instance_map id %s for key %s and process %s',
                       id(loop_instance_map), key, os.getpid())
+            # Don't pass any strong refereces to obj. That's why __singleton_destroy__
+            # is a class method. To access the instance attributes, we pass the instance
+            # dictionary. This way, the finalize code does not have any strong references
+            # to the instance thus allowing weakref's finalize to kick in as soon as the
+            # instance looses all it's references
+            weakref.finalize(obj, obj.__singleton_destroy__, key, obj.__dict__)
         else:
             log.debug('Re-using AsyncZeroMQReqChannel for %s', key)
         return obj
@@ -198,15 +204,42 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
                                                         args=(self.opts, self.master_uri,),
                                                         kwargs={'io_loop': self._io_loop})
 
-    def __del__(self):
+    @classmethod
+    def __singleton_destroy__(cls, instance_key, instance_dict):
         '''
         Since the message_client creates sockets and assigns them to the IOLoop we have to
         specifically destroy them, since we aren't the only ones with references to the FDs
         '''
-        if hasattr(self, 'message_client'):
-            self.message_client.destroy()
+        if instance_dict.get('_closing') or False:
+            return
+
+        log.debug(
+            'Destroying %s instance with map key of: %s',
+            cls.__name__,
+            instance_key
+        )
+
+        instance_dict['_closing'] = True
+
+        message_client = instance_dict.get('message_client')
+        if message_client is not None:
+            message_client.destroy()
+            del instance_dict['message_client']
         else:
             log.debug('No message_client attr for AsyncZeroMQReqChannel found. Not destroying sockets.')
+
+        # Remove the entry from the instance map so that a closed entry may
+        # not be reused.
+        # This forces this operation even if the reference count of the entry
+        # has not yet gone to zero.
+        io_loop = instance_dict.get('io_loop')
+        if io_loop and io_loop in cls.instance_map:
+            loop_instance_map = cls.instance_map[io_loop]
+            if instance_key in loop_instance_map:
+                del loop_instance_map[instance_key]
+            if not loop_instance_map:
+                del cls.instance_map[io_loop]
+            instance_dict['io_loop'] = None
 
     @property
     def master_uri(self):
@@ -414,24 +447,42 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
             self._monitor = ZeroMQSocketMonitor(self._socket)
             self._monitor.start_io_loop(self.io_loop)
 
+        weakref.finalize(self, self.__destroy__, self.__dict__)
+
     def destroy(self):
-        if hasattr(self, '_monitor') and self._monitor is not None:
-            self._monitor.stop()
-            self._monitor = None
-        if hasattr(self, '_stream'):
+        salt.utils.versions.warn_until(
+            'Sodium',
+            'Explicitly destroying {} is deprecated and will happen as soon as there are '
+            'no other references to the class instance'.format(self.__class__.__name__)
+        )
+
+    @classmethod
+    def __destroy__(cls, instance_dict):
+        monitor = instance_dict.get('_monitor')
+        if monitor is not None:
+            monitor.stop()
+            instance_dict['_monitor'] = None
+
+        stream = instance_dict.get('_stream')
+        if stream is not None:
             if ZMQ_VERSION_INFO < (14, 3, 0):
                 # stream.close() doesn't work properly on pyzmq < 14.3.0
-                self._stream.io_loop.remove_handler(self._stream.socket)
-                self._stream.socket.close(0)
+                stream.io_loop.remove_handler(self._stream.socket)
+                stream.socket.close(0)
             else:
-                self._stream.close(0)
-        elif hasattr(self, '_socket'):
-            self._socket.close(0)
-        if hasattr(self, 'context') and self.context.closed is False:
-            self.context.term()
+                stream.close(0)
+            instance_dict['_stream'] = None
 
-    def __del__(self):
-        self.destroy()
+        _socket = instance_dict.get('_socket')
+        if _socket is not None:
+            _socket.close(0)
+            instance_dict['_socket'] = None
+
+        context = instance_dict.get('context')
+        if context is not None:
+            if context.closed is False:
+                context.term()
+            instance_dict['context'] = None
 
     # TODO: this is the time to see if we are connected, maybe use the req channel to guess?
     @tornado.gen.coroutine
@@ -988,14 +1039,22 @@ class AsyncReqMessageClientPool(salt.transport.MessageClientPool):
     '''
     def __init__(self, opts, args=None, kwargs=None):
         super(AsyncReqMessageClientPool, self).__init__(AsyncReqMessageClient, opts, args=args, kwargs=kwargs)
+        weakref.finalize(self, self.__destroy__, self.__dict__)
 
-    def __del__(self):
-        self.destroy()
+    @classmethod
+    def __destroy__(cls, instance_dict):
+        message_clients = instance_dict.get('message_clients')
+        if message_clients:
+            for message_client in message_clients:
+                message_client.destroy()
+            instance_dict['message_clients'] = []
 
     def destroy(self):
-        for message_client in self.message_clients:
-            message_client.destroy()
-        self.message_clients = []
+        salt.utils.versions.warn_until(
+            'Sodium',
+            'Explicitly destroying {} is deprecated and will happen as soon as there are '
+            'no other references to the class instance'.format(self.__class__.__name__)
+        )
 
     def send(self, *args, **kwargs):
         message_clients = sorted(self.message_clients, key=lambda x: len(x.send_queue))
@@ -1041,27 +1100,41 @@ class AsyncReqMessageClient(object):
         self.send_future_map = {}
 
         self.send_timeout_map = {}  # message -> timeout
+        weakref.finalize(self, self.__destroy__, self.__dict__)
+
+    def destroy(self):
+        salt.utils.versions.warn_until(
+            'Sodium',
+            'Explicitly destroying {} is deprecated and will happen as soon as there are '
+            'no other references to the class instance'.format(self.__class__.__name__)
+        )
 
     # TODO: timeout all in-flight sessions, or error
-    def destroy(self):
-        if hasattr(self, 'stream') and self.stream is not None:
+    @classmethod
+    def __destroy__(cls, instance_dict):
+        stream = instance_dict.get('stream')
+        if stream is not None:
             if ZMQ_VERSION_INFO < (14, 3, 0):
                 # stream.close() doesn't work properly on pyzmq < 14.3.0
-                if self.stream.socket:
-                    self.stream.socket.close()
-                self.stream.io_loop.remove_handler(self.stream.socket)
+                if stream.socket:
+                    stream.socket.close()
+                stream.io_loop.remove_handler(stream.socket)
                 # set this to None, more hacks for messed up pyzmq
-                self.stream.socket = None
-                self.socket.close()
+                stream.socket = None
             else:
-                self.stream.close()
-                self.socket = None
-            self.stream = None
-        if self.context.closed is False:
-            self.context.term()
+                stream.close()
+            instance_dict['stream'] = None
 
-    def __del__(self):
-        self.destroy()
+        _socket = instance_dict.get('socket')
+        if _socket is not None:
+            _socket.close()
+            instance_dict['socket'] = None
+
+        context = instance_dict.get('context')
+        if context is not None:
+            if context.closed is False:
+                context.term()
+            instance_dict['context'] = None
 
     def _init_socket(self):
         if hasattr(self, 'stream'):

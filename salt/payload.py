@@ -18,6 +18,7 @@ import salt.crypt
 import salt.transport.frame
 import salt.utils.immutabletypes as immutabletypes
 import salt.utils.stringutils
+from salt._compat import weakref
 from salt.exceptions import SaltReqTimeoutError
 
 # Import third party libs
@@ -273,6 +274,7 @@ class SREQ(object):
         self.context = zmq.Context()
         self.poller = zmq.Poller()
         self.opts = opts
+        weakref.finalize(self, self.__destroy__, self.__dict__)
 
     @property
     def socket(self):
@@ -372,24 +374,38 @@ class SREQ(object):
         return self.send(enc, load, tries, timeout)
 
     def destroy(self):
-        if isinstance(self.poller.sockets, dict):
-            sockets = list(self.poller.sockets.keys())
-            for socket in sockets:
-                if socket.closed is False:
-                    socket.setsockopt(zmq.LINGER, 1)
-                    socket.close()
-                self.poller.unregister(socket)
-        else:
-            for socket in self.poller.sockets:
-                if socket[0].closed is False:
-                    socket[0].setsockopt(zmq.LINGER, 1)
-                    socket[0].close()
-                self.poller.unregister(socket[0])
-        if self.socket.closed is False:
-            self.socket.setsockopt(zmq.LINGER, 1)
-            self.socket.close()
-        if self.context.closed is False:
-            self.context.term()
+        salt.utils.versions.warn_until(
+            'Sodium',
+            'Explicitly destroying {} is deprecated and will happen as soon as there are '
+            'no other references to the class instance'.format(self.__class__.__name__)
+        )
 
-    def __del__(self):
-        self.destroy()
+    @classmethod
+    def __destroy__(cls, instance_dict):
+        poller = instance_dict.get('poller')
+        if poller is not None:
+            if isinstance(poller.sockets, dict):
+                for socket in poller.sockets:
+                    if socket.closed is False:
+                        socket.setsockopt(zmq.LINGER, 1)
+                        socket.close()
+                    poller.unregister(socket)
+            else:
+                for socket in poller.sockets:
+                    if socket[0].closed is False:
+                        socket[0].setsockopt(zmq.LINGER, 1)
+                        socket[0].close()
+                    poller.unregister(socket[0])
+            instance_dict['poller'] = None
+        _socket = instance_dict.geT('socket')
+        if _socket is not None:
+            if _socket.closed is False:
+                _socket.setsockopt(zmq.LINGER, 1)
+                _socket.close()
+            instance_dict['socket'] = None
+
+        context = instance_dict.get('context')
+        if context is not None:
+            if context.closed is False:
+                context.term()
+            instance_dict['context'] = None

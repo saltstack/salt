@@ -3,12 +3,17 @@
 Helpers/utils for working with tornado asynchronous stuff
 '''
 
+# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+import contextlib
 
+# Import 3rd-party libs
 import tornado.ioloop
 import tornado.concurrent
-import contextlib
+
+# Import Salt libs
 from salt.utils import zeromq
+from salt._compat import weakref
 
 
 @contextlib.contextmanager
@@ -47,6 +52,7 @@ class SyncWrapper(object):
 
         with current_ioloop(self.io_loop):
             self.asynchronous = method(*args, **kwargs)
+        weakref.finalize(self, self.__destroy__, self.__dict__)
 
     def __getattribute__(self, key):
         try:
@@ -73,19 +79,21 @@ class SyncWrapper(object):
         self.io_loop.start()
         return future.result()
 
-    def __del__(self):
+    @classmethod
+    def __destroy__(cls, instance_dict):
         '''
         On deletion of the asynchronous wrapper, make sure to clean up the asynchronous stuff
         '''
-        if hasattr(self, 'asynchronous'):
-            if hasattr(self.asynchronous, 'close'):
+        asynchronous = instance_dict.get('asynchronous')
+        if asynchronous is not None:
+            if hasattr(asynchronous, 'close'):
                 # Certain things such as streams should be closed before
                 # their associated io_loop is closed to allow for proper
                 # cleanup.
-                self.asynchronous.close()
-            del self.asynchronous
-            self.io_loop.close()
-            del self.io_loop
-        elif hasattr(self, 'io_loop'):
-            self.io_loop.close()
-            del self.io_loop
+                asynchronous.close()
+            instance_dict['asynchronous'] = None
+
+        io_loop = instance_dict.get('io_loop')
+        if io_loop is not None:
+            io_loop.close()
+            instance_dict['io_loop'] = None
