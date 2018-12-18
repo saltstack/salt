@@ -76,5 +76,6 @@ def send(tag, data=None):
     '''
     data = data or {}
     event = salt.utils.event.get_master_event(__opts__, __opts__['sock_dir'],
-                                              listen=False)
+                                              listen=False,
+                                              keep_loop=True)
     return event.fire_event(data, tag)
