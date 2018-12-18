@@ -223,7 +223,7 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
 
         message_client = instance_dict.get('message_client')
         if message_client is not None:
-            message_client.destroy()
+            # message_client.destroy()  # Just deref and weakref.finalize will take care of cleanup
             del instance_dict['message_client']
         else:
             log.debug('No message_client attr for AsyncZeroMQReqChannel found. Not destroying sockets.')
@@ -1048,8 +1048,9 @@ class AsyncReqMessageClientPool(salt.transport.MessageClientPool):
         log.debug('Destroying %s instance', cls.__name__)
         message_clients = instance_dict.get('message_clients')
         if message_clients:
-            for message_client in message_clients:
-                message_client.destroy()
+            # Just deref and weakref.finalize will take care of cleanup
+            # for message_client in message_clients:
+            #     message_client.destroy()
             instance_dict['message_clients'] = []
 
     def destroy(self):
