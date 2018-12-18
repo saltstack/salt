@@ -12,6 +12,7 @@ import time
 from tests.support.case import ShellCase
 from tests.support.paths import FILES
 from tests.support.helpers import expensiveTest, generate_random_name
+from tests.support.unit import skipIf
 
 # Import Salt Libs
 from salt.config import cloud_providers_config
@@ -138,6 +139,7 @@ class VultrTest(ShellCase):
 #        # Delete public key
 #        self.assertTrue(self.run_cloud('-f remove_key {0} id={1}'.format(PROVIDER_NAME, finger_print)))
 
+    @skipIf(True, 'Skipped temporarily')
     def test_instance(self):
         '''
         Test creating an instance on Vultr
