@@ -44,6 +44,7 @@ class BaseIPCReqCase(salt.ext.tornado.testing.AsyncTestCase):
         self.socket_path = os.path.join(RUNTIME_VARS.TMP, "ipc_test.ipc")
 
         self.server_channel = salt.transport.ipc.IPCMessageServer(
+            salt.config.master_config(None),
             self.socket_path,
             io_loop=self.io_loop,
             payload_handler=self._handle_payload,
