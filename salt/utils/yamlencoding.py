@@ -16,6 +16,13 @@ from salt.utils.decorators.jinja import jinja_filter
 
 
 @jinja_filter()
+def to_yaml(data):
+    '''
+    Convert dict to yaml
+    '''
+    return yaml.dump(data)
+
+@jinja_filter()
 def yaml_dquote(text):
     '''
     Make text into a double-quoted YAML string with correct escaping
