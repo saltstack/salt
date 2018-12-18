@@ -313,10 +313,9 @@ def _domain_event_graphics_cb(conn, domain, phase, local, remote, auth, subject,
         '''
         transform address structure into event data piece
         '''
-        data = {'family': _get_libvirt_enum_string('{0}_ADDRESS_'.format(prefix), addr['family']),
+        return {'family': _get_libvirt_enum_string('{0}_ADDRESS_'.format(prefix), addr['family']),
                 'node': addr['node'],
                 'service': addr['service']}
-        return addr
 
     _salt_send_domain_event(opaque, conn, domain, opaque['event'], {
         'phase': _get_libvirt_enum_string(prefix, phase),
