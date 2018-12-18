@@ -76,6 +76,7 @@ from salt.utils.debug import (
 )
 from salt.utils.event import tagify
 from salt.utils.odict import OrderedDict
+from salt._compat import weakref
 
 try:
     import resource
@@ -843,6 +844,7 @@ class ReqServer(salt.utils.process.SignalHandlingMultiprocessingProcess):
         # Prepare the AES key
         self.key = key
         self.secrets = secrets
+        weakref.finalize(self, self.__destroy__, self.__dict__)
 
     # __setstate__ and __getstate__ are only used on Windows.
     # We do this so that __init__ will be invoked on Windows in the child
@@ -869,7 +871,7 @@ class ReqServer(salt.utils.process.SignalHandlingMultiprocessingProcess):
         }
 
     def _handle_signals(self, signum, sigframe):  # pylint: disable=unused-argument
-        self.destroy(signum)
+        self.__destroy__(self.__dict__, signum=signum)
         super(ReqServer, self)._handle_signals(signum, sigframe)
 
     def __bind(self):
@@ -941,14 +943,22 @@ class ReqServer(salt.utils.process.SignalHandlingMultiprocessingProcess):
         '''
         self.__bind()
 
-    def destroy(self, signum=signal.SIGTERM):
-        if hasattr(self, 'process_manager'):
-            self.process_manager.stop_restarting()
-            self.process_manager.send_signal_to_processes(signum)
-            self.process_manager.kill_children()
+    def destroy(self):
+        salt.utils.versions.warn_until(
+            'Sodium',
+            'Explicitly destroying {} is deprecated and will happen as soon as there are '
+            'no other references to the class instance'.format(self.__class__.__name__)
+        )
 
-    def __del__(self):
-        self.destroy()
+    @classmethod
+    def __destroy__(cls, instance_dict, signum=signal.SIGTERM):
+        log.debug('Destroying %s instance', cls.__name__)
+        process_manager = instance_dict.get('process_manager')
+        if process_manager is not None:
+            process_manager.stop_restarting()
+            process_manager.send_signal_to_processes(signum)
+            process_manager.kill_children()
+            instance_dict['process_manager'] = None
 
 
 class MWorker(salt.utils.process.SignalHandlingMultiprocessingProcess):

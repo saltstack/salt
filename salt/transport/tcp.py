@@ -10,10 +10,8 @@ Wire protocol: "len(payload) msgpack({'head': SOMEHEADER, 'body': SOMEBODY})"
 from __future__ import absolute_import, print_function, unicode_literals
 import errno
 import logging
-import msgpack
 import socket
 import os
-import weakref
 import time
 import traceback
 
@@ -36,6 +34,7 @@ from salt.ext import six
 from salt.ext.six.moves import queue  # pylint: disable=import-error
 from salt.exceptions import SaltReqTimeoutError, SaltClientError
 from salt.transport import iter_transport_opts
+from salt._compat import weakref
 
 # Import Tornado Libs
 import tornado
@@ -53,6 +52,7 @@ else:
 # pylint: enable=import-error,no-name-in-module
 
 # Import third party libs
+import msgpack
 try:
     from M2Crypto import RSA
     HAS_M2 = True
@@ -150,6 +150,7 @@ if USE_LOAD_BALANCER:
             self.opts = opts
             self.socket_queue = socket_queue
             self._socket = None
+            weakref.finalize(self, self.__destroy__, self.__dict__)
 
         # __setstate__ and __getstate__ are only used on Windows.
         # We do this so that __init__ will be invoked on Windows in the child
@@ -172,14 +173,22 @@ if USE_LOAD_BALANCER:
                 'log_queue_level': self.log_queue_level
             }
 
-        def close(self):
-            if self._socket is not None:
-                self._socket.shutdown(socket.SHUT_RDWR)
-                self._socket.close()
-                self._socket = None
+        @classmethod
+        def __destroy__(cls, instance_dict):
+            log.debug('Destroying %s instance', cls.__name__)
+            _socket = instance_dict.get('_socket')
+            if _socket is not None:
+                _socket.shutdown(socket.SHUT_RDWR)
+                _socket.close()
+                instance_dict['_socket'] = None
 
-        def __del__(self):
-            self.close()
+        def close(self):
+            salt.utils.versions.warn_until(
+                'Sodium',
+                'Explicitly closing {} is deprecated and will happen as soon as there are '
+                'no other references to the class instance'.format(self.__class__.__name__),
+                stacklevel=3
+            )
 
         def run(self):
             '''
@@ -241,6 +250,12 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
             obj = object.__new__(cls)
             obj.__singleton_init__(opts, **kwargs)
             loop_instance_map[key] = obj
+            # Don't pass any strong refereces to obj. That's why __singleton_destroy__
+            # is a class method. To access the instance attributes, we pass the instance
+            # dictionary. This way, the finalize code does not have any strong references
+            # to the instance thus allowing weakref's finalize to kick in as soon as the
+            # instance looses all it's references
+            weakref.finalize(obj, obj.__singleton_destroy__, key, obj.__dict__)
         else:
             log.debug('Re-using AsyncTCPReqChannel for %s', key)
         return obj
@@ -285,14 +300,40 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
                                                             'source_ip': self.opts.get('source_ip'),
                                                             'source_port': self.opts.get('source_ret_port')})
 
-    def close(self):
-        if self._closing:
+    @classmethod
+    def __singleton_destroy__(cls, instance_key, instance_dict):
+        '''
+        Routines to handle any cleanup before the instance shuts down.
+        Sockets and filehandles should be closed explicitly, to prevent
+        leaks.
+        '''
+        if instance_dict.get('_closing') or False:
             return
-        self._closing = True
-        self.message_client.close()
 
-    def __del__(self):
-        self.close()
+        log.debug(
+            'Destroying %s instance with map key of: %s',
+            cls.__name__,
+            instance_key
+        )
+        instance_dict['_closing'] = True
+
+        message_client = instance_dict.get('message_client')
+        if message_client is not None:
+            # message_client.close()  Don't close, just deref and weakref.finalize will take care of cleanup
+            instance_dict['message_client'] = None
+
+        # Remove the entry from the instance map so that a closed entry may
+        # not be reused.
+        # This forces this operation even if the reference count of the entry
+        # has not yet gone to zero.
+        io_loop = instance_dict.get('io_loop')
+        if io_loop and io_loop in cls.instance_map:
+            loop_instance_map = cls.instance_map[io_loop]
+            if instance_key in loop_instance_map:
+                del loop_instance_map[instance_key]
+            if not loop_instance_map:
+                del cls.instance_map[io_loop]
+            instance_dict['io_loop'] = None
 
     def _package_load(self, load):
         return {
@@ -371,6 +412,14 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
             raise SaltClientError('Connection to master lost')
         raise tornado.gen.Return(ret)
 
+    def close(self):
+        salt.utils.versions.warn_until(
+            'Sodium',
+            'Explicitly closing {} is deprecated and will happen as soon as there are '
+            'no other references to the class instance'.format(self.__class__.__name__),
+            stacklevel=3
+        )
+
 
 class AsyncTCPPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.transport.client.AsyncPubChannel):
     def __init__(self,
@@ -390,16 +439,28 @@ class AsyncTCPPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.tran
             opts=self.opts,
             listen=False
         )
+        weakref.finalize(self, self.__destroy__, self.__dict__)
+
+    @classmethod
+    def __destroy__(cls, instance_dict):
+        if instance_dict.get('_closing') or False:
+            return
+
+        log.debug('Destroying %s instance', cls.__name__)
+
+        instance_dict['_closing'] = True
+
+        message_client = instance_dict.get('message_client')
+        if message_client:
+            # message_client.close()  Don't close, just deref and weakref.finalize will take care of cleanup
+            instance_dict['message_client'] = None
 
     def close(self):
-        if self._closing:
-            return
-        self._closing = True
-        if hasattr(self, 'message_client'):
-            self.message_client.close()
-
-    def __del__(self):
-        self.close()
+        salt.utils.versions.warn_until(
+            'Sodium',
+            'Explicitly closing {} is deprecated and will happen as soon as there are '
+            'no other references to the class instance'.format(self.__class__.__name__)
+        )
 
     def _package_load(self, load):
         return {
@@ -553,32 +614,46 @@ class TCPReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.tra
     def __init__(self, opts):
         salt.transport.server.ReqServerChannel.__init__(self, opts)
         self._socket = None
+        weakref.finalize(self, self.__destroy__, self.__dict__)
 
     @property
     def socket(self):
         return self._socket
 
-    def close(self):
-        if self._socket is not None:
+    @classmethod
+    def __destroy__(cls, instance_dict):
+        log.debug('Destroying %s instance', cls.__name__)
+        _socket = instance_dict.get('socket')
+        if _socket is not None:
             try:
-                self._socket.shutdown(socket.SHUT_RDWR)
+                _socket.shutdown(socket.SHUT_RDWR)
+                _socket.close()
             except socket.error as exc:
-                if exc.errno == errno.ENOTCONN:
+                if exc.errno != errno.ENOTCONN:
                     # We may try to shutdown a socket which is already disconnected.
                     # Ignore this condition and continue.
-                    pass
-                else:
-                    raise exc
-            self._socket.close()
-            self._socket = None
-        if hasattr(self.req_server, 'stop'):
+                    # Raise any other condition
+                    raise
+            instance_dict['socket'] = None
+
+        req_server = instance_dict.get('req_server')
+        if req_server is not None and hasattr(req_server, 'stop'):
             try:
-                self.req_server.stop()
+                req_server.stop()
+                instance_dict['req_server'] = None
+            except socket.error as exc:
+                if exc.errno != errno.EBADF:
+                    # if it's not a bad file descriptor error, raise
+                    raise
             except Exception as exc:
                 log.exception('TCPReqServerChannel close generated an exception: %s', str(exc))
 
-    def __del__(self):
-        self.close()
+    def close(self):
+        salt.utils.versions.warn_until(
+            'Sodium',
+            'Explicitly closing {} is deprecated and will happen as soon as there are '
+            'no other references to the class instance'.format(self.__class__.__name__)
+        )
 
     def pre_fork(self, process_manager):
         '''
@@ -822,14 +897,23 @@ class SaltMessageClientPool(salt.transport.MessageClientPool):
     '''
     def __init__(self, opts, args=None, kwargs=None):
         super(SaltMessageClientPool, self).__init__(SaltMessageClient, opts, args=args, kwargs=kwargs)
+        weakref.finalize(self, self.__destroy__, self.__dict__)
 
-    def __del__(self):
-        self.close()
+    @classmethod
+    def __destroy__(cls, instance_dict):
+        log.debug('Destroying %s instance', cls.__name__)
+        message_clients = instance_dict.get('message_clients')
+        if message_clients is not None:
+            # Deref all message clients so GC can happen
+            instance_dict['message_clients'] = []
 
     def close(self):
-        for message_client in self.message_clients:
-            message_client.close()
-        self.message_clients = []
+        salt.utils.versions.warn_until(
+            'Sodium',
+            'Explicitly closing {} is deprecated and will happen as soon as there are '
+            'no other references to the class instance'.format(self.__class__.__name__),
+            stacklevel=3
+        )
 
     @tornado.gen.coroutine
     def connect(self):
@@ -890,47 +974,74 @@ class SaltMessageClient(object):
         self._connecting_future = self.connect()
         self._stream_return_future = tornado.concurrent.Future()
         self.io_loop.spawn_callback(self._stream_return)
+        weakref.finalize(self, self.__destroy__, self.__dict__)
 
     # TODO: timeout inflight sessions
-    def close(self):
-        if self._closing:
+    @classmethod
+    def __destroy__(cls, instance_dict):
+        if instance_dict.get('_closing') or False:
             return
-        self._closing = True
-        if hasattr(self, '_stream') and not self._stream.closed():
-            # If _stream_return() hasn't completed, it means the IO
-            # Loop is stopped (such as when using
-            # 'salt.utils.asynchronous.SyncWrapper'). Ensure that
-            # _stream_return() completes by restarting the IO Loop.
-            # This will prevent potential errors on shutdown.
-            try:
+
+        log.debug('Destroying %s instance', cls.__name__)
+
+        instance_dict['_closing'] = True
+
+        stream = instance_dict.get('_stream')
+        if stream is not None:
+            if not stream.closed():
+                # If _stream_return() hasn't completed, it means the IO
+                # Loop is stopped (such as when using
+                # 'salt.utils.asynchronous.SyncWrapper'). Ensure that
+                # _stream_return() completes by restarting the IO Loop.
+                # This will prevent potential errors on shutdown.
                 orig_loop = tornado.ioloop.IOLoop.current()
-                self.io_loop.make_current()
-                self._stream.close()
-                if self._read_until_future is not None:
-                    # This will prevent this message from showing up:
-                    # '[ERROR   ] Future exception was never retrieved:
-                    # StreamClosedError'
-                    # This happens because the logic is always waiting to read
-                    # the next message and the associated read future is marked
-                    # 'StreamClosedError' when the stream is closed.
-                    if self._read_until_future.done():
-                        self._read_until_future.exception()
-                    elif self.io_loop != tornado.ioloop.IOLoop.current(instance=False):
-                        self.io_loop.add_future(
-                            self._stream_return_future,
-                            lambda future: self.io_loop.stop()
-                        )
-                        self.io_loop.start()
-            finally:
-                orig_loop.make_current()
-        self._tcp_client.close()
+
+                # XXX: Closing the stream here will make tornado complain about
+                # ValueError: I/O operation on closed epoll fd
+                # It will be on a debug log message though....
+                stream.close()
+                try:
+                    instance_io_loop = instance_dict['io_loop']
+                    instance_io_loop.make_current()
+                    read_until_future = instance_dict.get('_read_until_future')
+                    stream_return_future = instance_dict.get('_stream_return_future')
+                    if read_until_future is not None:
+                        # This will prevent this message from showing up:
+                        # '[ERROR   ] Future exception was never retrieved:
+                        # StreamClosedError'
+                        # This happens because the logic is always waiting to read
+                        # the next message and the associated read future is marked
+                        # 'StreamClosedError' when the stream is closed.
+                        if read_until_future.done():
+                            read_until_future.exception()
+                        elif instance_io_loop != tornado.ioloop.IOLoop.current(instance=False):
+                            if stream_return_future:
+                                instance_io_loop.add_future(
+                                    stream_return_future,
+                                    lambda future: instance_io_loop.stop()
+                                )
+                                instance_io_loop.start()
+                finally:
+                    orig_loop.make_current()
+            instance_dict['_stream'] = None
+
+        tcp_client = instance_dict.get('_tcp_client')
+        if tcp_client:
+            tcp_client.close()
+            instance_dict['_tcp_client'] = None
+
         # Clear callback references to allow the object that they belong to
         # to be deleted.
-        self.connect_callback = None
-        self.disconnect_callback = None
+        for key in ('connect_callback', 'disconnect_callback'):
+            instance_dict[key] = None
 
-    def __del__(self):
-        self.close()
+    def close(self):
+        salt.utils.versions.warn_until(
+            'Sodium',
+            'Explicitly closing {} is deprecated and will happen as soon as there are '
+            'no other references to the class instance'.format(self.__class__.__name__),
+            stacklevel=3
+        )
 
     def connect(self):
         '''
@@ -1154,24 +1265,41 @@ class Subscriber(object):
         self._closing = False
         self._read_until_future = None
         self.id_ = None
+        weakref.finalize(self, self.__destroy__, self.__dict__)
 
     def close(self):
-        if self._closing:
-            return
-        self._closing = True
-        if not self.stream.closed():
-            self.stream.close()
-            if self._read_until_future is not None and self._read_until_future.done():
-                # This will prevent this message from showing up:
-                # '[ERROR   ] Future exception was never retrieved:
-                # StreamClosedError'
-                # This happens because the logic is always waiting to read
-                # the next message and the associated read future is marked
-                # 'StreamClosedError' when the stream is closed.
-                self._read_until_future.exception()
+        salt.utils.versions.warn_until(
+            'Sodium',
+            'Explicitly closing {} is deprecated and will happen as soon as there are '
+            'no other references to the class instance'.format(self.__class__.__name__),
+            stacklevel=3
+        )
 
-    def __del__(self):
-        self.close()
+    @classmethod
+    def __destroy__(cls, instance_dict):
+        if instance_dict.get('_closing') or False:
+            return
+
+        log.debug('Destroying %s instance', cls.__name__)
+
+        instance_dict['_closing'] = True
+
+        stream = instance_dict.geT('stream')
+        if stream is not None:
+            if not stream.closed():
+                stream.close()
+            instance_dict['stream'] = None
+            read_until_future = instance_dict.get('_read_until_future')
+            if read_until_future is not None:
+                if read_until_future.done():
+                    # This will prevent this message from showing up:
+                    # '[ERROR   ] Future exception was never retrieved:
+                    # StreamClosedError'
+                    # This happens because the logic is always waiting to read
+                    # the next message and the associated read future is marked
+                    # 'StreamClosedError' when the stream is closed.
+                    read_until_future.exception()
+                instance_dict['_read_until_future'] = None
 
 
 class PubServer(tornado.tcpserver.TCPServer, object):
@@ -1206,12 +1334,12 @@ class PubServer(tornado.tcpserver.TCPServer, object):
             )
 
     def close(self):
-        if self._closing:
-            return
-        self._closing = True
-
-    def __del__(self):
-        self.close()
+        salt.utils.versions.warn_until(
+            'Sodium',
+            'Explicitly closing {} is deprecated and will happen as soon as there are '
+            'no other references to the class instance'.format(self.__class__.__name__),
+            stacklevel=3
+        )
 
     def _add_client_present(self, client):
         id_ = client.id_

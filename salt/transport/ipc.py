@@ -7,7 +7,7 @@ IPC transport classes
 from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import socket
-import weakref
+import errno
 import time
 
 # Import 3rd-party libs
@@ -25,6 +25,7 @@ from tornado.iostream import IOStream
 import salt.transport.client
 import salt.transport.frame
 from salt.ext import six
+from salt._compat import weakref
 
 log = logging.getLogger(__name__)
 
@@ -111,6 +112,7 @@ class IPCServer(object):
         self.sock = None
         self.io_loop = io_loop or IOLoop.current()
         self._closing = False
+        weakref.finalize(self, self.__destroy__, self.__dict__)
 
     def start(self):
         '''
@@ -204,20 +206,32 @@ class IPCServer(object):
         except Exception as exc:
             log.error('IPC streaming error: %s', exc)
 
-    def close(self):
+    @classmethod
+    def __destroy__(cls, instance_dict):
         '''
         Routines to handle any cleanup before the instance shuts down.
         Sockets and filehandles should be closed explicitly, to prevent
         leaks.
         '''
-        if self._closing:
+        if instance_dict.get('_closing') or False:
             return
-        self._closing = True
-        if hasattr(self.sock, 'close'):
-            self.sock.close()
 
-    def __del__(self):
-        self.close()
+        log.debug('Destroying %s instance', cls.__name__)
+
+        instance_dict['_closing'] = True
+
+        sock = instance_dict.get('sock')
+        if sock is not None:
+            if hasattr(sock, 'close'):
+                sock.close()
+            instance_dict['sock'] = None
+
+    def close(self):
+        salt.utils.versions.warn_until(
+            'Sodium',
+            'Explicitly closing {} is deprecated and will happen as soon as there are '
+            'no other references to the class instance'.format(self.__class__.__name__)
+        )
 
 
 class IPCClient(object):
@@ -256,6 +270,12 @@ class IPCClient(object):
             # FIXME
             client.__singleton_init__(io_loop=io_loop, socket_path=socket_path)
             loop_instance_map[key] = client
+            # Don't pass any strong refereces to client. That's why __singleton_destroy__
+            # is a class method. To access the instance attributes, we pass the instance
+            # dictionary. This way, the finalize code does not have any strong references
+            # to the instance thus allowing weakref's finalize to kick in as soon as the
+            # instance looses all it's references
+            weakref.finalize(client, client.__singleton_destroy__, key, client.__dict__)
         else:
             log.debug('Re-using IPCClient for %s', key)
         return client
@@ -278,6 +298,46 @@ class IPCClient(object):
         else:
             encoding = 'utf-8'
         self.unpacker = msgpack.Unpacker(encoding=encoding)
+
+    @classmethod
+    def __singleton_destroy__(cls, instance_key, instance_dict):
+        '''
+        Routines to handle any cleanup before the instance shuts down.
+        Sockets and filehandles should be closed explicitly, to prevent
+        leaks.
+        '''
+        if instance_dict.get('_closing') or False:
+            return
+
+        log.debug(
+            'Destroying %s instance with map key of: %s',
+            cls.__name__,
+            instance_key
+        )
+
+        instance_dict['_closing'] = True
+        stream = instance_dict.get('stream')
+        if stream is not None and not stream.closed():
+            try:
+                stream.close()
+            except socket.error as exc:
+                if exc.errno != errno.EBADF:
+                    # if it's not a bad file descriptor error, raise
+                    raise
+            del instance_dict['stream']
+
+        # Remove the entry from the instance map so that a closed entry may
+        # not be reused.
+        # This forces this operation even if the reference count of the entry
+        # has not yet gone to zero.
+        io_loop = instance_dict.get('io_loop')
+        if io_loop and io_loop in cls.instance_map:
+            loop_instance_map = cls.instance_map[io_loop]
+            if instance_key in loop_instance_map:
+                del loop_instance_map[instance_key]
+            if not loop_instance_map:
+                del cls.instance_map[io_loop]
+            instance_dict['io_loop'] = None
 
     def __init__(self, socket_path, io_loop=None):
         # Handled by singleton __new__
@@ -352,30 +412,12 @@ class IPCClient(object):
 
                 yield tornado.gen.sleep(1)
 
-    def __del__(self):
-        self.close()
-
     def close(self):
-        '''
-        Routines to handle any cleanup before the instance shuts down.
-        Sockets and filehandles should be closed explicitly, to prevent
-        leaks.
-        '''
-        if self._closing:
-            return
-        self._closing = True
-        if self.stream is not None and not self.stream.closed():
-            self.stream.close()
-
-        # Remove the entry from the instance map so
-        # that a closed entry may not be reused.
-        # This forces this operation even if the reference
-        # count of the entry has not yet gone to zero.
-        if self.io_loop in IPCClient.instance_map:
-            loop_instance_map = IPCClient.instance_map[self.io_loop]
-            key = six.text_type(self.socket_path)
-            if key in loop_instance_map:
-                del loop_instance_map[key]
+        salt.utils.versions.warn_until(
+            'Sodium',
+            'Explicitly closing {} is deprecated and will happen as soon as there are '
+            'no other references to the class instance'.format(self.__class__.__name__)
+        )
 
 
 class IPCMessageClient(IPCClient):
@@ -491,6 +533,7 @@ class IPCMessagePublisher(object):
         self.io_loop = io_loop or IOLoop.current()
         self._closing = False
         self.streams = set()
+        weakref.finalize(self, self.__destroy__, self.__dict__)
 
     def start(self):
         '''
@@ -564,22 +607,36 @@ class IPCMessagePublisher(object):
             log.error('IPC streaming error: %s', exc)
 
     def close(self):
+        salt.utils.versions.warn_until(
+            'Sodium',
+            'Explicitly closing {} is deprecated and will happen as soon as there are '
+            'no other references to the class instance'.format(self.__class__.__name__)
+        )
+
+    @classmethod
+    def __destroy__(cls, instance_dict):
         '''
         Routines to handle any cleanup before the instance shuts down.
         Sockets and filehandles should be closed explicitly, to prevent
         leaks.
         '''
-        if self._closing:
+        if instance_dict.get('_closing') or False:
             return
-        self._closing = True
-        for stream in self.streams:
-            stream.close()
-        self.streams.clear()
-        if hasattr(self.sock, 'close'):
-            self.sock.close()
 
-    def __del__(self):
-        self.close()
+        log.debug('Destroying %s instance', cls.__name__)
+
+        instance_dict['_closing'] = True
+        streams = instance_dict.get('streams')
+        if streams is not None:
+            for stream in streams:
+                stream.close()
+            instance_dict['streams'].clear()
+
+        sock = instance_dict.get('sock')
+        if sock is not None:
+            if hasattr(sock, 'close'):
+                sock.close()
+            instance_dict['sock'] = None
 
 
 class IPCMessageSubscriber(IPCClient):
@@ -623,6 +680,38 @@ class IPCMessageSubscriber(IPCClient):
         self._sync_ioloop_running = False
         self.saved_data = []
         self._sync_read_in_progress = Semaphore()
+
+    @classmethod
+    def __singleton_destroy__(cls, instance_key, instance_dict):
+        '''
+        Routines to handle any cleanup before the instance shuts down.
+        Sockets and filehandles should be closed explicitly, to prevent
+        leaks.
+        '''
+        closing = instance_dict.get('_closing') or False
+        if closing is True:
+            return
+
+        log.debug(
+            'Destroying %s instance with map key of: %s',
+            cls.__name__,
+            instance_key
+        )
+
+        # Call super()'s __singleton_destroy__ routines
+        super(IPCMessageSubscriber, cls).__singleton_destroy__(instance_key, instance_dict)
+        # This will prevent this message from showing up:
+        # '[ERROR   ] Future exception was never retrieved:
+        # StreamClosedError'
+        read_sync_future = instance_dict.get('_read_sync_future')
+        if read_sync_future is not None and read_sync_future.done():
+            read_sync_future.exception()
+            del instance_dict['_read_sync_future']
+
+        read_stream_future = instance_dict.get('_read_stream_future')
+        if read_stream_future is not None and read_stream_future.done():
+            read_stream_future.exception()
+            del instance_dict['_read_stream_future']
 
     @tornado.gen.coroutine
     def _read_sync(self, timeout):
@@ -741,21 +830,8 @@ class IPCMessageSubscriber(IPCClient):
         yield self._read_async(callback)
 
     def close(self):
-        '''
-        Routines to handle any cleanup before the instance shuts down.
-        Sockets and filehandles should be closed explicitly, to prevent
-        leaks.
-        '''
-        if not self._closing:
-            IPCClient.close(self)
-            # This will prevent this message from showing up:
-            # '[ERROR   ] Future exception was never retrieved:
-            # StreamClosedError'
-            if self._read_sync_future is not None and self._read_sync_future.done():
-                self._read_sync_future.exception()
-            if self._read_stream_future is not None and self._read_stream_future.done():
-                self._read_stream_future.exception()
-
-    def __del__(self):
-        if IPCMessageSubscriber in globals():
-            self.close()
+        salt.utils.versions.warn_until(
+            'Sodium',
+            'Explicitly closing {} is deprecated and will happen as soon as there are '
+            'no other references to the class instance'.format(self.__class__.__name__)
+        )

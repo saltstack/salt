@@ -89,7 +89,7 @@ class BaseTCPReqCase(TestCase, AdaptedConfigurationTestCaseMixin):
             cls.io_loop.add_callback(cls.io_loop.stop)
             cls.server_thread.join()
             cls.process_manager.kill_children()
-            cls.server_channel.close()
+            # cls.server_channel.close()  Don't close, just deref and weakref.finalize will take care of cleanup
             del cls.server_channel
 
     @classmethod
@@ -215,7 +215,7 @@ class BaseTCPPubCase(AsyncTestCase, AdaptedConfigurationTestCaseMixin):
         cls._server_io_loop.add_callback(cls._server_io_loop.stop)
         cls.server_thread.join()
         cls.process_manager.kill_children()
-        cls.req_server_channel.close()
+        # cls.req_server_channel.close()  Don't close, just deref and weakref.finalize will take care of cleanup
         del cls.req_server_channel
 
     def setUp(self):
@@ -275,8 +275,9 @@ class SaltMessageClientPoolTest(AsyncTestCase):
         self.assertEqual([1], self.message_client_pool.write_to_stream(''))
 
     def test_close(self):
-        self.message_client_pool.close()
-        self.assertEqual([], self.message_client_pool.message_clients)
+        message_client_pool_dict = self.message_client_pool.__dict__
+        del self.message_client_pool
+        self.assertEqual([], message_client_pool_dict['message_clients'])
 
     def test_on_recv(self):
         for message_client_mock in self.message_client_pool.message_clients:
