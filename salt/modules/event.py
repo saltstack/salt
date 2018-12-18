@@ -27,7 +27,7 @@ def _dict_subset(keys, master_dict):
     return {k: v for k, v in master_dict.items() if k in keys}
 
 
-def fire_master(data, tag, preload=None):
+def fire_master(data, tag, preload=None, timeout=60):
     """
     Fire an event off up to the master server
 
@@ -76,12 +76,14 @@ def fire_master(data, tag, preload=None):
                 __opts__, master_uri=master
             ) as channel:
                 try:
-                    channel.send(load)
+                    channel.send(load, timeout=timeout)
                     # channel.send was successful.
                     # Ensure ret is True.
                     ret = True
                 except Exception:  # pylint: disable=broad-except
                     ret = False
+                finally:
+                    channel.close()
         return ret
     else:
         # Usually, we can send the event via the minion, which is faster
@@ -98,7 +100,7 @@ def fire_master(data, tag, preload=None):
             return False
 
 
-def fire(data, tag):
+def fire(data, tag, timeout=None):
     """
     Fire an event on the local minion event bus. Data must be formed as a dict.
 
@@ -108,15 +110,22 @@ def fire(data, tag):
 
         salt '*' event.fire '{"data":"my event data"}' 'tag'
     """
+    if timeout is None:
+        timeout = 60000
+    else:
+        timeout = timeout * 1000
     try:
-        event = salt.utils.event.get_event(__opts__['__role'],
-                                           sock_dir=__opts__['sock_dir'],
-                                           transport=__opts__['transport'],
-                                           opts=__opts__,
-                                           listen=False)
+        event = salt.utils.event.get_event(
+            __opts__.get("__role", "minion"),
+            sock_dir=__opts__["sock_dir"],
+            transport=__opts__["transport"],
+            opts=__opts__,
+            keep_loop=True,
+            listen=False,
+        )
 
-        return event.fire_event(data, tag)
-    except Exception:
+        return event.fire_event(data, tag, timeout=timeout)
+    except Exception:  # pylint: disable=broad-except
         exc_type, exc_value, exc_traceback = sys.exc_info()
         lines = traceback.format_exception(exc_type, exc_value, exc_traceback)
         log.debug(lines)
@@ -131,6 +140,7 @@ def send(
     with_grains=False,
     with_pillar=False,
     with_env_opts=False,
+    timeout=60,
     **kwargs
 ):
     """
@@ -175,6 +185,9 @@ def send(
     :type with_env_opts: Specify ``True`` to include ``saltenv`` and
         ``pillarenv`` values or ``False`` to omit them.
 
+    :param timeout: maximum duration to wait to connect to Salt's
+        IPCMessageServer in seconds. Defaults to 60s
+
     :param kwargs: Any additional keyword arguments passed to this function
         will be interpreted as key-value pairs and included in the event data.
         This provides a convenient alternative to YAML for simple values.
@@ -200,7 +213,7 @@ def send(
 
     .. code-block:: bash
 
-        sudo -E salt-call event.send myco/jenkins/build/success with_env=[BUILD_ID, BUILD_URL, GIT_BRANCH, GIT_COMMIT]
+        sudo -E salt-call event.send myco/jenkins/build/success with_env='[BUILD_ID, BUILD_URL, GIT_BRANCH, GIT_COMMIT]'
 
     """
     data_dict = {}
@@ -239,6 +252,6 @@ def send(
         or __opts__.get("file_client") == "local"
         or __opts__.get("master_type") == "disable"
     ) and not __opts__.get("use_master_when_local"):
-        return fire(data_dict, tag)
+        return fire(data_dict, tag, timeout=timeout)
     else:
-        return fire_master(data_dict, tag, preload=preload)
+        return fire_master(data_dict, tag, preload=preload, timeout=timeout)
