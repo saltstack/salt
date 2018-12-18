@@ -153,7 +153,6 @@ MOCK_MODULES = [
     'napalm',
     'dson',
     'jnpr',
-    'json',
     'lxml',
     'lxml.etree',
     'jnpr.junos',
