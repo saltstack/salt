@@ -783,12 +783,12 @@ class SaltEvent(object):
         log.debug('Destroying %s instance', cls.__name__)
         subscriber = instance_dict.get('subscriber')
         if subscriber is not None:
-            subscriber.close()
+            # subscriber.close()  Don't close, just deref and weakref.finalize will take care of cleanup
             instance_dict['subscriber'] = None
 
         pusher = instance_dict.get('pusher')
         if pusher is not None:
-            pusher.close()
+            # pusher.close()  Don't close, just deref and weakref.finalize will take care of cleanup
             instance_dict['pusher'] = None
 
         io_loop = instance_dict.get('io_loop')
@@ -1067,12 +1067,12 @@ class AsyncEventPublisher(object):
 
         publisher = instance_dict.get('publisher')
         if publisher is not None:
-            publisher.close()
+            # publisher.close()  Don't close, just deref and weakref.finalize will take care of cleanup
             instance_dict['publisher'] = None
 
         puller = instance_dict.get('puller')
         if puller is not None:
-            puller.close()
+            # puller.close()  Don't close, just deref and weakref.finalize will take care of cleanup
             instance_dict['puller'] = None
 
 
