@@ -165,7 +165,7 @@ def _get_libvirt_enum_string(prefix, value):
     # Filter out the values starting with a common base as they match another enum
     prefixes = [_compute_subprefix(p) for p in attributes]
     counts = {p: prefixes.count(p) for p in prefixes}
-    sub_prefixes = [p for p, count in counts.items() if count > 1]
+    sub_prefixes = [p for p, count in counts.items() if count > 1 or (p.endswith('_') and p[:-1] in prefixes)]
     filtered = [attr for attr in attributes if _compute_subprefix(attr) not in sub_prefixes]
 
     for candidate in filtered:
