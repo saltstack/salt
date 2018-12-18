@@ -600,13 +600,13 @@ VALID_OPTS = {
     'ipc_write_buffer': int,
 
     # IPC tcp socket max send buffer
-    'ipc_so_sndbuf': int,
+    'ipc_so_sndbuf': (type(None), int),
 
     # IPC tcp socket max receive buffer
-    'ipc_so_rcvbuf': int,
+    'ipc_so_rcvbuf': (type(None), int),
 
     # IPC tcp socket backlog size
-    'ipc_so_backlog': int,
+    'ipc_so_backlog': (type(None), int),
 
     # The number of MWorker processes for a master to startup. This number needs to scale up as
     # the number of connected minions increases.
