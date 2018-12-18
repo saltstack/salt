@@ -491,8 +491,8 @@ class ShellCase(ShellTestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixi
         except OSError:
             os.chdir(INTEGRATION_TEST_DIR)
 
-    def run_salt(self, arg_str, with_retcode=False, catch_stderr=False,
-            timeout=RUN_TIMEOUT, popen_kwargs=None):  # pylint: disable=W0221
+    def run_salt(self, arg_str, with_retcode=False, catch_stderr=False,  # pylint: disable=W0221
+            timeout=RUN_TIMEOUT, popen_kwargs=None):
         '''
         Execute salt
         '''
@@ -597,7 +597,8 @@ class ShellCase(ShellTestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixi
                   fun, opts_arg, ret)
         return ret
 
-    def run_key(self, arg_str, catch_stderr=False, with_retcode=False, timeout=RUN_TIMEOUT):
+    def run_key(self, arg_str, catch_stderr=False, with_retcode=False,  # pylint: disable=W0221
+            timeout=RUN_TIMEOUT):
         '''
         Execute salt-key
         '''
@@ -610,7 +611,8 @@ class ShellCase(ShellTestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixi
         log.debug('Result of run_key for command \'%s\': %s', arg_str, ret)
         return ret
 
-    def run_cp(self, arg_str, with_retcode=False, catch_stderr=False, timeout=RUN_TIMEOUT):
+    def run_cp(self, arg_str, with_retcode=False, catch_stderr=False,  # pylint: disable=W0221
+            timeout=RUN_TIMEOUT):
         '''
         Execute salt-cp
         '''
@@ -623,7 +625,8 @@ class ShellCase(ShellTestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixi
                                catch_stderr=catch_stderr,
                                timeout=timeout)
 
-    def run_call(self, arg_str, with_retcode=False, catch_stderr=False, local=False, timeout=RUN_TIMEOUT):
+    def run_call(self, arg_str, with_retcode=False, catch_stderr=False,  # pylint: disable=W0221
+            local=False, timeout=RUN_TIMEOUT):
         '''
         Execute salt-call.
         '''
