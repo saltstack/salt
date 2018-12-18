@@ -4,6 +4,7 @@
         <memory unit='KiB'>{{ mem }}</memory>
         <os>
                 <type arch='{{ arch }}'>{{ os_type }}</type>
+                {% if kernel %}<kernel>{{ kernel }}</kernel>{% endif %}
                 {% for dev in boot_dev %}
                 <boot dev='{{ dev }}' />
                 {% endfor %}
@@ -35,7 +36,7 @@
                 <interface type='{{ nic.type }}'>
                     <source {{ nic.type }}='{{ nic.source }}'/>
                     <mac address='{{ nic.mac }}'/>
-                    <model type='{{ nic.model }}'/>
+                    {% if nic.model %}<model type='{{ nic.model }}'/>{% endif %}
                 </interface>
                 {% endfor %}
                 {% if graphics %}
