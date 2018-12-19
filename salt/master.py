@@ -844,7 +844,7 @@ class ReqServer(salt.utils.process.SignalHandlingMultiprocessingProcess):
         # Prepare the AES key
         self.key = key
         self.secrets = secrets
-        weakref.finalize(self, self.__destroy__, self.__dict__)
+        self._finalizer = weakref.finalize(self, self.__destroy__, self.__dict__)
 
     # __setstate__ and __getstate__ are only used on Windows.
     # We do this so that __init__ will be invoked on Windows in the child
@@ -944,12 +944,8 @@ class ReqServer(salt.utils.process.SignalHandlingMultiprocessingProcess):
         self.__bind()
 
     def destroy(self):
-        salt.utils.versions.warn_until(
-            'Sodium',
-            'Explicitly destroying {} is deprecated and will happen as soon as there are '
-            'no other references to the class instance'.format(self.__class__.__name__),
-            stacklevel=3
-        )
+        self._finalizer.detach()
+        self.__destroy__(self.__dict__)
 
     @classmethod
     def __destroy__(cls, instance_dict, signum=signal.SIGTERM):

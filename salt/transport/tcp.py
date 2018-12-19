@@ -150,7 +150,7 @@ if USE_LOAD_BALANCER:
             self.opts = opts
             self.socket_queue = socket_queue
             self._socket = None
-            weakref.finalize(self, self.__destroy__, self.__dict__)
+            self._finalizer = weakref.finalize(self, self.__destroy__, self.__dict__)
 
         # __setstate__ and __getstate__ are only used on Windows.
         # We do this so that __init__ will be invoked on Windows in the child
@@ -183,12 +183,8 @@ if USE_LOAD_BALANCER:
                 instance_dict['_socket'] = None
 
         def close(self):
-            salt.utils.versions.warn_until(
-                'Sodium',
-                'Explicitly closing {} is deprecated and will happen as soon as there are '
-                'no other references to the class instance'.format(self.__class__.__name__),
-                stacklevel=3
-            )
+            self._finalizer.detach()
+            self.__destroy__(self.__dict__)
 
         def run(self):
             '''
@@ -319,7 +315,7 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
 
         message_client = instance_dict.get('message_client')
         if message_client is not None:
-            # message_client.close()  Don't close, just deref and weakref.finalize will take care of cleanup
+            message_client.close()
             instance_dict['message_client'] = None
 
         # Remove the entry from the instance map so that a closed entry may
@@ -439,7 +435,7 @@ class AsyncTCPPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.tran
             opts=self.opts,
             listen=False
         )
-        weakref.finalize(self, self.__destroy__, self.__dict__)
+        self._finalizer = weakref.finalize(self, self.__destroy__, self.__dict__)
 
     @classmethod
     def __destroy__(cls, instance_dict):
@@ -452,16 +448,12 @@ class AsyncTCPPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.tran
 
         message_client = instance_dict.get('message_client')
         if message_client:
-            # message_client.close()  Don't close, just deref and weakref.finalize will take care of cleanup
+            message_client.close()
             instance_dict['message_client'] = None
 
     def close(self):
-        salt.utils.versions.warn_until(
-            'Sodium',
-            'Explicitly closing {} is deprecated and will happen as soon as there are '
-            'no other references to the class instance'.format(self.__class__.__name__),
-            stacklevel=3
-        )
+        self._finalizer.detach()
+        self.__destroy__(self.__dict__)
 
     def _package_load(self, load):
         return {
@@ -615,7 +607,7 @@ class TCPReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.tra
     def __init__(self, opts):
         salt.transport.server.ReqServerChannel.__init__(self, opts)
         self._socket = None
-        weakref.finalize(self, self.__destroy__, self.__dict__)
+        self._finalizer = weakref.finalize(self, self.__destroy__, self.__dict__)
 
     @property
     def socket(self):
@@ -650,12 +642,8 @@ class TCPReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.tra
                 log.exception('TCPReqServerChannel close generated an exception: %s', str(exc))
 
     def close(self):
-        salt.utils.versions.warn_until(
-            'Sodium',
-            'Explicitly closing {} is deprecated and will happen as soon as there are '
-            'no other references to the class instance'.format(self.__class__.__name__),
-            stacklevel=3
-        )
+        self._finalizer.detach()
+        self.__destroy__(self.__dict__)
 
     def pre_fork(self, process_manager):
         '''
@@ -899,23 +887,20 @@ class SaltMessageClientPool(salt.transport.MessageClientPool):
     '''
     def __init__(self, opts, args=None, kwargs=None):
         super(SaltMessageClientPool, self).__init__(SaltMessageClient, opts, args=args, kwargs=kwargs)
-        weakref.finalize(self, self.__destroy__, self.__dict__)
+        self._finalizer = weakref.finalize(self, self.__destroy__, self.__dict__)
 
     @classmethod
     def __destroy__(cls, instance_dict):
         log.debug('Destroying %s instance', cls.__name__)
         message_clients = instance_dict.get('message_clients')
         if message_clients is not None:
-            # Deref all message clients so GC can happen
+            for message_client in message_clients:
+                message_client.close()
             instance_dict['message_clients'] = []
 
     def close(self):
-        salt.utils.versions.warn_until(
-            'Sodium',
-            'Explicitly closing {} is deprecated and will happen as soon as there are '
-            'no other references to the class instance'.format(self.__class__.__name__),
-            stacklevel=3
-        )
+        self._finalizer.detach()
+        self.__destroy__(self.__dict__)
 
     @tornado.gen.coroutine
     def connect(self):
@@ -976,7 +961,7 @@ class SaltMessageClient(object):
         self._connecting_future = self.connect()
         self._stream_return_future = tornado.concurrent.Future()
         self.io_loop.spawn_callback(self._stream_return)
-        weakref.finalize(self, self.__destroy__, self.__dict__)
+        self._finalizer = weakref.finalize(self, self.__destroy__, self.__dict__)
 
     # TODO: timeout inflight sessions
     @classmethod
@@ -1055,12 +1040,8 @@ class SaltMessageClient(object):
             instance_dict[key] = None
 
     def close(self):
-        salt.utils.versions.warn_until(
-            'Sodium',
-            'Explicitly closing {} is deprecated and will happen as soon as there are '
-            'no other references to the class instance'.format(self.__class__.__name__),
-            stacklevel=3
-        )
+        self._finalizer.detach()
+        self.__destroy__(self.__dict__)
 
     def connect(self):
         '''
@@ -1284,15 +1265,11 @@ class Subscriber(object):
         self._closing = False
         self._read_until_future = None
         self.id_ = None
-        weakref.finalize(self, self.__destroy__, self.__dict__)
+        self._finalizer = weakref.finalize(self, self.__destroy__, self.__dict__)
 
     def close(self):
-        salt.utils.versions.warn_until(
-            'Sodium',
-            'Explicitly closing {} is deprecated and will happen as soon as there are '
-            'no other references to the class instance'.format(self.__class__.__name__),
-            stacklevel=3
-        )
+        self._finalizer.detach()
+        self.__destroy__(self.__dict__)
 
     @classmethod
     def __destroy__(cls, instance_dict):

@@ -940,7 +940,7 @@ class MinionManager(MinionBase):
         self.io_loop = ZMQDefaultLoop.current()
         self.process_manager = ProcessManager(name='MultiMinionProcessManager')
         self.io_loop.spawn_callback(self.process_manager.run, **{'asynchronous': True})  # Tornado backward compat
-        weakref.finalize(self, self.__destroy__, self.__dict__)
+        self._finalizer = weakref.finalize(self, self.__destroy__, self.__dict__)
 
     def _bind(self):
         # start up the event publisher, so we can see events during startup
@@ -1074,12 +1074,8 @@ class MinionManager(MinionBase):
             minion.destroy()
 
     def destroy(self):
-        salt.utils.versions.warn_until(
-            'Sodium',
-            'Explicitly destroying {} is deprecated and will happen as soon as there are '
-            'no other references to the class instance'.format(self.__class__.__name__),
-            stacklevel=3
-        )
+        self._finalizer.detach()
+        self.__destroy__(self.__dict__)
 
     @classmethod
     def __destroy__(cls, instance_dict):
@@ -1178,7 +1174,7 @@ class Minion(MinionBase):
         if signal.getsignal(signal.SIGTERM) is signal.SIG_DFL:
             # No custom signal handling was added, install our own
             signal.signal(signal.SIGTERM, self._handle_signals)
-        weakref.finalize(self, self.__destroy__, self.__dict__)
+        self._finalizer = weakref.finalize(self, self.__destroy__, self.__dict__)
 
     def _handle_signals(self, signum, sigframe):  # pylint: disable=unused-argument
         self._running = False
@@ -2792,12 +2788,7 @@ class Minion(MinionBase):
         return True
 
     def destroy(self):
-        salt.utils.versions.warn_until(
-            'Sodium',
-            'Explicitly destroying {} is deprecated and will happen as soon as there are '
-            'no other references to the class instance'.format(self.__class__.__name__),
-            stacklevel=3
-        )
+        self._finalizer()
 
     @classmethod
     def __destroy__(cls, instance_dict):

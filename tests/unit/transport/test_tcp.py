@@ -89,7 +89,7 @@ class BaseTCPReqCase(TestCase, AdaptedConfigurationTestCaseMixin):
             cls.io_loop.add_callback(cls.io_loop.stop)
             cls.server_thread.join()
             cls.process_manager.kill_children()
-            # cls.server_channel.close()  Don't close, just deref and weakref.finalize will take care of cleanup
+            cls.server_channel.close()
             del cls.server_channel
 
     @classmethod
@@ -215,7 +215,7 @@ class BaseTCPPubCase(AsyncTestCase, AdaptedConfigurationTestCaseMixin):
         cls._server_io_loop.add_callback(cls._server_io_loop.stop)
         cls.server_thread.join()
         cls.process_manager.kill_children()
-        # cls.req_server_channel.close()  Don't close, just deref and weakref.finalize will take care of cleanup
+        cls.req_server_channel.close()
         del cls.req_server_channel
 
     def setUp(self):

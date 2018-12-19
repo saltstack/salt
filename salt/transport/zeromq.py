@@ -447,15 +447,11 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
             self._monitor = ZeroMQSocketMonitor(self._socket)
             self._monitor.start_io_loop(self.io_loop)
 
-        weakref.finalize(self, self.__destroy__, self.__dict__)
+        self._finalizer = weakref.finalize(self, self.__destroy__, self.__dict__)
 
     def destroy(self):
-        salt.utils.versions.warn_until(
-            'Sodium',
-            'Explicitly destroying {} is deprecated and will happen as soon as there are '
-            'no other references to the class instance'.format(self.__class__.__name__),
-            stacklevel=3
-        )
+        self._finalizer.detach()
+        self.__destroy__(self.__dict__)
 
     @classmethod
     def __destroy__(cls, instance_dict):
@@ -1041,25 +1037,20 @@ class AsyncReqMessageClientPool(salt.transport.MessageClientPool):
     '''
     def __init__(self, opts, args=None, kwargs=None):
         super(AsyncReqMessageClientPool, self).__init__(AsyncReqMessageClient, opts, args=args, kwargs=kwargs)
-        weakref.finalize(self, self.__destroy__, self.__dict__)
+        self._finalizer = weakref.finalize(self, self.__destroy__, self.__dict__)
 
     @classmethod
     def __destroy__(cls, instance_dict):
         log.debug('Destroying %s instance', cls.__name__)
         message_clients = instance_dict.get('message_clients')
         if message_clients:
-            # Just deref and weakref.finalize will take care of cleanup
-            # for message_client in message_clients:
-            #     message_client.destroy()
+            for message_client in message_clients:
+                message_client.destroy()
             instance_dict['message_clients'] = []
 
     def destroy(self):
-        salt.utils.versions.warn_until(
-            'Sodium',
-            'Explicitly destroying {} is deprecated and will happen as soon as there are '
-            'no other references to the class instance'.format(self.__class__.__name__),
-            stacklevel=3
-        )
+        self._finalizer.detach()
+        self.__destroy__(self.__dict__)
 
     def send(self, *args, **kwargs):
         message_clients = sorted(self.message_clients, key=lambda x: len(x.send_queue))
@@ -1105,15 +1096,11 @@ class AsyncReqMessageClient(object):
         self.send_future_map = {}
 
         self.send_timeout_map = {}  # message -> timeout
-        weakref.finalize(self, self.__destroy__, self.__dict__)
+        self._finalizer = weakref.finalize(self, self.__destroy__, self.__dict__)
 
     def destroy(self):
-        salt.utils.versions.warn_until(
-            'Sodium',
-            'Explicitly destroying {} is deprecated and will happen as soon as there are '
-            'no other references to the class instance'.format(self.__class__.__name__),
-            stacklevel=3
-        )
+        self._finalizer.detach()
+        self.__destroy__(self.__dict__)
 
     # TODO: timeout all in-flight sessions, or error
     @classmethod
