@@ -264,12 +264,22 @@ class GitFSTestFuncs(object):
         # This function does not use os.sep, the Salt fileserver uses the
         # forward slash, hence it being explicitly used to join here.
         self.assertIn('/'.join((UNICODE_DIRNAME, 'foo.txt')), ret)
+        self.assertIn('issue-21413/link/symlink/file1.txt', ret)
+        self.assertIn('issue-21413/link/symlink/deep/file2.txt', ret)
 
     def test_dir_list(self):
         gitfs.update()
         ret = gitfs.dir_list(LOAD)
         self.assertIn('grail', ret)
         self.assertIn(UNICODE_DIRNAME, ret)
+        self.assertIn('issue-21413/link/symlink', ret)
+        self.assertIn('issue-21413/link/symlink/deep', ret)
+
+    def test_symlink_list(self):
+        gitfs.update()
+        ret = gitfs.symlink_list(LOAD)
+        self.assertEqual('source_sym', ret['dest_sym'])
+        self.assertEqual('issue-21413/source', ret['issue-21413/link/symlink'])
 
     def test_envs(self):
         gitfs.update()
