@@ -333,6 +333,8 @@ def wait(
     hide_output=False,
     use_vt=False,
     success_retcodes=None,
+    success_stdout=None,
+    success_stderr=None,
     **kwargs
 ):
     """
@@ -448,6 +450,20 @@ def wait(
         the return code will be overridden with zero.
 
       .. versionadded:: 2019.2.0
+
+    success_stdout: This parameter will be allow a list of
+        strings that when found in standard out should be considered a success.
+        If stdout returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: Neon
+
+    success_stderr: This parameter will be allow a list of
+        strings that when found in standard error should be considered a success.
+        If stderr returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: Neon
     """
     # Ignoring our arguments is intentional.
     return {"name": name, "changes": {}, "result": True, "comment": ""}
@@ -470,6 +486,9 @@ def wait_script(
     use_vt=False,
     output_loglevel="debug",
     hide_output=False,
+    success_retcodes=None,
+    success_stdout=None,
+    success_stderr=None,
     **kwargs
 ):
     """
@@ -581,6 +600,20 @@ def wait_script(
         the return code will be overridden with zero.
 
       .. versionadded:: 2019.2.0
+
+    success_stdout: This parameter will be allow a list of
+        strings that when found in standard out should be considered a success.
+        If stdout returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: Neon
+
+    success_stderr: This parameter will be allow a list of
+        strings that when found in standard error should be considered a success.
+        If stderr returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: Neon
     """
     # Ignoring our arguments is intentional.
     return {"name": name, "changes": {}, "result": True, "comment": ""}
@@ -602,6 +635,8 @@ def run(
     ignore_timeout=False,
     use_vt=False,
     success_retcodes=None,
+    success_stdout=None,
+    success_stderr=None,
     **kwargs
 ):
     """
@@ -736,6 +771,20 @@ def run(
 
       .. versionadded:: 2019.2.0
 
+    success_stdout: This parameter will be allow a list of
+        strings that when found in standard out should be considered a success.
+        If stdout returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: Neon
+
+    success_stderr: This parameter will be allow a list of
+        strings that when found in standard error should be considered a success.
+        If stderr returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: Neon
+
     .. note::
 
         cmd.run supports the usage of ``reload_modules``. This functionality
@@ -791,6 +840,8 @@ def run(
             "output_loglevel": output_loglevel,
             "hide_output": hide_output,
             "success_retcodes": success_retcodes,
+            'success_stdout': success_stdout,
+            'success_stderr': success_stderr,
         }
     )
 
@@ -853,6 +904,8 @@ def script(
     defaults=None,
     context=None,
     success_retcodes=None,
+    success_stdout=NOne,
+    success_stderr=None,
     **kwargs
 ):
     """
@@ -1019,6 +1072,19 @@ def script(
 
       .. versionadded:: 2019.2.0
 
+    success_stdout: This parameter will be allow a list of
+        strings that when found in standard out should be considered a success.
+        If stdout returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: Neon
+
+    success_stderr: This parameter will be allow a list of
+        strings that when found in standard error should be considered a success.
+        If stderr returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: Neon
     """
     test_name = None
     if not isinstance(stateful, list):
@@ -1072,6 +1138,8 @@ def script(
             "context": tmpctx,
             "saltenv": __env__,
             "success_retcodes": success_retcodes,
+            'success_stdout': success_stdout,
+            'success_stderr': success_stderr,
         }
     )
 
