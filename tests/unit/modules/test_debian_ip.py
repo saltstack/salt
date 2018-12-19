@@ -6,7 +6,6 @@
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 import tempfile
-import os
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -20,12 +19,14 @@ from tests.support.mock import (
 
 # Import Salt Libs
 import salt.modules.debian_ip as debian_ip
+import salt.utils.platform
 
 # Import third party libs
 import jinja2.exceptions
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(salt.utils.platform.is_windows(), 'Do not run these tests on Windows')
 class DebianIpTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.debian_ip
@@ -439,7 +440,7 @@ class DebianIpTestCase(TestCase, LoaderModuleMockMixin):
                         '\n']},
                 ]
 
-        with tempfile.NamedTemporaryFile(mode='r', delete=False) as tfile:
+        with tempfile.NamedTemporaryFile(mode='r', delete=True) as tfile:
             with patch('salt.modules.debian_ip._DEB_NETWORK_FILE', str(tfile.name)):
                 for iface in interfaces:
                     # Skip tests that require __salt__['pkg.install']()
@@ -451,7 +452,6 @@ class DebianIpTestCase(TestCase, LoaderModuleMockMixin):
                                                     interface_file=tfile.name,
                                                     **iface['settings']),
                                              iface['return'])
-        os.remove(tfile.name)
 
     # 'up' function tests: 1
 
