@@ -483,6 +483,7 @@ class ShellCase(ShellTestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixi
     _code_dir_ = CODE_DIR
     _script_dir_ = SCRIPT_DIR
     _python_executable_ = PYEXEC
+    RUN_TIMEOUT = 500
 
     def chdir(self, dirname):
         try:
@@ -490,7 +491,8 @@ class ShellCase(ShellTestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixi
         except OSError:
             os.chdir(INTEGRATION_TEST_DIR)
 
-    def run_salt(self, arg_str, with_retcode=False, catch_stderr=False, timeout=60, popen_kwargs=None):  # pylint: disable=W0221
+    def run_salt(self, arg_str, with_retcode=False, catch_stderr=False,  # pylint: disable=W0221
+            timeout=RUN_TIMEOUT, popen_kwargs=None):
         '''
         Execute salt
         '''
@@ -504,7 +506,7 @@ class ShellCase(ShellTestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixi
         log.debug('Result of run_salt for command \'%s\': %s', arg_str, ret)
         return ret
 
-    def run_spm(self, arg_str, with_retcode=False, catch_stderr=False, timeout=60):  # pylint: disable=W0221
+    def run_spm(self, arg_str, with_retcode=False, catch_stderr=False, timeout=RUN_TIMEOUT):  # pylint: disable=W0221
         '''
         Execute spm
         '''
@@ -517,7 +519,7 @@ class ShellCase(ShellTestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixi
         return ret
 
     def run_ssh(self, arg_str, with_retcode=False, catch_stderr=False,  # pylint: disable=W0221
-                timeout=60, wipe=True, raw=False):
+                timeout=RUN_TIMEOUT, wipe=True, raw=False):
         '''
         Execute salt-ssh
         '''
@@ -538,7 +540,7 @@ class ShellCase(ShellTestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixi
         return ret
 
     def run_run(self, arg_str, with_retcode=False, catch_stderr=False,
-                asynchronous=False, timeout=180, config_dir=None, **kwargs):
+            asynchronous=False, timeout=RUN_TIMEOUT, config_dir=None, **kwargs):
         '''
         Execute salt-run
         '''
@@ -595,7 +597,8 @@ class ShellCase(ShellTestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixi
                   fun, opts_arg, ret)
         return ret
 
-    def run_key(self, arg_str, catch_stderr=False, with_retcode=False):
+    def run_key(self, arg_str, catch_stderr=False, with_retcode=False,  # pylint: disable=W0221
+            timeout=RUN_TIMEOUT):
         '''
         Execute salt-key
         '''
@@ -604,11 +607,12 @@ class ShellCase(ShellTestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixi
                               arg_str,
                               catch_stderr=catch_stderr,
                               with_retcode=with_retcode,
-                              timeout=60)
+                              timeout=timeout)
         log.debug('Result of run_key for command \'%s\': %s', arg_str, ret)
         return ret
 
-    def run_cp(self, arg_str, with_retcode=False, catch_stderr=False):
+    def run_cp(self, arg_str, with_retcode=False, catch_stderr=False,  # pylint: disable=W0221
+            timeout=RUN_TIMEOUT):
         '''
         Execute salt-cp
         '''
@@ -619,9 +623,10 @@ class ShellCase(ShellTestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixi
                                arg_str,
                                with_retcode=with_retcode,
                                catch_stderr=catch_stderr,
-                               timeout=60)
+                               timeout=timeout)
 
-    def run_call(self, arg_str, with_retcode=False, catch_stderr=False, local=False):
+    def run_call(self, arg_str, with_retcode=False, catch_stderr=False,  # pylint: disable=W0221
+            local=False, timeout=RUN_TIMEOUT):
         '''
         Execute salt-call.
         '''
@@ -631,11 +636,11 @@ class ShellCase(ShellTestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixi
                               arg_str,
                               with_retcode=with_retcode,
                               catch_stderr=catch_stderr,
-                              timeout=60)
+                              timeout=timeout)
         log.debug('Result of run_call for command \'%s\': %s', arg_str, ret)
         return ret
 
-    def run_cloud(self, arg_str, catch_stderr=False, timeout=30):
+    def run_cloud(self, arg_str, catch_stderr=False, timeout=RUN_TIMEOUT):
         '''
         Execute salt-cloud
         '''
