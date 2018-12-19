@@ -756,7 +756,7 @@ class IPCMessageSubscriber(IPCClient):
             self._read_stream_future = None
             exc_to_raise = exc
         except Exception as exc:
-            log.error('Exception occurred in Subscriber while handling stream: %s', exc)
+            log.error('Exception occurred in Subscriber while handling stream: %s', exc, exc_info=True)
             self._read_stream_future = None
             exc_to_raise = exc
 
