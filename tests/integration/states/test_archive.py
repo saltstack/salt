@@ -245,8 +245,6 @@ class ArchiveTest(ModuleCase, SaltReturnAssertsMixin):
 
         self._check_extracted(UNTAR_FILE)
 
-
-
     def test_archive_extracted_with_non_base_saltenv(self):
         '''
         test archive.extracted with a saltenv other than `base`
