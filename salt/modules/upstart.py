@@ -46,6 +46,11 @@ about this, at least.
 '''
 from __future__ import absolute_import, unicode_literals, print_function
 
+try:
+    from future_builtins import filter
+except ImportError:
+    pass
+
 # Import python libs
 import glob
 import os
@@ -190,7 +195,7 @@ def _upstart_is_disabled(name):
     in /etc/init/[name].conf.
     '''
     files = ['/etc/init/{0}.conf'.format(name), '/etc/init/{0}.override'.format(name)]
-    for file_name in itertools.ifilter(os.path.isfile, files):
+    for file_name in filter(os.path.isfile, files):
         with salt.utils.files.fopen(file_name) as fp_:
             if re.search(r'^\s*manual',
                          salt.utils.stringutils.to_unicode(fp_.read()),
@@ -516,7 +521,7 @@ def _upstart_enable(name):
         return _upstart_is_enabled(name)
     override = '/etc/init/{0}.override'.format(name)
     files = ['/etc/init/{0}.conf'.format(name), override]
-    for file_name in itertools.ifilter(os.path.isfile, files):
+    for file_name in filter(os.path.isfile, files):
         with salt.utils.files.fopen(file_name, 'r+') as fp_:
             new_text = re.sub(r'^\s*manual\n?',
                               '',
