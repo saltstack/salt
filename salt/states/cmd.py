@@ -904,7 +904,7 @@ def script(
     defaults=None,
     context=None,
     success_retcodes=None,
-    success_stdout=NOne,
+    success_stdout=None,
     success_stderr=None,
     **kwargs
 ):
