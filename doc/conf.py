@@ -55,8 +55,11 @@ class Mock(object):
     def __iter__(self):
         return self
 
-    def next(self):
+    def __next__(self):
         raise StopIteration
+
+    # For Python 2
+    next = __next__
 
 # pylint: enable=R0903
 
