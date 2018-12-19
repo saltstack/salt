@@ -59,6 +59,23 @@ class Mock(object):
     next = __next__
 
 
+def mock_decorator_with_params(*oargs, **okwargs):  # pylint: disable=unused-argument
+    '''
+    Optionally mock a decorator that takes parameters
+
+    E.g.:
+
+    @blah(stuff=True)
+    def things():
+        pass
+    '''
+    def inner(fn, *iargs, **ikwargs):  # pylint: disable=unused-argument
+        if hasattr(fn, '__call__'):
+            return fn
+        return Mock()
+    return inner
+
+
 MOCK_MODULES = [
     # Python stdlib
     'user',
@@ -182,23 +199,6 @@ for mod_name in MOCK_MODULES:
     else:
         mock = Mock()
     sys.modules[mod_name] = mock
-
-
-def mock_decorator_with_params(*oargs, **okwargs):  # pylint: disable=unused-argument
-    '''
-    Optionally mock a decorator that takes parameters
-
-    E.g.:
-
-    @blah(stuff=True)
-    def things():
-        pass
-    '''
-    def inner(fn, *iargs, **ikwargs):  # pylint: disable=unused-argument
-        if hasattr(fn, '__call__'):
-            return fn
-        return Mock()
-    return inner
 
 
 # Define a fake version attribute for the following libs.
