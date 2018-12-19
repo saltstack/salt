@@ -72,7 +72,7 @@ from salt.ext.six.moves import range
 # Import third party libs
 from salt.ext import six
 import tornado.ioloop
-import tornado.iostream
+import tornado.iostream as iostream
 
 # Import salt libs
 import salt.config
@@ -524,7 +524,8 @@ class SaltEvent(object):
         '''
         return fnmatch.fnmatch(event_tag, search_tag)
 
-    def _get_event(self, wait, tag, match_func=None, no_block=False):
+    def _get_event(self, wait, tag, match_func=None, no_block=False,
+                   StreamClosedError=iostream.StreamClosedError):
         if match_func is None:
             match_func = self._get_match_func()
         start = time.time()
@@ -555,7 +556,7 @@ class SaltEvent(object):
                 ret = {'data': data, 'tag': mtag}
             except KeyboardInterrupt:
                 return {'tag': 'salt/event/exit', 'data': {}}
-            except tornado.iostream.StreamClosedError:
+            except StreamClosedError:
                 if self.raise_errors:
                     raise
                 else:
@@ -583,7 +584,8 @@ class SaltEvent(object):
                   full=False,
                   match_type=None,
                   no_block=False,
-                  auto_reconnect=False):
+                  auto_reconnect=False,
+                  StreamClosedError=iostream.StreamClosedError):
         '''
         Get a single publication.
         If no publication is available, then block for up to ``wait`` seconds.
@@ -643,7 +645,7 @@ class SaltEvent(object):
                         try:
                             ret = self._get_event(wait, tag, match_func, no_block)
                             break
-                        except tornado.iostream.StreamClosedError:
+                        except StreamClosedError:
                             self.close_pub()
                             self.connect_pub(timeout=wait)
                             continue
