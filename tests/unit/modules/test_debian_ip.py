@@ -6,6 +6,7 @@
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 import tempfile
+import os
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -438,7 +439,7 @@ class DebianIpTestCase(TestCase, LoaderModuleMockMixin):
                         '\n']},
                 ]
 
-        with tempfile.NamedTemporaryFile(mode='r', delete=True) as tfile:
+        with tempfile.NamedTemporaryFile(mode='r', delete=False) as tfile:
             with patch('salt.modules.debian_ip._DEB_NETWORK_FILE', str(tfile.name)):
                 for iface in interfaces:
                     # Skip tests that require __salt__['pkg.install']()
@@ -450,6 +451,7 @@ class DebianIpTestCase(TestCase, LoaderModuleMockMixin):
                                                     interface_file=tfile.name,
                                                     **iface['settings']),
                                              iface['return'])
+        os.remove(tfile.name)
 
     # 'up' function tests: 1
 
