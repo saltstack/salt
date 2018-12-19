@@ -10,6 +10,7 @@ import sys
 import copy
 import errno
 import signal
+import socket
 import hashlib
 import logging
 import threading
@@ -1125,7 +1126,12 @@ class AsyncReqMessageClient(object):
                     # We still need to close or we'll leak file handles.
                     # The above does not happen under Py3 where tornado
                     # uses asyncio
-                    stream.close()
+                    try:
+                        stream.close()
+                    except socket.error as exc:
+                        if exc.errno != errno.EBADF:
+                            # if it's not a bad file descriptor error, raise
+                            raise
             instance_dict['stream'] = None
 
         _socket = instance_dict.get('socket')

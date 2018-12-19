@@ -993,6 +993,10 @@ class SaltMessageClient(object):
                 # uses asyncio
                 try:
                     stream.close()
+                except socket.error as exc:
+                    if exc.errno != errno.EBADF:
+                        # if it's not a bad file descriptor error, raise
+                        raise
                 except RuntimeError:
                     # Under Py3, and tornado ioloop running on asyncio,
                     # by now the loop is close which raises RuntimeError
