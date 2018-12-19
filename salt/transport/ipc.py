@@ -743,7 +743,15 @@ class IPCMessageSubscriber(IPCClient):
                         ret = framed_msg['body']
                         first = False
                     else:
-                        self.saved_data.append(framed_msg['body'])
+                        try:
+                            self.saved_data.append(framed_msg['body'])
+                        except KeyError:
+                            log.error(
+                                'Didn\'t find the \'body\' key on the framed_msg. '
+                                'Framed message:%s',
+                                framed_msg
+                            )
+                            raise
                 if not first:
                     # We read at least one piece of data
                     break
