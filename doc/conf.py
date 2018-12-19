@@ -46,8 +46,8 @@ class Mock(object):
             data = self.__mapping.get(name)
         elif name in ('__file__', '__path__'):
             data = '/dev/null'
-        elif name == '__qualname__':
-            raise AttributeError("'Mock' object has no attribute '__qualname__'")
+        elif name in ('__mro_entries__', '__qualname__'):
+            raise AttributeError("'Mock' object has no attribute '%s'" % (name))
         else:
             data = Mock(mapping=self.__mapping)
         return data
