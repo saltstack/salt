@@ -1243,8 +1243,22 @@ class GitPython(GitProvider):
                     stream.close()
                     link_path = relpath(blob.path)
                     (basepath, _) = os.path.split(blob.path)
-                    link_tgt = relpath(str('/'.join([basepath, link_tgt])))
-                    if isinstance(tree[link_tgt], git.Tree):
+                    if basepath:
+                        link_tgt = relpath(str('/'.join([basepath, link_tgt])))
+                    link_tgt = os.path.relpath(link_tgt)
+
+                    # GitPython trees don't support __contains__ properly, so
+                    # the "in" operator cannot be used to test if a path is in
+                    # the repo. Instead __getitem__ is attempted within a try
+                    # block.
+                    target_valid = True
+                    try:
+                        tree.__getitem__(link_tgt)
+                    except KeyError:
+                        target_valid = False
+                        log.warning('Broken symlink: %s', link_path)
+
+                    if target_valid and isinstance(tree[link_tgt], git.Tree):
                         symlink_dirs[link_path] = link_tgt
 
         # Add all paths that belong under symlinked directories
@@ -1339,15 +1353,28 @@ class GitPython(GitProvider):
                 stream.seek(0)
                 link_tgt = stream.read()
                 stream.close()
-                symlinks[file_path] = link_tgt
 
                 # If symlink points to a directory, add it to symlink_dirs so
                 # its children can be added later
                 link_path = relpath(file_blob.path)
                 (basepath, _) = os.path.split(file_blob.path)
-                link_tgt = relpath(str('/'.join([basepath, link_tgt])))
-                if isinstance(tree[link_tgt], git.Tree):
-                    symlink_dirs[link_path] = link_tgt
+                if basepath:
+                    link_tgt = relpath(str('/'.join([basepath, link_tgt])))
+                link_tgt = os.path.relpath(link_tgt)
+                symlinks[file_path] = link_tgt
+
+                # GitPython trees don't support __contains__ properly, so the
+                # "in" operator cannot be used to test if a path is in the
+                # repo. Instead __getitem__ is attempted within a try block.
+                target_valid = True
+                try:
+                    tree.__getitem__(link_tgt)
+                except KeyError:
+                    target_valid = False
+                    log.warning('Broken symlink: %s', link_path)
+
+                if target_valid and isinstance(tree[link_tgt], git.Tree):
+                        symlink_dirs[link_path] = link_tgt
                 else:
                     files.add(file_path)
             else:
@@ -1731,7 +1758,7 @@ class Pygit2(GitProvider):
         '''
         Get a list of directories for the target environment using pygit2
         '''
-        def _traverse(tree, blobs, prefix):
+        def _traverse(tree, blobs, prefix, top_tree):
             '''
             Traverse through a pygit2 Tree object recursively, accumulating all
             the empty directories within it in the "blobs" list
@@ -1744,9 +1771,15 @@ class Pygit2(GitProvider):
                 # If a blob is a symlink, and that symlink points to another
                 # tree, then use the blob of that link target
                 if stat.S_ISLNK(entry.filemode):
-                    link_tgt = self.repo[entry.oid].data
-                    if tree[link_tgt].type == 'tree':
-                        blob = self.repo[tree[link_tgt].oid]
+                    link_tgt = salt.utils.path.join(
+                        prefix, self.repo[entry.oid].data,
+                        use_posixpath=True)
+                    if link_tgt in top_tree:
+                        if top_tree[link_tgt].type == 'tree':
+                            blob = self.repo[top_tree[link_tgt].oid]
+                    else:
+                        log.warning('Broken symlink: %s',
+                            salt.utils.path.join(prefix, entry.name, use_posixpath=True))
                 if not isinstance(blob, pygit2.Tree):
                     continue
                 blobs.append(
@@ -1755,7 +1788,8 @@ class Pygit2(GitProvider):
                 if blob:
                     _traverse(
                         blob, blobs, salt.utils.path.join(
-                            prefix, entry.name, use_posixpath=True)
+                            prefix, entry.name, use_posixpath=True),
+                        top_tree
                     )
 
         ret = set()
@@ -1775,7 +1809,7 @@ class Pygit2(GitProvider):
             relpath = lambda path: path
         blobs = []
         if tree:
-            _traverse(tree, blobs, self.root(tgt_env))
+            _traverse(tree, blobs, self.root(tgt_env), tree)
         add_mountpoint = lambda path: salt.utils.path.join(
             self.mountpoint(tgt_env), path, use_posixpath=True)
         for blob in blobs:
@@ -1861,7 +1895,7 @@ class Pygit2(GitProvider):
         '''
         Get file list for the target environment using pygit2
         '''
-        def _traverse(tree, blobs, prefix):
+        def _traverse(tree, blobs, prefix, top_tree):
             '''
             Traverse through a pygit2 Tree object recursively, accumulating all
             the file paths and symlink info in the "blobs" dict
@@ -1874,28 +1908,37 @@ class Pygit2(GitProvider):
                 if isinstance(obj, pygit2.Blob):
                     repo_path = salt.utils.path.join(
                         prefix, entry.name, use_posixpath=True)
-                    blobs.setdefault('files', []).append(repo_path)
+                    include_in_files = True
                     if stat.S_ISLNK(entry.filemode):
-                        link_tgt = self.repo[entry.oid].data
-                        # if a symlink points to a directory, traverse that
-                        # directory
-                        if tree[link_tgt].type == 'tree':
-                            _traverse(
-                                self.repo[tree[link_tgt].oid],
-                                blobs,
-                                salt.utils.path.join(
-                                    prefix, entry.name, use_posixpath=True)
-                            )
+                        link_tgt = salt.utils.path.join(
+                            prefix, self.repo[entry.oid].data,
+                            use_posixpath=True)
+                        if link_tgt in top_tree:
+                            if top_tree[link_tgt].type == 'tree':
+                                include_in_files = False
+                                _traverse(
+                                    self.repo[top_tree[link_tgt].oid],
+                                    blobs,
+                                    salt.utils.path.join(
+                                        prefix, entry.name, use_posixpath=True),
+                                    top_tree
+                                )
+                        else:
+                            log.warning('Broken symlink: %s',
+                                salt.utils.path.join(prefix, entry.name, use_posixpath=True))
                         blobs.setdefault('symlinks', {})[repo_path] = link_tgt
+                    if include_in_files:
+                        blobs.setdefault('files', []).append(repo_path)
                 elif isinstance(obj, pygit2.Tree):
                     _traverse(
                         obj, blobs, salt.utils.path.join(
-                            prefix, entry.name, use_posixpath=True)
+                            prefix, entry.name, use_posixpath=True), top_tree
                     )
 
         files = set()
         symlinks = {}
         tree = self.get_tree(tgt_env)
+        top_tree = self.get_tree(tgt_env)
         if not tree:
             # Not found, return empty objects
             return files, symlinks
@@ -1914,7 +1957,7 @@ class Pygit2(GitProvider):
             relpath = lambda path: path
         blobs = {}
         if tree:
-            _traverse(tree, blobs, self.root(tgt_env))
+            _traverse(tree, blobs, self.root(tgt_env), top_tree)
         add_mountpoint = lambda path: salt.utils.path.join(
             self.mountpoint(tgt_env), path, use_posixpath=True)
         for repo_path in blobs.get('files', []):
