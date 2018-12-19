@@ -5,6 +5,7 @@ Helpers/utils for working with tornado asynchronous stuff
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+import os
 import logging
 import contextlib
 
@@ -46,13 +47,20 @@ class SyncWrapper(object):
     # the sync wrapper will automatically wait on the future
     ret = sync.async_method()
     '''
+
+    io_loops = weakref.WeakValueDictionary()
+
     def __init__(self, method, args=tuple(), kwargs=None):
         if kwargs is None:
             kwargs = {}
 
-        self.io_loop = zeromq.ZMQDefaultLoop()
-        kwargs['io_loop'] = self.io_loop
-
+        pid = os.getpid()
+        io_loop = SyncWrapper.io_loops.get(pid)
+        if io_loop is None:
+            io_loop = zeromq.ZMQDefaultLoop()
+            SyncWrapper.io_loops[pid] = io_loop
+            weakref.finalize(io_loop, io_loop.close, all_fds=True)
+        self.io_loop = io_loop
         with current_ioloop(self.io_loop):
             self.asynchronous = method(*args, **kwargs)
         weakref.finalize(self, self.__destroy__, self.__dict__)
@@ -91,8 +99,3 @@ class SyncWrapper(object):
         asynchronous = instance_dict.get('asynchronous')
         if asynchronous is not None:
             instance_dict['asynchronous'] = None
-
-        io_loop = instance_dict.get('io_loop')
-        if io_loop is not None:
-            io_loop.close()
-            instance_dict['io_loop'] = None

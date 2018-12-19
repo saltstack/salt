@@ -983,14 +983,6 @@ class SaltMessageClient(object):
                 # This will prevent potential errors on shutdown.
                 orig_loop = tornado.ioloop.IOLoop.current()
 
-                # XXX: Under Py2, while closing the stream here, tornado
-                # complain about:
-                #  ValueError: I/O operation on closed epoll fd
-                # It will be on a debug log message though....
-                #
-                # We still need to close or we'll leak file handles.
-                # The above does not happen under Py3 where tornado
-                # uses asyncio
                 try:
                     stream.close()
                 except socket.error as exc:
