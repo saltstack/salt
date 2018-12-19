@@ -173,7 +173,7 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMix
             if self.test_symlink_list_file_roots:
                 self.opts['file_roots'] = self.test_symlink_list_file_roots
             ret = roots.symlink_list({'saltenv': 'base'})
-            self.assertDictEqual(ret, {'dest_sym': 'source_sym'})
+            self.assertEqual('source_sym', ret['dest_sym'])
         finally:
             if self.test_symlink_list_file_roots:
                 self.opts['file_roots'] = orig_file_roots
