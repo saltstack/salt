@@ -450,7 +450,7 @@ latex_logo = '_static/salt-logo.png'
 latex_elements = {
     'inputenc': '',     # use XeTeX instead of the inputenc LaTeX package.
     'utf8extra': '',
-    'preamble': '''
+    'preamble': r'''
     \usepackage{fontspec}
     \setsansfont{Linux Biolinum O}
     \setromanfont{Linux Libertine O}
