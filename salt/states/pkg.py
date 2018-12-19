@@ -1512,7 +1512,7 @@ def installed(
              pkg.installed:
                - name: ntp
                - bypass_file: /etc/ntp.conf
-       
+      
        The use case for this feature is when running salt at significant scale.
        Each state that has a requisite for a ``pkg.installed`` will have salt
        querying the package manager of the system. Compared to simple diff
