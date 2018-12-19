@@ -2035,7 +2035,7 @@ class ClearFuncs(object):
             return False
         return self.loadauth.get_tok(clear_load['token'])
 
-    def publish_batch(self, clear_load):
+    def publish_batch(self, clear_load, minions, missing):
         batch_load = {}
         batch_load.update(clear_load)
         import salt.cli.batch_async
@@ -2051,8 +2051,8 @@ class ClearFuncs(object):
             'enc': 'clear',
             'load': {
                 'jid': batch.batch_jid,
-                'minions': [],
-                'missing': []
+                'minions': minions,
+                'missing': missing
             }
         }
 
@@ -2148,7 +2148,7 @@ class ClearFuncs(object):
                     }
                 }
         if extra.get('batch', None):
-            return self.publish_batch(clear_load)
+            return self.publish_batch(clear_load, minions, missing)
         else:
             jid = self._prep_jid(clear_load, extra)
             if jid is None:

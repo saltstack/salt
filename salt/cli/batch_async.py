@@ -84,6 +84,8 @@ class BatchAsync(object):
                     self.down_minions.remove(minion)
                     self.batch_size = get_bnum(self.opts, self.minions, True)
                     self.to_run = self.minions.difference(self.done_minions).difference(self.active)
+                    if not self.down_minions:
+                        self.event.io_loop.call_later(self.batch_delay, self.start_batch)
                 elif op == 'find_job_return':
                     self.find_job_returned.add(minion)
                 elif op == 'batch_run':
@@ -95,10 +97,17 @@ class BatchAsync(object):
                 if not self.initialized:
                     #start batching even if not all minions respond to ping
                     self.event.io_loop.call_later(
-                        self.opts['gather_job_timeout'], self.next)
-                    self.initialized = True
+                        self.opts['gather_job_timeout'], self.start_batch)
 
         if self.initialized and self.done_minions == self.minions.difference(self.timedout_minions):
+            self.event.fire_event(
+                {
+                    "available_minions": self.minions,
+                    "down_minions": self.down_minions,
+                    "done_minions": self.done_minions,
+                    "timedout_minions": self.timedout_minions
+                },
+                "salt/batch/%s/done" % self.batch_jid)
             # TODO how to really close this event handler?
             del self.event
 
@@ -158,7 +167,21 @@ class BatchAsync(object):
         self.down_minions = set(ping_return['minions'])
 
     @tornado.gen.coroutine
+    def start_batch(self):
+        if not self.initialized:
+            self.initialized = True
+            self.event.fire_event(
+                {
+                    "available_minions": self.minions,
+                    "down_minions": self.down_minions
+                },
+                "salt/batch/%s/start" % self.batch_jid)
+            yield self.next()
+
+    @tornado.gen.coroutine
     def next(self):
+        if not self.initialized:
+            self.initialized = True
         next_batch = self._get_next()
         if next_batch:
             yield self.local.run_job_async(
