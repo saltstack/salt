@@ -1879,7 +1879,7 @@ def run_stderr(cmd,
         the return code will be overridden with zero.
 
       .. versionadded:: Neon
- 
+
     :param bool stdin_raw_newlines: False
         If ``True``, Salt will not automatically convert the characters ``\\n``
         present in the ``stdin`` value to newlines.
@@ -2129,7 +2129,7 @@ def run_all(cmd,
         the return code will be overridden with zero.
 
       .. versionadded:: Neon
- 
+
     :param bool stdin_raw_newlines: False
         If ``True``, Salt will not automatically convert the characters ``\\n``
         present in the ``stdin`` value to newlines.
@@ -2346,7 +2346,7 @@ def retcode(cmd,
         the return code will be overridden with zero.
 
       .. versionadded:: Neon
- 
+
     :param bool stdin_raw_newlines: False
         If ``True``, Salt will not automatically convert the characters ``\\n``
         present in the ``stdin`` value to newlines.
@@ -2617,7 +2617,7 @@ def script(source,
         the return code will be overridden with zero.
 
       .. versionadded:: Neon
- 
+
     :param bool stdin_raw_newlines: False
         If ``True``, Salt will not automatically convert the characters ``\\n``
         present in the ``stdin`` value to newlines.
@@ -2882,7 +2882,7 @@ def script_retcode(source,
         the return code will be overridden with zero.
 
       .. versionadded:: Neon
- 
+
     :param bool stdin_raw_newlines: False
         If ``True``, Salt will not automatically convert the characters ``\\n``
         present in the ``stdin`` value to newlines.
@@ -3222,7 +3222,7 @@ def run_chroot(root,
         the return code will be overridden with zero.
 
       .. versionadded:: Neon
- 
+
     CLI Example:
 
     .. code-block:: bash
@@ -3723,7 +3723,7 @@ def powershell(cmd,
         the return code will be overridden with zero.
 
       .. versionadded:: Neon
- 
+
     :param bool stdin_raw_newlines: False
         If ``True``, Salt will not automatically convert the characters ``\\n``
         present in the ``stdin`` value to newlines.
@@ -4043,7 +4043,7 @@ def powershell_all(cmd,
         the return code will be overridden with zero.
 
       .. versionadded:: Neon
- 
+
     :param bool stdin_raw_newlines: False
         If ``True``, Salt will not automatically convert the characters ``\\n``
         present in the ``stdin`` value to newlines.
