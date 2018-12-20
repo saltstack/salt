@@ -327,6 +327,8 @@ mountpoint to ``web/`` (and restart the ``salt-master`` daemon).
       :conf_master:`git_pillar_includes` is not disabled.
     - Content from mounted git_pillar repos can only be referenced by a top
       file in the same pillar environment.
+    - Salt versions prior to 2018.3.4 ignore the ``root`` parameter when
+      ``mountpoint`` is set.
 '''
 from __future__ import absolute_import, print_function, unicode_literals
 
