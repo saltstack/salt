@@ -78,6 +78,14 @@ def _clear_instance_map():
         pass
 
 
+# recursively find all directory symlinks within top_dir
+def _find_dir_symlinks(top_dir):
+    for (root_dir, dirs, _) in os.walk(top_dir):
+        for full_path in [os.path.join(root_dir, d) for d in dirs]:
+            if os.path.islink(full_path):
+                yield full_path
+
+
 @skipIf(not HAS_GITPYTHON, 'GitPython >= {0} required'.format(GITPYTHON_MINVER))
 class GitfsConfigTestCase(TestCase, LoaderModuleMockMixin):
 
@@ -402,7 +410,8 @@ class GitFSTestBase(object):
                 raise
         shutil.copytree(
             salt.ext.six.text_type(RUNTIME_VARS.BASE_FILES),
-            salt.ext.six.text_type(cls.tmp_repo_dir + '/')
+            salt.ext.six.text_type(cls.tmp_repo_dir + '/'),
+            symlinks=True
         )
 
         repo = git.Repo.init(cls.tmp_repo_dir)
@@ -421,6 +430,11 @@ class GitFSTestBase(object):
 
             repo.index.add([x for x in os.listdir(cls.tmp_repo_dir)
                             if x != '.git'])
+
+            # GitPython does not add directory symlinks during the recursive
+            # additions above. This must be explicitly done.
+            repo.index.add(_find_dir_symlinks(cls.tmp_repo_dir))
+
             repo.index.commit('Test')
 
             # Add another branch with unicode characters in the name
