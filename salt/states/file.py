@@ -2047,7 +2047,7 @@ def managed(name,
 
     contents_pillar
         .. versionadded:: 0.17.0
-        .. versionchanged: 2016.11.0
+        .. versionchanged:: 2016.11.0
             contents_pillar can also be a list, and the pillars will be
             concatinated together to form one file.
 
