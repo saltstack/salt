@@ -376,6 +376,30 @@ def get_jid(jid):
         return ret
 
 
+def get_jids_filter(count, filter_find_job=True):
+    '''
+    Return a list of all job ids
+    :param int count: show not more than the count of most recent jobs
+    :param bool filter_find_jobs: filter out 'saltutil.find_job' jobs
+    '''
+    with _get_serv(ret=None, commit=True) as cur:
+
+        sql = '''SELECT * FROM (
+                     SELECT DISTINCT jid, load FROM jids
+                     {0}
+                     ORDER BY jid DESC limit {1}
+                 ) tmp
+                 ORDER BY jid;'''
+        where = '''WHERE CAST(load -> 'fun' AS TEXT) NOT LIKE '"saltutil.find_job"%' '''
+
+        cur.execute(sql.format(where if filter_find_job else '', count))
+        data = cur.fetchall()
+        ret = {}
+        for jid, load in data:
+            ret[jid] = salt.utils.jid.format_jid_instance(jid, load)
+        return ret
+
+
 def get_fun(fun):
     '''
     Return a dict of the last function called for all minions
