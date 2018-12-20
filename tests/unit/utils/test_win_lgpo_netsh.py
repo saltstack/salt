@@ -335,6 +335,7 @@ class WinLgpoNetshTestCase(TestCase):
     @destructiveTest
     def test_set_firewall_settings_fwrules_local_enable(self):
         self.assertRaises(
+            CommandExecutionError,
             win_lgpo_netsh.set_settings,
             profile='domain',
             setting='localfirewallrules',
@@ -366,6 +367,7 @@ class WinLgpoNetshTestCase(TestCase):
     @destructiveTest
     def test_set_firewall_settings_consecrules_local_enable(self):
         self.assertRaises(
+            CommandExecutionError,
             win_lgpo_netsh.set_settings,
             profile='domain',
             setting='localconsecrules',
