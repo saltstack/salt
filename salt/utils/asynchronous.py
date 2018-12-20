@@ -5,7 +5,6 @@ Helpers/utils for working with tornado asynchronous stuff
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
-import os
 import logging
 import contextlib
 
@@ -48,21 +47,14 @@ class SyncWrapper(object):
     ret = sync.async_method()
     '''
 
-    io_loops = weakref.WeakValueDictionary()
-
     def __init__(self, method, args=tuple(), kwargs=None):
         if kwargs is None:
             kwargs = {}
 
-        pid = os.getpid()
-        io_loop = SyncWrapper.io_loops.get(pid)
-        if io_loop is None:
-            io_loop = zeromq.ZMQDefaultLoop()
-            SyncWrapper.io_loops[pid] = io_loop
-            weakref.finalize(io_loop, io_loop.close, all_fds=True)
-        self.io_loop = io_loop
+        self.io_loop = zeromq.ZMQDefaultLoop()
         with current_ioloop(self.io_loop):
             self.asynchronous = method(*args, **kwargs)
+
         weakref.finalize(self, self.__destroy__, self.__dict__)
 
     def __getattribute__(self, key):
@@ -96,6 +88,26 @@ class SyncWrapper(object):
         On deletion of the asynchronous wrapper, make sure to clean up the asynchronous stuff
         '''
         log.debug('Destroying %s instance', cls.__name__)
-        asynchronous = instance_dict.get('asynchronous')
+        asynchronous = instance_dict.pop('asynchronous', None)
         if asynchronous is not None:
-            instance_dict['asynchronous'] = None
+            # Try to close/destroy the wrapped instance.
+            # This is particularly importance because iostream's or sockets
+            # might need to be closed before the IOLoop is closed
+            try:
+                asynchronous.close()
+            except AttributeError:
+                # There's no close method
+                try:
+                    asynchronous.destroy()
+                except AttributeError:
+                    # There's no destroy method
+                    pass
+
+            # As a last resort, free the wrapped instance to be GC'ed
+            del asynchronous
+
+        # Close the IOLoop
+        io_loop = instance_dict.pop('io_loop', None)
+        if io_loop is not None:
+            io_loop.close()
+            del io_loop
