@@ -178,6 +178,12 @@ from salt.ext import six
 
 # Import third party libs
 try:
+    import dateutil.parser as dateutil_parser
+    DATEUTIL_SUPPORT = True
+except ImportError:
+    DATEUTIL_SUPPORT = False
+
+try:
     import psycopg2
     import psycopg2.extras
     HAS_PG = True
@@ -424,7 +430,7 @@ def get_fun(fun):
         return ret
 
 
-def get_jids():
+def get_jids(job_filter):
     '''
     Return a list of all job ids
     '''
@@ -432,6 +438,44 @@ def get_jids():
 
         sql = '''SELECT jid, load
                 FROM jids'''
+
+        if (job_filter['search_metadata'] or
+            job_filter['search_target'] or
+            job_filter['search_function'] or
+            job_filter['start_time'] or
+            job_filter['end_time']):
+            sql += ' WHERE '
+            filter_start = 0
+
+            if job_filter['search_target']:
+                if filter_start == 1:
+                    sql += ' AND '
+                filter_start = 1
+                sql += """ load->'tgt' ? '{0}'""".format(job_filter['search_target'])
+
+            if job_filter['search_function']:
+                if filter_start == 1:
+                    sql += ' AND '
+                filter_start = 1
+                sql += """ CAST(load @> '{"fun": "{0}"}' """.format(job_filter['search_function'])
+
+            if job_filter['start_time']:
+                if filter_start == 1:
+                    sql += ' AND '
+                filter_start = 1
+                if DATEUTIL_SUPPORT:
+                    parsed_start_time = str(dateutil_parser.parse(job_filter['start_time']))
+                    sql += (" to_timestamp(jid, 'YYYYMMDDHH24miSSUS') >="
+                            "to_timestamp('{0}', 'YYYY-MM-DD HH24:mi:SS')".format(parsed_start_time))
+
+            if job_filter['end_time']:
+                if filter_start == 1:
+                    sql += ' AND '
+                filter_start = 1
+                if DATEUTIL_SUPPORT:
+                    parsed_end_time = str(dateutil_parser.parse(job_filter['end_time']))
+                    sql += (" to_timestamp(jid, 'YYYYMMDDHH24miSSUS') <="
+                            " to_timestamp('{0}', 'YYYY-MM-DD HH24:mi:SS')".format(parsed_end_time))
 
         cur.execute(sql)
         data = cur.fetchall()
