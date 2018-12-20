@@ -698,27 +698,6 @@ class CkMinions(object):
             _res = {'minions': [], 'missing': []}
         return _res
 
-    def _expand_matching(self, auth_entry):
-        ref = {'G': 'grain',
-               'P': 'grain_pcre',
-               'I': 'pillar',
-               'J': 'pillar_pcre',
-               'L': 'list',
-               'S': 'ipcidr',
-               'E': 'pcre',
-               'N': 'node',
-               None: 'compound'}
-
-        target_info = parse_target(auth_entry)
-        if not target_info:
-            log.error('Failed to parse valid target "%s"', auth_entry)
-
-        v_matcher = ref.get(target_info['engine'])
-        v_expr = target_info['pattern']
-
-        _res = self.check_minions(v_expr, v_matcher)
-        return set(_res['minions'])
-
     def validate_tgt(self, valid, expr, tgt_type, minions=None, expr_form=None):
         '''
         Return a Bool. This function returns if the expression sent in is
@@ -735,7 +714,7 @@ class CkMinions(object):
             )
             tgt_type = expr_form
 
-        v_minions = self._expand_matching(valid)
+        v_minions = set(self.check_minions(valid, 'compound'))
         if minions is None:
             _res = self.check_minions(expr, tgt_type)
             minions = set(_res['minions'])
@@ -875,7 +854,7 @@ class CkMinions(object):
                     continue
             allowed_minions.update(set(auth_list_entry.keys()))
             for key in auth_list_entry:
-                for match in self._expand_matching(key):
+                for match in set(self.check_minions(key, 'compound')):
                     if match in auth_dictionary:
                         auth_dictionary[match].extend(auth_list_entry[key])
                     else:
@@ -883,7 +862,7 @@ class CkMinions(object):
 
         allowed_minions_from_auth_list = set()
         for next_entry in allowed_minions:
-            allowed_minions_from_auth_list.update(self._expand_matching(next_entry))
+            allowed_minions_from_auth_list.update(set(self.check_minions(next_entry, 'compound')))
         # 'minions' here are all the names of minions matched by the target
         # if we take out all the allowed minions, and there are any left, then
         # the target includes minions that are not allowed by eauth
