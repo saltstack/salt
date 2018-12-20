@@ -34,6 +34,7 @@ import salt.transport.mixins.auth
 from salt.ext import six
 from salt.exceptions import SaltReqTimeoutError
 from salt._compat import weakref
+from salt.utils.singleton import Singleton
 
 from salt.utils.zeromq import zmq, ZMQDefaultLoop, install_zmq, ZMQ_VERSION_INFO, LIBZMQ_VERSION_INFO
 import zmq.error
@@ -101,55 +102,68 @@ def _get_master_uri(master_ip,
                 master_ip=master_ip, master_port=master_port)
 
 
-class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
+class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel, Singleton):
     '''
     Encapsulate sending routines to ZeroMQ.
 
     ZMQ Channels default to 'crypt=aes'
     '''
-    # This class is only a singleton per minion/master pair
-    # mapping of io_loop -> {key -> channel}
-    instance_map = weakref.WeakKeyDictionary()
 
-    def __new__(cls, opts, **kwargs):
-        '''
-        Only create one instance of channel per __key()
-        '''
-
-        # do we have any mapping for this io_loop
-        io_loop = kwargs.get('io_loop')
+    def __init__(self, opts, crypt=None, master_uri=None, io_loop=None, **kwargs):
+        opts = dict(opts)
+        if crypt is None:
+            # crypt defaults to 'aes'
+            crypt = 'aes'
+        if master_uri is not None:
+            opts['master_uri'] = master_uri
         if io_loop is None:
             install_zmq()
             io_loop = ZMQDefaultLoop.current()
-        if io_loop not in cls.instance_map:
-            cls.instance_map[io_loop] = weakref.WeakValueDictionary()
-        loop_instance_map = cls.instance_map[io_loop]
+        super(AsyncZeroMQReqChannel, self).__init__(opts,
+                                                    crypt=crypt,
+                                                    master_uri=master_uri,
+                                                    io_loop=io_loop,
+                                                    **kwargs)
 
-        key = cls.__key(opts, **kwargs)
-        obj = loop_instance_map.get(key)
-        if obj is None:
-            log.debug('Initializing new AsyncZeroMQReqChannel for %s', key)
-            # we need to make a local variable for this, as we are going to store
-            # it in a WeakValueDictionary-- which will remove the item if no one
-            # references it-- this forces a reference while we return to the caller
-            obj = object.__new__(cls)
-            obj.__singleton_init__(opts, **kwargs)
-            loop_instance_map[key] = obj
-            log.trace('Inserted key into loop_instance_map id %s for key %s and process %s',
-                      id(loop_instance_map), key, os.getpid())
-            # Don't pass any strong refereces to obj. That's why __singleton_destroy__
-            # is a class method. To access the instance attributes, we pass the instance
-            # dictionary. This way, the finalize code does not have any strong references
-            # to the instance thus allowing weakref's finalize to kick in as soon as the
-            # instance looses all it's references
-            weakref.finalize(obj, obj.__singleton_destroy__, key, obj.__dict__)
+    def __get_state_key__(self, opts, crypt=None, master_uri=None, io_loop=None, **kwargs):  # pylint: disable=arguments-differ
+        return (opts['pki_dir'],                       # where the keys are stored
+                opts['id'],                            # minion ID
+                master_uri or opts.get('master_uri'),  # master ID
+                crypt,                                  # TODO: use the same channel for crypt
+                id(io_loop))
+
+    def __singleton_init__(self, opts, crypt=None, master_uri=None, io_loop=None, **kwargs):
+        self.opts = opts
+        self.ttype = 'zeromq'
+        self.crypt = crypt
+        self._master_uri = master_uri
+        self._io_loop = io_loop
+        if self.crypt != 'clear':
+            # we don't need to worry about auth as a kwarg, since its a singleton
+            self.auth = salt.crypt.AsyncAuth(self.opts, io_loop=self._io_loop)
+        log.debug('Connecting the Minion to the Master URI (for the return server): %s', self.master_uri)
+        self.message_client = AsyncReqMessageClientPool(self.opts,
+                                                        args=(self.opts, self.master_uri,),
+                                                        kwargs={'io_loop': self._io_loop})
+
+    @staticmethod
+    def __singleton_deinit__(state):
+        '''
+        Since the message_client creates sockets and assigns them to the IOLoop we have to
+        specifically destroy them, since we aren't the only ones with references to the FDs
+        '''
+        message_client = state.get('message_client')
+        if message_client is not None:
+            message_client.destroy()
+            del state['message_client']
         else:
-            log.debug('Re-using AsyncZeroMQReqChannel for %s', key)
-        return obj
+            log.debug('No message_client attr for AsyncZeroMQReqChannel found. Not destroying sockets.')
 
     def __deepcopy__(self, memo):
-        cls = self.__class__
-        result = cls.__new__(cls, copy.deepcopy(self.opts, memo))  # pylint: disable=too-many-function-args
+        result = self.__class__(copy.deepcopy(self.opts),
+                                crypt=self.crypt,
+                                master_uri=self._master_uri,
+                                io_loop=self._io_loop)
         memo[id(self)] = result
         for key in self.__dict__:
             if key in ('_io_loop',):
@@ -168,79 +182,6 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
                 continue
             setattr(result, key, copy.deepcopy(self.__dict__[key], memo))
         return result
-
-    @classmethod
-    def __key(cls, opts, **kwargs):
-        return (opts['pki_dir'],     # where the keys are stored
-                opts['id'],          # minion ID
-                kwargs.get('master_uri', opts.get('master_uri')),  # master ID
-                kwargs.get('crypt', 'aes'),  # TODO: use the same channel for crypt
-                )
-
-    # has to remain empty for singletons, since __init__ will *always* be called
-    def __init__(self, opts, **kwargs):
-        pass
-
-    # an init for the singleton instance to call
-    def __singleton_init__(self, opts, **kwargs):
-        self.opts = dict(opts)
-        self.ttype = 'zeromq'
-
-        # crypt defaults to 'aes'
-        self.crypt = kwargs.get('crypt', 'aes')
-
-        if 'master_uri' in kwargs:
-            self.opts['master_uri'] = kwargs['master_uri']
-
-        self._io_loop = kwargs.get('io_loop')
-        if self._io_loop is None:
-            install_zmq()
-            self._io_loop = ZMQDefaultLoop.current()
-
-        if self.crypt != 'clear':
-            # we don't need to worry about auth as a kwarg, since its a singleton
-            self.auth = salt.crypt.AsyncAuth(self.opts, io_loop=self._io_loop)
-        log.debug('Connecting the Minion to the Master URI (for the return server): %s', self.master_uri)
-        self.message_client = AsyncReqMessageClientPool(self.opts,
-                                                        args=(self.opts, self.master_uri,),
-                                                        kwargs={'io_loop': self._io_loop})
-
-    @classmethod
-    def __singleton_destroy__(cls, instance_key, instance_dict):
-        '''
-        Since the message_client creates sockets and assigns them to the IOLoop we have to
-        specifically destroy them, since we aren't the only ones with references to the FDs
-        '''
-        if instance_dict.get('_closing') or False:
-            return
-
-        log.debug(
-            'Destroying %s instance with map key of: %s',
-            cls.__name__,
-            instance_key
-        )
-
-        instance_dict['_closing'] = True
-
-        message_client = instance_dict.get('message_client')
-        if message_client is not None:
-            # message_client.destroy()  # Just deref and weakref.finalize will take care of cleanup
-            del instance_dict['message_client']
-        else:
-            log.debug('No message_client attr for AsyncZeroMQReqChannel found. Not destroying sockets.')
-
-        # Remove the entry from the instance map so that a closed entry may
-        # not be reused.
-        # This forces this operation even if the reference count of the entry
-        # has not yet gone to zero.
-        io_loop = instance_dict.get('io_loop')
-        if io_loop and io_loop in cls.instance_map:
-            loop_instance_map = cls.instance_map[io_loop]
-            if instance_key in loop_instance_map:
-                del loop_instance_map[instance_key]
-            if not loop_instance_map:
-                del cls.instance_map[io_loop]
-            instance_dict['io_loop'] = None
 
     @property
     def master_uri(self):
@@ -360,6 +301,9 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
         else:
             ret = yield self._crypted_transfer(load, tries=tries, timeout=timeout, raw=raw)
         raise tornado.gen.Return(ret)
+
+    def close(self):
+        self._finalizer()
 
 
 class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.transport.client.AsyncPubChannel):
@@ -1124,18 +1068,23 @@ class AsyncReqMessageClient(object):
                         if exc.errno != errno.EBADF:
                             # if it's not a bad file descriptor error, raise
                             raise
-            instance_dict['stream'] = None
+            del instance_dict['stream']
 
         _socket = instance_dict.get('socket')
         if _socket is not None:
             _socket.close()
-            instance_dict['socket'] = None
+            del instance_dict['socket']
 
         context = instance_dict.get('context')
         if context is not None:
             if context.closed is False:
                 context.term()
-            instance_dict['context'] = None
+            del instance_dict['context']
+
+        for key in ('send_queue', 'send_future_map', 'send_timeout'):
+            attr = instance_dict.get(key)
+            if attr is not None:
+                del instance_dict[key]
 
     def _init_socket(self):
         if hasattr(self, 'stream'):
@@ -1144,7 +1093,11 @@ class AsyncReqMessageClient(object):
             del self.stream
             del self.socket
 
-        self.socket = self.context.socket(zmq.REQ)
+        try:
+            self.socket = self.context.socket(zmq.REQ)
+        except AttributeError:
+            self.context = zmq.Context()
+            self.socket = self.context.socket(zmq.REQ)
 
         # socket options
         if hasattr(zmq, 'RECONNECT_IVL_MAX'):

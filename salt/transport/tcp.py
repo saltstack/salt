@@ -35,6 +35,7 @@ from salt.ext.six.moves import queue  # pylint: disable=import-error
 from salt.exceptions import SaltReqTimeoutError, SaltClientError
 from salt.transport import iter_transport_opts
 from salt._compat import weakref
+from salt.utils.singleton import Singleton
 
 # Import Tornado Libs
 import tornado
@@ -216,71 +217,43 @@ if USE_LOAD_BALANCER:
 
 
 # TODO: move serial down into message library
-class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
+class AsyncTCPReqChannel(salt.transport.client.ReqChannel, Singleton):
     '''
     Encapsulate sending routines to tcp.
 
     Note: this class returns a singleton
     '''
-    # This class is only a singleton per minion/master pair
-    # mapping of io_loop -> {key -> channel}
-    instance_map = weakref.WeakKeyDictionary()
 
-    def __new__(cls, opts, **kwargs):
-        '''
-        Only create one instance of channel per __key()
-        '''
-        # do we have any mapping for this io_loop
-        io_loop = kwargs.get('io_loop') or tornado.ioloop.IOLoop.current()
-        if io_loop not in cls.instance_map:
-            cls.instance_map[io_loop] = weakref.WeakValueDictionary()
-        loop_instance_map = cls.instance_map[io_loop]
-
-        key = cls.__key(opts, **kwargs)
-        obj = loop_instance_map.get(key)
-        if obj is None:
-            log.debug('Initializing new AsyncTCPReqChannel for %s', key)
-            # we need to make a local variable for this, as we are going to store
-            # it in a WeakValueDictionary-- which will remove the item if no one
-            # references it-- this forces a reference while we return to the caller
-            obj = object.__new__(cls)
-            obj.__singleton_init__(opts, **kwargs)
-            loop_instance_map[key] = obj
-            # Don't pass any strong refereces to obj. That's why __singleton_destroy__
-            # is a class method. To access the instance attributes, we pass the instance
-            # dictionary. This way, the finalize code does not have any strong references
-            # to the instance thus allowing weakref's finalize to kick in as soon as the
-            # instance looses all it's references
-            weakref.finalize(obj, obj.__singleton_destroy__, key, obj.__dict__)
+    def __init__(self, opts, crypt=None, master_uri=None, io_loop=None, **kwargs):
+        opts = dict(opts)
+        if crypt is None:
+            # crypt defaults to 'aes'
+            crypt = 'aes'
+        if io_loop is None:
+            io_loop = tornado.ioloop.IOLoop.current()
+        if master_uri is None:
+            master_uri = opts['master_uri']
         else:
-            log.debug('Re-using AsyncTCPReqChannel for %s', key)
-        return obj
+            opts['master_uri'] = master_uri
+        super(AsyncTCPReqChannel, self).__init__(opts,
+                                                 crypt=crypt,
+                                                 master_uri=master_uri,
+                                                 io_loop=io_loop,
+                                                 **kwargs)
 
-    @classmethod
-    def __key(cls, opts, **kwargs):
-        if 'master_uri' in kwargs:
-            opts['master_uri'] = kwargs['master_uri']
+    def __get_state_key__(self, opts, crypt=None, master_uri=None, io_loop=None, **kwargs):  # pylint: disable=arguments-differ
         return (opts['pki_dir'],     # where the keys are stored
                 opts['id'],          # minion ID
-                opts['master_uri'],
-                kwargs.get('crypt', 'aes'),  # TODO: use the same channel for crypt
-                )
-
-    # has to remain empty for singletons, since __init__ will *always* be called
-    def __init__(self, opts, **kwargs):
-        pass
+                master_uri,
+                crypt,               # TODO: use the same channel for crypt
+                id(io_loop))
 
     # an init for the singleton instance to call
-    def __singleton_init__(self, opts, **kwargs):
-        self.opts = dict(opts)
-
+    def __singleton_init__(self, opts, crypt=None, master_uri=None, io_loop=None, **kwargs):
+        self.opts = opts
         self.serial = salt.payload.Serial(self.opts)
-
-        # crypt defaults to 'aes'
-        self.crypt = kwargs.get('crypt', 'aes')
-
-        self.io_loop = kwargs.get('io_loop') or tornado.ioloop.IOLoop.current()
-
+        self.crypt = crypt
+        self.io_loop = io_loop
         if self.crypt != 'clear':
             self.auth = salt.crypt.AsyncAuth(self.opts, io_loop=self.io_loop)
 
@@ -296,40 +269,16 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
                                                             'source_ip': self.opts.get('source_ip'),
                                                             'source_port': self.opts.get('source_ret_port')})
 
-    @classmethod
-    def __singleton_destroy__(cls, instance_key, instance_dict):
+    @staticmethod
+    def __singleton_deinit__(state):
         '''
         Routines to handle any cleanup before the instance shuts down.
         Sockets and filehandles should be closed explicitly, to prevent
         leaks.
         '''
-        if instance_dict.get('_closing') or False:
-            return
-
-        log.debug(
-            'Destroying %s instance with map key of: %s',
-            cls.__name__,
-            instance_key
-        )
-        instance_dict['_closing'] = True
-
-        message_client = instance_dict.get('message_client')
+        message_client = state.get('message_client')
         if message_client is not None:
             message_client.close()
-            instance_dict['message_client'] = None
-
-        # Remove the entry from the instance map so that a closed entry may
-        # not be reused.
-        # This forces this operation even if the reference count of the entry
-        # has not yet gone to zero.
-        io_loop = instance_dict.get('io_loop')
-        if io_loop and io_loop in cls.instance_map:
-            loop_instance_map = cls.instance_map[io_loop]
-            if instance_key in loop_instance_map:
-                del loop_instance_map[instance_key]
-            if not loop_instance_map:
-                del cls.instance_map[io_loop]
-            instance_dict['io_loop'] = None
 
     def _package_load(self, load):
         return {
@@ -409,12 +358,7 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
         raise tornado.gen.Return(ret)
 
     def close(self):
-        salt.utils.versions.warn_until(
-            'Sodium',
-            'Explicitly closing {} is deprecated and will happen as soon as there are '
-            'no other references to the class instance'.format(self.__class__.__name__),
-            stacklevel=3
-        )
+        self._finalizer()
 
 
 class AsyncTCPPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.transport.client.AsyncPubChannel):

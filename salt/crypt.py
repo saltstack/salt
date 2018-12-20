@@ -71,6 +71,7 @@ import salt.utils.user
 import salt.utils.verify
 import salt.version
 from salt._compat import weakref
+from salt.utils.singleton import Singleton
 from salt.exceptions import (
     AuthenticationError, SaltClientError, SaltReqTimeoutError, MasterExit
 )
@@ -436,60 +437,25 @@ class MasterKeys(dict):
         return self.pub_signature
 
 
-class AsyncAuth(object):
+class AsyncAuth(Singleton):
     '''
     Set up an Async object to maintain authentication with the salt master
     '''
-    # This class is only a singleton per minion/master pair
-    # mapping of io_loop -> {key -> auth}
-    instance_map = weakref.WeakKeyDictionary()
 
     # mapping of key -> creds
     creds_map = {}
 
-    def __new__(cls, opts, io_loop=None):
-        '''
-        Only create one instance of AsyncAuth per __key()
-        '''
-        # do we have any mapping for this io_loop
-        io_loop = io_loop or tornado.ioloop.IOLoop.current()
-        if io_loop not in AsyncAuth.instance_map:
-            AsyncAuth.instance_map[io_loop] = weakref.WeakValueDictionary()
-        loop_instance_map = AsyncAuth.instance_map[io_loop]
+    def __init__(self, opts, io_loop=None):
+        if io_loop is None:
+            io_loop = tornado.ioloop.IOLoop.current()
+        super(AsyncAuth, self).__init__(opts, io_loop=io_loop)
 
-        key = cls.__key(opts)
-        auth = loop_instance_map.get(key)
-        if auth is None:
-            log.debug('Initializing new AsyncAuth for %s', key)
-            # we need to make a local variable for this, as we are going to store
-            # it in a WeakValueDictionary-- which will remove the item if no one
-            # references it-- this forces a reference while we return to the caller
-            auth = object.__new__(cls)
-            auth.__singleton_init__(opts, io_loop=io_loop)
-            loop_instance_map[key] = auth
-            # Don't pass any strong refereces to the instance . That's why
-            # __singleton_destroy__ is a class method. To access the instance
-            # attributes, we pass the instance dictionary. This way, the
-            # finalize code does not have any strong references to the instance
-            # thus allowing weakref's finalize to kick in as soon as the
-            # instance looses all it's references
-            weakref.finalize(auth, auth.__singleton_destroy__, key, auth.__dict__)
-        else:
-            log.debug('Re-using AsyncAuth for %s', key)
-        return auth
-
-    @classmethod
-    def __key(cls, opts, io_loop=None):
+    def __get_state_key__(self, opts, io_loop=None):
         return (opts['pki_dir'],     # where the keys are stored
                 opts['id'],          # minion ID
                 opts['master_uri'],  # master ID
-                )
+                id(io_loop))
 
-    # has to remain empty for singletons, since __init__ will *always* be called
-    def __init__(self, opts, io_loop=None):
-        pass
-
-    # an init for the singleton instance to call
     def __singleton_init__(self, opts, io_loop=None):
         '''
         Init an Auth instance
@@ -499,6 +465,7 @@ class AsyncAuth(object):
         :rtype: Auth
         '''
         self.opts = opts
+        self.io_loop = io_loop
         if six.PY2:
             self.token = Crypticle.generate_key_string()
         else:
@@ -513,13 +480,11 @@ class AsyncAuth(object):
         if not os.path.isfile(self.pub_path):
             self.get_keys()
 
-        self.io_loop = io_loop or tornado.ioloop.IOLoop.current()
-
         salt.utils.crypt.reinit_crypto()
-        key = self.__key(self.opts)
+
         # TODO: if we already have creds for this key, lets just re-use
-        if key in AsyncAuth.creds_map:
-            creds = AsyncAuth.creds_map[key]
+        if self._state_key in AsyncAuth.creds_map:
+            creds = AsyncAuth.creds_map[self._state_key]
             self._creds = creds
             self._crypticle = Crypticle(self.opts, creds['aes'])
             self._authenticate_future = tornado.concurrent.Future()
@@ -527,44 +492,21 @@ class AsyncAuth(object):
         else:
             self.authenticate()
 
-    @classmethod
-    def __singleton_destroy__(cls, instance_key, instance_dict):
+    @staticmethod
+    def __singleton_deinit__(state):
         '''
         Routines to handle any cleanup before the instance shuts down.
         Sockets and filehandles should be closed explicitly, to prevent
         leaks.
         '''
-        if instance_dict.get('_closing') or False:
-            return
-
-        log.debug(
-            'Destroying %s instance with map key of: %s',
-            cls.__name__,
-            instance_key
-        )
-
-        instance_dict['_closing'] = True
-
         # Cleanup creds
-        if instance_key in cls.creds_map:
-            del cls.creds_map[instance_key]
-
-        # Remove the entry from the instance map so that a closed entry may
-        # not be reused.
-        # This forces this operation even if the reference count of the entry
-        # has not yet gone to zero.
-        io_loop = instance_dict.get('io_loop')
-        if io_loop and io_loop in cls.instance_map:
-            loop_instance_map = cls.instance_map[io_loop]
-            if instance_key in loop_instance_map:
-                del loop_instance_map[instance_key]
-            if not loop_instance_map:
-                del cls.instance_map[io_loop]
-            instance_dict['io_loop'] = None
+        try:
+            del AsyncAuth.creds_map[state['_state_key']]
+        except KeyError:
+            pass
 
     def __deepcopy__(self, memo):
-        cls = self.__class__
-        result = cls.__new__(cls, copy.deepcopy(self.opts, memo), io_loop=None)
+        result = self.__class__(copy.deepcopy(self.opts, memo), io_loop=None)
         memo[id(self)] = result
         for key in self.__dict__:
             if key in ('io_loop',):
@@ -592,9 +534,10 @@ class AsyncAuth(object):
     def invalidate(self):
         if self.authenticated:
             del self._authenticate_future
-            key = self.__key(self.opts)
-            if key in AsyncAuth.creds_map:
-                del AsyncAuth.creds_map[key]
+            try:
+                del AsyncAuth.creds_map[self._state_key]
+            except KeyError:
+                pass
 
     def authenticate(self, callback=None):
         '''
@@ -677,22 +620,27 @@ class AsyncAuth(object):
             if self.opts.get('detect_mode') is True:
                 error = SaltClientError('-|RETRY|-')
             try:
-                del AsyncAuth.creds_map[self.__key(self.opts)]
+                del AsyncAuth.creds_map[self._state_key]
             except KeyError:
                 pass
             if not error:
                 error = SaltClientError('Attempt to authenticate with the salt master failed')
             self._authenticate_future.set_exception(error)
         else:
-            key = self.__key(self.opts)
-            AsyncAuth.creds_map[key] = creds
+            AsyncAuth.creds_map[self._state_key] = creds
             self._creds = creds
             self._crypticle = Crypticle(self.opts, creds['aes'])
             self._authenticate_future.set_result(True)  # mark the sign-in as complete
             # Notify the bus about creds change
             if self.opts.get('auth_events') is True:
                 event = salt.utils.event.get_event(self.opts.get('__role'), opts=self.opts, listen=False)
-                event.fire_event({'key': key, 'creds': creds}, salt.utils.event.tagify(prefix='auth', suffix='creds'))
+                event.fire_event(
+                    {
+                        'key': self._state_key,
+                        'creds': creds
+                    },
+                    salt.utils.event.tagify(prefix='auth', suffix='creds')
+                )
 
     @tornado.gen.coroutine
     def sign_in(self, timeout=60, safe=True, tries=1, channel=None):
@@ -729,8 +677,8 @@ class AsyncAuth(object):
 
         if not channel:
             channel = salt.transport.client.AsyncReqChannel.factory(self.opts,
-                                                                crypt='clear',
-                                                                io_loop=self.io_loop)
+                                                                    crypt='clear',
+                                                                    io_loop=self.io_loop)
 
         sign_in_payload = self.minion_sign_in_payload()
         try:
@@ -1168,43 +1116,14 @@ class SAuth(AsyncAuth):
     '''
     Set up an object to maintain authentication with the salt master
     '''
-    # This class is only a singleton per minion/master pair
-    instances = weakref.WeakValueDictionary()
 
-    def __new__(cls, opts, io_loop=None):
-        '''
-        Only create one instance of SAuth per __key()
-        '''
-        key = cls.__key(opts)
-        auth = SAuth.instances.get(key)
-        if auth is None:
-            log.debug('Initializing new SAuth for %s', key)
-            auth = object.__new__(cls)
-            auth.__singleton_init__(opts)
-            SAuth.instances[key] = auth
-            # Don't pass any strong refereces to the instance . That's why
-            # __singleton_destroy__ is a class method. To access the instance
-            # attributes, we pass the instance dictionary. This way, the
-            # finalize code does not have any strong references to the instance
-            # thus allowing weakref's finalize to kick in as soon as the
-            # instance looses all it's references
-            weakref.finalize(auth, auth.__singleton_destroy__, key, auth.__dict__)
-        else:
-            log.debug('Re-using SAuth for %s', key)
-        return auth
+    creds_map = {}
 
-    @classmethod
-    def __key(cls, opts, io_loop=None):
+    def __get_state_key__(self, opts, io_loop=None):
         return (opts['pki_dir'],     # where the keys are stored
                 opts['id'],          # minion ID
-                opts['master_uri'],  # master ID
-                )
+                opts['master_uri'])  # master ID
 
-    # has to remain empty for singletons, since __init__ will *always* be called
-    def __init__(self, opts, io_loop=None):
-        super(SAuth, self).__init__(opts, io_loop=io_loop)
-
-    # an init for the singleton instance to call
     def __singleton_init__(self, opts, io_loop=None):
         '''
         Init an Auth instance
@@ -1230,28 +1149,18 @@ class SAuth(AsyncAuth):
         if not os.path.isfile(self.pub_path):
             self.get_keys()
 
-    @classmethod
-    def __singleton_destroy__(cls, instance_key, instance_dict):
+    @staticmethod
+    def __singleton_deinit__(state):
         '''
         Routines to handle any cleanup before the instance shuts down.
         Sockets and filehandles should be closed explicitly, to prevent
         leaks.
         '''
-        if instance_dict.get('_closing') or False:
-            return
-
-        log.debug(
-            'Destroying %s instance with map key of: %s',
-            cls.__name__,
-            instance_key
-        )
-
-        # Cleanup instances
-        if instance_key in cls.instances:
-            del cls.instances[instance_key]
-
-        # Call super()'s __singleton_destroy__ for the remaining cleanup
-        super(SAuth, cls).__singleton_destroy__(instance_key, instance_dict)
+        # Cleanup creds
+        try:
+            del SAuth.creds_map[state['_state_key']]
+        except KeyError:
+            pass
 
     @property
     def creds(self):

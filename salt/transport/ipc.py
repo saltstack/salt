@@ -26,6 +26,7 @@ import salt.transport.client
 import salt.transport.frame
 from salt.ext import six
 from salt._compat import weakref
+from salt.utils.singleton import Singleton
 
 log = logging.getLogger(__name__)
 
@@ -233,7 +234,7 @@ class IPCServer(object):
         )
 
 
-class IPCClient(object):
+class IPCClient(Singleton):
     '''
     A Tornado IPC client very similar to Tornado's TCPClient class
     but using either UNIX domain sockets or TCP sockets
@@ -250,36 +251,7 @@ class IPCClient(object):
                                 localhost connection.
     '''
 
-    # Create singleton map between two sockets
-    instance_map = weakref.WeakKeyDictionary()
-
-    def __new__(cls, socket_path, io_loop=None):
-        io_loop = io_loop or tornado.ioloop.IOLoop.current()
-        if io_loop not in IPCClient.instance_map:
-            IPCClient.instance_map[io_loop] = weakref.WeakValueDictionary()
-        loop_instance_map = IPCClient.instance_map[io_loop]
-
-        # FIXME
-        key = six.text_type(socket_path)
-
-        client = loop_instance_map.get(key)
-        if client is None:
-            log.debug('Initializing new IPCClient for path: %s', key)
-            client = object.__new__(cls)
-            # FIXME
-            client.__singleton_init__(io_loop=io_loop, socket_path=socket_path)
-            loop_instance_map[key] = client
-            # Don't pass any strong refereces to client. That's why __singleton_destroy__
-            # is a class method. To access the instance attributes, we pass the instance
-            # dictionary. This way, the finalize code does not have any strong references
-            # to the instance thus allowing weakref's finalize to kick in as soon as the
-            # instance looses all it's references
-            weakref.finalize(client, client.__singleton_destroy__, key, client.__dict__)
-        else:
-            log.debug('Re-using IPCClient for %s', key)
-        return client
-
-    def __singleton_init__(self, socket_path, io_loop=None):
+    def __singleton_init__(self, socket_path, io_loop=None):  # pylint: disable=arguments-differ
         '''
         Create a new IPC client
 
@@ -298,49 +270,30 @@ class IPCClient(object):
             encoding = 'utf-8'
         self.unpacker = msgpack.Unpacker(encoding=encoding)
 
-    @classmethod
-    def __singleton_destroy__(cls, instance_key, instance_dict):
+    @staticmethod
+    def __singleton_deinit__(state):
         '''
         Routines to handle any cleanup before the instance shuts down.
         Sockets and filehandles should be closed explicitly, to prevent
         leaks.
         '''
-        if instance_dict.get('_closing') or False:
-            return
-
-        log.debug(
-            'Destroying %s instance with map key of: %s',
-            cls.__name__,
-            instance_key
-        )
-
-        instance_dict['_closing'] = True
-        stream = instance_dict.get('stream')
+        log.warning('IPCClient.__singleton_deinit__() called')
+        stream = state.get('stream')
         if stream is not None and not stream.closed():
+            log.debug('Closing stream: %s', stream)
             try:
                 stream.close()
             except socket.error as exc:
                 if exc.errno != errno.EBADF:
                     # if it's not a bad file descriptor error, raise
                     raise
-            del instance_dict['stream']
 
-        # Remove the entry from the instance map so that a closed entry may
-        # not be reused.
-        # This forces this operation even if the reference count of the entry
-        # has not yet gone to zero.
-        io_loop = instance_dict.get('io_loop')
-        if io_loop and io_loop in cls.instance_map:
-            loop_instance_map = cls.instance_map[io_loop]
-            if instance_key in loop_instance_map:
-                del loop_instance_map[instance_key]
-            if not loop_instance_map:
-                del cls.instance_map[io_loop]
-            instance_dict['io_loop'] = None
+    def __get_state_key__(self, socket_path, io_loop=None):  # pylint: disable=arguments-differ
+        # Pass the io_loop object ID so that we don't hold a strong reference to it
+        return (socket_path, id(io_loop))
 
-    def __init__(self, socket_path, io_loop=None):
-        # Handled by singleton __new__
-        pass
+    def __get_state_key_repr__(self, socket_path, io_loop=None):  # pylint: disable=arguments-differ
+        return 'for path \'{}\''.format(socket_path)
 
     def connected(self):
         return self.stream is not None and not self.stream.closed()
@@ -412,12 +365,7 @@ class IPCClient(object):
                 yield tornado.gen.sleep(1)
 
     def close(self):
-        salt.utils.versions.warn_until(
-            'Sodium',
-            'Explicitly closing {} is deprecated and will happen as soon as there are '
-            'no other references to the class instance'.format(self.__class__.__name__),
-            stacklevel=3
-        )
+        self._finalizer()
 
 
 class IPCMessageClient(IPCClient):
@@ -679,37 +627,21 @@ class IPCMessageSubscriber(IPCClient):
         self.saved_data = []
         self._sync_read_in_progress = Semaphore()
 
-    @classmethod
-    def __singleton_destroy__(cls, instance_key, instance_dict):
-        '''
-        Routines to handle any cleanup before the instance shuts down.
-        Sockets and filehandles should be closed explicitly, to prevent
-        leaks.
-        '''
-        closing = instance_dict.get('_closing') or False
-        if closing is True:
-            return
-
-        log.debug(
-            'Destroying %s instance with map key of: %s',
-            cls.__name__,
-            instance_key
-        )
-
-        # Call super()'s __singleton_destroy__ routines
-        super(IPCMessageSubscriber, cls).__singleton_destroy__(instance_key, instance_dict)
+    @staticmethod
+    def __singleton_deinit__(state):
+        IPCClient.__singleton_deinit__(state)
         # This will prevent this message from showing up:
         # '[ERROR   ] Future exception was never retrieved:
         # StreamClosedError'
-        read_sync_future = instance_dict.get('_read_sync_future')
+        read_sync_future = state.get('_read_sync_future')
         if read_sync_future is not None and read_sync_future.done():
             read_sync_future.exception()
-            instance_dict['_read_sync_future'] = None
+            state['_read_sync_future'] = None
 
-        read_stream_future = instance_dict.get('_read_stream_future')
+        read_stream_future = state.get('_read_stream_future')
         if read_stream_future is not None and read_stream_future.done():
             read_stream_future.exception()
-            instance_dict['_read_stream_future'] = None
+            state['_read_stream_future'] = None
 
     @tornado.gen.coroutine
     def _read_sync(self, timeout, StreamClosedError=iostream.StreamClosedError):
