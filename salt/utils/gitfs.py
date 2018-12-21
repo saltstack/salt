@@ -590,8 +590,8 @@ class GitProvider(object):
         # According to stackoverflow (http://goo.gl/l74GC8), we are setting LANGUAGE as well
         # just to be sure.
         env = os.environ.copy()
-        env["LANGUAGE"] = "C"
-        env["LC_ALL"] = "C"
+        env[b"LANGUAGE"] = b"C"
+        env[b"LC_ALL"] = b"C"
 
         cmd = subprocess.Popen(
             shlex.split(cmd_str),

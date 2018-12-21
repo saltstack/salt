@@ -31,6 +31,7 @@ ARCHIVE_LOCAL_TAR_SOURCE = 'file://{0}'.format(os.path.join(FILES, 'file', 'base
 UNTAR_FILE = os.path.join(ARCHIVE_DIR, 'custom/README')
 ARCHIVE_TAR_HASH = 'md5=7643861ac07c30fe7d2310e9f25ca514'
 ARCHIVE_TAR_BAD_HASH = 'md5=d41d8cd98f00b204e9800998ecf8427e'
+ARCHIVE_TAR_HASH_UPPER = 'md5=7643861AC07C30FE7D2310E9F25CA514'
 
 
 class ArchiveTest(ModuleCase, SaltReturnAssertsMixin):
@@ -231,6 +232,18 @@ class ArchiveTest(ModuleCase, SaltReturnAssertsMixin):
                              source_hash=ARCHIVE_TAR_BAD_HASH)
 
         self.assertSaltFalseReturn(ret)
+
+    def test_local_archive_extracted_with_uppercase_source_hash(self):
+        '''
+        test archive.extracted with local file and bad hash
+        '''
+        ret = self.run_state('archive.extracted', name=ARCHIVE_DIR,
+                             source=ARCHIVE_LOCAL_TAR_SOURCE, archive_format='tar',
+                             source_hash=ARCHIVE_TAR_HASH_UPPER)
+
+        self.assertSaltTrueReturn(ret)
+
+        self._check_extracted(UNTAR_FILE)
 
     def test_archive_extracted_with_non_base_saltenv(self):
         '''
