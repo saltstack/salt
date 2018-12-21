@@ -98,7 +98,7 @@ def _find_key(prefix, pip_list):
     except StopIteration:
         return None
     else:
-        return match
+        return match.lower()
 
 
 def _fulfills_version_spec(version, version_spec):
@@ -918,11 +918,10 @@ def installed(name,
                         )
                     else:
                         pkg_name = _find_key(prefix, pipsearch)
-                        if pkg_name.lower() in already_installed_packages:
-                            continue
-                        ver = pipsearch[pkg_name]
-                        ret['changes']['{0}=={1}'.format(pkg_name,
-                                                         ver)] = 'Installed'
+                        if pkg_name is not None \
+                                and pkg_name not in already_installed_packages:
+                            ver = pipsearch[pkg_name]
+                            ret['changes']['{0}=={1}'.format(pkg_name, ver)] = 'Installed'
                 # Case for packages that are an URL
                 else:
                     ret['changes']['{0}==???'.format(state_name)] = 'Installed'
