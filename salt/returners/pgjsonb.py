@@ -437,13 +437,10 @@ def get_jids(job_filter):
     with _get_serv(ret=None, commit=True) as cur:
 
         sql = '''SELECT jid, load
-                FROM jids'''
+                FROM jids '''
 
-        if (job_filter['search_metadata'] or
-            job_filter['search_target'] or
-            job_filter['search_function'] or
-            job_filter['start_time'] or
-            job_filter['end_time']):
+        executer_filter = {k: v for k, v in job_filter.items() if v is not None}
+        if executer_filter:
             sql += ' WHERE '
             filter_start = 0
 
@@ -451,13 +448,13 @@ def get_jids(job_filter):
                 if filter_start == 1:
                     sql += ' AND '
                 filter_start = 1
-                sql += """ load->'tgt' ? '{0}'""".format(job_filter['search_target'])
+                sql += """ load->'tgt' ? %(search_target)s"""
 
             if job_filter['search_function']:
                 if filter_start == 1:
                     sql += ' AND '
                 filter_start = 1
-                sql += """ load @> '{"fun": "{0}"}' """.format(job_filter['search_function'])
+                sql += """ load @> '{"fun": %(search_function)s}'"""
 
             if job_filter['start_time']:
                 if filter_start == 1:
@@ -465,8 +462,9 @@ def get_jids(job_filter):
                 filter_start = 1
                 if DATEUTIL_SUPPORT:
                     parsed_start_time = str(dateutil_parser.parse(job_filter['start_time']))
+                    executer_filter['start_time'] = parsed_start_time
                     sql += (" to_timestamp(jid, 'YYYYMMDDHH24miSSUS') >="
-                            "to_timestamp('{0}', 'YYYY-MM-DD HH24:mi:SS')".format(parsed_start_time))
+                            " to_timestamp(%(start_time)s, 'YYYY-MM-DD HH24:mi:SS')")
 
             if job_filter['end_time']:
                 if filter_start == 1:
@@ -474,10 +472,11 @@ def get_jids(job_filter):
                 filter_start = 1
                 if DATEUTIL_SUPPORT:
                     parsed_end_time = str(dateutil_parser.parse(job_filter['end_time']))
+                    executer_filter['end_time'] = parsed_end_time
                     sql += (" to_timestamp(jid, 'YYYYMMDDHH24miSSUS') <="
-                            " to_timestamp('{0}', 'YYYY-MM-DD HH24:mi:SS')".format(parsed_end_time))
+                            " to_timestamp(%(end_time)s, 'YYYY-MM-DD HH24:mi:SS')")
+        cur.execute(sql, executer_filter)
 
-        cur.execute(sql)
         data = cur.fetchall()
         ret = {}
         for jid, load in data:
