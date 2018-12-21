@@ -718,7 +718,7 @@ class CkMinions(object):
             )
             tgt_type = expr_form
 
-        v_minions = set(self.check_minions(valid, 'compound'))
+        v_minions = set(self.check_minions(valid, 'compound').get('minions', []))
         if minions is None:
             _res = self.check_minions(expr, tgt_type)
             minions = set(_res['minions'])
