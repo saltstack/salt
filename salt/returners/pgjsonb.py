@@ -436,8 +436,19 @@ def get_jids(job_filter):
     '''
     with _get_serv(ret=None, commit=True) as cur:
 
-        sql = '''SELECT jid, load
-                FROM jids '''
+        sql = '''SELECT
+                   jid,
+                   row_to_json(tmp) as load FROM (
+                     SELECT
+                       jid,
+                       to_char(to_timestamp(jid, 'YYYYMMDDHH24miSSUS')::TIMESTAMP, 'YYYY, Mon DD HH24:MI:SS.US') as "StartTime",
+                       load->'fun' as "Function",
+                       load->'arg' as "Arguments",
+                       load->'tgt' as "Target",
+                       load->'tgt_type' as "Target-type",
+                       load->'user' as "User",
+                       load->'metadata' as "Metadata"
+                      FROM jids '''
 
         executer_filter = {k: v for k, v in job_filter.items() if v is not None}
         if executer_filter:
@@ -475,12 +486,13 @@ def get_jids(job_filter):
                     executer_filter['end_time'] = parsed_end_time
                     sql += (" to_timestamp(jid, 'YYYYMMDDHH24miSSUS') <="
                             " to_timestamp(%(end_time)s, 'YYYY-MM-DD HH24:mi:SS')")
+        sql += ') as tmp'
         cur.execute(sql, executer_filter)
 
         data = cur.fetchall()
         ret = {}
         for jid, load in data:
-            ret[jid] = salt.utils.jid.format_jid_instance(jid, load)
+            ret[jid] = load
         return ret
 
 
