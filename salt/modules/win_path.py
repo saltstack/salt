@@ -200,7 +200,7 @@ def add(path, index=None, **kwargs):
             elif index <= -num_dirs:
                 # Negative index is too large, shift index to beginning of list
                 index = pos = 0
-            elif index <= 0:
+            elif index < 0:
                 # Negative indexes (other than -1 which is handled above) must
                 # be inserted at index + 1 for the item  to end up in the
                 # position you want, since list.insert() inserts before the
