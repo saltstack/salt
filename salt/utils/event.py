@@ -411,6 +411,7 @@ class SaltEvent(object):
         if not self.cpub:
             return
 
+        self.subscriber.close()
         self.subscriber = None
         self.pending_events = []
         self.cpub = False
@@ -784,9 +785,10 @@ class SaltEvent(object):
         return self.fire_event(msg, "fire_master", timeout)
 
     def destroy(self):
-        # Do not directly close singleton instances, just set to None
-        self.subscriber = None
-        self.pusher = None
+        if self.subscriber is not None:
+            self.subscriber.close()
+        if self.pusher is not None:
+            self.pusher.close()
         if self._run_io_loop_sync and not self.keep_loop:
             self.io_loop.close()
 
@@ -1033,6 +1035,7 @@ class AsyncEventPublisher(object):
         )
 
         self.puller = salt.transport.ipc.IPCMessageServer(
+            self.opts,
             epull_uri,
             io_loop=self.io_loop,
             payload_handler=self.handle_publish
@@ -1061,7 +1064,7 @@ class AsyncEventPublisher(object):
             return
         self._closing = True
         if hasattr(self, 'publisher'):
-            self.publisher = None
+            self.publisher.close()
         if hasattr(self, 'puller'):
             self.puller.close()
 
@@ -1125,6 +1128,7 @@ class EventPublisher(salt.utils.process.SignalHandlingMultiprocessingProcess):
             )
 
             self.puller = salt.transport.ipc.IPCMessageServer(
+                self.opts,
                 epull_uri,
                 io_loop=self.io_loop,
                 payload_handler=self.handle_publish,

@@ -172,18 +172,14 @@ if USE_LOAD_BALANCER:
                 'log_queue_level': self.log_queue_level
             }
 
-        def _close(self):
-            '''
-            This class is a singleton so close have to be called only once during
-            garbage collection when nobody uses this instance.
-            '''
+        def close(self):
             if self._socket is not None:
                 self._socket.shutdown(socket.SHUT_RDWR)
                 self._socket.close()
                 self._socket = None
 
         def __del__(self):
-            self._close()
+            self.close()
 
         def run(self):
             '''
@@ -1412,6 +1408,7 @@ class TCPPubServerChannel(salt.transport.server.PubServerChannel):
             pull_uri = os.path.join(self.opts['sock_dir'], 'publish_pull.ipc')
 
         pull_sock = salt.transport.ipc.IPCMessageServer(
+            self.opts,
             pull_uri,
             io_loop=self.io_loop,
             payload_handler=pub_server.publish_payload,
