@@ -396,7 +396,7 @@ def get_jids_filter(count, filter_find_job=True):
                      ORDER BY jid DESC limit {1}
                  ) tmp
                  ORDER BY jid;'''
-        where = '''WHERE CAST(load -> 'fun' AS TEXT) NOT LIKE '"saltutil.find_job"%' '''
+        where = '''WHERE NOT (load @> '{ "fun": "saltutil.find_job"}') '''
 
         cur.execute(sql.format(where if filter_find_job else '', count))
         data = cur.fetchall()
@@ -457,7 +457,7 @@ def get_jids(job_filter):
                 if filter_start == 1:
                     sql += ' AND '
                 filter_start = 1
-                sql += """ CAST(load @> '{"fun": "{0}"}' """.format(job_filter['search_function'])
+                sql += """ load @> '{"fun": "{0}"}' """.format(job_filter['search_function'])
 
             if job_filter['start_time']:
                 if filter_start == 1:
