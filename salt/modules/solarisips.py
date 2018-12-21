@@ -332,6 +332,7 @@ def latest_version(name, **kwargs):
         return ret
     return ''
 
+
 # available_version is being deprecated
 available_version = salt.utils.functools.alias_function(latest_version, 'available_version')
 

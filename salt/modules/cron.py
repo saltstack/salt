@@ -704,6 +704,7 @@ def rm_job(user,
             return comdat['stderr']
     return ret
 
+
 rm = salt.utils.functools.alias_function(rm_job, 'rm')
 
 
