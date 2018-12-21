@@ -33,6 +33,7 @@ Current known limitations
 :depends:
   - pywin32 Python module
   - lxml
+  - uuid
   - struct
   - salt.utils.win_reg
 '''
@@ -44,7 +45,7 @@ import logging
 import re
 import locale
 import ctypes
-import time
+import uuid
 
 # Import Salt libs
 from salt.exceptions import CommandExecutionError, SaltInvocationError
@@ -65,6 +66,7 @@ log = logging.getLogger(__name__)
 __virtualname__ = 'lgpo'
 __func_alias__ = {'set_': 'set'}
 
+UUID = uuid.uuid4().hex
 adm_policy_name_map = {True: {}, False: {}}
 HAS_WINDOWS_MODULES = False
 # define some global XPATH variables that we'll set assuming all our imports are
@@ -4275,24 +4277,30 @@ def _load_policy_definitions(path='c:\\Windows\\PolicyDefinitions',
                 # the passed language (eg: en-US). Then we'll try the
                 # abbreviated version (en) to account for alternate locations.
                 # We'll do the same for the display_language_fallback (en_US).
-                adml_file = os.path.join(root, language,
-                                         os.path.splitext(t_admfile)[0] + '.adml')
+                adml_file = os.path.join(
+                    root,
+                    language,
+                    os.path.splitext(t_admfile)[0] + '.adml')
                 if not __salt__['file.file_exists'](adml_file):
                     log.info('An ADML file in the specified ADML language '
                              '"%s" does not exist for the ADMX "%s", the '
                              'the abbreviated language code will be tried.',
                              language, t_admfile)
 
-                    adml_file = os.path.join(root, language.split('-')[0],
-                                             os.path.splitext(t_admfile)[0] + '.adml')
+                    adml_file = os.path.join(
+                        root,
+                        language.split('-')[0],
+                        os.path.splitext(t_admfile)[0] + '.adml')
                     if not __salt__['file.file_exists'](adml_file):
                         log.info('An ADML file in the specified ADML language '
                                  'code %s does not exist for the ADMX "%s", '
                                  'the fallback language will be tried.',
                                  language[:2], t_admfile)
 
-                        adml_file = os.path.join(root, display_language_fallback,
-                                                 os.path.splitext(t_admfile)[0] + '.adml')
+                        adml_file = os.path.join(
+                            root,
+                            display_language_fallback,
+                            os.path.splitext(t_admfile)[0] + '.adml')
                         if not __salt__['file.file_exists'](adml_file):
                             log.info('An ADML file in the specified ADML '
                                      'fallback language "%s" '
@@ -4301,8 +4309,10 @@ def _load_policy_definitions(path='c:\\Windows\\PolicyDefinitions',
                                      'will be tried.',
                                      display_language_fallback, t_admfile)
 
-                            adml_file = os.path.join(root, display_language_fallback.split('-')[0],
-                                                     os.path.splitext(t_admfile)[0] + '.adml')
+                            adml_file = os.path.join(
+                                root,
+                                display_language_fallback.split('-')[0],
+                                os.path.splitext(t_admfile)[0] + '.adml')
                             if not __salt__['file.file_exists'](adml_file):
                                 msg = ('An ADML file in the specified ADML language '
                                        '"{0}" and the fallback language "{1}" do not '
@@ -4361,6 +4371,54 @@ def _buildElementNsmap(using_elements):
     for e in using_elements:
         thisMap[e.attrib['prefix']] = e.attrib['namespace']
     return thisMap
+
+
+def _findOptionValueNetSH(profile, option):
+    if 'lgpo.netsh_data' not in __context__:
+        __context__['lgpo.netsh_data'] = {}
+
+    if profile not in __context__['lgpo.netsh_data']:
+        log.debug('LGPO: Loading netsh data for {0} profile'.format(profile))
+        settings = salt.utils.win_lgpo_netsh.get_all_settings(profile=profile,
+                                                              store='lgpo')
+        __context__['lgpo.netsh_data'].update({profile: settings})
+    log.debug('LGPO: netsh returning value: {0}'
+              ''.format(__context__['lgpo.netsh_data'][profile][option]))
+    return __context__['lgpo.netsh_data'][profile][option]
+
+
+def _setOptionValueNetSH(profile, section, option, value):
+    if section not in ('firewallpolicy', 'settings', 'logging', 'state'):
+        raise ValueError('LGPO: Invalid section: {0}'.format(section))
+    log.debug('LGPO: Setting the following\n'
+              'Profile: {0}\n'
+              'Section: {1}\n'
+              'Option: {2}\n'
+              'Value: {3}'.format(profile, section, option, value))
+    if section == 'firewallpolicy':
+        salt.utils.win_lgpo_netsh.set_firewall_settings(
+            profile=profile,
+            inbound=value if option == 'Inbound' else None,
+            outbound=value if option == 'Outbound' else None,
+            store='lgpo')
+    if section == 'settings':
+        salt.utils.win_lgpo_netsh.set_settings(
+            profile=profile, setting=option, value=value, store='lgpo')
+    if section == 'state':
+        salt.utils.win_lgpo_netsh.set_state(
+            profile=profile, state=value, store='lgpo')
+    if section == 'logging':
+        if option in ('FileName', 'MaxFileSize'):
+            if value == 'Not configured':
+                value = 'notconfigured'
+        # Trim log for the two logging options
+        if option.startswith('Log'):
+            option = option[3:]
+        salt.utils.win_lgpo_netsh.set_logging_settings(
+            profile=profile, setting=option, value=value, store='lgpo')
+    log.debug('LGPO: Clearing netsh data for {0} profile'.format(profile))
+    __context__['lgpo.netsh_data'].pop(profile)
+    return True
 
 
 def _load_secedit_data():
@@ -5576,10 +5634,13 @@ def _build_parent_list(policy_definition,
     admx_policy_definitions = _get_policy_definitions(language=adml_language)
     if parent_category:
         parent_category = parent_category[0]
-        nsmap_xpath = '/policyDefinitions/policyNamespaces/{0}:*'.format(policy_namespace)
+        nsmap_xpath = '/policyDefinitions/policyNamespaces/{0}:*' \
+                      ''.format(policy_namespace)
         this_namespace_map = _buildElementNsmap(
-            admx_policy_definitions.xpath(nsmap_xpath, namespaces=policy_definition.nsmap))
-        this_namespace_map = dictupdate.update(this_namespace_map, policy_definition.nsmap)
+            admx_policy_definitions.xpath(
+                nsmap_xpath, namespaces=policy_definition.nsmap))
+        this_namespace_map = dictupdate.update(this_namespace_map,
+                                               policy_definition.nsmap)
         parent_list = _admx_policy_parent_walk(
             path=parent_list,
             policy_namespace=policy_namespace,
@@ -6282,10 +6343,10 @@ def _lookup_admin_template(policy_name,
             full_path_list.reverse()
             full_path_list.append(policy_display_name)
             policy_aliases.append('\\'.join(full_path_list))
-            return (True, the_policy, policy_aliases, None)
+            return True, the_policy, policy_aliases, None
         else:
             msg = 'ADMX policy name/id "{0}" is used in multiple ADMX files'
-            return (False, None, [], msg)
+            return False, None, [], msg
     else:
         adml_search_results = ADML_SEARCH_XPATH(adml_policy_resources,
                                                 policy_name=policy_name)
@@ -6410,15 +6471,15 @@ def _lookup_admin_template(policy_name,
                                     full_path_list.reverse()
                                     full_path_list.append(policy_display_name)
                                     policy_aliases.append('\\'.join(full_path_list))
-                                    return (True, search_result, policy_aliases, None)
+                                    return True, search_result, policy_aliases, None
                                 else:
                                     msg = ('ADMX policy with the display name {0} does not'
                                            'have the required name attribtue')
                                     msg = msg.format(policy_name)
-                                    return (False, None, [], msg)
+                                    return False, None, [], msg
                         if not found:
                             msg = 'Unable to correlate {0} to any policy'.format(hierarchy_policy_name)
-                            return (False, None, [], msg)
+                            return False, None, [], msg
                     else:
                         for possible_policy in admx_search_results:
                             this_parent_list = _build_parent_list(
@@ -6432,9 +6493,6 @@ def _lookup_admin_template(policy_name,
                                                                '\\'.join(this_parent_list)])
                             else:
                                 suggested_policies = '\\'.join(this_parent_list)
-                else:
-                    msg = 'Unable to find a policy with the name "{0}".'.format(policy_name)
-                    return False, None, [], msg
             if suggested_policies:
                 msg = ('ADML policy name "{0}" is used as the display name'
                        ' for multiple policies.'
@@ -6599,12 +6657,14 @@ def get_policy_info(policy_name,
     policy_class = policy_class.title()
     policy_data = _policy_info()
     if policy_class not in policy_data.policies.keys():
-        ret['message'] = 'The requested policy class "{0}" is invalid, policy_class should be one of: {1}'.format(
-                policy_class,
-                ', '.join(policy_data.policies.keys()))
+        policy_classes = ', '.join(policy_data.policies.keys())
+        ret['message'] = 'The requested policy class "{0}" is invalid, ' \
+                         'policy_class should be one of: {1}' \
+                         ''.format(policy_class, policy_classes)
         return ret
     if policy_name in policy_data.policies[policy_class]['policies']:
-        ret['policy_aliases'].append(policy_data.policies[policy_class]['policies'][policy_name]['Policy'])
+        ret['policy_aliases'].append(
+            policy_data.policies[policy_class]['policies'][policy_name]['Policy'])
         ret['policy_found'] = True
         ret['message'] = ''
         if 'LsaRights' in policy_data.policies[policy_class]['policies'][policy_name]:
@@ -6702,59 +6762,77 @@ def get(policy_class=None, return_full_policy_names=True,
 
     # handle policies statically defined in this module
     for p_class in policy_class:
+        this_class_policy_names = _policydata.policies[p_class]['policies']
         class_vals = {}
-        sub_time = start_time
-        for policy_name in _policydata.policies[p_class]['policies']:
-            _pol = _policydata.policies[p_class]['policies'][policy_name]
-            vals_key_name = policy_name
-            if 'Registry' in _pol:
-                # get value from registry
-                class_vals[policy_name] = __salt__['reg.read_value'](
-                    _pol['Registry']['Hive'],
-                    _pol['Registry']['Path'],
-                    _pol['Registry']['Value'])['vdata']
-                log.debug(
-                    'Value %r found for reg policy %s',
-                    class_vals[policy_name], policy_name
-                )
-            elif 'Secedit' in _pol:
-                # get value from secedit
-                _val = _get_secedit_value(option=_pol['Secedit']['Option'])
-                class_vals[policy_name] = _val
-            elif 'NetUserModal' in _pol:
-                # get value from UserNetMod
-                if _pol['NetUserModal']['Modal'] not in modal_returns:
-                    modal_returns[_pol['NetUserModal']['Modal']] = win32net.NetUserModalsGet(
-                            None,
-                            _pol['NetUserModal']['Modal'])
-                class_vals[policy_name] = modal_returns[_pol['NetUserModal']['Modal']][_pol['NetUserModal']['Option']]
-            elif 'LsaRights' in _pol:
-                class_vals[policy_name] = _getRightsAssignments(_pol['LsaRights']['Option'])
-            elif 'ScriptIni' in _pol:
-                log.debug('Working with ScriptIni setting %s', policy_name)
-                class_vals[policy_name] = _getScriptSettingsFromIniFile(_pol)
-            if policy_name in class_vals:
-                class_vals[policy_name] = _transform_value(
-                    value=class_vals[policy_name],
-                    policy=_policydata.policies[p_class]['policies'][policy_name],
-                    transform_type='Get')
-            if return_full_policy_names:
-                class_vals[_pol['Policy']] = class_vals.pop(policy_name)
-                vals_key_name = _pol['Policy']
-            if hierarchical_return:
-                if 'lgpo_section' in _pol:
-                    firstItem = True
-                    tdict = {}
-                    for level in reversed(_pol['lgpo_section']):
-                        newdict = {}
-                        if firstItem:
-                            newdict[level] = {vals_key_name: class_vals.pop(vals_key_name)}
-                            firstItem = False
-                        else:
-                            newdict[level] = tdict
-                        tdict = newdict
-                    if tdict:
-                        class_vals = dictupdate.update(class_vals, tdict)
+        for policy_name in this_class_policy_names:
+            _pol = None
+            if policy_name in _policydata.policies[p_class]['policies']:
+                _pol = _policydata.policies[p_class]['policies'][policy_name]
+            else:
+                for policy in _policydata.policies[p_class]['policies']:
+                    if _policydata.policies[p_class]['policies'][policy]['Policy'].upper() == policy_name.upper():
+                        _pol = _policydata.policies[p_class]['policies'][policy]
+                        policy_name = policy
+            if _pol:
+                vals_key_name = policy_name
+                if 'Registry' in _pol:
+                    # get value from registry
+                    class_vals[policy_name] = __salt__['reg.read_value'](
+                        _pol['Registry']['Hive'],
+                        _pol['Registry']['Path'],
+                        _pol['Registry']['Value'])['vdata']
+                    log.debug(
+                        'Value %r found for reg policy %s',
+                        class_vals[policy_name], policy_name
+                    )
+                elif 'Secedit' in _pol:
+                    # get value from secedit
+                    _val = _get_secedit_value(option=_pol['Secedit']['Option'])
+                    class_vals[policy_name] = _val
+                elif 'NetSH' in _pol:
+                    # get value from netsh
+                    class_vals[policy_name] = _findOptionValueNetSH(
+                        profile=_pol['NetSH']['Profile'],
+                        option=_pol['NetSH']['Option'])
+
+                elif 'NetUserModal' in _pol:
+                    # get value from UserNetMod
+                    if _pol['NetUserModal']['Modal'] not in modal_returns:
+                        modal_returns[_pol['NetUserModal']['Modal']] = win32net.NetUserModalsGet(
+                                None,
+                                _pol['NetUserModal']['Modal'])
+                    class_vals[policy_name] = modal_returns[_pol['NetUserModal']['Modal']][_pol['NetUserModal']['Option']]
+                elif 'LsaRights' in _pol:
+                    class_vals[policy_name] = _getRightsAssignments(_pol['LsaRights']['Option'])
+                elif 'ScriptIni' in _pol:
+                    log.debug('Working with ScriptIni setting %s', policy_name)
+                    class_vals[policy_name] = _getScriptSettingsFromIniFile(_pol)
+                if policy_name in class_vals:
+                    class_vals[policy_name] = _transform_value(
+                        value=class_vals[policy_name],
+                        policy=_policydata.policies[p_class]['policies'][policy_name],
+                        transform_type='Get')
+                if return_full_policy_names:
+                    class_vals[_pol['Policy']] = class_vals.pop(policy_name)
+                    vals_key_name = _pol['Policy']
+                if hierarchical_return:
+                    if 'lgpo_section' in _pol:
+                        firstItem = True
+                        tdict = {}
+                        for level in reversed(_pol['lgpo_section']):
+                            newdict = {}
+                            if firstItem:
+                                newdict[level] = {vals_key_name: class_vals.pop(vals_key_name)}
+                                firstItem = False
+                            else:
+                                newdict[level] = tdict
+                            tdict = newdict
+                        if tdict:
+                            class_vals = dictupdate.update(class_vals, tdict)
+            else:
+                msg = 'The specified policy {0} is not currently available ' \
+                      'to be configured via this module'
+                raise SaltInvocationError(msg.format(policy_name))
         class_vals = dictupdate.update(
             class_vals,
             _checkAllAdmxPolicies(policy_class=p_class,
@@ -6951,7 +7029,6 @@ def set_(computer_policy=None,
             if policies[p_class]:
                 for policy_name in policies[p_class]:
                     _pol = None
-                    policy_namespace = None
                     policy_key_name = policy_name
                     if policy_name in _policydata.policies[p_class]['policies']:
                         _pol = _policydata.policies[p_class]['policies'][policy_name]
