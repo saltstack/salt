@@ -87,7 +87,7 @@ def pvdisplay(pvname='', real=False):
     cmd = ['pvdisplay', '-c']
     if pvname:
         cmd.append(pvname)
-    cmd_ret = __salt__['cmd.run_all'](cmd, python_shell=False)
+    cmd_ret = __salt__['cmd.run_all'](cmd, python_shell=False, ignore_retcode=True)
 
     if cmd_ret['retcode'] != 0:
         return {}
@@ -133,7 +133,7 @@ def vgdisplay(vgname=''):
     cmd = ['vgdisplay', '-c']
     if vgname:
         cmd.append(vgname)
-    cmd_ret = __salt__['cmd.run_all'](cmd, python_shell=False)
+    cmd_ret = __salt__['cmd.run_all'](cmd, python_shell=False, ignore_retcode=True)
 
     if cmd_ret['retcode'] != 0:
         return {}
@@ -179,9 +179,9 @@ def lvdisplay(lvname='', quiet=False):
     if lvname:
         cmd.append(lvname)
     if quiet:
-        cmd_ret = __salt__['cmd.run_all'](cmd, python_shell=False, output_loglevel='quiet')
+        cmd_ret = __salt__['cmd.run_all'](cmd, python_shell=False, ignore_retcode=True, output_loglevel='quiet')
     else:
-        cmd_ret = __salt__['cmd.run_all'](cmd, python_shell=False)
+        cmd_ret = __salt__['cmd.run_all'](cmd, python_shell=False, ignore_retcode=True)
 
     if cmd_ret['retcode'] != 0:
         return {}
