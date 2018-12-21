@@ -793,6 +793,7 @@ def get_source_sum(file_name='',
         ret = extract_hash(hash_fn, '', file_name, source, source_hash_name)
         if ret is None:
             _invalid_source_hash_format()
+        ret['hsum'] = ret['hsum'].lower()
         return ret
     else:
         # The source_hash is a hash expression
@@ -836,6 +837,7 @@ def get_source_sum(file_name='',
                     )
                 )
 
+        ret['hsum'] = ret['hsum'].lower()
         return ret
 
 
