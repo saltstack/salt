@@ -46,7 +46,7 @@ def __virtual__():
     return (False, "Module win_path: module only works on Windows systems")
 
 
-def _normalize_dir(string_):
+def normalize_dir(string_):
     '''
     Normalize the directory to make comparison possible
     '''
@@ -92,7 +92,7 @@ def get_path():
     ).split(';')
 
     # Trim ending backslash
-    return list(map(_normalize_dir, ret))
+    return list(map(normalize_dir, ret))
 
 
 def exists(path):
@@ -111,7 +111,7 @@ def exists(path):
         salt '*' win_path.exists 'c:\\python27\\'
         salt '*' win_path.exists 'C:\\pyThon27'
     '''
-    path = _normalize_dir(path)
+    path = normalize_dir(path)
     sysPath = get_path()
 
     return path.lower() in (x.lower() for x in sysPath)
@@ -152,7 +152,7 @@ def add(path, index=None, **kwargs):
     if kwargs:
         salt.utils.args.invalid_kwargs(kwargs)
 
-    path = _normalize_dir(path)
+    path = normalize_dir(path)
     path_str = salt.utils.stringutils.to_str(path)
     system_path = get_path()
 
@@ -310,7 +310,7 @@ def remove(path, **kwargs):
     if kwargs:
         salt.utils.args.invalid_kwargs(kwargs)
 
-    path = _normalize_dir(path)
+    path = normalize_dir(path)
     path_str = salt.utils.stringutils.to_str(path)
     system_path = get_path()
 

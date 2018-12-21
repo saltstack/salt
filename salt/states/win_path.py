@@ -91,7 +91,7 @@ def exists(name, index=None):
             - index: -1
     '''
     try:
-        name = salt.utils.stringutils.to_unicode(name)
+        name = __salt__['win_path.normalize_dir'](name)
     except TypeError:
         name = six.text_type(name)
 
@@ -223,7 +223,7 @@ def exists(name, index=None):
             '{0} {1} to the PATH{2}.'.format(
                 'Added' if ret['result'] else 'Failed to add',
                 name,
-                ' at index {0}'.format(index) if index else ''
+                ' at index {0}'.format(index) if index is not None else ''
             )
         )
 
