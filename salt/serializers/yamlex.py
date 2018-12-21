@@ -389,6 +389,7 @@ class Dumper(BaseDumper):  # pylint: disable=W0232
     def represent_odict(self, data):
         return self.represent_mapping('tag:yaml.org,2002:map', list(data.items()))
 
+
 Dumper.add_multi_representer(type(None), Dumper.represent_none)
 if six.PY2:
     Dumper.add_multi_representer(six.binary_type, Dumper.represent_str)
