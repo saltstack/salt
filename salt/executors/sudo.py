@@ -56,7 +56,7 @@ def execute(opts, data, func, args, kwargs):
            'salt-call',
            '--out', 'json',
            '--metadata',
-           '-c', salt.syspaths.CONFIG_DIR,
+           '-c', opts.get('config_dir'),
            '--',
            data.get('fun')]
     if data['fun'] in ('state.sls', 'state.highstate', 'state.apply'):
