@@ -457,7 +457,7 @@ def get_jids(job_filter):
                 if filter_start == 1:
                     sql += ' AND '
                 filter_start = 1
-                sql += """ CAST(load @> '{"fun": "{0}"}' """.format(job_filter['search_function'])
+                sql += """ load @> '{"fun": "{0}"}' """.format(job_filter['search_function'])
 
             if job_filter['start_time']:
                 if filter_start == 1:
