@@ -298,12 +298,14 @@ def auth(username, password):
         log.error('LDAP authentication requires python-ldap module')
         return False
 
+    bind = None
+
     # If bind credentials are configured, verify that we receive a valid bind
     if _config('binddn', mandatory=False) and _config('bindpw', mandatory=False):
-        bind = _bind_for_search(anonymous=_config('anonymous', mandatory=False))
+        search_bind = _bind_for_search(anonymous=_config('anonymous', mandatory=False))
 
         # If username & password are not None, attempt to verify they are valid
-        if bind and username and password:
+        if search_bind and username and password:
             bind = _bind(username, password,
                          anonymous=_config('auth_by_group_membership_only', mandatory=False)
                          and _config('anonymous', mandatory=False))

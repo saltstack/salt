@@ -32,6 +32,7 @@ import salt.utils.error
 import salt.utils.event
 import salt.utils.files
 import salt.utils.jid
+import salt.utils.master
 import salt.utils.minion
 import salt.utils.platform
 import salt.utils.process
@@ -46,6 +47,10 @@ import salt.exceptions
 import salt.log.setup as log_setup
 import salt.defaults.exitcodes
 from salt.utils.odict import OrderedDict
+
+from salt.exceptions import (
+    SaltInvocationError
+)
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -208,7 +213,11 @@ class Schedule(object):
             return data
         if 'jid_include' not in data or data['jid_include']:
             jobcount = 0
-            for job in salt.utils.minion.running(self.opts):
+            if self.opts['__role'] == 'master':
+                current_jobs = salt.utils.master.get_running_jobs(self.opts)
+            else:
+                current_jobs = salt.utils.minion.running(self.opts)
+            for job in current_jobs:
                 if 'schedule' in job:
                     log.debug(
                         'schedule.handle_func: Checking job against fun '
@@ -637,6 +646,7 @@ class Schedule(object):
         if multiprocessing_enabled:
             # We just want to modify the process name if we're on a different process
             salt.utils.process.appendproctitle('{0} {1}'.format(self.__class__.__name__, ret['jid']))
+        data_returner = data.get('returner', None)
 
         if not self.standalone:
             proc_fn = os.path.join(
@@ -654,6 +664,22 @@ class Schedule(object):
 
         # TODO: Make it readable! Splt to funcs, remove nested try-except-finally sections.
         try:
+
+            minion_blackout_violation = False
+            if self.opts.get('pillar', {}).get('minion_blackout', False):
+                whitelist = self.opts.get('pillar', {}).get('minion_blackout_whitelist', [])
+                # this minion is blacked out. Only allow saltutil.refresh_pillar and the whitelist
+                if func != 'saltutil.refresh_pillar' and func not in whitelist:
+                    minion_blackout_violation = True
+            elif self.opts.get('grains', {}).get('minion_blackout', False):
+                whitelist = self.opts.get('grains', {}).get('minion_blackout_whitelist', [])
+                if func != 'saltutil.refresh_pillar' and func not in whitelist:
+                    minion_blackout_violation = True
+            if minion_blackout_violation:
+                raise SaltInvocationError('Minion in blackout mode. Set \'minion_blackout\' '
+                                          'to False in pillar or grains to resume operations. Only '
+                                          'saltutil.refresh_pillar allowed in blackout mode.')
+
             ret['pid'] = os.getpid()
 
             if not self.standalone:
@@ -732,6 +758,7 @@ class Schedule(object):
                         self.functions[mod_name].__globals__[global_key] = value
 
             self.functions.pack['__context__']['retcode'] = 0
+
             ret['return'] = self.functions[func](*args, **kwargs)
 
             if not self.standalone:
@@ -741,7 +768,6 @@ class Schedule(object):
 
                 ret['success'] = True
 
-                data_returner = data.get('returner', None)
                 if data_returner or self.schedule_returner:
                     if 'return_config' in data:
                         ret['ret_config'] = data['return_config']
@@ -920,116 +946,64 @@ class Schedule(object):
                 log.error(data['_error'])
                 return
 
-            if isinstance(data['when'], list):
-                _when = []
-                for i in data['when']:
-                    if ('pillar' in self.opts and 'whens' in self.opts['pillar'] and
-                            i in self.opts['pillar']['whens']):
-                        if not isinstance(self.opts['pillar']['whens'],
-                                          dict):
-                            data['_error'] = ('Pillar item "whens" '
-                                              'must be a dict. '
-                                              'Ignoring job {0}.'.format(data['name']))
-                            log.error(data['_error'])
-                            return
-                        when_ = self.opts['pillar']['whens'][i]
-                    elif ('whens' in self.opts['grains'] and
-                          i in self.opts['grains']['whens']):
-                        if not isinstance(self.opts['grains']['whens'],
-                                          dict):
-                            data['_error'] = ('Grain "whens" must be a dict.'
-                                              'Ignoring job {0}.'.format(data['name']))
-                            log.error(data['_error'])
-                            return
-                        when_ = self.opts['grains']['whens'][i]
-                    else:
-                        when_ = i
-
-                    if not isinstance(when_, datetime.datetime):
-                        try:
-                            when_ = dateutil_parser.parse(when_)
-                        except ValueError:
-                            data['_error'] = ('Invalid date string {0}. '
-                                              'Ignoring job {1}.'.format(i, data['name']))
-                            log.error(data['_error'])
-                            return
-
-                    _when.append(when_)
-
-                if data['_splay']:
-                    _when.append(data['_splay'])
-
-                # Sort the list of "whens" from earlier to later schedules
-                _when.sort()
-
-                # Copy the list so we can loop through it
-                for i in copy.deepcopy(_when):
-                    if len(_when) > 1:
-                        if i < now - loop_interval:
-                            # Remove all missed schedules except the latest one.
-                            # We need it to detect if it was triggered previously.
-                            _when.remove(i)
-
-                if _when:
-                    # Grab the first element, which is the next run time or
-                    # last scheduled time in the past.
-                    when = _when[0]
-
-                    if when < now - loop_interval and \
-                            not data.get('_run', False) and \
-                            not data.get('run', False) and \
-                            not data['_splay']:
-                        data['_next_fire_time'] = None
-                        data['_continue'] = True
-                        return
-
-                    if '_run' not in data:
-                        # Prevent run of jobs from the past
-                        data['_run'] = bool(when >= now - loop_interval)
-
-                    if not data['_next_fire_time']:
-                        data['_next_fire_time'] = when
-
-                    data['_next_scheduled_fire_time'] = when
-
-                    if data['_next_fire_time'] < when and \
-                            not run and \
-                            not data['_run']:
-                        data['_next_fire_time'] = when
-                        data['_run'] = True
-
-                elif not data.get('_run', False):
-                    data['_next_fire_time'] = None
-                    data['_continue'] = True
-
+            if not isinstance(data['when'], list):
+                _when_data = [data['when']]
             else:
+                _when_data = data['when']
+
+            _when = []
+            for i in _when_data:
                 if ('pillar' in self.opts and 'whens' in self.opts['pillar'] and
-                        data['when'] in self.opts['pillar']['whens']):
-                    if not isinstance(self.opts['pillar']['whens'], dict):
-                        data['_error'] = ('Pillar item "whens" must be dict.'
+                        i in self.opts['pillar']['whens']):
+                    if not isinstance(self.opts['pillar']['whens'],
+                                      dict):
+                        data['_error'] = ('Pillar item "whens" '
+                                          'must be a dict. '
                                           'Ignoring job {0}.'.format(data['name']))
                         log.error(data['_error'])
                         return
-                    when = self.opts['pillar']['whens'][data['when']]
+                    when_ = self.opts['pillar']['whens'][i]
                 elif ('whens' in self.opts['grains'] and
-                      data['when'] in self.opts['grains']['whens']):
-                    if not isinstance(self.opts['grains']['whens'], dict):
+                      i in self.opts['grains']['whens']):
+                    if not isinstance(self.opts['grains']['whens'],
+                                      dict):
                         data['_error'] = ('Grain "whens" must be a dict. '
                                           'Ignoring job {0}.'.format(data['name']))
                         log.error(data['_error'])
                         return
-                    when = self.opts['grains']['whens'][data['when']]
+                    when_ = self.opts['grains']['whens'][i]
                 else:
-                    when = data['when']
+                    when_ = i
 
-                if not isinstance(when, datetime.datetime):
+                if not isinstance(when_, datetime.datetime):
                     try:
-                        when = dateutil_parser.parse(when)
+                        when_ = dateutil_parser.parse(when_)
                     except ValueError:
-                        data['_error'] = ('Invalid date string. '
-                                          'Ignoring job {0}.'.format(data['name']))
+                        data['_error'] = ('Invalid date string {0}. '
+                                          'Ignoring job {1}.'.format(i, data['name']))
                         log.error(data['_error'])
                         return
+
+                _when.append(when_)
+
+            if data['_splay']:
+                _when.append(data['_splay'])
+
+            # Sort the list of "whens" from earlier to later schedules
+            _when.sort()
+
+            # Copy the list so we can loop through it
+            for i in copy.deepcopy(_when):
+                if len(_when) > 1:
+                    if i < now - loop_interval:
+                        # Remove all missed schedules except the latest one.
+                        # We need it to detect if it was triggered previously.
+                        _when.remove(i)
+
+            if _when:
+                # Grab the first element, which is the next run time or
+                # last scheduled time in the past.
+                when = _when[0]
 
                 if when < now - loop_interval and \
                         not data.get('_run', False) and \
@@ -1040,7 +1014,8 @@ class Schedule(object):
                     return
 
                 if '_run' not in data:
-                    data['_run'] = True
+                    # Prevent run of jobs from the past
+                    data['_run'] = bool(when >= now - loop_interval)
 
                 if not data['_next_fire_time']:
                     data['_next_fire_time'] = when
@@ -1048,9 +1023,14 @@ class Schedule(object):
                 data['_next_scheduled_fire_time'] = when
 
                 if data['_next_fire_time'] < when and \
+                        not run and \
                         not data['_run']:
                     data['_next_fire_time'] = when
                     data['_run'] = True
+
+            elif not data.get('_run', False):
+                data['_next_fire_time'] = None
+                data['_continue'] = True
 
         def _handle_cron(data, loop_interval):
             '''

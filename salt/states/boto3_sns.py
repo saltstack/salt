@@ -208,7 +208,8 @@ def topic_present(name, subscriptions=None, attributes=None,
             subscribe += [sub]
     for sub in curr_subs:
         if {'Protocol': sub['Protocol'], 'Endpoint': sub['Endpoint']} not in want_obfuscated:
-            unsubscribe += [sub['SubscriptionArn']]
+            if sub['SubscriptionArn'].startswith('arn:aws:sns:'):
+                unsubscribe += [sub['SubscriptionArn']]
     for sub in subscribe:
         ret = _create_or_update_subscription(ret, sub, curr_subs, mutable_attrs, TopicArn,
                                                 region, key, keyid, profile)
@@ -277,6 +278,13 @@ def _create_or_update_subscription(ret, sub, curr_subs, attrs, topic, region, ke
             ret['result'] = False
         return ret
     # Set requested subscriptions attributes if their current values differ...
+    if sub_arn == 'PendingConfirmation':
+        # The API won't let you do anything with subscriptions in pending status...
+        msg = 'Ignoring PendingConfirmation subscription {} {} on topic {}'.format(
+                curr_attrs['Protocol'], curr_attrs['Endpoint'], curr_attrs['TopicArn'])
+        log.warning(msg)
+        ret['comment'] += ' {}'.format(msg)
+        return ret
     for attr in attrs:
         if attr in sub and not _json_objs_equal(curr_attrs.get(attr), sub[attr]):
             fixed = sub[attr] if isinstance(sub[attr],

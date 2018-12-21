@@ -14,9 +14,9 @@ import shutil
 import tempfile
 
 # Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
-from tests.support.paths import TMP
 from tests.support.helpers import skip_if_not_root
 
 # Import salt libs
@@ -32,7 +32,7 @@ class PipModuleTest(ModuleCase):
     def setUp(self):
         super(PipModuleTest, self).setUp()
 
-        self.venv_test_dir = tempfile.mkdtemp(dir=TMP)
+        self.venv_test_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         self.venv_dir = os.path.join(self.venv_test_dir, 'venv')
         for key in os.environ.copy():
             if key.startswith('PIP_'):

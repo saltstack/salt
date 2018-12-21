@@ -93,7 +93,7 @@ def loads(s, **kwargs):
     except TypeError as exc:
         # json.loads cannot load bytestrings in Python < 3.6
         if six.PY3 and isinstance(s, bytes):
-            return json_module.loads(s.decode(__salt_system_encoding__), **kwargs)
+            return json_module.loads(salt.utils.stringutils.to_unicode(s), **kwargs)
         else:
             raise exc
 

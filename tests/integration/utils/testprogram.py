@@ -820,6 +820,9 @@ class TestDaemon(TestProgram):
                     # Process exited between when process_iter was invoked and
                     # when we tried to invoke this instance's cmdline() func.
                     continue
+                except psutils.AccessDenied:
+                    # We might get access denied if not running as root
+                    continue
                 if any((cmdline == proc_cmdline[n:n + cmd_len])
                         for n in range(len(proc_cmdline) - cmd_len + 1)):
                     ret.append(proc)

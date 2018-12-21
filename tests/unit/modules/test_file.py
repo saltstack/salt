@@ -8,9 +8,9 @@ import tempfile
 import textwrap
 
 # Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.helpers import with_tempfile
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.paths import TMP
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import MagicMock, Mock, patch, mock_open, DEFAULT
 
@@ -225,6 +225,22 @@ class FileReplaceTestCase(TestCase, LoaderModuleMockMixin):
         information.
         '''
         filemod.replace(self.tfile.name, r'Etiam', 123)
+
+    def test_search_only_return_true(self):
+        ret = filemod.replace(self.tfile.name,
+                              r'Etiam', 'Salticus',
+                              search_only=True)
+
+        self.assertIsInstance(ret, bool)
+        self.assertEqual(ret, True)
+
+    def test_search_only_return_false(self):
+        ret = filemod.replace(self.tfile.name,
+                              r'Etian', 'Salticus',
+                              search_only=True)
+
+        self.assertIsInstance(ret, bool)
+        self.assertEqual(ret, False)
 
 
 class FileCommentLineTestCase(TestCase, LoaderModuleMockMixin):
@@ -2021,7 +2037,7 @@ class FileBasicsTestCase(TestCase, LoaderModuleMockMixin):
             self.tfile.close()
         self.addCleanup(os.remove, self.tfile.name)
         self.addCleanup(delattr, self, 'tfile')
-        self.myfile = os.path.join(TMP, 'myfile')
+        self.myfile = os.path.join(RUNTIME_VARS.TMP, 'myfile')
         with salt.utils.files.fopen(self.myfile, 'w+') as fp:
             fp.write(salt.utils.stringutils.to_str('Hello\n'))
         self.addCleanup(os.remove, self.myfile)

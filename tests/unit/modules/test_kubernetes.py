@@ -180,6 +180,8 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
                 check_path = os.path.join('/tmp', 'salt-kubeconfig-')
                 if salt.utils.platform.is_windows():
                     check_path = os.path.join(os.environ.get('TMP'), 'salt-kubeconfig-')
+                elif salt.utils.platform.is_darwin():
+                    check_path = os.path.join(os.environ.get('TMPDIR', '/tmp'), 'salt-kubeconfig-')
                 self.assertTrue(config['kubeconfig'].lower().startswith(check_path.lower()))
                 self.assertTrue(os.path.exists(config['kubeconfig']))
                 with salt.utils.files.fopen(config['kubeconfig'], 'r') as kcfg:
