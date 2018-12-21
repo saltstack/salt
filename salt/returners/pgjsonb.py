@@ -439,14 +439,10 @@ def get_jids(job_filter):
         sql = '''SELECT jid, load
                 FROM jids '''
 
-        if (job_filter['search_metadata'] or
-            job_filter['search_target'] or
-            job_filter['search_function'] or
-            job_filter['start_time'] or
-            job_filter['end_time']):
+        executer_filter = {k: v for k, v in job_filter.items() if v is not None}
+        if executer_filter:
             sql += ' WHERE '
             filter_start = 0
-            executer_filter = {k: v for k, v in job_filter.items() if v is not None}
 
             if job_filter['search_target']:
                 if filter_start == 1:
