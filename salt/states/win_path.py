@@ -4,9 +4,6 @@ Manage the Windows System PATH
 '''
 from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt libs
-import salt.utils.stringutils
-
 # Import 3rd-party libs
 from salt.ext import six
 
