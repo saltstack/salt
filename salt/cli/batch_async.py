@@ -40,7 +40,6 @@ class BatchAsync(object):
         self.down_minions = set()
         self.timedout_minions = set()
         self.done_minions = set()
-        self.to_run = set()
         self.active = set()
         self.initialized = False
         self.ping_jid = jid_gen()
@@ -55,7 +54,6 @@ class BatchAsync(object):
             listen=True,
             io_loop=ioloop,
             keep_loop=True)
-        self.__set_event_handler()
 
     def __set_event_handler(self):
         ping_return_pattern = 'salt/job/{0}/ret/*'.format(self.ping_jid)
@@ -69,8 +67,7 @@ class BatchAsync(object):
             (batch_return_pattern, 'batch_run'),
             (find_job_return_pattern, 'find_job_return')
         }
-        if not self.event.subscriber.connected():
-            self.event.set_event_handler(self.__event_handler)
+        self.event.set_event_handler(self.__event_handler)
 
     def __event_handler(self, raw):
         if not self.event:
@@ -82,10 +79,8 @@ class BatchAsync(object):
                 if op == 'ping_return':
                     self.minions.add(minion)
                     self.down_minions.remove(minion)
-                    self.batch_size = get_bnum(self.opts, self.minions, True)
-                    self.to_run = self.minions.difference(self.done_minions).difference(self.active)
                     if not self.down_minions:
-                        self.event.io_loop.call_later(self.batch_delay, self.start_batch)
+                        self.event.io_loop.spawn_callback(self.start_batch)
                 elif op == 'find_job_return':
                     self.find_job_returned.add(minion)
                 elif op == 'batch_run':
@@ -94,32 +89,20 @@ class BatchAsync(object):
                         self.done_minions.add(minion)
                         # call later so that we maybe gather more returns
                         self.event.io_loop.call_later(self.batch_delay, self.next)
-                if not self.initialized:
-                    #start batching even if not all minions respond to ping
-                    self.event.io_loop.call_later(
-                        self.opts['gather_job_timeout'], self.start_batch)
 
         if self.initialized and self.done_minions == self.minions.difference(self.timedout_minions):
-            self.event.fire_event(
-                {
-                    "available_minions": self.minions,
-                    "down_minions": self.down_minions,
-                    "done_minions": self.done_minions,
-                    "timedout_minions": self.timedout_minions
-                },
-                "salt/batch/%s/done" % self.batch_jid)
-            # TODO how to really close this event handler?
-            del self.event
+            self.end_batch()
 
     def _get_next(self):
+        to_run = self.minions.difference(
+            self.done_minions).difference(
+            self.active).difference(
+            self.timedout_minions)
         next_batch_size = min(
-            len(self.to_run),                   # partial batch (all left)
+            len(to_run),                   # partial batch (all left)
             self.batch_size - len(self.active)  # full batch or available slots
         )
-        next_batch = set()
-        for i in range(next_batch_size):
-            next_batch.add(self.to_run.pop())
-        return next_batch
+        return set(list(to_run)[:next_batch_size])
 
     @tornado.gen.coroutine
     def check_find_job(self, minions):
@@ -153,6 +136,10 @@ class BatchAsync(object):
 
     @tornado.gen.coroutine
     def start(self):
+        self.__set_event_handler()
+        #start batching even if not all minions respond to ping
+        self.event.io_loop.call_later(
+            self.opts['gather_job_timeout'], self.start_batch)
         ping_return = yield self.local.run_job_async(
             self.opts['tgt'],
             'test.ping',
@@ -169,6 +156,7 @@ class BatchAsync(object):
     @tornado.gen.coroutine
     def start_batch(self):
         if not self.initialized:
+            self.batch_size = get_bnum(self.opts, self.minions, True)
             self.initialized = True
             self.event.fire_event(
                 {
@@ -178,10 +166,19 @@ class BatchAsync(object):
                 "salt/batch/%s/start" % self.batch_jid)
             yield self.next()
 
+    def end_batch(self):
+        self.event.fire_event(
+            {
+                "available_minions": self.minions,
+                "down_minions": self.down_minions,
+                "done_minions": self.done_minions,
+                "timedout_minions": self.timedout_minions
+            },
+            "salt/batch/%s/done" % self.batch_jid)
+        self.event.remove_event_handler(self.__event_handler)
+
     @tornado.gen.coroutine
     def next(self):
-        if not self.initialized:
-            self.initialized = True
         next_batch = self._get_next()
         if next_batch:
             yield self.local.run_job_async(
