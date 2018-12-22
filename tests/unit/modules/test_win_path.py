@@ -117,6 +117,13 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
         self.assert_call_matches(mock_set, new_path)
         self.assert_path_matches(env, new_path)
 
+        # Test adding with a custom index of 0
+        ret, env, mock_set = _run('c:\\salt', index=0, retval=True)
+        new_path = ('c:\\salt', 'C:\\Foo', 'C:\\Bar')
+        self.assertTrue(ret)
+        self.assert_call_matches(mock_set, new_path)
+        self.assert_path_matches(env, new_path)
+
         # Test adding path with a case-insensitive match already present, and
         # no index provided. The path should remain unchanged and we should not
         # update the registry.
