@@ -91,7 +91,15 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Tests win_path.exists when a non-integer index is specified.
         '''
-        ret = win_path.exists(NAME, index='foo')
+        dunder_salt = {
+            'win_path.normalize_dir': MagicMock(return_value=NAME),
+        }
+        dunder_opts = {'test': False}
+
+        with patch.dict(win_path.__salt__, dunder_salt), \
+                patch.dict(win_path.__opts__, dunder_opts):
+            ret = win_path.exists(NAME, index='foo')
+
         self.assertDictEqual(
             ret,
             {
@@ -116,6 +124,7 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
             ]),
             'win_path.add': add_mock,
             'win_path.rehash': rehash_mock,
+            'win_path.normalize_dir': MagicMock(return_value=NAME),
         }
         dunder_opts = {'test': False}
 
@@ -149,6 +158,7 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
             ]),
             'win_path.add': add_mock,
             'win_path.rehash': rehash_mock,
+            'win_path.normalize_dir': MagicMock(return_value=NAME),
         }
         dunder_opts = {'test': False}
 
@@ -182,6 +192,7 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
             ]),
             'win_path.add': add_mock,
             'win_path.rehash': rehash_mock,
+            'win_path.normalize_dir': MagicMock(return_value=NAME),
         }
         dunder_opts = {'test': False}
 
@@ -216,6 +227,7 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
             ]),
             'win_path.add': add_mock,
             'win_path.rehash': rehash_mock,
+            'win_path.normalize_dir': MagicMock(return_value=NAME),
         }
         dunder_opts = {'test': False}
 
@@ -251,6 +263,7 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
             ]),
             'win_path.add': add_mock,
             'win_path.rehash': rehash_mock,
+            'win_path.normalize_dir': MagicMock(return_value=NAME),
         }
         dunder_opts = {'test': False}
 
@@ -284,6 +297,7 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
             ]),
             'win_path.add': add_mock,
             'win_path.rehash': rehash_mock,
+            'win_path.normalize_dir': MagicMock(return_value=NAME),
         }
         dunder_opts = {'test': False}
 
@@ -320,6 +334,7 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
             ]),
             'win_path.add': add_mock,
             'win_path.rehash': rehash_mock,
+            'win_path.normalize_dir': MagicMock(return_value=NAME),
         }
         dunder_opts = {'test': False}
 
@@ -354,6 +369,7 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
             ]),
             'win_path.add': add_mock,
             'win_path.rehash': rehash_mock,
+            'win_path.normalize_dir': MagicMock(return_value=NAME),
         }
         dunder_opts = {'test': False}
 
@@ -389,6 +405,7 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
             ]),
             'win_path.add': add_mock,
             'win_path.rehash': rehash_mock,
+            'win_path.normalize_dir': MagicMock(return_value=NAME),
         }
         dunder_opts = {'test': False}
 
@@ -421,6 +438,7 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
             ]),
             'win_path.add': add_mock,
             'win_path.rehash': rehash_mock,
+            'win_path.normalize_dir': MagicMock(return_value=NAME),
         }
         dunder_opts = {'test': True}
 
@@ -453,6 +471,7 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
             ]),
             'win_path.add': add_mock,
             'win_path.rehash': rehash_mock,
+            'win_path.normalize_dir': MagicMock(return_value=NAME),
         }
         dunder_opts = {'test': True}
 
@@ -491,6 +510,7 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
             'win_path.get_path': MagicMock(side_effect=[current_path]),
             'win_path.add': add_mock,
             'win_path.rehash': rehash_mock,
+            'win_path.normalize_dir': MagicMock(return_value=NAME),
         }
         dunder_opts = {'test': test_mode}
 
