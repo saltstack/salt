@@ -65,7 +65,7 @@ Therefore, in addition to directories already present in `/etc/salt/master/pki`
 which are presently prefixed with `minions_`, such as
 `/etc/salt/master/pki/minions` for accepted minion public keys or
 `/etc/salt/master/pki/`, we recommend the addition of directories prefixed by
-the word `clients`, such as `/etc/salt/master/clients.
+the word `clients`, such as `/etc/salt/master/clients`.
 
 The authentication system would be modified to accept a second type of
 authentication which would be of the type `client`. Clients presenting
