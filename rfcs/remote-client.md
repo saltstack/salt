@@ -104,8 +104,6 @@ There are, of course, other ways we might accomplish this. These include:
    `salt-ssh` as well. Though, the goals of this are not necessarily orthoginal
    to this RFC.
 
-What other designs have been considered? What is the impact of not doing this?
-
 ## Unresolved questions
 
 This breaks the existing assumption that a client will be dealing with a single
