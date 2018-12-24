@@ -82,6 +82,11 @@ Obvious modifications would also need to be made to the CLI parser to
 support the addition of a `-m` flag to indicate a master or list of masters
 to publish to.
 
+As such, a sample command to access a remote master via the Salt CLI might
+be:
+  
+  `salt -m my_remote_master '*' test.ping`
+
 ## Alternatives
 
 There are, of course, other ways we might accomplish this. These include:
