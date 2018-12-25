@@ -1778,6 +1778,17 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                                     ret,
                                 )
 
+                        recurse = ['mode']
+                        ret.update({'comment': 'The directory {} is in the '
+                                               'correct state'.format(name),
+                                    'changes': {},
+                                    'result': True})
+                        with patch.object(os.path, 'isdir', mock_t):
+                            self.assertDictEqual(filestate.directory
+                                                 (name, user=user, dir_mode=700,
+                                                  recurse=recurse, group=group,
+                                                  children_only=True), ret)
+
     # 'recurse' function tests: 1
 
     def test_recurse(self):
