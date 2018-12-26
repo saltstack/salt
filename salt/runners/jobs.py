@@ -305,8 +305,8 @@ def list_jobs(ext_source=None,
         )
     mminion = salt.minion.MasterMinion(__opts__)
 
-    if returner in [ 'pgjsonb']:
-        mret = mminion.returners['{0}.get_jids'.format(returner)](
+    if __opts__.get('filter') == 'native':
+        mret = mminion.returners['{0}.get_jids_native'.format(returner)](
                 job_filter = {
                     'search_metadata': search_metadata,
                     'search_target': search_target,

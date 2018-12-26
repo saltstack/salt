@@ -55,9 +55,9 @@ optional. The following ssl options are simply for illustration purposes:
     alternative.pgjsonb.pass: 'salt'
     alternative.pgjsonb.db: 'salt'
     alternative.pgjsonb.port: 5432
-    alternative.pgjsonb.ssl_ca: '/etc/pki/mysql/certs/localhost.pem'
-    alternative.pgjsonb.ssl_cert: '/etc/pki/mysql/certs/localhost.crt'
-    alternative.pgjsonb.ssl_key: '/etc/pki/mysql/certs/localhost.key'
+    alternative.pgjsonb.ssl_ca: '/etc/pki/postgresql/certs/localhost.pem'
+    alternative.pgjsonb.ssl_cert: '/etc/pki/postgresql/certs/localhost.crt'
+    alternative.pgjsonb.ssl_key: '/etc/pki/postgresql/certs/localhost.key'
 
 Should you wish the returner data to be cleaned out every so often, set
 ``keep_jobs`` to the number of hours for the jobs to live in the tables.
@@ -206,7 +206,7 @@ def __virtual__():
 
 def _get_options(ret=None):
     '''
-    Returns options used for the MySQL connection.
+    Returns options used for the PostgreSQL connection.
     '''
     defaults = {
         'host': 'localhost',
@@ -248,7 +248,7 @@ def _get_serv(ret=None, commit=False):
     '''
     _options = _get_options(ret)
     try:
-        # An empty ssl_options dictionary passed to MySQLdb.connect will
+        # An empty ssl_options dictionary passed to psycopg2.connect will
         # effectively connect w/o SSL.
         ssl_options = {
             k: v for k, v in six.iteritems(_options)
@@ -430,7 +430,24 @@ def get_fun(fun):
         return ret
 
 
-def get_jids(job_filter):
+def get_jids():
+    '''
+    Return a list of all job ids
+    '''
+    with _get_serv(ret=None, commit=True) as cur:
+
+        sql = '''SELECT jid, load
+                FROM jids'''
+
+        cur.execute(sql)
+        data = cur.fetchall()
+        ret = {}
+        for jid, load in data:
+            ret[jid] = salt.utils.jid.format_jid_instance(jid, load)
+        return ret
+
+
+def get_jids_native(job_filter):
     '''
     Return a list of all job ids
     '''
