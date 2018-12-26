@@ -176,6 +176,8 @@ The ``__pillar__`` dictionary contains the pillar for the respective minion.
 
 While ``__pillar__`` is defined for every module, it's only filled in for some.
 
+.. _dunder-context:
+
 __context__
 -----------
 
