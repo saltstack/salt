@@ -306,6 +306,11 @@ def list_jobs(ext_source=None,
     mminion = salt.minion.MasterMinion(__opts__)
 
     if __opts__.get('filter') == 'native':
+        fun = '{0}.get_jids_native'.format(returner)
+        if fun not in mminion.returners:
+            raise NotImplementedError(
+               '\'{0}\' returner function not implemented yet.'.format(fun)
+            )
         mret = mminion.returners['{0}.get_jids_native'.format(returner)](
                 job_filter = {
                     'search_metadata': search_metadata,
