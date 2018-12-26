@@ -32,6 +32,7 @@ import salt.utils.json
 
 try:
     import docker
+    import docker.errors
     HAS_DOCKER = True
 except ImportError:
     HAS_DOCKER = False
@@ -64,8 +65,12 @@ def swarm_tokens():
 
         salt '*' swarm.swarm_tokens
     '''
-    client = docker.APIClient(base_url='unix://var/run/docker.sock')
-    service = client.inspect_swarm()
+    try:
+      client = docker.APIClient(base_url='unix://var/run/docker.sock')
+      service = client.inspect_swarm()
+    except docker.errors.APIError as exc:
+      return {'Error': 'Docker API error: {0}'.format(exc)}
+
     return service['JoinTokens']
 
 
@@ -109,6 +114,10 @@ def swarm_init(advertise_addr=str,
         salt_return = {}
         salt_return.update({'Error': 'Please make sure you are passing advertise_addr, '
                                      'listen_addr and force_new_cluster correctly.'})
+    except docker.errors.APIError as exc:
+        salt_return = {}
+        salt_return.update({'Error': 'Docker API error: {0}'.format(exc)})
+
     return salt_return
 
 
@@ -147,6 +156,10 @@ def joinswarm(remote_addr=int,
         salt_return = {}
         salt_return.update({'Error': 'Please make sure this minion is not part of a swarm and you are '
                                      'passing remote_addr, listen_addr and token correctly.'})
+    except docker.errors.APIError as exc:
+        salt_return = {}
+        salt_return.update({'Error': 'Docker API error: {0}'.format(exc)})
+
     return salt_return
 
 
@@ -353,6 +366,10 @@ def node_ls(server=str):
     except TypeError:
         salt_return = {}
         salt_return.update({'Error': 'The server arg is missing or you not targeting a Manager node?'})
+    except docker.errors.APIError as exc:
+        salt_return = {}
+        salt_return.update({'Error': 'Docker API error: {0}'.format(exc)})
+
     return salt_return
 
 
@@ -429,4 +446,8 @@ def update_node(availability=str,
     except TypeError:
         salt_return = {}
         salt_return.update({'Error': 'Make sure all args are passed [availability, node_name, role, node_id, version]'})
+    except docker.errors.APIError as exc:
+        salt_return = {}
+        salt_return.update({'Error': 'Docker API error: {0}'.format(exc)})
+
     return salt_return
