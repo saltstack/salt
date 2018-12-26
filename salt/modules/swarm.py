@@ -66,10 +66,10 @@ def swarm_tokens():
         salt '*' swarm.swarm_tokens
     '''
     try:
-      client = docker.APIClient(base_url='unix://var/run/docker.sock')
-      service = client.inspect_swarm()
+        client = docker.APIClient(base_url='unix://var/run/docker.sock')
+        service = client.inspect_swarm()
     except docker.errors.APIError as exc:
-      return {'Error': 'Docker API error: {0}'.format(exc)}
+        return {'Error': 'Docker API error: {0}'.format(exc)}
 
     return service['JoinTokens']
 
