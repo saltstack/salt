@@ -27,9 +27,6 @@ However, even between these option, there remain several serious drawbacks:
  * A user cannot use either the `salt` tool or the `pepper` tool to send
    commands to a mix of API- and non-API- endpoints.
  
- * Using `pepper`, there is no way to target a given master from the
-   command-line.
-
  * The only way to use Salt outputters is via the `salt` CLI tool, but
    as mentioned, this is limited to a single, local master. This is
    a noteable competitive disadvantage when comparing Salt to other
