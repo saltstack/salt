@@ -89,7 +89,7 @@ def _gather_buffer_space():
         # We need to load up ``mem_total`` grain. Let's mimic required OS data.
         os_data = {'kernel': platform.system()}
         grains = salt.grains.core._memdata(os_data)
-        total_mem = grains['mem_total']
+        total_mem = grains['mem_total'] * 1024 * 1024
     # Return the higher number between 5% of the system memory and 10MiB
     return max([total_mem * 0.05, 10 << 20])
 
@@ -600,13 +600,13 @@ VALID_OPTS = {
     'ipc_write_buffer': int,
 
     # IPC tcp socket max send buffer
-    'ipc_so_sndbuf': int,
+    'ipc_so_sndbuf': (type(None), int),
 
     # IPC tcp socket max receive buffer
-    'ipc_so_rcvbuf': int,
+    'ipc_so_rcvbuf': (type(None), int),
 
     # IPC tcp socket backlog size
-    'ipc_so_backlog': int,
+    'ipc_so_backlog': (type(None), int),
 
     # The number of MWorker processes for a master to startup. This number needs to scale up as
     # the number of connected minions increases.
