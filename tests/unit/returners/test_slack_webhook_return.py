@@ -120,12 +120,12 @@ class SlackWebhookReturnerTestCase(TestCase, LoaderModuleMockMixin):
             'slack_webhook.show_tasks': self._SHOW_TASKS
         }}}
 
-    def test_no_weebhook(self):
+    def test_no_webhook(self):
         '''
         Test returner stops if no webhook is defined
         '''
-        with patch.dict(slack_webhook.__opts__, {}):
-            self.assertEqual(slack_webhook.returner(None), None)
+        with patch.dict(slack_webhook.__opts__, {'webhook': ''}):
+            self.assertEqual(slack_webhook.returner(self._RET), None)
 
     def test_returner(self):
         '''
