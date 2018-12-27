@@ -4,8 +4,12 @@ Manage the Windows System PATH
 '''
 from __future__ import absolute_import, print_function, unicode_literals
 
-# Import 3rd-party libs
+# Import Python libs
+import os
+
+# Import Salt libs
 from salt.ext import six
+import salt.utils.stringutils
 
 
 def __virtual__():
@@ -88,7 +92,7 @@ def exists(name, index=None):
             - index: -1
     '''
     try:
-        name = __salt__['win_path.normalize_dir'](name)
+        name = os.path.normpath(salt.utils.stringutils.to_unicode(name))
     except TypeError:
         name = six.text_type(name)
 
