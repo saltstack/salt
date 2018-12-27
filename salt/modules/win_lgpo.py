@@ -55,6 +55,7 @@ import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
+import salt.utils.win_lgpo_netsh
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -136,7 +137,7 @@ except ImportError:
 
 
 class _policy_info(object):
-    '''
+    r'''
     Policy Helper Class
     ===================
 
@@ -224,7 +225,7 @@ class _policy_info(object):
              Access"
     =======  ===================================================================
 
-    LsaRights mechanism
+    LsaRights Mechanism
     -------------------
 
     LSA Rights policies are configured via the LsaRights mechanism. The value of
@@ -237,7 +238,7 @@ class _policy_info(object):
             **SeNetworkLogonRight**
     ======  ====================================================================
 
-    NetUserModal mechanism
+    NetUserModal Mechanism
     ----------------------
 
     Some policies are configurable by the **NetUserModalGet** and
@@ -253,6 +254,34 @@ class _policy_info(object):
     Option  The name of the structure member which contains the data for the
             policy, for example **max_passwd_age**
     ======  ====================================================================
+
+    NetSH Mechanism
+    ---------------
+
+    The firewall policies are configured by the ``netsh.exe`` executable. The
+    value of this key is a dict with the following make-up:
+
+    =======  ===================================================================
+    Key      Value
+    =======  ===================================================================
+    Profile  The firewall profile to modify. Can be one of Domain, Private, or
+             Public
+    Section  The section of the firewall to modify. Can be one of state,
+             firewallpolicy, settings, or logging.
+    Option   The setting within that section
+    Value    The value of the setting
+    =======  ===================================================================
+
+    More information can be found in the advfirewall context in netsh. This can
+    be access by opening a netsh prompt. At a command prompt type the following:
+
+    c:\>netsh
+    netsh>advfirewall
+    netsh advfirewall>set help
+    netsh advfirewall>set domain help
+
+    Transforms
+    ----------
 
     Optionally, each policy definition can contain a "Transform" key. The
     Transform key is used to handle data that is stored and viewed differently.
@@ -368,6 +397,13 @@ class _policy_info(object):
             'Local Policies',
             'Security Options'
         ]
+        self.windows_firewall_gpedit_path = [
+            'Computer Configuration',
+            'Windows Settings',
+            'Security Settings',
+            'Windows Firewall with Advanced Security',
+            'Windows Firewall with Advanced Security - Local Group Policy Object'
+        ]
         self.password_policy_gpedit_path = [
             'Computer Configuration',
             'Windows Settings',
@@ -428,6 +464,134 @@ class _policy_info(object):
             1: 'Guest only - local users authenticate as Guest',
             None: 'Not Defined',
             '(value not set)': 'Not Defined',
+        }
+        self.force_key_protection = {
+            0: 'User input is not required when new keys are stored and used',
+            1: 'User is prompted when the key is first used',
+            2: 'User must enter a password each time they use a key',
+            None: 'Not Defined',
+            '(value not set)': 'Not Defined'
+        }
+        self.firewall_inbound_connections = {
+            'blockinbound': 'Block (default)',
+            'blockinboundalways': 'Block all connections',
+            'allowinbound': 'Allow',
+            'notconfigured': 'Not configured'
+        }
+        self.firewall_outbound_connections = {
+            'blockoutbound': 'Block',
+            'allowoutbound': 'Allow (default)',
+            'notconfigured': 'Not configured'
+        }
+        self.firewall_rule_merging = {
+            'enable': 'Yes (default)',
+            'disable': 'No',
+            'notconfigured': 'Not configured'
+        }
+        self.firewall_log_packets_connections = {
+            'enable': 'Yes',
+            'disable': 'No (default)',
+            'notconfigured': 'Not configured'
+        }
+        self.firewall_notification = {
+            'enable': 'Yes',
+            'disable': 'No',
+            'notconfigured': 'Not configured'
+        }
+        self.firewall_state = {
+            'on': 'On (recommended)',
+            'off': 'Off',
+            'notconfigured': 'Not configured'
+        }
+        self.krb_encryption_types = {
+            0: 'No minimum',
+            1: 'DES_CBC_CRC',
+            2: 'DES_CBD_MD5',
+            4: 'RC4_MHAC_MD5',
+            8: 'AES128_HMAC_SHA1',
+            16: 'AES256_HMAC_SHA1',
+            2147483616: 'Future Encryption Types',
+            None: 'Not Defined',
+            '(value not set)': 'Not Defined',
+        }
+        self.lm_compat_levels = {
+            0: 'Send LM & NTLM response',
+            1: 'Send LM & NTLM - use NTLMv2 session security if negotiated',
+            2: 'Send NTLM response only',
+            3: 'Send NTLMv2 response only',
+            4: 'Send NTLMv2 response only. Refuse LM',
+            5: 'Send NTLMv2 response only. Refuse LM & NTLM',
+            None: 'Not Defined',
+            '(value not set)': 'Not Defined',
+        }
+        self.ldap_signing_reqs = {
+            0: 'None',
+            1: 'Negotiate signing',
+            2: 'Require signing',
+            None: 'Not Defined',
+            '(value not set)': 'Not Defined',
+        }
+        self.ntlm_session_security_levels = {
+            0: 'No minimum',
+            524288: 'Require NTLMv2 session security',
+            536870912: 'Require 128-bit encryption',
+            None: 'Not Defined',
+            '(value not set)': 'Not Defined',
+        }
+        self.ntlm_audit_settings = {
+            0: 'Disable',
+            1: 'Enable auditing for domain accounts',
+            2: 'Enable auditing for all accounts',
+            None: 'Not Defined',
+            '(value not set)': 'Not Defined'
+        }
+        self.ntlm_domain_audit_settings = {
+            0: 'Disable',
+            1: 'Enable for domain accounts to domain servers',
+            3: 'Enable for domain accounts',
+            5: 'Enable for domain servers',
+            7: 'Enable all',
+            None: 'Not Defined',
+            '(value not set)': 'Not Defined'
+        }
+        self.incoming_ntlm_settings = {
+            0: 'Allow all',
+            1: 'Deny all domain accounts',
+            2: 'Deny all accounts',
+            None: 'Not Defined',
+            '(value not set)': 'Not Defined'
+        }
+        self.ntlm_domain_auth_settings = {
+            0: 'Disable',
+            1: 'Deny for domain accounts to domain servers',
+            3: 'Deny for domain accounts',
+            5: 'Deny for domain servers',
+            7: 'Deny all',
+            None: 'Not Defined',
+            '(value not set)': 'Not Defined'
+        }
+        self.outgoing_ntlm_settings = {
+            0: 'Allow all',
+            1: 'Audit all',
+            2: 'Deny all',
+            None: 'Not Defined',
+            '(value not set)': 'Not Defined'
+        }
+        self.enabled_one_disabled_zero_no_not_defined = {
+            0: 'Disabled',
+            1: 'Enabled',
+        }
+        self.enabled_one_disabled_zero_no_not_defined_transform = {
+            'Get': '_dict_lookup',
+            'Put': '_dict_lookup',
+            'GetArgs': {
+                'lookup': self.enabled_one_disabled_zero_no_not_defined,
+                'value_lookup': False,
+            },
+            'PutArgs': {
+                'lookup': self.enabled_one_disabled_zero_no_not_defined,
+                'value_lookup': True,
+            },
         }
         self.policies = {
             'Machine': {
@@ -547,12 +711,12 @@ class _policy_info(object):
                         'Policy': 'Network access: Allow anonymous SID/Name '
                                   'translation',
                         'lgpo_section': self.password_policy_gpedit_path,
-                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'Settings': self.enabled_one_disabled_zero_no_not_defined.keys(),
                         'Secedit': {
                             'Option': 'LSAAnonymousNameLookup',
                             'Section': 'System Access',
                         },
-                        'Transform': self.enabled_one_disabled_zero_transform,
+                        'Transform': self.enabled_one_disabled_zero_no_not_defined_transform,
                     },
                     'RestrictAnonymousSam': {
                         'Policy': 'Network access: Do not allow anonymous '
@@ -566,6 +730,20 @@ class _policy_info(object):
                             'Type': 'REG_DWORD'
                         },
                         'Transform': self.enabled_one_disabled_zero_transform,
+                    },
+                    'RestrictRemoteSAM': {
+                        'Policy': 'Network access: Restrict clients allowed to '
+                                  'make remote calls to SAM',
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'System\\CurrentControlSet\\Control\\Lsa',
+                            'Value': 'RestrictRemoteSAM',
+                            'Type': 'REG_SZ'
+                        },
+                        'Transform': {
+                            'Put': '_string_put_transform'
+                        }
                     },
                     'RestrictAnonymous': {
                         'Policy': 'Network access: Do not allow anonymous '
@@ -618,6 +796,9 @@ class _policy_info(object):
                             'Value': 'NullSessionPipes',
                             'Type': 'REG_MULTI_SZ'
                         },
+                        'Transform': {
+                            'Put': '_multi_string_put_transform'
+                        }
                     },
                     'RemoteRegistryExactPaths': {
                         'Policy': 'Network access: Remotely accessible '
@@ -631,6 +812,9 @@ class _policy_info(object):
                             'Value': 'Machine',
                             'Type': 'REG_MULTI_SZ'
                         },
+                        'Transform': {
+                            'Put': '_multi_string_put_transform'
+                        }
                     },
                     'RemoteRegistryPaths': {
                         'Policy': 'Network access: Remotely accessible '
@@ -643,6 +827,9 @@ class _policy_info(object):
                             'Value': 'Machine',
                             'Type': 'REG_MULTI_SZ'
                         },
+                        'Transform': {
+                            'Put': '_multi_string_put_transform'
+                        }
                     },
                     'RestrictNullSessAccess': {
                         'Policy': 'Network access: Restrict anonymous access '
@@ -669,6 +856,9 @@ class _policy_info(object):
                             'Value': 'NullSessionShares',
                             'Type': 'REG_MULTI_SZ'
                         },
+                        'Transform': {
+                            'Put': '_multi_string_put_transform'
+                        }
                     },
                     'ForceGuest': {
                         'Policy': 'Network access: Sharing and security model '
@@ -690,6 +880,717 @@ class _policy_info(object):
                             },
                             'PutArgs': {
                                 'lookup': self.force_guest,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwDomainState': {
+                        'Policy': 'Network firewall: Domain: State',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - On (recommended)
+                        # - Off
+                        # - Not configured
+                        'Settings': self.firewall_state.keys(),
+                        'NetSH': {
+                            'Profile': 'domain',
+                            'Section': 'state',
+                            'Option': 'State'  # Unused, but needed
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_state,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_state,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwPrivateState': {
+                        'Policy': 'Network firewall: Private: State',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - On (recommended)
+                        # - Off
+                        # - Not configured
+                        'Settings': self.firewall_state.keys(),
+                        'NetSH': {
+                            'Profile': 'private',
+                            'Section': 'state',
+                            'Option': 'State'  # Unused, but needed
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_state,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_state,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwPublicState': {
+                        'Policy': 'Network firewall: Public: State',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - On (recommended)
+                        # - Off
+                        # - Not configured
+                        'Settings': self.firewall_state.keys(),
+                        'NetSH': {
+                            'Profile': 'public',
+                            'Section': 'state',
+                            'Option': 'State'  # Unused, but needed
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_state,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_state,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwDomainInboundConnections': {
+                        'Policy': 'Network firewall: Domain: Inbound connections',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - Block (default)
+                        # - Block all connections
+                        # - Allow
+                        # - Not configured
+                        'Settings': self.firewall_inbound_connections.keys(),
+                        'NetSH': {
+                            'Profile': 'domain',
+                            'Section': 'firewallpolicy',
+                            'Option': 'Inbound'
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_inbound_connections,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_inbound_connections,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwPrivateInboundConnections': {
+                        'Policy': 'Network firewall: Private: Inbound connections',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - Block (default)
+                        # - Block all connections
+                        # - Allow
+                        # - Not configured
+                        'Settings': self.firewall_inbound_connections.keys(),
+                        'NetSH': {
+                            'Profile': 'private',
+                            'Section': 'firewallpolicy',
+                            'Option': 'Inbound'
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_inbound_connections,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_inbound_connections,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwPublicInboundConnections': {
+                        'Policy': 'Network firewall: Public: Inbound connections',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - Block (default)
+                        # - Block all connections
+                        # - Allow
+                        # - Not configured
+                        'Settings': self.firewall_inbound_connections.keys(),
+                        'NetSH': {
+                            'Profile': 'public',
+                            'Section': 'firewallpolicy',
+                            'Option': 'Inbound'
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_inbound_connections,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_inbound_connections,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwDomainOutboundConnections': {
+                        'Policy': 'Network firewall: Domain: Outbound connections',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - Block
+                        # - Allow (default)
+                        # - Not configured
+                        'Settings': self.firewall_outbound_connections.keys(),
+                        'NetSH': {
+                            'Profile': 'domain',
+                            'Section': 'firewallpolicy',
+                            'Option': 'Outbound'
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_outbound_connections,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_outbound_connections,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwPrivateOutboundConnections': {
+                        'Policy': 'Network firewall: Private: Outbound connections',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - Block
+                        # - Allow (default)
+                        # - Not configured
+                        'Settings': self.firewall_outbound_connections.keys(),
+                        'NetSH': {
+                            'Profile': 'private',
+                            'Section': 'firewallpolicy',
+                            'Option': 'Outbound'
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_outbound_connections,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_outbound_connections,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwPublicOutboundConnections': {
+                        'Policy': 'Network firewall: Public: Outbound connections',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - Block
+                        # - Allow (default)
+                        # - Not configured
+                        'Settings': self.firewall_outbound_connections.keys(),
+                        'NetSH': {
+                            'Profile': 'public',
+                            'Section': 'firewallpolicy',
+                            'Option': 'Outbound'
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_outbound_connections,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_outbound_connections,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwDomainSettingsNotification': {
+                        'Policy': 'Network firewall: Domain: Settings: Display a notification',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - Yes
+                        # - No
+                        # - Not configured
+                        'Settings': self.firewall_notification.keys(),
+                        'NetSH': {
+                            'Profile': 'domain',
+                            'Section': 'settings',
+                            'Option': 'InboundUserNotification'
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_notification,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_notification,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwPrivateSettingsNotification': {
+                        'Policy': 'Network firewall: Private: Settings: Display a notification',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - Yes
+                        # - No
+                        # - Not configured
+                        'Settings': self.firewall_notification.keys(),
+                        'NetSH': {
+                            'Profile': 'private',
+                            'Section': 'settings',
+                            'Option': 'InboundUserNotification'
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_notification,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_notification,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwPublicSettingsNotification': {
+                        'Policy': 'Network firewall: Public: Settings: Display a notification',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - Yes
+                        # - No
+                        # - Not configured
+                        'Settings': self.firewall_notification.keys(),
+                        'NetSH': {
+                            'Profile': 'public',
+                            'Section': 'settings',
+                            'Option': 'InboundUserNotification'
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_notification,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_notification,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwDomainSettingsLocalFirewallRules': {
+                        'Policy': 'Network firewall: Domain: Settings: Apply '
+                                  'local firewall rules',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - Yes (default)
+                        # - No
+                        # - Not configured
+                        'Settings': self.firewall_rule_merging.keys(),
+                        'NetSH': {
+                            'Profile': 'domain',
+                            'Section': 'settings',
+                            'Option': 'LocalFirewallRules'
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_rule_merging,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_rule_merging,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwPrivateSettingsLocalFirewallRules': {
+                        'Policy': 'Network firewall: Private: Settings: Apply '
+                                  'local firewall rules',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - Yes (default)
+                        # - No
+                        # - Not configured
+                        'Settings': self.firewall_rule_merging.keys(),
+                        'NetSH': {
+                            'Profile': 'private',
+                            'Section': 'settings',
+                            'Option': 'LocalFirewallRules'
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_rule_merging,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_rule_merging,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwPublicSettingsLocalFirewallRules': {
+                        'Policy': 'Network firewall: Public: Settings: Apply '
+                                  'local firewall rules',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - Yes (default)
+                        # - No
+                        # - Not configured
+                        'Settings': self.firewall_rule_merging.keys(),
+                        'NetSH': {
+                            'Profile': 'public',
+                            'Section': 'settings',
+                            'Option': 'LocalFirewallRules'
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_rule_merging,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_rule_merging,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwDomainSettingsLocalConnectionRules': {
+                        'Policy': 'Network firewall: Domain: Settings: Apply '
+                                  'local connection security rules',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - Yes (default)
+                        # - No
+                        # - Not configured
+                        'Settings': self.firewall_rule_merging.keys(),
+                        'NetSH': {
+                            'Profile': 'domain',
+                            'Section': 'settings',
+                            'Option': 'LocalConSecRules'
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_rule_merging,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_rule_merging,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwPrivateSettingsLocalConnectionRules': {
+                        'Policy': 'Network firewall: Private: Settings: Apply '
+                                  'local connection security rules',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - Yes (default)
+                        # - No
+                        # - Not configured
+                        'Settings': self.firewall_rule_merging.keys(),
+                        'NetSH': {
+                            'Profile': 'private',
+                            'Section': 'settings',
+                            'Option': 'LocalConSecRules'
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_rule_merging,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_rule_merging,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwPublicSettingsLocalConnectionRules': {
+                        'Policy': 'Network firewall: Public: Settings: Apply '
+                                  'local connection security rules',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - Yes (default)
+                        # - No
+                        # - Not configured
+                        'Settings': self.firewall_rule_merging.keys(),
+                        'NetSH': {
+                            'Profile': 'public',
+                            'Section': 'settings',
+                            'Option': 'LocalConSecRules'
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_rule_merging,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_rule_merging,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwDomainLoggingName': {
+                        'Policy': 'Network firewall: Domain: Logging: Name',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - <a full path to a file>
+                        # - Not configured
+                        'Settings': None,
+                        'NetSH': {
+                            'Profile': 'domain',
+                            'Section': 'logging',
+                            'Option': 'FileName'
+                        }
+                    },
+                    'WfwPrivateLoggingName': {
+                        'Policy': 'Network firewall: Private: Logging: Name',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - <a full path to a file>
+                        # - Not configured
+                        'Settings': None,
+                        'NetSH': {
+                            'Profile': 'private',
+                            'Section': 'logging',
+                            'Option': 'FileName'
+                        }
+                    },
+                    'WfwPublicLoggingName': {
+                        'Policy': 'Network firewall: Public: Logging: Name',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - <a full path to a file>
+                        # - Not configured
+                        'Settings': None,
+                        'NetSH': {
+                            'Profile': 'public',
+                            'Section': 'logging',
+                            'Option': 'FileName'
+                        }
+                    },
+                    'WfwDomainLoggingMaxFileSize': {
+                        'Policy': 'Network firewall: Domain: Logging: Size limit (KB)',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - <int between 1 and 32767>
+                        # - Not configured
+                        'Settings': None,
+                        'NetSH': {
+                            'Profile': 'domain',
+                            'Section': 'logging',
+                            'Option': 'MaxFileSize'
+                        }
+                    },
+                    'WfwPrivateLoggingMaxFileSize': {
+                        'Policy': 'Network firewall: Private: Logging: Size limit (KB)',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - <int between 1 and 32767>
+                        # - Not configured
+                        'Settings': None,
+                        'NetSH': {
+                            'Profile': 'private',
+                            'Section': 'logging',
+                            'Option': 'MaxFileSize'
+                        }
+                    },
+                    'WfwPublicLoggingMaxFileSize': {
+                        'Policy': 'Network firewall: Public: Logging: Size limit (KB)',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - <int between 1 and 32767>
+                        # - Not configured
+                        'Settings': None,
+                        'NetSH': {
+                            'Profile': 'public',
+                            'Section': 'logging',
+                            'Option': 'MaxFileSize'
+                        }
+                    },
+                    'WfwDomainLoggingAllowedConnections': {
+                        'Policy': 'Network firewall: Domain: Logging: Log successful connections',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - Yes
+                        # - No (default)
+                        # - Not configured
+                        'Settings': self.firewall_log_packets_connections.keys(),
+                        'NetSH': {
+                            'Profile': 'domain',
+                            'Section': 'logging',
+                            'Option': 'LogAllowedConnections'
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_log_packets_connections,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_log_packets_connections,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwPrivateLoggingAllowedConnections': {
+                        'Policy': 'Network firewall: Private: Logging: Log successful connections',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - Yes
+                        # - No (default)
+                        # - Not configured
+                        'Settings': self.firewall_log_packets_connections.keys(),
+                        'NetSH': {
+                            'Profile': 'private',
+                            'Section': 'logging',
+                            'Option': 'LogAllowedConnections'
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_log_packets_connections,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_log_packets_connections,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwPublicLoggingAllowedConnections': {
+                        'Policy': 'Network firewall: Public: Logging: Log successful connections',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - Yes
+                        # - No (default)
+                        # - Not configured
+                        'Settings': self.firewall_log_packets_connections.keys(),
+                        'NetSH': {
+                            'Profile': 'public',
+                            'Section': 'logging',
+                            'Option': 'LogAllowedConnections'
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_log_packets_connections,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_log_packets_connections,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwDomainLoggingDroppedConnections': {
+                        'Policy': 'Network firewall: Domain: Logging: Log dropped packets',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - Yes
+                        # - No (default)
+                        # - Not configured
+                        'Settings': self.firewall_log_packets_connections.keys(),
+                        'NetSH': {
+                            'Profile': 'domain',
+                            'Section': 'logging',
+                            'Option': 'LogDroppedConnections'
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_log_packets_connections,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_log_packets_connections,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwPrivateLoggingDroppedConnections': {
+                        'Policy': 'Network firewall: Private: Logging: Log dropped packets',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - Yes
+                        # - No (default)
+                        # - Not configured
+                        'Settings': self.firewall_log_packets_connections.keys(),
+                        'NetSH': {
+                            'Profile': 'private',
+                            'Section': 'logging',
+                            'Option': 'LogDroppedConnections'
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_log_packets_connections,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_log_packets_connections,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwPublicLoggingDroppedConnections': {
+                        'Policy': 'Network firewall: Public: Logging: Log dropped packets',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - Yes
+                        # - No (default)
+                        # - Not configured
+                        'Settings': self.firewall_log_packets_connections.keys(),
+                        'NetSH': {
+                            'Profile': 'public',
+                            'Section': 'logging',
+                            'Option': 'LogDroppedConnections'
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_log_packets_connections,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_log_packets_connections,
                                 'value_lookup': True,
                             },
                         },
@@ -757,32 +1658,32 @@ class _policy_info(object):
                     'PasswordComplexity': {
                         'Policy': 'Password must meet complexity requirements',
                         'lgpo_section': self.password_policy_gpedit_path,
-                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'Settings': self.enabled_one_disabled_zero_no_not_defined.keys(),
                         'Secedit': {
                             'Option': 'PasswordComplexity',
                             'Section': 'System Access',
                         },
-                        'Transform': self.enabled_one_disabled_zero_transform,
+                        'Transform': self.enabled_one_disabled_zero_no_not_defined_transform,
                     },
                     'ClearTextPasswords': {
                         'Policy': 'Store passwords using reversible encryption',
                         'lgpo_section': self.password_policy_gpedit_path,
-                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'Settings': self.enabled_one_disabled_zero_no_not_defined.keys(),
                         'Secedit': {
                             'Option': 'ClearTextPassword',
                             'Section': 'System Access',
                         },
-                        'Transform': self.enabled_one_disabled_zero_transform,
+                        'Transform': self.enabled_one_disabled_zero_no_not_defined_transform,
                     },
                     'AdminAccountStatus': {
                         'Policy': 'Accounts: Administrator account status',
-                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'Settings': self.enabled_one_disabled_zero_no_not_defined.keys(),
                         'lgpo_section': self.security_options_gpedit_path,
                         'Secedit': {
                             'Option': 'EnableAdminAccount',
                             'Section': 'System Access',
                         },
-                        'Transform': self.enabled_one_disabled_zero_transform,
+                        'Transform': self.enabled_one_disabled_zero_no_not_defined_transform,
                     },
                     'NoConnectedUser': {
                         'Policy': 'Accounts: Block Microsoft accounts',
@@ -810,13 +1711,13 @@ class _policy_info(object):
                     },
                     'GuestAccountStatus': {
                         'Policy': 'Accounts: Guest account status',
-                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'Settings': self.enabled_one_disabled_zero_no_not_defined.keys(),
                         'lgpo_section': self.security_options_gpedit_path,
                         'Secedit': {
                             'Option': 'EnableGuestAccount',
                             'Section': 'System Access',
                         },
-                        'Transform': self.enabled_one_disabled_zero_transform,
+                        'Transform': self.enabled_one_disabled_zero_no_not_defined_transform,
                     },
                     'LimitBlankPasswordUse': {
                         'Policy': 'Accounts: Limit local account use of blank '
@@ -1193,6 +2094,9 @@ class _policy_info(object):
                             'Value': 'legalnoticetext',
                             'Type': 'REG_SZ',
                         },
+                        'Transform': {
+                            'Put': '_string_put_transform'
+                        }
                     },
                     'legalnoticecaption': {
                         'Policy': 'Interactive logon: Message title for users '
@@ -1205,6 +2109,9 @@ class _policy_info(object):
                             'Value': 'legalnoticecaption',
                             'Type': 'REG_SZ',
                         },
+                        'Transform': {
+                            'Put': '_string_put_transform'
+                        }
                     },
                     'DontDisplayLockedUserId': {
                         'Policy': 'Interactive logon: Display user information '
@@ -2306,7 +3213,7 @@ class _policy_info(object):
                         },
                     },
                     'SeTakeOwnershipPrivilege': {
-                        'Policy': 'Take ownership of files and other objects',
+                        'Policy': 'Take ownership of files or other objects',
                         'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
@@ -2341,6 +3248,481 @@ class _policy_info(object):
                             'Path': 'Software\\Microsoft\\Windows NT\\'
                                     'CurrentVersion\\Setup\\RecoveryConsole',
                             'Value': 'SetCommand',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': self.enabled_one_disabled_zero_transform,
+                    },
+                    'ForceKeyProtection': {
+                        'Policy': 'System Cryptography: Force strong key protection for '
+                                  'user keys stored on the computer',
+                        'Settings': self.force_key_protection.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'Software\\Policies\\Microsoft\\Cryptography',
+                            'Value': 'ForceKeyProtection',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.force_key_protection,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.force_key_protection,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'FIPSAlgorithmPolicy': {
+                        'Policy': 'System Cryptography: Use FIPS compliant algorithms '
+                                  'for encryption, hashing, and signing',
+                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'System\\CurrentControlSet\\Control\\Lsa\\FIPSAlgorithmPolicy',
+                            'Value': 'Enabled',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': self.enabled_one_disabled_zero_transform,
+                    },
+                    'MachineAccessRestriction': {
+                        'Policy': 'DCOM: Machine Access Restrictions in Security Descriptor '
+                                  'Definition Language (SDDL) syntax',
+                        'Settings': None,
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'Software\\Policies\\Microsoft\\Windows NT\\DCOM',
+                            'Value': 'MachineAccessRestriction',
+                            'Type': 'REG_SZ',
+                        },
+                        'Transform': {
+                            'Put': '_string_put_transform'
+                        }
+                    },
+                    'MachineLaunchRestriction': {
+                        'Policy': 'DCOM: Machine Launch Restrictions in Security Descriptor '
+                                  'Definition Language (SDDL) syntax',
+                        'Settings': None,
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'Software\\Policies\\Microsoft\\Windows NT\\DCOM',
+                            'Value': 'MachineLaunchRestriction',
+                            'Type': 'REG_SZ',
+                        },
+                        'Transform': {
+                            'Put': '_string_put_transform'
+                        }
+                    },
+                    'UseMachineId': {
+                        'Policy': 'Network security: Allow Local System to use computer '
+                                  'identity for NTLM',
+                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'SYSTEM\\CurrentControlSet\\Control\\Lsa',
+                            'Value': 'UseMachineId',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': self.enabled_one_disabled_zero_transform,
+                    },
+                    'allownullsessionfallback': {
+                        'Policy': 'Network security: Allow LocalSystem NULL session fallback',
+                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'SYSTEM\\CurrentControlSet\\Control\\Lsa\\MSV1_0',
+                            'Value': 'allownullsessionfallback',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': self.enabled_one_disabled_zero_transform,
+                    },
+                    'AllowOnlineID': {
+                        'Policy': 'Network security: Allow PKU2U authentication requests '
+                                  'to this computer to use online identities.',
+                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'SYSTEM\\CurrentControlSet\\Control\\Lsa\\pku2u',
+                            'Value': 'AllowOnlineID',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': self.enabled_one_disabled_zero_transform,
+                    },
+                    'KrbSupportedEncryptionTypes': {
+                        'Policy': 'Network security: Configure encryption types allowed '
+                                  'for Kerberos',
+                        'Settings': None,
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\policies'
+                                    '\\system\\Kerberos\\Parameters',
+                            'Value': 'SupportedEncryptionTypes',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup_bitwise_add',
+                            'Put': '_dict_lookup_bitwise_add',
+                            'GetArgs': {
+                                'lookup': self.krb_encryption_types,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.krb_encryption_types,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'NoLMHash': {
+                        'Policy': 'Network security: Do not store LAN Manager hash value '
+                                  'on next password change',
+                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'SYSTEM\\CurrentControlSet\\Control\\Lsa',
+                            'Value': 'NoLMHash',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': self.enabled_one_disabled_zero_transform,
+                    },
+                    'ForceLogoffWhenHourExpire': {
+                        'Policy': 'Network security: Force logoff when logon hours expire',
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Settings': self.enabled_one_disabled_zero_no_not_defined.keys(),
+                        'Secedit': {
+                            'Option': 'ForceLogoffWhenHourExpire',
+                            'Section': 'System Access',
+                        },
+                        'Transform': self.enabled_one_disabled_zero_no_not_defined_transform,
+                    },
+                    'LmCompatibilityLevel': {
+                        'Policy': 'Network security: LAN Manager authentication level',
+                        'Settings': self.lm_compat_levels.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'SYSTEM\\CurrentControlSet\\Control\\Lsa',
+                            'Value': 'LmCompatibilityLevel',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.lm_compat_levels,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.lm_compat_levels,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'LDAPClientIntegrity': {
+                        'Policy': 'Network security: LDAP client signing requirements',
+                        'Settings': self.ldap_signing_reqs.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'SYSTEM\\CurrentControlSet\\Services\\ldap',
+                            'Value': 'LDAPClientIntegrity',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.ldap_signing_reqs,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.ldap_signing_reqs,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'NTLMMinClientSec': {
+                        'Policy': 'Network security: Minimum session security for NTLM SSP based '
+                                  '(including secure RPC) clients',
+                        'Settings': None,
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'System\\CurrentControlSet\\Control\\Lsa\\MSV1_0',
+                            'Value': 'NTLMMinClientSec',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup_bitwise_add',
+                            'Put': '_dict_lookup_bitwise_add',
+                            'GetArgs': {
+                                'lookup': self.ntlm_session_security_levels,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.ntlm_session_security_levels,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'NTLMMinServerSec': {
+                        'Policy': 'Network security: Minimum session security for NTLM SSP based '
+                                  '(including secure RPC) servers',
+                        'Settings': None,
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'System\\CurrentControlSet\\Control\\Lsa\\MSV1_0',
+                            'Value': 'NTLMMinServerSec',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup_bitwise_add',
+                            'Put': '_dict_lookup_bitwise_add',
+                            'GetArgs': {
+                                'lookup': self.ntlm_session_security_levels,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.ntlm_session_security_levels,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'ClientAllowedNTLMServers': {
+                        'Policy': 'Network security: Restrict NTLM: Add remote server'
+                                  ' exceptions for NTLM authentication',
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'System\\CurrentControlSet\\Control\\Lsa\\MSV1_0',
+                            'Value': 'ClientAllowedNTLMServers',
+                            'Type': 'REG_MULTI_SZ'
+                        },
+                        'Transform': {
+                            'Put': '_multi_string_put_transform'
+                        }
+                    },
+                    'DCAllowedNTLMServers': {
+                        'Policy': 'Network security: Restrict NTLM: Add server exceptions'
+                                  ' in this domain',
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'System\\CurrentControlSet\\Services\\Netlogon\\Parameters',
+                            'Value': 'DCAllowedNTLMServers',
+                            'Type': 'REG_MULTI_SZ'
+                        },
+                        'Transform': {
+                            'Put': '_multi_string_put_transform'
+                        }
+                    },
+                    'AuditReceivingNTLMTraffic': {
+                        'Policy': 'Network security: Restrict NTLM: Audit Incoming NTLM Traffic',
+                        'Settings': self.ntlm_audit_settings.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'SYSTEM\\CurrentControlSet\\Control\\LSA\\MSV1_0',
+                            'Value': 'AuditReceivingNTLMTraffic',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.ntlm_audit_settings,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.ntlm_audit_settings,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'AuditNTLMInDomain': {
+                        'Policy': 'Network security: Restrict NTLM: Audit NTLM '
+                                  'authentication in this domain',
+                        'Settings': self.ntlm_domain_audit_settings.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'SYSTEM\\CurrentControlSet\\Services\\Netlogon\\Parameters',
+                            'Value': 'AuditNTLMInDomain',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.ntlm_domain_audit_settings,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.ntlm_domain_audit_settings,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'RestrictReceivingNTLMTraffic': {
+                        'Policy': 'Network security: Restrict NTLM: Incoming'
+                                  ' NTLM traffic',
+                        'Settings': self.incoming_ntlm_settings.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'SYSTEM\\CurrentControlSet\\Control\\LSA\\MSV1_0',
+                            'Value': 'RestrictReceivingNTLMTraffic',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.incoming_ntlm_settings,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.incoming_ntlm_settings,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'RestrictNTLMInDomain': {
+                        'Policy': 'Network security: Restrict NTLM: NTLM '
+                                  'authentication in this domain',
+                        'Settings': self.ntlm_domain_auth_settings.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'SYSTEM\\CurrentControlSet\\Services\\Netlogon\\Parameters',
+                            'Value': 'RestrictNTLMInDomain',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.ntlm_domain_auth_settings,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.ntlm_domain_auth_settings,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'RestrictSendingNTLMTraffic': {
+                        'Policy': 'Network security: Restrict NTLM: Outgoing NTLM'
+                                  ' traffic to remote servers',
+                        'Settings': self.outgoing_ntlm_settings.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'SYSTEM\\CurrentControlSet\\Control\\Lsa\\MSV1_0',
+                            'Value': 'RestrictSendingNTLMTraffic',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.outgoing_ntlm_settings,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.outgoing_ntlm_settings,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'ShutdownWithoutLogon': {
+                        'Policy': 'Shutdown: Allow system to be shut down '
+                                  'without having to log on',
+                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\policies\\system',
+                            'Value': 'ShutdownWithoutLogon',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': self.enabled_one_disabled_zero_transform,
+                    },
+                    'ClearPageFileAtShutdown': {
+                        'Policy': 'Shutdown: Clear virtual memory pagefile',
+                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'System\\CurrentControlSet\\Control\\'
+                                    'SESSION MANAGER\\MEMORY MANAGEMENT',
+                            'Value': 'ClearPageFileAtShutdown',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': self.enabled_one_disabled_zero_transform,
+                    },
+                    'ObCaseInsensitive': {
+                        'Policy': 'System objects: Require case insensitivity for '
+                                  'non-Windows subsystems',
+                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'System\\CurrentControlSet\\Control\\'
+                                    'SESSION MANAGER\\Kernel',
+                            'Value': 'ObCaseInsensitive',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': self.enabled_one_disabled_zero_transform,
+                    },
+                    'ProtectionMode': {
+                        'Policy': 'System objects: Strengthen default permissions of '
+                                  'internal system objects (e.g. Symbolic Links)',
+                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'System\\CurrentControlSet\\Control\\'
+                                    'SESSION MANAGER',
+                            'Value': 'ProtectionMode',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': self.enabled_one_disabled_zero_transform,
+                    },
+                    'OptionalSubsystems': {
+                        'Policy': 'System settings: Optional subsystems',
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'System\\CurrentControlSet\\Control\\'
+                                    'SESSION MANAGER\\SubSystems',
+                            'Value': 'optional',
+                            'Type': 'REG_MULTI_SZ'
+                        },
+                        'Transform': {
+                            'Put': '_multi_string_put_transform'
+                        }
+                    },
+                    'AuthenticodeEnabled': {
+                        'Policy': 'System settings: Use Certificate Rules on Windows'
+                                  ' Executables for Software Restriction Policies',
+                        'Settings': self.enabled_one_disabled_zero.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'SOFTWARE\\Policies\\Microsoft\\Windows\\safer\\codeidentifiers',
+                            'Value': 'AuthenticodeEnabled',
                             'Type': 'REG_DWORD',
                         },
                         'Transform': self.enabled_one_disabled_zero_transform,
@@ -2686,6 +4068,76 @@ class _policy_info(object):
                         return v
         return 'Invalid Value'
 
+    @classmethod
+    def _dict_lookup_bitwise_add(cls, item, **kwargs):
+        '''
+        kwarg value_lookup bool to determine if item_list should be compared to keys
+        or values
+
+        kwarg test_zero is used to determine if 0 should be tested when value_lookup is false
+        lookup should be a dict with integers for keys
+
+        if value_lookup is True, item is expected to be a list
+            the function will return the sum of the keys whose values are in the item list
+        if value_lookup is False, item is expected to be an integer
+            the function will return the values for the keys
+            which successfully "bitwise and" with item
+        '''
+        value_lookup = kwargs.get('value_lookup', False)
+        test_zero = kwargs.get('test_zero', False)
+        ret_val = None
+        if str(item).lower() == 'not defined':
+            return None
+        if value_lookup:
+            if not isinstance(item, list):
+                return 'Invalid Value'
+            ret_val = 0
+        else:
+            if not isinstance(item, six.integer_types):
+                return 'Invalid Value'
+            ret_val = []
+        if 'lookup' in kwargs:
+            for k, v in six.iteritems(kwargs['lookup']):
+                if value_lookup:
+                    if six.text_type(v).lower() in [z.lower() for z in item]:
+                        ret_val = ret_val + k
+                else:
+                    do_test = True
+                    if not test_zero:
+                        if k == 0:
+                            do_test = False
+                    if do_test and isinstance(k, int) and item & k == k:
+                        ret_val.append(v)
+        else:
+            return 'Invalid Value'
+        return ret_val
+
+    @classmethod
+    def _multi_string_put_transform(cls, item, **kwargs):
+        '''
+        transform for a REG_MULTI_SZ to properly handle "Not Defined"
+        '''
+        if isinstance(item, list):
+            return item
+        elif isinstance(item, six.string_types):
+            if item.lower() == 'not defined':
+                return None
+            else:
+                return item.split(',')
+        else:
+            return 'Invalid Value'
+
+    @classmethod
+    def _string_put_transform(cls, item, **kwargs):
+        '''
+        transfrom for a REG_SZ to properly handle "Not Defined"
+        '''
+        if isinstance(item, six.string_types):
+            if item.lower() == 'not defined':
+                return None
+            else:
+                return item
+
 
 def __virtual__():
     '''
@@ -2895,6 +4347,54 @@ def _buildElementNsmap(using_elements):
     for e in using_elements:
         thisMap[e.attrib['prefix']] = e.attrib['namespace']
     return thisMap
+
+
+def _findOptionValueNetSH(profile, option):
+    if 'lgpo.netsh_data' not in __context__:
+        __context__['lgpo.netsh_data'] = {}
+
+    if profile not in __context__['lgpo.netsh_data']:
+        log.debug('LGPO: Loading netsh data for {0} profile'.format(profile))
+        settings = salt.utils.win_lgpo_netsh.get_all_settings(profile=profile,
+                                                              store='lgpo')
+        __context__['lgpo.netsh_data'].update({profile: settings})
+    log.debug('LGPO: netsh returning value: {0}'
+              ''.format(__context__['lgpo.netsh_data'][profile][option]))
+    return __context__['lgpo.netsh_data'][profile][option]
+
+
+def _setOptionValueNetSH(profile, section, option, value):
+    if section not in ('firewallpolicy', 'settings', 'logging', 'state'):
+        raise ValueError('LGPO: Invalid section: {0}'.format(section))
+    log.debug('LGPO: Setting the following\n'
+              'Profile: {0}\n'
+              'Section: {1}\n'
+              'Option: {2}\n'
+              'Value: {3}'.format(profile, section, option, value))
+    if section == 'firewallpolicy':
+        salt.utils.win_lgpo_netsh.set_firewall_settings(
+            profile=profile,
+            inbound=value if option == 'Inbound' else None,
+            outbound=value if option == 'Outbound' else None,
+            store='lgpo')
+    if section == 'settings':
+        salt.utils.win_lgpo_netsh.set_settings(
+            profile=profile, setting=option, value=value, store='lgpo')
+    if section == 'state':
+        salt.utils.win_lgpo_netsh.set_state(
+            profile=profile, state=value, store='lgpo')
+    if section == 'logging':
+        if option in ('FileName', 'MaxFileSize'):
+            if value == 'Not configured':
+                value = 'notconfigured'
+        # Trim log for the two logging options
+        if option.startswith('Log'):
+            option = option[3:]
+        salt.utils.win_lgpo_netsh.set_logging_settings(
+            profile=profile, setting=option, value=value, store='lgpo')
+    log.debug('LGPO: Clearing netsh data for {0} profile'.format(profile))
+    __context__['lgpo.netsh_data'].pop(profile)
+    return True
 
 
 def _findOptionValueInSeceditFile(option):
@@ -5265,6 +6765,12 @@ def get(policy_class=None, return_full_policy_names=True,
                     else:
                         msg = 'An error occurred attempting to get the value of policy {0} from secedit'
                         raise CommandExecutionError(msg.format(policy_name))
+                elif 'NetSH' in _pol:
+                    # get value from netsh
+                    class_vals[policy_name] = _findOptionValueNetSH(
+                        profile=_pol['NetSH']['Profile'],
+                        option=_pol['NetSH']['Option'])
+
                 elif 'NetUserModal' in _pol:
                     # get value from UserNetMod
                     if _pol['NetUserModal']['Modal'] not in modal_returns:
@@ -5486,6 +6992,7 @@ def set_(computer_policy=None, user_policy=None,
     if policies:
         for p_class in policies:
             _secedits = {}
+            _netshs = {}
             _modal_sets = {}
             _admTemplateData = {}
             _regedits = {}
@@ -5525,6 +7032,15 @@ def set_(computer_policy=None, user_policy=None,
                             _secedits[_pol['Secedit']['Section']].append(
                                     ' '.join([_pol['Secedit']['Option'],
                                              '=', six.text_type(_value)]))
+                        elif 'NetSH' in _pol:
+                            # set value with netsh
+                            log.debug('%s is a NetSH policy', policy_name)
+                            _netshs.setdefault(policy_name, {
+                                'profile': _pol['NetSH']['Profile'],
+                                'section': _pol['NetSH']['Section'],
+                                'option': _pol['NetSH']['Option'],
+                                'value': six.text_type(_value)
+                            })
                         elif 'NetUserModal' in _pol:
                             # set value via NetUserModal
                             log.debug('%s is a NetUserModal policy', policy_name)
@@ -5664,10 +7180,15 @@ def set_(computer_policy=None, user_policy=None,
                                     _regedits[regedit]['value'],
                                     _regedits[regedit]['policy']['Registry']['Type'])
                         else:
-                            _ret = __salt__['reg.delete_value'](
+                            _ret = __salt__['reg.read_value'](
                                     _regedits[regedit]['policy']['Registry']['Hive'],
                                     _regedits[regedit]['policy']['Registry']['Path'],
                                     _regedits[regedit]['policy']['Registry']['Value'])
+                            if _ret['success'] and _ret['vdata'] != '(value not set)':
+                                _ret = __salt__['reg.delete_value'](
+                                        _regedits[regedit]['policy']['Registry']['Hive'],
+                                        _regedits[regedit]['policy']['Registry']['Path'],
+                                        _regedits[regedit]['policy']['Registry']['Value'])
                         if not _ret:
                             msg = ('Error while attempting to set policy {0} via the registry.'
                                    '  Some changes may not be applied as expected')
@@ -5709,6 +7230,13 @@ def set_(computer_policy=None, user_policy=None,
                         msg = ('Error while attempting to set policies via secedit.'
                                '  Some changes may not be applied as expected')
                         raise CommandExecutionError(msg)
+                if _netshs:
+                    # we've got netsh settings to make
+                    for setting in _netshs:
+                        log.debug('Setting firewall policy: {0}'.format(setting))
+                        log.debug(_netshs[setting])
+                        _setOptionValueNetSH(**_netshs[setting])
+
                 if _modal_sets:
                     # we've got modalsets to make
                     log.debug(_modal_sets)
