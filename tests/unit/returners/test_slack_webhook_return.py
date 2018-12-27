@@ -141,12 +141,13 @@ class SlackWebhookReturnerTestCase(TestCase, LoaderModuleMockMixin):
         test_title = '{} | Failed'.format(self._MINION_NAME)
         test_report = slack_webhook._generate_report(
             self._RET, self._SHOW_TASKS)
-        test_payload = slack_webhook._generate_payload(
-            self._AUTHOR_ICON, test_title, test_report)
 
         custom_grains = slack_webhook.__grains__
         custom_grains['id'] = self._MINION_NAME
         custom_grains['localhost'] = self._MINION_NAME
 
-        with patch.dict(slack_webhook.__grains__, custom_grains):
-            self.assertDictEqual(test_payload, self._EXPECTED_PAYLOAD)
+        with patch.dict(slack_webhook.__grains__, custom_grain):
+            test_payload = slack_webhook._generate_payload(
+                self._AUTHOR_ICON, test_title, test_report)
+
+        self.assertDictEqual(test_payload, self._EXPECTED_PAYLOAD)
