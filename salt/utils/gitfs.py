@@ -1424,6 +1424,10 @@ class Pygit2(GitProvider):
         will let the calling function know whether or not a new repo was
         initialized by this function.
         '''
+        # https://github.com/libgit2/pygit2/issues/339
+        # https://github.com/libgit2/libgit2/issues/2122
+        home = os.path.expanduser('~')
+        pygit2.settings.search_path[pygit2.GIT_CONFIG_LEVEL_GLOBAL] = home
         new = False
         if not os.listdir(self.cachedir):
             # Repo cachedir is empty, initialize a new repo there
@@ -1432,17 +1436,7 @@ class Pygit2(GitProvider):
         else:
             # Repo cachedir exists, try to attach
             try:
-                try:
-                    self.repo = pygit2.Repository(self.cachedir)
-                except GitError as exc:
-                    import pwd
-                    # https://github.com/libgit2/pygit2/issues/339
-                    # https://github.com/libgit2/libgit2/issues/2122
-                    if "Error stat'ing config file" not in str(exc):
-                        raise
-                    home = pwd.getpwnam(salt.utils.get_user()).pw_dir
-                    pygit2.settings.search_path[pygit2.GIT_CONFIG_LEVEL_GLOBAL] = home
-                    self.repo = pygit2.Repository(self.cachedir)
+                self.repo = pygit2.Repository(self.cachedir)
             except KeyError:
                 log.error(_INVALID_REPO.format(self.cachedir, self.url, self.role))
                 return new

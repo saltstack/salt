@@ -365,8 +365,8 @@ def key_value_to_tree(data):
     for flatkey, value in six.iteritems(data):
         t = tree
         keys = flatkey.split(__opts__['pepa_delimiter'])
-        for key in keys:
-            if key == keys[-1]:
+        for i, key in enumerate(keys, 1):
+            if i == len(keys):
                 t[key] = value
             else:
                 t = t.setdefault(key, {})

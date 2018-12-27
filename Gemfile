@@ -2,7 +2,8 @@
 
 source 'https://rubygems.org'
 
-gem 'test-kitchen', '~>1.21'
+# Point this back at the test-kitchen package after 1.23.3 is relased
+gem 'test-kitchen', :git => 'https://github.com/dwoz/test-kitchen.git', :branch => 'winrm_opts'
 gem 'kitchen-salt', '~>0.2'
 gem 'kitchen-sync'
 gem 'git'
