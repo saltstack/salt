@@ -14,10 +14,9 @@ from __future__ import absolute_import
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch
 
 # Import Salt libs
-import salt.utils.http
 import salt.returners.slack_webhook_return as slack_webhook
 
 
