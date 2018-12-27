@@ -56,7 +56,7 @@ class SlackWebhookReturnerTestCase(TestCase, LoaderModuleMockMixin):
                 '__sls__': 'config.vim',
                 'changes': {},
                 '__id__': 'vim present'},
-            'git_|-vim plugin salt updated_|-https://github.com/saltstack/salt-vim.git_|-latest':
+            'git_|-salt vim plugin updated_|-https://github.com/saltstack/salt-vim.git_|-latest':
             {'comment': 'https://github.com/saltstack/salt-vim.git cloned to /Users/cdalvaro/.vim/pack/git-plugins/start/salt',
                 'name': 'https://github.com/saltstack/salt-vim.git',
                 'start_time': '11:00:01.892757',
@@ -86,28 +86,28 @@ class SlackWebhookReturnerTestCase(TestCase, LoaderModuleMockMixin):
     }
 
     _EXPECTED_PAYLOAD = {
-        'attachments': [
-            {'title': 'Success: False',
-                'color': '#272727',
-                'text': "Function: state.apply\nFunction Args: ['config.vim']\nJID: 20181227105933129338\nTotal: 4\nDuration: 27.03 secs",
-                'author_link': _MINION_NAME,
-                'author_name': _MINION_NAME,
-                'fallback': '{} | Failed'.format(_MINION_NAME),
-                'author_icon': _AUTHOR_ICON},
-            {'color': 'good',
-                'title': 'Unchanged: 2'},
-            {'color': 'warning',
-                'fields': [
-                    {'short': False,
-                     'value': 'config.vim.sls | salt vim plugin updated'}
-                ],
-                'title': 'Changed: 1'},
-            {'color': 'danger',
-                'fields': [
-                    {'short': False,
-                     'value': 'config.vim.sls | macvim present'}
-                ],
-                'title': 'Failed: 1'}
+        u'attachments': [
+            {u'title': u'Success: False',
+             u'color': u'#272727',
+             u'text': u"Function: state.apply\nFunction Args: ['config.vim']\nJID: 20181227105933129338\nTotal: 4\nDuration: 27.03 secs",
+             u'author_link': u'{}'.format(_MINION_NAME),
+             u'author_name': u'{}'.format(_MINION_NAME),
+             u'fallback': u'{} | Failed'.format(_MINION_NAME),
+             u'author_icon': _AUTHOR_ICON},
+            {u'color': u'good',
+             u'title': u'Unchanged: 2'},
+            {u'color': u'warning',
+             u'fields': [
+                 {u'short': False,
+                  u'value': u'config.vim.sls | salt vim plugin updated'}
+             ],
+             u'title': u'Changed: 1'},
+            {u'color': u'danger',
+             u'fields': [
+                 {u'short': False,
+                  u'value': u'config.vim.sls | macvim present'}
+             ],
+             u'title': u'Failed: 1'}
         ]
     }
 
@@ -145,4 +145,9 @@ class SlackWebhookReturnerTestCase(TestCase, LoaderModuleMockMixin):
         test_payload = slack_webhook._generate_payload(
             self._AUTHOR_ICON, test_title, test_report)
 
-        self.assertDictEqual(test_payload, self._EXPECTED_PAYLOAD)
+        custom_grains = slack_webhook.__grains__
+        custom_grains['id'] = self._MINION_NAME
+        custom_grains['localhost'] = self._MINION_NAME
+
+        with patch.dict(slack_webhook.__grains__, custom_grains):
+            self.assertDictEqual(test_payload, self._EXPECTED_PAYLOAD)
