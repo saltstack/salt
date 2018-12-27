@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
-Return salt data via slack
+Return salt data via Slack using Incoming Webhooks
 
-..  versionadded:: 2018.3.4
+:codeauthor: :email:`Carlos D. Álvaro <carlos.alvaro@citelan.es>`
 
 The following fields can be set in the minion conf file:
 
