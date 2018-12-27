@@ -146,7 +146,7 @@ class SlackWebhookReturnerTestCase(TestCase, LoaderModuleMockMixin):
         custom_grains['id'] = self._MINION_NAME
         custom_grains['localhost'] = self._MINION_NAME
 
-        with patch.dict(slack_webhook.__grains__, custom_grain):
+        with patch.dict(slack_webhook.__grains__, custom_grains):
             test_payload = slack_webhook._generate_payload(
                 self._AUTHOR_ICON, test_title, test_report)
 
