@@ -131,7 +131,8 @@ class SlackWebhookReturnerTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test to see if the Slack Webhook returner sends a message
         '''
-        with patch(salt.utils.http.query, MagicMock(return_value={'body': 'ok'})):
+        query_ret = {'body': 'ok', 'status': 200}
+        with patch('salt.utils.http.query', return_value=query_ret):
             self.assertTrue(slack_webhook.returner(self._RET))
 
     def test_generate_payload(self):
