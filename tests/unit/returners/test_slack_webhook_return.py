@@ -123,7 +123,7 @@ class SlackWebhookReturnerTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test returner stops if no webhook is defined
         '''
-        with patch.dict(slack_webhook.__opts__, {'webhook': ''}):
+        with patch.dict(slack_webhook.__opts__, {'slack_webhook.webhook': ''}):
             self.assertEqual(slack_webhook.returner(self._RET), None)
 
     def test_returner(self):
