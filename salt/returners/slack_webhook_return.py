@@ -318,11 +318,11 @@ def returner(ret):
 
     _options = _get_options(ret)
 
-    webhook = _options.get('webhook')
+    webhook = _options.get('webhook', None)
     show_tasks = _options.get('show_tasks')
     author_icon = _options.get('author_icon')
 
-    if not webhook:
+    if not webhook or webhook is '':
         log.error('%s.webhook not defined in salt config', __virtualname__)
         return
 
