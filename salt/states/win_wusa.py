@@ -74,14 +74,14 @@ def installed(name, source):
     # Check for test=True
     if __opts__['test'] is True:
         ret['result'] = None
-        ret['comment'] = 'The KB "{0}" would be installed.'.format(name)
+        ret['comment'] = '{0} would be installed'.format(name)
         ret['result'] = None
         return ret
 
     # Cache the file
     cached_source_path = __salt__['cp.cache_file'](path=source, saltenv=__env__)
     if not cached_source_path:
-        msg = 'Unable to cache {0} from saltenv \'{1}\''.format(
+        msg = 'Unable to cache {0} from saltenv "{1}"'.format(
             salt.utils.url.redact_http_basic_auth(source), __env__)
         ret['comment'] = msg
         return ret
@@ -91,7 +91,7 @@ def installed(name, source):
 
     # Verify successful install
     if __salt__['wusa.is_installed'](name):
-        ret['comment'] = 'The KB "{0}" was installed!'.format(name)
+        ret['comment'] = '{0} was installed'.format(name)
         ret['changes'] = {'old': False, 'new': True}
         ret['result'] = True
     else:
@@ -121,10 +121,6 @@ def uninstalled(name):
            'result': False,
            'comment': ''}
 
-    # Input validation
-    if not name:
-        raise SaltInvocationError('Must specify a KB "name"')
-
     # Is the KB already uninstalled
     if not __salt__['wusa.is_installed'](name):
         ret['result'] = True
@@ -134,7 +130,7 @@ def uninstalled(name):
     # Check for test=True
     if __opts__['test'] is True:
         ret['result'] = None
-        ret['comment'] = 'The KB "{0}" would be uninstalled.'.format(name)
+        ret['comment'] = '{0} would be uninstalled'.format(name)
         ret['result'] = None
         return ret
 
@@ -143,7 +139,7 @@ def uninstalled(name):
 
     # Verify successful uninstall
     if not __salt__['wusa.is_installed'](name):
-        ret['comment'] = 'The KB "{0}" was uninstalled!'.format(name)
+        ret['comment'] = '{0} was uninstalled'.format(name)
         ret['changes'] = {'old': True, 'new': False}
         ret['result'] = True
     else:
