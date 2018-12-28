@@ -1008,9 +1008,12 @@ def create_node(vm_, newid):
         if 'host' in vm_:
             postParams['target'] = vm_['host']
 
-        if ':' in vm_['clone_from']:
-            vmhost = vm_['clone_from'].split(':')[0]
-            vm_['clone_from'] = vm_['clone_from'].split(':')[1]
+        try:
+            int(vm_['clone_from'])
+        except ValueError:
+            if ':' in vm_['clone_from']:
+                vmhost = vm_['clone_from'].split(':')[0]
+                vm_['clone_from'] = vm_['clone_from'].split(':')[1]
 
         node = query('post', 'nodes/{0}/qemu/{1}/clone'.format(
             vmhost, vm_['clone_from']), postParams)
