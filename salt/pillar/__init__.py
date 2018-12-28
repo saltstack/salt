@@ -20,7 +20,7 @@ import salt.loader
 import salt.fileclient
 import salt.minion
 import salt.crypt
-import salt.transport
+import salt.transport.client
 import salt.utils.args
 import salt.utils.cache
 import salt.utils.crypt
@@ -202,7 +202,7 @@ class RemotePillar(RemotePillarMixin):
         self.ext = ext
         self.grains = grains
         self.minion_id = minion_id
-        self.channel = salt.transport.Channel.factory(opts)
+        self.channel = salt.transport.client.ReqChannel.factory(opts)
         if pillarenv is not None:
             self.opts['pillarenv'] = pillarenv
         self.pillar_override = pillar_override or {}

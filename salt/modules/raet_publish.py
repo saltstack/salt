@@ -10,8 +10,8 @@ import logging
 
 # Import salt libs
 import salt.payload
-import salt.transport
 import salt.utils.args
+import salt.transport.client
 from salt.exceptions import SaltReqTimeoutError
 
 # Import 3rd party libs
@@ -83,7 +83,7 @@ def _publish(
             'form': form,
             'id': __opts__['id']}
 
-    channel = salt.transport.Channel.factory(__opts__)
+    channel = salt.transport.client.ReqChannel.factory(__opts__)
     try:
         peer_data = channel.send(load)
     except SaltReqTimeoutError:
@@ -229,7 +229,7 @@ def runner(fun, arg=None, timeout=5):
             'tmo': timeout,
             'id': __opts__['id']}
 
-    channel = salt.transport.Channel.factory(__opts__)
+    channel = salt.transport.client.ReqChannel.factory(__opts__)
     try:
         return channel.send(load)
     except SaltReqTimeoutError:

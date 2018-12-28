@@ -27,6 +27,7 @@ from binascii import crc32
 from salt.ext import six
 from salt.ext.six.moves import range
 from salt.utils.zeromq import zmq, ZMQDefaultLoop, install_zmq, ZMQ_VERSION_INFO
+import salt.transport.client
 import salt.defaults.exitcodes
 
 from salt.utils.ctx import RequestContext
@@ -1388,7 +1389,7 @@ class Minion(MinionBase):
             sig = salt.crypt.sign_message(minion_privkey_path, salt.serializers.msgpack.serialize(load))
             load['sig'] = sig
 
-        channel = salt.transport.Channel.factory(self.opts)
+        channel = salt.transport.client.ReqChannel.factory(self.opts)
         return channel.send(load, timeout=timeout)
 
     @tornado.gen.coroutine
@@ -2321,7 +2322,7 @@ class Minion(MinionBase):
         '''
         Send mine data to the master
         '''
-        channel = salt.transport.Channel.factory(self.opts)
+        channel = salt.transport.client.ReqChannel.factory(self.opts)
         data['tok'] = self.tok
         try:
             ret = channel.send(data)
