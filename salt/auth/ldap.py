@@ -323,7 +323,14 @@ def groups(username, **kwargs):
 
     '''
     group_list = []
-    bind = auth(username, kwargs.get('password', None))
+
+    # If bind credentials are configured, use them instead of user's
+    if _config('binddn', mandatory=False) and _config('bindpw', mandatory=False):
+        bind = _bind_for_search(anonymous=_config('anonymous', mandatory=False))
+    else:
+        bind = _bind(username, kwargs.get('password', ''),
+                     anonymous=_config('auth_by_group_membership_only', mandatory=False)
+                     and _config('anonymous', mandatory=False))
 
     if bind:
         log.debug('ldap bind to determine group membership succeeded!')
