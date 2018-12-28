@@ -10,6 +10,7 @@ import sys
 import copy
 import errno
 import signal
+import socket
 import hashlib
 import logging
 import weakref
@@ -135,9 +136,13 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
             obj = object.__new__(cls)
             obj.__singleton_init__(opts, **kwargs)
             loop_instance_map[key] = obj
+            obj._refcount = 1
+            obj._refcount_lock = threading.RLock()
             log.trace('Inserted key into loop_instance_map id %s for key %s and process %s',
                       id(loop_instance_map), key, os.getpid())
         else:
+            with obj._refcount_lock:
+                obj._refcount += 1
             log.debug('Re-using AsyncZeroMQReqChannel for %s', key)
         return obj
 
@@ -146,7 +151,7 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
         result = cls.__new__(cls, copy.deepcopy(self.opts, memo))  # pylint: disable=too-many-function-args
         memo[id(self)] = result
         for key in self.__dict__:
-            if key in ('_io_loop',):
+            if key in ('_io_loop', '_refcount', '_refcount_lock'):
                 continue
                 # The _io_loop has a thread Lock which will fail to be deep
                 # copied. Skip it because it will just be recreated on the
@@ -198,6 +203,7 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
         self.message_client = AsyncReqMessageClientPool(self.opts,
                                                         args=(self.opts, self.master_uri,),
                                                         kwargs={'io_loop': self._io_loop})
+        self._closing = False
 
     def close(self):
         '''
