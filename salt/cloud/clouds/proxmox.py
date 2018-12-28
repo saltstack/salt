@@ -905,6 +905,13 @@ def create_node(vm_, newid):
             ):  # if the property is set, use it for the VM request
                 postParams[prop] = vm_["clone_" + prop]
 
+        try:
+            int(vm_["clone_from"])
+        except ValueError:
+            if ":" in vm_["clone_from"]:
+                vmhost = vm_["clone_from"].split(":")[0]
+                vm_["clone_from"] = vm_["clone_from"].split(":")[1]
+
         node = query(
             "post",
             "nodes/{0}/qemu/{1}/clone".format(vmhost, vm_["clone_from"]),
