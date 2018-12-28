@@ -697,7 +697,6 @@ class MinionBase(object):
                     )
                 opts.update(prep_ip_port(opts))
                 opts.update(resolve_dns(opts))
-                pub_channel = None
                 try:
                     if self.opts['transport'] == 'detect':
                         self.opts['detect_mode'] = True
@@ -722,9 +721,6 @@ class MinionBase(object):
                         # Exhausted all attempts. Return exception.
                         self.connected = False
                         raise exc
-                finally:
-                    if pub_channel is not None:
-                        pub_channel.close()
 
     def _discover_masters(self):
         '''
@@ -1006,10 +1002,8 @@ class MinionManager(MinionBase):
                                                 False,
                                                 io_loop=self.io_loop,
                                                 loaded_base_name='salt.loader.{0}'.format(s_opts['master']),
-                                                jid_queue=self.jid_queue,
-                                               )
-
-            self._connect_minion(minion)
+                                                jid_queue=self.jid_queue)
+            self.io_loop.spawn_callback(self._connect_minion, minion)
         self.io_loop.call_later(timeout, self._check_minions)
 
     @tornado.gen.coroutine
