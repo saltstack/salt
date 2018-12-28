@@ -27,6 +27,7 @@ import salt.utils.process
 import salt.utils.stringutils
 import salt.utils.verify
 import salt.utils.zeromq
+import salt.utils.versions
 import salt.payload
 import salt.transport.client
 import salt.transport.server
@@ -198,15 +199,42 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
                                                         args=(self.opts, self.master_uri,),
                                                         kwargs={'io_loop': self._io_loop})
 
-    def __del__(self):
+    def close(self):
         '''
         Since the message_client creates sockets and assigns them to the IOLoop we have to
         specifically destroy them, since we aren't the only ones with references to the FDs
         '''
+        if self._closing:
+            return
+
+        if self._refcount > 1:
+            # Decrease refcount
+            with self._refcount_lock:
+                self._refcount -= 1
+            log.debug(
+                'This is not the last %s instance. Not closing yet.',
+                self.__class__.__name__
+            )
+            return
+
+        log.debug('Closing %s instance', self.__class__.__name__)
+        self._closing = True
         if hasattr(self, 'message_client'):
-            self.message_client.destroy()
+            self.message_client.close()
         else:
             log.debug('No message_client attr for AsyncZeroMQReqChannel found. Not destroying sockets.')
+
+    def __del__(self):
+        with self._refcount_lock:
+            # Make sure we actually close no matter if something
+            # went wrong with our ref counting
+            self._refcount = 1
+        try:
+            self.close()
+        except socket.error as exc:
+            if exc.errno != errno.EBADF:
+                # If its not a bad file descriptor error, raise
+                raise
 
     @property
     def master_uri(self):
@@ -414,7 +442,7 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
             self._monitor = ZeroMQSocketMonitor(self._socket)
             self._monitor.start_io_loop(self.io_loop)
 
-    def destroy(self):
+    def close(self):
         if hasattr(self, '_monitor') and self._monitor is not None:
             self._monitor.stop()
             self._monitor = None
@@ -430,8 +458,19 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
         if hasattr(self, 'context') and self.context.closed is False:
             self.context.term()
 
+    def destroy(self):
+        # Bacwards compat
+        salt.utils.versions.warn_until(
+            'Sodium',
+            'Calling {0}.destroy() is deprecated. Please call {0}.close() instead.'.format(
+                self.__class__.__name__
+            ),
+            stacklevel=3
+        )
+        self.close()
+
     def __del__(self):
-        self.destroy()
+        self.close()
 
     # TODO: this is the time to see if we are connected, maybe use the req channel to guess?
     @tornado.gen.coroutine
@@ -988,18 +1027,34 @@ class AsyncReqMessageClientPool(salt.transport.MessageClientPool):
     '''
     def __init__(self, opts, args=None, kwargs=None):
         super(AsyncReqMessageClientPool, self).__init__(AsyncReqMessageClient, opts, args=args, kwargs=kwargs)
+        self._closing = False
 
-    def __del__(self):
-        self.destroy()
+    def close(self):
+        if self._closing:
+            return
 
-    def destroy(self):
+        self._closing = True
         for message_client in self.message_clients:
-            message_client.destroy()
+            message_client.close()
         self.message_clients = []
 
     def send(self, *args, **kwargs):
         message_clients = sorted(self.message_clients, key=lambda x: len(x.send_queue))
         return message_clients[0].send(*args, **kwargs)
+
+    def destroy(self):
+        # Bacwards compat
+        salt.utils.versions.warn_until(
+            'Sodium',
+            'Calling {0}.destroy() is deprecated. Please call {0}.close() instead.'.format(
+                self.__class__.__name__
+            ),
+            stacklevel=3
+        )
+        self.close()
+
+    def __del__(self):
+        self.close()
 
 
 # TODO: unit tests!
@@ -1041,9 +1096,14 @@ class AsyncReqMessageClient(object):
         self.send_future_map = {}
 
         self.send_timeout_map = {}  # message -> timeout
+        self._closing = False
 
     # TODO: timeout all in-flight sessions, or error
-    def destroy(self):
+    def close(self):
+        if self._closing:
+            return
+
+        self._closing = True
         if hasattr(self, 'stream') and self.stream is not None:
             if ZMQ_VERSION_INFO < (14, 3, 0):
                 # stream.close() doesn't work properly on pyzmq < 14.3.0
@@ -1060,8 +1120,19 @@ class AsyncReqMessageClient(object):
         if self.context.closed is False:
             self.context.term()
 
+    def destroy(self):
+        # Bacwards compat
+        salt.utils.versions.warn_until(
+            'Sodium',
+            'Calling {0}.destroy() is deprecated. Please call {0}.close() instead.'.format(
+                self.__class__.__name__
+            ),
+            stacklevel=3
+        )
+        self.close()
+
     def __del__(self):
-        self.destroy()
+        self.close()
 
     def _init_socket(self):
         if hasattr(self, 'stream'):
