@@ -14,7 +14,9 @@ from tests.support.mock import MagicMock, patch
 
 
 class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
-
+    '''
+    test the function in the win_wusa state module
+    '''
     kb = 'KB123456'
 
     def setup_loader_modules(self):
@@ -22,6 +24,9 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
                        '__env__': 'base'}}
 
     def test_installed_no_source(self):
+        '''
+        test wusa.installed without passing source
+        '''
         with self.assertRaises(SaltInvocationError) as excinfo:
             wusa.installed(name='KB123456', source=None)
 
@@ -29,6 +34,9 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
                          'Must specify a "source" file to install')
 
     def test_installed_existing(self):
+        '''
+        test wusa.installed when the kb is already installed
+        '''
         mock_installed = MagicMock(return_value=True)
         with patch.dict(wusa.__salt__, {'wusa.is_installed': mock_installed}):
             returned = wusa.installed(name=self.kb,
@@ -40,6 +48,9 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
             self.assertDictEqual(expected, returned)
 
     def test_installed_test_true(self):
+        '''
+        test wusa.installed with test=True
+        '''
         mock_installed = MagicMock(return_value=False)
         with patch.dict(wusa.__salt__, {'wusa.is_installed': mock_installed}), \
                 patch.dict(wusa.__opts__, {'test': True}):
@@ -52,6 +63,9 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
             self.assertDictEqual(expected, returned)
 
     def test_installed_cache_fail(self):
+        '''
+        test wusa.install when it fails to cache the file
+        '''
         mock_installed = MagicMock(return_value=False)
         mock_cache = MagicMock(return_value='')
         with patch.dict(wusa.__salt__, {'wusa.is_installed': mock_installed,
@@ -66,6 +80,9 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
             self.assertDictEqual(expected, returned)
 
     def test_installed(self):
+        '''
+        test wusa.installed assuming success
+        '''
         mock_installed = MagicMock(side_effect=[False, True])
         mock_cache = MagicMock(return_value='C:\\{0}.msu'.format(self.kb))
         with patch.dict(wusa.__salt__, {'wusa.is_installed': mock_installed,
@@ -80,6 +97,9 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
             self.assertDictEqual(expected, returned)
 
     def test_installed_failed(self):
+        '''
+        test wusa.installed with a failure
+        '''
         mock_installed = MagicMock(side_effect=[False, False])
         mock_cache = MagicMock(return_value='C:\\{0}.msu'.format(self.kb))
         with patch.dict(wusa.__salt__, {'wusa.is_installed': mock_installed,
@@ -94,6 +114,9 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
             self.assertDictEqual(expected, returned)
 
     def test_uninstalled_non_existing(self):
+        '''
+        test wusa.uninstalled when the kb is not installed
+        '''
         mock_installed = MagicMock(return_value=False)
         with patch.dict(wusa.__salt__, {'wusa.is_installed': mock_installed}):
             returned = wusa.uninstalled(name=self.kb)
@@ -104,6 +127,9 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
             self.assertDictEqual(expected, returned)
 
     def test_uninstalled_test_true(self):
+        '''
+        test wusa.uninstalled with test=True
+        '''
         mock_installed = MagicMock(return_value=True)
         with patch.dict(wusa.__salt__, {'wusa.is_installed': mock_installed}), \
                 patch.dict(wusa.__opts__, {'test': True}):
@@ -115,6 +141,9 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
             self.assertDictEqual(expected, returned)
 
     def test_uninstalled(self):
+        '''
+        test wusa.uninstalled assuming success
+        '''
         mock_installed = MagicMock(side_effect=[True, False])
         with patch.dict(wusa.__salt__, {'wusa.is_installed': mock_installed,
                                         'wusa.uninstall': MagicMock()}):
@@ -126,6 +155,9 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
             self.assertDictEqual(expected, returned)
 
     def test_uninstalled_failed(self):
+        '''
+        test wusa.uninstalled with a failure
+        '''
         mock_installed = MagicMock(side_effect=[True, True])
         with patch.dict(wusa.__salt__, {'wusa.is_installed': mock_installed,
                                         'wusa.uninstall': MagicMock()}):
