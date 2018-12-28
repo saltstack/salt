@@ -21,7 +21,7 @@ import salt.utils.path
 import salt.utils.templates
 import salt.utils.url
 import salt.crypt
-import salt.transport
+import salt.transport.client
 from salt.exceptions import CommandExecutionError
 from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=import-error,no-name-in-module
 
@@ -829,7 +829,7 @@ def push(path, keep_symlinks=False, upload_path=None, remove_source=False):
             'path': load_path_list,
             'size': os.path.getsize(path),
             'tok': auth.gen_token(b'salt')}
-    channel = salt.transport.Channel.factory(__opts__)
+    channel = salt.transport.client.ReqChannel.factory(__opts__)
     with salt.utils.files.fopen(path, 'rb') as fp_:
         init_send = False
         while True:
