@@ -1237,13 +1237,15 @@ class Minion(MinionBase):
             self.opts['master'] = master
 
             # Initialize pillar before loader to make pillar accessible in modules
-            self.opts['pillar'] = yield salt.pillar.get_async_pillar(
+            async_pillar = salt.pillar.get_async_pillar(
                 self.opts,
                 self.opts['grains'],
                 self.opts['id'],
                 self.opts['saltenv'],
                 pillarenv=self.opts.get('pillarenv')
-            ).compile_pillar()
+            )
+            self.opts['pillar'] = yield async_pillar.compile_pillar()
+            async_pillar.destroy()
 
         if not self.ready:
             self._setup_core()
@@ -1402,8 +1404,11 @@ class Minion(MinionBase):
             load['sig'] = sig
 
         channel = salt.transport.client.AsyncReqChannel.factory(self.opts)
-        ret = yield channel.send(load, timeout=timeout)
-        raise tornado.gen.Return(ret)
+        try:
+            ret = yield channel.send(load, timeout=timeout)
+            raise tornado.gen.Return(ret)
+        finally:
+            channel.close()
 
     def _fire_master(self, data=None, tag=None, events=None, pretag=None, timeout=60, sync=True, timeout_handler=None):
         '''
@@ -2184,18 +2189,21 @@ class Minion(MinionBase):
         '''
         if self.connected:
             log.debug('Refreshing pillar')
+            async_pillar = salt.pillar.get_async_pillar(
+                self.opts,
+                self.opts['grains'],
+                self.opts['id'],
+                self.opts['saltenv'],
+                pillarenv=self.opts.get('pillarenv'),
+            )
             try:
-                self.opts['pillar'] = yield salt.pillar.get_async_pillar(
-                    self.opts,
-                    self.opts['grains'],
-                    self.opts['id'],
-                    self.opts['saltenv'],
-                    pillarenv=self.opts.get('pillarenv'),
-                ).compile_pillar()
+                self.opts['pillar'] = yield async_pillar.compile_pillar()
             except SaltClientError:
                 # Do not exit if a pillar refresh fails.
                 log.error('Pillar data could not be refreshed. '
                           'One or more masters may be down!')
+            finally:
+                async_pillar.destroy()
         self.module_refresh(force_refresh)
 
     def manage_schedule(self, tag, data):
@@ -2783,6 +2791,9 @@ class Minion(MinionBase):
         '''
         Tear down the minion
         '''
+        if self._running is False:
+            return
+
         self._running = False
         if hasattr(self, 'schedule'):
             del self.schedule
@@ -3317,13 +3328,15 @@ class ProxyMinion(Minion):
         if self.connected:
             self.opts['master'] = master
 
-            self.opts['pillar'] = yield salt.pillar.get_async_pillar(
+            async_pillar = salt.pillar.get_async_pillar(
                 self.opts,
                 self.opts['grains'],
                 self.opts['id'],
                 saltenv=self.opts['saltenv'],
                 pillarenv=self.opts.get('pillarenv'),
-            ).compile_pillar()
+            )
+            self.opts['pillar'] = yield async_pillar.compile_pillar()
+            async_pillar.destroy()
 
         if 'proxy' not in self.opts['pillar'] and 'proxy' not in self.opts:
             errmsg = 'No proxy key found in pillar or opts for id ' + self.opts['id'] + '. ' + \
