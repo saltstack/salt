@@ -45,7 +45,6 @@ import salt.client.ssh.client
 import salt.payload
 import salt.runner
 import salt.state
-import salt.transport
 import salt.utils.args
 import salt.utils.event
 import salt.utils.extmods
@@ -56,6 +55,7 @@ import salt.utils.path
 import salt.utils.process
 import salt.utils.url
 import salt.wheel
+import salt.transport.client
 
 HAS_PSUTIL = True
 try:
@@ -696,6 +696,7 @@ def sync_output(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blackl
     if refresh:
         refresh_modules()
     return ret
+
 
 sync_outputters = salt.utils.functools.alias_function(sync_output, 'sync_outputters')
 
@@ -1375,7 +1376,7 @@ def regen_keys():
             pass
     # TODO: move this into a channel function? Or auth?
     # create a channel again, this will force the key regen
-    channel = salt.transport.Channel.factory(__opts__)
+    channel = salt.transport.client.ReqChannel.factory(__opts__)
 
 
 def revoke_auth(preserve_minion_cache=False):
@@ -1402,7 +1403,7 @@ def revoke_auth(preserve_minion_cache=False):
         masters.append(__opts__['master_uri'])
 
     for master in masters:
-        channel = salt.transport.Channel.factory(__opts__, master_uri=master)
+        channel = salt.transport.client.ReqChannel.factory(__opts__, master_uri=master)
         tok = channel.auth.gen_token(b'salt')
         load = {'cmd': 'revoke_auth',
                 'id': __opts__['id'],

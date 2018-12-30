@@ -31,7 +31,7 @@ import salt.config
 import salt.cache
 import salt.defaults.exitcodes
 import salt.payload
-import salt.transport
+import salt.transport.client
 import salt.loader
 import salt.utils.args
 import salt.utils.event
@@ -1722,9 +1722,9 @@ class LocalClient(object):
 
         master_uri = 'tcp://' + salt.utils.zeromq.ip_bracket(self.opts['interface']) + \
                      ':' + six.text_type(self.opts['ret_port'])
-        channel = salt.transport.Channel.factory(self.opts,
-                                                 crypt='clear',
-                                                 master_uri=master_uri)
+        channel = salt.transport.client.ReqChannel.factory(self.opts,
+                                                           crypt='clear',
+                                                           master_uri=master_uri)
 
         try:
             # Ensure that the event subscriber is connected.

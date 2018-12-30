@@ -73,7 +73,7 @@ class PublishTestCase(TestCase, LoaderModuleMockMixin):
 
     @classmethod
     def setUpClass(cls):
-        cls.channel_patcher = patch('salt.transport.Channel', Channel())
+        cls.channel_patcher = patch('salt.transport.client.ReqChannel', Channel())
         cls.channel_patcher.start()
 
     @classmethod
