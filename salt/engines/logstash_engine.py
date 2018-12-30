@@ -41,6 +41,7 @@ def __virtual__():
         if logstash is not None \
         else (False, 'python-logstash not installed')
 
+
 log = logging.getLogger(__name__)
 
 
