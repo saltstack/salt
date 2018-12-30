@@ -1234,6 +1234,7 @@ def _windows_platform_data():
         os_release = platform.release()
         kernel_version = platform.version()
         info = salt.utils.win_osinfo.get_os_version_info()
+        net_info = salt.utils.win_osinfo.get_join_info()
 
         service_pack = None
         if info['ServicePackMajor'] > 0:
@@ -1277,8 +1278,8 @@ def _windows_platform_data():
             'serialnumber': _clean_value('serialnumber', biosinfo.SerialNumber),
             'osfullname': _clean_value('osfullname', osinfo.Caption),
             'timezone': _clean_value('timezone', timeinfo.Description),
-            'windowsdomain': _clean_value('windowsdomain', systeminfo.Domain),
-            'windowsdomaintype': _clean_value('windowsdomaintype', systeminfo.DomainType),
+            'windowsdomain': _clean_value('windowsdomain', net_info['Domain']),
+            'windowsdomaintype': _clean_value('windowsdomaintype', net_info['DomainType']),
             'motherboard': {
                 'productname': _clean_value('motherboard.productname', motherboard['product']),
                 'serialnumber': _clean_value('motherboard.serialnumber', motherboard['serial']),
