@@ -199,6 +199,7 @@ class NetapiClient(object):
         wheel = salt.wheel.WheelClient(self.opts)
         return wheel.cmd_async(kwargs)
 
+
 CLIENTS = [
     name for name, _
     in inspect.getmembers(NetapiClient, predicate=inspect.ismethod if six.PY2 else None)
