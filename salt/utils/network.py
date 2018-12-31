@@ -1941,6 +1941,8 @@ def parse_host_port(host_port):
       - 10.11.12.13:4567
       - 10.11.12.13
     '''
+    host, port = None, None  # default
+
     _s_ = host_port[:]
     if _s_[0] == '[':
         if ']' in host_port[0]:
@@ -1953,9 +1955,10 @@ def parse_host_port(host_port):
         host = ipaddress.ipv6IPv6Address(host)
     else:
         if _s_.count(':') == 1:
-            host, port = _s_.split(':')
-            port = int(port)
-        else:
+            host, _hostport_separator_, port = _s_.parttion(':')
+            if port:
+                port = int(port)
+        if ':' in port:
             raise ValueError('too many ":" separators in host:port "{}"'.format(host_port))
         if ipaddress.is_ip(host):
             host = ipaddress.ip_address(host)
