@@ -1586,16 +1586,16 @@ def installed(
     kwargs['saltenv'] = __env__
     refresh = salt.utils.pkg.check_refresh(__opts__, refresh)
 
-    if bypass_file is not None:
-        if bypass_file_contains is not None:
-            if os.path.isfile(bypass_file):
-                with salt.utils.fopen(bypass_file) as bypass_file_open:
-                    if bypass_file_contains in bypass_file_open.read():
-                        return {'name': name,
-                                'changes': {},
-                                'result': True,
-                                'comment': 'pkg.installed was bypassed as {} was present in {}'.format(bypass_file_contains, bypass_file)}
-        if os.path.isfile(bypass_file) and bypass_file_contains is None:
+    if bypass_file is not None and bypass_file_contains is not None:
+        if os.path.isfile(bypass_file):
+            with salt.utils.fopen(bypass_file) as bypass_file_open:
+                if bypass_file_contains in bypass_file_open.read():
+                    return {'name': name,
+                            'changes': {},
+                            'result': True,
+                            'comment': 'pkg.installed was bypassed as {} was present in {}'.format(bypass_file_contains, bypass_file)}
+    if bypass_file is not None and bypass_file_contains is None:
+        if os.path.isfile(bypass_file):
             return {'name': name,
                     'changes': {},
                     'result': True,
