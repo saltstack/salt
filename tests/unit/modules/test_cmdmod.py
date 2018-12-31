@@ -353,7 +353,8 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
         cwd = '/tmp'
         runas = 'foobar'
 
-        stdout = cmdmod._run(cmd, cwd=cwd, runas=runas).get('stdout')
+        with patch('pwd.getpwnam') as getpwnam_mock:
+            stdout = cmdmod._run(cmd, cwd=cwd, runas=runas).get('stdout')
         self.assertEqual(stdout, cwd)
 
     def test_run_all_binary_replace(self):
