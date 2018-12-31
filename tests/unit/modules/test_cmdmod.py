@@ -353,7 +353,8 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
         cwd = '/tmp'
         runas = 'foobar'
 
-        with patch('pwd.getpwnam') as getpwnam_mock:
+        with patch('pwd.getpwnam') as getpwnam_mock, \
+                patch.dict(cmdmod.__grains__, {'os': 'Darwin', 'os_family': 'Solaris'}):
             stdout = cmdmod._run(cmd, cwd=cwd, runas=runas).get('stdout')
         self.assertEqual(stdout, cwd)
 
