@@ -413,7 +413,7 @@ def _run(cmd,
         if isinstance(cmd, (list, tuple)):
             cmd = ' '.join(map(_cmd_quote, cmd))
 
-        cmd = 'su -l {0} -c "cd {1}; {2}"'.format(runas, cwd, cmd)
+        cmd = 'su {0} -c "{2}"'.format(runas, cmd)
         # set runas to None, because if you try to run `su -l` as well as
         # simulate the environment macOS will prompt for the password of the
         # user and will cause salt to hang.
