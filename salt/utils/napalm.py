@@ -95,7 +95,7 @@ def virtual(opts, virtualname, filename):
     '''
     Returns the __virtual__.
     '''
-    if (HAS_NAPALM and NAPALM_MAJOR >= 2) or HAS_NAPALM_BASE:
+    if ((HAS_NAPALM and NAPALM_MAJOR >= 2) or HAS_NAPALM_BASE) and (is_proxy(opts) or is_minion(opts)):
         return virtualname
     else:
         return (

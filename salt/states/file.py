@@ -684,6 +684,7 @@ def _check_directory(name,
                      group=None,
                      recurse=False,
                      mode=None,
+                     file_mode=None,
                      clean=False,
                      require=False,
                      exclude_pat=None,
@@ -720,6 +721,7 @@ def _check_directory(name,
             if check_files:
                 for fname in files:
                     fchange = {}
+                    mode = file_mode
                     path = os.path.join(root, fname)
                     stats = __salt__['file.stats'](
                         path, None, follow_symlinks
@@ -728,6 +730,8 @@ def _check_directory(name,
                         fchange['user'] = user
                     if group is not None and group != stats.get('group'):
                         fchange['group'] = group
+                    if mode is not None and mode != stats.get('mode'):
+                        fchange['mode'] = mode
                     if fchange:
                         changes[path] = fchange
             if check_dirs:
@@ -3345,8 +3349,8 @@ def directory(name,
             win_perms_reset=win_perms_reset)
     else:
         presult, pcomment, pchanges = _check_directory(
-            name, user, group, recurse or [], dir_mode, clean, require,
-            exclude_pat, max_depth, follow_symlinks, children_only)
+            name, user, group, recurse or [], dir_mode, file_mode, clean,
+            require, exclude_pat, max_depth, follow_symlinks, children_only)
 
     if pchanges:
         ret['changes'].update(pchanges)
