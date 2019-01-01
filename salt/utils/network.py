@@ -1956,7 +1956,7 @@ def parse_host_port(host_port):
                 port = int(port)
         if port and ":" in port:
             raise ValueError('too many ":" separators in host:port "{}"'.format(host_port))
-        if ipaddress.is_ip(host):
+        if is_ip(host):
             host = ipaddress.ip_address(host)
 
     return host, port
