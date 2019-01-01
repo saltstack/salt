@@ -166,6 +166,7 @@ def is_mp_logging_configured():
 def is_extended_logging_configured():
     return __EXTERNAL_LOGGERS_CONFIGURED
 
+
 # Store a reference to the temporary queue logging handler
 LOGGING_NULL_HANDLER = __NullLoggingHandler(logging.WARNING)
 

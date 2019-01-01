@@ -1227,7 +1227,7 @@ def set_known_host(user=None,
 
         if fingerprint and fingerprint not in known_fingerprints:
             return {'status': 'error',
-                    'error': ('Remote host public keys found but none of their'
+                    'error': ('Remote host public keys found but none of their '
                               'fingerprints match the one you have provided')}
 
         if check_required:
