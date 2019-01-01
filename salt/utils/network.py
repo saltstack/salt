@@ -220,8 +220,13 @@ def get_fqhostname():
     """
     Returns the fully qualified hostname
     """
+<<<<<<< HEAD
     fqdn = []
     fqdn.append(socket.getfqdn())
+=======
+    l = []
+    l.append(socket.getfqdn())
+>>>>>>> fix parse_host_port() parse error on hostname only arg
 
     # try socket.getaddrinfo
     try:
