@@ -114,7 +114,6 @@ import salt.utils.json
 
 # Import 3rd party libs
 from salt.ext import six
-from requests.structures import CaseInsensitiveDict
 
 log = logging.getLogger(__name__)
 __virtualname__ = 'lgpo'
@@ -251,9 +250,6 @@ def set_(name,
     for policy_section, policy_data in six.iteritems(pol_data):
         pol_id = None
         if policy_data and policy_data['output_section'] in current_policy:
-            # Make the subdict keys case insensitive
-            current_policy[policy_data['output_section']] = CaseInsensitiveDict(
-                current_policy[policy_data['output_section']])
             for policy_name, policy_setting in six.iteritems(policy_data['requested_policy']):
                 currently_set = False
                 # Check Case sensitive first (faster)
