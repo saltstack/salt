@@ -1818,7 +1818,9 @@ def request_instance(vm_=None, call=None):
 
     if userdata is not None:
         try:
-            params[spot_prefix + 'UserData'] = base64.b64encode(userdata)
+            params[spot_prefix + 'UserData'] = base64.b64encode(
+                salt.utils.stringutils.to_bytes(userdata)
+            )
         except Exception as exc:
             log.exception('Failed to encode userdata: %s', exc)
 
