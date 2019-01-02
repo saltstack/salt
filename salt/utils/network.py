@@ -1940,7 +1940,9 @@ def parse_host_port(host_port):
                 port = int(port)
         if port and ":" in port:
             raise ValueError('too many ":" separators in host:port "{}"'.format(host_port))
-        if is_ip(host):
+        try:
             host = ipaddress.ip_address(host)
+        except ValueError:
+            log.debug('"%s" Not an IP address? Assuming it is a hostname.' % host)
 
     return host, port
