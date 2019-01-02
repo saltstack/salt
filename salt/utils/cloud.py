@@ -1112,7 +1112,7 @@ def validate_windows_cred(host,
     '''
     Check if the windows credentials are valid
     '''
-    for i in xrange(retries):
+    for i in range(retries):
         ret_code = 1
         try:
             stdout, stderr, ret_code = run_psexec_command(
