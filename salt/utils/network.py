@@ -236,8 +236,8 @@ def get_fqhostname():
     """
     Returns the fully qualified hostname
     """
-    l = []
-    l.append(socket.getfqdn())
+    fqdn = []
+    fqdn.append(socket.getfqdn())
 
     # try socket.getaddrinfo
     try:
@@ -247,11 +247,11 @@ def get_fqhostname():
         for info in addrinfo:
             # info struct [family, socktype, proto, canonname, sockaddr]
             if len(info) >= 4:
-                l.append(info[3])
+                fqdn.append(info[3])
     except socket.gaierror:
         pass
 
-    return l and l[0] or None
+    return fqdn and fqdn[0] or None
 
 
 def ip_to_host(ip):
