@@ -1959,6 +1959,6 @@ def parse_host_port(host_port):
         try:
             host = ipaddress.ip_address(host)
         except ValueError:
-            log.debug('"%s" Not an IP address? Assuming it is a hostname.' % host)
+            log.debug('"%s" Not an IP address? Assuming it is a hostname.', host)
 
     return host, port
