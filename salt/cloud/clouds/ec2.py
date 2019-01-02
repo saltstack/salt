@@ -4907,7 +4907,7 @@ def get_password_data(
                 key_obj = Crypto.PublicKey.RSA.importKey(rsa_key)
                 key_obj = PKCS1_v1_5.new(key_obj)
                 password = key_obj.decrypt(pwdata, sentinel)
-            ret['password'] = password
+            ret['password'] = salt.utils.stringutils.to_unicode(password)
 
     return ret
 
