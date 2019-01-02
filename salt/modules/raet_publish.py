@@ -85,24 +85,27 @@ def _publish(
 
     channel = salt.transport.client.ReqChannel.factory(__opts__)
     try:
-        peer_data = channel.send(load)
-    except SaltReqTimeoutError:
-        return '\'{0}\' publish timed out'.format(fun)
-    if not peer_data:
-        return {}
-    # CLI args are passed as strings, re-cast to keep time.sleep happy
-    time.sleep(float(timeout))
-    load = {'cmd': 'pub_ret',
-            'id': __opts__['id'],
-            'jid': six.text_type(peer_data['jid'])}
-    ret = channel.send(load)
-    if form == 'clean':
-        cret = {}
-        for host in ret:
-            cret[host] = ret[host]['ret']
-        return cret
-    else:
-        return ret
+        try:
+            peer_data = channel.send(load)
+        except SaltReqTimeoutError:
+            return '\'{0}\' publish timed out'.format(fun)
+        if not peer_data:
+            return {}
+        # CLI args are passed as strings, re-cast to keep time.sleep happy
+        time.sleep(float(timeout))
+        load = {'cmd': 'pub_ret',
+                'id': __opts__['id'],
+                'jid': six.text_type(peer_data['jid'])}
+        ret = channel.send(load)
+        if form == 'clean':
+            cret = {}
+            for host in ret:
+                cret[host] = ret[host]['ret']
+            return cret
+        else:
+            return ret
+    finally:
+        channel.close()
 
 
 def publish(tgt,
@@ -234,3 +237,5 @@ def runner(fun, arg=None, timeout=5):
         return channel.send(load)
     except SaltReqTimeoutError:
         return '\'{0}\' runner publish timed out'.format(fun)
+    finally:
+        channel.close()

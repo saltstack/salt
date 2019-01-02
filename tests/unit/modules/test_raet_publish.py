@@ -66,6 +66,9 @@ class RaetPublishTestCase(TestCase, LoaderModuleMockMixin):
                 self.load = load
                 raise SaltReqTimeoutError(load)
 
+            def close(self):
+                pass
+
         with patch.dict(raet_publish.__opts__, {'id': 'id'}):
             with patch.object(salt.transport.client.ReqChannel, 'factory',
                               MagicMock(return_value=MockFactory())):

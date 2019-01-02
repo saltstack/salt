@@ -62,6 +62,9 @@ class Channel(object):
             raise SaltReqTimeoutError
         return True
 
+    def close(self):
+        pass
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class PublishTestCase(TestCase, LoaderModuleMockMixin):

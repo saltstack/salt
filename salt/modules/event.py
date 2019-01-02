@@ -55,6 +55,8 @@ def fire_master(data, tag, preload=None):
             channel.send(load)
         except Exception:
             pass
+        finally:
+            channel.close()
         return True
 
     if preload or __opts__.get('__cli') == 'salt-call':
@@ -91,6 +93,8 @@ def fire_master(data, tag, preload=None):
                 ret = True
             except Exception:
                 ret = False
+            finally:
+                channel.close()
         return ret
     else:
         # Usually, we can send the event via the minion, which is faster
