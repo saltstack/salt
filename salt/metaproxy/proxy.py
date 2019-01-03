@@ -729,7 +729,11 @@ def handle_decoded_payload(self, data):
     if process_count_max > 0:
         process_count = len(salt.utils.minion.running(self.opts))
         while process_count >= process_count_max:
-            log.warning("Maximum number of processes reached while executing jid {0}, waiting...".format(data['jid']))
+            log.warning('Maximum number of processes (%s) reached while '
+                        'executing jid %s, waiting %s seconds...',
+                        process_count_max,
+                        data['jid'],
+                        process_count_max_sleep_secs)
             yield tornado.gen.sleep(process_count_max_sleep_secs)
             process_count = len(salt.utils.minion.running(self.opts))
 
