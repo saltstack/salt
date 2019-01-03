@@ -873,7 +873,7 @@ class Client(object):
         self.service_name = service_name
         self._exe_file = "{0}.exe".format(self.service_name)
         self._client = PsExecClient(server, username, password, port, encrypt)
-        self._service = ScmrService(self.service_name, self._client.session)
+        self._client._service = ScmrService(self.service_name, self._client.session)
 
     def connect(self):
         return self._client.connect()
@@ -899,7 +899,7 @@ class Client(object):
         wait_start = time.time()
         while True:
             try:
-                self._service.delete()
+                self._client._service.delete()
             except SCMRException as exc:
                 log.debug("Exception encountered while deleting service %s", repr(exc))
                 if time.time() - wait_start > wait_timeout:
