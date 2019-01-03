@@ -11,8 +11,8 @@ import logging
 # Import salt libs
 import salt.crypt
 import salt.payload
-import salt.transport
 import salt.utils.args
+import salt.transport.client
 from salt.exceptions import SaltReqTimeoutError, SaltInvocationError
 
 log = logging.getLogger(__name__)
@@ -118,7 +118,7 @@ def _publish(
             'id': __opts__['id'],
             'no_parse': __opts__.get('no_parse', [])}
 
-    channel = salt.transport.Channel.factory(__opts__, master_uri=master_uri)
+    channel = salt.transport.client.ReqChannel.factory(__opts__, master_uri=master_uri)
     try:
         peer_data = channel.send(load)
     except SaltReqTimeoutError:
@@ -323,7 +323,7 @@ def runner(fun, arg=None, timeout=5):
             'id': __opts__['id'],
             'no_parse': __opts__.get('no_parse', [])}
 
-    channel = salt.transport.Channel.factory(__opts__)
+    channel = salt.transport.client.ReqChannel.factory(__opts__)
     try:
         return channel.send(load)
     except SaltReqTimeoutError:

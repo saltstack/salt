@@ -344,6 +344,20 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
         else:
             raise RuntimeError
 
+    def test_run_cwd_in_combination_with_runas(self):
+        '''
+        cmd.run executes command in the cwd directory
+        when the runas parameter is specified
+        '''
+        cmd = 'pwd'
+        cwd = '/tmp'
+        runas = 'foobar'
+
+        with patch('pwd.getpwnam') as getpwnam_mock, \
+                patch.dict(cmdmod.__grains__, {'os': 'Darwin', 'os_family': 'Solaris'}):
+            stdout = cmdmod._run(cmd, cwd=cwd, runas=runas).get('stdout')
+        self.assertEqual(stdout, cwd)
+
     def test_run_all_binary_replace(self):
         '''
         Test for failed decoding of binary data, for instance when doing

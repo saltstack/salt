@@ -28,7 +28,7 @@ import salt.utils.process
 import salt.utils.state
 import salt.utils.user
 import salt.utils.versions
-import salt.transport
+import salt.transport.client
 import salt.log.setup
 from salt.ext import six
 
@@ -136,9 +136,9 @@ class SyncClientMixin(object):
         '''
         load = kwargs
         load['cmd'] = self.client
-        channel = salt.transport.Channel.factory(self.opts,
-                                                 crypt='clear',
-                                                 usage='master_call')
+        channel = salt.transport.client.ReqChannel.factory(self.opts,
+                                                           crypt='clear',
+                                                           usage='master_call')
         ret = channel.send(load)
         if isinstance(ret, collections.Mapping):
             if 'error' in ret:

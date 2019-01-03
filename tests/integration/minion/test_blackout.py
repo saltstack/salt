@@ -32,7 +32,8 @@ class MinionBlackoutTestCase(ModuleCase):
         '''
         with salt.utils.files.fopen(BLACKOUT_PILLAR, 'w') as wfh:
             wfh.write(blackout_data)
-        self.run_function('saltutil.refresh_pillar')
+        self.run_function('saltutil.refresh_pillar', minion_tgt='minion')
+        self.run_function('saltutil.refresh_pillar', minion_tgt='sub_minion')
         sleep(10)  # wait for minion to enter blackout mode
 
     def end_blackout(self):
@@ -43,7 +44,8 @@ class MinionBlackoutTestCase(ModuleCase):
             blackout_pillar.write(textwrap.dedent('''\
                 minion_blackout: False
                 '''))
-        self.run_function('saltutil.refresh_pillar')
+        self.run_function('saltutil.refresh_pillar', minion_tgt='minion')
+        self.run_function('saltutil.refresh_pillar', minion_tgt='sub_minion')
         sleep(10)  # wait for minion to exit blackout mode
 
     @flaky
