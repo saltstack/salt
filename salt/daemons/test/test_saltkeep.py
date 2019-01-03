@@ -2224,6 +2224,7 @@ def runAll():
 
     unittest.TextTestRunner(verbosity=2).run(suite)
 
+
 if __name__ == '__main__' and __package__ is None:
 
     #console.reinit(verbosity=console.Wordage.concise)

@@ -40,6 +40,7 @@ def _test_hashlib():
     else:
         return True
 
+
 SUPPORTED_HASHLIB = _test_hashlib()
 
 
