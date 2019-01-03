@@ -362,6 +362,10 @@ VALID_OPTS = {
     # Maximum number of concurrently active processes at any given point in time
     'process_count_max': int,
 
+    # If the minion reaches process_count_max, how long should it sleep
+    # before trying to generate a new process.
+    'process_count_max_sleep_secs': int,
+
     # Whether or not the salt minion should run scheduled mine updates
     'mine_enabled': bool,
 
@@ -1374,6 +1378,7 @@ DEFAULT_MINION_OPTS = {
     'autosign_timeout': 120,
     'multiprocessing': True,
     'process_count_max': -1,
+    'process_count_max_sleep_secs': 10,
     'mine_enabled': True,
     'mine_return_job': False,
     'mine_interval': 60,
