@@ -12,7 +12,7 @@ import textwrap
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.paths import PILLAR_DIR
-from tests.support.helpers import destructiveTest, flaky
+from tests.support.helpers import flaky
 
 # Import Salt libs
 import salt.utils.files
@@ -21,7 +21,6 @@ import salt.utils.files
 BLACKOUT_PILLAR = os.path.join(PILLAR_DIR, 'base', 'blackout.sls')
 
 
-@destructiveTest
 class MinionBlackoutTestCase(ModuleCase):
     '''
     Test minion blackout functionality
