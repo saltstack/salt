@@ -302,7 +302,7 @@ def list_keys(hive, key=None, use_32bit_registry=False):
 
                 - HKEY_LOCAL_MACHINE or HKLM
                 - HKEY_CURRENT_USER or HKCU
-                - HKEY_USER or HKU
+                - HKEY_USERS or HKU
                 - HKEY_CLASSES_ROOT or HKCR
                 - HKEY_CURRENT_CONFIG or HKCC
 

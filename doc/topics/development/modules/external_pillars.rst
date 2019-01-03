@@ -153,7 +153,7 @@ Using our example above:
 
     ext_pillar( id, pillar, 'some argument' )                   # example_a
     ext_pillar( id, pillar, 'argumentA', 'argumentB' )          # example_b
-    ext_pillar( id, pillar, keyA='valueA', keyB='valueB' } )    # example_c
+    ext_pillar( id, pillar, keyA='valueA', keyB='valueB' )    # example_c
 
 
 In the ``example_a`` case, ``pillar`` will contain the items from the

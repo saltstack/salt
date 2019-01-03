@@ -413,6 +413,8 @@ def wait(name,
          hide_output=False,
          use_vt=False,
          success_retcodes=None,
+         success_stdout=None,
+         success_stderr=None,
          **kwargs):
     '''
     Run the given command only if the watch statement calls it.
@@ -530,6 +532,20 @@ def wait(name,
         the return code will be overridden with zero.
 
       .. versionadded:: Fluorine
+
+    success_stdout: This parameter will be allow a list of
+        strings that when found in standard out should be considered a success.
+        If stdout returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: Neon
+
+    success_stderr: This parameter will be allow a list of
+        strings that when found in standard error should be considered a success.
+        If stderr returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: Neon
     '''
     # Ignoring our arguments is intentional.
     return {'name': name,
@@ -556,6 +572,9 @@ def wait_script(name,
                 use_vt=False,
                 output_loglevel='debug',
                 hide_output=False,
+                success_retcodes=None,
+                success_stdout=None,
+                success_stderr=None,
                 **kwargs):
     '''
     Download a script from a remote source and execute it only if a watch
@@ -669,6 +688,20 @@ def wait_script(name,
         the return code will be overridden with zero.
 
       .. versionadded:: Fluorine
+
+    success_stdout: This parameter will be allow a list of
+        strings that when found in standard out should be considered a success.
+        If stdout returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: Neon
+
+    success_stderr: This parameter will be allow a list of
+        strings that when found in standard error should be considered a success.
+        If stderr returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: Neon
     '''
     # Ignoring our arguments is intentional.
     return {'name': name,
@@ -695,6 +728,8 @@ def run(name,
         ignore_timeout=False,
         use_vt=False,
         success_retcodes=None,
+        success_stdout=None,
+        success_stderr=None,
         **kwargs):
     '''
     Run a command if certain circumstances are met.  Use ``cmd.wait`` if you
@@ -838,6 +873,20 @@ def run(name,
 
       .. versionadded:: Fluorine
 
+    success_stdout: This parameter will be allow a list of
+        strings that when found in standard out should be considered a success.
+        If stdout returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: Neon
+
+    success_stderr: This parameter will be allow a list of
+        strings that when found in standard error should be considered a success.
+        If stderr returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: Neon
+
     .. note::
 
         cmd.run supports the usage of ``reload_modules``. This functionality
@@ -907,7 +956,9 @@ def run(name,
                        'output_loglevel': output_loglevel,
                        'hide_output': hide_output,
                        'quiet': quiet,
-                       'success_retcodes': success_retcodes})
+                       'success_retcodes': success_retcodes,
+                       'success_stdout': success_stdout,
+                       'success_stderr': success_stderr})
 
     cret = mod_run_check(cmd_kwargs, onlyif, unless, creates)
     if isinstance(cret, dict):
@@ -973,6 +1024,8 @@ def script(name,
            defaults=None,
            context=None,
            success_retcodes=None,
+           success_stdout=None,
+           success_stderr=None,
            **kwargs):
     '''
     Download a script and execute it with specified arguments.
@@ -1115,6 +1168,19 @@ def script(name,
 
       .. versionadded:: Fluorine
 
+    success_stdout: This parameter will be allow a list of
+        strings that when found in standard out should be considered a success.
+        If stdout returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: Neon
+
+    success_stderr: This parameter will be allow a list of
+        strings that when found in standard error should be considered a success.
+        If stderr returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: Neon
     '''
     test_name = None
     if not isinstance(stateful, list):
@@ -1164,7 +1230,9 @@ def script(name,
                        'use_vt': use_vt,
                        'context': tmpctx,
                        'saltenv': __env__,
-                       'success_retcodes': success_retcodes})
+                       'success_retcodes': success_retcodes,
+                       'success_stdout': success_stdout,
+                       'success_stderr': success_stderr})
 
     run_check_cmd_kwargs = {
         'cwd': cwd,

@@ -2889,7 +2889,8 @@ def create(vm_):
         log.debug('config_spec set to:\n%s', pprint.pformat(config_spec))
 
     event_kwargs = vm_.copy()
-    del event_kwargs['password']
+    if event_kwargs.get('password'):
+        del event_kwargs['password']
 
     try:
         __utils__['cloud.fire_event'](

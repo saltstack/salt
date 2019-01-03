@@ -231,7 +231,7 @@ def _get_repo_dists_env(env):
     return (codename, env_dists)
 
 
-def _create_pbuilders(env):
+def _create_pbuilders(env, runas='root'):
     '''
     Create the .pbuilder family of files in user's home directory
 
@@ -252,8 +252,17 @@ def _create_pbuilders(env):
             quotes to be used as strings. More info on this (and other) PyYAML
             idiosyncrasies can be found :ref:`here <yaml-idiosyncrasies>`.
 
+    runas : root
+        .. versionadded:: fluorine
+
+        User to create the files and directories
+
+        .. note::
+
+            Ensure the user has correct permissions to any files and
+            directories which are to be utilized.
     '''
-    home = os.path.expanduser('~')
+    home = os.path.expanduser('~{0}'.format(runas))
     pbuilderrc = os.path.join(home, '.pbuilderrc')
     if not os.path.isfile(pbuilderrc):
         raise SaltInvocationError(
@@ -264,6 +273,14 @@ def _create_pbuilders(env):
     if env_overrides and not env_overrides.isspace():
         with salt.utils.files.fopen(pbuilderrc, 'a') as fow:
             fow.write(salt.utils.stringutils.to_str(env_overrides))
+    cmd = "chown {0}:{0} {1}".format(runas, pbuilderrc)
+    retrc = __salt__['cmd.retcode'](cmd, runas='root')
+    if retrc != 0:
+        raise SaltInvocationError(
+             "Create pbuilderrc in home directory failed with return error \'{0}\', "
+             "check logs for further details".format(
+                retrc)
+        )
 
 
 def _mk_tree():
@@ -298,7 +315,7 @@ def _get_src(tree_base, source, saltenv='base'):
         shutil.copy(source, dest)
 
 
-def make_src_pkg(dest_dir, spec, sources, env=None, saltenv='base'):
+def make_src_pkg(dest_dir, spec, sources, env=None, saltenv='base', runas='root'):
     '''
     Create a platform specific source package from the given platform spec/control file and sources
 
@@ -314,12 +331,76 @@ def make_src_pkg(dest_dir, spec, sources, env=None, saltenv='base'):
 
     This example command should build the libnacl SOURCE package and place it in
     /var/www/html/ on the minion
+
+    dest_dir
+        Absolute path for directory to write source package
+
+    spec
+        Absolute path to spec file or equivalent
+
+    sources
+        Absolute path to source files to build source package from
+
+    env : None
+        A list  or dictionary of environment variables to be set prior to execution.
+        Example:
+
+        .. code-block:: yaml
+
+            - env:
+                - DEB_BUILD_OPTIONS: 'nocheck'
+
+        .. warning::
+
+            The above illustrates a common PyYAML pitfall, that **yes**,
+            **no**, **on**, **off**, **true**, and **false** are all loaded as
+            boolean ``True`` and ``False`` values, and must be enclosed in
+            quotes to be used as strings. More info on this (and other) PyYAML
+            idiosyncrasies can be found :ref:`here <yaml-idiosyncrasies>`.
+
+    saltenv: base
+
+        Salt environment variables
+
+
+    runas : root
+        .. versionadded:: fluorine
+
+        User to create the files and directories
+
+        .. note::
+
+            Ensure the user has correct permissions to any files and
+            directories which are to be utilized.
     '''
-    _create_pbuilders(env)
+    _create_pbuilders(env, runas)
     tree_base = _mk_tree()
     ret = []
     if not os.path.isdir(dest_dir):
         os.makedirs(dest_dir)
+
+    # ensure directories are writable
+    root_user = 'root'
+    retrc = 0
+    cmd = "chown {0}:{0} {1}".format(runas, tree_base)
+    retrc = __salt__['cmd.retcode'](cmd, runas='root')
+    if retrc != 0:
+        raise SaltInvocationError(
+             "make_src_pkg ensuring tree_base \'{0}\' ownership failed with return error \'{1}\', "
+             "check logs for further details".format(
+                tree_base,
+                retrc)
+        )
+
+    cmd = "chown {0}:{0} {1}".format(runas, dest_dir)
+    retrc = __salt__['cmd.retcode'](cmd, runas=root_user)
+    if retrc != 0:
+        raise SaltInvocationError(
+             "make_src_pkg ensuring dest_dir \'{0}\' ownership failed with return error \'{1}\', "
+             "check logs for further details".format(
+                dest_dir,
+                retrc)
+        )
 
     spec_pathfile = _get_spec(tree_base, spec, saltenv)
 
@@ -356,27 +437,25 @@ def make_src_pkg(dest_dir, spec, sources, env=None, saltenv='base'):
     debname += '+ds'
     debname_orig = debname + '.orig.tar.gz'
     abspath_debname = os.path.join(tree_base, debname)
-    retrc = 0
 
     cmd = 'tar -xvzf {0}'.format(salttarball)
-    retrc = __salt__['cmd.retcode'](cmd, cwd=tree_base)
+    retrc = __salt__['cmd.retcode'](cmd, cwd=tree_base, runas=root_user)
     cmd = 'mv {0} {1}'.format(salttar_name, debname)
-    retrc |= __salt__['cmd.retcode'](cmd, cwd=tree_base)
+    retrc |= __salt__['cmd.retcode'](cmd, cwd=tree_base, runas=root_user)
     cmd = 'tar -cvzf {0} {1}'.format(os.path.join(tree_base, debname_orig), debname)
-    retrc |= __salt__['cmd.retcode'](cmd, cwd=tree_base)
+    retrc |= __salt__['cmd.retcode'](cmd, cwd=tree_base, runas=root_user)
     cmd = 'rm -f {0}'.format(salttarball)
-    retrc |= __salt__['cmd.retcode'](cmd, cwd=tree_base, env=env)
+    retrc |= __salt__['cmd.retcode'](cmd, cwd=tree_base, runas=root_user, env=env)
     cmd = 'cp {0}  {1}'.format(spec_pathfile, abspath_debname)
-    retrc |= __salt__['cmd.retcode'](cmd, cwd=abspath_debname)
+    retrc |= __salt__['cmd.retcode'](cmd, cwd=abspath_debname, runas=root_user)
     cmd = 'tar -xvJf {0}'.format(spec_pathfile)
-    retrc |= __salt__['cmd.retcode'](cmd, cwd=abspath_debname, env=env)
+    retrc |= __salt__['cmd.retcode'](cmd, cwd=abspath_debname, runas=root_user, env=env)
     cmd = 'rm -f {0}'.format(os.path.basename(spec_pathfile))
-    retrc |= __salt__['cmd.retcode'](cmd, cwd=abspath_debname)
+    retrc |= __salt__['cmd.retcode'](cmd, cwd=abspath_debname, runas=root_user)
     cmd = 'debuild -S -uc -us -sa'
-    retrc |= __salt__['cmd.retcode'](cmd, cwd=abspath_debname, python_shell=True, env=env)
-
+    retrc |= __salt__['cmd.retcode'](cmd, cwd=abspath_debname, runas=root_user, python_shell=True, env=env)
     cmd = 'rm -fR {0}'.format(abspath_debname)
-    retrc |= __salt__['cmd.retcode'](cmd)
+    retrc |= __salt__['cmd.retcode'](cmd, runas=root_user)
     if retrc != 0:
         raise SaltInvocationError(
              'Make source package for destination directory {0}, spec {1}, sources {2}, failed '
@@ -433,23 +512,40 @@ def build(runas,
             raise
     dsc_dir = tempfile.mkdtemp()
     try:
-        dscs = make_src_pkg(dsc_dir, spec, sources, env, saltenv)
+        dscs = make_src_pkg(dsc_dir, spec, sources, env, saltenv, runas)
     except Exception as exc:
         shutil.rmtree(dsc_dir)
-        log.error('Failed to make src package')
+        log.error('Failed to make src package, exception \'{0}\''.format(exc))
         return ret
 
-    cmd = 'pbuilder --create'
-    retrc = __salt__['cmd.retcode'](cmd, runas=runas, python_shell=True, env=env)
+    root_user = 'root'
+
+    #ensure pbuilder setup from runas if other than root
+    if runas != root_user:
+        user_home = os.path.expanduser('~{0}'.format(runas))
+        root_home = os.path.expanduser('~root')
+        cmd = 'cp {0}/.pbuilderrc {1}/'.format(user_home, root_home)
+        retrc = __salt__['cmd.retcode'](cmd, runas=root_user, python_shell=True, env=env)
+        cmd = 'cp -R {0}/.pbuilder-hooks {1}/'.format(user_home, root_home)
+        retrc = __salt__['cmd.retcode'](cmd, runas=root_user, python_shell=True, env=env)
+        if retrc != 0:
+            raise SaltInvocationError(
+                 "build copy pbuilder files from \'{0}\' to \'{1}\' returned error \'{2}\', "
+                 "check logs for further details".format(user_home, root_home, retrc))
+
+    cmd = '/usr/sbin/pbuilder --create'
+    retrc = __salt__['cmd.retcode'](cmd, runas=root_user, python_shell=True, env=env)
     if retrc != 0:
         raise SaltInvocationError(
-             'pbuilder create failed with return error {0}, check logs for further details'.format(retrc))
+             'pbuilder create failed with return error \'{0}\', '
+             'check logs for further details'.format(retrc))
 
     # use default /var/cache/pbuilder/result
     results_dir = '/var/cache/pbuilder/result'
 
     # ensure clean
-    retrc |= __salt__['cmd.retcode']('rm -fR {0}'.format(results_dir))
+    cmd = 'rm -fR {0}'.format(results_dir)
+    retrc |= __salt__['cmd.retcode'](cmd, runas=root_user, python_shell=True, env=env)
 
     # dscs should only contain salt orig and debian tarballs and dsc file
     for dsc in dscs:
@@ -459,14 +555,12 @@ def build(runas,
         if dsc.endswith('.dsc'):
             dbase = os.path.dirname(dsc)
             try:
-                retrc |= __salt__['cmd.retcode']('chown {0} -R {1}'.format(runas, dbase))
-
-                cmd = 'pbuilder update --override-config'
-                retrc |= __salt__['cmd.retcode'](cmd, runas=runas, python_shell=True, env=env)
-
-                cmd = 'pbuilder build --debbuildopts "-sa" {0}'.format(dsc)
-                retrc |= __salt__['cmd.retcode'](cmd, runas=runas, python_shell=True, env=env)
-
+                cmd = 'chown {0}:{0} -R {1}'.format(runas, dbase)
+                retrc |= __salt__['cmd.retcode'](cmd, runas=root_user, python_shell=True, env=env)
+                cmd = '/usr/sbin/pbuilder update --override-config'
+                retrc |= __salt__['cmd.retcode'](cmd, runas=root_user, python_shell=True, env=env)
+                cmd = '/usr/sbin/pbuilder build --debbuildopts "-sa" {0}'.format(dsc)
+                retrc |= __salt__['cmd.retcode'](cmd, runas=root_user, python_shell=True, env=env)
                 if retrc != 0:
                     raise SaltInvocationError(
                          'pbuilder build or update failed with return error {0}, '
@@ -482,13 +576,16 @@ def build(runas,
                         ret.setdefault('Packages', []).append(bdist)
 
             except Exception as exc:
-                log.error('Error building from {0}: {1}'.format(dsc, exc))
+                log.error('Error building from \'{0}\', execption \'{1}\''.format(dsc, exc))
 
     # remove any Packages file created for local dependency processing
     for pkgzfile in os.listdir(dest_dir):
         if pkgzfile == 'Packages':
             pkgzabsfile = os.path.join(dest_dir, pkgzfile)
             os.remove(pkgzabsfile)
+
+    cmd = 'chown {0}:{0} -R {1}'.format(runas, dest_dir)
+    __salt__['cmd.retcode'](cmd, runas=root_user, python_shell=True, env=env)
 
     shutil.rmtree(dsc_dir)
     return ret
@@ -600,6 +697,14 @@ def make_repo(repodir,
     repoconfopts = os.path.join(repoconf, 'options')
     with salt.utils.files.fopen(repoconfopts, 'w') as fow:
         fow.write(salt.utils.stringutils.to_str(repocfg_opts))
+
+    cmd = 'chown {0}:{1} -R {2}'.format(runas, runas, repoconf)
+    retrc = __salt__['cmd.retcode'](cmd, runas='root')
+    if retrc != 0:
+        raise SaltInvocationError(
+             'failed to ensure rights to repoconf directory, error {0}, '
+             'check logs for further details'.format(retrc)
+        )
 
     local_keygrip_to_use = None
     local_key_fingerprint = None
@@ -714,12 +819,12 @@ def make_repo(repodir,
             if older_gnupg:
                 if local_keyid is not None:
                     cmd = 'debsign --re-sign -k {0} {1}'.format(keyid, abs_file)
-                    retrc |= __salt__['cmd.retcode'](cmd, cwd=repodir, use_vt=True, env=env)
+                    retrc |= __salt__['cmd.retcode'](cmd, runas=runas, cwd=repodir, use_vt=True, env=env)
 
                 cmd = 'reprepro --ignore=wrongdistribution --component=main -Vb . includedsc {0} {1}'.format(
                         codename,
                         abs_file)
-                retrc |= __salt__['cmd.retcode'](cmd, cwd=repodir, use_vt=True, env=env)
+                retrc |= __salt__['cmd.retcode'](cmd, runas=runas, cwd=repodir, use_vt=True, env=env)
             else:
                 # interval of 0.125 is really too fast on some systems
                 interval = 0.5
@@ -727,18 +832,73 @@ def make_repo(repodir,
                     number_retries = timeout / interval
                     times_looped = 0
                     error_msg = 'Failed to debsign file {0}'.format(abs_file)
-                    cmd = 'debsign --re-sign -k {0} {1}'.format(keyid, abs_file)
+                    if ((__grains__['os'] in ['Ubuntu'] and __grains__['osmajorrelease'] < 18)
+                         or (__grains__['os'] in ['Debian'] and __grains__['osmajorrelease'] <= 8)):
+                        cmd = 'debsign --re-sign -k {0} {1}'.format(keyid, abs_file)
+                        try:
+                            proc = salt.utils.vt.Terminal(
+                                cmd,
+                                env=env,
+                                shell=True,
+                                stream_stdout=True,
+                                stream_stderr=True
+                            )
+                            while proc.has_unread_data:
+                                stdout, _ = proc.recv()
+                                if stdout and SIGN_PROMPT_RE.search(stdout):
+                                    # have the prompt for inputting the passphrase
+                                    proc.sendline(phrase)
+                                else:
+                                    times_looped += 1
+
+                                if times_looped > number_retries:
+                                    raise SaltInvocationError(
+                                        'Attempting to sign file {0} failed, timed out after {1} seconds'.format(
+                                            abs_file,
+                                            int(times_looped * interval))
+                                    )
+                                time.sleep(interval)
+
+                            proc_exitstatus = proc.exitstatus
+                            if proc_exitstatus != 0:
+                                raise SaltInvocationError(
+                                    'Signing file {0} failed with proc.status {1}'.format(
+                                        abs_file,
+                                        proc_exitstatus)
+                                )
+                        except salt.utils.vt.TerminalException as err:
+                            trace = traceback.format_exc()
+                            log.error(error_msg, err, trace)
+                            res = {
+                                    'retcode': 1,
+                                    'stdout': '',
+                                    'stderr': trace}
+                        finally:
+                            proc.close(terminate=True, kill=True)
+                    else:
+                        cmd = 'debsign --re-sign -k {0} {1}'.format(local_key_fingerprint, abs_file)
+                        retrc |= __salt__['cmd.retcode'](cmd, runas=runas, cwd=repodir, use_vt=True, env=env)
+
+                number_retries = timeout / interval
+                times_looped = 0
+                error_msg = 'Failed to reprepro includedsc file {0}'.format(abs_file)
+                cmd = 'reprepro --ignore=wrongdistribution --component=main -Vb . includedsc {0} {1}'.format(
+                        codename,
+                        abs_file)
+                if ((__grains__['os'] in ['Ubuntu'] and __grains__['osmajorrelease'] < 18)
+                    or (__grains__['os'] in ['Debian'] and __grains__['osmajorrelease'] <= 8)):
                     try:
                         proc = salt.utils.vt.Terminal(
-                            cmd,
-                            env=env,
-                            shell=True,
-                            stream_stdout=True,
-                            stream_stderr=True
-                        )
+                                cmd,
+                                env=env,
+                                shell=True,
+                                cwd=repodir,
+                                stream_stdout=True,
+                                stream_stderr=True
+                                )
                         while proc.has_unread_data:
                             stdout, _ = proc.recv()
-                            if stdout and SIGN_PROMPT_RE.search(stdout):
+                            if stdout and REPREPRO_SIGN_PROMPT_RE.search(stdout):
                                 # have the prompt for inputting the passphrase
                                 proc.sendline(phrase)
                             else:
@@ -746,16 +906,16 @@ def make_repo(repodir,
 
                             if times_looped > number_retries:
                                 raise SaltInvocationError(
-                                    'Attempting to sign file {0} failed, timed out after {1} seconds'.format(
-                                        abs_file,
-                                        int(times_looped * interval))
-                                )
+                                        'Attempting to reprepro includedsc for file {0} failed, timed out after {1} loops'
+                                        .format(abs_file, times_looped)
+                                 )
                             time.sleep(interval)
 
                         proc_exitstatus = proc.exitstatus
                         if proc_exitstatus != 0:
                             raise SaltInvocationError(
-                                'Signing file {0} failed with proc.status {1}'.format(
+                                 'Reprepro includedsc for codename {0} and file {1} failed with proc.status {2}'.format(
+                                    codename,
                                     abs_file,
                                     proc_exitstatus)
                             )
@@ -765,59 +925,12 @@ def make_repo(repodir,
                         res = {
                                 'retcode': 1,
                                 'stdout': '',
-                                'stderr': trace}
+                                'stderr': trace
+                                }
                     finally:
                         proc.close(terminate=True, kill=True)
-
-                number_retries = timeout / interval
-                times_looped = 0
-                error_msg = 'Failed to reprepro includedsc file {0}'.format(abs_file)
-                cmd = 'reprepro --ignore=wrongdistribution --component=main -Vb . includedsc {0} {1}'.format(
-                        codename,
-                        abs_file)
-
-                try:
-                    proc = salt.utils.vt.Terminal(
-                            cmd,
-                            env=env,
-                            shell=True,
-                            cwd=repodir,
-                            stream_stdout=True,
-                            stream_stderr=True
-                            )
-                    while proc.has_unread_data:
-                        stdout, _ = proc.recv()
-                        if stdout and REPREPRO_SIGN_PROMPT_RE.search(stdout):
-                            # have the prompt for inputting the passphrase
-                            proc.sendline(phrase)
-                        else:
-                            times_looped += 1
-
-                        if times_looped > number_retries:
-                            raise SaltInvocationError(
-                                    'Attempting to reprepro includedsc for file {0} failed, timed out after {1} loops'
-                                    .format(abs_file, times_looped)
-                             )
-                        time.sleep(interval)
-
-                    proc_exitstatus = proc.exitstatus
-                    if proc_exitstatus != 0:
-                        raise SaltInvocationError(
-                             'Reprepro includedsc for codename {0} and file {1} failed with proc.status {2}'.format(
-                                codename,
-                                abs_file,
-                                proc_exitstatus)
-                        )
-                except salt.utils.vt.TerminalException as err:
-                    trace = traceback.format_exc()
-                    log.error(error_msg, err, trace)
-                    res = {
-                            'retcode': 1,
-                            'stdout': '',
-                            'stderr': trace
-                            }
-                finally:
-                    proc.close(terminate=True, kill=True)
+                else:
+                    retrc |= __salt__['cmd.retcode'](cmd, runas=runas, cwd=repodir, use_vt=True, env=env)
 
         if retrc != 0:
             raise SaltInvocationError(
@@ -827,6 +940,6 @@ def make_repo(repodir,
             cmd = 'reprepro --ignore=wrongdistribution --component=main -Vb . includedeb {0} {1}'.format(
                     codename,
                     abs_file)
-            res = __salt__['cmd.run_all'](cmd, cwd=repodir, use_vt=True, env=env)
+            res = __salt__['cmd.run_all'](cmd, runas=runas, cwd=repodir, use_vt=True, env=env)
 
     return res
