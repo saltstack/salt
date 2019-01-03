@@ -4478,7 +4478,9 @@ def check_perms(name, ret, user, group, mode, attrs=None, follow_symlinks=False)
 
     is_dir = os.path.isdir(name)
     is_link = os.path.islink(name)
-    if not salt.utils.platform.is_windows() and not is_dir and not is_link:
+    if attrs is not None \
+            and not salt.utils.platform.is_windows() \
+            and not is_dir and not is_link:
         try:
             lattrs = lsattr(name)
         except SaltInvocationError:
