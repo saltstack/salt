@@ -143,28 +143,31 @@ instances = {'Parallel': TASK_INSTANCES_PARALLEL,
              'Queue': TASK_INSTANCES_QUEUE,
              'No New Instance': TASK_INSTANCES_IGNORE_NEW,
              'Stop Existing': TASK_INSTANCES_STOP_EXISTING}
+
+
 def show_win32api_code(code):
-  '''
-      We should try to use the win32api to get error codes
-      instead of having a dict like:
-          results = {0x0: 'The operation completed successfully',
-               0x1: 'Incorrect or unknown function called',
-               0x2: 'File not found',
-               0xA: 'The environment is incorrect',
-               0x41300: 'Task is ready to run at its next scheduled time',
-               0x41301: 'Task is currently running',
-               0x41302: 'Task is disabled',
-               0x41303: 'Task has not yet run',
-               0x41304: 'There are no more runs scheduled for this task',
-               0x41306: 'Task was terminated by the user',
-               0x8004130F: 'Credentials became corrupted',
-               0x8004131F: 'An instance of this task is already running',
-               0x800704DD: 'The service is not available (Run only when logged in?)',
-               0x800710E0: 'The operator or administrator has refused the request',
-               0xC000013A: 'The application terminated as a result of CTRL+C',
-               0xC06D007E: 'Unknown software exception'}
-  '''
-  return win32api.FormatMessage(code).strip()
+    '''
+    We should try to use the win32api to get error codes
+    instead of having a dict like:
+        results = {
+          0x0: 'The operation completed successfully',
+          0x1: 'Incorrect or unknown function called',
+          0x2: 'File not found',
+          0xA: 'The environment is incorrect',
+          0x41300: 'Task is ready to run at its next scheduled time',
+          0x41301: 'Task is currently running',
+          0x41302: 'Task is disabled',
+          0x41303: 'Task has not yet run',
+          0x41304: 'There are no more runs scheduled for this task',
+          0x41306: 'Task was terminated by the user',
+          0x8004130F: 'Credentials became corrupted',
+          0x8004131F: 'An instance of this task is already running',
+          0x800704DD: 'The service is not available (Run only when logged in?)',
+          0x800710E0: 'The operator or administrator has refused the request',
+          0xC000013A: 'The application terminated as a result of CTRL+C',
+          0xC06D007E: 'Unknown software exception'}
+    '''
+    return win32api.FormatMessage(code).strip()
 
 
 def __virtual__():
