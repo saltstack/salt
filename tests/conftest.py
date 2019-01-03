@@ -223,8 +223,10 @@ def pytest_configure(config):
     # We always want deferred timeouts. Ie, only take into account the test function time
     # to run, exclude fixture setup/teardown
     config._env_timeout_func_only = True
+# <---- Register Markers ---------------------------------------------------------------------------------------------
 
 
+# ----- PyTest Tweaks ----------------------------------------------------------------------------------------------->
 def set_max_open_files_limits(min_soft=3072, min_hard=4096):
 
     # Get current limits
@@ -275,12 +277,26 @@ def set_max_open_files_limits(min_soft=3072, min_hard=4096):
             )
             exit(1)
     return soft, hard
-
-
 def pytest_report_header(config):
     soft, hard = set_max_open_files_limits()
     return 'max open files; soft: {}; hard: {}'.format(soft, hard)
-# <---- Register Markers ---------------------------------------------------------------------------------------------
+
+
+def pytest_runtest_logstart(nodeid):
+    '''
+    implements the runtest_setup/call/teardown protocol for
+    the given test item, including capturing exceptions and calling
+    reporting hooks.
+    '''
+    log.debug('>>>>> START >>>>> %s', nodeid)
+
+
+def pytest_runtest_logfinish(nodeid):
+    '''
+    called after ``pytest_runtest_call``
+    '''
+    log.debug('<<<<< END <<<<<<< %s', nodeid)
+# <---- PyTest Tweaks ------------------------------------------------------------------------------------------------
 
 
 # ----- Test Setup -------------------------------------------------------------------------------------------------->
