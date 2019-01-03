@@ -183,9 +183,15 @@ class CMDModuleTest(ModuleCase):
         random_file = "{0}{1}{2}".format(RUNTIME_VARS.TMP_ROOT_DIR,
                                          os.path.sep,
                                          random.random())
-        expected_stderr = 'cat: /tmp/{0}: No such file or directory'.format(random_file)
+
+        if salt.utils.platform.is_windows():
+            func = 'type'
+            expected_stderr = 'The system cannot find the file specified.'
+        else:
+            func = 'cat'
+            expected_stderr = 'cat: {0}: No such file or directory'.format(random_file)
         ret = self.run_function('cmd.run_all',
-                                ['cat /tmp/{0}'.format(random_file)],
+                                ['{0} {1}'.format(func, random_file)],
                                 success_stderr=[expected_stderr],
                                 python_shell=True)
 
