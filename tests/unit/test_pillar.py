@@ -727,7 +727,7 @@ foo_wildcard:
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-@patch('salt.transport.Channel.factory', MagicMock())
+@patch('salt.transport.client.ReqChannel.factory', MagicMock())
 class RemotePillarTestCase(TestCase):
     '''
     Tests for instantiating a RemotePillar in salt.pillar
@@ -826,7 +826,7 @@ class RemotePillarTestCase(TestCase):
             'pass_to_ext_pillars': ['path_to_add']}
         mock_channel = MagicMock(
             crypted_transfer_decode_dictentry=MagicMock(return_value={}))
-        with patch('salt.transport.Channel.factory',
+        with patch('salt.transport.client.ReqChannel.factory',
                    MagicMock(return_value=mock_channel)):
             pillar = salt.pillar.RemotePillar(opts, self.grains,
                                               'mocked_minion', 'fake_env')
