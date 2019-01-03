@@ -42,7 +42,7 @@ class EventTestCase(TestCase, LoaderModuleMockMixin):
         Test for Fire an event off up to the master server
         '''
         with patch('salt.crypt.SAuth') as salt_crypt_sauth, \
-                patch('salt.transport.Channel.factory') as salt_transport_channel_factory:
+                patch('salt.transport.client.ReqChannel.factory') as salt_transport_channel_factory:
 
             preload = {'id': 'id', 'tag': 'tag', 'data': 'data',
                        'tok': 'salt', 'cmd': '_minion_event'}

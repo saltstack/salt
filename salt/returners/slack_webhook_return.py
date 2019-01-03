@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
-Return salt data via slack
+Return salt data via Slack using Incoming Webhooks
 
-..  versionadded:: 2018.3.4
+:codeauthor: :email:`Carlos D. Álvaro <github@cdalvaro.io>`
 
 The following fields can be set in the minion conf file:
 
@@ -318,11 +318,11 @@ def returner(ret):
 
     _options = _get_options(ret)
 
-    webhook = _options.get('webhook')
+    webhook = _options.get('webhook', None)
     show_tasks = _options.get('show_tasks')
     author_icon = _options.get('author_icon')
 
-    if not webhook:
+    if not webhook or webhook is '':
         log.error('%s.webhook not defined in salt config', __virtualname__)
         return
 

@@ -584,10 +584,20 @@ class GitProvider(object):
         '''
         cleaned = []
         cmd_str = 'git remote prune origin'
+
+        # Attempt to force all output to plain ascii english, which is what some parsing code
+        # may expect.
+        # According to stackoverflow (http://goo.gl/l74GC8), we are setting LANGUAGE as well
+        # just to be sure.
+        env = os.environ.copy()
+        env[b"LANGUAGE"] = b"C"
+        env[b"LC_ALL"] = b"C"
+
         cmd = subprocess.Popen(
             shlex.split(cmd_str),
             close_fds=not salt.utils.platform.is_windows(),
             cwd=os.path.dirname(self.gitdir),
+            env=env,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT)
         output = cmd.communicate()[0]
@@ -984,6 +994,11 @@ class GitProvider(object):
         Resolve dynamically-set branch
         '''
         if self.role == 'git_pillar' and self.branch == '__env__':
+            try:
+                return self.all_saltenvs
+            except AttributeError:
+                # all_saltenvs not configured for this remote
+                pass
             target = self.opts.get('pillarenv') \
                 or self.opts.get('saltenv') \
                 or 'base'
@@ -2985,7 +3000,11 @@ class GitPillar(GitBase):
             cachedir = self.do_checkout(repo)
             if cachedir is not None:
                 # Figure out which environment this remote should be assigned
-                if repo.env:
+                if repo.branch == '__env__' and hasattr(repo, 'all_saltenvs'):
+                    env = self.opts.get('pillarenv') \
+                        or self.opts.get('saltenv') \
+                        or self.opts.get('git_pillar_base')
+                elif repo.env:
                     env = repo.env
                 else:
                     env = 'base' if repo.branch == repo.base else repo.get_checkout_target()

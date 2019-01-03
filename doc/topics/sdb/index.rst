@@ -144,6 +144,7 @@ When writing Salt modules, it is not recommended to call ``sdb.get`` directly,
 as it requires the user to provide values in SDB, using a specific URI. Use
 ``config.get`` instead.
 
+.. _sdb-writing-modules:
 
 Writing SDB Modules
 ===================
