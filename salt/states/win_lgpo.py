@@ -252,9 +252,18 @@ def set_(name,
         if policy_data and policy_data['output_section'] in current_policy:
             for policy_name, policy_setting in six.iteritems(policy_data['requested_policy']):
                 currently_set = False
+                # Check Case sensitive first (faster)
                 if policy_name in current_policy[policy_data['output_section']]:
                     currently_set = True
                     pol_id = policy_name
+                # Check case insensitive
+                elif policy_name.lower() in (k.lower() for k in current_policy[policy_data['output_section']]):
+                    for p_name in current_policy[policy_data['output_section']]:
+                        if policy_name.lower() == p_name.lower():
+                            currently_set = True
+                            pol_id = p_name
+                            break
+                # Check aliases
                 else:
                     for alias in policy_data['policy_lookup'][policy_name]['policy_aliases']:
                         log.debug('checking alias %s', alias)
@@ -308,13 +317,13 @@ def set_(name,
                             policy_changes.append(policy_name)
                         else:
                             if additional_policy_comments:
-                                ret['comment'] = '"{0}" is already set ({1}).\n'.format(policy_name, ', '.join(additional_policy_comments))
+                                ret['comment'] = '"{0}" is already set ({1})\n'.format(policy_name, ', '.join(additional_policy_comments))
                             else:
-                                ret['comment'] = '"{0}" is already set.\n'.format(policy_name) + ret['comment']
+                                ret['comment'] = '"{0}" is already set\n'.format(policy_name) + ret['comment']
                     else:
                         log.debug('%s current setting matches '
                                   'the requested setting', policy_name)
-                        ret['comment'] = '"{0}" is already set.\n'.format(policy_name) + ret['comment']
+                        ret['comment'] = '"{0}" is already set\n'.format(policy_name) + ret['comment']
                 else:
                     policy_changes.append(policy_name)
                     log.debug('policy %s is not set, we will configure it',
@@ -322,7 +331,7 @@ def set_(name,
     if __opts__['test']:
         if policy_changes:
             ret['result'] = None
-            ret['comment'] = 'The following policies are set to change:\n{0}.'.format(
+            ret['comment'] = 'The following policies are set to change:\n{0}'.format(
                     '\n'.join(policy_changes))
         else:
             ret['comment'] = 'All specified policies are properly configured'
@@ -334,13 +343,17 @@ def set_(name,
                                         adml_language=adml_language)
             if _ret:
                 ret['result'] = _ret
-                ret['comment'] = 'The following policies changed:\n{0}.'.format(
-                    '\n'.join(policy_changes))
                 ret['changes'] = salt.utils.dictdiffer.deep_diff(
                     current_policy,
                     __salt__['lgpo.get'](policy_class=policy_class,
                                          adml_language=adml_language,
                                          hierarchical_return=False))
+                if ret['changes']:
+                    ret['comment'] = 'The following policies changed:\n{0}' \
+                                     ''.format('\n'.join(policy_changes))
+                else:
+                    ret['comment'] = 'The following policies are in the correct state:\n{0}' \
+                                     ''.format('\n'.join(policy_changes))
             else:
                 ret['result'] = False
                 ret['comment'] = 'Errors occurred while attempting to configure policies: {0}'.format(_ret)
