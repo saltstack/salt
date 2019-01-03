@@ -471,6 +471,7 @@ def list_upgrades(refresh=True, **kwargs):
 
     return ret
 
+
 # Provide a list_updates function for those used to using zypper list-updates
 list_updates = salt.utils.functools.alias_function(list_upgrades, 'list_updates')
 
