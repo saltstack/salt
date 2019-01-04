@@ -1962,8 +1962,12 @@ def parse_host_port(host_port):
         if port and ":" in port:
             raise ValueError('too many ":" separators in host:port "{}"'.format(host_port))
         try:
-            host = ipaddress.ip_address(host)
+            host_ip = ipaddress.ip_address(host)
+            host = host_ip
         except ValueError:
             log.debug('"%s" Not an IP address? Assuming it is a hostname.', host)
+        except TypeError as _e_:
+            log.warn('"%s" generated a TypeError exception', host)
+            raise _e_
 
     return host, port
