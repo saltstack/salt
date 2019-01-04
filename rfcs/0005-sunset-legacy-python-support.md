@@ -10,7 +10,7 @@ SaltStack is phasing out Python 2 support, with the develop branch of Salt Open
 dropping Python 2 support effective immediately.
 
 We will continue our policy of backporting bug fixes and security patches for
-the last two releases, but starting with release (???) we will no longer
+the last two releases, but starting with release Neon we will no longer
 support legacy Python versions. For SaltStack, this means we will support
 &gt;=Python 3.6.
 
@@ -19,7 +19,8 @@ Python will continue to be available on http://repo.saltstack.com as well as
 https://pypi.org.
 
 Older platforms without native Python 3 packages (e.g. RedHat) will be provided SaltStack
-packages that include Python 3.
+packages that include Python 3. SaltStack will also fully support the creation
+of new, Python 3 based packages for all supported platforms.
 
 # Motivation
 [motivation]: #motivation
@@ -86,10 +87,19 @@ versions.
 # Drawbacks
 [drawbacks]: #drawbacks
 
-This is a significant breaking change - many installations are on older
-platforms, and some may have an inclination to not upgrade their systems.
-Though this may be the tipping point that gives them the impetus to upgrade to
-a more modern OS.
+By dropping support for Python 2 it's possible that a significant number of
+installations may be impacted. For those who have custom modules that are
+Python 2 only, or are stuck on unsupported legacy patforms, they may not be
+able to upgrade to the newer versions of Salt.
+
+While this change won't break communication between master and minion, or
+change pillars or state files in any way, when SaltStack begins taking
+advantage of new Python language features (e.g.  async/await keywords,
+f-strings), it will effectively be broken for those who for whatever reason
+have not upgraded to modern platforms.
+
+However, in some cases, this change may be tipping point that gives them the
+impetus to upgrade to a more modern OS.
 
 # Thank You, Python 2
 
