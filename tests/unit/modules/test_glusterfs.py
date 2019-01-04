@@ -181,6 +181,7 @@ class GlusterResults(object):
             success_first_ip_from_second_second_time = success_reverse_already_peer[
                 'ip']
 
+
 xml_peer_present = """
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <cliOutput>

@@ -936,7 +936,7 @@ def cmd_unzip(zip_file,
     if password:
         cmd.extend(['-P', password])
     if options:
-        cmd.append('{0}'.format(options))
+        cmd.extend(shlex.split(options))
     cmd.extend(['{0}'.format(zip_file), '-d', '{0}'.format(dest)])
 
     if excludes is not None:
