@@ -2655,7 +2655,8 @@ def create(vm_):
         )
 
     event_kwargs = vm_.copy()
-    del event_kwargs['password']
+    if event_kwargs.get('password'):
+        del event_kwargs['password']
 
     try:
         __utils__['cloud.fire_event'](
