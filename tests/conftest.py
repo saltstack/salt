@@ -201,10 +201,12 @@ def pytest_configure(config):
         if dirname != 'tests':
             config.addinivalue_line('norecursedirs', os.path.join(CODE_DIR, dirname))
     config.addinivalue_line('norecursedirs', os.path.join(CODE_DIR, 'tests/support'))
+    # Ignore the msgpack deprecated encoding usage
     config.addinivalue_line(
         'filterwarnings',
-        r'once:encoding is deprecated, Use raw=False instead\.:DeprecationWarning'
+        r'ignore:.*encoding is deprecated.*Use raw=False instead.*:DeprecationWarning'
     )
+    os.environ['PYTHONWARNINGS'] = r'ignore:.*encoding is deprecated.*Use raw=False instead.*:DeprecationWarning'
     # pylint: disable=protected-access
 
     # Default Logging Config
@@ -670,11 +672,12 @@ def cli_bin_dir(tempdir,
     extra_code = textwrap.dedent(
         r'''
         # During test runs, squash the msgpack deprecation warnings
-        import salt
+        import os
         import warnings
         warnings.filterwarnings(
-            'ignore', r'encoding is deprecated, Use raw=False instead\.', DeprecationWarning,
+            'ignore', r'.*encoding is deprecated, Use raw=False instead.*', DeprecationWarning,
         )
+        os.environ['PYTHONWARNINGS'] = r'ignore:.*encoding is deprecated.*Use raw=False instead.*:DeprecationWarning'
         '''
     )
 
