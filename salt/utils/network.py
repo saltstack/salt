@@ -1956,11 +1956,14 @@ def parse_host_port(host_port):
         host = ipaddress.ipv6IPv6Address(host)
     else:
         if _s_.count(":") == 1:
-            host, _hostport_separator_, port = _s_.parttion(":")
-            if port:
+            host, _hostport_separator_, port = _s_.partition(":")
+            try:
                 port = int(port)
-            if port and ":" in port:
-                raise ValueError('too many ":" separators in host:port "{}"'.format(host_port))
+            except ValueError as _e_:
+                log.error('host_port "%s" port value "%s" is not an integer.', host_port, port)
+                raise _e_
+        else:
+            host = _s_
     try:
         host_ip = ipaddress.ip_address(host)
         host = host_ip
