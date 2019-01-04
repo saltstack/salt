@@ -28,7 +28,10 @@ class MinionBlackoutTestCase(ModuleCase):
         cls.blackout_pillar = os.path.join(PILLAR_DIR, 'base', 'blackout.sls')
 
     def tearDown(self):
-        self.end_blackout()
+        self.end_blackout(sleep=False)
+        # Make sure we also refresh the sub_minion pillar
+        self.run_function('saltutil.refresh_pillar', minion_tgt='sub_minion')
+        time.sleep(10)  # wait for minion to exit blackout mode
 
     def begin_blackout(self, blackout_data='minion_blackout: True'):
         '''
@@ -36,19 +39,18 @@ class MinionBlackoutTestCase(ModuleCase):
         '''
         with salt.utils.files.fopen(self.blackout_pillar, 'w') as wfh:
             wfh.write(blackout_data)
-        for tgt in ('minion', 'sub_minion'):
-            self.run_function('saltutil.refresh_pillar', minion_tgt=tgt)
+        self.run_function('saltutil.refresh_pillar')
         time.sleep(10)  # wait for minion to enter blackout mode
 
-    def end_blackout(self):
+    def end_blackout(self, sleep=True):
         '''
         takedown minion blackout mode
         '''
         with salt.utils.files.fopen(self.blackout_pillar, 'w') as wfh:
             wfh.write('minion_blackout: False\n')
-        for tgt in ('minion', 'sub_minion'):
-            self.run_function('saltutil.refresh_pillar', minion_tgt=tgt)
-        time.sleep(10)  # wait for minion to exit blackout mode
+        self.run_function('saltutil.refresh_pillar')
+        if sleep:
+            time.sleep(10)  # wait for minion to exit blackout mode
 
     @flaky
     def test_blackout(self):
