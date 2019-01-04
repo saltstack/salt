@@ -1798,7 +1798,7 @@ class LocalClient(object):
             return payload
 
         # We have the payload, let's get rid of the channel fast(GC'ed faster)
-        del channel
+        channel.close()
 
         return {'jid': payload['load']['jid'],
                 'minions': payload['load']['minions']}
@@ -1906,7 +1906,7 @@ class LocalClient(object):
             raise tornado.gen.Return(payload)
 
         # We have the payload, let's get rid of the channel fast(GC'ed faster)
-        del channel
+        channel.close()
 
         raise tornado.gen.Return({'jid': payload['load']['jid'],
                                   'minions': payload['load']['minions']})

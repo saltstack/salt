@@ -5,10 +5,12 @@ IPC transport classes
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+import errno
 import logging
 import socket
 import weakref
 import time
+import threading
 
 # Import 3rd-party libs
 import msgpack
@@ -263,8 +265,12 @@ class IPCClient(object):
             # FIXME
             client.__singleton_init__(io_loop=io_loop, socket_path=socket_path)
             loop_instance_map[key] = client
+            client._refcount = 1
+            client._refcount_lock = threading.RLock()
         else:
             log.debug('Re-using IPCClient for %s', key)
+            with client._refcount_lock:
+                client._refcount += 1
         return client
 
     def __singleton_init__(self, socket_path, io_loop=None):
@@ -360,7 +366,16 @@ class IPCClient(object):
                 yield tornado.gen.sleep(1)
 
     def __del__(self):
-        self.close()
+        with self._refcount_lock:
+            # Make sure we actually close no matter if something
+            # went wrong with our ref counting
+            self._refcount = 1
+        try:
+            self.close()
+        except socket.error as exc:
+            if exc.errno != errno.EBADF:
+                # If its not a bad file descriptor error, raise
+                raise
 
     def close(self):
         '''
@@ -370,7 +385,21 @@ class IPCClient(object):
         '''
         if self._closing:
             return
+
+        if self._refcount > 1:
+            # Decrease refcount
+            with self._refcount_lock:
+                self._refcount -= 1
+            log.debug(
+                'This is not the last %s instance. Not closing yet.',
+                self.__class__.__name__
+            )
+            return
+
         self._closing = True
+
+        log.debug('Closing %s instance', self.__class__.__name__)
+
         if self.stream is not None and not self.stream.closed():
             self.stream.close()
 
@@ -757,14 +786,11 @@ class IPCMessageSubscriber(IPCClient):
         '''
         if not self._closing:
             IPCClient.close(self)
-            # This will prevent this message from showing up:
-            # '[ERROR   ] Future exception was never retrieved:
-            # StreamClosedError'
-            if self._read_sync_future is not None and self._read_sync_future.done():
-                self._read_sync_future.exception()
-            if self._read_stream_future is not None and self._read_stream_future.done():
-                self._read_stream_future.exception()
-
-    def __del__(self):
-        if IPCMessageSubscriber in globals():
-            self.close()
+            if self._closing:
+                # This will prevent this message from showing up:
+                # '[ERROR   ] Future exception was never retrieved:
+                # StreamClosedError'
+                if self._read_sync_future is not None and self._read_sync_future.done():
+                    self._read_sync_future.exception()
+                if self._read_stream_future is not None and self._read_stream_future.done():
+                    self._read_stream_future.exception()
