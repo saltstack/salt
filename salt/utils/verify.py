@@ -490,7 +490,7 @@ def valid_id(opts, id_):
         if any(x in id_ for x in ('/', '\\', '\0')):
             return False
         return bool(clean_path(opts['pki_dir'], id_))
-    except (AttributeError, KeyError, TypeError):
+    except (AttributeError, KeyError, TypeError, UnicodeDecodeError):
         return False
 
 
