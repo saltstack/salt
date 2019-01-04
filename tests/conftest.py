@@ -191,6 +191,33 @@ def pytest_configure(config):
         'filterwarnings',
         r'once:encoding is deprecated, Use raw=False instead\.:DeprecationWarning'
     )
+    # pylint: disable=protected-access
+
+    # Default Logging Config
+    config._inicache['log_print'] = False  # Don't print logs on pytest reports
+    # CLI Log records formatting
+    config._inicache['log_date_format'] = '%H:%M:%S'
+    for fmtname in ('log_cli_format', 'log_format'):
+        fmt = config.getini(fmtname)
+        if not fmt or fmt == _pytest.logging.DEFAULT_LOG_FORMAT:
+            config._inicache[fmtname] = salt.config._DFLT_LOG_FMT_LOGFILE.replace(
+                '[%(process)d]',
+                '[%(processName)s(%(process)d)]'
+            ).replace(
+                '[%(process)s]',
+                '[%(processName)s(%(process)s)]'
+            )
+        else:
+            config._inicache[fmtname] = fmt.replace(
+                '[%(process)d]',
+                '[%(processName)s(%(process)d)]'
+            ).replace(
+                '[%(process)s]',
+                '[%(processName)s(%(process)s)]'
+            )
+    # pylint: enable=protected-access
+
+    # Expose the markers we use to pytest CLI
     config.addinivalue_line(
         'markers',
         'destructive_test: Run destructive tests. These tests can include adding '
