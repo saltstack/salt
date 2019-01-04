@@ -73,9 +73,11 @@ def __virtual__():
 # module globals
 # ------------------------------------------------------------------------------
 
+
 # define the default values for all possible term fields
 # This mapping is currently built dynamically using the Term class from the
 # underlying library, Capirca
+
 _TERM_FIELDS = {}
 
 
