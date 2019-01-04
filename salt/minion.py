@@ -606,74 +606,69 @@ class MinionBase(object):
                 opts.update(prep_ip_port(opts))
                 opts['master_uri_list'].append(resolve_dns(opts)['master_uri'])
 
-            pub_channel = None
-            try:
-                while True:
-                    if attempts != 0:
-                        # Give up a little time between connection attempts
-                        # to allow the IOLoop to run any other scheduled tasks.
-                        yield tornado.gen.sleep(opts['acceptance_wait_time'])
-                    attempts += 1
-                    if tries > 0:
-                        log.debug(
-                            'Connecting to master. Attempt %s of %s',
-                            attempts, tries
-                        )
-                    else:
-                        log.debug(
-                            'Connecting to master. Attempt %s (infinite attempts)',
-                            attempts
-                        )
-                    for master in opts['local_masters']:
-                        opts['master'] = master
-                        opts.update(prep_ip_port(opts))
-                        opts.update(resolve_dns(opts))
+            while True:
+                if attempts != 0:
+                    # Give up a little time between connection attempts
+                    # to allow the IOLoop to run any other scheduled tasks.
+                    yield tornado.gen.sleep(opts['acceptance_wait_time'])
+                attempts += 1
+                if tries > 0:
+                    log.debug(
+                        'Connecting to master. Attempt %s of %s',
+                        attempts, tries
+                    )
+                else:
+                    log.debug(
+                        'Connecting to master. Attempt %s (infinite attempts)',
+                        attempts
+                    )
+                for master in opts['local_masters']:
+                    opts['master'] = master
+                    opts.update(prep_ip_port(opts))
+                    opts.update(resolve_dns(opts))
 
-                        # on first run, update self.opts with the whole master list
-                        # to enable a minion to re-use old masters if they get fixed
-                        if 'master_list' not in opts:
-                            opts['master_list'] = copy.copy(opts['local_masters'])
+                    # on first run, update self.opts with the whole master list
+                    # to enable a minion to re-use old masters if they get fixed
+                    if 'master_list' not in opts:
+                        opts['master_list'] = copy.copy(opts['local_masters'])
 
-                        self.opts = opts
+                    self.opts = opts
 
-                        pub_channel = salt.transport.client.AsyncPubChannel.factory(opts, **factory_kwargs)
-                        try:
-                            yield pub_channel.connect()
-                            conn = True
-                            break
-                        except SaltClientError as exc:
-                            last_exc = exc
-                            if exc.strerror.startswith('Could not access'):
-                                msg = (
-                                    'Failed to initiate connection with Master '
-                                    '%s: check ownership/permissions. Error '
-                                    'message: %s', opts['master'], exc
-                                )
-                            else:
-                                msg = ('Master %s could not be reached, trying next '
-                                       'next master (if any)', opts['master'])
-                            log.info(msg)
-                            continue
-
-                    if not conn:
-                        if attempts == tries:
-                            # Exhausted all attempts. Return exception.
-                            self.connected = False
-                            self.opts['master'] = copy.copy(self.opts['local_masters'])
-                            log.error(
-                                'No master could be reached or all masters '
-                                'denied the minion\'s connection attempt.'
+                    pub_channel = salt.transport.client.AsyncPubChannel.factory(opts, **factory_kwargs)
+                    try:
+                        yield pub_channel.connect()
+                        conn = True
+                        break
+                    except SaltClientError as exc:
+                        last_exc = exc
+                        if exc.strerror.startswith('Could not access'):
+                            msg = (
+                                'Failed to initiate connection with Master '
+                                '%s: check ownership/permissions. Error '
+                                'message: %s', opts['master'], exc
                             )
-                            # If the code reaches this point, 'last_exc'
-                            # should already be set.
-                            raise last_exc  # pylint: disable=E0702
-                    else:
-                        self.tok = pub_channel.auth.gen_token(b'salt')
-                        self.connected = True
-                        raise tornado.gen.Return((opts['master'], pub_channel))
-            finally:
-                if pub_channel is not None:
-                    pub_channel.close()
+                        else:
+                            msg = ('Master %s could not be reached, trying next '
+                                   'next master (if any)', opts['master'])
+                        log.info(msg)
+                        continue
+
+                if not conn:
+                    if attempts == tries:
+                        # Exhausted all attempts. Return exception.
+                        self.connected = False
+                        self.opts['master'] = copy.copy(self.opts['local_masters'])
+                        log.error(
+                            'No master could be reached or all masters '
+                            'denied the minion\'s connection attempt.'
+                        )
+                        # If the code reaches this point, 'last_exc'
+                        # should already be set.
+                        raise last_exc  # pylint: disable=E0702
+                else:
+                    self.tok = pub_channel.auth.gen_token(b'salt')
+                    self.connected = True
+                    raise tornado.gen.Return((opts['master'], pub_channel))
 
         # single master sign in
         else:

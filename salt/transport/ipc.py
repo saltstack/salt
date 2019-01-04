@@ -777,14 +777,11 @@ class IPCMessageSubscriber(IPCClient):
         '''
         if not self._closing:
             IPCClient.close(self)
-            # This will prevent this message from showing up:
-            # '[ERROR   ] Future exception was never retrieved:
-            # StreamClosedError'
-            if self._read_sync_future is not None and self._read_sync_future.done():
-                self._read_sync_future.exception()
-            if self._read_stream_future is not None and self._read_stream_future.done():
-                self._read_stream_future.exception()
-
-    def __del__(self):
-        if IPCMessageSubscriber in globals():
-            self.close()
+            if self._closing:
+                # This will prevent this message from showing up:
+                # '[ERROR   ] Future exception was never retrieved:
+                # StreamClosedError'
+                if self._read_sync_future is not None and self._read_sync_future.done():
+                    self._read_sync_future.exception()
+                if self._read_stream_future is not None and self._read_stream_future.done():
+                    self._read_stream_future.exception()
