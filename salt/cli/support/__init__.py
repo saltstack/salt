@@ -40,7 +40,7 @@ def get_profile(profile, caller, runner):
         if os.path.exists(profile_path):
             try:
                 rendered_template = _render_profile(profile_path, caller, runner)
-                log.trace('\n{d}\n{t}\n{d}\n'.format(d='-' * 80, t=rendered_template))
+                log.debug('\n{d}\n{t}\n{d}\n'.format(d='-' * 80, t=rendered_template))
                 data.update(yaml.load(rendered_template))
             except Exception as ex:
                 log.debug(ex, exc_info=True)
