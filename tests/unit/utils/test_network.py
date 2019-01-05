@@ -213,7 +213,7 @@ class NetworkTestCase(TestCase):
         self.assertFalse(network.is_ipv6('2001.0db8.85a3.0000.0000.8a2e.0370.7334'))
 
     def test_parse_host_port(self):
-        _ip = ipaddress
+        _ip = ipaddress.ip_address
         good_host_ports = {
             '10.10.0.3': (_ip('10.10.0.3'), None),
             '10.10.0.3:1234': (_ip('10.10.0.3'), 1234),
