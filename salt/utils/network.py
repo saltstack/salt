@@ -1340,7 +1340,7 @@ def hex2ip(hex_ip, invert=False):
         try:
             return ipaddress.IPv6Address(":".join(ip)).compressed
         except ipaddress.AddressValueError as ex:
-            log.error("hex2ip - ipv6 address error: {0}".format(ex))
+            log.error("hex2ip - ipv6 address error: %s", ex)
             return hex_ip
 
     try:
