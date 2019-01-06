@@ -891,6 +891,40 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
         self.assertTrue(os.path.isdir(name))
 
+
+    def test_directory_is_idempotent(self):
+        '''
+        Ensure the file.directory state produces no changes when rerun.
+        '''
+        name = os.path.join(RUNTIME_VARS.TMP, 'a_dir_twice')
+
+        if IS_WINDOWS:
+            username = os.environ.get('USERNAME', 'Administrators')
+            domain = os.environ.get('USERDOMAIN', '')
+            fullname = '{0}\\{1}'.format(domain, username)
+
+            ret = self.run_state(
+                'file.directory',
+                name=name,
+                win_owner=fullname
+            )
+        else:
+            ret = self.run_state('file.directory', name=name)
+
+        self.assertSaltTrueReturn(ret)
+
+        if IS_WINDOWS:
+            ret = self.run_state(
+                'file.directory',
+                name=name,
+                win_owner=username
+            )
+        else:
+            ret = self.run_state('file.directory', name=name)
+
+        self.assertSaltTrueReturn(ret)
+        self.assertSaltStateChangesEqual(ret, {})
+
     def test_directory_symlink_dry_run(self):
         '''
         Ensure that symlinks are followed when file.directory is run with
