@@ -1326,8 +1326,8 @@ def hex2ip(hex_ip, invert=False):
     if len(hex_ip) == 32:  # ipv6
         ip = []
         for i in range(0, 32, 8):
-            ip_part = hex_ip[i : i + 8]
-            ip_part = [ip_part[x : x + 2] for x in range(0, 8, 2)]
+            ip_part = hex_ip[i: i + 8]
+            ip_part = [ip_part[x: x + 2] for x in range(0, 8, 2)]
             if invert:
                 ip.append("{0[3]}{0[2]}:{0[1]}{0[0]}".format(ip_part))
             else:
@@ -1837,7 +1837,7 @@ def mac_str_to_bytes(mac_str):
         mac_str = mac_str.replace(sep, "")
     else:
         raise ValueError("Invalid MAC address")
-    chars = (int(mac_str[s : s + 2], 16) for s in range(0, 12, 2))
+    chars = (int(mac_str[s: s + 2], 16) for s in range(0, 12, 2))
     return bytes(chars) if six.PY3 else b"".join(chr(x) for x in chars)
 
 
