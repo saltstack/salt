@@ -229,7 +229,7 @@ class NetworkTestCase(TestCase):
             '2001:0db8:0370::7334]:1234',
             '2001:0db8:0370:0:a:b:c:d:1234'
         ]
-        for host_port, assertion_value in good_host_ports:
+        for host_port, assertion_value in good_host_ports.items():
             host = port = e = None
             try:
                 host, port = network.parse_host_port(host_port)
