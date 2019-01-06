@@ -360,11 +360,6 @@ class ZMQConfigTest(TestCase):
                                                          master_port=m_port,
                                                          source_port=s_port) == 'tcp://0.0.0.0:{0};{1}:{2}'.format(s_port, m_ip, m_port)
 
-            # pass in only master_port and ipv6 source_ip and source_port
-            assert salt.transport.zeromq._get_master_uri(master_port=m_port,
-                                                         source_ip=m_port,
-                                                         source_port=s_port) == 'tcp://[{1}]:{2};[::1]:{0}'.format(m_port, s_ip6, s_port)
-
 
 class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
 
