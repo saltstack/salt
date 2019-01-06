@@ -1934,7 +1934,7 @@ def parse_host_port(host_port):
             else:
                 if len(_s_) > 1:
                     raise ValueError('found ambiguous "{}" port in "{}"'.format(_s_, host_port))
-        host = ipaddress.ipv6IPv6Address(host)
+        host = ipaddress.IPv6Address(host)
     else:
         if _s_.count(":") == 1:
             host, _hostport_separator_, port = _s_.partition(":")
