@@ -1883,7 +1883,7 @@ def dns_check(addr, port, safe=False, ipv6=None):
                 except socket.error:
                     pass
             if not resolved:
-                if len(candidates) > 0:
+                if candidates:
                     resolved = candidates[0]
                 else:
                     error = True
