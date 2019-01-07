@@ -1008,6 +1008,13 @@ def install_os(path=None, **kwargs):
     path (required)
         Path where the image file is present on the proxy minion
 
+    remote_path :
+        If the value of path  is a file path on the local
+        (Salt host's) filesystem, then the image is copied from the local
+        filesystem to the :remote_path: directory on the target Junos
+        device. The default is ``/var/tmp``. If the value of :path: or
+        is a URL, then the value of :remote_path: is unused.
+
     dev_timeout : 30
         The NETCONF RPC timeout (in seconds). This argument was added since most of
         the time the "package add" RPC takes a significant amount of time.  The default
@@ -1021,6 +1028,23 @@ def install_os(path=None, **kwargs):
     no_copy : False
         If ``True`` the software package will not be SCP’d to the device
 
+    bool validate:
+        When ``True`` this method will perform a config validation against
+        the new image
+
+    bool issu:
+        When ``True`` allows unified in-service software upgrade
+        (ISSU) feature enables you to upgrade between two different Junos OS
+        releases with no disruption on the control plane and with minimal
+        disruption of traffic.
+
+    bool nssu:
+        When ``True`` allows nonstop software upgrade (NSSU)
+        enables you to upgrade the software running on a Juniper Networks
+        EX Series Virtual Chassis or a Juniper Networks EX Series Ethernet
+        Switch with redundant Routing Engines with a single command and
+        minimal disruption to network traffic.
+
     CLI Examples:
 
     .. code-block:: bash
@@ -1032,26 +1056,6 @@ def install_os(path=None, **kwargs):
     ret = {}
     ret['out'] = True
 
-    if path is None:
-        ret['message'] = \
-            'Please provide the salt path where the junos image is present.'
-        ret['out'] = False
-        return ret
-
-    image_cached_path = salt.utils.files.mkstemp()
-    __salt__['cp.get_file'](path, image_cached_path)
-
-    if not os.path.isfile(image_cached_path):
-        ret['message'] = 'Invalid image path.'
-        ret['out'] = False
-        return ret
-
-    if os.path.getsize(image_cached_path) == 0:
-        ret['message'] = 'Failed to copy image'
-        ret['out'] = False
-        return ret
-    path = image_cached_path
-
     op = {}
     if '__pub_arg' in kwargs:
         if kwargs['__pub_arg']:
@@ -1060,15 +1064,39 @@ def install_os(path=None, **kwargs):
     else:
         op.update(kwargs)
 
+    no_copy_ = op.get('no_copy', False)
+
+    if path is None:
+        ret['message'] = \
+            'Please provide the salt path where the junos image is present.'
+        ret['out'] = False
+        return ret
+
+    if not no_copy_:
+        image_cached_path = salt.utils.files.mkstemp()
+        __salt__['cp.get_file'](path, image_cached_path)
+
+        if not os.path.isfile(image_cached_path):
+            ret['message'] = 'Invalid image path.'
+            ret['out'] = False
+            return ret
+
+        if os.path.getsize(image_cached_path) == 0:
+            ret['message'] = 'Failed to copy image'
+            ret['out'] = False
+            return ret
+        path = image_cached_path
+
     try:
-        conn.sw.install(path, progress=True)
+        conn.sw.install(path, progress=True, **op)
         ret['message'] = 'Installed the os.'
     except Exception as exception:
         ret['message'] = 'Installation failed due to: "{0}"'.format(exception)
         ret['out'] = False
         return ret
     finally:
-        salt.utils.files.safe_rm(image_cached_path)
+        if not no_copy_:
+            salt.utils.files.safe_rm(image_cached_path)
 
     if 'reboot' in op and op['reboot'] is True:
         try:

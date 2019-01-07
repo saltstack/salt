@@ -129,6 +129,20 @@ def alive(opts):
 
     dev = conn()
 
+    thisproxy['conn'].connected = ping()
+
+    if not dev.connected:
+        __salt__['event.fire_master']({}, 'junos/proxy/{}/stop'.format(
+            opts['proxy']['host']))
+    return dev.connected
+
+
+def ping():
+    '''
+    Ping?  Pong!
+    '''
+
+    dev = conn()
     # Check that the underlying netconf connection still exists.
     if dev._conn is None:
         return False
@@ -137,16 +151,35 @@ def alive(opts):
     # rpc call is going on.
     if hasattr(dev._conn, '_session'):
         if dev._conn._session._transport.is_active():
-            # there is no on going rpc call.
-            if dev._conn._session._q.empty():
-                thisproxy['conn'].connected = ping()
+            # there is no on going rpc call. buffer tell can be 1 as it stores
+            # remaining char after "]]>]]>" which can be a new line char
+            if dev._conn._session._buffer.tell() <= 1 and \
+                    dev._conn._session._q.empty():
+                return _rpc_file_list(dev)
+            else:
+                log.debug('skipped ping() call as proxy already getting data')
+                return True
         else:
             # ssh connection is lost
-            dev.connected = False
+            return False
     else:
         # other connection modes, like telnet
-        thisproxy['conn'].connected = ping()
-    return dev.connected
+        return _rpc_file_list(dev)
+
+
+def _rpc_file_list(dev):
+    try:
+        dev.rpc.file_list(path='/dev/null', dev_timeout=5)
+        return True
+    except (RpcTimeoutError, ConnectClosedError):
+        try:
+            dev.close()
+            return False
+        except (RpcError, ConnectError, TimeoutExpiredError):
+            return False
+    except AttributeError as ex:
+        if "'NoneType' object has no attribute 'timeout'" in ex:
+            return False
 
 
 def proxytype():
@@ -168,22 +201,6 @@ def get_serialized_facts():
             facts['junos_info'][re]['object'] = \
                 dict(facts['junos_info'][re]['object'])
     return facts
-
-
-def ping():
-    '''
-    Ping?  Pong!
-    '''
-
-    dev = conn()
-    try:
-        dev.rpc.file_list(path='/dev/null', dev_timeout=2)
-        return True
-    except (RpcTimeoutError, ConnectClosedError):
-        try:
-            dev.close()
-        except (RpcError, ConnectError, TimeoutExpiredError):
-            return False
 
 
 def shutdown(opts):
