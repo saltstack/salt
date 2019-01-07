@@ -234,10 +234,10 @@ def index_template_absent(name):
 
 def index_template_present(name, definition, check_definition=False):
     '''
-    Ensure that the named index templat eis present.
+    Ensure that the named index template is present.
 
     name
-        Name of the index to add
+        Name of the index to check
     definition
         Required dict for creation parameters as per https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-templates.html
     check_definition
@@ -248,7 +248,7 @@ def index_template_present(name, definition, check_definition=False):
     .. code-block:: yaml
 
         mytestindex2_template:
-          elasticsearch_index_template.present:
+          elasticsearch.index_template_present:
             - definition:
                 template: logstash-*
                 order: 1
