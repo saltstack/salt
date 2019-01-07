@@ -1454,6 +1454,7 @@ def _parse_tcp_line(line):
     ret[sl]['state'] = int(comps[3], 16)
     return ret
 
+
 def _netlink_tool_remote_on(port, which_end):
     '''
     Returns set of ipv4 host addresses of remote established connections
@@ -1490,6 +1491,7 @@ def _netlink_tool_remote_on(port, which_end):
             continue
         remotes.add(remote_host)
     return remotes
+
 
 def _sunos_remotes_on(port, which_end):
     '''
