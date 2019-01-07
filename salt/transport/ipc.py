@@ -257,6 +257,7 @@ class IPCClient(object):
             client = object.__new__(cls)
             # FIXME
             client.__singleton_init__(io_loop=io_loop, socket_path=socket_path)
+            client._instance_key = key
             loop_instance_map[key] = client
             client._refcount = 1
             client._refcount_lock = threading.RLock()
@@ -400,11 +401,12 @@ class IPCClient(object):
         # that a closed entry may not be reused.
         # This forces this operation even if the reference
         # count of the entry has not yet gone to zero.
-        if self.io_loop in IPCClient.instance_map:
-            loop_instance_map = IPCClient.instance_map[self.io_loop]
-            key = six.text_type(self.socket_path)
-            if key in loop_instance_map:
-                del loop_instance_map[key]
+        if self.io_loop in self.__class__.instance_map:
+            loop_instance_map = self.__class__.instance_map[self.io_loop]
+            if self._instance_key in loop_instance_map:
+                del loop_instance_map[self._instance_key]
+            if not loop_instance_map:
+                del self.__class__.instance_map[self.io_loop]
 
 
 class IPCMessageClient(IPCClient):
