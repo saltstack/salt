@@ -2,7 +2,7 @@
 '''
 Manage LXD profiles.
 
-.. versionadded:: Fluorine
+.. versionadded:: 2019.2.0
 
 .. note:
 
