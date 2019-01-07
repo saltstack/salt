@@ -46,8 +46,9 @@ try:
     import jnpr.junos.utils
     import jnpr.junos.utils.config
     import jnpr.junos.utils.sw
-    from jnpr.junos.exception import RpcTimeoutError, ConnectClosedError, RpcError, ConnectError, \
-        ProbeError, ConnectAuthError, ConnectRefusedError, ConnectTimeoutError
+    from jnpr.junos.exception import RpcTimeoutError, ConnectClosedError,\
+        RpcError, ConnectError, ProbeError, ConnectAuthError,\
+        ConnectRefusedError, ConnectTimeoutError
     from ncclient.operations.errors import TimeoutExpiredError
 except ImportError:
     HAS_JUNOS = False
@@ -106,7 +107,8 @@ def init(opts):
     thisproxy['conn'] = jnpr.junos.Device(**args)
     try:
         thisproxy['conn'].open()
-    except (ProbeError, ConnectAuthError, ConnectRefusedError, ConnectTimeoutError, ConnectError) as ex:
+    except (ProbeError, ConnectAuthError, ConnectRefusedError, ConnectTimeoutError,
+            ConnectError) as ex:
         log.error("%s : not able to initiate connection to the device" % ex)
         thisproxy['initialized'] = False
         return
