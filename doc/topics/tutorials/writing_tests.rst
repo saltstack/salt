@@ -34,13 +34,11 @@ Getting Set Up For Tests
 
 There are a couple of requirements, in addition to Salt's requirements, that need
 to be installed in order to run Salt's test suite. You can install these additional
-requirements using the files located in the ``salt/requirements`` directory,
-depending on your relevant version of Python:
+requirements using the files located in the ``salt/requirements`` directory:
 
 .. code-block:: bash
 
-    pip install -r requirements/dev_python27.txt
-    pip install -r requirements/dev_python34.txt
+    pip install -r requirements/tests.txt
 
 To be able to run integration tests which utilizes ZeroMQ transport, you also
 need to install additional requirements for it. Make sure you have installed
