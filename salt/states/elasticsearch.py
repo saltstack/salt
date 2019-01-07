@@ -237,7 +237,7 @@ def index_template_present(name, definition, check_definition=False):
     Ensure that the named index template is present.
 
     name
-        Name of the index to check
+        Name of the index to add
     definition
         Required dict for creation parameters as per https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-templates.html
     check_definition
