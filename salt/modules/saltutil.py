@@ -552,7 +552,7 @@ def sync_proxymodules(saltenv=None, refresh=False, extmod_whitelist=None, extmod
 
 def sync_matchers(saltenv=None, refresh=False, extmod_whitelist=None, extmod_blacklist=None):
     '''
-    .. versionadded:: Flourine
+    .. versionadded:: 2019.2.0
 
     Sync engine modules from ``salt://_matchers`` to the minion
 
@@ -780,7 +780,7 @@ def sync_utils(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blackli
 
 def sync_serializers(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blacklist=None):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Sync serializers from ``salt://_serializers`` to the minion
 

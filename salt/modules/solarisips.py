@@ -338,7 +338,7 @@ def latest_version(*names, **kwargs):
 
     Please use pkg.latest_version as pkg.available_version is being deprecated.
 
-    .. versionchanged:: Fluorine
+    .. versionchanged:: 2019.2.0
         Support for multiple package names added.
 
     CLI Example:

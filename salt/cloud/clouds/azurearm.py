@@ -5,7 +5,7 @@ Azure ARM Cloud Module
 
 .. versionadded:: 2016.11.0
 
-.. versionchanged:: Fluorine
+.. versionchanged:: 2019.2.0
 
 The Azure ARM cloud module is used to control access to Microsoft Azure Resource Manager
 
@@ -1896,7 +1896,7 @@ def list_subnets(call=None, kwargs=None):
 
 def create_or_update_vmextension(call=None, kwargs=None):  # pylint: disable=unused-argument
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Create or update a VM extension object "inside" of a VM object.
 
@@ -2002,7 +2002,7 @@ def create_or_update_vmextension(call=None, kwargs=None):  # pylint: disable=unu
 
 def stop(name, call=None):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Stop (deallocate) a VM
 
@@ -2063,7 +2063,7 @@ def stop(name, call=None):
 
 def start(name, call=None):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Start a VM
 

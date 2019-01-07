@@ -136,7 +136,7 @@ VALID_OPTS = {
     # a master fingerprint with `salt-key -F master`
     'master_finger': six.string_types,
 
-    # Deprecated in Fluorine. Use 'random_master' instead.
+    # Deprecated in 2019.2.0. Use 'random_master' instead.
     # Do not remove! Keep as an alias for usability.
     'master_shuffle': bool,
 

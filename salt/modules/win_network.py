@@ -360,13 +360,13 @@ def ip_addrs(interface=None, include_loopback=False, cidr=None, type=None):
         Describes subnet using CIDR notation and only IPv4 addresses that belong
         to this subnet will be returned.
 
-      .. versionchanged:: Fluorine
+      .. versionchanged:: 2019.2.0
 
     type
         If option set to 'public' then only public addresses will be returned.
         Ditto for 'private'.
 
-        .. versionchanged:: Fluorine
+        .. versionchanged:: 2019.2.0
 
     CLI Example:
 
@@ -406,7 +406,7 @@ def ip_addrs6(interface=None, include_loopback=False, cidr=None):
         Describes subnet using CIDR notation and only IPv6 addresses that belong
         to this subnet will be returned.
 
-        .. versionchanged:: Fluorine
+        .. versionchanged:: 2019.2.0
 
     CLI Example:
 
@@ -522,7 +522,7 @@ def is_private(ip_addr):
     '''
     Check if the given IP address is a private address
 
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     CLI Example:
 
