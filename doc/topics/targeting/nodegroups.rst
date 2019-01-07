@@ -59,12 +59,12 @@ To match a nodegroup on the CLI, use the ``-N`` command-line option:
 
     salt -N group1 test.ping
 
-.. versionadded:: Fluorine
+.. versionadded:: 2019.2.0
 .. note::
 
     The ``N@`` classifier historically could not be used in compound matches
     within the CLI or :term:`top file`, it was only recognized in the
-    :conf_master:`nodegroups` master config file parameter. As of the Fluorine
+    :conf_master:`nodegroups` master config file parameter. As of the 2019.2.0
     release, this limitation no longer exists.
 
 To match a nodegroup in your :term:`top file`, make sure to put ``- match:

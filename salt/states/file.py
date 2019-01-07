@@ -5630,7 +5630,7 @@ def patch(name,
     '''
     Ensure that a patch has been applied to the specified file or directory
 
-    .. versionchanged:: Fluorine
+    .. versionchanged:: 2019.2.0
         The ``hash`` and ``dry_run_first`` options are now ignored, as the
         logic which determines whether or not the patch has already been
         applied no longer requires them. Additionally, this state now supports
@@ -5653,7 +5653,7 @@ def patch(name,
     source
         The patch file to apply
 
-        .. versionchanged:: Fluorine
+        .. versionchanged:: 2019.2.0
             The source can now be from any file source supported by Salt
             (``salt://``, ``http://``, ``https://``, ``ftp://``, etc.).
             Templating is also now supported.
@@ -5662,37 +5662,37 @@ def patch(name,
         Works the same way as in :py:func:`file.managed
         <salt.states.file.managed>`.
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     source_hash_name
         Works the same way as in :py:func:`file.managed
         <salt.states.file.managed>`
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     skip_verify
         Works the same way as in :py:func:`file.managed
         <salt.states.file.managed>`
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     template
         Works the same way as in :py:func:`file.managed
         <salt.states.file.managed>`
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     context
         Works the same way as in :py:func:`file.managed
         <salt.states.file.managed>`
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     defaults
         Works the same way as in :py:func:`file.managed
         <salt.states.file.managed>`
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     options
         Extra options to pass to patch. This should not be necessary in most
@@ -5714,7 +5714,7 @@ def patch(name,
             The parent directory must exist. Also, this will overwrite the file
             if it is already present.
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     strip
         Number of directories to strip from paths in the patch file. For
@@ -5728,7 +5728,7 @@ def patch(name,
                 - source: salt://myfile.patch
                 - strip: 1
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
             In previous versions, ``-p1`` would need to be passed as part of
             the ``options`` value.
 
@@ -6673,7 +6673,7 @@ def serialize(name,
         deserializing JSON, arguments like ``parse_float`` and ``parse_int``
         which accept a callable object cannot be handled in an SLS file.
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     For example, this state:
 
