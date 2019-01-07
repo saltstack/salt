@@ -30,7 +30,7 @@ python-gnupg==0.4.0
 pywin32==223
 PyYAML==3.12
 pyzmq==16.0.2
-requests==2.13.0
+requests==2.21.0
 singledispatch==3.4.0.3
 smmap==0.9.0
 timelib==0.2.4
