@@ -1399,9 +1399,11 @@ def _remotes_on(port, which_end):
     Return a set of ip addrs active tcp connections
     '''
     port = int(port)
+
     ret = _netlink_tool_remote_on(port, which_end)
-    if ret is not None and len(ret) > 0:    # ss tools may not be valid
+    if ret is not None:
         return ret
+
     ret = set()
 
     proc_available = False
@@ -1469,6 +1471,7 @@ def _netlink_tool_remote_on(port, which_end):
     ESTAB      0      0                      127.0.0.1:56726                  127.0.0.1:4505
     '''
     remotes = set()
+    valid = False
     try:
         data = subprocess.check_output(['ss', '-ant'])  # pylint: disable=minimum-python-version
     except subprocess.CalledProcessError:
@@ -1479,7 +1482,10 @@ def _netlink_tool_remote_on(port, which_end):
 
     lines = salt.utils.to_str(data).split('\n')
     for line in lines:
-        if 'ESTAB' not in line:
+        if 'Address:Port' in line:    # ss tools may not be valid
+            valid = True
+            continue
+        elif 'ESTAB' not in line:
             continue
         chunks = line.split()
         local_host, local_port = chunks[3].split(':')
@@ -1490,6 +1496,9 @@ def _netlink_tool_remote_on(port, which_end):
         if which_end == 'local_port' and int(local_port) != port:
             continue
         remotes.add(remote_host)
+    else:
+        if valid is False:
+            remotes = None
     return remotes
 
 
