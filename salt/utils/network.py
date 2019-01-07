@@ -1496,9 +1496,9 @@ def _netlink_tool_remote_on(port, which_end):
         if which_end == 'local_port' and int(local_port) != port:
             continue
         remotes.add(remote_host)
-    else:
-        if valid is False:
-            remotes = None
+
+    if valid is False:
+        remotes = None
     return remotes
 
 
