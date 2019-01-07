@@ -46,10 +46,9 @@ try:
     import jnpr.junos.utils
     import jnpr.junos.utils.config
     import jnpr.junos.utils.sw
-    from jnpr.junos.exception import RpcTimeoutError
-    from jnpr.junos.exception import ConnectClosedError
-    from jnpr.junos.exception import RpcError
-    from jnpr.junos.exception import ConnectError
+    from jnpr.junos.exception import RpcTimeoutError, ConnectClosedError,\
+        RpcError, ConnectError, ProbeError, ConnectAuthError,\
+        ConnectRefusedError, ConnectTimeoutError
     from ncclient.operations.errors import TimeoutExpiredError
 except ImportError:
     HAS_JUNOS = False
@@ -106,9 +105,23 @@ def init(opts):
             args[arg] = opts['proxy'][arg]
 
     thisproxy['conn'] = jnpr.junos.Device(**args)
-    thisproxy['conn'].open()
-    thisproxy['conn'].bind(cu=jnpr.junos.utils.config.Config)
-    thisproxy['conn'].bind(sw=jnpr.junos.utils.sw.SW)
+    try:
+        thisproxy['conn'].open()
+    except (ProbeError, ConnectAuthError, ConnectRefusedError, ConnectTimeoutError,
+            ConnectError) as ex:
+        log.error("%s : not able to initiate connection to the device" % ex)
+        thisproxy['initialized'] = False
+        return
+
+    try:
+        thisproxy['conn'].bind(cu=jnpr.junos.utils.config.Config)
+    except Exception as ex:
+        log.error('Bind failed with Config class due to: %s' % ex)
+
+    try:
+        thisproxy['conn'].bind(sw=jnpr.junos.utils.sw.SW)
+    except Exception as ex:
+        log.error('Bind failed with SW class due to: %s' % ex)
     thisproxy['initialized'] = True
 
 
