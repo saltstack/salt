@@ -988,7 +988,7 @@ Roster Deprecations
 - The :py:mod:`cache <salt.roster.cache>` roster has been changed as follows:
 
     - Support for ``roster_order`` as a list or tuple has been removed. As of
-      the ``2019.2.0 `` release, ``roster_order`` must be a dictionary.
+      the ``2019.2.0`` release, ``roster_order`` must be a dictionary.
 
     - The ``roster_order`` option now includes IPv6 in addition to IPv4 for the
       ``private``, ``public``, ``global`` or ``local`` settings. The syntax for
