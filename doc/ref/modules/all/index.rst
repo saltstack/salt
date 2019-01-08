@@ -198,6 +198,7 @@ execution modules
     jboss7
     jboss7_cli
     jenkinsmod
+    jinja
     jira_mod
     junos
     k8s
