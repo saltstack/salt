@@ -1929,7 +1929,7 @@ def parse_host_port(host_port):
     Takes a string argument specifying host or host:port.
 
     Returns a (hostname, port) or (ip_address, port) tuple. If no port is given,
-    the second element of the returned tuple will be None.
+    the second (port) element of the returned tuple will be None.
 
     host:port argument, for example, is accepted in the forms of:
       - hostname
