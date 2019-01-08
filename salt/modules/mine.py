@@ -16,6 +16,7 @@ import salt.payload
 import salt.utils.args
 import salt.utils.event
 import salt.utils.network
+import salt.transport.client
 from salt.exceptions import SaltClientError
 
 # Import 3rd-party libs
@@ -75,7 +76,10 @@ def _mine_get(load, opts):
                       )
             return False
     channel = salt.transport.client.ReqChannel.factory(opts)
-    ret = channel.send(load)
+    try:
+        ret = channel.send(load)
+    finally:
+        channel.close()
     return ret
 
 

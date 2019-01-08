@@ -1356,6 +1356,8 @@ class StateFire(object):
             channel.send(load)
         except Exception:
             pass
+        finally:
+            channel.close()
         return True
 
     def fire_running(self, running):
@@ -1386,4 +1388,6 @@ class StateFire(object):
             channel.send(load)
         except Exception:
             pass
+        finally:
+            channel.close()
         return True
