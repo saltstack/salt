@@ -101,6 +101,11 @@ def destructiveTest(caller):
             def test_create_user(self):
                 pass
     '''
+    # Late import
+    from tests.support.runtests import RUNTIME_VARS
+    if RUNTIME_VARS.PYTEST_SESSION:
+        setattr(caller, '__destructive_test__', True)
+
     if inspect.isclass(caller):
         # We're decorating a class
         old_setup = getattr(caller, 'setUp', None)
@@ -135,6 +140,11 @@ def expensiveTest(caller):
             def test_create_user(self):
                 pass
     '''
+    # Late import
+    from tests.support.runtests import RUNTIME_VARS
+    if RUNTIME_VARS.PYTEST_SESSION:
+        setattr(caller, '__expensive_test__', True)
+
     if inspect.isclass(caller):
         # We're decorating a class
         old_setup = getattr(caller, 'setUp', None)
@@ -1192,6 +1202,11 @@ def skip_if_binaries_missing(*binaries, **kwargs):
 
 
 def skip_if_not_root(func):
+    # Late import
+    from tests.support.runtests import RUNTIME_VARS
+    if RUNTIME_VARS.PYTEST_SESSION:
+        setattr(func, '__skip_if_not_root__', True)
+
     if not sys.platform.startswith('win'):
         if os.getuid() != 0:
             func.__unittest_skip__ = True
