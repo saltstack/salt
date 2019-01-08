@@ -570,7 +570,7 @@ def lsattr(path):
     for line in result.splitlines():
         if not line.startswith('lsattr: '):
             vals = line.split(None, 1)
-            results[vals[1]] = re.findall(r"[acdijstuADST]", vals[0])
+            results[vals[1]] = re.findall(r"[aAcCdDeijPsStTu]", vals[0])
 
     return results
 
@@ -587,8 +587,8 @@ def chattr(*files, **kwargs):
         should be added or removed from files
 
     attributes
-        One or more of the following characters: ``acdijstuADST``, representing
-        attributes to add to/remove from files
+        One or more of the following characters: ``aAcCdDeijPsStTu``,
+        representing attributes to add to/remove from files
 
     version
         a version number to assign to the file(s)
@@ -613,7 +613,7 @@ def chattr(*files, **kwargs):
         raise SaltInvocationError(
             "Need an operator: 'add' or 'remove' to modify attributes.")
     if attributes is None:
-        raise SaltInvocationError("Need attributes: [AacDdijsTtSu]")
+        raise SaltInvocationError("Need attributes: [aAcCdDeijPsStTu]")
 
     cmd = ['chattr']
 
@@ -793,6 +793,7 @@ def get_source_sum(file_name='',
         ret = extract_hash(hash_fn, '', file_name, source, source_hash_name)
         if ret is None:
             _invalid_source_hash_format()
+        ret['hsum'] = ret['hsum'].lower()
         return ret
     else:
         # The source_hash is a hash expression
@@ -836,6 +837,7 @@ def get_source_sum(file_name='',
                     )
                 )
 
+        ret['hsum'] = ret['hsum'].lower()
         return ret
 
 
@@ -1694,6 +1696,8 @@ def _starts_till(src, probe, strip_comments=True):
     if not src or not probe:
         return no_match
 
+    src = src.rstrip('\n\r')
+    probe = probe.rstrip('\n\r')
     if src == probe:
         return equal
 
@@ -2275,6 +2279,8 @@ def replace(path,
                 # Just search; bail as early as a match is found
                 if re.search(cpattern, r_data):
                     return True  # `with` block handles file closure
+                else:
+                    return False
             else:
                 result, nrepl = re.subn(cpattern,
                                         repl.replace('\\', '\\\\') if backslash_literal else repl,
@@ -6243,6 +6249,7 @@ def list_backups(path, limit=None):
         [files[x] for x in sorted(files, reverse=True)[:limit]]
     )))
 
+
 list_backup = salt.utils.functools.alias_function(list_backups, 'list_backup')
 
 
@@ -6414,6 +6421,7 @@ def delete_backup(path, backup_id):
         ret['comment'] = 'Successfully removed {0}'.format(backup['Location'])
 
     return ret
+
 
 remove_backup = salt.utils.functools.alias_function(delete_backup, 'remove_backup')
 

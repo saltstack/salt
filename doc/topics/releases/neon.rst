@@ -5,6 +5,14 @@ Salt Release Notes - Codename Neon
 ==================================
 
 
+Execution Module for Checking Jinja Map Files
+=============================================
+
+To aid in troubleshooting, an execution module has been added, which allows one
+to see the data loaded from a jinja map, or imported using ``import_yaml`` or
+``import_json``. See :py:mod:`here <salt.modules.jinja>` for more information.
+
+
 Saltcheck Updates
 =================
 
@@ -37,7 +45,7 @@ Usage
 
 Example file system layout:
 
-.. code-block:: txt
+.. code-block:: text
 
     /srv/salt/apache/
         init.sls
@@ -47,10 +55,11 @@ Example file system layout:
             config.tst
             deployment_validation.tst
 
-Tests can be run for each state by name, for all apache/saltcheck/*.tst files, or for all states
-assigned to the minion in top.sls. Tests may also be created with no associated state. These tests
-will be run through the use of ``saltcheck.run_state_tests``, but will not be automatically run
-by ``saltcheck.run_highstate_tests``.
+Tests can be run for each state by name, for all ``apache/saltcheck/*.tst`` files,
+or for all states assigned to the minion in top.sls. Tests may also be created
+with no associated state. These tests will be run through the use of
+``saltcheck.run_state_tests``, but will not be automatically run by
+``saltcheck.run_highstate_tests``.
 
 .. code-block:: bash
 
@@ -236,6 +245,9 @@ State Changes
 
 - Added new :py:func:`saltutil <salt.states.saltutil>` state to use instead of
   ``module.run`` to more easily handle change.
+
+- Added new `onfail_all` requisite form to allow for AND logic when adding
+  onfail states.
 
 Module Changes
 ==============

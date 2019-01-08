@@ -22,6 +22,7 @@ from zipimport import zipimporter
 
 # Import salt libs
 import salt.config
+import salt.defaults.events
 import salt.defaults.exitcodes
 import salt.syspaths
 import salt.utils.args
@@ -141,6 +142,18 @@ def static_loader(
     return ret
 
 
+def _format_entrypoint_target(ep):
+    '''
+    Makes a string describing the target of an EntryPoint object.
+
+    Base strongly on EntryPoint.__str__().
+    '''
+    s = ep.module_name
+    if ep.attrs:
+        s += ':' + '.'.join(ep.attrs)
+    return s
+
+
 def _module_dirs(
         opts,
         ext_type,
@@ -163,9 +176,13 @@ def _module_dirs(
             ext_type_types.extend(opts[ext_type_dirs])
         if HAS_PKG_RESOURCES and ext_type_dirs:
             for entry_point in pkg_resources.iter_entry_points('salt.loader', ext_type_dirs):
-                loaded_entry_point = entry_point.load()
-                for path in loaded_entry_point():
-                    ext_type_types.append(path)
+                try:
+                    loaded_entry_point = entry_point.load()
+                    for path in loaded_entry_point():
+                        ext_type_types.append(path)
+                except Exception as exc:
+                    log.error("Error getting module directories from %s: %s", _format_entrypoint_target(entry_point), exc)
+                    log.debug("Full backtrace for module directories error", exc_info=True)
 
     cli_module_dirs = []
     # The dirs can be any module dir, or a in-tree _{ext_type} dir
@@ -262,7 +279,8 @@ def minion_mods(
 
     if notify:
         evt = salt.utils.event.get_event('minion', opts=opts, listen=False)
-        evt.fire_event({'complete': True}, tag='/salt/minion/minion_mod_complete')
+        evt.fire_event({'complete': True},
+                       tag=salt.defaults.events.MINION_MOD_COMPLETE)
 
     return ret
 
@@ -293,6 +311,18 @@ def raw_mod(opts, name, functions, mod='modules'):
 
     loader._load_module(name)  # load a single module (the one passed in)
     return dict(loader._dict)  # return a copy of *just* the funcs for `name`
+
+
+def metaproxy(opts):
+    '''
+    Return functions used in the meta proxy
+    '''
+
+    return LazyLoader(
+        _module_dirs(opts, 'metaproxy'),
+        opts,
+        tag='metaproxy'
+    )
 
 
 def matchers(opts):
@@ -1679,8 +1709,10 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         ))
 
         for attr in getattr(mod, '__load__', dir(mod)):
-            if attr.startswith('_'):
-                # private functions are skipped
+            if attr.startswith('_') and attr != '__call__':
+                # private functions are skipped,
+                # except __call__ which is default entrance
+                # for multi-function batch-like state syntax
                 continue
             func = getattr(mod, attr)
             if not inspect.isfunction(func) and not isinstance(func, functools.partial):
@@ -1874,20 +1906,6 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                     # The module is renaming itself. Updating the module name
                     # with the new name
                     log.trace('Loaded %s as virtual %s', module_name, virtual)
-
-                    if not hasattr(mod, '__virtualname__'):
-                        salt.utils.versions.warn_until(
-                            'Hydrogen',
-                            'The \'{0}\' module is renaming itself in its '
-                            '__virtual__() function ({1} => {2}). Please '
-                            'set it\'s virtual name as the '
-                            '\'__virtualname__\' module attribute. '
-                            'Example: "__virtualname__ = \'{2}\'"'.format(
-                                mod.__name__,
-                                module_name,
-                                virtual
-                            )
-                        )
 
                     if virtualname != virtual:
                         # The __virtualname__ attribute does not match what's

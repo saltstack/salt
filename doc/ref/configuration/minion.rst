@@ -929,6 +929,20 @@ minion. Since this grain is expensive, it is disabled by default.
 
     iscsi_grains: True
 
+.. conf_minion:: nvme_grains
+
+``nvme_grains``
+------------------------
+
+Default: ``False``
+
+The ``nvme_grains`` setting will enable the ``nvme_nqn`` grain on the
+minion. Since this grain is expensive, it is disabled by default.
+
+.. code-block:: yaml
+
+    nvme_grains: True
+
 .. conf_minion:: mine_enabled
 
 ``mine_enabled``
@@ -3292,7 +3306,7 @@ have other services that need to go with it.
 
 .. versionadded:: 2016.11.0
 
-Default: ``0``
+Default: ``1800``
 
 If set to a nonzero integer, then passing ``refresh=True`` to functions in the
 :mod:`windows pkg module <salt.modules.win_pkg>` will not refresh the windows

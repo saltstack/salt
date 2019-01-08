@@ -45,7 +45,6 @@ import logging
 import re
 import locale
 import ctypes
-import time
 import uuid
 
 # Import Salt libs
@@ -56,6 +55,7 @@ import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
+import salt.utils.win_lgpo_netsh
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -137,7 +137,7 @@ except ImportError:
 
 
 class _policy_info(object):
-    '''
+    r'''
     Policy Helper Class
     ===================
 
@@ -225,7 +225,7 @@ class _policy_info(object):
              Access"
     =======  ===================================================================
 
-    LsaRights mechanism
+    LsaRights Mechanism
     -------------------
 
     LSA Rights policies are configured via the LsaRights mechanism. The value of
@@ -238,7 +238,7 @@ class _policy_info(object):
             **SeNetworkLogonRight**
     ======  ====================================================================
 
-    NetUserModal mechanism
+    NetUserModal Mechanism
     ----------------------
 
     Some policies are configurable by the **NetUserModalGet** and
@@ -254,6 +254,34 @@ class _policy_info(object):
     Option  The name of the structure member which contains the data for the
             policy, for example **max_passwd_age**
     ======  ====================================================================
+
+    NetSH Mechanism
+    ---------------
+
+    The firewall policies are configured by the ``netsh.exe`` executable. The
+    value of this key is a dict with the following make-up:
+
+    =======  ===================================================================
+    Key      Value
+    =======  ===================================================================
+    Profile  The firewall profile to modify. Can be one of Domain, Private, or
+             Public
+    Section  The section of the firewall to modify. Can be one of state,
+             firewallpolicy, settings, or logging.
+    Option   The setting within that section
+    Value    The value of the setting
+    =======  ===================================================================
+
+    More information can be found in the advfirewall context in netsh. This can
+    be access by opening a netsh prompt. At a command prompt type the following:
+
+    c:\>netsh
+    netsh>advfirewall
+    netsh advfirewall>set help
+    netsh advfirewall>set domain help
+
+    Transforms
+    ----------
 
     Optionally, each policy definition can contain a "Transform" key. The
     Transform key is used to handle data that is stored and viewed differently.
@@ -369,6 +397,13 @@ class _policy_info(object):
             'Local Policies',
             'Security Options'
         ]
+        self.windows_firewall_gpedit_path = [
+            'Computer Configuration',
+            'Windows Settings',
+            'Security Settings',
+            'Windows Firewall with Advanced Security',
+            'Windows Firewall with Advanced Security - Local Group Policy Object'
+        ]
         self.password_policy_gpedit_path = [
             'Computer Configuration',
             'Windows Settings',
@@ -436,6 +471,37 @@ class _policy_info(object):
             2: 'User must enter a password each time they use a key',
             None: 'Not Defined',
             '(value not set)': 'Not Defined'
+        }
+        self.firewall_inbound_connections = {
+            'blockinbound': 'Block (default)',
+            'blockinboundalways': 'Block all connections',
+            'allowinbound': 'Allow',
+            'notconfigured': 'Not configured'
+        }
+        self.firewall_outbound_connections = {
+            'blockoutbound': 'Block',
+            'allowoutbound': 'Allow (default)',
+            'notconfigured': 'Not configured'
+        }
+        self.firewall_rule_merging = {
+            'enable': 'Yes (default)',
+            'disable': 'No',
+            'notconfigured': 'Not configured'
+        }
+        self.firewall_log_packets_connections = {
+            'enable': 'Yes',
+            'disable': 'No (default)',
+            'notconfigured': 'Not configured'
+        }
+        self.firewall_notification = {
+            'enable': 'Yes',
+            'disable': 'No',
+            'notconfigured': 'Not configured'
+        }
+        self.firewall_state = {
+            'on': 'On (recommended)',
+            'off': 'Off',
+            'notconfigured': 'Not configured'
         }
         self.krb_encryption_types = {
             0: 'No minimum',
@@ -665,6 +731,20 @@ class _policy_info(object):
                         },
                         'Transform': self.enabled_one_disabled_zero_transform,
                     },
+                    'RestrictRemoteSAM': {
+                        'Policy': 'Network access: Restrict clients allowed to '
+                                  'make remote calls to SAM',
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'System\\CurrentControlSet\\Control\\Lsa',
+                            'Value': 'RestrictRemoteSAM',
+                            'Type': 'REG_SZ'
+                        },
+                        'Transform': {
+                            'Put': '_string_put_transform'
+                        }
+                    },
                     'RestrictAnonymous': {
                         'Policy': 'Network access: Do not allow anonymous '
                                   'enumeration of SAM accounts and shares',
@@ -800,6 +880,717 @@ class _policy_info(object):
                             },
                             'PutArgs': {
                                 'lookup': self.force_guest,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwDomainState': {
+                        'Policy': 'Network firewall: Domain: State',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - On (recommended)
+                        # - Off
+                        # - Not configured
+                        'Settings': self.firewall_state.keys(),
+                        'NetSH': {
+                            'Profile': 'domain',
+                            'Section': 'state',
+                            'Option': 'State'  # Unused, but needed
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_state,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_state,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwPrivateState': {
+                        'Policy': 'Network firewall: Private: State',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - On (recommended)
+                        # - Off
+                        # - Not configured
+                        'Settings': self.firewall_state.keys(),
+                        'NetSH': {
+                            'Profile': 'private',
+                            'Section': 'state',
+                            'Option': 'State'  # Unused, but needed
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_state,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_state,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwPublicState': {
+                        'Policy': 'Network firewall: Public: State',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - On (recommended)
+                        # - Off
+                        # - Not configured
+                        'Settings': self.firewall_state.keys(),
+                        'NetSH': {
+                            'Profile': 'public',
+                            'Section': 'state',
+                            'Option': 'State'  # Unused, but needed
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_state,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_state,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwDomainInboundConnections': {
+                        'Policy': 'Network firewall: Domain: Inbound connections',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - Block (default)
+                        # - Block all connections
+                        # - Allow
+                        # - Not configured
+                        'Settings': self.firewall_inbound_connections.keys(),
+                        'NetSH': {
+                            'Profile': 'domain',
+                            'Section': 'firewallpolicy',
+                            'Option': 'Inbound'
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_inbound_connections,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_inbound_connections,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwPrivateInboundConnections': {
+                        'Policy': 'Network firewall: Private: Inbound connections',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - Block (default)
+                        # - Block all connections
+                        # - Allow
+                        # - Not configured
+                        'Settings': self.firewall_inbound_connections.keys(),
+                        'NetSH': {
+                            'Profile': 'private',
+                            'Section': 'firewallpolicy',
+                            'Option': 'Inbound'
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_inbound_connections,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_inbound_connections,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwPublicInboundConnections': {
+                        'Policy': 'Network firewall: Public: Inbound connections',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - Block (default)
+                        # - Block all connections
+                        # - Allow
+                        # - Not configured
+                        'Settings': self.firewall_inbound_connections.keys(),
+                        'NetSH': {
+                            'Profile': 'public',
+                            'Section': 'firewallpolicy',
+                            'Option': 'Inbound'
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_inbound_connections,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_inbound_connections,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwDomainOutboundConnections': {
+                        'Policy': 'Network firewall: Domain: Outbound connections',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - Block
+                        # - Allow (default)
+                        # - Not configured
+                        'Settings': self.firewall_outbound_connections.keys(),
+                        'NetSH': {
+                            'Profile': 'domain',
+                            'Section': 'firewallpolicy',
+                            'Option': 'Outbound'
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_outbound_connections,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_outbound_connections,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwPrivateOutboundConnections': {
+                        'Policy': 'Network firewall: Private: Outbound connections',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - Block
+                        # - Allow (default)
+                        # - Not configured
+                        'Settings': self.firewall_outbound_connections.keys(),
+                        'NetSH': {
+                            'Profile': 'private',
+                            'Section': 'firewallpolicy',
+                            'Option': 'Outbound'
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_outbound_connections,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_outbound_connections,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwPublicOutboundConnections': {
+                        'Policy': 'Network firewall: Public: Outbound connections',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - Block
+                        # - Allow (default)
+                        # - Not configured
+                        'Settings': self.firewall_outbound_connections.keys(),
+                        'NetSH': {
+                            'Profile': 'public',
+                            'Section': 'firewallpolicy',
+                            'Option': 'Outbound'
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_outbound_connections,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_outbound_connections,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwDomainSettingsNotification': {
+                        'Policy': 'Network firewall: Domain: Settings: Display a notification',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - Yes
+                        # - No
+                        # - Not configured
+                        'Settings': self.firewall_notification.keys(),
+                        'NetSH': {
+                            'Profile': 'domain',
+                            'Section': 'settings',
+                            'Option': 'InboundUserNotification'
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_notification,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_notification,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwPrivateSettingsNotification': {
+                        'Policy': 'Network firewall: Private: Settings: Display a notification',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - Yes
+                        # - No
+                        # - Not configured
+                        'Settings': self.firewall_notification.keys(),
+                        'NetSH': {
+                            'Profile': 'private',
+                            'Section': 'settings',
+                            'Option': 'InboundUserNotification'
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_notification,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_notification,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwPublicSettingsNotification': {
+                        'Policy': 'Network firewall: Public: Settings: Display a notification',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - Yes
+                        # - No
+                        # - Not configured
+                        'Settings': self.firewall_notification.keys(),
+                        'NetSH': {
+                            'Profile': 'public',
+                            'Section': 'settings',
+                            'Option': 'InboundUserNotification'
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_notification,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_notification,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwDomainSettingsLocalFirewallRules': {
+                        'Policy': 'Network firewall: Domain: Settings: Apply '
+                                  'local firewall rules',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - Yes (default)
+                        # - No
+                        # - Not configured
+                        'Settings': self.firewall_rule_merging.keys(),
+                        'NetSH': {
+                            'Profile': 'domain',
+                            'Section': 'settings',
+                            'Option': 'LocalFirewallRules'
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_rule_merging,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_rule_merging,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwPrivateSettingsLocalFirewallRules': {
+                        'Policy': 'Network firewall: Private: Settings: Apply '
+                                  'local firewall rules',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - Yes (default)
+                        # - No
+                        # - Not configured
+                        'Settings': self.firewall_rule_merging.keys(),
+                        'NetSH': {
+                            'Profile': 'private',
+                            'Section': 'settings',
+                            'Option': 'LocalFirewallRules'
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_rule_merging,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_rule_merging,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwPublicSettingsLocalFirewallRules': {
+                        'Policy': 'Network firewall: Public: Settings: Apply '
+                                  'local firewall rules',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - Yes (default)
+                        # - No
+                        # - Not configured
+                        'Settings': self.firewall_rule_merging.keys(),
+                        'NetSH': {
+                            'Profile': 'public',
+                            'Section': 'settings',
+                            'Option': 'LocalFirewallRules'
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_rule_merging,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_rule_merging,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwDomainSettingsLocalConnectionRules': {
+                        'Policy': 'Network firewall: Domain: Settings: Apply '
+                                  'local connection security rules',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - Yes (default)
+                        # - No
+                        # - Not configured
+                        'Settings': self.firewall_rule_merging.keys(),
+                        'NetSH': {
+                            'Profile': 'domain',
+                            'Section': 'settings',
+                            'Option': 'LocalConSecRules'
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_rule_merging,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_rule_merging,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwPrivateSettingsLocalConnectionRules': {
+                        'Policy': 'Network firewall: Private: Settings: Apply '
+                                  'local connection security rules',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - Yes (default)
+                        # - No
+                        # - Not configured
+                        'Settings': self.firewall_rule_merging.keys(),
+                        'NetSH': {
+                            'Profile': 'private',
+                            'Section': 'settings',
+                            'Option': 'LocalConSecRules'
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_rule_merging,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_rule_merging,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwPublicSettingsLocalConnectionRules': {
+                        'Policy': 'Network firewall: Public: Settings: Apply '
+                                  'local connection security rules',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - Yes (default)
+                        # - No
+                        # - Not configured
+                        'Settings': self.firewall_rule_merging.keys(),
+                        'NetSH': {
+                            'Profile': 'public',
+                            'Section': 'settings',
+                            'Option': 'LocalConSecRules'
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_rule_merging,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_rule_merging,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwDomainLoggingName': {
+                        'Policy': 'Network firewall: Domain: Logging: Name',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - <a full path to a file>
+                        # - Not configured
+                        'Settings': None,
+                        'NetSH': {
+                            'Profile': 'domain',
+                            'Section': 'logging',
+                            'Option': 'FileName'
+                        }
+                    },
+                    'WfwPrivateLoggingName': {
+                        'Policy': 'Network firewall: Private: Logging: Name',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - <a full path to a file>
+                        # - Not configured
+                        'Settings': None,
+                        'NetSH': {
+                            'Profile': 'private',
+                            'Section': 'logging',
+                            'Option': 'FileName'
+                        }
+                    },
+                    'WfwPublicLoggingName': {
+                        'Policy': 'Network firewall: Public: Logging: Name',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - <a full path to a file>
+                        # - Not configured
+                        'Settings': None,
+                        'NetSH': {
+                            'Profile': 'public',
+                            'Section': 'logging',
+                            'Option': 'FileName'
+                        }
+                    },
+                    'WfwDomainLoggingMaxFileSize': {
+                        'Policy': 'Network firewall: Domain: Logging: Size limit (KB)',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - <int between 1 and 32767>
+                        # - Not configured
+                        'Settings': None,
+                        'NetSH': {
+                            'Profile': 'domain',
+                            'Section': 'logging',
+                            'Option': 'MaxFileSize'
+                        }
+                    },
+                    'WfwPrivateLoggingMaxFileSize': {
+                        'Policy': 'Network firewall: Private: Logging: Size limit (KB)',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - <int between 1 and 32767>
+                        # - Not configured
+                        'Settings': None,
+                        'NetSH': {
+                            'Profile': 'private',
+                            'Section': 'logging',
+                            'Option': 'MaxFileSize'
+                        }
+                    },
+                    'WfwPublicLoggingMaxFileSize': {
+                        'Policy': 'Network firewall: Public: Logging: Size limit (KB)',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - <int between 1 and 32767>
+                        # - Not configured
+                        'Settings': None,
+                        'NetSH': {
+                            'Profile': 'public',
+                            'Section': 'logging',
+                            'Option': 'MaxFileSize'
+                        }
+                    },
+                    'WfwDomainLoggingAllowedConnections': {
+                        'Policy': 'Network firewall: Domain: Logging: Log successful connections',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - Yes
+                        # - No (default)
+                        # - Not configured
+                        'Settings': self.firewall_log_packets_connections.keys(),
+                        'NetSH': {
+                            'Profile': 'domain',
+                            'Section': 'logging',
+                            'Option': 'LogAllowedConnections'
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_log_packets_connections,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_log_packets_connections,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwPrivateLoggingAllowedConnections': {
+                        'Policy': 'Network firewall: Private: Logging: Log successful connections',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - Yes
+                        # - No (default)
+                        # - Not configured
+                        'Settings': self.firewall_log_packets_connections.keys(),
+                        'NetSH': {
+                            'Profile': 'private',
+                            'Section': 'logging',
+                            'Option': 'LogAllowedConnections'
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_log_packets_connections,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_log_packets_connections,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwPublicLoggingAllowedConnections': {
+                        'Policy': 'Network firewall: Public: Logging: Log successful connections',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - Yes
+                        # - No (default)
+                        # - Not configured
+                        'Settings': self.firewall_log_packets_connections.keys(),
+                        'NetSH': {
+                            'Profile': 'public',
+                            'Section': 'logging',
+                            'Option': 'LogAllowedConnections'
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_log_packets_connections,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_log_packets_connections,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwDomainLoggingDroppedConnections': {
+                        'Policy': 'Network firewall: Domain: Logging: Log dropped packets',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - Yes
+                        # - No (default)
+                        # - Not configured
+                        'Settings': self.firewall_log_packets_connections.keys(),
+                        'NetSH': {
+                            'Profile': 'domain',
+                            'Section': 'logging',
+                            'Option': 'LogDroppedConnections'
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_log_packets_connections,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_log_packets_connections,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwPrivateLoggingDroppedConnections': {
+                        'Policy': 'Network firewall: Private: Logging: Log dropped packets',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - Yes
+                        # - No (default)
+                        # - Not configured
+                        'Settings': self.firewall_log_packets_connections.keys(),
+                        'NetSH': {
+                            'Profile': 'private',
+                            'Section': 'logging',
+                            'Option': 'LogDroppedConnections'
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_log_packets_connections,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_log_packets_connections,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwPublicLoggingDroppedConnections': {
+                        'Policy': 'Network firewall: Public: Logging: Log dropped packets',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - Yes
+                        # - No (default)
+                        # - Not configured
+                        'Settings': self.firewall_log_packets_connections.keys(),
+                        'NetSH': {
+                            'Profile': 'public',
+                            'Section': 'logging',
+                            'Option': 'LogDroppedConnections'
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_log_packets_connections,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_log_packets_connections,
                                 'value_lookup': True,
                             },
                         },
@@ -3486,24 +4277,30 @@ def _load_policy_definitions(path='c:\\Windows\\PolicyDefinitions',
                 # the passed language (eg: en-US). Then we'll try the
                 # abbreviated version (en) to account for alternate locations.
                 # We'll do the same for the display_language_fallback (en_US).
-                adml_file = os.path.join(root, language,
-                                         os.path.splitext(t_admfile)[0] + '.adml')
+                adml_file = os.path.join(
+                    root,
+                    language,
+                    os.path.splitext(t_admfile)[0] + '.adml')
                 if not __salt__['file.file_exists'](adml_file):
                     log.info('An ADML file in the specified ADML language '
                              '"%s" does not exist for the ADMX "%s", the '
                              'the abbreviated language code will be tried.',
                              language, t_admfile)
 
-                    adml_file = os.path.join(root, language.split('-')[0],
-                                             os.path.splitext(t_admfile)[0] + '.adml')
+                    adml_file = os.path.join(
+                        root,
+                        language.split('-')[0],
+                        os.path.splitext(t_admfile)[0] + '.adml')
                     if not __salt__['file.file_exists'](adml_file):
                         log.info('An ADML file in the specified ADML language '
                                  'code %s does not exist for the ADMX "%s", '
                                  'the fallback language will be tried.',
                                  language[:2], t_admfile)
 
-                        adml_file = os.path.join(root, display_language_fallback,
-                                                 os.path.splitext(t_admfile)[0] + '.adml')
+                        adml_file = os.path.join(
+                            root,
+                            display_language_fallback,
+                            os.path.splitext(t_admfile)[0] + '.adml')
                         if not __salt__['file.file_exists'](adml_file):
                             log.info('An ADML file in the specified ADML '
                                      'fallback language "%s" '
@@ -3512,8 +4309,10 @@ def _load_policy_definitions(path='c:\\Windows\\PolicyDefinitions',
                                      'will be tried.',
                                      display_language_fallback, t_admfile)
 
-                            adml_file = os.path.join(root, display_language_fallback.split('-')[0],
-                                                     os.path.splitext(t_admfile)[0] + '.adml')
+                            adml_file = os.path.join(
+                                root,
+                                display_language_fallback.split('-')[0],
+                                os.path.splitext(t_admfile)[0] + '.adml')
                             if not __salt__['file.file_exists'](adml_file):
                                 msg = ('An ADML file in the specified ADML language '
                                        '"{0}" and the fallback language "{1}" do not '
@@ -3572,6 +4371,54 @@ def _buildElementNsmap(using_elements):
     for e in using_elements:
         thisMap[e.attrib['prefix']] = e.attrib['namespace']
     return thisMap
+
+
+def _findOptionValueNetSH(profile, option):
+    if 'lgpo.netsh_data' not in __context__:
+        __context__['lgpo.netsh_data'] = {}
+
+    if profile not in __context__['lgpo.netsh_data']:
+        log.debug('LGPO: Loading netsh data for {0} profile'.format(profile))
+        settings = salt.utils.win_lgpo_netsh.get_all_settings(profile=profile,
+                                                              store='lgpo')
+        __context__['lgpo.netsh_data'].update({profile: settings})
+    log.debug('LGPO: netsh returning value: {0}'
+              ''.format(__context__['lgpo.netsh_data'][profile][option]))
+    return __context__['lgpo.netsh_data'][profile][option]
+
+
+def _setOptionValueNetSH(profile, section, option, value):
+    if section not in ('firewallpolicy', 'settings', 'logging', 'state'):
+        raise ValueError('LGPO: Invalid section: {0}'.format(section))
+    log.debug('LGPO: Setting the following\n'
+              'Profile: {0}\n'
+              'Section: {1}\n'
+              'Option: {2}\n'
+              'Value: {3}'.format(profile, section, option, value))
+    if section == 'firewallpolicy':
+        salt.utils.win_lgpo_netsh.set_firewall_settings(
+            profile=profile,
+            inbound=value if option == 'Inbound' else None,
+            outbound=value if option == 'Outbound' else None,
+            store='lgpo')
+    if section == 'settings':
+        salt.utils.win_lgpo_netsh.set_settings(
+            profile=profile, setting=option, value=value, store='lgpo')
+    if section == 'state':
+        salt.utils.win_lgpo_netsh.set_state(
+            profile=profile, state=value, store='lgpo')
+    if section == 'logging':
+        if option in ('FileName', 'MaxFileSize'):
+            if value == 'Not configured':
+                value = 'notconfigured'
+        # Trim log for the two logging options
+        if option.startswith('Log'):
+            option = option[3:]
+        salt.utils.win_lgpo_netsh.set_logging_settings(
+            profile=profile, setting=option, value=value, store='lgpo')
+    log.debug('LGPO: Clearing netsh data for {0} profile'.format(profile))
+    __context__['lgpo.netsh_data'].pop(profile)
+    return True
 
 
 def _load_secedit_data():
@@ -4787,10 +5634,13 @@ def _build_parent_list(policy_definition,
     admx_policy_definitions = _get_policy_definitions(language=adml_language)
     if parent_category:
         parent_category = parent_category[0]
-        nsmap_xpath = '/policyDefinitions/policyNamespaces/{0}:*'.format(policy_namespace)
+        nsmap_xpath = '/policyDefinitions/policyNamespaces/{0}:*' \
+                      ''.format(policy_namespace)
         this_namespace_map = _buildElementNsmap(
-            admx_policy_definitions.xpath(nsmap_xpath, namespaces=policy_definition.nsmap))
-        this_namespace_map = dictupdate.update(this_namespace_map, policy_definition.nsmap)
+            admx_policy_definitions.xpath(
+                nsmap_xpath, namespaces=policy_definition.nsmap))
+        this_namespace_map = dictupdate.update(this_namespace_map,
+                                               policy_definition.nsmap)
         parent_list = _admx_policy_parent_walk(
             path=parent_list,
             policy_namespace=policy_namespace,
@@ -5493,10 +6343,10 @@ def _lookup_admin_template(policy_name,
             full_path_list.reverse()
             full_path_list.append(policy_display_name)
             policy_aliases.append('\\'.join(full_path_list))
-            return (True, the_policy, policy_aliases, None)
+            return True, the_policy, policy_aliases, None
         else:
             msg = 'ADMX policy name/id "{0}" is used in multiple ADMX files'
-            return (False, None, [], msg)
+            return False, None, [], msg
     else:
         adml_search_results = ADML_SEARCH_XPATH(adml_policy_resources,
                                                 policy_name=policy_name)
@@ -5621,15 +6471,15 @@ def _lookup_admin_template(policy_name,
                                     full_path_list.reverse()
                                     full_path_list.append(policy_display_name)
                                     policy_aliases.append('\\'.join(full_path_list))
-                                    return (True, search_result, policy_aliases, None)
+                                    return True, search_result, policy_aliases, None
                                 else:
                                     msg = ('ADMX policy with the display name {0} does not'
                                            'have the required name attribtue')
                                     msg = msg.format(policy_name)
-                                    return (False, None, [], msg)
+                                    return False, None, [], msg
                         if not found:
                             msg = 'Unable to correlate {0} to any policy'.format(hierarchy_policy_name)
-                            return (False, None, [], msg)
+                            return False, None, [], msg
                     else:
                         for possible_policy in admx_search_results:
                             this_parent_list = _build_parent_list(
@@ -5643,9 +6493,6 @@ def _lookup_admin_template(policy_name,
                                                                '\\'.join(this_parent_list)])
                             else:
                                 suggested_policies = '\\'.join(this_parent_list)
-                else:
-                    msg = 'Unable to find a policy with the name "{0}".'.format(policy_name)
-                    return False, None, [], msg
             if suggested_policies:
                 msg = ('ADML policy name "{0}" is used as the display name'
                        ' for multiple policies.'
@@ -5810,12 +6657,14 @@ def get_policy_info(policy_name,
     policy_class = policy_class.title()
     policy_data = _policy_info()
     if policy_class not in policy_data.policies.keys():
-        ret['message'] = 'The requested policy class "{0}" is invalid, policy_class should be one of: {1}'.format(
-                policy_class,
-                ', '.join(policy_data.policies.keys()))
+        policy_classes = ', '.join(policy_data.policies.keys())
+        ret['message'] = 'The requested policy class "{0}" is invalid, ' \
+                         'policy_class should be one of: {1}' \
+                         ''.format(policy_class, policy_classes)
         return ret
     if policy_name in policy_data.policies[policy_class]['policies']:
-        ret['policy_aliases'].append(policy_data.policies[policy_class]['policies'][policy_name]['Policy'])
+        ret['policy_aliases'].append(
+            policy_data.policies[policy_class]['policies'][policy_name]['Policy'])
         ret['policy_found'] = True
         ret['message'] = ''
         if 'LsaRights' in policy_data.policies[policy_class]['policies'][policy_name]:
@@ -5896,8 +6745,6 @@ def get(policy_class=None, return_full_policy_names=True,
 
         salt '*' lgpo.get machine return_full_policy_names=True
     '''
-    timing = {}
-    start_time = time.time()
 
     vals = {}
     modal_returns = {}
@@ -5913,67 +6760,79 @@ def get(policy_class=None, return_full_policy_names=True,
     else:
         policy_class = [policy_class.title()]
 
-    sub_time = start_time
-    timing['1 - policy defs'] = time.time() - sub_time
-
     # handle policies statically defined in this module
     for p_class in policy_class:
+        this_class_policy_names = _policydata.policies[p_class]['policies']
         class_vals = {}
-        sub_time = start_time
-        for policy_name in _policydata.policies[p_class]['policies']:
-            _pol = _policydata.policies[p_class]['policies'][policy_name]
-            vals_key_name = policy_name
-            if 'Registry' in _pol:
-                # get value from registry
-                class_vals[policy_name] = __salt__['reg.read_value'](
-                    _pol['Registry']['Hive'],
-                    _pol['Registry']['Path'],
-                    _pol['Registry']['Value'])['vdata']
-                log.debug(
-                    'Value %r found for reg policy %s',
-                    class_vals[policy_name], policy_name
-                )
-            elif 'Secedit' in _pol:
-                # get value from secedit
-                _val = _get_secedit_value(option=_pol['Secedit']['Option'])
-                class_vals[policy_name] = _val
-            elif 'NetUserModal' in _pol:
-                # get value from UserNetMod
-                if _pol['NetUserModal']['Modal'] not in modal_returns:
-                    modal_returns[_pol['NetUserModal']['Modal']] = win32net.NetUserModalsGet(
-                            None,
-                            _pol['NetUserModal']['Modal'])
-                class_vals[policy_name] = modal_returns[_pol['NetUserModal']['Modal']][_pol['NetUserModal']['Option']]
-            elif 'LsaRights' in _pol:
-                class_vals[policy_name] = _getRightsAssignments(_pol['LsaRights']['Option'])
-            elif 'ScriptIni' in _pol:
-                log.debug('Working with ScriptIni setting %s', policy_name)
-                class_vals[policy_name] = _getScriptSettingsFromIniFile(_pol)
-            if policy_name in class_vals:
-                class_vals[policy_name] = _transform_value(
-                    value=class_vals[policy_name],
-                    policy=_policydata.policies[p_class]['policies'][policy_name],
-                    transform_type='Get')
-            if return_full_policy_names:
-                class_vals[_pol['Policy']] = class_vals.pop(policy_name)
-                vals_key_name = _pol['Policy']
-            if hierarchical_return:
-                if 'lgpo_section' in _pol:
-                    firstItem = True
-                    tdict = {}
-                    for level in reversed(_pol['lgpo_section']):
-                        newdict = {}
-                        if firstItem:
-                            newdict[level] = {vals_key_name: class_vals.pop(vals_key_name)}
-                            firstItem = False
-                        else:
-                            newdict[level] = tdict
-                        tdict = newdict
-                    if tdict:
-                        class_vals = dictupdate.update(class_vals, tdict)
-        timing['2 - for loop'] = time.time() - sub_time
+        for policy_name in this_class_policy_names:
+            _pol = None
+            if policy_name in _policydata.policies[p_class]['policies']:
+                _pol = _policydata.policies[p_class]['policies'][policy_name]
+            else:
+                for policy in _policydata.policies[p_class]['policies']:
+                    if _policydata.policies[p_class]['policies'][policy]['Policy'].upper() == policy_name.upper():
+                        _pol = _policydata.policies[p_class]['policies'][policy]
+                        policy_name = policy
+            if _pol:
+                vals_key_name = policy_name
+                if 'Registry' in _pol:
+                    # get value from registry
+                    class_vals[policy_name] = __salt__['reg.read_value'](
+                        _pol['Registry']['Hive'],
+                        _pol['Registry']['Path'],
+                        _pol['Registry']['Value'])['vdata']
+                    log.debug(
+                        'Value %r found for reg policy %s',
+                        class_vals[policy_name], policy_name
+                    )
+                elif 'Secedit' in _pol:
+                    # get value from secedit
+                    _val = _get_secedit_value(option=_pol['Secedit']['Option'])
+                    class_vals[policy_name] = _val
+                elif 'NetSH' in _pol:
+                    # get value from netsh
+                    class_vals[policy_name] = _findOptionValueNetSH(
+                        profile=_pol['NetSH']['Profile'],
+                        option=_pol['NetSH']['Option'])
 
-        sub_time = time.time()
+                elif 'NetUserModal' in _pol:
+                    # get value from UserNetMod
+                    if _pol['NetUserModal']['Modal'] not in modal_returns:
+                        modal_returns[_pol['NetUserModal']['Modal']] = win32net.NetUserModalsGet(
+                                None,
+                                _pol['NetUserModal']['Modal'])
+                    class_vals[policy_name] = modal_returns[_pol['NetUserModal']['Modal']][_pol['NetUserModal']['Option']]
+                elif 'LsaRights' in _pol:
+                    class_vals[policy_name] = _getRightsAssignments(_pol['LsaRights']['Option'])
+                elif 'ScriptIni' in _pol:
+                    log.debug('Working with ScriptIni setting %s', policy_name)
+                    class_vals[policy_name] = _getScriptSettingsFromIniFile(_pol)
+                if policy_name in class_vals:
+                    class_vals[policy_name] = _transform_value(
+                        value=class_vals[policy_name],
+                        policy=_policydata.policies[p_class]['policies'][policy_name],
+                        transform_type='Get')
+                if return_full_policy_names:
+                    class_vals[_pol['Policy']] = class_vals.pop(policy_name)
+                    vals_key_name = _pol['Policy']
+                if hierarchical_return:
+                    if 'lgpo_section' in _pol:
+                        firstItem = True
+                        tdict = {}
+                        for level in reversed(_pol['lgpo_section']):
+                            newdict = {}
+                            if firstItem:
+                                newdict[level] = {vals_key_name: class_vals.pop(vals_key_name)}
+                                firstItem = False
+                            else:
+                                newdict[level] = tdict
+                            tdict = newdict
+                        if tdict:
+                            class_vals = dictupdate.update(class_vals, tdict)
+            else:
+                msg = 'The specified policy {0} is not currently available ' \
+                      'to be configured via this module'
+                raise SaltInvocationError(msg.format(policy_name))
         class_vals = dictupdate.update(
             class_vals,
             _checkAllAdmxPolicies(policy_class=p_class,
@@ -5981,19 +6840,12 @@ def get(policy_class=None, return_full_policy_names=True,
                                   return_full_policy_names=return_full_policy_names,
                                   hierarchical_return=hierarchical_return,
                                   return_not_configured=return_not_configured))
-        timing['3 - check policies'] = time.time() - sub_time
-
-        sub_time = time.time()
         if _policydata.policies[p_class]['lgpo_section'] not in class_vals:
             temp_dict = {
                 _policydata.policies[p_class]['lgpo_section']: class_vals}
             class_vals = temp_dict
         vals = dictupdate.update(vals, class_vals)
-        timing['4 - dict update'] = time.time() - sub_time
 
-        timing['Total'] = time.time() - start_time
-
-    # return timing
     return vals
 
 
@@ -6168,6 +7020,7 @@ def set_(computer_policy=None,
         adml_policy_resources = _get_policy_resources(language=adml_language)
         for p_class in policies:
             _secedits = {}
+            _netshs = {}
             _modal_sets = {}
             _admTemplateData = {}
             _regedits = {}
@@ -6176,7 +7029,6 @@ def set_(computer_policy=None,
             if policies[p_class]:
                 for policy_name in policies[p_class]:
                     _pol = None
-                    policy_namespace = None
                     policy_key_name = policy_name
                     if policy_name in _policydata.policies[p_class]['policies']:
                         _pol = _policydata.policies[p_class]['policies'][policy_name]
@@ -6209,6 +7061,15 @@ def set_(computer_policy=None,
                             _secedits[_pol['Secedit']['Section']].append(
                                     ' '.join([_pol['Secedit']['Option'],
                                              '=', six.text_type(_value)]))
+                        elif 'NetSH' in _pol:
+                            # set value with netsh
+                            log.debug('%s is a NetSH policy', policy_name)
+                            _netshs.setdefault(policy_name, {
+                                'profile': _pol['NetSH']['Profile'],
+                                'section': _pol['NetSH']['Section'],
+                                'option': _pol['NetSH']['Option'],
+                                'value': six.text_type(_value)
+                            })
                         elif 'NetUserModal' in _pol:
                             # set value via NetUserModal
                             log.debug('%s is a NetUserModal policy', policy_name)
@@ -6399,6 +7260,13 @@ def set_(computer_policy=None,
                                'secedit. Some changes may not be applied as '
                                'expected')
                         raise CommandExecutionError(msg)
+                if _netshs:
+                    # we've got netsh settings to make
+                    for setting in _netshs:
+                        log.debug('Setting firewall policy: {0}'.format(setting))
+                        log.debug(_netshs[setting])
+                        _setOptionValueNetSH(**_netshs[setting])
+
                 if _modal_sets:
                     # we've got modalsets to make
                     log.debug(_modal_sets)

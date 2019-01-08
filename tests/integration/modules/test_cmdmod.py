@@ -3,6 +3,7 @@
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 import os
+import random
 import sys
 import tempfile
 import textwrap
@@ -15,7 +16,7 @@ from tests.support.helpers import (
     skip_if_not_root,
     this_user,
 )
-from tests.support.paths import TMP
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
 
 # Import salt libs
@@ -152,6 +153,28 @@ class CMDModuleTest(ModuleCase):
 
         self.assertEqual(ret, 0)
 
+    def test_run_all_with_success_stderr(self):
+        '''
+        cmd.run with success_retcodes
+        '''
+        random_file = "{0}{1}{2}".format(RUNTIME_VARS.TMP_ROOT_DIR,
+                                         os.path.sep,
+                                         random.random())
+
+        if salt.utils.platform.is_windows():
+            func = 'type'
+            expected_stderr = 'The system cannot find the file specified.'
+        else:
+            func = 'cat'
+            expected_stderr = 'cat: {0}: No such file or directory'.format(random_file)
+        ret = self.run_function('cmd.run_all',
+                                ['{0} {1}'.format(func, random_file)],
+                                success_stderr=[expected_stderr],
+                                python_shell=True)
+
+        self.assertTrue('retcode' in ret)
+        self.assertEqual(ret.get('retcode'), 0)
+
     def test_blacklist_glob(self):
         '''
         cmd_blacklist_glob
@@ -181,7 +204,7 @@ class CMDModuleTest(ModuleCase):
         '''
         cmd.script with cwd
         '''
-        tmp_cwd = tempfile.mkdtemp(dir=TMP)
+        tmp_cwd = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         args = 'saltines crackers biscuits=yes'
         script = 'salt://script.py'
         ret = self.run_function('cmd.script', [script, args], cwd=tmp_cwd)
@@ -191,7 +214,7 @@ class CMDModuleTest(ModuleCase):
         '''
         cmd.script with cwd
         '''
-        tmp_cwd = "{0}{1}test 2".format(tempfile.mkdtemp(dir=TMP), os.path.sep)
+        tmp_cwd = "{0}{1}test 2".format(tempfile.mkdtemp(dir=RUNTIME_VARS.TMP), os.path.sep)
         os.mkdir(tmp_cwd)
 
         args = 'saltines crackers biscuits=yes'

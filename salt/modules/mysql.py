@@ -330,7 +330,7 @@ def _connect(**kwargs):
     try:
         dbc = MySQLdb.connect(**connargs)
     except OperationalError as exc:
-        err = 'MySQL Error {0}: {1}'.format(*exc)
+        err = 'MySQL Error {0}: {1}'.format(*exc.args)
         __context__['mysql.error'] = err
         log.error(err)
         return None
@@ -646,7 +646,7 @@ def query(database, query, **connection_args):
     try:
         affected = _execute(cur, query)
     except OperationalError as exc:
-        err = 'MySQL Error {0}: {1}'.format(*exc)
+        err = 'MySQL Error {0}: {1}'.format(*exc.args)
         __context__['mysql.error'] = err
         log.error(err)
         return False
@@ -771,7 +771,7 @@ def status(**connection_args):
     try:
         _execute(cur, qry)
     except OperationalError as exc:
-        err = 'MySQL Error {0}: {1}'.format(*exc)
+        err = 'MySQL Error {0}: {1}'.format(*exc.args)
         __context__['mysql.error'] = err
         log.error(err)
         return {}
@@ -802,7 +802,7 @@ def version(**connection_args):
     try:
         _execute(cur, qry)
     except MySQLdb.OperationalError as exc:
-        err = 'MySQL Error {0}: {1}'.format(*exc)
+        err = 'MySQL Error {0}: {1}'.format(*exc.args)
         __context__['mysql.error'] = err
         log.error(err)
         return ''
@@ -835,7 +835,7 @@ def slave_lag(**connection_args):
     try:
         _execute(cur, qry)
     except MySQLdb.OperationalError as exc:
-        err = 'MySQL Error {0}: {1}'.format(*exc)
+        err = 'MySQL Error {0}: {1}'.format(*exc.args)
         __context__['mysql.error'] = err
         log.error(err)
         return -3
@@ -920,7 +920,7 @@ def db_list(**connection_args):
     try:
         _execute(cur, qry)
     except MySQLdb.OperationalError as exc:
-        err = 'MySQL Error {0}: {1}'.format(*exc)
+        err = 'MySQL Error {0}: {1}'.format(*exc.args)
         __context__['mysql.error'] = err
         log.error(err)
         return []
@@ -1009,7 +1009,7 @@ def db_tables(name, **connection_args):
     try:
         _execute(cur, qry)
     except MySQLdb.OperationalError as exc:
-        err = 'MySQL Error {0}: {1}'.format(*exc)
+        err = 'MySQL Error {0}: {1}'.format(*exc.args)
         __context__['mysql.error'] = err
         log.error(err)
         return []
@@ -1044,7 +1044,7 @@ def db_exists(name, **connection_args):
     try:
         _execute(cur, qry, args)
     except MySQLdb.OperationalError as exc:
-        err = 'MySQL Error {0}: {1}'.format(*exc)
+        err = 'MySQL Error {0}: {1}'.format(*exc.args)
         __context__['mysql.error'] = err
         log.error(err)
         return False
@@ -1099,7 +1099,7 @@ def db_create(name, character_set=None, collate=None, **connection_args):
             log.info('DB \'%s\' created', name)
             return True
     except MySQLdb.OperationalError as exc:
-        err = 'MySQL Error {0}: {1}'.format(*exc)
+        err = 'MySQL Error {0}: {1}'.format(*exc.args)
         __context__['mysql.error'] = err
         log.error(err)
     return False
@@ -1135,7 +1135,7 @@ def db_remove(name, **connection_args):
     try:
         _execute(cur, qry)
     except MySQLdb.OperationalError as exc:
-        err = 'MySQL Error {0}: {1}'.format(*exc)
+        err = 'MySQL Error {0}: {1}'.format(*exc.args)
         __context__['mysql.error'] = err
         log.error(err)
         return False
@@ -1167,7 +1167,7 @@ def user_list(**connection_args):
         qry = 'SELECT User,Host FROM mysql.user'
         _execute(cur, qry)
     except MySQLdb.OperationalError as exc:
-        err = 'MySQL Error {0}: {1}'.format(*exc)
+        err = 'MySQL Error {0}: {1}'.format(*exc.args)
         __context__['mysql.error'] = err
         log.error(err)
         return []
@@ -1245,12 +1245,12 @@ def user_exists(user,
         args['password'] = password_hash
 
     if run_verify:
-        if not verify_login(user, host, password):
+        if not verify_login(user, password, **connection_args):
             return False
     try:
         _execute(cur, qry, args)
     except MySQLdb.OperationalError as exc:
-        err = 'MySQL Error {0}: {1}'.format(*exc)
+        err = 'MySQL Error {0}: {1}'.format(*exc.args)
         __context__['mysql.error'] = err
         log.error(err)
         return False
@@ -1282,7 +1282,7 @@ def user_info(user, host='localhost', **connection_args):
     try:
         _execute(cur, qry, args)
     except MySQLdb.OperationalError as exc:
-        err = 'MySQL Error {0}: {1}'.format(*exc)
+        err = 'MySQL Error {0}: {1}'.format(*exc.args)
         __context__['mysql.error'] = err
         log.error(err)
         return False
@@ -1382,7 +1382,7 @@ def user_create(user,
     try:
         _execute(cur, qry, args)
     except MySQLdb.OperationalError as exc:
-        err = 'MySQL Error {0}: {1}'.format(*exc)
+        err = 'MySQL Error {0}: {1}'.format(*exc.args)
         __context__['mysql.error'] = err
         log.error(err)
         return False
@@ -1497,7 +1497,7 @@ def user_chpass(user,
     try:
         result = _execute(cur, qry, args)
     except MySQLdb.OperationalError as exc:
-        err = 'MySQL Error {0}: {1}'.format(*exc)
+        err = 'MySQL Error {0}: {1}'.format(*exc.args)
         __context__['mysql.error'] = err
         log.error(err)
         return False
@@ -1552,7 +1552,7 @@ def user_remove(user,
     try:
         _execute(cur, qry, args)
     except MySQLdb.OperationalError as exc:
-        err = 'MySQL Error {0}: {1}'.format(*exc)
+        err = 'MySQL Error {0}: {1}'.format(*exc.args)
         __context__['mysql.error'] = err
         log.error(err)
         return False
@@ -1770,13 +1770,13 @@ def user_grants(user,
     try:
         _execute(cur, qry, args)
     except MySQLdb.OperationalError as exc:
-        err = 'MySQL Error {0}: {1}'.format(*exc)
+        err = 'MySQL Error {0}: {1}'.format(*exc.args)
         __context__['mysql.error'] = err
         log.error(err)
         return False
 
     ret = []
-    results = cur.fetchall()
+    results = salt.utils.data.decode(cur.fetchall())
     for grant in results:
         tmp = grant[0].split(' IDENTIFIED BY')[0]
         if 'WITH GRANT OPTION' in grant[0] and 'WITH GRANT OPTION' not in tmp:
@@ -1884,7 +1884,7 @@ def grant_add(grant,
     try:
         _execute(cur, qry['qry'], qry['args'])
     except (MySQLdb.OperationalError, MySQLdb.ProgrammingError) as exc:
-        err = 'MySQL Error {0}: {1}'.format(*exc)
+        err = 'MySQL Error {0}: {1}'.format(*exc.args)
         __context__['mysql.error'] = err
         log.error(err)
         return False
@@ -1958,7 +1958,7 @@ def grant_revoke(grant,
     try:
         _execute(cur, qry, args)
     except MySQLdb.OperationalError as exc:
-        err = 'MySQL Error {0}: {1}'.format(*exc)
+        err = 'MySQL Error {0}: {1}'.format(*exc.args)
         __context__['mysql.error'] = err
         log.error(err)
         return False
@@ -2233,7 +2233,7 @@ def showglobal(**connection_args):
     return rtnv
 
 
-def verify_login(user, host='localhost', password=None, **connection_args):
+def verify_login(user, password=None, **connection_args):
     '''
     Attempt to login using the provided credentials.
     If successful, return true.  Otherwise, return False.
@@ -2242,11 +2242,10 @@ def verify_login(user, host='localhost', password=None, **connection_args):
 
     .. code-block:: bash
 
-        salt '*' mysql.verify_login root localhost password
+        salt '*' mysql.verify_login root password
     '''
-    # Override the connection args
+    # Override the connection args for username and password
     connection_args['connection_user'] = user
-    connection_args['connection_host'] = host
     connection_args['connection_pass'] = password
 
     dbc = _connect(**connection_args)

@@ -47,7 +47,7 @@ def compound(tgt, minion_id=None):
         opts = __opts__
     matchers = salt.loader.matchers(opts)
     try:
-        return matchers['compound_match.match'](tgt)
+        return matchers['compound_match.match'](tgt, opts=opts)
     except Exception as exc:
         log.exception(exc)
         return False
@@ -75,7 +75,7 @@ def ipcidr(tgt):
     '''
     matchers = salt.loader.matchers(__opts__)
     try:
-        return matchers['ipcidr_match.match'](tgt)
+        return matchers['ipcidr_match.match'](tgt, opts=__opts__)
     except Exception as exc:
         log.exception(exc)
         return False
@@ -106,7 +106,7 @@ def pillar_pcre(tgt, delimiter=DEFAULT_TARGET_DELIM):
     '''
     matchers = salt.loader.matchers(__opts__)
     try:
-        return matchers['pillar_pcre_match.match'](tgt, delimiter=delimiter)
+        return matchers['pillar_pcre_match.match'](tgt, delimiter=delimiter, opts=__opts__)
     except Exception as exc:
         log.exception(exc)
         return False
@@ -137,7 +137,7 @@ def pillar(tgt, delimiter=DEFAULT_TARGET_DELIM):
     '''
     matchers = salt.loader.matchers(__opts__)
     try:
-        return matchers['pillar_match.match'](tgt, delimiter=delimiter)
+        return matchers['pillar_match.match'](tgt, delimiter=delimiter, opts=__opts__)
     except Exception as exc:
         log.exception(exc)
         return False
@@ -155,7 +155,7 @@ def data(tgt):
     '''
     matchers = salt.loader.matchers(__opts__)
     try:
-        return matchers['data_match.match'](tgt)
+        return matchers['data_match.match'](tgt, opts=__opts__)
     except Exception as exc:
         log.exception(exc)
         return False
@@ -186,7 +186,7 @@ def grain_pcre(tgt, delimiter=DEFAULT_TARGET_DELIM):
     '''
     matchers = salt.loader.matchers(__opts__)
     try:
-        return matchers['grain_pcre_match.match'](tgt, delimiter=delimiter)
+        return matchers['grain_pcre_match.match'](tgt, delimiter=delimiter, opts=__opts__)
     except Exception as exc:
         log.exception(exc)
         return False
@@ -217,7 +217,7 @@ def grain(tgt, delimiter=DEFAULT_TARGET_DELIM):
     '''
     matchers = salt.loader.matchers(__opts__)
     try:
-        return matchers['grain_match.match'](tgt, delimiter=delimiter)
+        return matchers['grain_match.match'](tgt, delimiter=delimiter, opts=__opts__)
     except Exception as exc:
         log.exception(exc)
         return False
@@ -247,7 +247,7 @@ def list_(tgt, minion_id=None):
         opts = __opts__
     matchers = salt.loader.matchers(opts)
     try:
-        return matchers['list_match.match'](tgt)
+        return matchers['list_match.match'](tgt, opts=__opts__)
     except Exception as exc:
         log.exception(exc)
         return False
@@ -277,7 +277,7 @@ def pcre(tgt, minion_id=None):
         opts = __opts__
     matchers = salt.loader.matchers(opts)
     try:
-        return matchers['pcre_match.match'](tgt)
+        return matchers['pcre_match.match'](tgt, opts=__opts__)
     except Exception as exc:
         log.exception(exc)
         return False
@@ -308,7 +308,7 @@ def glob(tgt, minion_id=None):
     matchers = salt.loader.matchers(opts)
 
     try:
-        return matchers['glob_match.match'](tgt)
+        return matchers['glob_match.match'](tgt, opts=__opts__)
     except Exception as exc:
         log.exception(exc)
         return False

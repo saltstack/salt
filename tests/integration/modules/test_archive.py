@@ -9,9 +9,9 @@ import shutil
 import textwrap
 
 # Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
-from tests.support.paths import TMP
 from tests.support.helpers import destructiveTest
 
 # Import salt libs
@@ -35,7 +35,7 @@ class ArchiveTest(ModuleCase):
     Validate the archive module
     '''
     # Base path used for test artifacts
-    base_path = os.path.join(TMP, 'modules', 'archive')
+    base_path = os.path.join(RUNTIME_VARS.TMP, 'modules', 'archive')
 
     def _set_artifact_paths(self, arch_fmt):
         '''

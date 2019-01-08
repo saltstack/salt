@@ -17,7 +17,7 @@ import salt.crypt
 import salt.utils.event
 import salt.utils.zeromq
 import salt.payload
-import salt.transport
+import salt.transport.client
 from salt.ext import six
 
 __proxyenabled__ = ['*']
@@ -72,7 +72,7 @@ def fire_master(data, tag, preload=None):
             load.update(preload)
 
         for master in masters:
-            channel = salt.transport.Channel.factory(__opts__, master_uri=master)
+            channel = salt.transport.client.ReqChannel.factory(__opts__, master_uri=master)
             try:
                 channel.send(load)
                 # channel.send was successful.

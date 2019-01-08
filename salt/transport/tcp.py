@@ -510,7 +510,7 @@ class AsyncTCPPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.tran
                 yield self.auth.authenticate()
             if self.auth.authenticated:
                 # if this is changed from the default, we assume it was intentional
-                if int(self.opts.get('publish_port', 4506)) != 4506:
+                if int(self.opts.get('publish_port', 4505)) != 4505:
                     self.publish_port = self.opts.get('publish_port')
                 # else take the relayed publish_port master reports
                 else:
@@ -1408,6 +1408,7 @@ class TCPPubServerChannel(salt.transport.server.PubServerChannel):
             pull_uri = os.path.join(self.opts['sock_dir'], 'publish_pull.ipc')
 
         pull_sock = salt.transport.ipc.IPCMessageServer(
+            self.opts,
             pull_uri,
             io_loop=self.io_loop,
             payload_handler=pub_server.publish_payload,
@@ -1424,21 +1425,12 @@ class TCPPubServerChannel(salt.transport.server.PubServerChannel):
         except (KeyboardInterrupt, SystemExit):
             salt.log.setup.shutdown_multiprocessing_logging()
 
-    def pre_fork(self, process_manager):
+    def pre_fork(self, process_manager, kwargs=None):
         '''
         Do anything necessary pre-fork. Since this is on the master side this will
         primarily be used to create IPC channels and create our daemon process to
         do the actual publishing
         '''
-        kwargs = {}
-        if salt.utils.platform.is_windows():
-            kwargs['log_queue'] = (
-                salt.log.setup.get_multiprocessing_logging_queue()
-            )
-            kwargs['log_queue_level'] = (
-                salt.log.setup.get_multiprocessing_logging_level()
-            )
-
         process_manager.add_process(self._publish_daemon, kwargs=kwargs)
 
     def publish(self, load):

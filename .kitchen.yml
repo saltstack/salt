@@ -30,7 +30,7 @@ provisioner:
   salt_install: bootstrap
   salt_version: latest
   salt_bootstrap_url: https://bootstrap.saltstack.com
-  salt_bootstrap_options: -X -p rsync stable <%= version %>
+  salt_bootstrap_options: -X -p rsync git v<%= version %>
   log_level: info
   sudo: true
   require_chef: false

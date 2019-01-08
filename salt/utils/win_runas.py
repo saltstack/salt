@@ -140,9 +140,6 @@ def runas(cmdLine, username, password=None, cwd=None):
     # Elevate the user token
     salt.platform.win.elevate_token(user_token)
 
-    # Make sure the user's profile is loaded.
-    handle_reg = win32profile.LoadUserProfile(user_token, {'UserName': username})
-
     # Make sure the user's token has access to a windows station and desktop
     salt.platform.win.grant_winsta_and_desktop(user_token)
 
@@ -218,8 +215,6 @@ def runas(cmdLine, username, password=None, cwd=None):
         stderr = f_err.read()
         ret['stderr'] = stderr
 
-    win32profile.UnloadUserProfile(user_token, handle_reg)
-
     salt.platform.win.kernel32.CloseHandle(hProcess)
     win32api.CloseHandle(user_token)
     if impersonation_token:
@@ -233,7 +228,6 @@ def runas_unpriv(cmd, username, password, cwd=None):
     '''
     Runas that works for non-priviledged users
     '''
-
     # Create a pipe to set as stdout in the child. The write handle needs to be
     # inheritable.
     c2pread, c2pwrite = salt.platform.win.CreatePipe(

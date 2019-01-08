@@ -141,13 +141,13 @@ def _changes(name,
             change['empty_password'] = True
         if date is not None and lshad['lstchg'] != date:
             change['date'] = date
-        if mindays and mindays is not 0 and lshad['min'] != mindays:
+        if mindays is not None and lshad['min'] != mindays:
             change['mindays'] = mindays
-        if maxdays and maxdays is not 999999 and lshad['max'] != maxdays:
+        if maxdays is not None and lshad['max'] != maxdays:
             change['maxdays'] = maxdays
-        if inactdays and inactdays is not 0 and lshad['inact'] != inactdays:
+        if inactdays is not None and lshad['inact'] != inactdays:
             change['inactdays'] = inactdays
-        if warndays and warndays is not 7 and lshad['warn'] != warndays:
+        if warndays is not None and lshad['warn'] != warndays:
             change['warndays'] = warndays
         if expire and lshad['expire'] != expire:
             change['expire'] = expire
@@ -225,7 +225,7 @@ def _changes(name,
 def present(name,
             uid=None,
             gid=None,
-            gid_from_name=False,
+            usergroup=None,
             groups=None,
             optional_groups=None,
             remove_groups=True,
@@ -272,11 +272,6 @@ def present(name,
         or gid can be used. If not specified, and the user does not exist, then
         the next available gid will be assigned.
 
-    gid_from_name : False
-        If ``True``, the default group id will be set to the id of the group
-        with the same name as the user. If the group does not exist the state
-        will fail.
-
     allow_uid_change : False
         Set to ``True`` to allow the state to update the uid.
 
@@ -286,6 +281,17 @@ def present(name,
         Set to ``True`` to allow the state to update the gid.
 
         .. versionadded:: 2018.3.1
+
+    usergroup
+        If True, a group with the same name as the user will be created. If
+        False, a group with the same name as the user will not be created. The
+        default is distribution-specific. See the USERGROUPS_ENAB section of
+        the login.defs(5) man page.
+
+        .. note::
+            Only supported on GNU/Linux distributions
+
+        .. versionadded:: Fluorine
 
     groups
         A list of groups to assign the user to, pass a list object. If a group
@@ -526,17 +532,18 @@ def present(name,
                 'for user %s', isected, name
             )
 
-    if gid_from_name:
-        gid = __salt__['file.group_to_gid'](name)
-        if gid == '':
-            ret['comment'] = 'Default group with name "{0}" is not present'.format(name)
-            ret['result'] = False
-            return ret
+    # If usergroup was specified, we'll also be creating a new
+    # group. We should report this change without setting the gid
+    # variable.
+    if usergroup and __salt__['file.group_to_gid'](name) != '':
+        changes_gid = name
+    else:
+        changes_gid = gid
 
     try:
         changes = _changes(name,
                            uid,
-                           gid,
+                           changes_gid,
                            groups,
                            present_optgroups,
                            remove_groups,
@@ -741,7 +748,8 @@ def present(name,
                       'other': other,
                       'createhome': createhome,
                       'nologinit': nologinit,
-                      'loginclass': loginclass}
+                      'loginclass': loginclass,
+                      'usergroup': usergroup}
         else:
             params = ({'name': name,
                        'password': password,

@@ -10,10 +10,14 @@ import sys
 import platform
 
 # linux_distribution deprecated in py3.7
-try:
+LINUX_DIST_AVAIL = True
+if sys.version_info[:2] >= (3, 7):
+    try:
+        from distro import linux_distribution
+    except ImportError:
+        LINUX_DIST_AVAIL = False
+else:
     from platform import linux_distribution
-except ImportError:
-    from distro import linux_distribution
 
 # pylint: disable=invalid-name,redefined-builtin
 # Import 3rd-party libs
@@ -626,7 +630,13 @@ def system_information():
         '''
         Return host system version.
         '''
-        lin_ver = linux_distribution()
+        if LINUX_DIST_AVAIL:
+            lin_ver = linux_distribution()
+        else:
+            lin_ver = ('Unknown OS Name',
+                       'Unknown OS Release',
+                       'Unknown OS Codename')
+
         mac_ver = platform.mac_ver()
         win_ver = platform.win32_ver()
 
@@ -642,30 +652,58 @@ def system_information():
         else:
             return ''
 
-    version = system_version()
-    release = platform.release()
     if platform.win32_ver()[0]:
+        # Get the version and release info based on the Windows Operating
+        # System Product Name. As long as Microsoft maintains a similar format
+        # this should be future proof
         import win32api  # pylint: disable=3rd-party-module-not-gated
-        server = {'Vista': '2008Server',
-                  '7': '2008ServerR2',
-                  '8': '2012Server',
-                  '8.1': '2012ServerR2',
-                  '10': '2016Server'}
-        # Starting with Python 2.7.12 and 3.5.2 the `platform.uname()` function
-        # started reporting the Desktop version instead of the Server version on
-        # Server versions of Windows, so we need to look those up
-        # So, if you find a Server Platform that's a key in the server
-        # dictionary, then lookup the actual Server Release.
-        # If this is a Server Platform then `GetVersionEx` will return a number
-        # greater than 1.
-        if win32api.GetVersionEx(1)[8] > 1 and release in server:
-            release = server[release]
+        import win32con  # pylint: disable=3rd-party-module-not-gated
+
+        # Get the product name from the registry
+        hkey = win32con.HKEY_LOCAL_MACHINE
+        key = 'SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion'
+        value_name = 'ProductName'
+        reg_handle = win32api.RegOpenKey(hkey, key)
+
+        # Returns a tuple of (product_name, value_type)
+        product_name, _ = win32api.RegQueryValueEx(reg_handle, value_name)
+
+        version = 'Unknown'
+        release = ''
+        if 'Server' in product_name:
+            for item in product_name.split(' '):
+                # If it's all digits, then it's version
+                if re.match(r'\d+', item):
+                    version = item
+                # If it starts with R and then numbers, it's the release
+                # ie: R2
+                if re.match(r'^R\d+$', item):
+                    release = item
+            release = '{0}Server{1}'.format(version, release)
+        else:
+            for item in product_name.split(' '):
+                # If it's a number, decimal number, Thin or Vista, then it's the
+                # version
+                if re.match(r'^(\d+(\.\d+)?)|Thin|Vista$', item):
+                    version = item
+            release = version
+
         _, ver, sp, extra = platform.win32_ver()
         version = ' '.join([release, ver, sp, extra])
+    else:
+        version = system_version()
+        release = platform.release()
+
+    if not LINUX_DIST_AVAIL:
+        full_distribution_name = ('Unknown OS Name',
+                                  'Unknown OS Release',
+                                  'Unknown OS Codename')
+    else:
+        full_distribution_name = linux_distribution(full_distribution_name=False)
 
     system = [
         ('system', platform.system()),
-        ('dist', ' '.join(linux_distribution(full_distribution_name=False))),
+        ('dist', ' '.join(full_distribution_name)),
         ('release', release),
         ('machine', platform.machine()),
         ('version', version),
@@ -750,6 +788,7 @@ def msi_conformant_version():
     if noc == 0:
         noc = 65535
     return '{}.{}.{}'.format(short_year, 20*(month-1)+bugfix, noc)
+
 
 if __name__ == '__main__':
     if len(sys.argv) == 2 and sys.argv[1] == 'msi':

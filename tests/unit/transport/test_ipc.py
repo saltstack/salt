@@ -25,8 +25,8 @@ from salt.ext import six
 from salt.ext.six.moves import range
 
 # Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.mock import MagicMock
-from tests.support.paths import TMP
 from tests.support.unit import skipIf
 
 log = logging.getLogger(__name__)
@@ -40,9 +40,10 @@ class BaseIPCReqCase(tornado.testing.AsyncTestCase):
     def setUp(self):
         super(BaseIPCReqCase, self).setUp()
         #self._start_handlers = dict(self.io_loop._handlers)
-        self.socket_path = os.path.join(TMP, 'ipc_test.ipc')
+        self.socket_path = os.path.join(RUNTIME_VARS.TMP, 'ipc_test.ipc')
 
         self.server_channel = salt.transport.ipc.IPCMessageServer(
+            salt.config.master_config(None),
             self.socket_path,
             io_loop=self.io_loop,
             payload_handler=self._handle_payload,
