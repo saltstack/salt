@@ -1953,5 +1953,8 @@ def parse_host_port(host_port):
             host = host_ip
     except ValueError:
         log.debug('"%s" Not an IP address? Assuming it is a hostname.', host)
+        if host != sanitize_host(host):
+            log.error('bad hostname: "%s"', host)
+            raise ValueError('bad hostname: "{}"'.format(host))
 
     return host, port
