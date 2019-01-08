@@ -918,7 +918,7 @@ Minion Configuration Deprecations
 ---------------------------------
 
 The :conf_minion:`master_shuffle` configuration option is deprecated as of the
-``2019.2.0 `` release. Please use the :conf_minion:`random_master` option instead.
+``2019.2.0`` release. Please use the :conf_minion:`random_master` option instead.
 
 Module Deprecations
 -------------------
