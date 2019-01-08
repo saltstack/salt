@@ -1008,6 +1008,7 @@ class RemoteClient(Client):
     '''
     def __init__(self, opts):
         Client.__init__(self, opts)
+        self._closing = False
         self.channel = salt.transport.client.ReqChannel.factory(self.opts)
         if hasattr(self.channel, 'auth'):
             self.auth = self.channel.auth
@@ -1020,6 +1021,16 @@ class RemoteClient(Client):
         '''
         self.channel = salt.transport.client.ReqChannel.factory(self.opts)
         return self.channel
+
+    def __del__(self):
+        self.destroy()
+
+    def destroy(self):
+        if self._closing:
+            return
+
+        self._closing = True
+        self.channel.close()
 
     def get_file(self,
                  path,
@@ -1372,6 +1383,7 @@ class FSClient(RemoteClient):
     '''
     def __init__(self, opts):  # pylint: disable=W0231
         Client.__init__(self, opts)  # pylint: disable=W0233
+        self._closing = False
         self.channel = salt.fileserver.FSChan(opts)
         self.auth = DumbAuth()
 

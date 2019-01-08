@@ -686,9 +686,7 @@ class Terminal(object):
                         stdout = None
                     else:
                         if self.stream_stdout:
-                            # Python 2 requires encoding of the string, 3+ does not
-                            stdoutwrite = salt.utils.data.encode(stdout) if sys.version_info[0] == 2 else stdout
-                            self.stream_stdout.write(stdoutwrite)
+                            self.stream_stdout.write(salt.utils.stringutils.to_str(stdout))
                             self.stream_stdout.flush()
 
                         if self.stdout_logger:
