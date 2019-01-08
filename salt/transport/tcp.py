@@ -241,6 +241,7 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
             # references it-- this forces a reference while we return to the caller
             obj = object.__new__(cls)
             obj.__singleton_init__(opts, **kwargs)
+            obj._instance_key = key
             loop_instance_map[key] = obj
             obj._refcount = 1
             obj._refcount_lock = threading.RLock()
@@ -307,6 +308,17 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
         log.debug('Closing %s instance', self.__class__.__name__)
         self._closing = True
         self.message_client.close()
+
+        # Remove the entry from the instance map so that a closed entry may not
+        # be reused.
+        # This forces this operation even if the reference count of the entry
+        # has not yet gone to zero.
+        if self.io_loop in self.__class__.instance_map:
+            loop_instance_map = self.__class__.instance_map[self.io_loop]
+            if self._instance_key in loop_instance_map:
+                del loop_instance_map[self._instance_key]
+            if not loop_instance_map:
+                del self.__class__.instance_map[self.io_loop]
 
     def __del__(self):
         with self._refcount_lock:
