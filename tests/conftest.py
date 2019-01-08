@@ -185,7 +185,11 @@ def pytest_configure(config):
     called after command line options have been parsed
     and all plugins and initial conftest files been loaded.
     '''
-    config.addinivalue_line('norecursedirs', os.path.join(CODE_DIR, 'templates'))
+    for dirname in os.listdir(CODE_DIR):
+        if not os.path.isdir(dirname):
+            continue
+        if dirname != 'tests':
+            config.addinivalue_line('norecursedirs', os.path.join(CODE_DIR, dirname))
     config.addinivalue_line('norecursedirs', os.path.join(CODE_DIR, 'tests/support'))
     config.addinivalue_line(
         'filterwarnings',
