@@ -227,7 +227,8 @@ class NetworkTestCase(TestCase):
                 self.assertEqual((host, port), assertion_value)
             except Exception as e:
                 log.debug("Exception parsing '%s'", host_port)
-                self.assertFalse(e)
+                raise e
+                
         for host_port in bad_host_ports:
             self.assertRaises(ValueError, network.parse_host_port, host_port)
 
