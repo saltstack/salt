@@ -221,14 +221,10 @@ class NetworkTestCase(TestCase):
             '2001:0db8:0370:0:a:b:c:d:1234'
         ]
         for host_port, assertion_value in good_host_ports.items():
-            host = port = e = None
-            try:
-                host, port = network.parse_host_port(host_port)
-                self.assertEqual((host, port), assertion_value)
-            except Exception as e:
-                log.debug("Exception parsing '%s'", host_port)
-                raise e
-                
+            host = port = None
+            host, port = network.parse_host_port(host_port)
+            self.assertEqual((host, port), assertion_value)
+
         for host_port in bad_host_ports:
             self.assertRaises(ValueError, network.parse_host_port, host_port)
 
