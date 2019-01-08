@@ -1946,13 +1946,13 @@ def parse_host_port(host_port):
     _s_ = host_port[:]
     if _s_[0] == "[":
         if "]" in host_port[0]:
-            host, _s_ = _s_.lstrip("[]").rsplit("]", 1)
+            host, _s_ = _s_.lstrip("[").rsplit("]", 1)
+            host = ipaddress.IPv6Address(host)
             if _s_[0] == ":":
                 port = int(_s_.lstrip(":"))
             else:
                 if len(_s_) > 1:
                     raise ValueError('found ambiguous "{}" port in "{}"'.format(_s_, host_port))
-        host = ipaddress.IPv6Address(host)
     else:
         if _s_.count(":") == 1:
             host, _hostport_separator_, port = _s_.partition(":")
