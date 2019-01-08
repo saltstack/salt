@@ -175,7 +175,17 @@ def pytest_configure(config):
     called after command line options have been parsed
     and all plugins and initial conftest files been loaded.
     '''
+    for dirname in os.listdir(CODE_DIR):
+        if not os.path.isdir(dirname):
+            continue
+        if dirname != 'tests':
+            config.addinivalue_line('norecursedirs', os.path.join(CODE_DIR, dirname))
+
     config.addinivalue_line('norecursedirs', os.path.join(CODE_DIR, 'templates'))
+    config.addinivalue_line('norecursedirs', os.path.join(CODE_DIR, 'tests/kitchen'))
+    config.addinivalue_line('norecursedirs', os.path.join(CODE_DIR, 'tests/support'))
+
+    # Expose the markers we use to pytest CLI
     config.addinivalue_line(
         'markers',
         'destructive_test: Run destructive tests. These tests can include adding '
