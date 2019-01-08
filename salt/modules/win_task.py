@@ -166,13 +166,12 @@ def show_win32api_code(code):
       0x800710E0: 'The operator or administrator has refused the request',
       0xC000013A: 'The application terminated as a result of CTRL+C',
       0xC06D007E: 'Unknown software exception'}
-    
+
     :param code:
         A return code or error code from the win32com objects
 
     :return: The associated message for the code
     :rtype: str
-    
     '''
     return win32api.FormatMessage(code).strip()
 
