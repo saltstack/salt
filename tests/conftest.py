@@ -248,8 +248,8 @@ def pytest_configure(config):
     # Provide a global timeout for each test(pytest-timeout).
     if config._env_timeout is None:
         # If no timeout is set, set it to the default timeout value
-        # Right now, we set it to 5 minutes which is absurd, but let's see how it goes
-        config._env_timeout = 5 * 60
+        # Right now, we set it to 3 minutes which is absurd, but let's see how it goes
+        config._env_timeout = 3 * 60
 
     # We always want deferred timeouts. Ie, only take into account the test function time
     # to run, exclude fixture setup/teardown
