@@ -884,7 +884,7 @@ class Client(object):
     def create_service(self):
         return self._client.create_service()
 
-    def run_executabe(self, *args, **kwargs):
+    def run_executable(self, *args, **kwargs):
         return self._client.run_executable(*args, **kwargs)
 
     def remove_service(self, wait_timeout=10, sleep_wait=1):
