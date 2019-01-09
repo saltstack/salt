@@ -1319,6 +1319,7 @@ def symlink(
         makedirs=False,
         user=None,
         group=None,
+        copy_target_user=False,
         mode=None,
         win_owner=None,
         win_perms=None,
@@ -1410,6 +1411,17 @@ def symlink(
            'comment': ''}
     if not name:
         return _error(ret, 'Must provide name to file.symlink')
+
+    if copy_target_user:
+        if user:
+            log.warning('`copy_target_user` and `user` are mutually exclusive. Using `user`.')
+        else:
+            try:
+                user = __salt__['file.get_user'](target)
+            except CommandExecutionError:
+                ret['result'] = False
+                ret['comment'] = '`copy_target_user` is set, but target `{0}` does not exist.'.format(target)
+                return ret
 
     if user is None:
         user = __opts__['user']
