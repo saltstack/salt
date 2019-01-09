@@ -161,6 +161,29 @@ class PkgresTestCase(TestCase, LoaderModuleMockMixin):
             In this case, any redundant "arch" reference will be removed from the package name since it's
             include as part of the requested attr.
         '''
+        NAME_ARCH_MAPPING = {
+            'glibc': {
+                'name': 'glibc',
+                'arch': None
+            },
+            'glibc.i686': {
+                'name': 'glibc',
+                'arch': 'i686'
+            },
+            'foobar': {
+                'name': 'foobar',
+                'arch': None
+            },
+            'foobar.something': {
+                'name': 'foobar.something',
+                'arch': None
+            },
+            'foobar.': {
+                'name': 'foobar.',
+                'arch': None
+            }
+        }
+        parse_arch_lambda = lambda x: NAME_ARCH_MAPPING.get(x)
         packages = {
             'glibc': [{'version': '2.12', 'epoch': '', 'release': '1.212.el6', 'arch': 'x86_64'}],
             'glibc.i686': [{'version': '2.12', 'epoch': '', 'release': '1.212.el6', 'arch': 'i686'}],
@@ -217,10 +240,11 @@ class PkgresTestCase(TestCase, LoaderModuleMockMixin):
                 }
             ]
         }
-        if six.PY3:
-            self.assertCountEqual(pkg_resource.format_pkg_list(packages, False, attr=['epoch', 'release']), expected_pkg_list)
-        else:
-            self.assertItemsEqual(pkg_resource.format_pkg_list(packages, False, attr=['epoch', 'release']), expected_pkg_list)
+        with patch.dict(pkg_resource.__salt__, {'pkg.parse_arch_from_name': parse_arch_lambda}):
+            if six.PY3:
+                self.assertCountEqual(pkg_resource.format_pkg_list(packages, False, attr=['epoch', 'release']), expected_pkg_list)
+            else:
+                self.assertItemsEqual(pkg_resource.format_pkg_list(packages, False, attr=['epoch', 'release']), expected_pkg_list)
 
     def test_stringify(self):
         '''

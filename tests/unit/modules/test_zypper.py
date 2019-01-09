@@ -61,6 +61,7 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
     '''
 
     def setup_loader_modules(self):
+        pkg_resource.__salt__ = {}
         return {zypper: {'rpm': None}}
 
     def setUp(self):
@@ -533,7 +534,8 @@ Repository 'DUMMY' not found by its alias, number, or URI.
         with patch.dict(zypper.__salt__, {'cmd.run': MagicMock(return_value=os.linesep.join(rpm_out))}), \
              patch.dict(zypper.__salt__, {'pkg_resource.add_pkg': _add_data}), \
              patch.dict(zypper.__salt__, {'pkg_resource.format_pkg_list': pkg_resource.format_pkg_list}), \
-             patch.dict(zypper.__salt__, {'pkg_resource.stringify': MagicMock()}):
+             patch.dict(zypper.__salt__, {'pkg_resource.stringify': MagicMock()}), \
+             patch.dict(pkg_resource.__salt__, {'pkg.parse_arch_from_name': zypper.parse_arch_from_name}):
             pkgs = zypper.list_pkgs(attr=['epoch', 'release', 'arch', 'install_date_time_t'])
             for pkg_name, pkg_attr in {
                 'jakarta-commons-discovery': {
@@ -596,10 +598,12 @@ Repository 'DUMMY' not found by its alias, number, or URI.
             'virt-what_|-1.13_|-8.el7_|-x86_64_|-_|-1487838486',
             'virt-what_|-1.10_|-2.el7_|-x86_64_|-_|-1387838486',
         ]
+
         with patch.dict(zypper.__salt__, {'cmd.run': MagicMock(return_value=os.linesep.join(rpm_out))}), \
              patch.dict(zypper.__salt__, {'pkg_resource.add_pkg': _add_data}), \
              patch.dict(zypper.__salt__, {'pkg_resource.format_pkg_list': pkg_resource.format_pkg_list}), \
-             patch.dict(zypper.__salt__, {'pkg_resource.stringify': MagicMock()}):
+             patch.dict(zypper.__salt__, {'pkg_resource.stringify': MagicMock()}), \
+             patch.dict(pkg_resource.__salt__, {'pkg.parse_arch_from_name': zypper.parse_arch_from_name}):
             pkgs = zypper.list_pkgs(attr=['epoch', 'release', 'arch', 'install_date_time_t'])
             expected_pkg_list = {
                 'glibc': [

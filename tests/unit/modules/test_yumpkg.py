@@ -61,6 +61,7 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
     Test cases for salt.modules.yumpkg
     '''
     def setup_loader_modules(self):
+        pkg_resource.__salt__ = {}
         return {
             yumpkg: {
                 '__context__': {
@@ -102,7 +103,8 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
              patch.dict(yumpkg.__salt__, {'cmd.run': MagicMock(return_value=os.linesep.join(rpm_out))}), \
              patch.dict(yumpkg.__salt__, {'pkg_resource.add_pkg': _add_data}), \
              patch.dict(yumpkg.__salt__, {'pkg_resource.format_pkg_list': pkg_resource.format_pkg_list}), \
-             patch.dict(yumpkg.__salt__, {'pkg_resource.stringify': MagicMock()}):
+             patch.dict(yumpkg.__salt__, {'pkg_resource.stringify': MagicMock()}), \
+             patch.dict(pkg_resource.__salt__, {'pkg.parse_arch_from_name': yumpkg.parse_arch_from_name}):
             pkgs = yumpkg.list_pkgs(versions_as_list=True)
             for pkg_name, pkg_version in {
                 'python-urlgrabber': '3.10-8.el7',
@@ -149,7 +151,8 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
              patch.dict(yumpkg.__salt__, {'cmd.run': MagicMock(return_value=os.linesep.join(rpm_out))}), \
              patch.dict(yumpkg.__salt__, {'pkg_resource.add_pkg': _add_data}), \
              patch.dict(yumpkg.__salt__, {'pkg_resource.format_pkg_list': pkg_resource.format_pkg_list}), \
-             patch.dict(yumpkg.__salt__, {'pkg_resource.stringify': MagicMock()}):
+             patch.dict(yumpkg.__salt__, {'pkg_resource.stringify': MagicMock()}), \
+             patch.dict(pkg_resource.__salt__, {'pkg.parse_arch_from_name': yumpkg.parse_arch_from_name}):
             pkgs = yumpkg.list_pkgs(attr=['epoch', 'release', 'arch', 'install_date_time_t'])
             for pkg_name, pkg_attr in {
                 'python-urlgrabber': {
@@ -266,7 +269,8 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
              patch.dict(yumpkg.__salt__, {'cmd.run': MagicMock(return_value=os.linesep.join(rpm_out))}), \
              patch.dict(yumpkg.__salt__, {'pkg_resource.add_pkg': _add_data}), \
              patch.dict(yumpkg.__salt__, {'pkg_resource.format_pkg_list': pkg_resource.format_pkg_list}), \
-             patch.dict(yumpkg.__salt__, {'pkg_resource.stringify': MagicMock()}):
+             patch.dict(yumpkg.__salt__, {'pkg_resource.stringify': MagicMock()}), \
+             patch.dict(pkg_resource.__salt__, {'pkg.parse_arch_from_name': yumpkg.parse_arch_from_name}):
             pkgs = yumpkg.list_pkgs(attr=['epoch', 'release', 'arch', 'install_date_time_t'])
             expected_pkg_list = {
                 'glibc': [
