@@ -53,4 +53,3 @@ D:
     # and then will run before A
     - prereq:
       - cmd: A
-

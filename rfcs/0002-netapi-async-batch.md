@@ -52,4 +52,3 @@ The PR would come with unit or integration tests.
 [drawbacks]: #drawbacks
 
 As this is a refactoring, there is some risk of regressions. It is not expected the risk to be high due to the fact this mechanism is totally optional and not made default.
-

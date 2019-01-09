@@ -3,4 +3,3 @@ grain_create_file:
     - name: {{ pillar['grain_path'] }}
     - source: salt://file-grainget.tmpl
     - template: jinja
-

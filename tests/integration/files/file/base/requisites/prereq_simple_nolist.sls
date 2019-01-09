@@ -24,4 +24,3 @@ B:
 C:
   cmd.run:
     - name: echo C second
-

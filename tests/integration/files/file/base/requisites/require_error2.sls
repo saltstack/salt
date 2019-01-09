@@ -10,4 +10,3 @@ B:
 A:
   cmd.run:
     - name: echo A first
-

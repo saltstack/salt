@@ -99,4 +99,3 @@ External Pillars
 ================
 
 :ref:`External pillars <external-pillars>` are supported when running in masterless mode.
-

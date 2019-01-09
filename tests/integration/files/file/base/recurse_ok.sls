@@ -18,4 +18,3 @@ snmpd:
     - mode: "0600"
     - require:
       - pkg: snmpd
-

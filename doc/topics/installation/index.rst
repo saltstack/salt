@@ -178,4 +178,3 @@ SaltStack states and execution modules to build Salt and a specified set of
 dependencies, from which a platform specific repository can be built.
 
 https://github.com/saltstack/salt-pack
-

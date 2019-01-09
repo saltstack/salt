@@ -181,4 +181,3 @@ Open for suggestions.
 # Trade-offs
 
 - maintaining an index of unique error messages is not ~desired~ easy in a modular system
-

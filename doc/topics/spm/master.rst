@@ -118,4 +118,3 @@ command.
 
 If files have been modified, they will not be removed. Empty directories will
 also be removed.
-
