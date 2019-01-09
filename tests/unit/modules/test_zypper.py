@@ -61,8 +61,7 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
     '''
 
     def setup_loader_modules(self):
-        pkg_resource.__salt__ = {}
-        return {zypper: {'rpm': None}}
+        return {zypper: {'rpm': None}, pkg_resource: {}}
 
     def setUp(self):
         self.new_repo_config = dict(

@@ -61,7 +61,6 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
     Test cases for salt.modules.yumpkg
     '''
     def setup_loader_modules(self):
-        pkg_resource.__salt__ = {}
         return {
             yumpkg: {
                 '__context__': {
@@ -72,7 +71,8 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
                     'os_family': 'RedHat',
                     'osmajorrelease': 7,
                 },
-            }
+            },
+            pkg_resource: {}
         }
 
     def test_list_pkgs(self):
