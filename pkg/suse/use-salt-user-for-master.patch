@@ -8,7 +8,7 @@ Index: salt-2015.8.0/conf/master
  # modified files cause conflicts, set verify_env to False.
 -#user: root
 +user: salt
- 
+
  # Max open files
  #
 Index: salt-2015.8.0/pkg/salt-common.logrotate
@@ -23,7 +23,7 @@ Index: salt-2015.8.0/pkg/salt-common.logrotate
  	rotate 7
 @@ -7,6 +8,7 @@
  }
- 
+
  /var/log/salt/minion {
 +	su salt salt
  	weekly
@@ -31,7 +31,7 @@ Index: salt-2015.8.0/pkg/salt-common.logrotate
  	rotate 7
 @@ -15,6 +17,7 @@
  }
- 
+
  /var/log/salt/key {
 +	su salt salt
  	weekly

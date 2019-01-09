@@ -14,16 +14,16 @@ Installed: No
 Status: not installed
 Installed Size: 2,6 MiB
 Summary: Vi IMproved
-Description: 
+Description:
   Vim (Vi IMproved) is an almost compatible version of the UNIX editor
   vi. Almost every possible command can be performed using only ASCII
   characters. Only the 'Q' command is missing (you do not need it). Many
   new features have been added: multilevel undo, command line history,
   file name completion, block operations, and editing of binary data.
-  
+
   Vi is available for the AMIGA, MS-DOS, Windows NT, and various versions
   of UNIX.
-  
+
   For SUSE Linux, Vim is used as /usr/bin/vi.
 
 Information for package python:
@@ -38,12 +38,12 @@ Installed: Yes
 Status: up-to-date
 Installed Size: 1,4 MiB
 Summary: Python Interpreter
-Description: 
+Description:
   Python is an interpreted, object-oriented programming language, and is
   often compared to Tcl, Perl, Scheme, or Java.  You can find an overview
   of Python in the documentation and tutorials included in the python-doc
   (HTML) or python-doc-pdf (PDF) packages.
-  
+
   If you want to install third party modules using distutils, you need to
   install python-devel package.
 
@@ -59,6 +59,6 @@ Installed: Yes
 Status: up-to-date
 Installed Size: 63,9 MiB
 Summary: GNU Emacs Base Package
-Description: 
+Description:
   Basic package for the GNU Emacs editor. Requires emacs-x11 or
   emacs-nox.

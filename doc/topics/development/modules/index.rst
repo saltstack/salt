@@ -73,7 +73,7 @@ Sync Via the saltutil Module
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The saltutil module has a number of functions that can be used to sync all
-or specific dynamic modules. The ``saltutil.sync_*`` 
+or specific dynamic modules. The ``saltutil.sync_*``
 :py:mod:`execution functions <salt.modules.saltutil>` and
 :py:mod:`runner functions <salt.runners.saltutil>` can be used to sync modules
 to minions and the master, respectively.
@@ -179,7 +179,7 @@ Beacon
 
 * :ref:`Writing Beacons <writing-beacons>`
 
-Beacons are polled by the Salt event loop to monitor non-salt processes. See 
+Beacons are polled by the Salt event loop to monitor non-salt processes. See
 :ref:`Beacons <beacons>` for more information about the beacon system.
 
 Cache
@@ -325,7 +325,7 @@ SDB
 
 * :ref:`Writing SDB Modules <sdb-writing-modules>`
 
-SDB is a way to store data that's not associated with a minion. See 
+SDB is a way to store data that's not associated with a minion. See
 :ref:`Storing Data in Other Databases <sdb>`.
 
 Serializer
@@ -395,7 +395,7 @@ the state system.
 Util
 ----
 
-Just utility modules to use with other modules via ``__utils__`` (see 
+Just utility modules to use with other modules via ``__utils__`` (see
 :ref:`Dunder Dictionaries <dunder-dictionaries>`).
 
 Wheel

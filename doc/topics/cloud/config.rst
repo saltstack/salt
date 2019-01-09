@@ -345,7 +345,7 @@ OpenStack
 ---------
 
 Using Salt for OpenStack uses the `shade <https://docs.openstack.org/shade/latest/>` driver managed by the
-openstack-infra team.  
+openstack-infra team.
 
 This driver can be configured using the ``/etc/openstack/clouds.yml`` file with
 `os-client-config <https://docs.openstack.org/os-client-config/latest/>`

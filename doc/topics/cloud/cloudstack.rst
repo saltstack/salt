@@ -48,7 +48,7 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or in the
 
     exoscale-ubuntu:
       provider: exoscale-config
-      image: Ubuntu 16.04 
+      image: Ubuntu 16.04
       size: Small
       location: ch-gva-2
 

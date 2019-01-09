@@ -22,7 +22,7 @@ Step 1 - Install Docker
 =======================
 
 Since setting up Docker is well covered in the Docker documentation we will
-make no such effort to describe it here. Please see the Docker Installation 
+make no such effort to describe it here. Please see the Docker Installation
 Documentation for installing and setting up Docker:
 https://docs.docker.com/engine/installation/
 

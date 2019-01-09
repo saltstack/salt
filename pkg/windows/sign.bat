@@ -143,7 +143,7 @@ if exist "%file%" (
     echo - %file_name%
     powershell -c "$hash = (Get-FileHash -Algorithm MD5 \"%file%\").Hash; Out-File -InputObject $hash\" %file_name%\" -FilePath \"%file%.md5\""
     powershell -c "$hash = (Get-FileHash -Algorithm SHA256 \"%file%\").Hash; Out-File -InputObject $hash\" %file_name%\" -FilePath \"%file%.sha256\"")
-	
+
 set "file_name=Salt-Minion-%Version%-Py3-AMD64-Setup.exe"
 set "file=.\%Series%\%file_name%"
 if exist "%file%" (
