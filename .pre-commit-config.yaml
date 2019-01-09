@@ -22,6 +22,7 @@ repos:
         exclude: (doc/_themes/.*|.*\.ps([\d]+)$)
         args: [--fix=lf]
       - id: end-of-file-fixer     # Makes sure files end in a newline and only a newline.
+        exclude: ()
       - id: check-merge-conflict  # Check for files that contain merge conflict strings.
       - id: check-ast             # Simply check whether files parse as valid python.
         exclude: templates/.*

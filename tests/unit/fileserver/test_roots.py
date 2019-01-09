@@ -102,7 +102,7 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMix
                    'rel': 'testfile'}
             ret = roots.serve_file(load, fnd)
 
-            data = 'Scene 24\n\n \n  OLD MAN:  Ah, hee he he ha!\n  ' \
+            data = 'Scene 24\n\n\n  OLD MAN:  Ah, hee he he ha!\n  ' \
                    'ARTHUR:  And this enchanter of whom you speak, he ' \
                    'has seen the grail?\n  OLD MAN:  Ha ha he he he ' \
                    'he!\n  ARTHUR:  Where does he live?  Old man, where ' \
@@ -114,22 +114,10 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMix
                    'ARTHUR:  But the Grail!  Where is the Grail!?\n  ' \
                    'OLD MAN:  Seek you the Bridge of Death.\n  ARTHUR:  ' \
                    'The Bridge of Death, which leads to the Grail?\n  ' \
-                   'OLD MAN:  Hee hee ha ha!\n\n'
+                   'OLD MAN:  Hee hee ha ha!\n'
+
             if salt.utils.is_windows():
-                data = 'Scene 24\r\n\r\n \r\n  OLD MAN:  Ah, hee he he ' \
-                       'ha!\r\n  ARTHUR:  And this enchanter of whom you ' \
-                       'speak, he has seen the grail?\r\n  OLD MAN:  Ha ha ' \
-                       'he he he he!\r\n  ARTHUR:  Where does he live?  Old ' \
-                       'man, where does he live?\r\n  OLD MAN:  He knows of ' \
-                       'a cave, a cave which no man has entered.\r\n  ' \
-                       'ARTHUR:  And the Grail... The Grail is there?\r\n  ' \
-                       'OLD MAN:  Very much danger, for beyond the cave lies ' \
-                       'the Gorge\r\n      of Eternal Peril, which no man ' \
-                       'has ever crossed.\r\n  ARTHUR:  But the Grail!  ' \
-                       'Where is the Grail!?\r\n  OLD MAN:  Seek you the ' \
-                       'Bridge of Death.\r\n  ARTHUR:  The Bridge of Death, ' \
-                       'which leads to the Grail?\r\n  OLD MAN:  Hee hee ha ' \
-                       'ha!\r\n\r\n'
+                data = data.replace('\n', '\r\n')
 
             self.assertDictEqual(
                 ret,
@@ -153,9 +141,9 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMix
 
         # Hashes are different in Windows. May be how git translates line
         # endings
-        hsum = 'baba5791276eb99a7cc498fb1acfbc3b4bd96d24cfe984b4ed6b5be2418731df'
+        hsum = '3915427ae9cc36a277053dd3e84a965526da6bebb4b773eaee1136f41c4bf6ff'
         if salt.utils.is_windows():
-            hsum = '754aa260e1f3e70f43aaf92149c7d1bad37f708c53304c37660e628d7553f687'
+            hsum = '1ff051f56f017f08b7612515dd73ab39044d8b456021da3868f860d4ca269ab4'
 
         self.assertDictEqual(
             ret,
