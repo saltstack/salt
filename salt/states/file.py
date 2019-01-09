@@ -1371,6 +1371,16 @@ def symlink(
         The group ownership set for the file, this defaults to the group salt
         is running as on the minion. On Windows, this is ignored
 
+    copy_target_user : False
+        If True, set the symlink's owner to that of the target. If ``user`` is
+        also passed, it will be used instead. This option requires the target
+        to exist.
+
+    copy_target_group : False
+        If True, set the symlink's group to that of the target. If ``group`` is
+        also passed, it will be used instead. This option requires the target
+        to exist.
+
     mode
         The permissions to set on this file, aka 644, 0775, 4664. Not supported
         on Windows.
