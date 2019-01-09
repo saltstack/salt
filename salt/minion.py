@@ -259,8 +259,8 @@ def prep_ip_port(opts):
     # Use given master IP if "ip_only" is set or if master_ip is an ipv6 address without
     # a port specified. The is_ipv6 check returns False if brackets are used in the IP
     # definition such as master: '[::1]:1234'.
-    if opts['master_uri_format'] == 'ip_only' or salt.utils.network.is_ipv6(opts['master']):
-        ret['master'] = str(ipaddress.ip_address(opts['master']))
+    if opts['master_uri_format'] == 'ip_only':
+        ret['master'] = ipaddress.ip_address(opts['master'])
     else:
         host, port = parse_host_port(opts['master'])
         ret = {'master': host}
