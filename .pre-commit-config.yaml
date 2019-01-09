@@ -1,4 +1,6 @@
 exclude: ^(doc/_static/.*|doc/_themes/.*)$
+default_language_version:
+  python: python2.7
 repos:
 #  - repo: local
 #    hooks:
