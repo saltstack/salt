@@ -1320,6 +1320,7 @@ def symlink(
         user=None,
         group=None,
         copy_target_user=False,
+        copy_target_group=False,
         mode=None,
         win_owner=None,
         win_perms=None,
@@ -1421,6 +1422,17 @@ def symlink(
             except CommandExecutionError:
                 ret['result'] = False
                 ret['comment'] = '`copy_target_user` is set, but target `{0}` does not exist.'.format(target)
+                return ret
+
+    if copy_target_group:
+        if group:
+            log.warning('`copy_target_group` and `group` are mutually exclusive. Using `group`.')
+        else:
+            try:
+                group = __salt__['file.get_group'](target)
+            except CommandExecutionError:
+                ret['result'] = False
+                ret['comment'] = '`copy_target_group` is set, but target `{0}` does not exist.'.format(target)
                 return ret
 
     if user is None:
