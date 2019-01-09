@@ -2,16 +2,16 @@ exclude: ^(doc/_static/.*|doc/_themes/.*)$
 default_language_version:
   python: python2.7
 repos:
-#  - repo: local
-#    hooks:
-#      - id: update-pre-commit-dependencies
-#        name: Update pre-commit config PyLint dependencies
-#        entry: .pre-commit-hooks/update-pre-commit-pylint-deps.py
-#        language: python_venv
-#        files: ^requirements/.*\.txt$
-#        types: [file]
-#        additional_dependencies:
-#          - ruamel.yaml
+  - repo: local
+    hooks:
+      - id: update-pre-commit-dependencies
+        name: Update pre-commit config PyLint dependencies
+        entry: .pre-commit-hooks/update-pre-commit-pylint-deps.py
+        language: python_venv
+        files: ^requirements/.*\.txt$
+        types: [file]
+        additional_dependencies:
+          - ruamel.yaml
   - repo: https://github.com/pre-commit/pre-commit-hooks
     sha: v2.0.0
     hooks:
@@ -25,23 +25,163 @@ repos:
       - id: check-merge-conflict  # Check for files that contain merge conflict strings.
       - id: check-ast             # Simply check whether files parse as valid python.
         exclude: templates/.*
-#  - repo: https://github.com/pre-commit/mirrors-pylint
-#    sha: v1.6.5
-#    hooks:
-#      - id: pylint
-#        name: PyLint Salt
-#        args:
-#          - --output-format=parseable
-#          - --rcfile=.testing.pylintrc
-#          - --disable=I,W1307,C0411,C0413,W8410,str-format-in-logging
-#        files: (^(setup.py|salt/.*)$)
-#  - repo: https://github.com/pre-commit/mirrors-pylint
-#    sha: v1.6.5
-#    hooks:
-#      - id: pylint
-#        name: PyLint Test Suite
-#        args:
-#          - --output-format=parseable
-#          - --rcfile=.testing.pylintrc
-#          - --disable=I,W0232,E1002,W1307,C0411,C0413,W8410,str-format-in-logging
-#        files: (^(tests/.*)$)
+  - repo: https://github.com/pre-commit/mirrors-pylint
+    sha: v1.6.5
+    hooks:
+      - id: pylint
+        alias: pylint-salt
+        name: PyLint Salt
+        args:
+          - --output-format=parseable
+          - --rcfile=.testing.pylintrc
+          - --disable=I,W1307,C0411,C0413,W8410,str-format-in-logging
+        files: (^(setup.py|salt/.*\.py)$)
+        language_version: python2.7
+        additional_dependencies:
+          - GitPython
+          - Jinja2
+          - MarkupSafe
+          - PyMySQL; sys.platform != 'win32' and sys.platform != 'darwin'
+          - PyYAML
+          - SaltPyLint>=v2019.1.11
+          - SaltTesting==2017.6.1
+          - ansible; sys.platform != 'win32' and sys.platform != 'darwin' and python_version == '2.7'
+          - ansible; sys.platform != 'win32' and sys.platform != 'darwin' and python_version >= '3.5'
+          - apache-libcloud>=1.0.0
+          - boto3>=1.2.1
+          - boto>=2.32.1
+          - cherrypy>=3.2.2,<18.0.0; python_version < '3.5'
+          - cherrypy>=3.2.2,<18.0.0; python_version < '3.5' and sys.platform != 'win32' and sys.platform != 'darwin'
+          - cherrypy>=3.2.2; python_version >= '3.5'
+          - cherrypy>=3.2.2; python_version >= '3.5' and sys.platform != 'win32' and sys.platform != 'darwin'
+          - coverage
+          - croniter
+          - dnspython
+          - docker; sys.platform != 'win32'
+          - docker==2.7.0; sys.platform == 'win32'
+          - futures>=2.0; python_version < '3.0'
+          - httpretty; python_version >= '3.4'
+          - jinja2
+          - jmespath
+          - jsonschema
+          - junos-eznc
+          - jxmlease
+          - kazoo
+          - keyring==5.7.1
+          - kubernetes<4.0
+          - ldap; sys.platform != 'win32' and sys.platform != 'darwin'
+          - libnacl
+          - mock>=2.0.0
+          - moto>=0.3.6
+          - msgpack>=0.5,!=0.5.5
+          - mysql-python; python_version < '3.0'
+          - pre-commit >= 1.14.0
+          - psutil
+          - pyOpenSSL
+          - pycrypto>=2.6.1
+          - pyinotify; sys.platform != 'win32' and sys.platform != 'darwin'
+          - pylint==1.6.5
+          - pylxd>=2.2.5; sys.platform != 'win32' and sys.platform != 'darwin'
+          - pytest >= 4.0.1
+          - pytest-helpers-namespace >= 2017.11.11
+          - pytest-salt >= 2018.12.8
+          - pytest-tempdir >= 2018.8.11
+          - pytest-timeout >= 1.3.3
+          - python-etcd==0.4.2
+          - python-gnupg
+          - pyvmomi
+          - "pyzmq>=2.2.0,<17.1.0; python_version == '3.4'  "
+          - pyzmq>=2.2.0; python_version != '3.4'
+          - requests>=1.0.0
+          - rfc3987
+          - setproctitle
+          - setuptools>=30
+          - six>=1.10.0
+          - strict_rfc3339
+          - supervisor; python_version < '3'
+          - testinfra>=1.7.0,!=1.17.0
+          - timelib
+          - tornado>=4.2.1,<5.0; python_version >= '3.4'
+          - tornado>=4.2.1,<6.0; python_version < '3'
+          - virtualenv
+          - yappi>=0.8.2
+  - repo: https://github.com/pre-commit/mirrors-pylint
+    sha: v1.6.5
+    hooks:
+      - id: pylint
+        alias: pylint-tests
+        name: PyLint Test Suite
+        args:
+          - --output-format=parseable
+          - --rcfile=.testing.pylintrc
+          - --disable=I,W0232,E1002,W1307,C0411,C0413,W8410,str-format-in-logging
+        files: (^(tests/.*\.py)$)
+        language_version: python2.7
+        additional_dependencies:
+          - GitPython
+          - Jinja2
+          - MarkupSafe
+          - PyMySQL; sys.platform != 'win32' and sys.platform != 'darwin'
+          - PyYAML
+          - SaltPyLint>=v2019.1.11
+          - SaltTesting==2017.6.1
+          - ansible; sys.platform != 'win32' and sys.platform != 'darwin' and python_version == '2.7'
+          - ansible; sys.platform != 'win32' and sys.platform != 'darwin' and python_version >= '3.5'
+          - apache-libcloud>=1.0.0
+          - boto3>=1.2.1
+          - boto>=2.32.1
+          - cherrypy>=3.2.2,<18.0.0; python_version < '3.5'
+          - cherrypy>=3.2.2,<18.0.0; python_version < '3.5' and sys.platform != 'win32' and sys.platform != 'darwin'
+          - cherrypy>=3.2.2; python_version >= '3.5'
+          - cherrypy>=3.2.2; python_version >= '3.5' and sys.platform != 'win32' and sys.platform != 'darwin'
+          - coverage
+          - croniter
+          - dnspython
+          - docker; sys.platform != 'win32'
+          - docker==2.7.0; sys.platform == 'win32'
+          - futures>=2.0; python_version < '3.0'
+          - httpretty; python_version >= '3.4'
+          - jinja2
+          - jmespath
+          - jsonschema
+          - junos-eznc
+          - jxmlease
+          - kazoo
+          - keyring==5.7.1
+          - kubernetes<4.0
+          - ldap; sys.platform != 'win32' and sys.platform != 'darwin'
+          - libnacl
+          - mock>=2.0.0
+          - moto>=0.3.6
+          - msgpack>=0.5,!=0.5.5
+          - mysql-python; python_version < '3.0'
+          - pre-commit >= 1.14.0
+          - psutil
+          - pyOpenSSL
+          - pycrypto>=2.6.1
+          - pyinotify; sys.platform != 'win32' and sys.platform != 'darwin'
+          - pylint==1.6.5
+          - pylxd>=2.2.5; sys.platform != 'win32' and sys.platform != 'darwin'
+          - pytest >= 4.0.1
+          - pytest-helpers-namespace >= 2017.11.11
+          - pytest-salt >= 2018.12.8
+          - pytest-tempdir >= 2018.8.11
+          - pytest-timeout >= 1.3.3
+          - python-etcd==0.4.2
+          - python-gnupg
+          - pyvmomi
+          - "pyzmq>=2.2.0,<17.1.0; python_version == '3.4'  "
+          - pyzmq>=2.2.0; python_version != '3.4'
+          - requests>=1.0.0
+          - rfc3987
+          - setproctitle
+          - setuptools>=30
+          - six>=1.10.0
+          - strict_rfc3339
+          - supervisor; python_version < '3'
+          - testinfra>=1.7.0,!=1.17.0
+          - timelib
+          - tornado>=4.2.1,<5.0; python_version >= '3.4'
+          - tornado>=4.2.1,<6.0; python_version < '3'
+          - virtualenv
+          - yappi>=0.8.2
