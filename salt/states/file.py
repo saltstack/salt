@@ -1434,17 +1434,6 @@ def symlink(
                 ret['comment'] = '`copy_target_user` is set, but target `{0}` does not exist.'.format(target)
                 return ret
 
-    if copy_target_group:
-        if group:
-            log.warning('`copy_target_group` and `group` are mutually exclusive. Using `group`.')
-        else:
-            try:
-                group = __salt__['file.get_group'](target)
-            except CommandExecutionError:
-                ret['result'] = False
-                ret['comment'] = '`copy_target_group` is set, but target `{0}` does not exist.'.format(target)
-                return ret
-
     if user is None:
         user = __opts__['user']
 
@@ -1470,7 +1459,26 @@ def symlink(
                 'is a Windows system. Please use the `win_*` parameters to set '
                 'permissions in Windows.'.format(name)
             )
+
+        if copy_target_group is not None:
+            log.warning(
+                'The copy_target_group argument for {0} has been ignored as this '
+                'is a Windows system. Please use the `win_*` parameters to set '
+                'permissions in Windows.'.format(name)
+            )
+
         group = user
+
+    if copy_target_group:
+        if group:
+            log.warning('`copy_target_group` and `group` are mutually exclusive. Using `group`.')
+        else:
+            try:
+                group = __salt__['file.get_group'](target)
+            except CommandExecutionError:
+                ret['result'] = False
+                ret['comment'] = '`copy_target_group` is set, but target `{0}` does not exist.'.format(target)
+                return ret
 
     if group is None:
         group = __salt__['file.gid_to_group'](
