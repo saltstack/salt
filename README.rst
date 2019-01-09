@@ -2,7 +2,7 @@
 What is SaltStack?
 ==================
 
-SaltStack makes software for complex systems management at scale.
+SaltStack makes software for complex systems management at scale.
 SaltStack is the company that created and maintains the Salt Open
 project and develops and sells SaltStack Enterprise software, services
 and support. Easy enough to get running in minutes, scalable enough to
