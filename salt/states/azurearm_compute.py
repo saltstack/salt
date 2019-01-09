@@ -2,7 +2,7 @@
 '''
 Azure (ARM) Compute State Module
 
-.. versionadded:: Fluorine
+.. versionadded:: 2019.2.0
 
 :maintainer: <devops@decisionlab.io>
 :maturity: new
@@ -105,7 +105,7 @@ def availability_set_present(name, resource_group, tags=None, platform_update_do
                              platform_fault_domain_count=None, virtual_machines=None, sku=None, connection_auth=None,
                              **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Ensure an availability set exists.
 
@@ -265,7 +265,7 @@ def availability_set_present(name, resource_group, tags=None, platform_update_do
 
 def availability_set_absent(name, resource_group, connection_auth=None):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Ensure an availability set does not exist in a resource group.
 
