@@ -400,7 +400,7 @@ def normalize_name(name):
         salt '*' pkg.normalize_name zsh.x86_64
     '''
     try:
-        arch = name.rsplit('.', 1)[-1]
+        arch = name.rsplit(PKG_ARCH_SEPARATOR, 1)[-1]
         if arch not in salt.utils.pkg.rpm.ARCHES + ('noarch',):
             return name
     except ValueError:
