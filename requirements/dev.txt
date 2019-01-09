@@ -9,3 +9,6 @@ SaltPyLint>=v2017.3.6
 # prevent it from being successfully installed (at least on Python 3.4).
 httpretty; python_version >= '3.4'
 pylint==1.6.5
+
+# Pre-Commit
+pre-commit >= 1.14.0
