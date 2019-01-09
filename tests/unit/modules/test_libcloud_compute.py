@@ -25,7 +25,7 @@ from libcloud.compute.base import (
 
 
 class MockComputeDriver(BaseDriver):
-    def __init__(self):
+    def __init__(self):  # pylint: disable=super-init-not-called
         self._TEST_SIZE = NodeSize(
             id='test_id', name='test_size',
             ram=4096, disk=10240, bandwidth=100000, price=0,

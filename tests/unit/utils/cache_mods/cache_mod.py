@@ -3,6 +3,7 @@
 This is a module used in unit.utils.cache to test the context wrapper functions
 '''
 
+from __future__ import absolute_import
 import salt.utils.cache
 
 

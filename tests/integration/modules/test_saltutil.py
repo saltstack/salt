@@ -268,7 +268,7 @@ class SaltUtilSyncPillarTest(ModuleCase):
         wait = self.WaitForEvent(
             opts, salt.defaults.events.MINION_PILLAR_COMPLETE)
         wait.start()
-        self.run_function('saltutil.refresh_pillar', async=False)
+        self.run_function('saltutil.refresh_pillar', async=False)  # pylint: disable=pep8-reserved-keywords
         while wait.is_alive():
             time.sleep(1)
         self.assertTrue(wait.is_complete())

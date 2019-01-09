@@ -4,6 +4,8 @@
 # either in source code form or as a compiled binary, for any purpose,
 # commercial or non-commercial, and by any means.
 
+# pylint: skip-file
+
 from __future__ import absolute_import
 
 import socket
