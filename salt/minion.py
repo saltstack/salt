@@ -641,8 +641,8 @@ class MinionBase(object):
 
                     self.opts = opts
 
+                    pub_channel = salt.transport.client.AsyncPubChannel.factory(opts, **factory_kwargs)
                     try:
-                        pub_channel = salt.transport.client.AsyncPubChannel.factory(opts, **factory_kwargs)
                         yield pub_channel.connect()
                         conn = True
                         break
@@ -1019,10 +1019,8 @@ class MinionManager(MinionBase):
                                                 False,
                                                 io_loop=self.io_loop,
                                                 loaded_base_name='salt.loader.{0}'.format(s_opts['master']),
-                                                jid_queue=self.jid_queue,
-                                               )
-
-            self._connect_minion(minion)
+                                                jid_queue=self.jid_queue)
+            self.io_loop.spawn_callback(self._connect_minion, minion)
         self.io_loop.call_later(timeout, self._check_minions)
 
     @tornado.gen.coroutine
@@ -1264,13 +1262,15 @@ class Minion(MinionBase):
             self.opts['master'] = master
 
             # Initialize pillar before loader to make pillar accessible in modules
-            self.opts['pillar'] = yield salt.pillar.get_async_pillar(
+            async_pillar = salt.pillar.get_async_pillar(
                 self.opts,
                 self.opts['grains'],
                 self.opts['id'],
                 self.opts['saltenv'],
                 pillarenv=self.opts.get('pillarenv')
-            ).compile_pillar()
+            )
+            self.opts['pillar'] = yield async_pillar.compile_pillar()
+            async_pillar.destroy()
 
         if not self.ready:
             self._setup_core()
@@ -1424,7 +1424,10 @@ class Minion(MinionBase):
             load['sig'] = sig
 
         channel = salt.transport.client.ReqChannel.factory(self.opts)
-        return channel.send(load, timeout=timeout)
+        try:
+            return channel.send(load, timeout=timeout)
+        finally:
+            channel.close()
 
     @tornado.gen.coroutine
     def _send_req_async(self, load, timeout):
@@ -1436,8 +1439,11 @@ class Minion(MinionBase):
             load['sig'] = sig
 
         channel = salt.transport.client.AsyncReqChannel.factory(self.opts)
-        ret = yield channel.send(load, timeout=timeout)
-        raise tornado.gen.Return(ret)
+        try:
+            ret = yield channel.send(load, timeout=timeout)
+            raise tornado.gen.Return(ret)
+        finally:
+            channel.close()
 
     def _fire_master(self, data=None, tag=None, events=None, pretag=None, timeout=60, sync=True, timeout_handler=None):
         '''
@@ -2222,14 +2228,15 @@ class Minion(MinionBase):
         '''
         if self.connected:
             log.debug('Refreshing pillar. Notify: %s', notify)
+            async_pillar = salt.pillar.get_async_pillar(
+                self.opts,
+                self.opts['grains'],
+                self.opts['id'],
+                self.opts['saltenv'],
+                pillarenv=self.opts.get('pillarenv'),
+            )
             try:
-                self.opts['pillar'] = yield salt.pillar.get_async_pillar(
-                    self.opts,
-                    self.opts['grains'],
-                    self.opts['id'],
-                    self.opts['saltenv'],
-                    pillarenv=self.opts.get('pillarenv'),
-                ).compile_pillar()
+                self.opts['pillar'] = yield async_pillar.compile_pillar()
                 if notify:
                     evt = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
                     evt.fire_event({'complete': True}, tag=salt.defaults.events.MINION_PILLAR_COMPLETE)
@@ -2237,6 +2244,8 @@ class Minion(MinionBase):
                 # Do not exit if a pillar refresh fails.
                 log.error('Pillar data could not be refreshed. '
                           'One or more masters may be down!')
+            finally:
+                async_pillar.destroy()
         self.module_refresh(force_refresh, notify)
 
     def manage_schedule(self, tag, data):
@@ -2365,6 +2374,8 @@ class Minion(MinionBase):
         except SaltReqTimeoutError:
             log.warning('Unable to send mine data to master.')
             return None
+        finally:
+            channel.close()
 
     def _handle_tag_module_refresh(self, tag, data):
         '''
@@ -2911,6 +2922,9 @@ class Minion(MinionBase):
         '''
         Tear down the minion
         '''
+        if self._running is False:
+            return
+
         self._running = False
         if hasattr(self, 'schedule'):
             del self.schedule
@@ -3429,9 +3443,11 @@ def _metaproxy_call(opts, fn_name):
         metaproxy_name = opts['metaproxy']
     except KeyError:
         metaproxy_name = 'proxy'
-        errmsg = 'No metaproxy key found in opts for id ' + opts['id'] + '. ' + \
-                 'Defaulting to standard proxy minion'
-        log.trace(errmsg)
+        log.trace(
+            'No metaproxy key found in opts for id %s. '
+            'Defaulting to standard proxy minion.',
+            opts['id']
+        )
 
     metaproxy_fn = metaproxy_name + '.' + fn_name
     return metaproxy[metaproxy_fn]

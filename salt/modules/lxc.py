@@ -2599,6 +2599,7 @@ def destroy(name, stop=False, path=None):
         )
     return _change_state('lxc-destroy', name, None, path=path)
 
+
 # Compatibility between LXC and nspawn
 remove = salt.utils.functools.alias_function(destroy, 'remove')
 
@@ -2942,6 +2943,7 @@ def set_password(name, users, password, encrypted=True, path=None):
             .format(', '.join(failed_users))
         )
     return True
+
 
 set_pass = salt.utils.functools.alias_function(set_password, 'set_pass')
 
@@ -4208,6 +4210,7 @@ def copy_to(name, source, dest, overwrite=False, makedirs=False, path=None):
         exec_driver=EXEC_DRIVER,
         overwrite=overwrite,
         makedirs=makedirs)
+
 
 cp = salt.utils.functools.alias_function(copy_to, 'cp')
 

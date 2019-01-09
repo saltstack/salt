@@ -522,6 +522,10 @@ def _cmp_attrs(path, attrs):
     '''
     diff = [None, None]
 
+    # lsattr for AIX is not the same thing as lsattr for linux.
+    if salt.utils.platform.is_aix():
+        return None
+
     try:
         lattrs = lsattr(path).get(path, '')
     except AttributeError:
@@ -544,6 +548,9 @@ def lsattr(path):
     .. versionadded:: 2018.3.0
     .. versionchanged:: 2018.3.1
         If ``lsattr`` is not installed on the system, ``None`` is returned.
+    .. versionchanged:: 2018.3.4
+        If on ``AIX``, ``None`` is returned even if in filesystem as lsattr on ``AIX``
+        is not the same thing as the linux version.
 
     Obtain the modifiable attributes of the given file. If path
     is to a directory, an empty list is returned.
@@ -557,7 +564,7 @@ def lsattr(path):
 
         salt '*' file.lsattr foo1.txt
     '''
-    if not salt.utils.path.which('lsattr'):
+    if not salt.utils.path.which('lsattr') or salt.utils.platform.is_aix():
         return None
 
     if not os.path.exists(path):
@@ -4533,7 +4540,9 @@ def check_perms(name, ret, user, group, mode, attrs=None, follow_symlinks=False,
 
     is_dir = os.path.isdir(name)
     is_link = os.path.islink(name)
-    if not salt.utils.platform.is_windows() and not is_dir and not is_link:
+    if attrs is not None \
+            and not salt.utils.platform.is_windows() \
+            and not is_dir and not is_link:
         try:
             lattrs = lsattr(name)
         except SaltInvocationError:
