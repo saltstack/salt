@@ -1945,7 +1945,7 @@ def parse_host_port(host_port):
 
     _s_ = host_port[:]
     if _s_[0] == "[":
-        if "]" in host_port[0]:
+        if "]" in host_port:
             host, _s_ = _s_.lstrip("[").rsplit("]", 1)
             host = ipaddress.IPv6Address(host)
             if _s_[0] == ":":
@@ -1964,13 +1964,10 @@ def parse_host_port(host_port):
         else:
             host = _s_
     try:
-        host_ip = ipaddress.ip_address(host)
-        host = host_ip
+        if not isinstance(host, ipaddress._BaseAddress):
+            host_ip = ipaddress.ip_address(host)
+            host = host_ip
     except ValueError:
         log.debug('"%s" Not an IP address? Assuming it is a hostname.', host)
-# Todo: uncomment and handle
-#    except TypeError as _e_:
-#        log.error('"%s" generated a TypeError exception', host)
-#        raise _e_
 
     return host, port
