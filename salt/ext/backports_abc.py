@@ -1,3 +1,4 @@
+# pylint: skip-file
 """
 Patch recently added ABCs into the standard lib module
 ``collections.abc`` (Py3) or ``collections`` (Py2).

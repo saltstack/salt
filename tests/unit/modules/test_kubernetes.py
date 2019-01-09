@@ -42,6 +42,7 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.kubernetes
     '''
+    # pylint: disable=no-value-for-parameter
 
     def setup_loader_modules(self):
         return {
@@ -140,6 +141,8 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
                 self.assertTrue(
                     kubernetes.kubernetes.client.ExtensionsV1beta1Api().
                     create_namespaced_deployment().to_dict.called)
+
+    # pylint: enable=no-value-for-parameter
 
     @staticmethod
     def settings(name, value=None):

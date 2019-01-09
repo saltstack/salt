@@ -21,7 +21,7 @@ from libcloud.loadbalancer.base import BaseDriver, LoadBalancer, Algorithm, Memb
 
 
 class MockLBDriver(BaseDriver):
-    def __init__(self):
+    def __init__(self):  # pylint: disable=super-init-not-called
         self._TEST_BALANCER = LoadBalancer(
             id='test_id', name='test_balancer',
             state=0,  # RUNNING

@@ -62,12 +62,13 @@ class SwarmController(object):
         Re-calibrate the speed
         '''
         elapsed_time = datetime.datetime.now() - self.start_time
-        #remaining_time = self.run_time - elapsed_time
-        #remaining_requests = (self.reqs_sec * self.run_time) - self.total_complete
+        # remaining_time = self.run_time - elapsed_time
+        # remaining_requests = (self.reqs_sec * self.run_time) - self.total_complete
         # Figure out what the reqs/sec has been up to this point and then adjust up or down
         runtime_reqs_sec = self.total_complete / elapsed_time.total_seconds()
         print('Recalibrating. Current reqs/sec: {0}'.format(runtime_reqs_sec))
         return
+
 
 controller = SwarmController(opts)
 controller.run()

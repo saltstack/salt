@@ -111,7 +111,7 @@ def _init_client():
     if path_prefix != "":
         path_prefix = '/{0}'.format(path_prefix.strip('/'))
     log.info("etcd: Setting up client with params: %r", etcd_kwargs)
-    client = etcd.Client(**etcd_kwargs)
+    client = etcd.Client(**etcd_kwargs)  # pylint: disable=unexpected-keyword-arg
     try:
         client.read(path_prefix)
     except etcd.EtcdKeyNotFound:

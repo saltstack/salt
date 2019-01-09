@@ -21,7 +21,7 @@ from libcloud.storage.base import Container, BaseDriver, Object
 
 
 class MockStorageDriver(BaseDriver):
-    def __init__(self):
+    def __init__(self):  # pylint: disable=super-init-not-called
         self._TEST_CONTAINER = Container(name='test_container', extra={}, driver=self)
         self._TEST_OBJECT = Object(name='test_obj',
                                    size=1234,
