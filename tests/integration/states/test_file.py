@@ -585,10 +585,10 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         name = os.path.join(TMP, 'local_source_with_source_hash')
         local_path = os.path.join(BASE_FILES, 'grail', 'scene33')
-        actual_hash = '567fd840bf1548edc35c48eb66cdd78bfdfcccff'
+        actual_hash = '1dbc628a99596193e65c306986a0a21ee52783b2'
         if IS_WINDOWS:
             # CRLF vs LF causes a different hash on windows
-            actual_hash = 'f658a0ec121d9c17088795afcc6ff3c43cb9842a'
+            actual_hash = 'f3afc65d94c415c61faf908d66d8a683aaf501e9'
         # Reverse the actual hash
         bad_hash = actual_hash[::-1]
 
@@ -3859,9 +3859,9 @@ class RemoteFileTest(ModuleCase, SaltReturnAssertsMixin):
         cls.source = cls.webserver.url('grail/scene33')
         if IS_WINDOWS:
             # CRLF vs LF causes a different hash on windows
-            cls.source_hash = '21438b3d5fd2c0028bcab92f7824dc69'
+            cls.source_hash = 'b0a6701179a756bbff97d05ca68915be'
         else:
-            cls.source_hash = 'd2feb3beb323c79fc7a0f44f1408b4a3'
+            cls.source_hash = 'b2f6b776c322926703f55a778d687e1f'
 
     @classmethod
     def tearDownClass(cls):
