@@ -37,7 +37,7 @@ class NXOSPlatform(object):
     upgrade_required = False
 
     show_install_all_impact_no_module_data = """
-Installer will perform impact only check. Please wait. 
+Installer will perform impact only check. Please wait.
 
 Verifying image bootflash:/$IMAGE for boot variable "nxos".
 [####################] 100% -- SUCCESS

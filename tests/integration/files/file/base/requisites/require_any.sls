@@ -31,4 +31,4 @@ C:
 
 D:
   cmd.run:
-    - name: echo D 
+    - name: echo D

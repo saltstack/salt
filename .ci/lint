@@ -3,7 +3,7 @@ pipeline {
     options {
         timestamps()
         ansiColor('xterm')
-        timeout(time: 3, unit: 'HOURS') 
+        timeout(time: 3, unit: 'HOURS')
     }
     environment {
         PYENV_ROOT = "/usr/local/pyenv"
@@ -166,8 +166,8 @@ pipeline {
                 description: 'Python lint test has failed',
                 status: 'FAILURE',
                 context: "jenkins/pr/lint"
-            slackSend channel: "#jenkins-prod-pr", 
-                color: '#FF0000', 
+            slackSend channel: "#jenkins-prod-pr",
+                color: '#FF0000',
                 message: "FAILED: PR-Job: '${env.JOB_NAME} [${env.BUILD_NUMBER}]' (${env.BUILD_URL})"
         }
     }

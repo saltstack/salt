@@ -13,7 +13,7 @@ end
 
 group :windows do
   gem 'winrm', '~>2.0'
-  gem 'winrm-fs', '~>1.3.1' 
+  gem 'winrm-fs', '~>1.3.1'
 end
 
 group :ec2 do

@@ -31,7 +31,7 @@ class N93KLXCPlatform(NXOSPlatform):
     # Captured output from: show install all nxos <image>
 
     show_install_all_impact = """
-Installer will perform impact only check. Please wait. 
+Installer will perform impact only check. Please wait.
 
 Verifying image bootflash:/$IMAGE for boot variable "nxos".
 [####################] 100% -- SUCCESS
@@ -76,7 +76,7 @@ Disruptive ISSU will be performed "
     # Captured output from: show install all nxos <image> non-disruptive
 
     show_install_all_impact_non_disruptive = """
-Installer will perform impact only check. Please wait. 
+Installer will perform impact only check. Please wait.
 
 Verifying image bootflash:/$IMAGE for boot variable "nxos".
 [####################] 100% -- SUCCESS
@@ -98,8 +98,8 @@ Notifying services about system upgrade.
 Compatibility check is done:
 Module  bootable          Impact  Install-type  Reason
 ------  --------  --------------  ------------  ------
-     1       yes  non-disruptive       rolling  
-    27       yes  non-disruptive         reset  
+     1       yes  non-disruptive       rolling
+    27       yes  non-disruptive         reset
 
 
 
@@ -112,7 +112,7 @@ Module       Image                  Running-Version(pri:alt)           New-Versi
 """
 
     install_all_disruptive_success = """
-Installer will perform compatibility check first. Please wait. 
+Installer will perform compatibility check first. Please wait.
 Installer is forced disruptive
 
 Verifying image bootflash:/$IMAGE for boot variable "nxos".
@@ -174,7 +174,7 @@ Finishing the upgrade, switch will reboot in 10 seconds.
     # Captured output from: install all nxos <image> non-disruptive
 
     install_all_non_disruptive_success = """
-Installer will perform compatibility check first. Please wait. 
+Installer will perform compatibility check first. Please wait.
 
 Verifying image bootflash:/$IMAGE for boot variable "nxos".
 [####################] 100% -- SUCCESS
@@ -196,8 +196,8 @@ Notifying services about system upgrade.
 Compatibility check is done:
 Module  bootable          Impact  Install-type  Reason
 ------  --------  --------------  ------------  ------
-     1       yes  non-disruptive       rolling  
-    27       yes  non-disruptive         reset  
+     1       yes  non-disruptive       rolling
+    27       yes  non-disruptive         reset
 
 
 

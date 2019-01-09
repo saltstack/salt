@@ -99,7 +99,7 @@ Glossary
         <salt.runners.jobs>`.
 
     Job Cache
-        A storage location for job results, which may then be queried by a 
+        A storage location for job results, which may then be queried by a
         salt runner or an external system. May be local to a salt master
         or stored externally.
 

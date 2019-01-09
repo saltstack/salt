@@ -1,6 +1,6 @@
 - Feature Name: Rename ``__salt__`` to ``__runner__`` in the Runner functions
 - Start Date: 2019-01-02
-- RFC PR: 
+- RFC PR:
 - Salt Issue: #51039
 
 # Summary
@@ -130,7 +130,7 @@ adding these two changes (the duplicate packing and the warning) straight away
 into the develop branch to be included in the very next major release, Neon,
 and targeting the whole change for Magnesium.
 
-Nevertheless, I am going to handle the documentation for these changes before 
+Nevertheless, I am going to handle the documentation for these changes before
 and after the releases mentioned.
 
 # Drawbacks

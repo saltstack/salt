@@ -762,4 +762,4 @@ performance are a concern, you may also increase the value for
 which are pulling jobs from the queue and executing them. Obviously, this
 bears a relationship to the speed at which the queue itself will fill up.
 The price to pay for this value is that each thread will contain a copy of
-Salt code needed to perform the requested action. 
+Salt code needed to perform the requested action.

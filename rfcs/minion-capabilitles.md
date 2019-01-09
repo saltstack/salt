@@ -1,6 +1,6 @@
 - Feature Name: Minion Capabilitles
 - Start Date: 2018-11-22
-- RFC PR: 
+- RFC PR:
 - Salt Issue:
 - Keywords: capability capabilities introspect introspection
 

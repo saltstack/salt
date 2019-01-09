@@ -11,7 +11,7 @@ The salt loader was enhanced to look for external modules by looking at the
 `salt.loader` entry-point:
 
  https://setuptools.readthedocs.io/en/latest/pkg_resources.html#entry-points
- 
+
 `pkg_resources` should be installed, which is normally included in setuptools.
 
  https://setuptools.readthedocs.io/en/latest/pkg_resources.html
