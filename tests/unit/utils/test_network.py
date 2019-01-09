@@ -226,7 +226,11 @@ class NetworkTestCase(TestCase):
             self.assertEqual((host, port), assertion_value)
 
         for host_port in bad_host_ports:
-            self.assertRaises(ValueError, network.parse_host_port, host_port)
+            try:
+                self.assertRaises(ValueError, network.parse_host_port, host_port)
+            except AssertionError as _e_:
+                log.error('bad host_port value: "%s" failed to trigger ValueError exception', host_port)
+                raise _e_
 
     def test_is_subnet(self):
         for subnet_data in (IPV4_SUBNETS, IPV6_SUBNETS):
