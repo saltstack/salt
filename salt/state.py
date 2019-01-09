@@ -2810,6 +2810,8 @@ class State(object):
         '''
         for chunk in high:
             state = high[chunk]
+            if not isinstance(state, (dict, OrderedDict)):
+                continue
             for state_ref in state:
                 needs_default = True
                 if not isinstance(state[state_ref], list):
