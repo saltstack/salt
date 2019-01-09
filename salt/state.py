@@ -25,6 +25,7 @@ import traceback
 import re
 import time
 import random
+import collections
 
 # Import salt libs
 import salt.loader
@@ -2810,7 +2811,7 @@ class State(object):
         '''
         for chunk in high:
             state = high[chunk]
-            if not isinstance(state, (dict, OrderedDict)):
+            if not isinstance(state, collections.Mapping):
                 continue
             for state_ref in state:
                 needs_default = True
