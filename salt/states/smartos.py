@@ -727,7 +727,7 @@ def vm_present(name, vmconfig, config=None):
 
         e.g. disk0 will be the first disk added, disk1 the 2nd,...
 
-    .. versionchanged:: Fluorine
+    .. versionchanged:: 2019.2.0
 
         Added support for docker image uuids, added auto_lx_vars configuration, documented some missing configuration options.
 

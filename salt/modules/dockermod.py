@@ -2106,7 +2106,7 @@ def port(name, private_port=None):
     name
         Container name or ID
 
-        .. versionchanged:: Fluorine
+        .. versionchanged:: 2019.2.0
             This value can now be a pattern expression (using the
             pattern-matching characters defined in fnmatch_). If a pattern
             expression is used, this function will return a dictionary mapping
@@ -5928,7 +5928,7 @@ def wait(name, ignore_already_stopped=False, fail_on_exit_status=False):
 def prune(containers=False, networks=False, images=False,
           build=False, volumes=False, system=None, **filters):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Prune Docker's various subsystems
 
@@ -6724,7 +6724,7 @@ def call(name, function, *args, **kwargs):
 
 def apply_(name, mods=None, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Apply states! This function will call highstate or state.sls based on the
     arguments passed in, ``apply`` is intended to be the main gateway for
@@ -6864,7 +6864,7 @@ def highstate(name, saltenv='base', **kwargs):
     '''
     Apply a highstate to the running container
 
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     The container does not need to have Salt installed, but Python is required.
 

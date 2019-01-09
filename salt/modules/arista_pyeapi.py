@@ -3,7 +3,7 @@
 Arista pyeapi
 =============
 
-.. versionadded:: Fluorine
+.. versionadded:: 2019.2.0
 
 Execution module to interface the connection with Arista switches, connecting to
 the remote network device using the
