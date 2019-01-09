@@ -10,4 +10,3 @@ Param(
 Import-Module ./Modules/download-module.psm1
 
 DownloadFileWithProgress $url $file
-

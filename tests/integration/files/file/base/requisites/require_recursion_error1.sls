@@ -9,4 +9,3 @@ B:
     - name: echo B
     - require:
       - cmd: A
-

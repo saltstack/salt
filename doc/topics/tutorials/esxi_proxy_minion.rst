@@ -524,4 +524,3 @@ Relevant Salt Files and Resources
 - :ref:`Salt Proxy Minion Docs <proxy-minion>`
 - :ref:`Salt Proxy Minion End-to-End Example <proxy-minion-end-to-end-example>`
 - :mod:`vSphere Execution Module <salt.modules.vsphere>`
-

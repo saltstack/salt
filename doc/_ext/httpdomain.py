@@ -503,4 +503,3 @@ def setup(app):
     except ClassNotFound:
         app.add_lexer('http', HTTPLexer())
     app.add_config_value('http_index_ignore_prefixes', [], None)
-

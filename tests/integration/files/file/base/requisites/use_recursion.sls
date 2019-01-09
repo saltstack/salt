@@ -11,4 +11,3 @@ B:
     - unless: return False
     - use:
         cmd: A
-

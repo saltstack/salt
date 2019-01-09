@@ -4,4 +4,3 @@ A:
     - name: echo A
     - require_in:
       - foobar: W
-
