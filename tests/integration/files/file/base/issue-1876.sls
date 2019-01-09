@@ -5,4 +5,3 @@
 
   file.append:
     - text: foo
-

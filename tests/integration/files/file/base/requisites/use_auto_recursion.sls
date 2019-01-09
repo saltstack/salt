@@ -3,5 +3,3 @@ A:
     - name: echo "A"
     - use:
         cmd: A
-
-

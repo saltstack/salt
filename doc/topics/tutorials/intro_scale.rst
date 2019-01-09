@@ -300,4 +300,3 @@ The job cache can be disabled:
 .. code-block:: yaml
 
    job_cache: False
-

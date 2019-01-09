@@ -7,4 +7,3 @@ B:
     - name: echo B
     - prereq:
       - foobar: A
-

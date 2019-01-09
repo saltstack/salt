@@ -272,4 +272,3 @@ Glossary
         A master process which can send notices and receive replies from
         minions. *See also*:
         :conf_master:`worker_threads`.
-

@@ -199,4 +199,3 @@ command:
     # salt-cloud --list-locations myxen
 
 Returns a list of resource pools.
-

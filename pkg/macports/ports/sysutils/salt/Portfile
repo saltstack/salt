@@ -135,4 +135,3 @@ sudo launchctl disable system/org.macports.salt-syndic
 sudo launchctl bootout system /Library/LaunchDaemons/org.macports.salt-syndic.plist
 
 "
-
