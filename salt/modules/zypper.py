@@ -38,6 +38,7 @@ import salt.utils.files
 import salt.utils.functools
 import salt.utils.path
 import salt.utils.pkg
+import salt.utils.pkg.rpm
 import salt.utils.stringutils
 import salt.utils.systemd
 from salt.utils.versions import LooseVersion
@@ -50,6 +51,7 @@ ZYPP_HOME = '/etc/zypp'
 LOCKS = '{0}/locks'.format(ZYPP_HOME)
 REPOS = '{0}/repos.d'.format(ZYPP_HOME)
 DEFAULT_PRIORITY = 99
+PKG_ARCH_SEPARATOR = '.'
 
 # Define the module's virtual name
 __virtualname__ = 'pkg'
@@ -575,6 +577,30 @@ def info_available(*names, **kwargs):
             nfo['installed'] = nfo.get('installed').lower() == 'yes' and True or False
 
     return ret
+
+
+def parse_arch_from_name(name):
+    '''
+    Parse name and architecture from the specified package name.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.parse_arch_from_name zsh.x86_64
+    '''
+    _name, _arch = None, None
+    try:
+        _name, _arch = name.rsplit(PKG_ARCH_SEPARATOR, 1)
+    except ValueError:
+        pass
+    if _arch not in salt.utils.pkg.rpm.ARCHES + ('noarch',):
+        _name = name
+        _arch = None
+    return {
+        'name': _name,
+        'arch': _arch
+    }
 
 
 def latest_version(*names, **kwargs):

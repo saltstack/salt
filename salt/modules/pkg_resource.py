@@ -319,10 +319,10 @@ def format_pkg_list(packages, versions_as_list, attr):
             requested_attr &= set(attr + ['version'] + ['arch'])
 
         for name in ret:
-            try:
-                _name, _arch = name.rsplit('.', 1)
-            except ValueError:
-                _name, _arch = None, None
+            _parse_arch_from_name = __salt__.get('pkg.parse_arch_from_name', lambda pkgname: {'name': pkgname, 'arch': None})
+            name_arch_d = _parse_arch_from_name(name)
+            _name = name_arch_d['name']
+            _arch = name_arch_d['arch']
 
             versions = []
             pkgname = None

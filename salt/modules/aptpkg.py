@@ -76,6 +76,7 @@ except ImportError:
 # pylint: enable=import-error
 
 APT_LISTS_PATH = "/var/lib/apt/lists"
+PKG_ARCH_SEPARATOR = ':'
 
 # Source format for urllib fallback on PPA handling
 LP_SRC_FORMAT = 'deb http://ppa.launchpad.net/{0}/{1}/ubuntu {2} main'
@@ -232,6 +233,26 @@ def normalize_name(name):
     except ValueError:
         return name
     return name
+
+
+def parse_arch_from_name(name):
+    '''
+    Parse name and architecture from the specified package name.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.parse_arch_from_name zsh:amd64
+    '''
+    try:
+        _name, _arch = name.rsplit(PKG_ARCH_SEPARATOR, 1)
+    except ValueError:
+        _name, _arch = name, None
+    return {
+        'name': _name,
+        'arch': _arch
+    }
 
 
 def latest_version(*names, **kwargs):
