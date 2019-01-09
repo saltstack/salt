@@ -1,4 +1,4 @@
-mysql-python
+mysql-python; python_version < '3.0'
 timelib
 yappi>=0.8.2
 python-novaclient>2.17.0
