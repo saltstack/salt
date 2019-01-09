@@ -266,7 +266,6 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
             if [ -z "$debian_chroot" ] && [ -r /etc/debian_chroot ]; then
                 debian_chroot=$(cat /etc/debian_chroot)
             fi
-
             # enable bash completion in interactive shells
             if [ -f /etc/bash_completion ] && ! shopt -oq posix; then
                 . /etc/bash_completion
