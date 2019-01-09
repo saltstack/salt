@@ -1091,13 +1091,13 @@ def run(cmd,
         return code returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Fluorine
+      .. versionadded:: 2019.2.0
 
     :param bool stdin_raw_newlines: False
         If ``True``, Salt will not automatically convert the characters ``\\n``
         present in the ``stdin`` value to newlines.
 
-      .. versionadded:: Fluorine
+      .. versionadded:: 2019.2.0
 
     CLI Example:
 
@@ -1343,13 +1343,13 @@ def shell(cmd,
         return code returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Fluorine
+      .. versionadded:: 2019.2.0
 
     :param bool stdin_raw_newlines: False
         If ``True``, Salt will not automatically convert the characters ``\\n``
         present in the ``stdin`` value to newlines.
 
-      .. versionadded:: Fluorine
+      .. versionadded:: 2019.2.0
 
     CLI Example:
 
@@ -1568,13 +1568,13 @@ def run_stdout(cmd,
         return code returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Fluorine
+      .. versionadded:: 2019.2.0
 
     :param bool stdin_raw_newlines: False
         If ``True``, Salt will not automatically convert the characters ``\\n``
         present in the ``stdin`` value to newlines.
 
-      .. versionadded:: Fluorine
+      .. versionadded:: 2019.2.0
 
     CLI Example:
 
@@ -1776,13 +1776,13 @@ def run_stderr(cmd,
         return code returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Fluorine
+      .. versionadded:: 2019.2.0
 
     :param bool stdin_raw_newlines: False
         If ``True``, Salt will not automatically convert the characters ``\\n``
         present in the ``stdin`` value to newlines.
 
-      .. versionadded:: Fluorine
+      .. versionadded:: 2019.2.0
 
     CLI Example:
 
@@ -2008,13 +2008,13 @@ def run_all(cmd,
         return code returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Fluorine
+      .. versionadded:: 2019.2.0
 
     :param bool stdin_raw_newlines: False
         If ``True``, Salt will not automatically convert the characters ``\\n``
         present in the ``stdin`` value to newlines.
 
-      .. versionadded:: Fluorine
+      .. versionadded:: 2019.2.0
 
     CLI Example:
 
@@ -2207,13 +2207,13 @@ def retcode(cmd,
         return code returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Fluorine
+      .. versionadded:: 2019.2.0
 
     :param bool stdin_raw_newlines: False
         If ``True``, Salt will not automatically convert the characters ``\\n``
         present in the ``stdin`` value to newlines.
 
-      .. versionadded:: Fluorine
+      .. versionadded:: 2019.2.0
 
     CLI Example:
 
@@ -2456,13 +2456,13 @@ def script(source,
         return code returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Fluorine
+      .. versionadded:: 2019.2.0
 
     :param bool stdin_raw_newlines: False
         If ``True``, Salt will not automatically convert the characters ``\\n``
         present in the ``stdin`` value to newlines.
 
-      .. versionadded:: Fluorine
+      .. versionadded:: 2019.2.0
 
     CLI Example:
 
@@ -2703,13 +2703,13 @@ def script_retcode(source,
         return code returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Fluorine
+      .. versionadded:: 2019.2.0
 
     :param bool stdin_raw_newlines: False
         If ``True``, Salt will not automatically convert the characters ``\\n``
         present in the ``stdin`` value to newlines.
 
-      .. versionadded:: Fluorine
+      .. versionadded:: 2019.2.0
 
     CLI Example:
 
@@ -3025,7 +3025,7 @@ def run_chroot(root,
         return code returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Fluorine
+      .. versionadded:: 2019.2.0
 
     CLI Example:
 
@@ -3508,13 +3508,13 @@ def powershell(cmd,
         return code returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Fluorine
+      .. versionadded:: 2019.2.0
 
     :param bool stdin_raw_newlines: False
         If ``True``, Salt will not automatically convert the characters ``\\n``
         present in the ``stdin`` value to newlines.
 
-      .. versionadded:: Fluorine
+      .. versionadded:: 2019.2.0
 
     :returns:
         :dict: A dictionary of data returned by the powershell command.
@@ -3810,13 +3810,13 @@ def powershell_all(cmd,
         return code returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Fluorine
+      .. versionadded:: 2019.2.0
 
     :param bool stdin_raw_newlines: False
         If ``True``, Salt will not automatically convert the characters ``\\n``
         present in the ``stdin`` value to newlines.
 
-      .. versionadded:: Fluorine
+      .. versionadded:: 2019.2.0
 
     :return: A dictionary with the following entries:
 
@@ -4079,13 +4079,13 @@ def run_bg(cmd,
         return code returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Fluorine
+      .. versionadded:: 2019.2.0
 
     :param bool stdin_raw_newlines: False
         If ``True``, Salt will not automatically convert the characters ``\\n``
         present in the ``stdin`` value to newlines.
 
-      .. versionadded:: Fluorine
+      .. versionadded:: 2019.2.0
 
     CLI Example:
 

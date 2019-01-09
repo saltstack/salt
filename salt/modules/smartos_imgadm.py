@@ -157,7 +157,7 @@ def docker_to_uuid(uuid):
     '''
     Get the image uuid from an imported docker image
 
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
     '''
     if _is_uuid(uuid):
         return uuid
@@ -232,7 +232,7 @@ def list_installed(verbose=False):
     verbose : boolean (False)
         toggle verbose output
 
-    .. versionchanged:: Fluorine
+    .. versionchanged:: 2019.2.0
 
         Docker images are now also listed
 
@@ -422,7 +422,7 @@ def sources(verbose=False):
     verbose : boolean (False)
         toggle verbose output
 
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     CLI Example:
 
@@ -455,7 +455,7 @@ def source_delete(source):
     source : string
         source url to delete
 
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     CLI Example:
 
@@ -483,7 +483,7 @@ def source_add(source, source_type='imgapi'):
     source_trype : string (imgapi)
         source type, either imgapi or docker
 
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     CLI Example:
 
