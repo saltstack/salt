@@ -25,6 +25,7 @@ import traceback
 import re
 import time
 import random
+import collections
 
 # Import salt libs
 import salt.loader
@@ -2810,16 +2811,18 @@ class State(object):
         '''
         for chunk in high:
             state = high[chunk]
+            if not isinstance(state, collections.Mapping):
+                continue
             for state_ref in state:
                 needs_default = True
+                if not isinstance(state[state_ref], list):
+                    continue
                 for argset in state[state_ref]:
                     if isinstance(argset, six.string_types):
                         needs_default = False
                         break
                 if needs_default:
-                    order = state[state_ref].pop(-1)
-                    state[state_ref].append('__call__')
-                    state[state_ref].append(order)
+                    state[state_ref].insert(-1, '__call__')
 
     def call_high(self, high, orchestration_jid=None):
         '''
