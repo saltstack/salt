@@ -335,6 +335,17 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
     def test_query(self):
         self._test_call(mysql.query, 'SELECT * FROM testdb', 'testdb', 'SELECT * FROM testdb')
 
+    def test_query_error(self):
+        connect_mock = MagicMock()
+        with patch.object(mysql, '_connect', connect_mock):
+            with patch.dict(mysql.__salt__, {'config.option': MagicMock()}):
+                side_effect = MySQLdb.OperationalError(9999, 'Something Went Wrong')
+                with patch.object(mysql, '_execute', MagicMock(side_effect=side_effect)):
+                    mysql.query('testdb', 'SELECT * FROM testdb')
+            self.assertIn('mysql.error', mysql.__context__)
+            expected = 'MySQL Error 9999: Something Went Wrong'
+            self.assertEqual(mysql.__context__['mysql.error'], expected)
+
     def _test_call(self, function, expected_sql, *args, **kwargs):
         connect_mock = MagicMock()
         with patch.object(mysql, '_connect', connect_mock):
