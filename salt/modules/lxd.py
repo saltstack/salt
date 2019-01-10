@@ -4,12 +4,12 @@ Module for managing the LXD daemon and its containers.
 
 .. versionadded:: Fluorine
 
-`LXD(1)`__ is a container "hypervisor". This execution module provides
+`LXD(1)`_ is a container "hypervisor". This execution module provides
 several functions to help manage it and its containers.
 
-.. note:
+.. note::
 
-    - `pylxd(2)`__ version >=2.2.5 is required to let this work,
+    - `pylxd(2)`_ version >=2.2.5 is required to let this work,
       currently only available via pip.
 
         To install on Ubuntu:
@@ -23,8 +23,8 @@ several functions to help manage it and its containers.
     - for the config_get() and config_get() methods
       you need to have lxd-client installed.
 
-.. __: https://linuxcontainers.org/lxd/
-.. __: https://github.com/lxc/pylxd/blob/master/doc/source/installation.rst
+.. _LXD(1): https://linuxcontainers.org/lxd/
+.. _pylxd(2): https://github.com/lxc/pylxd/blob/master/doc/source/installation.rst
 
 :maintainer: René Jochum <rene@jochums.at>
 :maturity: new
