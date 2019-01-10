@@ -313,4 +313,7 @@ class ZeroMQCaller(BaseCaller):
         load = {'cmd': '_return', 'id': self.opts['id']}
         for key, value in six.iteritems(ret):
             load[key] = value
-        channel.send(load)
+        try:
+            channel.send(load)
+        finally:
+            channel.close()
