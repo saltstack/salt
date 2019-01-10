@@ -166,63 +166,63 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
                     'release': '8.el7',
                     'arch': 'noarch',
                     'install_date_time_t': 1487838471,
-                    'epoch': ''
+                    'epoch': None
                 },
                 'alsa-lib': {
                     'version': '1.1.1',
                     'release': '1.el7',
                     'arch': 'x86_64',
                     'install_date_time_t': 1487838475,
-                    'epoch': ''
+                    'epoch': None
                 },
                 'gnupg2': {
                     'version': '2.0.22',
                     'release': '4.el7',
                     'arch': 'x86_64',
                     'install_date_time_t': 1487838477,
-                    'epoch': ''
+                    'epoch': None
                 },
                 'rpm-python': {
                     'version': '4.11.3',
                     'release': '21.el7',
                     'arch': 'x86_64',
                     'install_date_time_t': 1487838477,
-                    'epoch': ''
+                    'epoch': None
                 },
                 'pygpgme': {
                     'version': '0.3',
                     'release': '9.el7',
                     'arch': 'x86_64',
                     'install_date_time_t': 1487838478,
-                    'epoch': ''
+                    'epoch': None
                 },
                 'yum': {
                     'version': '3.4.3',
                     'release': '150.el7.centos',
                     'arch': 'noarch',
                     'install_date_time_t': 1487838479,
-                    'epoch': ''
+                    'epoch': None
                 },
                 'lzo': {
                     'version': '2.06',
                     'release': '8.el7',
                     'arch': 'x86_64',
                     'install_date_time_t': 1487838479,
-                    'epoch': ''
+                    'epoch': None
                 },
                 'qrencode-libs': {
                     'version': '3.4.1',
                     'release': '3.el7',
                     'arch': 'x86_64',
                     'install_date_time_t': 1487838480,
-                    'epoch': ''
+                    'epoch': None
                 },
                 'ustr': {
                     'version': '1.0.4',
                     'release': '16.el7',
                     'arch': 'x86_64',
                     'install_date_time_t': 1487838480,
-                    'epoch': ''
+                    'epoch': None
                 },
                 'shadow-utils': {
                     'epoch': '2',
@@ -236,21 +236,21 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
                     'release': '33.el7',
                     'arch': 'x86_64',
                     'install_date_time_t': 1487838484,
-                    'epoch': ''
+                    'epoch': None
                 },
                 'openssh': {
                     'version': '6.6.1p1',
                     'release': '33.el7_3',
                     'arch': 'x86_64',
                     'install_date_time_t': 1487838485,
-                    'epoch': ''
+                    'epoch': None
                 },
                 'virt-what': {
                     'version': '1.13',
                     'release': '8.el7',
                     'install_date_time_t': 1487838486,
                     'arch': 'x86_64',
-                    'epoch': ''
+                    'epoch': None
                 }}.items():
 
                 self.assertTrue(pkgs.get(pkg_name))
@@ -285,14 +285,14 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
                         'release': '1.212.el6',
                         'install_date_time_t': 1542394210,
                         'arch': 'i686',
-                        'epoch': ''
+                        'epoch': None
                     },
                     {
                         'version': '2.12',
                         'release': '1.212.el6',
                         'install_date_time_t': 1542394204,
                         'arch': 'x86_64',
-                        'epoch': ''
+                        'epoch': None
                     }
                 ],
                 'virt-what': [
@@ -301,14 +301,14 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
                         'release': '2.el7',
                         'install_date_time_t': 1387838486,
                         'arch': 'x86_64',
-                        'epoch': ''
+                        'epoch': None
                     },
                     {
                         'version': '1.13',
                         'release': '8.el7',
                         'install_date_time_t': 1487838486,
                         'arch': 'x86_64',
-                        'epoch': ''
+                        'epoch': None
                     }
                 ]
             }
