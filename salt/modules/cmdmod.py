@@ -606,7 +606,7 @@ def _run(cmd,
                 'Unable to run command \'{0}\' with the context \'{1}\', '
                 'reason: {2}'.format(
                     cmd if output_loglevel is not None else 'REDACTED',
-                    new_kwargs,
+                    kwargs,
                     exc
                 )
             )
