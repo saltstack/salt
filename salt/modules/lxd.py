@@ -526,7 +526,10 @@ def container_list(list_names=False, remote_addr=None,
 
         salt '*' lxd.container_list true
 
-    # See: https://github.com/lxc/pylxd/blob/master/doc/source/containers.rst#container-attributes
+    See also `container-attributes`_.
+
+    .. _container-attributes: https://github.com/lxc/pylxd/blob/master/doc/source/containers.rst#container-attributes
+
     '''
 
     client = pylxd_client_get(remote_addr, cert, key, verify_cert)
@@ -632,7 +635,10 @@ def container_create(name, source, profiles=None,
 
         salt '*' lxd.container_create test xenial/amd64
 
-    # See: https://github.com/lxc/lxd/blob/master/doc/rest-api.md#post-1
+    See also the `rest-api-docs`_.
+
+    .. _rest-api-docs: https://github.com/lxc/lxd/blob/master/doc/rest-api.md#post-1
+
     '''
     if profiles is None:
         profiles = ['default']
