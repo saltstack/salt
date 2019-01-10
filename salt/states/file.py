@@ -1376,10 +1376,14 @@ def symlink(
         also passed, it will be used instead. This option requires the target
         to exist.
 
+        .. versionadded:: 2019.2.0
+
     copy_target_group : False
         If True, set the symlink's group to that of the target. If ``group`` is
         also passed, it will be used instead. This option requires the target
         to exist.
+
+        .. versionadded:: 2019.2.0
 
     mode
         The permissions to set on this file, aka 644, 0775, 4664. Not supported
