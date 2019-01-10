@@ -1886,14 +1886,14 @@ def dns_check(addr, port, safe=False, ipv6=None):
                 if h[0] == socket.AF_INET6 and ipv6 is False:
                     continue
 
-                candidate_addr = salt.utils.zeromq.ip_bracket(h[4][0])
+                candidate_addr = h[4][0]
 
                 if h[0] != socket.AF_INET6 or ipv6 is not None:
                     candidates.append(candidate_addr)
 
                 try:
                     s = socket.socket(h[0], socket.SOCK_STREAM)
-                    s.connect((candidate_addr.strip('[]'), port))
+                    s.connect((candidate_addr), port))
                     s.close()
 
                     resolved = candidate_addr
