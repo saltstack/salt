@@ -1893,7 +1893,7 @@ def dns_check(addr, port, safe=False, ipv6=None):
 
                 try:
                     s = socket.socket(h[0], socket.SOCK_STREAM)
-                    s.connect((candidate_addr), port))
+                    s.connect(candidate_addr, port)
                     s.close()
 
                     resolved = candidate_addr
