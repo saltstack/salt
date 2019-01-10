@@ -65,7 +65,7 @@ __docformat__ = 'restructuredtext en'
 
 _pylxd_minimal_version = "2.2.5"
 
-# Keep in sync with: https://github.com/lxc/lxd/blob/master/shared/osarch/architectures.go  # noqa
+# Keep in sync with: https://github.com/lxc/lxd/blob/master/shared/osarch/architectures.go
 _architectures = {
     'unknown': '0',
     'i686': '1',
@@ -78,7 +78,7 @@ _architectures = {
     's390x': '8'
 }
 
-# Keep in sync with: https://github.com/lxc/lxd/blob/master/shared/api/status_code.go  # noqa
+# Keep in sync with: https://github.com/lxc/lxd/blob/master/shared/api/status_code.go
 CONTAINER_STATUS_RUNNING = 103
 
 __virtualname__ = 'lxd'
@@ -328,7 +328,6 @@ def pylxd_client_get(remote_addr=None, cert=None, key=None, verify_cert=True):
 
     .. _requests-docs: http://docs.python-requests.org/en/master/user/advanced/#ssl-cert-verification
 
-    # noqa
     '''
 
     pool_key = '|'.join((six.text_type(remote_addr),
@@ -462,7 +461,6 @@ def authenticate(remote_addr, password, cert, key, verify_cert=True):
 
     .. _requests-docs: http://docs.python-requests.org/en/master/user/advanced/#ssl-cert-verification
 
-    # noqa
     '''
     client = pylxd_client_get(remote_addr, cert, key, verify_cert)
 
@@ -529,8 +527,6 @@ def container_list(list_names=False, remote_addr=None,
         salt '*' lxd.container_list true
 
     # See: https://github.com/lxc/pylxd/blob/master/doc/source/containers.rst#container-attributes
-
-    # noqa
     '''
 
     client = pylxd_client_get(remote_addr, cert, key, verify_cert)
@@ -1169,8 +1165,6 @@ def container_migrate(name,
 
             # Migrate phpmyadmin from srv01 to srv02
             salt '*' lxd.container_migrate phpmyadmin stop_and_start=true remote_addr=https://srv02:8443 cert=~/.config/lxc/client.crt key=~/.config/lxc/client.key verify_cert=False src_remote_addr=https://srv01:8443
-
-    # noqa
     '''
     if src_cert is None:
         src_cert = cert
@@ -2020,8 +2014,6 @@ def profile_create(name, config=None, devices=None, description=None,
         See the `lxd-docs`_ for the details about the config and devices dicts.
 
         .. _lxd-docs: https://github.com/lxc/lxd/blob/master/doc/rest-api.md#post-10
-
-        # noqa
     '''
     client = pylxd_client_get(remote_addr, cert, key, verify_cert)
 
@@ -2412,8 +2404,6 @@ def profile_device_set(name, device_name, device_type='disk',
         .. code-block:: bash
 
             $ salt '*' lxd.profile_device_set autostart eth1 nic nictype=bridged parent=lxdbr0
-
-        # noqa
     '''
     profile = profile_get(
         name,
@@ -2474,8 +2464,6 @@ def profile_device_delete(name, device_name, remote_addr=None,
         .. code-block:: bash
 
             $ salt '*' lxd.profile_device_delete autostart eth1
-
-        # noqa
 
     '''
     profile = profile_get(
@@ -2776,8 +2764,6 @@ def image_from_simplestreams(server,
         ..code-block:: bash
 
             $ salt '*' lxd.image_from_simplestreams "https://cloud-images.ubuntu.com/releases" "trusty/amd64" aliases='["t", "trusty/amd64"]' auto_update=True
-
-        # noqa
     '''
     if aliases is None:
         aliases = []
@@ -2857,8 +2843,6 @@ def image_from_url(url,
         ..code-block:: bash
 
             $ salt '*' lxd.image_from_url https://dl.stgraber.org/lxd aliases='["busybox-amd64"]'
-
-        # noqa
     '''
     if aliases is None:
         aliases = []
@@ -2938,8 +2922,6 @@ def image_from_file(filename,
         ..code-block:: bash
 
             $ salt '*' lxd.image_from_file salt://lxd/files/busybox.tar.xz aliases=["busybox-amd64"]
-
-        # noqa
     '''
     if aliases is None:
         aliases = []
@@ -3047,8 +3029,6 @@ def image_copy_lxd(source,
     .. code-block:: bash
 
         $ salt '*' lxd.image_copy_lxd xenial/amd64 https://srv01:8443 ~/.config/lxc/client.crt ~/.config/lxc/client.key false https://srv02:8443 ~/.config/lxc/client.crt ~/.config/lxc/client.key false aliases="['xenial/amd64']"
-
-    # noqa
     '''
     if aliases is None:
         aliases = []
@@ -3139,8 +3119,6 @@ def image_alias_add(image,
         .. code-block:: bash
 
             $ salt '*' lxd.image_alias_add xenial/amd64 x "Short version of xenial/amd64"
-
-        # noqa
     '''
     image = _verify_image(image, remote_addr, cert, key, verify_cert)
 
@@ -3196,8 +3174,6 @@ def image_alias_delete(image,
         .. code-block:: bash
 
             $ salt '*' lxd.image_alias_add xenial/amd64 x "Short version of xenial/amd64"
-
-        # noqa
     '''
     image = _verify_image(image, remote_addr, cert, key, verify_cert)
 
