@@ -265,7 +265,7 @@ def avail_locations(conn=None, call=None):  # pylint: disable=unused-argument
         webconn = get_conn(WebSiteManagementClient)
 
     ret = {}
-    regions = webconn.global_model.get_subscription_geo_regions()
+    regions = webconn.list_geo_regions()
     if hasattr(regions, 'value'):
         regions = regions.value
     for location in regions:  # pylint: disable=no-member
