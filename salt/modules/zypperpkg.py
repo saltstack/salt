@@ -784,8 +784,8 @@ def list_pkgs(versions_as_list=False, **kwargs):
             if pkginfo:
                 # see rpm version string rules available at https://goo.gl/UGKPNd
                 pkgver = pkginfo.version
-                epoch = ''
-                release = ''
+                epoch = None
+                release = None
                 if ':' in pkgver:
                     epoch, pkgver = pkgver.split(":", 1)
                 if '-' in pkgver:

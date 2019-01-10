@@ -134,8 +134,8 @@ class PkgresTestCase(TestCase, LoaderModuleMockMixin):
             Test to output format of the package list with no attr parameter.
         '''
         packages = {
-            'glibc': [{'version': '2.12', 'epoch': '', 'release': '1.212.el6', 'arch': 'x86_64'}],
-            'glibc.i686': [{'version': '2.12', 'epoch': '', 'release': '1.212.el6', 'arch': 'i686'}],
+            'glibc': [{'version': '2.12', 'epoch': None, 'release': '1.212.el6', 'arch': 'x86_64'}],
+            'glibc.i686': [{'version': '2.12', 'epoch': None, 'release': '1.212.el6', 'arch': 'i686'}],
             'foobar': [
                 {'version': '1.2.0', 'epoch': '2', 'release': '7', 'arch': 'x86_64'},
                 {'version': '1.2.3', 'epoch': '2', 'release': '27', 'arch': 'x86_64'},
@@ -184,8 +184,8 @@ class PkgresTestCase(TestCase, LoaderModuleMockMixin):
             }
         }
         packages = {
-            'glibc': [{'version': '2.12', 'epoch': '', 'release': '1.212.el6', 'arch': 'x86_64'}],
-            'glibc.i686': [{'version': '2.12', 'epoch': '', 'release': '1.212.el6', 'arch': 'i686'}],
+            'glibc': [{'version': '2.12', 'epoch': None, 'release': '1.212.el6', 'arch': 'x86_64'}],
+            'glibc.i686': [{'version': '2.12', 'epoch': None, 'release': '1.212.el6', 'arch': 'i686'}],
             'foobar': [
                 {'version': '1.2.0', 'epoch': '2', 'release': '7', 'arch': 'x86_64'},
                 {'version': '1.2.3', 'epoch': '2', 'release': '27', 'arch': 'x86_64'},
@@ -198,13 +198,13 @@ class PkgresTestCase(TestCase, LoaderModuleMockMixin):
                 {
                     'arch': 'x86_64',
                     'release': '1.212.el6',
-                    'epoch': '',
+                    'epoch': None,
                     'version': '2.12'
                 },
                 {
                     'arch': 'i686',
                     'release': '1.212.el6',
-                    'epoch': '',
+                    'epoch': None,
                     'version': '2.12'
                 }
              ],
