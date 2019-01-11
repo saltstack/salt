@@ -130,6 +130,16 @@ adding these two changes (the duplicate packing and the warning) straight away
 into the develop branch to be included in the very next major release, Neon,
 and targeting the whole change for Magnesium.
 
+UPDATE: based on the comments received under
+[#51039](https://github.com/saltstack/salt/issues/51039), the community made the
+following good suggestions:
+
+- Map the execution modules into a separate dunder, that would be eventually
+  deprecated when the core change is deployed (in the Magnesium. release).
+- Have a new configuration option that would allow the users to superseded
+  functionality enable to be able to turn this on immediately while waiting for
+  deprecation to take place.
+
 Nevertheless, I am going to handle the documentation for these changes before 
 and after the releases mentioned.
 
