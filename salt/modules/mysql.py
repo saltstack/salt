@@ -810,7 +810,7 @@ def version(**connection_args):
         return ''
 
     try:
-        return cur.fetchone()[0]
+        return salt.utils.data.decode(cur.fetchone()[0])
     except IndexError:
         return ''
 
