@@ -31,6 +31,7 @@ from tests.support.paths import TMP
 from tests.support.helpers import (
     get_unused_localhost_port,
     requires_system_grains,
+    patched_environ
 )
 from tests.support.mock import patch
 
@@ -70,7 +71,6 @@ _OPTS = {
     'git_pillar_includes': True,
 }
 PROC_TIMEOUT = 10
-NOTSET = object()
 
 
 class ProcessManager(object):
@@ -629,14 +629,8 @@ class GitPillarSSHTestBase(GitPillarTestBase, SSHDMixin):
         passphraselsess key is used to auth without needing to modify the root
         user's ssh config file.
         '''
-        orig_git_ssh = os.environ.pop('GIT_SSH', NOTSET)
-        os.environ['GIT_SSH'] = self.git_ssh
-        try:
+        with patched_environ(GIT_SSH=self.git_ssh):
             return super(GitPillarSSHTestBase, self).get_pillar(ext_pillar_conf)
-        finally:
-            os.environ.pop('GIT_SSH', None)
-            if orig_git_ssh is not NOTSET:
-                os.environ['GIT_SSH'] = orig_git_ssh
 
 
 class GitPillarHTTPTestBase(GitPillarTestBase, WebserverMixin):
