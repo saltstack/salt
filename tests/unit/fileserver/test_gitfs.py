@@ -24,6 +24,7 @@ from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch
 from tests.support.paths import FILES
+from tests.support.helpers import patched_environ
 
 # Import salt libs
 import salt.fileserver.gitfs as gitfs
@@ -405,23 +406,17 @@ class GitFSTestBase(object):
 
         repo = git.Repo.init(cls.tmp_repo_dir)
 
-        username_key = str('USERNAME')
-        orig_username = os.environ.get(username_key)
         try:
-            if username_key not in os.environ:
-                try:
-                    if salt.utils.platform.is_windows():
-                        os.environ[username_key] = \
-                            salt.utils.win_functions.get_current_user()
-                    else:
-                        os.environ[username_key] = \
-                            pwd.getpwuid(os.geteuid()).pw_name
-                except AttributeError:
-                    log.error(
-                        'Unable to get effective username, falling back to '
-                        '\'root\'.'
-                    )
-                    os.environ[username_key] = str('root')
+            if salt.utils.platform.is_windows():
+                username = salt.utils.win_functions.get_current_user()
+            else:
+                username = pwd.getpwuid(os.geteuid()).pw_name
+        except AttributeError:
+            log.error(
+                'Unable to get effective username, falling back to \'root\'.'
+            )
+            username = str('root')
+        with patched_environ(USERNAME=username):
 
             repo.index.add([x for x in os.listdir(cls.tmp_repo_dir)
                             if x != '.git'])
@@ -435,11 +430,6 @@ class GitFSTestBase(object):
             # Older GitPython versions do not have a close method.
             if hasattr(repo, 'close'):
                 repo.close()
-        finally:
-            if orig_username is not None:
-                os.environ[username_key] = orig_username
-            else:
-                os.environ.pop(username_key, None)
 
     @classmethod
     def tearDownClass(cls):

@@ -17,7 +17,7 @@ import tempfile
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
-from tests.support.helpers import skip_if_not_root
+from tests.support.helpers import skip_if_not_root, patched_environ
 
 # Import salt libs
 import salt.utils.files
@@ -34,13 +34,16 @@ class PipModuleTest(ModuleCase):
 
         self.venv_test_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         self.venv_dir = os.path.join(self.venv_test_dir, 'venv')
-        for key in os.environ.copy():
-            if key.startswith('PIP_'):
-                os.environ.pop(key)
         self.pip_temp = os.path.join(self.venv_test_dir, '.pip-temp')
         if not os.path.isdir(self.pip_temp):
             os.makedirs(self.pip_temp)
-        os.environ['PIP_SOURCE_DIR'] = os.environ['PIP_BUILD_DIR'] = ''
+        self.patched_environ = patched_environ(
+            PIP_SOURCE_DIR='',
+            PIP_BUILD_DIR='',
+            __cleanup__=[k for k in os.environ if k.startswith('PIP_')]
+        )
+        self.patched_environ.__enter__()
+        self.addCleanup(self.patched_environ.__exit__)
 
     def tearDown(self):
         super(PipModuleTest, self).tearDown()
