@@ -36,6 +36,52 @@ set_file
 .. note::
     Due to how PyYAML imports nested dicts (see :ref:`here <yaml-idiosyncrasies>`),
     the values in the ``data`` dict must be indented four spaces instead of two.
+
+If you're setting debconf values that requires `dpkg-reconfigure`, you can use
+the ``onchanges`` requisite to reconfigure your package:
+
+.. code-block:: yaml
+
+    # or use America
+    set-timezone-area:
+      debconf.set:
+        - name: tzdata
+        - data:
+              'tzdata/Areas': {'type': 'select', 'value': 'US'}
+
+    # Or use tzdata/Zones/America, and Denver
+    set-timezone:
+      debconf.set:
+        - name: tzdata
+        - data:
+              'tzdata/Zones/US': {'type': 'select', 'value': 'Mountain'}
+
+    remove /etc/localtime:
+      file.absent:
+        - name: /etc/localtime
+        - onchanges:
+          - debconf: set-timezone-area
+          - debconf: set-timezone
+
+    remove /etc/timezone:
+      file.absent:
+        - name: /etc/timezone
+        - onchanges:
+          - debconf: set-timezone-area
+          - debconf: set-timezone
+
+    reconfigure-tzdata:
+      cmd.run:
+        - name: dpkg-reconfigure -f noninteractive tzdata
+        - onchanges:
+          - debconf: set-timezone-area
+          - debconf: set-timezone
+        - require:
+          - file: remove /etc/localtime
+          - file: remove /etc/timezone
+
+Every time the ``set-timezone-area`` or ``set-timezone`` states have changes,
+the ``reconfigure-tzdata`` state will also run.
 '''
 from __future__ import absolute_import, print_function, unicode_literals
 from salt.ext import six
