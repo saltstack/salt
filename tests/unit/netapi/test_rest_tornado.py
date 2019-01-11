@@ -9,6 +9,7 @@ import hashlib
 # Import Salt Testing Libs
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.unit import TestCase, skipIf
+from tests.support.helpers import patched_environ
 
 # Import Salt libs
 import salt.auth
@@ -94,15 +95,12 @@ class SaltnadoTestCase(TestCase, AdaptedConfigurationTestCaseMixin, AsyncHTTPTes
 
     def setUp(self):
         super(SaltnadoTestCase, self).setUp()
-        self.async_timeout_prev = os.environ.pop('ASYNC_TEST_TIMEOUT', None)
-        os.environ['ASYNC_TEST_TIMEOUT'] = str(30)
+        self.patched_environ = patched_environ(ASYNC_TEST_TIMEOUT='30')
+        self.patched_environ.__enter__()
+        self.addCleanup(self.patched_environ.__exit__)
 
     def tearDown(self):
         super(SaltnadoTestCase, self).tearDown()
-        if self.async_timeout_prev is None:
-            os.environ.pop('ASYNC_TEST_TIMEOUT', None)
-        else:
-            os.environ['ASYNC_TEST_TIMEOUT'] = self.async_timeout_prev
         if hasattr(self, 'http_server'):
             del self.http_server
         if hasattr(self, 'io_loop'):
