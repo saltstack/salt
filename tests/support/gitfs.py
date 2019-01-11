@@ -33,7 +33,7 @@ from salt.pillar import git_pillar
 from tests.support.case import ModuleCase
 from tests.support.unit import SkipTest
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin, LoaderModuleMockMixin, SaltReturnAssertsMixin
-from tests.support.helpers import get_unused_localhost_port, requires_system_grains
+from tests.support.helpers import get_unused_localhost_port, requires_system_grains, patched_environ
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.mock import patch
 from pytestsalt.utils import SaltDaemonScriptBase as _SaltDaemonScriptBase, terminate_process
@@ -893,15 +893,8 @@ class GitPillarSSHTestBase(GitPillarTestBase, SSHDMixin):
         passphraselsess key is used to auth without needing to modify the root
         user's ssh config file.
         '''
-
-        def cleanup_environ(environ):
-            os.environ.clear()
-            os.environ.update(environ)
-
-        self.addCleanup(cleanup_environ, os.environ.copy())
-
-        os.environ['GIT_SSH'] = self.git_ssh
-        return super(GitPillarSSHTestBase, self).get_pillar(ext_pillar_conf)
+        with patched_environ(GIT_SSH=self.git_ssh):
+            return super(GitPillarSSHTestBase, self).get_pillar(ext_pillar_conf)
 
 
 class GitPillarHTTPTestBase(GitPillarTestBase, WebserverMixin):
