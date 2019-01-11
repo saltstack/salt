@@ -444,6 +444,37 @@ def pytest_runtest_setup(item):
                 continue
             else:
                 pytest.skip('No internet network connection was detected')
+
+
+# ----- WARNING!!! HACK AHEAD!!!!! ---------------------------------------------------------------------------------->
+# PyTest calls setUpClass before evauating any fixtures, as such, we cannot patch RUNTIME_VARS soon enough.
+# So, we rename setUpClass into something else, forcing PyTest not to call it, and we'll then call it ourselves.
+# Sad.
+def pytest_itemcollected(item):
+    if item.cls and hasattr(item.cls, 'setUpClass') and not hasattr(item.cls, '__setUpClassCounter__'):
+        from functools import wraps
+
+        def wrapper(func, cls):
+
+            @wraps(func)
+            def inner():
+                cls.__setUpClassCounter__ += 1
+                if cls.__setUpClassCounter__ == 2:
+                    func()
+
+            return inner
+
+        item.cls.setUpClass = wrapper(item.cls.setUpClass, item.cls)
+        item.cls.__setUpClassCounter__ = 0
+
+
+def pytest_runtest_call(item):
+    try:
+        item.cls.__setUpClassCounter__
+        item.cls.setUpClass()
+    except AttributeError:
+        pass
+# <---- WARNING!!! HACK AHEAD!!!!! -----------------------------------------------------------------------------------
 # <---- Test Setup ---------------------------------------------------------------------------------------------------
 
 
