@@ -8,7 +8,6 @@ Utilities for accessing storage container blobs on Azure
 # Import python libs
 from __future__ import absolute_import, unicode_literals
 import logging
-import inspect
 
 # Import azure libs
 HAS_LIBS = False
@@ -19,7 +18,6 @@ except ImportError:
     pass
 
 # Import salt libs
-from salt.ext import six
 from salt.exceptions import SaltSystemExit
 
 log = logging.getLogger(__name__)
