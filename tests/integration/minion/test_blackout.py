@@ -6,51 +6,45 @@ Tests for minion blackout
 # Import Python libs
 from __future__ import absolute_import
 import os
-import time
+from time import sleep
 import textwrap
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.paths import PILLAR_DIR
-from tests.support.helpers import flaky
+from tests.support.helpers import destructiveTest, flaky
 
 # Import Salt libs
 import salt.utils.files
 
 
+BLACKOUT_PILLAR = os.path.join(PILLAR_DIR, 'base', 'blackout.sls')
+
+
+@destructiveTest
 class MinionBlackoutTestCase(ModuleCase):
     '''
     Test minion blackout functionality
     '''
-
-    @classmethod
-    def setUpClass(cls):
-        cls.blackout_pillar = os.path.join(PILLAR_DIR, 'base', 'blackout.sls')
-
-    def tearDown(self):
-        self.end_blackout(sleep=False)
-        # Make sure we also refresh the sub_minion pillar
-        refreshed = self.run_function('saltutil.refresh_pillar', minion_tgt='sub_minion', async=False)
-        self.assertTrue(refreshed)
-
     def begin_blackout(self, blackout_data='minion_blackout: True'):
         '''
         setup minion blackout mode
         '''
-        with salt.utils.files.fopen(self.blackout_pillar, 'w') as wfh:
+        with salt.utils.files.fopen(BLACKOUT_PILLAR, 'w') as wfh:
             wfh.write(blackout_data)
-        refreshed = self.run_function('saltutil.refresh_pillar', async=False)
-        self.assertTrue(refreshed)
+        self.run_function('saltutil.refresh_pillar')
+        sleep(10)  # wait for minion to enter blackout mode
 
-    def end_blackout(self, sleep=True):
+    def end_blackout(self):
         '''
         takedown minion blackout mode
         '''
-        with salt.utils.files.fopen(self.blackout_pillar, 'w') as wfh:
-            wfh.write('minion_blackout: False\n')
+        with salt.utils.files.fopen(BLACKOUT_PILLAR, 'w') as blackout_pillar:
+            blackout_pillar.write(textwrap.dedent('''\
+                minion_blackout: False
+                '''))
         self.run_function('saltutil.refresh_pillar')
-        if sleep:
-            time.sleep(10)  # wait for minion to exit blackout mode
+        sleep(10)  # wait for minion to exit blackout mode
 
     @flaky
     def test_blackout(self):
@@ -72,19 +66,22 @@ class MinionBlackoutTestCase(ModuleCase):
         '''
         Test that minion blackout whitelist works
         '''
-        self.begin_blackout(textwrap.dedent('''\
-            minion_blackout: True
-            minion_blackout_whitelist:
-              - test.ping
-              - test.fib
-            '''))
+        try:
+            self.begin_blackout(textwrap.dedent('''\
+                minion_blackout: True
+                minion_blackout_whitelist:
+                  - test.ping
+                  - test.fib
+                '''))
 
-        ping_ret = self.run_function('test.ping')
-        self.assertEqual(ping_ret, True)
+            ping_ret = self.run_function('test.ping')
+            self.assertEqual(ping_ret, True)
 
-        fib_ret = self.run_function('test.fib', [7])
-        self.assertTrue(isinstance(fib_ret, list))
-        self.assertEqual(fib_ret[0], 13)
+            fib_ret = self.run_function('test.fib', [7])
+            self.assertTrue(isinstance(fib_ret, list))
+            self.assertEqual(fib_ret[0], 13)
+        finally:
+            self.end_blackout()
 
     @flaky
     def test_blackout_nonwhitelist(self):
@@ -92,15 +89,18 @@ class MinionBlackoutTestCase(ModuleCase):
         Test that minion refuses to run non-whitelisted functions during
         blackout whitelist
         '''
-        self.begin_blackout(textwrap.dedent('''\
-            minion_blackout: True
-            minion_blackout_whitelist:
-              - test.ping
-              - test.fib
-            '''))
+        try:
+            self.begin_blackout(textwrap.dedent('''\
+                minion_blackout: True
+                minion_blackout_whitelist:
+                  - test.ping
+                  - test.fib
+                '''))
 
-        state_ret = self.run_function('state.apply')
-        self.assertIn('Minion in blackout mode.', state_ret)
+            state_ret = self.run_function('state.apply')
+            self.assertIn('Minion in blackout mode.', state_ret)
 
-        cloud_ret = self.run_function('cloud.query', ['list_nodes_full'])
-        self.assertIn('Minion in blackout mode.', cloud_ret)
+            cloud_ret = self.run_function('cloud.query', ['list_nodes_full'])
+            self.assertIn('Minion in blackout mode.', cloud_ret)
+        finally:
+            self.end_blackout()
