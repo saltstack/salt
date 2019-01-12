@@ -70,6 +70,7 @@ __all_privileges__ = [
     'XA_RECOVER_ADMIN'
 ]
 
+
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(NO_MYSQL, 'Install MySQL bindings before running MySQL unit tests.')
 class MySQLTestCase(TestCase, LoaderModuleMockMixin):
