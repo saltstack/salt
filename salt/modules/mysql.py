@@ -1867,8 +1867,12 @@ def grant_exists(grant,
              'SELECT,INSERT,UPDATE,...' 'database.*' 'frank' 'localhost'
     '''
 
+    server_version = version(**connection_args)
     if 'ALL' in grant:
-        grant = ','.join([i for i in __all_privileges__])
+        if salt.utils.versions.version_cmp(server_version, '8.0') >= 0:
+            grant = ','.join([i for i in __all_privileges__])
+        else:
+            grant = 'ALL PRIVILEGES'
 
     try:
         target = __grant_generate(
