@@ -1011,7 +1011,6 @@ def bridge_pytest_and_runtests(reap_stray_processes,
                                session_syndic_config):
 
     # Make sure unittest2 classes know their paths
-    RUNTIME_VARS.TMP = RUNTIME_VARS.SYS_TMP_DIR = session_root_dir.realpath().strpath
     RUNTIME_VARS.TMP_CONF_DIR = session_conf_dir.realpath().strpath
     RUNTIME_VARS.TMP_SUB_MINION_CONF_DIR = session_secondary_conf_dir.realpath().strpath
     RUNTIME_VARS.TMP_SYNDIC_MASTER_CONF_DIR = session_master_of_masters_conf_dir.realpath().strpath
