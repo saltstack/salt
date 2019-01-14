@@ -85,7 +85,7 @@ def usage(args=None):
     '''
     Return usage information for volumes mounted on this minion
 
-    .. versionchanged:: Fluorine
+    .. versionchanged:: 2019.2.0
 
         Default for SunOS changed to 1 kilobyte blocks
 

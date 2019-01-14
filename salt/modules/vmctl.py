@@ -2,7 +2,7 @@
 '''
 Manage vms running on the OpenBSD VMM hypervisor using vmctl(8).
 
-.. versionadded:: Fluorine
+.. versionadded:: 2019.2.0
 
 :codeauthor: ``Jasper Lievisse Adriaanse <jasper@openbsd.org>``
 

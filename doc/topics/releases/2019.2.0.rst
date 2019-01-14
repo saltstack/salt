@@ -1,8 +1,8 @@
-:orphan:
+.. _release-2019-2-0:
 
-======================================
-Salt Release Notes - Codename Fluorine
-======================================
+===============================================
+Salt 2019.2.0 Release Notes - Codename Fluorine
+===============================================
 
 Non-Backward-Compatible Change to YAML Renderer
 ===============================================
@@ -62,7 +62,7 @@ Ansible Playbook State and Execution Modules
 
 Along with the including the :py:mod:`ansible modules
 <salt.modules.ansiblegate>` in the Oxygen release, running playbooks has been
-added in Fluorine with the :py:func:`playbooks function
+added in 2019.2.0 with the :py:func:`playbooks function
 <salt.modules.ansiblegate.playbooks>`.  This also includes an :py:func:`ansible
 playbooks state module <salt.states.ansiblegate.playbooks>` which can be used
 on a targeted host to run ansible playbooks, or used in an
@@ -918,7 +918,7 @@ Minion Configuration Deprecations
 ---------------------------------
 
 The :conf_minion:`master_shuffle` configuration option is deprecated as of the
-``Fluorine`` release. Please use the :conf_minion:`random_master` option instead.
+``2019.2.0`` release. Please use the :conf_minion:`random_master` option instead.
 
 Module Deprecations
 -------------------
@@ -988,7 +988,7 @@ Roster Deprecations
 - The :py:mod:`cache <salt.roster.cache>` roster has been changed as follows:
 
     - Support for ``roster_order`` as a list or tuple has been removed. As of
-      the ``Fluorine`` release, ``roster_order`` must be a dictionary.
+      the ``2019.2.0`` release, ``roster_order`` must be a dictionary.
 
     - The ``roster_order`` option now includes IPv6 in addition to IPv4 for the
       ``private``, ``public``, ``global`` or ``local`` settings. The syntax for
