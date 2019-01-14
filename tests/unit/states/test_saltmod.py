@@ -289,10 +289,12 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
         origcmd = saltmod.__salt__['saltutil.cmd']
         cmd_kwargs = {}
         cmd_args = []
+
         def cmd_mock(*args, **kwargs):
             cmd_args.extend(args)
             cmd_kwargs.update(kwargs)
             return origcmd(*args, **kwargs)
+
         with patch.dict(saltmod.__salt__, {'saltutil.cmd': cmd_mock}):
             ret = saltmod.state('state.sls', tgt='*', ssh=True, highstate=True, roster='my_roster')
         assert 'roster_file' in cmd_kwargs
