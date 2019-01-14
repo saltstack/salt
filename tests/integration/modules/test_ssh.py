@@ -11,7 +11,6 @@ import shutil
 # Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ModuleCase
-from tests.support.paths import FILES
 from tests.support.helpers import skip_if_binaries_missing
 
 # Import salt libs
@@ -52,7 +51,7 @@ class SSHModuleTest(ModuleCase):
         if not os.path.isdir(SUBSALT_DIR):
             os.makedirs(SUBSALT_DIR)
 
-        ssh_raw_path = os.path.join(FILES, 'ssh', 'raw')
+        ssh_raw_path = os.path.join(RUNTIME_VARS.FILES, 'ssh', 'raw')
         with salt.utils.files.fopen(ssh_raw_path) as fd:
             self.key = fd.read().strip()
 
@@ -70,7 +69,7 @@ class SSHModuleTest(ModuleCase):
         test ssh.auth_keys
         '''
         shutil.copyfile(
-             os.path.join(FILES, 'ssh', 'authorized_keys'),
+             os.path.join(RUNTIME_VARS.FILES, 'ssh', 'authorized_keys'),
              AUTHORIZED_KEYS)
         user = 'root'
         if salt.utils.platform.is_windows():
@@ -98,7 +97,7 @@ class SSHModuleTest(ModuleCase):
         invalid key entry in authorized_keys
         '''
         shutil.copyfile(
-             os.path.join(FILES, 'ssh', 'authorized_badkeys'),
+             os.path.join(RUNTIME_VARS.FILES, 'ssh', 'authorized_badkeys'),
              AUTHORIZED_KEYS)
         ret = self.run_function('ssh.auth_keys', ['root', AUTHORIZED_KEYS])
 
@@ -114,7 +113,7 @@ class SSHModuleTest(ModuleCase):
         Check that known host information is returned from ~/.ssh/config
         '''
         shutil.copyfile(
-             os.path.join(FILES, 'ssh', 'known_hosts'),
+             os.path.join(RUNTIME_VARS.FILES, 'ssh', 'known_hosts'),
              KNOWN_HOSTS)
         arg = ['root', 'github.com']
         kwargs = {'config': KNOWN_HOSTS}
@@ -161,7 +160,7 @@ class SSHModuleTest(ModuleCase):
         ssh.check_known_host update verification
         '''
         shutil.copyfile(
-             os.path.join(FILES, 'ssh', 'known_hosts'),
+             os.path.join(RUNTIME_VARS.FILES, 'ssh', 'known_hosts'),
              KNOWN_HOSTS)
         arg = ['root', 'github.com']
         kwargs = {'config': KNOWN_HOSTS}
@@ -179,7 +178,7 @@ class SSHModuleTest(ModuleCase):
         Verify check_known_host_exists
         '''
         shutil.copyfile(
-             os.path.join(FILES, 'ssh', 'known_hosts'),
+             os.path.join(RUNTIME_VARS.FILES, 'ssh', 'known_hosts'),
              KNOWN_HOSTS)
         arg = ['root', 'github.com']
         kwargs = {'config': KNOWN_HOSTS}
@@ -197,7 +196,7 @@ class SSHModuleTest(ModuleCase):
         ssh.rm_known_host
         '''
         shutil.copyfile(
-             os.path.join(FILES, 'ssh', 'known_hosts'),
+             os.path.join(RUNTIME_VARS.FILES, 'ssh', 'known_hosts'),
              KNOWN_HOSTS)
         arg = ['root', 'github.com']
         kwargs = {'config': KNOWN_HOSTS, 'key': self.key}
