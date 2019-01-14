@@ -834,12 +834,12 @@ def session_master_config_overrides(session_root_dir):
 
 
 @pytest.fixture(scope='session')
-def session_minion_default_options(request, session_root_dir):
+def session_minion_default_options(request, tempdir):
     with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.CONF_DIR, 'minion')) as rfh:
         opts = yaml.load(rfh.read())
 
-        opts['hosts.file'] = session_root_dir.join('hosts').strpath
-        opts['aliases.file'] = session_root_dir.join('aliases').strpath
+        opts['hosts.file'] = tempdir.join('hosts').strpath
+        opts['aliases.file'] = tempdir.join('aliases').strpath
         opts['transport'] = request.config.getoption('--transport')
 
         return opts
@@ -866,24 +866,25 @@ def session_minion_config_overrides():
 
 
 @pytest.fixture(scope='session')
-def session_secondary_minion_default_options(request, session_secondary_root_dir):
+def session_secondary_minion_default_options(request, tempdir):
     with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.CONF_DIR, 'sub_minion')) as rfh:
         opts = yaml.load(rfh.read())
 
-        opts['hosts.file'] = session_secondary_root_dir.join('hosts').strpath
-        opts['aliases.file'] = session_secondary_root_dir.join('aliases').strpath
+
+        opts['hosts.file'] = tempdir.join('hosts').strpath
+        opts['aliases.file'] = tempdir.join('aliases').strpath
         opts['transport'] = request.config.getoption('--transport')
 
         return opts
 
 
 @pytest.fixture(scope='session')
-def session_master_of_masters_default_options(request, session_root_dir):
+def session_master_of_masters_default_options(request, tempdir):
     with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.CONF_DIR, 'syndic_master')) as rfh:
         opts = yaml.load(rfh.read())
 
-        opts['hosts.file'] = session_root_dir.join('hosts').strpath
-        opts['aliases.file'] = session_root_dir.join('aliases').strpath
+        opts['hosts.file'] = tempdir.join('hosts').strpath
+        opts['aliases.file'] = tempdir.join('aliases').strpath
         opts['transport'] = request.config.getoption('--transport')
 
         return opts
@@ -938,24 +939,24 @@ def session_master_of_masters_config_overrides(session_master_of_masters_root_di
 
 
 @pytest.fixture(scope='session')
-def session_syndic_master_default_options(request, session_root_dir):
+def session_syndic_master_default_options(request, tempdir):
     with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.CONF_DIR, 'syndic_master')) as rfh:
         opts = yaml.load(rfh.read())
 
-        opts['hosts.file'] = session_root_dir.join('hosts').strpath
-        opts['aliases.file'] = session_root_dir.join('aliases').strpath
+        opts['hosts.file'] = tempdir.join('hosts').strpath
+        opts['aliases.file'] = tempdir.join('aliases').strpath
         opts['transport'] = request.config.getoption('--transport')
 
         return opts
 
 
 @pytest.fixture(scope='session')
-def session_syndic_default_options(request, session_root_dir):
+def session_syndic_default_options(request, tempdir):
     with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.CONF_DIR, 'syndic')) as rfh:
         opts = yaml.load(rfh.read())
 
-        opts['hosts.file'] = session_root_dir.join('hosts').strpath
-        opts['aliases.file'] = session_root_dir.join('aliases').strpath
+        opts['hosts.file'] = tempdir.join('hosts').strpath
+        opts['aliases.file'] = tempdir.join('aliases').strpath
         opts['transport'] = request.config.getoption('--transport')
 
         return opts
