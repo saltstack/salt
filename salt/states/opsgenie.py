@@ -99,7 +99,7 @@ def create_alert(name=None, api_key=None, reason=None, action_type="Create"):
         reason=reason,
         action_type=action_type
     )
-	
+
     if 200 <= response_status_code < 300:
         log.info(
             "POST Request has succeeded with message: %s status code: %s",
