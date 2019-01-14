@@ -17,7 +17,6 @@ from salt.ext.six.moves.urllib.request import urlopen
 # Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.paths import FILES
 from tests.support.unit import TestCase, skipIf
 from tests.support.helpers import requires_network, skip_if_binaries_missing
 
@@ -27,7 +26,7 @@ import salt.utils.path
 import salt.modules.zcbuildout as buildout
 import salt.modules.cmdmod as cmd
 
-ROOT = os.path.join(FILES, 'file', 'base', 'buildout')
+ROOT = os.path.join(RUNTIME_VARS.BASE_FILES, 'buildout')
 
 KNOWN_VIRTUALENV_BINARY_NAMES = (
     'virtualenv',

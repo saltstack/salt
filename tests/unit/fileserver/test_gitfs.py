@@ -23,7 +23,6 @@ from tests.support.runtests import RUNTIME_VARS
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch
-from tests.support.paths import FILES
 from tests.support.helpers import patched_environ
 
 # Import salt libs
@@ -62,7 +61,6 @@ except AttributeError:
 
 log = logging.getLogger(__name__)
 
-INTEGRATION_BASE_FILES = os.path.join(FILES, 'file', 'base')
 UNICODE_FILENAME = 'питон.txt'
 UNICODE_DIRNAME = UNICODE_ENVNAME = 'соль'
 TAG_NAME = 'mytag'
@@ -402,7 +400,7 @@ class GitFSTestBase(object):
                 log.error("Access error removeing file %s", cls.tmp_repo_dir)
             elif exc.errno != errno.ENOENT:
                 raise
-        shutil.copytree(INTEGRATION_BASE_FILES, cls.tmp_repo_dir + '/')
+        shutil.copytree(RUNTIME_VARS.BASE_FILES, cls.tmp_repo_dir + '/')
 
         repo = git.Repo.init(cls.tmp_repo_dir)
 
