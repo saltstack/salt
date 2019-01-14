@@ -1403,7 +1403,6 @@ def _remotes_on(port, which_end):
     if ret is not None and len(ret) > 0:    # ss tools may not be valid
         return ret
     ret = set()
-
     proc_available = False
     for statf in ['/proc/net/tcp', '/proc/net/tcp6']:
         if os.path.isfile(statf):
