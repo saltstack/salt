@@ -53,7 +53,7 @@ def task_present(name,
         to fetch data from. For backward compatibility, the value of
         'database' and 'retention_policy' will be merged as part of dbrps.
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     database
         Which database to fetch data from. Defaults to None, which will use the

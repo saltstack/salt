@@ -2686,7 +2686,7 @@ def owner(*paths):
 
 def show(*names, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Runs an ``apt-cache show`` on the passed package names, and returns the
     results in a nested dictionary. The top level of the return data will be
