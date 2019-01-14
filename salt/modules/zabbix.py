@@ -1323,7 +1323,7 @@ def host_inventory_get(hostids, **kwargs):
     Retrieve host inventory according to the given parameters.
     See: https://www.zabbix.com/documentation/2.4/manual/api/reference/host/object#host_inventory
 
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     :param hostids: Return only host interfaces used by the given hosts.
     :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
@@ -1360,7 +1360,7 @@ def host_inventory_set(hostid, **kwargs):
     NOTE: This function accepts all standard host: keyword argument names for inventory
     see: https://www.zabbix.com/documentation/2.4/manual/api/reference/host/object#host_inventory
 
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     :param hostid: ID of the host to update
     :param clear_old: Set to True in order to remove all existing inventory items before setting the specified items

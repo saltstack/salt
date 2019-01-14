@@ -585,7 +585,7 @@ def _get_expiration_date(cert):
 
 def get_expiration_date(cert, date_format='%Y-%m-%d'):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Get a certificate's expiration date
 
