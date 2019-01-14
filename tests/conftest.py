@@ -866,12 +866,12 @@ def session_minion_config_overrides():
 
 
 @pytest.fixture(scope='session')
-def session_secondary_minion_default_options(request, session_root_dir):
+def session_secondary_minion_default_options(request, session_secondary_root_dir):
     with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.CONF_DIR, 'sub_minion')) as rfh:
         opts = yaml.load(rfh.read())
 
-        opts['hosts.file'] = session_root_dir.join('hosts').strpath
-        opts['aliases.file'] = session_root_dir.join('aliases').strpath
+        opts['hosts.file'] = session_secondary_root_dir.join('hosts').strpath
+        opts['aliases.file'] = session_secondary_root_dir.join('aliases').strpath
         opts['transport'] = request.config.getoption('--transport')
 
         return opts
@@ -983,11 +983,11 @@ def reap_stray_processes():
             pprint.pformat(children)
         )
 
-        gone, alive = psutil.wait_procs(children, timeout=3, callback=on_terminate)
+        _, alive = psutil.wait_procs(children, timeout=3, callback=on_terminate)
         for child in alive:
             child.kill()
 
-        gone, alive = psutil.wait_procs(alive, timeout=3, callback=on_terminate)
+        _, alive = psutil.wait_procs(alive, timeout=3, callback=on_terminate)
         if alive:
             # Give up
             for child in alive:
