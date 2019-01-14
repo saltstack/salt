@@ -284,6 +284,8 @@ def state(name,
 
     cmd_kw['tgt_type'] = tgt_type
     cmd_kw['ssh'] = ssh
+    if 'roster' in kwargs:
+        cmd_kw['roster_file'] = kwargs['roster']
     cmd_kw['expect_minions'] = expect_minions
     if highstate:
         fun = 'state.highstate'
