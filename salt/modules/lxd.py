@@ -554,21 +554,25 @@ def container_create(name, source, profiles=None,
     source :
         Can be either a string containing an image alias:
              "xenial/amd64"
+
         or an dict with type "image" with alias:
             {"type": "image",
              "alias": "xenial/amd64"}
+
         or image with "fingerprint":
             {"type": "image",
              "fingerprint": "SHA-256"}
+
         or image with "properties":
             {"type": "image",
              "properties": {
                 "os": "ubuntu",
                 "release": "14.04",
-                "architecture": "x86_64"
-             }}
+                "architecture": "x86_64"}}
+
         or none:
             {"type": "none"}
+
         or copy:
             {"type": "copy",
              "source": "my-old-container"}
