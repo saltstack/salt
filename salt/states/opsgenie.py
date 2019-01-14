@@ -86,9 +86,7 @@ def create_alert(name=None, api_key=None, reason=None, action_type="Create"):
     if __opts__['test'] is True:
         ret[
             'comment'] = 'Test: {0} alert request will be processed ' \
-                         'using the API Key="{1}".'.format(
-            action_type,
-            api_key)
+                         'using the API Key="{1}".'.format(api_key)
 
         # Return ``None`` when running with ``test=true``.
         ret['result'] = None
@@ -101,7 +99,7 @@ def create_alert(name=None, api_key=None, reason=None, action_type="Create"):
         reason=reason,
         action_type=action_type
     )
-
+	
     if 200 <= response_status_code < 300:
         log.info(
             "POST Request has succeeded with message: %s status code: %s",
