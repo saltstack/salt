@@ -5,9 +5,9 @@ from __future__ import absolute_import, unicode_literals, print_function
 import os
 
 # Import Salt Testing libs
-from tests.support.paths import FILES
 from tests.support.unit import skipIf
 from tests.support.helpers import requires_network
+from tests.support.runtests import RUNTIME_VARS
 
 # Import Salt libs
 import salt.utils.path
@@ -16,7 +16,7 @@ import salt.modules.zcbuildout as modbuildout
 import salt.states.zcbuildout as buildout
 import salt.modules.cmdmod as cmd
 
-ROOT = os.path.join(FILES, 'file/base/buildout')
+ROOT = os.path.join(RUNTIME_VARS.BASE_FILES, 'buildout')
 
 
 @skipIf(salt.utils.path.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES) is None,

@@ -12,7 +12,7 @@ import os
 from tests.support.case import ModuleCase
 from tests.support.helpers import skip_if_not_root, Webserver
 from tests.support.mixins import SaltReturnAssertsMixin
-from tests.support.paths import FILES
+from tests.support.runtests import RUNTIME_VARS
 
 # Import Salt libs
 import salt.utils.files
@@ -27,7 +27,7 @@ ARCHIVE_DIR = os.path.join('c:/', 'tmp') \
 
 ARCHIVE_NAME = 'custom.tar.gz'
 ARCHIVE_TAR_SOURCE = 'http://localhost:{0}/{1}'.format(9999, ARCHIVE_NAME)
-ARCHIVE_LOCAL_TAR_SOURCE = 'file://{0}'.format(os.path.join(FILES, 'file', 'base', ARCHIVE_NAME))
+ARCHIVE_LOCAL_TAR_SOURCE = 'file://{0}'.format(os.path.join(RUNTIME_VARS.BASE_FILES, ARCHIVE_NAME))
 UNTAR_FILE = os.path.join(ARCHIVE_DIR, 'custom/README')
 ARCHIVE_TAR_HASH = 'md5=7643861ac07c30fe7d2310e9f25ca514'
 ARCHIVE_TAR_BAD_HASH = 'md5=d41d8cd98f00b204e9800998ecf8427e'

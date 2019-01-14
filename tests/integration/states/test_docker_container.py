@@ -16,7 +16,6 @@ from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
 from tests.support.case import ModuleCase
 from tests.support.docker import with_network, random_name
-from tests.support.paths import FILES
 from tests.support.helpers import destructiveTest, with_tempdir
 from tests.support.mixins import SaltReturnAssertsMixin
 
@@ -68,8 +67,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         # Generate image name
         cls.image = random_name(prefix='salt_busybox_')
 
-        script_path = \
-            os.path.join(FILES, 'file/base/mkimage-busybox-static')
+        script_path = os.path.join(RUNTIME_VARS.BASE_FILES, 'mkimage-busybox-static')
         cmd = [script_path, cls.image_build_rootdir, cls.image]
         log.debug('Running \'%s\' to build busybox image', ' '.join(cmd))
         process = subprocess.Popen(
