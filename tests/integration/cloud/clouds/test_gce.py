@@ -13,7 +13,7 @@ from salt.config import cloud_providers_config
 
 # Import Salt Testing Libs
 from tests.support.case import ShellCase
-from tests.support.paths import FILES
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.helpers import expensiveTest, generate_random_name
 
 TIMEOUT = 500
@@ -47,7 +47,7 @@ class GCETest(ShellCase):
 
         # check if project, service_account_email_address, service_account_private_key
         # and provider are present
-        path = os.path.join(FILES,
+        path = os.path.join(RUNTIME_VARS.FILES,
                             'conf',
                             'cloud.providers.d',
                             provider + '.conf')

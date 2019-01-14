@@ -10,7 +10,7 @@ import os
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase, ShellCase
-from tests.support.paths import FILES
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
 from tests.support.helpers import destructiveTest, expensiveTest, generate_random_name
 from tests.support.mixins import SaltReturnAssertsMixin
@@ -201,7 +201,7 @@ class RackspaceTest(ShellCase):
         # check if personal access token, ssh_key_file, and ssh_key_names are present
         config = cloud_providers_config(
             os.path.join(
-                FILES,
+                RUNTIME_VARS.FILES,
                 'conf',
                 'cloud.providers.d',
                 PROVIDER_NAME + '.conf'

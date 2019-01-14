@@ -11,8 +11,8 @@ import textwrap
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
-from tests.support.paths import PILLAR_DIR
 from tests.support.helpers import flaky
+from tests.support.runtests import RUNTIME_VARS
 
 # Import Salt libs
 import salt.utils.files
@@ -25,7 +25,7 @@ class MinionBlackoutTestCase(ModuleCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.blackout_pillar = os.path.join(PILLAR_DIR, 'base', 'blackout.sls')
+        cls.blackout_pillar = os.path.join(RUNTIME_VARS.PILLAR_DIR, 'base', 'blackout.sls')
 
     def tearDown(self):
         self.end_blackout(sleep=False)

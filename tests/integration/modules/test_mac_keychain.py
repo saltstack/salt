@@ -9,7 +9,7 @@ import os
 
 # Import Salt Testing Libs
 from tests.support.case import ModuleCase
-from tests.support.paths import FILES
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.helpers import destructiveTest, skip_if_not_root
 
 # Import Salt Libs
@@ -19,7 +19,7 @@ from salt.exceptions import CommandExecutionError
 from salt.ext import six
 
 CERT = os.path.join(
-    FILES,
+    RUNTIME_VARS.FILES,
     'file',
     'base',
     'certs',
