@@ -19,7 +19,6 @@ from tests.support.unit import skipIf, TestCase
 from tests.support.case import ModuleCase
 from tests.support.helpers import flaky
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock, Mock
-from tests.support.paths import BASE_FILES
 
 # Import Salt libs
 import salt.config
@@ -113,7 +112,7 @@ class TestSaltCacheLoader(TestCase):
         self.tempdir = tempfile.mkdtemp()
         self.template_dir = os.path.join(self.tempdir, 'files', 'test')
         _setup_test_dir(
-            os.path.join(BASE_FILES, 'templates'),
+            os.path.join(RUNTIME_VARS.BASE_FILES, 'templates'),
             self.template_dir
         )
         self.opts = {
@@ -231,7 +230,7 @@ class TestGetTemplate(TestCase):
         self.tempdir = tempfile.mkdtemp()
         self.template_dir = os.path.join(self.tempdir, 'files', 'test')
         _setup_test_dir(
-            os.path.join(BASE_FILES, 'templates'),
+            os.path.join(RUNTIME_VARS.BASE_FILES, 'templates'),
             self.template_dir
         )
         self.local_opts = {
@@ -572,10 +571,10 @@ class TestJinjaDefaultOptions(TestCase):
             'file_ignore_regex': None,
             'file_ignore_glob': None,
             'file_roots': {
-                'test': [os.path.join(BASE_FILES, 'templates')]
+                'test': [os.path.join(RUNTIME_VARS.BASE_FILES, 'templates')]
             },
             'pillar_roots': {
-                'test': [os.path.join(BASE_FILES, 'templates')]
+                'test': [os.path.join(RUNTIME_VARS.BASE_FILES, 'templates')]
             },
             'fileserver_backend': ['roots'],
             'hash_type': 'md5',
@@ -633,10 +632,10 @@ class TestCustomExtensions(TestCase):
             'file_ignore_regex': None,
             'file_ignore_glob': None,
             'file_roots': {
-                'test': [os.path.join(BASE_FILES, 'templates')]
+                'test': [os.path.join(RUNTIME_VARS.BASE_FILES, 'templates')]
             },
             'pillar_roots': {
-                'test': [os.path.join(BASE_FILES, 'templates')]
+                'test': [os.path.join(RUNTIME_VARS.BASE_FILES, 'templates')]
             },
             'fileserver_backend': ['roots'],
             'hash_type': 'md5',
