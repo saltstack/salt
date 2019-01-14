@@ -8,10 +8,10 @@ from salt.ext import six
 import textwrap
 
 from tests.support.helpers import with_tempfile
-from tests.support.paths import BASE_FILES, TMP, TMP_PILLAR_TREE
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
 from tests.support.mixins import SaltReturnAssertsMixin
+from tests.support.runtests import RUNTIME_VARS
 
 try:
     import M2Crypto  # pylint: disable=W0611
@@ -28,7 +28,7 @@ class x509Test(ModuleCase, SaltReturnAssertsMixin):
 
     @classmethod
     def setUpClass(cls):
-        cert_path = os.path.join(BASE_FILES, 'x509_test.crt')
+        cert_path = os.path.join(RUNTIME_VARS.BASE_FILES, 'x509_test.crt')
         with salt.utils.files.fopen(cert_path) as fp:
             cls.x509_cert_text = fp.read()
 
