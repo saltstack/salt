@@ -137,7 +137,23 @@ def _generate_minion_id():
         def first(self):
             return self and self[0] or None
 
-    hosts = DistinctList().append(socket.getfqdn()).append(platform.node()).append(socket.gethostname())
+    hosts = DistinctList([])
+
+    try:
+        hosts.append(socket.getfqdn())
+    except ValueError:
+        pass
+
+    try:
+        hosts.append(platform.node())
+    except ValueError:
+        pass
+
+    try:
+        hosts.append(socket.gethostname())
+    except ValueError:
+        pass
+
     if not hosts:
         try:
             for a_nfo in socket.getaddrinfo(hosts.first() or 'localhost', None, socket.AF_INET,
