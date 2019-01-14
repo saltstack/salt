@@ -1399,7 +1399,6 @@ def _remotes_on(port, which_end):
     Return a set of ip addrs active tcp connections
     '''
     port = int(port)
-
     ret = _netlink_tool_remote_on(port, which_end)
     if ret is not None:
         return ret
