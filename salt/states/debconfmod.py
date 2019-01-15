@@ -42,46 +42,24 @@ the ``onchanges`` requisite to reconfigure your package:
 
 .. code-block:: yaml
 
-    # or use America
-    set-timezone-area:
+    set-default-shell:
       debconf.set:
-        - name: tzdata
+        - name: dash
         - data:
-              'tzdata/Areas': {'type': 'select', 'value': 'US'}
+              'dash/sh': {'type': 'boolean', 'value': false}
 
-    # Or use tzdata/Zones/America, and Denver
-    set-timezone:
-      debconf.set:
-        - name: tzdata
-        - data:
-              'tzdata/Zones/US': {'type': 'select', 'value': 'Mountain'}
-
-    remove /etc/localtime:
-      file.absent:
-        - name: /etc/localtime
-        - onchanges:
-          - debconf: set-timezone-area
-          - debconf: set-timezone
-
-    remove /etc/timezone:
-      file.absent:
-        - name: /etc/timezone
-        - onchanges:
-          - debconf: set-timezone-area
-          - debconf: set-timezone
-
-    reconfigure-tzdata:
+    reconfigure-dash:
       cmd.run:
-        - name: dpkg-reconfigure -f noninteractive tzdata
+        - name: dpkg-reconfigure -f noninteractive dash
         - onchanges:
-          - debconf: set-timezone-area
-          - debconf: set-timezone
-        - require:
-          - file: remove /etc/localtime
-          - file: remove /etc/timezone
+          - debconf: set-default-shell
 
-Every time the ``set-timezone-area`` or ``set-timezone`` states have changes,
-the ``reconfigure-tzdata`` state will also run.
+Every time the ``set-default-shell`` state changes, the ``reconfigure-dash``
+state will also run.
+
+.. note::
+    For boolean types, the value should be ``true`` or ``false``, not
+    ``'true'`` or ``'false'``.
 '''
 from __future__ import absolute_import, print_function, unicode_literals
 from salt.ext import six
