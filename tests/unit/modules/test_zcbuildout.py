@@ -26,8 +26,6 @@ import salt.utils.path
 import salt.modules.zcbuildout as buildout
 import salt.modules.cmdmod as cmd
 
-ROOT = os.path.join(RUNTIME_VARS.BASE_FILES, 'buildout')
-
 KNOWN_VIRTUALENV_BINARY_NAMES = (
     'virtualenv',
     'virtualenv2',
@@ -70,6 +68,8 @@ class Base(TestCase, LoaderModuleMockMixin):
     def setUpClass(cls):
         if not os.path.isdir(RUNTIME_VARS.TMP):
             os.makedirs(RUNTIME_VARS.TMP)
+
+        cls.root = os.path.join(RUNTIME_VARS.BASE_FILES, 'buildout')
         cls.rdir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         cls.tdir = os.path.join(cls.rdir, 'test')
         for idx, url in six.iteritems(buildout._URL_VERSIONS):
@@ -102,7 +102,7 @@ class Base(TestCase, LoaderModuleMockMixin):
     def setUp(self):
         super(Base, self).setUp()
         self._remove_dir()
-        shutil.copytree(ROOT, self.tdir)
+        shutil.copytree(self.root, self.tdir)
 
         for idx in BOOT_INIT:
             path = os.path.join(
@@ -277,7 +277,7 @@ class BuildoutTestCase(Base):
     @requires_network()
     def test__find_cfgs(self):
         result = sorted(
-            [a.replace(ROOT, '') for a in buildout._find_cfgs(ROOT)])
+            [a.replace(self.root, '') for a in buildout._find_cfgs(self.root)])
         assertlist = sorted(
             ['/buildout.cfg',
              '/c/buildout.cfg',
