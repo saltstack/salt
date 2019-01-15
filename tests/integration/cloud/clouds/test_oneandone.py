@@ -30,12 +30,12 @@ DRIVER_NAME = 'oneandone'
 
 
 @skipIf(HAS_ONEANDONE is False, 'salt-cloud requires >= 1and1 1.2.0')
+@expensiveTest
 class OneAndOneTest(ShellCase):
     '''
     Integration tests for the 1and1 cloud provider
     '''
 
-    @expensiveTest
     def setUp(self):
         '''
         Sets up the test requirements

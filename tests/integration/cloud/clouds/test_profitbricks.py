@@ -31,12 +31,12 @@ DRIVER_NAME = 'profitbricks'
 
 
 @skipIf(HAS_PROFITBRICKS is False, 'salt-cloud requires >= profitbricks 4.1.0')
+@expensiveTest
 class ProfitBricksTest(ShellCase):
     '''
     Integration tests for the ProfitBricks cloud provider
     '''
 
-    @expensiveTest
     def setUp(self):
         '''
         Sets up the test requirements

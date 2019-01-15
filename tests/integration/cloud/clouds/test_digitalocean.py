@@ -21,12 +21,12 @@ INSTANCE_NAME = generate_random_name('CLOUD-TEST-')
 PROVIDER_NAME = 'digitalocean'
 
 
+@expensiveTest
 class DigitalOceanTest(ShellCase):
     '''
     Integration tests for the DigitalOcean cloud provider in Salt-Cloud
     '''
 
-    @expensiveTest
     def setUp(self):
         '''
         Sets up the test requirements

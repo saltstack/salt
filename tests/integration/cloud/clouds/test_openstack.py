@@ -46,6 +46,7 @@ DRIVER_NAME = 'openstack'
     'Please install keystoneclient and a keystone server before running'
     'openstack integration tests.'
 )
+@expensiveTest
 class OpenstackTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the keystone state
@@ -53,7 +54,6 @@ class OpenstackTest(ModuleCase, SaltReturnAssertsMixin):
     endpoint = 'http://localhost:35357/v2.0'
     token = 'administrator'
 
-    @destructiveTest
     def test_aaa_setup_keystone_endpoint(self):
         ret = self.run_state('keystone.service_present',
                              name='keystone',
@@ -176,12 +176,12 @@ class OpenstackTest(ModuleCase, SaltReturnAssertsMixin):
 
 
 @skipIf(not HAS_SHADE, 'openstack driver requires `shade`')
+@expensiveTest
 class RackspaceTest(ShellCase):
     '''
     Integration tests for the Rackspace cloud provider using the Openstack driver
     '''
 
-    @expensiveTest
     def setUp(self):
         '''
         Sets up the test requirements

@@ -29,6 +29,7 @@ HAS_WINRM = salt.utils.cloud.HAS_WINRM and salt.utils.cloud.HAS_SMB
 TIMEOUT = 1200
 
 
+@expensiveTest
 class EC2Test(ShellCase):
     '''
     Integration tests for the EC2 cloud provider in Salt-Cloud
@@ -65,7 +66,6 @@ class EC2Test(ShellCase):
             return name
         return self._fetch_latest_installer()
 
-    @expensiveTest
     def setUp(self):
         '''
         Sets up the test requirements

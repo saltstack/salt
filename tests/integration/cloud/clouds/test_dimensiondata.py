@@ -34,12 +34,12 @@ INSTANCE_NAME = _random_name()
 PROVIDER_NAME = 'dimensiondata'
 
 
+@expensiveTest
 class DimensionDataTest(ShellCase):
     '''
     Integration tests for the Dimension Data cloud provider in Salt-Cloud
     '''
 
-    @expensiveTest
     def setUp(self):
         '''
         Sets up the test requirements

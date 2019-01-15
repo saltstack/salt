@@ -22,12 +22,12 @@ PROVIDER_NAME = 'vmware'
 TIMEOUT = 500
 
 
+@expensiveTest
 class VMWareTest(ShellCase):
     '''
     Integration tests for the vmware cloud provider in Salt-Cloud
     '''
 
-    @expensiveTest
     def setUp(self):
         '''
         Sets up the test requirements

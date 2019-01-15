@@ -52,12 +52,12 @@ def __has_required_azure():
 
 @skipIf(HAS_AZURE is False, 'These tests require the Azure Python SDK to be installed.')
 @skipIf(__has_required_azure() is False, 'The Azure Python SDK must be >= 0.11.1.')
+@expensiveTest
 class AzureTest(ShellCase):
     '''
     Integration tests for the Azure cloud provider in Salt-Cloud
     '''
 
-    @expensiveTest
     def setUp(self):
         '''
         Sets up the test requirements
