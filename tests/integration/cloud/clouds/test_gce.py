@@ -19,12 +19,12 @@ from tests.support.helpers import expensiveTest, generate_random_name
 TIMEOUT = 500
 
 
+@expensiveTest
 class GCETest(ShellCase):
     '''
     Integration tests for the GCE cloud provider in Salt-Cloud
     '''
 
-    @expensiveTest
     def setUp(self):
         '''
         Sets up the test requirements

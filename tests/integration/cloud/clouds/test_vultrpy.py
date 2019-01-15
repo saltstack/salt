@@ -24,6 +24,7 @@ PROVIDER_NAME = 'vultr'
 TIMEOUT = 500
 
 
+@expensiveTest
 class VultrTest(ShellCase):
     '''
     Integration tests for the Vultr cloud provider in Salt-Cloud

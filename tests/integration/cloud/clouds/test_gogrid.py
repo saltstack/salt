@@ -22,12 +22,12 @@ PROVIDER_NAME = 'gogrid'
 
 
 @skipIf(True, 'waiting on bug report fixes from #13365')
+@expensiveTest
 class GoGridTest(ShellCase):
     '''
     Integration tests for the GoGrid cloud provider in Salt-Cloud
     '''
 
-    @expensiveTest
     def setUp(self):
         '''
         Sets up the test requirements
