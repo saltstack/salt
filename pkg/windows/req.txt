@@ -2,7 +2,7 @@ backports-abc==0.5
 backports.ssl-match-hostname==3.7.0.1
 certifi
 cffi==1.11.5
-CherryPy==18.1.0
+CherryPy==17.4.1
 cryptography==2.4.2
 enum34==1.1.6
 futures==3.2.0; python_version == '2.7'
