@@ -233,6 +233,7 @@ def update_system(version='', ruby=None, runas=None, gem_bin=None):
                 gem_bin=gem_bin,
                 runas=runas)
 
+
 def version(ruby=None, runas=None, gem_bin=None):
     '''
     Print out the version of gem
@@ -264,11 +265,13 @@ def version(ruby=None, runas=None, gem_bin=None):
             break
     return ret
 
+
 def _has_rubygems_3(ruby=None, runas=None, gem_bin=None):
     match = re.match(r'^3\..*', version(ruby=ruby, runas=runas, gem_bin=gem_bin))
     if match:
         return True
     return False
+
 
 def list_(prefix='', ruby=None, runas=None, gem_bin=None):
     '''
