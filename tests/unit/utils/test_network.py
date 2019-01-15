@@ -534,3 +534,16 @@ class NetworkTestCase(TestCase):
         self.assertRaises(ValueError, network.mac_str_to_bytes, 'a0:b0:c0:d0:e0:fg')
         self.assertEqual(b'\x10\x08\x06\x04\x02\x00', network.mac_str_to_bytes('100806040200'))
         self.assertEqual(b'\xf8\xe7\xd6\xc5\xb4\xa3', network.mac_str_to_bytes('f8e7d6c5b4a3'))
+
+    def test_generate_minion_id_with_long_hostname(self):
+        '''
+        Validate the fix for:
+
+        https://github.com/saltstack/salt/issues/51160
+        '''
+        long_name = 'localhost-abcdefghijklmnopqrstuvwxyz-abcdefghijklmnopqrstuvwxyz'
+        with patch('socket.gethostname', MagicMock(return_value=long_name)):
+            # An exception is raised if unicode is passed to socket.getfqdn 
+            minion_id = network.generate_minion_id()
+        assert minion_id != '', minion_id
+
