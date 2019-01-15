@@ -7,7 +7,7 @@ cryptography==2.4.2
 enum34==1.1.6
 futures==3.2.0; python_version == '2.7'
 gitdb==0.6.4
-GitPython==2.1.11
+GitPython==2.1.10
 idna==2.8
 ioloop==0.1a0
 ipaddress==1.0.22
