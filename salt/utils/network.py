@@ -141,8 +141,7 @@ def _generate_minion_id():
 
     hosts = DistinctList().append(
         salt.utils.stringutils.to_unicode(socket.getfqdn(salt.utils.stringutils.to_bytes(hostname)))
-    )
-    hosts.append(platform.node()).append(hostname)
+    ).append(platform.node()).append(hostname)
     if not hosts:
         try:
             for a_nfo in socket.getaddrinfo(hosts.first() or 'localhost', None, socket.AF_INET,

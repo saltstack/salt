@@ -181,6 +181,15 @@ class NetworkTestCase(TestCase):
         with patch('salt.utils.files.fopen', fopen_mock):
             assert 'thisismyhostname' in network._generate_minion_id()
 
+    def test_generate_minion_id_with_long_hostname(self):
+        '''
+        Test that hostnames longer than 63 characters do not raise
+        an exception when generating the minion ID
+        '''
+        with patch('socket.gethostbyaddr') as mock_gethostbyname:
+            mock_gethostbyname.side_effect = UnicodeError('encoding with \'idna\' codec failed')
+            self.assertTrue(network.generate_minion_id())
+
     def test_is_ip(self):
         self.assertTrue(network.is_ip('10.10.0.3'))
         self.assertFalse(network.is_ip('0.9.800.1000'))
