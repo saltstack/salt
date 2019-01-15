@@ -19,6 +19,7 @@ msgpack-python==0.5.6
 pyasn1==0.4.5
 pycparser==2.19
 pycrypto==2.6.1
+pyobjc==5.1.2
 python-dateutil==2.7.5
 python-gnupg==0.4.3
 PyYAML==3.13
