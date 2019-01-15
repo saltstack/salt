@@ -240,6 +240,7 @@ class UserTestCase(TestCase, LoaderModuleMockMixin):
                        'shadow.default_hash': shadow_hash,
                        'file.group_to_gid': MagicMock(side_effect=['foo']),
                        'file.gid_to_group': MagicMock(side_effect=[5000])}
+
         def mock_exists(*args):
             return True
 
