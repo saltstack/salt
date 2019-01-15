@@ -333,9 +333,11 @@ def pytest_runtest_logfinish(nodeid):
 # ----- Test Setup -------------------------------------------------------------------------------------------------->
 def _has_unittest_attr(item, attr):
     # XXX: This is a hack while we support both runtests.py and PyTest
-    if hasattr(item._obj, attr):
+    if hasattr(item.obj, attr):
         return True
-    if item.parent and hasattr(item.parent._obj, attr):
+    if item.cls and hasattr(item.cls, attr):
+        return True
+    if item.parent and hasattr(item.parent.obj, attr):
         return True
     return False
 
