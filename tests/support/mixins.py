@@ -652,8 +652,9 @@ def _fetch_events(q):
             queue_item.task_done()
 
     atexit.register(_clean_queue)
-    a_config = AdaptedConfigurationTestCaseMixin()
-    event = salt.utils.event.get_event('minion', sock_dir=a_config.get_config('minion')['sock_dir'], opts=a_config.get_config('minion'))
+
+    opts = RUNTIME_VARS.RUNTIME_CONFIGS['minion']
+    event = salt.utils.event.get_event('minion', sock_dir=opts['sock_dir'], opts=opts)
     while True:
         try:
             events = event.get_event(full=False)
@@ -669,29 +670,32 @@ class SaltMinionEventAssertsMixin(object):
     Asserts to verify that a given event was seen
     '''
 
-    def __new__(cls, *args, **kwargs):
-        # We have to cross-call to re-gen a config
+    @classmethod
+    def setUpClass(cls):
         cls.q = multiprocessing.Queue()
         cls.fetch_proc = salt.utils.process.SignalHandlingMultiprocessingProcess(
-            target=_fetch_events, args=(cls.q,)
+            target=_fetch_events,
+            args=(cls.q,),
+            name='Process-{}-Queue'.format(cls.__name__)
         )
         cls.fetch_proc.start()
-        return object.__new__(cls)
 
-    def __exit__(self, *args, **kwargs):
-        self.fetch_proc.join()
+    @classmethod
+    def tearDownClass(cls):
+        cls.fetch_proc.join()
+        del cls.q
+        del cls.fetch_proc
 
     def assertMinionEventFired(self, tag):
         #TODO
         raise salt.exceptions.NotImplemented('assertMinionEventFired() not implemented')
 
-    def assertMinionEventReceived(self, desired_event):
-        queue_wait = 5  # 2.5s
+    def assertMinionEventReceived(self, desired_event, queue_wait=2.5):
+        max_time = time.time() + queue_wait
         while self.q.empty():
             time.sleep(0.5)  # Wait for events to be pushed into the queue
-            queue_wait -= 1
-            if queue_wait <= 0:
-                raise AssertionError('Queue wait timer expired')
+            if time.time() >= max_time:
+                raise AssertionError('Queue wait timer expired after {} seconds.'.format(queue_wait))
         while not self.q.empty():  # This is not thread-safe and may be inaccurate
             event = self.q.get()
             if isinstance(event, dict):
