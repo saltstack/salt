@@ -27,7 +27,10 @@ class BatchAsync(object):
     def __init__(self, parent_opts, jid_gen, clear_load):
         ioloop = tornado.ioloop.IOLoop.current()
         self.local = salt.client.get_local_client(parent_opts['conf_file'])
-        clear_load['gather_job_timeout'] = clear_load['kwargs'].pop('gather_job_timeout')
+        if 'gather_job_timeout' in clear_load['kwargs']:
+            clear_load['gather_job_timeout'] = clear_load['kwargs'].pop('gather_job_timeout')
+        else:
+            clear_load['gather_job_timeout'] = self.local.opts['gather_job_timeout']
         self.batch_delay = clear_load['kwargs'].get('batch_delay', 1)
         self.opts = batch_get_opts(
             clear_load.pop('tgt'),
