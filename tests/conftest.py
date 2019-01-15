@@ -828,6 +828,11 @@ def session_master_config_overrides(session_root_dir):
                 'salt/minion/*/start': [
                     os.path.join(RUNTIME_VARS.FILES, 'reactor-sync-minion.sls')
                 ],
+            },
+            {
+                'salt/test/reactor': [
+                    os.path.join(RUNTIME_VARS.FILES, 'reactor-test.sls')
+                ],
             }
         ]
     }
