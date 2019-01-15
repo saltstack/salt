@@ -16,8 +16,6 @@ import salt.modules.zcbuildout as modbuildout
 import salt.states.zcbuildout as buildout
 import salt.modules.cmdmod as cmd
 
-ROOT = os.path.join(RUNTIME_VARS.BASE_FILES, 'buildout')
-
 
 @skipIf(salt.utils.path.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES) is None,
         "The 'virtualenv' packaged needs to be installed")

@@ -52,7 +52,6 @@ try:
 except ImportError:
     HAS_TIMELIB = False
 
-CACHEDIR = os.path.join(RUNTIME_VARS.TMP, 'jinja-template-cache')
 BLINESEP = salt.utils.stringutils.to_bytes(os.linesep)
 
 
@@ -601,7 +600,7 @@ class TestJinjaDefaultOptions(TestCase):
     def __init__(self, *args, **kws):
         TestCase.__init__(self, *args, **kws)
         self.local_opts = {
-            'cachedir': CACHEDIR,
+            'cachedir': os.path.join(RUNTIME_VARS.TMP, 'jinja-template-cache'),
             'file_buffer_size': 1048576,
             'file_client': 'local',
             'file_ignore_regex': None,
@@ -663,7 +662,7 @@ class TestCustomExtensions(TestCase):
     def __init__(self, *args, **kws):
         super(TestCustomExtensions, self).__init__(*args, **kws)
         self.local_opts = {
-            'cachedir': CACHEDIR,
+            'cachedir': os.path.join(RUNTIME_VARS.TMP, 'jinja-template-cache'),
             'file_buffer_size': 1048576,
             'file_client': 'local',
             'file_ignore_regex': None,
