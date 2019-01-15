@@ -30,7 +30,6 @@ from tests.support.helpers import (
     with_tempdir,
     with_tempfile,
     Webserver,
-    destructiveTest,
     dedent,
 )
 from tests.support.mixins import SaltReturnAssertsMixin
@@ -64,15 +63,6 @@ from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-b
 IS_WINDOWS = salt.utils.platform.is_windows()
 
 BINARY_FILE = b'GIF89a\x01\x00\x01\x00\x80\x00\x00\x05\x04\x04\x00\x00\x00,\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x02D\x01\x00;'
-
-if IS_WINDOWS:
-    FILEPILLAR = 'C:\\Windows\\Temp\\filepillar-python'
-    FILEPILLARDEF = 'C:\\Windows\\Temp\\filepillar-defaultvalue'
-    FILEPILLARGIT = 'C:\\Windows\\Temp\\filepillar-bar'
-else:
-    FILEPILLAR = '/tmp/filepillar-python'
-    FILEPILLARDEF = '/tmp/filepillar-defaultvalue'
-    FILEPILLARGIT = '/tmp/filepillar-bar'
 
 TEST_SYSTEM_USER = 'test_system_user'
 TEST_SYSTEM_GROUP = 'test_system_group'
@@ -147,6 +137,14 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the file state
     '''
+
+    def _delete_file(self, path):
+        try:
+            os.remove(path)
+        except OSError as exc:
+            if exc.errno != errno.ENOENT:
+                log.error('Failed to remove %s: %s', path, exc)
+
     def tearDown(self):
         '''
         remove files created in previous tests
@@ -154,13 +152,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         user = 'salt'
         if user in str(self.run_function('user.list_users')):
             self.run_function('user.delete', [user])
-
-        for path in (FILEPILLAR, FILEPILLARDEF, FILEPILLARGIT):
-            try:
-                os.remove(path)
-            except OSError as exc:
-                if exc.errno != errno.ENOENT:
-                    log.error('Failed to remove %s: %s', path, exc)
 
     def test_symlink(self):
         '''
@@ -382,13 +373,17 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         Test to ensure pillar data in sls file
         is rendered properly and file is created.
         '''
+
+        file_pillar = os.path.join(RUNTIME_VARS.TMP, 'filepillar-python')
+        self.addCleanup(self._delete_file, file_pillar)
         state_name = 'file-pillarget'
 
+        log.warning('File Path: %s', file_pillar)
         ret = self.run_function('state.sls', [state_name])
         self.assertSaltTrueReturn(ret)
 
         # Check to make sure the file was created
-        check_file = self.run_function('file.file_exists', [FILEPILLAR])
+        check_file = self.run_function('file.file_exists', [file_pillar])
         self.assertTrue(check_file)
 
     def test_managed_file_with_pillardefault_sls(self):
@@ -397,13 +392,16 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         in sls file with pillar.get it uses the default
         value.
         '''
+        file_pillar_def = os.path.join(RUNTIME_VARS.TMP, 'filepillar-defaultvalue')
+        self.addCleanup(self._delete_file, file_pillar_def)
         state_name = 'file-pillardefaultget'
 
+        log.warning('File Path: %s', file_pillar_def)
         ret = self.run_function('state.sls', [state_name])
         self.assertSaltTrueReturn(ret)
 
         # Check to make sure the file was created
-        check_file = self.run_function('file.file_exists', [FILEPILLARDEF])
+        check_file = self.run_function('file.file_exists', [file_pillar_def])
         self.assertTrue(check_file)
 
     @skip_if_not_root
