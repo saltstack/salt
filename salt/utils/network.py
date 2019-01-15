@@ -1478,7 +1478,7 @@ def _netlink_tool_remote_on(port, which_end):
     except OSError:     # not command "No such file or directory"
         return None
 
-    lines = salt.utils.to_str(data).split('\n')
+    lines = salt.utils.stringutils.to_str(data).split('\n')
     for line in lines:
         if 'Address:Port' in line:    # ss tools may not be valid
             valid = True
