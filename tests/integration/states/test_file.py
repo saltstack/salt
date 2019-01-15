@@ -65,15 +65,6 @@ IS_WINDOWS = salt.utils.platform.is_windows()
 
 BINARY_FILE = b'GIF89a\x01\x00\x01\x00\x80\x00\x00\x05\x04\x04\x00\x00\x00,\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x02D\x01\x00;'
 
-if IS_WINDOWS:
-    FILEPILLAR = 'C:\\Windows\\Temp\\filepillar-python'
-    FILEPILLARDEF = 'C:\\Windows\\Temp\\filepillar-defaultvalue'
-    FILEPILLARGIT = 'C:\\Windows\\Temp\\filepillar-bar'
-else:
-    FILEPILLAR = '/tmp/filepillar-python'
-    FILEPILLARDEF = '/tmp/filepillar-defaultvalue'
-    FILEPILLARGIT = '/tmp/filepillar-bar'
-
 TEST_SYSTEM_USER = 'test_system_user'
 TEST_SYSTEM_GROUP = 'test_system_group'
 
@@ -147,6 +138,13 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the file state
     '''
+
+    @classmethod
+    def setUpClass(cls):
+        cls.file_pillar = os.path.join(RUNTIME_VARS.TMP, 'filepillar-python')
+        cls.file_pillar_def = os.path.join(RUNTIME_VARS.TMP, 'filepillar-defaultvalue')
+        cls.file_pillar_git = os.path.join(RUNTIME_VARS.TMP, 'filepillar-bar')
+
     def tearDown(self):
         '''
         remove files created in previous tests
@@ -155,7 +153,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         if user in str(self.run_function('user.list_users')):
             self.run_function('user.delete', [user])
 
-        for path in (FILEPILLAR, FILEPILLARDEF, FILEPILLARGIT):
+        for path in (self.file_pillar, self.file_pillar_def, self.file_pillar_git):
             try:
                 os.remove(path)
             except OSError as exc:
@@ -386,7 +384,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
 
         # Check to make sure the file was created
-        check_file = self.run_function('file.file_exists', [FILEPILLAR])
+        check_file = self.run_function('file.file_exists', [self.file_pillar])
         self.assertTrue(check_file)
 
     def test_managed_file_with_pillardefault_sls(self):
@@ -401,7 +399,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
 
         # Check to make sure the file was created
-        check_file = self.run_function('file.file_exists', [FILEPILLARDEF])
+        check_file = self.run_function('file.file_exists', [self.file_pillar_def])
         self.assertTrue(check_file)
 
     @skip_if_not_root
