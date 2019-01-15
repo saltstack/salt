@@ -40,8 +40,7 @@ from salt.exceptions import (
 
 log = logging.getLogger(__name__)
 
-SAMPLE_CONF_DIR = os.path.dirname(os.path.realpath(__file__)).split('tests')[0] + 'conf/'
-
+SAMPLE_CONF_DIR = os.path.join(RUNTIME_VARS.CODE_DIR, 'conf') + os.sep
 
 # mock hostname should be more complex than the systems FQDN
 MOCK_HOSTNAME = 'very.long.complex.fqdn.that.is.crazy.extra.long.example.com'
@@ -65,19 +64,19 @@ MOCK_ETC_HOSTNAME = '{}\n'.format(MOCK_HOSTNAME)
 PATH = 'path/to/some/cloud/conf/file'
 DEFAULT = {'default_include': PATH}
 
-MOCK_MASTER_DEFAULT_OPTS = {
-    'log_file': '{}/var/log/salt/master'.format(RUNTIME_VARS.TMP_ROOT_DIR),
-    'pidfile': '{}/var/run/salt-master.pid'.format(RUNTIME_VARS.TMP_ROOT_DIR),
-    'root_dir': RUNTIME_VARS.TMP_ROOT_DIR
-}
-if salt.utils.platform.is_windows():
-    MOCK_MASTER_DEFAULT_OPTS = {
-        'log_file': '{}\\var\\log\\salt\\master'.format(RUNTIME_VARS.TMP_ROOT_DIR),
-        'pidfile': '{}\\var\\run\\salt-master.pid'.format(RUNTIME_VARS.TMP_ROOT_DIR),
-    }
+
+class DefaultConfigsBase(object):
+
+    @classmethod
+    def setUpClass(cls):
+        cls.mock_master_default_opts = dict(
+            root_dir=RUNTIME_VARS.TMP_ROOT_DIR,
+            log_file=os.path.join(RUNTIME_VARS.TMP_ROOT_DIR, 'var', 'log', 'salt', 'master'),
+            pid_file=os.path.join(RUNTIME_VARS.TMP_ROOT_DIR, 'var', 'run', 'salt-master.pid')
+        )
 
 
-class SampleConfTest(TestCase):
+class SampleConfTest(DefaultConfigsBase, TestCase):
     '''
     Validate files in the salt/conf directory.
     '''
@@ -1592,7 +1591,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class APIConfigTestCase(TestCase):
+class APIConfigTestCase(DefaultConfigsBase, TestCase):
     '''
     TestCase for the api_config function in salt.config.__init__.py
     '''
@@ -1610,7 +1609,7 @@ class APIConfigTestCase(TestCase):
         various default dict updates. 'log_file' should be updated to match
         the DEFAULT_API_OPTS 'api_logfile' value.
         '''
-        with patch('salt.config.client_config', MagicMock(return_value=MOCK_MASTER_DEFAULT_OPTS)):
+        with patch('salt.config.client_config', MagicMock(return_value=self.mock_master_default_opts)):
 
             expected = '{}/var/log/salt/api'.format(
                 RUNTIME_VARS.TMP_ROOT_DIR if RUNTIME_VARS.TMP_ROOT_DIR != '/' else '')
@@ -1627,7 +1626,7 @@ class APIConfigTestCase(TestCase):
         various default dict updates. 'pidfile' should be updated to match
         the DEFAULT_API_OPTS 'api_pidfile' value.
         '''
-        with patch('salt.config.client_config', MagicMock(return_value=MOCK_MASTER_DEFAULT_OPTS)):
+        with patch('salt.config.client_config', MagicMock(return_value=self.mock_master_default_opts)):
 
             expected = '{}/var/run/salt-api.pid'.format(
                 RUNTIME_VARS.TMP_ROOT_DIR if RUNTIME_VARS.TMP_ROOT_DIR != '/' else '')
@@ -1655,7 +1654,7 @@ class APIConfigTestCase(TestCase):
             'api_logfile': hello_dir,
             'rest_timeout': 5
         }
-        mock_master_config.update(MOCK_MASTER_DEFAULT_OPTS.copy())
+        mock_master_config.update(self.mock_master_default_opts.copy())
 
         with patch('salt.config.client_config',
                    MagicMock(return_value=mock_master_config)):
@@ -1676,7 +1675,7 @@ class APIConfigTestCase(TestCase):
         mock_log = '/mock/root/var/log/salt/api'
         mock_pid = '/mock/root/var/run/salt-api.pid'
 
-        mock_master_config = MOCK_MASTER_DEFAULT_OPTS.copy()
+        mock_master_config = self.mock_master_default_opts.copy()
         mock_master_config['root_dir'] = '/mock/root/'
 
         if salt.utils.platform.is_windows():
