@@ -720,12 +720,8 @@ def _fetch_events(q):
             queue_item.task_done()
 
     atexit.register(_clean_queue)
-    a_config = AdaptedConfigurationTestCaseMixin()
-    event = salt.utils.event.get_event(
-        'minion',
-        sock_dir=a_config.get_config('minion')['sock_dir'],
-        opts=a_config.get_config('minion'),
-    )
+    opts = RUNTIME_VARS.RUNTIME_CONFIGS['minion']
+    event = salt.utils.event.get_event('minion', sock_dir=opts['sock_dir'], opts=opts)
 
     # Wait for event bus to be connected
     while not event.connect_pull(30):
@@ -749,11 +745,13 @@ class SaltMinionEventAssertsMixin(object):
     Asserts to verify that a given event was seen
     '''
 
-    def __new__(cls, *args, **kwargs):
-        # We have to cross-call to re-gen a config
+    @classmethod
+    def setUpClass(cls):
         cls.q = multiprocessing.Queue()
         cls.fetch_proc = salt.utils.process.SignalHandlingProcess(
-            target=_fetch_events, args=(cls.q,)
+            target=_fetch_events,
+            args=(cls.q,),
+            name='Process-{}-Queue'.format(cls.__name__)
         )
         cls.fetch_proc.start()
         # Wait for the event bus to be connected
@@ -761,10 +759,12 @@ class SaltMinionEventAssertsMixin(object):
         if msg != 'CONNECTED':
             # Just in case something very bad happens
             raise RuntimeError('Unexpected message in test\'s event queue')
-        return object.__new__(cls)
 
-    def __exit__(self, *args, **kwargs):
-        self.fetch_proc.join()
+    @classmethod
+    def tearDownClass(cls):
+        cls.fetch_proc.join()
+        del cls.q
+        del cls.fetch_proc
 
     def assertMinionEventFired(self, tag):
         #TODO
