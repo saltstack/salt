@@ -32,7 +32,7 @@ except ImportError:
     from pytestsalt import __version_info__ as __pytestsalt_version_info__
 
 # Import tests support libs
-from tests.support.paths import ScriptPathMixin
+from tests.support.cli_scripts import ScriptPathMixin
 
 log = logging.getLogger(__name__)
 
