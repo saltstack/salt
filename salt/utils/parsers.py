@@ -3091,7 +3091,7 @@ class SaltRunOptionParser(
         if self.options.doc and len(self.args) > 1:
             self.error("You can only get documentation for one method at one time")
 
-        if len(self.args) > 0:
+        if self.args:
             self.config["fun"] = self.args[0]
         else:
             self.config["fun"] = ""

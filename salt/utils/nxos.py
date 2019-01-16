@@ -98,13 +98,13 @@ class NxapiClient(object):
                 )
 
             # Create UHTTPConnection object for NX-API communication over UDS.
-            log.info("Nxapi connection arguments: {0}".format(self.nxargs))
+            log.info("Nxapi connection arguments: %s", self.nxargs)
             log.info("Connecting over unix domain socket")
             self.connection = UHTTPConnection(self.NXAPI_UDS)
         else:
             # Remote connection - Proxy Minion, connect over http(s)
-            log.info("Nxapi connection arguments: {0}".format(self.nxargs))
-            log.info("Connecting over {}".format(self.nxargs["transport"]))
+            log.info("Nxapi connection arguments: %s", self.nxargs)
+            log.info("Connecting over %s", self.nxargs["transport"])
             self.connection = salt.utils.http.query
 
     def _use_remote_connection(self, kwargs):
@@ -181,7 +181,7 @@ class NxapiClient(object):
         request["headers"] = headers
         request["payload"] = json.dumps(payload)
         request["opts"] = {"http_request_timeout": self.nxargs["timeout"]}
-        log.info("request: {0}".format(request))
+        log.info("request: %s", request)
         return request
 
     def request(self, type, command_list):
@@ -255,8 +255,8 @@ class NxapiClient(object):
         for cmd_result, cmd in zip(output, command_list):
             code = cmd_result.get("code")
             msg = cmd_result.get("msg")
-            log.info("command {}:".format(cmd))
-            log.info("PARSE_RESPONSE: {0} {1}".format(code, msg))
+            log.info("command %s:", cmd)
+            log.info("PARSE_RESPONSE: %s %s", code, msg)
             if code == "400":
                 raise CommandExecutionError(
                     {

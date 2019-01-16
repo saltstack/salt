@@ -2368,7 +2368,7 @@ def check_perms(
             else:
                 try:
                     set_owner(obj_name=obj_name, principal=owner, obj_type=obj_type)
-                    log.debug("Owner set to {0}".format(owner))
+                    log.debug("Owner set to %s", owner)
                     ret["changes"]["owner"] = owner
                 except CommandExecutionError:
                     ret["result"] = False
@@ -2398,7 +2398,7 @@ def check_perms(
                     )
 
     # Check permissions
-    log.debug("Getting current permissions for {0}".format(obj_name))
+    log.debug("Getting current permissions for %s", obj_name)
     cur_perms = get_permissions(obj_name=obj_name, obj_type=obj_type)
 
     # Verify Deny Permissions
@@ -2426,7 +2426,7 @@ def check_perms(
     # Check reset
     # If reset=True, which users will be removed as a result
     if reset:
-        log.debug("Resetting permissions for {0}".format(obj_name))
+        log.debug("Resetting permissions for %s", obj_name)
         cur_perms = get_permissions(obj_name=obj_name, obj_type=obj_type)
         for user_name in cur_perms["Not Inherited"]:
             # case insensitive dictionary search
@@ -2487,7 +2487,7 @@ def check_perms(
     ret["comment"] = "\n".join(ret["comment"])
 
     # Set result for test = True
-    if __opts__["test"] and (ret["changes"]):
+    if __opts__["test"] and ret["changes"]:
         ret["result"] = None
 
     return ret
