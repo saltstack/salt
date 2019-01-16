@@ -38,7 +38,7 @@ class EngineTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test
         '''
-        mock_opts = salt.config.DEFAULT_MINION_OPTS
+        mock_opts = salt.config.DEFAULT_MINION_OPTS.copy()
         mock_opts['__role'] = 'minion'
         mock_opts['engines'] = [{'test_one': {'engine_module': 'test'}},
                                 {'test_two': {'engine_module': 'test'}}]
