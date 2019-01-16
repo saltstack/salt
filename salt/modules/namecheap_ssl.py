@@ -304,7 +304,7 @@ def __get_certificates(
 
     if http_dc_validation:
         validation_tag = sslresult.getElementsByTagName("HttpDCValidation")
-        if validation_tag is not None and len(validation_tag) > 0:
+        if validation_tag:
             validation_tag = validation_tag[0]
 
             if validation_tag.getAttribute("ValueAvailable").lower() == "true":
@@ -419,7 +419,7 @@ def renew(years, certificate_id, certificate_type, promotion_code=None):
         raise Exception("Invalid option for certificate_type=" + certificate_type)
 
     if years < 1 or years > 5:
-        log.error("Invalid option for years=%s", six.text_type(years))
+        log.error("Invalid option for years=%s", years)
         raise Exception("Invalid option for years=" + six.text_type(years))
 
     opts = salt.utils.namecheap.get_opts("namecheap.ssl.renew")
@@ -598,7 +598,7 @@ def create(years, certificate_type, promotion_code=None, sans_to_add=None):
         raise Exception("Invalid option for certificate_type=" + certificate_type)
 
     if years < 1 or years > 5:
-        log.error("Invalid option for years=%s", six.text_type(years))
+        log.error("Invalid option for years=%s", years)
         raise Exception("Invalid option for years=" + six.text_type(years))
 
     opts = salt.utils.namecheap.get_opts("namecheap.ssl.create")

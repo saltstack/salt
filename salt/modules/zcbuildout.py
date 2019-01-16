@@ -47,7 +47,6 @@ from salt.ext.six.moves.urllib.request import urlopen as _urlopen
 
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
 
-
 INVALID_RESPONSE = "We did not get any expectable answer from buildout"
 VALID_RESPONSE = ""
 NOTSET = object()
@@ -712,7 +711,8 @@ def bootstrap(
     except (IOError, OSError) as exc:
         # don't block here, try to execute it if can pass
         _logger.error(
-            "BUILDOUT bootstrap permissions error:" " {0}".format(exc),
+            "BUILDOUT bootstrap permissions error: %s",
+            exc,
             exc_info=_logger.isEnabledFor(logging.DEBUG),
         )
     cmd = "{0} bootstrap.py {1}".format(python, bootstrap_args)

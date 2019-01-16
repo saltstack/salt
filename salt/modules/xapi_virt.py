@@ -18,10 +18,9 @@ Useful documentation:
 """
 from __future__ import absolute_import, print_function, unicode_literals
 
+# Import python libs
 import contextlib
 import os
-
-# Import python libs
 import sys
 
 import salt.modules.cmdmod
@@ -307,7 +306,7 @@ def node_info():
         def getFreeCpuCount():
             cnt = 0
             for host_cpu_it in host_cpu_rec:
-                if len(host_cpu_rec["cpu_pool"]) == 0:
+                if not host_cpu_rec["cpu_pool"]:
                     cnt += 1
             return cnt
 
