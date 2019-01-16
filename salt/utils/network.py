@@ -120,7 +120,7 @@ def _generate_minion_id():
 
         def append(self, p_object):
             if p_object and p_object not in self and not self.filter(p_object):
-                super(self.__class__, self).append(p_object)
+                super(DistinctList, self).append(p_object)
             return self
 
         def extend(self, iterable):
@@ -145,9 +145,8 @@ def _generate_minion_id():
                 if len(a_nfo) > 3:
                     hosts.append(a_nfo[3])
         except socket.gaierror:
-            log.warning('Cannot resolve address {addr} info via socket: {message}'.format(
-                addr=hosts.first() or 'localhost (N/A)', message=socket.gaierror)
-            )
+            log.warning('Cannot resolve address %s info via socket: %s',
+                        hosts.first() or 'localhost (N/A)', socket.gaierror)
     # Universal method for everywhere (Linux, Slowlaris, Windows etc)
     for f_name in ('/etc/hostname', '/etc/nodename', '/etc/hosts',
                    r'{win}\system32\drivers\etc\hosts'.format(win=os.getenv('WINDIR'))):
@@ -1201,7 +1200,7 @@ def _subnets(proto='inet', interfaces_=None):
         subnet = 'prefixlen'
         dflt_cidr = 128
     else:
-        log.error('Invalid proto {0} calling subnets()'.format(proto))
+        log.error('Invalid proto %s calling subnets()', proto)
         return
 
     for ip_info in six.itervalues(ifaces):
@@ -1268,7 +1267,7 @@ def _ip_addrs(interface=None, include_loopback=False, interface_data=None, proto
         target_ifaces = dict([(k, v) for k, v in six.iteritems(ifaces)
                               if k == interface])
         if not target_ifaces:
-            log.error('Interface {0} not found.'.format(interface))
+            log.error('Interface %s not found.', interface)
     for ip_info in six.itervalues(target_ifaces):
         addrs = ip_info.get(proto, [])
         addrs.extend([addr for addr in ip_info.get('secondary', []) if addr.get('type') == proto])
@@ -1319,7 +1318,7 @@ def hex2ip(hex_ip, invert=False):
             else:
                 return address.compressed
         except ipaddress.AddressValueError as ex:
-            log.error('hex2ip - ipv6 address error: {0}'.format(ex))
+            log.error('hex2ip - ipv6 address error: %s', ex)
             return hex_ip
 
     try:
@@ -1517,7 +1516,7 @@ def _freebsd_remotes_on(port, which_end):
         cmd = salt.utils.args.shlex_split('sockstat -4 -c -p {0}'.format(port))
         data = subprocess.check_output(cmd)  # pylint: disable=minimum-python-version
     except subprocess.CalledProcessError as ex:
-        log.error('Failed "sockstat" with returncode = {0}'.format(ex.returncode))
+        log.error('Failed "sockstat" with returncode = %s', ex.returncode)
         raise
 
     lines = salt.utils.stringutils.to_str(data).split('\n')
@@ -1577,7 +1576,7 @@ def _netbsd_remotes_on(port, which_end):
         cmd = salt.utils.args.shlex_split('sockstat -4 -c -n -p {0}'.format(port))
         data = subprocess.check_output(cmd)  # pylint: disable=minimum-python-version
     except subprocess.CalledProcessError as ex:
-        log.error('Failed "sockstat" with returncode = {0}'.format(ex.returncode))
+        log.error('Failed "sockstat" with returncode = %s', ex.returncode)
         raise
 
     lines = salt.utils.stringutils.to_str(data).split('\n')
@@ -1713,7 +1712,7 @@ def _linux_remotes_on(port, which_end):
             # to locate Internet addresses, and it is not an error in this case.
             log.warning('"lsof" returncode = 1, likely no active TCP sessions.')
             return remotes
-        log.error('Failed "lsof" with returncode = {0}'.format(ex.returncode))
+        log.error('Failed "lsof" with returncode = %s', ex.returncode)
         raise
 
     lines = salt.utils.stringutils.to_str(data).split('\n')
@@ -1927,7 +1926,7 @@ def dns_check(addr, port=80, safe=False, ipv6=None, attempt_connect=True):
                     except socket.error:
                         pass
             if not resolved:
-                if len(candidates) > 0:
+                if candidates:
                     resolved = candidates[0]
                 else:
                     error = True

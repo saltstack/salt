@@ -30,7 +30,7 @@ def sdb_get(uri, opts, utils=None):
     sdlen = len('sdb://')
     indx = uri.find('/', sdlen)
 
-    if (indx == -1) or len(uri[(indx+1):]) == 0:
+    if (indx == -1) or not uri[(indx + 1):]:
         return uri
 
     profile = opts.get(uri[sdlen:indx], {})
@@ -61,7 +61,7 @@ def sdb_set(uri, value, opts, utils=None):
     sdlen = len('sdb://')
     indx = uri.find('/', sdlen)
 
-    if (indx == -1) or len(uri[(indx+1):]) == 0:
+    if (indx == -1) or not uri[(indx + 1):]:
         return False
 
     profile = opts.get(uri[sdlen:indx], {})
@@ -92,7 +92,7 @@ def sdb_delete(uri, opts, utils=None):
     sdlen = len('sdb://')
     indx = uri.find('/', sdlen)
 
-    if (indx == -1) or len(uri[(indx+1):]) == 0:
+    if (indx == -1) or not uri[(indx + 1):]:
         return False
 
     profile = opts.get(uri[sdlen:indx], {})

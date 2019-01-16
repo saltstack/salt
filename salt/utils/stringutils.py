@@ -145,7 +145,7 @@ def to_unicode(s, encoding=None, errors='strict', normalize=False):
         # This needs to be str and not six.string_types, since if the string is
         # already a unicode type, it does not need to be decoded (and doing so
         # will raise an exception).
-        if isinstance(s, unicode):  # pylint: disable=incompatible-py3-code
+        if isinstance(s, unicode):  # pylint: disable=incompatible-py3-code,undefined-variable
             return _normalize(s)
         elif isinstance(s, (str, bytearray)):
             for enc in encoding:
