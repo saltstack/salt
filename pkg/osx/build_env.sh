@@ -200,8 +200,8 @@ $MAKE install
 ############################################################################
 echo -n -e "\033]0;Build_Env: zeromq: download\007"
 
-PKGURL="http://github.com/zeromq/libzmq/releases/download/v4.2.5/zeromq-4.2.5.tar.gz"
-PKGDIR="zeromq-4.2.5"
+PKGURL="https://github.com/zeromq/zeromq4-1/releases/download/v4.1.6/zeromq-4.1.6.tar.gz"
+PKGDIR="zeromq-4.1.6"
 
 download $PKGURL
 
