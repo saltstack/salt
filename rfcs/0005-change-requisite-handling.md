@@ -24,7 +24,7 @@ The proposal here is that we change Salt to line up with the user expectations. 
 
     test1:
       test.nop
-      
+
     test2:
       test.nop:
         - require:
@@ -39,12 +39,12 @@ While there are some obvious ways to handle this case, a slightly more subtle ex
 
     test1:
       test.nop
-      
+
     test2:
       test.nop:
         - require_in:
           - test: test1
-    
+
     exclude:
       - id: test2
 
@@ -54,18 +54,29 @@ In these cases, the behavior that Salt's users expect is that the exclude will t
 
     test2:
       test.nop
-      
+
 And
 
     test1:
       test.nop
-      
+
+In order to preserve backwards compatibility, we [should make this configurable][1]. The following command line argument should be added to (TODO what cli? Also, too wordy?):
+
+    --exclude-before-requisites
+
+We should also add the same setting to the config files:
+
+    exclude_before_requisites: True
+
+When these flags are set to `True`, excludes should work as proposed. When the flags are set to `False`, current behavior should be kept, though we should add an explicit message that the exclude would remove a required state.
+
 At first glance, it's *possible* that this code change is as simple as moving the `apply_excludes` line in `state.py` a couple of lines earlier before the `requisite_in` calls. Further tests indicate there's more considerations.
 
 The test cases are pretty straight forward, though it's possible that it breaks some existing tests.
 
 Test cases:
 
+- when the flag is not set, excluding a requisite should produce a helpful error message (`'Warning: excluding {thing} that is required by {other_thing}'`, for example)
 - exclude with no requires still excludes
 - exclude with [each requisite](https://docs.saltstack.com/en/latest/ref/states/requisites.html#direct-requisite-and-requisite-in-types) properly excludes when the required state, or the requiring state is excluded
 
@@ -88,7 +99,8 @@ Are there issues with require/exclude cycles?
 # Drawbacks
 [drawbacks]: #drawbacks
 
-There are definite drawbacks to this implicit removal:
-
 - Implementation and opportunity cost of actually building/testing/etc.
-- This could cause *serious* issues if someone excluded something that ended out having a greater impact than they thought it should have. For example, it's possible that I exclude a state that looks simple, but it ends out to have a cascading effect, eliminating half of my states. That would be undesirable.
+- <strike>This could cause *serious* issues if someone excluded something that ended out having a greater impact than they thought it should have. For example, it's possible that I exclude a state that looks simple, but it ends out to have a cascading effect, eliminating half of my states. That would be undesirable.</strike> By requiring opt-in to this new behavior, it will not break any existing setups. Since we'll already be introducing some changes, we can update the existing behavior to provide a more helpful error if there is a conflict between exclude and require.
+
+
+[1]: https://github.com/saltstack/salt/pull/51183#issuecomment-454646418
