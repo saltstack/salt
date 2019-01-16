@@ -55,7 +55,7 @@ class WinLgpoAuditpolTestCase(TestCase, LoaderModuleMockMixin):
     def test_set_setting(self):
         names = ['Credential Validation', 'IPsec Driver', 'File System', 'SAM']
         mock_set = MagicMock(return_value={'retcode': 0, 'stdout': 'Success'})
-        with patch.dict(win_lgpo_auditpol.__salt__, {'cmd.run_all': mock_set}):
+        with patch.object(salt.modules.cmdmod, 'run_all', mock_set):
             with patch.object(win_lgpo_auditpol, '_get_valid_names',
                               return_value=[k.lower() for k in names]):
                 for name in names:
