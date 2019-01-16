@@ -38,8 +38,14 @@ try:
 except ImportError:
     sys.path.insert(0, CODE_DIR)
 
+# Coverage
+COVERAGERC_FILE = os.path.join(CODE_DIR, '.coveragerc')
+MAYBE_RUN_COVERAGE = sys.argv[0].endswith('pytest.py') or '_COVERAGE_RCFILE' in os.environ
+if MAYBE_RUN_COVERAGE:
+    # Flag coverage to track suprocesses by pointing it to the right .coveragerc file
+    os.environ['COVERAGE_PROCESS_START'] = COVERAGERC_FILE
+
 # Import test libs
-from tests.support import paths  # pylint: disable=unused-import
 from tests.support.runtests import RUNTIME_VARS
 
 # Import pytest libs
@@ -312,7 +318,9 @@ def set_max_open_files_limits(min_soft=3072, min_hard=4096):
             )
             exit(1)
     return soft, hard
-def pytest_report_header(config):
+
+
+def pytest_report_header():
     soft, hard = set_max_open_files_limits()
     return 'max open files; soft: {}; hard: {}'.format(soft, hard)
 
@@ -684,7 +692,7 @@ def cli_bin_dir(tempdir,
             executable=sys.executable,
             code_dir=CODE_DIR,
             extra_code=extra_code,
-            inject_sitecustomize=True
+            inject_sitecustomize=MAYBE_RUN_COVERAGE
         )
 
     # Return the CLI bin dir value
