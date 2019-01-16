@@ -2460,10 +2460,10 @@ def syndic_config(master_config_path,
                   master_defaults=None):
 
     if minion_defaults is None:
-        minion_defaults = DEFAULT_MINION_OPTS
+        minion_defaults = DEFAULT_MINION_OPTS.copy()
 
     if master_defaults is None:
-        master_defaults = DEFAULT_MASTER_OPTS
+        master_defaults = DEFAULT_MASTER_OPTS.copy()
 
     opts = {}
     master_opts = master_config(
@@ -2782,7 +2782,7 @@ def apply_cloud_config(overrides, defaults=None):
     Return a cloud config
     '''
     if defaults is None:
-        defaults = DEFAULT_CLOUD_OPTS
+        defaults = DEFAULT_CLOUD_OPTS.copy()
 
     config = defaults.copy()
     if overrides:
@@ -3682,7 +3682,7 @@ def apply_minion_config(overrides=None,
     Returns minion configurations dict.
     '''
     if defaults is None:
-        defaults = DEFAULT_MINION_OPTS
+        defaults = DEFAULT_MINION_OPTS.copy()
     if overrides is None:
         overrides = {}
 
@@ -3837,7 +3837,7 @@ def master_config(path, env_var='SALT_MASTER_CONFIG', defaults=None, exit_on_con
     :py:func:`salt.client.client_config`.
     '''
     if defaults is None:
-        defaults = DEFAULT_MASTER_OPTS
+        defaults = DEFAULT_MASTER_OPTS.copy()
 
     if not os.environ.get(env_var, None):
         # No valid setting was given using the configuration variable.
@@ -3879,7 +3879,7 @@ def apply_master_config(overrides=None, defaults=None):
     Returns master configurations dict.
     '''
     if defaults is None:
-        defaults = DEFAULT_MASTER_OPTS
+        defaults = DEFAULT_MASTER_OPTS.copy()
     if overrides is None:
         overrides = {}
 
@@ -4054,7 +4054,7 @@ def client_config(path, env_var='SALT_CLIENT_CONFIG', defaults=None):
     :py:class:`~salt.client.LocalClient`.
     '''
     if defaults is None:
-        defaults = DEFAULT_MASTER_OPTS
+        defaults = DEFAULT_MASTER_OPTS.copy()
 
     xdg_dir = salt.utils.xdg.xdg_config_dir()
     if os.path.isdir(xdg_dir):
@@ -4122,10 +4122,10 @@ def api_config(path):
     need to be stubbed out for salt-api
     '''
     # Let's grab a copy of salt-api's required defaults
-    opts = DEFAULT_API_OPTS
+    opts = DEFAULT_API_OPTS.copy()
 
     # Let's override them with salt's master opts
-    opts.update(client_config(path, defaults=DEFAULT_MASTER_OPTS))
+    opts.update(client_config(path, defaults=DEFAULT_MASTER_OPTS.copy()))
 
     # Let's set the pidfile and log_file values in opts to api settings
     opts.update({
