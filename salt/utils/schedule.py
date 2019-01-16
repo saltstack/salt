@@ -450,26 +450,23 @@ class Schedule(object):
             func = data['fun']
         else:
             func = None
-        if func not in self.functions:
-            log.info(
-                'Invalid function: %s in scheduled job %s.',
-                func, name
-            )
+        if not isinstance(func, list):
+            func = [func]
+        for _func in func:
+            if _func not in self.functions:
+                log.info(
+                    'Invalid function: %s in scheduled job %s.',
+                    _func, name
+                )
 
         if 'name' not in data:
             data['name'] = name
         log.info('Running Job: %s', name)
 
-        if not self.standalone:
-            data = self._check_max_running(func,
-                                           data,
-                                           self.opts,
-                                           datetime.datetime.now())
-
         # Grab run, assume True
         run = data.get('run', True)
         if run:
-            self._run_job(func, data)
+            self._run_job(_func, data)
 
     def enable_schedule(self):
         '''
@@ -1356,11 +1353,14 @@ class Schedule(object):
                 func = data['fun']
             else:
                 func = None
-            if func not in self.functions:
-                log.info(
-                    'Invalid function: %s in scheduled job %s.',
-                    func, job_name
-                )
+            if not isinstance(func, list):
+                func = [func]
+            for _func in func:
+                if _func not in self.functions:
+                    log.info(
+                        'Invalid function: %s in scheduled job %s.',
+                        _func, job_name
+                    )
 
             if '_next_fire_time' not in data:
                 data['_next_fire_time'] = None
@@ -1542,6 +1542,14 @@ class Schedule(object):
 
                     run = data['run']
 
+                # If args is a list and less than the number of functions
+                # run is set to False.
+                if 'args' in data and isinstance(data['args'], list):
+                    if len(data['args']) < len(func):
+                        log.error('Number of arguments is less than '
+                                  'number of functions. Ignoring job.')
+                        run = False
+
             # If the job item has continue, then we set run to False
             # so the job does not run but we still get the important
             # information calculated, eg. _next_fire_time
@@ -1645,16 +1653,21 @@ class Schedule(object):
             else:
                 thread_cls = threading.Thread
 
-            if multiprocessing_enabled:
-                with salt.utils.process.default_signals(signal.SIGINT, signal.SIGTERM):
-                    proc = thread_cls(target=self.handle_func, args=(multiprocessing_enabled, func, data))
-                    # Reset current signals before starting the process in
-                    # order not to inherit the current signal handlers
+            for i in range(len(func)):
+                _data = copy.deepcopy(data)
+                if 'args' in _data and isinstance(_data['args'], list):
+                    _data['args'] = _data['args'][i]
+
+                if multiprocessing_enabled:
+                    with salt.utils.process.default_signals(signal.SIGINT, signal.SIGTERM):
+                        proc = thread_cls(target=self.handle_func, args=(multiprocessing_enabled, func[i], _data))
+                        # Reset current signals before starting the process in
+                        # order not to inherit the current signal handlers
+                        proc.start()
+                    proc.join()
+                else:
+                    proc = thread_cls(target=self.handle_func, args=(multiprocessing_enabled, func[i], _data))
                     proc.start()
-                proc.join()
-            else:
-                proc = thread_cls(target=self.handle_func, args=(multiprocessing_enabled, func, data))
-                proc.start()
         finally:
             if multiprocessing_enabled and salt.utils.platform.is_windows():
                 # Restore our function references.
