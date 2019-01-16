@@ -33,6 +33,8 @@ try:
 except ImportError:
     logstash = None
 
+log = logging.getLogger(__name__)
+
 __virtualname__ = 'logstash'
 
 
@@ -40,9 +42,6 @@ def __virtual__():
     return __virtualname__ \
         if logstash is not None \
         else (False, 'python-logstash not installed')
-
-
-log = logging.getLogger(__name__)
 
 
 def start(host, port=5959, tag='salt/engine/logstash', proto='udp'):

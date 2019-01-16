@@ -460,7 +460,7 @@ def __get_host(node, vm_):
         ip_address = node.public_ips[0]
         log.info('Salt node data. Public_ip: %s', ip_address)
 
-    if len(ip_address) > 0:
+    if ip_address:
         return ip_address
 
     return node.name
@@ -556,7 +556,7 @@ def _parse_allow(allow):
                 seen_protos[pairs[0]].append(pairs[1])
     for k in seen_protos:
         d = {'IPProtocol': k}
-        if len(seen_protos[k]) > 0:
+        if seen_protos[k]:
             d['ports'] = seen_protos[k]
         allow_dict.append(d)
     log.debug("firewall allowed protocols/ports: %s", allow_dict)
@@ -1281,7 +1281,7 @@ def create_address(kwargs=None, call=None):
         transport=__opts__['transport']
     )
 
-    log.info('Created GCE Address '+name)
+    log.info('Created GCE Address %s', name)
 
     return _expand_address(addy)
 
@@ -1351,7 +1351,7 @@ def delete_address(kwargs=None, call=None):
         transport=__opts__['transport']
     )
 
-    log.info('Deleted GCE Address ' + name)
+    log.info('Deleted GCE Address %s', name)
 
     return result
 
