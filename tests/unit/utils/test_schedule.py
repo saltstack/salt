@@ -395,3 +395,22 @@ class ScheduleTestCase(TestCase):
         now = datetime.datetime.now()
         self.schedule.eval()
         self.assertTrue(self.schedule.opts['schedule']['testjob']['_next_fire_time'] > now)
+
+    def test_eval_schedule_invalid_arguments(self):
+        '''
+        Tests eval if the schedule if data contains error
+        '''
+        self.schedule.opts.update({'pillar': {'schedule': {}}})
+        self.schedule.opts.update({'schedule': {'testjob': {'function': ['cmd.run', 'status.time'],
+                                                            'args': [["data"]],
+                                                            'seconds': 60}}})
+        now = datetime.datetime.now()
+
+        # Run eval one to prime the scheduler
+        self.schedule.eval()
+
+        # Run in "60 seconds" and we should receive the error
+        self.schedule.eval(now + datetime.timedelta(seconds=60))
+        self.assertIn('_error', self.schedule.opts['schedule']['testjob'])
+        _expected = 'Number of arguments is less than the number of functions. Ignoring job.'
+        self.assertEqual(self.schedule.opts['schedule']['testjob']['_error'], _expected)

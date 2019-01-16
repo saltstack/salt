@@ -454,7 +454,7 @@ class Schedule(object):
             func = [func]
         for _func in func:
             if _func not in self.functions:
-                log.info(
+                log.error(
                     'Invalid function: %s in scheduled job %s.',
                     _func, name
                 )
@@ -1547,7 +1547,7 @@ class Schedule(object):
                 if 'args' in data and isinstance(data['args'], list):
                     if len(data['args']) < len(func):
                         data['_error'] = ('Number of arguments is less than '
-                                          'number of functions. Ignoring job.')
+                                          'the number of functions. Ignoring job.')
                         log.error(data['_error'])
                         run = False
 
