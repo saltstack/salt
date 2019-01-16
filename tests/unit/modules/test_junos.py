@@ -23,7 +23,7 @@ try:
     from jnpr.junos.device import Device
     import jxmlease  # pylint: disable=unused-import
     import jnpr.junos.op as tables_dir
-    from jnpr.junos.exception import ConnectClosedError, LockError, RpcError, \
+    from jnpr.junos.exception import ConnectClosedError, LockError, \
         UnlockError
     HAS_JUNOS = True
 except ImportError:

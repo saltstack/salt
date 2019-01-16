@@ -535,6 +535,7 @@ def commit_check(name):
     ret['changes'] = __salt__['junos.commit_check']()
     return ret
 
+
 @resultdecorator
 def get_table(name, table, table_file, **kwargs):
     '''
