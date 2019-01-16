@@ -297,8 +297,8 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
 
         with patch.dict(saltmod.__salt__, {'saltutil.cmd': cmd_mock}):
             ret = saltmod.state('state.sls', tgt='*', ssh=True, highstate=True, roster='my_roster')
-        assert 'roster_file' in cmd_kwargs
-        assert cmd_kwargs['roster_file'] == 'my_roster'
+        assert 'roster' in cmd_kwargs
+        assert cmd_kwargs['roster'] == 'my_roster'
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
