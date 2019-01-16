@@ -201,7 +201,7 @@ def pytest_configure(config):
     config._inicache['log_print'] = False  # Don't print logs on pytest reports
     # CLI Log records formatting
     config._inicache['log_date_format'] = '%H:%M:%S'
-    for fmtname in ('log_cli_format', 'log_format'):
+    for fmtname in ('log_format', 'log_cli_format', 'log_file_format'):
         fmt = config.getini(fmtname)
         if not fmt or fmt == _pytest.logging.DEFAULT_LOG_FORMAT:
             config._inicache[fmtname] = salt.config._DFLT_LOG_FMT_LOGFILE.replace(
