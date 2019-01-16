@@ -73,7 +73,7 @@ set ``archive_jobs`` to True.  Salt will create 3 archive tables;
 and move the contents of ``jids``, ``salt_returns``, and ``salt_events`` that are
 more than ``keep_jobs`` hours old to these tables.
 
-.. versionadded:: Fluorine
+.. versionadded:: 2019.2.0
 
 Use the following Pg database schema:
 

@@ -1465,11 +1465,11 @@ def list_all_versions(pkg,
 
     index_url
         Base URL of Python Package Index
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     extra_index_url
         Additional URL of Python Package Index
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     CLI Example:
 
