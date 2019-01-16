@@ -684,6 +684,7 @@ def _check_directory(name,
                      group=None,
                      recurse=False,
                      mode=None,
+                     file_mode=None,
                      clean=False,
                      require=False,
                      exclude_pat=None,
@@ -719,6 +720,7 @@ def _check_directory(name,
             if check_files:
                 for fname in files:
                     fchange = {}
+                    mode = file_mode
                     path = os.path.join(root, fname)
                     stats = __salt__['file.stats'](
                         path, None, follow_symlinks
@@ -727,6 +729,8 @@ def _check_directory(name,
                         fchange['user'] = user
                     if group is not None and group != stats.get('group'):
                         fchange['group'] = group
+                    if mode is not None and mode != stats.get('mode'):
+                        fchange['mode'] = mode
                     if fchange:
                         changes[path] = fchange
             if check_dirs:
@@ -1315,6 +1319,8 @@ def symlink(
         makedirs=False,
         user=None,
         group=None,
+        copy_target_user=False,
+        copy_target_group=False,
         mode=None,
         win_owner=None,
         win_perms=None,
@@ -1365,6 +1371,20 @@ def symlink(
         The group ownership set for the file, this defaults to the group salt
         is running as on the minion. On Windows, this is ignored
 
+    copy_target_user : False
+        If True, set the symlink's owner to that of the target. If ``user`` is
+        also passed, it will be used instead. This option requires the target
+        to exist.
+
+        .. versionadded:: 2019.2.0
+
+    copy_target_group : False
+        If True, set the symlink's group to that of the target. If ``group`` is
+        also passed, it will be used instead. This option requires the target
+        to exist.
+
+        .. versionadded:: 2019.2.0
+
     mode
         The permissions to set on this file, aka 644, 0775, 4664. Not supported
         on Windows.
@@ -1407,6 +1427,17 @@ def symlink(
     if not name:
         return _error(ret, 'Must provide name to file.symlink')
 
+    if copy_target_user:
+        if user:
+            log.warning('`copy_target_user` and `user` are mutually exclusive. Using `user`.')
+        else:
+            try:
+                user = __salt__['file.get_user'](target)
+            except CommandExecutionError:
+                ret['result'] = False
+                ret['comment'] = '`copy_target_user` is set, but target `{0}` does not exist.'.format(target)
+                return ret
+
     if user is None:
         user = __opts__['user']
 
@@ -1432,7 +1463,26 @@ def symlink(
                 'is a Windows system. Please use the `win_*` parameters to set '
                 'permissions in Windows.'.format(name)
             )
+
+        if copy_target_group is not None:
+            log.warning(
+                'The copy_target_group argument for {0} has been ignored as this '
+                'is a Windows system. Please use the `win_*` parameters to set '
+                'permissions in Windows.'.format(name)
+            )
+
         group = user
+
+    if copy_target_group:
+        if group:
+            log.warning('`copy_target_group` and `group` are mutually exclusive. Using `group`.')
+        else:
+            try:
+                group = __salt__['file.get_group'](target)
+            except CommandExecutionError:
+                ret['result'] = False
+                ret['comment'] = '`copy_target_group` is set, but target `{0}` does not exist.'.format(target)
+                return ret
 
     if group is None:
         group = __salt__['file.gid_to_group'](
@@ -2705,6 +2755,7 @@ def managed(name,
             ret, 'Defaults must be formed as a dict')
 
     if not replace and os.path.exists(name):
+        ret_perms = {}
         # Check and set the permissions if necessary
         if salt.utils.platform.is_windows():
             ret = __salt__['file.check_perms'](
@@ -2716,14 +2767,23 @@ def managed(name,
                 inheritance=win_inheritance,
                 reset=win_perms_reset)
         else:
-            ret, _ = __salt__['file.check_perms'](
+            ret, ret_perms = __salt__['file.check_perms'](
                 name, ret, user, group, mode, attrs, follow_symlinks,
                 seuser=seuser,
                 serole=serole,
                 setype=setype,
                 serange=serange)
         if __opts__['test']:
-            ret['comment'] = 'File {0} not updated'.format(name)
+            if isinstance(ret_perms, dict) and \
+               'lmode' in ret_perms and \
+               mode != ret_perms['lmode']:
+                ret['comment'] = ('File {0} will be updated with permissions '
+                                  '{1} from its current '
+                                  'state of {2}'.format(name,
+                                                        mode,
+                                                        ret_perms['lmode']))
+            else:
+                ret['comment'] = 'File {0} not updated'.format(name)
         elif not ret['changes'] and ret['result']:
             ret['comment'] = ('File {0} exists with proper permissions. '
                               'No changes made.'.format(name))
@@ -3341,8 +3401,8 @@ def directory(name,
             win_perms_reset=win_perms_reset)
     else:
         presult, pcomment, pchanges = _check_directory(
-            name, user, group, recurse or [], dir_mode, clean, require,
-            exclude_pat, max_depth, follow_symlinks)
+            name, user, group, recurse or [], dir_mode, file_mode, clean,
+            require, exclude_pat, max_depth, follow_symlinks)
 
     if pchanges:
         ret['changes'].update(pchanges)
@@ -6055,7 +6115,7 @@ def patch(name,
     '''
     Ensure that a patch has been applied to the specified file or directory
 
-    .. versionchanged:: Fluorine
+    .. versionchanged:: 2019.2.0
         The ``hash`` and ``dry_run_first`` options are now ignored, as the
         logic which determines whether or not the patch has already been
         applied no longer requires them. Additionally, this state now supports
@@ -6078,7 +6138,7 @@ def patch(name,
     source
         The patch file to apply
 
-        .. versionchanged:: Fluorine
+        .. versionchanged:: 2019.2.0
             The source can now be from any file source supported by Salt
             (``salt://``, ``http://``, ``https://``, ``ftp://``, etc.).
             Templating is also now supported.
@@ -6087,37 +6147,37 @@ def patch(name,
         Works the same way as in :py:func:`file.managed
         <salt.states.file.managed>`.
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     source_hash_name
         Works the same way as in :py:func:`file.managed
         <salt.states.file.managed>`
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     skip_verify
         Works the same way as in :py:func:`file.managed
         <salt.states.file.managed>`
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     template
         Works the same way as in :py:func:`file.managed
         <salt.states.file.managed>`
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     context
         Works the same way as in :py:func:`file.managed
         <salt.states.file.managed>`
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     defaults
         Works the same way as in :py:func:`file.managed
         <salt.states.file.managed>`
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     options
         Extra options to pass to patch. This should not be necessary in most
@@ -6139,7 +6199,7 @@ def patch(name,
             The parent directory must exist. Also, this will overwrite the file
             if it is already present.
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     strip
         Number of directories to strip from paths in the patch file. For
@@ -6153,7 +6213,7 @@ def patch(name,
                 - source: salt://myfile.patch
                 - strip: 1
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
             In previous versions, ``-p1`` would need to be passed as part of
             the ``options`` value.
 
@@ -7097,7 +7157,7 @@ def serialize(name,
         deserializing JSON, arguments like ``parse_float`` and ``parse_int``
         which accept a callable object cannot be handled in an SLS file.
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     For example, this state:
 

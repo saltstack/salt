@@ -33,7 +33,7 @@
 # and a warning will be logged.
 #random_master: False
 
-# NOTE: Deprecated in Salt Fluorine. Use 'random_master' instead.
+# NOTE: Deprecated in Salt 2019.2.0. Use 'random_master' instead.
 #master_shuffle: False
 
 # Minions can connect to multiple masters simultaneously (all masters

@@ -601,12 +601,12 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
     remove_dependencies
         Remove package and all dependencies
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     auto_remove_deps
         Remove packages that were installed automatically to satisfy dependencies
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     Returns a dict containing the changes.
 
@@ -1545,3 +1545,21 @@ def owner(*paths, **kwargs):  # pylint: disable=unused-argument
     if len(ret) == 1:
         return next(six.itervalues(ret))
     return ret
+
+
+def version_clean(version):
+    '''
+    Clean the version string removing extra data.
+    There's nothing do to here for nipkg.py, therefore it will always
+    return the given version.
+    '''
+    return version
+
+
+def check_extra_requirements(pkgname, pkgver):
+    '''
+    Check if the installed package already has the given requirements.
+    There's nothing do to here for nipkg.py, therefore it will always
+    return True.
+    '''
+    return True

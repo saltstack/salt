@@ -85,7 +85,7 @@ def usage(args=None):
     '''
     Return usage information for volumes mounted on this minion
 
-    .. versionchanged:: Fluorine
+    .. versionchanged:: 2019.2.0
 
         Default for SunOS changed to 1 kilobyte blocks
 
@@ -432,6 +432,7 @@ def format_(device,
             fs_type='ext4',
             inode_size=None,
             lazy_itable_init=None,
+            fat=None,
             force=False):
     '''
     Format a filesystem onto a device
@@ -459,6 +460,10 @@ def format_(device,
 
         This option is only enabled for ext filesystems
 
+    fat
+        FAT size option. Can be 12, 16 or 32, and can only be used on
+        fat or vfat filesystems.
+
     force
         Force mke2fs to create a filesystem, even if the specified device is
         not a partition on a block special device. This option is only enabled
@@ -481,6 +486,9 @@ def format_(device,
     if lazy_itable_init is not None:
         if fs_type[:3] == 'ext':
             cmd.extend(['-E', 'lazy_itable_init={0}'.format(lazy_itable_init)])
+    if fat is not None and fat in (12, 16, 32):
+        if fs_type[-3:] == 'fat':
+            cmd.extend(['-F', fat])
     if force:
         if fs_type[:3] == 'ext':
             cmd.append('-F')

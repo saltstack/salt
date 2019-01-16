@@ -1846,7 +1846,7 @@ def get_repo_keys():
 
     # The double usage of '--with-fingerprint' is necessary in order to
     # retrieve the fingerprint of the subkey.
-    cmd = ['apt-key', 'adv', '--list-public-keys', '--with-fingerprint',
+    cmd = ['apt-key', 'adv', '--batch', '--list-public-keys', '--with-fingerprint',
            '--with-fingerprint', '--with-colons', '--fixed-list-mode']
 
     cmd_ret = _call_apt(cmd, scope=False)
@@ -1946,7 +1946,7 @@ def add_repo_key(path=None, text=None, keyserver=None, keyid=None, saltenv='base
             error_msg = 'No keyid or keyid too short for keyserver: {0}'.format(keyserver)
             raise SaltInvocationError(error_msg)
 
-        cmd.extend(['adv', '--keyserver', keyserver, '--recv', keyid])
+        cmd.extend(['adv', '--batch', '--keyserver', keyserver, '--recv', keyid])
     elif keyid:
         error_msg = 'No keyserver specified for keyid: {0}'.format(keyid)
         raise SaltInvocationError(error_msg)
@@ -2249,10 +2249,10 @@ def mod_repo(repo, saltenv='base', **kwargs):
                 if not imported:
                     http_proxy_url = _get_http_proxy_url()
                     if http_proxy_url and keyserver not in no_proxy:
-                        cmd = ['apt-key', 'adv', '--keyserver-options', 'http-proxy={0}'.format(http_proxy_url),
+                        cmd = ['apt-key', 'adv', '--batch', '--keyserver-options', 'http-proxy={0}'.format(http_proxy_url),
                                '--keyserver', keyserver, '--logger-fd', '1', '--recv-keys', key]
                     else:
-                        cmd = ['apt-key', 'adv', '--keyserver', keyserver,
+                        cmd = ['apt-key', 'adv', '--batch', '--keyserver', keyserver,
                                '--logger-fd', '1', '--recv-keys', key]
                     ret = _call_apt(cmd, scope=False, **kwargs)
                     if ret['retcode'] != 0:
@@ -2686,7 +2686,7 @@ def owner(*paths):
 
 def show(*names, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Runs an ``apt-cache show`` on the passed package names, and returns the
     results in a nested dictionary. The top level of the return data will be

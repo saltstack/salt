@@ -315,6 +315,7 @@ def hw_addr(iface):
     '''
     return salt.utils.network.hw_addr(iface)
 
+
 # Alias hwaddr to preserve backward compat
 hwaddr = salt.utils.functools.alias_function(hw_addr, 'hwaddr')
 
@@ -359,13 +360,13 @@ def ip_addrs(interface=None, include_loopback=False, cidr=None, type=None):
         Describes subnet using CIDR notation and only IPv4 addresses that belong
         to this subnet will be returned.
 
-      .. versionchanged:: Fluorine
+      .. versionchanged:: 2019.2.0
 
     type
         If option set to 'public' then only public addresses will be returned.
         Ditto for 'private'.
 
-        .. versionchanged:: Fluorine
+        .. versionchanged:: 2019.2.0
 
     CLI Example:
 
@@ -387,6 +388,7 @@ def ip_addrs(interface=None, include_loopback=False, cidr=None, type=None):
         else:
             return addrs
 
+
 ipaddrs = salt.utils.functools.alias_function(ip_addrs, 'ipaddrs')
 
 
@@ -404,7 +406,7 @@ def ip_addrs6(interface=None, include_loopback=False, cidr=None):
         Describes subnet using CIDR notation and only IPv6 addresses that belong
         to this subnet will be returned.
 
-        .. versionchanged:: Fluorine
+        .. versionchanged:: 2019.2.0
 
     CLI Example:
 
@@ -419,6 +421,7 @@ def ip_addrs6(interface=None, include_loopback=False, cidr=None):
         return [i for i in addrs if salt.utils.network.in_subnet(cidr, [i])]
     else:
         return addrs
+
 
 ipaddrs6 = salt.utils.functools.alias_function(ip_addrs6, 'ipaddrs6')
 
@@ -519,7 +522,7 @@ def is_private(ip_addr):
     '''
     Check if the given IP address is a private address
 
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     CLI Example:
 

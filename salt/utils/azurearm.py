@@ -2,7 +2,7 @@
 '''
 Azure (ARM) Utilities
 
-.. versionadded:: Fluorine
+.. versionadded:: 2019.2.0
 
 :maintainer: <devops@decisionlab.io>
 :maturity: new

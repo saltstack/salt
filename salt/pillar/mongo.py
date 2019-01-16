@@ -81,6 +81,7 @@ def __virtual__():
         return False
     return 'mongo'
 
+
 # Set up logging
 log = logging.getLogger(__name__)
 

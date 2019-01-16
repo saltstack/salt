@@ -25,6 +25,7 @@ def pause(jid, state_id=None, duration=None):
     minion = salt.minion.MasterMinion(__opts__)
     minion.functions['state.pause'](jid, state_id, duration)
 
+
 set_pause = salt.utils.functools.alias_function(pause, 'set_pause')
 
 
@@ -34,6 +35,7 @@ def resume(jid, state_id=None):
     '''
     minion = salt.minion.MasterMinion(__opts__)
     minion.functions['state.resume'](jid, state_id)
+
 
 rm_pause = salt.utils.functools.alias_function(resume, 'rm_pause')
 
@@ -131,6 +133,7 @@ def orchestrate(mods,
     else:
         ret['retcode'] = 1
     return ret
+
 
 # Aliases for orchestrate runner
 orch = salt.utils.functools.alias_function(orchestrate, 'orch')
@@ -241,6 +244,7 @@ def orchestrate_show_sls(mods,
     ret = {minion.opts['id']: running}
     return ret
 
+
 orch_show_sls = salt.utils.functools.alias_function(orchestrate_show_sls, 'orch_show_sls')
 
 
@@ -254,7 +258,7 @@ def event(tagmatch='*',
     Watch Salt's event bus and block until the given tag is matched
 
     .. versionadded:: 2014.7.0
-    .. versionchanged:: Fluorine
+    .. versionchanged:: 2019.2.0
         ``tagmatch`` can now be either a glob or regular expression.
 
     This is useful for utilizing Salt's event bus from shell scripts or for

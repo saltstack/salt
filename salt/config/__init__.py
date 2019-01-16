@@ -89,7 +89,7 @@ def _gather_buffer_space():
         # We need to load up ``mem_total`` grain. Let's mimic required OS data.
         os_data = {'kernel': platform.system()}
         grains = salt.grains.core._memdata(os_data)
-        total_mem = grains['mem_total']
+        total_mem = grains['mem_total'] * 1024 * 1024
     # Return the higher number between 5% of the system memory and 10MiB
     return max([total_mem * 0.05, 10 << 20])
 
@@ -136,7 +136,7 @@ VALID_OPTS = {
     # a master fingerprint with `salt-key -F master`
     'master_finger': six.string_types,
 
-    # Deprecated in Fluorine. Use 'random_master' instead.
+    # Deprecated in 2019.2.0. Use 'random_master' instead.
     # Do not remove! Keep as an alias for usability.
     'master_shuffle': bool,
 
@@ -458,6 +458,9 @@ VALID_OPTS = {
 
     # Tell the client to display the jid when a job is published
     'show_jid': bool,
+
+    # Generate jids based on UTC time instead of local time
+    'utc_jid': bool,
 
     # Ensure that a generated jid is always unique. If this is set, the jid
     # format is different due to an underscore and process id being appended

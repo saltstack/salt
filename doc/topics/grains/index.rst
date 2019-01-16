@@ -276,7 +276,7 @@ grains in ``_grains`` will override *any* grains of the same name.
 For custom grains, if the function takes an argument ``grains``, then the
 previously rendered grains will be passed in.  Because the rest of the grains
 could be rendered in any order, the only grains that can be relied upon to be
-passed in are ``core`` grains. This was added in the Fluorine release.
+passed in are ``core`` grains. This was added in the 2019.2.0 release.
 
 
 Examples of Grains

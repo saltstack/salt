@@ -277,6 +277,7 @@ def items(*args, **kwargs):
 
     return pillar.compile_pillar()
 
+
 # Allow pillar.data to also be used to return pillar data
 data = salt.utils.functools.alias_function(items, 'data')
 

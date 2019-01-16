@@ -302,6 +302,7 @@ def TXT(host, nameserver=None):
 
     return [i for i in cmd['stdout'].split('\n')]
 
+
 # Let lowercase work, since that is the convention for Salt functions
 a = A
 aaaa = AAAA

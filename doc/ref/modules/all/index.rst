@@ -198,6 +198,7 @@ execution modules
     jboss7
     jboss7_cli
     jenkinsmod
+    jinja
     jira_mod
     junos
     k8s
@@ -230,6 +231,7 @@ execution modules
     logrotate
     lvs
     lxc
+    lxd
     mac_assistive
     mac_brew
     mac_defaults

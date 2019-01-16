@@ -16,6 +16,7 @@ import salt.payload
 import salt.utils.args
 import salt.utils.event
 import salt.utils.network
+import salt.transport.client
 from salt.exceptions import SaltClientError
 
 # Import 3rd-party libs
@@ -74,8 +75,11 @@ def _mine_get(load, opts):
                       'Mine could not be retrieved.'
                       )
             return False
-    channel = salt.transport.Channel.factory(opts)
-    ret = channel.send(load)
+    channel = salt.transport.client.ReqChannel.factory(opts)
+    try:
+        ret = channel.send(load)
+    finally:
+        channel.close()
     return ret
 
 
@@ -383,7 +387,7 @@ def get_docker(interfaces=None, cidrs=None, with_container_id=False):
         When :conf_minion:`docker.update_mine` is set to ``False`` for a given
         minion, no mine data will be populated for that minion, and thus none
         will be returned for it.
-    .. versionchanged:: Fluorine
+    .. versionchanged:: 2019.2.0
         :conf_minion:`docker.update_mine` now defaults to ``False``
 
     Get all mine data for :py:func:`docker.ps <salt.modules.dockermod.ps_>` and
