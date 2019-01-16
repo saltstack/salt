@@ -735,7 +735,7 @@ def wait_for_event(
             log.debug("wait_for_event: Skipping unmatched event '%s'",
                       event['tag'])
 
-        if len(id_list) == 0:
+        if not id_list:
             ret['result'] = True
             ret['comment'] = 'All events seen in {0} seconds.'.format(
                     time.time() - starttime)

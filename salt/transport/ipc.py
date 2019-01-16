@@ -574,7 +574,7 @@ class IPCMessagePublisher(object):
         '''
         Send message to all connected sockets
         '''
-        if not len(self.streams):
+        if not self.streams:
             return
 
         pack = salt.transport.frame.frame_msg_ipc(msg, raw_body=True)

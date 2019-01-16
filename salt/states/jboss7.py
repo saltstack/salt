@@ -156,17 +156,17 @@ def datasource_exists(name, jboss_config, datasource_properties, recreate=False,
         diff = dictdiffer.diff(ds_new_properties, ds_current_properties)
 
         added = diff.added()
-        if len(added) > 0:
+        if added:
             has_changed = True
             ret['changes']['added'] = __format_ds_changes(added, ds_current_properties, ds_new_properties)
 
         removed = diff.removed()
-        if len(removed) > 0:
+        if removed:
             has_changed = True
             ret['changes']['removed'] = __format_ds_changes(removed, ds_current_properties, ds_new_properties)
 
         changed = diff.changed()
-        if len(changed) > 0:
+        if changed:
             has_changed = True
             ret['changes']['changed'] = __format_ds_changes(changed, ds_current_properties, ds_new_properties)
 
