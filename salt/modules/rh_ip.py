@@ -158,7 +158,7 @@ def _parse_rh_config(path):
     if rh_config:
         for line in rh_config:
             line = line.strip()
-            if len(line) == 0 or line.startswith("!") or line.startswith("#"):
+            if not line or line.startswith("!") or line.startswith("#"):
                 continue
             pair = [p.rstrip() for p in line.split("=", 1)]
             if len(pair) != 2:
@@ -340,7 +340,7 @@ def _parse_settings_bond_0(opts, iface, bond_def):
             if 1 <= len(opts["arp_ip_target"]) <= 16:
                 bond.update({"arp_ip_target": ""})
                 for ip in opts["arp_ip_target"]:  # pylint: disable=C0103
-                    if len(bond["arp_ip_target"]) > 0:
+                    if bond["arp_ip_target"]:
                         bond["arp_ip_target"] = bond["arp_ip_target"] + "," + ip
                     else:
                         bond["arp_ip_target"] = ip
@@ -419,7 +419,7 @@ def _parse_settings_bond_2(opts, iface, bond_def):
             if 1 <= len(opts["arp_ip_target"]) <= 16:
                 bond.update({"arp_ip_target": ""})
                 for ip in opts["arp_ip_target"]:  # pylint: disable=C0103
-                    if len(bond["arp_ip_target"]) > 0:
+                    if bond["arp_ip_target"]:
                         bond["arp_ip_target"] = bond["arp_ip_target"] + "," + ip
                     else:
                         bond["arp_ip_target"] = ip
@@ -635,7 +635,7 @@ def _parse_settings_vlan(opts, iface):
             _raise_error_iface(iface, "vlan_id", "Positive integer")
 
     if "phys_dev" in opts:
-        if len(opts["phys_dev"]) > 0:
+        if opts["phys_dev"]:
             vlan.update({"phys_dev": opts["phys_dev"]})
         else:
             _raise_error_iface(iface, "phys_dev", "Non-empty string")

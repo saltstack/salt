@@ -5299,14 +5299,14 @@ def _get_netsh_value(profile, option):
         __context__["lgpo.netsh_data"] = {}
 
     if profile not in __context__["lgpo.netsh_data"]:
-        log.debug("LGPO: Loading netsh data for {0} profile".format(profile))
+        log.debug("LGPO: Loading netsh data for %s profile", profile)
         settings = salt.utils.win_lgpo_netsh.get_all_settings(
             profile=profile, store="lgpo"
         )
         __context__["lgpo.netsh_data"].update({profile: settings})
     log.trace(
-        "LGPO: netsh returning value: {0}"
-        "".format(__context__["lgpo.netsh_data"][profile][option])
+        "LGPO: netsh returning value: %s",
+        __context__["lgpo.netsh_data"][profile][option],
     )
     return __context__["lgpo.netsh_data"][profile][option]
 
@@ -5316,10 +5316,14 @@ def _set_netsh_value(profile, section, option, value):
         raise ValueError("LGPO: Invalid section: {0}".format(section))
     log.trace(
         "LGPO: Setting the following\n"
-        "Profile: {0}\n"
-        "Section: {1}\n"
-        "Option: {2}\n"
-        "Value: {3}".format(profile, section, option, value)
+        "Profile: %s\n"
+        "Section: %s\n"
+        "Option: %s\n"
+        "Value: %s",
+        profile,
+        section,
+        option,
+        value,
     )
     if section == "firewallpolicy":
         salt.utils.win_lgpo_netsh.set_firewall_settings(
@@ -5344,7 +5348,7 @@ def _set_netsh_value(profile, section, option, value):
         salt.utils.win_lgpo_netsh.set_logging_settings(
             profile=profile, setting=option, value=value, store="lgpo"
         )
-    log.trace("LGPO: Clearing netsh data for {0} profile".format(profile))
+    log.debug("LGPO: Clearing netsh data for %s profile", profile)
     __context__["lgpo.netsh_data"].pop(profile)
     return True
 
@@ -5456,7 +5460,7 @@ def _validateSetting(value, policy):
         True
     if the Policy has 'Children', we'll validate their settings too
     """
-    log.debug("validating {0} for policy {1}".format(value, policy))
+    log.debug("validating %s for policy %s", value, policy)
     if "Settings" in policy:
         if policy["Settings"]:
             if isinstance(policy["Settings"], list):
@@ -6167,7 +6171,7 @@ def _processValueItem(
             if this_element_value is not None:
                 # Sometimes values come in as strings
                 if isinstance(this_element_value, str):
-                    log.debug("Converting {0} to bytes".format(this_element_value))
+                    log.debug("Converting %s to bytes", this_element_value)
                     this_element_value = this_element_value.encode("utf-32-le")
                 expected_string = b"".join(
                     [
@@ -6271,7 +6275,7 @@ def _checkAllAdmxPolicies(
     admx_policy_definitions = _get_policy_definitions(language=adml_language)
     adml_policy_resources = _get_policy_resources(language=adml_language)
     if policy_file_data:
-        log.trace("POLICY CLASS {0} has file data".format(policy_class))
+        log.trace("POLICY CLASS %s has file data", policy_class)
         policy_filedata_split = re.sub(
             salt.utils.stringutils.to_bytes(r"\]{0}$".format(chr(0))),
             b"",
@@ -6865,9 +6869,8 @@ def _checkAllAdmxPolicies(
                                         policy_disabled_elements + 1
                                     )
                                     log.trace(
-                                        "element {0} is disabled".format(
-                                            child_item.attrib["id"]
-                                        )
+                                        "element %s is disabled",
+                                        child_item.attrib["id"],
                                     )
                     if element_only_enabled_disabled:
                         if len(required_elements.keys()) > 0 and len(
@@ -6877,9 +6880,8 @@ def _checkAllAdmxPolicies(
                                 required_elements.keys()
                             ):
                                 log.trace(
-                                    "{0} is disabled by all enum elements".format(
-                                        this_policyname
-                                    )
+                                    "%s is disabled by all enum elements",
+                                    this_policyname,
                                 )
                                 if this_policynamespace not in policy_vals:
                                     policy_vals[this_policynamespace] = {}
@@ -6893,9 +6895,7 @@ def _checkAllAdmxPolicies(
                                     this_policyname
                                 ] = configured_elements
                                 log.trace(
-                                    "{0} is enabled by enum elements".format(
-                                        this_policyname
-                                    )
+                                    "%s is enabled by enum elements", this_policyname
                                 )
                     else:
                         if this_policy_setting == "Enabled":
@@ -8149,14 +8149,10 @@ def _lookup_admin_template(policy_name, policy_class, adml_language="en-US"):
                         registry_class=policy_class,
                     )
                 if admx_search_results:
-                    log.trace(
-                        "processing admx_search_results of {0}".format(
-                            admx_search_results
-                        )
+                    log.debug(
+                        "processing admx_search_results of %s", admx_search_results
                     )
-                    log.trace(
-                        "multiple_adml_entries is {0}".format(multiple_adml_entries)
-                    )
+                    log.debug("multiple_adml_entries is %s", multiple_adml_entries)
                     if (
                         len(admx_search_results) == 1 or hierarchy
                     ) and not multiple_adml_entries:
@@ -10130,7 +10126,7 @@ def set_(
                 if _netshs:
                     # we've got netsh settings to make
                     for setting in _netshs:
-                        log.trace("Setting firewall policy: {0}".format(setting))
+                        log.trace("Setting firewall policy: %s", setting)
                         log.trace(_netshs[setting])
                         _set_netsh_value(**_netshs[setting])
 

@@ -186,10 +186,10 @@ def _prepare_settings(pspath, settings):
     prepared_settings = []
     for setting in settings:
         if setting.get("name", None) is None:
-            log.warning("win_iis: Setting has no name: {}".format(setting))
+            log.warning("win_iis: Setting has no name: %s", setting)
             continue
         if setting.get("filter", None) is None:
-            log.warning("win_iis: Setting has no filter: {}".format(setting))
+            log.warning("win_iis: Setting has no filter: %s", setting)
             continue
         match = re.search(r"Collection\[(\{.*\})\]", setting["name"])
         if match:
@@ -199,7 +199,7 @@ def _prepare_settings(pspath, settings):
                 pspath, setting["filter"], name, match_dict
             )
             if index == -1:
-                log.warning("win_iis: No match found for setting: {}".format(setting))
+                log.warning("win_iis: No match found for setting: %s", setting)
             else:
                 setting["name"] = setting["name"].replace(match.group(1), str(index))
                 prepared_settings.append(setting)
@@ -398,7 +398,7 @@ def modify_site(name, sourcepath=None, apppool=None):
     current_sites = list_sites()
 
     if name not in current_sites:
-        log.debug("Site '{0}' not defined.".format(name))
+        log.debug("Site '%s' not defined.", name)
         return False
 
     ps_cmd = list()
@@ -419,9 +419,9 @@ def modify_site(name, sourcepath=None, apppool=None):
     if apppool:
 
         if apppool in list_apppools():
-            log.debug("Utilizing pre-existing application pool: {0}" "".format(apppool))
+            log.debug("Utilizing pre-existing application pool: %s", apppool)
         else:
-            log.debug("Application pool will be created: {0}".format(apppool))
+            log.debug("Application pool will be created: %s", apppool)
             create_apppool(apppool)
 
         # If ps_cmd isn't empty, we need to add a semi-colon to run two commands
@@ -2219,7 +2219,7 @@ def set_webapp_settings(name, site, settings):
         log.error("Failed to change settings: %s", failed_settings)
         return False
 
-    log.debug("Settings configured successfully: {0}".format(settings.keys()))
+    log.debug("Settings configured successfully: %s", list(settings))
     return True
 
 
