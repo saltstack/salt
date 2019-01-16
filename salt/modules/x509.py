@@ -23,10 +23,8 @@ import re
 import sys
 import tempfile
 
-import salt.exceptions
-import salt.utils.data
-
 # Import salt libs
+import salt.utils.data
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
@@ -490,7 +488,7 @@ def get_pem_entry(text, pem_type=None):
         # mine.get returns the PEM on a single line, we fix this
         pem_fixed = []
         pem_temp = text
-        while len(pem_temp) > 0:
+        while pem_temp:
             if pem_temp.startswith("-----"):
                 # Grab ----(.*)---- blocks
                 pem_fixed.append(pem_temp[: pem_temp.index("-----", 5) + 5])
@@ -1653,7 +1651,7 @@ def create_certificate(path=None, text=False, overwrite=True, ca_server=None, **
             name=extname, value=extval, critical=critical, issuer=issuer
         )
         if not ext.x509_ext:
-            log.info("Invalid X509v3 Extension. {0}: {1}".format(extname, extval))
+            log.info("Invalid X509v3 Extension. %s: %s", extname, extval)
             continue
 
         cert.add_ext(ext)
@@ -1820,7 +1818,7 @@ def create_csr(path=None, text=False, **kwargs):
             name=extname, value=extval, critical=critical, issuer=issuer
         )
         if not ext.x509_ext:
-            log.info("Invalid X509v3 Extension. {0}: {1}".format(extname, extval))
+            log.info("Invalid X509v3 Extension. %s: %s", extname, extval)
             continue
 
         extstack.push(ext)
@@ -1940,10 +1938,7 @@ def verify_crl(crl, cert):
     crltempfile.close()
     certtempfile.close()
 
-    if "verify OK" in output:
-        return True
-    else:
-        return False
+    return "verify OK" in output
 
 
 def expired(certificate):

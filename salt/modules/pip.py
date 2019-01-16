@@ -1397,7 +1397,7 @@ def list_upgrades(bin_env=None, user=None, cwd=None):
             if match:
                 name, version_ = match.groups()
             else:
-                logger.error("Can't parse line '{0}'".format(line))
+                logger.error("Can't parse line '%s'", line)
                 continue
             packages[name] = version_
 

@@ -71,7 +71,7 @@ def latest_version(*names, **kwargs):
     """
     refresh = salt.utils.data.is_true(kwargs.pop("refresh", False))
 
-    if len(names) == 0:
+    if not names:
         return ""
 
     # Refresh before looking for the latest version available
@@ -531,7 +531,7 @@ def install(
     except MinionError as exc:
         raise CommandExecutionError(exc)
 
-    if pkg_params is None or len(pkg_params) == 0:
+    if not pkg_params:
         return {}
 
     if "root" in kwargs:
@@ -854,7 +854,7 @@ def file_list(*packages, **kwargs):
     ret = []
     cmd = ["pacman", "-Ql"]
 
-    if len(packages) > 0 and os.path.exists(packages[0]):
+    if packages and os.path.exists(packages[0]):
         packages = list(packages)
         cmd.extend(("-r", packages.pop(0)))
 
@@ -888,7 +888,7 @@ def file_dict(*packages, **kwargs):
     ret = {}
     cmd = ["pacman", "-Ql"]
 
-    if len(packages) > 0 and os.path.exists(packages[0]):
+    if packages and os.path.exists(packages[0]):
         packages = list(packages)
         cmd.extend(("-r", packages.pop(0)))
 

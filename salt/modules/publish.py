@@ -4,9 +4,8 @@ Publish a command from a minion to a target
 """
 from __future__ import absolute_import, print_function, unicode_literals
 
-import logging
-
 # Import python libs
+import logging
 import time
 
 # Import salt libs
@@ -152,7 +151,7 @@ def _publish(
             matched_minions = set(peer_data["minions"])
             returned_minions = set()
             loop_counter = 0
-            while len(returned_minions ^ matched_minions) > 0:
+            while returned_minions ^ matched_minions:
                 load = {
                     "cmd": "pub_ret",
                     "id": __opts__["id"],
@@ -167,7 +166,7 @@ def _publish(
                     end_loop = True
                 elif (loop_interval * loop_counter) > timeout:
                     # This may be unnecessary, but I am paranoid
-                    if len(returned_minions) < 1:
+                    if not returned_minions:
                         return {}
                     end_loop = True
 

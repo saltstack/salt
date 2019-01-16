@@ -42,7 +42,6 @@ import salt.utils.systemd
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, MinionError, SaltInvocationError
 
-# Import 3rd-party libs
 # pylint: disable=import-error,redefined-builtin
 # Import 3rd-party libs
 from salt.ext import six
@@ -56,9 +55,7 @@ try:
 except ImportError:
     HAS_YUM = False
 
-
 # pylint: enable=import-error,redefined-builtin
-
 
 log = logging.getLogger(__name__)
 
@@ -494,7 +491,7 @@ def latest_version(*names, **kwargs):
         salt '*' pkg.latest_version <package1> <package2> <package3> ...
     """
     refresh = salt.utils.data.is_true(kwargs.pop("refresh", True))
-    if len(names) == 0:
+    if not names:
         return ""
 
     options = _get_options(**kwargs)
@@ -1414,7 +1411,7 @@ def install(
     except MinionError as exc:
         raise CommandExecutionError(exc)
 
-    if pkg_params is None or len(pkg_params) == 0:
+    if not pkg_params:
         return {}
 
     version_num = kwargs.get("version")

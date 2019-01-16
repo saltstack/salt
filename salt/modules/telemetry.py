@@ -245,7 +245,7 @@ def get_alarms(deployment_id, profile="telemetry"):
     if response.status_code == 200:
         alarms = response.json()
 
-        if len(alarms) > 0:
+        if alarms:
             return alarms
 
         return "No alarms defined for deployment: {0}".format(deployment_id)
@@ -413,7 +413,7 @@ def delete_alarms(
     else:
         alert_ids = [alert_id]
 
-    if len(alert_ids) == 0:
+    if not alert_ids:
         return (
             False,
             "failed to find alert associated with deployment: {0}".format(
@@ -441,7 +441,7 @@ def delete_alarms(
         if response.status_code != 200:
             failed_to_delete.append(id)
 
-    if len(failed_to_delete) > 0:
+    if failed_to_delete:
         return (
             False,
             "Failed to delete {0} alarms in deployment: {1}".format(

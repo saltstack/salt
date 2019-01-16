@@ -838,7 +838,7 @@ def append(table="filter", chain=None, rule=None, family="ipv4"):
     )
     out = __salt__["cmd.run"](cmd, python_shell=False)
 
-    if len(out) == 0:
+    if not out:
         ret["result"] = True
         ret[
             "comment"
@@ -925,7 +925,7 @@ def insert(table="filter", chain=None, position=None, rule=None, family="ipv4"):
         )
     out = __salt__["cmd.run"](cmd, python_shell=False)
 
-    if len(out) == 0:
+    if not out:
         ret["result"] = True
         ret[
             "comment"
@@ -1004,7 +1004,7 @@ def delete(table, chain=None, position=None, rule=None, family="ipv4"):
     )
     out = __salt__["cmd.run"](cmd, python_shell=False)
 
-    if len(out) == 0:
+    if not out:
         ret["result"] = True
         ret[
             "comment"
@@ -1064,7 +1064,7 @@ def flush(table="filter", chain="", family="ipv4"):
         comment = "from table {0} in family {1}.".format(table, family)
     out = __salt__["cmd.run"](cmd, python_shell=False)
 
-    if len(out) == 0:
+    if not out:
         ret["result"] = True
         ret["comment"] = "Flushed rules {0}".format(comment)
     else:

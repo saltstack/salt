@@ -369,7 +369,7 @@ def create(domain_name, years, **kwargs):
     for requiredkey in require_opts:
         if requiredkey not in opts:
             log.error("Missing required parameter '%s'", requiredkey)
-            raise Exception("Missing required parameter '" + requiredkey + "'")
+            raise Exception("Missing required parameter '{0}'".format(requiredkey))
 
     response_xml = salt.utils.namecheap.post_request(opts)
 
