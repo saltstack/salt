@@ -107,8 +107,6 @@ bymYbi0l2pWqQLA2sPoRHNw=
 }
 
 # Skip this test case if we don't have access to mock or PyOpenSSL.
-
-
 @skipIf(NO_PYOPENSSL, "PyOpenSSL must be installed to run these tests.")
 class TLSAddTestCase(TestCase, LoaderModuleMockMixin):
     """

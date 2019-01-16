@@ -376,8 +376,7 @@ def init(opts):
             if "username" not in proxy_conf:
                 log.critical("No 'username' key found in pillar for this " "proxy.")
                 return False
-            if "passwords" not in proxy_conf and len(proxy_conf["passwords"]) > 0:
-
+            if "passwords" not in proxy_conf and proxy_conf["passwords"]:
                 log.critical(
                     "Mechanism is set to 'userpass' , but no "
                     "'passwords' key found in pillar for this "

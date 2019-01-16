@@ -7,9 +7,8 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import inspect
 
-import salt.modules.saltutil as saltutil_module
-
 # Import Salt Libs
+import salt.modules.saltutil as saltutil_module
 import salt.states.saltutil as saltutil_state
 
 # Import Salt Testing Libs

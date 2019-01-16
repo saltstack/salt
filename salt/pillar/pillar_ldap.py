@@ -338,9 +338,9 @@ def ext_pillar(
 
         msg = "pillar_ldap: error parsing configuration file: {0} - {1}"
         if salt.log.is_console_configured():
-            log.warning(msg.format(config_file, err))
+            log.warning(msg)
         else:
-            print(msg.format(config_file, err))
+            print(msg)
         return {}
     else:
         if not isinstance(opts, dict):

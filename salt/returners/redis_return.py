@@ -121,7 +121,6 @@ try:
     from rediscluster import StrictRedisCluster
 
     # pylint: enable=no-name-in-module
-
     HAS_REDIS_CLUSTER = True
 except ImportError:
     HAS_REDIS_CLUSTER = False
@@ -322,7 +321,7 @@ def clean_old_jobs():
         load_key = ret_key.replace("ret:", "load:", 1)
         if load_key not in living_jids:
             to_remove.append(ret_key)
-    if len(to_remove) != 0:
+    if to_remove:
         serv.delete(*to_remove)
         log.debug("clean old jobs: %s", to_remove)
 

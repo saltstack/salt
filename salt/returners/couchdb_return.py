@@ -73,7 +73,6 @@ from salt.ext.six.moves.urllib.request import build_opener as _build_opener
 
 # pylint: enable=no-name-in-module,import-error
 
-
 log = logging.getLogger(__name__)
 
 # Define the module's virtual name
@@ -256,7 +255,7 @@ def get_fun(fun):
 
         # Skip the minion if we didn't get any rows back. ( IE function that
         # they're looking for has a typo in it or some such ).
-        if len(_response["rows"]) < 1:
+        if not _response["rows"]:
             continue
 
         # Set the respnse ..

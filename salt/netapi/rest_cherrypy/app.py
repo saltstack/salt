@@ -601,7 +601,6 @@ import salt.utils.yaml
 
 logger = logging.getLogger(__name__)
 
-
 try:
     from cherrypy.lib import (  # pylint: disable=import-error,3rd-party-module-not-gated
         cpstats,
@@ -702,9 +701,9 @@ def salt_api_acl_tool(username, request):
     :param request: Cherrypy request to check against the API.
     :type request: cherrypy.request
     """
-    failure_str = "[api_acl] Authentication failed for " "user {0} from IP {1}"
-    success_str = "[api_acl] Authentication successful for user {0} from IP {1}"
-    pass_str = "[api_acl] Authentication not checked for " "user {0} from IP {1}"
+    failure_str = "[api_acl] Authentication failed for user %s from IP %s"
+    success_str = "[api_acl] Authentication successful for user %s from IP %s"
+    pass_str = "[api_acl] Authentication not checked for user %s from IP %s"
 
     acl = None
     # Salt Configuration
@@ -722,23 +721,23 @@ def salt_api_acl_tool(username, request):
         if users:
             if username in users:
                 if ip in users[username] or "*" in users[username]:
-                    logger.info(success_str.format(username, ip))
+                    logger.info(success_str, username, ip)
                     return True
                 else:
-                    logger.info(failure_str.format(username, ip))
+                    logger.info(failure_str, username, ip)
                     return False
             elif username not in users and "*" in users:
                 if ip in users["*"] or "*" in users["*"]:
-                    logger.info(success_str.format(username, ip))
+                    logger.info(success_str, username, ip)
                     return True
                 else:
-                    logger.info(failure_str.format(username, ip))
+                    logger.info(failure_str, username, ip)
                     return False
             else:
-                logger.info(failure_str.format(username, ip))
+                logger.info(failure_str, username, ip)
                 return False
     else:
-        logger.info(pass_str.format(username, ip))
+        logger.info(pass_str, username, ip)
         return True
 
 
@@ -755,11 +754,11 @@ def salt_ip_verify_tool():
         if cherrypy_conf:
             auth_ip_list = cherrypy_conf.get("authorized_ips", None)
             if auth_ip_list:
-                logger.debug("Found IP list: {0}".format(auth_ip_list))
+                logger.debug("Found IP list: %s", auth_ip_list)
                 rem_ip = cherrypy.request.headers.get("Remote-Addr", None)
-                logger.debug("Request from IP: {0}".format(rem_ip))
+                logger.debug("Request from IP: %s", rem_ip)
                 if rem_ip not in auth_ip_list:
-                    logger.error("Blocked IP: {0}".format(rem_ip))
+                    logger.error("Blocked IP: %s", rem_ip)
                     raise cherrypy.HTTPError(403, "Bad IP")
 
 
@@ -1888,10 +1887,10 @@ class Login(LowDataAdapter):
                 logger.debug("Eauth permission list not found.")
         except Exception:  # pylint: disable=broad-except
             logger.debug(
-                "Configuration for external_auth malformed for "
-                "eauth '{0}', and user '{1}'.".format(
-                    token.get("eauth"), token.get("name")
-                ),
+                "Configuration for external_auth malformed for eauth '%s', "
+                "and user '%s'.",
+                token.get("eauth"),
+                token.get("name"),
                 exc_info=True,
             )
             perms = None
@@ -2557,9 +2556,7 @@ class WebsocketEndpoint(object):
                                 False,
                             )
                     except UnicodeDecodeError:
-                        logger.error(
-                            "Error: Salt event has non UTF-8 data:\n{0}".format(data)
-                        )
+                        logger.error("Error: Salt event has non UTF-8 data:\n%s", data)
 
         parent_pipe, child_pipe = Pipe()
         handler.pipe = parent_pipe

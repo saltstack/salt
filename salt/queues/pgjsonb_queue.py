@@ -58,7 +58,6 @@ try:
 except ImportError:
     HAS_PG = False
 
-
 log = logging.getLogger(__name__)
 
 # Define the module's virtual name
@@ -267,7 +266,7 @@ def pop(queue, quantity=1, is_runner=False):
     with _conn(commit=True) as cur:
         cur.execute(cmd)
         result = cur.fetchall()
-        if len(result) > 0:
+        if result:
             ids = [six.text_type(item[0]) for item in result]
             items = [item[1] for item in result]
             idlist = "','".join(ids)

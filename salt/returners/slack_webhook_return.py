@@ -77,7 +77,6 @@ from salt.ext.six.moves.urllib.parse import urljoin as _urljoin
 
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
 
-
 log = logging.getLogger(__name__)
 
 __virtualname__ = "slack_webhook"
@@ -168,7 +167,7 @@ def _generate_payload(author_icon, title, report):
     title = _sprinkle(title)
 
     text = "Function: {}\n".format(report.get("function"))
-    if len(report.get("arguments", [])) > 0:
+    if report.get("arguments", []):
         text += "Function Args: {}\n".format(str(list(map(str, report["arguments"]))))
 
     text += "JID: {}\n".format(report.get("jid"))
@@ -208,7 +207,7 @@ def _generate_payload(author_icon, title, report):
             "title": "Changed: {}".format(report[CHANGED_KEY].get(COUNTER_KEY, 0)),
         }
 
-        if len(report[CHANGED_KEY].get(TASKS_KEY, [])) > 0:
+        if report[CHANGED_KEY].get(TASKS_KEY, []):
             changed["fields"] = list(map(_format_task, report[CHANGED_KEY][TASKS_KEY]))
 
         attachments.append(changed)
@@ -219,7 +218,7 @@ def _generate_payload(author_icon, title, report):
             "title": "Failed: {}".format(report[FAILED_KEY].get(COUNTER_KEY, None)),
         }
 
-        if len(report[FAILED_KEY].get(TASKS_KEY, [])) > 0:
+        if report[FAILED_KEY].get(TASKS_KEY, []):
             failed["fields"] = list(map(_format_task, report[FAILED_KEY][TASKS_KEY]))
 
         attachments.append(failed)

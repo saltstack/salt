@@ -17,6 +17,8 @@ import salt.utils.platform
 from salt.ext import six
 from salt.ext.six.moves import range
 from tests.support.case import ModuleCase
+
+# Import Salt Testing libs
 from tests.support.helpers import (
     destructiveTest,
     not_runs_on,

@@ -64,7 +64,7 @@ def _dummy_search(connect_spec, base, scope):
         return {}
     return {
         base: dict(
-            ((attr, list(db[base][attr])) for attr in db[base] if len(db[base][attr]))
+            ((attr, list(db[base][attr])) for attr in db[base] if db[base][attr])
         )
     }
 
@@ -175,7 +175,7 @@ class LDAPTestCase(TestCase, LoaderModuleMockMixin):
                 elif dn in expected_db:
                     new[dn].pop(attr, None)
                     expected_db[dn].pop(attr, None)
-            if not expected_db.get(dn, {}):
+            if not expected_db.get(dn):
                 new.pop(dn, None)
                 expected_db.pop(dn, None)
         if delete_others:
