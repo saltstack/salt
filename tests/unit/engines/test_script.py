@@ -27,7 +27,7 @@ class EngineScriptTestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
 
-        opts = salt.config.DEFAULT_MASTER_OPTS
+        opts = salt.config.DEFAULT_MASTER_OPTS.copy()
         return {
             script: {
                 '__opts__': opts
