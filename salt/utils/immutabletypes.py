@@ -9,6 +9,7 @@
     Immutable types
 '''
 from __future__ import absolute_import, unicode_literals
+import copy
 
 # Import python libs
 try:
@@ -37,6 +38,15 @@ class ImmutableDict(Mapping):
     def __repr__(self):
         return '<{0} {1}>'.format(self.__class__.__name__, repr(self.__obj))
 
+    def __deepcopy__(self, memo):
+        return copy.deepcopy(self.__obj)
+
+    def copy(self):
+        '''
+        Return an un-frozen copy of self
+        '''
+        return copy.deepcopy(self.__obj)
+
 
 class ImmutableList(Sequence):
     '''
@@ -64,6 +74,9 @@ class ImmutableList(Sequence):
     def __repr__(self):
         return '<{0} {1}>'.format(self.__class__.__name__, repr(self.__obj))
 
+    def __deepcopy__(self, memo):
+        return copy.deepcopy(self.__obj)
+
 
 class ImmutableSet(Set):
     '''
@@ -84,6 +97,9 @@ class ImmutableSet(Set):
 
     def __repr__(self):
         return '<{0} {1}>'.format(self.__class__.__name__, repr(self.__obj))
+
+    def __deepcopy__(self, memo):
+        return copy.deepcopy(self.__obj)
 
 
 def freeze(obj):
