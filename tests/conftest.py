@@ -264,6 +264,12 @@ def pytest_configure(config):
     # We always want deferred timeouts. Ie, only take into account the test function time
     # to run, exclude fixture setup/teardown
     config._env_timeout_func_only = True
+
+    # Freeze Salt's default configuration dictionaries
+    # Those SHALL NOT BE CHANGED during tests!!!
+    for key in dir(salt.config):
+        if key.startswith('DEFAULT_'):
+            setattr(salt.config, key, freeze(getattr(salt.config, key)))
 # <---- Register Markers ---------------------------------------------------------------------------------------------
 
 
