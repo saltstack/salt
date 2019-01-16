@@ -198,7 +198,7 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 patch('salt.utils.minion.running', MagicMock(return_value=[])), \
                 patch('tornado.gen.sleep', MagicMock(return_value=tornado.concurrent.Future())):
             process_count_max = 10
-            mock_opts = salt.config.DEFAULT_MINION_OPTS
+            mock_opts = salt.config.DEFAULT_MINION_OPTS.copy()
             mock_opts['__role'] = 'minion'
             mock_opts['minion_jid_queue_hwm'] = 100
             mock_opts["process_count_max"] = process_count_max
