@@ -30,7 +30,7 @@ class StatusBeaconTestCase(TestCase, LoaderModuleMockMixin):
     '''
 
     def setup_loader_modules(self):
-        opts = salt.config.DEFAULT_MINION_OPTS
+        opts = salt.config.DEFAULT_MINION_OPTS.copy()
         module_globals = {
             '__opts__': opts,
             '__salt__': 'autoload',
