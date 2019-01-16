@@ -135,7 +135,7 @@ Example using a user-specific library, extending NAPALM's capabilities, e.g. ``c
     - :mod:`Users configuration management <salt.modules.napalm_users>`
 
 .. note::
-    Beginning with release codename Fluorine, any NAPALM command executed when
+    Beginning with release codename 2019.2.0, any NAPALM command executed when
     running under a NAPALM Proxy Minion supports the ``force_reconnect``
     magic argument.
 

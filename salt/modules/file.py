@@ -2526,7 +2526,7 @@ def blockreplace(path,
         .. versionadded:: 2016.3.4
         .. versionchanged:: 2017.7.5,2018.3.1
             New behavior added when value is ``None``.
-        .. versionchanged:: Fluorine
+        .. versionchanged:: 2019.2.0
             The default value of this argument will change to ``None`` to match
             the behavior of the :py:func:`file.blockreplace state
             <salt.states.file.blockreplace>`

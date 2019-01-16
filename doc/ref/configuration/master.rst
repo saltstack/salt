@@ -1044,7 +1044,7 @@ cache events are fired when a minion requests a minion data cache refresh.
 ``http_connect_timeout``
 ------------------------
 
-.. versionadded:: Fluorine
+.. versionadded:: 2019.2.0
 
 Default: ``20``
 

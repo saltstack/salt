@@ -156,7 +156,7 @@ command:
 
     # salt-cloud --list-sizes my-profitbricks-config
 
-.. versionchanged:: Fluorine
+.. versionchanged:: 2019.2.0
 
     One or more public IP address can be reserved with the following command:
 
@@ -196,7 +196,7 @@ The following list explains some of the important properties.
 - ``disk_type`` - This option allow the disk type to be set to HDD or SSD. The
   default is HDD.
 
-  .. versionadded:: Fluorine
+  .. versionadded:: 2019.2.0
 
 - ``image_password`` - A password is set on the image for the "root" or
   "Administrator" account.  This field may only be set during volume creation.
@@ -215,7 +215,7 @@ The following list explains some of the important properties.
   LAN. If no LAN exists, then a new public LAN will be created. The value
   accepts a LAN ID (integer).
 
-  .. versionadded:: Fluorine
+  .. versionadded:: 2019.2.0
 
 - ``public_ips`` - Public IPs assigned to the NIC in the public LAN.
 
@@ -238,7 +238,7 @@ The following list explains some of the important properties.
   private LAN. If no LAN exists, then a new private LAN will be created. The
   value accepts a LAN ID (integer).
 
-  .. versionadded:: Fluorine
+  .. versionadded:: 2019.2.0
 
 - ``private_ips`` - Private IPs assigned in the private LAN. NAT setting is
   ignored when this setting is active.
