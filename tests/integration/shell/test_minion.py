@@ -118,10 +118,10 @@ class MinionTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMix
         )
 
         for line in ret[0]:
-            log.debug('script: salt-minion: stdout: {0}'.format(line))
+            log.debug('script: salt-minion: stdout: %s', line)
         for line in ret[1]:
-            log.debug('script: salt-minion: stderr: {0}'.format(line))
-        log.debug('exit status: {0}'.format(ret[2]))
+            log.debug('script: salt-minion: stderr: %s', line)
+        log.debug('exit status: %s', ret[2])
 
         if six.PY3:
             std_out = b'\nSTDOUT:'.join(ret[0])

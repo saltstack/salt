@@ -45,13 +45,13 @@ class CmdMock(object):
         return None
 
     def get_last_command(self):
-        if len(self.commands) > 0:
+        if self.commands:
             return self.commands[-1]
         else:
             return None
 
     def get_last_cli_command(self):
-        if len(self.cli_commands) > 0:
+        if self.cli_commands:
             return self.cli_commands[-1]
         else:
             return None

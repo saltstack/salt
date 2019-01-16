@@ -96,7 +96,7 @@ def display_output(data, out=None, opts=None, **kwargs):
     display_data = try_printout(data, out, opts, **kwargs)
 
     output_filename = opts.get('output_file', None)
-    log.trace('data = {0}'.format(data))
+    log.trace('data = %s', data)
     try:
         # output filename can be either '' or None
         if output_filename:
@@ -193,7 +193,7 @@ def get_printout(out, opts=None, **kwargs):
         # Since the grains outputter was removed we don't need to fire this
         # error when old minions are asking for it
         if out != 'grains':
-            log.error('Invalid outputter {0} specified, fall back to nested'.format(out))
+            log.error('Invalid outputter %s specified, falling back to nested', out)
         return outputters['nested']
     return outputters[out]
 

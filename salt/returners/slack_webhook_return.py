@@ -162,7 +162,7 @@ def _generate_payload(author_icon, title, report):
         'title': 'Changed: {changed}'.format(changed=report['changed'].get('counter', None))
     }
 
-    if len(report['changed'].get('tasks', [])) > 0:
+    if report['changed'].get('tasks'):
         changed['fields'] = list(
             map(_format_task, report['changed'].get('tasks')))
 
@@ -171,12 +171,12 @@ def _generate_payload(author_icon, title, report):
         'title': 'Failed: {failed}'.format(failed=report['failed'].get('counter', None))
     }
 
-    if len(report['failed'].get('tasks', [])) > 0:
+    if report['failed'].get('tasks'):
         failed['fields'] = list(
             map(_format_task, report['failed'].get('tasks')))
 
     text = 'Function: {function}\n'.format(function=report.get('function'))
-    if len(report.get('arguments', [])) > 0:
+    if report.get('arguments'):
         text += 'Function Args: {arguments}\n'.format(
             arguments=str(list(map(str, report.get('arguments')))))
 

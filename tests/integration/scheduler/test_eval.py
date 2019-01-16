@@ -25,7 +25,7 @@ import tests.integration as integration
 import salt.utils.schedule
 import salt.utils.platform
 
-from salt.modules.test import ping as ping
+from salt.modules.test import ping
 
 try:
     import croniter  # pylint: disable=W0611
