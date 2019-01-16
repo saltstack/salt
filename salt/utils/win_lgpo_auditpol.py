@@ -66,6 +66,7 @@ import re
 import tempfile
 
 # Import Salt libs
+import salt.modules.cmdmod
 import salt.utils.files
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError
@@ -117,8 +118,8 @@ def _auditpol_cmd(cmd):
     Raises:
         CommandExecutionError: If the command encounters an error
     '''
-    ret = __salt__['cmd.run_all'](cmd='auditpol {0}'.format(cmd),
-                                  python_shell=True)
+    ret = salt.modules.cmdmod.run_all(cmd='auditpol {0}'.format(cmd),
+                                      python_shell=True)
     if ret['retcode'] == 0:
         return ret['stdout'].splitlines()
 
