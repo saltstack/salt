@@ -70,7 +70,20 @@ class CheckShellBinaryNameAndVersionMixin(object):
             self._call_binary_expected_version_ = salt.version.__version__
 
         out = '\n'.join(self.run_script(self._call_binary_, '--version'))
-        self.assertIn(self._call_binary_, out)
+        # Assert that the binary name is in the output
+        try:
+            self.assertIn(self._call_binary_, out)
+        except AssertionError:
+            # We might have generated the CLI scripts in which case we replace '-' with '_'
+            alternate_binary_name = self._call_binary_.replace('-', '_')
+            errmsg = 'Neither \'{}\' or \'{}\' were found as part of the binary name in:\n\'{}\''.format(
+                self._call_binary_,
+                alternate_binary_name,
+                out
+            )
+            self.assertIn(alternate_binary_name, out, msg=errmsg)
+
+        # Assert that the version is in the output
         self.assertIn(self._call_binary_expected_version_, out)
 
 
