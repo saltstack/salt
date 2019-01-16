@@ -1546,8 +1546,9 @@ class Schedule(object):
                 # run is set to False.
                 if 'args' in data and isinstance(data['args'], list):
                     if len(data['args']) < len(func):
-                        log.error('Number of arguments is less than '
-                                  'number of functions. Ignoring job.')
+                        data['_error'] = ('Number of arguments is less than '
+                                          'number of functions. Ignoring job.')
+                        log.error(data['_error'])
                         run = False
 
             # If the job item has continue, then we set run to False
@@ -1653,20 +1654,20 @@ class Schedule(object):
             else:
                 thread_cls = threading.Thread
 
-            for i in range(len(func)):
+            for i, _func in enumerate(func):
                 _data = copy.deepcopy(data)
                 if 'args' in _data and isinstance(_data['args'], list):
                     _data['args'] = _data['args'][i]
 
                 if multiprocessing_enabled:
                     with salt.utils.process.default_signals(signal.SIGINT, signal.SIGTERM):
-                        proc = thread_cls(target=self.handle_func, args=(multiprocessing_enabled, func[i], _data))
+                        proc = thread_cls(target=self.handle_func, args=(multiprocessing_enabled, _func, _data))
                         # Reset current signals before starting the process in
                         # order not to inherit the current signal handlers
                         proc.start()
                     proc.join()
                 else:
-                    proc = thread_cls(target=self.handle_func, args=(multiprocessing_enabled, func[i], _data))
+                    proc = thread_cls(target=self.handle_func, args=(multiprocessing_enabled, _func, _data))
                     proc.start()
         finally:
             if multiprocessing_enabled and salt.utils.platform.is_windows():
