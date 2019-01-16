@@ -18,6 +18,7 @@ import pprint
 import shutil
 import socket
 import logging
+import textwrap
 TESTS_DIR = os.path.dirname(
     os.path.normpath(os.path.abspath(__file__))
 )
@@ -59,6 +60,9 @@ import salt.log.mixins
 import salt.utils.platform
 from salt.utils.odict import OrderedDict
 from salt.utils.immutabletypes import freeze
+
+# Import Pytest Salt libs
+from pytestsalt.utils import cli_scripts
 
 # Define the pytest plugins we rely on
 # pylint: disable=invalid-name
@@ -575,7 +579,7 @@ def cli_master_script_name():
     '''
     Return the CLI script basename
     '''
-    return 'cli_salt_master'
+    return 'cli_salt_master.py'
 
 
 @pytest.fixture(scope='session')
@@ -583,7 +587,7 @@ def cli_minion_script_name():
     '''
     Return the CLI script basename
     '''
-    return 'cli_salt_minion'
+    return 'cli_salt_minion.py'
 
 
 @pytest.fixture(scope='session')
@@ -591,7 +595,7 @@ def cli_salt_script_name():
     '''
     Return the CLI script basename
     '''
-    return 'cli_salt'
+    return 'cli_salt.py'
 
 
 @pytest.fixture(scope='session')
@@ -599,7 +603,7 @@ def cli_run_script_name():
     '''
     Return the CLI script basename
     '''
-    return 'cli_salt_run'
+    return 'cli_salt_run.py'
 
 
 @pytest.fixture(scope='session')
@@ -607,7 +611,7 @@ def cli_key_script_name():
     '''
     Return the CLI script basename
     '''
-    return 'cli_salt_key'
+    return 'cli_salt_key.py'
 
 
 @pytest.fixture(scope='session')
@@ -615,7 +619,7 @@ def cli_call_script_name():
     '''
     Return the CLI script basename
     '''
-    return 'cli_salt_call'
+    return 'cli_salt_call.py'
 
 
 @pytest.fixture(scope='session')
@@ -623,7 +627,7 @@ def cli_syndic_script_name():
     '''
     Return the CLI script basename
     '''
-    return 'cli_salt_syndic'
+    return 'cli_salt_syndic.py'
 
 
 @pytest.fixture(scope='session')
@@ -631,7 +635,7 @@ def cli_ssh_script_name():
     '''
     Return the CLI script basename
     '''
-    return 'cli_salt_ssh'
+    return 'cli_salt_ssh.py'
 
 
 @pytest.fixture(scope='session')
@@ -653,28 +657,18 @@ def cli_bin_dir(tempdir,
     tmp_cli_scripts_dir.ensure(dir=True)
     cli_bin_dir_path = tmp_cli_scripts_dir.strpath
 
-    # Now that we have the CLI directory created, lets generate the required CLI scripts to run salt's test suite
-    script_templates = {
-        'salt': [
-            'from salt.scripts import salt_main\n',
-            'if __name__ == \'__main__\':\n'
-            '    salt_main()'
-        ],
-        'salt-api': [
-            'import salt.cli\n',
-            'def main():\n',
-            '    sapi = salt.cli.SaltAPI()',
-            '    sapi.run()\n',
-            'if __name__ == \'__main__\':',
-            '    main()'
-        ],
-        'common': [
-            'from salt.scripts import salt_{0}\n',
-            'if __name__ == \'__main__\':\n',
-            '    salt_{0}()'
-        ]
-    }
+    extra_code = textwrap.dedent(
+        r'''
+        # During test runs, squash the msgpack deprecation warnings
+        import salt
+        import warnings
+        warnings.filterwarnings(
+            'ignore', r'encoding is deprecated, Use raw=False instead\.', DeprecationWarning,
+        )
+        '''
+    )
 
+    # Now that we have the CLI directory created, lets generate the required CLI scripts to run salt's test suite
     for script_name in (cli_master_script_name,
                         cli_minion_script_name,
                         cli_call_script_name,
@@ -683,32 +677,15 @@ def cli_bin_dir(tempdir,
                         cli_salt_script_name,
                         cli_ssh_script_name,
                         cli_syndic_script_name):
-        original_script_name = script_name.split('cli_')[-1].replace('_', '-')
-        script_path = os.path.join(cli_bin_dir_path, script_name)
-
-        if not os.path.isfile(script_path):
-            log.info('Generating %s', script_path)
-
-            with salt.utils.files.fopen(script_path, 'w') as sfh:
-                script_template = script_templates.get(original_script_name, None)
-                if script_template is None:
-                    script_template = script_templates.get('common', None)
-                if script_template is None:
-                    raise RuntimeError(
-                        'Salt\'s test suite does not know how to handle the "{0}" script'.format(
-                            original_script_name
-                        )
-                    )
-                sfh.write(
-                    '#!{0}\n\n'.format(python_executable_path) +
-                    'import sys\n' +
-                    'CODE_DIR="{0}"\n'.format(request.config.startdir.realpath().strpath) +
-                    'if CODE_DIR not in sys.path:\n' +
-                    '    sys.path.insert(0, CODE_DIR)\n\n' +
-                    '\n'.join(script_template).format(original_script_name.replace('salt-', ''))
-                )
-            fst = os.stat(script_path)
-            os.chmod(script_path, fst.st_mode | stat.S_IEXEC)
+        original_script_name = os.path.splitext(script_name)[0].split('cli_')[-1].replace('_', '-')
+        cli_scripts.generate_script(
+            bin_dir=cli_bin_dir_path,
+            script_name=original_script_name,
+            executable=sys.executable,
+            code_dir=CODE_DIR,
+            extra_code=extra_code,
+            inject_sitecustomize=True
+        )
 
     # Return the CLI bin dir value
     return cli_bin_dir_path
