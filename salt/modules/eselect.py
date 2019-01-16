@@ -60,7 +60,7 @@ def exec_action(module, action, module_parameter=None, action_parameter=None, st
     if state_only:
         return True
 
-    if len(out) < 1:
+    if not out:
         return False
 
     if len(out) == 1 and not out[0].strip():
@@ -192,7 +192,7 @@ def set_target(module, target, module_parameter=None, action_parameter=None):
 
     # get list of available modules
     if module not in get_modules():
-        log.error('Module {0} not available'.format(module))
+        log.error('Module %s not available', module)
         return False
 
     exec_result = exec_action(module, 'set', module_parameter=module_parameter, action_parameter=action_parameter, state_only=True)

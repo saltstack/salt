@@ -41,7 +41,7 @@ def version():
 
 
 def _raise_on_no_files(*args):
-    if len(args) == 0:
+    if not args:
         raise CommandExecutionError('You need to specify at least one file or directory to work with!')
 
 

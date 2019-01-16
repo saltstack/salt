@@ -215,8 +215,7 @@ def _csf_to_list(option):
 
 
 def split_option(option):
-    l = re.split("(?: +)?\=(?: +)?", option)  # pylint: disable=W1401
-    return l
+    return re.split(r'(?: +)?\=(?: +)?', option)
 
 
 def get_option(option):

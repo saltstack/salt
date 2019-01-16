@@ -231,7 +231,7 @@ def _parse(cli_output):
     tokens = __tokenize(cli_output)
     result = __process_tokens(tokens)
 
-    log.debug("=== RESULT: "+pprint.pformat(result))
+    log.debug('=== RESULT: %s', pprint.pformat(result))
     return result
 
 
@@ -346,7 +346,7 @@ def __is_long(token):
 
 def __get_long(token):
     if six.PY2:
-        return long(token[0:-1])  # pylint: disable=incompatible-py3-code
+        return long(token[0:-1])  # pylint: disable=incompatible-py3-code,undefined-variable
     else:
         return int(token[0:-1])
 

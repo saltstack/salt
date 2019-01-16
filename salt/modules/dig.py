@@ -93,10 +93,8 @@ def A(host, nameserver=None):
     # In this case, 0 is not the same as False
     if cmd['retcode'] != 0:
         log.warning(
-            'dig returned exit code \'{0}\'. Returning empty list as '
-            'fallback.'.format(
-                cmd['retcode']
-            )
+            'dig returned exit code \'%s\'. Returning empty list as fallback.',
+            cmd['retcode']
         )
         return []
 
@@ -125,10 +123,8 @@ def AAAA(host, nameserver=None):
     # In this case, 0 is not the same as False
     if cmd['retcode'] != 0:
         log.warning(
-            'dig returned exit code \'{0}\'. Returning empty list as '
-            'fallback.'.format(
-                cmd['retcode']
-            )
+            'dig returned exit code \'%s\'. Returning empty list as fallback.',
+            cmd['retcode']
         )
         return []
 
@@ -157,10 +153,8 @@ def NS(domain, resolve=True, nameserver=None):
     # In this case, 0 is not the same as False
     if cmd['retcode'] != 0:
         log.warning(
-            'dig returned exit code \'{0}\'. Returning empty list as '
-            'fallback.'.format(
-                cmd['retcode']
-            )
+            'dig returned exit code \'%s\'. Returning empty list as fallback.',
+            cmd['retcode']
         )
         return []
 
@@ -198,8 +192,8 @@ def SPF(domain, record='SPF', nameserver=None):
     # In this case, 0 is not the same as False
     if result['retcode'] != 0:
         log.warning(
-            'dig returned exit code \'{0}\'. Returning empty list as fallback.'
-            .format(result['retcode'])
+            'dig returned exit code \'%s\'. Returning empty list as fallback.',
+            result['retcode']
         )
         return []
 
@@ -209,7 +203,7 @@ def SPF(domain, record='SPF', nameserver=None):
         return SPF(domain, 'TXT', nameserver)
 
     sections = re.sub('"', '', result['stdout']).split()
-    if len(sections) == 0 or sections[0] != 'v=spf1':
+    if not sections or sections[0] != 'v=spf1':
         return []
 
     if sections[1].startswith('redirect='):
@@ -255,10 +249,8 @@ def MX(domain, resolve=False, nameserver=None):
     # In this case, 0 is not the same as False
     if cmd['retcode'] != 0:
         log.warning(
-            'dig returned exit code \'{0}\'. Returning empty list as '
-            'fallback.'.format(
-                cmd['retcode']
-            )
+            'dig returned exit code \'%s\'. Returning empty list as fallback.',
+            cmd['retcode']
         )
         return []
 
@@ -293,10 +285,8 @@ def TXT(host, nameserver=None):
 
     if cmd['retcode'] != 0:
         log.warning(
-            'dig returned exit code \'{0}\'. Returning empty list as '
-            'fallback.'.format(
-                cmd['retcode']
-            )
+            'dig returned exit code \'%s\'. Returning empty list as fallback.',
+            cmd['retcode']
         )
         return []
 

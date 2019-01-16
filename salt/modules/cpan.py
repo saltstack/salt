@@ -118,7 +118,7 @@ def remove(module, details=False):
     for file_ in files:
         if file_ in rm_details:
             continue
-        log.trace('Removing {0}'.format(file_))
+        log.trace('Removing %s', file_)
         if __salt__['file.remove'](file_):
             rm_details[file_] = 'removed'
         else:

@@ -401,7 +401,7 @@ def update(name, launch_config_name, availability_zones, min_size, max_size,
             _asg.resume_processes()
             # suspend any that are specified.  Note that the boto default of empty
             # list suspends all; don't do that.
-            if suspended_processes is not None and len(suspended_processes) > 0:
+            if suspended_processes:
                 _asg.suspend_processes(suspended_processes)
             log.info('Updated ASG %s', name)
             # ### scaling policies

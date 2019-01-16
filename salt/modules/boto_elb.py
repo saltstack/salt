@@ -807,10 +807,10 @@ def set_instances(name, instances, test=False, region=None, key=None, keyid=None
     remove = current - desired
     if test:
         return bool(add or remove)
-    if len(remove):
+    if remove:
         if deregister_instances(name, list(remove), region, key, keyid, profile) is False:
             ret = False
-    if len(add):
+    if add:
         if register_instances(name, list(add), region, key, keyid, profile) is False:
             ret = False
     return ret

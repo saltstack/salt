@@ -56,7 +56,7 @@ def _(module):
         # importlib is in Python 2.7+ and 3+
         import importlib
         mod = importlib.import_module("salt.modules.inspectlib.{0}".format(module))
-    except ImportError as err:
+    except ImportError:
         # No importlib around (2.6)
         mod = getattr(__import__("salt.modules.inspectlib", globals(), locals(), fromlist=[six.text_type(module)]), module)
     # pylint: enable=E0598

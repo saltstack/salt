@@ -93,7 +93,7 @@ def get_alarm(name, region=None, key=None, keyid=None, profile=None):
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     alarms = conn.describe_alarms(alarm_names=[name])
-    if len(alarms) == 0:
+    if not alarms:
         return None
     if len(alarms) > 1:
         log.error("multiple alarms matched name '%s'", name)
