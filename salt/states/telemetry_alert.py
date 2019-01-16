@@ -128,7 +128,7 @@ def present(
     )
     if saved_alert_config:  # alert config is present.  update, or do nothing
         # check to see if attributes matches is_present. If so, do nothing.
-        if len(difference) == 0:
+        if not difference:
             ret["comment"] = "alert config {0} present and matching".format(metric_name)
             return ret
         if __opts__["test"]:

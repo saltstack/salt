@@ -76,7 +76,7 @@ def present(name, timespec, tag=None, user=None, job=None, unique_tag=False):
             ret["result"] = False
             ret["comment"] = "no tag provided and unique_tag is set to True"
             return ret
-        elif len(__salt__["at.jobcheck"](tag=tag)["jobs"]) > 0:
+        elif __salt__["at.jobcheck"](tag=tag)["jobs"]:
             ret["comment"] = "atleast one job with tag {tag} exists.".format(tag=tag)
             return ret
 
@@ -96,7 +96,7 @@ def present(name, timespec, tag=None, user=None, job=None, unique_tag=False):
         res = __salt__["at.at"](timespec, job, tag=tag,)
 
     # set ret['changes']
-    if "jobs" in res and len(res["jobs"]) > 0:
+    if res.get("jobs"):
         ret["changes"] = res["jobs"][0]
     if "error" in res:
         ret["result"] = False
@@ -178,7 +178,7 @@ def absent(name, jobid=None, **kwargs):
     # remove specific job
     if jobid:
         jobs = __salt__["at.atq"](jobid)
-        if "jobs" in jobs and len(jobs["jobs"]) == 0:
+        if jobs.get("jobs"):
             ret["result"] = True
             ret["comment"] = "job with id {jobid} not present".format(jobid=jobid)
             return ret
@@ -218,7 +218,7 @@ def absent(name, jobid=None, **kwargs):
         # arguments to filter with, removing everything!
         res = __salt__["at.atrm"]("all")
 
-    if len(res["jobs"]["removed"]) > 0:
+    if res["jobs"]["removed"]:
         ret["changes"]["removed"] = res["jobs"]["removed"]
     ret["comment"] = "removed {count} job(s)".format(count=len(res["jobs"]["removed"]))
     return ret

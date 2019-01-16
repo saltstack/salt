@@ -822,7 +822,7 @@ def parameter_present(
                 changed[parameter["ParameterName"]] = params.get(
                     parameter["ParameterName"]
                 )
-        if len(changed) > 0:
+        if changed:
             if __opts__["test"]:
                 ret["comment"] = os.linesep.join(
                     [

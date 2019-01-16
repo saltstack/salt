@@ -488,9 +488,8 @@ def present(
             if algo == "1":
                 log.warning("Using MD5 for hashing passwords is considered insecure!")
             log.debug(
-                "Re-using existing shadow salt for hashing password using {}".format(
-                    algorithms.get(algo)
-                )
+                "Re-using existing shadow salt for hashing password using %s",
+                algorithms.get(algo),
             )
             password = __salt__["shadow.gen_password"](
                 password, crypt_salt=shadow_salt, algorithm=algorithms.get(algo)

@@ -777,7 +777,7 @@ def present(name, params, static_host_list=True, **kwargs):
             tmpl_create = __salt__["zabbix.run_query"](
                 "template.create", defined_obj, **kwargs
             )
-            log.info("TEMPLATE create result: %s", six.text_type(tmpl_create))
+            log.info("TEMPLATE create result: %s", tmpl_create)
             if tmpl_create:
                 template_id = tmpl_create["templateids"][0]
 

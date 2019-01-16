@@ -206,7 +206,6 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import sys
-import traceback
 
 # Import Salt Libs
 import salt.exceptions
@@ -286,8 +285,10 @@ def dvs_configured(name, dvs):
     datacenter_name = _get_datacenter_name()
     dvs_name = dvs["name"] if dvs.get("name") else name
     log.info(
-        "Running state {0} for DVS '{1}' in datacenter "
-        "'{2}'".format(name, dvs_name, datacenter_name)
+        "Running state %s for DVS '%s' in datacenter '%s'",
+        name,
+        dvs_name,
+        datacenter_name,
     )
     changes_required = False
     ret = {"name": name, "changes": {}, "result": None, "comment": None}
@@ -332,9 +333,10 @@ def dvs_configured(name, dvs):
                 "network_resource_management_enabled",
             ]
             log.trace(
-                "DVS '{0}' found in datacenter '{1}'. Checking "
-                "for any updates in "
-                "{2}".format(dvs_name, datacenter_name, props)
+                "DVS '%s' found in datacenter '%s'. Checking for any updates in %s",
+                dvs_name,
+                datacenter_name,
+                props,
             )
             props_to_original_values = {}
             props_to_updated_values = {}
@@ -423,7 +425,7 @@ def dvs_configured(name, dvs):
                 )
         __salt__["vsphere.disconnect"](si)
     except salt.exceptions.CommandExecutionError as exc:
-        log.error("Error: {0}\n{1}".format(exc, traceback.format_exc()))
+        log.exception("Encountered error")
         if si:
             __salt__["vsphere.disconnect"](si)
         if not __opts__["test"]:
@@ -552,10 +554,7 @@ def portgroups_configured(name, dvs, portgroups):
         Portgroup dict representations (see module sysdocs)
     """
     datacenter = _get_datacenter_name()
-    log.info(
-        "Running state {0} on DVS '{1}', datacenter "
-        "'{2}'".format(name, dvs, datacenter)
-    )
+    log.info("Running state %s on DVS '%s', datacenter '%s'", name, dvs, datacenter)
     changes_required = False
     ret = {"name": name, "changes": {}, "result": None, "comment": None}
     comments = []
@@ -573,7 +572,7 @@ def portgroups_configured(name, dvs, portgroups):
             pg_name = pg["name"]
             expected_pg_names.append(pg_name)
             del pg["name"]
-            log.info("Checking pg '{0}'".format(pg_name))
+            log.info("Checking pg '%s'", pg_name)
             filtered_current_pgs = [p for p in current_pgs if p.get("name") == pg_name]
             if not filtered_current_pgs:
                 changes_required = True
@@ -600,9 +599,11 @@ def portgroups_configured(name, dvs, portgroups):
             else:
                 # Porgroup already exists. Checking the config
                 log.trace(
-                    "Portgroup '{0}' found in DVS '{1}', datacenter "
-                    "'{2}'. Checking for any updates."
-                    "".format(pg_name, dvs, datacenter)
+                    "Portgroup '%s' found in DVS '%s', datacenter "
+                    "'%s'. Checking for any updates.",
+                    pg_name,
+                    dvs,
+                    datacenter,
                 )
                 current_pg = filtered_current_pgs[0]
                 diff_dict = _get_diff_dict(current_pg, pg)
@@ -611,7 +612,7 @@ def portgroups_configured(name, dvs, portgroups):
                     changes_required = True
                     if __opts__["test"]:
                         changes_strings = _get_changes_from_diff_dict(diff_dict)
-                        log.trace("changes_strings = " "{0}".format(changes_strings))
+                        log.trace("changes_strings = %s", changes_strings)
                         comments.append(
                             "State {0} will update portgroup '{1}' in "
                             "DVS '{2}', datacenter '{3}':\n{4}"
@@ -673,7 +674,7 @@ def portgroups_configured(name, dvs, portgroups):
                 changes.update({current_pg["name"]: {"old": current_pg}})
         __salt__["vsphere.disconnect"](si)
     except salt.exceptions.CommandExecutionError as exc:
-        log.error("Error: {0}\n{1}".format(exc, traceback.format_exc()))
+        log.exception("Encountered error")
         if si:
             __salt__["vsphere.disconnect"](si)
         if not __opts__["test"]:
@@ -718,9 +719,7 @@ def uplink_portgroup_configured(name, dvs, uplink_portgroup):
 
     """
     datacenter = _get_datacenter_name()
-    log.info(
-        "Running {0} on DVS '{1}', datacenter '{2}'" "".format(name, dvs, datacenter)
-    )
+    log.info("Running %s on DVS '%s', datacenter '%s'", name, dvs, datacenter)
     changes_required = False
     ret = {"name": name, "changes": {}, "result": None, "comment": None}
     comments = []
@@ -733,13 +732,13 @@ def uplink_portgroup_configured(name, dvs, uplink_portgroup):
         current_uplink_portgroup = __salt__["vsphere.list_uplink_dvportgroup"](
             dvs=dvs, service_instance=si
         )
-        log.trace("current_uplink_portgroup = " "{0}".format(current_uplink_portgroup))
+        log.trace("current_uplink_portgroup = %s", current_uplink_portgroup)
         diff_dict = _get_diff_dict(current_uplink_portgroup, uplink_portgroup)
         if diff_dict:
             changes_required = True
             if __opts__["test"]:
                 changes_strings = _get_changes_from_diff_dict(diff_dict)
-                log.trace("changes_strings = " "{0}".format(changes_strings))
+                log.trace("changes_strings = %s", changes_strings)
                 comments.append(
                     "State {0} will update the "
                     "uplink portgroup in DVS '{1}', datacenter "
@@ -774,7 +773,7 @@ def uplink_portgroup_configured(name, dvs, uplink_portgroup):
             )
         __salt__["vsphere.disconnect"](si)
     except salt.exceptions.CommandExecutionError as exc:
-        log.error("Error: {0}\n{1}".format(exc, traceback.format_exc()))
+        log.exception("Encountered error")
         if si:
             __salt__["vsphere.disconnect"](si)
         if not __opts__["test"]:

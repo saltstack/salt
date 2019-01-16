@@ -441,7 +441,7 @@ def _process_entries(l, entries):
                     )
                 else:
                     # nothing, so it must be a brand new entry
-                    assert len(results) == 0
+                    assert not results
                     olde = {}
                 old[dn] = olde
             # copy the old entry to create the new (don't do a simple

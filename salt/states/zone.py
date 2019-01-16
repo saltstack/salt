@@ -960,7 +960,7 @@ def present(name, brand, zonepath, properties=None, resources=None):
                     if res:
                         ret["result"] = ret["result"] if res["result"] else False
                         ret["comment"].append(res["comment"])
-                        if len(res["changes"]) > 0:
+                        if res["changes"]:
                             if "property" not in ret["changes"]:
                                 ret["changes"]["property"] = {}
                             ret["changes"]["property"] = merge_dict(
@@ -1026,7 +1026,7 @@ def present(name, brand, zonepath, properties=None, resources=None):
                     if res:
                         ret["result"] = ret["result"] if res["result"] else False
                         ret["comment"].append(res["comment"])
-                        if len(res["changes"]) > 0:
+                        if res["changes"]:
                             if "resource" not in ret["changes"]:
                                 ret["changes"]["resource"] = {}
                             ret["changes"]["resource"] = merge_dict(

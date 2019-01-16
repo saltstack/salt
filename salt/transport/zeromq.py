@@ -868,7 +868,7 @@ class ZeroMQReqServerChannel(
         except Exception as e:  # pylint: disable=broad-except
             # always attempt to return an error to the minion
             stream.send("Some exception handling minion payload")
-            log.error("Some exception handling a payload from minion", exc_info=True)
+            log.exception("Some exception handling minion payload")
             raise salt.ext.tornado.gen.Return()
 
         req_fun = req_opts.get("fun", "send")
@@ -1305,7 +1305,7 @@ class AsyncReqMessageClient(object):
 
     @salt.ext.tornado.gen.coroutine
     def _internal_send_recv(self):
-        while len(self.send_queue) > 0:
+        while self.send_queue:
             message = self.send_queue[0]
             future = self.send_future_map.get(message, None)
             if future is None:
@@ -1399,7 +1399,7 @@ class AsyncReqMessageClient(object):
             )
             self.send_timeout_map[message] = send_timeout
 
-        if len(self.send_queue) == 0:
+        if not self.send_queue:
             self.io_loop.spawn_callback(self._internal_send_recv)
 
         self.send_queue.append(message)

@@ -1280,7 +1280,7 @@ class SaltMessageClient(object):
             or self._connecting_future.result() is not True
         ):
             yield self._connecting_future
-        while len(self.send_queue) > 0:
+        while self.send_queue:
             message_id, item = self.send_queue[0]
             try:
                 yield self._stream.write(item)
@@ -1371,7 +1371,7 @@ class SaltMessageClient(object):
             self.send_timeout_map[message_id] = send_timeout
 
         # if we don't have a send queue, we need to spawn the callback to do the sending
-        if len(self.send_queue) == 0:
+        if not self.send_queue:
             self.io_loop.spawn_callback(self._stream_send)
         self.send_queue.append(
             (message_id, salt.transport.frame.frame_msg(msg, header=header))
@@ -1487,7 +1487,7 @@ class PubServer(salt.ext.tornado.tcpserver.TCPServer, object):
             return
 
         clients.remove(client)
-        if len(clients) == 0:
+        if not clients:
             del self.present[id_]
             if self.presence_events:
                 data = {"new": [], "lost": [id_]}

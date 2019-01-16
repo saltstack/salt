@@ -133,7 +133,7 @@ def present(name, persist=False, mods=None):
             continue
         load_result = __salt__["kmod.load"](mod, persist)
         if isinstance(load_result, (list, tuple)):
-            if len(load_result) > 0:
+            if load_result:
                 for module in load_result:
                     ret["changes"][module] = "loaded"
                     if module != mod:
@@ -223,7 +223,7 @@ def absent(name, persist=False, comment=True, mods=None):
         for mod in to_unload:
             unload_result = __salt__["kmod.remove"](mod, persist, comment)
             if isinstance(unload_result, (list, tuple)):
-                if len(unload_result) > 0:
+                if unload_result:
                     for module in unload_result:
                         ret["changes"][module] = "removed"
                     unloaded["yes"].append(mod)

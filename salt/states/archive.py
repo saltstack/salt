@@ -1636,7 +1636,7 @@ def extracted(
                             enforce_failed.append(filename)
 
     if extraction_needed:
-        if len(files) > 0:
+        if files:
             if created_destdir:
                 ret["changes"]["directories_created"] = [name]
             ret["changes"]["extracted_files"] = files

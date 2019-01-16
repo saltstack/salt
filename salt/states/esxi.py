@@ -1101,7 +1101,7 @@ def diskgroups_configured(name, diskgroups, erase_disks=False):
         if not proxy_details.get("vcenter")
         else proxy_details["esxi_host"]
     )
-    log.info("Running state {0} for host '{1}'".format(name, hostname))
+    log.info("Running state %s for host '%s'", name, hostname)
     # Variable used to return the result of the invocation
     ret = {"name": name, "result": None, "changes": {}, "comments": None}
     # Signals if errors have been encountered
@@ -1127,13 +1127,13 @@ def diskgroups_configured(name, diskgroups, erase_disks=False):
                 "No disks retrieved from host '{0}'".format(hostname)
             )
         scsi_addr_to_disk_map = {d["scsi_address"]: d for d in host_disks}
-        log.trace("scsi_addr_to_disk_map = {0}".format(scsi_addr_to_disk_map))
+        log.trace("scsi_addr_to_disk_map = %s", scsi_addr_to_disk_map)
         existing_diskgroups = __salt__["vsphere.list_diskgroups"](service_instance=si)
         cache_disk_to_existing_diskgroup_map = {
             dg["cache_disk"]: dg for dg in existing_diskgroups
         }
     except CommandExecutionError as err:
-        log.error("Error: {0}".format(err))
+        log.exception("Encountered error configuring diskgroups")
         if si:
             __salt__["vsphere.disconnect"](si)
         ret.update(
@@ -1182,7 +1182,7 @@ def diskgroups_configured(name, diskgroups, erase_disks=False):
 
         if not cache_disk_to_existing_diskgroup_map.get(cache_disk_id):
             # A new diskgroup needs to be created
-            log.trace("erase_disks = {0}".format(erase_disks))
+            log.trace("erase_disks = %s", erase_disks)
             if erase_disks:
                 if __opts__["test"]:
                     comments.append(
@@ -1257,8 +1257,9 @@ def diskgroups_configured(name, diskgroups, erase_disks=False):
 
         # The diskgroup exists; checking the capacity disks
         log.debug(
-            "Disk group #{0} exists. Checking capacity disks: "
-            "{1}.".format(idx, capacity_disk_displays)
+            "Disk group #%s exists. Checking capacity disks: %s.",
+            idx,
+            capacity_disk_displays,
         )
         existing_diskgroup = cache_disk_to_existing_diskgroup_map.get(cache_disk_id)
         existing_capacity_disk_displays = [
@@ -1293,14 +1294,12 @@ def diskgroups_configured(name, diskgroups, erase_disks=False):
                 )
 
         log.debug(
-            "Disk group #{0}: existing capacity disk ids: {1}; added "
-            "capacity disk ids: {2}; removed capacity disk ids: {3}"
-            "".format(
-                idx,
-                existing_capacity_disk_displays,
-                added_capacity_disk_displays,
-                removed_capacity_disk_displays,
-            )
+            "Disk group #%s: existing capacity disk ids: %s; added "
+            "capacity disk ids: %s; removed capacity disk ids: %s",
+            idx,
+            existing_capacity_disk_displays,
+            added_capacity_disk_displays,
+            removed_capacity_disk_displays,
         )
 
         # TODO revisit this when removing capacity disks is supported
@@ -1580,7 +1579,7 @@ def host_cache_configured(
                     log.trace("partitions = %s", partitions)
                     # We will ignore the mbr partitions
                     non_mbr_partitions = [p for p in partitions if p["format"] != "mbr"]
-                    if len(non_mbr_partitions) > 0:
+                    if non_mbr_partitions:
                         raise VMwareApiError(
                             "Backing disk '{0}' has unexpected partitions"
                             "".format(backing_disk_display)

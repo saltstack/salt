@@ -2243,7 +2243,7 @@ def downloaded(
         ret["comment"] = "The pkg.downloaded state is not available on " "this platform"
         return ret
 
-    if isinstance(pkgs, list) and len(pkgs) == 0:
+    if not pkgs and isinstance(pkgs, list):
         ret["result"] = True
         ret["comment"] = "No packages to download provided"
         return ret
@@ -2322,7 +2322,7 @@ def downloaded(
 
     if not ret["changes"] and not ret["comment"]:
         ret["result"] = True
-        ret["comment"] = "Packages downloaded: " "{0}".format(", ".join(targets))
+        ret["comment"] = "Packages downloaded: {0}".format(", ".join(targets))
 
     return ret
 
@@ -2369,7 +2369,7 @@ def patch_installed(name, advisory_ids=None, downloadonly=None, **kwargs):
         )
         return ret
 
-    if isinstance(advisory_ids, list) and len(advisory_ids) == 0:
+    if not advisory_ids and isinstance(advisory_ids, list):
         ret["result"] = True
         ret["comment"] = "No advisory ids provided"
         return ret
@@ -2646,7 +2646,7 @@ def latest(
                 "comment": 'Invalidly formatted "pkgs" parameter. See ' "minion log.",
             }
     else:
-        if isinstance(pkgs, list) and len(pkgs) == 0:
+        if not pkgs and isinstance(pkgs, list):
             return {
                 "name": name,
                 "changes": {},

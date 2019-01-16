@@ -171,7 +171,7 @@ def present(
         r = __salt__["boto_ec2.find_instances"](
             name=name_tag, return_objs=True, in_states=in_states, profile=profile
         )
-        if len(r) < 1:
+        if not r:
             ret["comment"] = "Error: instance with Name tag {0} not found".format(
                 name_tag
             )
@@ -531,7 +531,7 @@ def hosted_zone_present(
             create = True
         else:
             if private_zone:
-                for v, d in deets.get("VPCs", {}).items():
+                for d in deets.get("VPCs", {}).values():
                     if d["VPCId"] == vpc_id and d["VPCRegion"] == vpc_region:
                         create = False
                         break

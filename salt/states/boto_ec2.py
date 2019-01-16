@@ -1437,7 +1437,7 @@ def volume_absent(
     args = {"region": region, "key": key, "keyid": keyid, "profile": profile}
 
     vols = __salt__["boto_ec2.get_all_volumes"](filters=filters, **args)
-    if len(vols) < 1:
+    if not vols:
         ret["comment"] = "Volume matching criteria not found, assuming already absent"
         return ret
     if len(vols) > 1:
@@ -1684,7 +1684,7 @@ def volume_present(
                 volume_name, name
             )
             raise SaltInvocationError(msg)
-        if len(vols) < 1:
+        if not vols:
             if __opts__["test"]:
                 ret["comment"] = (
                     "The volume with name {0} is set to be created and attached"
@@ -1732,7 +1732,7 @@ def volume_present(
     vols = __salt__["boto_ec2.get_all_volumes"](
         volume_ids=[volume_id], return_objs=True, **args
     )
-    if len(vols) < 1:
+    if not vols:
         raise SaltInvocationError("Volume {0} do not exist".format(volume_id))
     vol = vols[0]
     if vol.zone != instance.placement:

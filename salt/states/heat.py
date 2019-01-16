@@ -327,7 +327,7 @@ def absent(name, poll=5, timeout=60, profile=None):
         Profile to use
 
     """
-    log.debug("Absent with(%s, %s %s)", name, poll, profile)
+    log.debug("Absent with (%s, %s %s)", name, poll, profile)
     ret = {"name": None, "comment": "", "changes": {}, "result": True}
     if not name:
         ret["result"] = False

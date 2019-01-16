@@ -703,7 +703,7 @@ def rr_present(
                         keyid=keyid,
                         profile=profile,
                     )
-                    if len(r) < 1:
+                    if not r:
                         ret[
                             "comment"
                         ] = "No EC2 instance with tag {} == {} found".format(

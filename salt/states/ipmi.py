@@ -293,7 +293,7 @@ def user_absent(name, channel=14, **kwargs):
     ret = {"name": name, "result": False, "comment": "", "changes": {}}
     user_id_list = __salt__["ipmi.get_name_uids"](name, channel, **kwargs)
 
-    if len(user_id_list) == 0:
+    if not user_id_list:
         ret["result"] = True
         ret["comment"] = "user already absent"
         return ret

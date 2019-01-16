@@ -273,7 +273,7 @@ def present(
         enable_metrics = list(new_monitoring_set.difference(matching_metrics))
         disable_metrics = list(old_monitoring_set.difference(matching_metrics))
 
-        if len(enable_metrics) != 0:
+        if enable_metrics:
             if __opts__["test"]:
                 ret["result"] = None
                 comments.append(
@@ -302,7 +302,7 @@ def present(
                     )
                 )
 
-        if len(disable_metrics) != 0:
+        if disable_metrics:
             if __opts__["test"]:
                 ret["result"] = None
                 comments.append(
@@ -331,23 +331,19 @@ def present(
                     )
                 )
 
-        if len(disable_metrics) == 0 and len(enable_metrics) == 0:
+        if not disable_metrics and not enable_metrics:
             comments.append(
                 "Kinesis stream {0}: enhanced monitoring did not require change, already set at {1}".format(
                     name,
-                    (
-                        old_enhanced_monitoring
-                        if len(old_enhanced_monitoring) > 0
-                        else "None"
-                    ),
+                    (old_enhanced_monitoring if old_enhanced_monitoring else "None"),
                 )
             )
         elif not __opts__["test"]:
             changes_old["enhanced_monitoring"] = (
-                old_enhanced_monitoring if len(old_enhanced_monitoring) > 0 else "None"
+                old_enhanced_monitoring if old_enhanced_monitoring else "None"
             )
             changes_new["enhanced_monitoring"] = (
-                enhanced_monitoring if len(enhanced_monitoring) > 0 else "None"
+                enhanced_monitoring if enhanced_monitoring else "None"
             )
     else:
         comments.append(
