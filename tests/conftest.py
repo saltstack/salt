@@ -29,6 +29,13 @@ if CODE_DIR in sys.path:
     sys.path.remove(CODE_DIR)
 sys.path.insert(0, CODE_DIR)
 
+# Coverage
+COVERAGERC_FILE = os.path.join(CODE_DIR, '.coveragerc')
+MAYBE_RUN_COVERAGE = sys.argv[0].endswith('pytest.py') or '_COVERAGE_RCFILE' in os.environ
+if MAYBE_RUN_COVERAGE:
+    # Flag coverage to track suprocesses by pointing it to the right .coveragerc file
+    os.environ['COVERAGE_PROCESS_START'] = COVERAGERC_FILE
+
 # Import test libs
 from tests.support.runtests import RUNTIME_VARS
 
@@ -597,7 +604,7 @@ def cli_bin_dir(tempdir,
             script_name=original_script_name,
             executable=sys.executable,
             code_dir=CODE_DIR,
-            inject_sitecustomize=True
+            inject_sitecustomize=MAYBE_RUN_COVERAGE
         )
 
     # Return the CLI bin dir value
