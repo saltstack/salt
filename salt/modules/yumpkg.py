@@ -466,7 +466,7 @@ def latest_version(*names, **kwargs):
         salt '*' pkg.latest_version <package1> <package2> <package3> ...
     '''
     refresh = salt.utils.data.is_true(kwargs.pop('refresh', True))
-    if len(names) == 0:
+    if not names:
         return ''
 
     options = _get_options(**kwargs)
@@ -1369,7 +1369,7 @@ def install(name=None,
     except MinionError as exc:
         raise CommandExecutionError(exc)
 
-    if pkg_params is None or len(pkg_params) == 0:
+    if not pkg_params:
         return {}
 
     version_num = kwargs.get('version')

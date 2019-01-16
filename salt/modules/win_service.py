@@ -482,7 +482,7 @@ def start(name, timeout=90):
         if exc.winerror != 1056:
             raise CommandExecutionError(
                 'Failed To Start {0}: {1}'.format(name, exc.strerror))
-        log.debug('Service "{0}" is running'.format(name))
+        log.debug('Service "%s" is running', name)
 
     srv_status = _status_wait(service_name=name,
                               end_time=time.time() + int(timeout),
@@ -520,7 +520,7 @@ def stop(name, timeout=90):
         if exc.winerror != 1062:
             raise CommandExecutionError(
                 'Failed To Stop {0}: {1}'.format(name, exc.strerror))
-        log.debug('Service "{0}" is not running'.format(name))
+        log.debug('Service "%s" is not running', name)
 
     srv_status = _status_wait(service_name=name,
                               end_time=time.time() + int(timeout),
@@ -1235,7 +1235,7 @@ def delete(name, timeout=90):
         if exc.winerror != 1060:
             raise CommandExecutionError(
                 'Failed to open {0}. {1}'.format(name, exc.strerror))
-        log.debug('Service "{0}" is not present'.format(name))
+        log.debug('Service "%s" is not present', name)
         return True
 
     try:
