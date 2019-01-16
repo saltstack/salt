@@ -17,6 +17,7 @@ from tests.support.unit import TestCase, skipIf
 from tests.support.mock import patch, NO_MOCK, NO_MOCK_REASON
 
 # Import Salt libs
+import salt.utils.compat
 import salt.utils.path
 import salt.utils.platform
 from salt.exceptions import CommandNotFoundError
@@ -125,7 +126,7 @@ class PathJoinTestCase(TestCase):
         platform.system = lambda: "windows"
 
         for module in (ntpath, os, os.path, tempfile):
-            reload(module)
+            salt.utils.compat.reload(module)
 
     def __unpatch_path(self):
         del sys.modules['nt']
@@ -133,7 +134,7 @@ class PathJoinTestCase(TestCase):
         platform.system = self.PLATFORM_FUNC
 
         for module in (posixpath, os, os.path, tempfile, platform):
-            reload(module)
+            salt.utils.compat.reload(module)
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
