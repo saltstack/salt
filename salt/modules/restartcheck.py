@@ -372,7 +372,7 @@ def _file_changed_nilrt(full_filepath):
     md5sum_file = os.path.join(rs_state_dir, '{0}.md5sum'.format(base_filename))
 
     if not os.path.exists(timestamp_file) or not os.path.exists(md5sum_file):
-        return False
+        return True
 
     prev_timestamp = __salt__['file.read'](timestamp_file).rstrip()
     # Need timestamp in seconds so floor it using int()
