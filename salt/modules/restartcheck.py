@@ -491,7 +491,10 @@ def restartcheck(ignorelist=None, blacklist=None, excludepid=None, **kwargs):
         if kernel in kernel_current:
             if __grains__.get('os_family') == 'NILinuxRT':
                 # Check kernel modules and hardware API's for version changes
-                if not _kernel_modules_changed_nilrt(kernel) and not _sysapi_changed_nilrt():
+                # If a restartcheck=True event was previously witnessed, propagate it
+                if not _kernel_modules_changed_nilrt(kernel) and \
+                   not _sysapi_changed_nilrt() and \
+                   not __salt__['system.get_reboot_required_witnessed']():
                     kernel_restart = False
                     break
             else:
