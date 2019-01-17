@@ -73,14 +73,14 @@ class TestGemModule(TestCase, LoaderModuleMockMixin):
                 runas=None
             )
 
-
     def test_install_pre_rubygems_3(self):
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         with patch.dict(gem.__salt__,
                         {'rvm.is_installed': MagicMock(return_value=False),
                          'rbenv.is_installed': MagicMock(return_value=False),
                          'cmd.run_all': mock}),\
-                patch.object(gem, '_has_rubygems_3', MagicMock(return_value=True)):
+                patch.object(
+                    gem, '_has_rubygems_3', MagicMock(return_value=True)):
             gem.install('rails', pre_releases=True)
             mock.assert_called_once_with(
                 ['gem', 'install', 'rails', '--no-document', '--prerelease'],
@@ -88,14 +88,14 @@ class TestGemModule(TestCase, LoaderModuleMockMixin):
                 python_shell=False
             )
 
-
-    def test_install_pre_rubygems_3(self):
+    def test_install_pre(self):
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         with patch.dict(gem.__salt__,
                         {'rvm.is_installed': MagicMock(return_value=False),
                          'rbenv.is_installed': MagicMock(return_value=False),
                          'cmd.run_all': mock}),\
-                patch.object(gem, '_has_rubygems_3', MagicMock(return_value=False)):
+                patch.object(
+                    gem, '_has_rubygems_3', MagicMock(return_value=False)):
             gem.install('rails', pre_releases=True)
             mock.assert_called_once_with(
                 ['gem', 'install', 'rails', '--no-rdoc', '--no-ri', '--pre'],
