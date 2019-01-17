@@ -662,6 +662,8 @@ def cli_bin_dir(tempdir,
     Return the path to the CLI script directory to use
     '''
     tmp_cli_scripts_dir = tempdir.join('cli-scrips-bin')
+    # Make sure we re-write the scripts every time we start the tests
+    shutil.rmtree(tmp_cli_scripts_dir.strpath, ignore_errors=True)
     tmp_cli_scripts_dir.ensure(dir=True)
     cli_bin_dir_path = tmp_cli_scripts_dir.strpath
 
