@@ -342,9 +342,14 @@ def delete(name, **kwargs):
                         ret['result'] = True
                         ret['comment'] = 'Deleted beacon: {0}.'.format(name)
                         return ret
-                else:
+                elif event_ret:
                     ret['result'] = False
                     ret['comment'] = event_ret['comment']
+                else:
+                    ret['result'] = False
+                    ret['comment'] = 'Did not receive the manage event before the timeout of {}s'.format(
+                        event_timeout
+                    )
         except KeyError:
             # Effectively a no-op, since we can't really return without an event system
             ret['comment'] = 'Event module not available. Beacon add failed.'
