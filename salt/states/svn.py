@@ -92,7 +92,7 @@ def latest(name,
         specified string is passed to SVN's --trust-server-cert-failures
         option as-is.
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     if not target:
@@ -242,7 +242,7 @@ def export(name,
         specified string is passed to SVN's --trust-server-cert-failures
         option as-is.
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     if not target:
