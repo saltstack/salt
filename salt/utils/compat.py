@@ -8,6 +8,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import sys
 import copy
 import types
+import importlib
 
 # Import salt libs
 import salt.loader
