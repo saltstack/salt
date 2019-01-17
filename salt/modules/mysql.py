@@ -81,7 +81,11 @@ __grants__ = [
     'ALL PRIVILEGES',
     'ALTER',
     'ALTER ROUTINE',
+    'BACKUP_ADMIN',
+    'BINLOG_ADMIN',
+    'CONNECTION_ADMIN',
     'CREATE',
+    'CREATE ROLE',
     'CREATE ROUTINE',
     'CREATE TABLESPACE',
     'CREATE TEMPORARY TABLES',
@@ -89,26 +93,37 @@ __grants__ = [
     'CREATE VIEW',
     'DELETE',
     'DROP',
+    'DROP ROLE',
+    'ENCRYPTION_KEY_ADMIN',
     'EVENT',
     'EXECUTE',
     'FILE',
     'GRANT OPTION',
+    'GROUP_REPLICATION_ADMIN',
     'INDEX',
     'INSERT',
     'LOCK TABLES',
+    'PERSIST_RO_VARIABLES_ADMIN',
     'PROCESS',
     'REFERENCES',
     'RELOAD',
     'REPLICATION CLIENT',
     'REPLICATION SLAVE',
+    'REPLICATION_SLAVE_ADMIN',
+    'RESOURCE_GROUP_ADMIN',
+    'RESOURCE_GROUP_USER',
+    'ROLE_ADMIN',
     'SELECT',
+    'SET_USER_ID',
     'SHOW DATABASES',
     'SHOW VIEW',
     'SHUTDOWN',
     'SUPER',
+    'SYSTEM_VARIABLES_ADMIN',
     'TRIGGER',
     'UPDATE',
-    'USAGE'
+    'USAGE',
+    'XA_RECOVER_ADMIN'
 ]
 
 __ssl_options_parameterized__ = [
@@ -119,6 +134,52 @@ __ssl_options_parameterized__ = [
 __ssl_options__ = __ssl_options_parameterized__ + [
     'SSL',
     'X509'
+]
+
+__all_privileges__ = [
+    'ALTER',
+    'ALTER ROUTINE',
+    'BACKUP_ADMIN',
+    'BINLOG_ADMIN',
+    'CONNECTION_ADMIN',
+    'CREATE',
+    'CREATE ROLE',
+    'CREATE ROUTINE',
+    'CREATE TABLESPACE',
+    'CREATE TEMPORARY TABLES',
+    'CREATE USER',
+    'CREATE VIEW',
+    'DELETE',
+    'DROP',
+    'DROP ROLE',
+    'ENCRYPTION_KEY_ADMIN',
+    'EVENT',
+    'EXECUTE',
+    'FILE',
+    'GROUP_REPLICATION_ADMIN',
+    'INDEX',
+    'INSERT',
+    'LOCK TABLES',
+    'PERSIST_RO_VARIABLES_ADMIN',
+    'PROCESS',
+    'REFERENCES',
+    'RELOAD',
+    'REPLICATION CLIENT',
+    'REPLICATION SLAVE',
+    'REPLICATION_SLAVE_ADMIN',
+    'RESOURCE_GROUP_ADMIN',
+    'RESOURCE_GROUP_USER',
+    'ROLE_ADMIN',
+    'SELECT',
+    'SET_USER_ID',
+    'SHOW DATABASES',
+    'SHOW VIEW',
+    'SHUTDOWN',
+    'SUPER',
+    'SYSTEM_VARIABLES_ADMIN',
+    'TRIGGER',
+    'UPDATE',
+    'XA_RECOVER_ADMIN'
 ]
 
 r'''
@@ -1787,12 +1848,12 @@ def user_grants(user,
 
 
 def grant_exists(grant,
-                database,
-                user,
-                host='localhost',
-                grant_option=False,
-                escape=True,
-                **connection_args):
+                 database,
+                 user,
+                 host='localhost',
+                 grant_option=False,
+                 escape=True,
+                 **connection_args):
     '''
     Checks to see if a grant exists in the database
 
@@ -1803,6 +1864,14 @@ def grant_exists(grant,
         salt '*' mysql.grant_exists \
              'SELECT,INSERT,UPDATE,...' 'database.*' 'frank' 'localhost'
     '''
+
+    server_version = version(**connection_args)
+    if 'ALL' in grant:
+        if salt.utils.versions.version_cmp(server_version, '8.0') >= 0:
+            grant = ','.join([i for i in __all_privileges__])
+        else:
+            grant = 'ALL PRIVILEGES'
+
     try:
         target = __grant_generate(
             grant, database, user, host, grant_option, escape
@@ -1818,15 +1887,27 @@ def grant_exists(grant,
                   'this could also indicate a connection error. Check your configuration.')
         return False
 
-    target_tokens = None
+    # Combine grants that match the same database
+    _grants = {}
     for grant in grants:
-        try:
-            if not target_tokens:  # Avoid the overhead of re-calc in loop
-                target_tokens = _grant_to_tokens(target)
-            grant_tokens = _grant_to_tokens(grant)
+        grant_token = _grant_to_tokens(grant)
+        if grant_token['database'] not in _grants:
+            _grants[grant_token['database']] = {'user': grant_token['user'],
+                                                'database': grant_token['database'],
+                                                'host': grant_token['host'],
+                                                'grant': grant_token['grant']}
+        else:
+            _grants[grant_token['database']]['grant'].extend(grant_token['grant'])
 
+    target_tokens = _grant_to_tokens(target)
+    for database, grant_tokens in _grants.items():
+        try:
             _grant_tokens = {}
             _target_tokens = {}
+
+            _grant_matches = [True if i in grant_tokens['grant']
+                              else False for i in target_tokens['grant']]
+
             for item in ['user', 'database', 'host']:
                 _grant_tokens[item] = grant_tokens[item].replace('"', '').replace('\\', '').replace('`', '')
                 _target_tokens[item] = target_tokens[item].replace('"', '').replace('\\', '').replace('`', '')
@@ -1834,7 +1915,7 @@ def grant_exists(grant,
             if _grant_tokens['user'] == _target_tokens['user'] and \
                     _grant_tokens['database'] == _target_tokens['database'] and \
                     _grant_tokens['host'] == _target_tokens['host'] and \
-                    set(grant_tokens['grant']) >= set(target_tokens['grant']):
+                    all(_grant_matches):
                 return True
             else:
                 log.debug('grants mismatch \'%s\'<>\'%s\'', grant_tokens, target_tokens)
