@@ -69,7 +69,7 @@ class ConfigTest(ModuleCase):
                 self.run_function(
                     'config.option',
                     ['master_port']),
-                64506)
+                self.get_config('minion')['master_port'])
         # pillar conf opt
         self.assertEqual(
                 self.run_function(
