@@ -130,7 +130,7 @@ Cloud        ``salt.cloud.clouds`` (:ref:`index <all-salt.clouds>`)           ``
 Engine       ``salt.engines`` (:ref:`index <engines>`)                        ``engines``               ``engines_dirs``
 Execution    ``salt.modules`` (:ref:`index <all-salt.modules>`)               ``modules``               ``module_dirs``
 Executor     ``salt.executors`` (:ref:`index <all-salt.executors>`)           ``executors`` [#no-fs]_   ``executor_dirs``
-File Server  ``salt.fileserver`` (:ref:`index <file-server>`)                 ``fileserver`` [#no-fs]_  ``fileserver_dirs``
+File Server  ``salt.fileserver`` (:ref:`index <file-server>`)                 ``fileserver``            ``fileserver_dirs``
 Grain        ``salt.grains`` (:ref:`index <all-salt.grains>`)                 ``grains``                ``grains_dirs``
 Log Handler  ``salt.log.handlers`` (:ref:`index <external-logging-handlers>`) ``log_handlers``          ``log_handlers_dirs``
 Net API      ``salt.netapi`` (:ref:`index <all-netapi-modules>`)              ``netapi`` [#no-fs]_      ``netapi_dirs``
