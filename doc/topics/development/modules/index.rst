@@ -143,7 +143,6 @@ Returner     ``salt.returners`` (:ref:`index <all-salt.returners>`)           ``
 Roster       ``salt.roster`` (:ref:`index <all-salt.roster>`)                 ``roster``                ``roster_dirs``
 Runner       ``salt.runners`` (:ref:`index <all-salt.runners>`)               ``runners``               ``runner_dirs``
 SDB          ``salt.sdb`` (:ref:`index <all-salt.sdb>`)                       ``sdb``                   ``sdb_dirs``
-Search       ``salt.search``                                                  ``search`` [#no-fs]_      ``search_dirs``
 Serializer   ``salt.serializers`` (:ref:`index <all-salt.serializers>`)       ``serializers`` [#no-fs]_ ``serializers_dirs``
 SPM pkgdb    ``salt.spm.pkgdb``                                               ``pkgdb`` [#no-fs]_       ``pkgdb_dirs``
 SPM pkgfiles ``salt.spm.pkgfiles``                                            ``pkgfiles`` [#no-fs]_    ``pkgfiles_dirs``
@@ -321,11 +320,6 @@ SDB
 
 SDB is a way to store data that's not associated with a minion. See 
 :ref:`Storing Data in Other Databases <sdb>`.
-
-Search
-------
-
-A system for indexing the file server and pillars. Removed in 2018.3.
 
 Serializer
 ----------
