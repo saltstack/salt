@@ -148,7 +148,8 @@ SPM pkgdb    ``salt.spm.pkgdb``                                               ``
 SPM pkgfiles ``salt.spm.pkgfiles``                                            ``pkgfiles`` [#no-fs]_    ``pkgfiles_dirs``
 SSH Wrapper  ``salt.client.ssh.wrapper``                                      ``wrapper`` [#no-fs]_     ``wrapper_dirs``
 State        ``salt.states`` (:ref:`index <all-salt.states>`)                 ``states``                ``states_dirs``
-Thorium      ``salt.thorium`` (:ref:`index <all-salt.thorium>`)               ``thorium`` [#no-fs]_     ``thorium_dirs``
+Thorium      ``salt.thorium`` (:ref:`index <all-salt.thorium>`)               ``thorium``               ``thorium_dirs``
+Tokens       ``salt.tokens``                                                  ``tokens``                ``tokens_dirs``
 Top          ``salt.tops`` (:ref:`index <all-salt.tops>`)                     ``tops``                  ``top_dirs``
 Util         ``salt.utils``                                                   ``utils``                 ``utils_dirs``
 Wheel        ``salt.wheels`` (:ref:`index <all-salt.wheel>`)                  ``wheel``                 ``wheel_dirs``
@@ -374,6 +375,16 @@ Thorium
 -------
 
 Modules for use in the :ref:`Thorium <thorium-reactor>` event reactor.
+
+Tokens
+------
+
+Token stores for :ref:`External Authentication <acl-eauth>`. See the
+:py:mod:`salt.tokens` docstring for details.
+
+.. note:
+    The runner to load tokens modules is
+    :py:func:`saltutil.sync_eauth_tokens <salt.runners.saltutil.sync_eauth_tokens>`.
 
 Tops
 ----
