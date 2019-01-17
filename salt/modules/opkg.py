@@ -83,6 +83,27 @@ def _update_nilrt_restart_state():
         __salt__['cmd.shell']('md5sum {0} >{1}/nisysapi.ini.md5sum'
                               .format(nisysapi_path, NILRT_RESTARTCHECK_STATE_PATH))
 
+    # Expert plugin files get added to a conf.d dir, so keep track of the total
+    # no. of files, their timestamps and content hashes
+    nisysapi_conf_d_path = "/usr/lib/{0}/nisysapi/conf.d/experts/".format(
+        'arm-linux-gnueabi' if 'arm' in __grains__.get('cpuarch') else 'x86_64-linux-gnu'
+    )
+
+    if os.path.exists(nisysapi_conf_d_path):
+        with salt.utils.files.fopen('{0}/sysapi.conf.d.count'.format(
+                NILRT_RESTARTCHECK_STATE_PATH), 'w') as fcount:
+            fcount.write(str(len(os.listdir(nisysapi_conf_d_path))))
+
+        for fexpert in os.listdir(nisysapi_conf_d_path):
+            __salt__['cmd.shell']('stat -c %Y {0}/{1} >{2}/{1}.timestamp'
+                                  .format(nisysapi_conf_d_path,
+                                          fexpert,
+                                          NILRT_RESTARTCHECK_STATE_PATH))
+            __salt__['cmd.shell']('md5sum {0}/{1} >{2}/{1}.md5sum'
+                                  .format(nisysapi_conf_d_path,
+                                          fexpert,
+                                          NILRT_RESTARTCHECK_STATE_PATH))
+
 
 def _get_restartcheck_result(errors):
     '''
