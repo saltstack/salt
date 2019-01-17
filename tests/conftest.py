@@ -794,6 +794,7 @@ def session_master_config_overrides(session_root_dir):
     os.chmod(autosign_file_path, autosign_file_permissions)
 
     return {
+        'pillar_opts': True,
         'ext_pillar': [ext_pillar],
         'extension_modules': extension_modules_path,
         'file_roots': {
