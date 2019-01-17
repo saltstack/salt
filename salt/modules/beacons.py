@@ -196,9 +196,14 @@ def add(name, beacon_data, **kwargs):
                     if name in beacons and beacons[name] == beacon_data:
                         ret['result'] = True
                         ret['comment'] = 'Added beacon: {0}.'.format(name)
-                else:
+                elif event_ret:
                     ret['result'] = False
                     ret['comment'] = event_ret['comment']
+                else:
+                    ret['result'] = False
+                    ret['comment'] = 'Did not receive the beacon add complete event before the timeout of {}s'.format(
+                        kwargs.get('timeout', default_event_wait)
+                    )
                 return ret
         except KeyError:
             # Effectively a no-op, since we can't really return without an event system
@@ -295,9 +300,14 @@ def modify(name, beacon_data, **kwargs):
                     if name in beacons and beacons[name] == beacon_data:
                         ret['result'] = True
                         ret['comment'] = 'Modified beacon: {0}.'.format(name)
-                else:
+                elif event_ret:
                     ret['result'] = False
                     ret['comment'] = event_ret['comment']
+                else:
+                    ret['result'] = False
+                    ret['comment'] = 'Did not receive the beacon modify complete  event before the timeout of {}s'.format(
+                        kwargs.get('timeout', default_event_wait)
+                    )
                 return ret
         except KeyError:
             # Effectively a no-op, since we can't really return without an event system
@@ -347,8 +357,8 @@ def delete(name, **kwargs):
                     ret['comment'] = event_ret['comment']
                 else:
                     ret['result'] = False
-                    ret['comment'] = 'Did not receive the manage event before the timeout of {}s'.format(
-                        event_timeout
+                    ret['comment'] = 'Did not receive the beacon delete complete  event before the timeout of {}s'.format(
+                        kwargs.get('timeout', default_event_wait)
                     )
         except KeyError:
             # Effectively a no-op, since we can't really return without an event system
@@ -430,6 +440,14 @@ def enable(**kwargs):
                     else:
                         ret['result'] = False
                         ret['comment'] = 'Failed to enable beacons on minion.'
+                elif event_ret:
+                    ret['result'] = False
+                    ret['comment'] = event_ret['comment']
+                else:
+                    ret['result'] = False
+                    ret['comment'] = 'Did not receive the beacon enabled complete event before the timeout of {}s'.format(
+                        kwargs.get('timeout', default_event_wait)
+                    )
                 return ret
         except KeyError:
             # Effectively a no-op, since we can't really return without an event system
@@ -472,6 +490,14 @@ def disable(**kwargs):
                     else:
                         ret['result'] = False
                         ret['comment'] = 'Failed to disable beacons on minion.'
+                elif event_ret:
+                    ret['result'] = False
+                    ret['comment'] = event_ret['comment']
+                else:
+                    ret['result'] = False
+                    ret['comment'] = 'Did not receive the beacon disabled complete event before the timeout of {}s'.format(
+                        kwargs.get('timeout', default_event_wait)
+                    )
                 return ret
         except KeyError:
             # Effectively a no-op, since we can't really return without an event system
@@ -537,9 +563,14 @@ def enable_beacon(name, **kwargs):
                     else:
                         ret['result'] = False
                         ret['comment'] = 'Failed to enable beacon {0} on minion.'.format(name)
-                else:
+                elif event_ret:
                     ret['result'] = False
                     ret['comment'] = event_ret['comment']
+                else:
+                    ret['result'] = False
+                    ret['comment'] = 'Did not receive the beacon enabled complete event before the timeout of {}s'.format(
+                        kwargs.get('timeout', default_event_wait)
+                    )
                 return ret
         except KeyError:
             # Effectively a no-op, since we can't really return without an event system
@@ -595,9 +626,14 @@ def disable_beacon(name, **kwargs):
                     else:
                         ret['result'] = False
                         ret['comment'] = 'Failed to disable beacon on minion.'
-                else:
+                elif event_ret:
                     ret['result'] = False
                     ret['comment'] = event_ret['comment']
+                else:
+                    ret['result'] = False
+                    ret['comment'] = 'Did not receive the beacon disabled complete event before the timeout of {}s'.format(
+                        kwargs.get('timeout', default_event_wait)
+                    )
                 return ret
         except KeyError:
             # Effectively a no-op, since we can't really return without an event system
