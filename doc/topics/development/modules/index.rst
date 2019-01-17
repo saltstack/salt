@@ -222,6 +222,12 @@ object.
 Executor
 --------
 
+.. toctree::
+    :maxdepth: 1
+    :glob:
+
+    /ref/executors/index
+
 Executors control how execution modules get called. The default is to just call
 them, but this can be customized.
 
