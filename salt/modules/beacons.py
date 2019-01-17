@@ -326,16 +326,23 @@ def delete(name, **kwargs):
             eventer = salt.utils.event.get_event('minion', opts=__opts__)
             res = __salt__['event.fire']({'name': name, 'func': 'delete'}, 'manage_beacons')
             if res:
-                event_ret = eventer.get_event(tag='/salt/minion/minion_beacon_delete_complete', wait=30)
+                event_timeout = 30
+                event_ret = eventer.get_event(tag='/salt/minion/minion_beacon_delete_complete',
+                                              wait=event_timeout)
                 if event_ret and event_ret['complete']:
                     beacons = event_ret['beacons']
                     if name not in beacons:
                         ret['result'] = True
                         ret['comment'] = 'Deleted beacon: {0}.'.format(name)
                         return ret
-                else:
+                elif event_ret:
                     ret['result'] = False
                     ret['comment'] = event_ret['comment']
+                else:
+                    ret['result'] = False
+                    ret['comment'] = 'Did not receive the manage event before the timeout of {}s'.format(
+                        event_timeout
+                    )
         except KeyError:
             # Effectively a no-op, since we can't really return without an event system
             ret['comment'] = 'Event module not available. Beacon add failed.'
