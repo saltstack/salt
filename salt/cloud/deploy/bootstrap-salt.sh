@@ -1,4 +1,9 @@
 #!/bin/sh -
+
+# WARNING: Changes to this file in the salt repo will be overwritten!
+# Please submit pull requests against the salt-bootstrap repo:
+# https://github.com/saltstack/salt-bootstrap
+
 #======================================================================================================================
 # vim: softtabstop=4 shiftwidth=4 expandtab fenc=utf-8 spell spelllang=en cc=120
 #======================================================================================================================
@@ -18,7 +23,7 @@
 #======================================================================================================================
 set -o nounset                              # Treat unset variables as an error
 
-__ScriptVersion="2018.08.15"
+__ScriptVersion="2019.01.08"
 __ScriptName="bootstrap-salt.sh"
 
 __ScriptFullName="$0"
@@ -585,14 +590,14 @@ elif [ "$ITYPE" = "stable" ]; then
     if [ "$#" -eq 0 ];then
         STABLE_REV="latest"
     else
-        if [ "$(echo "$1" | grep -E '^(latest|1\.6|1\.7|2014\.1|2014\.7|2015\.5|2015\.8|2016\.3|2016\.11|2017\.7|2018\.3)$')" != "" ]; then
+        if [ "$(echo "$1" | grep -E '^(latest|1\.6|1\.7|2014\.1|2014\.7|2015\.5|2015\.8|2016\.3|2016\.11|2017\.7|2018\.3|2019\.2)$')" != "" ]; then
             STABLE_REV="$1"
             shift
         elif [ "$(echo "$1" | grep -E '^([0-9]*\.[0-9]*\.[0-9]*)$')" != "" ]; then
             STABLE_REV="archive/$1"
             shift
         else
-            echo "Unknown stable version: $1 (valid: 1.6, 1.7, 2014.1, 2014.7, 2015.5, 2015.8, 2016.3, 2016.11, 2017.7, 2018.3, latest, \$MAJOR.\$MINOR.\$PATCH)"
+            echo "Unknown stable version: $1 (valid: 1.6, 1.7, 2014.1, 2014.7, 2015.5, 2015.8, 2016.3, 2016.11, 2017.7, 2018.3, 2019.2, latest, \$MAJOR.\$MINOR.\$PATCH)"
             exit 1
         fi
     fi
@@ -1269,6 +1274,7 @@ __ubuntu_derivatives_translation() {
     linuxmint_13_ubuntu_base="12.04"
     linuxmint_17_ubuntu_base="14.04"
     linuxmint_18_ubuntu_base="16.04"
+    linuxmint_19_ubuntu_base="18.04"
     linaro_12_ubuntu_base="12.04"
     elementary_os_02_ubuntu_base="12.04"
     neon_16_ubuntu_base="16.04"
@@ -1632,7 +1638,8 @@ __check_end_of_life_versions() {
 
         amazon*linux*ami)
             # Amazon Linux versions lower than 2012.0X no longer supported
-            if [ "$DISTRO_MAJOR_VERSION" -lt 2012 ]; then
+            # Except for Amazon Linux 2, which reset the major version counter
+            if [ "$DISTRO_MAJOR_VERSION" -lt 2012 ] && [ "$DISTRO_MAJOR_VERSION" -gt 10 ]; then
                 echoerror "End of life distributions are not supported."
                 echoerror "Please consider upgrading to the next stable. See:"
                 echoerror "    https://aws.amazon.com/amazon-linux-ami/"
@@ -1797,24 +1804,32 @@ __function_defined() {
 #                 process is finished so the script doesn't exit on a locked proc.
 #----------------------------------------------------------------------------------------------------------------------
 __wait_for_apt(){
-    echodebug "Checking if apt process is currently running."
-
     # Timeout set at 15 minutes
     WAIT_TIMEOUT=900
 
-    while ps -C apt,apt-get,aptitude,dpkg >/dev/null; do
-        sleep 1
-        WAIT_TIMEOUT=$((WAIT_TIMEOUT - 1))
+    # Run our passed in apt command
+    "${@}"
+    APT_RETURN=$?
 
-        # If timeout reaches 0, abort.
-        if [ "$WAIT_TIMEOUT" -eq 0 ]; then
-            echoerror "Apt, apt-get, aptitude, or dpkg process is taking too long."
-            echoerror "Bootstrap script cannot proceed. Aborting."
-            return 1
-        fi
+    # If our exit code from apt is 100, then we're waiting on a lock
+    while [ $APT_RETURN -eq 100 ]; do
+      echoinfo "Aware of the lock. Patiently waiting $WAIT_TIMEOUT more seconds..."
+      sleep 1
+      WAIT_TIMEOUT=$((WAIT_TIMEOUT - 1))
+
+      # If timeout reaches 0, abort.
+      if [ "$WAIT_TIMEOUT" -eq 0 ]; then
+          echoerror "Apt, apt-get, aptitude, or dpkg process is taking too long."
+          echoerror "Bootstrap script cannot proceed. Aborting."
+          return 1
+      else
+          # Try running apt again until our return code != 100
+	  "${@}"
+    	  APT_RETURN=$?
+      fi
     done
 
-    echodebug "No apt processes are currently running."
+    return $APT_RETURN
 }
 
 #---  FUNCTION  -------------------------------------------------------------------------------------------------------
@@ -1823,8 +1838,7 @@ __wait_for_apt(){
 #    PARAMETERS:  packages
 #----------------------------------------------------------------------------------------------------------------------
 __apt_get_install_noinput() {
-    __wait_for_apt
-    apt-get install -y -o DPkg::Options::=--force-confold "${@}"; return $?
+    __wait_for_apt apt-get install -y -o DPkg::Options::=--force-confold "${@}"; return $?
 }   # ----------  end of function __apt_get_install_noinput  ----------
 
 
@@ -1833,8 +1847,7 @@ __apt_get_install_noinput() {
 #   DESCRIPTION:  (DRY) apt-get upgrade with noinput options
 #----------------------------------------------------------------------------------------------------------------------
 __apt_get_upgrade_noinput() {
-    __wait_for_apt
-    apt-get upgrade -y -o DPkg::Options::=--force-confold; return $?
+    __wait_for_apt apt-get upgrade -y -o DPkg::Options::=--force-confold; return $?
 }   # ----------  end of function __apt_get_upgrade_noinput  ----------
 
 
@@ -1844,11 +1857,10 @@ __apt_get_upgrade_noinput() {
 #    PARAMETERS:  url
 #----------------------------------------------------------------------------------------------------------------------
 __apt_key_fetch() {
-    __wait_for_apt
     url=$1
 
     # shellcheck disable=SC2086
-    apt-key adv ${_GPG_ARGS} --fetch-keys "$url"; return $?
+    __wait_for_apt apt-key adv ${_GPG_ARGS} --fetch-keys "$url"; return $?
 }   # ----------  end of function __apt_key_fetch  ----------
 
 
@@ -2633,8 +2645,7 @@ __install_saltstack_ubuntu_repository() {
 
     __apt_key_fetch "$SALTSTACK_UBUNTU_URL/SALTSTACK-GPG-KEY.pub" || return 1
 
-    __wait_for_apt
-    apt-get update || return 1
+    __wait_for_apt apt-get update || return 1
 }
 
 install_ubuntu_deps() {
@@ -2646,8 +2657,7 @@ install_ubuntu_deps() {
 
         __enable_universe_repository || return 1
 
-        __wait_for_apt
-        apt-get update || return 1
+        __wait_for_apt apt-get update || return 1
     fi
 
     __PACKAGES=''
@@ -2703,8 +2713,7 @@ install_ubuntu_stable_deps() {
     # No user interaction, libc6 restart services for example
     export DEBIAN_FRONTEND=noninteractive
 
-    __wait_for_apt
-    apt-get update || return 1
+    __wait_for_apt apt-get update || return 1
 
     if [ "${_UPGRADE_SYS}" -eq $BS_TRUE ]; then
         if [ "${_INSECURE_DL}" -eq $BS_TRUE ]; then
@@ -2724,8 +2733,7 @@ install_ubuntu_stable_deps() {
 }
 
 install_ubuntu_git_deps() {
-    __wait_for_apt
-    apt-get update || return 1
+    __wait_for_apt apt-get update || return 1
 
     if ! __check_command_exists git; then
         __apt_get_install_noinput git-core || return 1
@@ -3032,8 +3040,7 @@ __install_saltstack_debian_repository() {
 
     __apt_key_fetch "$SALTSTACK_DEBIAN_URL/SALTSTACK-GPG-KEY.pub" || return 1
 
-    __wait_for_apt
-    apt-get update || return 1
+    __wait_for_apt apt-get update || return 1
 }
 
 install_debian_deps() {
@@ -3044,8 +3051,7 @@ install_debian_deps() {
     # No user interaction, libc6 restart services for example
     export DEBIAN_FRONTEND=noninteractive
 
-    __wait_for_apt
-    apt-get update || return 1
+    __wait_for_apt apt-get update || return 1
 
     if [ "${_UPGRADE_SYS}" -eq $BS_TRUE ]; then
         # Try to update GPG keys first if allowed
@@ -3164,8 +3170,7 @@ install_debian_8_git_deps() {
                 /etc/apt/sources.list.d/backports.list
         fi
 
-        __wait_for_apt
-        apt-get update || return 1
+        __wait_for_apt apt-get update || return 1
 
         # python-tornado package should be installed from backports repo
         __PACKAGES="${__PACKAGES} python-backports.ssl-match-hostname python-tornado/jessie-backports"
@@ -3415,35 +3420,32 @@ install_debian_check_services() {
 #
 
 install_fedora_deps() {
+    if [ "$_UPGRADE_SYS" -eq $BS_TRUE ]; then
+        dnf -y update || return 1
+    fi
+
+    __PACKAGES="${__PACKAGES:=}"
     if [ -n "$_PY_EXE" ] && [ "$_PY_MAJOR_VERSION" -eq 3 ]; then
         # Packages are named python3-<whatever>
         PY_PKG_VER=3
-        __PACKAGES="python3-m2crypto python3-PyYAML"
+        __PACKAGES="${__PACKAGES} python3-m2crypto python3-PyYAML"
     else
         PY_PKG_VER=2
-        __PACKAGES="m2crypto"
+        __PACKAGES="${__PACKAGES} m2crypto"
         if [ "$DISTRO_MAJOR_VERSION" -ge 28 ]; then
           __PACKAGES="${__PACKAGES} python2-pyyaml"
         else
           __PACKAGES="${__PACKAGES} PyYAML"
        fi
     fi
-
-    __PACKAGES="${__PACKAGES} procps-ng dnf-utils libyaml python${PY_PKG_VER}-crypto python${PY_PKG_VER}-jinja2"
+    __PACKAGES="${__PACKAGES} dnf-utils libyaml procps-ng python${PY_PKG_VER}-crypto python${PY_PKG_VER}-jinja2"
     __PACKAGES="${__PACKAGES} python${PY_PKG_VER}-msgpack python${PY_PKG_VER}-requests python${PY_PKG_VER}-zmq"
-
-    # shellcheck disable=SC2086
-    dnf install -y ${__PACKAGES} || return 1
-
-    if [ "$_UPGRADE_SYS" -eq $BS_TRUE ]; then
-        dnf -y update || return 1
-    fi
-
     if [ "${_EXTRA_PACKAGES}" != "" ]; then
         echoinfo "Installing the following extra packages as requested: ${_EXTRA_PACKAGES}"
-        # shellcheck disable=SC2086
-        dnf install -y ${_EXTRA_PACKAGES} || return 1
     fi
+
+    # shellcheck disable=SC2086
+    dnf install -y ${__PACKAGES} ${_EXTRA_PACKAGES} || return 1
 
     return 0
 }
@@ -3494,35 +3496,37 @@ install_fedora_git_deps() {
         PY_PKG_VER=2
     fi
 
+    __PACKAGES="${__PACKAGES:=}"
     if [ "$_INSECURE_DL" -eq $BS_FALSE ] && [ "${_SALT_REPO_URL%%://*}" = "https" ]; then
-        dnf install -y ca-certificates || return 1
+        __PACKAGES="${__PACKAGES} ca-certificates"
+    fi
+    if ! __check_command_exists git; then
+        __PACKAGES="${__PACKAGES} git"
+    fi
+    if [ "$_INSTALL_CLOUD" -eq $BS_TRUE ]; then
+        __PACKAGES="${__PACKAGES} python${PY_PKG_VER}-libcloud python${PY_PKG_VER}-netaddr"
+    fi
+    __PACKAGES="${__PACKAGES} python${PY_PKG_VER}-systemd"
+
+    # Fedora 28+ ships with tornado 5.0+ which is broken for salt on py3
+    # https://github.com/saltstack/salt-bootstrap/issues/1220
+    if [ "${PY_PKG_VER}" -lt 3 ] || [ "$DISTRO_MAJOR_VERSION" -lt 28 ]; then
+        __PACKAGES="${__PACKAGES} python${PY_PKG_VER}-tornado"
     fi
 
     install_fedora_deps || return 1
 
-    if ! __check_command_exists git; then
-        dnf install -y git || return 1
-    fi
-
     __git_clone_and_checkout || return 1
 
-    __PACKAGES="python${PY_PKG_VER}-systemd"
+    # Fedora 28+ needs tornado <5.0 from pip
+    # https://github.com/saltstack/salt-bootstrap/issues/1220
     if [ "${PY_PKG_VER}" -eq 3 ] && [ "$DISTRO_MAJOR_VERSION" -ge 28 ]; then
         __check_pip_allowed "You need to allow pip based installations (-P) for Tornado <5.0 in order to install Salt on Python 3"
         grep tornado "${_SALT_GIT_CHECKOUT_DIR}/requirements/base.txt" | while IFS='
 '         read -r dep; do
             "${_PY_EXE}" -m pip install "${dep}" || return 1
         done
-    else
-        __PACKAGES="${__PACKAGES} python${PY_PKG_VER}-tornado"
     fi
-
-    if [ "$_INSTALL_CLOUD" -eq $BS_TRUE ]; then
-        __PACKAGES="${__PACKAGES} python${PY_PKG_VER}-libcloud python${PY_PKG_VER}-netaddr"
-    fi
-
-    # shellcheck disable=SC2086
-    dnf install -y ${__PACKAGES} || return 1
 
     # Let's trigger config_salt()
     if [ "$_TEMP_CONFIG_DIR" = "null" ]; then
@@ -4681,6 +4685,138 @@ install_amazon_linux_ami_git_deps() {
     return 0
 }
 
+install_amazon_linux_ami_2_git_deps() {
+    if [ "$_INSECURE_DL" -eq $BS_FALSE ] && [ "${_SALT_REPO_URL%%://*}" = "https" ]; then
+        yum -y install ca-certificates || return 1
+    fi
+
+    PIP_EXE='pip'
+    if __check_command_exists python2.7; then
+        if ! __check_command_exists pip2.7; then
+            __yum_install_noinput python2-pip
+        fi
+        PIP_EXE='/bin/pip'
+        _PY_EXE='python2.7'
+    fi
+
+    install_amazon_linux_ami_2_deps || return 1
+
+    if ! __check_command_exists git; then
+        __yum_install_noinput git || return 1
+    fi
+
+    __git_clone_and_checkout || return 1
+
+    __PACKAGES=""
+    __PIP_PACKAGES=""
+
+    if [ "$_INSTALL_CLOUD" -eq $BS_TRUE ]; then
+        __check_pip_allowed "You need to allow pip based installations (-P) in order to install apache-libcloud"
+        __PACKAGES="${__PACKAGES} python27-pip"
+        __PIP_PACKAGES="${__PIP_PACKAGES} apache-libcloud>=$_LIBCLOUD_MIN_VERSION"
+    fi
+
+    if [ -f "${_SALT_GIT_CHECKOUT_DIR}/requirements/base.txt" ]; then
+        # We're on the develop branch, install whichever tornado is on the requirements file
+        __REQUIRED_TORNADO="$(grep tornado "${_SALT_GIT_CHECKOUT_DIR}/requirements/base.txt")"
+        if [ "${__REQUIRED_TORNADO}" != "" ]; then
+            __PACKAGES="${__PACKAGES} ${pkg_append}-tornado"
+        fi
+    fi
+
+    if [ "${__PACKAGES}" != "" ]; then
+        # shellcheck disable=SC2086
+        __yum_install_noinput ${__PACKAGES} || return 1
+    fi
+
+    if [ "${__PIP_PACKAGES}" != "" ]; then
+        # shellcheck disable=SC2086
+        ${PIP_EXE} install ${__PIP_PACKAGES} || return 1
+    fi
+
+    # Let's trigger config_salt()
+    if [ "$_TEMP_CONFIG_DIR" = "null" ]; then
+        _TEMP_CONFIG_DIR="${_SALT_GIT_CHECKOUT_DIR}/conf/"
+        CONFIG_SALT_FUNC="config_salt"
+    fi
+
+    return 0
+}
+
+install_amazon_linux_ami_2_deps() {
+    # Shim to figure out if we're using old (rhel) or new (aws) rpms.
+    _USEAWS=$BS_FALSE
+    pkg_append="python"
+
+    if [ "$ITYPE" = "stable" ]; then
+        repo_rev="$STABLE_REV"
+    else
+        repo_rev="latest"
+    fi
+
+    if echo $repo_rev | grep -E -q '^archive'; then
+        year=$(echo "$repo_rev" | cut -d '/' -f 2 | cut -c1-4)
+    else
+        year=$(echo "$repo_rev" | cut -c1-4)
+    fi
+
+    if echo "$repo_rev" | grep -E -q '^(latest|2016\.11)$' || \
+            [ "$year" -gt 2016 ]; then
+       _USEAWS=$BS_TRUE
+       pkg_append="python"
+    fi
+
+    # We need to install yum-utils before doing anything else when installing on
+    # Amazon Linux ECS-optimized images. See issue #974.
+    __yum_install_noinput yum-utils
+
+    # Do upgrade early
+    if [ "$_UPGRADE_SYS" -eq $BS_TRUE ]; then
+        yum -y update || return 1
+    fi
+
+    if [ $_DISABLE_REPOS -eq $BS_FALSE ] || [ "$_CUSTOM_REPO_URL" != "null" ]; then
+        __REPO_FILENAME="saltstack-repo.repo"
+
+        base_url="$HTTP_VAL://${_REPO_URL}/yum/redhat/7/\$basearch/$repo_rev/"
+        base_url="$HTTP_VAL://${_REPO_URL}/yum/amazon/2/\$basearch/latest/"
+        gpg_key="${base_url}SALTSTACK-GPG-KEY.pub
+        ${base_url}base/RPM-GPG-KEY-CentOS-7"
+        repo_name="SaltStack repo for Amazon Linux 2.0"
+
+        # This should prob be refactored to use __install_saltstack_rhel_repository()
+        # With args passed in to do the right thing.  Reformatted to be more like the
+        # amazon linux yum file.
+        if [ ! -s "/etc/yum.repos.d/${__REPO_FILENAME}" ]; then
+          cat <<_eof > "/etc/yum.repos.d/${__REPO_FILENAME}"
+[saltstack-repo]
+name=$repo_name
+failovermethod=priority
+priority=10
+gpgcheck=1
+gpgkey=$gpg_key
+baseurl=$base_url
+_eof
+        fi
+
+    fi
+
+    # Package python-ordereddict-1.1-2.el6.noarch is obsoleted by python26-2.6.9-2.88.amzn1.x86_64
+    # which is already installed
+    __PACKAGES="m2crypto ${pkg_append}-crypto ${pkg_append}-jinja2 PyYAML"
+    __PACKAGES="${__PACKAGES} ${pkg_append}-msgpack ${pkg_append}-requests ${pkg_append}-zmq"
+    __PACKAGES="${__PACKAGES} ${pkg_append}-futures"
+
+    # shellcheck disable=SC2086
+    __yum_install_noinput ${__PACKAGES} || return 1
+
+    if [ "${_EXTRA_PACKAGES}" != "" ]; then
+        echoinfo "Installing the following extra packages as requested: ${_EXTRA_PACKAGES}"
+        # shellcheck disable=SC2086
+        __yum_install_noinput ${_EXTRA_PACKAGES} || return 1
+    fi
+}
+
 install_amazon_linux_ami_stable() {
     install_centos_stable || return 1
     return 0
@@ -4712,6 +4848,41 @@ install_amazon_linux_ami_testing() {
 }
 
 install_amazon_linux_ami_testing_post() {
+    install_centos_testing_post || return 1
+    return 0
+}
+
+install_amazon_linux_ami_2_stable() {
+    install_centos_stable || return 1
+    return 0
+}
+
+install_amazon_linux_ami_2_stable_post() {
+    install_centos_stable_post || return 1
+    return 0
+}
+
+install_amazon_linux_ami_2_restart_daemons() {
+    install_centos_restart_daemons || return 1
+    return 0
+}
+
+install_amazon_linux_ami_2_git() {
+    install_centos_git || return 1
+    return 0
+}
+
+install_amazon_linux_ami_2_git_post() {
+    install_centos_git_post || return 1
+    return 0
+}
+
+install_amazon_linux_ami_2_testing() {
+    install_centos_testing || return 1
+    return 0
+}
+
+install_amazon_linux_ami_2_testing_post() {
     install_centos_testing_post || return 1
     return 0
 }
@@ -5336,7 +5507,8 @@ install_openbsd_restart_daemons() {
 #   SmartOS Install Functions
 #
 install_smartos_deps() {
-    pkgin -y install zeromq py27-crypto py27-m2crypto py27-msgpack py27-yaml py27-jinja2 py27-zmq py27-requests || return 1
+    smartos_deps="$(pkgin show-deps salt | grep '^\s' | grep -v '\snot' | xargs) py27-m2crypto"
+    pkgin -y install "${smartos_deps}" || return 1
 
     # Set _SALT_ETC_DIR to SmartOS default if they didn't specify
     _SALT_ETC_DIR=${BS_SALT_ETC_DIR:-/opt/local/etc/salt}

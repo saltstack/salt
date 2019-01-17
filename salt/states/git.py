@@ -768,6 +768,12 @@ def latest(name,
             ret,
             'Failed to check remote refs: {0}'.format(_strip_exc(exc))
         )
+    except NameError as exc:
+        if 'global name' in exc.message:
+            raise CommandExecutionError(
+                'Failed to check remote refs: You may need to install '
+                'GitPython or PyGit2')
+        raise
 
     if 'HEAD' in all_remote_refs:
         head_rev = all_remote_refs['HEAD']
