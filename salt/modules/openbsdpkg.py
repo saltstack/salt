@@ -348,7 +348,7 @@ def upgrade_available(name):
     '''
     Check whether or not an upgrade is available for a given package
 
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     CLI Example:
 
@@ -369,7 +369,7 @@ def upgrade(name=None,
 
     Returns a dictionary containing the changes:
 
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     .. code-block:: python
 

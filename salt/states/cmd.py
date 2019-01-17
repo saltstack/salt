@@ -521,7 +521,7 @@ def wait(name,
         return code returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Fluorine
+      .. versionadded:: 2019.2.0
     '''
     # Ignoring our arguments is intentional.
     return {'name': name,
@@ -660,7 +660,7 @@ def wait_script(name,
         return code returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Fluorine
+      .. versionadded:: 2019.2.0
     '''
     # Ignoring our arguments is intentional.
     return {'name': name,
@@ -821,7 +821,7 @@ def run(name,
         return code returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Fluorine
+      .. versionadded:: 2019.2.0
 
     .. note::
 
@@ -1094,7 +1094,7 @@ def script(name,
         return code returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Fluorine
+      .. versionadded:: 2019.2.0
 
     '''
     test_name = None
