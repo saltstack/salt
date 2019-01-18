@@ -166,7 +166,7 @@ class BatchAsync(object):
                     "available_minions": self.minions,
                     "down_minions": self.down_minions
                 },
-                "salt/batch/%s/start" % self.batch_jid)
+                "salt/batch/{0}/start".format(self.batch_jid))
             yield self.next()
 
     def end_batch(self):
@@ -177,7 +177,7 @@ class BatchAsync(object):
                 "done_minions": self.done_minions,
                 "timedout_minions": self.timedout_minions
             },
-            "salt/batch/%s/done" % self.batch_jid)
+            "salt/batch/{0}/done".format(self.batch_jid))
         self.event.remove_event_handler(self.__event_handler)
 
     @tornado.gen.coroutine
