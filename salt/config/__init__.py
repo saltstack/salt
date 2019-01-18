@@ -100,10 +100,6 @@ _DFLT_IPC_WBUFFER = _gather_buffer_space() * .5
 # TODO: Reserved for future use
 _DFLT_IPC_RBUFFER = _gather_buffer_space() * .5
 
-FLO_DIR = os.path.join(
-        os.path.dirname(os.path.dirname(__file__)),
-        'daemons', 'flo')
-
 VALID_OPTS = {
     # The address of the salt master. May be specified as IP address or hostname
     'master': (six.string_types, list),
