@@ -345,6 +345,7 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
 class MinionAsyncTestCase(TestCase, AdaptedConfigurationTestCaseMixin, tornado.testing.AsyncTestCase):
 
     def setUp(self):
+        super(MinionAsyncTestCase, self).setUp()
         self.opts = {}
         self.addCleanup(delattr, self, 'opts')
 
