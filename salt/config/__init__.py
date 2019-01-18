@@ -36,6 +36,7 @@ import salt.utils.zeromq
 import salt.syspaths
 import salt.exceptions
 import salt.defaults.exitcodes
+import salt.utils.immutabletypes as immutabletypes
 
 try:
     import psutil
@@ -100,7 +101,7 @@ _DFLT_IPC_WBUFFER = _gather_buffer_space() * .5
 # TODO: Reserved for future use
 _DFLT_IPC_RBUFFER = _gather_buffer_space() * .5
 
-VALID_OPTS = {
+VALID_OPTS = immutabletypes.freeze({
     # The address of the salt master. May be specified as IP address or hostname
     'master': (six.string_types, list),
 
@@ -1190,10 +1191,10 @@ VALID_OPTS = {
 
     # Thorium top file location
     'thorium_top': six.string_types,
-}
+})
 
 # default configurations
-DEFAULT_MINION_OPTS = {
+DEFAULT_MINION_OPTS = immutabletypes.freeze({
     'interface': '0.0.0.0',
     'master': 'salt',
     'master_type': 'str',
@@ -1485,9 +1486,9 @@ DEFAULT_MINION_OPTS = {
     'discovery': False,
     'schedule': {},
     'ssh_merge_pillar': True
-}
+})
 
-DEFAULT_MASTER_OPTS = {
+DEFAULT_MASTER_OPTS = immutabletypes.freeze({
     'interface': '0.0.0.0',
     'publish_port': 4505,
     'zmq_backlog': 1000,
@@ -1812,12 +1813,12 @@ DEFAULT_MASTER_OPTS = {
     'auth_events': True,
     'minion_data_cache_events': True,
     'enable_ssh_minions': False,
-}
+})
 
 
 # ----- Salt Proxy Minion Configuration Defaults ----------------------------------->
 # These are merged with DEFAULT_MINION_OPTS since many of them also apply here.
-DEFAULT_PROXY_MINION_OPTS = {
+DEFAULT_PROXY_MINION_OPTS = immutabletypes.freeze({
     'conf_file': os.path.join(salt.syspaths.CONFIG_DIR, 'proxy'),
     'log_file': os.path.join(salt.syspaths.LOGS_DIR, 'proxy'),
     'add_proxymodule_to_opts': False,
@@ -1843,9 +1844,10 @@ DEFAULT_PROXY_MINION_OPTS = {
     'pki_dir': os.path.join(salt.syspaths.CONFIG_DIR, 'pki', 'proxy'),
     'cachedir': os.path.join(salt.syspaths.CACHE_DIR, 'proxy'),
     'sock_dir': os.path.join(salt.syspaths.SOCK_DIR, 'proxy'),
-}
+})
+
 # ----- Salt Cloud Configuration Defaults ----------------------------------->
-DEFAULT_CLOUD_OPTS = {
+DEFAULT_CLOUD_OPTS = immutabletypes.freeze({
     'verify_env': True,
     'default_include': 'cloud.conf.d/*.conf',
     # Global defaults
@@ -1873,17 +1875,17 @@ DEFAULT_CLOUD_OPTS = {
     'log_rotate_backup_count': 0,
     'bootstrap_delay': None,
     'cache': 'localfs',
-}
+})
 
-DEFAULT_API_OPTS = {
+DEFAULT_API_OPTS = immutabletypes.freeze({
     # ----- Salt master settings overridden by Salt-API --------------------->
     'api_pidfile': os.path.join(salt.syspaths.PIDFILE_DIR, 'salt-api.pid'),
     'api_logfile': os.path.join(salt.syspaths.LOGS_DIR, 'api'),
     'rest_timeout': 300,
     # <---- Salt master settings overridden by Salt-API ----------------------
-}
+})
 
-DEFAULT_SPM_OPTS = {
+DEFAULT_SPM_OPTS = immutabletypes.freeze({
     # ----- Salt master settings overridden by SPM --------------------->
     'spm_conf_file': os.path.join(salt.syspaths.CONFIG_DIR, 'spm'),
     'formula_path': salt.syspaths.SPM_FORMULA_PATH,
@@ -1904,15 +1906,15 @@ DEFAULT_SPM_OPTS = {
     'spm_node_type': '',
     'spm_share_dir': os.path.join(salt.syspaths.SHARE_DIR, 'spm'),
     # <---- Salt master settings overridden by SPM ----------------------
-}
+})
 
-VM_CONFIG_DEFAULTS = {
+VM_CONFIG_DEFAULTS = immutabletypes.freeze({
     'default_include': 'cloud.profiles.d/*.conf',
-}
+})
 
-PROVIDER_CONFIG_DEFAULTS = {
+PROVIDER_CONFIG_DEFAULTS = immutabletypes.freeze({
     'default_include': 'cloud.providers.d/*.conf',
-}
+})
 # <---- Salt Cloud Configuration Defaults ------------------------------------
 
 
