@@ -333,7 +333,9 @@ def build_whitespace_split_regex(text):
         lexer = shlex.shlex(text)
         lexer.whitespace_split = True
         lexer.commenters = ''
-        if '\'' in text:
+        if "'\"":
+            lexer.quotes = ''
+        elif '\'' in text:
             lexer.quotes = '"'
         elif '"' in text:
             lexer.quotes = '\''
