@@ -109,19 +109,19 @@ def init(opts):
         thisproxy['conn'].open()
     except (ProbeError, ConnectAuthError, ConnectRefusedError, ConnectTimeoutError,
             ConnectError) as ex:
-        log.error("%s : not able to initiate connection to the device" % ex)
+        log.error("{} : not able to initiate connection to the device".format(str(ex)))
         thisproxy['initialized'] = False
         return
 
     try:
         thisproxy['conn'].bind(cu=jnpr.junos.utils.config.Config)
     except Exception as ex:
-        log.error('Bind failed with Config class due to: %s' % ex)
+        log.error('Bind failed with Config class due to: {}'.format(str(ex)))
 
     try:
         thisproxy['conn'].bind(sw=jnpr.junos.utils.sw.SW)
     except Exception as ex:
-        log.error('Bind failed with SW class due to: %s' % ex)
+        log.error('Bind failed with SW class due to: {}'.format(str(ex)))
     thisproxy['initialized'] = True
 
 
