@@ -1368,29 +1368,38 @@ def get_table(table, table_file, path=None, target=None, key=None, key_items=Non
               filters=None, args=None):
     '''
     Retrieve data from a Junos device using Tables/Views
-    Usage:
-    .. code-block:: bash
-        salt 'device_name' junos.get_table
-    Parameters:
-      Required
-        * table:
-          Name of PyEZ Table
-        * table_file:
-          YAML file that has the table specified in table parameter
-      Optional
-        * path:
-          Path of location of the YAML file.
-          defaults to op directory in jnpr.junos.op
-        * target:
-          if command need to run on FPC, can specify fpc target
-        * key:
-          To overwrite key provided in YAML
-        * key_items:
-          To select only given key items
-        * filters:
+
+    table (required)
+        Name of PyEZ Table
+
+    table_file (required)
+        YAML file that has the table specified in table parameter
+
+    path:
+        Path of location of the YAML file.
+        defaults to op directory in jnpr.junos.op
+
+    target:
+        if command need to run on FPC, can specify fpc target
+
+    key:
+        To overwrite key provided in YAML
+
+    key_items:
+        To select only given key items
+
+    filters:
           To select only filter for the dictionary from columns
-        * args:
+
+    **args:
           key/value pair which should render Jinja template command
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'device_name' junos.get_table
+
     '''
 
     conn = __proxy__['junos.conn']()
