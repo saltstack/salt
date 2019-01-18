@@ -18,7 +18,6 @@ import os
 import re
 import sys
 import time
-import stat
 import errno
 import signal
 import textwrap
