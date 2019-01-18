@@ -795,6 +795,10 @@ def session_master_config_overrides(session_root_dir):
     autosign_file_permissions = stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH | stat.S_IWUSR
     os.chmod(autosign_file_path, autosign_file_permissions)
 
+    pytest_stop_sending_events_file = session_root_dir.join('pytest_stop_sending_events_file').strpath
+    with salt.utils.files.fopen(pytest_stop_sending_events_file, 'w') as wfh:
+        wfh.write('')
+
     return {
         'pillar_opts': True,
         'ext_pillar': [ext_pillar],
@@ -824,7 +828,8 @@ def session_master_config_overrides(session_root_dir):
                     os.path.join(RUNTIME_VARS.FILES, 'reactor-test.sls')
                 ],
             }
-        ]
+        ],
+        'pytest_stop_sending_events_file': pytest_stop_sending_events_file
     }
 
 
@@ -913,6 +918,10 @@ def session_master_of_masters_config_overrides(session_master_of_masters_root_di
     autosign_file_permissions = stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH | stat.S_IWUSR
     os.chmod(autosign_file_path, autosign_file_permissions)
 
+    pytest_stop_sending_events_file = session_master_of_masters_root_dir.join('pytest_stop_sending_events_file').strpath
+    with salt.utils.files.fopen(pytest_stop_sending_events_file, 'w') as wfh:
+        wfh.write('')
+
     return {
         'ext_pillar': [ext_pillar],
         'extension_modules': extension_modules_path,
@@ -930,6 +939,7 @@ def session_master_of_masters_config_overrides(session_master_of_masters_root_di
                 os.path.join(RUNTIME_VARS.FILES, 'pillar', 'base'),
             ]
         },
+        'pytest_stop_sending_events_file': pytest_stop_sending_events_file
     }
 
 
