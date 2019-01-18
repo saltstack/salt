@@ -24,10 +24,6 @@ from pytestsalt.fixtures.daemons import SaltMaster as PytestSaltMaster
 from pytestsalt.fixtures.daemons import SaltMinion as PytestSaltMinion
 from pytestsalt.fixtures.daemons import SaltSyndic as PytestSaltSyndic
 from pytestsalt.fixtures.daemons import SaltProxy as PytestSaltProxy
-try:
-    from pytestsalt.version import __version_info__ as __pytestsalt_version_info__
-except ImportError:
-    from pytestsalt import __version_info__ as __pytestsalt_version_info__
 
 # Import tests support libs
 from tests.support.cli_scripts import ScriptPathMixin

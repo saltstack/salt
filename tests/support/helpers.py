@@ -1634,7 +1634,7 @@ def dedent(text, linesep=os.linesep):
     return clean_text
 
 
-class PatchedEnviron:
+class PatchedEnviron(object):
 
     def __init__(self, **kwargs):
         self.cleanup_keys = kwargs.pop('__cleanup__', ())

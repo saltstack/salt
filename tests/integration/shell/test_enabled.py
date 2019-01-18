@@ -15,7 +15,6 @@ import salt.utils.platform
 import salt.utils.files
 
 
-
 class EnabledTest(ModuleCase):
     '''
     validate the use of shell processing for cmd.run on the salt command line

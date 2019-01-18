@@ -65,7 +65,7 @@ PATH = 'path/to/some/cloud/conf/file'
 DEFAULT = {'default_include': PATH}
 
 
-class DefaultConfigsBase:
+class DefaultConfigsBase(object):
 
     @classmethod
     def setUpClass(cls):
@@ -1367,7 +1367,6 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 'root_dir: {}\n'
                 'log_file: {}\n'.format(env_root_dir, env_fpath)
             )
-
 
         with patched_environ(SALT_CLOUD_CONFIG=env_fpath):
             # Should load from env variable, not the default configuration file

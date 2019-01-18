@@ -39,7 +39,7 @@ class ReactorTest(SaltMinionEventAssertsMixin, ShellTestCase):
 
     def get_event(self, class_type='master'):
         if class_type not in ('master', 'minion'):
-            self.fail('Don\'t know how to handle class_type {!r}'.format(class_type))
+            self.fail('Don\'t know how to handle class_type \'{}\''.format(class_type))
         opts = self.get_config(class_type)
         return salt.utils.event.get_event(
             class_type,
