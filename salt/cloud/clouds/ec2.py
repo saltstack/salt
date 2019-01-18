@@ -71,6 +71,10 @@ To use the EC2 cloud module, set up the cloud configuration at
       # Pass userdata to the instance to be created
       userdata_file: /etc/salt/my-userdata-file
 
+      # Instance termination protection setting
+      # Default is disabled
+      termination_protection: False
+
 :depends: requests
 '''
 # pylint: disable=invalid-name,function-redefined
@@ -1929,6 +1933,18 @@ def request_instance(vm_=None, call=None):
     set_del_root_vol_on_destroy = config.get_cloud_config_value(
         'del_root_vol_on_destroy', vm_, __opts__, search_global=False
     )
+    
+    set_termination_protection = config.get_cloud_config_value(
+        'termination_protection', vm_, __opts__, search_global=False
+    )
+    
+    if set_termination_protection is not None:
+        if not isinstance(set_termination_protection, bool):
+            raise SaltCloudConfigError(
+                '\'termination_protection\' should be a boolean value.'
+            )
+        params.update(_param_from_config(spot_prefix + 'DisableApiTermination',
+                                         set_termination_protection))
 
     if set_del_root_vol_on_destroy and not isinstance(set_del_root_vol_on_destroy, bool):
         raise SaltCloudConfigError(

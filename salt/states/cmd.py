@@ -531,7 +531,7 @@ def wait(name,
         return code returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Fluorine
+      .. versionadded:: 2019.2.0
 
     success_stdout: This parameter will be allow a list of
         strings that when found in standard out should be considered a success.
@@ -687,7 +687,7 @@ def wait_script(name,
         return code returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Fluorine
+      .. versionadded:: 2019.2.0
 
     success_stdout: This parameter will be allow a list of
         strings that when found in standard out should be considered a success.
@@ -871,7 +871,7 @@ def run(name,
         return code returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Fluorine
+      .. versionadded:: 2019.2.0
 
     success_stdout: This parameter will be allow a list of
         strings that when found in standard out should be considered a success.
@@ -1166,7 +1166,7 @@ def script(name,
         return code returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Fluorine
+      .. versionadded:: 2019.2.0
 
     success_stdout: This parameter will be allow a list of
         strings that when found in standard out should be considered a success.

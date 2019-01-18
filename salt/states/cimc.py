@@ -47,7 +47,7 @@ def hostname(name, hostname=None):
     '''
     Ensures that the hostname is set to the specified value.
 
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     name: The name of the module function to execute.
 
@@ -106,7 +106,7 @@ def logging_levels(name, remote=None, local=None):
     must match the following options: emergency, alert, critical, error, warning,
     notice, informational, debug.
 
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     name: The name of the module function to execute.
 
@@ -252,7 +252,7 @@ def power_configuration(name, policy=None, delayType=None, delayValue=None):
     Ensures that the power configuration is configured on the system. This is
     only available on some C-Series servers.
 
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     name: The name of the module function to execute.
 
@@ -439,7 +439,7 @@ def user(name, id='', user='', priv='', password='', status='active'):
     Ensures that a user is configured on the device. Due to being unable to
     verify the user password. This is a forced operation.
 
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     name: The name of the module function to execute.
 

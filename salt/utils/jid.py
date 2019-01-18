@@ -27,9 +27,12 @@ def gen_jid(opts=None):
         opts = {}
     global LAST_JID_DATETIME  # pylint: disable=global-statement
 
+    if opts.get('utc_jid', False):
+        jid_dt = datetime.datetime.utcnow()
+    else:
+        jid_dt = datetime.datetime.now()
     if not opts.get('unique_jid', False):
-        return '{0:%Y%m%d%H%M%S%f}'.format(datetime.datetime.now())
-    jid_dt = datetime.datetime.now()
+        return '{0:%Y%m%d%H%M%S%f}'.format(jid_dt)
     if LAST_JID_DATETIME and LAST_JID_DATETIME >= jid_dt:
         jid_dt = LAST_JID_DATETIME + datetime.timedelta(microseconds=1)
     LAST_JID_DATETIME = jid_dt
