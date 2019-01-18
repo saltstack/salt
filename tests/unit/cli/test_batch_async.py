@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 # Import Salt Libs
 from salt.cli.batch_async import BatchAsync
 
@@ -15,7 +17,6 @@ class AsyncBatchTestCase(AsyncTestCase, TestCase):
         opts = {'batch': '1',
                 'conf_file': {},
                 'tgt': '*',
-                'transport': '',
                 'timeout': 5,
                 'gather_job_timeout': 5,
                 'transport': None,
