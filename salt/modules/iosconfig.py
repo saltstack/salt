@@ -2,7 +2,7 @@
 '''
 Cisco IOS configuration manipulation helpers
 
-.. versionadded:: Fluorine
+.. versionadded:: 2019.2.0
 
 This module provides a collection of helper functions for Cisco IOS style
 configuration manipulation. This module does not have external dependencies

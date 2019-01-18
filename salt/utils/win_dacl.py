@@ -2212,7 +2212,7 @@ def check_perms(obj_name,
     Check owner and permissions for the passed directory. This function checks
     the permissions and sets them, returning the changes made.
 
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Args:
 
@@ -2476,7 +2476,7 @@ def set_perms(obj_name,
     '''
     Set permissions for the given path
 
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Args:
 

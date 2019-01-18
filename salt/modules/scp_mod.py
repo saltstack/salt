@@ -3,7 +3,7 @@
 SCP Module
 ==========
 
-.. versionadded:: Fluorine
+.. versionadded:: 2019.2.0
 
 Module to copy files via `SCP <https://man.openbsd.org/scp>`_
 '''
