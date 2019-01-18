@@ -1242,7 +1242,7 @@ def user_exists(user,
         else:
             qry += ' AND ' + password_column + ' = \'\''
     elif password:
-        if salt.utils.versions.version_cmp(server_version, '8.0.11') <= 0:
+        if salt.utils.versions.version_cmp(server_version, '8.0.11') >= 0:
             # Hash the password before comparing
             _password = __mysql_hash_password(password)
             qry += ' AND ' + password_column + ' = %(password)s'
@@ -1368,7 +1368,7 @@ def user_create(user,
         qry += ' IDENTIFIED BY %(password)s'
         args['password'] = six.text_type(password)
     elif password_hash is not None:
-        if salt.utils.versions.version_cmp(server_version, '8.0.11') <= 0:
+        if salt.utils.versions.version_cmp(server_version, '8.0.11') >= 0:
             qry += ' IDENTIFIED BY %(password)s'
         else:
             qry += ' IDENTIFIED BY PASSWORD %(password)s'
@@ -1454,7 +1454,7 @@ def user_chpass(user,
     server_version = version(**connection_args)
     args = {}
     if password is not None:
-        if salt.utils.versions.version_cmp(server_version, '8.0.11') <= 0:
+        if salt.utils.versions.version_cmp(server_version, '8.0.11') >= 0:
             password_sql = '%(password)s'
         else:
             password_sql = 'PASSWORD(%(password)s)'
