@@ -1418,11 +1418,11 @@ def get_table(table, table_file, path=None, target=None, key=None, key_items=Non
         if len(file_loc) == 1:
             file_name = file_loc[0]
         else:
-            ret['message'] = 'Given table file %s cannot be located' % table_file
+            ret['message'] = 'Given table file {} cannot be located'.format(table_file)
             ret['out'] = False
             return ret
         try:
-            with salt.utils.fopen(file_name) as fp:
+            with salt.utils.files.fopen(file_name) as fp:
                 ret['table'] = yaml.load(fp.read(),
                                          Loader=yamlordereddictloader.Loader)
                 globals().update(FactoryLoader().load(ret['table']))
@@ -1441,7 +1441,7 @@ def get_table(table, table_file, path=None, target=None, key=None, key_items=Non
             return ret
         except ConnectClosedError:
             ret['message'] = 'Got ConnectClosedError exception. Connection lost ' \
-                             'with %s' % conn
+                             'with {}'.format(conn)
             ret['out'] = False
             return ret
         ret['reply'] = json.loads(data.to_json())

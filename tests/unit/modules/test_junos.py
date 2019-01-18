@@ -1703,7 +1703,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
         path = '/path/to/file'
         ret_exp = {'out': False, 'hostname': '1.1.1.1',
                    'tablename': 'ModuleTable',
-                   'message': 'Given table file %s cannot be located' % file}
+                   'message': 'Given table file {} cannot be located'.format(file)}
         with patch('jnpr.junos.factory.FactoryLoader.load') as mock_load:
             ret = junos.get_table(table, file, path)
             self.assertEqual(ret, ret_exp)
@@ -1714,14 +1714,13 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
         file = 'inventory.yml'
         ret_exp = {'out': False, 'hostname': '1.1.1.1',
                    'tablename': 'ModuleTable',
-                   'message': 'Given table file %s cannot be located' % file}
+                   'message': 'Given table file {} cannot be located'.format(file)}
         with patch('jnpr.junos.factory.FactoryLoader.load') as mock_load, \
                 patch('glob.glob') as mock_fopen:
             mock_fopen.return_value = []
             ret = junos.get_table(table, file)
             self.assertEqual(ret, ret_exp)
             mock_load.assert_not_called()
-
 
     def test_get_table_yaml_load_error(self):
         table = 'ModuleTable'
@@ -1730,9 +1729,9 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
         message = 'File not located test'
         ret_exp = {'out': False, 'hostname': '1.1.1.1',
                    'tablename': 'ModuleTable',
-                   'message': 'Uncaught exception during YAML Load - please report: %s'
-                              % message}
-        with patch('salt.utils.fopen', mock_open(IOError(message))) as mock_file, \
+                   'message': 'Uncaught exception during YAML Load - please report: {}'
+                   .format(message)}
+        with patch('salt.utils.files.fopen', mock_open(IOError(message))) as mock_file, \
                 patch('glob.glob') as mock_fopen:
             mock_fopen.return_value = ['/path/to/file']
             ret = junos.get_table(table, file, path)
