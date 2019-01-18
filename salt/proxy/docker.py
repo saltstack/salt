@@ -2,7 +2,7 @@
 '''
 Docker Proxy Minion
 
-.. versionadded: Fluorine
+.. versionadded: 2019.2.0
 
 :depends: docker
 

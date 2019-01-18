@@ -812,7 +812,7 @@ def list_repo_pkgs(*args, **kwargs):
         be expanded and ``--setopt`` prepended to each in the yum/dnf command
         that is run.
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     CLI Examples:
 
@@ -1084,7 +1084,7 @@ def refresh_db(**kwargs):
         be expanded and ``--setopt`` prepended to each in the yum/dnf command
         that is run.
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     CLI Example:
 
@@ -1249,7 +1249,7 @@ def install(name=None,
 
             salt '*' pkg.install foo setopt='obsoletes=0,plugins=0'
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     Repository Options:
 
@@ -1745,7 +1745,7 @@ def upgrade(name=None,
     .. _`systemd-run(1)`: https://www.freedesktop.org/software/systemd/man/systemd-run.html
     .. _`systemd.kill(5)`: https://www.freedesktop.org/software/systemd/man/systemd.kill.html
 
-    .. versionchanged:: Fluorine
+    .. versionchanged:: 2019.2.0
         Added ``obsoletes`` and ``minimal`` arguments
 
     Returns a dictionary containing the changes:
@@ -1838,7 +1838,7 @@ def upgrade(name=None,
 
             salt '*' pkg.upgrade minimal=True
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     obsoletes : True
         Controls wether yum/dnf should take obsoletes into account and remove them.
@@ -1849,14 +1849,14 @@ def upgrade(name=None,
 
             salt '*' pkg.upgrade obsoletes=False
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     setopt
         A comma-separated or Python list of key=value options. This list will
         be expanded and ``--setopt`` prepended to each in the yum/dnf command
         that is run.
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     .. note::
         To add extra arguments to the ``yum upgrade`` command, pass them as key
@@ -1929,7 +1929,7 @@ def update(name=None,
             obsoletes=False,
             **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Calls :py:func:`pkg.upgrade <salt.modules.yumpkg.upgrade>` with
     ``obsoletes=False``. Mirrors the CLI behavior of ``yum update``.
