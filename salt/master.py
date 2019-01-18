@@ -2149,25 +2149,25 @@ class ClearFuncs(object):
                 }
         if extra.get('batch', None):
             return self.publish_batch(clear_load, minions, missing)
-        else:
-            jid = self._prep_jid(clear_load, extra)
-            if jid is None:
-                return {'enc': 'clear',
-                        'load': {'error': 'Master failed to assign jid'}}
-            payload = self._prep_pub(minions, jid, clear_load, extra, missing)
 
-            # Send it!
-            self._send_ssh_pub(payload, ssh_minions=ssh_minions)
-            self._send_pub(payload)
+        jid = self._prep_jid(clear_load, extra)
+        if jid is None:
+            return {'enc': 'clear',
+                    'load': {'error': 'Master failed to assign jid'}}
+        payload = self._prep_pub(minions, jid, clear_load, extra, missing)
 
-            return {
-                'enc': 'clear',
-                'load': {
-                    'jid': clear_load['jid'],
-                    'minions': minions,
-                    'missing': missing
-                }
+        # Send it!
+        self._send_ssh_pub(payload, ssh_minions=ssh_minions)
+        self._send_pub(payload)
+
+        return {
+            'enc': 'clear',
+            'load': {
+                'jid': clear_load['jid'],
+                'minions': minions,
+                'missing': missing
             }
+        }
 
     def _prep_auth_info(self, clear_load):
         sensitive_load_keys = []
