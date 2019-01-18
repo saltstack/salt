@@ -1708,7 +1708,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         if not isinstance(key, six.string_types):
             raise KeyError('The key must be a string.')
         if '.' not in key:
-            raise KeyError('The key \'%s\' should contain a \'.\'', key)
+            raise KeyError('The key \'{0}\' should contain a \'.\''.format(key))
         mod_name, _ = key.split('.', 1)
         with self._lock:
             # It is possible that the key is in the dictionary after

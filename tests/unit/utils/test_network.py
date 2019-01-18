@@ -18,6 +18,7 @@ from tests.support.mock import (
 
 # Import salt libs
 import salt.utils.network as network
+from salt._compat import ipaddress
 
 log = logging.getLogger(__name__)
 
@@ -201,6 +202,35 @@ class NetworkTestCase(TestCase):
         self.assertFalse(network.is_ipv6('2001:0db8:::0370:7334'))
         self.assertFalse(network.is_ipv6('10.0.1.2'))
         self.assertFalse(network.is_ipv6('2001.0db8.85a3.0000.0000.8a2e.0370.7334'))
+
+    def test_parse_host_port(self):
+        _ip = ipaddress.ip_address
+        good_host_ports = {
+            '10.10.0.3': (_ip('10.10.0.3'), None),
+            '10.10.0.3:1234': (_ip('10.10.0.3'), 1234),
+            '2001:0db8:85a3::8a2e:0370:7334': (_ip('2001:0db8:85a3::8a2e:0370:7334'), None),
+            '[2001:0db8:85a3::8a2e:0370:7334]:1234': (_ip('2001:0db8:85a3::8a2e:0370:7334'), 1234),
+            '2001:0db8:85a3::7334': (_ip('2001:0db8:85a3::7334'), None),
+            '[2001:0db8:85a3::7334]:1234': (_ip('2001:0db8:85a3::7334'), 1234)
+        }
+        bad_host_ports = [
+            '10.10.0.3/24',
+            '10.10.0.3::1234',
+            '2001:0db8:0370:7334',
+            '2001:0db8:0370::7334]:1234',
+            '2001:0db8:0370:0:a:b:c:d:1234'
+        ]
+        for host_port, assertion_value in good_host_ports.items():
+            host = port = None
+            host, port = network.parse_host_port(host_port)
+            self.assertEqual((host, port), assertion_value)
+
+        for host_port in bad_host_ports:
+            try:
+                self.assertRaises(ValueError, network.parse_host_port, host_port)
+            except AssertionError as _e_:
+                log.error('bad host_port value: "%s" failed to trigger ValueError exception', host_port)
+                raise _e_
 
     def test_is_subnet(self):
         for subnet_data in (IPV4_SUBNETS, IPV6_SUBNETS):
@@ -534,3 +564,15 @@ class NetworkTestCase(TestCase):
         self.assertRaises(ValueError, network.mac_str_to_bytes, 'a0:b0:c0:d0:e0:fg')
         self.assertEqual(b'\x10\x08\x06\x04\x02\x00', network.mac_str_to_bytes('100806040200'))
         self.assertEqual(b'\xf8\xe7\xd6\xc5\xb4\xa3', network.mac_str_to_bytes('f8e7d6c5b4a3'))
+
+    def test_generate_minion_id_with_long_hostname(self):
+        '''
+        Validate the fix for:
+
+        https://github.com/saltstack/salt/issues/51160
+        '''
+        long_name = 'localhost-abcdefghijklmnopqrstuvwxyz-abcdefghijklmnopqrstuvwxyz'
+        with patch('socket.gethostname', MagicMock(return_value=long_name)):
+            # An exception is raised if unicode is passed to socket.getfqdn
+            minion_id = network.generate_minion_id()
+        assert minion_id != '', minion_id
