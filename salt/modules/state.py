@@ -13,7 +13,6 @@ states themselves.
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
-import fnmatch
 import logging
 import os
 import shutil
@@ -39,8 +38,10 @@ import salt.utils.state
 import salt.utils.stringutils
 import salt.utils.url
 import salt.utils.versions
+import salt.defaults.exitcodes
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.runners.state import orchestrate as _orchestrate
+from salt.utils.odict import OrderedDict
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -98,13 +99,13 @@ def _set_retcode(ret, highstate=None):
     '''
 
     # Set default retcode to 0
-    __context__['retcode'] = 0
+    __context__['retcode'] = salt.defaults.exitcodes.EX_OK
 
     if isinstance(ret, list):
-        __context__['retcode'] = 1
+        __context__['retcode'] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
         return
     if not __utils__['state.check_result'](ret, highstate=highstate):
-        __context__['retcode'] = 2
+        __context__['retcode'] = salt.defaults.exitcodes.EX_STATE_FAILURE
 
 
 def _get_pillar_errors(kwargs, pillar=None):
@@ -417,7 +418,7 @@ def _check_queue(queue, kwargs):
     else:
         conflict = running(concurrent=kwargs.get('concurrent', False))
         if conflict:
-            __context__['retcode'] = 1
+            __context__['retcode'] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
             return conflict
 
 
@@ -449,13 +450,13 @@ def low(data, queue=False, **kwargs):
         st_ = salt.state.State(__opts__)
     err = st_.verify_data(data)
     if err:
-        __context__['retcode'] = 1
+        __context__['retcode'] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
         return err
     ret = st_.call(data)
     if isinstance(ret, list):
-        __context__['retcode'] = 1
+        __context__['retcode'] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
     if __utils__['state.check_result'](ret):
-        __context__['retcode'] = 2
+        __context__['retcode'] = salt.defaults.exitcodes.EX_STATE_FAILURE
     return ret
 
 
@@ -557,7 +558,7 @@ def template(tem, queue=False, **kwargs):
 
     errors = _get_pillar_errors(kwargs, pillar=st_.opts['pillar'])
     if errors:
-        __context__['retcode'] = 5
+        __context__['retcode'] = salt.defaults.exitcodes.EX_PILLAR_FAILURE
         raise CommandExecutionError('Pillar failed to render', info=errors)
 
     if not tem.endswith('.sls'):
@@ -568,7 +569,7 @@ def template(tem, queue=False, **kwargs):
                                           None,
                                           local=True)
     if errors:
-        __context__['retcode'] = 1
+        __context__['retcode'] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
         return errors
     ret = st_.state.call_high(high_state)
     _set_retcode(ret, highstate=high_state)
@@ -625,12 +626,19 @@ def apply_(mods=None, **kwargs):
     test
         Run states in test-only (dry-run) mode
 
+    mock
+        The mock option allows for the state run to execute without actually
+        calling any states. This then returns a mocked return which will show
+        the requisite ordering as well as fully validate the state run.
+
+        .. versionadded:: 2015.8.4
+
     pillar
         Custom Pillar values, passed as a dictionary of key-value pairs
 
         .. code-block:: bash
 
-            salt '*' state.apply test pillar='{"foo": "bar"}'
+            salt '*' state.apply stuff pillar='{"foo": "bar"}'
 
         .. note::
             Values passed this way will override Pillar values set via
@@ -673,11 +681,11 @@ def apply_(mods=None, **kwargs):
 
     .. code-block:: bash
 
-        # Run the states configured in salt://test.sls (or salt://test/init.sls)
-        salt '*' state.apply test
-        # Run the states configured in salt://test.sls (or salt://test/init.sls)
+        # Run the states configured in salt://stuff.sls (or salt://stuff/init.sls)
+        salt '*' state.apply stuff
+        # Run the states configured in salt://stuff.sls (or salt://stuff/init.sls)
         # and salt://pkgs.sls (or salt://pkgs/init.sls).
-        salt '*' state.apply test,pkgs
+        salt '*' state.apply stuff,pkgs
 
     The following additional arguments are also accepted when applying
     individual SLS files:
@@ -685,12 +693,19 @@ def apply_(mods=None, **kwargs):
     test
         Run states in test-only (dry-run) mode
 
+    mock
+        The mock option allows for the state run to execute without actually
+        calling any states. This then returns a mocked return which will show
+        the requisite ordering as well as fully validate the state run.
+
+        .. versionadded:: 2015.8.4
+
     pillar
         Custom Pillar values, passed as a dictionary of key-value pairs
 
         .. code-block:: bash
 
-            salt '*' state.apply test pillar='{"foo": "bar"}'
+            salt '*' state.apply stuff pillar='{"foo": "bar"}'
 
         .. note::
             Values passed this way will override Pillar values set via
@@ -741,7 +756,7 @@ def apply_(mods=None, **kwargs):
 
         .. code-block:: bash
 
-            salt '*' state.apply test localconfig=/path/to/minion.yml
+            salt '*' state.apply stuff localconfig=/path/to/minion.yml
 
     sync_mods
         If specified, the desired custom module types will be synced prior to
@@ -749,15 +764,15 @@ def apply_(mods=None, **kwargs):
 
         .. code-block:: bash
 
-            salt '*' state.apply test sync_mods=states,modules
-            salt '*' state.apply test sync_mods=all
+            salt '*' state.apply stuff sync_mods=states,modules
+            salt '*' state.apply stuff sync_mods=all
 
         .. note::
             This option is ignored when no SLS files are specified, as a
             :ref:`highstate <running-highstate>` automatically syncs all custom
             module types.
 
-        .. versionadded:: 2017.7.8,2018.3.3,Fluorine
+        .. versionadded:: 2017.7.8,2018.3.3,2019.2.0
     '''
     if mods:
         return sls(mods, **kwargs)
@@ -770,16 +785,16 @@ def request(mods=None,
     .. versionadded:: 2015.5.0
 
     Request that the local admin execute a state run via
-    `salt-call state.run_request`
-    All arguments match state.apply
+    `salt-call state.run_request`.
+    All arguments match those of state.apply.
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' state.request
-        salt '*' state.request test
-        salt '*' state.request test,pkgs
+        salt '*' state.request stuff
+        salt '*' state.request stuff,pkgs
     '''
     kwargs['test'] = True
     ret = apply_(mods, **kwargs)
@@ -915,7 +930,7 @@ def highstate(test=None, queue=False, **kwargs):
 
         .. code-block:: bash
 
-            salt '*' state.apply test pillar='{"foo": "bar"}'
+            salt '*' state.highstate stuff pillar='{"foo": "bar"}'
 
         .. note::
             Values passed this way will override Pillar values set via
@@ -1052,7 +1067,7 @@ def highstate(test=None, queue=False, **kwargs):
 
     errors = _get_pillar_errors(kwargs, st_.opts['pillar'])
     if errors:
-        __context__['retcode'] = 5
+        __context__['retcode'] = salt.defaults.exitcodes.EX_PILLAR_FAILURE
         return ['Pillar failed to render with the following messages:'] + errors
 
     st_.push_active()
@@ -1095,7 +1110,7 @@ def sls(mods, test=None, exclude=None, queue=False, sync_mods=None, **kwargs):
 
         .. code-block:: bash
 
-            salt '*' state.apply test pillar='{"foo": "bar"}'
+            salt '*' state.sls stuff pillar='{"foo": "bar"}'
 
         .. note::
             Values passed this way will override existing Pillar values set via
@@ -1181,10 +1196,10 @@ def sls(mods, test=None, exclude=None, queue=False, sync_mods=None, **kwargs):
 
         .. code-block:: bash
 
-            salt '*' state.sls test sync_mods=states,modules
-            salt '*' state.sls test sync_mods=all
+            salt '*' state.sls stuff sync_mods=states,modules
+            salt '*' state.sls stuff sync_mods=all
 
-        .. versionadded:: 2017.7.8,2018.3.3,Fluorine
+        .. versionadded:: 2017.7.8,2018.3.3,2019.2.0
 
     CLI Example:
 
@@ -1206,7 +1221,7 @@ def sls(mods, test=None, exclude=None, queue=False, sync_mods=None, **kwargs):
     else:
         conflict = running(concurrent)
         if conflict:
-            __context__['retcode'] = 1
+            __context__['retcode'] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
             return conflict
 
     if isinstance(mods, list):
@@ -1220,7 +1235,7 @@ def sls(mods, test=None, exclude=None, queue=False, sync_mods=None, **kwargs):
                 'Salt state %s is disabled. To re-enable, run '
                 'state.enable %s', state, state
             )
-        __context__['retcode'] = 1
+        __context__['retcode'] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
         return disabled
 
     orig_test = __opts__.get('test', None)
@@ -1290,7 +1305,7 @@ def sls(mods, test=None, exclude=None, queue=False, sync_mods=None, **kwargs):
 
     errors = _get_pillar_errors(kwargs, pillar=st_.opts['pillar'])
     if errors:
-        __context__['retcode'] = 5
+        __context__['retcode'] = salt.defaults.exitcodes.EX_PILLAR_FAILURE
         return ['Pillar failed to render with the following messages:'] + errors
 
     orchestration_jid = kwargs.get('orchestration_jid')
@@ -1305,20 +1320,18 @@ def sls(mods, test=None, exclude=None, queue=False, sync_mods=None, **kwargs):
     if isinstance(mods, six.integer_types):
         mods = salt.utils.stringutils.to_unicode(str(mods))  # future lint: disable=blacklisted-function
 
-    if isinstance(mods, six.string_types):
-        mods = mods.split(',')
+    mods = salt.utils.args.split_input(mods)
 
     st_.push_active()
     try:
         high_, errors = st_.render_highstate({opts['saltenv']: mods})
 
         if errors:
-            __context__['retcode'] = 1
+            __context__['retcode'] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
             return errors
 
         if exclude:
-            if isinstance(exclude, six.string_types):
-                exclude = exclude.split(',')
+            exclude = salt.utils.args.split_input(exclude)
             if '__exclude__' in high_:
                 high_['__exclude__'].extend(exclude)
             else:
@@ -1428,7 +1441,7 @@ def top(topfn, test=None, queue=False, **kwargs):
                                    initial_pillar=_get_initial_pillar(opts))
     errors = _get_pillar_errors(kwargs, pillar=st_.opts['pillar'])
     if errors:
-        __context__['retcode'] = 5
+        __context__['retcode'] = salt.defaults.exitcodes.EX_PILLAR_FAILURE
         return ['Pillar failed to render with the following messages:'] + errors
 
     st_.push_active()
@@ -1495,7 +1508,7 @@ def show_highstate(queue=False, **kwargs):
 
     errors = _get_pillar_errors(kwargs, pillar=st_.opts['pillar'])
     if errors:
-        __context__['retcode'] = 5
+        __context__['retcode'] = salt.defaults.exitcodes.EX_PILLAR_FAILURE
         raise CommandExecutionError('Pillar failed to render', info=errors)
 
     st_.push_active()
@@ -1533,7 +1546,7 @@ def show_lowstate(queue=False, **kwargs):
 
     errors = _get_pillar_errors(kwargs, pillar=st_.opts['pillar'])
     if errors:
-        __context__['retcode'] = 5
+        __context__['retcode'] = salt.defaults.exitcodes.EX_PILLAR_FAILURE
         raise CommandExecutionError('Pillar failed to render', info=errors)
 
     st_.push_active()
@@ -1578,6 +1591,54 @@ def show_state_usage(queue=False, **kwargs):
         st_.pop_active()
     _set_retcode(ret)
     return ret
+
+
+def show_states(queue=False, **kwargs):
+    '''
+    Returns the list of states that will be applied on highstate.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' state.show_states
+
+    .. versionadded:: 2019.2.0
+
+    '''
+    conflict = _check_queue(queue, kwargs)
+    if conflict is not None:
+        assert False
+        return conflict
+
+    opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
+    try:
+        st_ = salt.state.HighState(opts,
+                                   proxy=__proxy__,
+                                   initial_pillar=_get_initial_pillar(opts))
+    except NameError:
+        st_ = salt.state.HighState(opts,
+                                   initial_pillar=_get_initial_pillar(opts))
+
+    errors = _get_pillar_errors(kwargs, pillar=st_.opts['pillar'])
+    if errors:
+        __context__['retcode'] = salt.defaults.exitcodes.EX_PILLAR_FAILURE
+        raise CommandExecutionError('Pillar failed to render', info=errors)
+
+    st_.push_active()
+    states = OrderedDict()
+    try:
+        result = st_.compile_low_chunks()
+
+        if not isinstance(result, list):
+            raise Exception(result)
+
+        for s in result:
+            states[s['__sls__']] = True
+    finally:
+        st_.pop_active()
+
+    return list(states.keys())
 
 
 def sls_id(id_, mods, test=None, queue=False, **kwargs):
@@ -1662,11 +1723,10 @@ def sls_id(id_, mods, test=None, queue=False, **kwargs):
 
     errors = _get_pillar_errors(kwargs, pillar=st_.opts['pillar'])
     if errors:
-        __context__['retcode'] = 5
+        __context__['retcode'] = salt.defaults.exitcodes.EX_PILLAR_FAILURE
         return ['Pillar failed to render with the following messages:'] + errors
 
-    if isinstance(mods, six.string_types):
-        split_mods = mods.split(',')
+    split_mods = salt.utils.args.split_input(mods)
     st_.push_active()
     try:
         high_, errors = st_.render_highstate({opts['saltenv']: split_mods})
@@ -1680,7 +1740,7 @@ def sls_id(id_, mods, test=None, queue=False, **kwargs):
         # but it is required to get the unit tests to pass.
         errors.extend(req_in_errors)
     if errors:
-        __context__['retcode'] = 1
+        __context__['retcode'] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
         return errors
     chunks = st_.state.compile_high_data(high_)
     ret = {}
@@ -1713,7 +1773,7 @@ def show_low_sls(mods, test=None, queue=False, **kwargs):
 
         .. code-block:: bash
 
-            salt '*' state.show_low_sls test pillar='{"foo": "bar"}'
+            salt '*' state.show_low_sls stuff pillar='{"foo": "bar"}'
 
         .. note::
             Values passed this way will override Pillar values set via
@@ -1771,11 +1831,10 @@ def show_low_sls(mods, test=None, queue=False, **kwargs):
 
     errors = _get_pillar_errors(kwargs, pillar=st_.opts['pillar'])
     if errors:
-        __context__['retcode'] = 5
+        __context__['retcode'] = salt.defaults.exitcodes.EX_PILLAR_FAILURE
         raise CommandExecutionError('Pillar failed to render', info=errors)
 
-    if isinstance(mods, six.string_types):
-        mods = mods.split(',')
+    mods = salt.utils.args.split_input(mods)
     st_.push_active()
     try:
         high_, errors = st_.render_highstate({opts['saltenv']: mods})
@@ -1783,7 +1842,7 @@ def show_low_sls(mods, test=None, queue=False, **kwargs):
         st_.pop_active()
     errors += st_.state.verify_high(high_)
     if errors:
-        __context__['retcode'] = 1
+        __context__['retcode'] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
         return errors
     ret = st_.state.compile_high_data(high_)
     # Work around Windows multiprocessing bug, set __opts__['test'] back to
@@ -1860,11 +1919,10 @@ def show_sls(mods, test=None, queue=False, **kwargs):
 
     errors = _get_pillar_errors(kwargs, pillar=st_.opts['pillar'])
     if errors:
-        __context__['retcode'] = 5
+        __context__['retcode'] = salt.defaults.exitcodes.EX_PILLAR_FAILURE
         raise CommandExecutionError('Pillar failed to render', info=errors)
 
-    if isinstance(mods, six.string_types):
-        mods = mods.split(',')
+    mods = salt.utils.args.split_input(mods)
     st_.push_active()
     try:
         high_, errors = st_.render_highstate({opts['saltenv']: mods})
@@ -1875,9 +1933,59 @@ def show_sls(mods, test=None, queue=False, **kwargs):
     # value from before this function was run.
     __opts__['test'] = orig_test
     if errors:
-        __context__['retcode'] = 1
+        __context__['retcode'] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
         return errors
     return high_
+
+
+def sls_exists(mods, test=None, queue=False, **kwargs):
+    '''
+    Tests for the existance the of a specific SLS or list of SLS files on the
+    master. Similar to :py:func:`state.show_sls <salt.modules.state.show_sls>`,
+    rather than returning state details, returns True or False. The default
+    environment is ``base``, use ``saltenv`` to specify a different environment.
+
+    .. versionadded:: 2019.2.0
+
+    saltenv
+        Specify a salt fileserver environment from which to look for the SLS files
+        specified in the ``mods`` argument
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' state.sls_exists core,edit.vim saltenv=dev
+    '''
+    return isinstance(
+        show_sls(mods, test=test, queue=queue, **kwargs),
+        dict
+    )
+
+
+def id_exists(ids, mods, test=None, queue=False, **kwargs):
+    '''
+    Tests for the existence of a specific ID or list of IDs within the
+    specified SLS file(s). Similar to :py:func:`state.sls_exists
+    <salt.modules.state.sls_exists>`, returns True or False. The default
+    environment is base``, use ``saltenv`` to specify a different environment.
+
+    .. versionadded:: 2019.2.0
+
+    saltenv
+        Specify a salt fileserver environment from which to look for the SLS files
+        specified in the ``mods`` argument
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' state.id_exists create_myfile,update_template filestate saltenv=dev
+    '''
+    ids = salt.utils.args.split_input(ids)
+    ids = set(ids)
+    sls_ids = set(x['__id__'] for x in show_low_sls(mods, test=test, queue=queue, **kwargs))
+    return ids.issubset(sls_ids)
 
 
 def show_top(queue=False, **kwargs):
@@ -1908,14 +2016,14 @@ def show_top(queue=False, **kwargs):
 
     errors = _get_pillar_errors(kwargs, pillar=st_.opts['pillar'])
     if errors:
-        __context__['retcode'] = 5
+        __context__['retcode'] = salt.defaults.exitcodes.EX_PILLAR_FAILURE
         raise CommandExecutionError('Pillar failed to render', info=errors)
 
     errors = []
     top_ = st_.get_top()
     errors += st_.verify_tops(top_)
     if errors:
-        __context__['retcode'] = 1
+        __context__['retcode'] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
         return errors
     matches = st_.top_matches(top_)
     return matches
@@ -1943,7 +2051,7 @@ def single(fun, name, test=None, queue=False, **kwargs):
         return conflict
     comps = fun.split('.')
     if len(comps) < 2:
-        __context__['retcode'] = 1
+        __context__['retcode'] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
         return 'Invalid function passed'
     kwargs.update({'state': comps[0],
                    'fun': comps[1],
@@ -1976,7 +2084,7 @@ def single(fun, name, test=None, queue=False, **kwargs):
                                initial_pillar=_get_initial_pillar(opts))
     err = st_.verify_data(kwargs)
     if err:
-        __context__['retcode'] = 1
+        __context__['retcode'] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
         return err
 
     st_._mod_init(kwargs)
@@ -2116,8 +2224,7 @@ def disable(states):
         'msg': ''
     }
 
-    if isinstance(states, six.string_types):
-        states = states.split(',')
+    states = salt.utils.args.split_input(states)
 
     msg = []
     _disabled = __salt__['grains.get']('state_runs_disabled')
@@ -2168,8 +2275,7 @@ def enable(states):
         'msg': ''
     }
 
-    if isinstance(states, six.string_types):
-        states = states.split(',')
+    states = salt.utils.args.split_input(states)
     log.debug('states %s', states)
 
     msg = []
@@ -2247,15 +2353,17 @@ def _disabled(funs):
 
 
 def event(tagmatch='*',
-        count=-1,
-        quiet=False,
-        sock_dir=None,
-        pretty=False,
-        node='minion'):
+          count=-1,
+          quiet=False,
+          sock_dir=None,
+          pretty=False,
+          node='minion'):
     r'''
     Watch Salt's event bus and block until the given tag is matched
 
     .. versionadded:: 2016.3.0
+    .. versionchanged:: 2019.2.0
+        ``tagmatch`` can now be either a glob or regular expression.
 
     This is useful for utilizing Salt's event bus from shell scripts or for
     taking simple actions directly from the CLI.
@@ -2263,7 +2371,7 @@ def event(tagmatch='*',
     Enable debug logging to see ignored events.
 
     :param tagmatch: the event is written to stdout for each tag that matches
-        this pattern; uses the same matching semantics as Salt's Reactor.
+        this glob or regular expression.
     :param count: this number is decremented for each event that matches the
         ``tagmatch`` parameter; pass ``-1`` to listen forever.
     :param quiet: do not print to stdout; just block
@@ -2279,18 +2387,18 @@ def event(tagmatch='*',
         salt-call --local state.event pretty=True
     '''
     sevent = salt.utils.event.get_event(
-            node,
-            sock_dir or __opts__['sock_dir'],
-            __opts__['transport'],
-            opts=__opts__,
-            listen=True)
+                 node,
+                 sock_dir or __opts__['sock_dir'],
+                 __opts__['transport'],
+                 opts=__opts__,
+                 listen=True)
 
     while True:
         ret = sevent.get_event(full=True, auto_reconnect=True)
         if ret is None:
             continue
 
-        if fnmatch.fnmatch(ret['tag'], tagmatch):
+        if salt.utils.stringutils.expr_match(ret['tag'], tagmatch):
             if not quiet:
                 salt.utils.stringutils.print_cli(
                     str('{0}\t{1}').format(  # future lint: blacklisted-function

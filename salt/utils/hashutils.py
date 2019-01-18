@@ -9,6 +9,7 @@ import base64
 import hashlib
 import hmac
 import random
+import os
 
 # Import Salt libs
 from salt.ext import six
@@ -92,6 +93,16 @@ def md5_digest(instr):
     )
 
 
+def sha1_digest(instr):
+    '''
+    Generate an sha1 hash of a given string.
+    '''
+    if six.PY3:
+        b = salt.utils.stringutils.to_bytes(instr)
+        return hashlib.sha1(b).hexdigest()
+    return hashlib.sha1(instr).hexdigest()
+
+
 @jinja_filter('sha256')
 def sha256_digest(instr):
     '''
@@ -126,7 +137,6 @@ def hmac_signature(string, shared_secret, challenge_hmac):
     return valid_hmac == challenge
 
 
-@jinja_filter('rand_str')  # Remove this for Neon
 @jinja_filter('random_hash')
 def random_hash(size=9999999999, hash_type=None):
     '''
@@ -159,3 +169,39 @@ def get_hash(path, form='sha256', chunk_size=65536):
         for chunk in iter(lambda: ifile.read(chunk_size), b''):
             hash_obj.update(chunk)
         return hash_obj.hexdigest()
+
+
+class DigestCollector(object):
+    '''
+    Class to collect digest of the file tree.
+    '''
+
+    def __init__(self, form='sha256', buff=0x10000):
+        '''
+        Constructor of the class.
+        :param form:
+        '''
+        self.__digest = hasattr(hashlib, form) and getattr(hashlib, form)() or None
+        if self.__digest is None:
+            raise ValueError('Invalid hash type: {0}'.format(form))
+        self.__buff = buff
+
+    def add(self, path):
+        '''
+        Update digest with the file content by path.
+
+        :param path:
+        :return:
+        '''
+        with salt.utils.files.fopen(path, 'rb') as ifile:
+            for chunk in iter(lambda: ifile.read(self.__buff), b''):
+                self.__digest.update(chunk)
+
+    def digest(self):
+        '''
+        Get digest.
+
+        :return:
+        '''
+
+        return salt.utils.stringutils.to_str(self.__digest.hexdigest() + os.linesep)

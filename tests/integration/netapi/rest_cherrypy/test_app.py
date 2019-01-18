@@ -10,6 +10,7 @@ import salt.utils.stringutils
 
 # Import test support libs
 import tests.support.cherrypy_testclasses as cptc
+from tests.support.helpers import flaky
 
 # Import 3rd-party libs
 from salt.ext.six.moves.urllib.parse import urlencode  # pylint: disable=no-name-in-module,import-error
@@ -307,6 +308,7 @@ class TestJobs(cptc.BaseRestCherryPyTest):
         })
         self.assertEqual(response.status, '200 OK')
 
+    @flaky
     def test_all_jobs(self):
         '''
         test query to /jobs returns job data

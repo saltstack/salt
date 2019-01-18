@@ -38,6 +38,18 @@ class ManageTest(ShellCase):
         ret = self.run_run_plus('cache.list', bank='cachetest/runner')
         self.assertNotIn('test_cache', ret['return'])
 
+    def test_cache_invalid(self):
+        '''
+        Store, list, fetch, then flush data
+        '''
+        # Store the data
+        ret = self.run_run_plus(
+            'cache.store',
+        )
+        # Make sure we can see the new key
+        expected = 'Passed invalid arguments:'
+        self.assertIn(expected, ret['return'])
+
     def test_grains(self):
         '''
         Test cache.grains

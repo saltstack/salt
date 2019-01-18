@@ -12,10 +12,11 @@ import subprocess
 import tempfile
 
 # Import Salt Testing Libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
 from tests.support.case import ModuleCase
 from tests.support.docker import with_network, random_name
-from tests.support.paths import FILES, TMP
+from tests.support.paths import FILES
 from tests.support.helpers import destructiveTest, with_tempdir
 from tests.support.mixins import SaltReturnAssertsMixin
 
@@ -63,7 +64,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         '''
         '''
         # Create temp dir
-        cls.image_build_rootdir = tempfile.mkdtemp(dir=TMP)
+        cls.image_build_rootdir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         # Generate image name
         cls.image = random_name(prefix='salt_busybox_')
 
@@ -475,7 +476,6 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state(
             'docker_container.absent',
             name=name,
-            shutdown_timeout=1,
         )
         self.assertSaltTrueReturn(ret)
         # Discard the outer dict with the state compiler data to make below
@@ -488,7 +488,6 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state(
             'docker_container.absent',
             name=name,
-            shutdown_timeout=1,
         )
         self.assertSaltTrueReturn(ret)
         # Discard the outer dict with the state compiler data to make below
@@ -522,7 +521,6 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state(
             'docker_container.absent',
             name=name,
-            shutdown_timeout=1,
         )
         self.assertSaltFalseReturn(ret)
         # Discard the outer dict with the state compiler data to make below
@@ -540,7 +538,6 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state('docker_container.absent',
             name=name,
             force=True,
-            shutdown_timeout=1,
         )
         self.assertSaltTrueReturn(ret)
         # Discard the outer dict with the state compiler data to make below
@@ -680,7 +677,6 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(ret['comment'], expected)
 
         # Update the SLS configuration to remove the last network
-        log.critical('networks = %s', kwargs['networks'])
         kwargs['networks'].pop(-1)
         ret = self.run_state('docker_container.running', **kwargs)
         self.assertSaltTrueReturn(ret)
@@ -788,6 +784,65 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
     @skipIf(not IPV6_ENABLED, 'IPv6 not enabled')
     def test_running_mixed_ipv4_and_ipv6(self, container_name, *nets):
         self._test_running(container_name, *nets)
+
+    @with_network(subnet='10.247.197.96/27', create=True)
+    @container_name
+    def test_running_explicit_networks(self, container_name, net):
+        '''
+        Ensure that if we use an explicit network configuration, we remove any
+        default networks not specified (e.g. the default "bridge" network).
+        '''
+        # Create a container with no specific network configuration. The only
+        # networks connected will be the default ones.
+        ret = self.run_state(
+            'docker_container.running',
+            name=container_name,
+            image=self.image,
+            shutdown_timeout=1)
+        self.assertSaltTrueReturn(ret)
+
+        inspect_result = self.run_function('docker.inspect_container',
+                                           [container_name])
+        # Get the default network names
+        default_networks = list(inspect_result['NetworkSettings']['Networks'])
+
+        # Re-run the state with an explicit network configuration. All of the
+        # default networks should be disconnected.
+        ret = self.run_state(
+            'docker_container.running',
+            name=container_name,
+            image=self.image,
+            networks=[net.name],
+            shutdown_timeout=1)
+        self.assertSaltTrueReturn(ret)
+        ret = ret[next(iter(ret))]
+        net_changes = ret['changes']['container']['Networks']
+
+        self.assertIn(
+            "Container '{0}' is already configured as specified.".format(
+                container_name
+            ),
+            ret['comment']
+        )
+
+        updated_networks = self.run_function(
+            'docker.inspect_container',
+            [container_name])['NetworkSettings']['Networks']
+
+        for default_network in default_networks:
+            self.assertIn(
+                "Disconnected from network '{0}'.".format(default_network),
+                ret['comment']
+            )
+            self.assertIn(default_network, net_changes)
+            # We've tested that the state return is correct, but let's be extra
+            # paranoid and check the actual connected networks.
+            self.assertNotIn(default_network, updated_networks)
+
+        self.assertIn(
+            "Connected to network '{0}'.".format(net.name),
+            ret['comment']
+        )
 
     @container_name
     def test_run_with_onlyif(self, name):

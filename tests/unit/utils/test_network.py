@@ -243,6 +243,10 @@ class NetworkTestCase(TestCase):
     def test_hex2ip(self):
         self.assertEqual(network.hex2ip('0x4A7D2B63'), '74.125.43.99')
         self.assertEqual(network.hex2ip('0x4A7D2B63', invert=True), '99.43.125.74')
+        self.assertEqual(network.hex2ip('00000000000000000000FFFF7F000001'), '127.0.0.1')
+        self.assertEqual(network.hex2ip('0000000000000000FFFF00000100007F', invert=True), '127.0.0.1')
+        self.assertEqual(network.hex2ip('20010DB8000000000000000000000000'), '2001:db8::')
+        self.assertEqual(network.hex2ip('B80D0120000000000000000000000000', invert=True), '2001:db8::')
 
     def test_interfaces_ifconfig_linux(self):
         interfaces = network._interfaces_ifconfig(LINUX)
@@ -534,3 +538,14 @@ class NetworkTestCase(TestCase):
         self.assertRaises(ValueError, network.mac_str_to_bytes, 'a0:b0:c0:d0:e0:fg')
         self.assertEqual(b'\x10\x08\x06\x04\x02\x00', network.mac_str_to_bytes('100806040200'))
         self.assertEqual(b'\xf8\xe7\xd6\xc5\xb4\xa3', network.mac_str_to_bytes('f8e7d6c5b4a3'))
+
+    def test_get_fqhostname_return(self):
+        '''
+        Test if proper hostname is used when RevDNS differ from hostname
+
+        :return:
+        '''
+        with patch('socket.gethostname', MagicMock(return_value='hostname')), \
+             patch('socket.getfqdn', MagicMock(return_value='very.long.and.complex.domain.name')), \
+             patch('socket.getaddrinfo', MagicMock(return_value=[(2, 3, 0, 'hostname', ('127.0.1.1', 0))])):
+            self.assertEqual(network.get_fqhostname(), 'hostname')

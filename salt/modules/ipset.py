@@ -13,10 +13,7 @@ from salt.ext.six.moves import map, range
 import salt.utils.path
 
 # Import third-party libs
-if six.PY3:
-    import ipaddress
-else:
-    import salt.ext.ipaddress as ipaddress
+from salt._compat import ipaddress
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -28,6 +25,7 @@ def long_range(start, end):
     while start < end:
         yield start
         start += 1
+
 
 _IPSET_FAMILIES = {
         'ipv4': 'inet',

@@ -14,8 +14,8 @@ import textwrap
 import subprocess
 
 # Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ModuleCase
-from tests.support.paths import TMP, TMP_CONF_DIR
 from tests.support.unit import skipIf
 from tests.support.helpers import requires_system_grains
 
@@ -29,15 +29,15 @@ import salt.pillar as pillar
 log = logging.getLogger(__name__)
 
 
-GPG_HOMEDIR = os.path.join(TMP_CONF_DIR, 'gpgkeys')
-PILLAR_BASE = os.path.join(TMP, 'test-decrypt-pillar', 'pillar')
+GPG_HOMEDIR = os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'gpgkeys')
+PILLAR_BASE = os.path.join(RUNTIME_VARS.TMP, 'test-decrypt-pillar', 'pillar')
 TOP_SLS = os.path.join(PILLAR_BASE, 'top.sls')
 GPG_SLS = os.path.join(PILLAR_BASE, 'gpg.sls')
 DEFAULT_OPTS = {
-    'cachedir': os.path.join(TMP, 'rootdir', 'cache'),
-    'config_dir': TMP_CONF_DIR,
+    'cachedir': os.path.join(RUNTIME_VARS.TMP, 'rootdir', 'cache'),
+    'config_dir': RUNTIME_VARS.TMP_CONF_DIR,
     'optimization_order': [0, 1, 2],
-    'extension_modules': os.path.join(TMP,
+    'extension_modules': os.path.join(RUNTIME_VARS.TMP,
                                       'test-decrypt-pillar',
                                       'extmods'),
     'pillar_roots': {'base': [PILLAR_BASE]},
@@ -188,6 +188,67 @@ GPG_PILLAR_DECRYPTED = {
         },
     },
 }
+
+
+class BasePillarTest(ModuleCase):
+    '''
+    Tests for pillar decryption
+    '''
+    @classmethod
+    def setUpClass(cls):
+        os.makedirs(PILLAR_BASE)
+        with salt.utils.files.fopen(TOP_SLS, 'w') as fp_:
+            fp_.write(textwrap.dedent('''\
+            base:
+              'N@mins not L@minion':
+                - ng1
+              'N@missing_minion':
+                - ng2
+            '''))
+
+        with salt.utils.files.fopen(os.path.join(PILLAR_BASE, 'ng1.sls'), 'w') as fp_:
+            fp_.write('pillar_from_nodegroup: True')
+
+        with salt.utils.files.fopen(os.path.join(PILLAR_BASE, 'ng2.sls'), 'w') as fp_:
+            fp_.write('pillar_from_nodegroup_with_ghost: True')
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(PILLAR_BASE)
+
+    def _build_opts(self, opts):
+        ret = copy.deepcopy(DEFAULT_OPTS)
+        for item in ADDITIONAL_OPTS:
+            ret[item] = self.master_opts[item]
+        ret.update(opts)
+        return ret
+
+    def test_pillar_top_compound_match(self, grains=None):
+        '''
+        Test that a compound match topfile that refers to a nodegroup via N@ works
+        as expected.
+        '''
+        if not grains:
+            grains = {}
+        grains['os'] = 'Fedora'
+        nodegroup_opts = salt.utils.yaml.safe_load(textwrap.dedent('''\
+            nodegroups:
+              min: minion
+              sub_min: sub_minion
+              mins: N@min or N@sub_min
+              missing_minion: L@minion,ghostminion
+        '''))
+
+        opts = self._build_opts(nodegroup_opts)
+        pillar_obj = pillar.Pillar(opts, grains, 'minion', 'base')
+        ret = pillar_obj.compile_pillar()
+        self.assertEqual(ret.get('pillar_from_nodegroup_with_ghost'), True)
+        self.assertEqual(ret.get('pillar_from_nodegroup'), None)
+
+        sub_pillar_obj = pillar.Pillar(opts, grains, 'sub_minion', 'base')
+        sub_ret = sub_pillar_obj.compile_pillar()
+        self.assertEqual(sub_ret.get('pillar_from_nodegroup_with_ghost'), None)
+        self.assertEqual(sub_ret.get('pillar_from_nodegroup'), True)
 
 
 @skipIf(not salt.utils.path.which('gpg'), 'GPG is not installed')

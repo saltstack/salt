@@ -45,7 +45,7 @@ def targets(tgt, tgt_type='glob', **kwargs):
 
     for host, addr in host_addrs.items():
         addr = six.text_type(addr)
-        ret[addr] = copy.deepcopy(__opts__.get('roster_defaults', {}))
+        ret[host] = copy.deepcopy(__opts__.get('roster_defaults', {}))
         for port in ports:
             try:
                 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

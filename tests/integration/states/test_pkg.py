@@ -44,7 +44,7 @@ _PKG_TARGETS = {
 }
 
 _PKG_CAP_TARGETS = {
-    'Suse': [('w3m_ssl', 'w3m')],
+    'Suse': [('perl(ZNC)', 'znc-perl')],
 }
 
 _PKG_TARGETS_32 = {
@@ -168,7 +168,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             __testcontext__['refresh'] = True
 
     @requires_system_grains
-    def test_pkg_001_installed(self, grains=None):
+    def test_pkg_001_installed(self, grains):
         '''
         This is a destructive test as it installs and then removes a package
         '''
@@ -198,7 +198,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
 
     @requires_system_grains
-    def test_pkg_002_installed_with_version(self, grains=None):
+    def test_pkg_002_installed_with_version(self, grains):
         '''
         This is a destructive test as it installs and then removes a package
         '''
@@ -245,7 +245,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
 
     @requires_system_grains
-    def test_pkg_003_installed_multipkg(self, grains=None):
+    def test_pkg_003_installed_multipkg(self, grains):
         '''
         This is a destructive test as it installs and then removes two packages
         '''
@@ -281,7 +281,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertSaltTrueReturn(ret)
 
     @requires_system_grains
-    def test_pkg_004_installed_multipkg_with_version(self, grains=None):
+    def test_pkg_004_installed_multipkg_with_version(self, grains):
         '''
         This is a destructive test as it installs and then removes two packages
         '''
@@ -331,7 +331,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertSaltTrueReturn(ret)
 
     @requires_system_grains
-    def test_pkg_005_installed_32bit(self, grains=None):
+    def test_pkg_005_installed_32bit(self, grains):
         '''
         This is a destructive test as it installs and then removes a package
         '''
@@ -367,7 +367,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertSaltTrueReturn(ret)
 
     @requires_system_grains
-    def test_pkg_006_installed_32bit_with_version(self, grains=None):
+    def test_pkg_006_installed_32bit_with_version(self, grains):
         '''
         This is a destructive test as it installs and then removes a package
         '''
@@ -414,7 +414,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
 
     @requires_system_grains
-    def test_pkg_007_with_dot_in_pkgname(self, grains=None):
+    def test_pkg_007_with_dot_in_pkgname(self, grains):
         '''
         This tests for the regression found in the following issue:
         https://github.com/saltstack/salt/issues/8614
@@ -444,7 +444,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
 
     @requires_system_grains
-    def test_pkg_008_epoch_in_version(self, grains=None):
+    def test_pkg_008_epoch_in_version(self, grains):
         '''
         This tests for the regression found in the following issue:
         https://github.com/saltstack/salt/issues/8614
@@ -513,7 +513,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertTrue(pkgquery in six.text_type(ret))
 
     @requires_system_grains
-    def test_pkg_011_latest(self, grains=None):
+    def test_pkg_011_latest(self, grains):
         '''
         This tests pkg.latest with a package that has no epoch (or a zero
         epoch).
@@ -544,7 +544,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
 
     @requires_system_grains
-    def test_pkg_012_latest_only_upgrade(self, grains=None):
+    def test_pkg_012_latest_only_upgrade(self, grains):
         '''
         WARNING: This test will pick a package with an available upgrade (if
         there is one) and upgrade it to the latest version.
@@ -610,7 +610,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             )
 
     @requires_system_grains
-    def test_pkg_013_installed_with_wildcard_version(self, grains=None):
+    def test_pkg_013_installed_with_wildcard_version(self, grains):
         '''
         This is a destructive test as it installs and then removes a package
         '''
@@ -679,7 +679,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
 
     @requires_system_grains
-    def test_pkg_014_installed_with_comparison_operator(self, grains=None):
+    def test_pkg_014_installed_with_comparison_operator(self, grains):
         '''
         This is a destructive test as it installs and then removes a package
         '''
@@ -728,7 +728,8 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             ret = self.run_state('pkg.removed', name=target)
             self.assertSaltTrueReturn(ret)
 
-    def test_pkg_014_installed_missing_release(self, grains=None):  # pylint: disable=unused-argument
+    @requires_system_grains
+    def test_pkg_014_installed_missing_release(self, grains):
         '''
         Tests that a version number missing the release portion still resolves
         as correctly installed. For example, version 2.0.2 instead of 2.0.2-1.el7
@@ -766,8 +767,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
 
     @requires_salt_modules('pkg.group_install')
-    @requires_system_grains
-    def test_group_installed_handle_missing_package_group(self, grains=None):  # pylint: disable=unused-argument
+    def test_group_installed_handle_missing_package_group(self):  # pylint: disable=unused-argument
         '''
         Tests that a CommandExecutionError is caught and the state returns False when
         the package group is missing. Before this fix, the state would stacktrace.
@@ -797,7 +797,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
 
     @skipIf(salt.utils.platform.is_windows(), 'minion is windows')
     @requires_system_grains
-    def test_pkg_cap_001_installed(self, grains=None):
+    def test_pkg_cap_001_installed(self, grains):
         '''
         This is a destructive test as it installs and then removes a package
         '''
@@ -820,16 +820,18 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertFalse(version)
         self.assertFalse(realver)
 
-        ret = self.run_state('pkg.installed', name=target, refresh=False, resolve_capabilities=True, test=True)
-        self.assertInSaltComment("The following packages would be installed/updated: {0}".format(realpkg), ret)
-        ret = self.run_state('pkg.installed', name=target, refresh=False, resolve_capabilities=True)
-        self.assertSaltTrueReturn(ret)
-        ret = self.run_state('pkg.removed', name=realpkg)
-        self.assertSaltTrueReturn(ret)
+        try:
+            ret = self.run_state('pkg.installed', name=target, refresh=False, resolve_capabilities=True, test=True)
+            self.assertInSaltComment("The following packages would be installed/updated: {0}".format(realpkg), ret)
+            ret = self.run_state('pkg.installed', name=target, refresh=False, resolve_capabilities=True)
+            self.assertSaltTrueReturn(ret)
+        finally:
+            ret = self.run_state('pkg.removed', name=realpkg)
+            self.assertSaltTrueReturn(ret)
 
     @skipIf(salt.utils.platform.is_windows(), 'minion is windows')
     @requires_system_grains
-    def test_pkg_cap_002_already_installed(self, grains=None):
+    def test_pkg_cap_002_already_installed(self, grains):
         '''
         This is a destructive test as it installs and then removes a package
         '''
@@ -852,22 +854,26 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertFalse(version)
         self.assertFalse(realver)
 
-        # install the package already
-        ret = self.run_state('pkg.installed', name=realpkg, refresh=False)
+        try:
+            # install the package
+            ret = self.run_state('pkg.installed', name=realpkg, refresh=False)
+            self.assertSaltTrueReturn(ret)
 
-        ret = self.run_state('pkg.installed', name=target, refresh=False, resolve_capabilities=True, test=True)
-        self.assertInSaltComment("All specified packages are already installed", ret)
+            # Try to install again. Nothing should be installed this time.
+            ret = self.run_state('pkg.installed', name=target, refresh=False, resolve_capabilities=True, test=True)
+            self.assertInSaltComment("All specified packages are already installed", ret)
 
-        ret = self.run_state('pkg.installed', name=target, refresh=False, resolve_capabilities=True)
-        self.assertSaltTrueReturn(ret)
+            ret = self.run_state('pkg.installed', name=target, refresh=False, resolve_capabilities=True)
+            self.assertSaltTrueReturn(ret)
 
-        self.assertInSaltComment("packages are already installed", ret)
-        ret = self.run_state('pkg.removed', name=realpkg)
-        self.assertSaltTrueReturn(ret)
+            self.assertInSaltComment("packages are already installed", ret)
+        finally:
+            ret = self.run_state('pkg.removed', name=realpkg)
+            self.assertSaltTrueReturn(ret)
 
     @skipIf(salt.utils.platform.is_windows(), 'minion is windows')
     @requires_system_grains
-    def test_pkg_cap_003_installed_multipkg_with_version(self, grains=None):
+    def test_pkg_cap_003_installed_multipkg_with_version(self, grains):
         '''
         This is a destructive test as it installs and then removes two packages
         '''
@@ -889,8 +895,8 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         # Make sure that we have targets that match the os_family. If this
         # fails then the _PKG_TARGETS dict above needs to have an entry added,
         # with two packages that are not installed before these tests are run
-        self.assertTrue(bool(pkg_cap_targets))
-        self.assertTrue(bool(pkg_targets))
+        self.assertTrue(pkg_cap_targets)
+        self.assertTrue(pkg_targets)
 
         if os_family == 'Arch':
             for idx in range(13):
@@ -908,38 +914,40 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         # If this assert fails, we need to find new targets, this test needs to
         # be able to test successful installation of packages, so these
         # packages need to not be installed before we run the states below
-        self.assertTrue(bool(version))
-        self.assertTrue(bool(realver))
+        self.assertTrue(version)
+        self.assertTrue(realver)
 
-        pkgs = [{pkg_targets[0]: version}, pkg_targets[1], {capability: realver}]
-        ret = self.run_state('pkg.installed',
-                             name='test_pkg_cap_003_installed_multipkg_with_version-install',
-                             pkgs=pkgs,
-                             refresh=False)
-        self.assertSaltFalseReturn(ret)
+        try:
+            pkgs = [{pkg_targets[0]: version}, pkg_targets[1], {capability: realver}]
+            ret = self.run_state('pkg.installed',
+                                 name='test_pkg_cap_003_installed_multipkg_with_version-install',
+                                 pkgs=pkgs,
+                                 refresh=False)
+            self.assertSaltFalseReturn(ret)
 
-        ret = self.run_state('pkg.installed',
-                             name='test_pkg_cap_003_installed_multipkg_with_version-install-capability',
-                             pkgs=pkgs,
-                             refresh=False, resolve_capabilities=True, test=True)
-        self.assertInSaltComment("packages would be installed/updated", ret)
-        self.assertInSaltComment("{0}={1}".format(realpkg, realver), ret)
+            ret = self.run_state('pkg.installed',
+                                 name='test_pkg_cap_003_installed_multipkg_with_version-install-capability',
+                                 pkgs=pkgs,
+                                 refresh=False, resolve_capabilities=True, test=True)
+            self.assertInSaltComment("packages would be installed/updated", ret)
+            self.assertInSaltComment("{0}={1}".format(realpkg, realver), ret)
 
-        ret = self.run_state('pkg.installed',
-                             name='test_pkg_cap_003_installed_multipkg_with_version-install-capability',
-                             pkgs=pkgs,
-                             refresh=False, resolve_capabilities=True)
-        self.assertSaltTrueReturn(ret)
-        cleanup_pkgs = pkg_targets
-        cleanup_pkgs.append(realpkg)
-        ret = self.run_state('pkg.removed',
-                             name='test_pkg_cap_003_installed_multipkg_with_version-remove',
-                             pkgs=cleanup_pkgs)
-        self.assertSaltTrueReturn(ret)
+            ret = self.run_state('pkg.installed',
+                                 name='test_pkg_cap_003_installed_multipkg_with_version-install-capability',
+                                 pkgs=pkgs,
+                                 refresh=False, resolve_capabilities=True)
+            self.assertSaltTrueReturn(ret)
+            cleanup_pkgs = pkg_targets
+            cleanup_pkgs.append(realpkg)
+        finally:
+            ret = self.run_state('pkg.removed',
+                                 name='test_pkg_cap_003_installed_multipkg_with_version-remove',
+                                 pkgs=cleanup_pkgs)
+            self.assertSaltTrueReturn(ret)
 
     @skipIf(salt.utils.platform.is_windows(), 'minion is windows')
     @requires_system_grains
-    def test_pkg_cap_004_latest(self, grains=None):
+    def test_pkg_cap_004_latest(self, grains):
         '''
         This tests pkg.latest with a package that has no epoch (or a zero
         epoch).
@@ -963,21 +971,22 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertFalse(version)
         self.assertFalse(realver)
 
-        ret = self.run_state('pkg.latest', name=target, refresh=False, resolve_capabilities=True, test=True)
-        self.assertInSaltComment("The following packages would be installed/upgraded: {0}".format(realpkg), ret)
-        ret = self.run_state('pkg.latest', name=target, refresh=False, resolve_capabilities=True)
-        self.assertSaltTrueReturn(ret)
+        try:
+            ret = self.run_state('pkg.latest', name=target, refresh=False, resolve_capabilities=True, test=True)
+            self.assertInSaltComment("The following packages would be installed/upgraded: {0}".format(realpkg), ret)
+            ret = self.run_state('pkg.latest', name=target, refresh=False, resolve_capabilities=True)
+            self.assertSaltTrueReturn(ret)
 
-        ret = self.run_state('pkg.latest', name=target, refresh=False, resolve_capabilities=True)
-        self.assertSaltTrueReturn(ret)
-        self.assertInSaltComment("is already up-to-date", ret)
-
-        ret = self.run_state('pkg.removed', name=realpkg)
-        self.assertSaltTrueReturn(ret)
+            ret = self.run_state('pkg.latest', name=target, refresh=False, resolve_capabilities=True)
+            self.assertSaltTrueReturn(ret)
+            self.assertInSaltComment("is already up-to-date", ret)
+        finally:
+            ret = self.run_state('pkg.removed', name=realpkg)
+            self.assertSaltTrueReturn(ret)
 
     @skipIf(salt.utils.platform.is_windows(), 'minion is windows')
     @requires_system_grains
-    def test_pkg_cap_005_downloaded(self, grains=None):
+    def test_pkg_cap_005_downloaded(self, grains):
         '''
         This is a destructive test as it installs and then removes a package
         '''
@@ -1011,7 +1020,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
 
     @skipIf(salt.utils.platform.is_windows(), 'minion is windows')
     @requires_system_grains
-    def test_pkg_cap_006_uptodate(self, grains=None):
+    def test_pkg_cap_006_uptodate(self, grains):
         '''
         This is a destructive test as it installs and then removes a package
         '''
@@ -1034,27 +1043,24 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertFalse(version)
         self.assertFalse(realver)
 
-        ret = self.run_state('pkg.installed', name=target,
-                             refresh=False, resolve_capabilities=True)
-        self.assertSaltTrueReturn(ret)
-        ret = self.run_state('pkg.uptodate',
-                             name='test_pkg_cap_006_uptodate',
-                             pkgs=[target],
-                             refresh=False,
-                             resolve_capabilities=True)
-        self.assertSaltTrueReturn(ret)
-        self.assertInSaltComment("System is already up-to-date", ret)
-        ret = self.run_state('pkg.removed', name=realpkg)
-        self.assertSaltTrueReturn(ret)
-        ret = self.run_state('pkg.uptodate',
-                             name='test_pkg_cap_006_uptodate',
-                             refresh=False,
-                             test=True)
-        self.assertInSaltComment("System update will be performed", ret)
+        try:
+            ret = self.run_state('pkg.installed', name=target,
+                                 refresh=False, resolve_capabilities=True)
+            self.assertSaltTrueReturn(ret)
+            ret = self.run_state('pkg.uptodate',
+                                 name='test_pkg_cap_006_uptodate',
+                                 pkgs=[target],
+                                 refresh=False,
+                                 resolve_capabilities=True)
+            self.assertSaltTrueReturn(ret)
+            self.assertInSaltComment("System is already up-to-date", ret)
+        finally:
+            ret = self.run_state('pkg.removed', name=realpkg)
+            self.assertSaltTrueReturn(ret)
 
     @requires_salt_modules('pkg.hold', 'pkg.unhold')
     @requires_system_grains
-    def test_pkg_015_installed_held(self, grains=None):  # pylint: disable=unused-argument
+    def test_pkg_015_installed_held(self, grains):
         '''
         Tests that a package can be held even when the package is already installed.
         '''

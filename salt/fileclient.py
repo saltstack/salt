@@ -23,7 +23,7 @@ import salt.client
 import salt.crypt
 import salt.loader
 import salt.payload
-import salt.transport
+import salt.transport.client
 import salt.fileserver
 import salt.utils.data
 import salt.utils.files
@@ -36,7 +36,6 @@ import salt.utils.stringutils
 import salt.utils.templates
 import salt.utils.url
 import salt.utils.versions
-from salt.utils.locales import sdecode
 from salt.utils.openstack.swift import SaltSwift
 
 # pylint: disable=no-name-in-module,import-error
@@ -61,7 +60,7 @@ def get_file_client(opts, pillar=False):
     return {
         'remote': RemoteClient,
         'local': FSClient,
-        'pillar': LocalClient,
+        'pillar': PillarClient,
     }.get(client, RemoteClient)(opts)
 
 
@@ -225,7 +224,7 @@ class Client(object):
         '''
         ret = []
 
-        path = self._check_proto(sdecode(path))
+        path = self._check_proto(salt.utils.data.decode(path))
         # We want to make sure files start with this *directory*, use
         # '/' explicitly because the master (that's generating the
         # list of files) only runs on POSIX
@@ -238,7 +237,7 @@ class Client(object):
         # go through the list of all files finding ones that are in
         # the target directory and caching them
         for fn_ in self.file_list(saltenv):
-            fn_ = sdecode(fn_)
+            fn_ = salt.utils.data.decode(fn_)
             if fn_.strip() and fn_.startswith(path):
                 if salt.utils.stringutils.check_include_exclude(
                         fn_, include_pat, exclude_pat):
@@ -261,7 +260,7 @@ class Client(object):
 
             dest = salt.utils.path.join(cachedir, 'files', saltenv)
             for fn_ in self.file_list_emptydirs(saltenv):
-                fn_ = sdecode(fn_)
+                fn_ = salt.utils.data.decode(fn_)
                 if fn_.startswith(path):
                     minion_dir = '{0}/{1}'.format(dest, fn_)
                     if not os.path.isdir(minion_dir):
@@ -347,58 +346,17 @@ class Client(object):
         Return a list of all available sls modules on the master for a given
         environment
         '''
-
-        limit_traversal = self.opts.get('fileserver_limit_traversal', False)
-        states = []
-
-        if limit_traversal:
-            if saltenv not in self.opts['file_roots']:
-                log.warning(
-                    'During an attempt to list states for saltenv \'%s\', '
-                    'the environment could not be found in the configured '
-                    'file roots', saltenv
-                )
-                return states
-            for path in self.opts['file_roots'][saltenv]:
-                for root, dirs, files in os.walk(path, topdown=True):  # future lint: disable=blacklisted-function
-                    root = salt.utils.data.decode(root)
-                    files = salt.utils.data.decode(files)
-                    log.debug(
-                        'Searching for states in dirs %s and files %s',
-                        salt.utils.data.decode(dirs), files
-                    )
-                    if not [filename.endswith('.sls') for filename in files]:
-                        #  Use shallow copy so we don't disturb the memory used
-                        #  by os.walk. Otherwise this breaks!
-                        del dirs[:]
-                    else:
-                        for found_file in files:
-                            stripped_root = os.path.relpath(root, path)
-                            if salt.utils.platform.is_windows():
-                                stripped_root = stripped_root.replace('\\', '/')
-                            stripped_root = stripped_root.replace('/', '.')
-                            if found_file.endswith(('.sls')):
-                                if found_file.endswith('init.sls'):
-                                    if stripped_root.endswith('.'):
-                                        stripped_root = stripped_root.rstrip('.')
-                                    states.append(stripped_root)
-                                else:
-                                    if not stripped_root.endswith('.'):
-                                        stripped_root += '.'
-                                    if stripped_root.startswith('.'):
-                                        stripped_root = stripped_root.lstrip('.')
-                                    states.append(stripped_root + found_file[:-4])
-        else:
-            for path in self.file_list(saltenv):
-                if salt.utils.platform.is_windows():
-                    path = path.replace('\\', '/')
-                if path.endswith('.sls'):
-                    # is an sls module!
-                    if path.endswith('/init.sls'):
-                        states.append(path.replace('/', '.')[:-9])
-                    else:
-                        states.append(path.replace('/', '.')[:-4])
-        return states
+        states = set()
+        for path in self.file_list(saltenv):
+            if salt.utils.platform.is_windows():
+                path = path.replace('\\', '/')
+            if path.endswith('.sls'):
+                # is an sls module!
+                if path.endswith('/init.sls'):
+                    states.add(path.replace('/', '.')[:-9])
+                else:
+                    states.add(path.replace('/', '.')[:-4])
+        return sorted(states)
 
     def get_state(self, sls, saltenv, cachedir=None):
         '''
@@ -581,8 +539,9 @@ class Client(object):
                 ftp = ftplib.FTP()
                 ftp.connect(url_data.hostname, url_data.port)
                 ftp.login(url_data.username, url_data.password)
+                remote_file_path = url_data.path.lstrip('/')
                 with salt.utils.files.fopen(dest, 'wb') as fp_:
-                    ftp.retrbinary('RETR {0}'.format(url_data.path), fp_.write)
+                    ftp.retrbinary('RETR {0}'.format(remote_file_path), fp_.write)
                 ftp.quit()
                 return dest
             except Exception as exc:
@@ -844,13 +803,10 @@ class Client(object):
         )
 
 
-class LocalClient(Client):
+class PillarClient(Client):
     '''
-    Use the local_roots option to parse a local file root
+    Used by pillar to handle fileclient requests
     '''
-    def __init__(self, opts):
-        Client.__init__(self, opts)
-
     def _find_file(self, path, saltenv='base'):
         '''
         Locate the file path
@@ -858,12 +814,10 @@ class LocalClient(Client):
         fnd = {'path': '',
                'rel': ''}
 
-        if saltenv not in self.opts['file_roots']:
-            return fnd
         if salt.utils.url.is_escaped(path):
             # The path arguments are escaped
             path = salt.utils.url.unescape(path)
-        for root in self.opts['file_roots'][saltenv]:
+        for root in self.opts['pillar_roots'].get(saltenv, []):
             full = os.path.join(root, path)
             if os.path.isfile(full):
                 fnd['path'] = full
@@ -896,10 +850,8 @@ class LocalClient(Client):
         with optional relative prefix path to limit directory traversal
         '''
         ret = []
-        if saltenv not in self.opts['file_roots']:
-            return ret
         prefix = prefix.strip('/')
-        for path in self.opts['file_roots'][saltenv]:
+        for path in self.opts['pillar_roots'].get(saltenv, []):
             for root, dirs, files in salt.utils.path.os_walk(
                 os.path.join(path, prefix), followlinks=True
             ):
@@ -907,42 +859,38 @@ class LocalClient(Client):
                 dirs[:] = [d for d in dirs if not salt.fileserver.is_file_ignored(self.opts, d)]
                 for fname in files:
                     relpath = os.path.relpath(os.path.join(root, fname), path)
-                    ret.append(sdecode(relpath))
+                    ret.append(salt.utils.data.decode(relpath))
         return ret
 
     def file_list_emptydirs(self, saltenv='base', prefix=''):
         '''
-        List the empty dirs in the file_roots
+        List the empty dirs in the pillar_roots
         with optional relative prefix path to limit directory traversal
         '''
         ret = []
         prefix = prefix.strip('/')
-        if saltenv not in self.opts['file_roots']:
-            return ret
-        for path in self.opts['file_roots'][saltenv]:
+        for path in self.opts['pillar_roots'].get(saltenv, []):
             for root, dirs, files in salt.utils.path.os_walk(
                 os.path.join(path, prefix), followlinks=True
             ):
                 # Don't walk any directories that match file_ignore_regex or glob
                 dirs[:] = [d for d in dirs if not salt.fileserver.is_file_ignored(self.opts, d)]
                 if len(dirs) == 0 and len(files) == 0:
-                    ret.append(sdecode(os.path.relpath(root, path)))
+                    ret.append(salt.utils.data.decode(os.path.relpath(root, path)))
         return ret
 
     def dir_list(self, saltenv='base', prefix=''):
         '''
-        List the dirs in the file_roots
+        List the dirs in the pillar_roots
         with optional relative prefix path to limit directory traversal
         '''
         ret = []
-        if saltenv not in self.opts['file_roots']:
-            return ret
         prefix = prefix.strip('/')
-        for path in self.opts['file_roots'][saltenv]:
+        for path in self.opts['pillar_roots'].get(saltenv, []):
             for root, dirs, files in salt.utils.path.os_walk(
                 os.path.join(path, prefix), followlinks=True
             ):
-                ret.append(sdecode(os.path.relpath(root, path)))
+                ret.append(salt.utils.data.decode(os.path.relpath(root, path)))
         return ret
 
     def __get_file_path(self, path, saltenv='base'):
@@ -965,7 +913,7 @@ class LocalClient(Client):
 
     def hash_file(self, path, saltenv='base'):
         '''
-        Return the hash of a file, to get the hash of a file in the file_roots
+        Return the hash of a file, to get the hash of a file in the pillar_roots
         prepend the path with salt://<file on server> otherwise, prepend the
         file with / for a local file.
         '''
@@ -988,7 +936,7 @@ class LocalClient(Client):
 
     def hash_and_stat_file(self, path, saltenv='base'):
         '''
-        Return the hash of a file, to get the hash of a file in the file_roots
+        Return the hash of a file, to get the hash of a file in the pillar_roots
         prepend the path with salt://<file on server> otherwise, prepend the
         file with / for a local file.
 
@@ -1034,7 +982,7 @@ class LocalClient(Client):
         Return the available environments
         '''
         ret = []
-        for saltenv in self.opts['file_roots']:
+        for saltenv in self.opts['pillar_roots']:
             ret.append(saltenv)
         return ret
 
@@ -1060,7 +1008,8 @@ class RemoteClient(Client):
     '''
     def __init__(self, opts):
         Client.__init__(self, opts)
-        self.channel = salt.transport.Channel.factory(self.opts)
+        self._closing = False
+        self.channel = salt.transport.client.ReqChannel.factory(self.opts)
         if hasattr(self.channel, 'auth'):
             self.auth = self.channel.auth
         else:
@@ -1070,8 +1019,18 @@ class RemoteClient(Client):
         '''
         Reset the channel, in the event of an interruption
         '''
-        self.channel = salt.transport.Channel.factory(self.opts)
+        self.channel = salt.transport.client.ReqChannel.factory(self.opts)
         return self.channel
+
+    def __del__(self):
+        self.destroy()
+
+    def destroy(self):
+        if self._closing:
+            return
+
+        self._closing = True
+        self.channel.close()
 
     def get_file(self,
                  path,
@@ -1424,8 +1383,14 @@ class FSClient(RemoteClient):
     '''
     def __init__(self, opts):  # pylint: disable=W0231
         Client.__init__(self, opts)  # pylint: disable=W0233
+        self._closing = False
         self.channel = salt.fileserver.FSChan(opts)
         self.auth = DumbAuth()
+
+
+# Provide backward compatibility for anyone directly using LocalClient (but no
+# one should be doing this).
+LocalClient = FSClient
 
 
 class DumbAuth(object):

@@ -14,14 +14,14 @@ import fnmatch
 # Import salt libs
 import salt.minion
 import salt.fileclient
+import salt.utils.data
 import salt.utils.files
 import salt.utils.gzip_util
-import salt.utils.locales
 import salt.utils.path
 import salt.utils.templates
 import salt.utils.url
 import salt.crypt
-import salt.transport
+import salt.transport.client
 from salt.exceptions import CommandExecutionError
 from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=import-error,no-name-in-module
 
@@ -301,6 +301,19 @@ def get_file(path,
                 gzip)
 
 
+def envs():
+    '''
+    List available environments for fileserver
+
+    CLI Example
+
+    .. code-block:: bash
+
+        salt '*' cp.envs
+    '''
+    return _client().envs()
+
+
 def get_template(path,
                  dest,
                  template='jinja',
@@ -407,7 +420,9 @@ def get_url(path, dest='', saltenv='base', makedirs=False, source_hash=None):
         result = _client().get_url(
             path, None, makedirs, saltenv, no_cache=True, source_hash=source_hash)
     if not result:
-        log.error('Unable to fetch file %s from saltenv %s.', path, saltenv)
+        log.error('Unable to fetch file %s from saltenv %s.',
+                  salt.utils.url.redact_http_basic_auth(path),
+                  saltenv)
     return result
 
 
@@ -470,8 +485,8 @@ def cache_file(path, saltenv='base', source_hash=None):
         It may be necessary to quote the URL when using the querystring method,
         depending on the shell being used to run the command.
     '''
-    path = salt.utils.locales.sdecode(path)
-    saltenv = salt.utils.locales.sdecode(saltenv)
+    path = salt.utils.data.decode(path)
+    saltenv = salt.utils.data.decode(saltenv)
 
     contextkey = '{0}_|-{1}_|-{2}'.format('cp.cache_file', path, saltenv)
 
@@ -812,30 +827,34 @@ def push(path, keep_symlinks=False, upload_path=None, remove_source=False):
     load = {'cmd': '_file_recv',
             'id': __opts__['id'],
             'path': load_path_list,
+            'size': os.path.getsize(path),
             'tok': auth.gen_token(b'salt')}
-    channel = salt.transport.Channel.factory(__opts__)
-    with salt.utils.files.fopen(path, 'rb') as fp_:
-        init_send = False
-        while True:
-            load['loc'] = fp_.tell()
-            load['data'] = fp_.read(__opts__['file_buffer_size'])
-            if not load['data'] and init_send:
-                if remove_source:
-                    try:
-                        salt.utils.files.rm_rf(path)
-                        log.debug('Removing source file \'%s\'', path)
-                    except IOError:
-                        log.error('cp.push failed to remove file \'%s\'', path)
-                        return False
-                return True
-            ret = channel.send(load)
-            if not ret:
-                log.error('cp.push Failed transfer failed. Ensure master has '
-                          '\'file_recv\' set to \'True\' and that the file '
-                          'is not larger than the \'file_recv_size_max\' '
-                          'setting on the master.')
-                return ret
-            init_send = True
+    channel = salt.transport.client.ReqChannel.factory(__opts__)
+    try:
+        with salt.utils.files.fopen(path, 'rb') as fp_:
+            init_send = False
+            while True:
+                load['loc'] = fp_.tell()
+                load['data'] = fp_.read(__opts__['file_buffer_size'])
+                if not load['data'] and init_send:
+                    if remove_source:
+                        try:
+                            salt.utils.files.rm_rf(path)
+                            log.debug('Removing source file \'%s\'', path)
+                        except IOError:
+                            log.error('cp.push failed to remove file \'%s\'', path)
+                            return False
+                    return True
+                ret = channel.send(load)
+                if not ret:
+                    log.error('cp.push Failed transfer failed. Ensure master has '
+                              '\'file_recv\' set to \'True\' and that the file '
+                              'is not larger than the \'file_recv_size_max\' '
+                              'setting on the master.')
+                    return ret
+                init_send = True
+    finally:
+        channel.close()
 
 
 def push_dir(path, glob=None, upload_path=None):

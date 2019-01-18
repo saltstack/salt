@@ -41,7 +41,8 @@ _DEFAULTS = {
     'user': 'sysdba',
     'password': '',
     'database': '',
-    'as_dict': False
+    'as_dict': False,
+    'autocommit': False
 }
 
 
@@ -56,7 +57,7 @@ def __virtual__():
 
 def _get_connection(**kwargs):
     connection_args = {}
-    for arg in ('server', 'port', 'user', 'password', 'database', 'as_dict'):
+    for arg in ('server', 'port', 'user', 'password', 'database', 'as_dict', 'autocommit'):
         if arg in kwargs:
             connection_args[arg] = kwargs[arg]
         else:
@@ -175,7 +176,7 @@ def db_remove(database_name, **kwargs):
         salt minion mssql.db_remove database_name='DBNAME'
     '''
     try:
-        if db_exists(database_name) and database_name not in ['master', 'model', 'msdb', 'tempdb']:
+        if db_exists(database_name, **kwargs) and database_name not in ['master', 'model', 'msdb', 'tempdb']:
             conn = _get_connection(**kwargs)
             conn.autocommit(True)
             cur = conn.cursor()

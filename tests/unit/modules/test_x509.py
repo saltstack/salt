@@ -35,6 +35,7 @@ from tests.support.mock import (
 )
 
 from salt.modules import x509
+from salt.modules import cmdmod
 import salt.utils.stringutils
 import salt.utils.files
 
@@ -50,7 +51,14 @@ except ImportError:
 class X509TestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
-        return {x509: {}}
+        module_globals = {
+            x509: {
+                 '__salt__': {
+                     'cmd.run_stdout': cmdmod.run_stdout
+                 }
+            }
+        }
+        return module_globals
 
     @patch('salt.modules.x509.log', MagicMock())
     def test_private_func__parse_subject(self):
@@ -71,9 +79,9 @@ class X509TestCase(TestCase, LoaderModuleMockMixin):
 
         subj = FakeSubject()
         x509._parse_subject(subj)
-        assert x509.log.trace.call_args[0][0] == "Missing attribute '%s'. Error: %s"
-        assert x509.log.trace.call_args[0][1] == list(subj.nid.keys())[0]
-        assert isinstance(x509.log.trace.call_args[0][2], TypeError)
+        assert x509.log.debug.call_args[0][0] == "Missing attribute '%s'. Error: %s"
+        assert x509.log.debug.call_args[0][1] == list(subj.nid.keys())[0]
+        assert isinstance(x509.log.debug.call_args[0][2], TypeError)
 
     @skipIf(not HAS_M2CRYPTO, 'Skipping, M2Crypto is unavailble')
     def test_get_pem_entry(self):
@@ -136,7 +144,7 @@ c9bcgp7D7xD+TxWWNj4CSXEccJgGr91StV+gFg4ARQ==
         '''
         ret = x509.create_private_key(text=True,
                                       passphrase='super_secret_passphrase')
-        self.assertIn(b'BEGIN RSA PRIVATE KEY', ret)
+        self.assertIn('BEGIN RSA PRIVATE KEY', ret)
 
     @skipIf(not HAS_M2CRYPTO, 'Skipping, M2Crypto is unavailble')
     def test_create_certificate(self):
@@ -218,7 +226,7 @@ c9bcgp7D7xD+TxWWNj4CSXEccJgGr91StV+gFg4ARQ==
             ca_key_file.flush()
 
         with tempfile.NamedTemporaryFile('w+', delete=False) as ca_cert_file:
-            ca_cert_file.write(ca_cert)
+            ca_cert_file.write(salt.utils.stringutils.to_str(ca_cert))
             ca_cert_file.flush()
 
         with tempfile.NamedTemporaryFile('w+', delete=False) as ca_crl_file:
@@ -240,7 +248,7 @@ c9bcgp7D7xD+TxWWNj4CSXEccJgGr91StV+gFg4ARQ==
         os.remove(ca_crl_file.name)
 
         # Ensure that a CRL was actually created
-        self.assertIn(b'BEGIN X509 CRL', crl)
+        self.assertIn('BEGIN X509 CRL', crl)
 
     @skipIf(not HAS_M2CRYPTO, 'Skipping, M2Crypto is unavailble')
     def test_revoke_certificate_with_crl(self):
@@ -300,11 +308,11 @@ c9bcgp7D7xD+TxWWNj4CSXEccJgGr91StV+gFg4ARQ==
             ca_key_file.flush()
 
         with tempfile.NamedTemporaryFile('w+', delete=False) as ca_cert_file:
-            ca_cert_file.write(ca_cert)
+            ca_cert_file.write(salt.utils.stringutils.to_str(ca_cert))
             ca_cert_file.flush()
 
         with tempfile.NamedTemporaryFile('w+', delete=False) as server_cert_file:
-            server_cert_file.write(server_cert)
+            server_cert_file.write(salt.utils.stringutils.to_str(server_cert))
             server_cert_file.flush()
 
         # Revoke server CRL
@@ -342,3 +350,67 @@ c9bcgp7D7xD+TxWWNj4CSXEccJgGr91StV+gFg4ARQ==
         # Ensure that the correct server cert serial is amongst
         # the revoked certificates
         self.assertIn(serial_number, crl)
+
+    @skipIf(not HAS_M2CRYPTO, 'Skipping, M2Crypto is unavailble')
+    def test_create_csr(self):
+        '''
+        Test create_csr
+        :return:
+        '''
+        ca_key = '''
+-----BEGIN RSA PRIVATE KEY-----
+MIICWwIBAAKBgQCjdjbgL4kQ8Lu73xeRRM1q3C3K3ptfCLpyfw38LRnymxaoJ6ls
+pNSx2dU1uJ89YKFlYLo1QcEk4rJ2fdIjarV0kuNCY3rC8jYUp9BpAU5Z6p9HKeT1
+2rTPH81JyjbQDR5PyfCyzYOQtpwpB4zIUUK/Go7tTm409xGKbbUFugJNgQIDAQAB
+AoGAF24we34U1ZrMLifSRv5nu3OIFNZHyx2DLDpOFOGaII5edwgIXwxZeIzS5Ppr
+yO568/8jcdLVDqZ4EkgCwRTgoXRq3a1GLHGFmBdDNvWjSTTMLoozuM0t2zjRmIsH
+hUd7tnai9Lf1Bp5HlBEhBU2gZWk+SXqLvxXe74/+BDAj7gECQQDRw1OPsrgTvs3R
+3MNwX6W8+iBYMTGjn6f/6rvEzUs/k6rwJluV7n8ISNUIAxoPy5g5vEYK6Ln/Ttc7
+u0K1KNlRAkEAx34qcxjuswavL3biNGE+8LpDJnJx1jaNWoH+ObuzYCCVMusdT2gy
+kKuq9ytTDgXd2qwZpIDNmscvReFy10glMQJAXebMz3U4Bk7SIHJtYy7OKQzn0dMj
+35WnRV81c2Jbnzhhu2PQeAvt/i1sgEuzLQL9QEtSJ6wLJ4mJvImV0TdaIQJAAYyk
+TcKK0A8kOy0kMp3yvDHmJZ1L7wr7bBGIZPBlQ0Ddh8i1sJExm1gJ+uN2QKyg/XrK
+tDFf52zWnCdVGgDwcQJALW/WcbSEK+JVV6KDJYpwCzWpKIKpBI0F6fdCr1G7Xcwj
+c9bcgp7D7xD+TxWWNj4CSXEccJgGr91StV+gFg4ARQ==
+-----END RSA PRIVATE KEY-----
+'''
+
+        ret = x509.create_csr(text=True,
+                              public_key=ca_key,
+                              CN='Redacted Root CA')
+        self.assertIn(b'BEGIN CERTIFICATE REQUEST', ret)
+
+    @skipIf(not HAS_M2CRYPTO, 'Skipping, M2Crypto is unavailble')
+    def test_create_csr_ext_mapping(self):
+        '''
+        Test create_csr with ext_mapping
+        :return:
+        '''
+        ca_key = '''
+-----BEGIN RSA PRIVATE KEY-----
+MIICWwIBAAKBgQCjdjbgL4kQ8Lu73xeRRM1q3C3K3ptfCLpyfw38LRnymxaoJ6ls
+pNSx2dU1uJ89YKFlYLo1QcEk4rJ2fdIjarV0kuNCY3rC8jYUp9BpAU5Z6p9HKeT1
+2rTPH81JyjbQDR5PyfCyzYOQtpwpB4zIUUK/Go7tTm409xGKbbUFugJNgQIDAQAB
+AoGAF24we34U1ZrMLifSRv5nu3OIFNZHyx2DLDpOFOGaII5edwgIXwxZeIzS5Ppr
+yO568/8jcdLVDqZ4EkgCwRTgoXRq3a1GLHGFmBdDNvWjSTTMLoozuM0t2zjRmIsH
+hUd7tnai9Lf1Bp5HlBEhBU2gZWk+SXqLvxXe74/+BDAj7gECQQDRw1OPsrgTvs3R
+3MNwX6W8+iBYMTGjn6f/6rvEzUs/k6rwJluV7n8ISNUIAxoPy5g5vEYK6Ln/Ttc7
+u0K1KNlRAkEAx34qcxjuswavL3biNGE+8LpDJnJx1jaNWoH+ObuzYCCVMusdT2gy
+kKuq9ytTDgXd2qwZpIDNmscvReFy10glMQJAXebMz3U4Bk7SIHJtYy7OKQzn0dMj
+35WnRV81c2Jbnzhhu2PQeAvt/i1sgEuzLQL9QEtSJ6wLJ4mJvImV0TdaIQJAAYyk
+TcKK0A8kOy0kMp3yvDHmJZ1L7wr7bBGIZPBlQ0Ddh8i1sJExm1gJ+uN2QKyg/XrK
+tDFf52zWnCdVGgDwcQJALW/WcbSEK+JVV6KDJYpwCzWpKIKpBI0F6fdCr1G7Xcwj
+c9bcgp7D7xD+TxWWNj4CSXEccJgGr91StV+gFg4ARQ==
+-----END RSA PRIVATE KEY-----
+'''
+
+        ret = x509.create_csr(text=True,
+                              public_key=ca_key,
+                              CN='Redacted Root CA',
+                              DomainController='ASN1:UTF8String:SomeOneSomeWhere',
+                              ext_mapping={'1.3.6.1.4.1.311.20.2': 'DomainController'})
+
+        self.assertIn(b'BEGIN CERTIFICATE REQUEST', ret)
+
+        ret = x509.read_csr(ret)
+        self.assertIn(b'1.3.6.1.4.1.311.20.2', ret['X509v3 Extensions'])

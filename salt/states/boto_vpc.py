@@ -501,7 +501,7 @@ def subnet_present(name, cidr_block, vpc_name=None, vpc_id=None,
                    availability_zone=None, tags=None,
                    region=None, key=None,
                    keyid=None, profile=None,
-                   route_table_id=None, route_table_name=None):
+                   route_table_id=None, route_table_name=None, auto_assign_public_ipv4=False):
 
     '''
     Ensure a subnet exists.
@@ -610,6 +610,7 @@ def subnet_present(name, cidr_block, vpc_name=None, vpc_id=None,
         r = __salt__['boto_vpc.create_subnet'](subnet_name=name,
                                                cidr_block=cidr_block,
                                                availability_zone=availability_zone,
+                                               auto_assign_public_ipv4=auto_assign_public_ipv4,
                                                vpc_name=vpc_name, vpc_id=vpc_id,
                                                tags=tags, region=region,
                                                key=key, keyid=keyid,
@@ -906,9 +907,9 @@ def route_table_present(name, vpc_name=None, vpc_id=None, routes=None,
               interface_id: eni-123456
             - destination_cidr_block: 10.10.13.0/24
               instance_name: mygatewayserver
-            - subnet_names:
-              - subnet1
-              - subnet2
+          - subnet_names:
+            - subnet1
+            - subnet2
 
     name
         Name of the route table.

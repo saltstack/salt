@@ -263,24 +263,6 @@ syndic_user: salt
 # The publisher interface ZeroMQPubServerChannel
 #pub_hwm: 1000
 
-# These two ZMQ HWM settings, salt_event_pub_hwm and event_publisher_pub_hwm
-# are significant for masters with thousands of minions.  When these are
-# insufficiently high it will manifest in random responses missing in the CLI
-# and even missing from the job cache.  Masters that have fast CPUs and many
-# cores with appropriate worker_threads will not need these set as high.
-
-# On deployment with 8,000 minions, 2.4GHz CPUs, 24 cores, 32GiB memory has
-# these settings:
-#
-#   salt_event_pub_hwm: 128000
-#   event_publisher_pub_hwm: 64000
-
-# ZMQ high-water-mark for SaltEvent pub socket
-#salt_event_pub_hwm: 20000
-
-# ZMQ high-water-mark for EventPublisher pub socket
-#event_publisher_pub_hwm: 10000
-
 # The master may allocate memory per-event and not
 # reclaim it.
 # To set a high-water mark for memory allocation, use
@@ -535,12 +517,6 @@ syndic_user: salt
 #   ext_nodes: <Shell command which returns yaml>
 #
 #master_tops: {}
-
-# The external_nodes option allows Salt to gather data that would normally be
-# placed in a top file. The external_nodes option is the executable that will
-# return the ENC data. Remember that Salt will look for external nodes AND top
-# files and combine the results if both are enabled!
-#external_nodes: None
 
 # The renderer to use on the minions to render the state data
 #renderer: yaml_jinja
@@ -963,7 +939,7 @@ syndic_user: salt
 
 # If and only if a master has set ``pillar_cache: True``, the cache TTL controls the amount
 # of time, in seconds, before the cache is considered invalid by a master and a fresh
-# pillar is recompiled and stored.
+# pillar is recompiled and stored. A value of 0 will cause the cache to always be valid.
 #pillar_cache_ttl: 3600
 
 # If and only if a master has set `pillar_cache: True`, one of several storage providers
@@ -1100,7 +1076,7 @@ syndic_user: salt
 #key_logfile: /var/log/salt/key
 
 # The level of messages to send to the console.
-# One of 'garbage', 'trace', 'debug', info', 'warning', 'error', 'critical'.
+# One of 'garbage', 'trace', 'debug', 'info', 'warning', 'error', 'critical'.
 #
 # The following log levels are considered INSECURE and may log sensitive data:
 # ['garbage', 'trace', 'debug']

@@ -26,11 +26,7 @@ from salt.exceptions import CommandExecutionError
 # Import 3rd-party libs
 from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,no-name-in-module,redefined-builtin
-if six.PY3:
-    import ipaddress
-else:
-    import salt.ext.ipaddress as ipaddress
-
+from salt._compat import ipaddress
 
 log = logging.getLogger(__name__)
 
@@ -546,7 +542,7 @@ def _ip_route_linux():
 
             ret.append({
                 'addr_family': 'inet6',
-                'destination': '::',
+                'destination': '::/0',
                 'gateway': comps[2],
                 'netmask': '',
                 'flags': 'UG',
@@ -1038,6 +1034,7 @@ def hw_addr(iface):
     '''
     return salt.utils.network.hw_addr(iface)
 
+
 # Alias hwaddr to preserve backward compat
 hwaddr = salt.utils.functools.alias_function(hw_addr, 'hwaddr')
 
@@ -1140,7 +1137,7 @@ def convert_cidr(cidr):
     ret = {'network': None,
            'netmask': None}
     cidr = calc_net(cidr)
-    network_info = salt.ext.ipaddress.ip_network(cidr)
+    network_info = ipaddress.ip_network(cidr)
     ret['network'] = six.text_type(network_info.network_address)
     ret['netmask'] = six.text_type(network_info.netmask)
     return ret
@@ -1216,6 +1213,7 @@ def ip_addrs6(interface=None, include_loopback=False, cidr=None):
     else:
         return addrs
 
+
 ipaddrs6 = salt.utils.functools.alias_function(ip_addrs6, 'ipaddrs6')
 
 
@@ -1280,11 +1278,16 @@ def mod_hostname(hostname):
     # Grab the old hostname so we know which hostname to change and then
     # change the hostname using the hostname command
     if hostname_cmd.endswith('hostnamectl'):
-        out = __salt__['cmd.run']('{0} status'.format(hostname_cmd))
-        for line in out.splitlines():
-            line = line.split(':')
-            if 'Static hostname' in line[0]:
-                o_hostname = line[1].strip()
+        result = __salt__['cmd.run_all']('{0} status'.format(hostname_cmd))
+        if 0 == result['retcode']:
+            out = result['stdout']
+            for line in out.splitlines():
+                line = line.split(':')
+                if 'Static hostname' in line[0]:
+                    o_hostname = line[1].strip()
+        else:
+            log.debug('{0} was unable to get hostname'.format(hostname_cmd))
+            o_hostname = __salt__['network.get_hostname']()
     elif not salt.utils.platform.is_sunos():
         # don't run hostname -f because -f is not supported on all platforms
         o_hostname = socket.getfqdn()
@@ -1293,7 +1296,16 @@ def mod_hostname(hostname):
         o_hostname = __salt__['cmd.run'](check_hostname_cmd).split(' ')[-1]
 
     if hostname_cmd.endswith('hostnamectl'):
-        __salt__['cmd.run']('{0} set-hostname {1}'.format(hostname_cmd, hostname))
+        result = __salt__['cmd.run_all']('{0} set-hostname {1}'.format(
+            hostname_cmd,
+            hostname,
+            ))
+        if result['retcode'] != 0:
+            log.debug('{0} was unable to set hostname. Error: {1}'.format(
+                hostname_cmd,
+                result['stderr'],
+                ))
+            return False
     elif not salt.utils.platform.is_sunos():
         __salt__['cmd.run']('{0} {1}'.format(hostname_cmd, hostname))
     else:
@@ -1340,6 +1352,12 @@ def mod_hostname(hostname):
     elif __grains__['os_family'] in ('Debian', 'NILinuxRT'):
         with salt.utils.files.fopen('/etc/hostname', 'w') as fh_:
             fh_.write(salt.utils.stringutils.to_str(hostname + '\n'))
+        if __grains__['lsb_distrib_id'] == 'nilrt':
+            str_hostname = salt.utils.stringutils.to_str(hostname)
+            nirtcfg_cmd = '/usr/local/natinst/bin/nirtcfg'
+            nirtcfg_cmd += ' --set section=SystemSettings,token=\'Host_Name\',value=\'{0}\''.format(str_hostname)
+            if __salt__['cmd.run_all'](nirtcfg_cmd)['retcode'] != 0:
+                raise CommandExecutionError('Couldn\'t set hostname to: {0}\n'.format(str_hostname))
     elif __grains__['os_family'] == 'OpenBSD':
         with salt.utils.files.fopen('/etc/myname', 'w') as fh_:
             fh_.write(salt.utils.stringutils.to_str(hostname + '\n'))
@@ -1707,7 +1725,7 @@ def get_route(ip):
     if __grains__['kernel'] == 'Linux':
         cmd = 'ip route get {0}'.format(ip)
         out = __salt__['cmd.run'](cmd, python_shell=True)
-        regexp = re.compile(r'(via\s+(?P<gateway>[\w\.:]+))?\s+dev\s+(?P<interface>[\w\.\:]+)\s+.*src\s+(?P<source>[\w\.:]+)')
+        regexp = re.compile(r'(via\s+(?P<gateway>[\w\.:]+))?\s+dev\s+(?P<interface>[\w\.\:\-]+)\s+.*src\s+(?P<source>[\w\.:]+)')
         m = regexp.search(out.splitlines()[0])
         ret = {
             'destination': ip,

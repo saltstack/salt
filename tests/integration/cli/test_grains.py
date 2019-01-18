@@ -15,6 +15,7 @@
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 import os
+import logging
 
 # Import Salt Libs
 import salt.utils.files
@@ -22,6 +23,8 @@ import salt.utils.files
 # Import Salt Testing Libs
 from tests.support.case import ShellCase, SSHCase
 from tests.support.helpers import flaky
+
+log = logging.getLogger(__name__)
 
 
 class GrainsTargetingTest(ShellCase):
@@ -40,17 +43,17 @@ class GrainsTargetingTest(ShellCase):
             if item != 'minion:':
                 os_grain = item.strip()
 
-        ret = self.run_salt('-G \'os:{0}\' test.ping'.format(os_grain))
+        ret = self.run_salt('-G "os:{0}" test.ping'.format(os_grain))
         self.assertEqual(sorted(ret), sorted(test_ret))
 
     def test_grains_targeting_minion_id_running(self):
         '''
         Tests return of each running test minion targeting with minion id grain
         '''
-        minion = self.run_salt('-G \'id:minion\' test.ping')
+        minion = self.run_salt('-G "id:minion" test.ping')
         self.assertEqual(sorted(minion), sorted(['minion:', '    True']))
 
-        sub_minion = self.run_salt('-G \'id:sub_minion\' test.ping')
+        sub_minion = self.run_salt('-G "id:sub_minion" test.ping')
         self.assertEqual(sorted(sub_minion), sorted(['sub_minion:', '    True']))
 
     @flaky
@@ -66,14 +69,13 @@ class GrainsTargetingTest(ShellCase):
         with salt.utils.files.fopen(key_file, 'a'):
             pass
 
-        import logging
-        log = logging.getLogger(__name__)
         # ping disconnected minion and ensure it times out and returns with correct message
         try:
             ret = ''
-            for item in self.run_salt('-t 1 -G \'id:disconnected\' test.ping', timeout=40):
+            for item in self.run_salt('-t 1 -G "id:disconnected" test.ping', timeout=40):
                 if item != 'disconnected:':
                     ret = item.strip()
+                    break
             assert ret == test_ret
         finally:
             os.unlink(key_file)

@@ -772,3 +772,17 @@ class TLSAddTestCase(TestCase, LoaderModuleMockMixin):
                                 ca_name,
                                 **_TLS_TEST_DATA['create_ca']),
                             ret)
+
+    def test_get_expiration_date(self):
+        with patch('salt.utils.files.fopen',
+                   mock_open(read_data=_TLS_TEST_DATA['ca_cert'])):
+            self.assertEqual(
+                tls.get_expiration_date('/path/to/cert'),
+                '2016-05-04'
+            )
+        with patch('salt.utils.files.fopen',
+                   mock_open(read_data=_TLS_TEST_DATA['ca_cert'])):
+            self.assertEqual(
+                tls.get_expiration_date('/path/to/cert', date_format='%d/%m/%y'),
+                '04/05/16'
+            )

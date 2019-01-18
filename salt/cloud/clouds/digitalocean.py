@@ -382,6 +382,15 @@ def create(vm_):
             raise SaltCloudConfigError("'ipv6' should be a boolean value.")
         kwargs['ipv6'] = ipv6
 
+    monitoring = config.get_cloud_config_value(
+        'monitoring', vm_, __opts__, search_global=False, default=None,
+    )
+
+    if monitoring is not None:
+        if not isinstance(monitoring, bool):
+            raise SaltCloudConfigError("'monitoring' should be a boolean value.")
+        kwargs['monitoring'] = monitoring
+
     kwargs['tags'] = config.get_cloud_config_value(
         'tags', vm_, __opts__, search_global=False, default=False
     )

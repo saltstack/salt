@@ -6,9 +6,11 @@ Functions which implement running reactor jobs
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
+import collections
 import fnmatch
 import glob
 import logging
+import time
 
 # Import salt libs
 import salt.client
@@ -19,10 +21,12 @@ import salt.utils.cache
 import salt.utils.data
 import salt.utils.event
 import salt.utils.files
+import salt.utils.master
 import salt.utils.process
 import salt.utils.yaml
 import salt.wheel
 import salt.defaults.exitcodes
+from salt.utils.event import tagify
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -35,6 +39,7 @@ REACTOR_INTERNAL_KEYWORDS = frozenset([
     'name',
     'order',
     'fun',
+    'key',
     'state',
 ])
 
@@ -50,12 +55,16 @@ class Reactor(salt.utils.process.SignalHandlingMultiprocessingProcess, salt.stat
         'cmd': 'local',
     }
 
-    def __init__(self, opts, log_queue=None):
-        super(Reactor, self).__init__(log_queue=log_queue)
+    def __init__(self, opts, **kwargs):
+        super(Reactor, self).__init__(**kwargs)
         local_minion_opts = opts.copy()
         local_minion_opts['file_client'] = 'local'
         self.minion = salt.minion.MasterMinion(local_minion_opts)
         salt.state.Compiler.__init__(self, opts, self.minion.rend)
+        self.event = salt.utils.event.get_master_event(opts, opts['sock_dir'], listen=False)
+        self.stats = collections.defaultdict(lambda: {'mean': 0, 'latency': 0, 'runs': 0})
+        self.stat_clock = time.time()
+        self.is_leader = True
 
     # We need __setstate__ and __getstate__ to avoid pickling errors since
     # 'self.rend' (from salt.state.Compiler) contains a function reference
@@ -66,11 +75,27 @@ class Reactor(salt.utils.process.SignalHandlingMultiprocessingProcess, salt.stat
         self._is_child = True
         Reactor.__init__(
             self, state['opts'],
-            log_queue=state['log_queue'])
+            log_queue=state['log_queue'],
+            log_queue_level=state['log_queue_level']
+        )
 
     def __getstate__(self):
-        return {'opts': self.opts,
-                'log_queue': self.log_queue}
+        return {
+            'opts': self.opts,
+            'log_queue': self.log_queue,
+            'log_queue_level': self.log_queue_level
+        }
+
+    def _post_stats(self, stats):
+        '''
+        Fire events with stat info if it's time
+        '''
+        end_time = time.time()
+        if end_time - self.stat_clock > self.opts['master_stats_event_iter']:
+            # Fire the event with the stats and wipe the tracker
+            self.event.fire_event({'time': end_time - self.stat_clock, 'worker': self.name, 'stats': stats}, tagify(self.name, 'stats'))
+            self.stats = collections.defaultdict(lambda: {'mean': 0, 'latency': 0, 'runs': 0})
+            self.stat_clock = end_time
 
     def render_reaction(self, glob_ref, tag, data):
         '''
@@ -241,12 +266,28 @@ class Reactor(salt.utils.process.SignalHandlingMultiprocessingProcess, salt.stat
             # skip all events fired by ourselves
             if data['data'].get('user') == self.wrap.event_user:
                 continue
+            # NOTE: these events must contain the masters key in order to be accepted
+            # see salt.runners.reactor for the requesting interface
+            if 'salt/reactors/manage' in data['tag']:
+                master_key = salt.utils.master.get_master_key('root', self.opts)
+                if data['data'].get('key') != master_key:
+                    log.error('received salt/reactors/manage event without matching master_key. discarding')
+                    continue
+            if data['tag'].endswith('salt/reactors/manage/is_leader'):
+                self.event.fire_event({'result': self.is_leader},
+                                       'salt/reactors/manage/leader/value')
+            if data['tag'].endswith('salt/reactors/manage/set_leader'):
+                # we only want to register events from the local master
+                if data['data'].get('id') == self.opts['id']:
+                    self.is_leader = data['data']['value']
+                self.event.fire_event({'result': self.is_leader},
+                                       'salt/reactors/manage/leader/value')
             if data['tag'].endswith('salt/reactors/manage/add'):
                 _data = data['data']
                 res = self.add_reactor(_data['event'], _data['reactors'])
                 self.event.fire_event({'reactors': self.list_all(),
                                        'result': res},
-                                      'salt/reactors/manage/add-complete')
+                                       'salt/reactors/manage/add-complete')
             elif data['tag'].endswith('salt/reactors/manage/delete'):
                 _data = data['data']
                 res = self.delete_reactor(_data['event'])
@@ -256,16 +297,27 @@ class Reactor(salt.utils.process.SignalHandlingMultiprocessingProcess, salt.stat
             elif data['tag'].endswith('salt/reactors/manage/list'):
                 self.event.fire_event({'reactors': self.list_all()},
                                       'salt/reactors/manage/list-results')
+
+            # do not handle any reactions if not leader in cluster
+            if not self.is_leader:
+                continue
             else:
                 reactors = self.list_reactors(data['tag'])
                 if not reactors:
                     continue
                 chunks = self.reactions(data['tag'], data['data'], reactors)
                 if chunks:
+                    if self.opts['master_stats']:
+                        _data = data['data']
+                        start = time.time()
                     try:
                         self.call_reactions(chunks)
                     except SystemExit:
                         log.warning('Exit ignored by reactor')
+
+                    if self.opts['master_stats']:
+                        stats = salt.utils.event.update_stats(self.stats, start, _data)
+                        self._post_stats(stats)
 
 
 class ReactWrap(object):
@@ -412,7 +464,16 @@ class ReactWrap(object):
             # and kwargs['kwarg'] contain the positional and keyword arguments
             # that will be passed to the client interface to execute the
             # desired runner/wheel/remote-exec/etc. function.
-            l_fun(*args, **kwargs)
+            ret = l_fun(*args, **kwargs)
+
+            if ret is False:
+                log.error('Reactor \'%s\' failed  to execute %s \'%s\': '
+                            'TaskPool queue is full!'
+                            ' Consider tuning reactor_worker_threads and/or'
+                            ' reactor_worker_hwm',
+                            low['__id__'], low['state'], low['fun']
+                )
+
         except SystemExit:
             log.warning(
                 'Reactor \'%s\' attempted to exit. Ignored.', low['__id__']
@@ -427,13 +488,13 @@ class ReactWrap(object):
         '''
         Wrap RunnerClient for executing :ref:`runner modules <all-salt.runners>`
         '''
-        self.pool.fire_async(self.client_cache['runner'].low, args=(fun, kwargs))
+        return self.pool.fire_async(self.client_cache['runner'].low, args=(fun, kwargs))
 
     def wheel(self, fun, **kwargs):
         '''
         Wrap Wheel to enable executing :ref:`wheel modules <all-salt.wheel>`
         '''
-        self.pool.fire_async(self.client_cache['wheel'].low, args=(fun, kwargs))
+        return self.pool.fire_async(self.client_cache['wheel'].low, args=(fun, kwargs))
 
     def local(self, fun, tgt, **kwargs):
         '''

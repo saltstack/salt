@@ -138,29 +138,6 @@ class YamlLoaderTestCase(TestCase):
                   v2: beta
                   v2: betabeta'''))
 
-    def test_yaml_with_unicode_literals(self):
-        '''
-        Test proper loading of unicode literals
-        '''
-        self.assert_matches(
-            self.render_yaml(textwrap.dedent('''\
-                foo:
-                  a: Д
-                  b: {'a': u'\\u0414'}''')),
-            {'foo': {'a': u'\u0414', 'b': {'a': u'\u0414'}}}
-        )
-
-    def test_yaml_with_colon_in_inline_dict(self):
-        '''
-        Test proper loading of unicode literal strings in inline dicts
-        '''
-        self.assert_matches(
-            self.render_yaml(textwrap.dedent('''\
-                foo:
-                  b: {u'c': u'https://foo.com'}''')),
-            {'foo': {'b': {'c': 'https://foo.com'}}}
-        )
-
     def test_yaml_with_plain_scalars(self):
         '''
         Test that plain (i.e. unqoted) string and non-string scalars are

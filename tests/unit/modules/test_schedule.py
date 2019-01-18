@@ -8,8 +8,8 @@ from __future__ import absolute_import, print_function, unicode_literals
 import os
 
 # Import Salt Testing Libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.paths import TMP
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -22,7 +22,7 @@ from tests.support.mock import (
 import salt.modules.schedule as schedule
 from salt.utils.event import SaltEvent
 
-SOCK_DIR = os.path.join(TMP, 'test-socks')
+SOCK_DIR = os.path.join(RUNTIME_VARS.TMP, 'test-socks')
 
 JOB1 = {'function': 'test.ping', 'maxrunning': 1, 'name': 'job1',
         'jid_include': True, 'enabled': True}
@@ -95,6 +95,18 @@ class ScheduleTestCase(TestCase, LoaderModuleMockMixin):
                                  ('job1', function='test.ping', when='2400',
                                   cron='2'),
                                  {'comment': comment1, 'result': False})
+
+    # 'build_schedule_item_invalid_when' function tests: 1
+
+    def test_build_schedule_item_invalid_when(self):
+        '''
+        Test if it build a schedule job.
+        '''
+        comment = 'Schedule item garbage for "when" in invalid.'
+        with patch.dict(schedule.__opts__, {'job1': {}}):
+            self.assertDictEqual(schedule.build_schedule_item
+                                 ('job1', function='test.ping', when='garbage'),
+                                 {'comment': comment, 'result': False})
 
     # 'add' function tests: 1
 

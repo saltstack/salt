@@ -66,13 +66,14 @@ passed in as a dict, or as a string to pull from pillars or minion config:
 
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
+import logging
 import uuid
 
 # Import Salt Libs
-import salt.utils.dictupdate as dictupdate
-from salt.utils import exactly_one
 from salt.exceptions import SaltInvocationError
-import logging
+import salt.utils.data
+import salt.utils.dictupdate
+
 log = logging.getLogger(__name__)  # pylint: disable=W1699
 
 
@@ -81,60 +82,6 @@ def __virtual__():
     Only load if boto is available.
     '''
     return 'boto3_route53' if 'boto3_route53.find_hosted_zone' in __salt__ else False
-
-
-def _to_aws_encoding(instring):
-    '''
-    A partial implememtation of the `AWS domain encoding`__ rules. The punycode section is
-    ignored for now, so you'll have to input any unicode characters already punycoded.
-
-    .. __: http://docs.aws.amazon.com/Route53/latest/DeveloperGuide/DomainNameFormat.html
-
-    The only breakage is that we don't permit ASCII 92 ('backslash') in domain names, even though
-    AWS seems to allow it, becuase it's used to introduce octal escapes, and I can't think of a
-    good way to allow it while still parsing those escapes.  Imagine a domain name containing the
-    literal string '\134' - pathological to be sure, but allowed by AWS's rules.  If someone
-    dislikes this restriction, feel free to update this function to correctly handle such madness.
-
-    Oh, and the idea of allowing '.' (period) within a domain component (e.g. not as a separator,
-    but as part of a field) is as stupid it sounds, and is also not supported by these functions.
-    Again, if you can figure out a sensible way to make it work, more power too you.  If you
-    REALLY need this, just embed '\056' directly in your strings.  I can't promise it won't break
-    your DNS out in the real world though.
-    '''
-    instring = instring.lower()                                           # Always lowercase
-    send_as_is_get_the_same_back = list(range(97, 123))                   # a-z is 97-122 inclusive
-    send_as_is_get_the_same_back += [ord(n) for n in ['0', '1', '2', '3', '4', '5', '6', '7', '8',
-                                                      '9', '-', '_', '.']]
-    send_as_is_get_octal_back = [ord(n) for n in ['!', '"', '#', '$', '%', '&', "'", '(', ')', '*',
-                                                  '+', ',', '/', '\\', ':', ';', '<', '=', '>', '?',
-                                                  '@', '[', ']', '^', '`', '{', '|', '}']]
-    # Non-printable ASCII - AWS claims it's valid in DNS entries... YMMV
-    acceptable_points_which_must_be_octalized = list(range(0, 33))        # 0-32 inclusive
-    # "Extended ASCII" stuff
-    acceptable_points_which_must_be_octalized += list(range(127, 256))    # 127-255 inclusive
-    # ^^^ This, BTW, is incompatible with punycode as far as I can tell, since unicode only aligns
-    # with ASCII for the first 127 code-points...  Oh well.
-    outlist = []
-    for char in instring:
-        point = ord(char)
-        octal = '\\{:03o}'.format(point)
-        if point in send_as_is_get_the_same_back:
-            outlist += [char]
-        elif point in send_as_is_get_octal_back:
-            outlist += [char]
-        elif point in acceptable_points_which_must_be_octalized:
-            outlist += [octal]
-        else:
-            raise SaltInvocationError("Invalid Route53 domain character seen (octal {0}) in string "
-                                      "{1}.  Do you need to punycode it?".format(octal, instring))
-    ret = ''.join(outlist)
-    log.debug('Name after massaging is: %s', ret)
-    return ret
-
-
-def _from_aws_encoding(string):  # XXX TODO
-    pass
 
 
 def hosted_zone_present(name, Name=None, PrivateZone=False,
@@ -186,7 +133,6 @@ def hosted_zone_present(name, Name=None, PrivateZone=False,
             bound account, in which case you'll need to provide an explicit value for VPCRegion.
     '''
     Name = Name if Name else name
-    Name = _to_aws_encoding(Name)
 
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
@@ -198,7 +144,7 @@ def hosted_zone_present(name, Name=None, PrivateZone=False,
         if not isinstance(VPCs, list):
             raise SaltInvocationError("Parameter 'VPCs' must be a list of dicts.")
         for v in VPCs:
-            if not isinstance(v, dict) or not exactly_one((v.get('VPCId'), v.get('VPCName'))):
+            if not isinstance(v, dict) or not salt.utils.data.exactly_one((v.get('VPCId'), v.get('VPCName'))):
                 raise SaltInvocationError("Parameter 'VPCs' must be a list of dicts, each composed "
                                       "of either a 'VPCId' or a 'VPCName', and optionally a "
                                       "'VPCRegion', to help distinguish between multitple matches.")
@@ -306,7 +252,7 @@ def hosted_zone_present(name, Name=None, PrivateZone=False,
             log.info(msg)
             ret['comment'] = '  '.join([ret['comment'], msg])
             ret['changes']['old'] = zone
-            ret['changes']['new'] = dictupdate.update(ret['changes'].get('new', {}), r)
+            ret['changes']['new'] = salt.utils.dictupdate.update(ret['changes'].get('new', {}), r)
         else:
             ret['comment'] = 'Update of Route 53 {} hosted zone {} comment failed'.format('private'
                     if PrivateZone else 'public', Name)
@@ -369,7 +315,6 @@ def hosted_zone_absent(name, Name=None, PrivateZone=False,
 
     '''
     Name = Name if Name else name
-    Name = _to_aws_encoding(Name)
 
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
@@ -584,7 +529,6 @@ def rr_present(name, HostedZoneId=None, DomainName=None, PrivateZone=False, Name
         Dict, or pillar key pointing to a dict, containing AWS region/key/keyid.
     '''
     Name = Name if Name else name
-    Name = _to_aws_encoding(Name)
 
     if Type is None:
         raise SaltInvocationError("'Type' is a required parameter when adding or updating"
@@ -636,7 +580,7 @@ def rr_present(name, HostedZoneId=None, DomainName=None, PrivateZone=False, Name
                     res = getattr(instance, instance_attr, None)
                     if res:
                         log.debug('Found %s %s for instance %s', instance_attr, res, instance.id)
-                        fixed_rrs += [_to_aws_encoding(res)]
+                        fixed_rrs += [__salt__['boto3_route53.aws_encode'](res)]
                     else:
                         ret['comment'] = 'Attribute {} not found on instance {}'.format(instance_attr,
                                 instance.id)
@@ -690,7 +634,8 @@ def rr_present(name, HostedZoneId=None, DomainName=None, PrivateZone=False, Name
             if locals().get(u) != rrset.get(u):
                 update = True
                 break
-        if ResourceRecords != sorted(rrset.get('ResourceRecords'), key=lambda x: x['Value']):
+        if 'ResourceRecords' in rrset and ResourceRecords != sorted(rrset.get('ResourceRecords', {}),
+                key=lambda x: x['Value']):
             update = True
 
     if not create and not update:
@@ -711,7 +656,10 @@ def rr_present(name, HostedZoneId=None, DomainName=None, PrivateZone=False, Name
         if ResourceRecords:
             ResourceRecordSet['ResourceRecords'] = ResourceRecords
         for u in updatable:
-            ResourceRecordSet.update({u: locals().get(u)}) if locals().get(u) else None
+            if locals().get(u) or (locals().get(u) == 0):
+                ResourceRecordSet.update({u: locals().get(u)})
+            else:
+                log.debug('Not updating ResourceRecordSet with local value: %s', locals().get(u))
 
         ChangeBatch = {
             'Changes': [
@@ -786,7 +734,6 @@ def rr_absent(name, HostedZoneId=None, DomainName=None, PrivateZone=False,
         Dict, or pillar key pointing to a dict, containing AWS region/key/keyid.
     '''
     Name = Name if Name else name
-    Name = _to_aws_encoding(Name)
 
     if Type is None:
         raise SaltInvocationError("'Type' is a required parameter when deleting resource records.")

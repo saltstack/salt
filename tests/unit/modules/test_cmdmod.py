@@ -180,10 +180,12 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Tests return when runas user is not available
         '''
-        with patch('salt.modules.cmdmod._is_valid_shell', MagicMock(return_value=True)):
-            with patch('os.path.isfile', MagicMock(return_value=True)):
-                with patch('os.access', MagicMock(return_value=True)):
-                    self.assertRaises(CommandExecutionError, cmdmod._run, 'foo', 'bar', runas='baz')
+        mock_true = MagicMock(return_value=True)
+        with patch('salt.modules.cmdmod._is_valid_shell', mock_true), \
+                patch('os.path.isfile', mock_true), \
+                patch('os.access', mock_true):
+            self.assertRaises(CommandExecutionError,
+                              cmdmod._run, 'foo', 'bar', runas='baz')
 
     def test_run_zero_umask(self):
         '''
@@ -342,6 +344,20 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
         else:
             raise RuntimeError
 
+    def test_run_cwd_in_combination_with_runas(self):
+        '''
+        cmd.run executes command in the cwd directory
+        when the runas parameter is specified
+        '''
+        cmd = 'pwd'
+        cwd = '/tmp'
+        runas = 'foobar'
+
+        with patch('pwd.getpwnam') as getpwnam_mock, \
+                patch.dict(cmdmod.__grains__, {'os': 'Darwin', 'os_family': 'Solaris'}):
+            stdout = cmdmod._run(cmd, cwd=cwd, runas=runas).get('stdout')
+        self.assertEqual(stdout, cwd)
+
     def test_run_all_binary_replace(self):
         '''
         Test for failed decoding of binary data, for instance when doing
@@ -353,11 +369,19 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
         with salt.utils.files.fopen(rand_bytes_file, 'rb') as fp_:
             stdout_bytes = fp_.read()
 
+        # kitchen-salt uses unix2dos on all the files before copying them over
+        # to the vm that will be running the tests. It skips binary files though
+        # The file specified in `rand_bytes_file` is detected as binary so the
+        # Unix-style line ending remains. This should account for that.
+        stdout_bytes = stdout_bytes.rstrip() + os.linesep.encode()
+
         # stdout with the non-decodable bits replaced with the unicode
         # replacement character U+FFFD.
-        stdout_unicode = '\ufffd\x1b\ufffd\ufffd\n'
-        stderr_bytes = b'1+0 records in\n1+0 records out\n' \
-                       b'4 bytes copied, 9.1522e-05 s, 43.7 kB/s\n'
+        stdout_unicode = '\ufffd\x1b\ufffd\ufffd' + os.linesep
+        stderr_bytes = os.linesep.encode().join([
+            b'1+0 records in',
+            b'1+0 records out',
+            b'4 bytes copied, 9.1522e-05 s, 43.7 kB/s']) + os.linesep.encode()
         stderr_unicode = stderr_bytes.decode()
 
         proc = MagicMock(

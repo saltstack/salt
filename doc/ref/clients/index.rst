@@ -88,17 +88,23 @@ Salt Caller
 .. autoclass:: salt.client.Caller
     :members: cmd
 
+Salt Proxy Caller
+-----------------
+
+.. autoclass:: salt.client.ProxyCaller
+    :members: cmd
+
 RunnerClient
 ------------
 
 .. autoclass:: salt.runner.RunnerClient
-    :members: cmd, async, cmd_sync, cmd_async
+    :members: cmd, asynchronous, cmd_sync, cmd_async
 
 WheelClient
 -----------
 
 .. autoclass:: salt.wheel.WheelClient
-    :members: cmd, async, cmd_sync, cmd_async
+    :members: cmd, asynchronous, cmd_sync, cmd_async
 
 CloudClient
 -----------

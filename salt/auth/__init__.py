@@ -43,8 +43,12 @@ AUTH_INTERNAL_KEYWORDS = frozenset([
     'cmd',
     'eauth',
     'fun',
+    'gather_job_timeout',
     'kwarg',
-    'match'
+    'match',
+    'print_event',
+    'raw',
+    'yield_pub_data'
 ])
 
 
@@ -283,7 +287,7 @@ class LoadAuth(object):
             return False
 
         if load['eauth'] not in self.opts['external_auth']:
-            log.debug('The eauth system "%s" is not enabled', load['eauth'])
+            log.warning('The eauth system "%s" is not enabled', load['eauth'])
             log.warning('Authentication failure of type "eauth" occurred.')
             return False
 
@@ -668,18 +672,12 @@ class Resolver(object):
         self.auth = salt.loader.auth(opts)
 
     def _send_token_request(self, load):
-        if self.opts['transport'] in ('zeromq', 'tcp'):
-            master_uri = 'tcp://' + salt.utils.zeromq.ip_bracket(self.opts['interface']) + \
-                         ':' + six.text_type(self.opts['ret_port'])
-            channel = salt.transport.client.ReqChannel.factory(self.opts,
-                                                                crypt='clear',
-                                                                master_uri=master_uri)
-            return channel.send(load)
-
-        elif self.opts['transport'] == 'raet':
-            channel = salt.transport.client.ReqChannel.factory(self.opts)
-            channel.dst = (None, None, 'local_cmd')
-            return channel.send(load)
+        master_uri = 'tcp://' + salt.utils.zeromq.ip_bracket(self.opts['interface']) + \
+                     ':' + six.text_type(self.opts['ret_port'])
+        channel = salt.transport.client.ReqChannel.factory(self.opts,
+                                                           crypt='clear',
+                                                           master_uri=master_uri)
+        return channel.send(load)
 
     def cli(self, eauth):
         '''

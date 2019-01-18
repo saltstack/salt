@@ -79,7 +79,8 @@ Mine Interval
 
 The Salt Mine functions are executed when the Minion starts and at a given
 interval by the scheduler. The default interval is every 60 minutes and can
-be adjusted for the Minion via the ``mine_interval`` option:
+be adjusted for the Minion via the ``mine_interval`` option in the minion
+config:
 
 .. code-block:: yaml
 

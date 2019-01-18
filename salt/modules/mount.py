@@ -63,7 +63,9 @@ def _active_mountinfo(ret):
         msg = 'File not readable {0}'
         raise CommandExecutionError(msg.format(filename))
 
-    blkid_info = __salt__['disk.blkid']()
+    if 'disk.blkid' not in __context__:
+        __context__['disk.blkid'] = __salt__['disk.blkid']()
+    blkid_info = __context__['disk.blkid']
 
     with salt.utils.files.fopen(filename) as ifile:
         for line in ifile:
@@ -290,8 +292,10 @@ class _fstab_entry(object):
             raise cls.ParseError("Comment!")
 
         comps = line.split()
-        if len(comps) != 6:
+        if len(comps) < 4 or len(comps) > 6:
             raise cls.ParseError("Invalid Entry!")
+
+        comps.extend(['0'] * (len(keys) - len(comps)))
 
         return dict(zip(keys, comps))
 

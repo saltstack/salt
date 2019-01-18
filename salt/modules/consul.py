@@ -61,7 +61,7 @@ def _query(function,
     :param api_version  The Consul api version
     :param function:    The Consul api function to perform.
     :param method:      The HTTP method, e.g. GET or POST.
-    :param data:        The data to be sent for POST method.
+    :param data:        The data to be sent for POST method. This param is ignored for GET requests.
     :return:            The json response from the API call or False.
     '''
 
@@ -78,9 +78,12 @@ def _query(function,
     base_url = urllib.parse.urljoin(consul_url, '{0}/'.format(api_version))
     url = urllib.parse.urljoin(base_url, function, False)
 
-    if data is None:
-        data = {}
-    data = salt.utils.json.dumps(data)
+    if method == 'GET':
+        data = None
+    else:
+        if data is None:
+            data = {}
+        data = salt.utils.json.dumps(data)
 
     result = salt.utils.http.query(
         url,
@@ -214,10 +217,10 @@ def get(consul_url=None, key=None, token=None, recurse=False, decode=False, raw=
     if ret['res']:
         if decode:
             for item in ret['data']:
-                if item['Value'] != None:
-                    item['Value'] = base64.b64decode(item['Value'])
-                else:
+                if item['Value'] is None:
                     item['Value'] = ""
+                else:
+                    item['Value'] = base64.b64decode(item['Value'])
     return ret
 
 
@@ -2264,7 +2267,7 @@ def acl_info(consul_url=None, **kwargs):
     function = 'acl/info/{0}'.format(kwargs['id'])
     ret = _query(consul_url=consul_url,
                  data=data,
-                 method='PUT',
+                 method='GET',
                  function=function)
     return ret
 

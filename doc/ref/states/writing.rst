@@ -153,6 +153,9 @@ distributed manually to minions by running :mod:`saltutil.sync_states
 <salt.modules.saltutil.sync_all>`. Alternatively, when running a
 :ref:`highstate <running-highstate>` custom types will automatically be synced.
 
+NOTE: Writing state modules with hyphens in the filename will cause issues
+with !pyobjects routines.  Best practice to stick to underscores.
+
 Any custom states which have been synced to a minion, that are named the same
 as one of Salt's default set of states, will take the place of the default
 state with the same name. Note that a state module's name defaults to one based
@@ -190,7 +193,7 @@ functions available in other state modules.
 The variable ``__states__`` is packed into the modules after they are loaded into
 the Salt minion.
 
-The ``__states__`` variable is a :ref:`Python dictionary <typesmapping>`
+The ``__states__`` variable is a :ref:`Python dictionary <python:typesmapping>`
 containing all of the state modules. Dictionary keys are strings representing
 the names of the modules and the values are the functions themselves.
 
@@ -255,10 +258,6 @@ A State Module must return a dict containing the following keys/values:
   this is useful to allow multiple comments from subparts of a state.
   Prefer to keep line lengths short (use multiple lines as needed),
   and end with punctuation (e.g. a period) to delimit multiple comments.
-
-The return data can also, include the **pchanges** key, this stands for
-`predictive changes`. The **pchanges** key informs the State system what
-changes are predicted to occur.
 
 .. note::
 
@@ -445,7 +444,6 @@ Example state module
             'changes': {},
             'result': False,
             'comment': '',
-            'pchanges': {},
             }
 
         # Start with basic error-checking. Do all the passed parameters make sense
@@ -466,7 +464,7 @@ Example state module
         # in ``test=true`` mode.
         if __opts__['test'] == True:
             ret['comment'] = 'The state of "{0}" will be changed.'.format(name)
-            ret['pchanges'] = {
+            ret['changes'] = {
                 'old': current_state,
                 'new': 'Description, diff, whatever of the new state',
             }

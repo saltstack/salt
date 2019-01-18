@@ -135,17 +135,6 @@ provider, profile, or map blocks use ssh_port option.
     ssh_port: 2222
 
 
-SSH Port
-========
-
-By default ssh port is set to port 22. If you want to use a custom port in
-provider, profile, or map blocks use ssh_port option.
-
-.. code-block:: yaml
-
-    ssh_port: 2222
-
-
 Delete SSH Keys
 ===============
 When Salt Cloud deploys an instance, the SSH pub key for the instance is added

@@ -22,6 +22,7 @@ class TimedProc(object):
         self.stdin = kwargs.pop('stdin', None)
         self.with_communicate = kwargs.pop('with_communicate', self.wait)
         self.timeout = kwargs.pop('timeout', None)
+        self.stdin_raw_newlines = kwargs.pop('stdin_raw_newlines', False)
 
         # If you're not willing to wait for the process
         # you can't define any stdin, stdout or stderr
@@ -29,9 +30,10 @@ class TimedProc(object):
             self.stdin = kwargs['stdin'] = None
             self.with_communicate = False
         elif self.stdin is not None:
-            # Translate a newline submitted as '\n' on the CLI to an actual
-            # newline character.
-            self.stdin = self.stdin.replace('\\n', '\n').encode(__salt_system_encoding__)
+            if not self.stdin_raw_newlines:
+                # Translate a newline submitted as '\n' on the CLI to an actual
+                # newline character.
+                self.stdin = salt.utils.stringutils.to_bytes(self.stdin.replace('\\n', '\n'))
             kwargs['stdin'] = subprocess.PIPE
 
         if not self.with_communicate:
@@ -40,8 +42,8 @@ class TimedProc(object):
 
         if self.timeout and not isinstance(self.timeout, (int, float)):
             raise salt.exceptions.TimedProcTimeoutError('Error: timeout {0} must be a number'.format(self.timeout))
-        if six.PY2 and kwargs.get('shell', False):
-            args = salt.utils.stringutils.to_bytes(args)
+        if kwargs.get('shell', False):
+            args = salt.utils.data.decode(args, to_str=True)
 
         try:
             self.process = subprocess.Popen(args, **kwargs)

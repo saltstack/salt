@@ -392,7 +392,7 @@ def present(name,
 
     This state supports networks with either IPv4, or both IPv4 and IPv6. If
     configuring IPv4, then you can pass the :ref:`IPAM pool arguments
-    `<salt-states-docker-network-present-ipam-pool-arguments>` below as
+    <salt-states-docker-network-present-ipam-pool-arguments>` below as
     individual arguments. However, if configuring IPv4 and IPv6, the arguments
     must be passed as a list of dictionaries, in the ``ipam_pools`` argument
     (click :ref:`here <salt-states-docker-network-present-ipam-examples>` for
@@ -890,7 +890,7 @@ def present(name,
     return ret
 
 
-def absent(name, driver=None):
+def absent(name):
     '''
     Ensure that a network is absent.
 
@@ -908,12 +908,6 @@ def absent(name, driver=None):
            'changes': {},
            'result': False,
            'comment': ''}
-
-    if driver is not None:
-        ret.setdefault('warnings', []).append(
-            'The \'driver\' argument has no function and will be removed in '
-            'the Fluorine release.'
-        )
 
     try:
         network = __salt__['docker.inspect_network'](name)

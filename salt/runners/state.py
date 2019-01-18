@@ -10,6 +10,7 @@ import logging
 import salt.loader
 import salt.utils.event
 import salt.utils.functools
+import salt.utils.jid
 from salt.exceptions import SaltInvocationError
 
 LOGGER = logging.getLogger(__name__)
@@ -24,6 +25,7 @@ def pause(jid, state_id=None, duration=None):
     minion = salt.minion.MasterMinion(__opts__)
     minion.functions['state.pause'](jid, state_id, duration)
 
+
 set_pause = salt.utils.functools.alias_function(pause, 'set_pause')
 
 
@@ -33,6 +35,7 @@ def resume(jid, state_id=None):
     '''
     minion = salt.minion.MasterMinion(__opts__)
     minion.functions['state.resume'](jid, state_id)
+
 
 rm_pause = salt.utils.functools.alias_function(resume, 'rm_pause')
 
@@ -110,6 +113,8 @@ def orchestrate(mods,
         pillarenv = __opts__['pillarenv']
     if saltenv is None and 'saltenv' in __opts__:
         saltenv = __opts__['saltenv']
+    if orchestration_jid is None:
+        orchestration_jid = salt.utils.jid.gen_jid(__opts__)
 
     running = minion.functions['state.sls'](
             mods,
@@ -128,6 +133,7 @@ def orchestrate(mods,
     else:
         ret['retcode'] = 1
     return ret
+
 
 # Aliases for orchestrate runner
 orch = salt.utils.functools.alias_function(orchestrate, 'orch')
@@ -238,19 +244,22 @@ def orchestrate_show_sls(mods,
     ret = {minion.opts['id']: running}
     return ret
 
+
 orch_show_sls = salt.utils.functools.alias_function(orchestrate_show_sls, 'orch_show_sls')
 
 
 def event(tagmatch='*',
-        count=-1,
-        quiet=False,
-        sock_dir=None,
-        pretty=False,
-        node='master'):
+          count=-1,
+          quiet=False,
+          sock_dir=None,
+          pretty=False,
+          node='master'):
     r'''
     Watch Salt's event bus and block until the given tag is matched
 
     .. versionadded:: 2014.7.0
+    .. versionchanged:: 2019.2.0
+        ``tagmatch`` can now be either a glob or regular expression.
 
     This is useful for utilizing Salt's event bus from shell scripts or for
     taking simple actions directly from the CLI.
@@ -258,7 +267,7 @@ def event(tagmatch='*',
     Enable debug logging to see ignored events.
 
     :param tagmatch: the event is written to stdout for each tag that matches
-        this pattern; uses the same matching semantics as Salt's Reactor.
+        this glob or regular expression.
     :param count: this number is decremented for each event that matches the
         ``tagmatch`` parameter; pass ``-1`` to listen forever.
     :param quiet: do not print to stdout; just block
@@ -296,9 +305,9 @@ def event(tagmatch='*',
     statemod = salt.loader.raw_mod(__opts__, 'state', None)
 
     return statemod['state.event'](
-            tagmatch=tagmatch,
-            count=count,
-            quiet=quiet,
-            sock_dir=sock_dir,
-            pretty=pretty,
-            node=node)
+               tagmatch=tagmatch,
+               count=count,
+               quiet=quiet,
+               sock_dir=sock_dir,
+               pretty=pretty,
+               node=node)

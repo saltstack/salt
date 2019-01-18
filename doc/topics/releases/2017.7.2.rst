@@ -717,7 +717,7 @@ Changelog for v2017.7.1..v2017.7.2
 
     * 822eabcc81 Catch exceptions raised when making changes to jenkins
 
-    * 91b583b493 Improve and correct execption raising
+    * 91b583b493 Improve and correct exception raising
 
     * f096917a0e Raise an exception if we fail to cache the config xml
 

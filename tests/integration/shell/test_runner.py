@@ -10,16 +10,18 @@ import os
 import shutil
 
 # Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.integration.utils import testprogram
 from tests.support.case import ShellCase
-from tests.support.paths import TMP
 from tests.support.mixins import ShellCaseCommonTestsMixin
 from tests.support.helpers import skip_if_not_root
+from tests.support.unit import skipIf
 
 # Import Salt libs
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.yaml
+
 
 USERA = 'saltdev'
 USERA_PWD = 'saltdev'
@@ -90,9 +92,13 @@ class RunTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin)
         data = self.run_run('-d virt.list foo', catch_stderr=True)
         self.assertIn('You can only get documentation for one method at one time', '\n'.join(data[1]))
 
+    @skipIf(salt.utils.platform.is_windows(), 'Skip on Windows OS')
     def test_issue_7754(self):
+        '''
+        Skip on windows because syslog not available
+        '''
         old_cwd = os.getcwd()
-        config_dir = os.path.join(TMP, 'issue-7754')
+        config_dir = os.path.join(RUNTIME_VARS.TMP, 'issue-7754')
         if not os.path.isdir(config_dir):
             os.makedirs(config_dir)
 

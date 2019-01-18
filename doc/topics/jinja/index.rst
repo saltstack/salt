@@ -177,7 +177,7 @@ Saltstack extends `builtin filters`_ with these custom filters:
 
 Converts any time related object into a time based string. It requires valid
 strftime directives. An exhaustive list can be found :ref:`here
-<strftime-strptime-behavior>` in the Python documentation.
+<python:strftime-strptime-behavior>` in the Python documentation.
 
 .. code-block:: jinja
 
@@ -222,8 +222,8 @@ maps.
     {%- load_yaml as foo %}
     bar: {{ bar|yaml_encode }}
     baz: {{ baz|yaml_encode }}
-    baz: {{ zip|yaml_encode }}
-    baz: {{ zap|yaml_encode }}
+    zip: {{ zip|yaml_encode }}
+    zap: {{ zap|yaml_encode }}
     {%- endload %}
 
 In the above case ``{{ bar }}`` and ``{{ foo.bar }}`` should be
@@ -396,6 +396,29 @@ Returns:
 .. code-block:: text
 
   None
+
+
+.. jinja_ref:: regex_replace
+
+``regex_replace``
+-----------------
+
+.. versionadded:: 2017.7.0
+
+Searches for a pattern and replaces with a sequence of characters.
+
+Example:
+
+.. code-block:: jinja
+
+    {% set my_text = 'yes, this is a TEST' %}
+    {{ my_text | regex_replace(' ([a-z])', '__\\1', ignorecase=True) }}
+
+Returns:
+
+.. code-block:: text
+
+    yes,__this__is__a__TEST
 
 
 .. jinja_ref:: uuid
@@ -617,6 +640,56 @@ Returns:
 .. code-block:: text
 
   1, 4
+
+
+.. jinja_ref:: method_call
+
+``method_call``
+---------------
+
+.. versionadded:: Neon
+
+Returns a result of object's method call.
+
+Example #1:
+
+.. code-block:: jinja
+
+  {{ [1, 2, 1, 3, 4] | method_call('index', 1, 1, 3) }}
+
+Returns:
+
+.. code-block:: text
+
+  2
+
+This filter can be used with the `map filter`_ to apply object methods without
+using loop constructs or temporary variables.
+
+Example #2:
+
+.. code-block:: jinja
+
+  {% set host_list = ['web01.example.com', 'db01.example.com'] %}
+  {% set host_list_split = [] %}
+  {% for item in host_list %}
+    {% do host_list_split.append(item.split('.', 1)) %}
+  {% endfor %}
+  {{ host_list_split }}
+
+Example #3:
+
+.. code-block:: jinja
+
+  {{ host_list|map('method_call', 'split', '.', 1)|list }}
+
+Return of examples #2 and #3:
+
+.. code-block:: text
+
+  [[web01, example.com], [db01, example.com]]
+
+.. _`map filter`: http://jinja.pocoo.org/docs/2.10/templates/#map
 
 
 .. jinja_ref:: is_sorted
@@ -868,7 +941,7 @@ Example:
 .. note::
 
     This option may have adverse effects when using the default renderer,
-    ``yaml_jinja``. This is due to the fact that YAML requires proper handling
+    ``jinja|yaml``. This is due to the fact that YAML requires proper handling
     in regard to special characters. Please see the section on :ref:`YAML ASCII
     support <yaml_plain_ascii>` in the :ref:`YAML Idiosyncracies
     <yaml-idiosyncrasies>` documentation for more information.
@@ -886,7 +959,7 @@ Example:
     encoding (usually a ``unicode`` type). This filter was incorrectly-named
     when it was added. ``json_decode_list`` will be supported until the Neon
     release.
-.. deprecated:: 2018.3.3,Fluorine
+.. deprecated:: 2018.3.3,2019.2.0
     The :jinja_ref:`tojson` filter accomplishes what this filter was designed
     to do, making this filter redundant.
 
@@ -919,7 +992,7 @@ Returns:
     encoding (usually a ``unicode`` type). This filter was incorrectly-named
     when it was added. ``json_decode_dict`` will be supported until the Neon
     release.
-.. deprecated:: 2018.3.3,Fluorine
+.. deprecated:: 2018.3.3,2019.2.0
     The :jinja_ref:`tojson` filter accomplishes what this filter was designed
     to do, making this filter redundant.
 
@@ -946,7 +1019,7 @@ Returns:
 ``tojson``
 ----------
 
-.. versionadded:: 2018.3.3,Fluorine
+.. versionadded:: 2018.3.3,2019.2.0
 
 Dumps a data structure to JSON.
 
@@ -1182,8 +1255,52 @@ Returns:
 
   'default'
 
+
+.. jinja_ref:: json_query
+
+``json_query``
+--------------
+
+.. versionadded:: Neon
+
+A port of Ansible ``json_query`` Jinja filter to make queries against JSON data using `JMESPath language`_.
+Could be used to filter ``pillar`` data, ``yaml`` maps, and together with :jinja_ref:`http_query`.
+Depends on the `jmespath`_ Python module.
+
+Examples:
+
+.. code-block:: jinja
+
+  Example 1: {{ [1, 2, 3, 4, [5, 6]] | json_query('[]') }}
+
+  Example 2: {{
+  {"machines": [
+    {"name": "a", "state": "running"},
+    {"name": "b", "state": "stopped"},
+    {"name": "b", "state": "running"}
+  ]} | json_query("machines[?state=='running'].name") }}
+
+  Example 3: {{
+  {"services": [
+    {"name": "http", "host": "1.2.3.4", "port": 80},
+    {"name": "smtp", "host": "1.2.3.5", "port": 25},
+    {"name": "ssh",  "host": "1.2.3.6", "port": 22},
+  ]} | json_query("services[].port") }}
+
+Returns:
+
+.. code-block:: text
+
+  Example 1: [1, 2, 3, 4, 5, 6]
+
+  Example 2: ['a', 'b']
+
+  Example 3: [80, 25, 22]
+
 .. _`builtin filters`: http://jinja.pocoo.org/docs/templates/#builtin-filters
 .. _`timelib`: https://github.com/pediapress/timelib/
+.. _`JMESPath language`: http://jmespath.org/
+.. _`jmespath`: https://github.com/jmespath/jmespath.py
 
 Networking Filters
 ------------------
@@ -1419,11 +1536,11 @@ Example:
 
 .. note::
 
-    This option may have adverse effects when using the default renderer, ``yaml_jinja``.
-    This is due to the fact that YAML requires proper handling in regard to special
-    characters. Please see the section on :ref:`YAML ASCII support <yaml_plain_ascii>`
-    in the :ref:`YAML Idiosyncracies <yaml-idiosyncrasies>` documentation for more
-    information.
+    This option may have adverse effects when using the default renderer,
+    ``jinja|yaml``. This is due to the fact that YAML requires proper handling
+    in regard to special characters. Please see the section on :ref:`YAML ASCII
+    support <yaml_plain_ascii>` in the :ref:`YAML Idiosyncracies
+    <yaml-idiosyncrasies>` documentation for more information.
 
 .. jinja_ref:: dns_check
 
@@ -1434,6 +1551,9 @@ Example:
 
 Return the ip resolved by dns, but do not exit on failure, only raise an
 exception. Obeys system preference for IPv4/6 address resolution.
+
+This function tries to connect to the address/port before considering it
+valid and therefor requires a port to test. The default port tested is 80.
 
 Example:
 
@@ -1449,6 +1569,15 @@ Returns:
 
 File filters
 ------------
+
+.. jinja_ref:: connection_check
+
+``connection_check``
+--------------------
+
+.. versionadded:: Neon
+
+Return the IP resolved by DNS. This is an alias of ``dns_check``.
 
 .. jinja_ref:: is_text_file
 

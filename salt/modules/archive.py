@@ -700,7 +700,7 @@ def cmd_zip(zip_file, sources, template=None, cwd=None, runas=None):
 
 
 @salt.utils.decorators.depends('zipfile', fallback_function=cmd_zip)
-def zip_(zip_file, sources, template=None, cwd=None, runas=None):
+def zip_(zip_file, sources, template=None, cwd=None, runas=None, zip64=False):
     '''
     Uses the ``zipfile`` Python module to create zip files
 
@@ -745,6 +745,14 @@ def zip_(zip_file, sources, template=None, cwd=None, runas=None):
         Create the zip file as the specified user. Defaults to the user under
         which the minion is running.
 
+    zip64 : False
+        Used to enable ZIP64 support, necessary to create archives larger than
+        4 GByte in size.
+        If true, will create ZIP file with the ZIPp64 extension when the zipfile
+        is larger than 2 GB.
+        ZIP64 extension is disabled by default in the Python native zip support
+        because the default zip and unzip commands on Unix (the InfoZIP utilities)
+        don't support these extensions.
 
     CLI Example:
 
@@ -789,7 +797,7 @@ def zip_(zip_file, sources, template=None, cwd=None, runas=None):
     try:
         exc = None
         archived_files = []
-        with contextlib.closing(zipfile.ZipFile(zip_file, 'w', zipfile.ZIP_DEFLATED)) as zfile:
+        with contextlib.closing(zipfile.ZipFile(zip_file, 'w', zipfile.ZIP_DEFLATED, zip64)) as zfile:
             for src in sources:
                 if cwd:
                     src = os.path.join(cwd, src)
@@ -829,9 +837,15 @@ def zip_(zip_file, sources, template=None, cwd=None, runas=None):
         if exc is not None:
             # Wait to raise the exception until euid/egid are restored to avoid
             # permission errors in writing to minion log.
-            raise CommandExecutionError(
-                'Exception encountered creating zipfile: {0}'.format(exc)
-            )
+            if exc == zipfile.LargeZipFile:
+                raise CommandExecutionError(
+                    'Resulting zip file too large, would require ZIP64 support'
+                    'which has not been enabled. Rerun command with zip64=True'
+                )
+            else:
+                raise CommandExecutionError(
+                    'Exception encountered creating zipfile: {0}'.format(exc)
+                )
 
     return archived_files
 
@@ -875,7 +889,7 @@ def cmd_unzip(zip_file,
 
     options
         Optional when using ``zip`` archives, ignored when usign other archives
-        files. This is mostly used to overwrite exsiting files with ``o``.
+        files. This is mostly used to overwrite existing files with ``o``.
         This options are only used when ``unzip`` binary is used.
 
         .. versionadded:: 2016.3.1
@@ -922,7 +936,7 @@ def cmd_unzip(zip_file,
     if password:
         cmd.extend(['-P', password])
     if options:
-        cmd.append('{0}'.format(options))
+        cmd.extend(shlex.split(options))
     cmd.extend(['{0}'.format(zip_file), '-d', '{0}'.format(dest)])
 
     if excludes is not None:

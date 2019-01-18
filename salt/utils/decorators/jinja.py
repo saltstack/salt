@@ -5,7 +5,8 @@ Jinja-specific decorators
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
-import logging
+# Ensure we're using the custom logging from Salt
+import salt.log.setup as logging
 
 log = logging.getLogger(__name__)
 

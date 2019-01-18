@@ -5,6 +5,15 @@ A REST API for Salt
 
 .. py:currentmodule:: salt.netapi.rest_cherrypy.app
 
+.. note::
+
+    This module is Experimental on Windows platforms, and supports limited
+    configurations:
+
+    - doesn't support PAM authentication (i.e. external_auth: auto)
+    - doesn't support SSL (i.e. disable_ssl: True)
+
+
 :depends:
     - CherryPy Python module.
 
@@ -68,12 +77,12 @@ A REST API for Salt
     debug : ``False``
         Starts the web server in development mode. It will reload itself when
         the underlying code is changed and will output more debugging info.
-    log_access_file
+    log.access_file
         Path to a file to write HTTP access logs.
 
         .. versionadded:: 2016.11.0
 
-    log_error_file
+    log.error_file
         Path to a file to write HTTP error logs.
 
         .. versionadded:: 2016.11.0
@@ -135,7 +144,7 @@ A REST API for Salt
         This is useful for bootstrapping a single-page JavaScript app.
 
         Warning! If you set this option to a custom web application, anything
-        that uses cookie-based authentcation is vulnerable to XSRF attacks.
+        that uses cookie-based authentication is vulnerable to XSRF attacks.
         Send the custom ``X-Auth-Token`` header instead and consider disabling
         the ``enable_sessions`` setting.
 
@@ -174,7 +183,7 @@ cookie. The latter is far more convenient for clients that support cookies.
           -H 'Accept: application/x-yaml' \\
           -d username=saltdev \\
           -d password=saltdev \\
-          -d eauth=auto
+          -d eauth=pam
 
   Copy the ``token`` value from the output and include it in subsequent requests:
 
@@ -1174,6 +1183,13 @@ class LowDataAdapter(object):
                 except (TypeError, ValueError):
                     raise cherrypy.HTTPError(401, 'Invalid token')
 
+            if 'token' in chunk:
+                # Make sure that auth token is hex
+                try:
+                    int(chunk['token'], 16)
+                except (TypeError, ValueError):
+                    raise cherrypy.HTTPError(401, 'Invalid token')
+
             if client:
                 chunk['client'] = client
 
@@ -1715,16 +1731,21 @@ class Keys(LowDataAdapter):
         priv_key_file = tarfile.TarInfo('minion.pem')
         priv_key_file.size = len(priv_key)
 
-        fileobj = six.StringIO()
+        fileobj = BytesIO()
         tarball = tarfile.open(fileobj=fileobj, mode='w')
-        tarball.addfile(pub_key_file, six.StringIO(pub_key))
-        tarball.addfile(priv_key_file, six.StringIO(priv_key))
+
+        if six.PY3:
+            pub_key = pub_key.encode(__salt_system_encoding__)
+            priv_key = priv_key.encode(__salt_system_encoding__)
+
+        tarball.addfile(pub_key_file, BytesIO(pub_key))
+        tarball.addfile(priv_key_file, BytesIO(priv_key))
         tarball.close()
 
         headers = cherrypy.response.headers
         headers['Content-Disposition'] = 'attachment; filename="saltkeys-{0}.tar"'.format(lowstate[0]['id_'])
         headers['Content-Type'] = 'application/x-tar'
-        headers['Content-Length'] = fileobj.len
+        headers['Content-Length'] = len(fileobj.getvalue())
         headers['Cache-Control'] = 'no-cache'
 
         fileobj.seek(0)

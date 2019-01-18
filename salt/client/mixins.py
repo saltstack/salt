@@ -28,7 +28,7 @@ import salt.utils.process
 import salt.utils.state
 import salt.utils.user
 import salt.utils.versions
-import salt.transport
+import salt.transport.client
 import salt.log.setup
 from salt.ext import six
 
@@ -49,7 +49,9 @@ CLIENT_INTERNAL_KEYWORDS = frozenset([
     '__tag__',
     '__user__',
     'username',
-    'password'
+    'password',
+    'full_return',
+    'print_event'
 ])
 
 
@@ -134,10 +136,13 @@ class SyncClientMixin(object):
         '''
         load = kwargs
         load['cmd'] = self.client
-        channel = salt.transport.Channel.factory(self.opts,
-                                                 crypt='clear',
-                                                 usage='master_call')
-        ret = channel.send(load)
+        channel = salt.transport.client.ReqChannel.factory(self.opts,
+                                                           crypt='clear',
+                                                           usage='master_call')
+        try:
+            ret = channel.send(load)
+        finally:
+            channel.close()
         if isinstance(ret, collections.Mapping):
             if 'error' in ret:
                 salt.utils.error.raise_error(**ret['error'])
@@ -243,23 +248,6 @@ class SyncClientMixin(object):
             self._mminion = salt.minion.MasterMinion(self.opts, states=False, rend=False)
         return self._mminion
 
-    def low(self, fun, low, print_event=True, full_return=False):
-        '''
-        Check for deprecated usage and allow until Salt Fluorine.
-        '''
-        msg = []
-        if 'args' in low:
-            msg.append('call with arg instead')
-            low['arg'] = low.pop('args')
-        if 'kwargs' in low:
-            msg.append('call with kwarg instead')
-            low['kwarg'] = low.pop('kwargs')
-
-        if msg:
-            salt.utils.versions.warn_until('Fluorine', ' '.join(msg))
-
-        return self._low(fun, low, print_event=print_event, full_return=full_return)
-
     @property
     def store_job(self):
         '''
@@ -282,7 +270,7 @@ class SyncClientMixin(object):
             # just return True.
             return True
 
-    def _low(self, fun, low, print_event=True, full_return=False):
+    def low(self, fun, low, print_event=True, full_return=False):
         '''
         Execute a function from low data
         Low data includes:
@@ -384,7 +372,11 @@ class SyncClientMixin(object):
 
             # Initialize a context for executing the method.
             with tornado.stack_context.StackContext(self.functions.context_dict.clone):
-                data['return'] = self.functions[fun](*args, **kwargs)
+                func = self.functions[fun]
+                try:
+                    data['return'] = func(*args, **kwargs)
+                except TypeError as exc:
+                    data['return'] = '\nPassed invalid arguments: {0}\n\nUsage:\n{1}'.format(exc, func.__doc__)
                 try:
                     data['success'] = self.context.get('retcode', 0) == 0
                 except AttributeError:

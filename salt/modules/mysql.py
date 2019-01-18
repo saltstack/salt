@@ -35,7 +35,6 @@ Module to provide MySQL compatibility to salt.
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
-import hashlib
 import time
 import logging
 import re
@@ -52,13 +51,14 @@ import salt.utils.stringutils
 from salt.ext import six
 # pylint: disable=import-error
 from salt.ext.six.moves import range, zip  # pylint: disable=no-name-in-module,redefined-builtin
+
 try:
-    # Try to import MySQLdb
+    # Trying to import MySQLdb
     import MySQLdb
     import MySQLdb.cursors
     import MySQLdb.converters
     from MySQLdb.constants import FIELD_TYPE, FLAG
-    HAS_MYSQLDB = True
+    from MySQLdb.connections import OperationalError
 except ImportError:
     try:
         # MySQLdb import failed, try to import PyMySQL
@@ -68,10 +68,9 @@ except ImportError:
         import MySQLdb.cursors
         import MySQLdb.converters
         from MySQLdb.constants import FIELD_TYPE, FLAG
-        HAS_MYSQLDB = True
+        from MySQLdb.err import OperationalError
     except ImportError:
-        # No MySQL Connector installed, return False
-        HAS_MYSQLDB = False
+        MySQLdb = None
 
 log = logging.getLogger(__name__)
 
@@ -196,17 +195,9 @@ And theses could be mixed, in a like query value with args: 'f\_o\%%o`b\'a"r'
 
 def __virtual__():
     '''
-    Only load this module if the mysql libraries exist
+    Confirm that a python mysql client is installed.
     '''
-    if HAS_MYSQLDB:
-        return True
-    return (False, 'The mysql execution module cannot be loaded: neither MySQLdb nor PyMySQL is available.')
-
-
-def __mysql_hash_password(password):
-    _password = hashlib.sha1(password).digest()
-    _password = '*{0}'.format(hashlib.sha1(_password).hexdigest().upper())
-    return _password
+    return bool(MySQLdb), 'No python mysql client installed.' if MySQLdb is None else ''
 
 
 def __check_table(name, table, **connection_args):
@@ -338,8 +329,8 @@ def _connect(**kwargs):
         connargs.pop('passwd')
     try:
         dbc = MySQLdb.connect(**connargs)
-    except MySQLdb.OperationalError as exc:
-        err = 'MySQL Error {0}: {1}'.format(*exc)
+    except OperationalError as exc:
+        err = 'MySQL Error {0}: {1}'.format(*exc.args)
         __context__['mysql.error'] = err
         log.error(err)
         return None
@@ -654,8 +645,8 @@ def query(database, query, **connection_args):
     log.debug('Using db: %s to run query %s', database, query)
     try:
         affected = _execute(cur, query)
-    except MySQLdb.OperationalError as exc:
-        err = 'MySQL Error {0}: {1}'.format(*exc)
+    except OperationalError as exc:
+        err = 'MySQL Error {0}: {1}'.format(*exc.args)
         __context__['mysql.error'] = err
         log.error(err)
         return False
@@ -779,8 +770,8 @@ def status(**connection_args):
     qry = 'SHOW STATUS'
     try:
         _execute(cur, qry)
-    except MySQLdb.OperationalError as exc:
-        err = 'MySQL Error {0}: {1}'.format(*exc)
+    except OperationalError as exc:
+        err = 'MySQL Error {0}: {1}'.format(*exc.args)
         __context__['mysql.error'] = err
         log.error(err)
         return {}
@@ -811,7 +802,7 @@ def version(**connection_args):
     try:
         _execute(cur, qry)
     except MySQLdb.OperationalError as exc:
-        err = 'MySQL Error {0}: {1}'.format(*exc)
+        err = 'MySQL Error {0}: {1}'.format(*exc.args)
         __context__['mysql.error'] = err
         log.error(err)
         return ''
@@ -844,7 +835,7 @@ def slave_lag(**connection_args):
     try:
         _execute(cur, qry)
     except MySQLdb.OperationalError as exc:
-        err = 'MySQL Error {0}: {1}'.format(*exc)
+        err = 'MySQL Error {0}: {1}'.format(*exc.args)
         __context__['mysql.error'] = err
         log.error(err)
         return -3
@@ -929,7 +920,7 @@ def db_list(**connection_args):
     try:
         _execute(cur, qry)
     except MySQLdb.OperationalError as exc:
-        err = 'MySQL Error {0}: {1}'.format(*exc)
+        err = 'MySQL Error {0}: {1}'.format(*exc.args)
         __context__['mysql.error'] = err
         log.error(err)
         return []
@@ -1018,7 +1009,7 @@ def db_tables(name, **connection_args):
     try:
         _execute(cur, qry)
     except MySQLdb.OperationalError as exc:
-        err = 'MySQL Error {0}: {1}'.format(*exc)
+        err = 'MySQL Error {0}: {1}'.format(*exc.args)
         __context__['mysql.error'] = err
         log.error(err)
         return []
@@ -1053,7 +1044,7 @@ def db_exists(name, **connection_args):
     try:
         _execute(cur, qry, args)
     except MySQLdb.OperationalError as exc:
-        err = 'MySQL Error {0}: {1}'.format(*exc)
+        err = 'MySQL Error {0}: {1}'.format(*exc.args)
         __context__['mysql.error'] = err
         log.error(err)
         return False
@@ -1108,7 +1099,7 @@ def db_create(name, character_set=None, collate=None, **connection_args):
             log.info('DB \'%s\' created', name)
             return True
     except MySQLdb.OperationalError as exc:
-        err = 'MySQL Error {0}: {1}'.format(*exc)
+        err = 'MySQL Error {0}: {1}'.format(*exc.args)
         __context__['mysql.error'] = err
         log.error(err)
     return False
@@ -1144,7 +1135,7 @@ def db_remove(name, **connection_args):
     try:
         _execute(cur, qry)
     except MySQLdb.OperationalError as exc:
-        err = 'MySQL Error {0}: {1}'.format(*exc)
+        err = 'MySQL Error {0}: {1}'.format(*exc.args)
         __context__['mysql.error'] = err
         log.error(err)
         return False
@@ -1176,7 +1167,7 @@ def user_list(**connection_args):
         qry = 'SELECT User,Host FROM mysql.user'
         _execute(cur, qry)
     except MySQLdb.OperationalError as exc:
-        err = 'MySQL Error {0}: {1}'.format(*exc)
+        err = 'MySQL Error {0}: {1}'.format(*exc.args)
         __context__['mysql.error'] = err
         log.error(err)
         return []
@@ -1210,6 +1201,7 @@ def user_exists(user,
         salt '*' mysql.user_exists 'username' passwordless=True
         salt '*' mysql.user_exists 'username' password_column='authentication_string'
     '''
+    run_verify = False
     server_version = version(**connection_args)
     dbc = _connect(**connection_args)
     # Did we fail to connect with the user we are checking
@@ -1243,21 +1235,22 @@ def user_exists(user,
             qry += ' AND ' + password_column + ' = \'\''
     elif password:
         if salt.utils.versions.version_cmp(server_version, '8.0.11') >= 0:
-            # Hash the password before comparing
-            _password = __mysql_hash_password(password)
-            qry += ' AND ' + password_column + ' = %(password)s'
+            run_verify = True
         else:
             _password = password
             qry += ' AND ' + password_column + ' = PASSWORD(%(password)s)'
-        args['password'] = six.text_type(_password)
+            args['password'] = six.text_type(_password)
     elif password_hash:
         qry += ' AND ' + password_column + ' = %(password)s'
         args['password'] = password_hash
 
+    if run_verify:
+        if not verify_login(user, password, **connection_args):
+            return False
     try:
         _execute(cur, qry, args)
     except MySQLdb.OperationalError as exc:
-        err = 'MySQL Error {0}: {1}'.format(*exc)
+        err = 'MySQL Error {0}: {1}'.format(*exc.args)
         __context__['mysql.error'] = err
         log.error(err)
         return False
@@ -1289,7 +1282,7 @@ def user_info(user, host='localhost', **connection_args):
     try:
         _execute(cur, qry, args)
     except MySQLdb.OperationalError as exc:
-        err = 'MySQL Error {0}: {1}'.format(*exc)
+        err = 'MySQL Error {0}: {1}'.format(*exc.args)
         __context__['mysql.error'] = err
         log.error(err)
         return False
@@ -1389,7 +1382,7 @@ def user_create(user,
     try:
         _execute(cur, qry, args)
     except MySQLdb.OperationalError as exc:
-        err = 'MySQL Error {0}: {1}'.format(*exc)
+        err = 'MySQL Error {0}: {1}'.format(*exc.args)
         __context__['mysql.error'] = err
         log.error(err)
         return False
@@ -1477,29 +1470,39 @@ def user_chpass(user,
         password_column = __password_column(**connection_args)
 
     cur = dbc.cursor()
-    qry = ('UPDATE mysql.user SET ' + password_column + '='
-           + password_sql +
-           ' WHERE User=%(user)s AND Host = %(host)s;')
-    args['user'] = user
-    args['host'] = host
+    if salt.utils.versions.version_cmp(server_version, '8.0.11') >= 0:
+        qry = ("ALTER USER '" + user + "'@'" + host + "'"
+               " IDENTIFIED BY '" + password + "';")
+        args = {}
+    else:
+        qry = ('UPDATE mysql.user SET ' + password_column + '='
+               + password_sql +
+               ' WHERE User=%(user)s AND Host = %(host)s;')
+        args['user'] = user
+        args['host'] = host
     if salt.utils.data.is_true(allow_passwordless) and \
             salt.utils.data.is_true(unix_socket):
         if host == 'localhost':
-            qry = ('UPDATE mysql.user SET ' + password_column + '='
-                   + password_sql + ', plugin=%(unix_socket)s' +
-                   ' WHERE User=%(user)s AND Host = %(host)s;')
-            args['unix_socket'] = 'unix_socket'
+            if salt.utils.versions.version_cmp(server_version, '8.0.11') >= 0:
+                qry = ("ALTER USER '" + user + "'@'" + host + "'"
+                       " IDENTIFIED BY '" + password + "';")
+                args = {}
+            else:
+                qry = ('UPDATE mysql.user SET ' + password_column + '='
+                       + password_sql + ', plugin=%(unix_socket)s' +
+                       ' WHERE User=%(user)s AND Host = %(host)s;')
+                args['unix_socket'] = 'unix_socket'
         else:
             log.error('Auth via unix_socket can be set only for host=localhost')
     try:
         result = _execute(cur, qry, args)
     except MySQLdb.OperationalError as exc:
-        err = 'MySQL Error {0}: {1}'.format(*exc)
+        err = 'MySQL Error {0}: {1}'.format(*exc.args)
         __context__['mysql.error'] = err
         log.error(err)
         return False
 
-    if result:
+    if salt.utils.versions.version_cmp(server_version, '8.0.11') >= 0:
         _execute(cur, 'FLUSH PRIVILEGES;')
         log.info(
             'Password for user \'%s\'@\'%s\' has been %s',
@@ -1507,6 +1510,15 @@ def user_chpass(user,
                 'changed' if any((password, password_hash)) else 'cleared'
         )
         return True
+    else:
+        if result:
+            _execute(cur, 'FLUSH PRIVILEGES;')
+            log.info(
+                'Password for user \'%s\'@\'%s\' has been %s',
+                    user, host,
+                    'changed' if any((password, password_hash)) else 'cleared'
+            )
+            return True
 
     log.info(
         'Password for user \'%s\'@\'%s\' was not %s',
@@ -1540,7 +1552,7 @@ def user_remove(user,
     try:
         _execute(cur, qry, args)
     except MySQLdb.OperationalError as exc:
-        err = 'MySQL Error {0}: {1}'.format(*exc)
+        err = 'MySQL Error {0}: {1}'.format(*exc.args)
         __context__['mysql.error'] = err
         log.error(err)
         return False
@@ -1758,13 +1770,13 @@ def user_grants(user,
     try:
         _execute(cur, qry, args)
     except MySQLdb.OperationalError as exc:
-        err = 'MySQL Error {0}: {1}'.format(*exc)
+        err = 'MySQL Error {0}: {1}'.format(*exc.args)
         __context__['mysql.error'] = err
         log.error(err)
         return False
 
     ret = []
-    results = cur.fetchall()
+    results = salt.utils.data.decode(cur.fetchall())
     for grant in results:
         tmp = grant[0].split(' IDENTIFIED BY')[0]
         if 'WITH GRANT OPTION' in grant[0] and 'WITH GRANT OPTION' not in tmp:
@@ -1872,7 +1884,7 @@ def grant_add(grant,
     try:
         _execute(cur, qry['qry'], qry['args'])
     except (MySQLdb.OperationalError, MySQLdb.ProgrammingError) as exc:
-        err = 'MySQL Error {0}: {1}'.format(*exc)
+        err = 'MySQL Error {0}: {1}'.format(*exc.args)
         __context__['mysql.error'] = err
         log.error(err)
         return False
@@ -1946,7 +1958,7 @@ def grant_revoke(grant,
     try:
         _execute(cur, qry, args)
     except MySQLdb.OperationalError as exc:
-        err = 'MySQL Error {0}: {1}'.format(*exc)
+        err = 'MySQL Error {0}: {1}'.format(*exc.args)
         __context__['mysql.error'] = err
         log.error(err)
         return False
@@ -1975,17 +1987,20 @@ def processlist(**connection_args):
     "SHOW FULL PROCESSLIST".
 
     Returns: a list of dicts, with each dict representing a process:
+
+    .. code-block:: python
+
         {'Command': 'Query',
-                          'Host': 'localhost',
-                          'Id': 39,
-                          'Info': 'SHOW FULL PROCESSLIST',
-                          'Rows_examined': 0,
-                          'Rows_read': 1,
-                          'Rows_sent': 0,
-                          'State': None,
-                          'Time': 0,
-                          'User': 'root',
-                          'db': 'mysql'}
+        'Host': 'localhost',
+        'Id': 39,
+        'Info': 'SHOW FULL PROCESSLIST',
+        'Rows_examined': 0,
+        'Rows_read': 1,
+        'Rows_sent': 0,
+        'State': None,
+        'Time': 0,
+        'User': 'root',
+        'db': 'mysql'}
 
     CLI Example:
 
@@ -2216,3 +2231,28 @@ def showglobal(**connection_args):
 
     log.debug('%s-->%s', mod, len(rtnv[0]))
     return rtnv
+
+
+def verify_login(user, password=None, **connection_args):
+    '''
+    Attempt to login using the provided credentials.
+    If successful, return true.  Otherwise, return False.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' mysql.verify_login root password
+    '''
+    # Override the connection args for username and password
+    connection_args['connection_user'] = user
+    connection_args['connection_pass'] = password
+
+    dbc = _connect(**connection_args)
+    if dbc is None:
+        # Clear the mysql.error if unable to connect
+        # if the connection fails, we simply return False
+        if 'mysql.error' in __context__:
+            del __context__['mysql.error']
+        return False
+    return True

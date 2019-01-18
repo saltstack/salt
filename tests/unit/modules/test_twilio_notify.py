@@ -22,7 +22,9 @@ import salt.modules.twilio_notify as twilio_notify
 HAS_LIBS = False
 try:
     import twilio
-    if twilio.__version__ > 5:
+    # Grab version, ensure elements are ints
+    twilio_version = tuple([int(x) for x in twilio.__version_info__])
+    if twilio_version > (5, ):
         TWILIO_5 = False
     else:
         TWILIO_5 = True

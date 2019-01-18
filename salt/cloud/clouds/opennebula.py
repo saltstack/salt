@@ -1142,7 +1142,6 @@ def create(vm_):
                 # if IPv6 is used try this as last resort
                 # OpenNebula does not yet show ULA address here so take global
                 private_ip = data['template']['nic']['ip6_global']
-
             vm_['ssh_host'] = private_ip
 
     ssh_username = config.get_cloud_config_value(
@@ -2369,6 +2368,9 @@ def template_clone(call=None, kwargs=None):
     template_name
         The name of the template to be cloned. Can be used instead of ``template_id``.
 
+    clone_images
+        Optional, defaults to False. Indicates if the images attached to the template should be cloned as well.
+
     CLI Example:
 
     .. code-block:: bash
@@ -2387,6 +2389,7 @@ def template_clone(call=None, kwargs=None):
     name = kwargs.get('name', None)
     template_id = kwargs.get('template_id', None)
     template_name = kwargs.get('template_name', None)
+    clone_images = kwargs.get('clone_images', False)
 
     if name is None:
         raise SaltCloudSystemExit(
@@ -2410,7 +2413,7 @@ def template_clone(call=None, kwargs=None):
     server, user, password = _get_xml_rpc()
     auth = ':'.join([user, password])
 
-    response = server.one.template.clone(auth, int(template_id), name)
+    response = server.one.template.clone(auth, int(template_id), name, clone_images)
 
     data = {
         'action': 'template.clone',

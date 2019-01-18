@@ -44,7 +44,10 @@ class GPGTestCase(TestCase, LoaderModuleMockMixin):
         '''
         key_dir = '/etc/salt/gpgkeys'
         secret = 'Use more salt.'
-        crypted = '!@#$%^&*()_+'
+        crypted = '-----BEGIN PGP MESSAGE-----!@#$%^&*()_+-----END PGP MESSAGE-----'
+
+        multisecret = 'password is {0} and salt is {0}'.format(secret)
+        multicrypted = 'password is {0} and salt is {0}'.format(crypted)
 
         class GPGDecrypt(object):
             def communicate(self, *args, **kwargs):
@@ -57,17 +60,20 @@ class GPGTestCase(TestCase, LoaderModuleMockMixin):
         with patch('salt.renderers.gpg._get_key_dir', MagicMock(return_value=key_dir)), \
                 patch('salt.utils.path.which', MagicMock()):
             with patch('salt.renderers.gpg.Popen', MagicMock(return_value=GPGDecrypt())):
-                self.assertEqual(gpg._decrypt_ciphertext(crypted), secret)
+                self.assertEqual(gpg._decrypt_ciphertexts(crypted), secret)
+                self.assertEqual(
+                    gpg._decrypt_ciphertexts(multicrypted), multisecret)
             with patch('salt.renderers.gpg.Popen', MagicMock(return_value=GPGNotDecrypt())):
-                self.assertEqual(gpg._decrypt_ciphertext(crypted), crypted)
+                self.assertEqual(gpg._decrypt_ciphertexts(crypted), crypted)
+                self.assertEqual(
+                    gpg._decrypt_ciphertexts(multicrypted), multicrypted)
 
     def test__decrypt_object(self):
         '''
         test _decrypt_object
         '''
-
         secret = 'Use more salt.'
-        crypted = '-----BEGIN PGP MESSAGE-----!@#$%^&*()_+'
+        crypted = '-----BEGIN PGP MESSAGE-----!@#$%^&*()_+-----END PGP MESSAGE-----'
 
         secret_map = {'secret': secret}
         crypted_map = {'secret': crypted}
@@ -86,7 +92,6 @@ class GPGTestCase(TestCase, LoaderModuleMockMixin):
         '''
         test render
         '''
-
         key_dir = '/etc/salt/gpgkeys'
         secret = 'Use more salt.'
         crypted = '-----BEGIN PGP MESSAGE-----!@#$%^&*()_+'

@@ -19,11 +19,12 @@ msgpack-python==0.4.8
 pyasn1==0.4.2
 pycparser==2.18
 pycrypto==2.6.1
+pyobjc==4.2.2
 python-dateutil==2.6.1
 python-gnupg==0.4.1
 PyYAML==3.12
 pyzmq==17.0.0
-requests==2.18.4
+requests==2.21.0
 singledispatch==3.4.0.3
 six==1.11.0
 smmap==0.9.0

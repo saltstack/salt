@@ -11,6 +11,7 @@ import os
 import sys
 import time
 import warnings
+import collections
 
 TESTS_DIR = os.path.dirname(os.path.normpath(os.path.abspath(__file__)))
 if os.name == 'nt':
@@ -97,7 +98,7 @@ MAX_OPEN_FILES = {
 
 # Combine info from command line options and test suite directories.  A test
 # suite is a python package of test modules relative to the tests directory.
-TEST_SUITES = {
+TEST_SUITES_UNORDERED = {
     'unit':
        {'display_name': 'Unit',
         'path': 'unit'},
@@ -160,7 +161,7 @@ TEST_SUITES = {
         'path': 'integration/netapi'},
     'cloud_provider':
        {'display_name': 'Cloud Provider',
-        'path': 'integration/cloud/providers'},
+        'path': 'integration/cloud/clouds'},
     'minion':
         {'display_name': 'Minion',
          'path': 'integration/minion'},
@@ -179,7 +180,16 @@ TEST_SUITES = {
     'scheduler':
         {'display_name': 'Scheduler',
          'path': 'integration/scheduler'},
+    'sdb':
+        {'display_name': 'Sdb',
+         'path': 'integration/sdb'},
+    'logging':
+        {'display_name': 'Logging',
+         'path': 'integration/logging'},
 }
+
+TEST_SUITES = collections.OrderedDict(sorted(TEST_SUITES_UNORDERED.items(),
+    key=lambda x: x[0]))
 
 
 class SaltTestsuiteParser(SaltCoverageTestingParser):
@@ -242,9 +252,9 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         self.add_option(
             '--transport',
             default='zeromq',
-            choices=('zeromq', 'raet', 'tcp'),
+            choices=('zeromq', 'tcp'),
             help=('Select which transport to run the integration tests with, '
-                  'zeromq, raet, or tcp. Default: %default')
+                  'zeromq or tcp. Default: %default')
         )
         self.add_option(
             '--interactive',
@@ -470,6 +480,14 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             help='Run salt-api tests'
         )
         self.test_selection_group.add_option(
+            '--sdb',
+            '--sdb-tests',
+            dest='sdb',
+            action='store_true',
+            default=False,
+            help='Run sdb tests'
+        )
+        self.test_selection_group.add_option(
             '-P',
             '--proxy',
             '--proxy-tests',
@@ -501,6 +519,13 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             action='store_true',
             default=False,
             help='Run scheduler integration tests'
+        )
+        self.test_selection_group.add_option(
+            '--logging',
+            dest='logging',
+            action='store_true',
+            default=False,
+            help='Run logging integration tests'
         )
 
     def validate_options(self):
@@ -569,7 +594,10 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         Run an integration test suite
         '''
         full_path = os.path.join(TEST_DIR, path)
-        return self.run_suite(full_path, display_name, suffix='test_*.py')
+        return self.run_suite(
+            full_path, display_name, suffix='test_*.py',
+            failfast=self.options.failfast,
+        )
 
     def start_daemons_only(self):
         if not salt.utils.platform.is_windows():
@@ -714,13 +742,16 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                     continue
                 named_tests.append(test)
 
-        if (self.options.unit or self.options.kitchen or named_unit_test) and not named_tests and not \
-                self._check_enabled_suites(include_cloud_provider=True):
+        if (self.options.unit or self.options.kitchen or named_unit_test) \
+                and not named_tests \
+                and (self.options.from_filenames or
+                     not self._check_enabled_suites(include_cloud_provider=True)):
             # We're either not running any integration test suites, or we're
             # only running unit tests by passing --unit or by passing only
             # `unit.<whatever>` to --name.  We don't need the tests daemon
             # running
             return [True]
+
         if not salt.utils.platform.is_windows():
             self.set_filehandle_limits('integration')
 
@@ -751,12 +782,16 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                         results = self.run_suite(os.path.dirname(name),
                                                  name,
                                                  suffix=os.path.basename(name),
+                                                 failfast=self.options.failfast,
                                                  load_from_name=False)
                         status.append(results)
                         continue
                     if name.startswith(('tests.unit.', 'unit.')):
                         continue
-                    results = self.run_suite('', name, suffix='test_*.py', load_from_name=True)
+                    results = self.run_suite(
+                        '', name, suffix='test_*.py', load_from_name=True,
+                        failfast=self.options.failfast,
+                    )
                     status.append(results)
                 return status
             for suite in TEST_SUITES:
@@ -775,9 +810,11 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                     continue
                 named_unit_test.append(test)
 
-        if not self.options.unit and not named_unit_test:
+        if not named_unit_test \
+                and (self.options.from_filenames or not self.options.unit):
             # We are not explicitly running the unit tests and none of the
-            # names passed to --name is a unit test.
+            # names passed to --name (or derived via --from-filenames) is a
+            # unit test.
             return [True]
 
         status = []
@@ -786,7 +823,8 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             self.set_filehandle_limits('unit')
 
             results = self.run_suite(
-                os.path.join(TEST_DIR, 'unit'), 'Unit', suffix='test_*.py'
+                os.path.join(TEST_DIR, 'unit'), 'Unit', suffix='test_*.py',
+                failfast=self.options.failfast,
             )
             status.append(results)
             # We executed ALL unittests, we can skip running unittests by name
@@ -795,7 +833,8 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
 
         for name in named_unit_test:
             results = self.run_suite(
-                os.path.join(TEST_DIR, 'unit'), name, suffix='test_*.py', load_from_name=True
+                os.path.join(TEST_DIR, 'unit'), name, suffix='test_*.py',
+                load_from_name=True, failfast=self.options.failfast,
             )
             status.append(results)
         return status

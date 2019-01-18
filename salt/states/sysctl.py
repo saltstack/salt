@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
-Configuration of the Linux kernel using sysctl
-==============================================
+Configuration of the kernel using sysctl
+========================================
 
 Control the kernel sysctl system.
 
@@ -62,7 +62,7 @@ def present(name, value, config=None):
     if __opts__['test']:
         current = __salt__['sysctl.show']()
         configured = __salt__['sysctl.show'](config_file=config)
-        if not configured:
+        if configured is None:
             ret['result'] = None
             ret['comment'] = (
                 'Sysctl option {0} might be changed, we failed to check '

@@ -104,7 +104,7 @@ def atq(tag=None):
         if __grains__['os_family'] == 'RedHat':
             job, spec = line.split('\t')
             specs = spec.split()
-        elif __grains__['os'] in BSD:
+        elif __grains__['os'] == 'OpenBSD':
             if line.startswith(' Rank'):
                 continue
             else:
@@ -115,6 +115,17 @@ def atq(tag=None):
                     '%H:%M')[0:5])).isoformat().split('T')
                 specs.append(tmp[7])
                 specs.append(tmp[5])
+        elif __grains__['os'] == 'FreeBSD':
+            if line.startswith('Date'):
+                continue
+            else:
+                tmp = line.split()
+                timestr = ' '.join(tmp[1:6])
+                job = tmp[8]
+                specs = datetime.datetime(*(time.strptime(timestr,
+                    '%b %d %H:%M:%S %Z %Y')[0:5])).isoformat().split('T')
+                specs.append(tmp[7])
+                specs.append(tmp[6])
 
         else:
             job, spec = line.split('\t')

@@ -58,6 +58,7 @@ def _has_required_boto():
     else:
         return True
 
+
 if _has_required_boto():
     region = 'us-east-1'
     access_key = 'GKTADJGHEIQSXMKKRBJ08H'
@@ -138,7 +139,10 @@ class BotoIoTStateTestCaseBase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
         ctx = {}
-        utils = salt.loader.utils(self.opts, whitelist=['boto3'], context=ctx)
+        utils = salt.loader.utils(
+            self.opts,
+            whitelist=['boto3', 'args', 'systemd', 'path', 'platform'],
+            context=ctx)
         serializers = salt.loader.serializers(self.opts)
         self.funcs = funcs = salt.loader.minion_mods(self.opts, context=ctx, utils=utils, whitelist=['boto_iot'])
         self.salt_states = salt.loader.states(opts=self.opts, functions=funcs, utils=utils, whitelist=['boto_iot'],

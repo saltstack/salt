@@ -12,7 +12,7 @@ from salt.netapi.rest_tornado import saltnado
 from salt.utils.versions import StrictVersion
 
 # Import Salt Testing Libs
-from tests.unit.netapi.rest_tornado.test_handlers import SaltnadoTestCase
+from tests.unit.netapi.test_rest_tornado import SaltnadoTestCase
 from tests.support.helpers import flaky
 from tests.support.unit import skipIf
 
@@ -279,9 +279,6 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
                               request_timeout=30,
                               )
         response_obj = salt.utils.json.loads(response.body)
-
-        self.application.opts['order_masters'] = []
-        self.application.opts['syndic_wait'] = 5
         self.assertEqual(response_obj['return'], [{'minion': True, 'sub_minion': True}])
 
     # runner tests
@@ -299,7 +296,7 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
                               )
         response_obj = salt.utils.json.loads(response.body)
         self.assertEqual(len(response_obj['return']), 1)
-        self.assertEqual(set(response_obj['return'][0]), set(['minion', 'sub_minion']))
+        self.assertEqual(sorted(response_obj['return'][0]), sorted(['minion', 'sub_minion']))
 
     # runner_async tests
     def test_simple_local_runner_async_post(self):

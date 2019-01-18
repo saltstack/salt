@@ -7,9 +7,11 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Third Party Libs
 import ctypes
+HAS_WIN32 = True
 try:
     from ctypes.wintypes import BYTE, WORD, DWORD, WCHAR
-    HAS_WIN32 = True
+    import win32net
+    import win32netcon
 except (ImportError, ValueError):
     HAS_WIN32 = False
 
@@ -76,3 +78,22 @@ def get_os_version_info():
            'ProductType': info.wProductType}
 
     return ret
+
+
+def get_join_info():
+    '''
+    Gets information about the domain/workgroup. This will tell you if the
+    system is joined to a domain or a workgroup
+
+    .. version-added:: 2018.3.4
+
+    Returns:
+        dict: A dictionary containing the domain/workgroup and it's status
+    '''
+    info = win32net.NetGetJoinInformation()
+    status = {win32netcon.NetSetupUnknown: 'Unknown',
+              win32netcon.NetSetupUnjoined: 'Unjoined',
+              win32netcon.NetSetupWorkgroupName: 'Workgroup',
+              win32netcon.NetSetupDomainName: 'Domain'}
+    return {'Domain': info[0],
+            'DomainType': status[info[1]]}

@@ -14,6 +14,7 @@ import datetime
 import re
 
 # Import salt libs
+import salt.utils.data
 from salt.exceptions import SaltInvocationError, CommandExecutionError
 
 # Import third party libs
@@ -53,9 +54,9 @@ def _get_proc_cmdline(proc):
     It's backward compatible with < 2.0 versions of psutil.
     '''
     try:
-        return proc.cmdline() if PSUTIL2 else proc.cmdline
+        return salt.utils.data.decode(proc.cmdline() if PSUTIL2 else proc.cmdline)
     except (psutil.NoSuchProcess, psutil.AccessDenied):
-        return ''
+        return []
 
 
 def _get_proc_create_time(proc):
@@ -65,7 +66,7 @@ def _get_proc_create_time(proc):
     It's backward compatible with < 2.0 versions of psutil.
     '''
     try:
-        return proc.create_time() if PSUTIL2 else proc.create_time
+        return salt.utils.data.decode(proc.create_time() if PSUTIL2 else proc.create_time)
     except (psutil.NoSuchProcess, psutil.AccessDenied):
         return None
 
@@ -77,7 +78,7 @@ def _get_proc_name(proc):
     It's backward compatible with < 2.0 versions of psutil.
     '''
     try:
-        return proc.name() if PSUTIL2 else proc.name
+        return salt.utils.data.decode(proc.name() if PSUTIL2 else proc.name)
     except (psutil.NoSuchProcess, psutil.AccessDenied):
         return []
 
@@ -89,7 +90,7 @@ def _get_proc_status(proc):
     It's backward compatible with < 2.0 versions of psutil.
     '''
     try:
-        return proc.status() if PSUTIL2 else proc.status
+        return salt.utils.data.decode(proc.status() if PSUTIL2 else proc.status)
     except (psutil.NoSuchProcess, psutil.AccessDenied):
         return None
 
@@ -101,7 +102,7 @@ def _get_proc_username(proc):
     It's backward compatible with < 2.0 versions of psutil.
     '''
     try:
-        return proc.username() if PSUTIL2 else proc.username
+        return salt.utils.data.decode(proc.username() if PSUTIL2 else proc.username)
     except (psutil.NoSuchProcess, psutil.AccessDenied, KeyError):
         return None
 
@@ -301,7 +302,7 @@ def pkill(pattern, user=None, signal=15, full=False):
         return {'killed': killed}
 
 
-def pgrep(pattern, user=None, full=False):
+def pgrep(pattern, user=None, full=False, pattern_is_regex=False):
     '''
     Return the pids for processes matching a pattern.
 
@@ -322,6 +323,12 @@ def pgrep(pattern, user=None, full=False):
         A boolean value indicating whether only the name of the command or
         the full command line should be matched against the pattern.
 
+    pattern_is_regex
+        This flag enables ps.pgrep to mirror the regex search functionality
+         found in the pgrep command line utility.
+
+        .. versionadded:: Neon
+
     **Examples:**
 
     Find all httpd processes on all 'www' minions:
@@ -336,14 +343,28 @@ def pgrep(pattern, user=None, full=False):
 
         salt '*' ps.pgrep bash user=tom
     '''
+    procs = []
+
+    if pattern_is_regex:
+        pattern = re.compile(str(pattern))
 
     procs = []
     for proc in psutil.process_iter():
-        name_match = pattern in ' '.join(_get_proc_cmdline(proc)) if full \
-            else pattern in _get_proc_name(proc)
+        if full:
+            process_line = ' '.join(_get_proc_cmdline(proc))
+        else:
+            process_line = _get_proc_name(proc)
+
+        if pattern_is_regex:
+            name_match = re.search(pattern, process_line)
+        else:
+            name_match = pattern in process_line
+
         user_match = True if user is None else user == _get_proc_username(proc)
+
         if name_match and user_match:
             procs.append(_get_proc_pid(proc))
+
     return procs or None
 
 

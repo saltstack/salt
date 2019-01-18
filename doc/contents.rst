@@ -8,11 +8,13 @@ Salt Table of Contents
     :maxdepth: 2
 
     topics/index
+    topics/community/index
     topics/installation/index
     topics/configuration/index
     topics/using_salt
     topics/execution/index
     topics/states/index
+    topics/return_codes/index
     topics/utils/index
     topics/event/index
     topics/orchestrate/index

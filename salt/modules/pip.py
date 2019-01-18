@@ -79,7 +79,10 @@ from __future__ import absolute_import, print_function, unicode_literals
 # Import python libs
 import logging
 import os
-import pkg_resources
+try:
+    import pkg_resources
+except ImportError:
+    pkg_resources = None
 import re
 import shutil
 import sys
@@ -116,7 +119,12 @@ def __virtual__():
     entire filesystem.  If it's not installed in a conventional location, the
     user is required to provide the location of pip each time it is used.
     '''
-    return 'pip'
+    if pkg_resources is None:
+        ret = False, 'Package dependency "pkg_resource" is missing'
+    else:
+        ret = 'pip'
+
+    return ret
 
 
 def _clear_context(bin_env=None):
@@ -303,7 +311,7 @@ def _process_requirements(requirements, cmd, cwd, saltenv, user):
                 # In Windows, just being owner of a file isn't enough. You also
                 # need permissions
                 if salt.utils.platform.is_windows():
-                    __utils__['win_dacl.set_permissions'](
+                    __utils__['dacl.set_permissions'](
                         obj_name=treq,
                         principal=user,
                         permissions='read_execute')
@@ -619,12 +627,6 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
                 editable=git+https://github.com/worldcompany/djangoembed.git#egg=djangoembed upgrade=True no_deps=True
 
     '''
-    if 'no_chown' in kwargs:
-        salt.utils.versions.warn_until(
-            'Fluorine',
-            'The no_chown argument has been deprecated and is no longer used. '
-            'Its functionality was removed in Boron.')
-        kwargs.pop('no_chown')
     cmd = _get_pip_bin(bin_env)
     cmd.append('install')
 
@@ -1429,7 +1431,9 @@ def list_all_versions(pkg,
                       include_beta=False,
                       include_rc=False,
                       user=None,
-                      cwd=None):
+                      cwd=None,
+                      index_url=None,
+                      extra_index_url=None):
     '''
     .. versionadded:: 2017.7.3
 
@@ -1459,6 +1463,14 @@ def list_all_versions(pkg,
     cwd
         Directory from which to run pip
 
+    index_url
+        Base URL of Python Package Index
+        .. versionadded:: 2019.2.0
+
+    extra_index_url
+        Additional URL of Python Package Index
+        .. versionadded:: 2019.2.0
+
     CLI Example:
 
     .. code-block:: bash
@@ -1467,6 +1479,20 @@ def list_all_versions(pkg,
     '''
     cmd = _get_pip_bin(bin_env)
     cmd.extend(['install', '{0}==versions'.format(pkg)])
+
+    if index_url:
+        if not salt.utils.url.validate(index_url, VALID_PROTOS):
+            raise CommandExecutionError(
+                '\'{0}\' is not a valid URL'.format(index_url)
+            )
+        cmd.extend(['--index-url', index_url])
+
+    if extra_index_url:
+        if not salt.utils.url.validate(extra_index_url, VALID_PROTOS):
+            raise CommandExecutionError(
+                '\'{0}\' is not a valid URL'.format(extra_index_url)
+            )
+        cmd.extend(['--extra-index-url', extra_index_url])
 
     cmd_kwargs = dict(cwd=cwd, runas=user, output_loglevel='quiet', redirect_stderr=True)
     if bin_env and os.path.isdir(bin_env):

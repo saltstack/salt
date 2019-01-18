@@ -25,6 +25,7 @@ import traceback
 import re
 import time
 import random
+import collections
 
 # Import salt libs
 import salt.loader
@@ -33,15 +34,18 @@ import salt.pillar
 import salt.fileclient
 import salt.utils.args
 import salt.utils.crypt
+import salt.utils.data
 import salt.utils.decorators.state
 import salt.utils.dictupdate
 import salt.utils.event
 import salt.utils.files
+import salt.utils.hashutils
 import salt.utils.immutabletypes as immutabletypes
 import salt.utils.platform
 import salt.utils.process
 import salt.utils.url
 import salt.syspaths as syspaths
+import salt.transport.client
 from salt.serializers.msgpack import serialize as msgpack_serialize, deserialize as msgpack_deserialize
 from salt.template import compile_template, compile_template_str
 from salt.exceptions import (
@@ -49,7 +53,6 @@ from salt.exceptions import (
     SaltReqTimeoutError
 )
 from salt.utils.odict import OrderedDict, DefaultOrderedDict
-from salt.utils.locales import sdecode
 # Explicit late import to avoid circular import. DO NOT MOVE THIS.
 import salt.utils.yamlloader as yamlloader
 
@@ -70,6 +73,7 @@ STATE_REQUISITE_KEYWORDS = frozenset([
     'onchanges_any',
     'onfail',
     'onfail_any',
+    'onfail_all',
     'onfail_stop',
     'prereq',
     'prerequired',
@@ -606,7 +610,7 @@ class Compiler(object):
                 chunk['order'] = chunk['order'] + chunk.pop('name_order') / 10000.0
             if chunk['order'] < 0:
                 chunk['order'] = cap + 1000000 + chunk['order']
-            chunk['name'] = sdecode(chunk['name'])
+            chunk['name'] = salt.utils.data.decode(chunk['name'])
         chunks.sort(key=lambda chunk: (chunk['order'], '{0[state]}{0[name]}{0[fun]}'.format(chunk)))
         return chunks
 
@@ -731,6 +735,7 @@ class State(object):
             except AttributeError:
                 pillar_enc = six.text_type(pillar_enc).lower()
         self._pillar_enc = pillar_enc
+        log.debug('Gathering pillar data for state run')
         if initial_pillar and not self._pillar_override:
             self.opts['pillar'] = initial_pillar
         else:
@@ -744,6 +749,7 @@ class State(object):
                     self.opts.get('pillar_source_merging_strategy', 'smart'),
                     self.opts.get('renderer', 'yaml'),
                     self.opts.get('pillar_merge_lists', False))
+        log.debug('Finished gathering pillar data for state run')
         self.state_con = context or {}
         self.load_modules()
         self.active = set()
@@ -842,51 +848,80 @@ class State(object):
         '''
         Check that unless doesn't return 0, and that onlyif returns a 0.
         '''
-        ret = {'result': False}
+        ret = {'result': False, 'comment': []}
         cmd_opts = {}
 
         if 'shell' in self.opts['grains']:
             cmd_opts['shell'] = self.opts['grains'].get('shell')
+
         if 'onlyif' in low_data:
-            if not isinstance(low_data['onlyif'], list):
-                low_data_onlyif = [low_data['onlyif']]
-            else:
-                low_data_onlyif = low_data['onlyif']
-            for entry in low_data_onlyif:
-                if not isinstance(entry, six.string_types):
-                    ret.update({'comment': 'onlyif execution failed, bad type passed', 'result': False})
-                    return ret
-                cmd = self.functions['cmd.retcode'](
-                    entry, ignore_retcode=True, python_shell=True, **cmd_opts)
-                log.debug('Last command return code: %s', cmd)
-                if cmd != 0 and ret['result'] is False:
-                    ret.update({'comment': 'onlyif condition is false',
-                                'skip_watch': True,
-                                'result': True})
-                    return ret
-                elif cmd == 0:
-                    ret.update({'comment': 'onlyif condition is true', 'result': False})
-            return ret
+            _ret = self._run_check_onlyif(low_data, cmd_opts)
+            ret['result'] = _ret['result']
+            ret['comment'].append(_ret['comment'])
+            if 'skip_watch' in _ret:
+                ret['skip_watch'] = _ret['skip_watch']
 
         if 'unless' in low_data:
-            if not isinstance(low_data['unless'], list):
-                low_data_unless = [low_data['unless']]
-            else:
-                low_data_unless = low_data['unless']
-            for entry in low_data_unless:
-                if not isinstance(entry, six.string_types):
-                    ret.update({'comment': 'unless condition is false, bad type passed', 'result': False})
-                    return ret
-                cmd = self.functions['cmd.retcode'](
-                    entry, ignore_retcode=True, python_shell=True, **cmd_opts)
-                log.debug('Last command return code: %s', cmd)
-                if cmd == 0 and ret['result'] is False:
-                    ret.update({'comment': 'unless condition is true',
-                                'skip_watch': True,
-                                'result': True})
-                elif cmd != 0:
-                    ret.update({'comment': 'unless condition is false', 'result': False})
-                    return ret
+            _ret = self._run_check_unless(low_data, cmd_opts)
+            # If either result is True, the returned result should be True
+            ret['result'] = _ret['result'] or ret['result']
+            ret['comment'].append(_ret['comment'])
+            if 'skip_watch' in _ret:
+                # If either result is True, the returned result should be True
+                ret['skip_watch'] = _ret['skip_watch'] or ret['skip_watch']
+
+        return ret
+
+    def _run_check_onlyif(self, low_data, cmd_opts):
+        '''
+        Check that unless doesn't return 0, and that onlyif returns a 0.
+        '''
+        ret = {'result': False}
+
+        if not isinstance(low_data['onlyif'], list):
+            low_data_onlyif = [low_data['onlyif']]
+        else:
+            low_data_onlyif = low_data['onlyif']
+        for entry in low_data_onlyif:
+            if not isinstance(entry, six.string_types):
+                ret.update({'comment': 'onlyif execution failed, bad type passed', 'result': False})
+                return ret
+            cmd = self.functions['cmd.retcode'](
+                entry, ignore_retcode=True, python_shell=True, **cmd_opts)
+            log.debug('Last command return code: %s', cmd)
+            if cmd != 0 and ret['result'] is False:
+                ret.update({'comment': 'onlyif condition is false',
+                            'skip_watch': True,
+                            'result': True})
+                return ret
+            elif cmd == 0:
+                ret.update({'comment': 'onlyif condition is true', 'result': False})
+        return ret
+
+    def _run_check_unless(self, low_data, cmd_opts):
+        '''
+        Check that unless doesn't return 0, and that onlyif returns a 0.
+        '''
+        ret = {'result': False}
+
+        if not isinstance(low_data['unless'], list):
+            low_data_unless = [low_data['unless']]
+        else:
+            low_data_unless = low_data['unless']
+        for entry in low_data_unless:
+            if not isinstance(entry, six.string_types):
+                ret.update({'comment': 'unless condition is false, bad type passed', 'result': False})
+                return ret
+            cmd = self.functions['cmd.retcode'](
+                entry, ignore_retcode=True, python_shell=True, **cmd_opts)
+            log.debug('Last command return code: %s', cmd)
+            if cmd == 0 and ret['result'] is False:
+                ret.update({'comment': 'unless condition is true',
+                            'skip_watch': True,
+                            'result': True})
+            elif cmd != 0:
+                ret.update({'comment': 'unless condition is false', 'result': False})
+                return ret
 
         # No reason to stop, return ret
         return ret
@@ -1325,8 +1360,9 @@ class State(object):
                 names = []
                 if state.startswith('__'):
                     continue
-                chunk = {'state': state,
-                         'name': name}
+                chunk = OrderedDict()
+                chunk['state'] = state
+                chunk['name'] = name
                 if orchestration_jid is not None:
                     chunk['__orchestration_jid__'] = orchestration_jid
                 if '__sls__' in body:
@@ -1488,26 +1524,13 @@ class State(object):
         '''
         Extend the data reference with requisite_in arguments
         '''
-        req_in = set([
-            'require_in',
-            'watch_in',
-            'onfail_in',
-            'onchanges_in',
-            'use',
-            'use_in',
-            'prereq',
-            'prereq_in',
-            ])
-        req_in_all = req_in.union(
-                set([
-                    'require',
-                    'watch',
-                    'onfail',
-                    'onfail_stop',
-                    'onchanges',
-                    ]))
+        req_in = {'require_in', 'watch_in', 'onfail_in', 'onchanges_in', 'use', 'use_in', 'prereq', 'prereq_in'}
+        req_in_all = req_in.union({'require', 'watch', 'onfail', 'onfail_stop', 'onchanges'})
         extend = {}
         errors = []
+        disabled_reqs = self.opts.get('disabled_requisites', [])
+        if not isinstance(disabled_reqs, list):
+            disabled_reqs = [disabled_reqs]
         for id_, body in six.iteritems(high):
             if not isinstance(body, dict):
                 continue
@@ -1525,6 +1548,9 @@ class State(object):
                         # Split out the components
                         key = next(iter(arg))
                         if key not in req_in:
+                            continue
+                        if key in disabled_reqs:
+                            log.warning('The %s requisite has been disabled, Ignoring.', key)
                             continue
                         rkey = key.split('_')[0]
                         items = arg[key]
@@ -1733,14 +1759,15 @@ class State(object):
         try:
             ret = self.states[cdata['full']](*cdata['args'],
                                              **cdata['kwargs'])
-        except Exception:
+        except Exception as exc:
+            log.debug('An exception occurred in this state: %s', exc,
+                      exc_info_on_loglevel=logging.DEBUG)
             trb = traceback.format_exc()
             ret = {
                 'result': False,
                 'name': name,
                 'changes': {},
-                'comment': 'An exception occurred in this state: {0}'.format(
-                    trb)
+                'comment': 'An exception occurred in this state: {0}'.format(trb)
             }
 
         utc_finish_time = datetime.datetime.utcnow()
@@ -1750,7 +1777,9 @@ class State(object):
         ret['duration'] = duration
 
         troot = os.path.join(self.opts['cachedir'], self.jid)
-        tfile = os.path.join(troot, _clean_tag(tag))
+        tfile = os.path.join(
+            troot,
+            salt.utils.hashutils.sha1_digest(tag))
         if not os.path.isdir(troot):
             try:
                 os.makedirs(troot)
@@ -1791,6 +1820,11 @@ class State(object):
         Call a state directly with the low data structure, verify data
         before processing.
         '''
+        use_uptime = False
+        if os.path.isfile('/proc/uptime'):
+            use_uptime = True
+            with salt.utils.files.fopen('/proc/uptime', 'r') as fp_:
+                start_uptime = float(fp_.readline().split()[0])
         utc_start_time = datetime.datetime.utcnow()
         local_start_time = utc_start_time - (datetime.datetime.utcnow() - datetime.datetime.now())
         log.info('Running state [%s] at time %s',
@@ -1909,12 +1943,18 @@ class State(object):
                         ret = self.call_parallel(cdata, low)
                     else:
                         self.format_slots(cdata)
-                        ret = self.states[cdata['full']](*cdata['args'],
-                                                         **cdata['kwargs'])
+                        if cdata['full'].split('.')[-1] == '__call__':
+                            # __call__ requires OrderedDict to preserve state order
+                            # kwargs are also invalid overall
+                            ret = self.states[cdata['full']](cdata['args'], module=None, state=cdata['kwargs'])
+                        else:
+                            ret = self.states[cdata['full']](*cdata['args'], **cdata['kwargs'])
                 self.states.inject_globals = {}
             if 'check_cmd' in low and '{0[state]}.mod_run_check_cmd'.format(low) not in self.states:
                 ret.update(self._run_check_cmd(low))
-        except Exception:
+        except Exception as exc:
+            log.debug('An exception occurred in this state: %s', exc,
+                      exc_info_on_loglevel=logging.DEBUG)
             trb = traceback.format_exc()
             # There are a number of possibilities to not have the cdata
             # populated with what we might have expected, so just be smart
@@ -1929,8 +1969,7 @@ class State(object):
                 'result': False,
                 'name': name,
                 'changes': {},
-                'comment': 'An exception occurred in this state: {0}'.format(
-                    trb)
+                'comment': 'An exception occurred in this state: {0}'.format(trb)
             }
         finally:
             if low.get('__prereq__'):
@@ -1958,14 +1997,20 @@ class State(object):
         self.__run_num += 1
         format_log(ret)
         self.check_refresh(low, ret)
+        if use_uptime:
+            with salt.utils.files.fopen('/proc/uptime', 'r') as fp_:
+                finish_uptime = float(fp_.readline().split()[0])
         utc_finish_time = datetime.datetime.utcnow()
         timezone_delta = datetime.datetime.utcnow() - datetime.datetime.now()
         local_finish_time = utc_finish_time - timezone_delta
         local_start_time = utc_start_time - timezone_delta
         ret['start_time'] = local_start_time.time().isoformat()
-        delta = (utc_finish_time - utc_start_time)
-        # duration in milliseconds.microseconds
-        duration = (delta.seconds * 1000000 + delta.microseconds) / 1000.0
+        if use_uptime:
+            duration = (finish_uptime - start_uptime) * 1000.0
+        else:
+            delta = (utc_finish_time - utc_start_time)
+            # duration in milliseconds.microseconds
+            duration = (delta.seconds * 1000000 + delta.microseconds) / 1000.0
         ret['duration'] = duration
         ret['__id__'] = low['__id__']
         log.info(
@@ -2045,8 +2090,9 @@ class State(object):
                ('kwargs', cdata['kwargs'].items()))
         for atype, avalues in ctx:
             for ind, arg in avalues:
-                arg = sdecode(arg)
-                if not isinstance(arg, six.string_types) or not arg.startswith('__slot__:'):
+                arg = salt.utils.data.decode(arg, keep=True)
+                if not isinstance(arg, six.text_type) \
+                        or not arg.startswith('__slot__:'):
                     # Not a slot, skip it
                     continue
                 cdata[atype][ind] = self.__eval_slot(arg)
@@ -2144,7 +2190,7 @@ class State(object):
         tag = _gen_tag(low)
         if self.opts.get('test', False):
             return False
-        if (low.get('failhard', False) or self.opts['failhard']) and tag in running:
+        if low.get('failhard', self.opts['failhard']) and tag in running:
             if running[tag]['result'] is None:
                 return False
             return not running[tag]['result']
@@ -2204,7 +2250,10 @@ class State(object):
             proc = running[tag].get('proc')
             if proc:
                 if not proc.is_alive():
-                    ret_cache = os.path.join(self.opts['cachedir'], self.jid, _clean_tag(tag))
+                    ret_cache = os.path.join(
+                        self.opts['cachedir'],
+                        self.jid,
+                        salt.utils.hashutils.sha1_digest(tag))
                     if not os.path.isfile(ret_cache):
                         ret = {'result': False,
                                'comment': 'Parallel process failed to return',
@@ -2229,6 +2278,9 @@ class State(object):
         Look into the running data to check the status of all requisite
         states
         '''
+        disabled_reqs = self.opts.get('disabled_requisites', [])
+        if not isinstance(disabled_reqs, list):
+            disabled_reqs = [disabled_reqs]
         present = False
         # If mod_watch is not available make it a require
         if 'watch' in low:
@@ -2259,6 +2311,8 @@ class State(object):
             present = True
         if 'onfail_any' in low:
             present = True
+        if 'onfail_all' in low:
+            present = True
         if 'onchanges' in low:
             present = True
         if 'onchanges_any' in low:
@@ -2274,12 +2328,16 @@ class State(object):
                 'prereq': [],
                 'onfail': [],
                 'onfail_any': [],
+                'onfail_all': [],
                 'onchanges': [],
                 'onchanges_any': []}
         if pre:
             reqs['prerequired'] = []
         for r_state in reqs:
             if r_state in low and low[r_state] is not None:
+                if r_state in disabled_reqs:
+                    log.warning('The %s requisite has been disabled, Ignoring.', r_state)
+                    continue
                 for req in low[r_state]:
                     if isinstance(req, six.string_types):
                         req = {'id': req}
@@ -2362,7 +2420,7 @@ class State(object):
                 else:
                     if run_dict[tag].get('__state_ran__', True):
                         req_stats.add('met')
-            if r_state.endswith('_any'):
+            if r_state.endswith('_any') or r_state == 'onfail':
                 if 'met' in req_stats or 'change' in req_stats:
                     if 'fail' in req_stats:
                         req_stats.remove('fail')
@@ -2372,8 +2430,14 @@ class State(object):
                     if 'fail' in req_stats:
                         req_stats.remove('fail')
                 if 'onfail' in req_stats:
-                    if 'fail' in req_stats:
+                    # a met requisite in this case implies a success
+                    if 'met' in req_stats:
                         req_stats.remove('onfail')
+            if r_state.endswith('_all'):
+                if 'onfail' in req_stats:
+                    # a met requisite in this case implies a failure
+                    if 'met' in req_stats:
+                        req_stats.remove('met')
             fun_stats.update(req_stats)
 
         if 'unmet' in fun_stats:
@@ -2385,8 +2449,8 @@ class State(object):
                 status = 'met'
             else:
                 status = 'pre'
-        elif 'onfail' in fun_stats and 'met' not in fun_stats:
-            status = 'onfail'  # all onfail states are OK
+        elif 'onfail' in fun_stats and 'onchangesmet' not in fun_stats:
+            status = 'onfail'
         elif 'onchanges' in fun_stats and 'onchangesmet' not in fun_stats:
             status = 'onchanges'
         elif 'change' in fun_stats:
@@ -2661,6 +2725,7 @@ class State(object):
             else:
                 running[tag] = self.call(low, chunks, running)
         if tag in running:
+            running[tag]['__saltfunc__'] = '{0}.{1}'.format(low['state'], low['fun'])
             self.event(running[tag], len(chunks), fire_event=low.get('fire_event'))
         return running
 
@@ -2737,10 +2802,33 @@ class State(object):
         running.update(errors)
         return running
 
+    def inject_default_call(self, high):
+        '''
+        Sets .call function to a state, if not there.
+
+        :param high:
+        :return:
+        '''
+        for chunk in high:
+            state = high[chunk]
+            if not isinstance(state, collections.Mapping):
+                continue
+            for state_ref in state:
+                needs_default = True
+                if not isinstance(state[state_ref], list):
+                    continue
+                for argset in state[state_ref]:
+                    if isinstance(argset, six.string_types):
+                        needs_default = False
+                        break
+                if needs_default:
+                    state[state_ref].insert(-1, '__call__')
+
     def call_high(self, high, orchestration_jid=None):
         '''
         Process a high data call and ensure the defined states.
         '''
+        self.inject_default_call(high)
         errors = []
         # If there is extension data reconcile it
         high, ext_errors = self.reconcile_extend(high)
@@ -2937,7 +3025,7 @@ class BaseHighState(object):
         mopts = self.client.master_opts()
         if not isinstance(mopts, dict):
             # An error happened on the master
-            opts['renderer'] = 'yaml_jinja'
+            opts['renderer'] = 'jinja|yaml'
             opts['failhard'] = False
             opts['state_top'] = salt.utils.url.create('top.sls')
             opts['nodegroups'] = {}
@@ -3365,7 +3453,7 @@ class BaseHighState(object):
                 def _filter_matches(_match, _data, _opts):
                     if isinstance(_data, six.string_types):
                         _data = [_data]
-                    if self.matcher.confirm_top(
+                    if self.matchers['confirm_top.confirm_top'](
                             _match,
                             _data,
                             _opts
@@ -3390,7 +3478,7 @@ class BaseHighState(object):
         ext_matches = self._master_tops()
         for saltenv in ext_matches:
             top_file_matches = matches.get(saltenv, [])
-            if self.opts['master_tops_first']:
+            if self.opts.get('master_tops_first'):
                 first = ext_matches[saltenv]
                 second = top_file_matches
             else:
@@ -3898,7 +3986,8 @@ class BaseHighState(object):
         err += self.verify_tops(top)
         matches = self.top_matches(top)
         if not matches:
-            msg = 'No Top file or master_tops data matches found.'
+            msg = ('No Top file or master_tops data matches found. Please see '
+                   'master log for details.')
             ret[tag_name]['comment'] = msg
             return ret
         matches = self.matches_whitelist(matches, whitelist)
@@ -4053,7 +4142,7 @@ class HighState(BaseHighState):
                            mocked=mocked,
                            loader=loader,
                            initial_pillar=initial_pillar)
-        self.matcher = salt.minion.Matcher(self.opts)
+        self.matchers = salt.loader.matchers(self.opts)
         self.proxy = proxy
 
         # tracks all pydsl state declarations globally across sls files
@@ -4134,12 +4223,14 @@ class RemoteHighState(object):
     '''
     Manage gathering the data from the master
     '''
+    # XXX: This class doesn't seem to be used anywhere
     def __init__(self, opts, grains):
         self.opts = opts
         self.grains = grains
         self.serial = salt.payload.Serial(self.opts)
         # self.auth = salt.crypt.SAuth(opts)
-        self.channel = salt.transport.Channel.factory(self.opts['master_uri'])
+        self.channel = salt.transport.client.ReqChannel.factory(self.opts['master_uri'])
+        self._closing = False
 
     def compile_master(self):
         '''
@@ -4152,3 +4243,13 @@ class RemoteHighState(object):
             return self.channel.send(load, tries=3, timeout=72000)
         except SaltReqTimeoutError:
             return {}
+
+    def destroy(self):
+        if self._closing:
+            return
+
+        self._closing = True
+        self.channel.close()
+
+    def __del__(self):
+        self.destroy()

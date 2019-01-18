@@ -69,12 +69,12 @@ import logging
 import salt.utils.jid
 import salt.returners
 from salt.ext import six
+from salt.utils.versions import LooseVersion as _LooseVersion
 
 # Import third party libs
 try:
     import pymongo
-    version = pymongo.version
-    version = '.'.join(version.split('.')[:2])
+    PYMONGO_VERSION = _LooseVersion(pymongo.version)
     HAS_PYMONGO = True
 except ImportError:
     HAS_PYMONGO = False
@@ -141,7 +141,7 @@ def _get_conn(ret):
     # pymongo versions < 2.3 until then there are
     # a bunch of these sections that need to be supported
 
-    if float(version) > 2.3:
+    if PYMONGO_VERSION > _LooseVersion('2.3'):
         conn = pymongo.MongoClient(host, port)
     else:
         conn = pymongo.Connection(host, port)
@@ -151,7 +151,7 @@ def _get_conn(ret):
         mdb.authenticate(user, password)
 
     if indexes:
-        if float(version) > 2.3:
+        if PYMONGO_VERSION > _LooseVersion('2.3'):
             mdb.saltReturns.create_index('minion')
             mdb.saltReturns.create_index('jid')
 
@@ -193,7 +193,7 @@ def returner(ret):
 
     # again we run into the issue with deprecated code from previous versions
 
-    if float(version) > 2.3:
+    if PYMONGO_VERSION > _LooseVersion('2.3'):
         #using .copy() to ensure original data for load is unchanged
         mdb.saltReturns.insert_one(sdata.copy())
     else:

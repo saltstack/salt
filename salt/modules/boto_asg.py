@@ -498,7 +498,7 @@ def delete(name, force=False, region=None, key=None, keyid=None, profile=None):
 def get_cloud_init_mime(cloud_init):
     '''
     Get a mime multipart encoded string from a cloud-init dict. Currently
-    supports scripts and cloud-config.
+    supports boothooks, scripts and cloud-config.
 
     CLI Example:
 
@@ -828,6 +828,7 @@ def get_instances(name, lifecycle_state="InService", health_status="Healthy",
     while True:
         try:
             asgs = conn.get_all_groups(names=[name])
+            break
         except boto.exception.BotoServerError as e:
             if retries and e.code == 'Throttling':
                 log.debug('Throttled by AWS API, retrying in 5 seconds...')

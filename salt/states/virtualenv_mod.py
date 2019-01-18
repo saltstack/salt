@@ -135,13 +135,6 @@ def managed(name,
             - env_vars:
                 PATH_VAR: '/usr/local/bin/'
     '''
-    if 'no_chown' in kwargs:
-        salt.utils.versions.warn_until(
-            'Fluorine',
-            'The no_chown argument has been deprecated and is no longer used. '
-            'Its functionality was removed in Boron.')
-        kwargs.pop('no_chown')
-
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
     if 'virtualenv.create' not in __salt__:
@@ -342,5 +335,6 @@ def managed(name,
                 'new': new if new else '',
                 'old': old if old else ''}
     return ret
+
 
 manage = salt.utils.functools.alias_function(managed, 'manage')
