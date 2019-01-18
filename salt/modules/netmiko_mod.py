@@ -3,7 +3,7 @@
 Netmiko Execution Module
 ========================
 
-.. versionadded:: Fluorine
+.. versionadded:: 2019.2.0
 
 Execution module to interface the connection with a remote network device. It is
 flexible enough to execute the commands both when running under a Netmiko Proxy

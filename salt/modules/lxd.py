@@ -2,7 +2,7 @@
 '''
 Module for managing the LXD daemon and its containers.
 
-.. versionadded:: Fluorine
+.. versionadded:: 2019.2.0
 
 `LXD(1)`__ is a container "hypervisor". This execution module provides
 several functions to help manage it and its containers.

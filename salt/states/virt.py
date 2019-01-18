@@ -192,13 +192,13 @@ def stopped(name, connection=None, username=None, password=None):
 
     :param connection: libvirt connection URI, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param username: username to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param password: password to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     .. code-block:: yaml
 
@@ -218,13 +218,13 @@ def powered_off(name, connection=None, username=None, password=None):
 
     :param connection: libvirt connection URI, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param username: username to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param password: password to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     .. code-block:: yaml
 
@@ -266,68 +266,68 @@ def running(name,
     :param mem: amount of memory in MiB for the new virtual machine
     :param image: disk image to use for the first disk of the new VM
 
-        .. deprecated:: Fluorine
+        .. deprecated:: 2019.2.0
     :param vm_type: force virtual machine type for the new VM. The default value is taken from
         the host capabilities. This could be useful for example to use ``'qemu'`` type instead
         of the ``'kvm'`` one.
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param disk_profile:
         Name of the disk profile to use for the new virtual machine
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param disks:
         List of disk to create for the new virtual machine.
         See :ref:`init-disk-def` for more details on the items on this list.
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param nic_profile:
         Name of the network interfaces profile to use for the new virtual machine
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param interfaces:
         List of network interfaces to create for the new virtual machine.
         See :ref:`init-nic-def` for more details on the items on this list.
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param graphics:
         Graphics device to create for the new virtual machine.
         See :ref:`init-graphics-def` for more details on this dictionary
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param saltenv:
         Fileserver environment (Default: ``'base'``).
         See :mod:`cp module for more details <salt.modules.cp>`
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param seed: ``True`` to seed the disk image. Only used when the ``image`` parameter is provided.
                  (Default: ``True``)
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param install: install salt minion if absent (Default: ``True``)
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param pub_key: public key to seed with (Default: ``None``)
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param priv_key: public key to seed with (Default: ``None``)
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param seed_cmd: Salt command to execute to seed the image. (Default: ``'seed.apply'``)
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param update: set to ``True`` to update a defined module. (Default: ``False``)
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param connection: libvirt connection URI, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param username: username to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param password: password to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param os_type:
         type of virtualization as found in the ``//os/type`` element of the libvirt definition.
         The default value is taken from the host capabilities, with a preference for ``hvm``.
@@ -476,13 +476,13 @@ def snapshot(name, suffix=None, connection=None, username=None, password=None):
 
     :param connection: libvirt connection URI, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param username: username to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param password: password to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     .. code-block:: yaml
 
@@ -510,13 +510,13 @@ def rebooted(name, connection=None, username=None, password=None):
 
     :param connection: libvirt connection URI, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param username: username to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param password: password to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     '''
 
     return _virt_call(name, 'reboot', 'rebooted', "Machine has been rebooted",
@@ -637,13 +637,13 @@ def network_running(name,
 
     :param connection: libvirt connection URI, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param username: username to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param password: password to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     .. code-block:: yaml
 
@@ -709,7 +709,7 @@ def pool_running(name,
     '''
     Defines and starts a new pool with specified arguments.
 
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     :param ptype: libvirt pool type
     :param target: full path to the target device or folder. (Default: ``None``)
