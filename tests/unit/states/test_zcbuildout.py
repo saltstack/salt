@@ -7,7 +7,6 @@ import os
 # Import Salt Testing libs
 from tests.support.unit import skipIf
 from tests.support.helpers import requires_network
-from tests.support.runtests import RUNTIME_VARS
 
 # Import Salt libs
 import salt.utils.path
