@@ -2530,6 +2530,25 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             '',
         ]).encode('utf-8'))
 
+    @with_tempfile()
+    def test_issue_50221(self, name):
+        ret = self.run_function(
+            'pillar.get',
+            ['issue-50221']
+        )
+        assert ret == 'abc\n\n\n'
+        ret = self.run_function(
+            'state.apply',
+            ['issue-50221'],
+            pillar={
+                'name': name
+            },
+        )
+        self.assertSaltTrueReturn(ret)
+        with salt.utils.files.fopen(name, 'rb') as fp:
+            contents = fp.read()
+        assert contents == b'abc\n\n\n'
+
 
 class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
     marker_start = '# start'
