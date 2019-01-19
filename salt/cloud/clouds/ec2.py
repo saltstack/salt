@@ -1933,11 +1933,11 @@ def request_instance(vm_=None, call=None):
     set_del_root_vol_on_destroy = config.get_cloud_config_value(
         'del_root_vol_on_destroy', vm_, __opts__, search_global=False
     )
-    
+
     set_termination_protection = config.get_cloud_config_value(
         'termination_protection', vm_, __opts__, search_global=False
     )
-    
+
     if set_termination_protection is not None:
         if not isinstance(set_termination_protection, bool):
             raise SaltCloudConfigError(
