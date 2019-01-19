@@ -23,6 +23,7 @@ import shlex
 import socket
 import ssl
 import string
+import functools
 
 # Import Salt libs
 import salt.utils.files
@@ -563,12 +564,15 @@ def lookup(
                 timeout /= len(servers)
 
             # Inject a wrapper for multi-server behaviour
-            def _multi_srvr(**res_kwargs):
-                for server in servers:
-                    s_res = resolver(server=server, **res_kwargs)
-                    if s_res:
-                        return s_res
-            resolver = _multi_srvr
+            def _multi_srvr(resolv_func):
+                @functools.wraps(resolv_func)
+                def _wrapper(**res_kwargs):
+                    for server in servers:
+                        s_res = resolv_func(server=server, **res_kwargs)
+                        if s_res:
+                            return s_res
+                return _wrapper
+            resolver = _multi_srvr(resolver)
 
     if not walk:
         name = [name]
