@@ -56,17 +56,7 @@ def zbx():
 
 
 def zabbix_send(key, host, output):
-    with salt.utils.files.fopen(zbx()['config'], 'r') as file_handle:
-        for line in file_handle:
-            if "ServerActive" in line:
-                server = line.rsplit('=')
-                server = server[1].rsplit(',')
-                for s in server:
-                    cmd = zbx()['sender'] + " -z " + s.replace('\n', '') + " -s " + host + " -k " + key + " -o \"" + output +"\""
-                    __salt__['cmd.shell'](cmd)
-                return
-
-    cmd = zbx()['sender'] + " -c " + zbx()['config'] + " -s " + host + " -k " + key + " -o \"" + output +"\""
+    cmd = zbx()['sender'] + " -c " + zbx()['config'] + " -k " + key + " -o \"" + output +"\""
     __salt__['cmd.shell'](cmd)
 
 
