@@ -540,34 +540,41 @@ def commit_check(name):
 def get_table(name, table, table_file, **kwargs):
     '''
     Retrieve data from a Junos device using Tables/Views
+
+    name (required)
+        task definition
+
+    table (required)
+        Name of PyEZ Table
+
+    file
+        YAML file that has the table specified in table parameter
+
+    path:
+        Path of location of the YAML file.
+        defaults to op directory in jnpr.junos.op
+
+    target:
+        if command need to run on FPC, can specify fpc target
+
+    key:
+        To overwrite key provided in YAML
+
+    key_items:
+        To select only given key items
+
+    filters:
+        To select only filter for the dictionary from columns
+
+    template_args:
+        key/value pair which should render Jinja template command
+
     .. code-block:: yaml
+
         get route details:
-            junos:
-              - get_table
-              - table: RouteTable
-              - file: routes.yml
-    Parameters:
-      Required
-        * name:
-          task definition
-        * table:
-          Name of PyEZ Table
-        * file:
-          YAML file that has the table specified in table parameter
-      Optional
-        * path:
-          Path of location of the YAML file.
-          defaults to op directory in jnpr.junos.op
-        * target:
-          if command need to run on FPC, can specify fpc target
-        * key:
-          To overwrite key provided in YAML
-        * key_items:
-          To select only given key items
-        * filters:
-          To select only filter for the dictionary from columns
-        * args:
-          key/value pair which should render Jinja template command
+          junos.get_table:
+            - table: RouteTable
+            - file: routes.yml
     '''
     ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
     ret['changes'] = __salt__['junos.get_table'](table, table_file, **kwargs)
