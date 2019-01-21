@@ -38,6 +38,7 @@ EXCLUDED_FILES = [
     os.path.join('tests', 'modparser.py'),
     os.path.join('tests', 'committer_parser.py'),
     os.path.join('tests', 'zypp_plugin.py'),
+    os.path.join('tests', 'tox-helper.py'),
     os.path.join('tests', 'unit', 'transport', 'mixins.py'),
     os.path.join('tests', 'integration', 'utils', 'testprogram.py'),
 ]
@@ -57,7 +58,7 @@ class BadTestModuleNamesTestCase(TestCase):
         excluded_dirs = tuple(EXCLUDED_DIRS)
         tests_dir = os.path.join(CODE_DIR, 'tests')
         bad_names = []
-        for root, dirs, files in os.walk(tests_dir):
+        for root, _, files in os.walk(tests_dir):
             reldir = os.path.relpath(root, CODE_DIR)
             if reldir.startswith(excluded_dirs) or reldir.endswith('__pycache__'):
                 continue
@@ -73,7 +74,7 @@ class BadTestModuleNamesTestCase(TestCase):
         error_msg = '\n\nPlease rename the following files:\n'
         for path in bad_names:
             directory, filename = path.rsplit(os.sep, 1)
-            filename, ext = os.path.splitext(filename)
+            filename, _ = os.path.splitext(filename)
             error_msg += '  {} -> {}/test_{}.py\n'.format(path, directory, filename.split('_test')[0])
 
         error_msg += '\nIf you believe one of the entries above should be ignored, please add it to either\n'
