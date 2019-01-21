@@ -7,10 +7,8 @@ The following Type: "Zabbix trapper" with "Type of information" Text items are r
 .. code-block:: cfg
 
     Key: salt.trap.info
-    Key: salt.trap.average
     Key: salt.trap.warning
     Key: salt.trap.high
-    Key: salt.trap.disaster
 
 To use the Zabbix returner, append '--return zabbix' to the salt command. ex:
 
@@ -21,15 +19,10 @@ To use the Zabbix returner, append '--return zabbix' to the salt command. ex:
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
-import logging
 import os
 
 # Import Salt libs
 from salt.ext import six
-import salt.utils.files
-
-# Get logging started
-log = logging.getLogger(__name__)
 
 
 # Define the module's virtual name
@@ -55,7 +48,7 @@ def zbx():
         return False
 
 
-def zabbix_send(key, host, output):
+def zabbix_send(key, output):
     cmd = zbx()['sender'] + " -c " + zbx()['config'] + " -k " + key + " -o \"" + output +"\""
     __salt__['cmd.shell'](cmd)
 
@@ -64,16 +57,15 @@ def returner(ret):
     changes = False
     errors = False
     job_minion_id = ret['id']
-    host = job_minion_id
 
     if type(ret['return']) is dict:
         for state, item in six.iteritems(ret['return']):
             if 'comment' in item and 'name' in item and not item['result']:
                 errors = True
-                zabbix_send("salt.trap.high", host, 'SALT:\nname: {0}\ncomment: {1}'.format(item['name'], item['comment']))
+                zabbix_send("salt.trap.high", 'SALT:\nname: {0}\ncomment: {1}'.format(item['name'], item['comment']))
             if 'comment' in item and 'name' in item and item['changes']:
                 changes = True
-                zabbix_send("salt.trap.warning", host, 'SALT:\nname: {0}\ncomment: {1}'.format(item['name'], item['comment']))
+                zabbix_send("salt.trap.warning", 'SALT:\nname: {0}\ncomment: {1}'.format(item['name'], item['comment']))
 
     if not changes and not errors:
-        zabbix_send("salt.trap.info", host, 'SALT {0} OK'.format(job_minion_id))
+        zabbix_send("salt.trap.info", 'SALT {0} OK'.format(job_minion_id))
