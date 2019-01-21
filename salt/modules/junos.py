@@ -1365,7 +1365,7 @@ def commit_check():
 
 
 def get_table(table, table_file, path=None, target=None, key=None, key_items=None,
-              filters=None, args=None):
+              filters=None, template_args=None):
     '''
     Retrieve data from a Junos device using Tables/Views
 
@@ -1389,19 +1389,17 @@ def get_table(table, table_file, path=None, target=None, key=None, key_items=Non
         To select only given key items
 
     filters:
-          To select only filter for the dictionary from columns
+        To select only filter for the dictionary from columns
 
-    **args:
-          key/value pair which should render Jinja template command
+    template_args:
+        key/value pair which should render Jinja template command
 
     CLI Example:
 
     .. code-block:: bash
 
         salt 'device_name' junos.get_table
-
     '''
-
     conn = __proxy__['junos.conn']()
     ret = {}
     ret['out'] = True
@@ -1416,8 +1414,8 @@ def get_table(table, table_file, path=None, target=None, key=None, key_items=Non
         get_kvargs['key_items'] = key_items
     if filters is not None:
         get_kvargs['filters'] = filters
-    if args is not None and isinstance(args, dict):
-        get_kvargs['args'] = args
+    if template_args is not None and isinstance(template_args, dict):
+        get_kvargs['args'] = template_args
     pyez_tables_path = os.path.dirname(os.path.abspath(tables_dir.__file__))
     try:
         if path is not None:
@@ -1468,7 +1466,7 @@ def get_table(table, table_file, path=None, target=None, key=None, key_items=Non
                 ret['table'][table]['key'] = data.KEY
             if key_items is not None:
                 ret['table'][table]['key_items'] = data.KEY_ITEMS
-            if args is not None:
+            if template_args is not None:
                 ret['table'][table]['args'] = data.CMD_ARGS
                 ret['table'][table]['command'] = data.GET_CMD
     except Exception as err:
