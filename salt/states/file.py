@@ -2440,7 +2440,6 @@ def managed(name,
                     contents += line.rstrip('\n').rstrip('\r') + os.linesep
             if contents_newline and not contents.endswith(os.linesep):
                 contents += os.linesep
-            log.error("USE CONTENTS %s %s %s", repr(use_contents), repr(validated_contents), repr(contents))
         if template:
             contents = __salt__['file.apply_template_on_contents'](
                 contents,
