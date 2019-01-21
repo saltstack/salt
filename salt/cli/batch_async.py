@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Execute batch runs
+Execute a job on the targeted minions by using a moving window of fixed size `batch`.
 '''
 
 # Import python libs
