@@ -177,7 +177,7 @@ class IPCServer(object):
             encoding = None
         else:
             encoding = 'utf-8'
-        unpacker = msgpack.Unpacker(encoding=encoding)
+        unpacker = msgpack.Unpacker(raw=False)
         while not stream.closed():
             try:
                 wire_bytes = yield stream.read_bytes(4096, partial=True)
@@ -291,7 +291,7 @@ class IPCClient(object):
             encoding = None
         else:
             encoding = 'utf-8'
-        self.unpacker = msgpack.Unpacker(encoding=encoding)
+        self.unpacker = msgpack.Unpacker(raw=False)
 
     def __init__(self, socket_path, io_loop=None):
         # Handled by singleton __new__
