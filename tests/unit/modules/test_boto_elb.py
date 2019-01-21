@@ -104,7 +104,7 @@ class BotoElbTestCase(TestCase, LoaderModuleMockMixin):
     '''
 
     def setup_loader_modules(self):
-        opts = salt.config.DEFAULT_MASTER_OPTS
+        opts = salt.config.DEFAULT_MASTER_OPTS.copy()
         utils = salt.loader.utils(
             opts,
             whitelist=['boto', 'args', 'systemd', 'path', 'platform'])

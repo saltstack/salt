@@ -42,7 +42,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
     This class contains a set of functions that test salt.modules.zfs module
     '''
     def setup_loader_modules(self):
-        self.opts = opts = salt.config.DEFAULT_MINION_OPTS
+        self.opts = opts = salt.config.DEFAULT_MINION_OPTS.copy()
         utils = salt.loader.utils(
             opts,
             whitelist=['zfs', 'args', 'systemd', 'path', 'platform'])

@@ -76,7 +76,7 @@ class BotoRoute53TestCase(TestCase, LoaderModuleMockMixin):
     TestCase for salt.modules.boto_route53 module
     '''
     def setup_loader_modules(self):
-        self.opts = salt.config.DEFAULT_MINION_OPTS
+        self.opts = salt.config.DEFAULT_MINION_OPTS.copy()
         self.opts['route53.keyid'] = 'GKTADJGHEIQSXMKKRBJ08H'
         self.opts['route53.key'] = 'askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs'
         utils = salt.loader.utils(self.opts)
