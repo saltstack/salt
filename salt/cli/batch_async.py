@@ -194,6 +194,5 @@ class BatchAsync(object):
                 gather_job_timeout=self.opts['gather_job_timeout'],
                 jid=self.batch_jid,
                 **self.eauth)
-            # TODO add parameter for find_job - should use gather_job_timeout?
-            self.event.io_loop.call_later(10, self.find_job, set(next_batch))
+            self.event.io_loop.call_later(self.opts['timeout'], self.find_job, set(next_batch))
             self.active = self.active.union(next_batch)
