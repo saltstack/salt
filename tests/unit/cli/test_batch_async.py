@@ -128,7 +128,7 @@ class AsyncBatchTestCase(AsyncTestCase, TestCase):
         )
         self.assertEqual(
             self.batch.event.io_loop.call_later.call_args[0],
-            (10, self.batch.find_job, {'foo', 'bar'})
+            (self.batch.opts['timeout'], self.batch.find_job, {'foo', 'bar'})
         )
         self.assertEqual(self.batch.active, {'bar', 'foo'})
 
