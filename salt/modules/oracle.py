@@ -121,7 +121,7 @@ def _connect(uri):
         else:
             host = hostport_l[0]
             port = 1521
-        log.debug('connect: {0}'.format((user, password, host, port, sid, mode)))
+        log.debug('connect: %s', (user, password, host, port, sid, mode))
         if serv_name:
             conn = cx_Oracle.connect(user, password, cx_Oracle.makedsn(host, port, service_name=sid), mode)
         else:
@@ -134,7 +134,7 @@ def _connect(uri):
         else:
             raise CommandExecutionError('No uri defined and SID {0} not found in oratab'.format(sid))
         os.environ['ORACLE_SID'] = sid
-        log.debug('connect: {0}'.format((sid, mode)))
+        log.debug('connect: %s', (sid, mode))
         conn = cx_Oracle.connect(mode=MODE['sysdba'])
     conn.outputtypehandler = _unicode_output
     return conn
@@ -152,7 +152,8 @@ def _parse_oratab(sid):
         ORATAB = '/var/opt/oracle/oratab'
     else:
         # Windows has no oratab file
-        raise CommandExecutionError('No uri defined for %s and oratab not available in this OS', sid)
+        raise CommandExecutionError(
+            'No uri defined for {0} and oratab not available in this OS'.format(sid))
     with fopen(ORATAB, 'r') as f:
         while True:
             line = f.readline()
@@ -227,12 +228,12 @@ def version(*dbs):
         ]
     result = {}
     if dbs:
-        log.debug('get db versions for: {0}'.format(dbs))
+        log.debug('get db versions for: %s', dbs)
         for db in dbs:
             if db in pillar_dbs:
                 result[db] = get_version(db)
     else:
-        log.debug('get all({0}) dbs versions'.format(len(dbs)))
+        log.debug('get all(%s) dbs versions', len(dbs))
         for db in dbs:
             result[db] = get_version(db)
     return result

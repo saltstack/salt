@@ -189,7 +189,7 @@ def vm_virt_type(domain):
         salt '*' virt.vm_virt_type <domain>
     '''
     ret = __salt__['vmadm.lookup'](search="uuid={uuid}".format(uuid=domain), order='type')
-    if len(ret) < 1:
+    if not ret:
         raise CommandExecutionError("We can't determine the type of this VM")
 
     return ret[0]['type']
@@ -234,7 +234,7 @@ def get_macs(domain):
     '''
     macs = []
     ret = __salt__['vmadm.lookup'](search="uuid={uuid}".format(uuid=domain), order='nics')
-    if len(ret) < 1:
+    if not ret:
         raise CommandExecutionError('We can\'t find the MAC address of this VM')
     else:
         for nic in ret[0]['nics']:

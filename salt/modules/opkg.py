@@ -158,7 +158,7 @@ def latest_version(*names, **kwargs):
     '''
     refresh = salt.utils.data.is_true(kwargs.pop('refresh', True))
 
-    if len(names) == 0:
+    if not names:
         return ''
 
     ret = {}
@@ -457,7 +457,7 @@ def install(name=None,
     to_downgrade = []
 
     _append_noaction_if_testmode(cmd_prefix, **kwargs)
-    if pkg_params is None or len(pkg_params) == 0:
+    if not pkg_params:
         return {}
     elif pkg_type == 'file':
         if reinstall:
@@ -1061,7 +1061,7 @@ def _process_info_installed_output(out, filter_attrs):
             # This is a continuation of the last attr
             if filter_attrs is None or attr in filter_attrs:
                 line = line.strip()
-                if len(attrs[attr]):
+                if attrs[attr]:
                     # If attr is empty, don't add leading newline
                     attrs[attr] += '\n'
                 attrs[attr] += line

@@ -28,6 +28,7 @@ file, or in the Pillar data.
 '''
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+import logging
 
 # Import Salt libs
 import salt.utils.files
@@ -41,6 +42,8 @@ except ImportError:
 
 # Import 3rd-party libs
 from salt.ext import six
+
+log = logging.getLogger(__name__)
 
 
 def __virtual__():
@@ -238,15 +241,15 @@ def __get_certificates(command,
                         )
 
     if web_server_type not in web_server_types:
-        salt.utils.namecheap.log.error('Invalid option for web_server_type=' + web_server_type)
+        log.error('Invalid option for web_server_type=%s', web_server_type)
         raise Exception('Invalid option for web_server_type=' + web_server_type)
 
     if approver_email is not None and http_dc_validation:
-        salt.utils.namecheap.log.error('approver_email and http_dc_validation cannot both have values')
+        log.error('approver_email and http_dc_validation cannot both have values')
         raise Exception('approver_email and http_dc_validation cannot both have values')
 
     if approver_email is None and not http_dc_validation:
-        salt.utils.namecheap.log.error('approver_email or http_dc_validation must have a value')
+        log.error('approver_email or http_dc_validation must have a value')
         raise Exception('approver_email or http_dc_validation must have a value')
 
     opts = salt.utils.namecheap.get_opts(command)
@@ -277,7 +280,7 @@ def __get_certificates(command,
 
     if http_dc_validation:
         validation_tag = sslresult.getElementsByTagName('HttpDCValidation')
-        if validation_tag is not None and len(validation_tag) > 0:
+        if validation_tag:
             validation_tag = validation_tag[0]
 
             if validation_tag.getAttribute('ValueAvailable').lower() == 'true':
@@ -382,11 +385,11 @@ def renew(years, certificate_id, certificate_type, promotion_code=None):
                    )
 
     if certificate_type not in valid_certs:
-        salt.utils.namecheap.log.error('Invalid option for certificate_type=' + certificate_type)
+        log.error('Invalid option for certificate_type=%s', certificate_type)
         raise Exception('Invalid option for certificate_type=' + certificate_type)
 
     if years < 1 or years > 5:
-        salt.utils.namecheap.log.error('Invalid option for years=' + six.text_type(years))
+        log.error('Invalid option for years=%s', years)
         raise Exception('Invalid option for years=' + six.text_type(years))
 
     opts = salt.utils.namecheap.get_opts('namecheap.ssl.renew')
@@ -560,11 +563,11 @@ def create(years, certificate_type, promotion_code=None, sans_to_add=None):
                    )
 
     if certificate_type not in valid_certs:
-        salt.utils.namecheap.log.error('Invalid option for certificate_type=' + certificate_type)
+        log.error('Invalid option for certificate_type=%s', certificate_type)
         raise Exception('Invalid option for certificate_type=' + certificate_type)
 
     if years < 1 or years > 5:
-        salt.utils.namecheap.log.error('Invalid option for years=' + six.text_type(years))
+        log.error('Invalid option for years=%s', years)
         raise Exception('Invalid option for years=' + six.text_type(years))
 
     opts = salt.utils.namecheap.get_opts('namecheap.ssl.create')
@@ -672,7 +675,7 @@ def parse_csr(csr_file, certificate_type, http_dc_validation=False):
                    )
 
     if certificate_type not in valid_certs:
-        salt.utils.namecheap.log.error('Invalid option for certificate_type=' + certificate_type)
+        log.error('Invalid option for certificate_type=%s', certificate_type)
         raise Exception('Invalid option for certificate_type=' + certificate_type)
 
     opts = salt.utils.namecheap.get_opts('namecheap.ssl.parseCSR')
@@ -786,10 +789,10 @@ def get_info(certificate_id, returncertificate=False, returntype=None):
     if returncertificate:
         opts['returncertificate'] = "true"
         if returntype is None:
-            salt.utils.namecheap.log.error('returntype must be specified when returncertificate is set to True')
+            log.error('returntype must be specified when returncertificate is set to True')
             raise Exception('returntype must be specified when returncertificate is set to True')
         if returntype not in ["Individual", "PKCS7"]:
-            salt.utils.namecheap.log.error('returntype must be specified as Individual or PKCS7, not ' + returntype)
+            log.error('returntype must be specified as Individual or PKCS7, not %s', returntype)
             raise Exception('returntype must be specified as Individual or PKCS7, not ' + returntype)
         opts['returntype'] = returntype
 
