@@ -1910,28 +1910,11 @@ def dns_check(addr, port=80, safe=False, ipv6=None, attempt_connect=True):
                     resolved = salt.utils.zeromq.ip_bracket(addr)
                     break
 
-<<<<<<< HEAD
                 candidate_addr = salt.utils.zeromq.ip_bracket(h[4][0])
 
                 # sometimes /etc/hosts contains ::1 localhost
                 if not ipv6 and candidate_addr == '[::1]':
                     continue
-=======
-                if h[0] == socket.AF_INET and ipv6 is True:
-                    continue
-                if h[0] == socket.AF_INET6 and ipv6 is False:
-                    continue
-
-                candidate_addr = h[4][0]
-
-                if h[0] != socket.AF_INET6 or ipv6 is not None:
-                    candidates.append(candidate_addr)
-
-                try:
-                    s = socket.socket(h[0], socket.SOCK_STREAM)
-                    s.connect((candidate_addr, port))
-                    s.close()
->>>>>>> 2019.2
 
                 candidates.append(candidate_addr)
 
