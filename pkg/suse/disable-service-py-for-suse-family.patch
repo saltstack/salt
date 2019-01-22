@@ -21,5 +21,5 @@ index cfafe24..d581916 100644
          try:
              if int(__grains__.get('osrelease', '').split('.')[0]) >= 12:
                  return False
--- 
+--
 2.0.3

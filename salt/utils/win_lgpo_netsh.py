@@ -133,7 +133,7 @@ def _netsh_command(command, store):
     if store.lower() == 'local':
         netsh_script = dedent('''\
             advfirewall
-            set store local 
+            set store local
             {0}
         '''.format(command))
     else:

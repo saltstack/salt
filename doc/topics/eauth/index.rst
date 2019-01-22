@@ -275,7 +275,7 @@ Server configuration values and their defaults:
     auth.ldap.persontype: 'person'
 
     auth.ldap.minion_stripdomains: []
-    
+
     # Redhat Identity Policy Audit
     auth.ldap.freeipa: False
 
@@ -344,7 +344,7 @@ from LDAP or Active Directory have fully-qualified domain names attached, while 
 instead are simple hostnames.  The parameter below allows the administrator to strip
 off a certain set of domain names so the hostnames looked up in the directory service
 can match the minion IDs.
-               
+
 .. code-block:: yaml
 
    auth.ldap.minion_stripdomains: ['.external.bigcorp.com', '.internal.bigcorp.com']
