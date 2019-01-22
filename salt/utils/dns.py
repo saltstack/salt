@@ -365,12 +365,13 @@ def _lookup_host(name, rdtype, timeout=None, server=None):
     '''
     cmd = 'host -t {0} '.format(rdtype)
 
-    if server is not None:
-        cmd += '@{0} '.format(server)
     if timeout:
         cmd += '-W {0} '.format(int(timeout))
+    cmd += name
+    if server is not None:
+        cmd += ' {0}'.format(server)
 
-    cmd = __salt__['cmd.run_all'](cmd + name, python_shell=False, output_loglevel='quiet')
+    cmd = __salt__['cmd.run_all'](cmd, python_shell=False, output_loglevel='quiet')
 
     if 'invalid type' in cmd['stderr']:
         raise ValueError('Invalid DNS type {}'.format(rdtype))
