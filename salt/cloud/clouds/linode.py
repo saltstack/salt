@@ -1037,9 +1037,12 @@ def _decode_linode_plan_label(label):
                     'Invalid Linode plan ({}) specified - call avail_sizes() for all available options'.format(new_label)
                 )
 
-            log.warning('An outdated Linode plan label was detected in your Cloud Profile ({}).'
-                        ' Please update the profile to use'
-                        ' the new label format ({}) for the requested Linode plan size.'.format(label, new_label))
+            log.warning(
+                'An outdated Linode plan label was detected in your Cloud '
+                'Profile (%s). Please update the profile to use the new '
+                'label format (%s) for the requested Linode plan size.',
+                label, new_label
+            )
 
             label = new_label
 
@@ -1557,7 +1560,7 @@ def _query(action=None,
     )
 
     if 'ERRORARRAY' in result['dict']:
-        if len(result['dict']['ERRORARRAY']):
+        if result['dict']['ERRORARRAY']:
             error_list = []
 
             for error in result['dict']['ERRORARRAY']:
