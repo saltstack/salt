@@ -5,7 +5,7 @@ Return salt data to Zabbix with keys of the form `salt.return.<fun>`
 Missing items will be ignored.
 The value will be either OK or FAILED, followed by the formatted return data:
 
-.. code-block:: plain
+.. code-block
 
     salt.return.test.ping: OK True
 
@@ -152,7 +152,7 @@ An example Zabbix template:
       </templates>
       <triggers>
         <trigger>
-          <expression>{Template App Saltstack:salt.return.test.ping.regexp(^OK )}=0</expression>
+          <expression>{Template App Saltstack:salt.return.test.ping.str(True)}=0</expression>
           <recovery_mode>0</recovery_mode>
           <recovery_expression/>
           <name>Salt ping failed</name>
@@ -168,7 +168,7 @@ An example Zabbix template:
           <tags/>
         </trigger>
         <trigger>
-          <expression>{Template App Saltstack:salt.return.state.apply.regexp(^OK )}=0</expression>
+          <expression>{Template App Saltstack:salt.return.state.apply.regexp(Failed:\s*0)}=0</expression>
           <recovery_mode>0</recovery_mode>
           <recovery_expression/>
           <name>Salt state failed</name>
@@ -233,9 +233,6 @@ def zabbix_send(key, value):
 
 
 def returner(ret):
-    key = 'salt.return.{}'.format(ret['fun'])
-    value = 'OK ' if ret['retcode'] == 0 else 'FAILED '
-
     if ret['fun'].split('.')[0] == 'state':
         out = 'highstate'
         data = {ret['id']: ret['return']}
@@ -246,5 +243,6 @@ def returner(ret):
     opts = __opts__.copy()
     opts['color'] = False
 
-    value += salt.output.try_printout(data, ret.get('out', out), opts)
+    key = 'salt.return.{}'.format(ret['fun'])
+    value = salt.output.try_printout(data, ret.get('out', out), opts)
     zabbix_send(key, value)
