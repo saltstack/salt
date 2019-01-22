@@ -1017,10 +1017,11 @@ def _virtual(osdata):
             if 'QEMU Virtual CPU' in model:
                 grains['virtual'] = 'kvm'
     elif osdata['kernel'] == 'OpenBSD':
-        if osdata['manufacturer'] in ['QEMU', 'Red Hat']:
-            grains['virtual'] = 'kvm'
-        if osdata['manufacturer'] == 'OpenBSD':
-            grains['virtual'] = 'vmm'
+        if 'manufacturer' in osdata:
+            if osdata['manufacturer'] in ['QEMU', 'Red Hat', 'Joyent']:
+                grains['virtual'] = 'kvm'
+            if osdata['manufacturer'] == 'OpenBSD':
+                grains['virtual'] = 'vmm'
     elif osdata['kernel'] == 'SunOS':
         if grains['virtual'] == 'LDOM':
             roles = []
