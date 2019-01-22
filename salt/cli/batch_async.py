@@ -91,7 +91,7 @@ class BatchAsync(object):
                         self.active.remove(minion)
                         self.done_minions.add(minion)
                         # call later so that we maybe gather more returns
-                        self.event.io_loop.call_later(self.batch_delay, self.next)
+                        self.event.io_loop.call_later(self.batch_delay, self.schedule_next)
 
         if self.initialized and self.done_minions == self.minions.difference(self.timedout_minions):
             self.end_batch()
@@ -167,7 +167,7 @@ class BatchAsync(object):
                     "down_minions": self.down_minions
                 },
                 "salt/batch/{0}/start".format(self.batch_jid))
-            yield self.next()
+            yield self.schedule_next()
 
     def end_batch(self):
         self.event.fire_event(
@@ -181,7 +181,7 @@ class BatchAsync(object):
         self.event.remove_event_handler(self.__event_handler)
 
     @tornado.gen.coroutine
-    def next(self):
+    def schedule_next(self):
         next_batch = self._get_next()
         if next_batch:
             yield self.local.run_job_async(
