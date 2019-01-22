@@ -25,8 +25,9 @@ as either absent or present
 '''
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
-import os
+
 import logging
+import os
 
 # Import Salt libs
 import salt.utils.data
@@ -34,7 +35,6 @@ import salt.utils.dateutils
 import salt.utils.platform
 import salt.utils.user
 from salt.exceptions import CommandExecutionError
-
 # Import 3rd-party libs
 from salt.ext.six import string_types, iteritems
 
@@ -80,6 +80,9 @@ def _changes(name,
              win_profile=None,
              win_logonscript=None,
              win_description=None,
+             win_account_disabled=None,
+             win_password_never_expires=None,
+             win_disallow_change_password=None,
              allow_uid_change=False,
              allow_gid_change=False):
     '''
@@ -152,7 +155,8 @@ def _changes(name,
         if expire and lshad['expire'] != expire:
             change['expire'] = expire
     elif 'shadow.info' in __salt__ and salt.utils.platform.is_windows():
-        if expire and expire is not -1 and salt.utils.dateutils.strftime(lshad['expire']) != salt.utils.dateutils.strftime(expire):
+        if expire and expire is not -1 and salt.utils.dateutils.strftime(
+                lshad['expire']) != salt.utils.dateutils.strftime(expire):
             change['expire'] = expire
 
     # GECOS fields
@@ -168,6 +172,15 @@ def _changes(name,
         change['logonscript'] = win_logonscript
     if win_description and lusr['description'] != win_description:
         change['description'] = win_description
+
+    if win_account_disabled is not None and lusr['account_disabled'] != win_account_disabled:
+        change['win_account_disabled'] = win_account_disabled
+
+    if win_password_never_expires is not None and lusr['password_never_expires'] != win_password_never_expires:
+        change['win_password_never_expires'] = win_password_never_expires
+
+    if win_disallow_change_password is not None and lusr['disallow_change_password'] != win_disallow_change_password:
+        change['win_disallow_change_password'] = win_disallow_change_password
 
     # MacOS doesn't have full GECOS support, so check for the "ch" functions
     # and ignore these parameters if these functions do not exist.
@@ -254,6 +267,9 @@ def present(name,
             win_profile=None,
             win_logonscript=None,
             win_description=None,
+            win_account_disabled=None,
+            win_password_never_expires=None,
+            win_disallow_change_password=None,
             nologinit=False,
             allow_uid_change=False,
             allow_gid_change=False):
@@ -449,6 +465,15 @@ def present(name,
         A brief description of the purpose of the users account.
 
         .. versionchanged:: 2015.8.0
+
+    win_account_disabled (Windows only)
+        Sets the account to disabled
+
+    win_password_never_expires  (Windows only)
+        Sets that the password never expires
+
+    win_disallow_change_password (Windows only)
+        Prevents the user from changing their password
     '''
     # First check if a password is set. If password is set, check if
     # hash_password is True, then hash it.
@@ -460,10 +485,10 @@ def present(name,
         # hash to change each time and thereby making the
         # user.present state non-idempotent.
         algorithms = {
-            '1':  'md5',
+            '1': 'md5',
             '2a': 'blowfish',
-            '5':  'sha256',
-            '6':  'sha512',
+            '5': 'sha256',
+            '6': 'sha512',
         }
         try:
             _, algo, shadow_salt, shadow_hash = __salt__['shadow.info'](name)['passwd'].split('$', 4)
@@ -541,36 +566,39 @@ def present(name,
         changes_gid = gid
 
     try:
-        changes = _changes(name,
-                           uid,
-                           changes_gid,
-                           groups,
-                           present_optgroups,
-                           remove_groups,
-                           home,
-                           createhome,
-                           password,
-                           enforce_password,
-                           empty_password,
-                           shell,
-                           fullname,
-                           roomnumber,
-                           workphone,
-                           homephone,
-                           other,
-                           loginclass,
-                           date,
-                           mindays,
-                           maxdays,
-                           inactdays,
-                           warndays,
-                           expire,
-                           win_homedrive,
-                           win_profile,
-                           win_logonscript,
-                           win_description,
-                           allow_uid_change,
-                           allow_gid_change)
+        changes = _changes(name=name,
+                           uid=uid,
+                           gid=changes_gid,
+                           groups=groups,
+                           optional_groups=present_optgroups,
+                           remove_groups=remove_groups,
+                           home=home,
+                           createhome=createhome,
+                           password=password,
+                           enforce_password=enforce_password,
+                           empty_password=empty_password,
+                           shell=shell,
+                           fullname=fullname,
+                           roomnumber=roomnumber,
+                           workphone=workphone,
+                           homephone=homephone,
+                           other=other,
+                           loginclass=loginclass,
+                           date=date,
+                           mindays=mindays,
+                           maxdays=maxdays,
+                           inactdays=inactdays,
+                           warndays=warndays,
+                           expire=expire,
+                           win_homedrive=win_homedrive,
+                           win_profile=win_profile,
+                           win_logonscript=win_logonscript,
+                           win_description=win_description,
+                           win_account_disabled=win_account_disabled,
+                           win_password_never_expires=win_password_never_expires,
+                           win_disallow_change_password=win_disallow_change_password,
+                           allow_uid_change=allow_uid_change,
+                           allow_gid_change=allow_gid_change)
     except CommandExecutionError as exc:
         ret['result'] = False
         ret['comment'] = exc.strerror
@@ -649,6 +677,15 @@ def present(name,
             if key == 'win_description':
                 __salt__['user.update'](name=name, description=val)
                 continue
+            if key == 'win_account_disabled':
+                __salt__['user.update'](name=name, account_disabled=val)
+                continue
+            if key == 'win_password_never_expires':
+                __salt__['user.update'](name=name, password_never_expires=val)
+                continue
+            if key == 'win_disallow_change_password':
+                __salt__['user.update'](name=name, disallow_change_password=val)
+                continue
             if key == 'groups':
                 __salt__['user.ch{0}'.format(key)](
                     name, val, not remove_groups
@@ -677,34 +714,37 @@ def present(name,
             ret['changes']['loginclass'] = lcpost
         if ret['changes']:
             ret['comment'] = 'Updated user {0}'.format(name)
-        changes = _changes(name,
-                           uid,
-                           gid,
-                           groups,
-                           present_optgroups,
-                           remove_groups,
-                           home,
-                           createhome,
-                           password,
-                           enforce_password,
-                           empty_password,
-                           shell,
-                           fullname,
-                           roomnumber,
-                           workphone,
-                           homephone,
-                           other,
-                           loginclass,
-                           date,
-                           mindays,
-                           maxdays,
-                           inactdays,
-                           warndays,
-                           expire,
-                           win_homedrive,
-                           win_profile,
-                           win_logonscript,
-                           win_description,
+        changes = _changes(name=name,
+                           uid=uid,
+                           gid=gid,
+                           groups=groups,
+                           optional_groups=present_optgroups,
+                           remove_groups=remove_groups,
+                           home=home,
+                           createhome=createhome,
+                           password=password,
+                           enforce_password=enforce_password,
+                           empty_password=empty_password,
+                           shell=shell,
+                           fullname=fullname,
+                           roomnumber=roomnumber,
+                           workphone=workphone,
+                           homephone=homephone,
+                           other=other,
+                           loginclass=loginclass,
+                           date=date,
+                           mindays=mindays,
+                           maxdays=maxdays,
+                           inactdays=inactdays,
+                           warndays=warndays,
+                           expire=expire,
+                           win_homedrive=win_homedrive,
+                           win_profile=win_profile,
+                           win_logonscript=win_logonscript,
+                           win_description=win_description,
+                           win_account_disabled=win_account_disabled,
+                           win_password_never_expires=win_password_never_expires,
+                           win_disallow_change_password=win_disallow_change_password,
                            allow_uid_change=True,
                            allow_gid_change=True)
         # allow_uid_change and allow_gid_change passed as True to avoid race
@@ -759,7 +799,11 @@ def present(name,
                        'home': home,
                        'homedrive': win_homedrive,
                        'profile': win_profile,
-                       'logonscript': win_logonscript})
+                       'logonscript': win_logonscript,
+                       'account_disabled': win_account_disabled,
+                       'password_never_expires': win_password_never_expires,
+                       'disallow_change_password': win_disallow_change_password
+                       })
 
         if __salt__['user.add'](**params):
             ret['comment'] = 'New user {0} created'.format(name)
@@ -768,8 +812,8 @@ def present(name,
                 # pwd incorrectly reports presence of home
                 ret['changes']['home'] = ''
             if 'shadow.info' in __salt__ \
-                and not salt.utils.platform.is_windows() \
-                and not salt.utils.platform.is_darwin():
+                    and not salt.utils.platform.is_windows() \
+                    and not salt.utils.platform.is_darwin():
                 if password and not empty_password:
                     __salt__['shadow.set_password'](name, password)
                     spost = __salt__['shadow.info'](name)

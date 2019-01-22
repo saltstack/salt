@@ -105,7 +105,13 @@ def add(name,
         home=None,
         homedrive=None,
         profile=None,
-        logonscript=None):
+        logonscript=None,
+        expiration_date=None,
+        expired=None,
+        account_disabled=None,
+        lock_account=None,
+        password_never_expires=None,
+        disallow_change_password=None):
     '''
     Add a user to the minion.
 
@@ -132,6 +138,28 @@ def add(name,
 
         logonscript (str, optional): Path to a login script to run when the user
             logs on.
+
+        expiration_date (date, optional): The date and time when the account
+            expires. Can be a valid date/time string. To set to never expire
+            pass the string 'Never'.
+
+        expired (bool, optional): Pass `True` to expire the account. The user
+            will be prompted to change their password at the next logon. Pass
+            `False` to mark the account as 'not expired'. You can't use this to
+            negate the expiration if the expiration was caused by the account
+            expiring. You'll have to change the `expiration_date` as well.
+
+        account_disabled (bool, optional): True disables the account. False
+            enables the account.
+
+        lock_account (bool, optional): True locks a locked user account.
+            False unlocks the account.
+
+        password_never_expires (bool, optional): True sets the password to never
+            expire. False allows the password to expire.
+
+        disallow_change_password (bool, optional): True blocks the user from
+            changing the password. False allows the user to change the password.
 
     Returns:
         bool: True if successful. False is unsuccessful.
@@ -176,7 +204,14 @@ def add(name,
     update(name=name,
            homedrive=homedrive,
            profile=profile,
-           fullname=fullname)
+           fullname=fullname,
+           expiration_date=expiration_date,
+           expired=expired,
+           account_disabled=account_disabled,
+           lock_account=lock_account,
+           password_never_expires=password_never_expires,
+           disallow_change_password=disallow_change_password
+           )
 
     ret = chgroups(name, groups) if groups else True
 
@@ -194,7 +229,7 @@ def update(name,
            expiration_date=None,
            expired=None,
            account_disabled=None,
-           unlock_account=None,
+           lock_account=None,
            password_never_expires=None,
            disallow_change_password=None):
     # pylint: disable=anomalous-backslash-in-string
@@ -235,8 +270,8 @@ def update(name,
         account_disabled (bool, optional): True disables the account. False
             enables the account.
 
-        unlock_account (bool, optional): True unlocks a locked user account.
-            False is ignored.
+        lock_account (bool, optional): True locks a locked user account.
+            False unlocks the account.
 
         password_never_expires (bool, optional): True sets the password to never
             expire. False allows the password to expire.
@@ -311,8 +346,10 @@ def update(name,
             user_info['flags'] |= win32netcon.UF_ACCOUNTDISABLE
         else:
             user_info['flags'] &= ~win32netcon.UF_ACCOUNTDISABLE
-    if unlock_account is not None:
-        if unlock_account:
+    if lock_account is not None:
+        if lock_account:
+            user_info['flags'] |= win32netcon.UF_LOCKOUT
+        else:
             user_info['flags'] &= ~win32netcon.UF_LOCKOUT
     if password_never_expires is not None:
         if password_never_expires:
@@ -743,7 +780,6 @@ def info(name):
             - failed_logon_attempts
             - last_logon
             - account_disabled
-            - account_locked
             - password_never_expires
             - disallow_change_password
             - gid
