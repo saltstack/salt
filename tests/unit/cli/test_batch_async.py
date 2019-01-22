@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+from __future__ import absolute_import
+
 # Import Salt Libs
 from salt.cli.batch_async import BatchAsync
 
