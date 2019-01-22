@@ -2293,11 +2293,11 @@ class Minion(MinionBase):
 
         funcs = {'add': ('add_beacon', (name, beacon_data)),
                  'modify': ('modify_beacon', (name, beacon_data)),
-                 'delete': ('delete_beacon', (name)),
+                 'delete': ('delete_beacon', (name,)),
                  'enable': ('enable_beacons', ()),
                  'disable': ('disable_beacons', ()),
-                 'enable_beacon': ('enable_beacon', (name)),
-                 'disable_beacon': ('disable_beacon', (name)),
+                 'enable_beacon': ('enable_beacon', (name,)),
+                 'disable_beacon': ('disable_beacon', (name,)),
                  'list': ('list_beacons', (include_opts,
                                            include_pillar)),
                  'list_available': ('list_available_beacons', ()),
@@ -2309,9 +2309,14 @@ class Minion(MinionBase):
         try:
             alias, params = funcs.get(func)
             getattr(self.beacons, alias)(*params)
-        except TypeError:
-            log.error('Function "%s" is unavailable in salt.utils.beacons',
-                      func)
+        except AttributeError:
+            log.error('Function "%s" is unavailable in salt.beacons', func)
+        except TypeError as exc:
+            log.info(
+                'Failed to handle %s with data(%s). Error: %s',
+                tag, data, exc,
+                exc_info_on_loglevel=logging.DEBUG
+            )
 
     def environ_setenv(self, tag, data):
         '''
