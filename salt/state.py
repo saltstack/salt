@@ -41,6 +41,7 @@ import salt.utils.event
 import salt.utils.files
 import salt.utils.hashutils
 import salt.utils.immutabletypes as immutabletypes
+import salt.utils.msgpack as msgpack
 import salt.utils.platform
 import salt.utils.process
 import salt.utils.url
@@ -57,7 +58,6 @@ from salt.utils.odict import OrderedDict, DefaultOrderedDict
 import salt.utils.yamlloader as yamlloader
 
 # Import third party libs
-import msgpack
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 from salt.ext import six
 from salt.ext.six.moves import map, range, reload_module
