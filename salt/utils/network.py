@@ -1953,7 +1953,7 @@ def parse_host_port(host_port):
             host = _s_
     try:
         if not isinstance(host, ipaddress._BaseAddress):
-            host_ip = ipaddress.ip_address(host)
+            host_ip = ipaddress.ip_address(host).compressed
             host = host_ip
     except ValueError:
         log.debug('"%s" Not an IP address? Assuming it is a hostname.', host)
