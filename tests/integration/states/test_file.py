@@ -2532,12 +2532,12 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
 
     @with_tempfile()
     def test_issue_50221(self, name):
-        expected = b'abc{0}{0}{0}'.format(os.linesep)
+        expected = 'abc{0}{0}{0}'.format(os.linesep)
         ret = self.run_function(
             'pillar.get',
             ['issue-50221']
         )
-        assert ret.encode() == expected
+        assert ret == expected
         ret = self.run_function(
             'state.apply',
             ['issue-50221'],
@@ -2546,7 +2546,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             },
         )
         self.assertSaltTrueReturn(ret)
-        with salt.utils.files.fopen(name, 'rb') as fp:
+        with salt.utils.files.fopen(name, 'r') as fp:
             contents = fp.read()
         assert contents == expected
 
