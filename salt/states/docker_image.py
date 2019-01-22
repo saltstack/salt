@@ -275,7 +275,7 @@ def present(name,
         argspec = salt.utils.args.get_function_argspec(__salt__['docker.build'])
         # Map any if existing args from kwargs into the build_args dictionary
         build_args = dict(list(zip(argspec.args, argspec.defaults)))
-        for k, v in build_args.items():
+        for k in build_args:
             if k in kwargs.get('kwargs', {}):
                 build_args[k] = kwargs.get('kwargs', {}).get(k)
         try:

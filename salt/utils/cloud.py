@@ -884,7 +884,7 @@ class Client(object):
     def create_service(self):
         return self._client.create_service()
 
-    def run_executabe(self, *args, **kwargs):
+    def run_executable(self, *args, **kwargs):
         return self._client.run_executable(*args, **kwargs)
 
     def remove_service(self, wait_timeout=10, sleep_wait=1):
@@ -1022,12 +1022,8 @@ def wait_for_psexecsvc(host, port, username, password, timeout=900):
         if time.time() - start > timeout:
             return False
         log.debug(
-            'Retrying psexec connection to host {0} on port {1} '
-            '(try {2})'.format(
-                host,
-                port,
-                try_count
-            )
+            'Retrying psexec connection to host %s on port %s (try %s)',
+            host, port, try_count
         )
         time.sleep(1)
 
@@ -1313,7 +1309,7 @@ def deploy_windows(host,
             )
 
             if ret_code != 0:
-                raise Exception("Fail installer %d", ret_code)
+                raise Exception('Fail installer {0}'.format(ret_code))
 
         # Copy over minion_conf
         if minion_conf:
@@ -1499,7 +1495,7 @@ def deploy_script(host,
                     )
             if sudo:
                 comps = tmp_dir.lstrip('/').rstrip('/').split('/')
-                if len(comps) > 0:
+                if comps:
                     if len(comps) > 1 or comps[0] != 'tmp':
                         ret = root_cmd(
                             'chown {0} "{1}"'.format(username, tmp_dir),

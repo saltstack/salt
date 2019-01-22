@@ -134,11 +134,11 @@ def beacon(config):
 
     # Maybe send an event if we don't have any devices
     if 'no_devices_event' in _config and _config['no_devices_event'] is True:
-        if len(found_devices) == 0 and not last_state_extra['no_devices']:
+        if not found_devices and not last_state_extra['no_devices']:
             ret.append({'tag': 'no_devices'})
 
     # Did we have no devices listed this time around?
 
-    last_state_extra['no_devices'] = len(found_devices) == 0
+    last_state_extra['no_devices'] = not found_devices
 
     return ret

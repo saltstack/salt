@@ -79,7 +79,7 @@ def exists(name, attributes):
             ret['changes'][attr_id] = attr_val
             __salt__['xattr.write'](name, attr_id, attr_val, attr_hex)
 
-    if len(ret['changes'].keys()) == 0:
+    if not ret['changes']:
         ret['comment'] = 'All values existed correctly.'
 
     return ret
@@ -115,7 +115,7 @@ def delete(name, attributes):
             __salt__['xattr.delete'](name, attr)
             ret['changes'][attr] = 'delete'
 
-    if len(ret['changes'].keys()) == 0:
+    if not ret['changes']:
         ret['comment'] = 'All attributes were already deleted.'
 
     return ret

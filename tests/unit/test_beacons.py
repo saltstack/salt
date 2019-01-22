@@ -34,7 +34,7 @@ class BeaconsTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test that beacon_module parameter for beacon configuration
         '''
-        mock_opts = salt.config.DEFAULT_MINION_OPTS
+        mock_opts = salt.config.DEFAULT_MINION_OPTS.copy()
         mock_opts['id'] = 'minion'
         mock_opts['__role'] = 'minion'
         mock_opts['beacons'] = {'watch_apache': [{'processes': {'apache2': 'stopped'}},

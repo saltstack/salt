@@ -292,7 +292,7 @@ class SaltCloud(salt.utils.parsers.SaltCloudParser):
             salt.utils.cloud.store_password_in_keyring(provider_name, username)
         elif self.config.get('map', None) and \
                 self.selected_query_option is None:
-            if len(mapper.rendered_map) == 0:
+            if not mapper.rendered_map:
                 sys.stderr.write('No nodes defined in this map')
                 self.exit(salt.defaults.exitcodes.EX_GENERIC)
             try:

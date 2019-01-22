@@ -212,9 +212,9 @@ def setup_handlers():
             except KeyError:
                 log.debug('Sentry tag \'%s\' not found in grains.', tag)
                 continue
-            if len(tag_value) > 0:
+            if tag_value:
                 context_dict[tag] = tag_value
-        if len(context_dict) > 0:
+        if context_dict:
             client.context.merge({'tags': context_dict})
     try:
         handler = SentryHandler(client)

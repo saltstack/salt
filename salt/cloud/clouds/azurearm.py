@@ -865,7 +865,7 @@ def create_network_interface(call=None, kwargs=None):
                     ]
                     break
             except CloudError as exc:
-                log.error('There was a cloud error: {0}'.format(exc))
+                log.error('There was a cloud error: %s', exc)
             count += 1
             if count > 120:
                 raise ValueError('Timed out waiting for public IP Address.')
@@ -1425,9 +1425,9 @@ def create(vm_):
         Query node data.
         '''
         data = show_instance(name, call='action')
-        ip_address = None
-        if len(data.keys()) == 0:
+        if not data:
             return False
+        ip_address = None
         if bootstrap_interface == 'public':
             ip_address = data['public_ips'][0]
         if bootstrap_interface == 'private':

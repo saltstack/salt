@@ -903,7 +903,7 @@ def replication_group_present(name, wait=900, security_groups=None, region=None,
                     ret['comment'] += ' ... and then immediately modified.'
                 else:
                     ret['comment'] = 'Replication group {0} was modified.'.format(name)
-                    ret['changes']['old'] = current[0] if len(current) else None
+                    ret['changes']['old'] = current[0] if current else None
                 ret['changes']['new'] = new[0]
             else:
                 ret['result'] = False

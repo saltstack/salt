@@ -297,8 +297,8 @@ class Key(object):
         self.opts = opts
         kind = self.opts.get('__role', '')  # application kind
         if kind not in salt.utils.kinds.APPL_KINDS:
-            emsg = ("Invalid application kind = '{0}'.".format(kind))
-            log.error(emsg + '\n')
+            emsg = "Invalid application kind = '{0}'.".format(kind)
+            log.error(emsg)
             raise ValueError(emsg)
         self.event = salt.utils.event.get_event(
                 kind,

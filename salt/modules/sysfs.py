@@ -108,7 +108,7 @@ def read(key, root=''):
                 subkeys = subkey.split('/')
                 subkey = subkeys.pop()
                 subresult = result
-                if len(subkeys):
+                if subkeys:
                     for skey in subkeys:
                         if skey not in subresult:
                             subresult[skey] = {}

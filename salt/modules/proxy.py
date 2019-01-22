@@ -66,7 +66,7 @@ def _get_proxy_windows(types=None):
     if servers and "=" in servers:
         split = servers.split(";")
         for s in split:
-            if len(s) == 0:
+            if not s:
                 continue
 
             if ":" in s:
