@@ -68,6 +68,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging
+import uuid
 
 # Import salt libs
 import salt.utils.jid
@@ -391,3 +392,35 @@ def prep_jid(nocache=False, passed_jid=None):  # pylint: disable=unused-argument
     Do any work necessary to prepare a JID, including sending a custom id.
     '''
     return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid(__opts__)
+
+
+def event_return(events):
+    '''
+    Return event to etcd server
+
+    Requires that configuration enabled via 'event_return'
+    option in master config.
+    '''
+    ttl = __opts__.get('etcd.ttl', 5)
+    client, path = _get_conn(__opts__)
+
+    exceptions = []
+    for event in events:
+        package = {
+            'tag': event.get('tag', ''),
+            'data': event.get('data', ''),
+            'master_id': __opts__['id'],
+        }
+        path = '/'.join([path, 'events', package['tag']])
+        json = salt.utils.json.dumps(package)
+        try:
+            res = client.set(path, json, ttl=ttl)
+        except Exception, err:
+            log.exception('etcd: Unable to write event into returner path %s due to exception %s: %r', path, package, err)
+            exceptions.append(err)
+            continue
+        if not res:
+            log.error('etcd: Unable to write event into returner path %s: %r', path, package)
+        continue
+    return
+
