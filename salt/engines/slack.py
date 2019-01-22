@@ -727,7 +727,7 @@ class SlackClient(object):
                 if count > 10:
                     log.warning('Breaking in getting messages because count is exceeded')
                     break
-                if len(msg) == 0:
+                if not msg:
                     count += 1
                     log.warning('Skipping an empty message.')
                     continue  # This one is a dud, get the next message

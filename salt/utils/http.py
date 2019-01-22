@@ -981,7 +981,7 @@ def _sanitize_url_components(comp_list, field):
     '''
     Recursive function to sanitize each component of the url.
     '''
-    if len(comp_list) == 0:
+    if not comp_list:
         return ''
     elif comp_list[0].startswith('{0}='.format(field)):
         ret = '{0}=XXXXXXXXXX&'.format(field)

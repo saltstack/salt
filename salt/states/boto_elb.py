@@ -524,7 +524,7 @@ def register_instances(name, instances, region=None, key=None, keyid=None,
     nodes = [value['instance_id'] for value in health
              if value['description'] != 'Instance deregistration currently in progress.']
     new = [value for value in instances if value not in nodes]
-    if not len(new):
+    if not new:
         msg = 'Instance/s {0} already exist.'.format(six.text_type(instances).strip('[]'))
         log.debug(msg)
         ret.update({'comment': msg})

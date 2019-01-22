@@ -1541,7 +1541,7 @@ class State(object):
                     if isinstance(arg, dict):
                         # It is not a function, verify that the arg is a
                         # requisite in statement
-                        if len(arg) < 1:
+                        if not arg:
                             # Empty arg dict
                             # How did we get this far?
                             continue
@@ -1619,7 +1619,7 @@ class State(object):
                                                             found = True
                                         if not found:
                                             continue
-                                if len(ind) < 1:
+                                if not ind:
                                     continue
                                 pstate = next(iter(ind))
                                 pname = ind[pstate]
@@ -3719,7 +3719,7 @@ class BaseHighState(object):
 
                     for arg in state[name][s_dec]:
                         if isinstance(arg, dict):
-                            if len(arg) > 0:
+                            if arg:
                                 if next(six.iterkeys(arg)) == 'order':
                                     found = True
                     if not found:

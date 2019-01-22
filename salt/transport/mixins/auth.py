@@ -420,7 +420,7 @@ class AESReqServerMixin(object):
                 with salt.utils.files.fopen(pubfn, 'w+') as fp_:
                     fp_.write(load['pub'])
             elif not load['pub']:
-                log.error('Public key is empty: {0}'.format(load['id']))
+                log.error('Public key is empty: %s', load['id'])
                 return {'enc': 'clear',
                         'load': {'ret': False}}
 

@@ -62,7 +62,7 @@ def get_user_pubkeys(users):
 
         ret[user] = {}
         for key in keys:
-            if len(key_ids) > 0:
+            if key_ids:
                 if six.text_type(key['id']) in key_ids:
                     ret[user][key['id']] = key['key']
             else:

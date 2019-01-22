@@ -1160,8 +1160,7 @@ def _clean_value(key, val):
     NOTE: This logic also exists in the smbios module. This function is
           for use when not using smbios to retrieve the value.
     '''
-    if (val is None or
-            not len(val) or
+    if (val is None or not val or
             re.match('none', val, flags=re.IGNORECASE)):
         return None
     elif 'uuid' in key:

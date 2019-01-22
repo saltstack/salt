@@ -381,7 +381,7 @@ def modify_site(name, sourcepath=None, apppool=None, preload=None):
     current_sites = list_sites()
 
     if name not in current_sites:
-        log.debug("Site '{0}' not defined.".format(name))
+        log.debug("Site '%s' not defined.", name)
         return False
 
     ps_cmd = list()
@@ -395,10 +395,9 @@ def modify_site(name, sourcepath=None, apppool=None, preload=None):
     if apppool:
 
         if apppool in list_apppools():
-            log.debug('Utilizing pre-existing application pool: {0}'
-                      ''.format(apppool))
+            log.debug('Utilizing pre-existing application pool: %s', apppool)
         else:
-            log.debug('Application pool will be created: {0}'.format(apppool))
+            log.debug('Application pool will be created: %s', apppool)
             create_apppool(apppool)
 
         # If ps_cmd isn't empty, we need to add a semi-colon to run two commands
@@ -2039,7 +2038,7 @@ def set_webapp_settings(name, site, settings):
         log.error('Failed to change settings: %s', failed_settings)
         return False
 
-    log.debug('Settings configured successfully: {0}'.format(settings.keys()))
+    log.debug('Settings configured successfully: %s', list(settings))
     return True
 
 

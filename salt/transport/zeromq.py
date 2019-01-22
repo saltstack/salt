@@ -1188,7 +1188,7 @@ class AsyncReqMessageClient(object):
 
     @tornado.gen.coroutine
     def _internal_send_recv(self):
-        while len(self.send_queue) > 0:
+        while self.send_queue:
             message = self.send_queue[0]
             future = self.send_future_map.get(message, None)
             if future is None:
@@ -1274,7 +1274,7 @@ class AsyncReqMessageClient(object):
             send_timeout = self.io_loop.call_later(timeout, self.timeout_message, message)
             self.send_timeout_map[message] = send_timeout
 
-        if len(self.send_queue) == 0:
+        if not self.send_queue:
             self.io_loop.spawn_callback(self._internal_send_recv)
 
         self.send_queue.append(message)

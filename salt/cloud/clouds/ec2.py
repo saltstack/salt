@@ -100,6 +100,7 @@ import decimal
 
 # Import Salt Libs
 import salt.utils.cloud
+import salt.utils.compat
 import salt.utils.files
 import salt.utils.hashutils
 import salt.utils.json
@@ -1229,7 +1230,7 @@ def get_imageid(vm_):
     _t = lambda x: datetime.datetime.strptime(x['creationDate'], '%Y-%m-%dT%H:%M:%S.%fZ')
     image_id = sorted(aws.query(params, location=get_location(),
                                  provider=get_provider(), opts=__opts__, sigver='4'),
-                      lambda i, j: cmp(_t(i), _t(j))
+                      lambda i, j: salt.utils.compat.cmp(_t(i), _t(j))
                       )[-1]['imageId']
     get_imageid.images[image] = image_id
     return image_id
@@ -2659,7 +2660,7 @@ def create(vm_=None, call=None):
             vm_['instance_id_list'].append(instance['instanceId'])
 
         vm_['instance_id'] = vm_['instance_id_list'].pop()
-        if len(vm_['instance_id_list']) > 0:
+        if vm_['instance_id_list']:
             # Multiple instances were spun up, get one now, and queue the rest
             queue_instances(vm_['instance_id_list'])
 

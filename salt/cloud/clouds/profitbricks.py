@@ -372,8 +372,7 @@ def get_datacenter_id():
     try:
         conn.get_datacenter(datacenter_id=datacenter_id)
     except PBNotFoundError:
-        log.error('Failed to get datacenter: {0}'.format(
-                  datacenter_id))
+        log.error('Failed to get datacenter: %s', datacenter_id)
         raise
 
     return datacenter_id
@@ -607,7 +606,7 @@ def list_nodes_full(conn=None, call=None):
         node['private_ips'] = []
         if item['entities']['nics']['items'] > 0:
             for nic in item['entities']['nics']['items']:
-                if len(nic['properties']['ips']) > 0:
+                if nic['properties']['ips']:
                     pass
                 ip_address = nic['properties']['ips'][0]
                 if salt.utils.cloud.is_public_ip(ip_address):
@@ -877,11 +876,8 @@ def create(vm_):
         return False
     except Exception as exc:  # pylint: disable=W0703
         log.error(
-            'Error creating {0} \n\n'
-            'Error: \n{1}'.format(
-                vm_['name'], exc
-            ),
-            exc_info_on_loglevel=logging.DEBUG
+            'Error creating %s \n\nError: \n%s',
+            vm_['name'], exc, exc_info_on_loglevel=logging.DEBUG
         )
         return False
 
@@ -1008,12 +1004,12 @@ def destroy(name, call=None):
     # The server is deleted and now is safe to delete the volumes
     if delete_volumes:
         for vol in attached_volumes['items']:
-            log.debug('Deleting volume {0}'.format(vol['id']))
+            log.debug('Deleting volume %s', vol['id'])
             conn.delete_volume(
                 datacenter_id=datacenter_id,
                 volume_id=vol['id']
             )
-            log.debug('Deleted volume {0}'.format(vol['id']))
+            log.debug('Deleted volume %s', vol['id'])
 
     __utils__['cloud.fire_event'](
         'event',

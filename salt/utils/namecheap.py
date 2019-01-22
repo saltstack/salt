@@ -86,11 +86,11 @@ def xml_to_dict(xml):
     if xml.nodeType == xml.CDATA_SECTION_NODE:
         return xml.data
     result = atts_to_dict(xml)
-    if len([n for n in xml.childNodes if n.nodeType != xml.TEXT_NODE]) == 0:
-        if len(result) > 0:
-            if xml.firstChild is not None and len(xml.firstChild.data) > 0:
+    if not [n for n in xml.childNodes if n.nodeType != xml.TEXT_NODE]:
+        if result > 0:
+            if xml.firstChild is not None and xml.firstChild.data:
                 result['data'] = xml.firstChild.data
-        elif xml.firstChild is not None and len(xml.firstChild.data) > 0:
+        elif xml.firstChild is not None and xml.firstChild.data:
             return xml.firstChild.data
         else:
             return None

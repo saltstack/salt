@@ -143,7 +143,6 @@ def dumps(obj, **kwargs):
     You can pass an alternate json module (loaded via import_json() above)
     using the _json_module argument)
     '''
-    import sys
     json_module = kwargs.pop('_json_module', json)
     orig_enc_func = kwargs.pop('default', lambda x: x)
 

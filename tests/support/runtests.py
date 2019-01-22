@@ -221,6 +221,10 @@ RUNTIME_VARS = RuntimeVars(
     TMP_PRODENV_STATE_TREE=paths.TMP_PRODENV_STATE_TREE,
     RUNNING_TESTS_USER=RUNNING_TESTS_USER,
     RUNTIME_CONFIGS={},
+    CODE_DIR=paths.CODE_DIR,
+    BASE_FILES=paths.BASE_FILES,
+    PROD_FILES=paths.PROD_FILES,
+    TESTS_DIR=paths.TESTS_DIR,
     PYTEST_SESSION=False
 )
 # <---- Tests Runtime Variables --------------------------------------------------------------------------------------

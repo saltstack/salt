@@ -87,7 +87,7 @@ def start(interval=3600, expire=604800):
             if now - expire > seen:
                 stale_keys.append(m)
 
-        if len(stale_keys):
+        if stale_keys:
             for k in stale_keys:
                 log.info('Removing stale key for %s', k)
             wheel.cmd('key.delete', stale_keys)

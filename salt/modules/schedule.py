@@ -912,7 +912,7 @@ def move(name, target, **kwargs):
         if not response:
             ret['comment'] = 'no servers answered the published schedule.add command'
             return ret
-        elif len(errors) > 0:
+        elif errors:
             ret['comment'] = 'the following minions return False'
             ret['minions'] = errors
             return ret
@@ -976,7 +976,7 @@ def copy(name, target, **kwargs):
         if not response:
             ret['comment'] = 'no servers answered the published schedule.add command'
             return ret
-        elif len(errors) > 0:
+        elif errors:
             ret['comment'] = 'the following minions return False'
             ret['minions'] = errors
             return ret
