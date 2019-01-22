@@ -96,7 +96,7 @@ class Registry(object):
             attr[id_] = OrderedDict()
 
         # if we have requisites in our stack then add them to the state
-        if len(cls.requisites) > 0:
+        if cls.requisites:
             for req in cls.requisites:
                 if req.requisite not in state.kwargs:
                     state.kwargs[req.requisite] = []
@@ -170,7 +170,7 @@ class StateFactory(object):
         self.valid_funcs = valid_funcs
 
     def __getattr__(self, func):
-        if len(self.valid_funcs) > 0 and func not in self.valid_funcs:
+        if self.valid_funcs and func not in self.valid_funcs:
             raise InvalidFunction('The function \'{0}\' does not exist in the '
                                   'StateFactory for \'{1}\''.format(
                                       func,

@@ -47,7 +47,7 @@ def _load_libcrypto():
             # or /opt/local/lib (non-Global Zone), thus the
             # two checks below
             lib = glob.glob('/opt/local/lib/libcrypto.so*') + glob.glob('/opt/tools/lib/libcrypto.so*')
-            lib = lib[0] if len(lib) > 0 else None
+            lib = lib[0] if lib else None
         if lib:
             return cdll.LoadLibrary(lib)
         raise OSError('Cannot locate OpenSSL libcrypto')
