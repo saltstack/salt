@@ -5,10 +5,11 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing Libs
 from tests.support.unit import TestCase, skipIf
-import mock
+from tests.support.mock import  mock
 
 import salt.config
 import salt.syspaths
+
 
 class ConfigTest(TestCase):
 
