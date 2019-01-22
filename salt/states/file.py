@@ -445,8 +445,10 @@ def _gen_recurse_managed_files(
             _filenames = list(filenames)
             for filename in _filenames:
                 if filename.startswith(lname):
-                    log.debug('** skipping file ** {0}, it intersects a '
-                              'symlink'.format(filename))
+                    log.debug(
+                        '** skipping file ** %s, it intersects a symlink',
+                        filename
+                    )
                     filenames.remove(filename)
             # Create the symlink along with the necessary dirs.
             # The dir perms/ownership will be adjusted later
@@ -522,8 +524,10 @@ def _gen_recurse_managed_files(
                 islink = False
                 for link in symlinks:
                     if mdir.startswith(link, 0):
-                        log.debug('** skipping empty dir ** {0}, it intersects'
-                                  ' a symlink'.format(mdir))
+                        log.debug(
+                            '** skipping empty dir ** %s, it intersects a '
+                            'symlink', mdir
+                        )
                         islink = True
                         break
                 if islink:
@@ -596,7 +600,7 @@ def _gen_keep_files(name, require, walk_d=None):
                         if _is_child(fn, name):
                             if fun == 'recurse':
                                 fkeep = _gen_recurse_managed_files(**low)[3]
-                                log.debug('Keep from {0}: {1}'.format(fn, fkeep))
+                                log.debug('Keep from %s: %s', fn, fkeep)
                                 keep.update(fkeep)
                             elif walk_d:
                                 walk_ret = set()
@@ -606,7 +610,7 @@ def _gen_keep_files(name, require, walk_d=None):
                                 keep.update(_process(fn))
                     else:
                         keep.add(fn)
-    log.debug('Files to keep from required states: {0}'.format(list(keep)))
+    log.debug('Files to keep from required states: %s', list(keep))
     return list(keep)
 
 
@@ -1132,8 +1136,8 @@ def _get_template_texts(source_list=None,
             context=context_dict,
             **kwargs
         )
-        msg = 'cp.get_template returned {0} (Called with: {1})'
-        log.debug(msg.format(rndrd_templ_fn, source))
+        log.debug('cp.get_template returned %s (Called with: %s)',
+                  rndrd_templ_fn, source)
         if rndrd_templ_fn:
             tmplines = None
             with salt.utils.files.fopen(rndrd_templ_fn, 'rb') as fp_:
@@ -1141,10 +1145,12 @@ def _get_template_texts(source_list=None,
                 tmplines = salt.utils.stringutils.to_unicode(tmplines)
                 tmplines = tmplines.splitlines(True)
             if not tmplines:
-                msg = 'Failed to read rendered template file {0} ({1})'
-                log.debug(msg.format(rndrd_templ_fn, source))
+                msg = 'Failed to read rendered template file {0} ({1})'.format(
+                    rndrd_templ_fn, source
+                )
+                log.debug(msg)
                 ret['name'] = source
-                return _error(ret, msg.format(rndrd_templ_fn, source))
+                return _error(ret, msg)
             txtl.append(''.join(tmplines))
         else:
             msg = 'Failed to load template file {0}'.format(source)
@@ -1459,9 +1465,9 @@ def symlink(
         # Group isn't relevant to Windows, use win_perms/win_deny_perms
         if group is not None:
             log.warning(
-                'The group argument for {0} has been ignored as this '
+                'The group argument for %s has been ignored as this '
                 'is a Windows system. Please use the `win_*` parameters to set '
-                'permissions in Windows.'.format(name)
+                'permissions in Windows.', name
             )
 
         if copy_target_group is not None:
@@ -2595,11 +2601,11 @@ def managed(name,
     if not source and contents_count == 0 and replace:
         replace = False
         log.warning(
-            'State for file: {0} - Neither \'source\' nor \'contents\' nor '
+            'State for file: %s - Neither \'source\' nor \'contents\' nor '
             '\'contents_pillar\' nor \'contents_grains\' was defined, yet '
             '\'replace\' was set to \'True\'. As there is no source to '
             'replace the file with, \'replace\' has been set to \'False\' to '
-            'avoid reading the file unnecessarily.'.format(name)
+            'avoid reading the file unnecessarily.', name
         )
 
     if 'file_mode' in kwargs:
@@ -2720,9 +2726,9 @@ def managed(name,
         # Group isn't relevant to Windows, use win_perms/win_deny_perms
         if group is not None:
             log.warning(
-                'The group argument for {0} has been ignored as this is '
+                'The group argument for %s has been ignored as this is '
                 'a Windows system. Please use the `win_*` parameters to set '
-                'permissions in Windows.'.format(name)
+                'permissions in Windows.', name
             )
         group = user
 
@@ -3312,9 +3318,9 @@ def directory(name,
         # Group isn't relevant to Windows, use win_perms/win_deny_perms
         if group is not None:
             log.warning(
-                'The group argument for {0} has been ignored as this is '
+                'The group argument for %s has been ignored as this is '
                 'a Windows system. Please use the `win_*` parameters to set '
-                'permissions in Windows.'.format(name)
+                'permissions in Windows.', name
             )
         group = user
 
@@ -3844,8 +3850,8 @@ def recurse(name,
     if salt.utils.platform.is_windows():
         if group is not None:
             log.warning(
-                'The group argument for {0} has been ignored as this '
-                'is a Windows system.'.format(name)
+                'The group argument for %s has been ignored as this '
+                'is a Windows system.', name
             )
         group = user
     ret = {
@@ -4925,7 +4931,7 @@ def keyvalue(
                 tmpdiff.append('+ {0}'.format(line))
                 content.append(line)
                 changes += 1
-        if len(tmpdiff):
+        if tmpdiff:
             tmpdiff.insert(0, '- <EOF>'+os.linesep)
             tmpdiff.append('+ <EOF>'+os.linesep)
             diff.extend(tmpdiff)
@@ -6707,8 +6713,8 @@ def copy_(name,
         if salt.utils.platform.is_windows():
             if group is not None:
                 log.warning(
-                    'The group argument for {0} has been ignored as this is '
-                    'a Windows system.'.format(name)
+                    'The group argument for %s has been ignored as this is '
+                    'a Windows system.', name
                 )
             group = user
 
