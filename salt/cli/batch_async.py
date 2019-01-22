@@ -21,7 +21,32 @@ from salt.cli.batch import get_bnum, batch_get_opts, batch_get_eauth
 
 class BatchAsync(object):
     '''
-    Manage the execution of batch runs
+    Run a job on the targeted minions by using a moving window of fixed size `batch`.
+
+    ``BatchAsync`` is used to execute a job on the targeted minions by keeping
+    the number of concurrent running minions to the size of `batch` parameter.
+
+    The control parameters are:
+        - batch: number/percentage of concurrent running minions
+        - batch_delay: minimum wait time between batches
+        - gather_job_timeout: `find_job` timeout
+        - timeout: time to wait before firing a `find_job`
+
+    When the batch stars, a `start` event is fired:
+         - tag: salt/batch/<batch-jid>/start
+         - data: {
+             "available_minions": self.minions,
+             "down_minions": self.down_minions
+           }
+
+    When the batch ends, an `done` event is fired:
+        - tag: salt/batch/<batch-jid>/done
+        - data: {
+             "available_minions": self.minions,
+             "down_minions": self.down_minions,
+             "done_minions": self.done_minions,
+             "timedout_minions": self.timedout_minions
+         }
     '''
     def __init__(self, parent_opts, jid_gen, clear_load):
         ioloop = tornado.ioloop.IOLoop.current()
