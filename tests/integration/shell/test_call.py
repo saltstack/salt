@@ -20,7 +20,6 @@ import logging
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ShellCase
 from tests.support.unit import skipIf
-from tests.support.paths import FILES
 from tests.support.mixins import ShellCaseCommonTestsMixin
 from tests.support.helpers import flaky, with_tempfile
 from tests.integration.utils import testprogram
@@ -66,8 +65,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
         self.assertIn('"local": true', ''.join(out))
 
     def test_local_sls_call(self):
-        fileroot = os.path.join(FILES, 'file', 'base')
-        out = self.run_call('--file-root {0} --local state.sls saltcalllocal'.format(fileroot))
+        out = self.run_call('--file-root {0} --local state.sls saltcalllocal'.format(RUNTIME_VARS.BASE_FILES))
         self.assertIn('Name: test.echo', ''.join(out))
         self.assertIn('Result: True', ''.join(out))
         self.assertIn('hello', ''.join(out))
@@ -113,8 +111,8 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
         for this minion, salt-call should exit non-zero if invoked with
         option --retcode-passthrough
         '''
-        src = os.path.join(FILES, 'file/base/top.sls')
-        dst = os.path.join(FILES, 'file/base/top.sls.bak')
+        src = os.path.join(RUNTIME_VARS.BASE_FILES, 'top.sls')
+        dst = os.path.join(RUNTIME_VARS.BASE_FILES, 'top.sls.bak')
         shutil.move(src, dst)
         expected_comment = 'No states found for this minion'
         try:
@@ -162,10 +160,8 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
             id=minion_id,
             root_dir=root_dir,
         )
-        import pprint
-        pprint.pprint(minion_config)
-        config_dir = minion_config['config_dir']
         minion_config_file = minion_config['conf_file']
+        config_dir = os.path.dirname(minion_config_file)
         logfile = minion_config['log_file']
 
         master_config = self.get_config('master')

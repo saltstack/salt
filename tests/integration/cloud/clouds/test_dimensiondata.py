@@ -11,8 +11,8 @@ import string
 
 # Import Salt Testing Libs
 from tests.support.case import ShellCase
-from tests.support.paths import FILES
 from tests.support.helpers import expensiveTest
+from tests.support.runtests import RUNTIME_VARS
 
 # Import Salt Libs
 from salt.config import cloud_providers_config
@@ -34,12 +34,12 @@ INSTANCE_NAME = _random_name()
 PROVIDER_NAME = 'dimensiondata'
 
 
+@expensiveTest
 class DimensionDataTest(ShellCase):
     '''
     Integration tests for the Dimension Data cloud provider in Salt-Cloud
     '''
 
-    @expensiveTest
     def setUp(self):
         '''
         Sets up the test requirements
@@ -59,7 +59,7 @@ class DimensionDataTest(ShellCase):
         # check if user_id, key, and region are present
         config = cloud_providers_config(
             os.path.join(
-                FILES,
+                RUNTIME_VARS.FILES,
                 'conf',
                 'cloud.providers.d',
                 PROVIDER_NAME + '.conf'
