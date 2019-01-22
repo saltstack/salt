@@ -22,6 +22,7 @@ import salt.crypt
 import salt.utils.asynchronous
 import salt.utils.event
 import salt.utils.files
+import salt.utils.msgpack
 import salt.utils.platform
 import salt.utils.process
 import salt.utils.verify
@@ -586,7 +587,7 @@ class AsyncTCPPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.tran
             if not isinstance(body, dict):
                 # TODO: For some reason we need to decode here for things
                 #       to work. Fix this.
-                body = msgpack.loads(body)
+                body = salt.utils.msgpack.loads(body)
                 if six.PY3:
                     body = salt.transport.frame.decode_embedded_strs(body)
             ret = yield self._decode_payload(body)
