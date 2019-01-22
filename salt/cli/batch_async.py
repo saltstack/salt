@@ -13,7 +13,6 @@ import salt.client
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
 import logging
 import fnmatch
-from salt.ext.six.moves import range
 
 log = logging.getLogger(__name__)
 
