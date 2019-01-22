@@ -47,7 +47,6 @@ import re
 import locale
 import ctypes
 import tempfile
-import time
 import uuid
 
 # Import Salt libs
