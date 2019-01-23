@@ -63,7 +63,8 @@ class BatchAsync(object):
             self.local.opts,
             **clear_load)
         self.kwargs = clear_load['kwargs']
-        self.kwargs.update(batch_get_eauth(clear_load['kwargs']))
+        self.eauth = batch_get_eauth(clear_load['kwargs'])
+        self.kwargs.update(self.eauth)
         self.minions = set()
         self.down_minions = set()
         self.timedout_minions = set()
@@ -156,7 +157,7 @@ class BatchAsync(object):
             'list',
             gather_job_timeout=self.opts['gather_job_timeout'],
             jid=self.find_job_jid,
-            **self.kwargs)
+            **self.eauth)
         self.event.io_loop.call_later(
             self.opts['gather_job_timeout'],
             self.check_find_job,
@@ -178,7 +179,7 @@ class BatchAsync(object):
             ),
             gather_job_timeout=self.opts['gather_job_timeout'],
             jid=self.ping_jid,
-            **self.kwargs)
+            **self.eauth)
         self.down_minions = set(ping_return['minions'])
 
     @tornado.gen.coroutine
