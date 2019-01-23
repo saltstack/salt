@@ -442,7 +442,7 @@ class DNSlookupsCase(TestCase):
 
         empty = {'stdout': 'www.example.com has no MX record'}
 
-        # example returns for dig
+        # example returns for host
         rights = {
             'A':     [
                 'mocksrvr.example.com has address 10.1.1.1',
