@@ -300,7 +300,7 @@ def running(name,
         See the **Graphics Definition** section of the :py:func:`virt.init
         <salt.modules.virt.init>` function for more details on this dictionary.
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param loader:
         Firmware loader for the new virtual machine.
         See the **Loader Definition** section of the :py:func:`virt.init

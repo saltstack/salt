@@ -17,7 +17,6 @@ from tests.support.mock import (
 from tests.support import mixins
 from tests.support.unit import skipIf, TestCase
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.paths import TESTS_DIR
 
 # Import Salt Libs
 import salt.config
@@ -27,7 +26,6 @@ import salt.roster.dir as dir_
 # Import 3rd-party libs
 from salt.ext import six
 
-ROSTER_DIR = os.path.join(TESTS_DIR, 'unit/files/rosters/dir')
 ROSTER_DOMAIN = 'test.roster.domain'
 EXPECTED = {
     'basic': {
@@ -69,7 +67,7 @@ class DirRosterTestCase(TestCase, mixins.LoaderModuleMockMixin):
                     'renderer': 'jinja|yaml',
                     'renderer_blacklist': [],
                     'renderer_whitelist': [],
-                    'roster_dir': ROSTER_DIR,
+                    'roster_dir': os.path.join(RUNTIME_VARS.TESTS_DIR, 'unit/files/rosters/dir'),
                     'roster_domain': ROSTER_DOMAIN,
                 },
                 '__runner__': runner,

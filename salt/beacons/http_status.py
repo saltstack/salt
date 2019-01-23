@@ -144,7 +144,7 @@ def beacon(config):
                 else:
                     received_value = attr_func_map[attr](r)
                 if received_value is None:
-                    log.info('[-] No data found at location {} for url {}'.format(attr_path, url))
+                    log.info('[-] No data found at location %s for url %s', attr_path, url)
                     continue
                 log.debug('[+] expected_value: %s', expected_value)
                 log.debug('[+] received_value: %s', received_value)

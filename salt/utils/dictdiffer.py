@@ -54,7 +54,7 @@ def deep_diff(old, new, ignore=None):
     new = copy.deepcopy(new)
     stack = [(old, new, False)]
 
-    while len(stack) > 0:
+    while stack:
         tmps = []
         tmp_old, tmp_new, reentrant = stack.pop()
         for key in set(list(tmp_old) + list(tmp_new)):

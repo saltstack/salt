@@ -15,9 +15,6 @@ from tests.support.runtests import RUNTIME_VARS
 import salt.utils.files
 import salt.utils.platform
 
-REPO_DIR = os.path.join(RUNTIME_VARS.FILES, 'file', 'base', 'win', 'repo-ng')
-CURL = os.path.join(REPO_DIR, 'curl.sls')
-
 
 @skipIf(not salt.utils.platform.is_windows(), 'windows test only')
 class WinPKGTest(ModuleCase):
@@ -28,6 +25,15 @@ class WinPKGTest(ModuleCase):
     specific windows software respository tests while
     using the win_pkg module.
     '''
+    @classmethod
+    def setUpClass(cls):
+        cls.repo_dir = os.path.join(RUNTIME_VARS.FILES, 'file', 'base', 'win', 'repo-ng')
+        cls.curl_sls_path = os.path.join(cls.repo_dir, 'curl.sls')
+
+    def tearDown(self):
+        if os.path.isfile(self.curl_sls_path):
+            os.remove(self.curl_sls_path)
+
     @destructiveTest
     def test_adding_removing_pkg_sls(self):
         '''
@@ -57,7 +63,7 @@ class WinPKGTest(ModuleCase):
         _check_pkg(pkgs, 2)
 
         # now add new sls
-        with salt.utils.files.fopen(CURL, 'w') as fp_:
+        with salt.utils.files.fopen(self.curl_sls_path, 'w') as fp_:
             fp_.write(textwrap.dedent('''
                 curl:
                   '7.46.0':
@@ -78,13 +84,9 @@ class WinPKGTest(ModuleCase):
         # now check if curl is also in cache and repo query
         pkgs.append('curl')
         for pkg in pkgs:
-            self.assertIn(pkg + '.sls', os.listdir(REPO_DIR))
+            self.assertIn(pkg + '.sls', os.listdir(self.repo_dir))
         _check_pkg(pkgs, 3)
 
         # remove curl sls and check its not in cache and repo query
-        os.remove(CURL)
+        os.remove(self.curl_sls_path)
         _check_pkg(['curl'], 2, exists=False)
-
-    def tearDown(self):
-        if os.path.isfile(CURL):
-            os.remove(CURL)

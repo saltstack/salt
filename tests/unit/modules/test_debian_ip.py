@@ -983,14 +983,17 @@ class DebianIpTestCase(TestCase, LoaderModuleMockMixin):
                 patch('salt.modules.debian_ip._parse_hostname',
                       MagicMock(return_value='SaltStack')), \
                         patch('salt.modules.debian_ip._parse_domainname',
-                              MagicMock(return_value='saltstack.com')):
+                              MagicMock(return_value='saltstack.com')), \
+                                      patch('salt.modules.debian_ip._parse_searchdomain',
+                                              MagicMock(return_value='test.saltstack.com')):
             mock_avai = MagicMock(return_value=True)
             with patch.dict(debian_ip.__salt__, {'service.available': mock_avai,
                                                  'service.status': mock_avai}):
                 self.assertEqual(debian_ip.get_network_settings(),
-                                 ['NETWORKING=yes\n',
-                                  'HOSTNAME=SaltStack\n',
-                                  'DOMAIN=saltstack.com\n'])
+                                 [u'NETWORKING=yes\n',
+                                  u'HOSTNAME=SaltStack\n',
+                                  u'DOMAIN=saltstack.com\n',
+                                  u'SEARCH=test.saltstack.com\n'])
 
                 mock = MagicMock(side_effect=jinja2.exceptions.TemplateNotFound
                                  ('error'))
