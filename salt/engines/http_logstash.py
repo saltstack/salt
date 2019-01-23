@@ -106,7 +106,7 @@ def start(url, funs=None, tags=None):
         event = event_bus.get_event(full=True)
         if event:
             publish = True
-            if isinstance(tags, list) and len(tags) > 0:
+            if tags and isinstance(tags, list):
                 found_match = False
                 for tag in tags:
                     if fnmatch.fnmatch(event['tag'], tag):

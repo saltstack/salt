@@ -1325,8 +1325,7 @@ def init(name,
         Dictionary providing details on the BIOS firmware loader. (Default: ``None``)
         See init-loader-def_ for more details on the possible values.
 
-        .. versionadded:: Neon
-
+        .. versionadded:: 2019.2.0
     :param os_type:
         type of virtualization as found in the ``//os/type`` element of the libvirt definition.
         The default value is taken from the host capabilities, with a preference for ``hvm``.

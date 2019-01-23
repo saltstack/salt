@@ -103,7 +103,7 @@ def managed(name, port, services=None, user=None, password=None, bypass_domains=
                 ret['result'] = False
                 ret['comment'] += 'Failed to set bypass proxy domains.\n'
 
-        if len(ret['changes']['new']) == 0:
+        if not ret['changes']['new']:
             del ret['changes']['new']
 
         return ret

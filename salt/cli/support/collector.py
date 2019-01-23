@@ -291,7 +291,10 @@ class SaltSupport(salt.utils.parsers.SaltSupportOptionParser):
         def stub(*args, **kwargs):
             message = 'Function {} is not available'.format(call_conf['fun'])
             self.out.error(message)
-            log.debug('Attempt to run "{fun}" with {arg} arguments and {kwargs} parameters.'.format(**call_conf))
+            log.debug(
+                'Attempt to run "%s" with %s arguments and %s parameters.',
+                call_conf['fun'], call_conf['arg'], call_conf['kwargs']
+            )
             return message
 
         return getattr(salt.cli.support.intfunc,

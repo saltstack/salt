@@ -9,7 +9,7 @@ Management of Zabbix users.
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
-from json import loads, dumps
+from salt.utils.json import loads, dumps
 from copy import deepcopy
 
 # Import Salt libs

@@ -300,7 +300,7 @@ def node_info():
         def getFreeCpuCount():
             cnt = 0
             for host_cpu_it in host_cpu_rec:
-                if len(host_cpu_rec['cpu_pool']) == 0:
+                if not host_cpu_rec['cpu_pool']:
                     cnt += 1
             return cnt
 

@@ -360,7 +360,7 @@ def list_nodes_full(call=None):
                 ret[name]['private_ips'] = items[item]['IpAddress']
             if item == 'VpcAttributes':
                 vpc_ips = items[item]['PrivateIpAddress']['IpAddress']
-                if len(vpc_ips) > 0:
+                if vpc_ips:
                     ret[name]['private_ips'] = vpc_ips
             ret[name][item] = value
 
@@ -709,9 +709,9 @@ def create(vm_):
         finally:
             raise SaltCloudSystemExit(six.text_type(exc))
 
-    if len(data['public_ips']) > 0:
+    if data['public_ips']:
         ssh_ip = data['public_ips'][0]
-    elif len(data['private_ips']) > 0:
+    elif data['private_ips']:
         ssh_ip = data['private_ips'][0]
     else:
         log.info('No available ip:cant connect to salt')
@@ -975,7 +975,7 @@ def show_image(kwargs, call=None):
     # DescribeImages so far support input multi-image. And
     # if not found certain image, the response will include
     # blank image list other than 'not found' error message
-    if 'Code' in items or len(items['Images']['Image']) == 0:
+    if 'Code' in items or not items['Images']['Image']:
         raise SaltCloudNotFound('The specified image could not be found.')
 
     log.debug(

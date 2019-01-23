@@ -32,11 +32,8 @@ from salt.runners.winrepo import (
     GLOBAL_ONLY
 )
 from salt.ext import six
-try:
-    import msgpack
-except ImportError:
-    import msgpack_pure as msgpack  # pylint: disable=import-error
 import salt.utils.gitfs
+import salt.utils.msgpack
 # pylint: enable=unused-import
 
 log = logging.getLogger(__name__)

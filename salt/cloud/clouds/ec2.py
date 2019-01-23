@@ -95,15 +95,16 @@ import hashlib
 import binascii
 import datetime
 import base64
-import msgpack
 import re
 import decimal
 
 # Import Salt Libs
 import salt.utils.cloud
+import salt.utils.compat
 import salt.utils.files
 import salt.utils.hashutils
 import salt.utils.json
+import salt.utils.msgpack
 import salt.utils.stringutils
 import salt.utils.yaml
 from salt._compat import ElementTree as ET
@@ -1229,7 +1230,7 @@ def get_imageid(vm_):
     _t = lambda x: datetime.datetime.strptime(x['creationDate'], '%Y-%m-%dT%H:%M:%S.%fZ')
     image_id = sorted(aws.query(params, location=get_location(),
                                  provider=get_provider(), opts=__opts__, sigver='4'),
-                      lambda i, j: cmp(_t(i), _t(j))
+                      lambda i, j: salt.utils.compat.cmp(_t(i), _t(j))
                       )[-1]['imageId']
     get_imageid.images[image] = image_id
     return image_id
@@ -1933,11 +1934,11 @@ def request_instance(vm_=None, call=None):
     set_del_root_vol_on_destroy = config.get_cloud_config_value(
         'del_root_vol_on_destroy', vm_, __opts__, search_global=False
     )
-    
+
     set_termination_protection = config.get_cloud_config_value(
         'termination_protection', vm_, __opts__, search_global=False
     )
-    
+
     if set_termination_protection is not None:
         if not isinstance(set_termination_protection, bool):
             raise SaltCloudConfigError(
@@ -2659,7 +2660,7 @@ def create(vm_=None, call=None):
             vm_['instance_id_list'].append(instance['instanceId'])
 
         vm_['instance_id'] = vm_['instance_id_list'].pop()
-        if len(vm_['instance_id_list']) > 0:
+        if vm_['instance_id_list']:
             # Multiple instances were spun up, get one now, and queue the rest
             queue_instances(vm_['instance_id_list'])
 
@@ -5015,7 +5016,7 @@ def _parse_pricing(url, name):
         __opts__['cachedir'], 'ec2-pricing-{0}.p'.format(name)
     )
     with salt.utils.files.fopen(outfile, 'w') as fho:
-        msgpack.dump(regions, fho)
+        salt.utils.msgpack.dump(regions, fho)
 
     return True
 
@@ -5083,7 +5084,8 @@ def show_pricing(kwargs=None, call=None):
         update_pricing({'type': name}, 'function')
 
     with salt.utils.files.fopen(pricefile, 'r') as fhi:
-        ec2_price = salt.utils.stringutils.to_unicode(msgpack.load(fhi))
+        ec2_price = salt.utils.stringutils.to_unicode(
+            salt.utils.msgpack.load(fhi))
 
     region = get_location(profile)
     size = profile.get('size', None)
