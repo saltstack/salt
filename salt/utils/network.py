@@ -58,10 +58,10 @@ except (ImportError, OSError, AttributeError, TypeError):
 def sanitize_host(host):
     '''
     Sanitize host string.
+    https://tools.ietf.org/html/rfc1123#section-2.1
     '''
-    return ''.join([
-        c for c in host[0:255] if c in (ascii_letters + digits + '.-')
-    ])
+    RFC952_characters = ascii_letters + digits + ".-"
+    return "".join([c for c in host[0:255] if c in RFC952_characters])
 
 
 def isportopen(host, port):
@@ -137,7 +137,11 @@ def _generate_minion_id():
         def first(self):
             return self and self[0] or None
 
-    hosts = DistinctList().append(socket.getfqdn()).append(platform.node()).append(socket.gethostname())
+    hostname = socket.gethostname()
+
+    hosts = DistinctList().append(
+        salt.utils.stringutils.to_unicode(socket.getfqdn(salt.utils.stringutils.to_bytes(hostname)))
+    ).append(platform.node()).append(hostname)
     if not hosts:
         try:
             for a_nfo in socket.getaddrinfo(hosts.first() or 'localhost', None, socket.AF_INET,
@@ -1870,14 +1874,14 @@ def dns_check(addr, port, safe=False, ipv6=None):
                 if h[0] == socket.AF_INET6 and ipv6 is False:
                     continue
 
-                candidate_addr = salt.utils.zeromq.ip_bracket(h[4][0])
+                candidate_addr = h[4][0]
 
                 if h[0] != socket.AF_INET6 or ipv6 is not None:
                     candidates.append(candidate_addr)
 
                 try:
                     s = socket.socket(h[0], socket.SOCK_STREAM)
-                    s.connect((candidate_addr.strip('[]'), port))
+                    s.connect((candidate_addr, port))
                     s.close()
 
                     resolved = candidate_addr
@@ -1906,3 +1910,55 @@ def dns_check(addr, port, safe=False, ipv6=None):
             raise SaltClientError()
         raise SaltSystemExit(code=42, msg=err)
     return resolved
+
+
+def parse_host_port(host_port):
+    """
+    Takes a string argument specifying host or host:port.
+
+    Returns a (hostname, port) or (ip_address, port) tuple. If no port is given,
+    the second (port) element of the returned tuple will be None.
+
+    host:port argument, for example, is accepted in the forms of:
+      - hostname
+      - hostname:1234
+      - hostname.domain.tld
+      - hostname.domain.tld:5678
+      - [1234::5]:5678
+      - 1234::5
+      - 10.11.12.13:4567
+      - 10.11.12.13
+    """
+    host, port = None, None  # default
+
+    _s_ = host_port[:]
+    if _s_[0] == "[":
+        if "]" in host_port:
+            host, _s_ = _s_.lstrip("[").rsplit("]", 1)
+            host = ipaddress.IPv6Address(host)
+            if _s_[0] == ":":
+                port = int(_s_.lstrip(":"))
+            else:
+                if len(_s_) > 1:
+                    raise ValueError('found ambiguous "{}" port in "{}"'.format(_s_, host_port))
+    else:
+        if _s_.count(":") == 1:
+            host, _hostport_separator_, port = _s_.partition(":")
+            try:
+                port = int(port)
+            except ValueError as _e_:
+                log.error('host_port "%s" port value "%s" is not an integer.', host_port, port)
+                raise _e_
+        else:
+            host = _s_
+    try:
+        if not isinstance(host, ipaddress._BaseAddress):
+            host_ip = ipaddress.ip_address(host)
+            host = host_ip
+    except ValueError:
+        log.debug('"%s" Not an IP address? Assuming it is a hostname.', host)
+        if host != sanitize_host(host):
+            log.error('bad hostname: "%s"', host)
+            raise ValueError('bad hostname: "{}"'.format(host))
+
+    return host, port
