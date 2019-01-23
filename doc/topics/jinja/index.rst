@@ -87,6 +87,13 @@ the context into the included file is required:
 .. code-block:: jinja
 
     {% from 'lib.sls' import test with context %}
+    
+Includes must use full paths, like so:
+
+.. code-block:: jinja
+   :caption: spam/eggs.jinja
+
+    {% include 'spam/foobar.jinja' %}
 
 Including Context During Include/Import
 ---------------------------------------

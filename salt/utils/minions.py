@@ -149,7 +149,7 @@ def nodegroup_comp(nodegroup, nodegroups, skip=None, first_call=True):
             # No compound operators found in nodegroup definition. Check for
             # group type specifiers
             group_type_re = re.compile('^[A-Z]@')
-            regex_chars = ['(', '[', '{', '\\', '?''}])']
+            regex_chars = ['(', '[', '{', '\\', '?', '}', ']', ')']
             if not [x for x in ret if '*' in x or group_type_re.match(x)]:
                 # No group type specifiers and no wildcards.
                 # Treat this as an expression.
