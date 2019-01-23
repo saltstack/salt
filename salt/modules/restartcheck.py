@@ -372,7 +372,7 @@ def _file_changed_nilrt(full_filepath):
     md5sum_file = os.path.join(rs_state_dir, '{0}.md5sum'.format(base_filename))
 
     if not os.path.exists(timestamp_file) or not os.path.exists(md5sum_file):
-        return False
+        return True
 
     prev_timestamp = __salt__['file.read'](timestamp_file).rstrip()
     # Need timestamp in seconds so floor it using int()
@@ -408,12 +408,33 @@ def _sysapi_changed_nilrt():
     daemons restarted, etc.
 
     Returns:
-             - True/False depending on if nisysapi.ini got modified/touched
-             - False if nisysapi.ini does not exist to avoid triggering unnecessary reboots
+             - True/False depending if nisysapi .ini files got modified/touched
+             - False if no nisysapi .ini files exist
     '''
     nisysapi_path = '/usr/local/natinst/share/nisysapi.ini'
-    if os.path.exists(nisysapi_path):
-        return _file_changed_nilrt(nisysapi_path)
+    if os.path.exists(nisysapi_path) and _file_changed_nilrt(nisysapi_path):
+        return True
+
+    restartcheck_state_dir = '/var/lib/salt/restartcheck_state'
+    nisysapi_conf_d_path = "/usr/lib/{0}/nisysapi/conf.d/experts/".format(
+        'arm-linux-gnueabi' if 'arm' in __grains__.get('cpuarch') else 'x86_64-linux-gnu'
+    )
+
+    if os.path.exists(nisysapi_conf_d_path):
+        rs_count_file = '{0}/sysapi.conf.d.count'.format(restartcheck_state_dir)
+        if not os.path.exists(rs_count_file):
+            return True
+
+        with salt.utils.files.fopen(rs_count_file, 'r') as fcount:
+            current_nb_files = len(os.listdir(nisysapi_conf_d_path))
+            rs_stored_nb_files = int(fcount.read())
+            if current_nb_files != rs_stored_nb_files:
+                return True
+
+        for fexpert in os.listdir(nisysapi_conf_d_path):
+            if _file_changed_nilrt('{0}/{1}'.format(nisysapi_conf_d_path, fexpert)):
+                return True
+
     return False
 
 
@@ -470,7 +491,10 @@ def restartcheck(ignorelist=None, blacklist=None, excludepid=None, **kwargs):
         if kernel in kernel_current:
             if __grains__.get('os_family') == 'NILinuxRT':
                 # Check kernel modules and hardware API's for version changes
-                if not _kernel_modules_changed_nilrt(kernel) and not _sysapi_changed_nilrt():
+                # If a restartcheck=True event was previously witnessed, propagate it
+                if not _kernel_modules_changed_nilrt(kernel) and \
+                   not _sysapi_changed_nilrt() and \
+                   not __salt__['system.get_reboot_required_witnessed']():
                     kernel_restart = False
                     break
             else:

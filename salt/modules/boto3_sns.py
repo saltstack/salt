@@ -319,8 +319,8 @@ def subscribe(TopicArn=None, Protocol=None, Endpoint=None,
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     kwargs = {k: v for k, v in kwargs.items() if not k.startswith('_')}
     ## Begin warn_until()
-    if any((locals().get('TopicArn'), locals().get('Protocol'), locals().get('Endpoint'))):
-        if all((locals().get('TopicArn'), locals().get('Protocol'), locals().get('Endpoint'))):
+    if any((TopicArn, Protocol, Endpoint)):
+        if all((TopicArn, Protocol, Endpoint)):
             salt.utils.versions.warn_until('Sodium', 'Passing positional parameters is deprecated.'
                                            '  Please update code to use keyword style arguments'
                                            ' instead.  This will become mandatory in salt version'
