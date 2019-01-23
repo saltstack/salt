@@ -416,7 +416,7 @@ def flopen(*args, **kwargs):
     '''
     Shortcut for fopen with lock and context manager.
     '''
-    filename = args.pop(0)
+    filename, args = args[0], args[1:]
     writing = 'wa'
     with fopen(filename, *args, **kwargs) as f_handle:
         try:
