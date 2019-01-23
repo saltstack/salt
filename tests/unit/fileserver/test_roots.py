@@ -151,6 +151,17 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMix
         ret = roots.file_list_emptydirs({'saltenv': 'base'})
         self.assertIn('empty_dir', ret)
 
+    def test_file_list_with_slash(self):
+        opts = {'file_roots': copy.copy(self.opts['file_roots'])}
+        opts['file_roots']['foo/bar'] = opts['file_roots']['base']
+        load = {
+                'saltenv': 'foo/bar',
+                }
+        with patch.dict(roots.__opts__, opts):
+            ret = roots.file_list(load)
+        self.assertIn('testfile', ret)
+        self.assertIn(UNICODE_FILENAME, ret)
+
     def test_dir_list(self):
         ret = roots.dir_list({'saltenv': 'base'})
         self.assertIn('empty_dir', ret)

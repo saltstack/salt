@@ -357,6 +357,9 @@ def gets_service_instance_via_proxy(fn):
                         local_service_instance = \
                                 salt.utils.vmware.get_service_instance(
                                     *connection_details)
+                        # Tuples are immutable, so if we want to change what
+                        # was passed in, we need to first convert to a list.
+                        args = list(args)
                         args[idx] = local_service_instance
                 else:
                     # case 2: Not enough positional parameters so
