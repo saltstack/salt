@@ -647,6 +647,14 @@ def cli_ssh_script_name():
 
 
 @pytest.fixture(scope='session')
+def cli_proxy_script_name():
+    '''
+    Return the CLI script basename
+    '''
+    return 'cli_salt_proxy.py'
+
+
+@pytest.fixture(scope='session')
 def cli_bin_dir(tempdir,
                 request,
                 python_executable_path,
@@ -657,7 +665,8 @@ def cli_bin_dir(tempdir,
                 cli_key_script_name,
                 cli_run_script_name,
                 cli_ssh_script_name,
-                cli_syndic_script_name):
+                cli_syndic_script_name,
+                cli_proxy_script_name):
     '''
     Return the path to the CLI script directory to use
     '''
@@ -686,7 +695,8 @@ def cli_bin_dir(tempdir,
                         cli_run_script_name,
                         cli_salt_script_name,
                         cli_ssh_script_name,
-                        cli_syndic_script_name):
+                        cli_syndic_script_name,
+                        cli_proxy_script_name):
         original_script_name = os.path.splitext(script_name)[0].split('cli_')[-1].replace('_', '-')
         cli_scripts.generate_script(
             bin_dir=cli_bin_dir_path,
@@ -741,6 +751,14 @@ def session_syndic_id():
     Returns the session scoped syndic id
     '''
     return 'syndic'
+
+
+@pytest.fixture(scope='session')
+def session_proxy_id():
+    '''
+    Returns the session scoped proxy id
+    '''
+    return 'proxytest'
 
 
 @pytest.fixture(scope='session')
@@ -870,7 +888,6 @@ def session_secondary_minion_default_options(request, tempdir):
     with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.CONF_DIR, 'sub_minion')) as rfh:
         opts = yaml.load(rfh.read())
 
-
         opts['hosts.file'] = tempdir.join('hosts').strpath
         opts['aliases.file'] = tempdir.join('aliases').strpath
         opts['transport'] = request.config.getoption('--transport')
@@ -958,6 +975,18 @@ def session_syndic_master_default_options(request, tempdir):
 @pytest.fixture(scope='session')
 def session_syndic_default_options(request, tempdir):
     with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.CONF_DIR, 'syndic')) as rfh:
+        opts = yaml.load(rfh.read())
+
+        opts['hosts.file'] = tempdir.join('hosts').strpath
+        opts['aliases.file'] = tempdir.join('aliases').strpath
+        opts['transport'] = request.config.getoption('--transport')
+
+        return opts
+
+
+@pytest.fixture(scope='session')
+def session_proxy_default_options(request, tempdir):
+    with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.CONF_DIR, 'proxy')) as rfh:
         opts = yaml.load(rfh.read())
 
         opts['hosts.file'] = tempdir.join('hosts').strpath
