@@ -2,6 +2,8 @@
 '''
 Send events based on a script's stdout
 
+.. versionadded:: Neon
+
 Example Config
 
 .. code-block:: yaml
@@ -55,7 +57,9 @@ def _get_serializer(output):
     try:
         return getattr(serializers, output)
     except AttributeError:
-        raise CommandExecutionError("Unknown serializer '%s' found for output option", output)
+        raise CommandExecutionError(
+            "Unknown serializer '{0}' found for output option".format(output)
+        )
 
 
 def start(cmd, output='json', interval=1):

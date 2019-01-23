@@ -9,6 +9,7 @@ authenticating peers
 # the Array class, which has incompatibilities with it.
 from __future__ import absolute_import, print_function
 import os
+import random
 import sys
 import copy
 import time
@@ -740,6 +741,10 @@ class AsyncAuth(object):
                             'minion.\nOr restart the Salt Master in open mode to '
                             'clean out the keys. The Salt Minion will now exit.'
                         )
+                        # Add a random sleep here for systems that are using a
+                        # a service manager to immediately restart the service
+                        # to avoid overloading the system
+                        time.sleep(random.randint(10, 20))
                         sys.exit(salt.defaults.exitcodes.EX_NOPERM)
                 # has the master returned that its maxed out with minions?
                 elif payload['load']['ret'] == 'full':

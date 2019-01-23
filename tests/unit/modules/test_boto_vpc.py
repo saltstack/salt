@@ -18,7 +18,7 @@ from pkg_resources import DistributionNotFound
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
-from tests.support.paths import TESTS_DIR
+from tests.support.runtests import RUNTIME_VARS
 
 # Import Salt libs
 import salt.config
@@ -35,7 +35,7 @@ from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 # pylint: disable=no-name-in-module,unused-import
 try:
     import boto
-    boto.ENDPOINTS_PATH = os.path.join(TESTS_DIR, 'unit/files/endpoints.json')
+    boto.ENDPOINTS_PATH = os.path.join(RUNTIME_VARS.TESTS_DIR, 'unit/files/endpoints.json')
     import boto3
     from boto.exception import BotoServerError
     HAS_BOTO = True
@@ -140,7 +140,7 @@ class BotoVpcTestCaseBase(TestCase, LoaderModuleMockMixin):
     conn3 = None
 
     def setup_loader_modules(self):
-        self.opts = opts = salt.config.DEFAULT_MINION_OPTS
+        self.opts = opts = salt.config.DEFAULT_MINION_OPTS.copy()
         utils = salt.loader.utils(
             opts,
             whitelist=['boto', 'boto3', 'args', 'systemd', 'path', 'platform'])

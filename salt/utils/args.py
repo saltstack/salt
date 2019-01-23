@@ -76,7 +76,7 @@ def condition_input(args, kwargs):
     ret = []
     for arg in args:
         if (six.PY3 and isinstance(arg, six.integer_types) and salt.utils.jid.is_jid(six.text_type(arg))) or \
-        (six.PY2 and isinstance(arg, long)):  # pylint: disable=incompatible-py3-code
+        (six.PY2 and isinstance(arg, long)):  # pylint: disable=incompatible-py3-code,undefined-variable
             ret.append(six.text_type(arg))
         else:
             ret.append(arg)

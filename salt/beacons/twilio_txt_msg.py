@@ -86,8 +86,9 @@ def beacon(config):
     output['texts'] = []
     client = TwilioRestClient(_config['account_sid'], _config['auth_token'])
     messages = client.messages.list(to=_config['twilio_number'])
-    log.trace('Num messages: %d', len(messages))
-    if len(messages) < 1:
+    num_messages = len(messages)
+    log.trace('Num messages: %d', num_messages)
+    if not num_messages:
         log.trace('Twilio beacon has no texts')
         return ret
 
@@ -101,7 +102,7 @@ def beacon(config):
 
         if int(message.num_media):
             media = client.media(message.sid).list()
-            if len(media):
+            if media:
                 for pic in media:
                     item['images'].append(six.text_type(pic.uri))
         output['texts'].append(item)

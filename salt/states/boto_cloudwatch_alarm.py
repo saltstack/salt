@@ -144,7 +144,7 @@ def present(
     create_or_update_alarm_args.update(attributes)
     if alarm_details:   # alarm is present.  update, or do nothing
         # check to see if attributes matches is_present. If so, do nothing.
-        if len(difference) == 0:
+        if not difference:
             ret['comment'] = "alarm {0} present and matching".format(name)
             return ret
         if __opts__['test']:

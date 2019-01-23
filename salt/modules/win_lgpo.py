@@ -5265,12 +5265,11 @@ def _findOptionValueNetSH(profile, option):
         __context__['lgpo.netsh_data'] = {}
 
     if profile not in __context__['lgpo.netsh_data']:
-        log.debug('LGPO: Loading netsh data for {0} profile'.format(profile))
+        log.debug('LGPO: Loading netsh data for %s profile', profile)
         settings = salt.utils.win_lgpo_netsh.get_all_settings(profile=profile,
                                                               store='lgpo')
         __context__['lgpo.netsh_data'].update({profile: settings})
-    log.debug('LGPO: netsh returning value: {0}'
-              ''.format(__context__['lgpo.netsh_data'][profile][option]))
+    log.debug('LGPO: netsh returning value: %s', __context__['lgpo.netsh_data'][profile][option])
     return __context__['lgpo.netsh_data'][profile][option]
 
 
@@ -5278,10 +5277,11 @@ def _setOptionValueNetSH(profile, section, option, value):
     if section not in ('firewallpolicy', 'settings', 'logging', 'state'):
         raise ValueError('LGPO: Invalid section: {0}'.format(section))
     log.debug('LGPO: Setting the following\n'
-              'Profile: {0}\n'
-              'Section: {1}\n'
-              'Option: {2}\n'
-              'Value: {3}'.format(profile, section, option, value))
+              'Profile: %s\n'
+              'Section: %s\n'
+              'Option: %s\n'
+              'Value: %s',
+              profile, section, option, value)
     if section == 'firewallpolicy':
         salt.utils.win_lgpo_netsh.set_firewall_settings(
             profile=profile,
@@ -5303,7 +5303,7 @@ def _setOptionValueNetSH(profile, section, option, value):
             option = option[3:]
         salt.utils.win_lgpo_netsh.set_logging_settings(
             profile=profile, setting=option, value=value, store='lgpo')
-    log.debug('LGPO: Clearing netsh data for {0} profile'.format(profile))
+    log.debug('LGPO: Clearing netsh data for %s profile', profile)
     __context__['lgpo.netsh_data'].pop(profile)
     return True
 
@@ -5414,7 +5414,7 @@ def _validateSetting(value, policy):
         True
     if the Policy has 'Children', we'll validate their settings too
     '''
-    log.debug('validating {0} for policy {1}'.format(value, policy))
+    log.debug('validating %s for policy %s', value, policy)
     if 'Settings' in policy:
         if policy['Settings']:
             if isinstance(policy['Settings'], list):
@@ -6067,7 +6067,7 @@ def _checkAllAdmxPolicies(policy_class,
     admx_policy_definitions = _get_policy_definitions(language=adml_language)
     adml_policy_resources = _get_policy_resources(language=adml_language)
     if policy_file_data:
-        log.debug('POLICY CLASS {0} has file data'.format(policy_class))
+        log.debug('POLICY CLASS %s has file data', policy_class)
         policy_filedata_split = re.sub(
             salt.utils.stringutils.to_bytes(r'\]{0}$'.format(chr(0))),
             b'',
@@ -6414,12 +6414,12 @@ def _checkAllAdmxPolicies(policy_class,
                                                             policy_file_data):
                                     configured_elements[this_element_name] = "Disabled"
                                     policy_disabled_elements = policy_disabled_elements + 1
-                                    log.debug('element {0} is disabled'.format(child_item.attrib['id']))
+                                    log.debug('element %s is disabled', child_item.attrib['id'])
                     if element_only_enabled_disabled:
-                        if len(required_elements.keys()) > 0 \
-                                    and len(configured_elements.keys()) == len(required_elements.keys()):
-                            if policy_disabled_elements == len(required_elements.keys()):
-                                log.debug('{0} is disabled by all enum elements'.format(this_policyname))
+                        if required_elements \
+                                    and len(configured_elements) == len(required_elements):
+                            if policy_disabled_elements == len(required_elements):
+                                log.debug('%s is disabled by all enum elements', this_policyname)
                                 if this_policynamespace not in policy_vals:
                                     policy_vals[this_policynamespace] = {}
                                 policy_vals[this_policynamespace][this_policyname] = 'Disabled'
@@ -6427,7 +6427,7 @@ def _checkAllAdmxPolicies(policy_class,
                                 if this_policynamespace not in policy_vals:
                                     policy_vals[this_policynamespace] = {}
                                 policy_vals[this_policynamespace][this_policyname] = configured_elements
-                                log.debug('{0} is enabled by enum elements'.format(this_policyname))
+                                log.debug('%s is enabled by enum elements', this_policyname)
                     else:
                         if this_policy_setting == 'Enabled':
                             if this_policynamespace not in policy_vals:
@@ -7003,7 +7003,7 @@ def _writeAdminTemplateRegPolFile(admtemplate_data,
                                                                                       TRUE_LIST_XPATH,
                                                                                       None,
                                                                                       test_items=False)
-                                                        log.debug('working with trueList portion of {0}'.format(admPolicy))
+                                                        log.debug('working with trueList portion of %s', admPolicy)
                                                     else:
                                                         list_strings = _checkListItem(child_item,
                                                                                       admPolicy,
@@ -7322,8 +7322,8 @@ def _lookup_admin_template(policy_name,
                             display_name=display_name_searchval,
                             registry_class=policy_class)
                 if admx_search_results:
-                    log.debug('processing admx_search_results of {0}'.format(admx_search_results))
-                    log.debug('multiple_adml_entries is {0}'.format(multiple_adml_entries))
+                    log.debug('processing admx_search_results of %s', admx_search_results)
+                    log.debug('multiple_adml_entries is %s', multiple_adml_entries)
                     if (len(admx_search_results) == 1 or hierarchy) and not multiple_adml_entries:
                         found = False
                         for search_result in admx_search_results:
@@ -7639,7 +7639,7 @@ def get(policy_class=None, return_full_policy_names=True,
 
     if policy_class is None or policy_class.lower() == 'both':
         policy_class = _policydata.policies.keys()
-    elif policy_class.lower() not in [z.lower() for z in _policydata.policies.keys()]:
+    elif policy_class.lower() not in [z.lower() for z in _policydata.policies]:
         msg = 'The policy_class {0} is not an available policy class, please ' \
               'use one of the following: {1}, Both'
         raise SaltInvocationError(
@@ -8160,7 +8160,7 @@ def set_(computer_policy=None,
                 if _netshs:
                     # we've got netsh settings to make
                     for setting in _netshs:
-                        log.debug('Setting firewall policy: {0}'.format(setting))
+                        log.debug('Setting firewall policy: %s', setting)
                         log.debug(_netshs[setting])
                         _setOptionValueNetSH(**_netshs[setting])
 

@@ -90,9 +90,7 @@ def sync(opts,
                     'Syncing %s for environment \'%s\'', form, sub_env
                 )
                 cache = []
-                log.info(
-                    'Loading cache from {0}, for {1})'.format(source, sub_env)
-                )
+                log.info('Loading cache from %s, for %s', source, sub_env)
                 # Grab only the desired files (.py, .pyx, .so)
                 cache.extend(
                     fileclient.cache_dir(

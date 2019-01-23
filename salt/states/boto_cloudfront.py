@@ -248,7 +248,7 @@ def _fix_quantities(tree):
         tree = {k: _fix_quantities(v) for k, v in tree.items()}
         if isinstance(tree.get('Items'), list):
             tree['Quantity'] = len(tree['Items'])
-            if len(tree['Items']) == 0:
+            if not tree['Items']:
                 tree.pop('Items')  # Silly, but AWS requires it....
         return tree
     elif isinstance(tree, list):
@@ -419,7 +419,7 @@ def distribution_present(name, region=None, key=None, keyid=None, profile=None, 
             if res is None:  # An error occurred, bubble it up...
                 log.warning('Error encountered while trying to determine the Resource ID of'
                             ' CloudFront origin access identity `%s`.  Passing as-is.', oai)
-            elif len(res) < 1:
+            elif not res:
                 log.warning('Failed to determine the Resource ID of CloudFront origin access'
                             ' identity `%s`.  Passing as-is.', oai)
             elif len(res) > 1:
@@ -640,7 +640,7 @@ def oai_bucket_policy_present(name, Bucket, OAI, Policy,
         ret['comment'] = msg
         ret['result'] = False
         return ret
-    if len(oais) < 1:
+    if not oais:
         msg = 'No origin access identities matched `{}`.'.format(OAI)
         log.error(msg)
         ret['comment'] = msg
@@ -780,7 +780,7 @@ def route53_alias_present(name, region=None, key=None, keyid=None, profile=None,
         ret['comment'] = msg
         ret['result'] = False
         return ret
-    if len(res) < 1:
+    if not res:
         msg = 'No CloudFront distibutions matching `{}` found.'.format(Distribution)
         log.error(msg)
         ret['comment'] = msg
@@ -898,7 +898,7 @@ def distribution_absent(name, region=None, key=None, keyid=None, profile=None, *
             ret['comment'] = msg
             ret['result'] = False
             return ret
-        if len(res) < 1:
+        if not res:
             msg = 'CloudFront Distribution `{}` already absent.'.format(Name)
             log.info(msg)
             ret['comment'] = msg
@@ -1136,7 +1136,7 @@ def origin_access_identity_absent(name, region=None, key=None, keyid=None, profi
             ret['comment'] = msg
             ret['result'] = False
             return ret
-        if len(current) < 1:
+        if not current:
             msg = 'CloudFront origin access identity `{}` already absent.'.format(Name)
             log.info(msg)
             ret['comment'] = msg

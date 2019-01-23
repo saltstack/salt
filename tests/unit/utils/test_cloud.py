@@ -17,7 +17,6 @@ import tempfile
 # Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
-from tests.support.paths import CODE_DIR
 
 # Import salt libs
 import salt.utils.cloud as cloud
@@ -64,8 +63,8 @@ try:
     HAS_KEYRING = True
 except ImportError:
     HAS_KEYRING = False
-
-os.chdir(CODE_DIR)
+finally:
+    os.chdir(RUNTIME_VARS.CODE_DIR)
 
 
 class CloudUtilsTestCase(TestCase):

@@ -271,7 +271,7 @@ def additions_version():
         d = _additions_dir()
     except EnvironmentError:
         return False
-    if d and len(os.listdir(d)) > 0:
+    if d and os.listdir(d):
         return re.sub(r'^{0}-'.format(_additions_dir_prefix), '',
                 os.path.basename(d))
     return False

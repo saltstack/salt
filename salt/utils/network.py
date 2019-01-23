@@ -58,10 +58,10 @@ except (ImportError, OSError, AttributeError, TypeError):
 def sanitize_host(host):
     '''
     Sanitize host string.
+    https://tools.ietf.org/html/rfc1123#section-2.1
     '''
-    return ''.join([
-        c for c in host[0:255] if c in (ascii_letters + digits + '.-_')
-    ])
+    RFC952_characters = ascii_letters + digits + ".-"
+    return "".join([c for c in host[0:255] if c in RFC952_characters])
 
 
 def isportopen(host, port):
@@ -120,7 +120,7 @@ def _generate_minion_id():
 
         def append(self, p_object):
             if p_object and p_object not in self and not self.filter(p_object):
-                super(self.__class__, self).append(p_object)
+                super(DistinctList, self).append(p_object)
             return self
 
         def extend(self, iterable):
@@ -137,7 +137,11 @@ def _generate_minion_id():
         def first(self):
             return self and self[0] or None
 
-    hosts = DistinctList().append(socket.getfqdn()).append(platform.node()).append(socket.gethostname())
+    hostname = socket.gethostname()
+
+    hosts = DistinctList().append(
+        salt.utils.stringutils.to_unicode(socket.getfqdn(salt.utils.stringutils.to_bytes(hostname)))
+    ).append(platform.node()).append(hostname)
     if not hosts:
         try:
             for a_nfo in socket.getaddrinfo(hosts.first() or 'localhost', None, socket.AF_INET,
@@ -145,9 +149,8 @@ def _generate_minion_id():
                 if len(a_nfo) > 3:
                     hosts.append(a_nfo[3])
         except socket.gaierror:
-            log.warning('Cannot resolve address {addr} info via socket: {message}'.format(
-                addr=hosts.first() or 'localhost (N/A)', message=socket.gaierror)
-            )
+            log.warning('Cannot resolve address %s info via socket: %s',
+                        hosts.first() or 'localhost (N/A)', socket.gaierror)
     # Universal method for everywhere (Linux, Slowlaris, Windows etc)
     for f_name in ('/etc/hostname', '/etc/nodename', '/etc/hosts',
                    r'{win}\system32\drivers\etc\hosts'.format(win=os.getenv('WINDIR'))):
@@ -1201,7 +1204,7 @@ def _subnets(proto='inet', interfaces_=None):
         subnet = 'prefixlen'
         dflt_cidr = 128
     else:
-        log.error('Invalid proto {0} calling subnets()'.format(proto))
+        log.error('Invalid proto %s calling subnets()', proto)
         return
 
     for ip_info in six.itervalues(ifaces):
@@ -1268,7 +1271,7 @@ def _ip_addrs(interface=None, include_loopback=False, interface_data=None, proto
         target_ifaces = dict([(k, v) for k, v in six.iteritems(ifaces)
                               if k == interface])
         if not target_ifaces:
-            log.error('Interface {0} not found.'.format(interface))
+            log.error('Interface %s not found.', interface)
     for ip_info in six.itervalues(target_ifaces):
         addrs = ip_info.get(proto, [])
         addrs.extend([addr for addr in ip_info.get('secondary', []) if addr.get('type') == proto])
@@ -1319,7 +1322,7 @@ def hex2ip(hex_ip, invert=False):
             else:
                 return address.compressed
         except ipaddress.AddressValueError as ex:
-            log.error('hex2ip - ipv6 address error: {0}'.format(ex))
+            log.error('hex2ip - ipv6 address error: %s', ex)
             return hex_ip
 
     try:
@@ -1517,7 +1520,7 @@ def _freebsd_remotes_on(port, which_end):
         cmd = salt.utils.args.shlex_split('sockstat -4 -c -p {0}'.format(port))
         data = subprocess.check_output(cmd)  # pylint: disable=minimum-python-version
     except subprocess.CalledProcessError as ex:
-        log.error('Failed "sockstat" with returncode = {0}'.format(ex.returncode))
+        log.error('Failed "sockstat" with returncode = %s', ex.returncode)
         raise
 
     lines = salt.utils.stringutils.to_str(data).split('\n')
@@ -1577,7 +1580,7 @@ def _netbsd_remotes_on(port, which_end):
         cmd = salt.utils.args.shlex_split('sockstat -4 -c -n -p {0}'.format(port))
         data = subprocess.check_output(cmd)  # pylint: disable=minimum-python-version
     except subprocess.CalledProcessError as ex:
-        log.error('Failed "sockstat" with returncode = {0}'.format(ex.returncode))
+        log.error('Failed "sockstat" with returncode = %s', ex.returncode)
         raise
 
     lines = salt.utils.stringutils.to_str(data).split('\n')
@@ -1713,7 +1716,7 @@ def _linux_remotes_on(port, which_end):
             # to locate Internet addresses, and it is not an error in this case.
             log.warning('"lsof" returncode = 1, likely no active TCP sessions.')
             return remotes
-        log.error('Failed "lsof" with returncode = {0}'.format(ex.returncode))
+        log.error('Failed "lsof" with returncode = %s', ex.returncode)
         raise
 
     lines = salt.utils.stringutils.to_str(data).split('\n')
@@ -1927,7 +1930,7 @@ def dns_check(addr, port=80, safe=False, ipv6=None, attempt_connect=True):
                     except socket.error:
                         pass
             if not resolved:
-                if len(candidates) > 0:
+                if candidates:
                     resolved = candidates[0]
                 else:
                     error = True
@@ -1948,3 +1951,55 @@ def dns_check(addr, port=80, safe=False, ipv6=None, attempt_connect=True):
             raise SaltClientError()
         raise SaltSystemExit(code=42, msg=err)
     return resolved
+
+
+def parse_host_port(host_port):
+    """
+    Takes a string argument specifying host or host:port.
+
+    Returns a (hostname, port) or (ip_address, port) tuple. If no port is given,
+    the second (port) element of the returned tuple will be None.
+
+    host:port argument, for example, is accepted in the forms of:
+      - hostname
+      - hostname:1234
+      - hostname.domain.tld
+      - hostname.domain.tld:5678
+      - [1234::5]:5678
+      - 1234::5
+      - 10.11.12.13:4567
+      - 10.11.12.13
+    """
+    host, port = None, None  # default
+
+    _s_ = host_port[:]
+    if _s_[0] == "[":
+        if "]" in host_port:
+            host, _s_ = _s_.lstrip("[").rsplit("]", 1)
+            host = ipaddress.IPv6Address(host)
+            if _s_[0] == ":":
+                port = int(_s_.lstrip(":"))
+            else:
+                if len(_s_) > 1:
+                    raise ValueError('found ambiguous "{}" port in "{}"'.format(_s_, host_port))
+    else:
+        if _s_.count(":") == 1:
+            host, _hostport_separator_, port = _s_.partition(":")
+            try:
+                port = int(port)
+            except ValueError as _e_:
+                log.error('host_port "%s" port value "%s" is not an integer.', host_port, port)
+                raise _e_
+        else:
+            host = _s_
+    try:
+        if not isinstance(host, ipaddress._BaseAddress):
+            host_ip = ipaddress.ip_address(host)
+            host = host_ip
+    except ValueError:
+        log.debug('"%s" Not an IP address? Assuming it is a hostname.', host)
+        if host != sanitize_host(host):
+            log.error('bad hostname: "%s"', host)
+            raise ValueError('bad hostname: "{}"'.format(host))
+
+    return host, port

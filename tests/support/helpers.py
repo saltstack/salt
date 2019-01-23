@@ -52,7 +52,7 @@ except ImportError:
         return port
 
 # Import Salt Tests Support libs
-from tests.support.unit import skip, _id
+from tests.support.unit import skip, _id, SkipTest
 from tests.support.mock import patch
 from tests.support.paths import FILES, TMP
 
@@ -208,7 +208,7 @@ def flaky(caller=None, condition=True, attempts=4):
             try:
                 return caller(cls)
             except Exception as exc:
-                if log.isEnabledFor(logging.DEBUG):
+                if not isinstance(exc, (AssertionError, SkipTest)) and log.isEnabledFor(logging.DEBUG):
                     log.exception(exc, exc_info=True)
                 if attempt >= attempts -1:
                     raise exc
@@ -1632,3 +1632,25 @@ def dedent(text, linesep=os.linesep):
     if not isinstance(text, six.text_type):
         return salt.utils.stringutils.to_bytes(clean_text)
     return clean_text
+
+
+class PatchedEnviron(object):
+
+    def __init__(self, **kwargs):
+        self.cleanup_keys = kwargs.pop('__cleanup__', ())
+        self.kwargs = kwargs
+        self.original_environ = None
+
+    def __enter__(self):
+        self.original_environ = os.environ.copy()
+        for key in self.cleanup_keys:
+            os.environ.pop(key, None)
+        os.environ.update(**self.kwargs)
+        return self
+
+    def __exit__(self, *args):
+        os.environ.clear()
+        os.environ.update(self.original_environ)
+
+
+patched_environ = PatchedEnviron

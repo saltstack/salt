@@ -103,7 +103,7 @@ def absent(name, keys=None, **connection_args):
             return ret
         delete_list = [key for key in keys
                        if __salt__['redis.exists'](key, **connection_args)]
-        if not len(delete_list):
+        if not delete_list:
             return ret
         __salt__['redis.delete'](*delete_list, **connection_args)
         ret['changes']['deleted'] = delete_list
