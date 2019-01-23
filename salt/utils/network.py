@@ -1855,6 +1855,9 @@ def dns_check(addr, port, safe=False, ipv6=None):
     seen_ipv6 = False
     try:
         refresh_dns()
+        if isinstance(addr, salt.ext.ipaddress.IPv4Address) or \
+           isinstance(addr, salt.ext.ipaddress.IPv6Address):
+            return addr.exploded
         hostnames = socket.getaddrinfo(
             addr, None, socket.AF_UNSPEC, socket.SOCK_STREAM
         )
