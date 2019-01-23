@@ -406,6 +406,7 @@ class Pillar(object):
         if not isinstance(self.extra_minion_data, dict):
             self.extra_minion_data = {}
             log.error('Extra minion data must be a dictionary')
+        self._closing = False
 
     def __valid_on_demand_ext_pillar(self, opts):
         '''
@@ -1108,6 +1109,17 @@ class Pillar(object):
                     errors.append(msg)
                     log.error(msg, exc_info=True)
         return errors
+
+    def destroy(self):
+        '''
+        This method exist in order to be API compatible with RemotePillar
+        '''
+        if self._closing:
+            return
+        self._closing = True
+
+    def __del__(self):
+        self.destroy()
 
 
 # TODO: actually migrate from Pillar to AsyncPillar to allow for futures in
