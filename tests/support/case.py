@@ -801,10 +801,11 @@ class ModuleCase(TestCase, SaltClientTestCaseMixin):
         behavior of the raw function call
         '''
         known_to_return_none = (
+            'data.get',
             'file.chown',
             'file.chgrp',
+            'pkg.refresh_db',
             'ssh.recv_known_host_entries',
-            'pkg.refresh_db'  # At least on CentOS
         )
         if minion_tgt == 'sub_minion':
             known_to_return_none += ('mine.update',)
