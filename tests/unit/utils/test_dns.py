@@ -446,9 +446,9 @@ class DNSlookupsCase(TestCase):
         rights = {
             'A':     [
                 'mocksrvr.example.com has address 10.1.1.1',
-                'web.example.com  has address 10.1.1.1\n'
-                'web.example.com  has address 10.2.2.2\n'
-                'web.example.com  has address 10.3.3.3'
+                'web.example.com has address 10.1.1.1\n'
+                'web.example.com has address 10.2.2.2\n'
+                'web.example.com has address 10.3.3.3'
 
             ],
             'AAAA':  [
