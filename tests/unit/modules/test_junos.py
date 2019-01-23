@@ -10,6 +10,7 @@ import os
 from tests.support.mixins import LoaderModuleMockMixin, XMLEqualityMixin
 from tests.support.mock import patch, mock_open, PropertyMock, call, ANY
 from tests.support.unit import skipIf, TestCase
+import six
 
 # Import 3rd-party libs
 try:
@@ -1743,7 +1744,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
         ret_exp = {'out': False, 'hostname': '1.1.1.1',
                    'tablename': 'sample',
                    'message': 'Uncaught exception during get API call - please report:'
-                              ' u\'{0}\''.format(table)}
+                              ' u\'{0}\''.format(six.text_type(table))}
         with patch('jnpr.junos.device.Device.execute') as mock_execute:
             ret = junos.get_table(table, file)
             self.assertEqual(ret['out'], ret_exp['out'])
