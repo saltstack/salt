@@ -3,7 +3,7 @@ r'''
 A salt util for modifying firewall settings.
 
 .. versionadded:: 2018.3.4
-.. versionadded:: Fluorine
+.. versionadded:: 2019.2.0
 
 This util allows you to modify firewall settings in the local group policy in
 addition to the normal firewall settings. Parameters are taken from the
