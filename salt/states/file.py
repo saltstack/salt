@@ -2421,7 +2421,6 @@ def managed(name,
                 'to True to allow the managed file to be empty.'
                 .format(contents_id)
             )
-
         if isinstance(use_contents, six.binary_type) and b'\0' in use_contents:
             contents = use_contents
         elif isinstance(use_contents, six.text_type) and str('\0') in use_contents:
@@ -2435,9 +2434,10 @@ def managed(name,
                     'contents_grains is not a string or list of strings, and '
                     'is not binary data. SLS is likely malformed.'
                 )
-            contents = os.linesep.join(
-                [line.rstrip('\n').rstrip('\r') for line in validated_contents]
-            )
+            contents = ''
+            for part in validated_contents:
+                for line in part.splitlines():
+                    contents += line.rstrip('\n').rstrip('\r') + os.linesep
             if contents_newline and not contents.endswith(os.linesep):
                 contents += os.linesep
         if template:
