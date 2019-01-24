@@ -10,7 +10,6 @@ from tests.support.unit import skipIf
 from tests.support.unit import TestCase
 from tests.support.mock import (
     MagicMock,
-    Mock,
     mock_open,
     patch,
     NO_MOCK,
@@ -278,7 +277,7 @@ class NetworkTestCase(TestCase):
         ]
         for host in hosts:
             log.debug('=== h %s ===', host)
-            with patch.object(socket, 'getaddrinfo', Mock(return_value=host['mocked'])):
+            with patch.object(socket, 'getaddrinfo', MagicMock(return_value=host['mocked'])):
                 with patch('socket.socket', MockSocket):
                     ret = network.dns_check(host['host'], host['port'])
                     self.assertEqual(ret, host['ret'])
