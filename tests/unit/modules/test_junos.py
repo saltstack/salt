@@ -1739,12 +1739,12 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             self.assertEqual(ret, ret_exp)
 
     def test_get_table_api_error(self):
-        table = 'sample'
+        table = str('sample')
         file = 'inventory.yml'
         ret_exp = {'out': False, 'hostname': '1.1.1.1',
                    'tablename': 'sample',
                    'message': 'Uncaught exception during get API call - please report:'
-                              ' u\'{0}\''.format(six.text_type(table))}
+                              ' \'{}\''.format(six.text_type(table))}
         with patch('jnpr.junos.device.Device.execute') as mock_execute:
             ret = junos.get_table(table, file)
             self.assertEqual(ret['out'], ret_exp['out'])
