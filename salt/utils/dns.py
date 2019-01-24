@@ -382,7 +382,8 @@ def _lookup_host(name, rdtype, timeout=None, server=None):
         return []
 
     res = []
-    for line in cmd['stdout'].splitlines():
+    _stdout = cmd['stdout'] if server is None else cmd['stdout'].split('\n\n')[-1]
+    for line in _stdout.splitlines():
         if rdtype != 'CNAME' and 'is an alias' in line:
             continue
         line = line.split(' ', 3)[-1]
