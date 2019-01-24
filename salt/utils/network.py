@@ -1854,6 +1854,7 @@ def dns_check(addr, port, safe=False, ipv6=None):
     lookup = addr
     seen_ipv6 = False
     try:
+        log.debug('=== %s ===', socket.getaddrinfo)
         refresh_dns()
         if isinstance(addr, salt.ext.ipaddress.IPv4Address) or \
            isinstance(addr, salt.ext.ipaddress.IPv6Address):
@@ -1861,6 +1862,7 @@ def dns_check(addr, port, safe=False, ipv6=None):
         hostnames = socket.getaddrinfo(
             addr, None, socket.AF_UNSPEC, socket.SOCK_STREAM
         )
+        log.debug('=== hostnames %s ===', hostnames)
         if not hostnames:
             error = True
         else:
@@ -1885,6 +1887,7 @@ def dns_check(addr, port, safe=False, ipv6=None):
                 try:
                     s = socket.socket(h[0], socket.SOCK_STREAM)
                     s.connect((candidate_addr, port))
+                    log.debug('=== h %s ===', h)
                     s.close()
 
                     resolved = candidate_addr

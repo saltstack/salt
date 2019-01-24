@@ -10,6 +10,7 @@ from tests.support.unit import skipIf
 from tests.support.unit import TestCase
 from tests.support.mock import (
     MagicMock,
+    Mock,
     mock_open,
     patch,
     NO_MOCK,
@@ -231,6 +232,56 @@ class NetworkTestCase(TestCase):
             except AssertionError as _e_:
                 log.error('bad host_port value: "%s" failed to trigger ValueError exception', host_port)
                 raise _e_
+
+    def test_dns_check(self):
+
+        class MockSocket(object):
+            def __init__(self, *args, **kwargs):
+                pass
+
+            def __call__(self, *args, **kwargs):
+                pass
+
+            def setsockopt(self, *args, **kwargs):
+                pass
+
+            def sendto(self, *args, **kwargs):
+                pass
+
+            def connect(self, *args, **kwargs):
+                pass
+
+            def close(self, *args, **kwargs):
+                pass
+
+        _ip = ipaddress.ip_address
+        hosts = [
+            {'host': _ip('10.10.0.3'),
+             'port': '',
+             'mocked': '10.10.0.3',
+             'ret': '10.10.0.3'},
+            {'host': _ip('10.10.0.3'),
+             'port': '1234',
+             'mocked': '10.10.0.3',
+             'ret': '10.10.0.3'},
+            {'host': _ip('2001:0db8:85a3::8a2e:0370:7334'),
+             'port': '',
+             'mocked': '2001:0db8:85a3:0000:0000:8a2e:0370:7334',
+             'ret': '2001:0db8:85a3:0000:0000:8a2e:0370:7334'},
+            {'host': _ip('2001:0db8:85a3::8a2e:0370:7334'),
+             'port': '1234',
+             'mocked': '2001:0db8:85a3:0000:0000:8a2e:0370:7334',
+             'ret': '2001:0db8:85a3:0000:0000:8a2e:0370:7334'},
+            {'host': 'salt-master',
+             'port': '1234',
+             'mocked': [(2, 1, 6, '', ('127.0.0.1', 0))],
+             'ret': '127.0.0.1'},
+        ]
+        for host in hosts:
+            with patch.object(socket, 'getaddrinfo', Mock(return_value=host['mocked'])):
+                with patch('socket.socket', MockSocket):
+                    ret = network.dns_check(host['host'], host['port'])
+                    self.assertEqual(ret, host['ret'])
 
     def test_is_subnet(self):
         for subnet_data in (IPV4_SUBNETS, IPV6_SUBNETS):
