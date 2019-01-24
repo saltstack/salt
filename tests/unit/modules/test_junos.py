@@ -10,7 +10,7 @@ import os
 from tests.support.mixins import LoaderModuleMockMixin, XMLEqualityMixin
 from tests.support.mock import patch, mock_open, PropertyMock, call, ANY
 from tests.support.unit import skipIf, TestCase
-import six
+from salt.ext import six
 
 # Import 3rd-party libs
 try:
