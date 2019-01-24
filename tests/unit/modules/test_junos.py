@@ -1421,7 +1421,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
     def test_virtual_proxy_unavailable(self):
         with patch.dict(junos.__opts__, {}):
             res = (False, 'The junos or dependent module could not be loaded: '
-                          'junos-eznc or jxmlease or '
+                          'junos-eznc or jxmlease or or yamlordereddictloader or '
                           'proxy could not be loaded.')
             self.assertEqual(junos.__virtual__(), res)
 

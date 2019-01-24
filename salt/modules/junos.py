@@ -50,6 +50,7 @@ try:
     from jnpr.junos.factory.optable import OpTable
     import jnpr.junos.op as tables_dir
     from jnpr.junos.factory.factory_loader import FactoryLoader
+    import yamlordereddictloader
     from jnpr.junos.exception import ConnectClosedError
     # pylint: enable=W0611
     HAS_JUNOS = True
@@ -75,7 +76,7 @@ def __virtual__():
         return __virtualname__
     else:
         return (False, 'The junos or dependent module could not be loaded: '
-                       'junos-eznc or jxmlease or '
+                       'junos-eznc or jxmlease or or yamlordereddictloader or '
                        'proxy could not be loaded.')
 
 
@@ -1429,7 +1430,8 @@ def get_table(table, table_file, path=None, target=None, key=None, key_items=Non
             return ret
         try:
             with salt.utils.files.fopen(file_name) as fp:
-                ret['table'] = yaml.load(fp.read())
+                ret['table'] = yaml.load(fp.read(),
+                                         Loader=yamlordereddictloader.Loader)
                 globals().update(FactoryLoader().load(ret['table']))
         except IOError as err:
             ret['message'] = 'Uncaught exception during YAML Load - please ' \
