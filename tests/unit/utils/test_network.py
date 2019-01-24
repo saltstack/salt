@@ -276,7 +276,6 @@ class NetworkTestCase(TestCase):
              'ret': '127.0.0.1'},
         ]
         for host in hosts:
-            log.debug('=== h %s ===', host)
             with patch.object(socket, 'getaddrinfo', MagicMock(return_value=host['mocked'])):
                 with patch('socket.socket', MockSocket):
                     ret = network.dns_check(host['host'], host['port'])
