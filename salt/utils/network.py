@@ -1864,7 +1864,6 @@ def dns_check(addr, port, safe=False, ipv6=None):
             resolved = False
             candidates = []
             for h in hostnames:
-                log.debug('=== h %s ===', h)
                 # It's an IP address, just return it
                 if h[4][0] == addr:
                     resolved = addr
