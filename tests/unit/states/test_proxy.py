@@ -14,9 +14,6 @@ from tests.support.mock import (
     call
 )
 
-# Import 3rd-party libs
-from salt.ext import six
-
 # Import Salt Libs
 import salt.states.proxy as proxy
 
