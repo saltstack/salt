@@ -3,7 +3,7 @@ r'''
 A salt util for modifying firewall settings.
 
 .. versionadded:: 2018.3.4
-.. versionadded:: Fluorine
+.. versionadded:: 2019.2.0
 
 This util allows you to modify firewall settings in the local group policy in
 addition to the normal firewall settings. Parameters are taken from the
@@ -81,6 +81,19 @@ from salt.ext.six.moves import zip
 
 log = logging.getLogger(__name__)
 __hostname__ = socket.gethostname()
+__virtualname__ = 'netsh'
+
+
+# Although utils are often directly imported, it is also possible to use the
+# loader.
+def __virtual__():
+    '''
+    Only load if on a Windows system
+    '''
+    if not salt.utils.platform.is_windows():
+        return False, 'This utility only available on Windows'
+
+    return __virtualname__
 
 
 def _netsh_file(content):

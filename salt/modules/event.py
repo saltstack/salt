@@ -17,7 +17,7 @@ import salt.crypt
 import salt.utils.event
 import salt.utils.zeromq
 import salt.payload
-import salt.transport
+import salt.transport.client
 from salt.ext import six
 
 __proxyenabled__ = ['*']
@@ -46,7 +46,7 @@ def fire_master(data, tag, preload=None):
         log.warning('Local mode detected. Event with tag %s will NOT be sent.', tag)
         return False
     if __opts__['transport'] == 'raet':
-        channel = salt.transport.Channel.factory(__opts__)
+        channel = salt.transport.client.ReqChannel.factory(__opts__)
         load = {'id': __opts__['id'],
                 'tag': tag,
                 'data': data,
@@ -55,6 +55,8 @@ def fire_master(data, tag, preload=None):
             channel.send(load)
         except Exception:
             pass
+        finally:
+            channel.close()
         return True
 
     if preload or __opts__.get('__cli') == 'salt-call':
@@ -83,7 +85,7 @@ def fire_master(data, tag, preload=None):
             load.update(preload)
 
         for master in masters:
-            channel = salt.transport.Channel.factory(__opts__, master_uri=master)
+            channel = salt.transport.client.ReqChannel.factory(__opts__, master_uri=master)
             try:
                 channel.send(load)
                 # channel.send was successful.
@@ -91,6 +93,8 @@ def fire_master(data, tag, preload=None):
                 ret = True
             except Exception:
                 ret = False
+            finally:
+                channel.close()
         return ret
     else:
         # Usually, we can send the event via the minion, which is faster

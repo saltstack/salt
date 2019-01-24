@@ -10,11 +10,11 @@ Wire protocol: "len(payload) msgpack({'head': SOMEHEADER, 'body': SOMEBODY})"
 from __future__ import absolute_import, print_function, unicode_literals
 import errno
 import logging
-import msgpack
 import socket
 import os
 import weakref
 import time
+import threading
 import traceback
 
 # Import Salt Libs
@@ -53,6 +53,7 @@ else:
 # pylint: enable=import-error,no-name-in-module
 
 # Import third party libs
+import msgpack
 try:
     from M2Crypto import RSA
     HAS_M2 = True
@@ -240,8 +241,13 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
             # references it-- this forces a reference while we return to the caller
             obj = object.__new__(cls)
             obj.__singleton_init__(opts, **kwargs)
+            obj._instance_key = key
             loop_instance_map[key] = obj
+            obj._refcount = 1
+            obj._refcount_lock = threading.RLock()
         else:
+            with obj._refcount_lock:
+                obj._refcount += 1
             log.debug('Re-using AsyncTCPReqChannel for %s', key)
         return obj
 
@@ -288,11 +294,43 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
     def close(self):
         if self._closing:
             return
+
+        if self._refcount > 1:
+            # Decrease refcount
+            with self._refcount_lock:
+                self._refcount -= 1
+            log.debug(
+                'This is not the last %s instance. Not closing yet.',
+                self.__class__.__name__
+            )
+            return
+
+        log.debug('Closing %s instance', self.__class__.__name__)
         self._closing = True
         self.message_client.close()
 
+        # Remove the entry from the instance map so that a closed entry may not
+        # be reused.
+        # This forces this operation even if the reference count of the entry
+        # has not yet gone to zero.
+        if self.io_loop in self.__class__.instance_map:
+            loop_instance_map = self.__class__.instance_map[self.io_loop]
+            if self._instance_key in loop_instance_map:
+                del loop_instance_map[self._instance_key]
+            if not loop_instance_map:
+                del self.__class__.instance_map[self.io_loop]
+
     def __del__(self):
-        self.close()
+        with self._refcount_lock:
+            # Make sure we actually close no matter if something
+            # went wrong with our ref counting
+            self._refcount = 1
+        try:
+            self.close()
+        except socket.error as exc:
+            if exc.errno != errno.EBADF:
+                # If its not a bad file descriptor error, raise
+                raise
 
     def _package_load(self, load):
         return {
@@ -489,6 +527,9 @@ class AsyncTCPPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.tran
                 log.info('fire_master failed: master could not be contacted. Request timed out.')
             except Exception:
                 log.info('fire_master failed: %s', traceback.format_exc())
+            finally:
+                # SyncWrapper will call either close() or destroy(), whichever is available
+                del req_channel
         else:
             self._reconnected = True
 

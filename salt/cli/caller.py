@@ -20,6 +20,7 @@ import salt.minion
 import salt.output
 import salt.payload
 import salt.transport
+import salt.transport.client
 import salt.utils.args
 import salt.utils.files
 import salt.utils.jid
@@ -334,11 +335,14 @@ class ZeroMQCaller(BaseCaller):
         '''
         Return the data up to the master
         '''
-        channel = salt.transport.Channel.factory(self.opts, usage='salt_call')
+        channel = salt.transport.client.ReqChannel.factory(self.opts, usage='salt_call')
         load = {'cmd': '_return', 'id': self.opts['id']}
         for key, value in six.iteritems(ret):
             load[key] = value
-        channel.send(load)
+        try:
+            channel.send(load)
+        finally:
+            channel.close()
 
 
 def raet_minion_run(cleanup_protecteds):

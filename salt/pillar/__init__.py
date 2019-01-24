@@ -20,7 +20,7 @@ import salt.loader
 import salt.fileclient
 import salt.minion
 import salt.crypt
-import salt.transport
+import salt.transport.client
 import salt.utils.args
 import salt.utils.cache
 import salt.utils.crypt
@@ -157,6 +157,7 @@ class AsyncRemotePillar(RemotePillarMixin):
                                      self.get_ext_pillar_extra_minion_data(opts),
                                      recursive_update=True,
                                      merge_lists=True)
+        self._closing = False
 
     @tornado.gen.coroutine
     def compile_pillar(self):
@@ -190,6 +191,16 @@ class AsyncRemotePillar(RemotePillarMixin):
             raise SaltClientError(msg)
         raise tornado.gen.Return(ret_pillar)
 
+    def destroy(self):
+        if self._closing:
+            return
+
+        self._closing = True
+        self.channel.close()
+
+    def __del__(self):
+        self.destroy()
+
 
 class RemotePillar(RemotePillarMixin):
     '''
@@ -202,7 +213,7 @@ class RemotePillar(RemotePillarMixin):
         self.ext = ext
         self.grains = grains
         self.minion_id = minion_id
-        self.channel = salt.transport.Channel.factory(opts)
+        self.channel = salt.transport.client.ReqChannel.factory(opts)
         if pillarenv is not None:
             self.opts['pillarenv'] = pillarenv
         self.pillar_override = pillar_override or {}
@@ -217,6 +228,7 @@ class RemotePillar(RemotePillarMixin):
                                      self.get_ext_pillar_extra_minion_data(opts),
                                      recursive_update=True,
                                      merge_lists=True)
+        self._closing = False
 
     def compile_pillar(self):
         '''
@@ -243,6 +255,16 @@ class RemotePillar(RemotePillarMixin):
             )
             return {}
         return ret_pillar
+
+    def destroy(self):
+        if self._closing:
+            return
+
+        self._closing = True
+        self.channel.close()
+
+    def __del__(self):
+        self.destroy()
 
 
 class PillarCache(object):
@@ -384,6 +406,7 @@ class Pillar(object):
         if not isinstance(self.extra_minion_data, dict):
             self.extra_minion_data = {}
             log.error('Extra minion data must be a dictionary')
+        self._closing = False
 
     def __valid_on_demand_ext_pillar(self, opts):
         '''
@@ -1086,6 +1109,17 @@ class Pillar(object):
                     errors.append(msg)
                     log.error(msg, exc_info=True)
         return errors
+
+    def destroy(self):
+        '''
+        This method exist in order to be API compatible with RemotePillar
+        '''
+        if self._closing:
+            return
+        self._closing = True
+
+    def __del__(self):
+        self.destroy()
 
 
 # TODO: actually migrate from Pillar to AsyncPillar to allow for futures in

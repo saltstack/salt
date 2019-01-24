@@ -17,7 +17,7 @@ from tests.support.mock import (
 
 # Import Salt Libs
 import salt.modules.raet_publish as raet_publish
-import salt.transport
+import salt.transport.client
 from salt.exceptions import SaltReqTimeoutError
 
 
@@ -50,7 +50,7 @@ class RaetPublishTestCase(TestCase, LoaderModuleMockMixin):
          the data from the runner function
         '''
         with patch.dict(raet_publish.__opts__, {'id': 'id'}):
-            with patch.object(salt.transport.Channel, 'factory', MagicMock()):
+            with patch.object(salt.transport.client.ReqChannel, 'factory', MagicMock()):
                 self.assertTrue(raet_publish.runner('fun'))
 
         class MockFactory(object):
@@ -66,7 +66,10 @@ class RaetPublishTestCase(TestCase, LoaderModuleMockMixin):
                 self.load = load
                 raise SaltReqTimeoutError(load)
 
+            def close(self):
+                pass
+
         with patch.dict(raet_publish.__opts__, {'id': 'id'}):
-            with patch.object(salt.transport.Channel, 'factory',
+            with patch.object(salt.transport.client.ReqChannel, 'factory',
                               MagicMock(return_value=MockFactory())):
                 self.assertEqual(raet_publish.runner(1), "'1' runner publish timed out")

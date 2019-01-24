@@ -21,7 +21,7 @@ import salt.utils.path
 import salt.utils.templates
 import salt.utils.url
 import salt.crypt
-import salt.transport
+import salt.transport.client
 from salt.exceptions import CommandExecutionError
 from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=import-error,no-name-in-module
 
@@ -829,29 +829,32 @@ def push(path, keep_symlinks=False, upload_path=None, remove_source=False):
             'path': load_path_list,
             'size': os.path.getsize(path),
             'tok': auth.gen_token(b'salt')}
-    channel = salt.transport.Channel.factory(__opts__)
-    with salt.utils.files.fopen(path, 'rb') as fp_:
-        init_send = False
-        while True:
-            load['loc'] = fp_.tell()
-            load['data'] = fp_.read(__opts__['file_buffer_size'])
-            if not load['data'] and init_send:
-                if remove_source:
-                    try:
-                        salt.utils.files.rm_rf(path)
-                        log.debug('Removing source file \'%s\'', path)
-                    except IOError:
-                        log.error('cp.push failed to remove file \'%s\'', path)
-                        return False
-                return True
-            ret = channel.send(load)
-            if not ret:
-                log.error('cp.push Failed transfer failed. Ensure master has '
-                          '\'file_recv\' set to \'True\' and that the file '
-                          'is not larger than the \'file_recv_size_max\' '
-                          'setting on the master.')
-                return ret
-            init_send = True
+    channel = salt.transport.client.ReqChannel.factory(__opts__)
+    try:
+        with salt.utils.files.fopen(path, 'rb') as fp_:
+            init_send = False
+            while True:
+                load['loc'] = fp_.tell()
+                load['data'] = fp_.read(__opts__['file_buffer_size'])
+                if not load['data'] and init_send:
+                    if remove_source:
+                        try:
+                            salt.utils.files.rm_rf(path)
+                            log.debug('Removing source file \'%s\'', path)
+                        except IOError:
+                            log.error('cp.push failed to remove file \'%s\'', path)
+                            return False
+                    return True
+                ret = channel.send(load)
+                if not ret:
+                    log.error('cp.push Failed transfer failed. Ensure master has '
+                              '\'file_recv\' set to \'True\' and that the file '
+                              'is not larger than the \'file_recv_size_max\' '
+                              'setting on the master.')
+                    return ret
+                init_send = True
+    finally:
+        channel.close()
 
 
 def push_dir(path, glob=None, upload_path=None):

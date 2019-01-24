@@ -873,7 +873,7 @@ class Client(object):
         self.service_name = service_name
         self._exe_file = "{0}.exe".format(self.service_name)
         self._client = PsExecClient(server, username, password, port, encrypt)
-        self._service = ScmrService(self.service_name, self._client.session)
+        self._client._service = ScmrService(self.service_name, self._client.session)
 
     def connect(self):
         return self._client.connect()
@@ -884,7 +884,7 @@ class Client(object):
     def create_service(self):
         return self._client.create_service()
 
-    def run_executabe(self, *args, **kwargs):
+    def run_executable(self, *args, **kwargs):
         return self._client.run_executable(*args, **kwargs)
 
     def remove_service(self, wait_timeout=10, sleep_wait=1):
@@ -899,7 +899,7 @@ class Client(object):
         wait_start = time.time()
         while True:
             try:
-                self._service.delete()
+                self._client._service.delete()
             except SCMRException as exc:
                 log.debug("Exception encountered while deleting service %s", repr(exc))
                 if time.time() - wait_start > wait_timeout:
@@ -1112,7 +1112,7 @@ def validate_windows_cred(host,
     '''
     Check if the windows credentials are valid
     '''
-    for i in xrange(retries):
+    for i in range(retries):
         ret_code = 1
         try:
             stdout, stderr, ret_code = run_psexec_command(
