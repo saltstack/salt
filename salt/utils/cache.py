@@ -9,7 +9,7 @@ import re
 import time
 import logging
 try:
-    import msgpack
+    import salt.utils.msgpack as msgpack
 except ImportError:
     msgpack = None
 

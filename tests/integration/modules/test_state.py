@@ -16,7 +16,6 @@ from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ModuleCase
 from tests.support.helpers import with_tempdir
 from tests.support.unit import skipIf
-from tests.support.paths import BASE_FILES
 from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import Salt libs
@@ -83,9 +82,9 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
                 for line in lines:
                     fhw.write(line + ending)
 
-        destpath = os.path.join(BASE_FILES, 'testappend', 'firstif')
+        destpath = os.path.join(RUNTIME_VARS.BASE_FILES, 'testappend', 'firstif')
         _reline(destpath)
-        destpath = os.path.join(BASE_FILES, 'testappend', 'secondif')
+        destpath = os.path.join(RUNTIME_VARS.BASE_FILES, 'testappend', 'secondif')
         _reline(destpath)
 
     def test_show_highstate(self):

@@ -9,6 +9,8 @@
 
 # Import Python libs
 from __future__ import absolute_import
+import signal
+import logging
 
 # Import Salt testing libs
 from tests.support.case import ShellTestCase
@@ -19,30 +21,35 @@ from tests.support.helpers import flaky
 # Import Salt libs
 import salt.utils.event
 import salt.utils.reactor
-import signal
+
+log = logging.getLogger(__name__)
 
 
 class TimeoutException(Exception):
     pass
 
 
-class ReactorTest(ShellTestCase, SaltMinionEventAssertsMixin):
+class ReactorTest(SaltMinionEventAssertsMixin, ShellTestCase):
     '''
     Test Salt's reactor system
     '''
+
     def setUp(self):
         self.timeout = 30
 
     def get_event(self, class_type='master'):
+        if class_type not in ('master', 'minion'):
+            self.fail('Don\'t know how to handle class_type \'{}\''.format(class_type))
+        opts = self.get_config(class_type)
         return salt.utils.event.get_event(
             class_type,
-            sock_dir=self.master_opts['sock_dir'],
-            transport=self.master_opts['transport'],
+            sock_dir=opts['sock_dir'],
+            transport=opts['transport'],
             keep_loop=True,
-            opts=self.master_opts)
+            opts=opts)
 
-    def fire_event(self, tag, data):
-        event = self.get_event()
+    def fire_event(self, tag, data, class_type='master'):
+        event = self.get_event(class_type=class_type)
         event.fire_event(tag, data)
 
     def alarm_handler(self, signal, frame):
@@ -54,11 +61,7 @@ class ReactorTest(ShellTestCase, SaltMinionEventAssertsMixin):
         Fire an event on the master and ensure
         that it pings the minion
         '''
-        # Create event bus connection
-        e = salt.utils.event.get_event('minion', sock_dir=self.minion_opts['sock_dir'], opts=self.minion_opts)
-
-        e.fire_event({'a': 'b'}, '/test_event')
-
+        self.fire_event({'a': 'b'}, '/test_event', class_type='minion')
         self.assertMinionEventReceived({'a': 'b'})
 
     @skipIf(salt.utils.platform.is_windows(), 'no sigalarm on windows')
