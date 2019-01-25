@@ -691,7 +691,6 @@ def latest(name,
     use_lfs = bool(
         __salt__['git.config_get_regexp'](
             r'filter\.lfs\.',
-            cwd=target,
             **{'global': True}))
     lfs_opts = {'identity': identity} if use_lfs else {}
 
