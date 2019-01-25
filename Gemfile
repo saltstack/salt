@@ -3,7 +3,7 @@
 source 'https://rubygems.org'
 
 gem 'test-kitchen', '~>1.23.3'
-gem 'kitchen-salt', '~>0.2'
+gem 'kitchen-salt', '~>0.4.1'
 gem 'kitchen-sync'
 gem 'git'
 
@@ -13,7 +13,7 @@ end
 
 group :windows do
   gem 'winrm', '~>2.0'
-  gem 'winrm-fs', '~>1.3.1' 
+  gem 'winrm-fs', '~>1.3.1'
 end
 
 group :ec2 do

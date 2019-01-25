@@ -153,6 +153,17 @@ class PayloadTestCase(TestCase):
         odata = payload.loads(sdata)
         self.assertEqual(edata, odata)
 
+    def test_recursive_dump_load(self):
+        '''
+        Test recursive payloads are (mostly) serialized
+        '''
+        payload = salt.payload.Serial('msgpack')
+        data = {'name': 'roscivs'}
+        data['data'] = data  # Data all the things!
+        sdata = payload.dumps(data)
+        odata = payload.loads(sdata)
+        self.assertTrue('recursion' in odata['data'].lower())
+
 
 class SREQTestCase(TestCase):
     port = 8845  # TODO: dynamically assign a port?
