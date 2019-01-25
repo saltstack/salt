@@ -185,11 +185,17 @@ class NetworkTestCase(TestCase):
     def test_is_ip(self):
         self.assertTrue(network.is_ip('10.10.0.3'))
         self.assertFalse(network.is_ip('0.9.800.1000'))
+        # Check 16-char-long unicode string
+        # https://github.com/saltstack/salt/issues/51258
+        self.assertFalse(network.is_ipv6('sixteen-char-str'))
 
     def test_is_ipv4(self):
         self.assertTrue(network.is_ipv4('10.10.0.3'))
         self.assertFalse(network.is_ipv4('10.100.1'))
         self.assertFalse(network.is_ipv4('2001:db8:0:1:1:1:1:1'))
+        # Check 16-char-long unicode string
+        # https://github.com/saltstack/salt/issues/51258
+        self.assertFalse(network.is_ipv4('sixteen-char-str'))
 
     def test_is_ipv6(self):
         self.assertTrue(network.is_ipv6('2001:db8:0:1:1:1:1:1'))
@@ -202,6 +208,9 @@ class NetworkTestCase(TestCase):
         self.assertFalse(network.is_ipv6('2001:0db8:::0370:7334'))
         self.assertFalse(network.is_ipv6('10.0.1.2'))
         self.assertFalse(network.is_ipv6('2001.0db8.85a3.0000.0000.8a2e.0370.7334'))
+        # Check 16-char-long unicode string
+        # https://github.com/saltstack/salt/issues/51258
+        self.assertFalse(network.is_ipv6('sixteen-char-str'))
 
     def test_parse_host_port(self):
         _ip = ipaddress.ip_address
