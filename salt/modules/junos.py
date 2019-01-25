@@ -18,6 +18,11 @@ Refer to :mod:`junos <salt.proxy.junos>` for information on connecting to junos 
 from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
+from functools import wraps
+import traceback
+import json
+import glob
+import yaml
 
 try:
     from lxml import etree
@@ -42,6 +47,11 @@ try:
     import jnpr.junos.utils
     import jnpr.junos.cfg
     import jxmlease
+    from jnpr.junos.factory.optable import OpTable
+    import jnpr.junos.op as tables_dir
+    from jnpr.junos.factory.factory_loader import FactoryLoader
+    import yamlordereddictloader
+    from jnpr.junos.exception import ConnectClosedError
     # pylint: enable=W0611
     HAS_JUNOS = True
 except ImportError:
@@ -65,8 +75,32 @@ def __virtual__():
     if HAS_JUNOS and 'proxy' in __opts__:
         return __virtualname__
     else:
-        return (False, 'The junos module could not be loaded: '
-                       'junos-eznc or jxmlease or proxy could not be loaded.')
+        return (False, 'The junos or dependent module could not be loaded: '
+                       'junos-eznc or jxmlease or or yamlordereddictloader or '
+                       'proxy could not be loaded.')
+
+
+def timeoutDecorator(function):
+    @wraps(function)
+    def wrapper(*args, **kwargs):
+        if 'dev_timeout' in kwargs:
+            conn = __proxy__['junos.conn']()
+            restore_timeout = conn.timeout
+            conn.timeout = kwargs.pop('dev_timeout', None)
+            try:
+                result = function(*args, **kwargs)
+                conn.timeout = restore_timeout
+                return result
+            except Exception:
+                conn.timeout = restore_timeout
+                raise
+        else:
+            try:
+                return function(*args, **kwargs)
+            except Exception:
+                raise
+
+    return wrapper
 
 
 def facts_refresh():
@@ -82,7 +116,7 @@ def facts_refresh():
         salt 'device_name' junos.facts_refresh
     '''
     conn = __proxy__['junos.conn']()
-    ret = dict()
+    ret = {}
     ret['out'] = True
     try:
         conn.facts_refresh()
@@ -111,7 +145,7 @@ def facts():
 
         salt 'device_name' junos.facts
     '''
-    ret = dict()
+    ret = {}
     try:
         ret['facts'] = __proxy__['junos.get_serialized_facts']()
         ret['out'] = True
@@ -122,6 +156,7 @@ def facts():
     return ret
 
 
+@timeoutDecorator
 def rpc(cmd=None, dest=None, **kwargs):
     '''
     This function executes the RPC provided as arguments on the junos device.
@@ -160,7 +195,7 @@ def rpc(cmd=None, dest=None, **kwargs):
     '''
 
     conn = __proxy__['junos.conn']()
-    ret = dict()
+    ret = {}
     ret['out'] = True
 
     if cmd is None:
@@ -183,7 +218,6 @@ def rpc(cmd=None, dest=None, **kwargs):
                 op[key] = value
     else:
         op.update(kwargs)
-    op['dev_timeout'] = six.text_type(op.pop('timeout', conn.timeout))
 
     if cmd in ['get-config', 'get_config']:
         filter_reply = None
@@ -204,7 +238,6 @@ def rpc(cmd=None, dest=None, **kwargs):
             ret['out'] = False
             return ret
     else:
-        op['dev_timeout'] = int(op['dev_timeout'])
         if 'filter' in op:
             log.warning(
                 'Filter ignored as it is only used with "get-config" rpc')
@@ -242,6 +275,7 @@ def rpc(cmd=None, dest=None, **kwargs):
     return ret
 
 
+@timeoutDecorator
 def set_hostname(hostname=None, **kwargs):
     '''
     Set the device's hostname
@@ -249,11 +283,11 @@ def set_hostname(hostname=None, **kwargs):
     hostname
         The name to be set
 
-    dev_timeout : 30
-        The NETCONF RPC timeout (in seconds)
-
     comment
         Provide a comment to the commit
+
+    dev_timeout : 30
+        The NETCONF RPC timeout (in seconds)
 
     confirm
       Provide time in minutes for commit confirmation. If this option is
@@ -267,7 +301,7 @@ def set_hostname(hostname=None, **kwargs):
         salt 'device_name' junos.set_hostname salt-device
     '''
     conn = __proxy__['junos.conn']()
-    ret = dict()
+    ret = {}
     if hostname is None:
         ret['message'] = 'Please provide the hostname.'
         ret['out'] = False
@@ -315,9 +349,11 @@ def set_hostname(hostname=None, **kwargs):
         ret[
             'message'] = 'Successfully loaded host-name but pre-commit check failed.'
         conn.cu.rollback()
+
     return ret
 
 
+@timeoutDecorator
 def commit(**kwargs):
     '''
     To commit the changes loaded in the candidate configuration.
@@ -400,9 +436,11 @@ def commit(**kwargs):
         ret['out'] = False
         ret['message'] = 'Pre-commit check failed.'
         conn.cu.rollback()
+
     return ret
 
 
+@timeoutDecorator
 def rollback(**kwargs):
     '''
     Roll back the last committed configuration changes and commit
@@ -435,7 +473,7 @@ def rollback(**kwargs):
     '''
     id_ = kwargs.pop('id', 0)
 
-    ret = dict()
+    ret = {}
     conn = __proxy__['junos.conn']()
 
     op = dict()
@@ -512,7 +550,7 @@ def diff(**kwargs):
         salt.utils.args.invalid_kwargs(kwargs)
 
     conn = __proxy__['junos.conn']()
-    ret = dict()
+    ret = {}
     ret['out'] = True
     try:
         ret['message'] = conn.cu.diff(rb_id=id_)
@@ -524,6 +562,7 @@ def diff(**kwargs):
     return ret
 
 
+@timeoutDecorator
 def ping(dest_ip=None, **kwargs):
     '''
     Send a ping RPC to a device
@@ -558,7 +597,7 @@ def ping(dest_ip=None, **kwargs):
         salt 'device_name' junos.ping '8.8.8.8' ttl=1 rapid=True
     '''
     conn = __proxy__['junos.conn']()
-    ret = dict()
+    ret = {}
 
     if dest_ip is None:
         ret['message'] = 'Please specify the destination ip to ping.'
@@ -586,6 +625,7 @@ def ping(dest_ip=None, **kwargs):
     return ret
 
 
+@timeoutDecorator
 def cli(command=None, **kwargs):
     '''
     Executes the CLI commands and returns the output in specified format. \
@@ -610,7 +650,6 @@ def cli(command=None, **kwargs):
     .. code-block:: bash
 
         salt 'device_name' junos.cli 'show system commit'
-        salt 'device_name' junos.cli 'show version' dev_timeout=40
         salt 'device_name' junos.cli 'show system alarms' format=xml dest=/home/user/cli_output.txt
     '''
     conn = __proxy__['junos.conn']()
@@ -619,7 +658,7 @@ def cli(command=None, **kwargs):
     if not format_:
         format_ = 'text'
 
-    ret = dict()
+    ret = {}
     if command is None:
         ret['message'] = 'Please provide the CLI command to be executed.'
         ret['out'] = False
@@ -688,10 +727,10 @@ def shutdown(**kwargs):
         salt 'device_name' junos.shutdown shutdown=True
     '''
     conn = __proxy__['junos.conn']()
-    ret = dict()
+    ret = {}
     sw = SW(conn)
 
-    op = dict()
+    op = {}
     if '__pub_arg' in kwargs:
         if kwargs['__pub_arg']:
             if isinstance(kwargs['__pub_arg'][-1], dict):
@@ -729,6 +768,7 @@ def shutdown(**kwargs):
     return ret
 
 
+@timeoutDecorator
 def install_config(path=None, **kwargs):
     '''
     Installs the given configuration file into the candidate configuration.
@@ -803,7 +843,7 @@ def install_config(path=None, **kwargs):
         salt 'device_name' junos.install_config 'salt://syslog_template.conf' template_vars='{"syslog_host": "10.180.222.7"}'
     '''
     conn = __proxy__['junos.conn']()
-    ret = dict()
+    ret = {}
     ret['out'] = True
 
     if path is None:
@@ -812,7 +852,7 @@ def install_config(path=None, **kwargs):
         ret['out'] = False
         return ret
 
-    op = dict()
+    op = {}
     if '__pub_arg' in kwargs:
         if kwargs['__pub_arg']:
             if isinstance(kwargs['__pub_arg'][-1], dict):
@@ -820,7 +860,8 @@ def install_config(path=None, **kwargs):
     else:
         op.update(kwargs)
 
-    template_vars = dict()
+    test = op.pop('test', False)
+    template_vars = {}
     if "template_vars" in op:
         template_vars = op["template_vars"]
 
@@ -874,7 +915,7 @@ def install_config(path=None, **kwargs):
         except Exception as exception:
             ret['message'] = 'Could not load configuration due to : "{0}"'.format(
                 exception)
-            ret['format'] = template_format
+            ret['format'] = op['format']
             ret['out'] = False
             return ret
 
@@ -903,7 +944,7 @@ def install_config(path=None, **kwargs):
             ret['out'] = False
             return ret
 
-        if check:
+        if check and not test:
             try:
                 cu.commit(**commit_params)
                 ret['message'] = 'Successfully loaded and committed!'
@@ -913,10 +954,14 @@ def install_config(path=None, **kwargs):
                     .format(exception)
                 ret['out'] = False
                 return ret
-        else:
-            ret['message'] = 'Loaded configuration but commit check failed.'
-            ret['out'] = False
+        elif not check:
             cu.rollback()
+            ret['message'] = 'Loaded configuration but commit check failed, hence rolling back configuration.'
+            ret['out'] = False
+        else:
+            cu.rollback()
+            ret['message'] = 'Commit check passed, but skipping commit for dry-run and rolling back configuration.'
+            ret['out'] = True
 
         try:
             if write_diff and config_diff is not None:
@@ -941,7 +986,7 @@ def zeroize():
         salt 'device_name' junos.zeroize
     '''
     conn = __proxy__['junos.conn']()
-    ret = dict()
+    ret = {}
     ret['out'] = True
     try:
         conn.cli('request system zeroize')
@@ -953,6 +998,7 @@ def zeroize():
     return ret
 
 
+@timeoutDecorator
 def install_os(path=None, **kwargs):
     '''
     Installs the given image on the device. After the installation is complete\
@@ -962,14 +1008,42 @@ def install_os(path=None, **kwargs):
     path (required)
         Path where the image file is present on the proxy minion
 
+    remote_path :
+        If the value of path  is a file path on the local
+        (Salt host's) filesystem, then the image is copied from the local
+        filesystem to the :remote_path: directory on the target Junos
+        device. The default is ``/var/tmp``. If the value of :path: or
+        is a URL, then the value of :remote_path: is unused.
+
     dev_timeout : 30
-        The NETCONF RPC timeout (in seconds)
+        The NETCONF RPC timeout (in seconds). This argument was added since most of
+        the time the "package add" RPC takes a significant amount of time.  The default
+        RPC timeout is 30 seconds.  So this :timeout: value will be
+        used in the context of the SW installation process.  Defaults to
+        30 minutes (30*60=1800)
 
     reboot : False
         Whether to reboot after installation
 
     no_copy : False
         If ``True`` the software package will not be SCP’d to the device
+
+    bool validate:
+        When ``True`` this method will perform a config validation against
+        the new image
+
+    bool issu:
+        When ``True`` allows unified in-service software upgrade
+        (ISSU) feature enables you to upgrade between two different Junos OS
+        releases with no disruption on the control plane and with minimal
+        disruption of traffic.
+
+    bool nssu:
+        When ``True`` allows nonstop software upgrade (NSSU)
+        enables you to upgrade the software running on a Juniper Networks
+        EX Series Virtual Chassis or a Juniper Networks EX Series Ethernet
+        Switch with redundant Routing Engines with a single command and
+        minimal disruption to network traffic.
 
     CLI Examples:
 
@@ -979,30 +1053,10 @@ def install_os(path=None, **kwargs):
         salt 'device_name' junos.install_os 'salt://junos_16_1.tgz' dev_timeout=300
     '''
     conn = __proxy__['junos.conn']()
-    ret = dict()
+    ret = {}
     ret['out'] = True
 
-    if path is None:
-        ret['message'] = \
-            'Please provide the salt path where the junos image is present.'
-        ret['out'] = False
-        return ret
-
-    image_cached_path = salt.utils.files.mkstemp()
-    __salt__['cp.get_file'](path, image_cached_path)
-
-    if not os.path.isfile(image_cached_path):
-        ret['message'] = 'Invalid image path.'
-        ret['out'] = False
-        return ret
-
-    if os.path.getsize(image_cached_path) == 0:
-        ret['message'] = 'Failed to copy image'
-        ret['out'] = False
-        return ret
-    path = image_cached_path
-
-    op = dict()
+    op = {}
     if '__pub_arg' in kwargs:
         if kwargs['__pub_arg']:
             if isinstance(kwargs['__pub_arg'][-1], dict):
@@ -1010,15 +1064,39 @@ def install_os(path=None, **kwargs):
     else:
         op.update(kwargs)
 
+    no_copy_ = op.get('no_copy', False)
+
+    if path is None:
+        ret['message'] = \
+            'Please provide the salt path where the junos image is present.'
+        ret['out'] = False
+        return ret
+
+    if not no_copy_:
+        image_cached_path = salt.utils.files.mkstemp()
+        __salt__['cp.get_file'](path, image_cached_path)
+
+        if not os.path.isfile(image_cached_path):
+            ret['message'] = 'Invalid image path.'
+            ret['out'] = False
+            return ret
+
+        if os.path.getsize(image_cached_path) == 0:
+            ret['message'] = 'Failed to copy image'
+            ret['out'] = False
+            return ret
+        path = image_cached_path
+
     try:
-        conn.sw.install(path, progress=True)
+        conn.sw.install(path, progress=True, **op)
         ret['message'] = 'Installed the os.'
     except Exception as exception:
         ret['message'] = 'Installation failed due to: "{0}"'.format(exception)
         ret['out'] = False
         return ret
     finally:
-        salt.utils.files.safe_rm(image_cached_path)
+        if not no_copy_:
+            salt.utils.files.safe_rm(image_cached_path)
 
     if 'reboot' in op and op['reboot'] is True:
         try:
@@ -1030,6 +1108,7 @@ def install_os(path=None, **kwargs):
             ret['out'] = False
             return ret
         ret['message'] = 'Successfully installed and rebooted!'
+
     return ret
 
 
@@ -1050,7 +1129,7 @@ def file_copy(src=None, dest=None):
         salt 'device_name' junos.file_copy /home/m2/info.txt info_copy.txt
     '''
     conn = __proxy__['junos.conn']()
-    ret = dict()
+    ret = {}
     ret['out'] = True
 
     if src is None:
@@ -1077,6 +1156,7 @@ def file_copy(src=None, dest=None):
     except Exception as exception:
         ret['message'] = 'Could not copy file : "{0}"'.format(exception)
         ret['out'] = False
+
     return ret
 
 
@@ -1098,7 +1178,7 @@ def lock():
         salt 'device_name' junos.lock
     '''
     conn = __proxy__['junos.conn']()
-    ret = dict()
+    ret = {}
     ret['out'] = True
     try:
         conn.cu.lock()
@@ -1121,7 +1201,7 @@ def unlock():
         salt 'device_name' junos.unlock
     '''
     conn = __proxy__['junos.conn']()
-    ret = dict()
+    ret = {}
     ret['out'] = True
     try:
         conn.cu.unlock()
@@ -1188,7 +1268,7 @@ def load(path=None, **kwargs):
         salt 'device_name' junos.load 'salt://syslog_template.conf' template_vars='{"syslog_host": "10.180.222.7"}'
     '''
     conn = __proxy__['junos.conn']()
-    ret = dict()
+    ret = {}
     ret['out'] = True
 
     if path is None:
@@ -1197,7 +1277,7 @@ def load(path=None, **kwargs):
         ret['out'] = False
         return ret
 
-    op = dict()
+    op = {}
     if '__pub_arg' in kwargs:
         if kwargs['__pub_arg']:
             if isinstance(kwargs['__pub_arg'][-1], dict):
@@ -1205,7 +1285,7 @@ def load(path=None, **kwargs):
     else:
         op.update(kwargs)
 
-    template_vars = dict()
+    template_vars = {}
     if "template_vars" in op:
         template_vars = op["template_vars"]
 
@@ -1252,7 +1332,7 @@ def load(path=None, **kwargs):
     except Exception as exception:
         ret['message'] = 'Could not load configuration due to : "{0}"'.format(
             exception)
-        ret['format'] = template_format
+        ret['format'] = op['format']
         ret['out'] = False
         return ret
     finally:
@@ -1272,7 +1352,7 @@ def commit_check():
         salt 'device_name' junos.commit_check
     '''
     conn = __proxy__['junos.conn']()
-    ret = dict()
+    ret = {}
     ret['out'] = True
     try:
         conn.cu.commit_check()
@@ -1281,4 +1361,118 @@ def commit_check():
         ret['message'] = 'Commit check failed with {0}'.format(exception)
         ret['out'] = False
 
+    return ret
+
+
+def get_table(table, table_file, path=None, target=None, key=None, key_items=None,
+              filters=None, template_args=None):
+    '''
+    Retrieve data from a Junos device using Tables/Views
+
+    table (required)
+        Name of PyEZ Table
+
+    table_file (required)
+        YAML file that has the table specified in table parameter
+
+    path:
+        Path of location of the YAML file.
+        defaults to op directory in jnpr.junos.op
+
+    target:
+        if command need to run on FPC, can specify fpc target
+
+    key:
+        To overwrite key provided in YAML
+
+    key_items:
+        To select only given key items
+
+    filters:
+        To select only filter for the dictionary from columns
+
+    template_args:
+        key/value pair which should render Jinja template command
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'device_name' junos.get_table
+    '''
+    conn = __proxy__['junos.conn']()
+    ret = {}
+    ret['out'] = True
+    ret['hostname'] = conn._hostname
+    ret['tablename'] = table
+    get_kvargs = {}
+    if target is not None:
+        get_kvargs['target'] = target
+    if key is not None:
+        get_kvargs['key'] = key
+    if key_items is not None:
+        get_kvargs['key_items'] = key_items
+    if filters is not None:
+        get_kvargs['filters'] = filters
+    if template_args is not None and isinstance(template_args, dict):
+        get_kvargs['args'] = template_args
+    pyez_tables_path = os.path.dirname(os.path.abspath(tables_dir.__file__))
+    try:
+        if path is not None:
+            file_loc = glob.glob(os.path.join(path, '{}'.format(table_file)))
+        else:
+            file_loc = glob.glob(os.path.join(pyez_tables_path, '{}'.format(table_file)))
+        if len(file_loc) == 1:
+            file_name = file_loc[0]
+        else:
+            ret['message'] = 'Given table file {} cannot be located'.format(table_file)
+            ret['out'] = False
+            return ret
+        try:
+            with salt.utils.files.fopen(file_name) as fp:
+                ret['table'] = yaml.load(fp.read(),
+                                         Loader=yamlordereddictloader.Loader)
+                globals().update(FactoryLoader().load(ret['table']))
+        except IOError as err:
+            ret['message'] = 'Uncaught exception during YAML Load - please ' \
+                             'report: {0}'.format(six.text_type(err))
+            ret['out'] = False
+            return ret
+        try:
+            data = globals()[table](conn)
+            data.get(**get_kvargs)
+        except KeyError as err:
+            ret['message'] = 'Uncaught exception during get API call - please ' \
+                             'report: {0}'.format(six.text_type(err))
+            ret['out'] = False
+            return ret
+        except ConnectClosedError:
+            ret['message'] = 'Got ConnectClosedError exception. Connection lost ' \
+                             'with {}'.format(conn)
+            ret['out'] = False
+            return ret
+        ret['reply'] = json.loads(data.to_json())
+        if data.__class__.__bases__[0] == OpTable:
+            # Sets key value if not present in YAML. To be used by returner
+            if ret['table'][table].get('key') is None:
+                ret['table'][table]['key'] = data.ITEM_NAME_XPATH
+            # If key is provided from salt state file.
+            if key is not None:
+                ret['table'][table]['key'] = data.KEY
+        else:
+            if target is not None:
+                ret['table'][table]['target'] = data.TARGET
+            if key is not None:
+                ret['table'][table]['key'] = data.KEY
+            if key_items is not None:
+                ret['table'][table]['key_items'] = data.KEY_ITEMS
+            if template_args is not None:
+                ret['table'][table]['args'] = data.CMD_ARGS
+                ret['table'][table]['command'] = data.GET_CMD
+    except Exception as err:
+        ret['message'] = 'Uncaught exception - please report: {0}'.format(
+            str(err))
+        traceback.print_exc()
+        ret['out'] = False
+        return ret
     return ret
