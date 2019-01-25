@@ -2779,6 +2779,7 @@ def managed(name,
                 serole=serole,
                 setype=setype,
                 serange=serange)
+
         if __opts__['test']:
             if isinstance(ret_perms, dict) and \
                'lmode' in ret_perms and \
