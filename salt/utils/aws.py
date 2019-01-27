@@ -109,7 +109,15 @@ def creds(provider):
         __Expiration__ = data['Expiration']
         return __AccessKeyId__, __SecretAccessKey__, __Token__
     else:
-        return provider['id'], provider['key'], ''
+        ret_credentials = provider['id'], provider['key'], ''
+
+    if provider.get('role_arn') is not None:
+        provider_shadow = provider.copy()
+        provider_shadow.pop("role_arn", None)
+        log.info("Assuming the role: %s", provider.get('role_arn'))
+        ret_credentials = assumed_creds(provider_shadow, role_arn=provider.get('role_arn'), location='us-east-1')
+
+    return ret_credentials
 
 
 def sig2(method, endpoint, params, provider, aws_api_version):
