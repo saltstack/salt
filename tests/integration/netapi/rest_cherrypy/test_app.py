@@ -191,6 +191,20 @@ class TestRun(cptc.BaseRestCherryPyTest):
         })
         assert response.status == '401 Unauthorized'
 
+    def test_run_extra_parameters(self):
+        '''
+        Test the run URL with good auth credentials
+        '''
+        cmd = dict(self.low, **dict(self.auth_creds))
+        cmd['id_'] = 'someminionname'
+        body = urlencode(cmd)
+
+        request, response = self.request('/run', method='POST', body=body,
+            headers={
+                'content-type': 'application/x-www-form-urlencoded'
+        })
+        self.assertEqual(response.status, '200 OK')
+
 
 class TestWebhookDisableAuth(cptc.BaseRestCherryPyTest):
 
