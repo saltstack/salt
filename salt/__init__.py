@@ -29,6 +29,7 @@ warnings.filterwarnings(
     UserWarning
 )
 
+
 def __define_global_system_encoding_variable__():
     import sys
     # This is the most trustworthy source of the system encoding, though, if
@@ -97,7 +98,7 @@ del __define_global_system_encoding_variable__
 
 
 # REMOVEME after Python 2.7 support is dropped
-import six
+import salt.ext.six as six
 
 if six.PY2:
     from salt.utils.versions import warn_until
