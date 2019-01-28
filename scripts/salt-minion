@@ -3,6 +3,7 @@
 This script is used to kick off a salt minion daemon
 '''
 
+import salt.ext.six as six
 import salt.utils.platform
 from salt.scripts import salt_minion
 from multiprocessing import freeze_support
@@ -20,6 +21,16 @@ if __name__ == '__main__':
         cfile = os.path.splitext(__file__)[0] + '.pyc'
         if not os.path.exists(cfile):
             py_compile.compile(__file__, cfile)
+# REMOVEME after Python 2.7 support is dropped (also the six import)
+    elif six.PY2:
+        from salt.utils.versions import warn_until
+        # Message borrowed from pip's deprecation warning
+        warn_until('Sodium',
+                   'Python 2.7 will reach the end of its life on January 1st,'
+                   ' 2020. Please upgrade your Python as Python 2.7 won\'t be'
+                   ' maintained after that date.  Salt will drop support for'
+                   ' Python 2.7 in the Sodium release or later.')
+# END REMOVEME
     # This handles the bootstrapping code that is included with frozen
     # scripts. It is a no-op on unfrozen code.
     freeze_support()
