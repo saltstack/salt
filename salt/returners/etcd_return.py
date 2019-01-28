@@ -412,13 +412,16 @@ def event_return(events):
         }
         path = '/'.join([path, 'events', package['tag']])
         json = salt.utils.json.dumps(package)
+
         try:
             res = client.set(path, json, ttl=ttl)
-        except Exception, err:
-            log.exception('etcd: Unable to write event into returner path %s due to exception %s: %s', path, package, repr(err))
+        except Exception as err:
+            log.exception('etcd: Unable to write event into returner path {:s} due to exception {:s}: {!r}', path, package, err)
             exceptions.append(err)
             continue
+
         if not res:
-            log.error('etcd: Unable to write event into returner path %s: %r', path, package)
+            log.error('etcd: Unable to write event into returner path {:s}: {!r}', path, package)
         continue
+
     return
