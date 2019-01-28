@@ -416,12 +416,12 @@ def event_return(events):
         try:
             res = client.set(path, json, ttl=ttl)
         except Exception as err:
-            log.exception('etcd: Unable to write event into returner path {:s} due to exception {:s}: {!r}'.format(path, package, err))
+            log.exception('etcd: Unable to write event into returner path {:s} due to exception {:s}: {}'.format(path, package, err))
             exceptions.append(err)
             continue
 
         if not res:
-            log.error('etcd: Unable to write event into returner path {:s}: {!r}'.format(path, package))
+            log.error('etcd: Unable to write event into returner path {:s}: {}'.format(path, package))
         continue
 
     return
