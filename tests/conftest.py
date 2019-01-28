@@ -55,7 +55,6 @@ import salt.utils.path
 import salt.log.setup
 import salt.log.mixins
 import salt.utils.platform
-from salt.utils.odict import OrderedDict
 from salt.utils.immutabletypes import freeze
 
 # Import Pytest Salt libs
@@ -994,37 +993,3 @@ def bridge_pytest_and_runtests(reap_stray_processes,
                 os.path.join(RUNTIME_VARS.TMP_CONF_DIR, entry)
             )
 # <---- Salt Configuration -------------------------------------------------------------------------------------------
-
-
-# <---- Fixtures Overrides -------------------------------------------------------------------------------------------
-# ----- Custom Fixtures Definitions --------------------------------------------------------------------------------->
-# pylint: disable=unused-argument
-@pytest.fixture(scope='session')
-def session_salt_syndic(request, session_salt_master_of_masters, session_salt_syndic):
-    request.session.stats_processes.update(OrderedDict((
-        ('Salt Syndic Master', psutil.Process(session_salt_master_of_masters.pid)),
-        ('       Salt Syndic', psutil.Process(session_salt_syndic.pid)),
-    )).items())
-    yield session_salt_syndic
-    request.session.stats_processes.pop('Salt Syndic Master')
-    request.session.stats_processes.pop('       Salt Syndic')
-
-
-@pytest.fixture(scope='session')
-def default_session_daemons(request,
-                            log_server,
-                            salt_log_port,
-                            engines_dir,
-                            log_handlers_dir,
-                            session_salt_master,
-                            session_salt_minion,
-                            session_secondary_salt_minion,
-                            ):
-
-    request.session.stats_processes.update(OrderedDict((
-        ('       Salt Master', psutil.Process(session_salt_master.pid)),
-        ('       Salt Minion', psutil.Process(session_salt_minion.pid)),
-        ('   Salt Sub Minion', psutil.Process(session_secondary_salt_minion.pid)),
-    )).items())
-# pylint: enable=unused-argument
-# <---- Custom Fixtures Definitions ----------------------------------------------------------------------------------
