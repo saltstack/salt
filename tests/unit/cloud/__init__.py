@@ -8,6 +8,7 @@ from tests.support.unit import TestCase
 
 import salt.cloud
 
+
 class CloudTest(TestCase):
 
     def test_vm_config_merger(self):
@@ -63,7 +64,6 @@ class CloudTest(TestCase):
             'location': 'us-west-2',
             'profile': 'default',
             'provider': 'ec2-default:ec2',
-            'ssh_username': 'admin',
             'image': 'ami-0a1fbca0e5b419fd1',
             'size': 't2.micro',
             'name': 'test_vm',
