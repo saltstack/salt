@@ -743,6 +743,12 @@ class TestDaemon(object):
         master_opts['root_dir'] = os.path.join(TMP, 'rootdir')
         master_opts['pki_dir'] = os.path.join(TMP, 'rootdir', 'pki', 'master')
         master_opts['syndic_master'] = 'localhost'
+        file_tree = {
+            'root_dir':  os.path.join(FILES, 'pillar', 'base', 'file_tree'),
+            'follow_dir_links': False,
+            'keep_newline': True,
+        }
+        master_opts['ext_pillar'].append({'file_tree': file_tree})
 
         # This is the syndic for master
         # Let's start with a copy of the syndic master configuration
