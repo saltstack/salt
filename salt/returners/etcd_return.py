@@ -68,7 +68,6 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging
-import uuid
 
 # Import salt libs
 import salt.utils.jid
@@ -416,11 +415,10 @@ def event_return(events):
         try:
             res = client.set(path, json, ttl=ttl)
         except Exception, err:
-            log.exception('etcd: Unable to write event into returner path %s due to exception %s: %r', path, package, err)
+            log.exception('etcd: Unable to write event into returner path %s due to exception %s: %s', path, package, repr(err))
             exceptions.append(err)
             continue
         if not res:
             log.error('etcd: Unable to write event into returner path %s: %r', path, package)
         continue
     return
-
