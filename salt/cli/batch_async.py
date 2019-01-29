@@ -187,23 +187,29 @@ class BatchAsync(object):
         if not self.initialized:
             self.batch_size = get_bnum(self.opts, self.minions, True)
             self.initialized = True
-            self.event.fire_event(
+            data = {}
+            data.update(self.kwargs)
+            data.update(
                 {
                     "available_minions": self.minions,
                     "down_minions": self.down_minions
-                },
-                "salt/batch/{0}/start".format(self.batch_jid))
+                }
+            )
+            self.event.fire_event(data, "salt/batch/{0}/start".format(self.batch_jid))
             yield self.schedule_next()
 
     def end_batch(self):
-        self.event.fire_event(
+        data = {}
+        data.update(self.kwargs)
+        data.update(
             {
                 "available_minions": self.minions,
                 "down_minions": self.down_minions,
                 "done_minions": self.done_minions,
                 "timedout_minions": self.timedout_minions
-            },
-            "salt/batch/{0}/done".format(self.batch_jid))
+            }
+        )
+        self.event.fire_event(data, "salt/batch/{0}/done".format(self.batch_jid))
         self.event.remove_event_handler(self.__event_handler)
 
     @tornado.gen.coroutine
