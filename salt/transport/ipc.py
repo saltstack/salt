@@ -219,7 +219,12 @@ class IPCServer(object):
             self.sock.close()
 
     def __del__(self):
-        self.close()
+        try:
+            self.close()
+        except TypeError:
+            # This is raised when Python's GC has collected objects which
+            # would be needed when calling self.close()
+            pass
 
 
 class IPCClient(object):
@@ -360,16 +365,21 @@ class IPCClient(object):
                 yield tornado.gen.sleep(1)
 
     def __del__(self):
-        with self._refcount_lock:
-            # Make sure we actually close no matter if something
-            # went wrong with our ref counting
-            self._refcount = 1
         try:
-            self.close()
-        except socket.error as exc:
-            if exc.errno != errno.EBADF:
-                # If its not a bad file descriptor error, raise
-                raise
+            with self._refcount_lock:
+                # Make sure we actually close no matter if something
+                # went wrong with our ref counting
+                self._refcount = 1
+            try:
+                self.close()
+            except socket.error as exc:
+                if exc.errno != errno.EBADF:
+                    # If its not a bad file descriptor error, raise
+                    raise
+        except TypeError:
+            # This is raised when Python's GC has collected objects which
+            # would be needed when calling self.close()
+            pass
 
     def close(self):
         '''
@@ -610,7 +620,12 @@ class IPCMessagePublisher(object):
             self.sock.close()
 
     def __del__(self):
-        self.close()
+        try:
+            self.close()
+        except TypeError:
+            # This is raised when Python's GC has collected objects which
+            # would be needed when calling self.close()
+            pass
 
 
 class IPCMessageSubscriber(IPCClient):
