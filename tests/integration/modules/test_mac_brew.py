@@ -142,7 +142,7 @@ class BrewModuleTest(ModuleCase):
             upgrades = self.run_function('pkg.list_upgrades')
             try:
                 self.assertTrue(isinstance(upgrades, dict))
-                if len(upgrades):
+                if upgrades:
                     for name in upgrades:
                         self.assertTrue(isinstance(name, six.string_types))
                         self.assertTrue(isinstance(upgrades[name], six.string_types))

@@ -177,7 +177,7 @@ def ext_pillar(minion_id,
         return {}
 
     myself = boto.utils.get_instance_metadata(timeout=0.1, num_retries=1)
-    if len(myself.keys()) < 1:
+    if not myself:
         log.info("%s: salt master not an EC2 instance, skipping", __name__)
         return {}
 

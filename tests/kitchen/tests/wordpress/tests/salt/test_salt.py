@@ -1,9 +1,13 @@
+# -*- coding: utf-8 -*-
+
+
 def test_formula(salt):
     '''
     Test that the states are synced to minion
     '''
     dirs = salt('cp.list_master_dirs')
     assert 'states' in dirs
+
 
 def test_wordpress_module(salt):
     '''

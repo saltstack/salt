@@ -368,7 +368,7 @@ class EventListener(object):
         if not future.done():
             future.set_exception(TimeoutException())
             self.tag_map[(tag, matcher)].remove(future)
-        if len(self.tag_map[(tag, matcher)]) == 0:
+        if not self.tag_map[(tag, matcher)]:
             del self.tag_map[(tag, matcher)]
 
     def _handle_event_socket_recv(self, raw):

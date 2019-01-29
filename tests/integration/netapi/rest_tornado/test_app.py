@@ -100,6 +100,11 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
                               )
         response_obj = salt.utils.json.loads(response.body)
         self.assertEqual(len(response_obj['return']), 1)
+        # If --proxy is set, it will cause an extra minion_id to be in the
+        # response. Since there's not a great way to know if the test
+        # runner's proxy minion is running, and we're not testing proxy
+        # minions here anyway, just remove it from the response.
+        response_obj['return'][0].pop('proxytest', None)
         self.assertEqual(response_obj['return'][0], {'minion': True, 'sub_minion': True})
 
     def test_simple_local_post_no_tgt(self):
@@ -142,6 +147,11 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
                               )
         response_obj = salt.utils.json.loads(response.body)
         self.assertEqual(len(response_obj['return']), 1)
+        # If --proxy is set, it will cause an extra minion_id to be in the
+        # response. Since there's not a great way to know if the test
+        # runner's proxy minion is running, and we're not testing proxy
+        # minions here anyway, just remove it from the response.
+        response_obj['return'][0].pop('proxytest', None)
         self.assertEqual(response_obj['return'][0], {'minion': True, 'sub_minion': True})
 
     def test_simple_local_post_invalid_request(self):
@@ -175,6 +185,14 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
         response_obj = salt.utils.json.loads(response.body)
         ret = response_obj['return']
         ret[0]['minions'] = sorted(ret[0]['minions'])
+        try:
+            # If --proxy is set, it will cause an extra minion_id to be in the
+            # response. Since there's not a great way to know if the test
+            # runner's proxy minion is running, and we're not testing proxy
+            # minions here anyway, just remove it from the response.
+            ret[0]['minions'].remove('proxytest')
+        except ValueError:
+            pass
 
         # TODO: verify pub function? Maybe look at how we test the publisher
         self.assertEqual(len(ret), 1)
@@ -201,6 +219,15 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
         ret = response_obj['return']
         ret[0]['minions'] = sorted(ret[0]['minions'])
         ret[1]['minions'] = sorted(ret[1]['minions'])
+        try:
+            # If --proxy is set, it will cause an extra minion_id to be in the
+            # response. Since there's not a great way to know if the test
+            # runner's proxy minion is running, and we're not testing proxy
+            # minions here anyway, just remove it from the response.
+            ret[0]['minions'].remove('proxytest')
+            ret[1]['minions'].remove('proxytest')
+        except ValueError:
+            pass
 
         self.assertEqual(len(ret), 2)
         self.assertIn('jid', ret[0])
@@ -235,6 +262,15 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
         ret = response_obj['return']
         ret[0]['minions'] = sorted(ret[0]['minions'])
         ret[1]['minions'] = sorted(ret[1]['minions'])
+        try:
+            # If --proxy is set, it will cause an extra minion_id to be in the
+            # response. Since there's not a great way to know if the test
+            # runner's proxy minion is running, and we're not testing proxy
+            # minions here anyway, just remove it from the response.
+            ret[0]['minions'].remove('proxytest')
+            ret[1]['minions'].remove('proxytest')
+        except ValueError:
+            pass
 
         self.assertEqual(len(ret), 3)  # make sure we got 3 responses
         self.assertIn('jid', ret[0])  # the first 2 are regular returns
@@ -279,6 +315,11 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
                               request_timeout=30,
                               )
         response_obj = salt.utils.json.loads(response.body)
+        # If --proxy is set, it will cause an extra minion_id to be in the
+        # response. Since there's not a great way to know if the test runner's
+        # proxy minion is running, and we're not testing proxy minions here
+        # anyway, just remove it from the response.
+        response_obj[0]['return'].pop('proxytest', None)
         self.assertEqual(response_obj['return'], [{'minion': True, 'sub_minion': True}])
 
     # runner tests
@@ -296,6 +337,14 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
                               )
         response_obj = salt.utils.json.loads(response.body)
         self.assertEqual(len(response_obj['return']), 1)
+        try:
+            # If --proxy is set, it will cause an extra minion_id to be in the
+            # response. Since there's not a great way to know if the test
+            # runner's proxy minion is running, and we're not testing proxy
+            # minions here anyway, just remove it from the response.
+            response_obj['return'][0].remove('proxytest')
+        except ValueError:
+            pass
         self.assertEqual(sorted(response_obj['return'][0]), sorted(['minion', 'sub_minion']))
 
     # runner_async tests
