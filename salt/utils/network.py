@@ -1935,7 +1935,7 @@ def parse_host_port(host_port):
     if _s_[0] == "[":
         if "]" in host_port:
             host, _s_ = _s_.lstrip("[").rsplit("]", 1)
-            host = ipaddress.IPv6Address(host)
+            host = ipaddress.IPv6Address(host).compressed
             if _s_[0] == ":":
                 port = int(_s_.lstrip(":"))
             else:
@@ -1953,7 +1953,7 @@ def parse_host_port(host_port):
             host = _s_
     try:
         if not isinstance(host, ipaddress._BaseAddress):
-            host_ip = ipaddress.ip_address(host)
+            host_ip = ipaddress.ip_address(host).compressed
             host = host_ip
     except ValueError:
         log.debug('"%s" Not an IP address? Assuming it is a hostname.', host)

@@ -8,6 +8,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import sys
 import copy
 import types
+import importlib
 
 # Import salt libs
 import salt.loader
@@ -58,3 +59,13 @@ def cmp(x, y):
     Return negative if x<y, zero if x==y, positive if x>y.
     '''
     return (x > y) - (x < y)
+
+
+def reload(mod):
+    '''
+    Compatibility helper function to replace the ``reload`` builtin from Python 2.
+    '''
+    try:
+        return importlib.reload(mod)
+    except AttributeError:
+        return reload(mod)

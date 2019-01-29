@@ -2530,6 +2530,42 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             '',
         ]).encode('utf-8'))
 
+    @with_tempfile()
+    def test_issue_50221(self, name):
+        expected = 'abc{0}{0}{0}'.format(os.linesep)
+        ret = self.run_function(
+            'pillar.get',
+            ['issue-50221']
+        )
+        assert ret == expected
+        ret = self.run_function(
+            'state.apply',
+            ['issue-50221'],
+            pillar={
+                'name': name
+            },
+        )
+        self.assertSaltTrueReturn(ret)
+        with salt.utils.files.fopen(name, 'r') as fp:
+            contents = fp.read()
+        assert contents == expected
+
+    def test_managed_file_issue_51208(self):
+        '''
+        Test to ensure we can handle a file with escaped double-quotes
+        '''
+        name = os.path.join(TMP, 'issue_51208.txt')
+        ret = self.run_state(
+            'file.managed', name=name, source='salt://issue-51208/vimrc.stub'
+        )
+        src = os.path.join(BASE_FILES, 'issue-51208', 'vimrc.stub')
+        with salt.utils.files.fopen(src, 'r') as fp_:
+            master_data = fp_.read()
+        with salt.utils.files.fopen(name, 'r') as fp_:
+            minion_data = fp_.read()
+        self.assertEqual(master_data, minion_data)
+        self.assertSaltTrueReturn(ret)
+
 
 class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
     marker_start = '# start'
