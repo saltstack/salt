@@ -692,11 +692,10 @@ def set_hostname(hostname):
 
         salt 'minion-id' system.set_hostname newhostname
     '''
-    curr_hostname = get_hostname()
-    cmd = "wmic computersystem where name='{0}' call rename name='{1}'".format(curr_hostname, hostname)
-    ret = __salt__['cmd.run'](cmd=cmd)
-
-    return "successful" in ret
+    pythoncom.CoInitialize()
+    conn = wmi.WMI()
+    comp = conn.Win32_ComputerSystem()[0]
+    return comp.Rename(Name=hostname)
 
 
 def join_domain(domain,
@@ -995,11 +994,10 @@ def set_domain_workgroup(workgroup):
 
         salt 'minion-id' system.set_domain_workgroup LOCAL
     '''
-    curr_hostname = get_hostname()
-    cmd = "wmic computersystem where name='{0}' call JoinDomainOrWorkgroup name='{1}'".format(curr_hostname, workgroup)
-    ret = __salt__['cmd.run'](cmd=cmd)
-
-    return "successful" in ret
+    pythoncom.CoInitialize()
+    conn = wmi.WMI()
+    comp = conn.Win32_ComputerSystem()[0]
+    return comp.JoinDomainOrWorkgroup(Name=workgroup)
 
 
 def _try_parse_datetime(time_str, fmts):
