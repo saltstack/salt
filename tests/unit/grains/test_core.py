@@ -864,9 +864,9 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         ret = {'fqdns': ['bluesniff.foo.bar', 'foo.bar.baz', 'rinzler.evil-corp.com']}
         with patch.object(socket, 'gethostbyaddr', side_effect=reverse_resolv_mock):
             fqdns = core.fqdns()
-            self.assertIn('fqdns', fqdns)
-            self.assertEqual(len(fqdns['fqdns']), len(ret['fqdns']))
-            self.assertEqual(set(fqdns['fqdns']), set(ret['fqdns']))
+            assert "fqdns" in fqdns
+            assert len(fqdns['fqdns']) == len(ret['fqdns'])
+            assert set(fqdns['fqdns']) == set(ret['fqdns'])
 
     def test_core_virtual(self):
         '''
