@@ -66,6 +66,6 @@ class JsonTestCase(TestCase, LoaderModuleMockMixin):
                       '"error": "Unable to serialize output to json"}')
             ret = json_out.output(data)
             if six.PY2:
-                self.assertEqual(expect, ret)
+                self.assertEqual(sorted(expect), sorted(ret))
             else:
                 self.assertEqual(json.loads(ret), data)

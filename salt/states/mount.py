@@ -663,7 +663,7 @@ def swap(name, persist=True, config='/etc/fstab'):
     if persist:
         fstab_data = __salt__['mount.fstab'](config)
         if __opts__['test']:
-            if name not in fstab_data:
+            if name not in fstab_data and name not in [fstab_data[item]['device'] for item in fstab_data]:
                 ret['result'] = None
                 if name in on_:
                     ret['comment'] = ('Swap {0} is set to be added to the '

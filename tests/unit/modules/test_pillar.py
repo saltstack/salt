@@ -54,10 +54,11 @@ class PillarModuleTestCase(TestCase, LoaderModuleMockMixin):
     @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_ls(self):
         with patch('salt.modules.pillar.items', MagicMock(return_value=pillar_value_1)):
+            ls = sorted(pillarmod.ls())
             if six.PY3:
-                self.assertCountEqual(pillarmod.ls(), ['a', 'b'])
+                self.assertCountEqual(ls, ['a', 'b'])
             else:
-                self.assertEqual(pillarmod.ls(), ['a', 'b'])
+                self.assertEqual(ls, ['a', 'b'])
 
     @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_pillar_get_default_merge(self):
