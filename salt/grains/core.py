@@ -2187,8 +2187,8 @@ def fqdns():
     grains = {}
     fqdns = set()
 
-    addresses = salt.utils.network.ip_addrs(include_loopback=False)
-    addresses.extend(salt.utils.network.ip_addrs6(include_loopback=False))
+    addresses = salt.utils.network.ip_addrs(include_loopback=False, interface_data=_get_interfaces())
+    addresses.extend(salt.utils.network.ip_addrs6(include_loopback=False, interface_data=_get_interfaces()))
     err_message = 'Exception during resolving address: %s'
     for ip in addresses:
         try:
