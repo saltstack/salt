@@ -183,7 +183,8 @@ def workgroup(name):
         'comment': ''
     }
 
-    current_workgroup = __salt__['system.get_domain_workgroup']()
+    res = __salt__['system.get_domain_workgroup']()
+    current_workgroup = res['Domain'] if 'Domain' in res else res['Workgroup'] if 'Workgroup' in res else ''
 
     if current_workgroup.upper() == name.upper():
         ret['comment'] = "Workgroup is already set to '{0}'".format(name.upper())
