@@ -294,7 +294,7 @@ class _Zypper:
         self.__called = True
         if self.__xml:
             self.__cmd.append("--xmlout")
-        if not self.__refresh:
+        if not self.__refresh and "--no-refresh" not in args:
             self.__cmd.append("--no-refresh")
         if self.__root:
             self.__cmd.extend(["--root", self.__root])
