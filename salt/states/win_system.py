@@ -167,6 +167,40 @@ def hostname(name):
     return ret
 
 
+def workgroup(name):
+    '''
+    .. versionadded:: 2019.2.0
+
+    Manage the workgroup of the computer
+
+    name
+        The workgroup to set
+    '''
+    ret = {
+        'name': name.upper(),
+        'changes': {},
+        'result': True,
+        'comment': ''
+    }
+
+    current_workgroup = __salt__['system.get_domain_workgroup']()
+
+    if current_workgroup.upper() == name.upper():
+        ret['comment'] = "Workgroup is already set to '{0}'".format(name.upper())
+        return ret
+
+    out = __salt__['system.set_domain_workgroup'](name.upper())
+
+    if out:
+        ret['comment'] = "The workgroup has been changed from '{0}' to '{1}".format(current_workgroup.upper(), name.upper())
+        ret['changes'] = {'workgroup': name.upper()}
+    else:
+        ret['result'] = False
+        ret['comment'] = 'Unable to set the workgroup'
+
+    return ret
+
+
 def join_domain(name,
                 username=None,
                 password=None,
