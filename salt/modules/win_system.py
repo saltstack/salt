@@ -994,10 +994,22 @@ def set_domain_workgroup(workgroup):
 
         salt 'minion-id' system.set_domain_workgroup LOCAL
     '''
+    if six.PY2:
+        workgroup = _to_unicode(workgroup)
+
+    # Initialize COM
     pythoncom.CoInitialize()
+
+    # Grab the first Win32_ComputerSystem object from wmi
     conn = wmi.WMI()
     comp = conn.Win32_ComputerSystem()[0]
-    return comp.JoinDomainOrWorkgroup(Name=workgroup)
+
+    # Grab the current workgroup/domain value
+    current = comp.Domain if comp.PartOfDomain else comp.Workgroup
+
+    # Now we can join the new workgroup
+    res = comp.JoinDomainOrWorkgroup(Name=workgroup.upper())
+    return True if not res[0] else False
 
 
 def _try_parse_datetime(time_str, fmts):
