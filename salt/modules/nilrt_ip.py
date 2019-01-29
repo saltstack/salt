@@ -233,9 +233,9 @@ def _get_service_info(service):
         data["ipv4"]["dns"] = nameservers
     else:
         data["up"] = False
+        data["ipv4"] = {"requestmode": "disabled"}
 
-    if "ipv4" in data:
-        data["ipv4"]["supportedrequestmodes"] = ["static", "dhcp_linklocal"]
+    data["ipv4"]["supportedrequestmodes"] = ["static", "dhcp_linklocal", "disabled"]
     return data
 
 
@@ -379,7 +379,7 @@ def _get_static_info(interface):
         "hwaddr": interface.hwaddr[:-1],
         "up": False,
         "ipv4": {
-            "supportedrequestmodes": ["static", "dhcp_linklocal"],
+            "supportedrequestmodes": ["static", "dhcp_linklocal", "disabled"],
             "requestmode": "static",
         },
         "wireless": False,
@@ -521,6 +521,33 @@ def get_interfaces_details():
     return {"interfaces": list(map(_get_info, _interfaces))}
 
 
+def _change_state_legacy(interface, new_state):
+    """
+    Enable or disable an interface on a legacy distro
+
+    Change adapter mode to TCP/IP. If previous adapter mode was EtherCAT, the target will need reboot.
+
+    :param interface: interface label
+    :param new_state: up or down
+    :return: True if the service was enabled, otherwise an exception will be thrown.
+    :rtype: bool
+    """
+    initial_mode = _get_adapter_mode_info(interface)
+    _save_config(interface, "Mode", "TCPIP" if new_state == "up" else "Disabled")
+    if initial_mode == "ethercat":
+        __salt__["system.set_reboot_required_witnessed"]()
+    else:
+        out = __salt__["cmd.run_all"](
+            "ip link set {0} {1}".format(interface, new_state)
+        )
+        if out["retcode"] != 0:
+            msg = "Couldn't {0} interface {1}. Error: {2}".format(
+                "enable" if new_state == "up" else "disable", interface, out["stderr"]
+            )
+            raise salt.exceptions.CommandExecutionError(msg)
+    return True
+
+
 def _change_state(interface, new_state):
     """
     Enable or disable an interface
@@ -533,22 +560,7 @@ def _change_state(interface, new_state):
     :rtype: bool
     """
     if __grains__["lsb_distrib_id"] == "nilrt":
-        initial_mode = _get_adapter_mode_info(interface)
-        _save_config(interface, "Mode", "TCPIP")
-        if initial_mode == "ethercat":
-            __salt__["system.set_reboot_required_witnessed"]()
-        else:
-            out = __salt__["cmd.run_all"](
-                "ip link set {0} {1}".format(interface, new_state)
-            )
-            if out["retcode"] != 0:
-                msg = "Couldn't {0} interface {1}. Error: {2}".format(
-                    "enable" if new_state == "up" else "disable",
-                    interface,
-                    out["stderr"],
-                )
-                raise salt.exceptions.CommandExecutionError(msg)
-        return True
+        return _change_state_legacy(interface, new_state)
     service = _interface_to_service(interface)
     if not service:
         raise salt.exceptions.CommandExecutionError(
@@ -560,7 +572,7 @@ def _change_state(interface, new_state):
         try:
             state = service.connect() if new_state == "up" else service.disconnect()
             return state is None
-        except Exception:  # pylint: disable=broad-except
+        except Exception:
             raise salt.exceptions.CommandExecutionError(
                 "Couldn't {0} service: {1}\n".format(
                     "enable" if new_state == "up" else "disable", service
@@ -731,7 +743,7 @@ def set_dhcp_linklocal_all(interface):
         service.set_property(
             "Nameservers.Configuration", [""]
         )  # reset nameservers list
-    except Exception as exc:  # pylint: disable=broad-except
+    except Exception as exc:
         exc_msg = "Couldn't set dhcp linklocal for service: {0}\nError: {1}\n".format(
             service, exc
         )
@@ -894,7 +906,7 @@ def set_static_all(interface, address, netmask, gateway, nameservers):
                 interface,
                 **{
                     "ip": address,
-                    "dns": ",".join(nameservers),
+                    "dns": ",".join(nameservers) if nameservers else "",
                     "netmask": netmask,
                     "gateway": gateway,
                 }
@@ -910,11 +922,12 @@ def set_static_all(interface, address, netmask, gateway, nameservers):
     ipv4["Gateway"] = dbus.String("{0}".format(gateway), variant_level=1)
     try:
         service.set_property("IPv4.Configuration", ipv4)
-        service.set_property(
-            "Nameservers.Configuration",
-            [dbus.String("{0}".format(d)) for d in nameservers],
-        )
-    except Exception as exc:  # pylint: disable=broad-except
+        if nameservers:
+            service.set_property(
+                "Nameservers.Configuration",
+                [dbus.String("{0}".format(d)) for d in nameservers],
+            )
+    except Exception as exc:
         exc_msg = "Couldn't set manual settings for service: {0}\nError: {1}\n".format(
             service, exc
         )
