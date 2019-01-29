@@ -428,7 +428,7 @@ class SPMClient(object):
 
             needs, unavail, optional, recommended = self._resolve_deps(formula_def)
 
-            if len(unavail) > 0:
+            if unavail:
                 raise SPMPackageError(
                     'Cannot install {0}, the following dependencies are needed:\n\n{1}'.format(
                         formula_def['name'], '\n'.join(unavail))
@@ -596,7 +596,7 @@ class SPMClient(object):
 
         inspected = []
         to_inspect = can_has.copy()
-        while len(to_inspect) > 0:
+        while to_inspect:
             dep = next(six.iterkeys(to_inspect))
             del to_inspect[dep]
 

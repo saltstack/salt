@@ -227,7 +227,7 @@ def pop(queue, quantity=1, is_runner=False):
     with con:
         cur = con.cursor()
         result = cur.execute(cmd).fetchall()
-        if len(result) > 0:
+        if result:
             items = [item[0] for item in result]
             itemlist = '","'.join(items)
             _quote_escape(itemlist)
