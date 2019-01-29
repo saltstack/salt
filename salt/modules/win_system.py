@@ -980,6 +980,28 @@ def get_domain_workgroup():
             return {'Workgroup': computer.Domain}
 
 
+def set_domain_workgroup(workgroup):
+    '''
+    Set the domain or workgroup the computer belongs to.
+
+    .. versionadded:: 2019.2.0
+
+    Returns:
+        bool: ``True`` if successful, otherwise ``False``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'minion-id' system.set_domain_workgroup LOCAL
+    '''
+    curr_hostname = get_hostname()
+    cmd = "wmic computersystem where name='{0}' call JoinDomainOrWorkgroup name='{1}'".format(curr_hostname, workgroup)
+    ret = __salt__['cmd.run'](cmd=cmd)
+
+    return "successful" in ret
+
+
 def _try_parse_datetime(time_str, fmts):
     '''
     A helper function that attempts to parse the input time_str as a date.
