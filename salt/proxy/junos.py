@@ -118,9 +118,9 @@ def init(opts):
         try:
             thisproxy['conn'].timeout = timeout
         except Exception as ex:
-            log.error('Not able to set timeout due to: {}'.format(ex))
+            log.error('Not able to set timeout due to: %s', str(ex))
         else:
-            log.debug('RPC timeout set to {} seconds'.format(timeout))
+            log.debug('RPC timeout set to %d seconds', timeout)
 
     try:
         thisproxy['conn'].bind(cu=jnpr.junos.utils.config.Config)
