@@ -976,7 +976,7 @@ def get_domain_workgroup():
         if computer.PartOfDomain:
             return {'Domain': computer.Domain}
         else:
-            return {'Workgroup': computer.Domain}
+            return {'Workgroup': computer.Workgroup}
 
 
 def set_domain_workgroup(workgroup):
