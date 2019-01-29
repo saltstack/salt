@@ -164,7 +164,7 @@ all interfaces are ignored unless specified.
         - max_bonds: 1
         - updelay: 0
         - use_carrier: on
-        - xmit_hash_policy: layer2
+        - hashing-algorithm: layer2
         - mtu: 9000
         - autoneg: on
         - speed: 1000
