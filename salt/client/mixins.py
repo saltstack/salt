@@ -324,7 +324,7 @@ class SyncClientMixin(object):
             print_func=print_func
         )
 
-        # TODO: document these, and test that they exist
+        # TODO: test that they exist
         # TODO: Other things to inject??
         func_globals = {'__jid__': jid,
                         '__user__': data['user'],
