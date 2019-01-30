@@ -30,7 +30,9 @@ depending on the the version of Windows this is run on. Once support for Windows
 from __future__ import absolute_import, unicode_literals, print_function
 import ipaddress
 import platform
-from distutils.version import StrictVersion
+
+# Import Salt libs
+from salt.utils.versions import StrictVersion
 
 IS_WINDOWS = platform.system() == 'Windows'
 USE_WMI = StrictVersion(platform.version()) < StrictVersion('6.2')

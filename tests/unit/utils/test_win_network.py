@@ -1,8 +1,8 @@
+# -*- coding: utf-8 -*-
 # Import Python Libs
 from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt Testing Libs
-from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock
 from tests.support.unit import TestCase, skipIf
 
@@ -86,7 +86,7 @@ mock_int = MagicMock(return_value=[Interface()])
 @skipIf(not salt.utils.platform.is_windows(), 'System is not Windows')
 class WinNetworkTestCase(TestCase):
     def test_get_interface_info_dot_net(self):
-        expected ={
+        expected = {
             'Ethernet': {
                 'alias': 'Ethernet',
                 'description': 'Dell GigabitEthernet',
