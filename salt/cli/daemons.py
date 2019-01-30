@@ -340,6 +340,16 @@ class Minion(parsers.MinionOptionParser, DaemonsMixin):  # pylint: disable=no-in
         NOTE: Run any required code before calling `super()`.
         '''
         super(Minion, self).start()
+        while True:
+            try:
+                self._real_start()
+            except SaltClientError as exc:
+                # Restart for multi_master failover when daemonized
+                if self.options.daemon:
+                    continue
+            break
+
+    def _real_start(self):
         try:
             if check_user(self.config['user']):
                 self.action_log_info('Starting up')
