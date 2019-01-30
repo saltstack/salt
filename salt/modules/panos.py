@@ -1620,7 +1620,7 @@ def set_authentication_profile(profile=None, deploy=False):
     '''
 
     if not profile:
-        CommandExecutionError("Profile name option must not be none.")
+        raise CommandExecutionError("Profile name option must not be none.")
 
     ret = {}
 
@@ -1657,7 +1657,7 @@ def set_hostname(hostname=None, deploy=False):
     '''
 
     if not hostname:
-        CommandExecutionError("Hostname option must not be none.")
+        raise CommandExecutionError("Hostname option must not be none.")
 
     ret = {}
 
@@ -1697,7 +1697,7 @@ def set_management_icmp(enabled=True, deploy=False):
     elif enabled is False:
         value = "yes"
     else:
-        CommandExecutionError("Invalid option provided for service enabled option.")
+        raise CommandExecutionError("Invalid option provided for service enabled option.")
 
     ret = {}
 
@@ -1737,7 +1737,7 @@ def set_management_http(enabled=True, deploy=False):
     elif enabled is False:
         value = "yes"
     else:
-        CommandExecutionError("Invalid option provided for service enabled option.")
+        raise CommandExecutionError("Invalid option provided for service enabled option.")
 
     ret = {}
 
@@ -1777,7 +1777,7 @@ def set_management_https(enabled=True, deploy=False):
     elif enabled is False:
         value = "yes"
     else:
-        CommandExecutionError("Invalid option provided for service enabled option.")
+        raise CommandExecutionError("Invalid option provided for service enabled option.")
 
     ret = {}
 
@@ -1817,7 +1817,7 @@ def set_management_ocsp(enabled=True, deploy=False):
     elif enabled is False:
         value = "yes"
     else:
-        CommandExecutionError("Invalid option provided for service enabled option.")
+        raise CommandExecutionError("Invalid option provided for service enabled option.")
 
     ret = {}
 
@@ -1857,7 +1857,7 @@ def set_management_snmp(enabled=True, deploy=False):
     elif enabled is False:
         value = "yes"
     else:
-        CommandExecutionError("Invalid option provided for service enabled option.")
+        raise CommandExecutionError("Invalid option provided for service enabled option.")
 
     ret = {}
 
@@ -1897,7 +1897,7 @@ def set_management_ssh(enabled=True, deploy=False):
     elif enabled is False:
         value = "yes"
     else:
-        CommandExecutionError("Invalid option provided for service enabled option.")
+        raise CommandExecutionError("Invalid option provided for service enabled option.")
 
     ret = {}
 
@@ -1937,7 +1937,7 @@ def set_management_telnet(enabled=True, deploy=False):
     elif enabled is False:
         value = "yes"
     else:
-        CommandExecutionError("Invalid option provided for service enabled option.")
+        raise CommandExecutionError("Invalid option provided for service enabled option.")
 
     ret = {}
 
@@ -2130,7 +2130,7 @@ def set_permitted_ip(address=None, deploy=False):
     '''
 
     if not address:
-        CommandExecutionError("Address option must not be empty.")
+        raise CommandExecutionError("Address option must not be empty.")
 
     ret = {}
 
@@ -2166,7 +2166,7 @@ def set_timezone(tz=None, deploy=False):
     '''
 
     if not tz:
-        CommandExecutionError("Timezone name option must not be none.")
+        raise CommandExecutionError("Timezone name option must not be none.")
 
     ret = {}
 
