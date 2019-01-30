@@ -34,6 +34,10 @@ import platform
 # Import Salt libs
 from salt.utils.versions import StrictVersion
 
+# Import 3rd party libs
+# I don't understand why I need this import, but the linter fails without it
+from salt.ext.six.moves import range
+
 IS_WINDOWS = platform.system() == 'Windows'
 USE_WMI = StrictVersion(platform.version()) < StrictVersion('6.2')
 
