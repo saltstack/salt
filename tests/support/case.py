@@ -243,9 +243,15 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         script_path = self.get_script_path(script)
         if not os.path.isfile(script_path):
             return False
+        popen_kwargs = popen_kwargs or {}
 
         if salt.utils.is_windows():
             cmd = 'python '
+            if 'cwd' not in popen_kwargs:
+                popen_kwargs['cwd'] = os.getcwd()
+            if 'env' not in popen_kwargs:
+                popen_kwargs['env'] = os.environ.copy()
+                popen_kwargs['env'][b'PYTHONPATH'] = os.getcwd().encode()
         else:
             cmd = 'PYTHONPATH='
             python_path = os.environ.get('PYTHONPATH', None)
@@ -262,7 +268,6 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
         tmp_file = tempfile.SpooledTemporaryFile()
 
-        popen_kwargs = popen_kwargs or {}
         popen_kwargs = dict({
             'shell': True,
             'stdout': tmp_file,
