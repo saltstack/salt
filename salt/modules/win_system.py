@@ -1004,9 +1004,6 @@ def set_domain_workgroup(workgroup):
     conn = wmi.WMI()
     comp = conn.Win32_ComputerSystem()[0]
 
-    # Grab the current workgroup/domain value
-    current = comp.Domain if comp.PartOfDomain else comp.Workgroup
-
     # Now we can join the new workgroup
     res = comp.JoinDomainOrWorkgroup(Name=workgroup.upper())
     return True if not res[0] else False
