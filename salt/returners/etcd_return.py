@@ -174,7 +174,14 @@ def get_load(jid):
     log.debug('sdstack_etcd returner <get_load> called jid: %s', jid)
     read_profile = __opts__.get('etcd.returner_read_profile')
     client, path = _get_conn(__opts__, read_profile)
-    return salt.utils.json.loads(client.get('/'.join((path, 'jobs', jid, '.load.p'))).value)
+
+    loadp = '/'.join((path, 'jobs', jid, '.load.p'))
+    try:
+        res = client.get(loadp)
+    except:
+        log.error("etcd returner <get_load> could not find path: {:s}".format(loadp))
+        return None
+    return salt.utils.json.loads(res.value)
 
 
 def get_jid(jid):
@@ -189,7 +196,14 @@ def get_jid(jid):
         if str(item.key).endswith('.load.p'):
             continue
         comps = str(item.key).split('/')
-        data = client.get('/'.join((path, 'jobs', jid, comps[-1], 'return'))).value
+
+        returnp = '/'.join((path, 'jobs', jid, comps[-1], 'return'))
+        try:
+            res = client.get(returnp)
+        except:
+            log.debug("etcd returner <get_jid> returned nothing for minion: {:s}".format(returnp))
+            continue
+        data = res.value
         ret[comps[-1]] = {'return': salt.utils.json.loads(data)}
     return ret
 
@@ -204,7 +218,15 @@ def get_fun(fun):
     items = client.get('/'.join((path, 'minions')))
     for item in items.children:
         comps = str(item.key).split('/')
-        efun = salt.utils.json.loads(client.get('/'.join((path, 'jobs', str(item.value), comps[-1], 'fun'))).value)
+
+        funp = '/'.join((path, 'jobs', str(item.value), comps[-1], 'fun'))
+        try:
+            res = client.get(funp)
+        except:
+            log.debug("etcd returner <get_fun> returned nothing for minion: {:s}".format(returnp))
+            continue
+        data = res.value
+        efun = salt.utils.json.loads(data)
         if efun == fun:
             ret[comps[-1]] = str(efun)
     return ret
