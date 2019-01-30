@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 This salt util uses WMI to gather network information on Windows 7 and .NET 4.0+
 on newer systems.
@@ -166,7 +167,7 @@ def _get_ip_gateway_info(i_face):
         for addrs in ip_properties.GatewayAddresses:
             int_dict.setdefault(
                 names[addrs.Address.AddressFamily],
-                []).append(addrs.Address.ToString())
+                []).append(addrs.Address.ToString().split('%')[0])
     return int_dict
 
 
@@ -178,7 +179,8 @@ def _get_ip_dns_info(i_face):
                  af_inet6: 'ipv6_dns'}
         for addrs in ip_properties.DnsAddresses:
             int_dict.setdefault(
-                names[addrs.AddressFamily], []).append(addrs.ToString())
+                names[addrs.AddressFamily],
+                []).append(addrs.ToString().split('%')[0])
     return int_dict
 
 
@@ -191,7 +193,7 @@ def _get_ip_multicast_info(i_face):
         for addrs in ip_properties.MulticastAddresses:
             int_dict.setdefault(
                 names[addrs.Address.AddressFamily],
-                []).append(addrs.Address.ToString())
+                []).append(addrs.Address.ToString().split('%')[0])
     return int_dict
 
 
@@ -218,6 +220,11 @@ def _get_ip_wins_info(i_face):
     return int_dict
 
 
+def _get_network_interfaces():
+    clr.AddReference('System.Net')
+    return NetworkInformation.NetworkInterface.GetAllNetworkInterfaces()
+
+
 def get_interface_info_dot_net():
     '''
     Uses .NET 4.0+ to gather Network Interface information. Should only run on
@@ -227,7 +234,7 @@ def get_interface_info_dot_net():
         dict: A dictionary of information about all interfaces on the system
     '''
     clr.AddReference('System.Net')
-    interfaces = NetworkInformation.NetworkInterface.GetAllNetworkInterfaces()
+    interfaces = _get_network_interfaces()
 
     int_dict = {}
     for i_face in interfaces:
