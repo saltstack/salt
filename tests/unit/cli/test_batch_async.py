@@ -71,13 +71,15 @@ class AsyncBatchTestCase(AsyncTestCase, TestCase):
         self.batch.minions = set(['foo', 'bar'])
         self.batch.opts = {'batch': '2', 'timeout': 5}
         self.batch.event = MagicMock()
+        self.batch.metadata = {'mykey': 'myvalue'}
         self.batch.start_batch()
         self.assertEqual(
             self.batch.event.fire_event.call_args[0],
             (
                 {
                     'available_minions': set(['foo', 'bar']),
-                    'down_minions': set()
+                    'down_minions': set(),
+                    'metadata': self.batch.metadata
                 },
                 "salt/batch/1235/start"
             )
@@ -97,6 +99,7 @@ class AsyncBatchTestCase(AsyncTestCase, TestCase):
     def test_batch_fire_done_event(self):
         self.batch.minions = set(['foo', 'bar'])
         self.batch.event = MagicMock()
+        self.batch.metadata = {'mykey': 'myvalue'}
         self.batch.end_batch()
         self.assertEqual(
             self.batch.event.fire_event.call_args[0],
@@ -105,7 +108,8 @@ class AsyncBatchTestCase(AsyncTestCase, TestCase):
                     'available_minions': set(['foo', 'bar']),
                     'done_minions': set(),
                     'down_minions': set(),
-                    'timedout_minions': set()
+                    'timedout_minions': set(),
+                    'metadata': self.batch.metadata
                 },
                 "salt/batch/1235/done"
             )
