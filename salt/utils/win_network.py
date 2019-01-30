@@ -44,55 +44,55 @@ if IS_WINDOWS:
         import clr
         from System.Net import NetworkInformation
 
-        enum_adapter_types = {
-            1: 'Unknown',
-            6: 'Ethernet',
-            9: 'TokenRing',
-            15: 'FDDI',
-            20: 'BasicISDN',
-            21: 'PrimaryISDN',
-            23: 'PPP',
-            24: 'Loopback',
-            26: 'Ethernet3Megabit',
-            28: 'Slip',
-            37: 'ATM',
-            48: 'GenericModem',
-            62: 'FastEthernetT',
-            63: 'ISDN',
-            69: 'FastEthernetFx',
-            71: 'Wireless802.11',
-            94: 'AsymmetricDSL',
-            95: 'RateAdaptDSL',
-            96: 'SymmetricDSL',
-            97: 'VeryHighSpeedDSL',
-            114: 'IPOverATM',
-            117: 'GigabitEthernet',
-            131: 'Tunnel',
-            143: 'MultiRateSymmetricDSL',
-            144: 'HighPerformanceSerialBus',
-            237: 'WMAN',
-            243: 'WWANPP',
-            244: 'WWANPP2'}
+enum_adapter_types = {
+    1: 'Unknown',
+    6: 'Ethernet',
+    9: 'TokenRing',
+    15: 'FDDI',
+    20: 'BasicISDN',
+    21: 'PrimaryISDN',
+    23: 'PPP',
+    24: 'Loopback',
+    26: 'Ethernet3Megabit',
+    28: 'Slip',
+    37: 'ATM',
+    48: 'GenericModem',
+    62: 'FastEthernetT',
+    63: 'ISDN',
+    69: 'FastEthernetFx',
+    71: 'Wireless802.11',
+    94: 'AsymmetricDSL',
+    95: 'RateAdaptDSL',
+    96: 'SymmetricDSL',
+    97: 'VeryHighSpeedDSL',
+    114: 'IPOverATM',
+    117: 'GigabitEthernet',
+    131: 'Tunnel',
+    143: 'MultiRateSymmetricDSL',
+    144: 'HighPerformanceSerialBus',
+    237: 'WMAN',
+    243: 'WWANPP',
+    244: 'WWANPP2'}
 
-        enum_operational_status = {
-            1: 'Up',
-            2: 'Down',
-            3: 'Testing',
-            4: 'Unknown',
-            5: 'Dormant',
-            6: 'NotPresent',
-            7: 'LayerDown'}
+enum_operational_status = {
+    1: 'Up',
+    2: 'Down',
+    3: 'Testing',
+    4: 'Unknown',
+    5: 'Dormant',
+    6: 'NotPresent',
+    7: 'LayerDown'}
 
-        enum_prefix_suffix = {
-            0: 'Other',
-            1: 'Manual',
-            2: 'WellKnown',
-            3: 'DHCP',
-            4: 'Router',
-            5: 'Random'}
+enum_prefix_suffix = {
+    0: 'Other',
+    1: 'Manual',
+    2: 'WellKnown',
+    3: 'DHCP',
+    4: 'Router',
+    5: 'Random'}
 
-        af_inet = 2
-        af_inet6 = 23
+af_inet = 2
+af_inet6 = 23
 
 
 def __virtual__():
@@ -103,6 +103,119 @@ def __virtual__():
         return False, 'This utility will only run on Windows'
 
     return __virtualname__
+
+
+def _get_base_properties(i_face):
+    raw_mac = i_face.GetPhysicalAddress().ToString()
+    return {
+        'alias': i_face.Name,
+        'description': i_face.Description,
+        'id': i_face.Id,
+        'receive_only': i_face.IsReceiveOnly,
+        'type': enum_adapter_types[i_face.NetworkInterfaceType],
+        'status': enum_operational_status[i_face.OperationalStatus],
+        'physical_address': ':'.join(raw_mac[i:i+2] for i in range(0, 12, 2))}
+
+
+def _get_ip_base_properties(i_face):
+    ip_properties = i_face.GetIPProperties()
+    return {'dns_suffix': ip_properties.DnsSuffix,
+            'dns_enabled': ip_properties.IsDnsEnabled,
+            'dynamic_dns_enabled': ip_properties.IsDynamicDnsEnabled}
+
+
+def _get_ip_unicast_info(i_face):
+    ip_properties = i_face.GetIPProperties()
+    int_dict = {}
+    if ip_properties.UnicastAddresses.Count > 0:
+        names = {af_inet: 'ip_addresses',
+                 af_inet6: 'ipv6_addresses'}
+        for addrs in ip_properties.UnicastAddresses:
+            if addrs.Address.AddressFamily == af_inet:
+                ip = addrs.Address.ToString()
+                mask = addrs.IPv4Mask.ToString()
+                net = ipaddress.IPv4Network(ip + '/' + mask, False)
+                ip_info = {
+                    'address': ip,
+                    'netmask': mask,
+                    'broadcast': net.broadcast_address.compressed,
+                    'loopback': addrs.Address.Loopback.ToString()}
+            else:
+                ip_info = {
+                    'address': addrs.Address.ToString().split('%')[0],
+                    # ScopeID is a suffix affixed to the end of an IPv6
+                    # address it denotes the adapter. This is different from
+                    # ScopeLevel. Need to figure out how to get ScopeLevel
+                    # for feature parity with Linux
+                    'interface_index': int(addrs.Address.ScopeId)}
+            ip_info.update({
+                'prefix_length': addrs.PrefixLength,
+                'prefix_origin': enum_prefix_suffix[addrs.PrefixOrigin],
+                'suffix_origin': enum_prefix_suffix[addrs.SuffixOrigin]})
+            int_dict.setdefault(
+                names[addrs.Address.AddressFamily], []).append(ip_info)
+    return int_dict
+
+
+def _get_ip_gateway_info(i_face):
+    ip_properties = i_face.GetIPProperties()
+    int_dict = {}
+    if ip_properties.GatewayAddresses.Count > 0:
+        names = {af_inet: 'ip_gateways',
+                 af_inet6: 'ipv6_gateways'}
+        for addrs in ip_properties.GatewayAddresses:
+            int_dict.setdefault(
+                names[addrs.Address.AddressFamily],
+                []).append(addrs.Address.ToString())
+    return int_dict
+
+
+def _get_ip_dns_info(i_face):
+    ip_properties = i_face.GetIPProperties()
+    int_dict = {}
+    if ip_properties.DnsAddresses.Count > 0:
+        names = {af_inet: 'ip_dns',
+                 af_inet6: 'ipv6_dns'}
+        for addrs in ip_properties.DnsAddresses:
+            int_dict.setdefault(
+                names[addrs.AddressFamily], []).append(addrs.ToString())
+    return int_dict
+
+
+def _get_ip_multicast_info(i_face):
+    ip_properties = i_face.GetIPProperties()
+    int_dict = {}
+    if ip_properties.MulticastAddresses.Count > 0:
+        names = {af_inet: 'ip_multicast',
+                 af_inet6: 'ipv6_multicast'}
+        for addrs in ip_properties.MulticastAddresses:
+            int_dict.setdefault(
+                names[addrs.Address.AddressFamily],
+                []).append(addrs.Address.ToString())
+    return int_dict
+
+
+def _get_ip_anycast_info(i_face):
+    ip_properties = i_face.GetIPProperties()
+    int_dict = {}
+    if ip_properties.AnycastAddresses.Count > 0:
+        names = {af_inet: 'ip_anycast',
+                 af_inet6: 'ipv6_anycast'}
+        for addrs in ip_properties.AnycastAddresses:
+            int_dict.setdefault(
+                names[addrs.Address.AddressFamily],
+                []).append(addrs.Address.ToString())
+    return int_dict
+
+
+def _get_ip_wins_info(i_face):
+    ip_properties = i_face.GetIPProperties()
+    int_dict = {}
+    if ip_properties.WinsServersAddresses.Count > 0:
+        for addrs in ip_properties.WinsServersAddresses:
+            int_dict.setdefault(
+                'ip_wins', []).append(addrs.ToString())
+    return int_dict
 
 
 def get_interface_info_dot_net():
@@ -118,86 +231,14 @@ def get_interface_info_dot_net():
 
     int_dict = {}
     for i_face in interfaces:
-        raw_mac = i_face.GetPhysicalAddress().ToString()
-        int_dict[i_face.Name] = {
-            'alias': i_face.Name,
-            'description': i_face.Description,
-            'id': i_face.Id,
-            'receive_only': i_face.IsReceiveOnly,
-            'type': enum_adapter_types[i_face.NetworkInterfaceType],
-            'status': enum_operational_status[i_face.OperationalStatus],
-            'physical_address': ':'.join(raw_mac[i:i+2] for i in range(0, 12, 2))}
-
-        ip_properties = i_face.GetIPProperties()
-        int_dict[i_face.Name].update({
-            'dns_suffix': ip_properties.DnsSuffix,
-            'dns_enabled': ip_properties.IsDnsEnabled,
-            'dynamic_dns_enabled': ip_properties.IsDynamicDnsEnabled
-        })
-
-        if ip_properties.UnicastAddresses.Count > 0:
-            names = {af_inet: 'ip_addresses',
-                     af_inet6: 'ipv6_addresses'}
-            for addrs in ip_properties.UnicastAddresses:
-                if addrs.Address.AddressFamily == af_inet:
-                    ip = addrs.Address.ToString()
-                    mask = addrs.IPv4Mask.ToString()
-                    net = ipaddress.IPv4Network(ip + '/' + mask, False)
-                    ip_info = {
-                        'address': ip,
-                        'netmask': mask,
-                        'broadcast': net.broadcast_address.compressed,
-                        'loopback': addrs.Address.Loopback.ToString()}
-                else:
-                    ip_info = {
-                        'address': addrs.Address.ToString().split('%')[0],
-                        # ScopeID is a suffix affixed to the end of an IPv6
-                        # address it denotes the adapter. This is different from
-                        # ScopeLevel. Need to figure out how to get ScopeLevel
-                        # for feature parity with Linux
-                        'interface_index': int(addrs.Address.ScopeId)}
-                ip_info.update({
-                    'prefix_length': addrs.PrefixLength,
-                    'prefix_origin': enum_prefix_suffix[addrs.PrefixOrigin],
-                    'suffix_origin': enum_prefix_suffix[addrs.SuffixOrigin]})
-                int_dict[i_face.Name].setdefault(
-                    names[addrs.Address.AddressFamily], []).append(ip_info)
-
-        if ip_properties.GatewayAddresses.Count > 0:
-            names = {af_inet: 'ip_gateways',
-                     af_inet6: 'ipv6_gateways'}
-            for addrs in ip_properties.GatewayAddresses:
-                int_dict[i_face.Name].setdefault(
-                    names[addrs.Address.AddressFamily],
-                    []).append(addrs.Address.ToString())
-
-        if ip_properties.DnsAddresses.Count > 0:
-            names = {af_inet: 'ip_dns',
-                     af_inet6: 'ipv6_dns'}
-            for addrs in ip_properties.DnsAddresses:
-                int_dict[i_face.Name].setdefault(
-                    names[addrs.AddressFamily], []).append(addrs.ToString())
-
-        if ip_properties.MulticastAddresses.Count > 0:
-            names = {af_inet: 'ip_multicast',
-                     af_inet6: 'ipv6_multicast'}
-            for addrs in ip_properties.MulticastAddresses:
-                int_dict[i_face.Name].setdefault(
-                    names[addrs.Address.AddressFamily],
-                    []).append(addrs.Address.ToString())
-
-        if ip_properties.AnycastAddresses.Count > 0:
-            names = {af_inet: 'ip_anycast',
-                     af_inet6: 'ipv6_anycast'}
-            for addrs in ip_properties.AnycastAddresses:
-                int_dict[i_face.Name].setdefault(
-                    names[addrs.Address.AddressFamily],
-                    []).append(addrs.Address.ToString())
-
-        if ip_properties.WinsServersAddresses.Count > 0:
-            for addrs in ip_properties.WinsServersAddresses:
-                int_dict[i_face.Name].setdefault(
-                    'ip_wins', []).append(addrs.ToString())
+        int_dict[i_face.Name] = _get_base_properties(i_face)
+        int_dict[i_face.Name].update(_get_ip_base_properties(i_face))
+        int_dict[i_face.Name].update(_get_ip_unicast_info(i_face))
+        int_dict[i_face.Name].update(_get_ip_gateway_info(i_face))
+        int_dict[i_face.Name].update(_get_ip_dns_info(i_face))
+        int_dict[i_face.Name].update(_get_ip_multicast_info(i_face))
+        int_dict[i_face.Name].update(_get_ip_anycast_info(i_face))
+        int_dict[i_face.Name].update(_get_ip_wins_info(i_face))
 
     return int_dict
 
@@ -274,16 +315,14 @@ def get_interface_info():
             name = interfaces[iface]['description']
             ifaces.setdefault(name, {}).update({
                 'hwaddr': interfaces[iface]['physical_address'],
-                'up': True
-            })
+                'up': True})
             for ip in interfaces[iface].get('ip_addresses', []):
                 ifaces[name].setdefault('inet', []).append({
                     'address': ip['address'],
                     'broadcast': ip['broadcast'],
                     'netmask': ip['netmask'],
                     'gateway': interfaces[iface].get('ip_gateways', [''])[0],
-                    'label': name
-                })
+                    'label': name})
             for ip in interfaces[iface].get('ipv6_addresses', []):
                 ifaces[name].setdefault('inet6', []).append({
                     'address': ip['address'],
