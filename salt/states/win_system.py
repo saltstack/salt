@@ -175,6 +175,14 @@ def workgroup(name):
 
     name
         The workgroup to set
+
+    Example:
+
+    .. code-block:: yaml
+
+        set workgroup:
+          system.workgroup:
+            - name: local
     '''
     ret = {
         'name': name.upper(),
