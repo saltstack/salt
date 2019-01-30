@@ -38,13 +38,13 @@ class CaseInsensitiveDict(MutableMapping):
     Inspired by requests' case-insensitive dict implementation, but works with
     non-string keys as well.
     '''
-    def __init__(self, init=None):
+    def __init__(self, init=None, **kwargs):
         '''
         Force internal dict to be ordered to ensure a consistent iteration
         order, irrespective of case.
         '''
         self._data = OrderedDict()
-        self.update(init or {})
+        self.update(init or {}, **kwargs)
 
     def __len__(self):
         return len(self._data)
