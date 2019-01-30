@@ -45,7 +45,7 @@ try:
 except ImportError:
     HAS_DNSPYTHON = False
 HAS_DIG = salt.utils.path.which('dig') is not None
-DIG_OPTIONS = '+search +fail +noall +answer +noclass +nottl'
+DIG_OPTIONS = '+search +fail +noall +answer +nocl +nottl'
 HAS_DRILL = salt.utils.path.which('drill') is not None
 HAS_HOST = salt.utils.path.which('host') is not None
 HAS_NSLOOKUP = salt.utils.path.which('nslookup') is not None
