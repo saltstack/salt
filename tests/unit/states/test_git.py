@@ -60,6 +60,7 @@ class GitTestCase(TestCase, LoaderModuleMockMixin):
         git_diff = Mock()
         dunder_salt = {
             'git.current_branch': MagicMock(return_value=branches[0]),
+            'git.config_get_regexp': MagicMock(return_value={}),
             'git.diff': git_diff,
             'git.fetch': MagicMock(return_value={}),
             'git.is_worktree': MagicMock(return_value=False),
