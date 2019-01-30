@@ -77,14 +77,14 @@ You can install a release candidate of Salt using `Salt Bootstrap
 .. code-block:: bash
 
     curl -o install_salt.sh -L https://bootstrap.saltstack.com
-    sudo sh install_salt.sh -P git v2019.2.0rc1
+    sudo sh install_salt.sh -P git v2019.2.0rc2
 
 If you want to also install a master using Salt Bootstrap, use the ``-M`` flag:
 
 .. code-block:: bash
 
     curl -o install_salt.sh -L https://bootstrap.saltstack.com
-    sudo sh install_salt.sh -P -M git v2019.2.0rc1
+    sudo sh install_salt.sh -P -M git v2019.2.0rc2
 
 If you want to install only a master and not a minion using Salt Bootstrap, use
 the ``-M`` and ``-N`` flags:
@@ -92,13 +92,13 @@ the ``-M`` and ``-N`` flags:
 .. code-block:: bash
 
     curl -o install_salt.sh -L https://bootstrap.saltstack.com
-    sudo sh install_salt.sh -P -M -N git v2019.2.0rc1
+    sudo sh install_salt.sh -P -M -N git v2019.2.0rc2
 
 Installing Using PyPI
 =====================
 
 Installing from the `source archive
-<https://pypi.python.org/pypi?:action=display&name=salt&version=2019.2.0rc1>`_ on
+<https://pypi.python.org/pypi?:action=display&name=salt&version=2019.2.0rc2>`_ on
 `PyPI <https://pypi.python.org/pypi>`_ is fairly straightforward.
 
 .. note::
@@ -136,4 +136,4 @@ Then install salt using the following command:
 
 .. code-block:: bash
 
-    sudo pip install salt==2019.2.0rc1
+    sudo pip install salt==2019.2.0rc2
