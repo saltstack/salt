@@ -243,6 +243,7 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         script_path = self.get_script_path(script)
         if not os.path.isfile(script_path):
             return False
+        popen_kwargs = popen_kwargs or {}
 
         if salt.utils.is_windows():
             cmd = 'python '
@@ -270,7 +271,6 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
         tmp_file = tempfile.SpooledTemporaryFile()
 
-        popen_kwargs = popen_kwargs or {}
         popen_kwargs = dict({
             'shell': True,
             'stdout': tmp_file,
