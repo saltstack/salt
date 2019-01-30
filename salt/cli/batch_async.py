@@ -62,9 +62,8 @@ class BatchAsync(object):
             clear_load['kwargs'].pop('batch'),
             self.local.opts,
             **clear_load)
-        self.kwargs = clear_load['kwargs']
         self.eauth = batch_get_eauth(clear_load['kwargs'])
-        self.kwargs.update(self.eauth)
+        self.metadata = clear_load['kwargs'].get('metadata', {})
         self.minions = set()
         self.down_minions = set()
         self.timedout_minions = set()
@@ -179,6 +178,7 @@ class BatchAsync(object):
             ),
             gather_job_timeout=self.opts['gather_job_timeout'],
             jid=self.ping_jid,
+            metadata=self.metadata,
             **self.eauth)
         self.down_minions = set(ping_return['minions'])
 
@@ -187,28 +187,22 @@ class BatchAsync(object):
         if not self.initialized:
             self.batch_size = get_bnum(self.opts, self.minions, True)
             self.initialized = True
-            data = {}
-            data.update(self.kwargs)
-            data.update(
-                {
-                    "available_minions": self.minions,
-                    "down_minions": self.down_minions
-                }
-            )
+            data = {
+                "available_minions": self.minions,
+                "down_minions": self.down_minions,
+                "metadata": self.metadata
+            }
             self.event.fire_event(data, "salt/batch/{0}/start".format(self.batch_jid))
             yield self.schedule_next()
 
     def end_batch(self):
-        data = {}
-        data.update(self.kwargs)
-        data.update(
-            {
-                "available_minions": self.minions,
-                "down_minions": self.down_minions,
-                "done_minions": self.done_minions,
-                "timedout_minions": self.timedout_minions
-            }
-        )
+        data = {
+            "available_minions": self.minions,
+            "down_minions": self.down_minions,
+            "done_minions": self.done_minions,
+            "timedout_minions": self.timedout_minions,
+            "metadata": self.metadata
+        }
         self.event.fire_event(data, "salt/batch/{0}/done".format(self.batch_jid))
         self.event.remove_event_handler(self.__event_handler)
 
@@ -225,6 +219,6 @@ class BatchAsync(object):
                 ret=self.opts.get('return', ''),
                 gather_job_timeout=self.opts['gather_job_timeout'],
                 jid=self.batch_jid,
-                **self.kwargs)
+                metadata=self.metadata)
             self.event.io_loop.call_later(self.opts['timeout'], self.find_job, set(next_batch))
             self.active = self.active.union(next_batch)
