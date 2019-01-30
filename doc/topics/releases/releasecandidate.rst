@@ -65,6 +65,7 @@ Available builds:
 - Debian 9
 - Redhat 7
 - Windows
+- OSX
 
 .. FreeBSD
 
