@@ -164,9 +164,8 @@ def _auth(profile=None, api_version=1, **connection_args):
     except KeyError:
         heat_endpoint = __salt__['keystone.endpoint_get']('heat', profile)['publicurl']
     heat_endpoint = heat_endpoint % token
-    log.debug('Calling heatclient.client.Client(' +
-              '{0}, {1}, **{2})'.format(api_version, heat_endpoint,
-                                        kwargs))
+    log.debug('Calling heatclient.client.Client(%s, %s, **%s)',
+              api_version, heat_endpoint, kwargs)
     # may raise exc.HTTPUnauthorized, exc.HTTPNotFound
     # but we deal with those elsewhere
     return heatclient.client.Client(api_version, endpoint=heat_endpoint, **kwargs)
@@ -250,7 +249,7 @@ def _poll_for_events(h_client, stack_name, action=None, poll_period=5,
         events = _get_stack_events(h_client, stack_id=stack_name,
                                    event_args={'sort_dir': 'asc', 'marker': marker})
 
-        if len(events) == 0:
+        if not events:
             no_event_polls += 1
         else:
             no_event_polls = 0
@@ -416,7 +415,7 @@ def delete_stack(name=None, poll=0, timeout=60, profile=None):
             ret['comment'] = 'Deleted stack {0}.'.format(name)
             return ret
         except Exception as ex:  # pylint: disable=W0703
-            log.exception('Delete failed {0}'.format(ex))
+            log.exception('Delete failed %s', ex)
             ret['result'] = False
             ret['comment'] = '{0}'.format(ex)
             return ret
@@ -543,10 +542,10 @@ def create_stack(name=None, template_file=None, environment=None,
     kwargs['template'] = template
     try:
         h_client.stacks.validate(**kwargs)
-    except Exception as ex:  # pylint: disable=W0703
-        log.exception('Template not valid {0}'.format(ex))
+    except Exception as ex:
+        log.exception('Template not valid')
         ret['result'] = False
-        ret['comment'] = 'Template not valid {0}'.format(ex)
+        ret['comment'] = 'Template not valid: {0}'.format(ex)
         return ret
     env = {}
     if environment:
@@ -609,9 +608,9 @@ def create_stack(name=None, template_file=None, environment=None,
     try:
         h_client.stacks.create(**fields)
     except Exception as ex:  # pylint: disable=W0703
-        log.exception('Create failed {0}'.format(ex))
+        log.exception('Create failed')
         ret['result'] = False
-        ret['comment'] = '{0}'.format(ex)
+        ret['comment'] = six.text_type(ex)
         return ret
     if poll > 0:
         stack_status, msg = _poll_for_events(h_client, name, action='CREATE',
@@ -743,7 +742,7 @@ def update_stack(name=None, template_file=None, environment=None,
     try:
         h_client.stacks.validate(**kwargs)
     except Exception as ex:  # pylint: disable=W0703
-        log.exception('Template not valid {0}'.format(ex))
+        log.exception('Template not valid')
         ret['result'] = False
         ret['comment'] = 'Template not valid {0}'.format(ex)
         return ret
@@ -806,7 +805,7 @@ def update_stack(name=None, template_file=None, environment=None,
     try:
         h_client.stacks.update(name, **fields)
     except Exception as ex:  # pylint: disable=W0703
-        log.exception('Update failed {0}'.format(ex))
+        log.exception('Update failed')
         ret['result'] = False
         ret['comment'] = 'Update failed {0}'.format(ex)
         return ret

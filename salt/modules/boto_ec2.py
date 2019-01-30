@@ -765,7 +765,7 @@ def get_tags(instance_id=None, keyid=None, key=None, profile=None,
     tags = []
     client = _get_conn(key=key, keyid=keyid, profile=profile, region=region)
     result = client.get_all_tags(filters={"resource-id": instance_id})
-    if len(result) > 0:
+    if result:
         for tag in result:
             tags.append({tag.name: tag.value})
     else:
@@ -1255,7 +1255,7 @@ def get_attribute(attribute, instance_name=None, instance_id=None, region=None, 
             if len(instances) > 1:
                 log.error('Found more than one EC2 instance matching the criteria.')
                 return False
-            elif len(instances) < 1:
+            elif not instances:
                 log.error('Found no EC2 instance matching the criteria.')
                 return False
             instance_id = instances[0]
@@ -1854,10 +1854,10 @@ def set_volumes_tags(tag_maps, authoritative=False, dry_run=False,
             changes['new'][vol.id] = tags
         else:
             log.debug('No changes needed for vol.id %s', vol.id)
-        if len(add):
+        if add:
             d = dict((k, tags[k]) for k in add)
             log.debug('New tags for vol.id %s: %s', vol.id, d)
-        if len(update):
+        if update:
             d = dict((k, tags[k]) for k in update)
             log.debug('Updated tags for vol.id %s: %s', vol.id, d)
         if not dry_run:
@@ -1866,7 +1866,7 @@ def set_volumes_tags(tag_maps, authoritative=False, dry_run=False,
                 ret['comment'] = "Failed to set tags on vol.id {0}: {1}".format(vol.id, tags)
                 return ret
             if authoritative:
-                if len(remove):
+                if remove:
                     log.debug('Removed tags for vol.id %s: %s', vol.id, remove)
                     if not delete_tags(vol.id, remove, region=region, key=key, keyid=keyid, profile=profile):
                         ret['success'] = False

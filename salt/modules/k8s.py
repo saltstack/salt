@@ -756,7 +756,7 @@ def create_secret(namespace, name, sources, apiserver_url=None, force=False, upd
                     return ret
             data[sname] = encoded
 
-    log.trace("secret data is: {0}".format(data))
+    log.trace('secret data is: %s', data)
 
     if secret and update:
         if not data:

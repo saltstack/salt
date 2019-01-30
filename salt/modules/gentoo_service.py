@@ -40,7 +40,7 @@ def __virtual__():
 
 
 def _ret_code(cmd, ignore_retcode=False):
-    log.debug('executing [{0}]'.format(cmd))
+    log.debug('executing [%s]', cmd)
     sts = __salt__['cmd.retcode'](cmd, python_shell=False, ignore_retcode=ignore_retcode)
     return sts
 

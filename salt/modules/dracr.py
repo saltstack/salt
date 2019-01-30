@@ -51,7 +51,7 @@ def __parse_drac(output):
         if i.strip().endswith(':') and '=' not in i:
             section = i[0:-1]
             drac[section] = {}
-        if len(i.rstrip()) > 0 and '=' in i:
+        if i.rstrip() and '=' in i:
             if section in drac:
                 drac[section].update(dict(
                     [[prop.strip() for prop in i.split('=')]]
@@ -141,7 +141,7 @@ def __execute_ret(command, host=None,
             if l.startswith('Continuing execution'):
                 continue
 
-            if len(l.strip()) == 0:
+            if not l.strip():
                 continue
             fmtlines.append(l)
             if '=' in l:
@@ -511,7 +511,7 @@ def list_users(host=None,
                 else:
                     break
             else:
-                if len(_username) > 0:
+                if _username:
                     users[_username].update({key: val})
 
     return users
@@ -1257,7 +1257,7 @@ def inventory(host=None, admin_username=None, admin_password=None):
             in_chassis = True
             continue
 
-        if len(l) < 1:
+        if not l:
             continue
 
         line = re.split('  +', l.strip())

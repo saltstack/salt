@@ -139,7 +139,7 @@ def list_sizes(profile, location_id=None, **libcloud_kwargs):
     libcloud_kwargs = salt.utils.args.clean_kwargs(**libcloud_kwargs)
     if location_id is not None:
         locations = [loc for loc in conn.list_locations() if loc.id == location_id]
-        if len(locations) == 0:
+        if not locations:
             raise ValueError("Location not found")
         else:
             sizes = conn.list_sizes(location=locations[0], **libcloud_kwargs)
@@ -782,7 +782,7 @@ def _get_by_id(collection, id):
     Get item from a list by the id field
     '''
     matches = [item for item in collection if item.id == id]
-    if len(matches) == 0:
+    if not matches:
         raise ValueError('Could not find a matching item')
     elif len(matches) > 1:
         raise ValueError('The id matched {0} items, not 1'.format(len(matches)))
