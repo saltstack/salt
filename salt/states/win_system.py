@@ -194,6 +194,11 @@ def workgroup(name):
     res = __salt__['system.get_domain_workgroup']()
     current_workgroup = res['Domain'] if 'Domain' in res else res['Workgroup'] if 'Workgroup' in res else ''
 
+    if __opts__['test']:
+        ret['result'] = None
+        ret['comment'] = 'Computer will be joined to workgroup \'{0}\''.format(name)
+        return ret
+
     if current_workgroup.upper() == name.upper():
         ret['comment'] = "Workgroup is already set to '{0}'".format(name.upper())
         return ret
