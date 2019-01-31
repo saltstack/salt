@@ -1728,7 +1728,8 @@ def create_empty_crl(
         ca_name,
         cacert_path=None,
         ca_filename=None,
-        crl_file=None):
+        crl_file=None,
+        digest='sha256'):
     '''
     Create an empty Certificate Revocation List.
 
@@ -1745,6 +1746,11 @@ def create_empty_crl(
 
     crl_file
         full path to the CRL file
+
+    digest
+        The message digest algorithm. Must be a string describing a digest
+        algorithm supported by OpenSSL (by EVP_get_digestbyname, specifically).
+        For example, "md5" or "sha1". Default: 'sha256'
 
     CLI Example:
 
@@ -1790,7 +1796,11 @@ def create_empty_crl(
         return 'There is no CA named "{0}"'.format(ca_name)
 
     crl = OpenSSL.crypto.CRL()
-    crl_text = crl.export(ca_cert, ca_key)
+    crl_text = crl.export(
+        ca_cert,
+        ca_key,
+        digest=salt.utils.stringutils.to_bytes(digest),
+    )
 
     with salt.utils.files.fopen(crl_file, 'w') as f:
         f.write(salt.utils.stringutils.to_str(crl_text))
@@ -1805,7 +1815,9 @@ def revoke_cert(
         ca_filename=None,
         cert_path=None,
         cert_filename=None,
-        crl_file=None):
+        crl_file=None,
+        digest='sha256',
+        ):
     '''
     Revoke a certificate.
 
@@ -1832,6 +1844,11 @@ def revoke_cert(
 
     crl_file
         Full path to the CRL file.
+
+    digest
+        The message digest algorithm. Must be a string describing a digest
+        algorithm supported by OpenSSL (by EVP_get_digestbyname, specifically).
+        For example, "md5" or "sha1". Default: 'sha256'
 
     CLI Example:
 
@@ -1937,14 +1954,17 @@ def revoke_cert(
             if line.startswith('R'):
                 fields = line.split('\t')
                 revoked = OpenSSL.crypto.Revoked()
-                revoked.set_serial(fields[3])
+                revoked.set_serial(salt.utils.stringutils.to_bytes(fields[3]))
                 revoke_date_2_digit = datetime.strptime(fields[2],
                                                         two_digit_year_fmt)
-                revoked.set_rev_date(revoke_date_2_digit.strftime(
-                    four_digit_year_fmt))
+                revoked.set_rev_date(salt.utils.stringutils.to_bytes(
+                    revoke_date_2_digit.strftime(four_digit_year_fmt)
+                ))
                 crl.add_revoked(revoked)
 
-    crl_text = crl.export(ca_cert, ca_key)
+    crl_text = crl.export(ca_cert,
+                          ca_key,
+                          digest=salt.utils.stringutils.to_bytes(digest))
 
     if crl_file is None:
         crl_file = '{0}/{1}/crl.pem'.format(
