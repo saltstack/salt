@@ -164,7 +164,7 @@ A few examples of salt states from the community:
 * https://github.com/pcrews/salt-data
 
 Follow on Open Hub
-===============
+==================
 
 https://www.openhub.net/p/salt
 
