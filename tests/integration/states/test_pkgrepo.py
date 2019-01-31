@@ -5,6 +5,7 @@ tests for pkgrepo states
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+import os
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
@@ -13,7 +14,6 @@ from tests.support.unit import skipIf
 from tests.support.helpers import (
     destructiveTest,
     requires_system_grains,
-    with_tempfile,
 )
 
 # Import Salt libs
@@ -131,8 +131,7 @@ class PkgrepoTest(ModuleCase, SaltReturnAssertsMixin):
             self.run_state('pkgrepo.absent', name=kwargs['name'])
 
     @requires_system_grains
-    @with_tempfile(dir='/etc/apt/sources.list.d', suffix='.list')
-    def test_pkgrepo_04_apt_with_architectures(self, fn_, grains):
+    def test_pkgrepo_04_apt_with_architectures(self, grains):
         '''
         Test managing a repo with architectures specified
         '''
@@ -153,106 +152,114 @@ class PkgrepoTest(ModuleCase, SaltReturnAssertsMixin):
                 test=test)
             return ret[next(iter(ret))]
 
-        # Run with test=True
-        ret = _run(test=True)
-        assert ret['changes'] == {'repo': name.format(arch='')}, ret['changes']
-        assert 'would be' in ret['comment'], ret['comment']
-        assert ret['result'] is None, ret['result']
+        fn_ = salt.utils.files.mkstemp(dir='/etc/apt/sources.list.d', suffix='.list')
 
-        # Run for real
-        ret = _run()
-        assert ret['changes'] == {'repo': name.format(arch='')}, ret['changes']
-        assert ret['comment'].startswith('Configured'), ret['comment']
-        assert ret['result'] is True, ret['result']
+        try:
+            # Run with test=True
+            ret = _run(test=True)
+            assert ret['changes'] == {'repo': name.format(arch='')}, ret['changes']
+            assert 'would be' in ret['comment'], ret['comment']
+            assert ret['result'] is None, ret['result']
 
-        # Run again with test=True, should exit with no changes and a True
-        # result.
-        ret = _run(test=True)
-        assert not ret['changes'], ret['changes']
-        assert 'already' in ret['comment'], ret['comment']
-        assert ret['result'] is True, ret['result']
+            # Run for real
+            ret = _run()
+            assert ret['changes'] == {'repo': name.format(arch='')}, ret['changes']
+            assert ret['comment'].startswith('Configured'), ret['comment']
+            assert ret['result'] is True, ret['result']
 
-        # Run for real again, results should be the same as above (i.e. we
-        # should never get to the point where we exit with a None result).
-        ret = _run()
-        assert not ret['changes'], ret['changes']
-        assert 'already' in ret['comment'], ret['comment']
-        assert ret['result'] is True, ret['result']
+            # Run again with test=True, should exit with no changes and a True
+            # result.
+            ret = _run(test=True)
+            assert not ret['changes'], ret['changes']
+            assert 'already' in ret['comment'], ret['comment']
+            assert ret['result'] is True, ret['result']
 
-        expected_changes = {
-            'line': {
-                'new': name.format(arch=_get_arch('amd64')),
-                'old': name.format(arch=''),
-            },
-            'architectures': {
-                'new': ['amd64'],
-                'old': [],
-            },
-        }
+            # Run for real again, results should be the same as above (i.e. we
+            # should never get to the point where we exit with a None result).
+            ret = _run()
+            assert not ret['changes'], ret['changes']
+            assert 'already' in ret['comment'], ret['comment']
+            assert ret['result'] is True, ret['result']
 
-        # Run with test=True and the architecture set. We should get a None
-        # result with some expected changes.
-        ret = _run(arch='amd64', test=True)
-        assert ret['changes'] == expected_changes, ret['changes']
-        assert 'would be' in ret['comment'], ret['comment']
-        assert ret['result'] is None, ret['result']
+            expected_changes = {
+                'line': {
+                    'new': name.format(arch=_get_arch('amd64')),
+                    'old': name.format(arch=''),
+                },
+                'architectures': {
+                    'new': ['amd64'],
+                    'old': [],
+                },
+            }
 
-        # Run for real, with the architecture set. We should get a True
-        # result with the same changes.
-        ret = _run(arch='amd64')
-        assert ret['changes'] == expected_changes, ret['changes']
-        assert ret['comment'].startswith('Configured'), ret['comment']
-        assert ret['result'] is True, ret['result']
+            # Run with test=True and the architecture set. We should get a None
+            # result with some expected changes.
+            ret = _run(arch='amd64', test=True)
+            assert ret['changes'] == expected_changes, ret['changes']
+            assert 'would be' in ret['comment'], ret['comment']
+            assert ret['result'] is None, ret['result']
 
-        # Run again with test=True, should exit with no changes and a True
-        # result.
-        ret = _run(arch='amd64', test=True)
-        assert not ret['changes'], ret['changes']
-        assert 'already' in ret['comment'], ret['comment']
-        assert ret['result'] is True, ret['result']
+            # Run for real, with the architecture set. We should get a True
+            # result with the same changes.
+            ret = _run(arch='amd64')
+            assert ret['changes'] == expected_changes, ret['changes']
+            assert ret['comment'].startswith('Configured'), ret['comment']
+            assert ret['result'] is True, ret['result']
 
-        # Run for real again, results should be the same as above (i.e. we
-        # should never get to the point where we exit with a None result).
-        ret = _run(arch='amd64')
-        assert not ret['changes'], ret['changes']
-        assert 'already' in ret['comment'], ret['comment']
-        assert ret['result'] is True, ret['result']
+            # Run again with test=True, should exit with no changes and a True
+            # result.
+            ret = _run(arch='amd64', test=True)
+            assert not ret['changes'], ret['changes']
+            assert 'already' in ret['comment'], ret['comment']
+            assert ret['result'] is True, ret['result']
 
-        expected_changes = {
-            'line': {
-                'new': name.format(arch=''),
-                'old': name.format(arch=_get_arch('amd64')),
-            },
-            'architectures': {
-                'new': [],
-                'old': ['amd64'],
-            },
-        }
+            # Run for real again, results should be the same as above (i.e. we
+            # should never get to the point where we exit with a None result).
+            ret = _run(arch='amd64')
+            assert not ret['changes'], ret['changes']
+            assert 'already' in ret['comment'], ret['comment']
+            assert ret['result'] is True, ret['result']
 
-        # Run with test=True and the architecture set back to the original
-        # value. We should get a None result with some expected changes.
-        ret = _run(test=True)
-        assert ret['changes'] == expected_changes, ret['changes']
-        assert 'would be' in ret['comment'], ret['comment']
-        assert ret['result'] is None, ret['result']
+            expected_changes = {
+                'line': {
+                    'new': name.format(arch=''),
+                    'old': name.format(arch=_get_arch('amd64')),
+                },
+                'architectures': {
+                    'new': [],
+                    'old': ['amd64'],
+                },
+            }
 
-        # Run for real, with the architecture set. We should get a True
-        # result with the same changes.
-        ret = _run()
-        assert ret['changes'] == expected_changes, ret['changes']
-        assert ret['comment'].startswith('Configured'), ret['comment']
-        assert ret['result'] is True, ret['result']
+            # Run with test=True and the architecture set back to the original
+            # value. We should get a None result with some expected changes.
+            ret = _run(test=True)
+            assert ret['changes'] == expected_changes, ret['changes']
+            assert 'would be' in ret['comment'], ret['comment']
+            assert ret['result'] is None, ret['result']
 
-        # Run again with test=True, should exit with no changes and a True
-        # result.
-        ret = _run(test=True)
-        assert not ret['changes'], ret['changes']
-        assert 'already' in ret['comment'], ret['comment']
-        assert ret['result'] is True, ret['result']
+            # Run for real, with the architecture set. We should get a True
+            # result with the same changes.
+            ret = _run()
+            assert ret['changes'] == expected_changes, ret['changes']
+            assert ret['comment'].startswith('Configured'), ret['comment']
+            assert ret['result'] is True, ret['result']
 
-        # Run for real again, results should be the same as above (i.e. we
-        # should never get to the point where we exit with a None result).
-        ret = _run()
-        assert not ret['changes'], ret['changes']
-        assert 'already' in ret['comment'], ret['comment']
-        assert ret['result'] is True, ret['result']
+            # Run again with test=True, should exit with no changes and a True
+            # result.
+            ret = _run(test=True)
+            assert not ret['changes'], ret['changes']
+            assert 'already' in ret['comment'], ret['comment']
+            assert ret['result'] is True, ret['result']
+
+            # Run for real again, results should be the same as above (i.e. we
+            # should never get to the point where we exit with a None result).
+            ret = _run()
+            assert not ret['changes'], ret['changes']
+            assert 'already' in ret['comment'], ret['comment']
+            assert ret['result'] is True, ret['result']
+        finally:
+            try:
+                os.remove(fn_)
+            except OSError:
+                pass
