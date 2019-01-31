@@ -47,7 +47,7 @@ import salt.log.setup
 from salt.utils.odict import OrderedDict
 
 # Define the pytest plugins we rely on
-pytest_plugins = ['tempdir', 'helpers_namespace', 'salt-from-filenames']  # pylint: disable=invalid-name
+pytest_plugins = ['tempdir', 'helpers_namespace', 'salt-runtests-bridge']  # pylint: disable=invalid-name
 
 # Define where not to collect tests from
 collect_ignore = ['setup.py']
