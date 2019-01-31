@@ -70,6 +70,28 @@ ${StrStrAdv}
 !define MUI_ICON "salt.ico"
 !define MUI_UNICON "salt.ico"
 !define MUI_WELCOMEFINISHPAGE_BITMAP "panel.bmp"
+!define MUI_UNWELCOMEFINISHPAGE_BITMAP "panel.bmp"
+
+!if "${PYTHON_VERSION}" == "2"
+    !define MUI_WELCOMEPAGE_TEXT "\
+        WARNING: Python 2 Support will be discontinued in Sodium. Salt will only ship Python 3 \
+        installers after the Sodium release.$\r$\n\
+        $\r$\n\
+        Setup will guide you through the installation of ${PRODUCT_NAME} ${PRODUCT_VERSION}.$\r$\n\
+        $\r$\n\
+        It is recommended that you close all other applications before starting Setup. This will make it possible to \
+        update relevant system files without having to reboot your computer.$\r$\n\
+        $\r$\n\
+        Click Next to continue."
+!else
+    !define MUI_WELCOMEPAGE_TEXT "\
+        Setup will guide you through the installation of ${PRODUCT_NAME} ${PRODUCT_VERSION}.$\r$\n\
+        $\r$\n\
+        It is recommended that you close all other applications before starting Setup. This will make it possible to \
+        update relevant system files without having to reboot your computer.$\r$\n\
+        $\r$\n\
+        Click Next to continue."
+!endif
 
 # Welcome page
 !insertmacro MUI_PAGE_WELCOME
