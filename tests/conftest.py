@@ -72,7 +72,7 @@ from pytestsalt.utils import cli_scripts
 
 # Define the pytest plugins we rely on
 # pylint: disable=invalid-name
-pytest_plugins = ['tempdir', 'helpers_namespace', 'salt-from-filenames']
+pytest_plugins = ['tempdir', 'helpers_namespace', 'salt-runtests-bridge']
 
 # Define where not to collect tests from
 collect_ignore = ['setup.py']
