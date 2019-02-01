@@ -209,7 +209,7 @@ def orchestrate_high(data, test=None, queue=False, pillar=None, **kwargs):
 def orchestrate_show_sls(mods,
                          saltenv='base',
                          test=None,
-                         exclude=None,
+                         queue=False,
                          pillar=None,
                          pillarenv=None,
                          pillar_enc=None):
@@ -234,12 +234,12 @@ def orchestrate_show_sls(mods,
     minion = salt.minion.MasterMinion(__opts__)
     running = minion.functions['state.show_sls'](
         mods,
-        saltenv,
         test,
-        exclude,
+        queue,
         pillar=pillar,
         pillarenv=pillarenv,
-        pillar_enc=pillar_enc)
+        pillar_enc=pillar_enc,
+        saltenv=saltenv)
 
     ret = {minion.opts['id']: running}
     return ret
