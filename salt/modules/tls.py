@@ -563,6 +563,52 @@ def _read_cert(cert):
             return cert
 
 
+def validate(cert, ca_name, crl_file):
+    '''
+    .. versionadded:: Neon
+
+    Validate a certificate against a given CA/CRL.
+
+    cert
+        path to the certifiate PEM file or string
+
+    ca_name
+        name of the CA
+
+    crl_file
+        full path to the CRL file
+    '''
+    store = OpenSSL.crypto.X509Store()
+    cert_obj = _read_cert(cert)
+    if cert_obj is None:
+        raise CommandExecutionError(
+            'Failed to read cert from {0}, see log for details'.format(cert)
+        )
+    ca_dir = '{0}/{1}'.format(cert_base_path(), ca_name)
+    ca_cert = _read_cert('{0}/{1}_ca_cert.crt'.format(ca_dir, ca_name))
+    store.add_cert(ca_cert)
+    # These flags tell OpenSSL to check the leaf as well as the
+    # entire cert chain.
+    X509StoreFlags = OpenSSL.crypto.X509StoreFlags
+    store.set_flags(X509StoreFlags.CRL_CHECK | X509StoreFlags.CRL_CHECK_ALL)
+    if crl_file is None:
+        crl = OpenSSL.crypto.CRL()
+    else:
+        with salt.utils.files.fopen(crl_file) as fhr:
+            crl = OpenSSL.crypto.load_crl(OpenSSL.crypto.FILETYPE_PEM, fhr.read())
+    store.add_crl(crl)
+    context = OpenSSL.crypto.X509StoreContext(store, cert_obj)
+    ret = {}
+    try:
+        context.verify_certificate()
+        ret['valid'] = True
+    except OpenSSL.crypto.X509StoreContextError as e:
+        ret['error'] = str(e)
+        ret['error_cert'] = e.certificate
+        ret['valid'] = False
+    return ret
+
+
 def _get_expiration_date(cert):
     '''
     Returns a datetime.datetime object
