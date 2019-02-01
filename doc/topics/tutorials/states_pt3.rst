@@ -141,7 +141,7 @@ The following example illustrates calling the ``group_to_gid`` function in the
         - gid: {{ salt['file.group_to_gid']('some_group_that_exists') }}
 
 One way to think about this might be that the ``gid`` key is being assigned
-a value equivelent to the following python pseudo-code:
+a value equivalent to the following python pseudo-code:
 
 .. code-block:: python
 
