@@ -295,6 +295,20 @@ def expanded_dict_from_minion(minion_id, salt_data):
     return expanded_classes, pillars_dict, classes_list, states_list
 
 
+def pop_override_markers(b):
+    if isinstance(b, list):
+        if len(b) > 0 and b[0] == '^':
+            b.pop(0)
+        elif len(b) > 0 and b[0] == r'\^':
+            b[0] = '^'
+        for sub in b:
+            pop_override_markers(sub)
+    elif isinstance(b, dict):
+        for sub in b.values():
+            pop_override_markers(sub)
+    return b
+
+
 def get_pillars(minion_id, salt_data):
     # Get 2 dicts and 2 lists
     # expanded_classes: Full list of expanded dicts
@@ -312,7 +326,7 @@ def get_pillars(minion_id, salt_data):
     # Expand ${} variables in merged dict
     # pillars key shouldn't exist if we haven't found any minion_id ref
     if 'pillars' in pillars_dict:
-        pillars_dict_expanded = expand_variables(pillars_dict['pillars'], {}, [])
+        pillars_dict_expanded = expand_variables(pop_override_markers(pillars_dict['pillars']), {}, [])
     else:
         pillars_dict_expanded = expand_variables({}, {}, [])
 
