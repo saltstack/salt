@@ -12,10 +12,9 @@
              hostArchitectures="@CPUARCH@" />
     <domains enable_localSystem="true" />
     <!-- Define background image -->
-    <background file="logo.png"
+    <background file="saltstack.png"
                 mime-type="image/png"
-                scaling="proportional"
-                alignment="bottomleft" />
+                scaling="proportional" />
     <!-- Define documents displayed at various steps -->
     <welcome file="welcome@PY2@.rtf"
              mime-type="text/rtf" />
