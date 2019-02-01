@@ -1543,13 +1543,13 @@ def user_chpass(user,
     if salt.utils.data.is_true(allow_passwordless) and \
             salt.utils.data.is_true(unix_socket):
         if host == 'localhost':
+            args['unix_socket'] = 'auth_socket'
             if salt.utils.versions.version_cmp(server_version, '8.0.11') >= 0:
-                qry = "ALTER USER %(user)s@%(host)s IDENTIFIED BY %(password)s;"
+                qry = "ALTER USER %(user)s@%(host)s IDENTIFIED WITH %(unix_socket)s AS %(user)s;"
             else:
                 qry = ('UPDATE mysql.user SET ' + password_column + '='
                        + password_sql + ', plugin=%(unix_socket)s' +
                        ' WHERE User=%(user)s AND Host = %(host)s;')
-                args['unix_socket'] = 'unix_socket'
         else:
             log.error('Auth via unix_socket can be set only for host=localhost')
     try:
