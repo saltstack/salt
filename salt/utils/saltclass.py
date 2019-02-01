@@ -154,7 +154,11 @@ def find_and_process_re(_str, v, k, b, expanded):
                 expanded.append(k)
             else:
                 v_expanded = find_value_to_expand(b, re_str)
-                if isinstance(v, six.string_types):
+                # TODO: refactor is badly needed here!
+                if isinstance(v_expanded, list) or isinstance(v_expanded, dict):
+                    v_new = v_expanded
+                # Have no idea why do we need two variables of the same - _str and v
+                elif isinstance(v, six.string_types):
                     v_new = v.replace(re_str, v_expanded)
                 else:
                     v_new = _str.replace(re_str, v_expanded)
@@ -204,9 +208,6 @@ def expand_classes_in_order(minion_dict,
             # Fix corner case where class is loaded but doesn't contain anything
             if expanded_classes[klass] is None:
                 expanded_classes[klass] = {}
-
-            # Merge newly found pillars into existing ones
-            dict_merge(salt_data['__pillar__'], expanded_classes[klass].get('pillars', {}))
 
             # Now replace class element in classes_to_expand by expansion
             if expanded_classes[klass].get('classes'):
