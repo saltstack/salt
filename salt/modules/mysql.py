@@ -1533,23 +1533,18 @@ def user_chpass(user,
         password_column = __password_column(**connection_args)
 
     cur = dbc.cursor()
+    args['user'] = user
+    args['host'] = host
     if salt.utils.versions.version_cmp(server_version, '8.0.11') >= 0:
-        qry = ("ALTER USER '" + user + "'@'" + host + "'"
-               " IDENTIFIED BY '" + password + "';")
-        args = {}
+        qry = "ALTER USER %(user)s@%(host)s IDENTIFIED BY %(password)s;"
     else:
-        qry = ('UPDATE mysql.user SET ' + password_column + '='
-               + password_sql +
+        qry = ('UPDATE mysql.user SET ' + password_column + '=' + password_sql +
                ' WHERE User=%(user)s AND Host = %(host)s;')
-        args['user'] = user
-        args['host'] = host
     if salt.utils.data.is_true(allow_passwordless) and \
             salt.utils.data.is_true(unix_socket):
         if host == 'localhost':
             if salt.utils.versions.version_cmp(server_version, '8.0.11') >= 0:
-                qry = ("ALTER USER '" + user + "'@'" + host + "'"
-                       " IDENTIFIED BY '" + password + "';")
-                args = {}
+                qry = "ALTER USER %(user)s@%(host)s IDENTIFIED BY %(password)s;"
             else:
                 qry = ('UPDATE mysql.user SET ' + password_column + '='
                        + password_sql + ', plugin=%(unix_socket)s' +
