@@ -2116,7 +2116,7 @@ def managed(name,
     attrs
         The attributes to have on this file, e.g. ``a``, ``i``. The attributes
         can be any or a combination of the following characters:
-        ``acdijstuADST``.
+        ``aAcCdDeijPsStTu``.
 
         .. note::
             This option is **not** supported on Windows.
