@@ -425,13 +425,13 @@ def owner(*paths):
 @salt.utils.decorators.path.which('rpm2cpio')
 @salt.utils.decorators.path.which('cpio')
 @salt.utils.decorators.path.which('diff')
-def diff(package, path):
+def diff(package_path, path):
     '''
     Return a formatted diff between current file and original in a package.
     NOTE: this function includes all files (configuration and not), but does
     not work on binary content.
 
-    :param package: The name of the package
+    :param package: Full pack of the RPM file
     :param path: Full path to the installed file
     :return: Difference or empty string. For binary files only a notification.
 
@@ -439,13 +439,13 @@ def diff(package, path):
 
     .. code-block:: bash
 
-        salt '*' lowpkg.diff apache2 /etc/apache2/httpd.conf
+        salt '*' lowpkg.diff /path/to/apache2.rpm /etc/apache2/httpd.conf
     '''
 
     cmd = "rpm2cpio {0} " \
           "| cpio -i --quiet --to-stdout .{1} " \
           "| diff -u --label 'A {1}' --from-file=- --label 'B {1}' {1}"
-    res = __salt__['cmd.shell'](cmd.format(package, path),
+    res = __salt__['cmd.shell'](cmd.format(package_path, path),
                                 output_loglevel='trace')
     if res and res.startswith('Binary file'):
         return 'File \'{0}\' is binary and its content has been ' \
