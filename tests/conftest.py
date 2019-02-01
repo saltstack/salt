@@ -174,6 +174,18 @@ def pytest_addoption(parser):
         action='store_true',
         help='Disable colour printing.'
     )
+
+    # ----- Test Groups --------------------------------------------------------------------------------------------->
+    # This will allow running the tests in chunks
+    test_selection_group.addoption(
+        '--test-group-count', dest='test-group-count', type=int,
+        help='The number of groups to split the tests into'
+    )
+    test_selection_group.addoption(
+        '--test-group', dest='test-group', type=int,
+        help='The group of tests that should be executed'
+    )
+    # <---- Test Groups ----------------------------------------------------------------------------------------------
 # <---- CLI Options Setup --------------------------------------------------------------------------------------------
 
 
@@ -412,6 +424,66 @@ def pytest_runtest_setup(item):
             else:
                 pytest.skip('No internet network connection was detected')
 # <---- Test Setup ---------------------------------------------------------------------------------------------------
+
+
+# ----- Test Groups Selection --------------------------------------------------------------------------------------->
+def get_group_size(total_items, total_groups):
+    '''
+    Return the group size.
+    '''
+    return int(total_items / total_groups)
+
+
+def get_group(items, group_count, group_size, group_id):
+    '''
+    Get the items from the passed in group based on group size.
+    '''
+    start = group_size * (group_id - 1)
+    end = start + group_size
+    total_items = len(items)
+
+    if start >= total_items:
+        pytest.fail("Invalid test-group argument. start({})>=total_items({})".format(start, total_items))
+    elif start < 0:
+        pytest.fail("Invalid test-group argument. Start({})<0".format(start))
+
+    if group_count == group_id and end < total_items:
+        # If this is the last group and there are still items to test
+        # which don't fit in this group based on the group items count
+        # add them anyway
+        end = total_items
+
+    return items[start:end]
+
+
+@pytest.hookimpl(hookwrapper=True, tryfirst=True)
+def pytest_collection_modifyitems(config, items):
+    # Let PyTest or other plugins handle the initial collection
+    yield
+
+    group_count = config.getoption('test-group-count')
+    group_id = config.getoption('test-group')
+
+    if not group_count or not group_id:
+        # We're not selection tests using groups, don't do any filtering
+        return
+
+    total_items = len(items)
+
+    group_size = get_group_size(total_items, group_count)
+    tests_in_group = get_group(items, group_count, group_size, group_id)
+    # Replace all items in the list
+    items[:] = tests_in_group
+
+    terminal_reporter = config.pluginmanager.get_plugin('terminalreporter')
+    terminal_reporter.write(
+        'Running test group #{0} ({1} tests)\n'.format(
+            group_id,
+            len(items)
+        ),
+        yellow=True
+    )
+# <---- Test Groups Selection ----------------------------------------------------------------------------------------
 
 
 # ----- Pytest Helpers ---------------------------------------------------------------------------------------------->
