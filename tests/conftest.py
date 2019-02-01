@@ -463,32 +463,6 @@ def pytest_runtest_setup(item):
 # <---- Test Setup ---------------------------------------------------------------------------------------------------
 
 
-# ----- Automatic Markers Setup ------------------------------------------------------------------------------------->
-def pytest_collection_modifyitems(items):
-    '''
-    Automatically add markers to tests based on directory layout
-    '''
-    for item in items:
-        fspath = str(item.fspath)
-        if '/integration/' in fspath:
-            item.add_marker(pytest.mark.integration)
-            for kind in ('cli', 'client', 'cloud', 'fileserver', 'loader', 'minion', 'modules',
-                         'netapi', 'output', 'reactor', 'renderers', 'runners', 'sdb', 'shell',
-                         'ssh', 'states', 'utils', 'wheel'):
-                if '/{0}/'.format(kind) in fspath:
-                    item.add_marker(getattr(pytest.mark, kind))
-                    break
-        if '/unit/' in fspath:
-            item.add_marker(pytest.mark.unit)
-            for kind in ('acl', 'beacons', 'cli', 'cloud', 'config', 'grains', 'modules', 'netapi',
-                         'output', 'pillar', 'renderers', 'runners', 'serializers', 'states',
-                         'templates', 'transport', 'utils'):
-                if '/{0}/'.format(kind) in fspath:
-                    item.add_marker(getattr(pytest.mark, kind))
-                    break
-# <---- Automatic Markers Setup --------------------------------------------------------------------------------------
-
-
 # ----- Pytest Helpers ---------------------------------------------------------------------------------------------->
 if six.PY2:
     # backport mock_open from the python 3 unittest.mock library so that we can
