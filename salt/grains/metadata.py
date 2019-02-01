@@ -53,6 +53,11 @@ def _search(prefix="latest/"):
         return ret
     if linedata['headers'].get('Content-Type', 'text/plain') == 'application/octet-stream':
         return linedata['body']
+    if prefix == 'latest/user-data/':
+        # The user-data field never has subdirectories
+        # and the content-type isn't discriminant
+        # (prefix always has a trailing / because of the condition below)
+        return linedata['body']
     for line in linedata['body'].split('\n'):
         if line.endswith('/'):
             ret[line[:-1]] = _search(prefix=os.path.join(prefix, line))
