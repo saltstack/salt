@@ -116,6 +116,7 @@ def _get_instance(hosts=None, profile=None):
         hosts = ['127.0.0.1:9200']
     if isinstance(hosts, six.string_types):
         hosts = [hosts]
+    print(_profile) 
     try:
         if proxies:
             # Custom connection class to use requests module with proxies
