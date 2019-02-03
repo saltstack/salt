@@ -14,6 +14,7 @@ from salt.utils.odict import OrderedDict
 import salt.utils.dns
 from salt.utils.dns import _to_port, _tree, _weighted_order, _data2rec, _data2rec_group
 from salt.utils.dns import _lookup_gai, _lookup_dig, _lookup_drill, _lookup_host, _lookup_nslookup
+import salt.modules.cmdmod
 
 # Testing
 from tests.support.unit import skipIf, TestCase
@@ -276,6 +277,12 @@ class DNSlookupsCase(TestCase):
                         lookup_cb('mocksrvr.example.com', rec_t, secure=True), test_res,
                         msg='Error parsing DNSSEC\'d {0} returns'.format(rec_t)
                     )
+
+    @skipIf(not salt.utils.dns.HAS_DIG, 'dig is not available')
+    def test_dig_options(self):
+        cmd = 'dig {0}'.format(salt.utils.dns.DIG_OPTIONS)
+        cmd = salt.modules.cmdmod.retcode(cmd, python_shell=False, output_loglevel='quiet')
+        self.assertEqual(cmd, 0)
 
     def test_dig(self):
         wrong_type = {'retcode': 0, 'stderr':  ';; Warning, ignoring invalid type ABC'}
