@@ -152,13 +152,13 @@ def get(key, profile=None):
 
 def delete(key, profile=None):
     '''
-    Delete a value from sqlite3
+    Delete a key/value pair from sqlite3
     '''
     if not profile:
         return None
     conn, cur, table = _connect(profile)
     q = profile.get('delete_query', ('DELETE FROM {0} WHERE '
-                                  'key=:key'.format(table)))
+                                     'key=:key'.format(table)))
     res = cur.execute(q, {'key': key})
     conn.commit()
     return cur.rowcount
