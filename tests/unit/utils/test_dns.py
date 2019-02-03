@@ -280,7 +280,7 @@ class DNSlookupsCase(TestCase):
 
     @skipIf(not salt.utils.dns.HAS_DIG, 'dig is not available')
     def test_dig_options(self):
-        cmd = 'dig {0}'.format(salt.utils.dns.DIG_OPTIONS)
+        cmd = 'dig {0} -v'.format(salt.utils.dns.DIG_OPTIONS)
         cmd = salt.modules.cmdmod.retcode(cmd, python_shell=False, output_loglevel='quiet')
         self.assertEqual(cmd, 0)
 
