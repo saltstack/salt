@@ -25,11 +25,15 @@ Note :
 It doesn't check the owner of the file.
 If the file is not readable by salt on the master, you should make salt the owner.
 '''
+
+# Import Python Libs
 import re
 import os
 import random
 from stat import ST_MODE
 
+# Import Salt libs
+import salt.utils.files
 
 def __virtual__():
     return True
@@ -37,7 +41,7 @@ def __virtual__():
 
 def clean_file(filename):
     content = ""
-    with salt.utils.fopen(filename) as file:
+    with salt.utils.files.fopen(filename) as file:
         for line in file:
             if re.search(r'^\s*#.*?$', line):  # Commentary
                 pass
