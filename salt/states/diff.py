@@ -30,8 +30,10 @@ import os
 import random
 from stat import *
 
+
 def __virtual__():
     return True
+
 
 def clean_file(filename):
     content = ""
@@ -46,6 +48,7 @@ def clean_file(filename):
                 line = re.sub(' +', ' ', line)  # multispaces replaced
                 content += line
     return content.strip('\n\n')
+
 
 def diff_file(name, file1, file2, content=True, change=False):
     '''
@@ -91,7 +94,7 @@ def diff_file(name, file1, file2, content=True, change=False):
                     return_dict['comment'] = comments
                     return return_dict 
             else:
-                comments  += "\nCouldn't copy the file. Maybe it doesn't exist on the master or the permissions don't allow salt to copy it."
+                comments += "\nCouldn't copy the file. Maybe it doesn't exist on the master or the permissions don't allow salt to copy it."
                 return_dict['comment'] = comments
                 return return_dict 
         else:
@@ -100,7 +103,7 @@ def diff_file(name, file1, file2, content=True, change=False):
     # CHECKING THE PERMISSION OF THE FILE
     # ------------------------------------
 
-    randFile = random.randint(0,999999)
+    randFile = random.randint(0, 999999)
     ret = __states__['file.managed'](name='/tmp/salt_' + str(randFile), source=file1, mode='keep')
     if ret['result']:
         permissions1 = oct(os.stat('/tmp/salt_' + str(randFile))[ST_MODE])[-4:]
@@ -122,7 +125,6 @@ def diff_file(name, file1, file2, content=True, change=False):
         comments += "\nCouldn't copy the file. Maybe it doesn't exist on the master or the permissions don't allow salt to copy it."
         return_dict['comment'] = comments
         return return_dict
-
 
     # CHECKING THE CONTENT OF THE FILE
     # ---------------------------------
