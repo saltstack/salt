@@ -18,7 +18,7 @@ from tests.support.mock import (
     MagicMock,
     patch)
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
-from tests.support.paths import BASE_FILES
+from tests.support.runtests import RUNTIME_VARS
 
 # Import Salt libs
 import salt.exceptions
@@ -211,7 +211,7 @@ class HighStateTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         '''
         sls_dir = 'issue-47182'
         shutil.copytree(
-            os.path.join(BASE_FILES, sls_dir),
+            os.path.join(RUNTIME_VARS.BASE_FILES, sls_dir),
             os.path.join(self.state_tree_dir, sls_dir)
         )
         shutil.move(
