@@ -37,9 +37,9 @@ def __virtual__():
 
 def clean_file(filename):
     content = ""
-    with open(filename) as file:
+    with salt.utils.fopen(filename) as file:
         for line in file:
-            if re.search('^\s*#.*?$', line):  # Commentary
+            if re.search(r'^\s*#.*?$', line):  # Commentary
                 pass
             elif re.match(r'^\s*$', line):  # empty line
                 pass
@@ -97,7 +97,7 @@ def diff_file(file1, file2, content=True, change=False):
                 return return_dict
         else:
             return return_dict
-        
+
     # CHECKING THE PERMISSION OF THE FILE
     # ------------------------------------
 
