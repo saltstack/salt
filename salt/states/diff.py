@@ -27,6 +27,7 @@ If the file is not readable by salt on the master, you should make salt the owne
 '''
 
 # Import Python Libs
+from __future__ import absolute_import
 import re
 import os
 import random
