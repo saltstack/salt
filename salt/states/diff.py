@@ -35,6 +35,7 @@ from stat import ST_MODE
 # Import Salt libs
 import salt.utils.files
 
+
 def __virtual__():
     return True
 
