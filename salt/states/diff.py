@@ -145,7 +145,7 @@ def diff_file(file1, file2, content=True, change=False):
         return_dict['result'] = True
     elif same_permissions and content is False:
         return_dict['result'] = True
-        else:
+    else:
         if change:
             if same_content is False and content is True:
                 ret = os.system('cp -p /tmp/salt_' + str(rand_file) + ' ' + file2)
