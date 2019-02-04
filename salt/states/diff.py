@@ -28,7 +28,7 @@ If the file is not readable by salt on the master, you should make salt the owne
 import re
 import os
 import random
-from stat import *
+from stat import ST_MODE
 
 
 def __virtual__():
@@ -37,8 +37,8 @@ def __virtual__():
 
 def clean_file(filename):
     content = ""
-    with open(filename) as f:
-        for line in f:
+    with open(filename) as file:
+        for line in file:
             if re.search('^\s*#.*?$', line):  # Commentary
                 pass
             elif re.match(r'^\s*$', line):  # empty line
@@ -50,7 +50,7 @@ def clean_file(filename):
     return content.strip('\n\n')
 
 
-def diff_file(name, file1, file2, content=True, change=False):
+def diff_file(file1, file2, content=True, change=False):
     '''
     1) Checking if the file exists.
     2) Checking if the permissions are the same.
@@ -74,41 +74,39 @@ def diff_file(name, file1, file2, content=True, change=False):
     # CHECKING IF THE FILE EXISTS
     # ----------------------------
 
-    if os.path.isfile(file2):
-        file_ok = True
-    else:
-        file_ok = False
+    if not os.path.isfile(file2):
         comments += "File doesn't exist (" + file2 + ")."
         return_dict['comment'] = comments
         if change:
-            randFile = random.randint(0, 999999)
-            ret = __states__['file.managed'](name='/tmp/salt_' + str(randFile), source=file1, mode='keep')
+            rand_file = random.randint(0, 999999)
+            ret = __states__['file.managed'](name='/tmp/salt_' + str(rand_file), source=file1, mode='keep')
             if ret['result']:
-                ret = os.system('cp -p /tmp/salt_' + str(randFile) + ' ' + file2)
+                ret = os.system('cp -p /tmp/salt_' + str(rand_file) + ' ' + file2)
                 if ret == 0:
                     comments += "\nFile copied."
                     return_dict['comment'] = comments
-                    return return_dict 
+            #        return return_dict
                 else:
                     comments += "\nCouldn't copy the file."
                     return_dict['comment'] = comments
-                    return return_dict 
+            #        return return_dict
+                return return_dict
             else:
                 comments += "\nCouldn't copy the file. Maybe it doesn't exist on the master or the permissions don't allow salt to copy it."
                 return_dict['comment'] = comments
-                return return_dict 
+                return return_dict
         else:
             return return_dict
-
+        
     # CHECKING THE PERMISSION OF THE FILE
     # ------------------------------------
 
-    randFile = random.randint(0, 999999)
-    ret = __states__['file.managed'](name='/tmp/salt_' + str(randFile), source=file1, mode='keep')
+    rand_file = random.randint(0, 999999)
+    ret = __states__['file.managed'](name='/tmp/salt_' + str(rand_file), source=file1, mode='keep')
     if ret['result']:
-        permissions1 = oct(os.stat('/tmp/salt_' + str(randFile))[ST_MODE])[-4:]
+        permissions1 = oct(os.stat('/tmp/salt_' + str(rand_file))[ST_MODE])[-4:]
         permissions2 = oct(os.stat(file2)[ST_MODE])[-4:]
-        
+
         if permissions1 == permissions2:
             same_permissions = True
             comments += "File's permissions are the same."
@@ -130,7 +128,7 @@ def diff_file(name, file1, file2, content=True, change=False):
     # ---------------------------------
 
     if content is True:
-        file1_content = clean_file('/tmp/salt_' + str(randFile))
+        file1_content = clean_file('/tmp/salt_' + str(rand_file))
         file2_content = clean_file(file2)
         if file1_content == file2_content:
             same_content = True
@@ -147,10 +145,10 @@ def diff_file(name, file1, file2, content=True, change=False):
         return_dict['result'] = True
     elif same_permissions and content is False:
         return_dict['result'] = True
-    else: 
-        if change: 
+        else:
+        if change:
             if same_content is False and content is True:
-                ret = os.system('cp -p /tmp/salt_' + str(randFile) + ' ' + file2)
+                ret = os.system('cp -p /tmp/salt_' + str(rand_file) + ' ' + file2)
                 if ret == 0:
                     comments += "\nFile changed as requested."
                 else:
@@ -162,7 +160,7 @@ def diff_file(name, file1, file2, content=True, change=False):
                 else:
                     comments += '\nPermissions modified.'
 
-    os.remove('/tmp/salt_' + str(randFile))
+    os.remove('/tmp/salt_' + str(rand_file))
     return_dict['comment'] = comments
-    
+
     return return_dict
