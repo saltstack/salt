@@ -701,6 +701,19 @@ def _get_size_spec(device, size_gb=None, size_kb=None):
     return disk_spec
 
 
+def _iter_disk_unit_number(unit_number):
+    '''
+    Apparently vmware reserves ID 7 for SCSI controllers, so we cannot specify
+    hard drives for 7.
+
+    Skip 7 to make sure.
+    '''
+    unit_number += 1
+    if unit_number == 7:
+        unit_number += 1
+    return unit_number
+
+
 def _manage_devices(devices, vm=None, container_ref=None, new_vm_name=None):
     unit_number = 0
     bus_number = 0
@@ -722,7 +735,7 @@ def _manage_devices(devices, vm=None, container_ref=None, new_vm_name=None):
                 # this is a hard disk
                 if 'disk' in list(devices.keys()):
                     # there is atleast one disk specified to be created/configured
-                    unit_number += 1
+                    unit_number = _iter_disk_unit_number(unit_number)
                     existing_disks_label.append(device.deviceInfo.label)
                     if device.deviceInfo.label in list(devices['disk'].keys()):
                         disk_spec = None
@@ -899,7 +912,7 @@ def _manage_devices(devices, vm=None, container_ref=None, new_vm_name=None):
                         break
 
             device_specs.append(disk_spec)
-            unit_number += 1
+            unit_number = _iter_disk_unit_number(unit_number)
 
     if 'cd' in list(devices.keys()):
         cd_drives_to_create = list(set(devices['cd'].keys()) - set(existing_cd_drives_label))
@@ -2876,7 +2889,8 @@ def create(vm_):
         log.debug('config_spec set to:\n%s', pprint.pformat(config_spec))
 
     event_kwargs = vm_.copy()
-    del event_kwargs['password']
+    if event_kwargs.get('password'):
+        del event_kwargs['password']
 
     try:
         __utils__['cloud.fire_event'](
@@ -3066,7 +3080,7 @@ def create_datacenter(kwargs=None, call=None):
             'You must specify name of the new datacenter to be created.'
         )
 
-    if len(datacenter_name) >= 80 or len(datacenter_name) <= 0:
+    if not datacenter_name or len(datacenter_name) >= 80:
         raise SaltCloudSystemExit(
             'The datacenter name must be a non empty string of less than 80 characters.'
         )
@@ -4360,7 +4374,7 @@ def reboot_host(kwargs=None, call=None):
             'Specified host system does not support reboot.'
         )
 
-    if not host_ref.runtime.inMaintenanceMode:
+    if not host_ref.runtime.inMaintenanceMode and not force:
         raise SaltCloudSystemExit(
             'Specified host system is not in maintenance mode. Specify force=True to '
             'force reboot even if there are virtual machines running or other operations '
@@ -4406,7 +4420,7 @@ def create_datastore_cluster(kwargs=None, call=None):
             'You must specify name of the new datastore cluster to be created.'
         )
 
-    if len(datastore_cluster_name) >= 80 or len(datastore_cluster_name) <= 0:
+    if not datastore_cluster_name or len(datastore_cluster_name) >= 80:
         raise SaltCloudSystemExit(
             'The datastore cluster name must be a non empty string of less than 80 characters.'
         )
@@ -4442,3 +4456,73 @@ def create_datastore_cluster(kwargs=None, call=None):
         return False
 
     return {datastore_cluster_name: 'created'}
+
+
+def shutdown_host(kwargs=None, call=None):
+    '''
+    Shut down the specified host system in this VMware environment
+
+    .. note::
+
+        If the host system is not in maintenance mode, it will not be shut down. If you
+        want to shut down the host system regardless of whether it is in maintenance mode,
+        set ``force=True``. Default is ``force=False``.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f shutdown_host my-vmware-config host="myHostSystemName" [force=True]
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The shutdown_host function must be called with '
+            '-f or --function.'
+        )
+
+    host_name = kwargs.get('host') if kwargs and 'host' in kwargs else None
+    force = _str_to_bool(kwargs.get('force')) if kwargs and 'force' in kwargs else False
+
+    if not host_name:
+        raise SaltCloudSystemExit(
+            'You must specify name of the host system.'
+        )
+
+    # Get the service instance
+    si = _get_si()
+
+    host_ref = salt.utils.vmware.get_mor_by_property(si, vim.HostSystem, host_name)
+    if not host_ref:
+        raise SaltCloudSystemExit(
+            'Specified host system does not exist.'
+        )
+
+    if host_ref.runtime.connectionState == 'notResponding':
+        raise SaltCloudSystemExit(
+            'Specified host system cannot be shut down in it\'s current state (not responding).'
+        )
+
+    if not host_ref.capability.rebootSupported:
+        raise SaltCloudSystemExit(
+            'Specified host system does not support shutdown.'
+        )
+
+    if not host_ref.runtime.inMaintenanceMode and not force:
+        raise SaltCloudSystemExit(
+            'Specified host system is not in maintenance mode. Specify force=True to '
+            'force reboot even if there are virtual machines running or other operations '
+            'in progress.'
+        )
+
+    try:
+        host_ref.ShutdownHost_Task(force)
+    except Exception as exc:
+        log.error(
+            'Error while shutting down host %s: %s',
+            host_name, exc,
+            # Show the traceback if the debug logging level is enabled
+            exc_info_on_loglevel=logging.DEBUG
+        )
+        return {host_name: 'failed to shut down host'}
+
+    return {host_name: 'shut down host'}

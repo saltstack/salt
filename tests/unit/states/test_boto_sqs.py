@@ -25,9 +25,8 @@ class BotoSqsTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         utils = salt.loader.utils(
             self.opts,
-            whitelist=['boto3', 'yaml'],
-            context={}
-        )
+            whitelist=['boto3', 'yaml', 'args', 'systemd', 'path', 'platform'],
+            context={})
         return {
             boto_sqs: {
                 '__utils__': utils,
@@ -36,7 +35,7 @@ class BotoSqsTestCase(TestCase, LoaderModuleMockMixin):
 
     @classmethod
     def setUpClass(cls):
-        cls.opts = salt.config.DEFAULT_MINION_OPTS
+        cls.opts = salt.config.DEFAULT_MINION_OPTS.copy()
 
     @classmethod
     def tearDownClass(cls):
@@ -75,7 +74,7 @@ class BotoSqsTestCase(TestCase, LoaderModuleMockMixin):
                 ret.update({
                     'result': None,
                     'comment': comt,
-                    'pchanges': {'old': None, 'new': 'mysqs'},
+                    'changes': {'old': None, 'new': 'mysqs'},
                 })
                 self.assertDictEqual(boto_sqs.present(name), ret)
                 diff = textwrap.dedent('''\
@@ -102,7 +101,7 @@ class BotoSqsTestCase(TestCase, LoaderModuleMockMixin):
                 ]
                 ret.update({
                     'comment': comt,
-                    'pchanges': {'attributes': {'diff': diff}},
+                    'changes': {'attributes': {'diff': diff}},
                 })
                 self.assertDictEqual(boto_sqs.present(name, attributes), ret)
 
@@ -134,6 +133,6 @@ class BotoSqsTestCase(TestCase, LoaderModuleMockMixin):
                 ret.update({
                     'result': None,
                     'comment': comt,
-                    'pchanges': {'old': name, 'new': None},
+                    'changes': {'old': name, 'new': None},
                 })
                 self.assertDictEqual(boto_sqs.absent(name), ret)

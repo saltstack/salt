@@ -308,6 +308,74 @@ class WinFunctionsTestCase(TestCase):
             win_reg.delete_key_recursive(hive='HKLM', key=FAKE_KEY)
 
     @destructiveTest
+    def test_set_value_reg_dword(self):
+        '''
+        Test the set_value function on a unicode value
+        '''
+        try:
+            self.assertTrue(
+                win_reg.set_value(
+                    hive='HKLM',
+                    key=FAKE_KEY,
+                    vname='dword_value',
+                    vdata=123,
+                    vtype='REG_DWORD'
+                )
+            )
+            expected = {
+                'hive': 'HKLM',
+                'key': FAKE_KEY,
+                'success': True,
+                'vdata': 123,
+                'vname': 'dword_value',
+                'vtype': 'REG_DWORD'
+            }
+            self.assertEqual(
+                win_reg.read_value(
+                    hive='HKLM',
+                    key=FAKE_KEY,
+                    vname='dword_value'
+                ),
+                expected
+            )
+        finally:
+            win_reg.delete_key_recursive(hive='HKLM', key=FAKE_KEY)
+
+    @destructiveTest
+    def test_set_value_reg_qword(self):
+        '''
+        Test the set_value function on a unicode value
+        '''
+        try:
+            self.assertTrue(
+                win_reg.set_value(
+                    hive='HKLM',
+                    key=FAKE_KEY,
+                    vname='qword_value',
+                    vdata=123,
+                    vtype='REG_QWORD'
+                )
+            )
+            expected = {
+                'hive': 'HKLM',
+                'key': FAKE_KEY,
+                'success': True,
+                'vdata': 123,
+                'vname': 'qword_value',
+                'vtype': 'REG_QWORD'
+            }
+            self.assertEqual(
+                win_reg.read_value(
+                    hive='HKLM',
+                    key=FAKE_KEY,
+                    vname='qword_value'
+                ),
+                expected
+            )
+        finally:
+            win_reg.delete_key_recursive(hive='HKLM', key=FAKE_KEY)
+
+    @destructiveTest
     def test_delete_value(self):
         '''
         Test the delete_value function

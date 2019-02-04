@@ -36,6 +36,7 @@ import salt.utils.zeromq
 import salt.syspaths
 import salt.exceptions
 import salt.defaults.exitcodes
+import salt.utils.immutabletypes as immutabletypes
 
 try:
     import psutil
@@ -89,9 +90,10 @@ def _gather_buffer_space():
         # We need to load up ``mem_total`` grain. Let's mimic required OS data.
         os_data = {'kernel': platform.system()}
         grains = salt.grains.core._memdata(os_data)
-        total_mem = grains['mem_total']
+        total_mem = grains['mem_total'] * 1024 * 1024
     # Return the higher number between 5% of the system memory and 10MiB
     return max([total_mem * 0.05, 10 << 20])
+
 
 # For the time being this will be a fixed calculation
 # TODO: Allow user configuration
@@ -99,11 +101,7 @@ _DFLT_IPC_WBUFFER = _gather_buffer_space() * .5
 # TODO: Reserved for future use
 _DFLT_IPC_RBUFFER = _gather_buffer_space() * .5
 
-FLO_DIR = os.path.join(
-        os.path.dirname(os.path.dirname(__file__)),
-        'daemons', 'flo')
-
-VALID_OPTS = {
+VALID_OPTS = immutabletypes.freeze({
     # The address of the salt master. May be specified as IP address or hostname
     'master': (six.string_types, list),
 
@@ -135,7 +133,7 @@ VALID_OPTS = {
     # a master fingerprint with `salt-key -F master`
     'master_finger': six.string_types,
 
-    # Deprecated in Fluorine. Use 'random_master' instead.
+    # Deprecated in 2019.2.0. Use 'random_master' instead.
     # Do not remove! Keep as an alias for usability.
     'master_shuffle': bool,
 
@@ -374,7 +372,7 @@ VALID_OPTS = {
     'ipc_mode': six.string_types,
 
     # Enable ipv6 support for daemons
-    'ipv6': bool,
+    'ipv6': (type(None), bool),
 
     # The chunk size to use when streaming files with the file server
     'file_buffer_size': int,
@@ -437,7 +435,7 @@ VALID_OPTS = {
     # If an event is above this size, it will be trimmed before putting it on the event bus
     'max_event_size': int,
 
-    # Enable old style events to be sent on minion_startup. Change default to False in Neon release
+    # Enable old style events to be sent on minion_startup. Change default to False in Sodium release
     'enable_legacy_startup_events': bool,
 
     # Always execute states with test=True if this flag is set
@@ -445,6 +443,9 @@ VALID_OPTS = {
 
     # Tell the loader to attempt to import *.pyx cython files if cython is available
     'cython_enable': bool,
+
+    # Whether or not to load grains for the GPU
+    'enable_gpu_grains': bool,
 
     # Tell the loader to attempt to import *.zip archives
     'enable_zip_modules': bool,
@@ -454,6 +455,9 @@ VALID_OPTS = {
 
     # Tell the client to display the jid when a job is published
     'show_jid': bool,
+
+    # Generate jids based on UTC time instead of local time
+    'utc_jid': bool,
 
     # Ensure that a generated jid is always unique. If this is set, the jid
     # format is different due to an underscore and process id being appended
@@ -519,6 +523,7 @@ VALID_OPTS = {
     # The number of seconds to sleep between retrying an attempt to resolve the hostname of a
     # salt master
     'retry_dns': float,
+    'retry_dns_count': (type(None), int),
 
     # In the case when the resolve of the salt master hostname fails, fall back to localhost
     'resolve_dns_fallback': bool,
@@ -593,6 +598,15 @@ VALID_OPTS = {
     # IPC buffer size
     # Refs https://github.com/saltstack/salt/issues/34215
     'ipc_write_buffer': int,
+
+    # IPC tcp socket max send buffer
+    'ipc_so_sndbuf': (type(None), int),
+
+    # IPC tcp socket max receive buffer
+    'ipc_so_rcvbuf': (type(None), int),
+
+    # IPC tcp socket backlog size
+    'ipc_so_backlog': (type(None), int),
 
     # The number of MWorker processes for a master to startup. This number needs to scale up as
     # the number of connected minions increases.
@@ -915,6 +929,9 @@ VALID_OPTS = {
     # Set a hard limit for the amount of memory modules can consume on a minion.
     'modules_max_memory': int,
 
+    # Blacklist specific core grains to be filtered
+    'grains_blacklist': list,
+
     # The number of minutes between the minion refreshing its cache of grains
     'grains_refresh_every': int,
 
@@ -944,13 +961,16 @@ VALID_OPTS = {
     # Always generate minion id in lowercase.
     'minion_id_lowercase': bool,
 
+    # Remove either a single domain (foo.org), or all (True) from a generated minion id.
+    'minion_id_remove_domain': (six.string_types, bool),
+
     # If set, the master will sign all publications before they are sent out
     'sign_pub_messages': bool,
 
     # The size of key that should be generated when creating new keys
     'keysize': int,
 
-    # The transport system for this daemon. (i.e. zeromq, raet, etc)
+    # The transport system for this daemon. (i.e. zeromq, tcp, detect, etc)
     'transport': six.string_types,
 
     # The number of seconds to wait when the client is requesting information about running jobs
@@ -1000,31 +1020,8 @@ VALID_OPTS = {
     'ssh_config_file': six.string_types,
     'ssh_merge_pillar': bool,
 
-    # Enable ioflo verbose logging. Warning! Very verbose!
-    'ioflo_verbose': int,
-
-    'ioflo_period': float,
-
-    # Set ioflo to realtime. Useful only for testing/debugging to simulate many ioflo periods very
-    # quickly
-    'ioflo_realtime': bool,
-
-    # Location for ioflo logs
-    'ioflo_console_logdir': six.string_types,
-
-    # The port to bind to when bringing up a RAET daemon
-    'raet_port': int,
-    'raet_alt_port': int,
-    'raet_mutable': bool,
-    'raet_main': bool,
-    'raet_clear_remotes': bool,
-    'raet_clear_remote_masters': bool,
-    'raet_road_bufcnt': int,
-    'raet_lane_bufcnt': int,
     'cluster_mode': bool,
-    'cluster_masters': list,
     'sqlite_queue_dir': six.string_types,
-
     'queue_dirs': list,
 
     # Instructs the minion to ping its master(s) every n number of minutes. Used
@@ -1054,9 +1051,6 @@ VALID_OPTS = {
 
     # Can be set to override the python_shell=False default in the cmd module
     'cmd_safe': bool,
-
-    # Used strictly for performance testing in RAET.
-    'dummy_publisher': bool,
 
     # Used by salt-api for master requests timeout
     'rest_timeout': int,
@@ -1092,6 +1086,9 @@ VALID_OPTS = {
     # Whether or not a minion should send the results of a command back to the master
     # Useful when a returner is the source of truth for a job result
     'pub_ret': bool,
+
+    # HTTP request settings. Used in tornado fetch functions
+    'user_agent': six.string_types,
 
     # HTTP proxy settings. Used in tornado fetch functions, apt-key etc
     'proxy_host': six.string_types,
@@ -1207,10 +1204,17 @@ VALID_OPTS = {
 
     # Thorium top file location
     'thorium_top': six.string_types,
-}
+
+    # Use Adler32 hashing algorithm for server_id (default False until Sodium, "adler32" after)
+    # Possible values are: False, adler32, crc32
+    'server_id_use_crc': (bool, six.string_types),
+
+    # Disable requisites during State runs
+    'disabled_requisites': (six.string_types, list),
+})
 
 # default configurations
-DEFAULT_MINION_OPTS = {
+DEFAULT_MINION_OPTS = immutabletypes.freeze({
     'interface': '0.0.0.0',
     'master': 'salt',
     'master_type': 'str',
@@ -1238,6 +1242,7 @@ DEFAULT_MINION_OPTS = {
     'cachedir': os.path.join(salt.syspaths.CACHE_DIR, 'minion'),
     'append_minionid_config_dirs': [],
     'cache_jobs': False,
+    'grains_blacklist': [],
     'grains_cache': False,
     'grains_cache_expiration': 300,
     'grains_deep_merge': False,
@@ -1374,7 +1379,10 @@ DEFAULT_MINION_OPTS = {
     'mine_interval': 60,
     'ipc_mode': _DFLT_IPC_MODE,
     'ipc_write_buffer': _DFLT_IPC_WBUFFER,
-    'ipv6': False,
+    'ipc_so_rcvbuf': None,
+    'ipc_so_sndbuf': None,
+    'ipc_so_backlog': 128,
+    'ipv6': None,
     'file_buffer_size': 262144,
     'tcp_pub_port': 4510,
     'tcp_pull_port': 4511,
@@ -1395,6 +1403,7 @@ DEFAULT_MINION_OPTS = {
     'test': False,
     'ext_job_cache': '',
     'cython_enable': False,
+    'enable_gpu_grains': True,
     'enable_zip_modules': False,
     'state_verbose': True,
     'state_output': 'full',
@@ -1415,6 +1424,7 @@ DEFAULT_MINION_OPTS = {
     'update_url': False,
     'update_restart_services': [],
     'retry_dns': 30,
+    'retry_dns_count': None,
     'resolve_dns_fallback': True,
     'recon_max': 10000,
     'recon_default': 1000,
@@ -1427,7 +1437,7 @@ DEFAULT_MINION_OPTS = {
     'winrepo_dir_ng': os.path.join(salt.syspaths.BASE_FILE_ROOTS_DIR, 'win', 'repo-ng'),
     'winrepo_cachefile': 'winrepo.p',
     'winrepo_cache_expire_max': 21600,
-    'winrepo_cache_expire_min': 0,
+    'winrepo_cache_expire_min': 1800,
     'winrepo_remotes': ['https://github.com/saltstack/salt-winrepo.git'],
     'winrepo_remotes_ng': ['https://github.com/saltstack/salt-winrepo-ng.git'],
     'winrepo_branch': 'master',
@@ -1453,6 +1463,7 @@ DEFAULT_MINION_OPTS = {
     'grains_refresh_every': 0,
     'minion_id_caching': True,
     'minion_id_lowercase': False,
+    'minion_id_remove_domain': False,
     'keysize': 2048,
     'transport': 'zeromq',
     'auth_timeout': 5,
@@ -1461,22 +1472,7 @@ DEFAULT_MINION_OPTS = {
     'master_tops_first': False,
     'auth_safemode': False,
     'random_master': False,
-    'minion_floscript': os.path.join(FLO_DIR, 'minion.flo'),
-    'caller_floscript': os.path.join(FLO_DIR, 'caller.flo'),
-    'ioflo_verbose': 0,
-    'ioflo_period': 0.1,
-    'ioflo_realtime': True,
-    'ioflo_console_logdir': '',
-    'raet_port': 4510,
-    'raet_alt_port': 4511,
-    'raet_mutable': False,
-    'raet_main': False,
-    'raet_clear_remotes': True,
-    'raet_clear_remote_masters': True,
-    'raet_road_bufcnt': 2,
-    'raet_lane_bufcnt': 100,
     'cluster_mode': False,
-    'cluster_masters': [],
     'restart_on_error': False,
     'ping_interval': 0,
     'username': None,
@@ -1492,6 +1488,7 @@ DEFAULT_MINION_OPTS = {
     'event_match_type': 'startswith',
     'minion_restart_command': [],
     'pub_ret': True,
+    'user_agent': '',
     'proxy_host': '',
     'proxy_username': '',
     'proxy_password': '',
@@ -1513,10 +1510,12 @@ DEFAULT_MINION_OPTS = {
     },
     'discovery': False,
     'schedule': {},
-    'ssh_merge_pillar': True
-}
+    'ssh_merge_pillar': True,
+    'server_id_use_crc': False,
+    'disabled_requisites': [],
+})
 
-DEFAULT_MASTER_OPTS = {
+DEFAULT_MASTER_OPTS = immutabletypes.freeze({
     'interface': '0.0.0.0',
     'publish_port': 4505,
     'zmq_backlog': 1000,
@@ -1705,7 +1704,10 @@ DEFAULT_MASTER_OPTS = {
     'enforce_mine_cache': False,
     'ipc_mode': _DFLT_IPC_MODE,
     'ipc_write_buffer': _DFLT_IPC_WBUFFER,
-    'ipv6': False,
+    'ipc_so_rcvbuf': None,
+    'ipc_so_sndbuf': None,
+    'ipc_so_backlog': 128,
+    'ipv6': None,
     'tcp_master_pub_port': 4512,
     'tcp_master_pull_port': 4513,
     'tcp_master_publish_pull': 4514,
@@ -1799,23 +1801,7 @@ DEFAULT_MASTER_OPTS = {
     'ssh_identities_only': False,
     'ssh_log_file': os.path.join(salt.syspaths.LOGS_DIR, 'ssh'),
     'ssh_config_file': os.path.join(salt.syspaths.HOME_DIR, '.ssh', 'config'),
-    'master_floscript': os.path.join(FLO_DIR, 'master.flo'),
-    'worker_floscript': os.path.join(FLO_DIR, 'worker.flo'),
-    'maintenance_floscript': os.path.join(FLO_DIR, 'maint.flo'),
-    'ioflo_verbose': 0,
-    'ioflo_period': 0.01,
-    'ioflo_realtime': True,
-    'ioflo_console_logdir': '',
-    'raet_port': 4506,
-    'raet_alt_port': 4511,
-    'raet_mutable': False,
-    'raet_main': True,
-    'raet_clear_remotes': False,
-    'raet_clear_remote_masters': True,
-    'raet_road_bufcnt': 2,
-    'raet_lane_bufcnt': 100,
     'cluster_mode': False,
-    'cluster_masters': [],
     'sqlite_queue_dir': os.path.join(salt.syspaths.CACHE_DIR, 'master', 'queues'),
     'queue_dirs': [],
     'cli_summary': False,
@@ -1857,12 +1843,12 @@ DEFAULT_MASTER_OPTS = {
     'auth_events': True,
     'minion_data_cache_events': True,
     'enable_ssh_minions': False,
-}
+})
 
 
 # ----- Salt Proxy Minion Configuration Defaults ----------------------------------->
 # These are merged with DEFAULT_MINION_OPTS since many of them also apply here.
-DEFAULT_PROXY_MINION_OPTS = {
+DEFAULT_PROXY_MINION_OPTS = immutabletypes.freeze({
     'conf_file': os.path.join(salt.syspaths.CONFIG_DIR, 'proxy'),
     'log_file': os.path.join(salt.syspaths.LOGS_DIR, 'proxy'),
     'add_proxymodule_to_opts': False,
@@ -1888,9 +1874,10 @@ DEFAULT_PROXY_MINION_OPTS = {
     'pki_dir': os.path.join(salt.syspaths.CONFIG_DIR, 'pki', 'proxy'),
     'cachedir': os.path.join(salt.syspaths.CACHE_DIR, 'proxy'),
     'sock_dir': os.path.join(salt.syspaths.SOCK_DIR, 'proxy'),
-}
+})
+
 # ----- Salt Cloud Configuration Defaults ----------------------------------->
-DEFAULT_CLOUD_OPTS = {
+DEFAULT_CLOUD_OPTS = immutabletypes.freeze({
     'verify_env': True,
     'default_include': 'cloud.conf.d/*.conf',
     # Global defaults
@@ -1918,17 +1905,17 @@ DEFAULT_CLOUD_OPTS = {
     'log_rotate_backup_count': 0,
     'bootstrap_delay': None,
     'cache': 'localfs',
-}
+})
 
-DEFAULT_API_OPTS = {
+DEFAULT_API_OPTS = immutabletypes.freeze({
     # ----- Salt master settings overridden by Salt-API --------------------->
     'api_pidfile': os.path.join(salt.syspaths.PIDFILE_DIR, 'salt-api.pid'),
     'api_logfile': os.path.join(salt.syspaths.LOGS_DIR, 'api'),
     'rest_timeout': 300,
     # <---- Salt master settings overridden by Salt-API ----------------------
-}
+})
 
-DEFAULT_SPM_OPTS = {
+DEFAULT_SPM_OPTS = immutabletypes.freeze({
     # ----- Salt master settings overridden by SPM --------------------->
     'spm_conf_file': os.path.join(salt.syspaths.CONFIG_DIR, 'spm'),
     'formula_path': salt.syspaths.SPM_FORMULA_PATH,
@@ -1949,15 +1936,15 @@ DEFAULT_SPM_OPTS = {
     'spm_node_type': '',
     'spm_share_dir': os.path.join(salt.syspaths.SHARE_DIR, 'spm'),
     # <---- Salt master settings overridden by SPM ----------------------
-}
+})
 
-VM_CONFIG_DEFAULTS = {
+VM_CONFIG_DEFAULTS = immutabletypes.freeze({
     'default_include': 'cloud.profiles.d/*.conf',
-}
+})
 
-PROVIDER_CONFIG_DEFAULTS = {
+PROVIDER_CONFIG_DEFAULTS = immutabletypes.freeze({
     'default_include': 'cloud.providers.d/*.conf',
-}
+})
 # <---- Salt Cloud Configuration Defaults ------------------------------------
 
 
@@ -2093,16 +2080,6 @@ def _validate_opts(opts):
     # Convert list to comma-delimited string for 'return' config option
     if isinstance(opts.get('return'), list):
         opts['return'] = ','.join(opts['return'])
-
-    # RAET on Windows uses 'win32file.CreateMailslot()' for IPC. Due to this,
-    # sock_dirs must start with '\\.\mailslot\' and not contain any colons.
-    # We don't expect the user to know this, so we will fix up their path for
-    # them if it isn't compliant.
-    if (salt.utils.platform.is_windows() and opts.get('transport') == 'raet' and
-            'sock_dir' in opts and
-            not opts['sock_dir'].startswith('\\\\.\\mailslot\\')):
-        opts['sock_dir'] = (
-                '\\\\.\\mailslot\\' + opts['sock_dir'].replace(':', ''))
 
     for error in errors:
         log.warning(error)
@@ -2286,14 +2263,15 @@ def include_config(include, orig_path, verbose, exit_on_config_errors=False):
 
         # Catch situation where user typos path in configuration; also warns
         # for empty include directory (which might be by design)
-        if len(glob.glob(path)) == 0:
+        glob_matches = glob.glob(path)
+        if not glob_matches:
             if verbose:
                 log.warning(
                     'Warning parsing configuration file: "include" path/glob '
                     "'%s' matches no files", path
                 )
 
-        for fn_ in sorted(glob.glob(path)):
+        for fn_ in sorted(glob_matches):
             log.debug('Including configuration from \'%s\'', fn_)
             try:
                 opts = _read_conf_file(fn_)
@@ -2491,10 +2469,10 @@ def syndic_config(master_config_path,
                   master_defaults=None):
 
     if minion_defaults is None:
-        minion_defaults = DEFAULT_MINION_OPTS
+        minion_defaults = DEFAULT_MINION_OPTS.copy()
 
     if master_defaults is None:
-        master_defaults = DEFAULT_MASTER_OPTS
+        master_defaults = DEFAULT_MASTER_OPTS.copy()
 
     opts = {}
     master_opts = master_config(
@@ -2580,7 +2558,7 @@ def apply_sdb(opts, sdb_opts=None):
 
 
 # ----- Salt Cloud Configuration Functions ---------------------------------->
-def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
+def cloud_config(path=None, env_var='SALT_CLOUD_CONFIG', defaults=None,
                  master_config_path=None, master_config=None,
                  providers_config_path=None, providers_config=None,
                  profiles_config_path=None, profiles_config=None):
@@ -2608,11 +2586,11 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
 
     # Load cloud configuration from any default or provided includes
     overrides.update(
-        salt.config.include_config(overrides['default_include'], path, verbose=False)
+        salt.config.include_config(overrides['default_include'], config_dir, verbose=False)
     )
     include = overrides.get('include', [])
     overrides.update(
-        salt.config.include_config(include, path, verbose=True)
+        salt.config.include_config(include, config_dir, verbose=True)
     )
 
     # The includes have been evaluated, let's see if master, providers and
@@ -2667,7 +2645,7 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
         if not os.path.isabs(entry):
             # Let's try adding the provided path's directory name turns the
             # entry into a proper directory
-            entry = os.path.join(os.path.dirname(path), entry)
+            entry = os.path.join(config_dir, entry)
 
         if os.path.isdir(entry):
             # Path exists, let's update the entry (its path might have been
@@ -2813,7 +2791,7 @@ def apply_cloud_config(overrides, defaults=None):
     Return a cloud config
     '''
     if defaults is None:
-        defaults = DEFAULT_CLOUD_OPTS
+        defaults = DEFAULT_CLOUD_OPTS.copy()
 
     config = defaults.copy()
     if overrides:
@@ -3514,7 +3492,7 @@ def check_driver_dependencies(driver, dependencies):
         if value is False:
             log.warning(
                 "Missing dependency: '%s'. The %s driver requires "
-                "'%s' to be installed.", key, key, driver
+                "'%s' to be installed.", key, driver, key
             )
             ret = False
 
@@ -3598,6 +3576,26 @@ def call_id_function(opts):
         sys.exit(salt.defaults.exitcodes.EX_GENERIC)
 
 
+def remove_domain_from_fqdn(opts, newid):
+    '''
+    Depending on the values of `minion_id_remove_domain`,
+    remove all domains or a single domain from a FQDN, effectivly generating a hostname.
+    '''
+    opt_domain = opts.get('minion_id_remove_domain')
+    if opt_domain is True:
+        if '.' in newid:
+            # Remove any domain
+            newid, xdomain = newid.split('.', 1)
+            log.debug('Removed any domain (%s) from minion id.', xdomain)
+    else:
+        # Must be string type
+        if newid.upper().endswith('.' + opt_domain.upper()):
+            # Remove single domain
+            newid = newid[:-len('.' + opt_domain)]
+            log.debug('Removed single domain %s from minion id.', opt_domain)
+    return newid
+
+
 def get_id(opts, cache_minion_id=False):
     '''
     Guess the id of the minion.
@@ -3649,6 +3647,11 @@ def get_id(opts, cache_minion_id=False):
     if opts.get('minion_id_lowercase'):
         newid = newid.lower()
         log.debug('Changed minion id %s to lowercase.', newid)
+
+    # Optionally remove one or many domains in a generated minion id
+    if opts.get('minion_id_remove_domain'):
+        newid = remove_domain_from_fqdn(opts, newid)
+
     if '__role' in opts and opts.get('__role') == 'minion':
         if opts.get('id_function'):
             log.debug(
@@ -3713,7 +3716,7 @@ def apply_minion_config(overrides=None,
     Returns minion configurations dict.
     '''
     if defaults is None:
-        defaults = DEFAULT_MINION_OPTS
+        defaults = DEFAULT_MINION_OPTS.copy()
     if overrides is None:
         overrides = {}
 
@@ -3826,8 +3829,6 @@ def apply_minion_config(overrides=None,
 
     if overrides.get('ipc_write_buffer', '') == 'dynamic':
         opts['ipc_write_buffer'] = _DFLT_IPC_WBUFFER
-    if 'ipc_write_buffer' not in overrides:
-        opts['ipc_write_buffer'] = 0
 
     # Make sure hash_type is lowercase
     opts['hash_type'] = opts['hash_type'].lower()
@@ -3849,7 +3850,7 @@ def _update_discovery_config(opts):
     if opts.get('discovery') not in (None, False):
         if opts['discovery'] is True:
             opts['discovery'] = {}
-        discovery_config = {'attempts': 3, 'pause': 5, 'port': 4520, 'match': 'any', 'mapping': {}}
+        discovery_config = {'attempts': 3, 'pause': 5, 'port': 4520, 'match': 'any', 'mapping': {}, 'multimaster': False}
         for key in opts['discovery']:
             if key not in discovery_config:
                 raise salt.exceptions.SaltConfigurationError('Unknown discovery option: {0}'.format(key))
@@ -3868,7 +3869,7 @@ def master_config(path, env_var='SALT_MASTER_CONFIG', defaults=None, exit_on_con
     :py:func:`salt.client.client_config`.
     '''
     if defaults is None:
-        defaults = DEFAULT_MASTER_OPTS
+        defaults = DEFAULT_MASTER_OPTS.copy()
 
     if not os.environ.get(env_var, None):
         # No valid setting was given using the configuration variable.
@@ -3901,8 +3902,6 @@ def master_config(path, env_var='SALT_MASTER_CONFIG', defaults=None, exit_on_con
         opts['nodegroups'] = DEFAULT_MASTER_OPTS.get('nodegroups', {})
     if salt.utils.data.is_dictlist(opts['nodegroups']):
         opts['nodegroups'] = salt.utils.data.repack_dictlist(opts['nodegroups'])
-    if opts.get('transport') == 'raet' and 'aes' in opts:
-        opts.pop('aes')
     apply_sdb(opts)
     return opts
 
@@ -3912,7 +3911,7 @@ def apply_master_config(overrides=None, defaults=None):
     Returns master configurations dict.
     '''
     if defaults is None:
-        defaults = DEFAULT_MASTER_OPTS
+        defaults = DEFAULT_MASTER_OPTS.copy()
     if overrides is None:
         overrides = {}
 
@@ -3979,8 +3978,7 @@ def apply_master_config(overrides=None, defaults=None):
 
     if overrides.get('ipc_write_buffer', '') == 'dynamic':
         opts['ipc_write_buffer'] = _DFLT_IPC_WBUFFER
-    if 'ipc_write_buffer' not in overrides:
-        opts['ipc_write_buffer'] = 0
+
     using_ip_for_id = False
     append_master = False
     if not opts.get('id'):
@@ -4087,7 +4085,7 @@ def client_config(path, env_var='SALT_CLIENT_CONFIG', defaults=None):
     :py:class:`~salt.client.LocalClient`.
     '''
     if defaults is None:
-        defaults = DEFAULT_MASTER_OPTS
+        defaults = DEFAULT_MASTER_OPTS.copy()
 
     xdg_dir = salt.utils.xdg.xdg_config_dir()
     if os.path.isdir(xdg_dir):
@@ -4155,10 +4153,10 @@ def api_config(path):
     need to be stubbed out for salt-api
     '''
     # Let's grab a copy of salt-api's required defaults
-    opts = DEFAULT_API_OPTS
+    opts = DEFAULT_API_OPTS.copy()
 
     # Let's override them with salt's master opts
-    opts.update(client_config(path, defaults=DEFAULT_MASTER_OPTS))
+    opts.update(client_config(path, defaults=DEFAULT_MASTER_OPTS.copy()))
 
     # Let's set the pidfile and log_file values in opts to api settings
     opts.update({

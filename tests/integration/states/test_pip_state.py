@@ -28,7 +28,8 @@ from tests.support.helpers import (
     requires_system_grains,
     with_system_user,
     skip_if_not_root,
-    with_tempdir
+    with_tempdir,
+    patched_environ
 )
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.runtests import RUNTIME_VARS
@@ -47,26 +48,6 @@ from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party libs
 from salt.ext import six
-
-
-def can_runas():
-    '''
-    Detect if we are running in a limited shell (winrm) and are un-able to use
-    the runas utility method.
-    '''
-    if salt.utils.platform.is_windows():
-        try:
-            salt.utils.win_runas.runas(
-                'cmd.exe /c echo 1', 'noexistuser', 'n0existp4ss',
-            )
-        except WindowsError as exc:  # pylint: disable=undefined-variable
-            if exc.winerror == 5:
-                # Access Denied
-                return False
-    return True
-
-
-CAN_RUNAS = can_runas()
 
 
 class VirtualEnv(object):
@@ -114,7 +95,6 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
         venv_dir = os.path.join(
             RUNTIME_VARS.TMP, 'pip-installed-errors'
         )
-        orig_shell = os.environ.get('SHELL')
         try:
             # Since we don't have the virtualenv created, pip.installed will
             # throw an error.
@@ -122,29 +102,22 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
             #  * "Error installing 'pep8': /tmp/pip-installed-errors: not found"
             #  * "Error installing 'pep8': /bin/sh: 1: /tmp/pip-installed-errors: not found"
             #  * "Error installing 'pep8': /bin/bash: /tmp/pip-installed-errors: No such file or directory"
-            os.environ['SHELL'] = '/bin/sh'
-            ret = self.run_function('state.sls', mods='pip-installed-errors')
-            self.assertSaltFalseReturn(ret)
-            self.assertSaltCommentRegexpMatches(
-                ret,
-                'Error installing \'pep8\':'
-            )
+            with patched_environ(SHELL='/bin/sh'):
+                ret = self.run_function('state.sls', mods='pip-installed-errors')
+                self.assertSaltFalseReturn(ret)
+                self.assertSaltCommentRegexpMatches(
+                    ret,
+                    'Error installing \'pep8\':'
+                )
 
-            # We now create the missing virtualenv
-            ret = self.run_function('virtualenv.create', [venv_dir])
-            self.assertEqual(ret['retcode'], 0)
+                # We now create the missing virtualenv
+                ret = self.run_function('virtualenv.create', [venv_dir])
+                self.assertEqual(ret['retcode'], 0)
 
-            # The state should not have any issues running now
-            ret = self.run_function('state.sls', mods='pip-installed-errors')
-            self.assertSaltTrueReturn(ret)
+                # The state should not have any issues running now
+                ret = self.run_function('state.sls', mods='pip-installed-errors')
+                self.assertSaltTrueReturn(ret)
         finally:
-            if orig_shell is None:
-                # Didn't exist before, don't leave it there. This should never
-                # happen, but if it does, we don't want this test to affect
-                # others elsewhere in the suite.
-                os.environ.pop('SHELL')
-            else:
-                os.environ['SHELL'] = orig_shell
             if os.path.isdir(venv_dir):
                 shutil.rmtree(venv_dir, ignore_errors=True)
 
@@ -294,7 +267,6 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
 
     @destructiveTest
     @skip_if_not_root
-    @skipIf(not CAN_RUNAS, 'Runas support required')
     @with_system_user('issue-6912', on_existing='delete', delete=True,
                       password='PassWord1!')
     @with_tempdir()
@@ -338,7 +310,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
 
     @destructiveTest
     @skip_if_not_root
-    @skipIf(not CAN_RUNAS, 'Runas support required')
+    @skipIf(salt.utils.platform.is_darwin(), 'Test is flaky on macosx')
     @with_system_user('issue-6912', on_existing='delete', delete=True,
                       password='PassWord1!')
     @with_tempdir()

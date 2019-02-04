@@ -53,7 +53,6 @@ import sys
 import re
 import pprint
 import logging
-import msgpack
 from ast import literal_eval
 from salt.utils.versions import LooseVersion as _LooseVersion
 
@@ -91,6 +90,7 @@ from salt.ext import six
 import salt.utils.cloud
 import salt.utils.files
 import salt.utils.http
+import salt.utils.msgpack
 import salt.config as config
 from salt.cloud.libcloudfuncs import *  # pylint: disable=redefined-builtin,wildcard-import,unused-wildcard-import
 from salt.exceptions import (
@@ -134,7 +134,8 @@ def __virtual__():
 
         parameters = details['gce']
         pathname = os.path.expanduser(parameters['service_account_private_key'])
-        if salt.utils.cloud.check_key_path_and_mode(
+        # empty pathname will tell libcloud to use instance credentials
+        if pathname and salt.utils.cloud.check_key_path_and_mode(
                 provider, pathname
         ) is False:
             return False
@@ -251,6 +252,12 @@ def _expand_address(addy):
     ret = {}
     ret.update(addy.__dict__)
     ret['extra']['zone'] = addy.region.name
+    return ret
+
+
+def _expand_region(region):
+    ret = {}
+    ret['name'] = region.name
     return ret
 
 
@@ -453,7 +460,7 @@ def __get_host(node, vm_):
         ip_address = node.public_ips[0]
         log.info('Salt node data. Public_ip: %s', ip_address)
 
-    if len(ip_address) > 0:
+    if ip_address:
         return ip_address
 
     return node.name
@@ -549,7 +556,7 @@ def _parse_allow(allow):
                 seen_protos[pairs[0]].append(pairs[1])
     for k in seen_protos:
         d = {'IPProtocol': k}
-        if len(seen_protos[k]) > 0:
+        if seen_protos[k]:
             d['ports'] = seen_protos[k]
         allow_dict.append(d)
     log.debug("firewall allowed protocols/ports: %s", allow_dict)
@@ -1250,6 +1257,7 @@ def create_address(kwargs=None, call=None):
     name = kwargs['name']
     ex_region = kwargs['region']
     ex_address = kwargs.get("address", None)
+    kwargs['region'] = _expand_region(kwargs['region'])
 
     conn = get_conn()
 
@@ -1257,7 +1265,7 @@ def create_address(kwargs=None, call=None):
         'event',
         'create address',
         'salt/cloud/address/creating',
-        args=kwargs,
+        args=salt.utils.data.simple_types_filter(kwargs),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -1268,12 +1276,12 @@ def create_address(kwargs=None, call=None):
         'event',
         'created address',
         'salt/cloud/address/created',
-        args=kwargs,
+        args=salt.utils.data.simple_types_filter(kwargs),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
-    log.info('Created GCE Address '+name)
+    log.info('Created GCE Address %s', name)
 
     return _expand_address(addy)
 
@@ -1343,7 +1351,7 @@ def delete_address(kwargs=None, call=None):
         transport=__opts__['transport']
     )
 
-    log.info('Deleted GCE Address ' + name)
+    log.info('Deleted GCE Address %s', name)
 
     return result
 
@@ -2477,13 +2485,19 @@ def request_instance(vm_):
 
     if external_ip.lower() == 'ephemeral':
         external_ip = 'ephemeral'
+        vm_['external_ip'] = external_ip
     elif external_ip == 'None':
         external_ip = None
+        vm_['external_ip'] = external_ip
     else:
         region = __get_region(conn, vm_)
         external_ip = __create_orget_address(conn, external_ip, region)
+        vm_['external_ip'] = {
+            'name': external_ip.name,
+            'address': external_ip.address,
+            'region': external_ip.region.name
+        }
     kwargs['external_ip'] = external_ip
-    vm_['external_ip'] = external_ip
 
     if LIBCLOUD_VERSION_INFO > (0, 15, 1):
 
@@ -2628,7 +2642,7 @@ def update_pricing(kwargs=None, call=None):
         __opts__['cachedir'], 'gce-pricing.p'
     )
     with salt.utils.files.fopen(outfile, 'w') as fho:
-        msgpack.dump(price_json['dict'], fho)
+        salt.utils.msgpack.dump(price_json['dict'], fho)
 
     return True
 
@@ -2667,7 +2681,7 @@ def show_pricing(kwargs=None, call=None):
         update_pricing()
 
     with salt.utils.files.fopen(pricefile, 'r') as fho:
-        sizes = msgpack.load(fho)
+        sizes = salt.utils.msgpack.load(fho)
 
     per_hour = float(sizes['gcp_price_list'][size][region])
 

@@ -68,11 +68,11 @@ If not Exist "%PyDir%\python.exe" (
 )
 
 Set "CurDir=%~dp0"
-Set "BldDir=%CurDir%\buildenv"
-Set "BinDir=%CurDir%\buildenv\bin"
-Set "CnfDir=%CurDir%\buildenv\conf"
-Set "InsDir=%CurDir%\installer"
-Set "PreDir=%CurDir%\prereqs"
+Set "BldDir=%CurDir%buildenv"
+Set "BinDir=%CurDir%buildenv\bin"
+Set "CnfDir=%CurDir%buildenv\conf"
+Set "InsDir=%CurDir%installer"
+Set "PreDir=%CurDir%prereqs"
 for /f "delims=" %%a in ('git rev-parse --show-toplevel') do @set "SrcDir=%%a"
 
 :: Find the NSIS Installer
@@ -113,10 +113,8 @@ xcopy /Q /Y "%SrcDir%\conf\master" "%CnfDir%\"
 xcopy /Q /Y "%SrcDir%\conf\minion" "%CnfDir%\"
 @echo.
 
-@echo Copying NSSM to buildenv
+@echo Copying SSM to buildenv
 @echo ----------------------------------------------------------------------
-:: Make sure the "prereq" directory exists
-If NOT Exist "%PreDir%" mkdir "%PreDir%"
 
 :: Set the location of the ssm to download
 Set Url64="https://repo.saltstack.com/windows/dependencies/64/ssm-2.24-103-gdee49fc.exe"
@@ -130,12 +128,62 @@ If Defined ProgramFiles(x86) (
 )
 @echo.
 
-:: Make sure the "prereq" directory exists
-If NOT Exist "%PreDir%" mkdir "%PreDir%"
+:: Make sure the "prereq" directory exists and is empty
+If Exist "%PreDir%" rd /s /q "%PreDir%"
+mkdir "%PreDir%"
 
-:: Don't include the vcredist for Py3 installations
-If %Python%==3 goto :vcredist_end
+:: Skip KB2999226 if on Py3
+If %Python%==2 goto get_vcredist
 
+:: For PY 3, include KB2999226
+@echo Copying KB2999226 to Prerequisites
+@echo ----------------------------------------------------------------------
+:: 64 bit binaries required for AMD64 and x86
+:: Copy down the 64 bit binaries
+set Url60=http://repo.saltstack.com/windows/dependencies/64/ucrt/Windows6.0-KB2999226-x64.msu
+set Name60=Windows6.0-KB2999226-x64.msu
+set Url61=http://repo.saltstack.com/windows/dependencies/64/ucrt/Windows6.1-KB2999226-x64.msu
+set Name61=Windows6.1-KB2999226-x64.msu
+set Url80=http://repo.saltstack.com/windows/dependencies/64/ucrt/Windows8-RT-KB2999226-x64.msu
+set Name80=Windows8-RT-KB2999226-x64.msu
+set Url81=http://repo.saltstack.com/windows/dependencies/64/ucrt/Windows8.1-KB2999226-x64.msu
+set Name81=Windows8.1-KB2999226-x64.msu
+@echo - Downloading %Name60%
+powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url %Url60% -file "%PreDir%\%Name60%"
+@echo - Downloading %Name61%
+powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url %Url61% -file "%PreDir%\%Name61%"
+@echo - Downloading %Name80%
+powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url %Url80% -file "%PreDir%\%Name80%"
+@echo - Downloading %Name81%
+powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url %Url81% -file "%PreDir%\%Name81%"
+
+:: 32 bit binaries only needed for x86 installer
+:: ProgramFiles(x86) is defined on AMD64 systems
+:: If it's defined, skip the x86 binaries
+If Defined ProgramFiles(x86) goto prereq_end
+
+:: Copy down the 32 bit binaries
+set Url60=http://repo.saltstack.com/windows/dependencies/32/ucrt/Windows6.0-KB2999226-x86.msu
+set Name60=Windows6.0-KB2999226-x86.msu
+set Url61=http://repo.saltstack.com/windows/dependencies/32/ucrt/Windows6.1-KB2999226-x86.msu
+set Name61=Windows6.1-KB2999226-x86.msu
+set Url80=http://repo.saltstack.com/windows/dependencies/32/ucrt/Windows8-RT-KB2999226-x86.msu
+set Name80=Windows8-RT-KB2999226-x86.msu
+set Url81=http://repo.saltstack.com/windows/dependencies/32/ucrt/Windows8.1-KB2999226-x86.msu
+set Name81=Windows8.1-KB2999226-x86.msu
+@echo - Downloading %Name60%
+powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url %Url60% -file "%PreDir%\%Name60%"
+@echo - Downloading %Name61%
+powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url %Url61% -file "%PreDir%\%Name61%"
+@echo - Downloading %Name80%
+powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url %Url80% -file "%PreDir%\%Name80%"
+@echo - Downloading %Name81%
+powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url %Url81% -file "%PreDir%\%Name81%"
+
+goto prereq_end
+
+:: For PY 2, include VCRedist
+:get_vcredist
 @echo Copying VCRedist to Prerequisites
 @echo ----------------------------------------------------------------------
 
@@ -151,7 +199,7 @@ If Defined ProgramFiles(x86) (
 )
 @echo.
 
-:vcredist_end
+:prereq_end
 
 :: Remove the fixed path in .exe files
 @echo Removing fixed path from .exe files

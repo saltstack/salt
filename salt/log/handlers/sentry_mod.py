@@ -113,13 +113,16 @@ __virtualname__ = 'sentry'
 
 def __virtual__():
     if HAS_RAVEN is True:
-        __grains__ = salt.loader.grains(__opts__)
-        __salt__ = salt.loader.minion_mods(__opts__)
         return __virtualname__
     return False
 
 
 def setup_handlers():
+    '''
+    sets up the sentry handler
+    '''
+    __grains__ = salt.loader.grains(__opts__)
+    __salt__ = salt.loader.minion_mods(__opts__)
     if 'sentry_handler' not in __opts__:
         log.debug('No \'sentry_handler\' key was found in the configuration')
         return False
@@ -202,10 +205,14 @@ def setup_handlers():
     context_dict = {}
     if context is not None:
         for tag in context:
-            tag_value = __salt__['grains.get'](tag)
-            if len(tag_value) > 0:
+            try:
+                tag_value = __grains__[tag]
+            except KeyError:
+                log.debug('Sentry tag \'%s\' not found in grains.', tag)
+                continue
+            if tag_value:
                 context_dict[tag] = tag_value
-        if len(context_dict) > 0:
+        if context_dict:
             client.context.merge({'tags': context_dict})
     try:
         handler = SentryHandler(client)
@@ -229,4 +236,7 @@ def setup_handlers():
 
 
 def get_config_value(name, default=None):
+    '''
+    returns a configuration option for the sentry_handler
+    '''
     return __opts__['sentry_handler'].get(name, default)

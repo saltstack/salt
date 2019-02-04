@@ -79,6 +79,8 @@ def _localectl_status():
             ctl_key = ctl_key.strip().lower().replace(' ', '_')
         else:
             ctl_data = line.strip()
+        if not ctl_data:
+            continue
         if ctl_key:
             if '=' in ctl_data:
                 loc_set = ctl_data.split('=')

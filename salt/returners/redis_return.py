@@ -193,6 +193,7 @@ def _get_serv(ret=None):
                                        port=_options.get('port'),
                                        unix_socket_path=_options.get('unix_socket_path', None),
                                        db=_options.get('db'),
+                                       decode_responses=True,
                                        password=_options.get('password'))
     return REDIS_POOL
 
@@ -313,7 +314,7 @@ def clean_old_jobs():
         load_key = ret_key.replace('ret:', 'load:', 1)
         if load_key not in living_jids:
             to_remove.append(ret_key)
-    if len(to_remove) != 0:
+    if to_remove:
         serv.delete(*to_remove)
         log.debug('clean old jobs: %s', to_remove)
 

@@ -90,6 +90,7 @@ passed in as a dict, or as a string to pull from pillars or minion config:
 
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
+from copy import deepcopy
 
 
 def __virtual__():
@@ -902,7 +903,7 @@ def replication_group_present(name, wait=900, security_groups=None, region=None,
                     ret['comment'] += ' ... and then immediately modified.'
                 else:
                     ret['comment'] = 'Replication group {0} was modified.'.format(name)
-                    ret['changes']['old'] = current[0] if len(current) else None
+                    ret['changes']['old'] = current[0] if current else None
                 ret['changes']['new'] = new[0]
             else:
                 ret['result'] = False
@@ -1145,4 +1146,178 @@ def cache_subnet_group_absent(name, region=None, key=None, keyid=None, profile=N
             ret['comment'] = 'Failed to delete {0} cache_subnet group.'.format(name)
     else:
         ret['comment'] = 'Cache subnet group {0} already absent.'.format(name)
+    return ret
+
+
+def cache_parameter_group_present(name, region=None, key=None, keyid=None, profile=None, **args):
+    '''
+    Ensure cache parameter group exists.
+
+    name
+        A name for the cache parameter group.
+
+    CacheParameterGroupName
+        A name for the cache parameter group.
+        Note:  In general this parameter is not needed, as 'name' is used if it's not provided.
+
+
+    CacheParameterGroupFamily
+        The name of the cache parameter group family that the cache parameter group can be used with.
+
+        Valid values are:
+        - memcached1.4
+        - redis2.6
+        - redis2.8
+        - redis3.2
+
+    Description
+        A description for the cache parameter group.
+
+    ParameterNameValues
+        A newly created CacheParameterGroup is an exact duplicate of the default parameter group
+        of the requested CacheParameterGroupFamily.  This option provides a way to fine-tune
+        these settings.  It is formatted as [list] of {dicts}, each composed of a parameter name
+        and a value.
+
+    .. code-block:: yaml
+
+        ParameterNameValues:
+        - ParameterName: timeout
+          # Amazon requires ALL VALUES to be strings...
+          ParameterValue: "30"
+        - ParameterName: appendonly
+          # The YAML parser will turn a bare `yes` into a bool, which Amazon will then throw on...
+          ParameterValue: "yes"
+
+    region
+        Region to connect to.
+
+    key
+        Secret key to be used.
+
+    keyid
+        Access key to be used.
+
+    profile
+        A dict with region, key and keyid, or a pillar key (string) that
+        contains a dict with region, key and keyid.
+    '''
+    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
+    args = dict([(k, v) for k, v in args.items() if not k.startswith('_')])
+    tunables = args.pop('ParameterNameValues', None)
+    current = __salt__['boto3_elasticache.describe_cache_parameter_groups'](name, region=region,
+            key=key, keyid=keyid, profile=profile)
+
+    if not current:
+        if __opts__['test']:
+            ret['comment'] = 'Cache parameter group `{}` would be created.'.format(name)
+            ret['result'] = None
+            return ret
+        created = __salt__['boto3_elasticache.create_cache_parameter_group'](name, region=region,
+                key=key, keyid=keyid, profile=profile, **args)
+        if not created:
+            ret['result'] = False
+            ret['comment'] = 'Failed to create cache parameter group `{}`.'.format(name)
+            return ret
+        new = __salt__['boto3_elasticache.describe_cache_parameter_groups'](name, region=region,
+                key=key, keyid=keyid, profile=profile)
+        new = new[0]
+        # Set any custom cache parameters requested...
+        if tunables:
+            kwargs = {'ParameterNameValues': tunables}
+            updated = __salt__['boto3_elasticache.modify_cache_parameter_groups'](name,
+                    region=region, key=key, keyid=keyid, profile=profile, **kwargs)
+            if not updated:
+                ret['result'] = False
+                ret['comment'] = 'Failed to update new cache parameter group `{}`.'.format(name)
+                return ret
+            kwargs = {'Source': 'user'}
+            new['ParameterNameValues'] = __salt__['boto3_elasticache.describe_cache_parameters'](
+                    name, region=region, key=key, keyid=keyid, profile=profile, **kwargs)
+        ret['comment'] = 'Cache parameter group `{}` was created.'.format(name)
+        ret['changes']['old'] = None
+        ret['changes']['new'] = new
+    else:
+        if not tunables:
+            ret['comment'] = 'Cache parameter group `{}` exists.'.format(name)
+        else:
+            oldvals = []
+            newvals = []
+            curr_params = __salt__['boto3_elasticache.describe_cache_parameters'](name,
+                    region=region, key=key, keyid=keyid, profile=profile)
+            # Note that the items under CacheNodeTypeSpecificParameters are never modifiable, so
+            # we ignore them completely.
+            curr_kvs = {p['ParameterName']: p['ParameterValue'] for p in curr_params['Parameters']}
+            req_kvs = {p['ParameterName']: p['ParameterValue'] for p in tunables}
+            for pname, pval in req_kvs.items():
+                if pname in curr_kvs and pval != curr_kvs[pname]:
+                    oldvals += [{'ParameterName': pname, 'ParameterValue': curr_kvs[pname]}]
+                    newvals += [{'ParameterName': pname, 'ParameterValue': pval}]
+            if newvals:
+                if __opts__['test']:
+                    ret['comment'] = 'Cache parameter group `{}` would be updated.'.format(name)
+                    ret['result'] = None
+                    ret['changes']['old'] = current[0]
+                    ret['changes']['old']['ParameterNameValues'] = oldvals
+                    ret['changes']['new'] = deepcopy(current[0])
+                    ret['changes']['new']['ParameterNameValues'] = newvals
+                    return ret
+                kwargs = {'ParameterNameValues': newvals}
+                if not __salt__['boto3_elasticache.modify_cache_parameter_groups'](name,
+                        region=region, key=key, keyid=keyid, profile=profile, **kwargs):
+                    ret['result'] = False
+                    ret['comment'] = 'Failed to update cache parameter group `{}`.'.format(name)
+                    return ret
+                ret['changes']['old'] = current[0]
+                ret['changes']['old']['ParameterNameValues'] = oldvals
+                ret['changes']['new'] = deepcopy(current[0])
+                ret['changes']['new']['ParameterNameValues'] = newvals
+            else:
+                ret['comment'] = 'Cache parameter group `{}` is in the desired state.'.format(name)
+    return ret
+
+
+def cache_parameter_group_absent(name, region=None, key=None, keyid=None, profile=None, **args):
+    '''
+    Ensure a given cache parameter group is absent.
+
+    name
+        Name of the cache parameter group.
+
+    CacheParameterGroupName
+        A name for the cache parameter group.
+        Note:  In general this parameter is not needed, as 'name' is used if it's not provided.
+
+    region
+        Region to connect to.
+
+    key
+        Secret key to be used.
+
+    keyid
+        Access key to be used.
+
+    profile
+        A dict with region, key and keyid, or a pillar key (string)
+        that contains a dict with region, key and keyid.
+    '''
+    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
+    args = dict([(k, v) for k, v in args.items() if not k.startswith('_')])
+    exists = __salt__['boto3_elasticache.describe_cache_parameter_groups'](name, region=region,
+            key=key, keyid=keyid, profile=profile)
+    if exists:
+        if __opts__['test']:
+            ret['comment'] = 'Cache parameter group `{}` would be removed.'.format(name)
+            ret['result'] = None
+            return ret
+        deleted = __salt__['boto3_elasticache.delete_cache_parameter_group'](name, region=region,
+                key=key, keyid=keyid, profile=profile, **args)
+        if deleted:
+            ret['changes']['old'] = name
+            ret['changes']['new'] = None
+        else:
+            ret['result'] = False
+            ret['comment'] = 'Failed to delete cache parameter group `{}`.'.format(name)
+    else:
+        ret['comment'] = 'Cache parameter group `{}` already absent.'.format(name)
     return ret

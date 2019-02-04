@@ -1080,7 +1080,7 @@ def enumerate_tokens(sid=None, session_id=None, privs=None):
             )
             th = win32security.OpenProcessToken(ph, access)
         except Exception as exc:
-            log.exception("OpenProcessToken failed pid=%d name=%s user%s", p.pid, p.name(), p.username())
+            log.debug("OpenProcessToken failed pid=%d name=%s user%s", p.pid, p.name(), p.username())
             continue
         try:
             process_sid = win32security.GetTokenInformation(th, win32security.TokenUser)[0]

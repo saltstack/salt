@@ -156,7 +156,7 @@ def present(name, value, zone, record_type, ttl=None, identifier=None, region=No
                                                 return_objs=True,
                                                 in_states=in_states,
                                                 profile=profile)
-        if len(r) < 1:
+        if not r:
             ret['comment'] = 'Error: instance with Name tag {0} not found'.format(name_tag)
             ret['result'] = False
             return ret
@@ -442,7 +442,7 @@ def hosted_zone_present(name, domain_name=None, private_zone=False, caller_ref=N
             create = True
         else:
             if private_zone:
-                for v, d in deets.get('VPCs', {}).items():
+                for d in deets.get('VPCs', {}):
                     if (d['VPCId'] == vpc_id
                             and d['VPCRegion'] == vpc_region):
                         create = False

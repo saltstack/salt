@@ -34,6 +34,12 @@ Management of the Salt beacons
 '''
 from __future__ import absolute_import, print_function, unicode_literals
 
+# Import Salt libs
+from salt.ext import six
+
+import logging
+log = logging.getLogger(__name__)
+
 
 def present(name,
             save=False,
@@ -54,7 +60,7 @@ def present(name,
            'comment': []}
 
     current_beacons = __salt__['beacons.list'](return_yaml=False)
-    beacon_data = [kwargs]
+    beacon_data = [{k: v} for k, v in six.iteritems(kwargs)]
 
     if name in current_beacons:
 

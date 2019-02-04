@@ -229,7 +229,7 @@ def sync_proxymodules(saltenv='base', extmod_whitelist=None, extmod_blacklist=No
 
     .. code-block:: bash
 
-        salt-run saltutil.sync_proxy
+        salt-run saltutil.sync_proxymodules
     '''
     return salt.utils.extmods.sync(__opts__, 'proxy', saltenv=saltenv, extmod_whitelist=extmod_whitelist,
                                    extmod_blacklist=extmod_blacklist)[0]
@@ -585,7 +585,7 @@ def sync_eauth_tokens(saltenv='base', extmod_whitelist=None, extmod_blacklist=No
 
 def sync_serializers(saltenv='base', extmod_whitelist=None, extmod_blacklist=None):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Sync serializer modules from ``salt://_serializers`` to the master
 

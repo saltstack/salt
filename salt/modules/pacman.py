@@ -70,7 +70,7 @@ def latest_version(*names, **kwargs):
     '''
     refresh = salt.utils.data.is_true(kwargs.pop('refresh', False))
 
-    if len(names) == 0:
+    if not names:
         return ''
 
     # Refresh before looking for the latest version available
@@ -105,6 +105,7 @@ def latest_version(*names, **kwargs):
     if len(names) == 1:
         return ret[names[0]]
     return ret
+
 
 # available_version is being deprecated
 available_version = salt.utils.functools.alias_function(latest_version, 'available_version')
@@ -528,7 +529,7 @@ def install(name=None,
     except MinionError as exc:
         raise CommandExecutionError(exc)
 
-    if pkg_params is None or len(pkg_params) == 0:
+    if not pkg_params:
         return {}
 
     if 'root' in kwargs:
@@ -860,7 +861,7 @@ def file_list(*packages):
     ret = []
     cmd = ['pacman', '-Ql']
 
-    if len(packages) > 0 and os.path.exists(packages[0]):
+    if packages and os.path.exists(packages[0]):
         packages = list(packages)
         cmd.extend(('-r', packages.pop(0)))
 
@@ -894,7 +895,7 @@ def file_dict(*packages):
     ret = {}
     cmd = ['pacman', '-Ql']
 
-    if len(packages) > 0 and os.path.exists(packages[0]):
+    if packages and os.path.exists(packages[0]):
         packages = list(packages)
         cmd.extend(('-r', packages.pop(0)))
 
@@ -917,7 +918,7 @@ def owner(*paths):
     .. versionadded:: 2014.7.0
 
     Return the name of the package that owns the file. Multiple file paths can
-    be passed. Like :mod:`pkg.version <salt.modules.yumpkg.version`, if a
+    be passed. Like :mod:`pkg.version <salt.modules.yumpkg.version>`, if a
     single path is passed, a string will be returned, and if multiple paths are
     passed, a dictionary of file/package name pairs will be returned.
 

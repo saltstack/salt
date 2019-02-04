@@ -19,7 +19,6 @@ import subprocess
 import multiprocessing
 import logging
 import pipes
-import msgpack
 import traceback
 import copy
 import re
@@ -64,6 +63,7 @@ import salt.utils.data
 import salt.utils.event
 import salt.utils.files
 import salt.utils.path
+import salt.utils.msgpack
 import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.versions
@@ -624,7 +624,7 @@ def bootstrap(vm_, opts=None):
         'event',
         'executing deploy script',
         'salt/cloud/{0}/deploying'.format(vm_['name']),
-        args={'kwargs': event_kwargs},
+        args={'kwargs': salt.utils.data.simple_types_filter(event_kwargs)},
         sock_dir=opts.get(
             'sock_dir',
             os.path.join(__opts__['sock_dir'], 'master')),
@@ -873,7 +873,7 @@ class Client(object):
         self.service_name = service_name
         self._exe_file = "{0}.exe".format(self.service_name)
         self._client = PsExecClient(server, username, password, port, encrypt)
-        self._service = ScmrService(self.service_name, self._client.session)
+        self._client._service = ScmrService(self.service_name, self._client.session)
 
     def connect(self):
         return self._client.connect()
@@ -884,7 +884,7 @@ class Client(object):
     def create_service(self):
         return self._client.create_service()
 
-    def run_executabe(self, *args, **kwargs):
+    def run_executable(self, *args, **kwargs):
         return self._client.run_executable(*args, **kwargs)
 
     def remove_service(self, wait_timeout=10, sleep_wait=1):
@@ -899,7 +899,7 @@ class Client(object):
         wait_start = time.time()
         while True:
             try:
-                self._service.delete()
+                self._client._service.delete()
             except SCMRException as exc:
                 log.debug("Exception encountered while deleting service %s", repr(exc))
                 if time.time() - wait_start > wait_timeout:
@@ -1022,12 +1022,8 @@ def wait_for_psexecsvc(host, port, username, password, timeout=900):
         if time.time() - start > timeout:
             return False
         log.debug(
-            'Retrying psexec connection to host {0} on port {1} '
-            '(try {2})'.format(
-                host,
-                port,
-                try_count
-            )
+            'Retrying psexec connection to host %s on port %s (try %s)',
+            host, port, try_count
         )
         time.sleep(1)
 
@@ -1036,6 +1032,9 @@ def wait_for_winrm(host, port, username, password, timeout=900, use_ssl=True, ve
     '''
     Wait until WinRM connection can be established.
     '''
+    # Ensure the winrm service is listening before attempting to connect
+    wait_for_port(host=host, port=port, timeout=timeout)
+
     start = time.time()
     log.debug(
         'Attempting WinRM connection to host %s on port %s',
@@ -1109,7 +1108,7 @@ def validate_windows_cred(host,
     '''
     Check if the windows credentials are valid
     '''
-    for i in xrange(retries):
+    for i in range(retries):
         ret_code = 1
         try:
             stdout, stderr, ret_code = run_psexec_command(
@@ -1310,7 +1309,7 @@ def deploy_windows(host,
             )
 
             if ret_code != 0:
-                raise Exception("Fail installer %d", ret_code)
+                raise Exception('Fail installer {0}'.format(ret_code))
 
         # Copy over minion_conf
         if minion_conf:
@@ -1496,7 +1495,7 @@ def deploy_script(host,
                     )
             if sudo:
                 comps = tmp_dir.lstrip('/').rstrip('/').split('/')
-                if len(comps) > 0:
+                if comps:
                     if len(comps) > 1 or comps[0] != 'tmp':
                         ret = root_cmd(
                             'chown {0} "{1}"'.format(username, tmp_dir),
@@ -2631,7 +2630,9 @@ def cachedir_index_add(minion_id, profile, driver, provider, base=None):
     if os.path.exists(index_file):
         mode = 'rb' if six.PY3 else 'r'
         with salt.utils.files.fopen(index_file, mode) as fh_:
-            index = salt.utils.data.decode(msgpack.load(fh_, encoding=MSGPACK_ENCODING))
+            index = salt.utils.data.decode(
+                salt.utils.msgpack.msgpack.load(
+                    fh_, encoding=MSGPACK_ENCODING))
     else:
         index = {}
 
@@ -2648,7 +2649,7 @@ def cachedir_index_add(minion_id, profile, driver, provider, base=None):
 
     mode = 'wb' if six.PY3 else 'w'
     with salt.utils.files.fopen(index_file, mode) as fh_:
-        msgpack.dump(index, fh_, encoding=MSGPACK_ENCODING)
+        salt.utils.msgpack.dump(index, fh_, encoding=MSGPACK_ENCODING)
 
     unlock_file(index_file)
 
@@ -2665,7 +2666,8 @@ def cachedir_index_del(minion_id, base=None):
     if os.path.exists(index_file):
         mode = 'rb' if six.PY3 else 'r'
         with salt.utils.files.fopen(index_file, mode) as fh_:
-            index = salt.utils.data.decode(msgpack.load(fh_, encoding=MSGPACK_ENCODING))
+            index = salt.utils.data.decode(
+                salt.utils.msgpack.load(fh_, encoding=MSGPACK_ENCODING))
     else:
         return
 
@@ -2674,7 +2676,7 @@ def cachedir_index_del(minion_id, base=None):
 
     mode = 'wb' if six.PY3 else 'w'
     with salt.utils.files.fopen(index_file, mode) as fh_:
-        msgpack.dump(index, fh_, encoding=MSGPACK_ENCODING)
+        salt.utils.msgpack.dump(index, fh_, encoding=MSGPACK_ENCODING)
 
     unlock_file(index_file)
 
@@ -2732,7 +2734,7 @@ def request_minion_cachedir(
     path = os.path.join(base, 'requested', fname)
     mode = 'wb' if six.PY3 else 'w'
     with salt.utils.files.fopen(path, mode) as fh_:
-        msgpack.dump(data, fh_, encoding=MSGPACK_ENCODING)
+        salt.utils.msgpack.dump(data, fh_, encoding=MSGPACK_ENCODING)
 
 
 def change_minion_cachedir(
@@ -2764,12 +2766,13 @@ def change_minion_cachedir(
     path = os.path.join(base, cachedir, fname)
 
     with salt.utils.files.fopen(path, 'r') as fh_:
-        cache_data = salt.utils.data.decode(msgpack.load(fh_, encoding=MSGPACK_ENCODING))
+        cache_data = salt.utils.data.decode(
+            salt.utils.msgpack.load(fh_, encoding=MSGPACK_ENCODING))
 
     cache_data.update(data)
 
     with salt.utils.files.fopen(path, 'w') as fh_:
-        msgpack.dump(cache_data, fh_, encoding=MSGPACK_ENCODING)
+        salt.utils.msgpack.dump(cache_data, fh_, encoding=MSGPACK_ENCODING)
 
 
 def activate_minion_cachedir(minion_id, base=None):
@@ -2843,7 +2846,8 @@ def list_cache_nodes_full(opts=None, provider=None, base=None):
                 minion_id = fname[:-2]  # strip '.p' from end of msgpack filename
                 mode = 'rb' if six.PY3 else 'r'
                 with salt.utils.files.fopen(fpath, mode) as fh_:
-                    minions[driver][prov][minion_id] = salt.utils.data.decode(msgpack.load(fh_, encoding=MSGPACK_ENCODING))
+                    minions[driver][prov][minion_id] = salt.utils.data.decode(
+                        salt.utils.msgpack.load(fh_, encoding=MSGPACK_ENCODING))
 
     return minions
 
@@ -3004,7 +3008,7 @@ def cache_node_list(nodes, provider, opts):
         path = os.path.join(prov_dir, '{0}.p'.format(node))
         mode = 'wb' if six.PY3 else 'w'
         with salt.utils.files.fopen(path, mode) as fh_:
-            msgpack.dump(nodes[node], fh_, encoding=MSGPACK_ENCODING)
+            salt.utils.msgpack.dump(nodes[node], fh_, encoding=MSGPACK_ENCODING)
 
 
 def cache_node(node, provider, opts):
@@ -3030,7 +3034,7 @@ def cache_node(node, provider, opts):
     path = os.path.join(prov_dir, '{0}.p'.format(node['name']))
     mode = 'wb' if six.PY3 else 'w'
     with salt.utils.files.fopen(path, mode) as fh_:
-        msgpack.dump(node, fh_, encoding=MSGPACK_ENCODING)
+        salt.utils.msgpack.dump(node, fh_, encoding=MSGPACK_ENCODING)
 
 
 def missing_node_cache(prov_dir, node_list, provider, opts):
@@ -3105,7 +3109,8 @@ def diff_node_cache(prov_dir, node, new_data, opts):
 
     with salt.utils.files.fopen(path, 'r') as fh_:
         try:
-            cache_data = salt.utils.data.decode(msgpack.load(fh_, encoding=MSGPACK_ENCODING))
+            cache_data = salt.utils.data.decode(
+                salt.utils.msgpack.load(fh_, encoding=MSGPACK_ENCODING))
         except ValueError:
             log.warning('Cache for %s was corrupt: Deleting', node)
             cache_data = {}

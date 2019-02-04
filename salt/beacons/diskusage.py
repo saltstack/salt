@@ -12,6 +12,8 @@ from __future__ import absolute_import, unicode_literals
 import logging
 import re
 
+import salt.utils.platform
+
 # Import Third Party Libs
 try:
     import psutil
@@ -94,19 +96,21 @@ def beacon(config):
         if not mount.endswith('$'):
             mount_re = '{0}$'.format(mount)
 
+        if salt.utils.platform.is_windows():
+            mount_re = re.sub('\\$', '\\\\', mount_re)
+
         for part in parts:
             if re.match(mount_re, part.mountpoint):
                 _mount = part.mountpoint
 
                 try:
-                    _current_usage = psutil.disk_usage(mount)
+                    _current_usage = psutil.disk_usage(_mount)
                 except OSError:
-                    log.warning('%s is not a valid mount point.', mount)
+                    log.warning('%s is not a valid mount point.', _mount)
                     continue
 
                 current_usage = _current_usage.percent
                 monitor_usage = mounts[mount]
-                log.debug('current_usage %s', current_usage)
                 if '%' in monitor_usage:
                     monitor_usage = re.sub('%', '', monitor_usage)
                 monitor_usage = float(monitor_usage)

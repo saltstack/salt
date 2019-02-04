@@ -71,7 +71,7 @@ def daemonize(redirect_out=True):
         if pid > 0:
             # exit first parent
             salt.utils.crypt.reinit_crypto()
-            sys.exit(salt.defaults.exitcodes.EX_OK)
+            os._exit(salt.defaults.exitcodes.EX_OK)
     except OSError as exc:
         log.error('fork #1 failed: %s (%s)', exc.errno, exc)
         sys.exit(salt.defaults.exitcodes.EX_GENERIC)
@@ -509,7 +509,7 @@ class ProcessManager(object):
                     yield gen.sleep(10)
                 else:
                     time.sleep(10)
-                if len(self._process_map) == 0:
+                if not self._process_map:
                     break
             # OSError is raised if a signal handler is called (SIGTERM) during os.wait
             except OSError:

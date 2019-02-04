@@ -7,7 +7,7 @@ from docutils.parsers.rst import Directive
 
 from docutils.statemachine import ViewList
 from sphinx import addnodes
-from sphinx.directives import ObjectDescription, Directive
+from sphinx.directives import ObjectDescription
 from sphinx.domains import Domain, ObjType
 from sphinx.domains.python import PyObject
 from sphinx.locale import l_, _

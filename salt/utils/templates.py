@@ -473,7 +473,7 @@ def render_mako_tmpl(tmplstr, context, tmplpath=None):
             uri=context['sls'].replace('.', '/') if 'sls' in context else None,
             lookup=lookup
         ).render(**context)
-    except:
+    except Exception:
         raise SaltRenderError(mako.exceptions.text_error_template().render())
 
 

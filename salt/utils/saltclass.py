@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+
+import glob
 import os
 import re
 import logging
@@ -40,16 +42,7 @@ def get_class(_class, salt_data):
     l_files = []
     saltclass_path = salt_data['path']
 
-    straight = os.path.join(saltclass_path,
-                            'classes',
-                            '{0}.yml'.format(_class))
-    sub_straight = os.path.join(saltclass_path,
-                                'classes',
-                                '{0}.yml'.format(_class.replace('.', os.sep)))
-    sub_init = os.path.join(saltclass_path,
-                            'classes',
-                            _class.replace('.', os.sep),
-                            'init.yml')
+    straight, sub_init, sub_straight = get_class_paths(_class, saltclass_path)
 
     for root, dirs, files in salt.utils.path.os_walk(os.path.join(saltclass_path, 'classes'), followlinks=True):
         for l_file in files:
@@ -66,6 +59,54 @@ def get_class(_class, salt_data):
 
     log.warning('%s: Class definition not found', _class)
     return {}
+
+
+def get_class_paths(_class, saltclass_path):
+    '''
+    Converts the dotted notation of a saltclass class to its possible file counterparts.
+
+    :param str _class: Dotted notation of the class
+    :param str saltclass_path: Root to saltclass storage
+    :return: 3-tuple of possible file counterparts
+    :rtype: tuple(str)
+    '''
+    straight = os.path.join(saltclass_path,
+                            'classes',
+                            '{0}.yml'.format(_class))
+    sub_straight = os.path.join(saltclass_path,
+                                'classes',
+                                '{0}.yml'.format(_class.replace('.', os.sep)))
+    sub_init = os.path.join(saltclass_path,
+                            'classes',
+                            _class.replace('.', os.sep),
+                            'init.yml')
+    return straight, sub_init, sub_straight
+
+
+def get_class_from_file(_file, saltclass_path):
+    '''
+    Converts the absolute path to a saltclass file back to the dotted notation.
+
+    .. code-block:: python
+
+       print(get_class_from_file('/srv/saltclass/classes/services/nginx/init.yml', '/srv/saltclass'))
+       # services.nginx
+
+    :param str _file: Absolute path to file
+    :param str saltclass_path: Root to saltclass storage
+    :return: class name in dotted notation
+    :rtype: str
+    '''
+    # remove classes path prefix
+    _file = _file[len(os.path.join(saltclass_path, 'classes')) + len(os.sep):]
+    # remove .yml extension
+    _file = _file[:-4]
+    # revert to dotted notation
+    _file = _file.replace(os.sep, '.')
+    # remove tailing init
+    if _file.endswith('.init'):
+        _file = _file[:-5]
+    return _file
 
 
 # Return environment
@@ -187,6 +228,61 @@ def expand_variables(a, b, expanded, path=None):
     return b
 
 
+def match_class_glob(_class, saltclass_path):
+    '''
+    Takes a class name possibly including `*` or `?` wildcards (or any other wildcards supportet by `glob.glob`) and
+    returns a list of expanded class names without wildcards.
+
+    .. code-block:: python
+
+       classes = match_class_glob('services.*', '/srv/saltclass')
+       print(classes)
+       # services.mariadb
+       # services.nginx...
+
+
+    :param str _class: dotted class name, globbing allowed.
+    :param str saltclass_path: path to the saltclass root directory.
+
+    :return: The list of expanded class matches.
+    :rtype: list(str)
+    '''
+    straight, sub_init, sub_straight = get_class_paths(_class, saltclass_path)
+    classes = []
+    matches = []
+    matches.extend(glob.glob(straight))
+    matches.extend(glob.glob(sub_straight))
+    matches.extend(glob.glob(sub_init))
+    if not matches:
+        log.warning('%s: Class globbing did not yield any results', _class)
+    for match in matches:
+        classes.append(get_class_from_file(match, saltclass_path))
+    return classes
+
+
+def expand_classes_glob(classes, salt_data):
+    '''
+    Expand the list of `classes` to no longer include any globbing.
+
+    :param iterable(str) classes: Iterable of classes
+    :param dict salt_data: configuration data
+    :return: Expanded list of classes with resolved globbing
+    :rtype: list(str)
+    '''
+    all_classes = []
+    expanded_classes = []
+    saltclass_path = salt_data['path']
+
+    for _class in classes:
+        all_classes.extend(match_class_glob(_class, saltclass_path))
+
+    for _class in all_classes:
+        if _class not in expanded_classes:
+            expanded_classes.append(_class)
+
+    return expanded_classes
+
+
 def expand_classes_in_order(minion_dict,
                             salt_data,
                             seen_classes,
@@ -195,6 +291,8 @@ def expand_classes_in_order(minion_dict,
     # Get classes to expand from minion dictionary
     if not classes_to_expand and 'classes' in minion_dict:
         classes_to_expand = minion_dict['classes']
+
+    classes_to_expand = expand_classes_glob(classes_to_expand, salt_data)
 
     # Now loop on list to recursively expand them
     for klass in classes_to_expand:

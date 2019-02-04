@@ -83,6 +83,27 @@ def _update_nilrt_restart_state():
         __salt__['cmd.shell']('md5sum {0} >{1}/nisysapi.ini.md5sum'
                               .format(nisysapi_path, NILRT_RESTARTCHECK_STATE_PATH))
 
+    # Expert plugin files get added to a conf.d dir, so keep track of the total
+    # no. of files, their timestamps and content hashes
+    nisysapi_conf_d_path = "/usr/lib/{0}/nisysapi/conf.d/experts/".format(
+        'arm-linux-gnueabi' if 'arm' in __grains__.get('cpuarch') else 'x86_64-linux-gnu'
+    )
+
+    if os.path.exists(nisysapi_conf_d_path):
+        with salt.utils.files.fopen('{0}/sysapi.conf.d.count'.format(
+                NILRT_RESTARTCHECK_STATE_PATH), 'w') as fcount:
+            fcount.write(str(len(os.listdir(nisysapi_conf_d_path))))
+
+        for fexpert in os.listdir(nisysapi_conf_d_path):
+            __salt__['cmd.shell']('stat -c %Y {0}/{1} >{2}/{1}.timestamp'
+                                  .format(nisysapi_conf_d_path,
+                                          fexpert,
+                                          NILRT_RESTARTCHECK_STATE_PATH))
+            __salt__['cmd.shell']('md5sum {0}/{1} >{2}/{1}.md5sum'
+                                  .format(nisysapi_conf_d_path,
+                                          fexpert,
+                                          NILRT_RESTARTCHECK_STATE_PATH))
+
 
 def _get_restartcheck_result(errors):
     '''
@@ -94,21 +115,25 @@ def _get_restartcheck_result(errors):
     return rs_result
 
 
-def _process_restartcheck_result(rs_result):
+def _process_restartcheck_result(rs_result, **kwargs):
     '''
     Check restartcheck output to see if system/service restarts were requested
     and take appropriate action.
     '''
     if 'No packages seem to need to be restarted' in rs_result:
         return
+    reboot_required = False
     for rstr in rs_result:
         if 'System restart required' in rstr:
             _update_nilrt_restart_state()
             __salt__['system.set_reboot_required_witnessed']()
-        else:
-            service = os.path.join('/etc/init.d', rstr)
-            if os.path.exists(service):
-                __salt__['cmd.run']([service, 'restart'])
+            reboot_required = True
+    if kwargs.get('always_restart_services', True) or not reboot_required:
+        for rstr in rs_result:
+            if 'System restart required' not in rstr:
+                service = os.path.join('/etc/init.d', rstr)
+                if os.path.exists(service):
+                    __salt__['cmd.run']([service, 'restart'])
 
 
 def __virtual__():
@@ -124,9 +149,8 @@ def __virtual__():
                     NILRT_RESTARTCHECK_STATE_PATH,
                     exc.errno,
                     exc.strerror)
-        # modules.dep always exists, make sure it's restart state files also exist
-        if not (os.path.exists(os.path.join(NILRT_RESTARTCHECK_STATE_PATH, 'modules.dep.timestamp')) and
-                os.path.exists(os.path.join(NILRT_RESTARTCHECK_STATE_PATH, 'modules.dep.md5sum'))):
+        # populate state dir if empty
+        if not os.listdir(NILRT_RESTARTCHECK_STATE_PATH):
             _update_nilrt_restart_state()
         return __virtualname__
 
@@ -154,7 +178,7 @@ def latest_version(*names, **kwargs):
     '''
     refresh = salt.utils.data.is_true(kwargs.pop('refresh', True))
 
-    if len(names) == 0:
+    if not names:
         return ''
 
     ret = {}
@@ -269,6 +293,89 @@ def refresh_db(failhard=False, **kwargs):  # pylint: disable=unused-argument
     return ret
 
 
+def _is_testmode(**kwargs):
+    '''
+    Returns whether a test mode (noaction) operation was requested.
+    '''
+    return bool(kwargs.get('test') or __opts__.get('test'))
+
+
+def _append_noaction_if_testmode(cmd, **kwargs):
+    '''
+    Adds the --noaction flag to the command if it's running in the test mode.
+    '''
+    if _is_testmode(**kwargs):
+        cmd.append('--noaction')
+
+
+def _build_install_command_list(cmd_prefix, to_install, to_downgrade, to_reinstall):
+    '''
+    Builds a list of install commands to be executed in sequence in order to process
+    each of the to_install, to_downgrade, and to_reinstall lists.
+    '''
+    cmds = []
+    if to_install:
+        cmd = copy.deepcopy(cmd_prefix)
+        cmd.extend(to_install)
+        cmds.append(cmd)
+    if to_downgrade:
+        cmd = copy.deepcopy(cmd_prefix)
+        cmd.append('--force-downgrade')
+        cmd.extend(to_downgrade)
+        cmds.append(cmd)
+    if to_reinstall:
+        cmd = copy.deepcopy(cmd_prefix)
+        cmd.append('--force-reinstall')
+        cmd.extend(to_reinstall)
+        cmds.append(cmd)
+
+    return cmds
+
+
+def _parse_reported_packages_from_install_output(output):
+    '''
+    Parses the output of "opkg install" to determine what packages would have been
+    installed by an operation run with the --noaction flag.
+
+    We are looking for lines like:
+        Installing <package> (<version>) on <target>
+    or
+        Upgrading <package> from <oldVersion> to <version> on root
+    '''
+    reported_pkgs = {}
+    install_pattern = re.compile(r'Installing\s(?P<package>.*?)\s\((?P<version>.*?)\)\son\s(?P<target>.*?)')
+    upgrade_pattern = re.compile(r'Upgrading\s(?P<package>.*?)\sfrom\s(?P<oldVersion>.*?)\sto\s(?P<version>.*?)\son\s(?P<target>.*?)')
+    for line in salt.utils.itertools.split(output, '\n'):
+        match = install_pattern.match(line)
+        if match is None:
+            match = upgrade_pattern.match(line)
+        if match:
+            reported_pkgs[match.group('package')] = match.group('version')
+
+    return reported_pkgs
+
+
+def _execute_install_command(cmd, parse_output, errors, parsed_packages):
+    '''
+    Executes a command for the install operation.
+    If the command fails, its error output will be appended to the errors list.
+    If the command succeeds and parse_output is true, updated packages will be appended
+    to the parsed_packages dictionary.
+    '''
+    out = __salt__['cmd.run_all'](
+        cmd,
+        output_loglevel='trace',
+        python_shell=False
+    )
+    if out['retcode'] != 0:
+        if out['stderr']:
+            errors.append(out['stderr'])
+        else:
+            errors.append(out['stdout'])
+    elif parse_output:
+        parsed_packages.update(_parse_reported_packages_from_install_output(out['stdout']))
+
+
 def install(name=None,
             refresh=False,
             pkgs=None,
@@ -346,6 +453,9 @@ def install(name=None,
 
         .. versionadded:: 2017.7.0
 
+    always_restart_services
+        Whether to restart services even if a reboot is required. Default is True.
+
     Returns a dict containing the new package names and versions::
 
         {'<package>': {'old': '<old-version>',
@@ -366,7 +476,8 @@ def install(name=None,
     to_reinstall = []
     to_downgrade = []
 
-    if pkg_params is None or len(pkg_params) == 0:
+    _append_noaction_if_testmode(cmd_prefix, **kwargs)
+    if not pkg_params:
         return {}
     elif pkg_type == 'file':
         if reinstall:
@@ -415,24 +526,7 @@ def install(name=None,
                         # This should cause the command to fail.
                         to_install.append(pkgstr)
 
-    cmds = []
-
-    if to_install:
-        cmd = copy.deepcopy(cmd_prefix)
-        cmd.extend(to_install)
-        cmds.append(cmd)
-
-    if to_downgrade:
-        cmd = copy.deepcopy(cmd_prefix)
-        cmd.append('--force-downgrade')
-        cmd.extend(to_downgrade)
-        cmds.append(cmd)
-
-    if to_reinstall:
-        cmd = copy.deepcopy(cmd_prefix)
-        cmd.append('--force-reinstall')
-        cmd.extend(to_reinstall)
-        cmds.append(cmd)
+    cmds = _build_install_command_list(cmd_prefix, to_install, to_downgrade, to_reinstall)
 
     if not cmds:
         return {}
@@ -441,20 +535,17 @@ def install(name=None,
         refresh_db()
 
     errors = []
+    is_testmode = _is_testmode(**kwargs)
+    test_packages = {}
     for cmd in cmds:
-        out = __salt__['cmd.run_all'](
-            cmd,
-            output_loglevel='trace',
-            python_shell=False
-        )
-        if out['retcode'] != 0:
-            if out['stderr']:
-                errors.append(out['stderr'])
-            else:
-                errors.append(out['stdout'])
+        _execute_install_command(cmd, is_testmode, errors, test_packages)
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
+    if is_testmode:
+        new = copy.deepcopy(new)
+        new.update(test_packages)
+
     ret = salt.utils.data.compare_dicts(old, new)
 
     if pkg_type == 'file' and reinstall:
@@ -490,9 +581,27 @@ def install(name=None,
             info={'errors': errors, 'changes': ret}
         )
 
-    _process_restartcheck_result(rs_result)
+    _process_restartcheck_result(rs_result, **kwargs)
 
     return ret
+
+
+def _parse_reported_packages_from_remove_output(output):
+    '''
+    Parses the output of "opkg remove" to determine what packages would have been
+    removed by an operation run with the --noaction flag.
+
+    We are looking for lines like
+        Removing <package> (<version>) from <Target>...
+    '''
+    reported_pkgs = {}
+    remove_pattern = re.compile(r'Removing\s(?P<package>.*?)\s\((?P<version>.*?)\)\sfrom\s(?P<target>.*?)...')
+    for line in salt.utils.itertools.split(output, '\n'):
+        match = remove_pattern.match(line)
+        if match:
+            reported_pkgs[match.group('package')] = ''
+
+    return reported_pkgs
 
 
 def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
@@ -512,12 +621,12 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
     remove_dependencies
         Remove package and all dependencies
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     auto_remove_deps
         Remove packages that were installed automatically to satisfy dependencies
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     Returns a dict containing the changes.
 
@@ -540,6 +649,7 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
     if not targets:
         return {}
     cmd = ['opkg', 'remove']
+    _append_noaction_if_testmode(cmd, **kwargs)
     if kwargs.get('remove_dependencies', False):
         cmd.append('--force-removal-of-dependent-packages')
     if kwargs.get('auto_remove_deps', False):
@@ -561,6 +671,9 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
+    if _is_testmode(**kwargs):
+        reportedPkgs = _parse_reported_packages_from_remove_output(out['stdout'])
+        new = {k: v for k, v in new.items() if k not in reportedPkgs}
     ret = salt.utils.data.compare_dicts(old, new)
 
     rs_result = _get_restartcheck_result(errors)
@@ -571,7 +684,7 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
             info={'errors': errors, 'changes': ret}
         )
 
-    _process_restartcheck_result(rs_result)
+    _process_restartcheck_result(rs_result, **kwargs)
 
     return ret
 
@@ -654,7 +767,7 @@ def upgrade(refresh=True, **kwargs):  # pylint: disable=unused-argument
             info={'errors': errors, 'changes': ret}
         )
 
-    _process_restartcheck_result(rs_result)
+    _process_restartcheck_result(rs_result, **kwargs)
 
     return ret
 
@@ -968,7 +1081,7 @@ def _process_info_installed_output(out, filter_attrs):
             # This is a continuation of the last attr
             if filter_attrs is None or attr in filter_attrs:
                 line = line.strip()
-                if len(attrs[attr]):
+                if attrs[attr]:
                     # If attr is empty, don't add leading newline
                     attrs[attr] += '\n'
                 attrs[attr] += line
@@ -1168,7 +1281,7 @@ def list_repos(**kwargs):  # pylint: disable=unused-argument
     return repos
 
 
-def get_repo(alias, **kwargs):  # pylint: disable=unused-argument
+def get_repo(repo, **kwargs):  # pylint: disable=unused-argument
     '''
     Display a repo from the ``/etc/opkg/*.conf``
 
@@ -1176,19 +1289,19 @@ def get_repo(alias, **kwargs):  # pylint: disable=unused-argument
 
     .. code-block:: bash
 
-        salt '*' pkg.get_repo alias
+        salt '*' pkg.get_repo repo
     '''
     repos = list_repos()
 
     if repos:
         for source in six.itervalues(repos):
             for sub in source:
-                if sub['name'] == alias:
+                if sub['name'] == repo:
                     return sub
     return {}
 
 
-def _del_repo_from_file(alias, filepath):
+def _del_repo_from_file(repo, filepath):
     '''
     Remove a repo from filepath
     '''
@@ -1201,30 +1314,30 @@ def _del_repo_from_file(alias, filepath):
                 if line.startswith('#'):
                     line = line[1:]
                 cols = salt.utils.args.shlex_split(line.strip())
-                if alias != cols[1]:
+                if repo != cols[1]:
                     output.append(salt.utils.stringutils.to_str(line))
     with salt.utils.files.fopen(filepath, 'w') as fhandle:
         fhandle.writelines(output)
 
 
-def _add_new_repo(alias, uri, compressed, enabled=True):
+def _add_new_repo(repo, uri, compressed, enabled=True):
     '''
     Add a new repo entry
     '''
     repostr = '# ' if not enabled else ''
     repostr += 'src/gz ' if compressed else 'src '
-    if ' ' in alias:
-        repostr += '"' + alias + '" '
+    if ' ' in repo:
+        repostr += '"' + repo + '" '
     else:
-        repostr += alias + ' '
+        repostr += repo + ' '
     repostr += uri + '\n'
-    conffile = os.path.join(OPKG_CONFDIR, alias + '.conf')
+    conffile = os.path.join(OPKG_CONFDIR, repo + '.conf')
 
     with salt.utils.files.fopen(conffile, 'a') as fhandle:
         fhandle.write(salt.utils.stringutils.to_str(repostr))
 
 
-def _mod_repo_in_file(alias, repostr, filepath):
+def _mod_repo_in_file(repo, repostr, filepath):
     '''
     Replace a repo entry in filepath with repostr
     '''
@@ -1234,7 +1347,7 @@ def _mod_repo_in_file(alias, repostr, filepath):
             cols = salt.utils.args.shlex_split(
                 salt.utils.stringutils.to_unicode(line).strip()
             )
-            if alias not in cols:
+            if repo not in cols:
                 output.append(line)
             else:
                 output.append(salt.utils.stringutils.to_str(repostr + '\n'))
@@ -1242,7 +1355,7 @@ def _mod_repo_in_file(alias, repostr, filepath):
         fhandle.writelines(output)
 
 
-def del_repo(alias, **kwargs):  # pylint: disable=unused-argument
+def del_repo(repo, **kwargs):  # pylint: disable=unused-argument
     '''
     Delete a repo from ``/etc/opkg/*.conf``
 
@@ -1253,21 +1366,22 @@ def del_repo(alias, **kwargs):  # pylint: disable=unused-argument
 
     .. code-block:: bash
 
-        salt '*' pkg.del_repo alias
+        salt '*' pkg.del_repo repo
     '''
+    refresh = salt.utils.data.is_true(kwargs.get('refresh', True))
     repos = list_repos()
     if repos:
         deleted_from = dict()
-        for repo in repos:
-            source = repos[repo][0]
-            if source['name'] == alias:
+        for repository in repos:
+            source = repos[repository][0]
+            if source['name'] == repo:
                 deleted_from[source['file']] = 0
-                _del_repo_from_file(alias, source['file'])
+                _del_repo_from_file(repo, source['file'])
 
         if deleted_from:
             ret = ''
-            for repo in repos:
-                source = repos[repo][0]
+            for repository in repos:
+                source = repos[repository][0]
                 if source['file'] in deleted_from:
                     deleted_from[source['file']] += 1
             for repo_file, count in six.iteritems(deleted_from):
@@ -1279,22 +1393,22 @@ def del_repo(alias, **kwargs):  # pylint: disable=unused-argument
                         os.remove(repo_file)
                     except OSError:
                         pass
-                ret += msg.format(alias, repo_file)
-            # explicit refresh after a repo is deleted
-            refresh_db()
+                ret += msg.format(repo, repo_file)
+            if refresh:
+                refresh_db()
             return ret
 
-    return "Repo {0} doesn't exist in the opkg repo lists".format(alias)
+    return "Repo {0} doesn't exist in the opkg repo lists".format(repo)
 
 
-def mod_repo(alias, **kwargs):
+def mod_repo(repo, **kwargs):
     '''
     Modify one or more values for a repo.  If the repo does not exist, it will
     be created, so long as uri is defined.
 
     The following options are available to modify a repo definition:
 
-    alias
+    repo
         alias by which opkg refers to the repo.
     uri
         the URI to the repo.
@@ -1310,8 +1424,8 @@ def mod_repo(alias, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' pkg.mod_repo alias uri=http://new/uri
-        salt '*' pkg.mod_repo alias enabled=False
+        salt '*' pkg.mod_repo repo uri=http://new/uri
+        salt '*' pkg.mod_repo repo enabled=False
     '''
     repos = list_repos()
     found = False
@@ -1319,9 +1433,9 @@ def mod_repo(alias, **kwargs):
     if 'uri' in kwargs:
         uri = kwargs['uri']
 
-    for repo in repos:
-        source = repos[repo][0]
-        if source['name'] == alias:
+    for repository in repos:
+        source = repos[repository][0]
+        if source['name'] == repo:
             found = True
             repostr = ''
             if 'enabled' in kwargs and not kwargs['enabled']:
@@ -1330,13 +1444,13 @@ def mod_repo(alias, **kwargs):
                 repostr += 'src/gz ' if kwargs['compressed'] else 'src'
             else:
                 repostr += 'src/gz' if source['compressed'] else 'src'
-            repo_alias = kwargs['alias'] if 'alias' in kwargs else alias
+            repo_alias = kwargs['alias'] if 'alias' in kwargs else repo
             if ' ' in repo_alias:
                 repostr += ' "{0}"'.format(repo_alias)
             else:
                 repostr += ' {0}'.format(repo_alias)
             repostr += ' {0}'.format(kwargs['uri'] if 'uri' in kwargs else source['uri'])
-            _mod_repo_in_file(alias, repostr, source['file'])
+            _mod_repo_in_file(repo, repostr, source['file'])
         elif uri and source['uri'] == uri:
             raise CommandExecutionError(
                 'Repository \'{0}\' already exists as \'{1}\'.'.format(uri, source['name']))
@@ -1345,12 +1459,12 @@ def mod_repo(alias, **kwargs):
         # Need to add a new repo
         if 'uri' not in kwargs:
             raise CommandExecutionError(
-                'Repository \'{0}\' not found and no URI passed to create one.'.format(alias))
+                'Repository \'{0}\' not found and no URI passed to create one.'.format(repo))
         # If compressed is not defined, assume True
         compressed = kwargs['compressed'] if 'compressed' in kwargs else True
         # If enabled is not defined, assume True
         enabled = kwargs['enabled'] if 'enabled' in kwargs else True
-        _add_new_repo(alias, kwargs['uri'], compressed, enabled)
+        _add_new_repo(repo, kwargs['uri'], compressed, enabled)
 
     if 'refresh' in kwargs:
         refresh_db()
@@ -1451,3 +1565,21 @@ def owner(*paths, **kwargs):  # pylint: disable=unused-argument
     if len(ret) == 1:
         return next(six.itervalues(ret))
     return ret
+
+
+def version_clean(version):
+    '''
+    Clean the version string removing extra data.
+    There's nothing do to here for nipkg.py, therefore it will always
+    return the given version.
+    '''
+    return version
+
+
+def check_extra_requirements(pkgname, pkgver):
+    '''
+    Check if the installed package already has the given requirements.
+    There's nothing do to here for nipkg.py, therefore it will always
+    return True.
+    '''
+    return True

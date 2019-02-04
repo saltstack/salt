@@ -92,7 +92,7 @@ def _get_token_and_url_from_master():
     }
 
 
-def _get_vault_connection():
+def get_vault_connection():
     '''
     Get the connection details for calling Vault, from local configuration if
     it exists, or from the master otherwise
@@ -134,7 +134,11 @@ def _get_vault_connection():
             raise salt.exceptions.CommandExecutionError(errmsg)
 
     if 'vault' in __opts__ and __opts__.get('__role', 'minion') == 'master':
-        return _use_local_config()
+        if 'id' in __grains__:
+            log.debug('Contacting master for Vault connection details')
+            return _get_token_and_url_from_master()
+        else:
+            return _use_local_config()
     elif any((__opts__['local'], __opts__['file_client'] == 'local', __opts__['master_type'] == 'disable')):
         return _use_local_config()
     else:
@@ -147,7 +151,7 @@ def make_request(method, resource, token=None, vault_url=None, get_token_url=Fal
     Make a request to Vault
     '''
     if not token or not vault_url:
-        connection = _get_vault_connection()
+        connection = get_vault_connection()
         token, vault_url = connection['token'], connection['url']
         if 'verify' not in args:
             args['verify'] = connection['verify']

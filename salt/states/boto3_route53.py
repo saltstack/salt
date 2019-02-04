@@ -66,13 +66,14 @@ passed in as a dict, or as a string to pull from pillars or minion config:
 
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
+import logging
 import uuid
 
 # Import Salt Libs
-import salt.utils.dictupdate as dictupdate
-from salt.utils import exactly_one
 from salt.exceptions import SaltInvocationError
-import logging
+import salt.utils.data
+import salt.utils.dictupdate
+
 log = logging.getLogger(__name__)  # pylint: disable=W1699
 
 
@@ -143,7 +144,7 @@ def hosted_zone_present(name, Name=None, PrivateZone=False,
         if not isinstance(VPCs, list):
             raise SaltInvocationError("Parameter 'VPCs' must be a list of dicts.")
         for v in VPCs:
-            if not isinstance(v, dict) or not exactly_one((v.get('VPCId'), v.get('VPCName'))):
+            if not isinstance(v, dict) or not salt.utils.data.exactly_one((v.get('VPCId'), v.get('VPCName'))):
                 raise SaltInvocationError("Parameter 'VPCs' must be a list of dicts, each composed "
                                       "of either a 'VPCId' or a 'VPCName', and optionally a "
                                       "'VPCRegion', to help distinguish between multitple matches.")
@@ -251,7 +252,7 @@ def hosted_zone_present(name, Name=None, PrivateZone=False,
             log.info(msg)
             ret['comment'] = '  '.join([ret['comment'], msg])
             ret['changes']['old'] = zone
-            ret['changes']['new'] = dictupdate.update(ret['changes'].get('new', {}), r)
+            ret['changes']['new'] = salt.utils.dictupdate.update(ret['changes'].get('new', {}), r)
         else:
             ret['comment'] = 'Update of Route 53 {} hosted zone {} comment failed'.format('private'
                     if PrivateZone else 'public', Name)
@@ -563,7 +564,7 @@ def rr_present(name, HostedZoneId=None, DomainName=None, PrivateZone=False, Name
                     r = __salt__['boto_ec2.find_instances'](
                             tags={tag_name: tag_value}, return_objs=True, in_states=good_states,
                             region=region, key=key, keyid=keyid, profile=profile)
-                    if len(r) < 1:
+                    if not r:
                         ret['comment'] = 'No EC2 instance with tag {} == {} found'.format(tag_name,
                                 tag_value)
                         log.error(ret['comment'])
@@ -633,7 +634,8 @@ def rr_present(name, HostedZoneId=None, DomainName=None, PrivateZone=False, Name
             if locals().get(u) != rrset.get(u):
                 update = True
                 break
-        if 'ResourceRecords' in rrset and ResourceRecords != sorted(rrset.get('ResourceRecords'), key=lambda x: x['Value']):
+        if 'ResourceRecords' in rrset and ResourceRecords != sorted(rrset.get('ResourceRecords', {}),
+                key=lambda x: x['Value']):
             update = True
 
     if not create and not update:

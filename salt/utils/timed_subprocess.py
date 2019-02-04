@@ -42,6 +42,8 @@ class TimedProc(object):
 
         if self.timeout and not isinstance(self.timeout, (int, float)):
             raise salt.exceptions.TimedProcTimeoutError('Error: timeout {0} must be a number'.format(self.timeout))
+        if kwargs.get('shell', False):
+            args = salt.utils.data.decode(args, to_str=True)
 
         try:
             self.process = subprocess.Popen(args, **kwargs)

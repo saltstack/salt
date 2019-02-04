@@ -4112,12 +4112,6 @@ source_file = _build/locale/topics/development/hacking.pot
 source_lang = en
 source_name = topics/development/hacking.rst
 
-[salt.topics--development--raet--index]
-file_filter = locale/<lang>/LC_MESSAGES/topics/development/raet/index.po
-source_file = _build/locale/topics/development/raet/index.pot
-source_lang = en
-source_name = topics/development/raet/index.rst
-
 [salt.topics--development--salt_projects]
 file_filter = locale/<lang>/LC_MESSAGES/topics/development/salt_projects.po
 source_file = _build/locale/topics/development/salt_projects.pot
@@ -4183,18 +4177,6 @@ file_filter = locale/<lang>/LC_MESSAGES/topics/topology/syndic.po
 source_file = _build/locale/topics/topology/syndic.pot
 source_lang = en
 source_name = topics/topology/syndic.rst
-
-[salt.topics--transports--raet--index]
-file_filter = locale/<lang>/LC_MESSAGES/topics/transports/raet/index.po
-source_file = _build/locale/topics/transports/raet/index.pot
-source_lang = en
-source_name = topics/transports/raet/index.rst
-
-[salt.topics--transports--raet--programming_intro]
-file_filter = locale/<lang>/LC_MESSAGES/topics/transports/raet/programming_intro.po
-source_file = _build/locale/topics/transports/raet/programming_intro.pot
-source_lang = en
-source_name = topics/transports/raet/programming_intro.rst
 
 [salt.topics--tutorials--states_pt5]
 file_filter = locale/<lang>/LC_MESSAGES/topics/tutorials/states_pt5.po
@@ -4651,12 +4633,6 @@ file_filter = locale/<lang>/LC_MESSAGES/ref/modules/all/salt.modules.pyenv.po
 source_file = _build/locale/ref/modules/all/salt.modules.pyenv.pot
 source_lang = en
 source_name = ref/modules/all/salt.modules.pyenv.rst
-
-[salt.ref--modules--all--salt_modules_raet_publish]
-file_filter = locale/<lang>/LC_MESSAGES/ref/modules/all/salt.modules.raet_publish.po
-source_file = _build/locale/ref/modules/all/salt.modules.raet_publish.pot
-source_lang = en
-source_name = ref/modules/all/salt.modules.raet_publish.rst
 
 [salt.ref--modules--all--salt_modules_schedule]
 file_filter = locale/<lang>/LC_MESSAGES/ref/modules/all/salt.modules.schedule.po
