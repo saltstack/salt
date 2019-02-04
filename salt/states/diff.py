@@ -1,37 +1,26 @@
 # -*- coding: utf-8 -*
 '''
 Smart diff files state
-
 Simple usage to diff a file from the master and the minion :
-
 .. code-block:: sls
-
     check_redhat-release:
       diff.diff_file:
         - file1: salt://configurations/RHEL7/redhat-release
         - file2: /etc/redhat-release
-
-
 Only check the permissions of the file /etc/hosts :
-
 .. code-block:: sls
-
     check_hosts:
       diff.diff_file:
         - file1: salt://configurations/RHEL7/hosts
         - file2: /etc/hosts
         - content: False
-
 Check the /etc/krb5.conf and change it if it's different :
-
 .. code-block:: sls
-
     check_krb5.conf
       diff.diff_file:
         - file1: salt://configurations/RHEL7/krb5.conf
         - file2: /etc/krb5.conf
         - change: True
-
 Note :
 It doesn't check the owner of the file.
 If the file is not readable by salt on the master, you should make salt the owner.
@@ -48,13 +37,13 @@ def clean_file(filename):
     content = ""
     with open(filename) as f:
         for line in f:
-            if re.search('^\s*#.*?$', line): # Commentary
+            if re.search('^\s*#.*?$', line):  # Commentary
                 pass
-            elif re.match(r'^\s*$', line): # empty line
+            elif re.match(r'^\s*$', line):  # empty line
                 pass
             else:
-                line = re.sub('\t+', ' ',line) # Tab replaced
-                line = re.sub(' +', ' ',line) # multispaces replaced
+                line = re.sub('\t+', ' ', line)  # Tab replaced
+                line = re.sub(' +', ' ', line)  # multispaces replaced
                 content += line
     return content.strip('\n\n')
 
@@ -63,7 +52,6 @@ def diff_file(name, file1, file2, content=True, change=False):
     1) Checking if the file exists.
     2) Checking if the permissions are the same.
     3) Checking if both file's content is the same.
-
     file1
         The name of the file on the salt-master.
     file2
@@ -90,7 +78,7 @@ def diff_file(name, file1, file2, content=True, change=False):
         comments += "File doesn't exist (" + file2 + ")."
         return_dict['comment'] = comments
         if change:
-            randFile = random.randint(0,999999)
+            randFile = random.randint(0, 999999)
             ret = __states__['file.managed'](name='/tmp/salt_' + str(randFile), source=file1, mode='keep')
             if ret['result']:
                 ret = os.system('cp -p /tmp/salt_' + str(randFile) + ' ' + file2)
