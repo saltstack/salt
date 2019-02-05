@@ -135,7 +135,7 @@ def returner(ret):
         log.trace("sdstack_etcd returner <returner> the previous job id {old:s} for {id:s} at {path:s} was set to {new:s}".format(old=res._prev_node.value, id=ret['id'], path=minionp, new=res.value))
 
     # Iterate through all the fields in the ret dict and dump it under jobs/$jid/id/$field
-    jobp = '/'.join([path, 'jobs', ret['jid'], ret['id'])
+    jobp = '/'.join([path, 'jobs', ret['jid'], ret['id']])
     log.debug("sdstack_etcd returner <returner> writing job data (ttl={ttl:d}) for {jid:s} to {path:s} with {data:s}".format(jid=ret['jid'], path=jobp, ttl=ttl, data=repr(ret)))
     for field in ret:
         fieldp = '/'.join([jobp, field])
@@ -216,7 +216,7 @@ def get_load(jid):
     except salt.utils.etcd_util.etcd.EtcdKeyNotFound as E:
         log.error("sdstack_etcd returner <get_load> could not find job {jid:s} at the path {path:s}".format(jid=jid, path=loadp))
         return None
-    log.trace('sdstack_etcd returner <get_load> found load data for job {jid:s} at {path:s} with value {data:s}'.format(jid=jid, path=res.key, data=repr(res.value))))
+    log.trace('sdstack_etcd returner <get_load> found load data for job {jid:s} at {path:s} with value {data:s}'.format(jid=jid, path=res.key, data=repr(res.value)))
     return salt.utils.json.loads(res.value)
 
 
@@ -299,7 +299,7 @@ def get_fun(fun):
             res = client.get(funp)
         except salt.utils.etcd_util.etcd.EtcdKeyNotFound as E:
             log.debug("sdstack_etcd returner <get_fun> returned nothing from minion {id:s} for job {jid:s} at path {path:s}".format(id=comps[-1], jid=str(item.value), path=funp))
-            continue.
+            continue
 
         # Check if the function field (fun) matches what the user is looking for
         # If it does, then we can just add the minion to our results
