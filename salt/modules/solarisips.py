@@ -46,6 +46,7 @@ import salt.utils.data
 import salt.utils.functools
 import salt.utils.path
 import salt.utils.pkg
+from salt.ext.six import string_types
 from salt.exceptions import CommandExecutionError
 
 # Define the module's virtual name
@@ -332,7 +333,6 @@ def latest_version(name, **kwargs):
         return ret
     return ''
 
-
 # available_version is being deprecated
 available_version = salt.utils.functools.alias_function(latest_version, 'available_version')
 
@@ -474,12 +474,16 @@ def install(name=None, refresh=False, pkgs=None, version=None, test=False, **kwa
 
     pkg2inst = ''
     if pkgs:    # multiple packages specified
+        pkg2inst = []
         for pkg in pkgs:
-            if list(pkg.items())[0][1]:   # version specified
-                pkg2inst += '{0}@{1} '.format(list(pkg.items())[0][0],
-                                              list(pkg.items())[0][1])
+            if getattr(pkg, 'items', False):
+                if list(pkg.items())[0][1]:   # version specified
+                    pkg2inst.append('{0}@{1}'.format(list(pkg.items())[0][0],
+                                                     list(pkg.items())[0][1]))
+                else:
+                    pkg2inst.append(list(pkg.items())[0][0])
             else:
-                pkg2inst += '{0} '.format(list(pkg.items())[0][0])
+                pkg2inst.append("{0}".format(pkg))
         log.debug('Installing these packages instead of %s: %s',
                   name, pkg2inst)
 
@@ -499,7 +503,10 @@ def install(name=None, refresh=False, pkgs=None, version=None, test=False, **kwa
 
     # Install or upgrade the package
     # If package is already installed
-    cmd.append(pkg2inst)
+    if isinstance(pkg2inst, string_types):
+        cmd.append(pkg2inst)
+    elif isinstance(pkg2inst, list):
+        cmd = cmd + pkg2inst
 
     out = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
 
