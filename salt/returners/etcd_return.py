@@ -139,9 +139,10 @@ def returner(ret):
     log.debug("sdstack_etcd returner <returner> writing job data (ttl={ttl:d}) for {jid:s} to {path:s} with {data:s}".format(jid=ret['jid'], path=jobp, ttl=ttl, data=repr(ret)))
     for field in ret:
         fieldp = '/'.join([jobp, field])
-        log.trace("sdstack_etcd returner <returner> setting field {0} at {1} to {2:s}".format(field, fieldp, repr(ret[field])))
+
         data = salt.utils.json.dumps(ret[field])
         res = client.set(fieldp, data, ttl=ttl)
+        log.trace("sdstack_etcd returner <returner> set field {field:s} for job {jid:s} at {path:s} to {result:s}".format(field=field, jid=ret['jid'], path=res.key, result=repr(ret[field])))
     return
 
 
@@ -157,28 +158,42 @@ def save_load(jid, load, minions=None):
         ttl = __opts__.get('etcd.ttl')
 
     # Figure out the path using jobs/$jid/.load.p
-    savep = '/'.join([path, 'jobs', jid, '.load.p']),
-    log.debug('sdstack_etcd returner <save_load> setting load data (ttl={ttl:d}) for jid {jid:s} at {path:s} with {data:s}'.format(jid=jid, ttl=ttl, path=savep, data=load))
+    loadp = '/'.join([path, 'jobs', jid, '.load.p']),
+    log.debug('sdstack_etcd returner <save_load> setting load data (ttl={ttl:d}) for job {jid:s} at {path:s} with {data:s}'.format(jid=jid, ttl=ttl, path=loadp, data=load))
 
     # Now we can just store the current load
     data = salt.utils.json.dumps(load)
-    res = client.set(savep, data, ttl=ttl)
+    res = client.set(loadp, data, ttl=ttl)
 
-    log.trace('sdstack_etcd returner <save_load> saved load data for job {jid:s} at {path:s} with {data:s}'.format(jid=jid, path=loadp, data=repr(load)))
+    log.trace('sdstack_etcd returner <save_load> saved load data for job {jid:s} at {path:s} with {data:s}'.format(jid=jid, path=res.key, data=repr(load)))
     return
 
 
 def save_minions(jid, minions, syndic_id=None):  # pylint: disable=unused-argument
     '''
-    Included for API consistency.
+    Save/update the minion list for a given jid. The syndic_id argument is
+    included for API compatibility only.
     '''
-    pass
+    client, path = _get_conn(__opts__, read_profile)
+
+    # Figure out the path that our job should be at
+    jobp = '/'.join([path, 'jobs', jid])
+    log.debug('sdstack_etcd returner <save_minions> adding minions for job {jid:s} to {path:s}'.format(jid=jid, path=jobp))
+
+    # Iterate through all of the minions and add a directory for them to the job path
+    for minion in set(minions):
+        minionp = '/'.join([path, minion])
+        res = client.set(minionp, None, dir=True)
+        log.trace('sdstack_etcd returner <save_minions> added minion {id:s} for job {jid:s} to {path:s}'.format(id=minion, jid=jid, path=res.key))
+    return
 
 
 def clean_old_jobs():
     '''
     Included for API consistency.
     '''
+    # Old jobs should be cleaned by the ttl that's written for each key, so therefore
+    # the implementation of this api is not necessary.
     pass
 
 
@@ -191,7 +206,7 @@ def get_load(jid):
 
     # Figure out the path that our job should be at
     loadp = '/'.join([path, 'jobs', jid, '.load.p'])
-    log.debug('sdstack_etcd returner <get_load> reading load data for jid {jid:s} from {path:s}'.format(jid=jid, path=loadp))
+    log.debug('sdstack_etcd returner <get_load> reading load data for job {jid:s} from {path:s}'.format(jid=jid, path=loadp))
 
     # Read it. If EtcdKeyNotFound was raised then the key doesn't exist and so
     # we need to return None, because that's what our caller expects on a
@@ -201,7 +216,7 @@ def get_load(jid):
     except salt.utils.etcd_util.etcd.EtcdKeyNotFound as E:
         log.error("sdstack_etcd returner <get_load> could not find job {jid:s} at the path {path:s}".format(jid=jid, path=loadp))
         return None
-    log.trace('sdstack_etcd returner <get_load> found load data for jid {jid:s} at {path:s} with value {data:s}'.format(jid=jid, path=loadp, data=repr(res.value))))
+    log.trace('sdstack_etcd returner <get_load> found load data for job {jid:s} at {path:s} with value {data:s}'.format(jid=jid, path=res.key, data=repr(res.value))))
     return salt.utils.json.loads(res.value)
 
 
@@ -213,7 +228,7 @@ def get_jid(jid):
 
     # Figure out the path that our job should be at
     jobp = '/'.join([path, 'jobs', jid])
-    log.debug('sdstack_etcd returner <get_jid> reading job fields for jid {jid:s} from {path:s}'.format(jid=jid, path=jobp))
+    log.debug('sdstack_etcd returner <get_jid> reading job fields for job {jid:s} from {path:s}'.format(jid=jid, path=jobp))
 
     # Try and read the job directory. If we have a missing key exception then no
     # minions have returned anything yet and so we return an empty dict for the
@@ -245,9 +260,8 @@ def get_jid(jid):
 
         # We found something, so update our return dict with the minion id and
         # the result that it returned.
-        data = res.value
-        ret[comps[-1]] = {'return': salt.utils.json.loads(data)}
-        log.trace("sdstack_etcd returner <get_jid> job {jid:s} from minion {id:s} at path {path:s} returned {ret:s}".format(id=comps[-1], jid=jid, path=returnp, ret=repr(data)))
+        ret[comps[-1]] = {'return': salt.utils.json.loads(res.value)}
+        log.trace("sdstack_etcd returner <get_jid> job {jid:s} from minion {id:s} at path {path:s} returned {result:s}".format(id=comps[-1], jid=jid, path=res.key, result=repr(res.value)))
     return ret
 
 
