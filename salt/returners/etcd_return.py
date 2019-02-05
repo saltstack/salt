@@ -419,22 +419,22 @@ def event_return(events):
             'data': event.get('data', ''),
             'master_id': __opts__['id'],
         }
-        json = salt.utils.json.dumps(package)
 
         # Use the tag from the event package to build a watchable path
         eventp = '/'.join([path, 'events', package['tag']])
 
         # Now we can write the event package into the event path
         try:
+            json = salt.utils.json.dumps(package)
             res = client.set(eventp, json, ttl=ttl)
         except Exception as E:
-            log.trace("sdstack_etcd returner <event_return> unable to write event into returner path {path:s} due to exception {exception:s}: {data}".format(path=eventp, data=package, exception=E))
+            log.trace("sdstack_etcd returner <event_return> unable to write event with the tag {name:s} into the path {path:s} due to exception ({exception}) being raised".format(name=package['tag'], path=eventp, exception=E))
             exceptions.append((E, package))
             continue
 
-        log.trace("sdstack_etcd returner <event_return> wrote event (ttl={ttl:d}) with the name {name:s} to {path:s} with the data {data}".format(path=res.key, name=package['tag'], ttl=ttl, data=res.value))
+        log.trace("sdstack_etcd returner <event_return> wrote event (ttl={ttl:d}) with the tag {name:s} to {path:s} using {data}".format(path=res.key, name=package['tag'], ttl=ttl, data=res.value))
 
     # Go back through all of the exceptions that occurred and log them.
     for e, pack in exceptions:
-        log.exception("sdstack_etcd returner <event_return> exception ({exception:s}) was raised while trying to write event {name:s} with the data {data}".format(exception=e, name=pack['tag'], data=pack))
+        log.exception("sdstack_etcd returner <event_return> exception ({exception}) was raised while trying to write event {name:s} with the data {data}".format(exception=e, name=pack['tag'], data=pack))
     return
