@@ -134,15 +134,29 @@ def returner(ret):
     if hasattr(res, '_prev_node'):
         log.trace("sdstack_etcd returner <returner> the previous job id {old:s} for {id:s} at {path:s} was set to {new:s}".format(old=res._prev_node.value, id=ret['id'], path=minionp, new=res.value))
 
-    # Iterate through all the fields in the ret dict and dump it under jobs/$jid/id/$field
+    # Figure out the path for the specified job and minion
     jobp = '/'.join([path, 'jobs', ret['jid'], ret['id']])
     log.debug("sdstack_etcd returner <returner> writing job data (ttl={ttl:d}) for {jid:s} to {path:s} with {data}".format(jid=ret['jid'], path=jobp, ttl=ttl, data=ret))
+
+    # Iterate through all the fields in the return dict and dump them under the
+    # jobs/$jid/id/$field key. We aggregate all the exceptions so that if an
+    # error happens, the rest of the fields will still be written.
+    exceptions = []
     for field in ret:
         fieldp = '/'.join([jobp, field])
-
         data = salt.utils.json.dumps(ret[field])
-        res = client.set(fieldp, data, ttl=ttl)
+        try:
+            res = client.set(fieldp, data, ttl=ttl)
+        except Exception as E:
+            log.trace("sdstack_etcd returner <returner> unable to set field {field:s} for job {jid:s} at {path:s} to {result}".format(field=field, jid=ret['jid'], path=fieldp, result=ret[field]))
+            exceptions.append((E, field, ret[field]))
+            continue
         log.trace("sdstack_etcd returner <returner> set field {field:s} for job {jid:s} at {path:s} to {result}".format(field=field, jid=ret['jid'], path=res.key, result=ret[field]))
+
+    # Go back through all the exceptions that occurred while trying to write the
+    # fields and log them.
+    for e, field, value in exceptions:
+        log.exception("sdstack_etcd returner <returner> exception ({exception:s}) was raised while trying to set the field {field:s} for job {jid:s} to {value}".format(exception=e, field=field, jid=ret['jid'], value=value))
     return
 
 
