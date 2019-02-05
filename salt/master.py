@@ -233,6 +233,7 @@ class Maintenance(salt.utils.process.SignalHandlingMultiprocessingProcess):
                 salt.daemons.masterapi.clean_old_jobs(self.opts)
                 salt.daemons.masterapi.clean_expired_tokens(self.opts)
                 salt.daemons.masterapi.clean_pub_auth(self.opts)
+                salt.daemons.masterapi.clean_proc_dir(self.opts)
             self.handle_git_pillar()
             self.handle_schedule()
             self.handle_key_cache()
