@@ -129,7 +129,7 @@ def returner(ret):
     # Update the given minion in the external job cache with the current (latest job)
     # This is used by get_fun() to return the last function that was called
     minionp = '/'.join([path, 'minions', ret['id']])
-    jid.debug("sdstack_etcd returner <returner> updating (last) job id (ttl={ttl:d}) of {id:s} at {path:s} with job {jid:s}".format(jid=ret['jid'], id=ret['id'], path=minionp, ttl=ttl))
+    log.debug("sdstack_etcd returner <returner> updating (last) job id (ttl={ttl:d}) of {id:s} at {path:s} with job {jid:s}".format(jid=ret['jid'], id=ret['id'], path=minionp, ttl=ttl))
     res = client.set(minionp, ret['jid'], ttl=ttl)
     if hasattr(res, '_prev_node'):
         log.trace("sdstack_etcd returner <returner> the previous job id {old:s} for {id:s} at {path:s} was set to {new:s}".format(old=res._prev_node.value, id=ret['id'], path=minionp, new=res.value))
