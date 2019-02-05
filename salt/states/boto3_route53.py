@@ -690,10 +690,10 @@ def rr_present(name, HostedZoneId=None, DomainName=None, PrivateZone=False, Name
             if locals().get(u) != rrset.get(u):
                 update = True
                 break
-        if rrset.get('ResourceRecords') != None:
+        if rrset.get('ResourceRecords') is not None:
             if ResourceRecords != sorted(rrset.get('ResourceRecords'), key=lambda x: x['Value']):
                 update = True
-        elif (AliasTarget != None) and (rrset.get('AliasTarget') != None):
+        elif (AliasTarget is not None) and (rrset.get('AliasTarget') is not None):
             if sorted(AliasTarget) != sorted(rrset.get('AliasTarget')):
                 update = True
 
