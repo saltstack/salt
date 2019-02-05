@@ -188,7 +188,8 @@ def save_minions(jid, minions, syndic_id=None):  # pylint: disable=unused-argume
     Save/update the minion list for a given jid. The syndic_id argument is
     included for API compatibility only.
     '''
-    client, path = _get_conn(__opts__, read_profile)
+    write_profile = __opts__.get('etcd.returner_write_profile')
+    client, path = _get_conn(__opts__, write_profile)
 
     # Figure out the path that our job should be at
     jobp = '/'.join([path, 'jobs', jid])
@@ -256,7 +257,8 @@ def get_jid(jid):
     # Anything that is a directory should be a minion that contains some results.
     ret = {}
     for item in items.leaves:
-        if not item.dir: continue
+        if not item.dir:
+            continue
 
         # Extract the minion name from the key in the job, and use it to build
         # the path to the return value
