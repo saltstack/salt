@@ -400,28 +400,41 @@ def event_return(events):
     Requires that configuration enabled via 'event_return'
     option in master config.
     '''
-    ttl = __opts__.get('etcd.ttl', 5)
-    client, path = _get_conn(__opts__)
+    write_profile = __opts__.get('etcd.returner_write_profile')
+    client, path = _get_conn(__opts__, write_profile)
+    if write_profile:
+        ttl = __opts__.get(write_profile, {}).get('etcd.ttl')
+    else:
+        ttl = __opts__.get('etcd.ttl')
 
+    # Iterate through all the events, and add them to the events path based
+    # on the tag that is labeled in each event. We aggregate all errors into
+    # a list so the writing of the events are as atomic as possible.
     exceptions = []
     for event in events:
+
+        # Package the event data into a value to write into our etcd profile
         package = {
             'tag': event.get('tag', ''),
             'data': event.get('data', ''),
             'master_id': __opts__['id'],
         }
-        path = '/'.join([path, 'events', package['tag']])
         json = salt.utils.json.dumps(package)
 
+        # Use the tag from the event package to build a watchable path
+        eventp = '/'.join([path, 'events', package['tag']])
+
+        # Now we can write the event package into the event path
         try:
-            res = client.set(path, json, ttl=ttl)
-        except Exception as err:
-            log.exception('etcd: Unable to write event into returner path {:s} due to exception {:s}: {}'.format(path, package, err))
-            exceptions.append(err)
+            res = client.set(eventp, json, ttl=ttl)
+        except Exception as E:
+            log.trace("sdstack_etcd returner <event_return> unable to write event into returner path {path:s} due to exception {exception:s}: {data}".format(path=eventp, data=package, exception=E))
+            exceptions.append((E, package))
             continue
 
-        if not res:
-            log.error('etcd: Unable to write event into returner path {:s}: {}'.format(path, package))
-        continue
+        log.trace("sdstack_etcd returner <event_return> wrote event (ttl={ttl:d}) with the name {name:s} to {path:s} with the data {data}".format(path=res.key, name=package['tag'], ttl=ttl, data=res.value))
 
+    # Go back through all of the exceptions that occurred and log them.
+    for e, pack in exceptions:
+        log.exception("sdstack_etcd returner <event_return> exception ({exception:s}) was raised while trying to write event {name:s} with the data {data}".format(exception=e, name=pack['tag'], data=pack))
     return
