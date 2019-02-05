@@ -96,7 +96,7 @@ def __virtual__():
 
 def _get_conn(opts, profile=None):
     '''
-    Establish a connection to etcd
+    Establish a connection to an etcd profile.
     '''
     if profile is None:
         profile = opts.get('etcd.returner')
@@ -112,7 +112,7 @@ def _get_conn(opts, profile=None):
 
 def returner(ret):
     '''
-    Return data to an etcd server or cluster
+    Return data to an etcd profile.
     '''
     write_profile = __opts__.get('etcd.returner_write_profile')
     if write_profile:
@@ -147,7 +147,7 @@ def returner(ret):
 
 def save_load(jid, load, minions=None):
     '''
-    Save the load to the specified jid
+    Save the load to the specified jid.
     '''
     write_profile = __opts__.get('etcd.returner_write_profile')
     client, path = _get_conn(__opts__, write_profile)
@@ -170,21 +170,21 @@ def save_load(jid, load, minions=None):
 
 def save_minions(jid, minions, syndic_id=None):  # pylint: disable=unused-argument
     '''
-    Included for API consistency
+    Included for API consistency.
     '''
     pass
 
 
 def clean_old_jobs():
     '''
-    Included for API consistency
+    Included for API consistency.
     '''
     pass
 
 
 def get_load(jid):
     '''
-    Return the load data that marks a specified jid
+    Return the load data that marks a specified jid.
     '''
     read_profile = __opts__.get('etcd.returner_read_profile')
     client, path = _get_conn(__opts__, read_profile)
@@ -207,7 +207,7 @@ def get_load(jid):
 
 def get_jid(jid):
     '''
-    Return the information returned when the specified job id was executed
+    Return the information returned when the specified job id was executed.
     '''
     client, path = _get_conn(__opts__)
 
@@ -253,7 +253,7 @@ def get_jid(jid):
 
 def get_fun(fun):
     '''
-    Return a dict of the last function called for all minions
+    Return a dict containing the last function called for all the minions that have called a function.
     '''
     client, path = _get_conn(__opts__)
 
@@ -299,7 +299,7 @@ def get_fun(fun):
 
 def get_jids():
     '''
-    Return a list of all job ids
+    Return a list of all job ids that have returned something.
     '''
     client, path = _get_conn(__opts__)
 
@@ -329,7 +329,7 @@ def get_jids():
 
 def get_minions():
     '''
-    Return a list of minions
+    Return a list of all minions that have returned something.
     '''
     client, path = _get_conn(__opts__)
 
@@ -358,6 +358,6 @@ def get_minions():
 
 def prep_jid(nocache=False, passed_jid=None):  # pylint: disable=unused-argument
     '''
-    Do any work necessary to prepare a JID, including sending a custom id
+    Do any work necessary to prepare a JID, including sending a custom id.
     '''
     return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid(__opts__)
