@@ -226,7 +226,7 @@ def get_jid(jid):
     # Iterate through all of the children at our job path that are directories.
     # Anything that is a directory should be a minion that contains some results.
     ret = {}
-    for item in items.children:
+    for item in items.leaves:
         if not item.dir: continue
 
         # Extract the minion name from the key in the job, and use it to build
@@ -272,7 +272,7 @@ def get_fun(fun):
     # Walk through the list of all the minions that have a jid registered,
     # and cross reference this with the job returns.
     ret = {}
-    for item in items.children:
+    for item in items.leaves:
 
         # Now that we have a minion and it's last jid, we use it to fetch the
         # function field (fun) that was registered by returner().
@@ -317,7 +317,7 @@ def get_jids():
     # Anything that's a directory is a job id. Since that's all we're returning,
     # aggregate them into a list.
     ret = []
-    for item in items.children:
+    for item in items.leaves:
         comps = str(item.key).split('/')
         if item.dir:
             jid = comps[-1]
@@ -347,7 +347,7 @@ def get_minions():
     # We can just walk through everything that isn't a directory. This path
     # is simply a list of minions and the last job that each one returned.
     ret = []
-    for item in items.children:
+    for item in items.leaves:
         if not item.dir:
             comps = str(item.key).split('/')
             ret.append(comps[-1])
