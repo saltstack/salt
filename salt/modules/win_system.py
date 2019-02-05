@@ -972,13 +972,13 @@ def get_domain_workgroup():
 
         salt 'minion-id' system.get_domain_workgroup
     '''
-    pythoncom.CoInitialize()
-    conn = wmi.WMI()
-    for computer in conn.Win32_ComputerSystem():
-        if computer.PartOfDomain:
-            return {'Domain': computer.Domain}
-        else:
-            return {'Workgroup': computer.Workgroup}
+    with salt.utils.winapi.Com():
+        conn = wmi.WMI()
+        for computer in conn.Win32_ComputerSystem():
+            if computer.PartOfDomain:
+                return {'Domain': computer.Domain}
+            else:
+                return {'Workgroup': computer.Workgroup}
 
 
 def set_domain_workgroup(workgroup):
@@ -1000,14 +1000,14 @@ def set_domain_workgroup(workgroup):
         workgroup = _to_unicode(workgroup)
 
     # Initialize COM
-    pythoncom.CoInitialize()
+    with salt.utils.winapi.Com():
+        # Grab the first Win32_ComputerSystem object from wmi
+        conn = wmi.WMI()
+        comp = conn.Win32_ComputerSystem()[0]
 
-    # Grab the first Win32_ComputerSystem object from wmi
-    conn = wmi.WMI()
-    comp = conn.Win32_ComputerSystem()[0]
+        # Now we can join the new workgroup
+        res = comp.JoinDomainOrWorkgroup(Name=workgroup.upper())
 
-    # Now we can join the new workgroup
-    res = comp.JoinDomainOrWorkgroup(Name=workgroup.upper())
     return True if not res[0] else False
 
 

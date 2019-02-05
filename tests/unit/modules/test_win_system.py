@@ -60,6 +60,10 @@ class MockWMI_ComputerSystem(object):
     def Rename(Name):
         return Name == Name
 
+    @staticmethod
+    def JoinDomainOrWorkgroup(Name):
+        return [0]
+
 
 class MockWMI_OperatingSystem(object):
     '''
@@ -411,9 +415,32 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
                 patch.object(wmi, 'WMI', Mock(return_value=self.WMI)):
             self.assertTrue(win_system.set_hostname("NEW"))
 
+    def test_get_domain_workgroup(self):
+        '''
+        Test get_domain_workgroup
+        '''
+        with patch('salt.utils', Mockwinapi), \
+                patch.object(wmi, 'WMI', Mock(return_value=self.WMI)), \
+                patch('salt.utils.winapi.Com', MagicMock()), \
+                patch.object(self.WMI, 'Win32_ComputerSystem',
+                             return_value=[MockWMI_ComputerSystem()]):
+            self.assertDictEqual(win_system.get_domain_workgroup(),
+                                 {'Workgroup': 'WORKGROUP'})
+
+    def test_set_domain_workgroup(self):
+        '''
+        Test set_domain_workgroup
+        '''
+        with patch('salt.utils', Mockwinapi), \
+                patch.object(wmi, 'WMI', Mock(return_value=self.WMI)), \
+                patch('salt.utils.winapi.Com', MagicMock()), \
+                patch.object(self.WMI, 'Win32_ComputerSystem',
+                          return_value=[MockWMI_ComputerSystem()]):
+            self.assertTrue(win_system.set_domain_workgroup('test'))
+
     def test_get_hostname(self):
         '''
-            Test setting a new hostname
+            Test getting a new hostname
         '''
         cmd_run_mock = MagicMock(return_value="MINION")
         with patch.dict(win_system.__salt__, {'cmd.run': cmd_run_mock}):
