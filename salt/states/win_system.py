@@ -217,7 +217,7 @@ def workgroup(name):
     elif res:
         ret['result'] = True
         ret['comment'] = "The workgroup has been changed from '{0}' to '{1}'".format(current_workgroup.upper(), changed_workgroup.upper())
-        ret['changes'] = {'old', current_workgroup.upper(), 'new': changed_workgroup.upper()}
+        ret['changes'] = {'old': current_workgroup.upper(), 'new': changed_workgroup.upper()}
     else:
         ret['result'] = False
         ret['comment'] = "Unable to join the requested workgroup '{0}'".format(changed_workgroup.upper())
