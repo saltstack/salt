@@ -21,34 +21,6 @@ configuration is needed to pull from these repositories.
 
 These packages are usually available within a few days of upstream release.
 
-.. _freebsd-upstream:
-
-SaltStack repo
-==============
-
-SaltStack also hosts internal binary builds of the Salt package, available from
-https://repo.saltstack.com/freebsd/. To make use of this repository, add the
-following file to your system:
-
-**/usr/local/etc/pkg/repos/saltstack.conf:**
-
-.. code-block:: text
-
-    saltstack: {
-      url: "https://repo.saltstack.com/freebsd/${ABI}/",
-      enabled: yes
-    }
-
-You should now be able to install Salt from this new repository:
-
-.. code-block:: bash
-
-    pkg install py27-salt
-
-These packages are usually available earlier than upstream FreeBSD. Also
-available are release candidates and development releases. Use these pre-release
-packages with caution.
-
 Post-installation tasks
 =======================
 
