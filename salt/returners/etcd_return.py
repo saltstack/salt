@@ -138,13 +138,13 @@ def returner(ret):
 
     # Iterate through all the fields in the ret dict and dump it under jobs/$jid/id/$field
     jobp = '/'.join([path, 'jobs', ret['jid'], ret['id']])
-    log.debug("sdstack_etcd returner <returner> writing job data (ttl={ttl:d}) for {jid:s} to {path:s} with {data:s}".format(jid=ret['jid'], path=jobp, ttl=ttl, data=repr(ret)))
+    log.debug("sdstack_etcd returner <returner> writing job data (ttl={ttl:d}) for {jid:s} to {path:s} with {data}".format(jid=ret['jid'], path=jobp, ttl=ttl, data=ret))
     for field in ret:
         fieldp = '/'.join([jobp, field])
 
         data = salt.utils.json.dumps(ret[field])
         res = client.set(fieldp, data, ttl=ttl)
-        log.trace("sdstack_etcd returner <returner> set field {field:s} for job {jid:s} at {path:s} to {result:s}".format(field=field, jid=ret['jid'], path=res.key, result=repr(ret[field])))
+        log.trace("sdstack_etcd returner <returner> set field {field:s} for job {jid:s} at {path:s} to {result}".format(field=field, jid=ret['jid'], path=res.key, result=ret[field]))
     return
 
 
@@ -167,7 +167,7 @@ def save_load(jid, load, minions=None):
     data = salt.utils.json.dumps(load)
     res = client.set(loadp, data, ttl=ttl)
 
-    log.trace('sdstack_etcd returner <save_load> saved load data for job {jid:s} at {path:s} with {data:s}'.format(jid=jid, path=res.key, data=repr(load)))
+    log.trace('sdstack_etcd returner <save_load> saved load data for job {jid:s} at {path:s} with {data}'.format(jid=jid, path=res.key, data=load))
     return
 
 
@@ -218,7 +218,7 @@ def get_load(jid):
     except salt.utils.etcd_util.etcd.EtcdKeyNotFound as E:
         log.error("sdstack_etcd returner <get_load> could not find job {jid:s} at the path {path:s}".format(jid=jid, path=loadp))
         return None
-    log.trace('sdstack_etcd returner <get_load> found load data for job {jid:s} at {path:s} with value {data:s}'.format(jid=jid, path=res.key, data=repr(res.value)))
+    log.trace('sdstack_etcd returner <get_load> found load data for job {jid:s} at {path:s} with value {data}'.format(jid=jid, path=res.key, data=res.value))
     return salt.utils.json.loads(res.value)
 
 
@@ -263,7 +263,7 @@ def get_jid(jid):
         # We found something, so update our return dict with the minion id and
         # the result that it returned.
         ret[comps[-1]] = {'return': salt.utils.json.loads(res.value)}
-        log.trace("sdstack_etcd returner <get_jid> job {jid:s} from minion {id:s} at path {path:s} returned {result:s}".format(id=comps[-1], jid=jid, path=res.key, result=repr(res.value)))
+        log.trace("sdstack_etcd returner <get_jid> job {jid:s} from minion {id:s} at path {path:s} returned {result}".format(id=comps[-1], jid=jid, path=res.key, result=res.value))
     return ret
 
 
