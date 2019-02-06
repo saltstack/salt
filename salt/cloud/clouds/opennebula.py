@@ -782,7 +782,7 @@ def get_template_image(kwargs=None, call=None):
         ret = list_templates()[name]['template']['disk']['image']
     except KeyError:
         raise SaltCloudSystemExit(
-            'The image for template \'{1}\' could not be found.'.format(name)
+            'The image for template \'{0}\' could not be found.'.format(name)
         )
 
     return ret
