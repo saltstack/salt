@@ -1160,7 +1160,7 @@ Changelog for v2018.3.3..v2018.3.4
 
   * 15c34fe Support unicode in space-delimited list; fixes unit tests in py2.
 
-  * 0b59561 Added documentation about debian interfaces.d/*. (Fixes: `#40262`_)
+  * 0b59561 Added documentation about debian interfaces.d/\*. (Fixes: `#40262`_)
 
   * 1b096fb Removed python lint.
 
@@ -2057,8 +2057,8 @@ Changelog for v2018.3.3..v2018.3.4
 
   * 271bd70 capture and print exception information
 
-  * bc94b8e update method for creating size field of **delvals items for py3 compatibility
-
+  * bc94b8e update method for creating size field of \*\*delvals items for py3 compatibility
+  
   * d9fe28a fix clobbering of admx_search_results which was keeping some policies from being properly detected
 
 * **PR** `#50340`_: (`garethgreenaway`_) [2018.3] Backporting `#48087`_ to 2018.3
