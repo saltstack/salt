@@ -191,7 +191,7 @@ def installed(name, target="LocalSystem", dmg=False, store=False, app=False, mpk
             else:
                 pkg_ids = __salt__['macpackage.get_pkg_id'](real_pkg)
 
-            if len(pkg_ids) > 0:
+            if pkg_ids:
                 for p in pkg_ids:
                     if p in installed_pkgs and force is False:
                         found.append(p)
@@ -212,11 +212,11 @@ def installed(name, target="LocalSystem", dmg=False, store=False, app=False, mpk
 
             for app in installing:
                 try:
-                    log.info('Copying {0} to {1}'.format(app, target))
+                    log.info('Copying %s to %s', app, target)
 
                     out = __salt__['macpackage.install_app'](os.path.join(mount_point, app), target)
 
-                    if len(out) != 0:
+                    if out:
                         failed_pkg(app)
                     else:
                         ret['comment'] += '{0} installed'.format(app)

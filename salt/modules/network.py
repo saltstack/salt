@@ -1286,7 +1286,7 @@ def mod_hostname(hostname):
                 if 'Static hostname' in line[0]:
                     o_hostname = line[1].strip()
         else:
-            log.debug('{0} was unable to get hostname'.format(hostname_cmd))
+            log.debug('%s was unable to get hostname', hostname_cmd)
             o_hostname = __salt__['network.get_hostname']()
     elif not salt.utils.platform.is_sunos():
         # don't run hostname -f because -f is not supported on all platforms
@@ -1301,10 +1301,8 @@ def mod_hostname(hostname):
             hostname,
             ))
         if result['retcode'] != 0:
-            log.debug('{0} was unable to set hostname. Error: {1}'.format(
-                hostname_cmd,
-                result['stderr'],
-                ))
+            log.debug('%s was unable to set hostname. Error: %s',
+                      hostname_cmd, result['stderr'])
             return False
     elif not salt.utils.platform.is_sunos():
         __salt__['cmd.run']('{0} {1}'.format(hostname_cmd, hostname))

@@ -157,7 +157,7 @@ def top(num_processes=5, interval=3):
     for idx, (diff, process) in enumerate(reversed(sorted(usage))):
         if num_processes and idx >= num_processes:
             break
-        if len(_get_proc_cmdline(process)) == 0:
+        if not _get_proc_cmdline(process):
             cmdline = _get_proc_name(process)
         else:
             cmdline = _get_proc_cmdline(process)

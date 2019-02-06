@@ -22,6 +22,7 @@ import salt.crypt
 import salt.utils.asynchronous
 import salt.utils.event
 import salt.utils.files
+import salt.utils.msgpack
 import salt.utils.platform
 import salt.utils.process
 import salt.utils.verify
@@ -586,7 +587,7 @@ class AsyncTCPPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.tran
             if not isinstance(body, dict):
                 # TODO: For some reason we need to decode here for things
                 #       to work. Fix this.
-                body = msgpack.loads(body)
+                body = salt.utils.msgpack.loads(body)
                 if six.PY3:
                     body = salt.transport.frame.decode_embedded_strs(body)
             ret = yield self._decode_payload(body)
@@ -1101,7 +1102,7 @@ class SaltMessageClient(object):
     def _stream_send(self):
         while not self._connecting_future.done() or self._connecting_future.result() is not True:
             yield self._connecting_future
-        while len(self.send_queue) > 0:
+        while self.send_queue:
             message_id, item = self.send_queue[0]
             try:
                 yield self._stream.write(item)
@@ -1186,7 +1187,7 @@ class SaltMessageClient(object):
             self.send_timeout_map[message_id] = send_timeout
 
         # if we don't have a send queue, we need to spawn the callback to do the sending
-        if len(self.send_queue) == 0:
+        if not self.send_queue:
             self.io_loop.spawn_callback(self._stream_send)
         self.send_queue.append((message_id, salt.transport.frame.frame_msg(msg, header=header)))
         return future
@@ -1297,7 +1298,7 @@ class PubServer(tornado.tcpserver.TCPServer, object):
             return
 
         clients.remove(client)
-        if len(clients) == 0:
+        if not clients:
             del self.present[id_]
             if self.presence_events:
                 data = {'new': [],
