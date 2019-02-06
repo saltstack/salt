@@ -172,7 +172,6 @@ def latest_version(*names, **kwargs):
         return ret[names[0]]
     return ret
 
-
 # available_version is being deprecated
 available_version = salt.utils.functools.alias_function(
     latest_version, "available_version"
@@ -330,6 +329,27 @@ def install(name=None, sources=None, saltenv="base", **kwargs):
     .. note::
         The ID declaration is ignored, as the package name is read from the
         ``sources`` parameter.
+
+    If the package has an interactive script that requires a response file, supply the
+        response file with the 'response_source' parameter
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        # Supplying a response file to pkgadd
+
+        salt '*' pkg.install sources='[{"<pkg name>": "salt://pkgs/<pkg filename>"}]' response_source='salt://pkgs/<response filename>'
+
+    Response files can be generated with 'pkgask'
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        # creating a response file
+
+        pkgask -r <output_file> -d <pkg source> <pkgname>
     """
     if salt.utils.data.is_true(kwargs.get("refresh")):
         log.warning("'refresh' argument not implemented for solarispkg module")
@@ -358,6 +378,11 @@ def install(name=None, sources=None, saltenv="base", **kwargs):
 
         old = list_pkgs()
         cmd_prefix = ["/usr/sbin/pkgadd", "-n", "-a", adminfile]
+
+        if 'response_source' in kwargs:
+            responsefile = __salt__['cp.cache_file'](kwargs['response_source'], saltenv)
+            cmd_prefix = cmd_prefix + ['-r', responsefile]
+
 
         # Only makes sense in a global zone but works fine in non-globals.
         if kwargs.get("current_zone_only") in (True, "True"):
