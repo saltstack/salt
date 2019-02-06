@@ -2290,8 +2290,12 @@ def ip4_interfaces():
             if 'address' in inet:
                 iface_ips.append(inet['address'])
         for secondary in ifaces[face].get('secondary', []):
-            if 'address' in secondary:
-                iface_ips.append(secondary['address'])
+            try:
+                socket.inet_pton(socket.AF_INET6, secondary['address'])
+                if 'address' in secondary:
+                    iface_ips.append(secondary['address'])
+            except:
+                pass
         ret[face] = iface_ips
     return {'ip4_interfaces': ret}
 
