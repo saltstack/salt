@@ -47,13 +47,7 @@ A username and password can be set:
     etcd.username: larry  # Optional; requires etcd.password to be set
     etcd.password: 123pass  # Optional; requires etcd.username to be set
 
-You can also set a TTL (time to live) value for the returner:
-
-.. code-block:: yaml
-
-    etcd.ttl: 5
-
-Authentication with username and password, and ttl, currently requires the
+Authentication with username and password, currently requires the
 ``master`` branch of ``python-etcd``.
 
 You may also specify different roles for read and write operations. First,
@@ -115,10 +109,6 @@ def returner(ret):
     Return data to an etcd profile.
     '''
     write_profile = __opts__.get('etcd.returner_write_profile')
-    if write_profile:
-        ttl = __opts__.get(write_profile, {}).get('etcd.ttl')
-    else:
-        ttl = __opts__.get('etcd.ttl')
 
     client, path = _get_conn(__opts__, write_profile)
 
@@ -129,14 +119,14 @@ def returner(ret):
     # Update the given minion in the external job cache with the current (latest job)
     # This is used by get_fun() to return the last function that was called
     minionp = '/'.join([path, 'minions', ret['id']])
-    log.debug("sdstack_etcd returner <returner> updating (last) job id (ttl={ttl:d}) of {id:s} at {path:s} with job {jid:s}".format(jid=ret['jid'], id=ret['id'], path=minionp, ttl=ttl))
-    res = client.set(minionp, ret['jid'], ttl=ttl)
+    log.debug("sdstack_etcd returner <returner> updating (last) job id of {id:s} at {path:s} with job {jid:s}".format(jid=ret['jid'], id=ret['id'], path=minionp))
+    res = client.set(minionp, ret['jid'])
     if hasattr(res, '_prev_node'):
         log.trace("sdstack_etcd returner <returner> the previous job id {old:s} for {id:s} at {path:s} was set to {new:s}".format(old=res._prev_node.value, id=ret['id'], path=minionp, new=res.value))
 
     # Figure out the path for the specified job and minion
     jobp = '/'.join([path, 'jobs', ret['jid'], ret['id']])
-    log.debug("sdstack_etcd returner <returner> writing job data (ttl={ttl:d}) for {jid:s} to {path:s} with {data}".format(jid=ret['jid'], path=jobp, ttl=ttl, data=ret))
+    log.debug("sdstack_etcd returner <returner> writing job data for {jid:s} to {path:s} with {data}".format(jid=ret['jid'], path=jobp, data=ret))
 
     # Iterate through all the fields in the return dict and dump them under the
     # jobs/$jid/id/$field key. We aggregate all the exceptions so that if an
@@ -146,7 +136,7 @@ def returner(ret):
         fieldp = '/'.join([jobp, field])
         data = salt.utils.json.dumps(ret[field])
         try:
-            res = client.set(fieldp, data, ttl=ttl)
+            res = client.set(fieldp, data)
         except Exception as E:
             log.trace("sdstack_etcd returner <returner> unable to set field {field:s} for job {jid:s} at {path:s} to {result}".format(field=field, jid=ret['jid'], path=fieldp, result=ret[field]))
             exceptions.append((E, field, ret[field]))
@@ -166,18 +156,14 @@ def save_load(jid, load, minions=None):
     '''
     write_profile = __opts__.get('etcd.returner_write_profile')
     client, path = _get_conn(__opts__, write_profile)
-    if write_profile:
-        ttl = __opts__.get(write_profile, {}).get('etcd.ttl')
-    else:
-        ttl = __opts__.get('etcd.ttl')
 
     # Figure out the path using jobs/$jid/.load.p
     loadp = '/'.join([path, 'jobs', jid, '.load.p'])
-    log.debug('sdstack_etcd returner <save_load> setting load data (ttl={ttl:d}) for job {jid:s} at {path:s} with {data:s}'.format(jid=jid, ttl=ttl, path=loadp, data=load))
+    log.debug('sdstack_etcd returner <save_load> setting load data for job {jid:s} at {path:s} with {data:s}'.format(jid=jid, path=loadp, data=load))
 
     # Now we can just store the current load
     data = salt.utils.json.dumps(load)
-    res = client.set(loadp, data, ttl=ttl)
+    res = client.set(loadp, data)
 
     log.trace('sdstack_etcd returner <save_load> saved load data for job {jid:s} at {path:s} with {data}'.format(jid=jid, path=res.key, data=load))
     return
@@ -205,10 +191,26 @@ def save_minions(jid, minions, syndic_id=None):  # pylint: disable=unused-argume
 
 def clean_old_jobs():
     '''
-    Included for API consistency.
+    FIXME: This needs to be implemented
     '''
-    # Old jobs should be cleaned by the ttl that's written for each key, so therefore
-    # the implementation of this api is not necessary.
+    # XXX:
+    # This needs to be implemented. The reason why we don't use ttl to
+    # automatically clean this up is because Salt doesn't know about ttl
+    # and so it assumes that records are always available until it
+    # removes them (which makes them unavailable). That's what this api
+    # call is for at least.
+    #
+    # If we use ttl to automatically remove records we encounter issues
+    # such as that Salt's main code isn't monitorying returner records
+    # in any way, instead treating returners as just a data store with
+    # nearly an arbitrary schema. Related is that it has not exposed an
+    # interface to returners for persisting a connection, modifying
+    # records at arbitrary times, and notifying (like an event-callback)
+    # Salt that a record change has happened.
+    #
+    # Because these features aren't available, this api needs to be
+    # implemented if we want salt to be able to clean old jobs that have
+    # expired.
     pass
 
 
@@ -367,8 +369,8 @@ def get_minions():
     minionsp = '/'.join([path, 'minions'])
     log.debug('sdstack_etcd returner <get_minions> reading minions at {path:s}'.format(path=minionsp))
 
-    # If no minions were found, then nobody has returned anything recently
-    # (due to ttl). In this case, return an empty last for the caller.
+    # If no minions were found, then nobody has returned anything recently. In
+    # this case, return an empty last for the caller.
     try:
         items = client.get(minionsp)
     except salt.utils.etcd_util.etcd.EtcdKeyNotFound as E:
@@ -402,10 +404,6 @@ def event_return(events):
     '''
     write_profile = __opts__.get('etcd.returner_write_profile')
     client, path = _get_conn(__opts__, write_profile)
-    if write_profile:
-        ttl = __opts__.get(write_profile, {}).get('etcd.ttl')
-    else:
-        ttl = __opts__.get('etcd.ttl')
 
     # Iterate through all the events, and add them to the events path based
     # on the tag that is labeled in each event. We aggregate all errors into
@@ -426,13 +424,13 @@ def event_return(events):
         # Now we can write the event package into the event path
         try:
             json = salt.utils.json.dumps(package)
-            res = client.set(eventp, json, ttl=ttl)
+            res = client.set(eventp, json)
         except Exception as E:
             log.trace("sdstack_etcd returner <event_return> unable to write event with the tag {name:s} into the path {path:s} due to exception ({exception}) being raised".format(name=package['tag'], path=eventp, exception=E))
             exceptions.append((E, package))
             continue
 
-        log.trace("sdstack_etcd returner <event_return> wrote event (ttl={ttl:d}) with the tag {name:s} to {path:s} using {data}".format(path=res.key, name=package['tag'], ttl=ttl, data=res.value))
+        log.trace("sdstack_etcd returner <event_return> wrote event with the tag {name:s} to {path:s} using {data}".format(path=res.key, name=package['tag'], data=res.value))
 
     # Go back through all of the exceptions that occurred and log them.
     for e, pack in exceptions:
