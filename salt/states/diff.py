@@ -62,7 +62,7 @@ def clean_file(filename):
     return content.strip('\n\n')
 
 
-def diff_file(file1, file2, content=True, change=False):
+def diff_file(name, file1, file2, content=True, change=False):
     '''
     1) Checking if the file exists.
     2) Checking if the permissions are the same.
