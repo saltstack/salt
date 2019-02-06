@@ -2171,7 +2171,7 @@ def route_exists(destination_cidr_block, route_table_name=None, route_table_id=N
                           'vpc_peering_connection_id': vpc_peering_connection_id
                           }
             route_comp = set(route_dict.items()) ^ set(route_check.items())
-            if len(route_comp) == 0:
+            if not route_comp:
                 log.info('Route %s exists.', destination_cidr_block)
                 return {'exists': True}
 

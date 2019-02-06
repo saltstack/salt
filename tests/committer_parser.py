@@ -138,7 +138,7 @@ def main(argv=None):
     try:
         try:
             opts, args = getopt.getopt(argv[1:], 'hc', ['help', 'contributor-detail'])
-            if len(args) < 1:
+            if not args:
                 raise Usage('committer_parser.py needs a filename or \'-\' to read from stdin')
         except getopt.error as msg:
             raise Usage(msg)
@@ -146,13 +146,13 @@ def main(argv=None):
         print(err.msg, file=sys.stderr)
         return 2
 
-    if len(opts) > 0:
+    if opts:
         if '-h' in opts[0] or '--help' in opts[0]:
             return 0
 
     data, counts, commits_by_contributor = parse_gitlog(filename=args[0])
 
-    if len(opts) > 0:
+    if opts:
         if '-c' or '--contributor-detail':
             print(counts_by_contributor(commits_by_contributor, data))
     else:
