@@ -187,7 +187,11 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
                     mysql.user_chpass('testuser', password='BLUECOW')
                     calls = (
                         call().cursor().execute(
-                            "ALTER USER 'testuser'@'localhost' IDENTIFIED BY 'BLUECOW';"
+                            "ALTER USER %(user)s@%(host)s IDENTIFIED BY %(password)s;",
+                            {'password': 'BLUECOW',
+                             'user': 'testuser',
+                             'host': 'localhost',
+                            }
                         ),
                         call().cursor().execute('FLUSH PRIVILEGES;'),
                     )
