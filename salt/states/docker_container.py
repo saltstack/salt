@@ -384,7 +384,7 @@ def running(name,
     **NETWORK MANAGEMENT**
 
     .. versionadded:: 2018.3.0
-    .. versionchanged:: Fluorine
+    .. versionchanged:: 2019.2.0
         If the ``networks`` option is used, any networks (including the default
         ``bridge`` network) which are not specified will be disconnected.
 
@@ -424,7 +424,7 @@ def running(name,
     .. _`connect_container_to_network`: https://docker-py.readthedocs.io/en/stable/api.html#docker.api.network.NetworkApiMixin.connect_container_to_network
 
     To start a container with no network connectivity (only possible in
-    Fluorine and later) pass this option as an empty list. For example:
+    2019.2.0 and later) pass this option as an empty list. For example:
 
     .. code-block:: yaml
 

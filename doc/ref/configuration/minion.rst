@@ -213,7 +213,7 @@ minion event bus. The value is expressed in bytes.
 ``enable_legacy_startup_events``
 --------------------------------
 
-.. versionadded:: Fluorine
+.. versionadded:: 2019.2.0
 
 Default: ``True``
 
@@ -286,13 +286,13 @@ to the next master in the list if it finds the existing one is dead.
 ------------------
 
 .. versionadded:: 2014.7.0
-.. deprecated:: Fluorine
+.. deprecated:: 2019.2.0
 
 Default: ``False``
 
 .. warning::
 
-    This option has been deprecated in Salt ``Fluorine``. Please use
+    This option has been deprecated in Salt ``2019.2.0``. Please use
     :conf_minion:`random_master` instead.
 
 .. code-block:: yaml
@@ -305,7 +305,7 @@ Default: ``False``
 -----------------
 
 .. versionadded:: 2014.7.0
-.. versionchanged:: Fluorine
+.. versionchanged:: 2019.2.0
     The :conf_minion:`master_failback` option can be used in conjunction with
     ``random_master`` to force the minion to fail back to the first master in the
     list if the first master is back online. Note that :conf_minion:`master_type`
@@ -929,6 +929,20 @@ minion. Since this grain is expensive, it is disabled by default.
 
     iscsi_grains: True
 
+.. conf_minion:: nvme_grains
+
+``nvme_grains``
+------------------------
+
+Default: ``False``
+
+The ``nvme_grains`` setting will enable the ``nvme_nqn`` grain on the
+minion. Since this grain is expensive, it is disabled by default.
+
+.. code-block:: yaml
+
+    nvme_grains: True
+
 .. conf_minion:: mine_enabled
 
 ``mine_enabled``
@@ -1429,7 +1443,7 @@ talking to the intended master.
 ``http_connect_timeout``
 ------------------------
 
-.. versionadded:: Fluorine
+.. versionadded:: 2019.2.0
 
 Default: ``20``
 
@@ -1515,7 +1529,7 @@ The password used for HTTP proxy access.
 ``no_proxy``
 ------------
 
-.. versionadded:: Fluorine
+.. versionadded:: 2019.2.0
 
 Default: ``[]``
 
@@ -1538,7 +1552,7 @@ Docker Configuration
 ----------------------
 
 .. versionadded:: 2017.7.8,2018.3.3
-.. versionchanged:: Fluorine
+.. versionchanged:: 2019.2.0
     The default value is now ``False``
 
 Default: ``True``

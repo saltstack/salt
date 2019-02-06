@@ -223,7 +223,7 @@ def init(opts=None):
         log.info('NXOS PROXY: Initialize nxapi proxy connection')
         return _init_nxapi(opts)
     else:
-        log.error('Unknown Connection Type: {0}'.format(CONNECTION))
+        log.error('Unknown Connection Type: %s', CONNECTION)
         return False
 
 
@@ -261,7 +261,7 @@ def grains(**kwargs):
 
         salt '*' nxos.cmd grains
     '''
-    import __main__ as main
+    import __main__ as main  # pylint: disable=unused-import
     if not DEVICE_DETAILS['grains_cache']:
         data = sendline('show version')
         if CONNECTION == 'nxapi':
@@ -403,7 +403,7 @@ def _init_ssh(opts):
             ssh_args=opts['proxy'].get('ssh_args', ''),
             prompt=this_prompt)
         out, err = DEVICE_DETAILS[_worker_name()].sendline('terminal length 0')
-        log.info('SSH session establised for process {}'.format(_worker_name()))
+        log.info('SSH session establised for process %s', _worker_name())
     except Exception as ex:
         log.error('Unable to connect to %s', opts['proxy']['host'])
         log.error('Please check the following:\n')
@@ -502,7 +502,7 @@ def _init_nxapi(opts):
         log.error('-- Verify that nxapi settings on the NX-OS device and proxy minion config file match')
         log.error('-- Exception Generated: %s', ex)
         exit()
-    log.info('nxapi DEVICE_DETAILS info: {}'.format(DEVICE_DETAILS))
+    log.info('nxapi DEVICE_DETAILS info: %s', DEVICE_DETAILS)
     return True
 
 

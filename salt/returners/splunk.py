@@ -201,7 +201,7 @@ class http_event_collector(object):
     def flushBatch(self):
         # Method to flush the batch list of events
 
-        if len(self.batchEvents) > 0:
+        if self.batchEvents:
             headers = {'Authorization': 'Splunk '+self.token}
             r = requests.post(self.server_uri, data=" ".join(self.batchEvents), headers=headers, verify=http_event_collector_SSL_verify)
             self.batchEvents = []

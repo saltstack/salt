@@ -1017,10 +1017,11 @@ def _virtual(osdata):
             if 'QEMU Virtual CPU' in model:
                 grains['virtual'] = 'kvm'
     elif osdata['kernel'] == 'OpenBSD':
-        if osdata['manufacturer'] in ['QEMU', 'Red Hat']:
-            grains['virtual'] = 'kvm'
-        if osdata['manufacturer'] == 'OpenBSD':
-            grains['virtual'] = 'vmm'
+        if 'manufacturer' in osdata:
+            if osdata['manufacturer'] in ['QEMU', 'Red Hat', 'Joyent']:
+                grains['virtual'] = 'kvm'
+            if osdata['manufacturer'] == 'OpenBSD':
+                grains['virtual'] = 'vmm'
     elif osdata['kernel'] == 'SunOS':
         if grains['virtual'] == 'LDOM':
             roles = []
@@ -1160,8 +1161,7 @@ def _clean_value(key, val):
     NOTE: This logic also exists in the smbios module. This function is
           for use when not using smbios to retrieve the value.
     '''
-    if (val is None or
-            not len(val) or
+    if (val is None or not val or
             re.match('none', val, flags=re.IGNORECASE)):
         return None
     elif 'uuid' in key:

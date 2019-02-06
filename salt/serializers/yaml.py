@@ -121,6 +121,7 @@ class Dumper(BaseDumper):  # pylint: disable=W0232
     '''Overwrites Dumper as not for pollute legacy Dumper'''
     pass
 
+
 Dumper.add_multi_representer(EncryptedString, EncryptedString.yaml_dumper)
 Dumper.add_multi_representer(type(None), Dumper.represent_none)
 Dumper.add_multi_representer(str, Dumper.represent_str)
