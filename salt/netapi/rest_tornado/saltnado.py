@@ -236,7 +236,7 @@ logger = logging.getLogger()
 
 # # master side
 #  - "runner" (done)
-#  - "wheel" (need async api...)
+#  - "wheel" (need asynchronous api...)
 
 
 AUTH_TOKEN_HEADER = 'X-Auth-Token'
@@ -265,7 +265,7 @@ class Any(Future):
 class EventListener(object):
     '''
     Class responsible for listening to the salt master event bus and updating
-    futures. This is the core of what makes this async, this allows us to do
+    futures. This is the core of what makes this asynchronous, this allows us to do
     non-blocking work in the main processes and "wait" for an event to happen
     '''
 
@@ -328,7 +328,7 @@ class EventListener(object):
                   timeout=None
                   ):
         '''
-        Get an event (async of course) return a future that will get it later
+        Get an event (asynchronous of course) return a future that will get it later
         '''
         # if the request finished, no reason to allow event fetching, since we
         # can't send back to the client
@@ -645,7 +645,7 @@ class SaltAuthHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
 
         self.write(self.serialize(ret))
 
-    # TODO: make async? Underlying library isn't... and we ARE making disk calls :(
+    # TODO: make asynchronous? Underlying library isn't... and we ARE making disk calls :(
     def post(self):
         '''
         :ref:`Authenticate  <rest_tornado-auth>` against Salt's eauth system

@@ -130,7 +130,7 @@ class IPCServer(object):
         else:
             self.sock = tornado.netutil.bind_unix_socket(self.socket_path)
 
-        with salt.utils.async.current_ioloop(self.io_loop):
+        with salt.utils.asynchronous.current_ioloop(self.io_loop):
             tornado.netutil.add_accept_handler(
                 self.sock,
                 self.handle_connection,
@@ -197,7 +197,7 @@ class IPCServer(object):
         log.trace('IPCServer: Handling connection '
                   'to address: {0}'.format(address))
         try:
-            with salt.utils.async.current_ioloop(self.io_loop):
+            with salt.utils.asynchronous.current_ioloop(self.io_loop):
                 stream = IOStream(
                     connection,
                 )
@@ -330,7 +330,7 @@ class IPCClient(object):
                 break
 
             if self.stream is None:
-                with salt.utils.async.current_ioloop(self.io_loop):
+                with salt.utils.asynchronous.current_ioloop(self.io_loop):
                     self.stream = IOStream(
                         socket.socket(sock_type, socket.SOCK_STREAM),
                     )
@@ -511,7 +511,7 @@ class IPCMessagePublisher(object):
         else:
             self.sock = tornado.netutil.bind_unix_socket(self.socket_path)
 
-        with salt.utils.async.current_ioloop(self.io_loop):
+        with salt.utils.asynchronous.current_ioloop(self.io_loop):
             tornado.netutil.add_accept_handler(
                 self.sock,
                 self.handle_connection,
@@ -549,8 +549,8 @@ class IPCMessagePublisher(object):
             kwargs = {}
             if self.opts['ipc_write_buffer'] > 0:
                 kwargs['max_write_buffer_size'] = self.opts['ipc_write_buffer']
-                log.trace('Setting IPC connection write buffer: {0}'.format((self.opts['ipc_write_buffer'])))
-            with salt.utils.async.current_ioloop(self.io_loop):
+                log.trace('Setting IPC connection write buffer: %s', (self.opts['ipc_write_buffer']))
+            with salt.utils.asynchronous.current_ioloop(self.io_loop):
                 stream = IOStream(
                     connection,
                     **kwargs

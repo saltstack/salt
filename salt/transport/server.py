@@ -55,7 +55,7 @@ class ReqServerChannel(object):
         '''
         Do anything you need post-fork. This should handle all incoming payloads
         and call payload_handler. You will also be passed io_loop, for all of your
-        async needs
+        asynchronous needs
         '''
         pass
 

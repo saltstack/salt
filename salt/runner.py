@@ -237,10 +237,10 @@ class Runner(RunnerClient):
                     if self.opts.get('eauth'):
                         async_pub = self.cmd_async(low)
                     else:
-                        async_pub = self.async(self.opts['fun'],
-                                               low,
-                                               user=user,
-                                               pub=async_pub)
+                        async_pub = self.asynchronous(self.opts['fun'],
+                                                      low,
+                                                      user=user,
+                                                      pub=async_pub)
                     # by default: info will be not enougth to be printed out !
                     log.warning('Running in async mode. Results of this execution may '
                              'be collected by attaching to the master event bus or '

@@ -71,17 +71,17 @@ import tornado.iostream
 
 # Import salt libs
 import salt.config
+import salt.defaults.exitcodes
+import salt.log.setup
 import salt.payload
+import salt.transport.ipc
 import salt.utils
-import salt.utils.async
+import salt.utils.asynchronous
 import salt.utils.cache
 import salt.utils.dicttrim
 import salt.utils.files
 import salt.utils.process
 import salt.utils.zeromq
-import salt.log.setup
-import salt.defaults.exitcodes
-import salt.transport.ipc
 
 log = logging.getLogger(__name__)
 
@@ -221,7 +221,7 @@ class SaltEvent(object):
         :param Bool keep_loop: Pass a boolean to determine if we want to keep
                                the io loop or destroy it when the event handle
                                is destroyed. This is useful when using event
-                               loops from within third party async code
+                               loops from within third party asynchronous code
         '''
         self.serial = salt.payload.Serial({'serial': 'msgpack'})
         self.keep_loop = keep_loop
@@ -357,7 +357,7 @@ class SaltEvent(object):
             return True
 
         if self._run_io_loop_sync:
-            with salt.utils.async.current_ioloop(self.io_loop):
+            with salt.utils.asynchronous.current_ioloop(self.io_loop):
                 if self.subscriber is None:
                     self.subscriber = salt.transport.ipc.IPCMessageSubscriber(
                     self.puburi,
@@ -376,7 +376,7 @@ class SaltEvent(object):
                 io_loop=self.io_loop
             )
 
-            # For the async case, the connect will be defered to when
+            # For the asynchronous case, the connect will be defered to when
             # set_event_handler() is invoked.
             self.cpub = True
         return self.cpub
@@ -402,7 +402,7 @@ class SaltEvent(object):
             return True
 
         if self._run_io_loop_sync:
-            with salt.utils.async.current_ioloop(self.io_loop):
+            with salt.utils.asynchronous.current_ioloop(self.io_loop):
                 if self.pusher is None:
                     self.pusher = salt.transport.ipc.IPCMessageClient(
                         self.pulluri,
@@ -420,7 +420,7 @@ class SaltEvent(object):
                     self.pulluri,
                     io_loop=self.io_loop
                 )
-            # For the async case, the connect will be defered to when
+            # For the asynchronous case, the connect will be deferred to when
             # fire_event() is invoked.
             self.cpush = True
         return self.cpush
@@ -624,7 +624,7 @@ class SaltEvent(object):
 
         ret = self._check_pending(tag, match_func)
         if ret is None:
-            with salt.utils.async.current_ioloop(self.io_loop):
+            with salt.utils.asynchronous.current_ioloop(self.io_loop):
                 if auto_reconnect:
                     raise_errors = self.raise_errors
                     self.raise_errors = True
@@ -733,7 +733,7 @@ class SaltEvent(object):
             serialized_data])
         msg = salt.utils.to_bytes(event, 'utf-8')
         if self._run_io_loop_sync:
-            with salt.utils.async.current_ioloop(self.io_loop):
+            with salt.utils.asynchronous.current_ioloop(self.io_loop):
                 try:
                     self.io_loop.run_sync(lambda: self.pusher.send(msg))
                 except Exception as ex:
@@ -1073,7 +1073,7 @@ class EventPublisher(salt.utils.process.SignalHandlingMultiprocessingProcess):
         '''
         salt.utils.appendproctitle(self.__class__.__name__)
         self.io_loop = tornado.ioloop.IOLoop()
-        with salt.utils.async.current_ioloop(self.io_loop):
+        with salt.utils.asynchronous.current_ioloop(self.io_loop):
             if self.opts['ipc_mode'] == 'tcp':
                 epub_uri = int(self.opts['tcp_master_pub_port'])
                 epull_uri = int(self.opts['tcp_master_pull_port'])

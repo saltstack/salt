@@ -87,6 +87,7 @@ import ssl
 from salt.exceptions import CommandExecutionError
 import salt.ext.six as six
 from salt.ext.six.moves import range
+import salt.utils.versions
 
 SSL_VERSION = 'ssl_version'
 
@@ -124,7 +125,7 @@ def __virtual__():
 
 
 def _async_log_errors(errors):
-    log.error('Cassandra_cql async call returned: {0}'.format(errors))
+    log.error('Cassandra_cql asynchronous call returned: %s', errors)
 
 
 def _load_properties(property_name, config_option, set_default=False, default=None):
@@ -337,9 +338,8 @@ def cql_query(query, contact_points=None, port=None, cql_user=None, cql_pass=Non
     return ret
 
 
-def cql_query_with_prepare(query, statement_name, statement_arguments, async=False,
-                           callback_errors=None,
-                           contact_points=None, port=None, cql_user=None, cql_pass=None):
+def cql_query_with_prepare(query, statement_name, statement_arguments, callback_errors=None, contact_points=None,
+                           port=None, cql_user=None, cql_pass=None, **kwargs):
     '''
     Run a query on a Cassandra cluster and return a dictionary.
 
@@ -353,8 +353,8 @@ def cql_query_with_prepare(query, statement_name, statement_arguments, async=Fal
     :type  statement_name: str
     :param statement_arguments: Bind parameters for the SQL statement
     :type  statement_arguments: list[str]
-    :param async:          Run this query in asynchronous mode
-    :type  async:          bool
+    :param async:           Run this query in asynchronous mode
+    :type  async:           bool
     :param callback_errors: Function to call after query runs if there is an error
     :type  callback_errors: Function callable
     :param contact_points: The Cassandra cluster addresses, can either be a string or a list of IPs.
@@ -377,12 +377,14 @@ def cql_query_with_prepare(query, statement_name, statement_arguments, async=Fal
 
         # Insert data asynchronously
         salt this-node cassandra_cql.cql_query_with_prepare "name_insert" "INSERT INTO USERS (first_name, last_name) VALUES (?, ?)" \
-            statement_arguments=['John','Doe'], async=True
+            statement_arguments=['John','Doe'], asynchronous=True
 
         # Select data, should not be asynchronous because there is not currently a facility to return data from a future
         salt this-node cassandra_cql.cql_query_with_prepare "name_select" "SELECT * FROM USERS WHERE first_name=?" \
             statement_arguments=['John']
     '''
+    # Backward-compatibility with Python 3.7: "async" is a reserved word
+    asynchronous = kwargs.get('async', False)
     try:
         cluster, session = _connect(contact_points=contact_points, port=port,
                                     cql_user=cql_user, cql_pass=cql_pass)
@@ -407,7 +409,7 @@ def cql_query_with_prepare(query, statement_name, statement_arguments, async=Fal
     ret = []
 
     try:
-        if async:
+        if asynchronous:
             future_results = session.execute_async(bound_statement.bind(statement_arguments))
             # future_results.add_callbacks(_async_log_errors)
         else:
@@ -417,7 +419,7 @@ def cql_query_with_prepare(query, statement_name, statement_arguments, async=Fal
         msg = "ERROR: Cassandra query failed: {0} reason: {1}".format(query, str(e))
         raise CommandExecutionError(msg)
 
-    if not async and results:
+    if not asynchronous and results:
         for result in results:
             values = {}
             for key, value in six.iteritems(result):
@@ -432,7 +434,7 @@ def cql_query_with_prepare(query, statement_name, statement_arguments, async=Fal
 
     # If this was a synchronous call, then we either have a empty list
     # because there was no return, or we have a return
-    # If this was an async call we only return the empty list
+    # If this was an asynchronous call we only return the empty list
     return ret
 
 
