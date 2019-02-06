@@ -172,7 +172,7 @@ def save_load(jid, load, minions=None):
         ttl = __opts__.get('etcd.ttl')
 
     # Figure out the path using jobs/$jid/.load.p
-    loadp = '/'.join([path, 'jobs', jid, '.load.p']),
+    loadp = '/'.join([path, 'jobs', jid, '.load.p'])
     log.debug('sdstack_etcd returner <save_load> setting load data (ttl={ttl:d}) for job {jid:s} at {path:s} with {data:s}'.format(jid=jid, ttl=ttl, path=loadp, data=load))
 
     # Now we can just store the current load
