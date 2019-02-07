@@ -22,6 +22,7 @@ import locale
 import uuid
 from errno import EACCES, EPERM
 import datetime
+import warnings
 
 __proxyenabled__ = ['*']
 __FQDN__ = None
@@ -34,7 +35,12 @@ _supported_dists += ('arch', 'mageia', 'meego', 'vmware', 'bluewhite64',
 
 # linux_distribution deprecated in py3.7
 try:
-    from platform import linux_distribution
+    from platform import linux_distribution as _deprecated_linux_distribution
+
+    def linux_distribution(**kwargs):
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            return _deprecated_linux_distribution(**kwargs)
 except ImportError:
     from distro import linux_distribution
 
