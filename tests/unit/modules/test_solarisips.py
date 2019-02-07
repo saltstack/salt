@@ -2,13 +2,11 @@
 
 # Import Python Libs
 from __future__ import absolute_import
-import os
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
-    Mock,
     MagicMock,
     patch,
     NO_MOCK,
@@ -19,6 +17,7 @@ from tests.support.mock import (
 import salt.modules.solarisips as solarisips
 import salt.modules.pkg_resource as pkg_resource
 import salt.utils.data
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class IpsTestCase(TestCase, LoaderModuleMockMixin):
