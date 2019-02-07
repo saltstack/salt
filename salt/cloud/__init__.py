@@ -74,10 +74,16 @@ def communicator(func):
             queue.put("KEYBOARDINT")
             queue.put("Keyboard interrupt")
             queue.put("{0}\n{1}\n".format(ex, trace))
-        except BaseException as ex:
+        except Exception as ex:
             trace = traceback.format_exc()
             queue.put("ERROR")
             queue.put("Exception")
+            queue.put("{0}\n{1}\n".format(ex, trace))
+        except SystemExit as ex:
+            print("Communicatior: caught exception")
+            trace = traceback.format_exc()
+            queue.put("ERROR")
+            queue.put("System exit")
             queue.put("{0}\n{1}\n".format(ex, trace))
         return ret
 
