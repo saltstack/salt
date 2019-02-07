@@ -1867,7 +1867,8 @@ def grant_exists(grant,
 
     server_version = version(**connection_args)
     if 'ALL' in grant:
-        if salt.utils.versions.version_cmp(server_version, '8.0') >= 0:
+        if salt.utils.versions.version_cmp(server_version, '8.0') >= 0 and \
+           'MariaDB' not in server_version:
             grant = ','.join([i for i in __all_privileges__])
         else:
             grant = 'ALL PRIVILEGES'
