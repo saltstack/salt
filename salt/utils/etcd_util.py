@@ -274,7 +274,7 @@ class EtcdClient(object):
     def write_file(self, key, value, ttl=None):
         try:
             result = self.client.write(key, value, ttl=ttl, dir=False)
-        except (etcd.EtcdNotDir, etcd.EtcdRootReadOnly, ValueError) as err:
+        except (etcd.EtcdNotFile, etcd.EtcdRootReadOnly, ValueError) as err:
             log.error('etcd: %s', err)
             return None
         except MaxRetryError as err:
@@ -292,7 +292,12 @@ class EtcdClient(object):
         try:
             # directories can't have values, but have to have it passed
             result = self.client.write(key, None, ttl=ttl, dir=True)
-        except (etcd.EtcdNotFile, etcd.EtcdRootReadOnly, ValueError) as err:
+        except etcd.EtcdNotFile:
+            # When a directory already exists, python-etcd raises an EtcdNotFile
+            # exception. In this case, we just catch and return True for success.
+            log.info('etcd: directory already exists: %s', key)
+            return True
+        except (etcd.EtcdNotDir, etcd.EtcdRootReadOnly, ValueError) as err:
             log.error('etcd: %s', err)
             return None
         except MaxRetryError as err:
