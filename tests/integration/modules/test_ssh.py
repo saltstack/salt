@@ -15,6 +15,7 @@ from tests.support.helpers import skip_if_binaries_missing
 
 # Import salt libs
 import salt.utils.files
+import salt.utils.platform
 
 # Import 3rd-party libs
 from tornado.httpclient import HTTPClient
@@ -72,8 +73,11 @@ class SSHModuleTest(ModuleCase):
         '''
         shutil.copyfile(
              os.path.join(RUNTIME_VARS.FILES, 'ssh', 'authorized_keys'),
-             self.authorized_keys)
-        ret = self.run_function('ssh.auth_keys', ['root', self.authorized_keys])
+             AUTHORIZED_KEYS)
+        user = 'root'
+        if salt.utils.platform.is_windows():
+            user = 'Administrator'
+        ret = self.run_function('ssh.auth_keys', [user, AUTHORIZED_KEYS])
         self.assertEqual(len(list(ret.items())), 1)  # exactly one key is found
         key_data = list(ret.items())[0][1]
         try:
