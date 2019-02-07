@@ -1266,6 +1266,7 @@ def user_exists(user,
     '''
     run_verify = False
     server_version = version(**connection_args)
+    compare_version = '10.2.0' if 'MariaDB' in server_version else '8.0.11'
     dbc = _connect(**connection_args)
     # Did we fail to connect with the user we are checking
     # Its password might have previously change with the same command/state
@@ -1297,7 +1298,7 @@ def user_exists(user,
         else:
             qry += ' AND ' + password_column + ' = \'\''
     elif password:
-        if salt.utils.versions.version_cmp(server_version, '8.0.11') >= 0:
+        if salt.utils.versions.version_cmp(server_version, compare_version) >= 0:
             run_verify = True
         else:
             _password = password
@@ -1404,6 +1405,7 @@ def user_create(user,
         salt '*' mysql.user_create 'username' 'hostname' allow_passwordless=True
     '''
     server_version = version(**connection_args)
+    compare_version = '10.2.0' if 'MariaDB' in server_version else '8.0.11'
     if user_exists(user, host, **connection_args):
         log.info('User \'%s\'@\'%s\' already exists', user, host)
         return False
@@ -1424,7 +1426,7 @@ def user_create(user,
         qry += ' IDENTIFIED BY %(password)s'
         args['password'] = six.text_type(password)
     elif password_hash is not None:
-        if salt.utils.versions.version_cmp(server_version, '8.0.11') >= 0:
+        if salt.utils.versions.version_cmp(server_version, compare_version) >= 0:
             qry += ' IDENTIFIED BY %(password)s'
         else:
             qry += ' IDENTIFIED BY PASSWORD %(password)s'
@@ -1508,9 +1510,10 @@ def user_chpass(user,
         salt '*' mysql.user_chpass frank localhost allow_passwordless=True
     '''
     server_version = version(**connection_args)
+    compare_version = '10.2.0' if 'MariaDB' in server_version else '8.0.11'
     args = {}
     if password is not None:
-        if salt.utils.versions.version_cmp(server_version, '8.0.11') >= 0:
+        if salt.utils.versions.version_cmp(server_version, compare_version) >= 0:
             password_sql = '%(password)s'
         else:
             password_sql = 'PASSWORD(%(password)s)'
@@ -1535,7 +1538,7 @@ def user_chpass(user,
     cur = dbc.cursor()
     args['user'] = user
     args['host'] = host
-    if salt.utils.versions.version_cmp(server_version, '8.0.11') >= 0:
+    if salt.utils.versions.version_cmp(server_version, compare_version) >= 0:
         qry = "ALTER USER %(user)s@%(host)s IDENTIFIED BY %(password)s;"
     else:
         qry = ('UPDATE mysql.user SET ' + password_column + '=' + password_sql +
@@ -1544,7 +1547,7 @@ def user_chpass(user,
             salt.utils.data.is_true(unix_socket):
         if host == 'localhost':
             args['unix_socket'] = 'auth_socket'
-            if salt.utils.versions.version_cmp(server_version, '8.0.11') >= 0:
+            if salt.utils.versions.version_cmp(server_version, compare_version) >= 0:
                 qry = "ALTER USER %(user)s@%(host)s IDENTIFIED WITH %(unix_socket)s AS %(user)s;"
             else:
                 qry = ('UPDATE mysql.user SET ' + password_column + '='
@@ -1560,7 +1563,7 @@ def user_chpass(user,
         log.error(err)
         return False
 
-    if salt.utils.versions.version_cmp(server_version, '8.0.11') >= 0:
+    if salt.utils.versions.version_cmp(server_version, compare_version) >= 0:
         _execute(cur, 'FLUSH PRIVILEGES;')
         log.info(
             'Password for user \'%s\'@\'%s\' has been %s',
@@ -1864,7 +1867,8 @@ def grant_exists(grant,
 
     server_version = version(**connection_args)
     if 'ALL' in grant:
-        if salt.utils.versions.version_cmp(server_version, '8.0') >= 0:
+        if salt.utils.versions.version_cmp(server_version, '8.0') >= 0 and \
+           'MariaDB' not in server_version:
             grant = ','.join([i for i in __all_privileges__])
         else:
             grant = 'ALL PRIVILEGES'
