@@ -272,9 +272,6 @@ class MinionSwarm(Swarm):
     '''
     Create minions
     '''
-    def __init__(self, opts):
-        super(MinionSwarm, self).__init__(opts)
-
     def start_minions(self):
         '''
         Iterate over the config files and start up the minions
@@ -426,6 +423,7 @@ class MasterSwarm(Swarm):
                 shell=True
         )
         print('Master killed')
+
 
 # pylint: disable=C0103
 if __name__ == '__main__':
