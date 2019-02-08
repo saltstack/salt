@@ -755,9 +755,8 @@ def bootstrap(directory='.',
             os.chown('bootstrap.py', uid, gid)
     except (IOError, OSError) as exc:
         # don't block here, try to execute it if can pass
-        _logger.error('BUILDOUT bootstrap permissions error:'
-                      ' {0}'.format(exc),
-                  exc_info=_logger.isEnabledFor(logging.DEBUG))
+        _logger.error('BUILDOUT bootstrap permissions error: %s',
+                      exc, exc_info=_logger.isEnabledFor(logging.DEBUG))
     cmd = '{0} bootstrap.py {1}'.format(python, bootstrap_args)
     ret = _Popen(cmd, directory=directory, runas=runas, loglevel=loglevel,
                  env=env, use_vt=use_vt)

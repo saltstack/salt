@@ -98,7 +98,7 @@ pipeline {
         stage('linting all') {
             // perform a full linit if this is a merge forward and the change only lint passed.
             when {
-                expression { return params.CHANGE_BRANCH =~ /(?i)^merge[._-]/ }
+                expression { return env.CHANGE_BRANCH =~ /(?i)^merge[._-]/ }
             }
             parallel {
                 stage('setup full') {

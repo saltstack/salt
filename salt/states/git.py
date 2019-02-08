@@ -445,7 +445,7 @@ def latest(name,
         argument to ``True`` to force a hard-reset to the remote revision in
         these cases.
 
-        .. versionchanged:: Fluorine
+        .. versionchanged:: 2019.2.0
             This option can now be set to ``remote-changes``, which will
             instruct Salt not to discard local changes if the repo is
             up-to-date with the remote repository.
@@ -489,7 +489,7 @@ def latest(name,
         with a long history. Use rev to specify branch or tag. This is not
         compatible with revision IDs.
 
-        .. versionchanged:: Fluorine
+        .. versionchanged:: 2019.2.0
             This option now supports tags as well as branches, on Git 1.8.0 and
             newer.
 
@@ -768,6 +768,12 @@ def latest(name,
             ret,
             'Failed to check remote refs: {0}'.format(_strip_exc(exc))
         )
+    except NameError as exc:
+        if 'global name' in exc.message:
+            raise CommandExecutionError(
+                'Failed to check remote refs: You may need to install '
+                'GitPython or PyGit2')
+        raise
 
     if 'HEAD' in all_remote_refs:
         head_rev = all_remote_refs['HEAD']
@@ -2753,7 +2759,7 @@ def cloned(name,
            https_pass=None,
            output_encoding=None):
     '''
-    .. versionadded:: 2018.3.3,Fluorine
+    .. versionadded:: 2018.3.3,2019.2.0
 
     Ensure that a repository has been cloned to the specified target directory.
     If not, clone that repository. No fetches will be performed once cloned.
