@@ -31,7 +31,7 @@ pythonnet==2.3.0
 pywin32==223
 PyYAML==3.12
 pyzmq==16.0.3
-requests==2.18.4
+requests==2.21.0
 singledispatch==3.4.0.3
 smmap==0.9.0
 timelib==0.2.4

@@ -324,7 +324,7 @@ class MasterPillarUtil(object):
         ckminions = salt.utils.minions.CkMinions(self.opts)
         _res = ckminions.check_minions(self.tgt, self.tgt_type)
         minion_ids = _res['minions']
-        if len(minion_ids) == 0:
+        if not minion_ids:
             log.debug('No minions matched for tgt="%s" and tgt_type="%s"', self.tgt, self.tgt_type)
             return {}
         log.debug('Matching minions for tgt="%s" and tgt_type="%s": %s', self.tgt, self.tgt_type, minion_ids)
@@ -424,7 +424,7 @@ class MasterPillarUtil(object):
             clear_what.append('mine')
         if clear_mine_func is not None:
             clear_what.append('mine_func: \'{0}\''.format(clear_mine_func))
-        if not len(clear_what):
+        if not clear_what:
             log.debug('No cached data types specified for clearing.')
             return False
 
@@ -729,7 +729,7 @@ class ConnectedCache(MultiprocessingProcess):
 
                 try:
 
-                    if len(new_c_data) == 0:
+                    if not new_c_data:
                         log.debug('ConCache Got empty update from worker')
                         continue
 

@@ -3,7 +3,7 @@
 Redis SDB module
 ================
 
- .. versionadded:: Fluorine
+ .. versionadded:: 2019.2.0
 
 This module allows access to Redis  using an ``sdb://`` URI.
 

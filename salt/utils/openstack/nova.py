@@ -76,6 +76,7 @@ def check_nova():
         log.debug('Newer novaclient version required.  Minimum: %s', NOVACLIENT_MINVER)
     return False
 
+
 if check_nova():
     try:
         import novaclient.auth_plugin

@@ -213,6 +213,7 @@ def wait(name, **kwargs):
             'result': True,
             'comment': ''}
 
+
 # Alias module.watch to module.wait
 watch = salt.utils.functools.alias_function(wait, 'watch')
 
@@ -260,7 +261,7 @@ def run(**kwargs):
         'result': None,
     }
 
-    functions = [func for func in kwargs.keys() if '.' in func]
+    functions = [func for func in kwargs if '.' in func]
     missing = []
     tests = []
     for func in functions:
@@ -554,5 +555,6 @@ def _get_dict_result(node):
             if ret is False:
                 break
     return ret
+
 
 mod_watch = salt.utils.functools.alias_function(run, 'mod_watch')
