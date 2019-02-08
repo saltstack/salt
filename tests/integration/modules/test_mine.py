@@ -19,12 +19,16 @@ class MineTest(ModuleCase):
         test mine.get and mine.update
         '''
         self.assertTrue(self.run_function('mine.update', minion_tgt='minion'))
-        self.assertTrue(
+        # The sub_minion does not have mine_functions defined in its configuration
+        # In this case, mine.update returns None
+        self.assertIsNone(
             self.run_function(
                 'mine.update',
                 minion_tgt='sub_minion'
             )
         )
+        # Since the minion has mine_functions defined in its configuration,
+        # mine.update will return True
         self.assertTrue(
             self.run_function(
                 'mine.get',

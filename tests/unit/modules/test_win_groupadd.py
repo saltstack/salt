@@ -97,7 +97,7 @@ class WinGroupTestCase(TestCase, LoaderModuleMockMixin):
                                        'members': ['HOST\\spongebob']})
         with patch.object(win_groupadd, 'info', info),\
                 patch.object(win_groupadd, '_get_computer_object', Mock()):
-            self.assertTrue(win_groupadd.add('foo'))
+            self.assertFalse(win_groupadd.add('foo'))
 
     def test_add_error(self):
         '''
@@ -131,7 +131,7 @@ class WinGroupTestCase(TestCase, LoaderModuleMockMixin):
         info = MagicMock(return_value=False)
         with patch.object(win_groupadd, 'info', info), \
                 patch.object(win_groupadd, '_get_computer_object', Mock()):
-            self.assertTrue(win_groupadd.delete('foo'))
+            self.assertFalse(win_groupadd.delete('foo'))
 
     def test_delete_error(self):
         '''
@@ -199,7 +199,7 @@ class WinGroupTestCase(TestCase, LoaderModuleMockMixin):
         obj_group_mock = MagicMock(return_value=MockGroupObj('foo', ['WinNT://HOST/steve']))
         with patch.object(win_groupadd, '_get_group_object', obj_group_mock), \
                 patch.object(salt.utils.win_functions, 'get_sam_name', sam_mock):
-            self.assertTrue(win_groupadd.adduser('foo', 'steve'))
+            self.assertFalse(win_groupadd.adduser('foo', 'steve'))
 
     def test_adduser_error(self):
         '''
@@ -227,7 +227,8 @@ class WinGroupTestCase(TestCase, LoaderModuleMockMixin):
         '''
         # Test removing a user
         obj_group_mock = MagicMock(return_value=MockGroupObj('foo', ['WinNT://HOST/spongebob']))
-        with patch.object(win_groupadd, '_get_group_object', obj_group_mock):
+        with patch.object(win_groupadd, '_get_group_object', obj_group_mock), \
+                patch.object(salt.utils.win_functions, 'get_sam_name', sam_mock):
             self.assertTrue(win_groupadd.deluser('foo', 'spongebob'))
 
     def test_deluser_no_user(self):
@@ -238,7 +239,7 @@ class WinGroupTestCase(TestCase, LoaderModuleMockMixin):
         obj_group_mock = MagicMock(return_value=MockGroupObj('foo', ['WinNT://HOST/steve']))
         with patch.object(win_groupadd, '_get_group_object', obj_group_mock), \
                 patch.object(salt.utils.win_functions, 'get_sam_name', sam_mock):
-            self.assertTrue(win_groupadd.deluser('foo', 'spongebob'))
+            self.assertFalse(win_groupadd.deluser('foo', 'spongebob'))
 
     def test_deluser_error(self):
         '''
@@ -251,7 +252,7 @@ class WinGroupTestCase(TestCase, LoaderModuleMockMixin):
         obj_group_mock = MagicMock(return_value=GroupObj('foo', ['WinNT://HOST/spongebob']))
         with patch.object(win_groupadd, '_get_group_object', obj_group_mock), \
                 patch.object(salt.utils.win_functions, 'get_sam_name', sam_mock):
-            self.assertTrue(win_groupadd.deluser('foo', 'spongebob'))
+            self.assertFalse(win_groupadd.deluser('foo', 'spongebob'))
 
     def test_deluser_group_does_not_exist(self):
         obj_group_mock = MagicMock(side_effect=PYWINTYPES_ERROR)

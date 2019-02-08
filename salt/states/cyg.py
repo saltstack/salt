@@ -58,7 +58,7 @@ def installed(name,
  be one of \'x86\' or \'x86_64\''
         return ret
 
-    LOG.debug('Installed State: Initial Mirror list: {0}'.format(mirrors))
+    LOG.debug('Installed State: Initial Mirror list: %s', mirrors)
 
     if not __salt__['cyg.check_valid_package'](name,
                                                cyg_arch=cyg_arch,

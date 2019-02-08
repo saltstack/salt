@@ -2,6 +2,7 @@
         <name>{{ name }}</name>
         <vcpu>{{ cpu }}</vcpu>
         <memory unit='KiB'>{{ mem }}</memory>
+        <currentMemory unit='KiB'>{{ mem }}</currentMemory>
         <os>
                 <type arch='{{ arch }}'>{{ os_type }}</type>
                 {% if kernel %}<kernel>{{ kernel }}</kernel>{% endif %}
