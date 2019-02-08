@@ -191,6 +191,7 @@ import time
 import fnmatch
 import logging
 from copy import copy
+from copy import deepcopy
 from collections import defaultdict
 
 # pylint: disable=import-error
@@ -940,6 +941,15 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
             self.write(self.serialize({'return': ret}))
             self.finish()
 
+    def _log_req_id_JID(self, chunk_dup):
+        '''
+        Log JID and injected request_id from proxy layer
+        '''
+        if 'request_id' in chunk_dup:
+            if 'token' in chunk_dup:
+                del chunk_dup['token']
+            log.info(json.dumps(chunk_dup))
+
     @tornado.gen.coroutine
     def _disbatch_local(self, chunk):
         '''
@@ -947,6 +957,8 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
         '''
         # Generate jid and find all minions before triggering a job to subscribe all returns from minions
         chunk['jid'] = salt.utils.jid.gen_jid(self.application.opts) if not chunk.get('jid', None) else chunk['jid']
+        chunk_dup = deepcopy(chunk)
+        self._log_req_id_JID(chunk_dup)
         minions = set(self.ckminions.check_minions(chunk['tgt'], chunk.get('tgt_type', 'glob')))
 
         def subscribe_minion(minion):
@@ -1120,8 +1132,11 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
         '''
         Disbatch runner client commands
         '''
+        chunk_dup = deepcopy(chunk)
         full_return = chunk.pop('full_return', False)
         pub_data = self.saltclients['runner'](chunk)
+        chunk_dup['jid'] = pub_data['jid']
+        self._log_req_id_JID(chunk_dup)
         tag = pub_data['tag'] + '/ret'
         try:
             event = yield self.application.event_listener.get_event(self, tag=tag)
