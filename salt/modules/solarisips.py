@@ -303,7 +303,7 @@ def version(*names, **kwargs):
         salt '*' pkg_resource.version pkg://solaris/entire
 
     '''
-    if len(names) == 0:
+    if not names:
         return ''
 
     cmd = ['/bin/pkg', 'list', '-Hv']
@@ -338,7 +338,7 @@ def latest_version(*names, **kwargs):
 
     Please use pkg.latest_version as pkg.available_version is being deprecated.
 
-    .. versionchanged:: Fluorine
+    .. versionchanged:: 2019.2.0
         Support for multiple package names added.
 
     CLI Example:
@@ -350,7 +350,7 @@ def latest_version(*names, **kwargs):
         salt '*' pkg.latest_version postfix sendmail
     '''
 
-    if len(names) == 0:
+    if not names:
         return ''
 
     cmd = ['/bin/pkg', 'list', '-Hnv']
@@ -364,7 +364,7 @@ def latest_version(*names, **kwargs):
 
     if len(names) == 1:
         # Convert back our result in a dict if only one name is passed
-        installed = {list(ret)[0] if len(ret) > 0 else names[0]: installed}
+        installed = {list(ret)[0] if ret else names[0]: installed}
 
     for name in ret:
         if name not in installed:
@@ -384,6 +384,7 @@ def latest_version(*names, **kwargs):
             return ''
 
     return ret
+
 
 # available_version is being deprecated
 available_version = salt.utils.functools.alias_function(latest_version, 'available_version')

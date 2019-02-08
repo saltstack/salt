@@ -158,7 +158,7 @@ Similarly, custom states are synced to Minions when :py:func:`saltutil.sync_stat
 They are both also synced when a :ref:`highstate <running-highstate>` is
 triggered.
 
-As of the Fluorine release, as well as 2017.7.7 and 2018.3.2 in their
+As of the 2019.2.0 release, as well as 2017.7.7 and 2018.3.2 in their
 respective release cycles, the ``sync`` argument to :py:func:`state.apply
 <salt.modules.state.apply_>`/:py:func:`state.sls <salt.modules.state.sls>` can
 be used to sync custom types when running individual SLS files.

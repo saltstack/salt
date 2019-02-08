@@ -253,7 +253,7 @@ def match_class_glob(_class, saltclass_path):
     matches.extend(glob.glob(straight))
     matches.extend(glob.glob(sub_straight))
     matches.extend(glob.glob(sub_init))
-    if len(matches) == 0:
+    if not matches:
         log.warning('%s: Class globbing did not yield any results', _class)
     for match in matches:
         classes.append(get_class_from_file(match, saltclass_path))

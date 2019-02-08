@@ -22,7 +22,7 @@ from tests.support.mock import (
 import salt.utils.files
 import salt.utils.templates as templates
 import salt.utils.platform
-import salt.transport
+import salt.transport.client
 import salt.modules.cp as cp
 from salt.exceptions import CommandExecutionError
 
@@ -143,14 +143,14 @@ class CpTestCase(TestCase, LoaderModuleMockMixin):
                                _auth=MagicMock(**{'return_value.gen_token.return_value': 'token'}),
                                __opts__={'id': 'abc', 'file_buffer_size': 10}), \
                 patch('salt.utils.files.fopen', mock_open(read_data=b'content')) as m_open, \
-                patch('salt.transport.Channel.factory', MagicMock()):
+                patch('salt.transport.client.ReqChannel.factory', MagicMock()):
             response = cp.push(filename)
             assert response, response
             num_opens = len(m_open.filehandles[filename])
             assert num_opens == 1, num_opens
             fh_ = m_open.filehandles[filename][0]
             assert fh_.read.call_count == 2, fh_.read.call_count
-            salt.transport.Channel.factory({}).send.assert_called_once_with(
+            salt.transport.client.ReqChannel.factory({}).send.assert_called_once_with(
                 dict(
                     loc=fh_.tell(),  # pylint: disable=resource-leakage
                     cmd='_file_recv',

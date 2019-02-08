@@ -302,7 +302,7 @@ def list_keys(hive, key=None, use_32bit_registry=False):
 
                 - HKEY_LOCAL_MACHINE or HKLM
                 - HKEY_CURRENT_USER or HKCU
-                - HKEY_USER or HKU
+                - HKEY_USERS or HKU
                 - HKEY_CLASSES_ROOT or HKCR
                 - HKEY_CURRENT_CONFIG or HKCC
 
@@ -769,7 +769,7 @@ def cast_vdata(vdata=None, vtype='REG_SZ'):
         return [_to_unicode(i) for i in vdata]
     # Make sure REG_QWORD is a 64 bit integer
     elif vtype_value == win32con.REG_QWORD:
-        return vdata if six.PY3 else long(vdata)  # pylint: disable=W1699
+        return vdata if six.PY3 else long(vdata)  # pylint: disable=incompatible-py3-code,undefined-variable
     # Everything else is int
     else:
         return int(vdata)

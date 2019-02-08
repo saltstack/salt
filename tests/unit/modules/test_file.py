@@ -226,6 +226,22 @@ class FileReplaceTestCase(TestCase, LoaderModuleMockMixin):
         '''
         filemod.replace(self.tfile.name, r'Etiam', 123)
 
+    def test_search_only_return_true(self):
+        ret = filemod.replace(self.tfile.name,
+                              r'Etiam', 'Salticus',
+                              search_only=True)
+
+        self.assertIsInstance(ret, bool)
+        self.assertEqual(ret, True)
+
+    def test_search_only_return_false(self):
+        ret = filemod.replace(self.tfile.name,
+                              r'Etian', 'Salticus',
+                              search_only=True)
+
+        self.assertIsInstance(ret, bool)
+        self.assertEqual(ret, False)
+
 
 class FileCommentLineTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
@@ -1233,8 +1249,10 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
                     patch('os.stat', self._anyattr), \
                     patch('salt.modules.file.log', _log):
                 self.assertFalse(filemod.line('/dummy/path', content='foo', match='bar', mode=mode))
-            self.assertIn('Cannot find text to {0}'.format(mode),
-                          _log.warning.call_args_list[0][0][0])
+            assert 'Cannot find text to ' in _log.warning.call_args_list[0][0][0], \
+                _log.warning.call_args_list[0][0][0]
+            assert _log.warning.call_args_list[0][0][1] == mode, \
+                _log.warning.call_args_list[0][0][1]
 
     @patch('os.path.realpath', MagicMock())
     @patch('os.path.isfile', MagicMock(return_value=True))
