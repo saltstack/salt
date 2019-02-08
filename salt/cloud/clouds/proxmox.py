@@ -531,7 +531,7 @@ def _stringlist_to_dictionary(input_string):
     for item in li:
         pair = str(item).replace(' ', '').split('=')
         if len(pair) != 2:
-            log.warn("Cannot process stringlist item %s", item)
+            log.warning('Cannot process stringlist item %s', item)
             continue
 
         ret[pair[0]] = pair[1]

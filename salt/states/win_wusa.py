@@ -2,10 +2,10 @@
 '''
 Microsoft Updates (KB) Management
 
-This module provides the ability to enforce KB installations
-from files (.msu), without WSUS.
+This module provides the ability to enforce KB installations from files (.msu),
+without WSUS or Windows Update
 
-.. versionadded:: Neon
+.. versionadded:: 2018.3.4
 '''
 
 # Import python libs
@@ -14,13 +14,14 @@ import logging
 
 # Import salt libs
 import salt.utils.platform
-import salt.exceptions
+import salt.utils.url
+from salt.exceptions import SaltInvocationError
 
 log = logging.getLogger(__name__)
 
 
 # Define the module's virtual name
-__virtualname__ = 'win_wusa'
+__virtualname__ = 'wusa'
 
 
 def __virtual__():
@@ -35,81 +36,113 @@ def __virtual__():
 
 def installed(name, source):
     '''
-    Enforce the installed state of a KB
+    Ensure an update is installed on the minion
 
-    name
-        Name of the Windows KB ("KB123456")
-    source
-        Source of .msu file corresponding to the KB
+    Args:
 
+        name(str):
+            Name of the Windows KB ("KB123456")
+
+        source (str):
+            Source of .msu file corresponding to the KB
+
+    Example:
+
+    .. code-block:: yaml
+
+        KB123456:
+          wusa.installed:
+            - source: salt://kb123456.msu
     '''
-    ret = {
-        'name': name,
-        'changes': {},
-        'result': False,
-        'comment': '',
-        }
+    ret = {'name': name,
+           'changes': {},
+           'result': False,
+           'comment': ''}
 
-    # Start with basic error-checking. Do all the passed parameters make sense
-    # and agree with each-other?
-    if not name or not source:
-        raise salt.exceptions.SaltInvocationError(
-            'Arguments "name" and "source" are mandatory.')
+    # Input validation
+    if not name:
+        raise SaltInvocationError('Must specify a KB "name"')
+    if not source:
+        raise SaltInvocationError('Must specify a "source" file to install')
 
-    # Check the current state of the system. Does anything need to change?
-    current_state = __salt__['win_wusa.is_installed'](name)
-
-    if current_state:
+    # Is the KB already installed
+    if __salt__['wusa.is_installed'](name):
         ret['result'] = True
-        ret['comment'] = 'KB already installed'
+        ret['comment'] = '{0} already installed'.format(name)
         return ret
 
-    # The state of the system does need to be changed. Check if we're running
-    # in ``test=true`` mode.
+    # Check for test=True
     if __opts__['test'] is True:
-        ret['comment'] = 'The KB "{0}" will be installed.'.format(name)
-        ret['changes'] = {
-            'old': current_state,
-            'new': True,
-        }
-
-        # Return ``None`` when running with ``test=true``.
         ret['result'] = None
-
+        ret['comment'] = '{0} would be installed'.format(name)
+        ret['result'] = None
         return ret
 
-    try:
-        result = __states__['file.cached'](source,
-                                           skip_verify=True,
-                                           saltenv=__env__)
-    except Exception as exc:
-        msg = 'Failed to cache {0}: {1}'.format(
-                salt.utils.url.redact_http_basic_auth(source),
-                exc.__str__())
-        log.exception(msg)
+    # Cache the file
+    cached_source_path = __salt__['cp.cache_file'](path=source, saltenv=__env__)
+    if not cached_source_path:
+        msg = 'Unable to cache {0} from saltenv "{1}"'.format(
+            salt.utils.url.redact_http_basic_auth(source), __env__)
         ret['comment'] = msg
         return ret
 
-    if result['result']:
-        # Get the path of the file in the minion cache
-        cached = __salt__['cp.is_cached'](source, saltenv=__env__)
+    # Install the KB
+    __salt__['wusa.install'](cached_source_path)
+
+    # Verify successful install
+    if __salt__['wusa.is_installed'](name):
+        ret['comment'] = '{0} was installed'.format(name)
+        ret['changes'] = {'old': False, 'new': True}
+        ret['result'] = True
     else:
-        log.debug(
-            'failed to download %s',
-            salt.utils.url.redact_http_basic_auth(source)
-        )
-        return result
+        ret['comment'] = '{0} failed to install'.format(name)
 
-    # Finally, make the actual change and return the result.
-    new_state = __salt__['win_wusa.install'](cached)
+    return ret
 
-    ret['comment'] = 'The KB "{0}" was installed!'.format(name)
 
-    ret['changes'] = {
-        'old': current_state,
-        'new': new_state,
-    }
+def uninstalled(name):
+    '''
+    Ensure an update is uninstalled from the minion
 
-    ret['result'] = True
+    Args:
+
+        name(str):
+            Name of the Windows KB ("KB123456")
+
+    Example:
+
+    .. code-block:: yaml
+
+        KB123456:
+          wusa.uninstalled
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': False,
+           'comment': ''}
+
+    # Is the KB already uninstalled
+    if not __salt__['wusa.is_installed'](name):
+        ret['result'] = True
+        ret['comment'] = '{0} already uninstalled'.format(name)
+        return ret
+
+    # Check for test=True
+    if __opts__['test'] is True:
+        ret['result'] = None
+        ret['comment'] = '{0} would be uninstalled'.format(name)
+        ret['result'] = None
+        return ret
+
+    # Uninstall the KB
+    __salt__['wusa.uninstall'](name)
+
+    # Verify successful uninstall
+    if not __salt__['wusa.is_installed'](name):
+        ret['comment'] = '{0} was uninstalled'.format(name)
+        ret['changes'] = {'old': True, 'new': False}
+        ret['result'] = True
+    else:
+        ret['comment'] = '{0} failed to uninstall'.format(name)
 
     return ret
