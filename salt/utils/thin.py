@@ -320,6 +320,21 @@ def _get_supported_py_config(tops, extended_cfg):
     return salt.utils.stringutils.to_bytes(os.linesep.join(pymap))
 
 
+def _get_thintar_prefix(tarname):
+    '''
+    Make sure thintar temporary name is concurrent and secure.
+
+    :param tarname: name of the chosen tarball
+    :return: prefixed tarname
+    '''
+    tfd, tmp_tarname = tempfile.mkstemp(dir=os.path.dirname(tarname), prefix=".thin-",
+                                        suffix="." + os.path.basename(tarname).split(".", 1)[-1])
+    os.write(tfd, salt.utils.stringutils.to_bytes(""))
+    os.close(tfd)
+
+    return tmp_tarname
+
+
 def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
              python2_bin='python2', python3_bin='python3', absonly=True,
              compress='gzip', extended_cfg=None):
