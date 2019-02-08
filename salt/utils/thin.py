@@ -556,6 +556,10 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
         os.chdir(start_dir)
     tfp.close()
 
+    if _six.PY3:
+        os.sync()
+    shutil.move(tmp_thintar, thintar)
+
     return thintar
 
 
