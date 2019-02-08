@@ -130,8 +130,9 @@ class ArgsTestCase(TestCase):
         sys_mock = create_autospec(_test_spec)
         test_functions = {'test_module.test_spec': sys_mock}
         ret = salt.utils.args.argspec_report(test_functions, 'test_module.test_spec')
-        self.assertDictEqual(ret, {'test_module.test_spec':
-                                       {'kwargs': True, 'args': None, 'defaults': None, 'varargs': True}})
+        self.assertDictEqual(ret, {'test_module.test_spec': {
+            'args': ['arg1', 'arg2', 'kwarg1'], 'defaults': (None,),
+            'kwargs': None, 'varargs': None}})
 
     def test_test_mode(self):
         self.assertTrue(salt.utils.args.test_mode(test=True))
