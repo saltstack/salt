@@ -280,6 +280,28 @@ to the next master in the list if it finds the existing one is dead.
 
     master_alive_interval: 30
 
+.. conf_minion:: master_return_strategy
+
+``master_return_strategy``
+--------------------------
+
+.. versionadded:: 2018.x.x
+
+Default: ``source``
+
+This option controls the master return strategy. Can be ``source`` or ``any``.
+If set to ``source``, then the minion will only attempt to return the job
+results to the master that sent the job. If set to ``any``, then the minion
+will attempt to return the job results to the master that sent the job but if
+that fails, then the minion will attempt to return the job results to the next
+connected master in the configuration. :conf_minion:`master_alive_interval`
+must also be set. This is used to keep track of which masters are currently
+connected.
+
+.. code_block:: yaml
+
+    master_return_strategy: source
+
 .. conf_minion:: master_shuffle
 
 ``master_shuffle``

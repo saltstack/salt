@@ -974,7 +974,19 @@ class MinionManager(MinionBase):
 
     @tornado.gen.coroutine
     def handle_event(self, package):
-        yield [minion.handle_event(package) for minion in self.minions]
+        tag, data = salt.utils.event.SaltEvent.unpack(package)
+        if tag == 'master_return':
+            connected_minions = [minion for minion in self.minions if minion.connected]
+            master_return_strategy = self.opts['master_return_strategy']
+
+            # send to the 1st connected minion
+            if connected_minions and master_return_strategy == 'any':
+                minion = connected_minions[0]
+                yield minion.handle_event(package)
+            else:
+                raise tornado.gen.Return()
+        else:
+            yield [minion.handle_event(package) for minion in self.minions]
 
     def _create_minion_object(self, opts, timeout, safe,
                               io_loop=None, loaded_base_name=None,
@@ -2042,7 +2054,12 @@ class Minion(MinionBase):
                 ret_val = self._send_req_sync(load, timeout=timeout)
             except SaltReqTimeoutError:
                 timeout_handler()
-                return ''
+                if self.opts['master_return_strategy'] == 'any':
+                    log.info('Attempting to return the job information for job %s to another master.', jid)
+                    evt = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
+                    ret_val = evt.fire_event(load, tag='master_return')
+                else:
+                    return ''
         else:
             with tornado.stack_context.ExceptionStackContext(timeout_handler):
                 ret_val = self._send_req_async(load, timeout=timeout, callback=lambda f: None)  # pylint: disable=unexpected-keyword-arg
@@ -2457,6 +2474,14 @@ class Minion(MinionBase):
             log.debug('Forwarding master event tag=%s', data['tag'])
             self._fire_master(data['data'], data['tag'], data['events'], data['pretag'])
 
+    def _handle_tag_master_return(self, tag, data):
+        '''
+        Handle a master_return event
+        '''
+        log.debug('Returning results for jid=%s to %s', data.get('jid'), self.opts['master'])
+        self._return_pub(data)
+
+    @tornado.gen.coroutine
     def _handle_tag_master_disconnected_failback(self, tag, data):
         '''
         Handle a master_disconnected_failback event
@@ -2573,6 +2598,7 @@ class Minion(MinionBase):
                     self.restart = True
                     self.io_loop.stop()
 
+    @tornado.gen.coroutine
     def _handle_tag_master_connected(self, tag, data):
         '''
         Handle a master_connected event
@@ -2661,6 +2687,7 @@ class Minion(MinionBase):
                          'salt/auth/creds': self._handle_tag_salt_auth_creds,
                          '_salt_error': self._handle_tag_salt_error,
                          '__schedule_return': self._handle_tag_schedule_return,
+                         'master_return': self._handle_tag_master_return,
                          master_event(type='disconnected'): self._handle_tag_master_disconnected_failback,
                          master_event(type='failback'): self._handle_tag_master_disconnected_failback,
                          master_event(type='connected'): self._handle_tag_master_connected,
