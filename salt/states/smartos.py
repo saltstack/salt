@@ -157,8 +157,7 @@ def _split_docker_uuid(uuid):
         if len(uuid) == 2:
             tag = uuid[1]
             repo = uuid[0]
-            if len(repo.split('/')) == 2:
-                return repo, tag
+            return repo, tag
     return None, None
 
 
