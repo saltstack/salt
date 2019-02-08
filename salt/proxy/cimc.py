@@ -102,7 +102,7 @@ def _validate_response_code(response_code_to_check, cookie_to_logout=None):
     if formatted_response_code not in ['200', '201', '202', '204']:
         if cookie_to_logout:
             logout(cookie_to_logout)
-        log.error("Received error HTTP status code: {0}" .format(formatted_response_code))
+        log.error("Received error HTTP status code: %s", formatted_response_code)
         raise salt.exceptions.CommandExecutionError(
             "Did not receive a valid response from host.")
 

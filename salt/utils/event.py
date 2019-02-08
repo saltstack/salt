@@ -88,6 +88,7 @@ import salt.utils.zeromq
 import salt.log.setup
 import salt.defaults.exitcodes
 import salt.transport.ipc
+import salt.transport.client
 
 log = logging.getLogger(__name__)
 
@@ -333,12 +334,8 @@ class SaltEvent(object):
                     sock_dir,
                     'minion_event_{0}_pull.ipc'.format(id_hash)
                 )
-        log.debug(
-            '{0} PUB socket URI: {1}'.format(self.__class__.__name__, puburi)
-        )
-        log.debug(
-            '{0} PULL socket URI: {1}'.format(self.__class__.__name__, pulluri)
-        )
+        log.debug('%s PUB socket URI: %s', self.__class__.__name__, puburi)
+        log.debug('%s PULL socket URI: %s', self.__class__.__name__, pulluri)
         return puburi, pulluri
 
     def subscribe(self, tag=None, match_type=None):
@@ -411,6 +408,7 @@ class SaltEvent(object):
         if not self.cpub:
             return
 
+        self.subscriber.close()
         self.subscriber = None
         self.pending_events = []
         self.cpub = False
@@ -784,9 +782,10 @@ class SaltEvent(object):
         return self.fire_event(msg, "fire_master", timeout)
 
     def destroy(self):
-        # Do not directly close singleton instances, just set to None
-        self.subscriber = None
-        self.pusher = None
+        if self.subscriber is not None:
+            self.subscriber.close()
+        if self.pusher is not None:
+            self.pusher.close()
         if self._run_io_loop_sync and not self.keep_loop:
             self.io_loop.close()
 
@@ -993,16 +992,8 @@ class AsyncEventPublisher(object):
             epub_uri = epub_sock_path
             epull_uri = epull_sock_path
 
-        log.debug(
-            '{0} PUB socket URI: {1}'.format(
-                self.__class__.__name__, epub_uri
-            )
-        )
-        log.debug(
-            '{0} PULL socket URI: {1}'.format(
-                self.__class__.__name__, epull_uri
-            )
-        )
+        log.debug('%s PUB socket URI: %s', self.__class__.__name__, epub_uri)
+        log.debug('%s PULL socket URI: %s', self.__class__.__name__, epull_uri)
 
         minion_sock_dir = self.opts['sock_dir']
 
@@ -1012,7 +1003,7 @@ class AsyncEventPublisher(object):
             try:
                 os.makedirs(minion_sock_dir, 0o755)
             except OSError as exc:
-                log.error('Could not create SOCK_DIR: {0}'.format(exc))
+                log.error('Could not create SOCK_DIR: %s', exc)
                 # Let's not fail yet and try using the default path
                 if minion_sock_dir == default_minion_sock_dir:
                     # We're already trying the default system path, stop now!
@@ -1022,7 +1013,7 @@ class AsyncEventPublisher(object):
                     try:
                         os.makedirs(default_minion_sock_dir, 0o755)
                     except OSError as exc:
-                        log.error('Could not create SOCK_DIR: {0}'.format(exc))
+                        log.error('Could not create SOCK_DIR: %s', exc)
                         # Let's stop at this stage
                         raise
 
@@ -1033,12 +1024,13 @@ class AsyncEventPublisher(object):
         )
 
         self.puller = salt.transport.ipc.IPCMessageServer(
+            self.opts,
             epull_uri,
             io_loop=self.io_loop,
             payload_handler=self.handle_publish
         )
 
-        log.info('Starting pull socket on {0}'.format(epull_uri))
+        log.info('Starting pull socket on %s', epull_uri)
         with salt.utils.files.set_umask(0o177):
             self.publisher.start()
             self.puller.start()
@@ -1061,7 +1053,7 @@ class AsyncEventPublisher(object):
             return
         self._closing = True
         if hasattr(self, 'publisher'):
-            self.publisher = None
+            self.publisher.close()
         if hasattr(self, 'puller'):
             self.puller.close()
 
@@ -1125,6 +1117,7 @@ class EventPublisher(salt.utils.process.SignalHandlingMultiprocessingProcess):
             )
 
             self.puller = salt.transport.ipc.IPCMessageServer(
+                self.opts,
                 epull_uri,
                 io_loop=self.io_loop,
                 payload_handler=self.handle_publish,
@@ -1189,7 +1182,7 @@ class EventReturn(salt.utils.process.SignalHandlingMultiprocessingProcess):
             # forked, the module namespace is copied and the current process
             # gets all of sys.modules from where the fork happens.  This is not
             # the case for Windows.
-            import salt.minion
+            import salt.minion  # pylint: disable=unused-import
         instance = super(EventReturn, cls).__new__(cls, *args, **kwargs)
         return instance
 
@@ -1238,13 +1231,13 @@ class EventReturn(salt.utils.process.SignalHandlingMultiprocessingProcess):
         if isinstance(self.opts['event_return'], list):
             # Multiple event returners
             for r in self.opts['event_return']:
-                log.debug('Calling event returner {0}, one of many.'.format(r))
+                log.debug('Calling event returner %s, one of many.', r)
                 event_return = '{0}.event_return'.format(r)
                 self._flush_event_single(event_return)
         else:
             # Only a single event returner
-            log.debug('Calling event returner {0}, only one '
-                      'configured.'.format(self.opts['event_return']))
+            log.debug('Calling event returner %s, only one configured.',
+                      self.opts['event_return'])
             event_return = '{0}.event_return'.format(
                 self.opts['event_return']
                 )
@@ -1256,13 +1249,13 @@ class EventReturn(salt.utils.process.SignalHandlingMultiprocessingProcess):
             try:
                 self.minion.returners[event_return](self.event_queue)
             except Exception as exc:
-                log.error('Could not store events - returner \'{0}\' raised '
-                          'exception: {1}'.format(event_return, exc))
+                log.error('Could not store events - returner \'%s\' raised '
+                          'exception: %s', event_return, exc)
                 # don't waste processing power unnecessarily on converting a
                 # potentially huge dataset to a string
                 if log.level <= logging.DEBUG:
-                    log.debug('Event data that caused an exception: {0}'.format(
-                        self.event_queue))
+                    log.debug('Event data that caused an exception: %s',
+                              self.event_queue)
         else:
             log.error('Could not store return for event(s) - returner '
                       '\'%s\' not found.', event_return)
@@ -1346,11 +1339,13 @@ class StateFire(object):
             'tok': self.auth.gen_token(b'salt'),
         })
 
-        channel = salt.transport.Channel.factory(self.opts)
+        channel = salt.transport.client.ReqChannel.factory(self.opts)
         try:
             channel.send(load)
         except Exception:
             pass
+        finally:
+            channel.close()
         return True
 
     def fire_running(self, running):
@@ -1376,9 +1371,11 @@ class StateFire(object):
                 'tag': tag,
                 'data': running[stag],
             })
-        channel = salt.transport.Channel.factory(self.opts)
+        channel = salt.transport.client.ReqChannel.factory(self.opts)
         try:
             channel.send(load)
         except Exception:
             pass
+        finally:
+            channel.close()
         return True

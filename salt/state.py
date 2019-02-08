@@ -25,6 +25,7 @@ import traceback
 import re
 import time
 import random
+import collections
 
 # Import salt libs
 import salt.loader
@@ -40,10 +41,12 @@ import salt.utils.event
 import salt.utils.files
 import salt.utils.hashutils
 import salt.utils.immutabletypes as immutabletypes
+import salt.utils.msgpack as msgpack
 import salt.utils.platform
 import salt.utils.process
 import salt.utils.url
 import salt.syspaths as syspaths
+import salt.transport.client
 from salt.serializers.msgpack import serialize as msgpack_serialize, deserialize as msgpack_deserialize
 from salt.template import compile_template, compile_template_str
 from salt.exceptions import (
@@ -55,7 +58,6 @@ from salt.utils.odict import OrderedDict, DefaultOrderedDict
 import salt.utils.yamlloader as yamlloader
 
 # Import third party libs
-import msgpack
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 from salt.ext import six
 from salt.ext.six.moves import map, range, reload_module
@@ -1358,8 +1360,9 @@ class State(object):
                 names = []
                 if state.startswith('__'):
                     continue
-                chunk = {'state': state,
-                         'name': name}
+                chunk = OrderedDict()
+                chunk['state'] = state
+                chunk['name'] = name
                 if orchestration_jid is not None:
                     chunk['__orchestration_jid__'] = orchestration_jid
                 if '__sls__' in body:
@@ -1538,7 +1541,7 @@ class State(object):
                     if isinstance(arg, dict):
                         # It is not a function, verify that the arg is a
                         # requisite in statement
-                        if len(arg) < 1:
+                        if not arg:
                             # Empty arg dict
                             # How did we get this far?
                             continue
@@ -1616,7 +1619,7 @@ class State(object):
                                                             found = True
                                         if not found:
                                             continue
-                                if len(ind) < 1:
+                                if not ind:
                                     continue
                                 pstate = next(iter(ind))
                                 pname = ind[pstate]
@@ -1940,8 +1943,12 @@ class State(object):
                         ret = self.call_parallel(cdata, low)
                     else:
                         self.format_slots(cdata)
-                        ret = self.states[cdata['full']](*cdata['args'],
-                                                         **cdata['kwargs'])
+                        if cdata['full'].split('.')[-1] == '__call__':
+                            # __call__ requires OrderedDict to preserve state order
+                            # kwargs are also invalid overall
+                            ret = self.states[cdata['full']](cdata['args'], module=None, state=cdata['kwargs'])
+                        else:
+                            ret = self.states[cdata['full']](*cdata['args'], **cdata['kwargs'])
                 self.states.inject_globals = {}
             if 'check_cmd' in low and '{0[state]}.mod_run_check_cmd'.format(low) not in self.states:
                 ret.update(self._run_check_cmd(low))
@@ -2795,10 +2802,33 @@ class State(object):
         running.update(errors)
         return running
 
+    def inject_default_call(self, high):
+        '''
+        Sets .call function to a state, if not there.
+
+        :param high:
+        :return:
+        '''
+        for chunk in high:
+            state = high[chunk]
+            if not isinstance(state, collections.Mapping):
+                continue
+            for state_ref in state:
+                needs_default = True
+                if not isinstance(state[state_ref], list):
+                    continue
+                for argset in state[state_ref]:
+                    if isinstance(argset, six.string_types):
+                        needs_default = False
+                        break
+                if needs_default:
+                    state[state_ref].insert(-1, '__call__')
+
     def call_high(self, high, orchestration_jid=None):
         '''
         Process a high data call and ensure the defined states.
         '''
+        self.inject_default_call(high)
         errors = []
         # If there is extension data reconcile it
         high, ext_errors = self.reconcile_extend(high)
@@ -3689,7 +3719,7 @@ class BaseHighState(object):
 
                     for arg in state[name][s_dec]:
                         if isinstance(arg, dict):
-                            if len(arg) > 0:
+                            if arg:
                                 if next(six.iterkeys(arg)) == 'order':
                                     found = True
                     if not found:
@@ -4193,12 +4223,14 @@ class RemoteHighState(object):
     '''
     Manage gathering the data from the master
     '''
+    # XXX: This class doesn't seem to be used anywhere
     def __init__(self, opts, grains):
         self.opts = opts
         self.grains = grains
         self.serial = salt.payload.Serial(self.opts)
         # self.auth = salt.crypt.SAuth(opts)
-        self.channel = salt.transport.Channel.factory(self.opts['master_uri'])
+        self.channel = salt.transport.client.ReqChannel.factory(self.opts['master_uri'])
+        self._closing = False
 
     def compile_master(self):
         '''
@@ -4211,3 +4243,13 @@ class RemoteHighState(object):
             return self.channel.send(load, tries=3, timeout=72000)
         except SaltReqTimeoutError:
             return {}
+
+    def destroy(self):
+        if self._closing:
+            return
+
+        self._closing = True
+        self.channel.close()
+
+    def __del__(self):
+        self.destroy()
