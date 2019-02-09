@@ -76,8 +76,7 @@ For example:
     ``https://index.docker.io/v1/``).
 
 More than one registry can be configured. Salt will look for Docker credentials
-in the ``docker-registries`` Pillar key, as well as any key ending in
-``-docker-registries``. For example:
+in the ``docker-registries`` key. For example:
 
 .. code-block:: yaml
 
@@ -86,12 +85,10 @@ in the ``docker-registries`` Pillar key, as well as any key ending in
         username: foo
         password: s3cr3t
 
-    foo-docker-registries:
       https://index.foo.io/v1/:
         username: foo
         password: s3cr3t
 
-    bar-docker-registries:
       https://index.bar.io/v1/:
         username: foo
         password: s3cr3t
@@ -1390,24 +1387,13 @@ def login(*registries):
     # NOTE: This function uses the "docker login" CLI command so that login
     # information is added to the config.json, since docker-py isn't designed
     # to do so.
-    registry_auth = __pillar__.get('docker-registries', {})
+    registry_auth = __salt__['config.option]('docker-registries', {})
     ret = {'retcode': 0}
     errors = ret.setdefault('Errors', [])
     if not isinstance(registry_auth, dict):
         errors.append(
-            '\'docker-registries\' Pillar value must be a dictionary')
+            '\'docker-registries\' Config value must be a dictionary')
         registry_auth = {}
-    for key, data in six.iteritems(__pillar__):
-        try:
-            if key.endswith('-docker-registries'):
-                try:
-                    registry_auth.update(data)
-                except TypeError:
-                    errors.append(
-                        '\'{0}\' Pillar value must be a dictionary'.format(key)
-                    )
-        except AttributeError:
-            pass
 
     # If no registries passed, we will auth to all of them
     if not registries:
