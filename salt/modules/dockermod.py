@@ -1361,7 +1361,7 @@ def login(*registries):
     repositories. See the documentation at the top of this page to configure
     authentication credentials.
 
-    Multiple registry URLs (matching those configured in Pillar) can be passed,
+    Multiple registry URLs (matching those configured in master, minion, or pillar) can be passed,
     and Salt will attempt to login to *just* those registries. If no registry
     URLs are provided, Salt will attempt to login to *all* configured
     registries.
