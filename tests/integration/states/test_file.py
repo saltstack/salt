@@ -644,7 +644,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                         remove_file()
 
         remove_file()
-        log.debug('Trying with nonexistant destination file')
+        log.debug('Trying with nonexistent destination file')
         do_test()
         log.debug('Trying with destination file already present')
         with salt.utils.files.fopen(name, 'w'):
