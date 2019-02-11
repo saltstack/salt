@@ -294,7 +294,7 @@ def iostat(zpool=None, sample_time=5, parsable=True):
         'name',
         'capacity-alloc', 'capacity-free',
         'operations-read', 'operations-write',
-        'bandwith-read', 'bandwith-write',
+        'bandwidth-read', 'bandwidth-write',
     ]
     root_vdev = None
     vdev = None

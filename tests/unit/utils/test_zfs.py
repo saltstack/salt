@@ -183,12 +183,12 @@ pmap_zpool = {
     'type': 'bool',
     'values': 'on | off'
   },
-  "bandwith-read": {
+  "bandwidth-read": {
     "edit": False,
     "type": "size",
     "values": "<size>"
   },
-  "bandwith-write": {
+  "bandwidth-write": {
     "edit": False,
     "type": "size",
     "values": "<size>"

@@ -348,7 +348,7 @@ def property_data_zpool():
     zpool_size_extra = [
         'capacity-alloc', 'capacity-free',
         'operations-read', 'operations-write',
-        'bandwith-read', 'bandwith-write',
+        'bandwidth-read', 'bandwidth-write',
         'read', 'write',
     ]
     zpool_numeric_extra = [
