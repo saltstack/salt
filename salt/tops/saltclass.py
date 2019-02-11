@@ -64,8 +64,8 @@ This means that ``default.users`` class name will correspond to one of these:
 - ``<saltclass_path>/classes/default/users.yml``
 - ``<saltclass_path>/classes/default/users/init.yml``
 
-Saltclass file hierachy
-=======================
+Saltclass file hierarchy
+========================
 
 A saltclass tree would look like this:
 
