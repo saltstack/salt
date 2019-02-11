@@ -9,7 +9,7 @@ States for managing zfs datasets
 
 .. versionadded:: 2016.3.0
 .. versionchanged:: 2018.3.1
-  Big refactor to remove duplicate code, better type converions and improved
+  Big refactor to remove duplicate code, better type conversions and improved
   consistency in output.
 
 .. code-block:: yaml

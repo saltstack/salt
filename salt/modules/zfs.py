@@ -9,7 +9,7 @@ Module for running ZFS command
 :platform:      illumos,freebsd,linux
 
 .. versionchanged:: 2018.3.1
-  Big refactor to remove duplicate code, better type converions and improved
+  Big refactor to remove duplicate code, better type conversions and improved
   consistency in output.
 
 """
