@@ -39,6 +39,11 @@ try:
 except ImportError:
     from collections import Mapping
 
+try:
+    from collections.abc import Mapping
+except ImportError:
+    from collections import Mapping
+
 
 class NestDisplay(object):
     '''
