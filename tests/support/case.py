@@ -252,9 +252,9 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             if 'env' not in popen_kwargs:
                 popen_kwargs['env'] = os.environ.copy()
                 if sys.version_info[0] < 3:
-                    popen_kwargs['env'][b'PYTHONPATH'] = os.getcwd().encode()
+                    popen_kwargs['env'][b'PYTHONPATH'] = CODE_DIR.encode()
                 else:
-                    popen_kwargs['env']['PYTHONPATH'] = os.getcwd()
+                    popen_kwargs['env']['PYTHONPATH'] = CODE_DIR
         else:
             cmd = 'PYTHONPATH='
             python_path = os.environ.get('PYTHONPATH', None)
