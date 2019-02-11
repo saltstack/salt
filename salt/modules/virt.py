@@ -938,7 +938,7 @@ def _disk_profile(profile, hypervisor, disks=None, vm_name=None, **kwargs):
             __salt__["config.get"]("virt:disk", {}).get(profile, default)
         )
 
-        # Transform the list to remove one level of dictionnary and add the name as a property
+        # Transform the list to remove one level of dictionary and add the name as a property
         disklist = [dict(d, name=name) for disk in disklist for name, d in disk.items()]
 
     # Merge with the user-provided disks definitions
@@ -1346,7 +1346,7 @@ def init(
 
     .. rubric:: Graphics Definition
 
-    The graphics dictionnary can have the following properties:
+    The graphics dictionary can have the following properties:
 
     type
         Graphics type. The possible values are ``none``, ``'spice'``, ``'vnc'`` and other values
