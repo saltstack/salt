@@ -278,7 +278,7 @@ class RAETEvent(object):
 
     def close_pub(self):
         '''
-        Here for compatability
+        Here for compatibility
         '''
         return
 
