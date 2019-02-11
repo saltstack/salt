@@ -601,7 +601,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         self.assertIn(returned_grains['windowsdomaintype'], valid_types)
         valid_releases = ['Vista', '7', '8', '8.1', '10', '2008Server',
                           '2008ServerR2', '2012Server', '2012ServerR2',
-                          '2016Server']
+                          '2016Server', '2019Server']
         self.assertIn(returned_grains['osrelease'], valid_releases)
 
     @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
