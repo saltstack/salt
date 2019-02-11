@@ -704,7 +704,7 @@ def cli(*commands, **kwargs):  # pylint: disable=unused-argument
         **{"commands": list(commands)}
     )
     # thus we can display the output as is
-    # in case of errors, they'll be catched in the proxy
+    # in case of errors, they'll be caught in the proxy
     if not raw_cli_outputs["result"]:
         # Error -> dispaly the output as-is.
         return raw_cli_outputs
