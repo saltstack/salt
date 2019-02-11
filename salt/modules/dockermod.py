@@ -3984,7 +3984,7 @@ def build(path=None,
             'The \'image\' argument to docker.build has been deprecated, '
             'please use \'repository\' instead.'
         )
-        respository = image
+        repository = image
 
     if repository or tag:
         if not repository and tag:
@@ -4126,7 +4126,7 @@ def commit(name,
             'The \'image\' argument to docker.commit has been deprecated, '
             'please use \'repository\' instead.'
         )
-        respository = image
+        repository = image
 
     if not isinstance(repository, six.string_types):
         repository = six.text_type(repository)
@@ -4277,7 +4277,7 @@ def import_(source,
             'The \'image\' argument to docker.import has been deprecated, '
             'please use \'repository\' instead.'
         )
-        respository = image
+        repository = image
 
     if not isinstance(repository, six.string_types):
         repository = six.text_type(repository)
@@ -4395,7 +4395,7 @@ def load(path, repository=None, tag=None, image=None):
             'The \'image\' argument to docker.load has been deprecated, '
             'please use \'repository\' instead.'
         )
-        respository = image
+        repository = image
 
     if (repository or tag) and not (repository and tag):
         # Have to have both or neither
@@ -4997,7 +4997,7 @@ def tag_(name, repository, tag='latest', force=False, image=None):
             'The \'image\' argument to docker.tag has been deprecated, '
             'please use \'repository\' instead.'
         )
-        respository = image
+        repository = image
 
     if not isinstance(repository, six.string_types):
         repository = six.text_type(repository)
