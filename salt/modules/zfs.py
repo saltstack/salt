@@ -10,7 +10,7 @@ Module for running ZFS command
 
 .. versionchanged:: 2018.3.1
   Big refactor to remove duplicate code, better type converions and improved
-  consistancy in output.
+  consistency in output.
 
 """
 from __future__ import absolute_import, print_function, unicode_literals
