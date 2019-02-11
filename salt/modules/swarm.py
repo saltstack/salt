@@ -75,7 +75,7 @@ def swarm_tokens():
 
 def swarm_init(advertise_addr=str, listen_addr=int, force_new_cluster=bool):
     """
-    Initalize Docker on Minion as a Swarm Manager
+    Initialize Docker on Minion as a Swarm Manager
 
     advertise_addr
         The ip of the manager
