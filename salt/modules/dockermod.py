@@ -3365,7 +3365,7 @@ def run_container(image,
                         exc_info.setdefault('other_errors', []).append(
                             'Failed to auto_remove container: {0}'.format(rm_exc)
                         )
-                # Raise original exception with additonal info
+                # Raise original exception with additional info
                 raise CommandExecutionError(exc.__str__(), info=exc_info)
 
         # Start the container
