@@ -422,7 +422,7 @@ def mount(name=None, **kwargs):
 
     .. warning::
 
-            Passing '-a' as name is deprecated and will be removed 2 verions after Fluorine.
+            Passing '-a' as name is deprecated and will be removed 2 versions after Fluorine.
 
     CLI Example:
 
@@ -489,7 +489,7 @@ def unmount(name, **kwargs):
 
     .. warning::
 
-            Passing '-a' as name is deprecated and will be removed 2 verions after Fluorine.
+            Passing '-a' as name is deprecated and will be removed 2 versions after Fluorine.
 
     CLI Example:
 
