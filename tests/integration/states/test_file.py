@@ -2702,7 +2702,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         ]).encode('utf-8'))
 
     @with_tempfile()
-<<<<<<< HEAD
     def test_keyvalue(self, name):
         '''
         file.keyvalue
