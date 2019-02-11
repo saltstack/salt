@@ -6,40 +6,31 @@ and data structures.
 
 from __future__ import absolute_import, print_function, unicode_literals
 
-<<<<<<< HEAD
 # Import Python libs
 import copy
 import fnmatch
 import logging
 import re
 
-=======
->>>>>>> 2017.7
 try:
     from collections.abc import Mapping, MutableMapping, Sequence
 except ImportError:
     from collections import Mapping, MutableMapping, Sequence
 
 # Import Salt libs
-<<<<<<< HEAD
 import salt.utils.dictupdate
 import salt.utils.stringutils
 import salt.utils.yaml
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import SaltException
 from salt.utils.decorators.jinja import jinja_filter
-=======
->>>>>>> 2017.7
 from salt.utils.odict import OrderedDict
 
 # Import 3rd-party libs
 from salt.ext import six
-<<<<<<< HEAD
 from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 
 log = logging.getLogger(__name__)
-=======
->>>>>>> 2017.7
 
 
 class CaseInsensitiveDict(MutableMapping):
@@ -121,7 +112,6 @@ def to_lowercase(data, preserve_dict_class=False):
 
 def to_uppercase(data, preserve_dict_class=False):
     return __change_case(data, 'upper', preserve_dict_class)
-<<<<<<< HEAD
 
 
 @jinja_filter('compare_dicts')
@@ -978,5 +968,3 @@ def stringify(data):
             item = six.text_type(item)
         ret.append(item)
     return ret
-=======
->>>>>>> 2017.7
