@@ -205,17 +205,22 @@ def get_zone():
     Returns:
         str: Timezone in unix format
 
+    Raises:
+        CommandExecutionError: If timezone could not be gathered
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' timezone.get_zone
     '''
-    win_zone = __utils__['reg.read_value'](
-        hive='HKLM',
-        key='SYSTEM\\CurrentControlSet\\Control\\TimeZoneInformation',
-        vname='TimeZoneKeyName')['vdata']
-    return mapper.get_unix(win_zone.lower(), 'Unknown')
+    cmd = ['tzutil', '/g']
+    res = __salt__['cmd.run_all'](cmd, python_shell=False)
+    if res['retcode'] or not res['stdout']:
+        raise CommandExecutionError('tzutil encountered an error getting '
+                                    'timezone',
+                                    info=res)
+    return mapper.get_unix(res['stdout'].lower(), 'Unknown')
 
 
 def get_offset():
