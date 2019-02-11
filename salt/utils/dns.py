@@ -46,6 +46,7 @@ try:
 except ImportError:
     HAS_DNSPYTHON = False
 HAS_DIG = salt.utils.path.which('dig') is not None
+DIG_OPTIONS = '+search +fail +noall +answer +nocl +nottl'
 HAS_DRILL = salt.utils.path.which('drill') is not None
 HAS_HOST = salt.utils.path.which('host') is not None
 HAS_NSLOOKUP = salt.utils.path.which('nslookup') is not None
@@ -230,7 +231,7 @@ def _lookup_dig(name, rdtype, timeout=None, servers=None, secure=None):
     :param servers: [] of servers to use
     :return: [] of records or False if error
     '''
-    cmd = 'dig +search +fail +noall +answer +noclass +nottl -t {0} '.format(rdtype)
+    cmd = 'dig {0} -t {1} '.format(DIG_OPTIONS, rdtype)
     if servers:
         cmd += ''.join(['@{0} '.format(srv) for srv in servers])
     if timeout is not None:
