@@ -42,7 +42,7 @@ Terms usable in yaml files  Description
 ==========================  ===========
 classes                     A list of classes that will be processed in order
 states                      A list of states that will be returned by master_tops function
-pillars                     A yaml dictionnary that will be returned by the ext_pillar function
+pillars                     A yaml dictionary that will be returned by the ext_pillar function
 environment                 Node saltenv that will be used by master_tops
 ==========================  ===========
 
