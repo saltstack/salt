@@ -840,7 +840,7 @@ def _query_node_data(vm_, data, conn):
     # Conditions to pass this
     #
     #     Rackconnect v2: vm_['rackconnect'] = True
-    #         If this is True, then the server will not be accessible from the ipv4 addres in public_ips.
+    #         If this is True, then the server will not be accessible from the ipv4 address in public_ips.
     #         That interface gets turned off, and an ipv4 from the dedicated firewall is routed to the
     #         server.  In this case we can use the private_ips for ssh_interface, or the access_ip.
     #
