@@ -24,6 +24,7 @@ import shlex
 import socket
 import ssl
 import string
+import functools
 
 # Import Salt libs
 import salt.utils.files
@@ -409,12 +410,13 @@ def _lookup_host(name, rdtype, timeout=None, server=None):
     '''
     cmd = 'host -t {0} '.format(rdtype)
 
-    if server is not None:
-        cmd += '@{0} '.format(server)
     if timeout:
         cmd += '-W {0} '.format(int(timeout))
+    cmd += name
+    if server is not None:
+        cmd += ' {0}'.format(server)
 
-    cmd = __salt__['cmd.run_all']('{0} {1}'.format(cmd, name), python_shell=False, output_loglevel='quiet')
+    cmd = __salt__['cmd.run_all'](cmd, python_shell=False, output_loglevel='quiet')
 
     if 'invalid type' in cmd['stderr']:
         raise ValueError('Invalid DNS type {}'.format(rdtype))
@@ -425,7 +427,8 @@ def _lookup_host(name, rdtype, timeout=None, server=None):
         return []
 
     res = []
-    for line in cmd['stdout'].splitlines():
+    _stdout = cmd['stdout'] if server is None else cmd['stdout'].split('\n\n')[-1]
+    for line in _stdout.splitlines():
         if rdtype != 'CNAME' and 'is an alias' in line:
             continue
         line = line.split(' ', 3)[-1]
@@ -609,12 +612,15 @@ def lookup(
                 timeout /= len(servers)
 
             # Inject a wrapper for multi-server behaviour
-            def _multi_srvr(**res_kwargs):
-                for server in servers:
-                    s_res = resolver(server=server, **res_kwargs)
-                    if s_res:
-                        return s_res
-            resolver = _multi_srvr
+            def _multi_srvr(resolv_func):
+                @functools.wraps(resolv_func)
+                def _wrapper(**res_kwargs):
+                    for server in servers:
+                        s_res = resolv_func(server=server, **res_kwargs)
+                        if s_res:
+                            return s_res
+                return _wrapper
+            resolver = _multi_srvr(resolver)
 
     if not walk:
         name = [name]
