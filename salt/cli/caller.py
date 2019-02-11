@@ -201,7 +201,13 @@ class BaseCaller(object):
             }
             data.update(kwargs)
             executors = getattr(self.minion, 'module_executors', []) or \
-                        self.opts.get('module_executors', ['direct_call'])
+                        salt.utils.args.yamlify_arg(
+                            self.opts.get('module_executors', '[direct_call]')
+                        )
+            if self.opts.get('executor_opts', None):
+                data['executor_opts'] = salt.utils.args.yamlify_arg(
+                    self.opts['executor_opts']
+                )
             if isinstance(executors, six.string_types):
                 executors = [executors]
             try:
