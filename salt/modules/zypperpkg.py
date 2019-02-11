@@ -87,7 +87,7 @@ class _Zypper(object):
         100: "Patches are available for installation.",
         101: "Security patches are available for installation.",
         102: "Installation successful, reboot required.",
-        103: "Installation succesful, restart of the package manager itself required.",
+        103: "Installation successful, restart of the package manager itself required.",
     }
 
     WARNING_EXIT_CODES = {

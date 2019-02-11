@@ -534,7 +534,7 @@ class OrchEventTest(ShellCase):
                     continue
 
                 # if we receive the ret for this job before self.timeout (60),
-                # the test is implicitly sucessful; if it were happening in serial it would be
+                # the test is implicitly successful; if it were happening in serial it would be
                 # atleast 110 seconds.
                 if event["tag"] == "salt/run/{0}/ret".format(jid):
                     received = True

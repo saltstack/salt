@@ -445,7 +445,7 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_labelclear_success(self):
         """
-        Tests labelclear on succesful label removal
+        Tests labelclear on successful label removal
         """
         ret = {}
         ret["stdout"] = ""
