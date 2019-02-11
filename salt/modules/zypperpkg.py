@@ -62,7 +62,7 @@ def __virtual__():
     Set the virtual pkg module if the os is openSUSE
     '''
     if __grains__.get('os_family', '') != 'Suse':
-        return (False, "Module zypper: non SUSE OS not suppored by zypper package manager")
+        return (False, "Module zypper: non SUSE OS not supported by zypper package manager")
     # Not all versions of SUSE use zypper, check that it is available
     if not salt.utils.path.which('zypper'):
         return (False, "Module zypper: zypper package manager not found")
