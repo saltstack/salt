@@ -4468,7 +4468,7 @@ def load(path, repository=None, tag=None):
 
       *(Only present if tag was specified and tagging was successful)*
     - ``Time_Elapsed`` - Time in seconds taken to load the file
-    - ``Warning`` - Message describing any problems encountered in attemp to
+    - ``Warning`` - Message describing any problems encountered in attempt to
       tag the topmost layer
 
       *(Only present if tag was specified and tagging failed)*
