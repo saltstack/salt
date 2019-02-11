@@ -332,7 +332,7 @@ def list_(name=None, **kwargs):
         else:
             opts["-S"] = kwargs_sort
     if isinstance(properties, list):
-        # NOTE: There can be only one -o and it takes a comma-seperated list
+        # NOTE: There can be only one -o and it takes a comma-separated list
         opts["-o"] = ",".join(properties)
     else:
         opts["-o"] = properties

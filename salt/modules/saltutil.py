@@ -219,10 +219,10 @@ def sync_beacons(
         to prevent this refresh.
 
     extmod_whitelist : None
-        comma-seperated list of modules to sync
+        comma-separated list of modules to sync
 
     extmod_blacklist : None
-        comma-seperated list of modules to blacklist based on type
+        comma-separated list of modules to blacklist based on type
 
     CLI Example:
 
@@ -257,10 +257,10 @@ def sync_sdb(saltenv=None, extmod_whitelist=None, extmod_blacklist=None):
         other sync functions.
 
     extmod_whitelist : None
-        comma-seperated list of modules to sync
+        comma-separated list of modules to sync
 
     extmod_blacklist : None
-        comma-seperated list of modules to blacklist based on type
+        comma-separated list of modules to blacklist based on type
 
     CLI Example:
 
@@ -313,10 +313,10 @@ def sync_modules(
         why this is necessary.
 
     extmod_whitelist : None
-        comma-seperated list of modules to sync
+        comma-separated list of modules to sync
 
     extmod_blacklist : None
-        comma-seperated list of modules to blacklist based on type
+        comma-separated list of modules to blacklist based on type
 
     CLI Example:
 
@@ -354,10 +354,10 @@ def sync_states(
         ``False`` to prevent this refresh.
 
     extmod_whitelist : None
-        comma-seperated list of modules to sync
+        comma-separated list of modules to sync
 
     extmod_blacklist : None
-        comma-seperated list of modules to blacklist based on type
+        comma-separated list of modules to blacklist based on type
 
     CLI Examples:
 
@@ -431,10 +431,10 @@ def sync_grains(
         refresh.
 
     extmod_whitelist : None
-        comma-seperated list of modules to sync
+        comma-separated list of modules to sync
 
     extmod_blacklist : None
-        comma-seperated list of modules to blacklist based on type
+        comma-separated list of modules to blacklist based on type
 
     CLI Examples:
 
@@ -474,10 +474,10 @@ def sync_renderers(
         this refresh.
 
     extmod_whitelist : None
-        comma-seperated list of modules to sync
+        comma-separated list of modules to sync
 
     extmod_blacklist : None
-        comma-seperated list of modules to blacklist based on type
+        comma-separated list of modules to blacklist based on type
 
     CLI Examples:
 
@@ -515,10 +515,10 @@ def sync_returners(
         to ``False`` to prevent this refresh.
 
     extmod_whitelist : None
-        comma-seperated list of modules to sync
+        comma-separated list of modules to sync
 
     extmod_blacklist : None
-        comma-seperated list of modules to blacklist based on type
+        comma-separated list of modules to blacklist based on type
 
     CLI Examples:
 
@@ -555,10 +555,10 @@ def sync_proxymodules(
         Set to ``False`` to prevent this refresh.
 
     extmod_whitelist : None
-        comma-seperated list of modules to sync
+        comma-separated list of modules to sync
 
     extmod_blacklist : None
-        comma-seperated list of modules to blacklist based on type
+        comma-separated list of modules to blacklist based on type
 
     CLI Examples:
 
@@ -636,10 +636,10 @@ def sync_engines(
         Set to ``False`` to prevent this refresh.
 
     extmod_whitelist : None
-        comma-seperated list of modules to sync
+        comma-separated list of modules to sync
 
     extmod_blacklist : None
-        comma-seperated list of modules to blacklist based on type
+        comma-separated list of modules to blacklist based on type
 
     CLI Examples:
 
@@ -676,10 +676,10 @@ def sync_thorium(
         Set to ``False`` to prevent this refresh.
 
     extmod_whitelist
-        comma-seperated list of modules to sync
+        comma-separated list of modules to sync
 
     extmod_blacklist
-        comma-seperated list of modules to blacklist based on type
+        comma-separated list of modules to blacklist based on type
 
     CLI Examples:
 
@@ -714,10 +714,10 @@ def sync_output(
         Set to ``False`` to prevent this refresh.
 
     extmod_whitelist : None
-        comma-seperated list of modules to sync
+        comma-separated list of modules to sync
 
     extmod_blacklist : None
-        comma-seperated list of modules to blacklist based on type
+        comma-separated list of modules to blacklist based on type
 
     CLI Examples:
 
@@ -754,10 +754,10 @@ def sync_clouds(
         synced. Set to ``False`` to prevent this refresh.
 
     extmod_whitelist : None
-        comma-seperated list of modules to sync
+        comma-separated list of modules to sync
 
     extmod_blacklist : None
-        comma-seperated list of modules to blacklist based on type
+        comma-separated list of modules to blacklist based on type
 
     CLI Examples:
 
@@ -795,10 +795,10 @@ def sync_utils(
         synced. Set to ``False`` to prevent this refresh.
 
     extmod_whitelist : None
-        comma-seperated list of modules to sync
+        comma-separated list of modules to sync
 
     extmod_blacklist : None
-        comma-seperated list of modules to blacklist based on type
+        comma-separated list of modules to blacklist based on type
 
     CLI Examples:
 
@@ -901,10 +901,10 @@ def sync_log_handlers(
         Set to ``False`` to prevent this refresh.
 
     extmod_whitelist : None
-        comma-seperated list of modules to sync
+        comma-separated list of modules to sync
 
     extmod_blacklist : None
-        comma-seperated list of modules to blacklist based on type
+        comma-separated list of modules to blacklist based on type
 
     CLI Examples:
 
@@ -936,10 +936,10 @@ def sync_pillar(
         pillar data.
 
     extmod_whitelist : None
-        comma-seperated list of modules to sync
+        comma-separated list of modules to sync
 
     extmod_blacklist : None
-        comma-seperated list of modules to blacklist based on type
+        comma-separated list of modules to blacklist based on type
 
     .. note::
         This function will raise an error if executed on a traditional (i.e.
