@@ -129,7 +129,7 @@ class WithGitMirror(object):
             # Run the actual function with three arguments added:
             #   1. URL for the test to use to clone
             #   2. Cloned admin dir for making/pushing changes to the mirror
-            #   3. Yet-nonexistant clone_dir for the test function to use as a
+            #   3. Yet-nonexistent clone_dir for the test function to use as a
             #      destination for cloning.
             return self.func(
                 testcase, mirror_url, admin_dir, clone_dir, *args, **kwargs
@@ -638,7 +638,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         assert ret["changes"] == {"branch": {"old": new_branch, "new": old_branch}}
         assert ret["comment"] == "Branch changed to '{0}'".format(old_branch)
 
-        # Test switching to a nonexistant branch. This should fail.
+        # Test switching to a nonexistent branch. This should fail.
         ret = self.run_state(
             "git.cloned", name=TEST_REPO, target=target, branch=bad_branch
         )
@@ -652,9 +652,9 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
     @with_tempdir(create=False)
     @ensure_min_git(min_version="1.7.10")
     @skipIf(True, "SLOWTEST skip")
-    def test_cloned_with_nonexistant_branch(self, target):
+    def test_cloned_with_nonexistent_branch(self, target):
         """
-        Test git.cloned state with a nonexistant branch provided
+        Test git.cloned state with a nonexistent branch provided
         """
         branch = "thisbranchdoesnotexist"
 
