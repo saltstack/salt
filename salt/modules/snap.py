@@ -38,3 +38,13 @@ def is_installed(pkg):
 def remove(pkg):
     retcode = subprocess.call([SNAP_BINARY_NAME, 'remove', pkg])
     return retcode == 0
+
+def versions_installed(pkg):
+    try:
+        output = subprocess.check_output([SNAP_BINARY_NAME, 'list', pkg])
+    except subprocess.CalledProcessError:
+        return []
+
+    lines = output.splitlines()[1:]
+    versions = [ item.split()[1] for item in lines ]
+    return versions
