@@ -3,14 +3,8 @@
 # Import Python libs
 from __future__ import absolute_import
 import copy
-import datetime
 import logging
 import os
-import random
-import time
-
-import dateutil.parser as dateutil_parser
-import datetime
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
@@ -18,7 +12,6 @@ from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import Salt Testing Libs
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import skipIf
 import tests.integration as integration
 
 # Import Salt libs
@@ -26,12 +19,6 @@ import salt.utils.schedule
 import salt.utils.platform
 
 from salt.modules.test import ping as ping
-
-try:
-    import croniter  # pylint: disable=W0611
-    HAS_CRONITER = True
-except ImportError:
-    HAS_CRONITER = False
 
 log = logging.getLogger(__name__)
 ROOT_DIR = os.path.join(integration.TMP, 'schedule-unit-tests')
