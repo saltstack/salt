@@ -23,21 +23,28 @@ def __virtual__():
     return (False, 'The snap execution module cannot be loaded: the "snap" binary is not in the path.')
 
 
-def install(pkg, channel=None):
+def install(pkg, channel=None, refresh=False):
     args = []
     ret = {'result': None, 'output': ""}
+
+    if refresh:
+        cmd = 'refresh'
+    else:
+        cmd = 'install'
 
     if type(channel) is str:
         args += '--channel=' + channel
 
     try:
-        ret['output'] = subprocess.check_output([SNAP_BINARY_NAME, 'install', pkg] + args)
+        # Try to run it, merging stderr into output
+        ret['output'] = subprocess.check_output([SNAP_BINARY_NAME, cmd, pkg] + args, stderr=subprocess.STDOUT)
         ret['result'] = True
     except subprocess.CalledProcessError, e:
         ret['output'] = e.output
         ret['result'] = False
 
     return ret
+
 
 def is_installed(pkg):
     return bool(versions_installed(pkg))
@@ -51,7 +58,8 @@ def remove(pkg):
 # Parse 'snap list' into a dict
 def versions_installed(pkg):
     try:
-        output = subprocess.check_output([SNAP_BINARY_NAME, 'list', pkg])
+        # Try to run it, merging stderr into output
+        output = subprocess.check_output([SNAP_BINARY_NAME, 'list', pkg], stderr=subprocess.STDOUT)
     except subprocess.CalledProcessError:
         return []
 
