@@ -199,7 +199,7 @@ def service_create(image=str,
         The target port on the container
 
     published_port
-        port thats published on the host/os
+        port that's published on the host/os
 
     CLI Example:
 
