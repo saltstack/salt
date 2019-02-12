@@ -43,7 +43,7 @@ class Saltutil(TestCase, LoaderModuleMockMixin):
             'sdb': [],
             'proxymodules': [],
             'output': [],
-            'pillar': []
+            'pillar': [],
         }
         state_id = 'somename'
         state_result = {'changes': {},
@@ -73,7 +73,7 @@ class Saltutil(TestCase, LoaderModuleMockMixin):
             'sdb': [],
             'proxymodules': [],
             'output': [],
-            'pillar': []
+            'pillar': [],
         }
         state_id = 'somename'
         state_result = {'changes': {},
@@ -104,7 +104,7 @@ class Saltutil(TestCase, LoaderModuleMockMixin):
             'sdb': [],
             'proxymodules': [],
             'output': [],
-            'pillar': []
+            'pillar': [],
         }
         state_id = 'somename'
         state_result = {'changes': {'modules': ['modules.file'],

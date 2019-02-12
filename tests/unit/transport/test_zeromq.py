@@ -268,7 +268,7 @@ class BaseZMQPubCase(AsyncTestCase, AdaptedConfigurationTestCaseMixin):
             if self._start_handlers.get(k) != v:
                 failures.append((k, v))
         del self._start_handlers
-        if len(failures) > 0:
+        if failures:
             raise Exception('FDs still attached to the IOLoop: {0}'.format(failures))
 
 
@@ -577,6 +577,7 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
             executor.submit(self._send_small, opts, 3)
             executor.submit(self._send_large, opts, 4)
         expect = ['{}-{}'.format(a, b) for a in range(10) for b in (1, 2, 3, 4)]
+        time.sleep(0.1)
         server_channel.publish({'tgt_type': 'glob', 'tgt': '*', 'stop': True})
         gather.join()
         server_channel.pub_close()

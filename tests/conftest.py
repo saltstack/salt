@@ -61,7 +61,7 @@ from salt.utils.immutabletypes import freeze
 
 # Define the pytest plugins we rely on
 # pylint: disable=invalid-name
-pytest_plugins = ['tempdir', 'helpers_namespace']
+pytest_plugins = ['tempdir', 'helpers_namespace', 'salt-from-filenames']
 
 # Define where not to collect tests from
 collect_ignore = ['setup.py']

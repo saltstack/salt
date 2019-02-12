@@ -3,7 +3,7 @@
 Proxy object that can reference different values depending on the current
 thread of execution.
 
-..versionadded:: 2018.3.4
+..versionadded:: Neon
 
 '''
 
