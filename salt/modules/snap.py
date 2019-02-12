@@ -54,12 +54,12 @@ def versions_installed(pkg):
         # If fields contain spaces this will break.
         i = item.split()
         # Ignore 'Notes' field
-        ret += {
-            'name':         i[1],
-            'version':      i[2],
-            'rev':          i[3],
-            'tracking':     i[4],
-            'publisher':    i[5]
-            }
+        ret.append({
+            'name':         i[0],
+            'version':      i[1],
+            'rev':          i[2],
+            'tracking':     i[3],
+            'publisher':    i[4]
+            })
 
     return ret
