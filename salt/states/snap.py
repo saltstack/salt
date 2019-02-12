@@ -35,12 +35,45 @@ def installed(name, channel=None):
     if not old:
         if __opts__['test']:
             ret['comment'] = 'Package "{0}" would have been installed'.format(name)
-            ret['pchanges']['installed'] = name
+            ret['pchanges']['new'] = name
+            ret['pchanges']['old'] = None
             ret['result'] = None
             return ret
 
-        if __salt__['snap.install'](name, channel):
+        install = __salt__['snap.install'](name, channel)
+        if install['result']:
             ret['comment'] = 'Package "{0}" was installed'.format(name)
-            ret['changes']['installed'] = name
+            ret['changes']['new'] = name
+            ret['changes']['old'] = None
             ret['result'] = True
             return ret
+
+        else:
+            ret['comment'] = 'Package "{0}" failed to install'.format(name)
+            ret['comment'] += '\noutput:\n' + install['output']
+            ret['result'] = False
+
+    # Currently snap always returns only one line?
+    old_channel = old[0]['tracking']
+    if old_channel != channel and channel is not None:
+        if __opts__['test']:
+            ret['comment'] = 'Package "{0}" would have been switched to channel {1}'.format(name, channel)
+            ret['pchanges']['old_channel'] = old_channel
+            ret['pchanges']['new_channel'] = channel
+            ret['result'] = None
+            return ret
+
+        refresh = __salt__['snap.refresh'](name, channel)
+        if refresh['result']:
+            ret['comment'] = 'Package "{0}" was switched to channel {1}'.format(name, channel)
+            ret['pchanges']['old_channel'] = old_channel
+            ret['pchanges']['new_channel'] = channel
+            ret['result'] = True
+            return ret
+
+        else:
+            ret['comment'] = 'Failed to switch Package "{0}" to channel {1}'.format(name, channel)
+            ret['comment'] += '\noutput:\n' + install['output']
+            ret['result'] = False
+
+    return ret
