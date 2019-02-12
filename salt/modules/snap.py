@@ -25,12 +25,20 @@ def __virtual__():
 
 def install(pkg, channel=None):
     args = []
+    ret = {'result': None, 'output': ""}
+
     if type(channel) is str:
         args += '--channel'
         args += channel
-    retcode = subprocess.call([SNAP_BINARY_NAME, 'install', pkg] + args)
-    return retcode == 0
 
+    try:
+        ret['output'] = subprocess.check_output([SNAP_BINARY_NAME, 'install', pkg] + args)
+        ret['result'] = True
+    except subprocess.CalledProcessError, e:
+        ret['output'] = e.output
+        ret['result'] = False
+
+    return ret
 
 def is_installed(pkg):
     return bool(versions_installed(pkg))
