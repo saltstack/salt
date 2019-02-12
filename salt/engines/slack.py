@@ -84,6 +84,7 @@ import salt.output.highstate
 def __virtual__():
     return HAS_SLACKCLIENT
 
+
 log = logging.getLogger(__name__)
 
 

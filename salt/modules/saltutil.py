@@ -617,6 +617,7 @@ def sync_output(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blackl
         refresh_modules()
     return ret
 
+
 sync_outputters = salt.utils.alias_function(sync_output, 'sync_outputters')
 
 
@@ -902,6 +903,7 @@ def refresh_pillar():
         log.error('Event module not available. Module refresh failed.')
         ret = False  # Effectively a no-op, since we can't really return without an event system
     return ret
+
 
 pillar_refresh = salt.utils.alias_function(refresh_pillar, 'pillar_refresh')
 

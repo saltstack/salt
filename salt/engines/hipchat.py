@@ -60,6 +60,7 @@ import salt.ext.six as six
 def __virtual__():
     return HAS_HYPCHAT
 
+
 log = logging.getLogger(__name__)
 
 _DEFAULT_API_URL = 'https://api.hipchat.com'

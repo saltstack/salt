@@ -4379,6 +4379,7 @@ def pause(name):
                             .format(name))}
     return _change_state(name, 'pause', 'paused')
 
+
 freeze = salt.utils.alias_function(pause, 'freeze')
 
 
@@ -4585,6 +4586,7 @@ def unpause(name):
                 'comment': ('Container \'{0}\' is stopped, cannot unpause'
                             .format(name))}
     return _change_state(name, 'unpause', 'running')
+
 
 unfreeze = salt.utils.alias_function(unpause, 'unfreeze')
 

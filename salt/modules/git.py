@@ -1264,6 +1264,7 @@ def config_get_regexp(key,
         ret.setdefault(param, []).append(value)
     return ret
 
+
 config_get_regex = salt.utils.alias_function(config_get_regexp, 'config_get_regex')
 
 

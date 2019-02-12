@@ -1033,6 +1033,7 @@ def hw_addr(iface):
     '''
     return salt.utils.network.hw_addr(iface)
 
+
 # Alias hwaddr to preserve backward compat
 hwaddr = salt.utils.alias_function(hw_addr, 'hwaddr')
 
@@ -1210,6 +1211,7 @@ def ip_addrs6(interface=None, include_loopback=False, cidr=None):
         return [i for i in addrs if salt.utils.network.in_subnet(cidr, [i])]
     else:
         return addrs
+
 
 ipaddrs6 = salt.utils.alias_function(ip_addrs6, 'ipaddrs6')
 
