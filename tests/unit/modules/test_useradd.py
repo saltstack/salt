@@ -369,7 +369,7 @@ class UserAddTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test the user information
         '''
-        self.assertEqual(useradd.info('username-that-doesnt-exist'), {})
+        self.assertEqual(useradd.info('username-that-does-not-exist'), {})
 
         mock = MagicMock(return_value=pwd.struct_passwd(('_TEST_GROUP',
                                                          '*',
@@ -379,7 +379,7 @@ class UserAddTestCase(TestCase, LoaderModuleMockMixin):
                                                          '/var/virusmails',
                                                          '/usr/bin/false')))
         with patch.object(pwd, 'getpwnam', mock):
-            self.assertEqual(useradd.info('username-that-doesnt-exist')['name'], '_TEST_GROUP')
+            self.assertEqual(useradd.info('username-that-does-not-exist')['name'], '_TEST_GROUP')
 
     # 'list_groups' function tests: 1
 

@@ -384,7 +384,7 @@ def index(command,
         'comment': ''
     }
     if not HAS_CLITABLE:
-        ret['comment'] = 'TextFSM doesnt seem that has clitable embedded.'
+        ret['comment'] = "TextFSM doesn't seem that has clitable embedded."
         log.error(ret['comment'])
         return ret
     if not platform:
