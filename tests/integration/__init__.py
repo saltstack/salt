@@ -1275,7 +1275,7 @@ class TestDaemon(object):
                 ret = None
             if ret and 'minions' not in ret:
                 continue
-            if ret and  sorted(ret['minions']) == ['minion', 'sub_minion']:
+            if ret and sorted(ret['minions']) == ['minion', 'sub_minion']:
                 break
             if time.time() - start >= timeout:
                 raise RuntimeError("Ping Minions Failed")
