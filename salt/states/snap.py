@@ -28,6 +28,7 @@ def installed(name, channel=None):
     '''
     ret = {'name': name,
            'changes': {},
+           'pchanges': {},
            'result': None,
            'comment': ''}
 
@@ -40,7 +41,7 @@ def installed(name, channel=None):
             ret['result'] = None
             return ret
 
-        install = __salt__['snap.install'](name, channel)
+        install = __salt__['snap.install'](name, channel=channel)
         if install['result']:
             ret['comment'] = 'Package "{0}" was installed'.format(name)
             ret['changes']['new'] = name
@@ -48,10 +49,10 @@ def installed(name, channel=None):
             ret['result'] = True
             return ret
 
-        else:
-            ret['comment'] = 'Package "{0}" failed to install'.format(name)
-            ret['comment'] += '\noutput:\n' + install['output']
-            ret['result'] = False
+        ret['comment'] = 'Package "{0}" failed to install'.format(name)
+        ret['comment'] += '\noutput:\n' + install['output']
+        ret['result'] = False
+        return ret
 
     # Currently snap always returns only one line?
     old_channel = old[0]['tracking']
@@ -63,7 +64,7 @@ def installed(name, channel=None):
             ret['result'] = None
             return ret
 
-        refresh = __salt__['snap.refresh'](name, channel)
+        refresh = __salt__['snap.install'](name, channel=channel, refresh=True)
         if refresh['result']:
             ret['comment'] = 'Package "{0}" was switched to channel {1}'.format(name, channel)
             ret['pchanges']['old_channel'] = old_channel
@@ -71,9 +72,15 @@ def installed(name, channel=None):
             ret['result'] = True
             return ret
 
-        else:
-            ret['comment'] = 'Failed to switch Package "{0}" to channel {1}'.format(name, channel)
-            ret['comment'] += '\noutput:\n' + install['output']
-            ret['result'] = False
+        ret['comment'] = 'Failed to switch Package "{0}" to channel {1}'.format(name, channel)
+        ret['comment'] += '\noutput:\n' + install['output']
+        ret['result'] = False
+        return ret
 
+    ret['comment'] = 'Package "{0}" is already installed'.format(name)
+    if __opts__['test']:
+        ret['result'] = None
+        return ret
+
+    ret['result'] = True
     return ret

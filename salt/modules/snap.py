@@ -32,14 +32,14 @@ def install(pkg, channel=None, refresh=False):
     else:
         cmd = 'install'
 
-    if type(channel) is str:
-        args += '--channel=' + channel
+    if channel:
+        args.append('--channel=' + channel)
 
     try:
         # Try to run it, merging stderr into output
         ret['output'] = subprocess.check_output([SNAP_BINARY_NAME, cmd, pkg] + args, stderr=subprocess.STDOUT)
         ret['result'] = True
-    except subprocess.CalledProcessError, e:
+    except subprocess.CalledProcessError as e:
         ret['output'] = e.output
         ret['result'] = False
 
