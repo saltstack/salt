@@ -227,12 +227,12 @@ class StateRunnerTest(ShellCase):
             self.assertIn(result, ret)
 
     @skipIf(True, "SLOWTEST skip")
-    def test_orchestrate_target_doesnt_exist(self):
+    def test_orchestrate_target_does_not_exist(self):
         """
         test orchestration when target doesn't exist
         while using multiple states
         """
-        ret = self.run_run("state.orchestrate orch.target-doesnt-exists")
+        ret = self.run_run("state.orchestrate orch.target-does-not-exist")
 
         first = [
             "No minions matched the target. No command was sent, no jid was assigned.",
