@@ -404,7 +404,7 @@ def get_all(jail=None):
     return sorted(ret)
 
 
-def start(name, jail=None):
+def start(name, args=None, jail=None):
     '''
     Start the specified service
 
@@ -416,13 +416,13 @@ def start(name, jail=None):
 
     .. code-block:: bash
 
-        salt '*' service.start <service name>
+        salt '*' service.start <service name> 
     '''
-    cmd = '{0} {1} onestart'.format(_cmd(jail), name)
+    cmd = '{0} {1} onestart {2}'.format(_cmd(jail), name, args)
     return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
-def stop(name, jail=None):
+def stop(name, args=None, jail=None):
     '''
     Stop the specified service
 
@@ -434,13 +434,13 @@ def stop(name, jail=None):
 
     .. code-block:: bash
 
-        salt '*' service.stop <service name>
+        salt '*' service.stop <service name> 
     '''
-    cmd = '{0} {1} onestop'.format(_cmd(jail), name)
+    cmd = '{0} {1} onestop {2}'.format(_cmd(jail), name, args)
     return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
-def restart(name, jail=None):
+def restart(name, args=None, jail=None):
     '''
     Restart the named service
 
@@ -454,7 +454,7 @@ def restart(name, jail=None):
 
         salt '*' service.restart <service name>
     '''
-    cmd = '{0} {1} onerestart'.format(_cmd(jail), name)
+    cmd = '{0} {1} onerestart {2}'.format(_cmd(jail), name, args)
     return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
