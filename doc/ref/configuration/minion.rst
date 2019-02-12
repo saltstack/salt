@@ -813,7 +813,8 @@ A value of 10 minutes is a reasonable default.
 Default: ``False``
 
 Set this option to enable gathering of cloud metadata from
-``http://169.254.169.254/latest`` for use in grains.
+``http://169.254.169.254/latest`` for use in grains (see :py:mod:`here
+<salt.grains.metadata>` for more information).
 
 .. code-block:: yaml
 
