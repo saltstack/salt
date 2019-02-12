@@ -28,8 +28,7 @@ def install(pkg, channel=None):
     ret = {'result': None, 'output': ""}
 
     if type(channel) is str:
-        args += '--channel'
-        args += channel
+        args += '--channel=' + channel
 
     try:
         ret['output'] = subprocess.check_output([SNAP_BINARY_NAME, 'install', pkg] + args)
