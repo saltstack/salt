@@ -48,7 +48,7 @@ class DockerCallTestCase(ModuleCase, SaltReturnAssertsMixin):
     Test docker_container states
     '''
     @with_random_name
-    def setUp(self, name):
+    def setUp(self, name):  # pylint: disable=arguments-differ
         '''
         setup docker.call tests
         '''
