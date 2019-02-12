@@ -31,9 +31,7 @@ def install(pkg, channel=None):
     return retcode == 0
 
 def is_installed(pkg):
-    # snap returns 0 if there is at least one match, otherwise 1
-    retcode = subprocess.call([SNAP_BINARY_NAME, 'list', pkg])
-    return retcode == 0
+    return bool(versions_installed(pkg))
 
 def remove(pkg):
     retcode = subprocess.call([SNAP_BINARY_NAME, 'remove', pkg])
