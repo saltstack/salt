@@ -37,6 +37,7 @@ def remove(pkg):
     retcode = subprocess.call([SNAP_BINARY_NAME, 'remove', pkg])
     return retcode == 0
 
+# Parse 'snap list' into a dict
 def versions_installed(pkg):
     try:
         output = subprocess.check_output([SNAP_BINARY_NAME, 'list', pkg])
@@ -44,5 +45,17 @@ def versions_installed(pkg):
         return []
 
     lines = output.splitlines()[1:]
-    versions = [ item.split()[1] for item in lines ]
-    return versions
+    ret = []
+    for item in lines:
+        # If fields contain spaces this will break.
+        i = item.split()
+        # Ignore 'Notes' field
+        ret += {
+            'name':         i[1],
+            'version':      i[2],
+            'rev':          i[3],
+            'tracking':     i[4],
+            'publisher':    i[5]
+            }
+
+    return ret
