@@ -618,7 +618,7 @@ def cli(*commands, **kwargs):  # pylint: disable=unused-argument
             log.debug('Processed CLI output:')
             log.debug(processed_cli_output)
             if not processed_cli_output['result']:
-                log.debug('Apparently this didnt work, returnin the raw output')
+                log.debug("Apparently this didn't work, returnin the raw output")
                 processed_command_output = command_output
                 processed_cli_outputs['comment'] += '\nUnable to process the output from {0}: {1}.'.format(command,
                     processed_cli_output['comment'])
@@ -642,7 +642,7 @@ def cli(*commands, **kwargs):  # pylint: disable=unused-argument
             log.debug('Processed CLI output:')
             log.debug(processed_cli_output)
             if not processed_cli_output['result']:
-                log.debug('Apparently this didnt work, returning '
+                log.debug("Apparently this didn't work, returning "
                           'the raw output')
                 processed_command_output = command_output
                 processed_cli_outputs['comment'] += '\nUnable to process the output from {0}: {1}'.format(command,
@@ -652,7 +652,7 @@ def cli(*commands, **kwargs):  # pylint: disable=unused-argument
                 log.debug('All good, %s has a nice output!', command)
                 processed_command_output = processed_cli_output['out']
             else:
-                log.debug('Processing %s didnt fail, but didnt return'
+                log.debug("Processing %s didn't fail, but didn't return"
                           ' anything either. Dumping raw.', command)
                 processed_command_output = command_output
         else:

@@ -201,7 +201,7 @@ def list_nodes():
             except Exception:
                 base_template_name = None
                 log.debug(
-                    'VM %s, doesnt have base_template_name attribute',
+                    "VM %s, doesn't have base_template_name attribute",
                     record['name_label']
                 )
             ret[record['name_label']] = {'id': record['uuid'],
@@ -325,7 +325,7 @@ def list_nodes_full(session=None):
             except Exception:
                 base_template_name = None
                 log.debug(
-                    'VM %s, doesnt have base_template_name attribute',
+                    "VM %s, doesn't have base_template_name attribute",
                     record['name_label']
                 )
             vm_cfg = session.xenapi.VM.get_record(vm)
@@ -492,7 +492,7 @@ def show_instance(name, session=None, call=None):
         except Exception:
             base_template_name = None
             log.debug(
-                'VM %s, doesnt have base_template_name attribute',
+                "VM %s, doesn't have base_template_name attribute",
                 record['name_label']
             )
         ret = {'id': record['uuid'],
