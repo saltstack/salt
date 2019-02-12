@@ -2620,7 +2620,7 @@ __install_tornado_pip() {
 #    PARAMETERS:  requirements_file
 #----------------------------------------------------------------------------------------------------------------------
 __install_pip_deps() {
-    # Install virtualenv to system pip before activating virtualenv if thats going to be used
+    # Install virtualenv to system pip before activating virtualenv if that's going to be used
     # We assume pip pkg is installed since that is distro specific
     if [ "$_VIRTUALENV_DIR" != "null" ]; then
         if ! __check_command_exists pip; then
