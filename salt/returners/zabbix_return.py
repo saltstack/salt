@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+r'''
 Return salt data to Zabbix with keys of the form `salt.return.<fun>`
 
 Missing items will be ignored.
