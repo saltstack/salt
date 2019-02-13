@@ -21,7 +21,7 @@ class MasterUtilJobsTestCase(ShellTestCase):
     def setUp(self):
         # Necessary so that the master pid health check
         # passes as it looks for salt in cmdline
-        setproctitle.setproctitle('salt')  # pylint: disable=c-extension-no-member
+        setproctitle.setproctitle('salt')
 
     def test_get_running_jobs(self):
         ret = self.run_run_plus("test.sleep", '90', asynchronous=True)
