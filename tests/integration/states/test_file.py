@@ -892,10 +892,12 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         file.directory, keep casing
         '''
-        name = os.path.join(RUNTIME_VARS.TMP, 'a_NeW_DiR_KeEp_CaSiNg')
+        dirname = 'a_NeW_DiR_KeEp_CaSiNg'
+        name = os.path.join(RUNTIME_VARS.TMP, dirname)
         ret = self.run_state('file.directory', name=name)
         self.assertSaltTrueReturn(ret)
-        self.assertTrue(name in os.listdir(RUNTIME_VARS))
+        self.assertTrue(dirname in os.listdir(RUNTIME_VARS.TMP))
+        self.assertTrue(os.path.isdir(name))
 
     def test_directory_symlink_dry_run(self):
         '''
