@@ -20,9 +20,9 @@ import filecmp
 log = logging.getLogger(__name__)
 
 # Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
-from tests.support.paths import BASE_FILES, FILES, TMP, TMP_STATE_TREE
 from tests.support.helpers import (
     destructiveTest,
     skip_if_not_root,
@@ -64,22 +64,13 @@ IS_WINDOWS = salt.utils.platform.is_windows()
 
 BINARY_FILE = b'GIF89a\x01\x00\x01\x00\x80\x00\x00\x05\x04\x04\x00\x00\x00,\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x02D\x01\x00;'
 
-if IS_WINDOWS:
-    FILEPILLAR = 'C:\\Windows\\Temp\\filepillar-python'
-    FILEPILLARDEF = 'C:\\Windows\\Temp\\filepillar-defaultvalue'
-    FILEPILLARGIT = 'C:\\Windows\\Temp\\filepillar-bar'
-else:
-    FILEPILLAR = '/tmp/filepillar-python'
-    FILEPILLARDEF = '/tmp/filepillar-defaultvalue'
-    FILEPILLARGIT = '/tmp/filepillar-bar'
-
 
 def _test_managed_file_mode_keep_helper(testcase, local=False):
     '''
     DRY helper function to run the same test with a local or remote path
     '''
-    name = os.path.join(TMP, 'scene33')
-    grail_fs_path = os.path.join(BASE_FILES, 'grail', 'scene33')
+    name = os.path.join(RUNTIME_VARS.TMP, 'scene33')
+    grail_fs_path = os.path.join(RUNTIME_VARS.BASE_FILES, 'grail', 'scene33')
     grail = 'salt://grail/scene33' if not local else grail_fs_path
 
     # Get the current mode so that we can put the file back the way we
@@ -143,15 +134,22 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the file state
     '''
+
+    @classmethod
+    def setUpClass(cls):
+        cls.file_pillar = os.path.join(RUNTIME_VARS.TMP, 'filepillar-python')
+        cls.file_pillar_def = os.path.join(RUNTIME_VARS.TMP, 'filepillar-defaultvalue')
+        cls.file_pillar_git = os.path.join(RUNTIME_VARS.TMP, 'filepillar-bar')
+
     def tearDown(self):
         '''
         remove files created in previous tests
         '''
         user = 'salt'
-        if user in str(self.run_function('user.list_users', [user])):
+        if user in str(self.run_function('user.list_users')):
             self.run_function('user.delete', [user])
 
-        for path in (FILEPILLAR, FILEPILLARDEF, FILEPILLARGIT):
+        for path in (self.file_pillar, self.file_pillar_def, self.file_pillar_git):
             try:
                 os.remove(path)
             except OSError as exc:
@@ -162,8 +160,8 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         file.symlink
         '''
-        name = os.path.join(TMP, 'symlink')
-        tgt = os.path.join(TMP, 'target')
+        name = os.path.join(RUNTIME_VARS.TMP, 'symlink')
+        tgt = os.path.join(RUNTIME_VARS.TMP, 'target')
 
         # Windows must have a source directory to link to
         if IS_WINDOWS and not os.path.isdir(tgt):
@@ -180,8 +178,8 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         file.symlink test interface
         '''
-        name = os.path.join(TMP, 'symlink2')
-        tgt = os.path.join(TMP, 'target')
+        name = os.path.join(RUNTIME_VARS.TMP, 'symlink2')
+        tgt = os.path.join(RUNTIME_VARS.TMP, 'target')
         ret = self.run_state('file.symlink', test=True, name=name, target=tgt)
         self.assertSaltNoneReturn(ret)
 
@@ -189,7 +187,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         file.absent
         '''
-        name = os.path.join(TMP, 'file_to_kill')
+        name = os.path.join(RUNTIME_VARS.TMP, 'file_to_kill')
         with salt.utils.files.fopen(name, 'w+') as fp_:
             fp_.write('killme')
         ret = self.run_state('file.absent', name=name)
@@ -200,7 +198,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         file.absent
         '''
-        name = os.path.join(TMP, 'dir_to_kill')
+        name = os.path.join(RUNTIME_VARS.TMP, 'dir_to_kill')
         if not os.path.isdir(name):
             # left behind... Don't fail because of this!
             os.makedirs(name)
@@ -212,7 +210,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         file.absent
         '''
-        name = os.path.join(TMP, 'link_to_kill')
+        name = os.path.join(RUNTIME_VARS.TMP, 'link_to_kill')
         tgt = '{0}.tgt'.format(name)
 
         # Windows must have a source directory to link to
@@ -246,11 +244,11 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         file.managed
         '''
-        name = os.path.join(TMP, 'grail_scene33')
+        name = os.path.join(RUNTIME_VARS.TMP, 'grail_scene33')
         ret = self.run_state(
             'file.managed', name=name, source='salt://grail/scene33'
         )
-        src = os.path.join(BASE_FILES, 'grail', 'scene33')
+        src = os.path.join(RUNTIME_VARS.BASE_FILES, 'grail', 'scene33')
         with salt.utils.files.fopen(src, 'r') as fp_:
             master_data = fp_.read()
         with salt.utils.files.fopen(name, 'r') as fp_:
@@ -263,7 +261,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         file.managed, correct file permissions
         '''
         desired_mode = 504    # 0770 octal
-        name = os.path.join(TMP, 'grail_scene33')
+        name = os.path.join(RUNTIME_VARS.TMP, 'grail_scene33')
         ret = self.run_state(
             'file.managed', name=name, mode='0770', source='salt://grail/scene33'
         )
@@ -299,7 +297,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         initial_mode = 504    # 0770 octal
         desired_mode = 384    # 0600 octal
-        name = os.path.join(TMP, 'grail_scene33')
+        name = os.path.join(RUNTIME_VARS.TMP, 'grail_scene33')
         ret = self.run_state(
             'file.managed', name=name, mode=oct(initial_mode), source='salt://grail/scene33'
         )
@@ -315,7 +313,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertEqual(oct(initial_mode), oct(resulting_mode))
 
-        name = os.path.join(TMP, 'grail_scene33')
+        name = os.path.join(RUNTIME_VARS.TMP, 'grail_scene33')
         ret = self.run_state(
             'file.managed', name=name, replace=True, mode=oct(desired_mode), source='salt://grail/scene33'
         )
@@ -331,7 +329,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         initial_mode = 504    # 0770 octal
         desired_mode = 384    # 0600 octal
-        name = os.path.join(TMP, 'grail_scene33')
+        name = os.path.join(RUNTIME_VARS.TMP, 'grail_scene33')
         ret = self.run_state(
             'file.managed', name=name, replace=True, mode=oct(initial_mode), source='salt://grail/scene33'
         )
@@ -356,7 +354,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         Test to ensure we can render grains data into a managed
         file.
         '''
-        grain_path = os.path.join(TMP, 'file-grain-test')
+        grain_path = os.path.join(RUNTIME_VARS.TMP, 'file-grain-test')
         state_file = 'file-grainget'
 
         self.run_function('state.sls', [state_file], pillar={'grain_path': grain_path})
@@ -382,7 +380,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
 
         # Check to make sure the file was created
-        check_file = self.run_function('file.file_exists', [FILEPILLAR])
+        check_file = self.run_function('file.file_exists', [self.file_pillar])
         self.assertTrue(check_file)
 
     def test_managed_file_with_pillardefault_sls(self):
@@ -397,7 +395,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
 
         # Check to make sure the file was created
-        check_file = self.run_function('file.file_exists', [FILEPILLARDEF])
+        check_file = self.run_function('file.file_exists', [self.file_pillar_def])
         self.assertTrue(check_file)
 
     @skip_if_not_root
@@ -407,7 +405,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         permissions requested with the dir_mode argument
         '''
         desired_mode = 511  # 0777 in octal
-        name = os.path.join(TMP, 'a', 'managed_dir_mode_test_file')
+        name = os.path.join(RUNTIME_VARS.TMP, 'a', 'managed_dir_mode_test_file')
         desired_owner = 'nobody'
         ret = self.run_state(
             'file.managed',
@@ -425,9 +423,9 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             return
 
         resulting_mode = stat.S_IMODE(
-            os.stat(os.path.join(TMP, 'a')).st_mode
+            os.stat(os.path.join(RUNTIME_VARS.TMP, 'a')).st_mode
         )
-        resulting_owner = pwd.getpwuid(os.stat(os.path.join(TMP, 'a')).st_uid).pw_name
+        resulting_owner = pwd.getpwuid(os.stat(os.path.join(RUNTIME_VARS.TMP, 'a')).st_uid).pw_name
         self.assertEqual(oct(desired_mode), oct(resulting_mode))
         self.assertSaltTrueReturn(ret)
         self.assertEqual(desired_owner, resulting_owner)
@@ -436,7 +434,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         file.managed test interface
         '''
-        name = os.path.join(TMP, 'grail_not_not_scene33')
+        name = os.path.join(RUNTIME_VARS.TMP, 'grail_not_not_scene33')
         ret = self.run_state(
             'file.managed', test=True, name=name, source='salt://grail/scene33'
         )
@@ -447,7 +445,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         file.managed test interface
         '''
-        name = os.path.join(TMP, 'grail_not_scene33')
+        name = os.path.join(RUNTIME_VARS.TMP, 'grail_not_scene33')
         with salt.utils.files.fopen(name, 'wb') as fp_:
             fp_.write(b'test_managed_show_changes_false\n')
 
@@ -467,11 +465,11 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         funny_file = salt.utils.files.mkstemp(prefix='?f!le? n@=3&', suffix='.file type')
         funny_file_name = os.path.split(funny_file)[1]
         funny_url = 'salt://|' + funny_file_name
-        funny_url_path = os.path.join(BASE_FILES, funny_file_name)
+        funny_url_path = os.path.join(RUNTIME_VARS.BASE_FILES, funny_file_name)
 
         state_name = 'funny_file'
         state_file_name = state_name + '.sls'
-        state_file = os.path.join(BASE_FILES, state_file_name)
+        state_file = os.path.join(RUNTIME_VARS.BASE_FILES, state_file_name)
         state_key = 'file_|-{0}_|-{0}_|-managed'.format(funny_file)
 
         self.addCleanup(os.remove, state_file)
@@ -498,20 +496,12 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         state_name = 'file-FileTest-test_managed_contents'
         state_filename = state_name + '.sls'
-        state_file = os.path.join(BASE_FILES, state_filename)
+        state_file = os.path.join(RUNTIME_VARS.BASE_FILES, state_filename)
 
         managed_files = {}
         state_keys = {}
         for typ in ('bool', 'str', 'int', 'float', 'list', 'dict'):
-            fd_, managed_files[typ] = tempfile.mkstemp()
-
-            # Release the handle so they can be removed in Windows
-            try:
-                os.close(fd_)
-            except OSError as exc:
-                if exc.errno != errno.EBADF:
-                    raise exc
-
+            managed_files[typ] = salt.utils.files.mkstemp()
             state_keys[typ] = 'file_|-{0} file_|-{1}_|-managed'.format(typ, managed_files[typ])
         try:
             with salt.utils.files.fopen(state_file, 'w') as fd_:
@@ -591,8 +581,8 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         Make sure that we enforce the source_hash even with local files
         '''
-        name = os.path.join(TMP, 'local_source_with_source_hash')
-        local_path = os.path.join(BASE_FILES, 'grail', 'scene33')
+        name = os.path.join(RUNTIME_VARS.TMP, 'local_source_with_source_hash')
+        local_path = os.path.join(RUNTIME_VARS.BASE_FILES, 'grail', 'scene33')
         actual_hash = '567fd840bf1548edc35c48eb66cdd78bfdfcccff'
         if IS_WINDOWS:
             # CRLF vs LF causes a different hash on windows
@@ -650,8 +640,8 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         Make sure that we exit gracefully when a local source doesn't exist
         '''
-        name = os.path.join(TMP, 'local_source_does_not_exist')
-        local_path = os.path.join(BASE_FILES, 'grail', 'scene99')
+        name = os.path.join(RUNTIME_VARS.TMP, 'local_source_does_not_exist')
+        local_path = os.path.join(RUNTIME_VARS.BASE_FILES, 'grail', 'scene99')
 
         for proto in ('file://', ''):
             source = proto + local_path
@@ -694,14 +684,14 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         should produce an inline data structure which is valid YAML and will be
         loaded properly by our YAML loader.
         '''
-        test_file = os.path.join(TMP, 'test-tojson.txt')
+        test_file = os.path.join(RUNTIME_VARS.TMP, 'test-tojson.txt')
         ret = self.run_function(
             'state.apply',
             mods='tojson',
             pillar={'tojson-file': test_file})
         ret = ret[next(iter(ret))]
         assert ret['result'], ret
-        with salt.utils.files.fopen(test_file) as fp_:
+        with salt.utils.files.fopen(test_file, mode='rb') as fp_:
             managed = salt.utils.stringutils.to_unicode(fp_.read())
         expected = dedent('''\
             Die Webseite ist https://saltstack.com.
@@ -716,10 +706,10 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
 
         This is a regression test for Issue #38914 and Issue #48230 (test=true use).
         '''
-        name = os.path.join(TMP, 'source_hash_indifferent_case')
+        name = os.path.join(RUNTIME_VARS.TMP, 'source_hash_indifferent_case')
         state_name = 'file_|-{0}_|' \
                      '-{0}_|-managed'.format(name)
-        local_path = os.path.join(BASE_FILES, 'hello_world.txt')
+        local_path = os.path.join(RUNTIME_VARS.BASE_FILES, 'hello_world.txt')
         actual_hash = 'c98c24b677eff44860afea6f493bbaec5bb1c4cbb209c6fc2bbb47f66ff2ad31'
         if IS_WINDOWS:
             # CRLF vs LF causes a differnt hash on windows
@@ -893,7 +883,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         file.directory
         '''
-        name = os.path.join(TMP, 'a_new_dir')
+        name = os.path.join(RUNTIME_VARS.TMP, 'a_new_dir')
         ret = self.run_state('file.directory', name=name)
         self.assertSaltTrueReturn(ret)
         self.assertTrue(os.path.isdir(name))
@@ -904,8 +894,8 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         test=True
         '''
         try:
-            tmp_dir = os.path.join(TMP, 'pgdata')
-            sym_dir = os.path.join(TMP, 'pg_data')
+            tmp_dir = os.path.join(RUNTIME_VARS.TMP, 'pgdata')
+            sym_dir = os.path.join(RUNTIME_VARS.TMP, 'pg_data')
 
             if IS_WINDOWS:
                 self.run_function('file.mkdir', [tmp_dir, 'Administrators'])
@@ -944,7 +934,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             '''
             return salt.utils.files.normalize_mode(oct(os.stat(name).st_mode & 0o777))
 
-        top = os.path.join(TMP, 'top_dir')
+        top = os.path.join(RUNTIME_VARS.TMP, 'top_dir')
         sub = os.path.join(top, 'sub_dir')
         subsub = os.path.join(sub, 'sub_sub_dir')
         dirs = [top, sub, subsub]
@@ -991,7 +981,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         file.directory
         '''
-        name = os.path.join(TMP, 'a_not_dir')
+        name = os.path.join(RUNTIME_VARS.TMP, 'a_not_dir')
         ret = self.run_state('file.directory', test=True, name=name)
         self.assertSaltNoneReturn(ret)
         self.assertFalse(os.path.isdir(name))
@@ -1109,63 +1099,59 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertIn(strayfile2, comment)
         self.assertNotIn(keepfile, comment)
 
-    def test_directory_clean_require_in(self):
+    @with_tempdir()
+    def test_directory_clean_require_in(self, name):
         '''
         file.directory test with clean=True and require_in file
         '''
         state_name = 'file-FileTest-test_directory_clean_require_in'
         state_filename = state_name + '.sls'
-        state_file = os.path.join(BASE_FILES, state_filename)
+        state_file = os.path.join(RUNTIME_VARS.BASE_FILES, state_filename)
 
-        directory = tempfile.mkdtemp()
-        self.addCleanup(lambda: shutil.rmtree(directory))
-
-        wrong_file = os.path.join(directory, "wrong")
+        wrong_file = os.path.join(name, "wrong")
         with salt.utils.files.fopen(wrong_file, "w") as fp:
             fp.write("foo")
-        good_file = os.path.join(directory, "bar")
+        good_file = os.path.join(name, "bar")
 
         with salt.utils.files.fopen(state_file, 'w') as fp:
             self.addCleanup(lambda: os.remove(state_file))
             fp.write(textwrap.dedent('''\
                 some_dir:
                   file.directory:
-                    - name: {directory}
+                    - name: {name}
                     - clean: true
 
                 {good_file}:
                   file.managed:
                     - require_in:
                       - file: some_dir
-                '''.format(directory=directory, good_file=good_file)))
+                '''.format(name=name, good_file=good_file)))
 
         ret = self.run_function('state.sls', [state_name])
         self.assertTrue(os.path.exists(good_file))
         self.assertFalse(os.path.exists(wrong_file))
 
-    def test_directory_clean_require_in_with_id(self):
+    @with_tempdir()
+    def test_directory_clean_require_in_with_id(self, name):
         '''
         file.directory test with clean=True and require_in file with an ID
         different from the file name
         '''
         state_name = 'file-FileTest-test_directory_clean_require_in_with_id'
         state_filename = state_name + '.sls'
-        state_file = os.path.join(BASE_FILES, state_filename)
+        state_file = os.path.join(RUNTIME_VARS.BASE_FILES, state_filename)
 
-        directory = tempfile.mkdtemp()
-        self.addCleanup(lambda: shutil.rmtree(directory))
-
-        wrong_file = os.path.join(directory, "wrong")
+        wrong_file = os.path.join(name, "wrong")
         with salt.utils.files.fopen(wrong_file, "w") as fp:
             fp.write("foo")
-        good_file = os.path.join(directory, "bar")
+        good_file = os.path.join(name, "bar")
 
         with salt.utils.files.fopen(state_file, 'w') as fp:
             self.addCleanup(lambda: os.remove(state_file))
             fp.write(textwrap.dedent('''\
                 some_dir:
                   file.directory:
-                    - name: {directory}
+                    - name: {name}
                     - clean: true
 
                 some_file:
@@ -1173,35 +1159,33 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                     - name: {good_file}
                     - require_in:
                       - file: some_dir
-                '''.format(directory=directory, good_file=good_file)))
+                '''.format(name=name, good_file=good_file)))
 
         ret = self.run_function('state.sls', [state_name])
         self.assertTrue(os.path.exists(good_file))
         self.assertFalse(os.path.exists(wrong_file))
 
-    def test_directory_clean_require_with_name(self):
+    @with_tempdir()
+    def test_directory_clean_require_with_name(self, name):
         '''
         file.directory test with clean=True and require with a file state
         relatively to the state's name, not its ID.
         '''
         state_name = 'file-FileTest-test_directory_clean_require_in_with_id'
         state_filename = state_name + '.sls'
-        state_file = os.path.join(BASE_FILES, state_filename)
+        state_file = os.path.join(RUNTIME_VARS.BASE_FILES, state_filename)
 
-        directory = tempfile.mkdtemp()
-        self.addCleanup(lambda: shutil.rmtree(directory))
-
-        wrong_file = os.path.join(directory, "wrong")
+        wrong_file = os.path.join(name, "wrong")
         with salt.utils.files.fopen(wrong_file, "w") as fp:
             fp.write("foo")
-        good_file = os.path.join(directory, "bar")
+        good_file = os.path.join(name, "bar")
 
         with salt.utils.files.fopen(state_file, 'w') as fp:
             self.addCleanup(lambda: os.remove(state_file))
             fp.write(textwrap.dedent('''\
                 some_dir:
                   file.directory:
-                    - name: {directory}
+                    - name: {name}
                     - clean: true
                     - require:
                       # This requirement refers to the name of the following
@@ -1211,7 +1195,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                 some_file:
                   file.managed:
                     - name: {good_file}
-                '''.format(directory=directory, good_file=good_file)))
+                '''.format(name=name, good_file=good_file)))
 
         ret = self.run_function('state.sls', [state_name])
         self.assertTrue(os.path.exists(good_file))
@@ -1223,7 +1207,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         contains broken symbolic link
         '''
         try:
-            tmp_dir = os.path.join(TMP, 'foo')
+            tmp_dir = os.path.join(RUNTIME_VARS.TMP, 'foo')
             null_file = '{0}/null'.format(tmp_dir)
             broken_link = '{0}/broken'.format(tmp_dir)
 
@@ -1513,10 +1497,10 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         test_name = 'test_replace_issue_18612_prepend'
         path_in = os.path.join(
-            FILES, 'file.replace', '{0}.in'.format(test_name)
+            RUNTIME_VARS.FILES, 'file.replace', '{0}.in'.format(test_name)
         )
         path_out = os.path.join(
-            FILES, 'file.replace', '{0}.out'.format(test_name)
+            RUNTIME_VARS.FILES, 'file.replace', '{0}.out'.format(test_name)
         )
         path_test = os.path.join(base_dir, test_name)
 
@@ -1554,10 +1538,10 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         test_name = 'test_replace_issue_18612_append'
         path_in = os.path.join(
-            FILES, 'file.replace', '{0}.in'.format(test_name)
+            RUNTIME_VARS.FILES, 'file.replace', '{0}.in'.format(test_name)
         )
         path_out = os.path.join(
-            FILES, 'file.replace', '{0}.out'.format(test_name)
+            RUNTIME_VARS.FILES, 'file.replace', '{0}.out'.format(test_name)
         )
         path_test = os.path.join(base_dir, test_name)
 
@@ -1595,10 +1579,10 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         test_name = 'test_replace_issue_18612_append_not_found_content'
         path_in = os.path.join(
-            FILES, 'file.replace', '{0}.in'.format(test_name)
+            RUNTIME_VARS.FILES, 'file.replace', '{0}.in'.format(test_name)
         )
         path_out = os.path.join(
-            FILES, 'file.replace', '{0}.out'.format(test_name)
+            RUNTIME_VARS.FILES, 'file.replace', '{0}.out'.format(test_name)
         )
         path_test = os.path.join(base_dir, test_name)
 
@@ -1643,10 +1627,10 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         test_name = 'test_replace_issue_18612_change_mid_line_with_comment'
         path_in = os.path.join(
-            FILES, 'file.replace', '{0}.in'.format(test_name)
+            RUNTIME_VARS.FILES, 'file.replace', '{0}.in'.format(test_name)
         )
         path_out = os.path.join(
-            FILES, 'file.replace', '{0}.out'.format(test_name)
+            RUNTIME_VARS.FILES, 'file.replace', '{0}.out'.format(test_name)
         )
         path_test = os.path.join(base_dir, test_name)
 
@@ -1686,7 +1670,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         test_name = 'test_replace_issue_18841_no_changes'
         path_in = os.path.join(
-            FILES, 'file.replace', '{0}.in'.format(test_name)
+            RUNTIME_VARS.FILES, 'file.replace', '{0}.in'.format(test_name)
         )
         path_test = os.path.join(base_dir, test_name)
 
@@ -1731,7 +1715,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         Test to ensure that file.serialize returns a data structure that's
         both serialized and formatted properly
         '''
-        path_test = os.path.join(TMP, 'test_serialize')
+        path_test = os.path.join(RUNTIME_VARS.TMP, 'test_serialize')
         ret = self.run_state('file.serialize',
                 name=path_test,
                 dataset={'name': 'naive',
@@ -1818,7 +1802,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         test_name = 'test_replace_issue_18841_omit_backup'
         path_in = os.path.join(
-            FILES, 'file.replace', '{0}.in'.format(test_name)
+            RUNTIME_VARS.FILES, 'file.replace', '{0}.in'.format(test_name)
         )
         path_test = os.path.join(base_dir, test_name)
 
@@ -2199,7 +2183,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
 
     @with_tempdir()
     def test_issue_8343_accumulated_require_in(self, base_dir):
-        template_path = os.path.join(TMP_STATE_TREE, 'issue-8343.sls')
+        template_path = os.path.join(RUNTIME_VARS.TMP_STATE_TREE, 'issue-8343.sls')
         testcase_filedest = os.path.join(base_dir, 'issue-8343.txt')
         if os.path.exists(template_path):
             os.remove(template_path)
@@ -2272,7 +2256,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
     @with_tempdir()
     def test_issue_11003_immutable_lazy_proxy_sum(self, base_dir):
         # causes the Import-Module ServerManager error on Windows
-        template_path = os.path.join(TMP_STATE_TREE, 'issue-11003.sls')
+        template_path = os.path.join(RUNTIME_VARS.TMP_STATE_TREE, 'issue-11003.sls')
         testcase_filedest = os.path.join(base_dir, 'issue-11003.txt')
         sls_template = [
             'a{0}:',
@@ -2340,7 +2324,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         korean_3 = '마지막 행'
         test_file = os.path.join(base_dir, '{0}.txt'.format(korean_1))
         test_file_encoded = test_file
-        template_path = os.path.join(TMP_STATE_TREE, 'issue-8947.sls')
+        template_path = os.path.join(RUNTIME_VARS.TMP_STATE_TREE, 'issue-8947.sls')
         # create the sls template
         template = textwrap.dedent('''\
             some-utf8-file-create:
@@ -2561,8 +2545,8 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         ensure force option in copy state does not delete target file
         '''
-        shutil.copyfile(os.path.join(FILES, 'hosts'), source)
-        shutil.copyfile(os.path.join(FILES, 'file/base/cheese'), dest)
+        shutil.copyfile(os.path.join(RUNTIME_VARS.FILES, 'hosts'), source)
+        shutil.copyfile(os.path.join(RUNTIME_VARS.FILES, 'file/base/cheese'), dest)
 
         self.run_state('file.copy', name=dest, source=source, force=True)
         self.assertTrue(os.path.exists(dest))
@@ -2577,15 +2561,15 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         ensure make_dirs creates correct user perms
         '''
-        shutil.copyfile(os.path.join(FILES, 'hosts'), source)
-        dest = os.path.join(TMP, 'dir1', 'dir2', 'copied_file.txt')
+        shutil.copyfile(os.path.join(RUNTIME_VARS.FILES, 'hosts'), source)
+        dest = os.path.join(RUNTIME_VARS.TMP, 'dir1', 'dir2', 'copied_file.txt')
 
         user = 'salt'
         mode = '0644'
         self.run_function('user.add', [user])
         ret = self.run_state('file.copy', name=dest, source=source, user=user,
                              makedirs=True, mode=mode)
-        file_checks = [dest, os.path.join(TMP, 'dir1'), os.path.join(TMP, 'dir1', 'dir2')]
+        file_checks = [dest, os.path.join(RUNTIME_VARS.TMP, 'dir1'), os.path.join(RUNTIME_VARS.TMP, 'dir1', 'dir2')]
         for check in file_checks:
             user_check = self.run_function('file.get_user', [check])
             mode_check = self.run_function('file.get_mode', [check])
@@ -2617,7 +2601,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
 
         # Desired configuration.
         desired = {
-            'file': os.path.join(TMP, 'file_with_setuid'),
+            'file': os.path.join(RUNTIME_VARS.TMP, 'file_with_setuid'),
             'user': user,
             'group': group,
             'mode': '4750'
@@ -2646,7 +2630,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         This tests to ensure that binary contents do not cause a traceback.
         '''
-        name = os.path.join(TMP, '1px.gif')
+        name = os.path.join(RUNTIME_VARS.TMP, '1px.gif')
         try:
             ret = self.run_state(
                 'file.managed',
@@ -2716,6 +2700,69 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             'test3',
             '',
         ]).encode('utf-8'))
+
+    @with_tempfile()
+    def test_keyvalue(self, name):
+        '''
+        file.keyvalue
+        '''
+        content = dedent(six.text_type('''\
+            # This is the sshd server system-wide configuration file.  See
+            # sshd_config(5) for more information.
+
+            # The strategy used for options in the default sshd_config shipped with
+            # OpenSSH is to specify options with their default value where
+            # possible, but leave them commented.  Uncommented options override the
+            # default value.
+
+            #Port 22
+            #AddressFamily any
+            #ListenAddress 0.0.0.0
+            #ListenAddress ::
+
+            #HostKey /etc/ssh/ssh_host_rsa_key
+            #HostKey /etc/ssh/ssh_host_ecdsa_key
+            #HostKey /etc/ssh/ssh_host_ed25519_key
+
+            # Ciphers and keying
+            #RekeyLimit default none
+
+            # Logging
+            #SyslogFacility AUTH
+            #LogLevel INFO
+
+            # Authentication:
+
+            #LoginGraceTime 2m
+            #PermitRootLogin prohibit-password
+            #StrictModes yes
+            #MaxAuthTries 6
+            #MaxSessions 10
+            '''))
+
+        with salt.utils.files.fopen(name, 'w+') as fp_:
+            fp_.write(content)
+
+        ret = self.run_state('file.keyvalue',
+                name=name, key='permitrootlogin', value='no', separator=" ", uncomment=" #", key_ignore_case=True)
+
+        with salt.utils.files.fopen(name, 'r') as fp_:
+            file_contents = fp_.read()
+            self.assertNotIn('#PermitRootLogin', file_contents)
+            self.assertNotIn('prohibit-password', file_contents)
+            self.assertIn("PermitRootLogin no", file_contents)
+
+        self.assertSaltTrueReturn(ret)
+
+        ret = self.run_state('file.keyvalue',
+                name=name, key_values={'logingracetime': '1m'}, separator=" ", uncomment=" #", key_ignore_case=True)
+
+        with salt.utils.files.fopen(name, 'r') as fp_:
+            file_contents = fp_.read()
+            self.assertNotIn('#LoginGraceTime 2m', file_contents)
+            self.assertIn("LoginGraceTime 1m", file_contents)
+
+        self.assertSaltTrueReturn(ret)
 
 
 class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
@@ -4078,7 +4125,7 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         cls.all_patch_template_http = \
             cls.webserver.url(cls.all_patch_template_path)
 
-        patches_dir = os.path.join(FILES, 'file', 'base', 'patches')
+        patches_dir = os.path.join(RUNTIME_VARS.FILES, 'file', 'base', 'patches')
         cls.numbers_patch_hash = salt.utils.hashutils.get_hash(
             os.path.join(patches_dir, cls.numbers_patch_name)
         )
@@ -4108,7 +4155,7 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         Create a new unpatched set of files
         '''
-        self.base_dir = tempfile.mkdtemp(dir=TMP)
+        self.base_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         os.makedirs(os.path.join(self.base_dir, 'foo', 'bar'))
         self.numbers_file = os.path.join(self.base_dir, 'foo', 'numbers.txt')
         self.math_file = os.path.join(self.base_dir, 'foo', 'bar', 'math.txt')
@@ -4627,6 +4674,7 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         ret = ret[next(iter(ret))]
         self.assertIn('Patch would not apply cleanly', ret['comment'])
         self.assertEqual(ret['changes'], {})
+
 
 WIN_TEST_FILE = 'c:/testfile'
 

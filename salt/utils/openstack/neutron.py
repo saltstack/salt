@@ -158,7 +158,7 @@ class SaltNeutron(NeutronShell):
                 return resource
             if resource.get('name') == name_or_id:
                 ret.append(resource)
-        if len(ret) == 0:
+        if not ret:
             raise exceptions.MinionError("Resource not found.")
         elif len(ret) >= 2:
             raise exceptions.MinionError("Multiple resource matches found.")

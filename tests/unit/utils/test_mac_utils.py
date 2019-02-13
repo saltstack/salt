@@ -7,6 +7,7 @@ mac_utils tests
 from __future__ import absolute_import, unicode_literals
 import plistlib
 import xml.parsers.expat
+import os
 
 # Import Salt Testing Libs
 from tests.support.unit import TestCase, skipIf
@@ -22,6 +23,7 @@ from tests.support.mixins import LoaderModuleMockMixin
 
 # Import Salt libs
 import salt.utils.mac_utils as mac_utils
+import salt.utils.platform
 from salt.exceptions import SaltInvocationError, CommandExecutionError
 
 # Import 3rd-party libs
@@ -234,10 +236,14 @@ class MacUtilsTestCase(TestCase, LoaderModuleMockMixin):
         plists = [{'Label': 'com.apple.lla1'}]
         ret = _run_available_services(plists)
 
+        file_path = os.sep + os.path.join('Library', 'LaunchAgents', 'com.apple.lla1.plist')
+        if salt.utils.platform.is_windows():
+            file_path = 'c:' + file_path
+
         expected = {
             'com.apple.lla1': {
                 'file_name': 'com.apple.lla1.plist',
-                'file_path': '/Library/LaunchAgents/com.apple.lla1.plist',
+                'file_path': file_path,
                 'plist': plists[0]}}
         self.assertEqual(ret, expected)
 
@@ -290,10 +296,14 @@ class MacUtilsTestCase(TestCase, LoaderModuleMockMixin):
         plists = [{'Label': 'com.apple.lla1'}]
         ret = _run_available_services(plists)
 
+        file_path = os.sep + os.path.join('Library', 'LaunchAgents', 'com.apple.lla1.plist')
+        if salt.utils.platform.is_windows():
+            file_path = 'c:' + file_path
+
         expected = {
             'com.apple.lla1': {
                 'file_name': 'com.apple.lla1.plist',
-                'file_path': '/Library/LaunchAgents/com.apple.lla1.plist',
+                'file_path': file_path,
                 'plist': plists[0]}}
         self.assertEqual(ret, expected)
 
@@ -317,6 +327,10 @@ class MacUtilsTestCase(TestCase, LoaderModuleMockMixin):
 
         plists = [{'Label': 'com.apple.lla1'}]
 
+        file_path = os.sep + os.path.join('Library', 'LaunchAgents', 'com.apple.lla1.plist')
+        if salt.utils.platform.is_windows():
+            file_path = 'c:' + file_path
+
         if six.PY2:
             attrs = {'cmd.run': MagicMock()}
 
@@ -325,8 +339,7 @@ class MacUtilsTestCase(TestCase, LoaderModuleMockMixin):
 
             mock_run.__getitem__.side_effect = getitem
             mock_run.configure_mock(**attrs)
-            cmd = '/usr/bin/plutil -convert xml1 -o - -- "{}"'.format(
-                '/Library/LaunchAgents/com.apple.lla1.plist')
+            cmd = '/usr/bin/plutil -convert xml1 -o - -- "{}"'.format(file_path)
             calls = [call.cmd.run(cmd)]
 
             mock_read_plist.side_effect = xml.parsers.expat.ExpatError
@@ -341,7 +354,7 @@ class MacUtilsTestCase(TestCase, LoaderModuleMockMixin):
         expected = {
             'com.apple.lla1': {
                 'file_name': 'com.apple.lla1.plist',
-                'file_path': '/Library/LaunchAgents/com.apple.lla1.plist',
+                'file_path': file_path,
                 'plist': plists[0]}}
         self.assertEqual(ret, expected)
 
@@ -391,6 +404,10 @@ class MacUtilsTestCase(TestCase, LoaderModuleMockMixin):
         mock_os_walk.side_effect = _get_walk_side_effects(results)
         mock_exists.return_value = True
 
+        file_path = os.sep + os.path.join('Library', 'LaunchAgents', 'com.apple.lla1.plist')
+        if salt.utils.platform.is_windows():
+            file_path = 'c:' + file_path
+
         if six.PY3:
             mock_load = MagicMock()
             mock_load.side_effect = xml.parsers.expat.ExpatError
@@ -405,8 +422,7 @@ class MacUtilsTestCase(TestCase, LoaderModuleMockMixin):
 
             mock_run.__getitem__.side_effect = getitem
             mock_run.configure_mock(**attrs)
-            cmd = '/usr/bin/plutil -convert xml1 -o - -- "{}"'.format(
-                '/Library/LaunchAgents/com.apple.lla1.plist')
+            cmd = '/usr/bin/plutil -convert xml1 -o - -- "{}"'.format(file_path)
             calls = [call.cmd.run(cmd)]
 
             mock_raise_expat_error = MagicMock(

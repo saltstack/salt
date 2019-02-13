@@ -2903,7 +2903,7 @@ class SaltRunOptionParser(six.with_metaclass(OptionParserMeta,
         if self.options.doc and len(self.args) > 1:
             self.error('You can only get documentation for one method at one time')
 
-        if len(self.args) > 0:
+        if self.args:
             self.config['fun'] = self.args[0]
         else:
             self.config['fun'] = ''
@@ -2925,6 +2925,7 @@ class SaltSSHOptionParser(six.with_metaclass(OptionParserMeta,
                                              OutputOptionsMixIn,
                                              SaltfileMixIn,
                                              HardCrashMixin,
+                                             CacheDirMixIn,
                                              NoParseMixin)):
 
     usage = '%prog [options] \'<target>\' <function> [arguments]'
@@ -3154,6 +3155,11 @@ class SaltSSHOptionParser(six.with_metaclass(OptionParserMeta,
             action='store_true',
             help='If hostname is not found in the roster, store the information'
                  'into the default roster file (flat).'
+        )
+        auth_group.add_option(
+            '--pki-dir',
+            dest="pki_dir",
+            help=("Set the directory to load the pki keys.")
         )
         self.add_option_group(auth_group)
 

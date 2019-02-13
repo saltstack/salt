@@ -451,7 +451,7 @@ def mount(name=None, **kwargs):
         if name == '-a':
             salt.utils.versions.warn_until(
                 'Sodium',
-                'Passing \'-a\' as name is deprecated as of Salt Fluorine. This '
+                'Passing \'-a\' as name is deprecated as of Salt 2019.2.0. This '
                 'warning will be removed in Salt Sodium. Please pass name as '
                 '\'None\' instead to mount all filesystems.')
         flags.append('-a')

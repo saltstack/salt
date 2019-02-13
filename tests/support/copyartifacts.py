@@ -60,6 +60,7 @@ class DownloadArtifacts(object):
         except IOError:
             print('Failed to copy: {0}'.format(remote))
 
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Jenkins Artifact Download Helper')
     parser.add_argument(

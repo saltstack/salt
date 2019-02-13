@@ -83,6 +83,27 @@ def _update_nilrt_restart_state():
         __salt__['cmd.shell']('md5sum {0} >{1}/nisysapi.ini.md5sum'
                               .format(nisysapi_path, NILRT_RESTARTCHECK_STATE_PATH))
 
+    # Expert plugin files get added to a conf.d dir, so keep track of the total
+    # no. of files, their timestamps and content hashes
+    nisysapi_conf_d_path = "/usr/lib/{0}/nisysapi/conf.d/experts/".format(
+        'arm-linux-gnueabi' if 'arm' in __grains__.get('cpuarch') else 'x86_64-linux-gnu'
+    )
+
+    if os.path.exists(nisysapi_conf_d_path):
+        with salt.utils.files.fopen('{0}/sysapi.conf.d.count'.format(
+                NILRT_RESTARTCHECK_STATE_PATH), 'w') as fcount:
+            fcount.write(str(len(os.listdir(nisysapi_conf_d_path))))
+
+        for fexpert in os.listdir(nisysapi_conf_d_path):
+            __salt__['cmd.shell']('stat -c %Y {0}/{1} >{2}/{1}.timestamp'
+                                  .format(nisysapi_conf_d_path,
+                                          fexpert,
+                                          NILRT_RESTARTCHECK_STATE_PATH))
+            __salt__['cmd.shell']('md5sum {0}/{1} >{2}/{1}.md5sum'
+                                  .format(nisysapi_conf_d_path,
+                                          fexpert,
+                                          NILRT_RESTARTCHECK_STATE_PATH))
+
 
 def _get_restartcheck_result(errors):
     '''
@@ -94,21 +115,25 @@ def _get_restartcheck_result(errors):
     return rs_result
 
 
-def _process_restartcheck_result(rs_result):
+def _process_restartcheck_result(rs_result, **kwargs):
     '''
     Check restartcheck output to see if system/service restarts were requested
     and take appropriate action.
     '''
     if 'No packages seem to need to be restarted' in rs_result:
         return
+    reboot_required = False
     for rstr in rs_result:
         if 'System restart required' in rstr:
             _update_nilrt_restart_state()
             __salt__['system.set_reboot_required_witnessed']()
-        else:
-            service = os.path.join('/etc/init.d', rstr)
-            if os.path.exists(service):
-                __salt__['cmd.run']([service, 'restart'])
+            reboot_required = True
+    if kwargs.get('always_restart_services', True) or not reboot_required:
+        for rstr in rs_result:
+            if 'System restart required' not in rstr:
+                service = os.path.join('/etc/init.d', rstr)
+                if os.path.exists(service):
+                    __salt__['cmd.run']([service, 'restart'])
 
 
 def __virtual__():
@@ -124,9 +149,8 @@ def __virtual__():
                     NILRT_RESTARTCHECK_STATE_PATH,
                     exc.errno,
                     exc.strerror)
-        # modules.dep always exists, make sure it's restart state files also exist
-        if not (os.path.exists(os.path.join(NILRT_RESTARTCHECK_STATE_PATH, 'modules.dep.timestamp')) and
-                os.path.exists(os.path.join(NILRT_RESTARTCHECK_STATE_PATH, 'modules.dep.md5sum'))):
+        # populate state dir if empty
+        if not os.listdir(NILRT_RESTARTCHECK_STATE_PATH):
             _update_nilrt_restart_state()
         return __virtualname__
 
@@ -154,7 +178,7 @@ def latest_version(*names, **kwargs):
     '''
     refresh = salt.utils.data.is_true(kwargs.pop('refresh', True))
 
-    if len(names) == 0:
+    if not names:
         return ''
 
     ret = {}
@@ -429,6 +453,9 @@ def install(name=None,
 
         .. versionadded:: 2017.7.0
 
+    always_restart_services
+        Whether to restart services even if a reboot is required. Default is True.
+
     Returns a dict containing the new package names and versions::
 
         {'<package>': {'old': '<old-version>',
@@ -450,7 +477,7 @@ def install(name=None,
     to_downgrade = []
 
     _append_noaction_if_testmode(cmd_prefix, **kwargs)
-    if pkg_params is None or len(pkg_params) == 0:
+    if not pkg_params:
         return {}
     elif pkg_type == 'file':
         if reinstall:
@@ -554,7 +581,7 @@ def install(name=None,
             info={'errors': errors, 'changes': ret}
         )
 
-    _process_restartcheck_result(rs_result)
+    _process_restartcheck_result(rs_result, **kwargs)
 
     return ret
 
@@ -594,12 +621,12 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
     remove_dependencies
         Remove package and all dependencies
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     auto_remove_deps
         Remove packages that were installed automatically to satisfy dependencies
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     Returns a dict containing the changes.
 
@@ -657,7 +684,7 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
             info={'errors': errors, 'changes': ret}
         )
 
-    _process_restartcheck_result(rs_result)
+    _process_restartcheck_result(rs_result, **kwargs)
 
     return ret
 
@@ -740,7 +767,7 @@ def upgrade(refresh=True, **kwargs):  # pylint: disable=unused-argument
             info={'errors': errors, 'changes': ret}
         )
 
-    _process_restartcheck_result(rs_result)
+    _process_restartcheck_result(rs_result, **kwargs)
 
     return ret
 
@@ -1054,7 +1081,7 @@ def _process_info_installed_output(out, filter_attrs):
             # This is a continuation of the last attr
             if filter_attrs is None or attr in filter_attrs:
                 line = line.strip()
-                if len(attrs[attr]):
+                if attrs[attr]:
                     # If attr is empty, don't add leading newline
                     attrs[attr] += '\n'
                 attrs[attr] += line
@@ -1538,3 +1565,21 @@ def owner(*paths, **kwargs):  # pylint: disable=unused-argument
     if len(ret) == 1:
         return next(six.itervalues(ret))
     return ret
+
+
+def version_clean(version):
+    '''
+    Clean the version string removing extra data.
+    There's nothing do to here for nipkg.py, therefore it will always
+    return the given version.
+    '''
+    return version
+
+
+def check_extra_requirements(pkgname, pkgver):
+    '''
+    Check if the installed package already has the given requirements.
+    There's nothing do to here for nipkg.py, therefore it will always
+    return True.
+    '''
+    return True
