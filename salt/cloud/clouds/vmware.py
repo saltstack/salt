@@ -3080,7 +3080,7 @@ def create_datacenter(kwargs=None, call=None):
             'You must specify name of the new datacenter to be created.'
         )
 
-    if len(datacenter_name) >= 80 or len(datacenter_name) <= 0:
+    if not datacenter_name or len(datacenter_name) >= 80:
         raise SaltCloudSystemExit(
             'The datacenter name must be a non empty string of less than 80 characters.'
         )
@@ -4420,7 +4420,7 @@ def create_datastore_cluster(kwargs=None, call=None):
             'You must specify name of the new datastore cluster to be created.'
         )
 
-    if len(datastore_cluster_name) >= 80 or len(datastore_cluster_name) <= 0:
+    if not datastore_cluster_name or len(datastore_cluster_name) >= 80:
         raise SaltCloudSystemExit(
             'The datastore cluster name must be a non empty string of less than 80 characters.'
         )

@@ -8,14 +8,14 @@ import pkg_resources
 import os.path
 import sys
 
-# imprt salt paths
-from tests.support.paths import TESTS_DIR
+# Import test support libs
+from tests.support.runtests import RUNTIME_VARS
 
 # import Python Third Party Libs
 # pylint: disable=import-error
 try:
     import boto
-    boto.ENDPOINTS_PATH = os.path.join(TESTS_DIR, 'unit/files/endpoints.json')
+    boto.ENDPOINTS_PATH = os.path.join(RUNTIME_VARS.TESTS_DIR, 'unit/files/endpoints.json')
     import boto.ec2.elb
     HAS_BOTO = True
 except ImportError:

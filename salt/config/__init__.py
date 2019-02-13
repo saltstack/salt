@@ -2263,14 +2263,15 @@ def include_config(include, orig_path, verbose, exit_on_config_errors=False):
 
         # Catch situation where user typos path in configuration; also warns
         # for empty include directory (which might be by design)
-        if len(glob.glob(path)) == 0:
+        glob_matches = glob.glob(path)
+        if not glob_matches:
             if verbose:
                 log.warning(
                     'Warning parsing configuration file: "include" path/glob '
                     "'%s' matches no files", path
                 )
 
-        for fn_ in sorted(glob.glob(path)):
+        for fn_ in sorted(glob_matches):
             log.debug('Including configuration from \'%s\'', fn_)
             try:
                 opts = _read_conf_file(fn_)
