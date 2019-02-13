@@ -564,7 +564,7 @@ class SaltReturnAssertsMixin(object):
             for saltret in self.__getWithinSaltReturn(ret, 'result'):
                 self.assertTrue(saltret)
         except AssertionError:
-            log.info('Salt Full Return:\n{0}'.format(pprint.pformat(ret)))
+            log.info('Salt Full Return:\n%s', pprint.pformat(ret))
             try:
                 raise AssertionError(
                     '{result} is not True. Salt Comment:\n{comment}'.format(
@@ -583,7 +583,7 @@ class SaltReturnAssertsMixin(object):
             for saltret in self.__getWithinSaltReturn(ret, 'result'):
                 self.assertFalse(saltret)
         except AssertionError:
-            log.info('Salt Full Return:\n{0}'.format(pprint.pformat(ret)))
+            log.info('Salt Full Return:\n%s', pprint.pformat(ret))
             try:
                 raise AssertionError(
                     '{result} is not False. Salt Comment:\n{comment}'.format(
@@ -600,7 +600,7 @@ class SaltReturnAssertsMixin(object):
             for saltret in self.__getWithinSaltReturn(ret, 'result'):
                 self.assertIsNone(saltret)
         except AssertionError:
-            log.info('Salt Full Return:\n{0}'.format(pprint.pformat(ret)))
+            log.info('Salt Full Return:\n%s', pprint.pformat(ret))
             try:
                 raise AssertionError(
                     '{result} is not None. Salt Comment:\n{comment}'.format(

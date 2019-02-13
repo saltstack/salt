@@ -56,7 +56,7 @@ def _pretty_size(size):
     Print sizes in a similar fashion as eclean
     '''
     units = [' G', ' M', ' K', ' B']
-    while len(units) and size >= 1000:
+    while units and size >= 1000:
         size = size / 1024.0
         units.pop()
     return '{0}{1}'.format(round(size, 1), units[-1])

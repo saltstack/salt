@@ -268,7 +268,7 @@ class BaseZMQPubCase(AsyncTestCase, AdaptedConfigurationTestCaseMixin):
             if self._start_handlers.get(k) != v:
                 failures.append((k, v))
         del self._start_handlers
-        if len(failures) > 0:
+        if failures:
             raise Exception('FDs still attached to the IOLoop: {0}'.format(failures))
 
 
