@@ -2170,3 +2170,16 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(state_run[state_id]['comment'],
                          'Success!')
         self.assertTrue(state_run[state_id]['result'])
+
+    def test_state_sls_lazyloader_allows_recursion(self):
+        '''
+        This tests that referencing dunders like __salt__ work
+        context: https://github.com/saltstack/salt/pull/51499
+        '''
+        state_run = self.run_function('state.sls', mods='issue-51499')
+
+        state_id = 'test_|-always-passes_|-foo_|-succeed_without_changes'
+        self.assertIn(state_id, state_run)
+        self.assertEqual(state_run[state_id]['comment'],
+                         'Success!')
+        self.assertTrue(state_run[state_id]['result'])

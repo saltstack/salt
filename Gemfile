@@ -3,7 +3,7 @@
 source 'https://rubygems.org'
 
 gem 'test-kitchen', '~>1.23.3'
-gem 'kitchen-salt', '~>0.2'
+gem 'kitchen-salt', '~>0.4.1'
 gem 'kitchen-sync'
 gem 'git'
 
