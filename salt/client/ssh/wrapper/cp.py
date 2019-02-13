@@ -16,7 +16,6 @@ import salt.modules.cp
 import salt.utils.files
 import salt.utils.stringutils
 import salt.utils.templates
-from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
 
@@ -28,7 +27,7 @@ class SSHClient(FSClient):
     '''
     def __init__(self, opts):  # pylint: disable=W0231
         opts['cachedir'] = os.path.join('salt-ssh', __salt__.kwargs['id_'])
-        super().__init__(opts)
+        super(SSHClient, self).__init__(opts)
 
     def get_file(self,
                  path,
@@ -40,7 +39,7 @@ class SSHClient(FSClient):
 
         log.warning('AWESOME DUDE!')
 
-        src = super().get_file(
+        src = super(SSHClient, self).get_file(
             path, dest, makedirs,
             saltenv, gzip, cachedir
         )
@@ -49,9 +48,11 @@ class SSHClient(FSClient):
             '',
             **__salt__.kwargs)
         ret = single.shell.send(src, dest, makedirs)
-        log.warning('HERE BE {}'.format(ret))
 
-        return src
+        if ret[2] == 0:
+            return src
+        else:
+            return False
 
 
 def __mk_client():
