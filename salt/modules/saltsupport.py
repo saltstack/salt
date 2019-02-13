@@ -60,7 +60,7 @@ class LogCollector(object):
             list.append(
                 self,
                 "{} - {}".format(
-                    datetime.datetime.utcnow().strftime("%T.%f")[:-3], obj
+                    datetime.datetime.utcnow().strftime("%H:%M:%S.%f")[:-3], obj
                 ),
             )
 
