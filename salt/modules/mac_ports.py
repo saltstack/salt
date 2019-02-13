@@ -179,6 +179,7 @@ def latest_version(*names, **kwargs):
 
     return ret
 
+
 # available_version is being deprecated
 available_version = salt.utils.functools.alias_function(latest_version, 'available_version')
 
@@ -318,7 +319,7 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
 
         pkg_params = {name: spec}
 
-    if pkg_params is None or len(pkg_params) == 0:
+    if not pkg_params:
         return {}
 
     formulas_array = []

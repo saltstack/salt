@@ -316,6 +316,42 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
             mount.assert_called_once()
             umount.assert_called_once()
 
+    @patch('salt.states.btrfs._set_default')
+    @patch('salt.states.btrfs._is_default')
+    @patch('salt.states.btrfs._umount')
+    @patch('salt.states.btrfs._mount')
+    def test_subvolume_created_exists_set_default_no_force(self,
+                                                           mount,
+                                                           umount,
+                                                           is_default,
+                                                           set_default):
+        '''
+        Test creating a subvolume.
+        '''
+        mount.return_value = '/tmp/xxx'
+        is_default.return_value = False
+        set_default.return_value = True
+        salt_mock = {
+            'btrfs.subvolume_exists': MagicMock(return_value=True),
+        }
+        opts_mock = {
+            'test': False,
+        }
+        with patch.dict(btrfs.__salt__, salt_mock), \
+                patch.dict(btrfs.__opts__, opts_mock):
+            assert btrfs.subvolume_created(name='@/var',
+                                           device='/dev/sda1',
+                                           set_default=True,
+                                           force_set_default=False) == {
+                'name': '@/var',
+                'result': True,
+                'changes': {},
+                'comment': ['Subvolume @/var already present'],
+            }
+            salt_mock['btrfs.subvolume_exists'].assert_called_with('/tmp/xxx/@/var')
+            mount.assert_called_once()
+            umount.assert_called_once()
+
     @patch('salt.states.btrfs._is_cow')
     @patch('salt.states.btrfs._umount')
     @patch('salt.states.btrfs._mount')

@@ -11,6 +11,7 @@ import time
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.helpers import destructiveTest
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -141,6 +142,7 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
                     ret = gpg.get_key('xxxxxxxxxxxxxxxx')
                     self.assertEqual(ret, _expected_result)
 
+    @destructiveTest  # Need to run as root!?
     @skipIf(not HAS_GPG, 'GPG Module Unavailable')
     def test_delete_key(self):
         '''

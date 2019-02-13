@@ -22,6 +22,7 @@ Follow one of the below links for further information and examples
     overstatestage
     pony
     pprint_out
+    profile
     progress
     raw
     table_out

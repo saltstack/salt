@@ -85,7 +85,7 @@ def usage(args=None):
     '''
     Return usage information for volumes mounted on this minion
 
-    .. versionchanged:: Fluorine
+    .. versionchanged:: 2019.2.0
 
         Default for SunOS changed to 1 kilobyte blocks
 
@@ -268,10 +268,16 @@ def percent(args=None):
 
 
 @salt.utils.decorators.path.which('blkid')
-def blkid(device=None):
+def blkid(device=None, token=None):
     '''
     Return block device attributes: UUID, LABEL, etc. This function only works
     on systems where blkid is available.
+
+    device
+        Device name from the system
+
+    token
+        Any valid token used for the search
 
     CLI Example:
 
@@ -279,13 +285,17 @@ def blkid(device=None):
 
         salt '*' disk.blkid
         salt '*' disk.blkid /dev/sda
+        salt '*' disk.blkid token='UUID=6a38ee5-7235-44e7-8b22-816a403bad5d'
+        salt '*' disk.blkid token='TYPE=ext4'
     '''
-    args = ""
+    cmd = ['blkid']
     if device:
-        args = " " + device
+        cmd.append(device)
+    elif token:
+        cmd.extend(['-t', token])
 
     ret = {}
-    blkid_result = __salt__['cmd.run_all']('blkid' + args, python_shell=False)
+    blkid_result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if blkid_result['retcode'] > 0:
         return ret
@@ -422,6 +432,7 @@ def format_(device,
             fs_type='ext4',
             inode_size=None,
             lazy_itable_init=None,
+            fat=None,
             force=False):
     '''
     Format a filesystem onto a device
@@ -449,6 +460,10 @@ def format_(device,
 
         This option is only enabled for ext filesystems
 
+    fat
+        FAT size option. Can be 12, 16 or 32, and can only be used on
+        fat or vfat filesystems.
+
     force
         Force mke2fs to create a filesystem, even if the specified device is
         not a partition on a block special device. This option is only enabled
@@ -471,6 +486,9 @@ def format_(device,
     if lazy_itable_init is not None:
         if fs_type[:3] == 'ext':
             cmd.extend(['-E', 'lazy_itable_init={0}'.format(lazy_itable_init)])
+    if fat is not None and fat in (12, 16, 32):
+        if fs_type[-3:] == 'fat':
+            cmd.extend(['-F', fat])
     if force:
         if fs_type[:3] == 'ext':
             cmd.append('-F')
@@ -575,7 +593,7 @@ def hdparms(disks, args=None):
         disk_data = {}
         for line in _hdparm('-{0} {1}'.format(args, disk), False).splitlines():
             line = line.strip()
-            if len(line) == 0 or line == disk + ':':
+            if not line or line == disk + ':':
                 continue
 
             if ':' in line:
@@ -605,13 +623,13 @@ def hdparms(disks, args=None):
                             deep_key, val = val.split('=', 1)
                             deep_key = deep_key.strip()
                             val = val.strip()
-                            if len(val):
+                            if val:
                                 valdict[deep_key] = val
-                        elif len(val):
+                        elif val:
                             rvals.append(val)
-                if len(valdict):
+                if valdict:
                     rvals.append(valdict)
-                if len(rvals) == 0:
+                if not rvals:
                     continue
                 elif len(rvals) == 1:
                     rvals = rvals[0]
@@ -807,7 +825,7 @@ def _iostat_fbsd(interval, count, disks):
     for line in ret:
         if not line.startswith('device'):
             continue
-        elif not len(dev_header):
+        elif not dev_header:
             dev_header = line.split()[1:]
         while line is not False:
             line = next(ret, False)
@@ -858,12 +876,12 @@ def _iostat_linux(interval, count, disks):
     ret = iter(__salt__['cmd.run_stdout'](iostat_cmd, output_loglevel='quiet').splitlines())
     for line in ret:
         if line.startswith('avg-cpu:'):
-            if not len(sys_header):
+            if not sys_header:
                 sys_header = tuple(line.split()[1:])
             line = [decimal.Decimal(x) for x in next(ret).split()]
             sys_stats.append(line)
         elif line.startswith('Device:'):
-            if not len(dev_header):
+            if not dev_header:
                 dev_header = tuple(line.split()[1:])
             while line is not False:
                 line = next(ret, False)
@@ -876,7 +894,7 @@ def _iostat_linux(interval, count, disks):
 
     iostats = {}
 
-    if len(sys_header):
+    if sys_header:
         iostats['sys'] = _iostats_dict(sys_header, sys_stats)
 
     for disk, stats in dev_stats.items():

@@ -5,6 +5,14 @@ Salt Release Notes - Codename Neon
 ==================================
 
 
+Execution Module for Checking Jinja Map Files
+=============================================
+
+To aid in troubleshooting, an execution module has been added, which allows one
+to see the data loaded from a jinja map, or imported using ``import_yaml`` or
+``import_json``. See :py:mod:`here <salt.modules.jinja>` for more information.
+
+
 Saltcheck Updates
 =================
 
@@ -237,6 +245,9 @@ State Changes
 
 - Added new :py:func:`saltutil <salt.states.saltutil>` state to use instead of
   ``module.run`` to more easily handle change.
+
+- Added new `onfail_all` requisite form to allow for AND logic when adding
+  onfail states.
 
 Module Changes
 ==============

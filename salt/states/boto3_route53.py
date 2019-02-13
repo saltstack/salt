@@ -564,7 +564,7 @@ def rr_present(name, HostedZoneId=None, DomainName=None, PrivateZone=False, Name
                     r = __salt__['boto_ec2.find_instances'](
                             tags={tag_name: tag_value}, return_objs=True, in_states=good_states,
                             region=region, key=key, keyid=keyid, profile=profile)
-                    if len(r) < 1:
+                    if not r:
                         ret['comment'] = 'No EC2 instance with tag {} == {} found'.format(tag_name,
                                 tag_value)
                         log.error(ret['comment'])
@@ -634,7 +634,8 @@ def rr_present(name, HostedZoneId=None, DomainName=None, PrivateZone=False, Name
             if locals().get(u) != rrset.get(u):
                 update = True
                 break
-        if 'ResourceRecords' in rrset and ResourceRecords != sorted(rrset.get('ResourceRecords'), key=lambda x: x['Value']):
+        if 'ResourceRecords' in rrset and ResourceRecords != sorted(rrset.get('ResourceRecords', {}),
+                key=lambda x: x['Value']):
             update = True
 
     if not create and not update:
