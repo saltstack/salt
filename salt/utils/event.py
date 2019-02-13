@@ -145,13 +145,13 @@ def get_event(
                      raise_errors=raise_errors)
 
 
-def get_master_event(opts, sock_dir, listen=True, io_loop=None, raise_errors=False):
+def get_master_event(opts, sock_dir, listen=True, io_loop=None, raise_errors=False, keep_loop=False):
     '''
     Return an event object suitable for the named transport
     '''
     # TODO: AIO core is separate from transport
     if opts['transport'] in ('zeromq', 'tcp', 'detect'):
-        return MasterEvent(sock_dir, opts, listen=listen, io_loop=io_loop, raise_errors=raise_errors)
+        return MasterEvent(sock_dir, opts, listen=listen, io_loop=io_loop, raise_errors=raise_errors, keep_loop=keep_loop)
 
 
 def fire_args(opts, jid, tag_data, prefix=''):
