@@ -77,6 +77,7 @@ def remove(pkg):
     pkg
         The package name
     '''
+    ret = {'result': None, 'output': ""}
     try:
         ret['output'] = subprocess.check_output([SNAP_BINARY_NAME, 'remove', pkg])
         ret['result'] = True
