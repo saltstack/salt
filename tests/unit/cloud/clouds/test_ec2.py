@@ -85,4 +85,4 @@ class EC2TestCase(TestCase, LoaderModuleMockMixin):
             name='i-abcddef', kwargs={'key_file': self.key_file}, call='action'
         )
         assert ret['passwordData'] == PASS_DATA
-        assert ret['password'] == b'testp4ss!'
+        assert ret['password'] == 'testp4ss!'

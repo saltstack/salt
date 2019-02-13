@@ -164,7 +164,7 @@ def _replace_auth_key(
                     lines.append(line)
                     continue
                 comps = re.findall(r'((.*)\s)?(ssh-[a-z0-9-]+|ecdsa-[a-z0-9-]+)\s([a-zA-Z0-9+/]+={0,2})(\s(.*))?', line)
-                if len(comps) > 0 and len(comps[0]) > 3 and comps[0][3] == key:
+                if comps and len(comps[0]) > 3 and comps[0][3] == key:
                     # Found our key, replace it
                     lines.append(auth_line)
                 else:
@@ -1136,7 +1136,7 @@ def set_known_host(user=None,
 
         if fingerprint and fingerprint not in known_fingerprints:
             return {'status': 'error',
-                    'error': ('Remote host public keys found but none of their'
+                    'error': ('Remote host public keys found but none of their '
                               'fingerprints match the one you have provided')}
 
         if check_required:

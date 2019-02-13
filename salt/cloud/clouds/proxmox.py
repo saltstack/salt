@@ -326,22 +326,42 @@ def get_resources_vms(call=None, resFilter=None, includeConfig=True):
 
         salt-cloud -f get_resources_vms my-proxmox-config
     '''
-    log.debug('Getting resource: vms.. (filter: %s)', resFilter)
-    resources = query('get', 'cluster/resources')
 
-    ret = {}
-    for resource in resources:
-        if 'type' in resource and resource['type'] in ['openvz', 'qemu', 'lxc']:
-            name = resource['name']
-            ret[name] = resource
+    timeoutTime = time.time() + 60
+    while True:
+        log.debug('Getting resource: vms.. (filter: %s)', resFilter)
+        resources = query('get', 'cluster/resources')
+        ret = {}
+        badResource = False
+        for resource in resources:
+            if 'type' in resource and resource['type'] in ['openvz', 'qemu',
+                                                           'lxc']:
+                try:
+                    name = resource['name']
+                except KeyError:
+                    badResource = True
+                    log.debug('No name in VM resource %s', repr(resource))
+                    break
 
-            if includeConfig:
-                # Requested to include the detailed configuration of a VM
-                ret[name]['config'] = get_vmconfig(
-                    ret[name]['vmid'],
-                    ret[name]['node'],
-                    ret[name]['type']
-                )
+                ret[name] = resource
+
+                if includeConfig:
+                    # Requested to include the detailed configuration of a VM
+                    ret[name]['config'] = get_vmconfig(
+                        ret[name]['vmid'],
+                        ret[name]['node'],
+                        ret[name]['type']
+                    )
+
+        if time.time() > timeoutTime:
+            raise SaltCloudExecutionTimeout('FAILED to get the proxmox '
+                                            'resources vms')
+
+        # Carry on if there wasn't a bad resource return from Proxmox
+        if not badResource:
+            break
+
+        time.sleep(0.5)
 
     if resFilter is not None:
         log.debug('Filter given: %s, returning requested '
@@ -511,7 +531,7 @@ def _stringlist_to_dictionary(input_string):
     for item in li:
         pair = str(item).replace(' ', '').split('=')
         if len(pair) != 2:
-            log.warn("Cannot process stringlist item %s", item)
+            log.warning('Cannot process stringlist item %s', item)
             continue
 
         ret[pair[0]] = pair[1]
@@ -1008,9 +1028,12 @@ def create_node(vm_, newid):
         if 'host' in vm_:
             postParams['target'] = vm_['host']
 
-        if ':' in vm_['clone_from']:
-            vmhost = vm_['clone_from'].split(':')[0]
-            vm_['clone_from'] = vm_['clone_from'].split(':')[1]
+        try:
+            int(vm_['clone_from'])
+        except ValueError:
+            if ':' in vm_['clone_from']:
+                vmhost = vm_['clone_from'].split(':')[0]
+                vm_['clone_from'] = vm_['clone_from'].split(':')[1]
 
         node = query('post', 'nodes/{0}/qemu/{1}/clone'.format(
             vmhost, vm_['clone_from']), postParams)

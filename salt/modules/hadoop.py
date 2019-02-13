@@ -90,7 +90,7 @@ def dfs(command=None, *args):
 
 def dfsadmin_report(arg=None):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Reports basic filesystem information and statistics. Optional flags may be used to filter the list of displayed DataNodes.
 

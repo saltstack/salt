@@ -220,7 +220,7 @@ def _show_ip_migration(show_ip, show_ipv4):
 def list_state(subset=None, show_ip=False, show_ipv4=None):
     '''
     .. versionadded:: 2015.8.0
-    .. versionchanged:: Fluorine
+    .. versionchanged:: 2019.2.0
         The 'show_ipv4' argument has been renamed to 'show_ip' as it now
         includes IPv6 addresses for IPv6-connected minions.
 
@@ -254,7 +254,7 @@ def list_state(subset=None, show_ip=False, show_ipv4=None):
 def list_not_state(subset=None, show_ip=False, show_ipv4=None):
     '''
     .. versionadded:: 2015.8.0
-    .. versionchanged:: Fluorine
+    .. versionchanged:: 2019.2.0
         The 'show_ipv4' argument has been renamed to 'show_ip' as it now
         includes IPv6 addresses for IPv6-connected minions.
 
@@ -289,7 +289,7 @@ def list_not_state(subset=None, show_ip=False, show_ipv4=None):
 
 def present(subset=None, show_ip=False, show_ipv4=None):
     '''
-    .. versionchanged:: Fluorine
+    .. versionchanged:: 2019.2.0
         The 'show_ipv4' argument has been renamed to 'show_ip' as it now
         includes IPv6 addresses for IPv6-connected minions.
 
@@ -315,7 +315,7 @@ def present(subset=None, show_ip=False, show_ipv4=None):
 def not_present(subset=None, show_ip=False, show_ipv4=None):
     '''
     .. versionadded:: 2015.5.0
-    .. versionchanged:: Fluorine
+    .. versionchanged:: 2019.2.0
         The 'show_ipv4' argument has been renamed to 'show_ip' as it now
         includes IPv6 addresses for IPv6-connected minions.
 
@@ -341,7 +341,7 @@ def not_present(subset=None, show_ip=False, show_ipv4=None):
 def joined(subset=None, show_ip=False, show_ipv4=None):
     '''
     .. versionadded:: 2015.8.0
-    .. versionchanged:: Fluorine
+    .. versionchanged:: 2019.2.0
         The 'show_ipv4' argument has been renamed to 'show_ip' as it now
         includes IPv6 addresses for IPv6-connected minions.
 
@@ -367,7 +367,7 @@ def joined(subset=None, show_ip=False, show_ipv4=None):
 def not_joined(subset=None, show_ip=False, show_ipv4=None):
     '''
     .. versionadded:: 2015.8.0
-    .. versionchanged:: Fluorine
+    .. versionchanged:: 2019.2.0
         The 'show_ipv4' argument has been renamed to 'show_ip' as it now
         includes IPv6 addresses for IPv6-connected minions.
 
@@ -393,7 +393,7 @@ def not_joined(subset=None, show_ip=False, show_ipv4=None):
 def allowed(subset=None, show_ip=False, show_ipv4=None):
     '''
     .. versionadded:: 2015.8.0
-    .. versionchanged:: Fluorine
+    .. versionchanged:: 2019.2.0
         The 'show_ipv4' argument has been renamed to 'show_ip' as it now
         includes IPv6 addresses for IPv6-connected minions.
 
@@ -419,7 +419,7 @@ def allowed(subset=None, show_ip=False, show_ipv4=None):
 def not_allowed(subset=None, show_ip=False, show_ipv4=None):
     '''
     .. versionadded:: 2015.8.0
-    .. versionchanged:: Fluorine
+    .. versionchanged:: 2019.2.0
         The 'show_ipv4' argument has been renamed to 'show_ip' as it now
         includes IPv6 addresses for IPv6-connected minions.
 
@@ -445,7 +445,7 @@ def not_allowed(subset=None, show_ip=False, show_ipv4=None):
 def alived(subset=None, show_ip=False, show_ipv4=None):
     '''
     .. versionadded:: 2015.8.0
-    .. versionchanged:: Fluorine
+    .. versionchanged:: 2019.2.0
         The 'show_ipv4' argument has been renamed to 'show_ip' as it now
         includes IPv6 addresses for IPv6-connected minions.
 
@@ -471,7 +471,7 @@ def alived(subset=None, show_ip=False, show_ipv4=None):
 def not_alived(subset=None, show_ip=False, show_ipv4=None):
     '''
     .. versionadded:: 2015.8.0
-    .. versionchanged:: Fluorine
+    .. versionchanged:: 2019.2.0
         The 'show_ipv4' argument has been renamed to 'show_ip' as it now
         includes IPv6 addresses for IPv6-connected minions.
 
@@ -497,7 +497,7 @@ def not_alived(subset=None, show_ip=False, show_ipv4=None):
 def reaped(subset=None, show_ip=False, show_ipv4=None):
     '''
     .. versionadded:: 2015.8.0
-    .. versionchanged:: Fluorine
+    .. versionchanged:: 2019.2.0
         The 'show_ipv4' argument has been renamed to 'show_ip' as it now
         includes IPv6 addresses for IPv6-connected minions.
 
@@ -523,7 +523,7 @@ def reaped(subset=None, show_ip=False, show_ipv4=None):
 def not_reaped(subset=None, show_ip=False, show_ipv4=None):
     '''
     .. versionadded:: 2015.8.0
-    .. versionchanged:: Fluorine
+    .. versionchanged:: 2019.2.0
         The 'show_ipv4' argument has been renamed to 'show_ip' as it now
         includes IPv6 addresses for IPv6-connected minions.
 
