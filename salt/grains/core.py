@@ -1395,7 +1395,9 @@ _OS_FAMILY_MAP = {
     'KDE neon': 'Debian',
     'Void': 'Void',
     'IDMS': 'Debian',
-    'AIX': 'AIX'
+    'Funtoo': 'Gentoo',
+    'AIX': 'AIX',
+    'TurnKey': 'Debian',
 }
 
 # Matches any possible format:
