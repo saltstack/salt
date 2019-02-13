@@ -85,13 +85,13 @@ class MasterUtilsIsPidHealthy(TestCase):
         assert master.is_pid_healthy(99999999) is False
 
     def test_is_pid_healthy_running_salt(self):
-        m_fopen = mock_open(read_data='salt')
+        m_fopen = mock_open(read_data=b'salt')
         with patch('salt.utils.process.os_is_running', return_value=True):
             with patch('salt.utils.files.fopen', m_fopen):
                 assert master.is_pid_healthy(12345) is True
 
     def test_is_pid_healthy_not_running_salt(self):
-        m_fopen = mock_open(read_data='tacos')
+        m_fopen = mock_open(read_data=b'tacos')
         with patch('salt.utils.process.os_is_running', return_value=True):
             with patch('salt.utils.files.fopen', m_fopen):
                 assert master.is_pid_healthy(12345) is False
