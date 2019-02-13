@@ -22,6 +22,7 @@ import re
 
 # Import salt libs
 import salt.utils.args
+import salt.utils.compat
 import salt.utils.data
 import salt.utils.functools
 import salt.utils.path
@@ -31,9 +32,6 @@ import salt.utils.versions
 from salt.exceptions import CommandExecutionError, MinionError
 from salt.ext import six
 
-# Workaround for 'reload' builtin of py2.7
-if six.PY3:
-    from importlib import reload  # pylint: disable=no-name-in-module
 
 # Import third party libs
 HAS_PORTAGE = False
@@ -69,13 +67,13 @@ def __virtual__():
 
 def _vartree():
     import portage  # pylint: disable=3rd-party-module-not-gated
-    portage = reload(portage)
+    portage = salt.utils.compat.reload(portage)
     return portage.db[portage.root]['vartree']
 
 
 def _porttree():
     import portage  # pylint: disable=3rd-party-module-not-gated
-    portage = reload(portage)
+    portage = salt.utils.compat.reload(portage)
     return portage.db[portage.root]['porttree']
 
 

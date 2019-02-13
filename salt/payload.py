@@ -19,6 +19,7 @@ import salt.transport.frame
 import salt.utils.immutabletypes as immutabletypes
 import salt.utils.stringutils
 from salt.exceptions import SaltReqTimeoutError
+from salt.utils.data import CaseInsensitiveDict
 
 # Import third party libs
 from salt.ext import six
@@ -205,6 +206,8 @@ class Serial(object):
             elif isinstance(obj, (set, immutabletypes.ImmutableSet)):
                 # msgpack can't handle set so translate it to tuple
                 return tuple(obj)
+            elif isinstance(obj, CaseInsensitiveDict):
+                return dict(obj)
             # Nothing known exceptions found. Let msgpack raise it's own.
             return obj
 
