@@ -299,12 +299,6 @@ class ZeroMQCaller(BaseCaller):
     '''
     Object to wrap the calling of local salt modules for the salt-call command
     '''
-    def __init__(self, opts):
-        '''
-        Pass in the command line options
-        '''
-        super(ZeroMQCaller, self).__init__(opts)
-
     def return_pub(self, ret):
         '''
         Return the data up to the master
@@ -313,4 +307,7 @@ class ZeroMQCaller(BaseCaller):
         load = {'cmd': '_return', 'id': self.opts['id']}
         for key, value in six.iteritems(ret):
             load[key] = value
-        channel.send(load)
+        try:
+            channel.send(load)
+        finally:
+            channel.close()

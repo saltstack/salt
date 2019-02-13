@@ -552,7 +552,7 @@ def sync_proxymodules(saltenv=None, refresh=False, extmod_whitelist=None, extmod
 
 def sync_matchers(saltenv=None, refresh=False, extmod_whitelist=None, extmod_blacklist=None):
     '''
-    .. versionadded:: Flourine
+    .. versionadded:: 2019.2.0
 
     Sync engine modules from ``salt://_matchers`` to the minion
 
@@ -780,7 +780,7 @@ def sync_utils(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blackli
 
 def sync_serializers(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blacklist=None):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Sync serializers from ``salt://_serializers`` to the minion
 
@@ -1397,6 +1397,7 @@ def regen_keys():
     # TODO: move this into a channel function? Or auth?
     # create a channel again, this will force the key regen
     channel = salt.transport.client.ReqChannel.factory(__opts__)
+    channel.close()
 
 
 def revoke_auth(preserve_minion_cache=False):
@@ -1433,6 +1434,8 @@ def revoke_auth(preserve_minion_cache=False):
             channel.send(load)
         except SaltReqTimeoutError:
             ret = False
+        finally:
+            channel.close()
     return ret
 
 

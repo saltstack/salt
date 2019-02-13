@@ -1372,6 +1372,7 @@ def config_get_regexp(key,
         ret.setdefault(param, []).append(value)
     return ret
 
+
 config_get_regex = salt.utils.functools.alias_function(config_get_regexp, 'config_get_regex')
 
 
@@ -1963,7 +1964,7 @@ def discard_local_changes(cwd,
                           ignore_retcode=False,
                           output_encoding=None):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Runs a ``git checkout -- <path>`` from the directory specified by ``cwd``.
 
@@ -3828,7 +3829,7 @@ def remote_refs(url,
         to make this function run faster on repositories with many
         branches/tags.
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     heads : False
         Restrict output to heads. Can be combined with ``tags``.

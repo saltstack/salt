@@ -156,7 +156,7 @@ def present(name, value, zone, record_type, ttl=None, identifier=None, region=No
                                                 return_objs=True,
                                                 in_states=in_states,
                                                 profile=profile)
-        if len(r) < 1:
+        if not r:
             ret['comment'] = 'Error: instance with Name tag {0} not found'.format(name_tag)
             ret['result'] = False
             return ret

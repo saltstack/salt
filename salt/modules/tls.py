@@ -440,10 +440,7 @@ def get_ca(ca_name, as_text=False, cacert_path=None):
         salt '*' tls.get_ca test_ca as_text=False cacert_path=/etc/certs
     '''
     set_ca_path(cacert_path)
-    certp = '{0}/{1}/{2}_ca_cert.crt'.format(
-            cert_base_path(),
-            ca_name,
-            ca_name)
+    certp = '{0}/{1}/{1}_ca_cert.crt'.format(cert_base_path(), ca_name)
     if not os.path.exists(certp):
         raise ValueError('Certificate does not exist for {0}'.format(ca_name))
     else:
@@ -585,7 +582,7 @@ def _get_expiration_date(cert):
 
 def get_expiration_date(cert, date_format='%Y-%m-%d'):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Get a certificate's expiration date
 
@@ -821,8 +818,8 @@ def create_ca(ca_name,
 
     ret = ('Created Private Key: "{0}/{1}/{2}.key." ').format(
         cert_base_path(), ca_name, ca_filename)
-    ret += ('Created CA "{0}": "{1}/{2}/{3}.crt."').format(
-        ca_name, cert_base_path(), ca_name, ca_filename)
+    ret += ('Created CA "{0}": "{1}/{0}/{2}.crt."').format(
+        ca_name, cert_base_path(), ca_filename)
 
     return ret
 
@@ -906,8 +903,9 @@ def get_extensions(cert_type):
                 'tls.extensions:{0}'.format(cert_type))
         except NameError as e:
             log.debug(
-                'pillar, tls:extensions:{0} not available or '
-                'not operating in a salt context\n{1}'.format(cert_type, e))
+                'pillar, tls:extensions:%s not available or '
+                'not operating in a salt context\n%s', cert_type, e
+            )
 
     retval = ext['common']
 
@@ -1486,8 +1484,7 @@ def create_ca_signed_cert(ca_name,
             # recent pyopenssl distros
             log.info('req.get_extensions() not supported in pyOpenSSL versions '
                      'prior to 0.15. Processing extensions internally. '
-                     ' Your version: {0}'.format(
-                         OpenSSL_version))
+                     'Your version: %s', OpenSSL_version)
 
             native_exts_obj = OpenSSL._util.lib.X509_REQ_get_extensions(
                 req._req)
@@ -1502,8 +1499,7 @@ def create_ca_signed_cert(ca_name,
         except Exception:
             log.error('X509 extensions are unsupported in pyOpenSSL '
                       'versions prior to 0.14. Upgrade required to '
-                      'use extensions. Current version: {0}'.format(
-                          OpenSSL_version))
+                      'use extensions. Current version: %s', OpenSSL_version)
 
     cert = OpenSSL.crypto.X509()
     cert.set_version(2)
@@ -1581,9 +1577,8 @@ def create_pkcs12(ca_name, CN, passphrase='', cacert_path=None, replace=False):
         return 'Certificate "{0}" already exists'.format(CN)
 
     try:
-        with salt.utils.files.fopen('{0}/{1}/{2}_ca_cert.crt'.format(cert_base_path(),
-                                                               ca_name,
-                                                               ca_name)) as fhr:
+        with salt.utils.files.fopen(
+                '{0}/{1}/{1}_ca_cert.crt'.format(cert_base_path(), ca_name)) as fhr:
             ca_cert = OpenSSL.crypto.load_certificate(
                 OpenSSL.crypto.FILETYPE_PEM,
                 fhr.read()
@@ -1625,11 +1620,10 @@ def create_pkcs12(ca_name, CN, passphrase='', cacert_path=None, replace=False):
         )
 
     return ('Created PKCS#12 Certificate for "{0}": '
-            '"{1}/{2}/certs/{3}.p12"').format(
+            '"{1}/{2}/certs/{0}.p12"').format(
         CN,
         cert_base_path(),
         ca_name,
-        CN
     )
 
 
@@ -1710,8 +1704,8 @@ def cert_info(cert, digest='sha256'):
         for name in str(ret['extensions']['subjectAltName']).split(', '):
             entry, name = name.split(':', 1)
             if entry not in valid_entries:
-                log.error('Cert {0} has an entry ({1}) which does not start '
-                          'with {2}'.format(ret['subject'], name, '/'.join(valid_entries)))
+                log.error('Cert %s has an entry (%s) which does not start '
+                          'with %s', ret['subject'], name, '/'.join(valid_entries))
             else:
                 valid_names.add(name)
         ret['subject_alt_names'] = list(valid_names)
