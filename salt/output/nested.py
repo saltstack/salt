@@ -33,7 +33,11 @@ import salt.utils.color
 import salt.utils.odict
 import salt.utils.stringutils
 from salt.ext import six
-from collections import Mapping
+
+try:
+    from collections.abc import Mapping
+except ImportError:
+    from collections import Mapping
 
 
 class NestDisplay(object):
