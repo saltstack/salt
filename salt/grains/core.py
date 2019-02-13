@@ -1464,6 +1464,7 @@ _OS_FAMILY_MAP = {
     'IDMS': 'Debian',
     'Funtoo': 'Gentoo',
     'AIX': 'AIX',
+    'TurnKey': 'Debian',
 }
 
 # Matches any possible format:
