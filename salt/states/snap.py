@@ -103,14 +103,11 @@ def removed(name):
     old = __salt__['snap.versions_installed'](name)
     if not old:
         ret['comment'] = 'Package {0} is not installed'.format(name)
-        if __opts__['test']:
-            ret['result'] = True
-        else:
-            ret['result'] = None
-
+        ret['result'] = True
         return ret
 
     if __opts__['test']:
+        ret['comment'] = 'Package {0} would have been removed'.format(name)
         ret['result'] = None
         ret['pchanges']['old'] = old[0]['version']
         ret['pchanges']['new'] = None
