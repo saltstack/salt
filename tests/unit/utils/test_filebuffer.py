@@ -10,14 +10,12 @@
 # Import Python libs
 from __future__ import absolute_import, unicode_literals, print_function
 import os
-import tempfile
 
 # Import Salt Testing libs
 from tests.support.unit import TestCase
-from tests.support.helpers import generate_random_name
+from tests.support.paths import BASE_FILES
 
 # Import salt libs
-import salt.modules.cmdmod as cmdmod
 from salt.utils.filebuffer import BufferedReader, InvalidFileMode
 
 
@@ -39,15 +37,12 @@ class TestFileBuffer(TestCase):
         '''
         https://github.com/saltstack/salt/issues/51309
         '''
-        temp_name = os.path.join(tempfile.gettempdir(),
-                                 generate_random_name(prefix='salt-test-'))
-        cmd = 'tzutil /l > {0}'.format(temp_name)
-        cmdmod.run(cmd=cmd, python_shell=True)
+        file_name = os.path.join(BASE_FILES, 'grail', 'scene33')
 
         def find_value(text):
             stripped_text = text.strip()
             try:
-                with BufferedReader(temp_name) as breader:
+                with BufferedReader(file_name) as breader:
                     for chunk in breader:
                         if stripped_text in chunk:
                             return True
@@ -55,5 +50,4 @@ class TestFileBuffer(TestCase):
             except (IOError, OSError):
                 return False
 
-        self.assertTrue(find_value('(UTC) Coordinated Universal Time'))
-        os.remove(temp_name)
+        self.assertTrue(find_value('We have the Holy Hand Grenade'))
