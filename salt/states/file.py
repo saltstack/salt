@@ -445,8 +445,10 @@ def _gen_recurse_managed_files(
             _filenames = list(filenames)
             for filename in _filenames:
                 if filename.startswith(lname):
-                    log.debug('** skipping file ** {0}, it intersects a '
-                              'symlink'.format(filename))
+                    log.debug(
+                        '** skipping file ** %s, it intersects a symlink',
+                        filename
+                    )
                     filenames.remove(filename)
             # Create the symlink along with the necessary dirs.
             # The dir perms/ownership will be adjusted later
@@ -522,8 +524,10 @@ def _gen_recurse_managed_files(
                 islink = False
                 for link in symlinks:
                     if mdir.startswith(link, 0):
-                        log.debug('** skipping empty dir ** {0}, it intersects'
-                                  ' a symlink'.format(mdir))
+                        log.debug(
+                            '** skipping empty dir ** %s, it intersects a '
+                            'symlink', mdir
+                        )
                         islink = True
                         break
                 if islink:
@@ -596,7 +600,7 @@ def _gen_keep_files(name, require, walk_d=None):
                         if _is_child(fn, name):
                             if fun == 'recurse':
                                 fkeep = _gen_recurse_managed_files(**low)[3]
-                                log.debug('Keep from {0}: {1}'.format(fn, fkeep))
+                                log.debug('Keep from %s: %s', fn, fkeep)
                                 keep.update(fkeep)
                             elif walk_d:
                                 walk_ret = set()
@@ -606,7 +610,7 @@ def _gen_keep_files(name, require, walk_d=None):
                                 keep.update(_process(fn))
                     else:
                         keep.add(fn)
-    log.debug('Files to keep from required states: {0}'.format(list(keep)))
+    log.debug('Files to keep from required states: %s', list(keep))
     return list(keep)
 
 
@@ -1132,8 +1136,8 @@ def _get_template_texts(source_list=None,
             context=context_dict,
             **kwargs
         )
-        msg = 'cp.get_template returned {0} (Called with: {1})'
-        log.debug(msg.format(rndrd_templ_fn, source))
+        log.debug('cp.get_template returned %s (Called with: %s)',
+                  rndrd_templ_fn, source)
         if rndrd_templ_fn:
             tmplines = None
             with salt.utils.files.fopen(rndrd_templ_fn, 'rb') as fp_:
@@ -1141,10 +1145,12 @@ def _get_template_texts(source_list=None,
                 tmplines = salt.utils.stringutils.to_unicode(tmplines)
                 tmplines = tmplines.splitlines(True)
             if not tmplines:
-                msg = 'Failed to read rendered template file {0} ({1})'
-                log.debug(msg.format(rndrd_templ_fn, source))
+                msg = 'Failed to read rendered template file {0} ({1})'.format(
+                    rndrd_templ_fn, source
+                )
+                log.debug(msg)
                 ret['name'] = source
-                return _error(ret, msg.format(rndrd_templ_fn, source))
+                return _error(ret, msg)
             txtl.append(''.join(tmplines))
         else:
             msg = 'Failed to load template file {0}'.format(source)
@@ -1319,6 +1325,8 @@ def symlink(
         makedirs=False,
         user=None,
         group=None,
+        copy_target_user=False,
+        copy_target_group=False,
         mode=None,
         win_owner=None,
         win_perms=None,
@@ -1369,6 +1377,20 @@ def symlink(
         The group ownership set for the file, this defaults to the group salt
         is running as on the minion. On Windows, this is ignored
 
+    copy_target_user : False
+        If True, set the symlink's owner to that of the target. If ``user`` is
+        also passed, it will be used instead. This option requires the target
+        to exist.
+
+        .. versionadded:: 2019.2.0
+
+    copy_target_group : False
+        If True, set the symlink's group to that of the target. If ``group`` is
+        also passed, it will be used instead. This option requires the target
+        to exist.
+
+        .. versionadded:: 2019.2.0
+
     mode
         The permissions to set on this file, aka 644, 0775, 4664. Not supported
         on Windows.
@@ -1411,6 +1433,17 @@ def symlink(
     if not name:
         return _error(ret, 'Must provide name to file.symlink')
 
+    if copy_target_user:
+        if user:
+            log.warning('`copy_target_user` and `user` are mutually exclusive. Using `user`.')
+        else:
+            try:
+                user = __salt__['file.get_user'](target)
+            except CommandExecutionError:
+                ret['result'] = False
+                ret['comment'] = '`copy_target_user` is set, but target `{0}` does not exist.'.format(target)
+                return ret
+
     if user is None:
         user = __opts__['user']
 
@@ -1432,11 +1465,30 @@ def symlink(
         # Group isn't relevant to Windows, use win_perms/win_deny_perms
         if group is not None:
             log.warning(
-                'The group argument for {0} has been ignored as this '
+                'The group argument for %s has been ignored as this '
+                'is a Windows system. Please use the `win_*` parameters to set '
+                'permissions in Windows.', name
+            )
+
+        if copy_target_group is not None:
+            log.warning(
+                'The copy_target_group argument for {0} has been ignored as this '
                 'is a Windows system. Please use the `win_*` parameters to set '
                 'permissions in Windows.'.format(name)
             )
+
         group = user
+
+    if copy_target_group:
+        if group:
+            log.warning('`copy_target_group` and `group` are mutually exclusive. Using `group`.')
+        else:
+            try:
+                group = __salt__['file.get_group'](target)
+            except CommandExecutionError:
+                ret['result'] = False
+                ret['comment'] = '`copy_target_group` is set, but target `{0}` does not exist.'.format(target)
+                return ret
 
     if group is None:
         group = __salt__['file.gid_to_group'](
@@ -2207,7 +2259,7 @@ def managed(name,
         .. versionadded:: 0.17.0
         .. versionchanged:: 2016.11.0
             contents_pillar can also be a list, and the pillars will be
-            concatinated together to form one file.
+            concatenated together to form one file.
 
 
         Operates like ``contents``, but draws from a value stored in pillar,
@@ -2248,7 +2300,7 @@ def managed(name,
         .. note::
             The private key above is shortened to keep the example brief, but
             shows how to do multiline string in YAML. The key is followed by a
-            pipe character, and the mutliline string is indented two more
+            pipe character, and the multiline string is indented two more
             spaces.
 
             To avoid the hassle of creating an indented multiline YAML string,
@@ -2549,11 +2601,11 @@ def managed(name,
     if not source and contents_count == 0 and replace:
         replace = False
         log.warning(
-            'State for file: {0} - Neither \'source\' nor \'contents\' nor '
+            'State for file: %s - Neither \'source\' nor \'contents\' nor '
             '\'contents_pillar\' nor \'contents_grains\' was defined, yet '
             '\'replace\' was set to \'True\'. As there is no source to '
             'replace the file with, \'replace\' has been set to \'False\' to '
-            'avoid reading the file unnecessarily.'.format(name)
+            'avoid reading the file unnecessarily.', name
         )
 
     if 'file_mode' in kwargs:
@@ -2674,9 +2726,9 @@ def managed(name,
         # Group isn't relevant to Windows, use win_perms/win_deny_perms
         if group is not None:
             log.warning(
-                'The group argument for {0} has been ignored as this is '
+                'The group argument for %s has been ignored as this is '
                 'a Windows system. Please use the `win_*` parameters to set '
-                'permissions in Windows.'.format(name)
+                'permissions in Windows.', name
             )
         group = user
 
@@ -2709,6 +2761,7 @@ def managed(name,
             ret, 'Defaults must be formed as a dict')
 
     if not replace and os.path.exists(name):
+        ret_perms = {}
         # Check and set the permissions if necessary
         if salt.utils.platform.is_windows():
             ret = __salt__['file.check_perms'](
@@ -2720,14 +2773,23 @@ def managed(name,
                 inheritance=win_inheritance,
                 reset=win_perms_reset)
         else:
-            ret, _ = __salt__['file.check_perms'](
+            ret, ret_perms = __salt__['file.check_perms'](
                 name, ret, user, group, mode, attrs, follow_symlinks,
                 seuser=seuser,
                 serole=serole,
                 setype=setype,
                 serange=serange)
         if __opts__['test']:
-            ret['comment'] = 'File {0} not updated'.format(name)
+            if isinstance(ret_perms, dict) and \
+               'lmode' in ret_perms and \
+               mode != ret_perms['lmode']:
+                ret['comment'] = ('File {0} will be updated with permissions '
+                                  '{1} from its current '
+                                  'state of {2}'.format(name,
+                                                        mode,
+                                                        ret_perms['lmode']))
+            else:
+                ret['comment'] = 'File {0} not updated'.format(name)
         elif not ret['changes'] and ret['result']:
             ret['comment'] = ('File {0} exists with proper permissions. '
                               'No changes made.'.format(name))
@@ -3179,7 +3241,7 @@ def directory(name,
         example: ``{'Administrators': {'perms': 'full_control', 'applies_to':
         'this_folder_only'}}`` Can be a single basic perm or a list of advanced
         perms. ``perms`` must be specified. ``applies_to`` is optional and
-        defaults to ``this_folder_subfoler_files``.
+        defaults to ``this_folder_subfolder_files``.
 
         .. versionadded:: 2017.7.0
 
@@ -3256,9 +3318,9 @@ def directory(name,
         # Group isn't relevant to Windows, use win_perms/win_deny_perms
         if group is not None:
             log.warning(
-                'The group argument for {0} has been ignored as this is '
+                'The group argument for %s has been ignored as this is '
                 'a Windows system. Please use the `win_*` parameters to set '
-                'permissions in Windows.'.format(name)
+                'permissions in Windows.', name
             )
         group = user
 
@@ -3788,8 +3850,8 @@ def recurse(name,
     if salt.utils.platform.is_windows():
         if group is not None:
             log.warning(
-                'The group argument for {0} has been ignored as this '
-                'is a Windows system.'.format(name)
+                'The group argument for %s has been ignored as this '
+                'is a Windows system.', name
             )
         group = user
     ret = {
@@ -4869,7 +4931,7 @@ def keyvalue(
                 tmpdiff.append('+ {0}'.format(line))
                 content.append(line)
                 changes += 1
-        if len(tmpdiff):
+        if tmpdiff:
             tmpdiff.insert(0, '- <EOF>'+os.linesep)
             tmpdiff.append('+ <EOF>'+os.linesep)
             diff.extend(tmpdiff)
@@ -6059,7 +6121,7 @@ def patch(name,
     '''
     Ensure that a patch has been applied to the specified file or directory
 
-    .. versionchanged:: Fluorine
+    .. versionchanged:: 2019.2.0
         The ``hash`` and ``dry_run_first`` options are now ignored, as the
         logic which determines whether or not the patch has already been
         applied no longer requires them. Additionally, this state now supports
@@ -6082,7 +6144,7 @@ def patch(name,
     source
         The patch file to apply
 
-        .. versionchanged:: Fluorine
+        .. versionchanged:: 2019.2.0
             The source can now be from any file source supported by Salt
             (``salt://``, ``http://``, ``https://``, ``ftp://``, etc.).
             Templating is also now supported.
@@ -6091,37 +6153,37 @@ def patch(name,
         Works the same way as in :py:func:`file.managed
         <salt.states.file.managed>`.
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     source_hash_name
         Works the same way as in :py:func:`file.managed
         <salt.states.file.managed>`
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     skip_verify
         Works the same way as in :py:func:`file.managed
         <salt.states.file.managed>`
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     template
         Works the same way as in :py:func:`file.managed
         <salt.states.file.managed>`
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     context
         Works the same way as in :py:func:`file.managed
         <salt.states.file.managed>`
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     defaults
         Works the same way as in :py:func:`file.managed
         <salt.states.file.managed>`
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     options
         Extra options to pass to patch. This should not be necessary in most
@@ -6143,7 +6205,7 @@ def patch(name,
             The parent directory must exist. Also, this will overwrite the file
             if it is already present.
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     strip
         Number of directories to strip from paths in the patch file. For
@@ -6157,7 +6219,7 @@ def patch(name,
                 - source: salt://myfile.patch
                 - strip: 1
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
             In previous versions, ``-p1`` would need to be passed as part of
             the ``options`` value.
 
@@ -6651,8 +6713,8 @@ def copy_(name,
         if salt.utils.platform.is_windows():
             if group is not None:
                 log.warning(
-                    'The group argument for {0} has been ignored as this is '
-                    'a Windows system.'.format(name)
+                    'The group argument for %s has been ignored as this is '
+                    'a Windows system.', name
                 )
             group = user
 
@@ -7101,7 +7163,7 @@ def serialize(name,
         deserializing JSON, arguments like ``parse_float`` and ``parse_int``
         which accept a callable object cannot be handled in an SLS file.
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     For example, this state:
 

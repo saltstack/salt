@@ -33,6 +33,7 @@ import salt.utils.functools
 import salt.utils.hashutils
 import salt.utils.jid
 import salt.utils.json
+import salt.utils.msgpack
 import salt.utils.platform
 import salt.utils.state
 import salt.utils.stringutils
@@ -45,7 +46,6 @@ from salt.utils.odict import OrderedDict
 
 # Import 3rd-party libs
 from salt.ext import six
-import msgpack
 
 __proxyenabled__ = ['*']
 
@@ -185,7 +185,7 @@ def _get_pause(jid, state_id=None):
             data[state_id] = {}
     if os.path.exists(pause_path):
         with salt.utils.files.fopen(pause_path, 'rb') as fp_:
-            data = msgpack.loads(fp_.read())
+            data = salt.utils.msgpack.loads(fp_.read())
     return data, pause_path
 
 
@@ -256,7 +256,7 @@ def soft_kill(jid, state_id=None):
     data, pause_path = _get_pause(jid, state_id)
     data[state_id]['kill'] = True
     with salt.utils.files.fopen(pause_path, 'wb') as fp_:
-        fp_.write(msgpack.dumps(data))
+        fp_.write(salt.utils.msgpack.dumps(data))
 
 
 def pause(jid, state_id=None, duration=None):
@@ -291,7 +291,7 @@ def pause(jid, state_id=None, duration=None):
     if duration:
         data[state_id]['duration'] = int(duration)
     with salt.utils.files.fopen(pause_path, 'wb') as fp_:
-        fp_.write(msgpack.dumps(data))
+        fp_.write(salt.utils.msgpack.dumps(data))
 
 
 def resume(jid, state_id=None):
@@ -325,7 +325,7 @@ def resume(jid, state_id=None):
     if state_id == '__all__':
         data = {}
     with salt.utils.files.fopen(pause_path, 'wb') as fp_:
-        fp_.write(msgpack.dumps(data))
+        fp_.write(salt.utils.msgpack.dumps(data))
 
 
 def orchestrate(mods,
@@ -772,7 +772,7 @@ def apply_(mods=None, **kwargs):
             :ref:`highstate <running-highstate>` automatically syncs all custom
             module types.
 
-        .. versionadded:: 2017.7.8,2018.3.3,Fluorine
+        .. versionadded:: 2017.7.8,2018.3.3,2019.2.0
     '''
     if mods:
         return sls(mods, **kwargs)
@@ -1199,7 +1199,7 @@ def sls(mods, test=None, exclude=None, queue=False, sync_mods=None, **kwargs):
             salt '*' state.sls stuff sync_mods=states,modules
             salt '*' state.sls stuff sync_mods=all
 
-        .. versionadded:: 2017.7.8,2018.3.3,Fluorine
+        .. versionadded:: 2017.7.8,2018.3.3,2019.2.0
 
     CLI Example:
 
@@ -1603,7 +1603,7 @@ def show_states(queue=False, **kwargs):
 
         salt '*' state.show_states
 
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     '''
     conflict = _check_queue(queue, kwargs)
@@ -1945,7 +1945,7 @@ def sls_exists(mods, test=None, queue=False, **kwargs):
     rather than returning state details, returns True or False. The default
     environment is ``base``, use ``saltenv`` to specify a different environment.
 
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     saltenv
         Specify a salt fileserver environment from which to look for the SLS files
@@ -1970,7 +1970,7 @@ def id_exists(ids, mods, test=None, queue=False, **kwargs):
     <salt.modules.state.sls_exists>`, returns True or False. The default
     environment is base``, use ``saltenv`` to specify a different environment.
 
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     saltenv
         Specify a salt fileserver environment from which to look for the SLS files
@@ -2362,7 +2362,7 @@ def event(tagmatch='*',
     Watch Salt's event bus and block until the given tag is matched
 
     .. versionadded:: 2016.3.0
-    .. versionchanged:: Fluorine
+    .. versionchanged:: 2019.2.0
         ``tagmatch`` can now be either a glob or regular expression.
 
     This is useful for utilizing Salt's event bus from shell scripts or for

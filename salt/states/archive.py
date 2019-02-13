@@ -1057,7 +1057,7 @@ def extracted(name,
 
     if enforce_toplevel and contents is not None \
             and (len(contents['top_level_dirs']) > 1
-                 or len(contents['top_level_files']) > 0):
+                 or contents['top_level_files']):
         ret['comment'] = ('Archive does not have a single top-level directory. '
                           'To allow this archive to be extracted, set '
                           '\'enforce_toplevel\' to False. To avoid a '
@@ -1477,7 +1477,7 @@ def extracted(name,
                             enforce_failed.append(filename)
 
     if extraction_needed:
-        if len(files) > 0:
+        if files:
             if created_destdir:
                 ret['changes']['directories_created'] = [name]
             ret['changes']['extracted_files'] = files

@@ -3,6 +3,7 @@
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 import os
+import random
 import sys
 import tempfile
 import textwrap
@@ -151,6 +152,28 @@ class CMDModuleTest(ModuleCase):
                                 python_shell=True)
 
         self.assertEqual(ret, 0)
+
+    def test_run_all_with_success_stderr(self):
+        '''
+        cmd.run with success_retcodes
+        '''
+        random_file = "{0}{1}{2}".format(RUNTIME_VARS.TMP_ROOT_DIR,
+                                         os.path.sep,
+                                         random.random())
+
+        if salt.utils.platform.is_windows():
+            func = 'type'
+            expected_stderr = 'The system cannot find the file specified.'
+        else:
+            func = 'cat'
+            expected_stderr = 'cat: {0}: No such file or directory'.format(random_file)
+        ret = self.run_function('cmd.run_all',
+                                ['{0} {1}'.format(func, random_file)],
+                                success_stderr=[expected_stderr],
+                                python_shell=True)
+
+        self.assertTrue('retcode' in ret)
+        self.assertEqual(ret.get('retcode'), 0)
 
     def test_blacklist_glob(self):
         '''

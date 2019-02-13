@@ -2,7 +2,7 @@
 '''
 watchdog beacon
 
-.. versionadded:: Fluorine
+.. versionadded:: 2019.2.0
 
 Watch files and translate the changes into salt events
 

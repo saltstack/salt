@@ -48,7 +48,7 @@ class PortageConfigTestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
         try:
-            import portage
+            import portage  # pylint: disable=unused-import
             return {}
         except ImportError:
             dummy_atom = self.DummyAtom()

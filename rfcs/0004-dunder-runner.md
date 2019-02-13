@@ -1,7 +1,7 @@
 - Feature Name: Rename ``__salt__`` to ``__runner__`` in the Runner functions
 - Start Date: 2019-01-02
 - RFC PR: 
-- Salt Issue: 
+- Salt Issue: #51039
 
 # Summary
 [summary]: #summary

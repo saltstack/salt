@@ -28,6 +28,7 @@ class DuplicateKeyWarning(RuntimeWarning):
     Warned when duplicate keys exist
     '''
 
+
 warnings.simplefilter('always', category=DuplicateKeyWarning)
 
 
