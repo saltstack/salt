@@ -1374,7 +1374,7 @@ class GitPython(GitProvider):
                     log.warning('Broken symlink: %s', link_path)
 
                 if target_valid and isinstance(tree[link_tgt], git.Tree):
-                        symlink_dirs[link_path] = link_tgt
+                    symlink_dirs[link_path] = link_tgt
                 else:
                     files.add(file_path)
             else:
