@@ -181,7 +181,7 @@ class TestDaemon(object):
     '''
     Set up the master and minion daemons, and run related cases
     '''
-    MINIONS_CONNECT_TIMEOUT = MINIONS_SYNC_TIMEOUT = 120
+    MINIONS_CONNECT_TIMEOUT = MINIONS_SYNC_TIMEOUT = 300
 
     def __init__(self, parser):
         self.parser = parser
@@ -216,6 +216,8 @@ class TestDaemon(object):
 
         if getattr(self.parser.options, 'ssh', False):
             self.prep_ssh()
+
+        self.wait_for_minions(time.time(), self.MINIONS_CONNECT_TIMEOUT)
 
         if self.parser.options.sysinfo:
             try:
@@ -1321,3 +1323,20 @@ class TestDaemon(object):
     def sync_minion_grains(self, targets, timeout=None):
         salt.utils.appendproctitle('SyncMinionGrains')
         self.sync_minion_modules_('grains', targets, timeout=timeout)
+
+    def wait_for_minions(self, start, timeout, sleep=5):
+        '''
+        Ensure all minions and masters (including sub-masters) are connected.
+        '''
+        while True:
+            try:
+                ret = self.client.run_job('*', 'test.ping')
+            except salt.exceptions.SaltClientError:
+                ret = None
+            if ret and 'minions' not in ret:
+                continue
+            if ret and sorted(ret['minions']) == ['minion', 'sub_minion']:
+                break
+            if time.time() - start >= timeout:
+                raise RuntimeError("Ping Minions Failed")
+            time.sleep(sleep)
