@@ -137,7 +137,10 @@ def _fetch_option(cfg, ret_config, virtualname, attr_name):
     if not ret_config:
         # Using the default configuration key
         if isinstance(cfg, dict):
-            return c_cfg.get(attr_name, cfg.get(default_cfg_key))
+            if default_cfg_key in cfg:
+                return cfg[default_cfg_key]
+            else:
+                return c_cfg.get(attr_name)
         else:
             return c_cfg.get(attr_name, cfg(default_cfg_key))
 

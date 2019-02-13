@@ -87,6 +87,7 @@ def __virtual__():
         return 'keystone'
     return (False, 'keystone execution module cannot be loaded: keystoneclient python library not available.')
 
+
 __opts__ = {}
 
 

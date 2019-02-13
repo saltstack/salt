@@ -163,10 +163,10 @@ A few examples of salt states from the community:
 * https://github.com/bclermont/states
 * https://github.com/pcrews/salt-data
 
-Follow on ohloh
-===============
+Follow on Open Hub
+==================
 
-https://www.ohloh.net/p/salt
+https://www.openhub.net/p/salt
 
 Other community links
 =====================
@@ -178,6 +178,7 @@ Other community links
 - `Facebook <https://www.facebook.com/SaltStack>`_
 - `Twitter <https://twitter.com/SaltStackInc>`_
 - `Wikipedia page <http://en.wikipedia.org/wiki/Salt_(software)>`_
+- `Stack Overflow <https://stackoverflow.com/questions/tagged/salt-stack>`_
 
 Hack the Source
 ===============

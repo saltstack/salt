@@ -72,6 +72,7 @@ def __virtual__():
 
     return __virtualname__
 
+
 __func_alias__ = {
     'time_': 'time'
 }

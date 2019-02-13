@@ -226,6 +226,7 @@ def _resolve_user_group_names(opts):
                 if _info and _param in _info:
                     _id = _info[_param]
             opts[ind] = _param + '=' + six.text_type(_id)
+        opts[ind] = opts[ind].replace('\\040', '\\ ')
     return opts
 
 
@@ -727,7 +728,7 @@ def set_fstab(
         'name': name,
         'device': device.replace('\\ ', '\\040'),
         'fstype': fstype,
-        'opts': opts,
+        'opts': opts.replace('\\ ', '\\040'),
         'dump': dump,
         'pass_num': pass_num,
     }

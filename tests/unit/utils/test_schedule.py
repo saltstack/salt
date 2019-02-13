@@ -7,6 +7,7 @@
 from __future__ import absolute_import, print_function, unicode_literals
 import copy
 import datetime
+import logging
 import os
 
 # Import Salt Testing Libs
@@ -26,6 +27,7 @@ except ImportError:
     _CRON_SUPPORTED = False
 # pylint: enable=import-error
 
+log = logging.getLogger(__name__)
 
 ROOT_DIR = os.path.join(integration.TMP, 'schedule-unit-tests')
 SOCK_DIR = os.path.join(ROOT_DIR, 'test-socks')
@@ -331,3 +333,42 @@ class ScheduleTestCase(TestCase):
         self.schedule.eval()
         self.assertTrue(self.schedule.opts['schedule']['testjob']['_splay'] >
                         self.schedule.opts['schedule']['testjob']['_next_fire_time'])
+
+    def test_handle_func_schedule_minion_blackout(self):
+        '''
+        Tests eval if the schedule from pillar is not a dictionary
+        '''
+        self.schedule.opts.update({'pillar': {'schedule': {}}})
+        self.schedule.opts.update({'grains': {'minion_blackout': True}})
+
+        self.schedule.opts.update(
+            {'schedule': {'testjob': {'function': 'test.true',
+                                      'seconds': 60}}})
+        data = {'function': 'test.true',
+                '_next_scheduled_fire_time': datetime.datetime(2018,
+                                                               11,
+                                                               21,
+                                                               14,
+                                                               9,
+                                                               53,
+                                                               903438),
+                'run': True,
+                'name': 'testjob',
+                'seconds': 60,
+                '_splay': None,
+                '_seconds': 60,
+                'jid_include': True,
+                'maxrunning': 1,
+                '_next_fire_time': datetime.datetime(2018,
+                                                     11,
+                                                     21,
+                                                     14,
+                                                     8,
+                                                     53,
+                                                     903438)}
+
+        with patch.object(salt.utils.schedule, 'log') as log_mock:
+            with patch('salt.utils.process.daemonize'), \
+                patch('sys.platform', 'linux2'):
+                self.schedule.handle_func(False, 'test.ping', data)
+                self.assertTrue(log_mock.exception.called)

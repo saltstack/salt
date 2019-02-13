@@ -212,6 +212,7 @@ def list_tab(user):
             ret['pre'].append(line)
     return ret
 
+
 # For consistency's sake
 ls = salt.utils.functools.alias_function(list_tab, 'ls')
 
@@ -316,5 +317,6 @@ def rm_job(user,
         return comdat['stderr']
 
     return ret
+
 
 rm = salt.utils.functools.alias_function(rm_job, 'rm')

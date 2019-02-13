@@ -2,12 +2,15 @@
 from __future__ import absolute_import, unicode_literals
 import os
 import logging
+
+import salt.utils.files
+from salt.ext import six
+
+from tests.support.helpers import with_tempfile
 from tests.support.paths import BASE_FILES
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
 from tests.support.mixins import SaltReturnAssertsMixin
-
-import salt.utils.files
 
 try:
     import M2Crypto  # pylint: disable=W0611
@@ -19,48 +22,42 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 
+@skipIf(not HAS_M2CRYPTO, 'Skip when no M2Crypto found')
 class x509Test(ModuleCase, SaltReturnAssertsMixin):
 
-    def tearDown(self):
-        paths = [
-            '/test-49027.crt',
-            '/test-ca-49008.key',
-            '/test-ca-49008.crt',
-        ]
-        for path in paths:
-            try:
-                os.remove(path)
-            except Exception:
-                pass
+    @classmethod
+    def setUpClass(cls):
+        cert_path = os.path.join(BASE_FILES, 'x509_test.crt')
+        with salt.utils.files.fopen(cert_path) as fp:
+            cls.x509_cert_text = fp.read()
 
-    @staticmethod
-    def get_cert_lines(path):
-        lines = []
-        started = False
-        with salt.utils.files.fopen(path, 'rb') as fp:
-            for line in fp:
-                if line.find(b'-----BEGIN CERTIFICATE-----') != -1:
-                    started = True
-                    continue
-                if line.find(b'-----END CERTIFICATE-----') != -1:
-                    break
-                if started:
-                    lines.append(line.strip())
-        return lines
+    def run_function(self, *args, **kwargs):
+        ret = super(x509Test, self).run_function(*args, **kwargs)
+        log.debug('ret = %s', ret)
+        return ret
 
-    @skipIf(not HAS_M2CRYPTO, 'Skip when no M2Crypto found')
-    def test_issue_49027(self):
-        expected = self.get_cert_lines(os.path.join(BASE_FILES, 'issue-49027.sls'))
-        started = False
-        ret = self.run_function('state.sls', ['issue-49027'])
-        log.warn("ret = %s", repr(ret))
-        self.assertSaltTrueReturn(ret)
-        self.assertEqual(expected, self.get_cert_lines('/test-49027.crt'))
+    @with_tempfile(suffix='.pem', create=False)
+    def test_issue_49027(self, pemfile):
+        ret = self.run_state(
+            'x509.pem_managed',
+            name=pemfile,
+            text=self.x509_cert_text)
+        assert isinstance(ret, dict), ret
+        ret = ret[next(iter(ret))]
+        assert ret.get('result') is True, ret
+        with salt.utils.files.fopen(pemfile) as fp:
+            result = fp.readlines()
+        self.assertEqual(self.x509_cert_text.splitlines(True), result)
 
-    @skipIf(not HAS_M2CRYPTO, 'Skip when no M2Crypto found')
-    def test_issue_49008(self):
-        ret = self.run_function('state.sls', ['issue-49008'])
-        log.warn("ret = %s", repr(ret))
-        self.assertSaltTrueReturn(ret)
-        self.assertTrue(os.path.exists('/test-ca-49008.key'))
-        self.assertTrue(os.path.exists('/test-ca-49008.crt'))
+    @with_tempfile(suffix='.crt', create=False)
+    @with_tempfile(suffix='.key', create=False)
+    def test_issue_49008(self, keyfile, crtfile):
+        ret = self.run_function(
+            'state.apply',
+            ['issue-49008'],
+            pillar={'keyfile': keyfile, 'crtfile': crtfile})
+        assert isinstance(ret, dict), ret
+        for state_result in six.itervalues(ret):
+            assert state_result['result'] is True, state_result
+        assert os.path.exists(keyfile)
+        assert os.path.exists(crtfile)

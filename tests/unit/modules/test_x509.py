@@ -136,7 +136,7 @@ c9bcgp7D7xD+TxWWNj4CSXEccJgGr91StV+gFg4ARQ==
         '''
         ret = x509.create_private_key(text=True,
                                       passphrase='super_secret_passphrase')
-        self.assertIn(b'BEGIN RSA PRIVATE KEY', ret)
+        self.assertIn('BEGIN RSA PRIVATE KEY', ret)
 
     @skipIf(not HAS_M2CRYPTO, 'Skipping, M2Crypto is unavailble')
     def test_create_certificate(self):
@@ -176,7 +176,7 @@ c9bcgp7D7xD+TxWWNj4CSXEccJgGr91StV+gFg4ARQ==
                                       authorityKeyIdentifier='keyid,issuer:always',
                                       days_valid=3650,
                                       days_remaining=0)
-        self.assertIn(b'BEGIN CERTIFICATE', ret)
+        self.assertIn('BEGIN CERTIFICATE', ret)
 
     @skipIf(not HAS_M2CRYPTO, 'Skipping, M2Crypto is unavailble')
     def test_create_crl(self):
@@ -240,7 +240,7 @@ c9bcgp7D7xD+TxWWNj4CSXEccJgGr91StV+gFg4ARQ==
         os.remove(ca_crl_file.name)
 
         # Ensure that a CRL was actually created
-        self.assertIn(b'BEGIN X509 CRL', crl)
+        self.assertIn('BEGIN X509 CRL', crl)
 
     @skipIf(not HAS_M2CRYPTO, 'Skipping, M2Crypto is unavailble')
     def test_revoke_certificate_with_crl(self):

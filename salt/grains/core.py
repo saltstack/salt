@@ -22,6 +22,7 @@ import locale
 import uuid
 from errno import EACCES, EPERM
 import datetime
+import warnings
 
 __proxyenabled__ = ['*']
 __FQDN__ = None
@@ -34,7 +35,12 @@ _supported_dists += ('arch', 'mageia', 'meego', 'vmware', 'bluewhite64',
 
 # linux_distribution deprecated in py3.7
 try:
-    from platform import linux_distribution
+    from platform import linux_distribution as _deprecated_linux_distribution
+
+    def linux_distribution(**kwargs):
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            return _deprecated_linux_distribution(**kwargs)
 except ImportError:
     from distro import linux_distribution
 
@@ -909,7 +915,7 @@ def _virtual(osdata):
                 # Tested on CentOS 5.4 / 2.6.18-164.15.1.el5xen
                 grains['virtual_subtype'] = 'Xen Dom0'
             else:
-                if grains.get('productname', '') == 'HVM domU':
+                if osdata.get('productname', '') == 'HVM domU':
                     # Requires dmidecode!
                     grains['virtual_subtype'] = 'Xen HVM DomU'
                 elif os.path.isfile('/proc/xen/capabilities') and \
@@ -926,9 +932,8 @@ def _virtual(osdata):
                 elif isdir('/sys/bus/xen'):
                     if 'xen:' in __salt__['cmd.run']('dmesg').lower():
                         grains['virtual_subtype'] = 'Xen PV DomU'
-                    elif os.listdir('/sys/bus/xen/drivers'):
-                        # An actual DomU will have several drivers
-                        # whereas a paravirt ops kernel will  not.
+                    elif os.path.isfile('/sys/bus/xen/drivers/xenconsole'):
+                        # An actual DomU will have the xenconsole driver
                         grains['virtual_subtype'] = 'Xen PV DomU'
             # If a Dom0 or DomU was detected, obviously this is xen
             if 'dom' in grains.get('virtual_subtype', '').lower():
@@ -1004,10 +1009,11 @@ def _virtual(osdata):
             if 'QEMU Virtual CPU' in model:
                 grains['virtual'] = 'kvm'
     elif osdata['kernel'] == 'OpenBSD':
-        if osdata['manufacturer'] in ['QEMU', 'Red Hat']:
-            grains['virtual'] = 'kvm'
-        if osdata['manufacturer'] == 'OpenBSD':
-            grains['virtual'] = 'vmm'
+        if 'manufacturer' in osdata:
+            if osdata['manufacturer'] in ['QEMU', 'Red Hat', 'Joyent']:
+                grains['virtual'] = 'kvm'
+            if osdata['manufacturer'] == 'OpenBSD':
+                grains['virtual'] = 'vmm'
     elif osdata['kernel'] == 'SunOS':
         if grains['virtual'] == 'LDOM':
             roles = []
@@ -1174,24 +1180,33 @@ def _windows_platform_data():
         os_release = platform.release()
         kernel_version = platform.version()
         info = salt.utils.win_osinfo.get_os_version_info()
-        server = {'Vista': '2008Server',
-                  '7': '2008ServerR2',
-                  '8': '2012Server',
-                  '8.1': '2012ServerR2',
-                  '10': '2016Server'}
-
-        # Starting with Python 2.7.12 and 3.5.2 the `platform.uname()` function
-        # started reporting the Desktop version instead of the Server version on
-        # Server versions of Windows, so we need to look those up
-        # So, if you find a Server Platform that's a key in the server
-        # dictionary, then lookup the actual Server Release.
-        # (Product Type 1 is Desktop, Everything else is Server)
-        if info['ProductType'] > 1 and os_release in server:
-            os_release = server[os_release]
 
         service_pack = None
         if info['ServicePackMajor'] > 0:
             service_pack = ''.join(['SP', six.text_type(info['ServicePackMajor'])])
+
+        # This creates the osrelease grain based on the Windows Operating
+        # System Product Name. As long as Microsoft maintains a similar format
+        # this should be future proof
+        version = 'Unknown'
+        release = ''
+        if 'Server' in osinfo.Caption:
+            for item in osinfo.Caption.split(' '):
+                # If it's all digits, then it's version
+                if re.match(r'\d+', item):
+                    version = item
+                # If it starts with R and then numbers, it's the release
+                # ie: R2
+                if re.match(r'^R\d+$', item):
+                    release = item
+            os_release = '{0}Server{1}'.format(version, release)
+        else:
+            for item in osinfo.Caption.split(' '):
+                # If it's a number, decimal number, Thin or Vista, then it's the
+                # version
+                if re.match(r'^(\d+(\.\d+)?)|Thin|Vista$', item):
+                    version = item
+            os_release = version
 
         grains = {
             'kernelrelease': _clean_value('kernelrelease', osinfo.Version),
@@ -1380,7 +1395,9 @@ _OS_FAMILY_MAP = {
     'KDE neon': 'Debian',
     'Void': 'Void',
     'IDMS': 'Debian',
-    'AIX': 'AIX'
+    'Funtoo': 'Gentoo',
+    'AIX': 'AIX',
+    'TurnKey': 'Debian',
 }
 
 # Matches any possible format:

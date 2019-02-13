@@ -135,9 +135,7 @@ def setup_handlers():
             transport_registry = TransportRegistry(default_transports)
             url = urlparse(dsn)
             if not transport_registry.supported_scheme(url.scheme):
-                raise ValueError(
-                    'Unsupported Sentry DSN scheme: %s', url.scheme
-                )
+                raise ValueError('Unsupported Sentry DSN scheme: {0}'.format(url.scheme))
         except ValueError as exc:
             log.info(
                 'Raven failed to parse the configuration provided DSN: %s', exc

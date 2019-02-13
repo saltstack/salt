@@ -54,6 +54,7 @@ def _has_required_boto():
     else:
         return True
 
+
 if _has_required_boto():
     region = 'us-east-1'
     access_key = 'GKTADJGHEIQSXMKKRBJ08H'

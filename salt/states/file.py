@@ -677,6 +677,7 @@ def _check_directory(name,
                      group=None,
                      recurse=False,
                      mode=None,
+                     file_mode=None,
                      clean=False,
                      require=False,
                      exclude_pat=None,
@@ -712,6 +713,7 @@ def _check_directory(name,
             if check_files:
                 for fname in files:
                     fchange = {}
+                    mode = file_mode
                     path = os.path.join(root, fname)
                     stats = __salt__['file.stats'](
                         path, None, follow_symlinks
@@ -720,6 +722,8 @@ def _check_directory(name,
                         fchange['user'] = user
                     if group is not None and group != stats.get('group'):
                         fchange['group'] = group
+                    if mode is not None and mode != stats.get('mode'):
+                        fchange['mode'] = mode
                     if fchange:
                         changes[path] = fchange
             if check_dirs:
@@ -2043,7 +2047,7 @@ def managed(name,
 
     contents_pillar
         .. versionadded:: 0.17.0
-        .. versionchanged: 2016.11.0
+        .. versionchanged:: 2016.11.0
             contents_pillar can also be a list, and the pillars will be
             concatinated together to form one file.
 
@@ -2417,7 +2421,6 @@ def managed(name,
                 'to True to allow the managed file to be empty.'
                 .format(contents_id)
             )
-
         if isinstance(use_contents, six.binary_type) and b'\0' in use_contents:
             contents = use_contents
         elif isinstance(use_contents, six.text_type) and str('\0') in use_contents:
@@ -2431,9 +2434,10 @@ def managed(name,
                     'contents_grains is not a string or list of strings, and '
                     'is not binary data. SLS is likely malformed.'
                 )
-            contents = os.linesep.join(
-                [line.rstrip('\n').rstrip('\r') for line in validated_contents]
-            )
+            contents = ''
+            for part in validated_contents:
+                for line in part.splitlines():
+                    contents += line.rstrip('\n').rstrip('\r') + os.linesep
             if contents_newline and not contents.endswith(os.linesep):
                 contents += os.linesep
         if template:
@@ -2499,6 +2503,7 @@ def managed(name,
             ret, 'Defaults must be formed as a dict')
 
     if not replace and os.path.exists(name):
+        ret_perms = {}
         # Check and set the permissions if necessary
         if salt.utils.platform.is_windows():
             ret = __salt__['file.check_perms'](
@@ -2510,10 +2515,19 @@ def managed(name,
                 inheritance=win_inheritance,
                 reset=win_perms_reset)
         else:
-            ret, _ = __salt__['file.check_perms'](
+            ret, ret_perms = __salt__['file.check_perms'](
                 name, ret, user, group, mode, attrs, follow_symlinks)
         if __opts__['test']:
-            ret['comment'] = 'File {0} not updated'.format(name)
+            if isinstance(ret_perms, dict) and \
+               'lmode' in ret_perms and \
+               mode != ret_perms['lmode']:
+                ret['comment'] = ('File {0} will be updated with permissions '
+                                  '{1} from its current '
+                                  'state of {2}'.format(name,
+                                                        mode,
+                                                        ret_perms['lmode']))
+            else:
+                ret['comment'] = 'File {0} not updated'.format(name)
         elif not ret['changes'] and ret['result']:
             ret['comment'] = ('File {0} exists with proper permissions. '
                               'No changes made.'.format(name))
@@ -3119,8 +3133,8 @@ def directory(name,
             win_perms_reset=win_perms_reset)
     else:
         presult, pcomment, pchanges = _check_directory(
-            name, user, group, recurse or [], dir_mode, clean, require,
-            exclude_pat, max_depth, follow_symlinks)
+            name, user, group, recurse or [], dir_mode, file_mode, clean,
+            require, exclude_pat, max_depth, follow_symlinks)
 
     if pchanges:
         ret['pchanges'].update(pchanges)
@@ -3262,7 +3276,7 @@ def directory(name,
                             ret, _ = __salt__['file.check_perms'](
                                 full, ret, user, group, file_mode, None, follow_symlinks)
                     except CommandExecutionError as exc:
-                        if not exc.strerror.endswith('does not exist'):
+                        if not exc.strerror.startswith('Path not found'):
                             errors.append(exc.strerror)
 
             if check_dirs:

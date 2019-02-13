@@ -522,6 +522,10 @@ def _cmp_attrs(path, attrs):
     '''
     diff = [None, None]
 
+    # lsattr for AIX is not the same thing as lsattr for linux.
+    if salt.utils.platform.is_aix():
+        return None
+
     try:
         lattrs = lsattr(path).get(path, '')
     except AttributeError:
@@ -544,6 +548,9 @@ def lsattr(path):
     .. versionadded:: 2018.3.0
     .. versionchanged:: 2018.3.1
         If ``lsattr`` is not installed on the system, ``None`` is returned.
+    .. versionchanged:: 2018.3.4
+        If on ``AIX``, ``None`` is returned even if in filesystem as lsattr on ``AIX``
+        is not the same thing as the linux version.
 
     Obtain the modifiable attributes of the given file. If path
     is to a directory, an empty list is returned.
@@ -557,7 +564,7 @@ def lsattr(path):
 
         salt '*' file.lsattr foo1.txt
     '''
-    if not salt.utils.path.which('lsattr'):
+    if not salt.utils.path.which('lsattr') or salt.utils.platform.is_aix():
         return None
 
     if not os.path.exists(path):
@@ -793,6 +800,7 @@ def get_source_sum(file_name='',
         ret = extract_hash(hash_fn, '', file_name, source, source_hash_name)
         if ret is None:
             _invalid_source_hash_format()
+        ret['hsum'] = ret['hsum'].lower()
         return ret
     else:
         # The source_hash is a hash expression
@@ -836,6 +844,7 @@ def get_source_sum(file_name='',
                     )
                 )
 
+        ret['hsum'] = ret['hsum'].lower()
         return ret
 
 
@@ -1694,6 +1703,8 @@ def _starts_till(src, probe, strip_comments=True):
     if not src or not probe:
         return no_match
 
+    src = src.rstrip('\n\r')
+    probe = probe.rstrip('\n\r')
     if src == probe:
         return equal
 
@@ -2275,6 +2286,8 @@ def replace(path,
                 # Just search; bail as early as a match is found
                 if re.search(cpattern, r_data):
                     return True  # `with` block handles file closure
+                else:
+                    return False
             else:
                 result, nrepl = re.subn(cpattern,
                                         repl.replace('\\', '\\\\') if backslash_literal else repl,
@@ -4465,7 +4478,9 @@ def check_perms(name, ret, user, group, mode, attrs=None, follow_symlinks=False)
 
     is_dir = os.path.isdir(name)
     is_link = os.path.islink(name)
-    if not salt.utils.platform.is_windows() and not is_dir and not is_link:
+    if attrs is not None \
+            and not salt.utils.platform.is_windows() \
+            and not is_dir and not is_link:
         try:
             lattrs = lsattr(name)
         except SaltInvocationError:
@@ -6001,6 +6016,7 @@ def list_backups(path, limit=None):
         [files[x] for x in sorted(files, reverse=True)[:limit]]
     )))
 
+
 list_backup = salt.utils.functools.alias_function(list_backups, 'list_backup')
 
 
@@ -6172,6 +6188,7 @@ def delete_backup(path, backup_id):
         ret['comment'] = 'Successfully removed {0}'.format(backup['Location'])
 
     return ret
+
 
 remove_backup = salt.utils.functools.alias_function(delete_backup, 'remove_backup')
 

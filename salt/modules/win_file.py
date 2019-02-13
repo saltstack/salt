@@ -198,6 +198,7 @@ def __virtual__():
 
     return __virtualname__
 
+
 __outputter__ = {
     'touch': 'txt',
     'append': 'txt',

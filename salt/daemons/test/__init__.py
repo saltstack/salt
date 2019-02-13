@@ -41,5 +41,6 @@ def run(start=None):
     suite = loader.discover(start, 'test_*.py', top)
     unittest.TextTestRunner(verbosity=2).run(suite)
 
+
 if __name__ == "__main__":
     run()

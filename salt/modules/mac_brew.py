@@ -189,6 +189,7 @@ def latest_version(*names, **kwargs):
     else:
         return versions_dict
 
+
 # available_version is being deprecated
 available_version = salt.utils.functools.alias_function(latest_version, 'available_version')
 

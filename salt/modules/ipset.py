@@ -26,6 +26,7 @@ def long_range(start, end):
         yield start
         start += 1
 
+
 _IPSET_FAMILIES = {
         'ipv4': 'inet',
         'ip4': 'inet',

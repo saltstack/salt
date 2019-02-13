@@ -373,7 +373,7 @@ class Fileserver(object):
 
         # Avoid error logging when performing lookups in the LazyDict by
         # instead doing the membership check on the result of a call to its
-        # .keys() attribute rather than on the LaztDict itself.
+        # .keys() attribute rather than on the LazyDict itself.
         server_funcs = self.servers.keys()
         try:
             subtract_only = all((x.startswith('-') for x in back))
