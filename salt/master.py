@@ -675,7 +675,7 @@ class Master(SMaster):
             pub_channels = []
             log.info('Creating master publisher process')
             log_queue = salt.log.setup.get_multiprocessing_logging_queue()
-            for transport, opts in iter_transport_opts(self.opts):
+            for _, opts in iter_transport_opts(self.opts):
                 chan = salt.transport.server.PubServerChannel.factory(opts)
                 chan.pre_fork(self.process_manager, kwargs={'log_queue': log_queue})
                 pub_channels.append(chan)
