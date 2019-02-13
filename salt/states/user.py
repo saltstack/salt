@@ -141,13 +141,13 @@ def _changes(name,
             change['empty_password'] = True
         if date is not None and lshad['lstchg'] != date:
             change['date'] = date
-        if mindays and mindays is not 0 and lshad['min'] != mindays:
+        if mindays is not None and lshad['min'] != mindays:
             change['mindays'] = mindays
-        if maxdays and maxdays is not 999999 and lshad['max'] != maxdays:
+        if maxdays is not None and lshad['max'] != maxdays:
             change['maxdays'] = maxdays
-        if inactdays and inactdays is not 0 and lshad['inact'] != inactdays:
+        if inactdays is not None and lshad['inact'] != inactdays:
             change['inactdays'] = inactdays
-        if warndays and warndays is not 7 and lshad['warn'] != warndays:
+        if warndays is not None and lshad['warn'] != warndays:
             change['warndays'] = warndays
         if expire and lshad['expire'] != expire:
             change['expire'] = expire
@@ -469,7 +469,7 @@ def present(name,
             _, algo, shadow_salt, shadow_hash = __salt__['shadow.info'](name)['passwd'].split('$', 4)
             if algo == '1':
                 log.warning('Using MD5 for hashing passwords is considered insecure!')
-            log.debug('Re-using existing shadow salt for hashing password using {}'.format(algorithms.get(algo)))
+            log.debug('Re-using existing shadow salt for hashing password using %s', algorithms.get(algo))
             password = __salt__['shadow.gen_password'](password, crypt_salt=shadow_salt, algorithm=algorithms.get(algo))
         except ValueError:
             log.info('No existing shadow salt found, defaulting to a randomly generated new one')

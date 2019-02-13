@@ -95,6 +95,7 @@ def __virtual__():
     '''
     return HAS_FERNET and salt.utils.versions.check_boto_reqs()
 
+
 log = logging.getLogger(__name__)
 
 

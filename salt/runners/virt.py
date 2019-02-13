@@ -174,7 +174,8 @@ def init(
         saltenv='base',
         enable_vnc=False,
         seed_cmd='seed.apply',
-        enable_qcow=False):
+        enable_qcow=False,
+        serial_type='None'):
     '''
     This routine is used to create a new virtual machine. This routines takes
     a number of options to determine what the newly created virtual machine
@@ -230,6 +231,11 @@ def init(
     enable_qcow
         Clone disk image as a copy-on-write qcow2 image, using downloaded
         `image` as backing file.
+
+    serial_type
+        Enable serial console. Set to 'pty' for serial console or 'tcp' for
+        telnet.
+        Default is 'None'
     '''
     __jid_event__.fire_event({'message': 'Searching for hosts'}, 'progress')
     data = query(host, quiet=True)
@@ -292,6 +298,7 @@ def init(
                 'seed_cmd': seed_cmd,
                 'enable_vnc': enable_vnc,
                 'enable_qcow': enable_qcow,
+                'serial_type': serial_type,
             })
     except SaltClientError as client_error:
         # Fall through to ret error handling below

@@ -2,14 +2,14 @@
 '''
 Module for managing the LXD daemon and its containers.
 
-.. versionadded:: Fluorine
+.. versionadded:: 2019.2.0
 
-`LXD(1)`__ is a container "hypervisor". This execution module provides
+`LXD(1)`_ is a container "hypervisor". This execution module provides
 several functions to help manage it and its containers.
 
-.. note:
+.. note::
 
-    - `pylxd(2)`__ version >=2.2.5 is required to let this work,
+    - `pylxd(2)`_ version >=2.2.5 is required to let this work,
       currently only available via pip.
 
         To install on Ubuntu:
@@ -23,8 +23,8 @@ several functions to help manage it and its containers.
     - for the config_get() and config_get() methods
       you need to have lxd-client installed.
 
-.. __: https://linuxcontainers.org/lxd/
-.. __: https://github.com/lxc/pylxd/blob/master/doc/source/installation.rst
+.. _LXD(1): https://linuxcontainers.org/lxd/
+.. _pylxd(2): https://github.com/lxc/pylxd/blob/master/doc/source/installation.rst
 
 :maintainer: René Jochum <rene@jochums.at>
 :maturity: new
@@ -65,7 +65,7 @@ __docformat__ = 'restructuredtext en'
 
 _pylxd_minimal_version = "2.2.5"
 
-# Keep in sync with: https://github.com/lxc/lxd/blob/master/shared/osarch/architectures.go  # noqa
+# Keep in sync with: https://github.com/lxc/lxd/blob/master/shared/osarch/architectures.go
 _architectures = {
     'unknown': '0',
     'i686': '1',
@@ -78,7 +78,7 @@ _architectures = {
     's390x': '8'
 }
 
-# Keep in sync with: https://github.com/lxc/lxd/blob/master/shared/api/status_code.go  # noqa
+# Keep in sync with: https://github.com/lxc/lxd/blob/master/shared/api/status_code.go
 CONTAINER_STATUS_RUNNING = 103
 
 __virtualname__ = 'lxd'
@@ -328,7 +328,6 @@ def pylxd_client_get(remote_addr=None, cert=None, key=None, verify_cert=True):
 
     .. _requests-docs: http://docs.python-requests.org/en/master/user/advanced/#ssl-cert-verification
 
-    # noqa
     '''
 
     pool_key = '|'.join((six.text_type(remote_addr),
@@ -337,9 +336,7 @@ def pylxd_client_get(remote_addr=None, cert=None, key=None, verify_cert=True):
                          six.text_type(verify_cert),))
 
     if pool_key in _connection_pool:
-        log.debug((
-            'Returning the client "{0}" from our connection pool'
-        ).format(remote_addr))
+        log.debug('Returning the client "%s" from our connection pool', remote_addr)
         return _connection_pool[pool_key]
 
     try:
@@ -375,12 +372,10 @@ def pylxd_client_get(remote_addr=None, cert=None, key=None, verify_cert=True):
                         )
                     )
 
-                log.debug((
-                    'Trying to connecto to "{0}" '
-                    'with cert "{1}", key "{2}" and '
-                    'verify_cert "{3!s}"'.format(
-                        remote_addr, cert, key, verify_cert)
-                ))
+                log.debug(
+                    'Trying to connect to "%s" with cert "%s", key "%s" and '
+                    'verify_cert "%s"', remote_addr, cert, key, verify_cert
+                )
                 client = pylxd.Client(
                     endpoint=remote_addr,
                     cert=(cert, key,),
@@ -462,7 +457,6 @@ def authenticate(remote_addr, password, cert, key, verify_cert=True):
 
     .. _requests-docs: http://docs.python-requests.org/en/master/user/advanced/#ssl-cert-verification
 
-    # noqa
     '''
     client = pylxd_client_get(remote_addr, cert, key, verify_cert)
 
@@ -528,9 +522,10 @@ def container_list(list_names=False, remote_addr=None,
 
         salt '*' lxd.container_list true
 
-    # See: https://github.com/lxc/pylxd/blob/master/doc/source/containers.rst#container-attributes
+    See also `container-attributes`_.
 
-    # noqa
+    .. _container-attributes: https://github.com/lxc/pylxd/blob/master/doc/source/containers.rst#container-attributes
+
     '''
 
     client = pylxd_client_get(remote_addr, cert, key, verify_cert)
@@ -555,21 +550,25 @@ def container_create(name, source, profiles=None,
     source :
         Can be either a string containing an image alias:
              "xenial/amd64"
+
         or an dict with type "image" with alias:
             {"type": "image",
              "alias": "xenial/amd64"}
+
         or image with "fingerprint":
             {"type": "image",
              "fingerprint": "SHA-256"}
+
         or image with "properties":
             {"type": "image",
              "properties": {
                 "os": "ubuntu",
                 "release": "14.04",
-                "architecture": "x86_64"
-             }}
+                "architecture": "x86_64"}}
+
         or none:
             {"type": "none"}
+
         or copy:
             {"type": "copy",
              "source": "my-old-container"}
@@ -636,7 +635,10 @@ def container_create(name, source, profiles=None,
 
         salt '*' lxd.container_create test xenial/amd64
 
-    # See: https://github.com/lxc/lxd/blob/master/doc/rest-api.md#post-1
+    See also the `rest-api-docs`_.
+
+    .. _rest-api-docs: https://github.com/lxc/lxd/blob/master/doc/rest-api.md#post-1
+
     '''
     if profiles is None:
         profiles = ['default']
@@ -1169,8 +1171,6 @@ def container_migrate(name,
 
             # Migrate phpmyadmin from srv01 to srv02
             salt '*' lxd.container_migrate phpmyadmin stop_and_start=true remote_addr=https://srv02:8443 cert=~/.config/lxc/client.crt key=~/.config/lxc/client.key verify_cert=False src_remote_addr=https://srv01:8443
-
-    # noqa
     '''
     if src_cert is None:
         src_cert = cert
@@ -2020,8 +2020,6 @@ def profile_create(name, config=None, devices=None, description=None,
         See the `lxd-docs`_ for the details about the config and devices dicts.
 
         .. _lxd-docs: https://github.com/lxc/lxd/blob/master/doc/rest-api.md#post-10
-
-        # noqa
     '''
     client = pylxd_client_get(remote_addr, cert, key, verify_cert)
 
@@ -2412,8 +2410,6 @@ def profile_device_set(name, device_name, device_type='disk',
         .. code-block:: bash
 
             $ salt '*' lxd.profile_device_set autostart eth1 nic nictype=bridged parent=lxdbr0
-
-        # noqa
     '''
     profile = profile_get(
         name,
@@ -2474,8 +2470,6 @@ def profile_device_delete(name, device_name, remote_addr=None,
         .. code-block:: bash
 
             $ salt '*' lxd.profile_device_delete autostart eth1
-
-        # noqa
 
     '''
     profile = profile_get(
@@ -2776,8 +2770,6 @@ def image_from_simplestreams(server,
         ..code-block:: bash
 
             $ salt '*' lxd.image_from_simplestreams "https://cloud-images.ubuntu.com/releases" "trusty/amd64" aliases='["t", "trusty/amd64"]' auto_update=True
-
-        # noqa
     '''
     if aliases is None:
         aliases = []
@@ -2857,8 +2849,6 @@ def image_from_url(url,
         ..code-block:: bash
 
             $ salt '*' lxd.image_from_url https://dl.stgraber.org/lxd aliases='["busybox-amd64"]'
-
-        # noqa
     '''
     if aliases is None:
         aliases = []
@@ -2938,8 +2928,6 @@ def image_from_file(filename,
         ..code-block:: bash
 
             $ salt '*' lxd.image_from_file salt://lxd/files/busybox.tar.xz aliases=["busybox-amd64"]
-
-        # noqa
     '''
     if aliases is None:
         aliases = []
@@ -3047,17 +3035,12 @@ def image_copy_lxd(source,
     .. code-block:: bash
 
         $ salt '*' lxd.image_copy_lxd xenial/amd64 https://srv01:8443 ~/.config/lxc/client.crt ~/.config/lxc/client.key false https://srv02:8443 ~/.config/lxc/client.crt ~/.config/lxc/client.key false aliases="['xenial/amd64']"
-
-    # noqa
     '''
     if aliases is None:
         aliases = []
 
-    log.debug(
-        'Trying to copy the image "{0}" from "{1}" to "{2}"'.format(
-            source, src_remote_addr, remote_addr
-        )
-    )
+    log.debug('Trying to copy the image "%s" from "%s" to "%s"',
+              source, src_remote_addr, remote_addr)
 
     # This will fail with a SaltInvocationError if
     # the image doesn't exists on the source and with a CommandExecutionError
@@ -3139,8 +3122,6 @@ def image_alias_add(image,
         .. code-block:: bash
 
             $ salt '*' lxd.image_alias_add xenial/amd64 x "Short version of xenial/amd64"
-
-        # noqa
     '''
     image = _verify_image(image, remote_addr, cert, key, verify_cert)
 
@@ -3196,8 +3177,6 @@ def image_alias_delete(image,
         .. code-block:: bash
 
             $ salt '*' lxd.image_alias_add xenial/amd64 x "Short version of xenial/amd64"
-
-        # noqa
     '''
     image = _verify_image(image, remote_addr, cert, key, verify_cert)
 

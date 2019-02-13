@@ -19,7 +19,6 @@ from tests.support.unit import skipIf, TestCase
 from tests.support.case import ModuleCase
 from tests.support.helpers import flaky
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock, Mock
-from tests.support.paths import BASE_FILES
 
 # Import Salt libs
 import salt.config
@@ -53,7 +52,6 @@ try:
 except ImportError:
     HAS_TIMELIB = False
 
-CACHEDIR = os.path.join(RUNTIME_VARS.TMP, 'jinja-template-cache')
 BLINESEP = salt.utils.stringutils.to_bytes(os.linesep)
 
 
@@ -113,7 +111,7 @@ class TestSaltCacheLoader(TestCase):
         self.tempdir = tempfile.mkdtemp()
         self.template_dir = os.path.join(self.tempdir, 'files', 'test')
         _setup_test_dir(
-            os.path.join(BASE_FILES, 'templates'),
+            os.path.join(RUNTIME_VARS.BASE_FILES, 'templates'),
             self.template_dir
         )
         self.opts = {
@@ -153,7 +151,7 @@ class TestSaltCacheLoader(TestCase):
         tmpl_dir = os.path.join(self.template_dir, 'hello_simple')
         self.assertEqual(res[1], tmpl_dir)
         assert res[2](), 'Template up to date?'
-        assert len(loader._file_client.requests)
+        assert loader._file_client.requests
         self.assertEqual(loader._file_client.requests[0]['path'], 'salt://hello_simple')
 
     def get_loader(self, opts=None, saltenv='base'):
@@ -231,7 +229,7 @@ class TestGetTemplate(TestCase):
         self.tempdir = tempfile.mkdtemp()
         self.template_dir = os.path.join(self.tempdir, 'files', 'test')
         _setup_test_dir(
-            os.path.join(BASE_FILES, 'templates'),
+            os.path.join(RUNTIME_VARS.BASE_FILES, 'templates'),
             self.template_dir
         )
         self.local_opts = {
@@ -567,15 +565,15 @@ class TestJinjaDefaultOptions(TestCase):
     def __init__(self, *args, **kws):
         TestCase.__init__(self, *args, **kws)
         self.local_opts = {
-            'cachedir': CACHEDIR,
+            'cachedir': os.path.join(RUNTIME_VARS.TMP, 'jinja-template-cache'),
             'file_client': 'local',
             'file_ignore_regex': None,
             'file_ignore_glob': None,
             'file_roots': {
-                'test': [os.path.join(BASE_FILES, 'templates')]
+                'test': [os.path.join(RUNTIME_VARS.BASE_FILES, 'templates')]
             },
             'pillar_roots': {
-                'test': [os.path.join(BASE_FILES, 'templates')]
+                'test': [os.path.join(RUNTIME_VARS.BASE_FILES, 'templates')]
             },
             'fileserver_backend': ['roots'],
             'hash_type': 'md5',
@@ -628,15 +626,15 @@ class TestCustomExtensions(TestCase):
     def __init__(self, *args, **kws):
         super(TestCustomExtensions, self).__init__(*args, **kws)
         self.local_opts = {
-            'cachedir': CACHEDIR,
+            'cachedir': os.path.join(RUNTIME_VARS.TMP, 'jinja-template-cache'),
             'file_client': 'local',
             'file_ignore_regex': None,
             'file_ignore_glob': None,
             'file_roots': {
-                'test': [os.path.join(BASE_FILES, 'templates')]
+                'test': [os.path.join(RUNTIME_VARS.BASE_FILES, 'templates')]
             },
             'pillar_roots': {
-                'test': [os.path.join(BASE_FILES, 'templates')]
+                'test': [os.path.join(RUNTIME_VARS.BASE_FILES, 'templates')]
             },
             'fileserver_backend': ['roots'],
             'hash_type': 'md5',
