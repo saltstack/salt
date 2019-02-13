@@ -13,6 +13,7 @@ state modules
     acme
     alias
     alternatives
+    ansiblegate
     apache
     apache_conf
     apache_module
@@ -26,6 +27,7 @@ state modules
     beacon
     bigip
     blockdev
+    bluecoat_sslv
     boto3_elasticache
     boto3_route53
     boto_apigateway

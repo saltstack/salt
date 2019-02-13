@@ -49,6 +49,7 @@ import logging
 # Import Salt libs
 import salt.utils.versions
 from salt.ext.six.moves import range
+from salt.exceptions import SaltInvocationError
 log = logging.getLogger(__name__)  # pylint: disable=W1699
 
 # Import third party libs
@@ -115,6 +116,11 @@ def describe_topic(name, region=None, key=None, keyid=None, profile=None):
             # Grab extended attributes for the above subscriptions
             for sub in range(len(ret['Subscriptions'])):
                 sub_arn = ret['Subscriptions'][sub]['SubscriptionArn']
+                if not sub_arn.startswith('arn:aws:sns:'):
+                    # Sometimes a sub is in e.g. PendingAccept or other
+                    # wierd states and doesn't have an ARN yet
+                    log.debug('Subscription with invalid ARN %s skipped...', sub_arn)
+                    continue
                 deets = get_subscription_attributes(SubscriptionArn=sub_arn, region=region,
                         key=key, keyid=keyid, profile=profile)
                 ret['Subscriptions'][sub].update(deets)
@@ -301,7 +307,8 @@ def set_subscription_attributes(SubscriptionArn, AttributeName, AttributeValue, 
         return False
 
 
-def subscribe(TopicArn, Protocol, Endpoint, region=None, key=None, keyid=None, profile=None):
+def subscribe(TopicArn=None, Protocol=None, Endpoint=None,
+              region=None, key=None, keyid=None, profile=None, **kwargs):
     '''
     Subscribe to a Topic.
 
@@ -310,16 +317,33 @@ def subscribe(TopicArn, Protocol, Endpoint, region=None, key=None, keyid=None, p
         salt myminion boto3_sns.subscribe mytopic https https://www.example.com/sns-endpoint
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    kwargs = {k: v for k, v in kwargs.items() if not k.startswith('_')}
+    ## Begin warn_until()
+    if any((TopicArn, Protocol, Endpoint)):
+        if all((TopicArn, Protocol, Endpoint)):
+            salt.utils.versions.warn_until('Sodium', 'Passing positional parameters is deprecated.'
+                                           '  Please update code to use keyword style arguments'
+                                           ' instead.  This will become mandatory in salt version'
+                                           ' {version}.')
+            kwargs.update({'TopicArn': TopicArn, 'Protocol': Protocol, 'Endpoint': Endpoint})
+        else:
+            ## Previous function def required EXACTLY three args
+            raise SaltInvocationError('When passed as positional parameters, all three of '
+                                      '`TopicArn`, `Protocol`, and `Endpoint` are required.')
+    ## End warn_until()
+    for arg in ('TopicArn', 'Protocol', 'Endpoint'):
+        if arg not in kwargs:
+            raise SaltInvocationError('`{}` is a required parameter.'.format(arg))
     try:
-        ret = conn.subscribe(TopicArn=TopicArn, Protocol=Protocol, Endpoint=Endpoint)
-        log.info('Subscribed %s %s to topic %s with SubscriptionArn %s',
-                 Protocol, Endpoint, TopicArn, ret['SubscriptionArn'])
+        ret = conn.subscribe(**kwargs)
+        log.info('Subscribed %s %s to topic %s with SubscriptionArn %s', kwargs['Protocol'],
+                 kwargs['Endpoint'], kwargs['TopicArn'], ret['SubscriptionArn'])
         return ret['SubscriptionArn']
     except botocore.exceptions.ClientError as e:
-        log.error('Failed to create subscription to SNS topic %s: %s', TopicArn, e)
+        log.error('Failed to create subscription to SNS topic %s: %s', kwargs['TopicArn'], e)
         return None
     except KeyError:
-        log.error('Failed to create subscription to SNS topic %s', TopicArn)
+        log.error('Failed to create subscription to SNS topic %s', kwargs['TopicArn'])
         return None
 
 
@@ -333,6 +357,15 @@ def unsubscribe(SubscriptionArn, region=None, key=None, keyid=None, profile=None
 
         salt myminion boto3_sns.unsubscribe my_subscription_arn region=us-east-1
     '''
+    if not SubscriptionArn.startswith('arn:aws:sns:'):
+        # Grrr, AWS sent us an ARN that's NOT and ARN....
+        # This can happen if, for instance, a subscription is left in PendingAcceptance or similar
+        # Note that anything left in PendingConfirmation will be auto-deleted by AWS after 30 days
+        # anyway, so this isn't as ugly a hack as it might seem at first...
+        log.info('Invalid subscription ARN `%s` passed - likely a PendingConfirmaton or such.  '
+                 'Skipping unsubscribe attempt as it would almost certainly fail...',
+                 SubscriptionArn)
+        return True
     subs = list_subscriptions(region=region, key=key, keyid=keyid, profile=profile)
     sub = [s for s in subs if s.get('SubscriptionArn') == SubscriptionArn]
     if not sub:

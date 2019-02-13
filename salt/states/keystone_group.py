@@ -73,6 +73,8 @@ def present(name, auth=None, **kwargs):
 
     __salt__['keystoneng.setup_cloud'](auth)
 
+    kwargs = __utils__['args.clean_kwargs'](**kwargs)
+
     kwargs['name'] = name
     group = _common(kwargs)
 
@@ -80,7 +82,6 @@ def present(name, auth=None, **kwargs):
         if __opts__['test'] is True:
             ret['result'] = None
             ret['changes'] = kwargs
-            ret['pchanges'] = ret['changes']
             ret['comment'] = 'Group will be created.'
             return ret
 
@@ -94,7 +95,6 @@ def present(name, auth=None, **kwargs):
         if __opts__['test'] is True:
             ret['result'] = None
             ret['changes'] = changes
-            ret['pchanges'] = ret['changes']
             ret['comment'] = 'Group will be updated.'
             return ret
 
@@ -120,6 +120,8 @@ def absent(name, auth=None, **kwargs):
            'result': True,
            'comment': ''}
 
+    kwargs = __utils__['args.clean_kwargs'](**kwargs)
+
     __salt__['keystoneng.setup_cloud'](auth)
 
     kwargs['name'] = name
@@ -129,7 +131,6 @@ def absent(name, auth=None, **kwargs):
         if __opts__['test'] is True:
             ret['result'] = None
             ret['changes'] = {'id': group.id}
-            ret['pchanges'] = ret['changes']
             ret['comment'] = 'Group will be deleted.'
             return ret
 

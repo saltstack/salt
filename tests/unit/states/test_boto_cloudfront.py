@@ -26,9 +26,8 @@ class BotoCloudfrontTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         utils = salt.loader.utils(
             self.opts,
-            whitelist=['boto3', 'dictdiffer', 'yaml'],
-            context={},
-        )
+            whitelist=['boto3', 'dictdiffer', 'yaml', 'args', 'systemd', 'path', 'platform'],
+            context={})
         return {
             boto_cloudfront: {
                 '__utils__': utils,
@@ -37,7 +36,7 @@ class BotoCloudfrontTestCase(TestCase, LoaderModuleMockMixin):
 
     @classmethod
     def setUpClass(cls):
-        cls.opts = salt.config.DEFAULT_MINION_OPTS
+        cls.opts = salt.config.DEFAULT_MINION_OPTS.copy()
 
         cls.name = 'my_distribution'
         cls.base_ret = {'name': cls.name, 'changes': {}}
@@ -92,7 +91,7 @@ class BotoCloudfrontTestCase(TestCase, LoaderModuleMockMixin):
                 self.base_ret_with({
                     'result': None,
                     'comment': comment,
-                    'pchanges': {'old': None, 'new': self.name},
+                    'changes': {'old': None, 'new': self.name},
                 }),
             )
 
@@ -192,7 +191,7 @@ class BotoCloudfrontTestCase(TestCase, LoaderModuleMockMixin):
                 self.base_ret_with({
                     'result': None,
                     'comment': '\n'.join([header, diff]),
-                    'pchanges': {'diff': diff},
+                    'changes': {'diff': diff},
                 }),
             )
 

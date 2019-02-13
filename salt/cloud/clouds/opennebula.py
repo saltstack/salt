@@ -1142,7 +1142,6 @@ def create(vm_):
                 # if IPv6 is used try this as last resort
                 # OpenNebula does not yet show ULA address here so take global
                 private_ip = data['template']['nic']['ip6_global']
-
             vm_['ssh_host'] = private_ip
 
     ssh_username = config.get_cloud_config_value(

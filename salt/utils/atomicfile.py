@@ -122,11 +122,11 @@ class _AtomicWFile(object):
             return
         self._fh.close()
         if os.path.isfile(self._filename):
-            shutil.copymode(self._filename, self._tmp_filename)
             if salt.utils.win_dacl.HAS_WIN32:
-                owner = salt.utils.win_dacl.get_owner(self._filename)
-                salt.utils.win_dacl.set_owner(self._tmp_filename, owner)
+                salt.utils.win_dacl.copy_security(
+                    source=self._filename, target=self._tmp_filename)
             else:
+                shutil.copymode(self._filename, self._tmp_filename)
                 st = os.stat(self._filename)
                 os.chown(self._tmp_filename, st.st_uid, st.st_gid)
         atomic_rename(self._tmp_filename, self._filename)

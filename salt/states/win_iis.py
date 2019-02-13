@@ -37,7 +37,7 @@ def _get_binding_info(hostheader='', ipaddress='*', port=80):
     return ret
 
 
-def deployed(name, sourcepath, apppool='', hostheader='', ipaddress='*', port=80, protocol='http'):
+def deployed(name, sourcepath, apppool='', hostheader='', ipaddress='*', port=80, protocol='http', preload=''):
     '''
     Ensure the website has been deployed.
 
@@ -54,6 +54,7 @@ def deployed(name, sourcepath, apppool='', hostheader='', ipaddress='*', port=80
     :param str ipaddress: The IP address of the binding.
     :param str port: The TCP port of the binding.
     :param str protocol: The application protocol of the binding.
+    :param bool preload: Whether Preloading should be enabled
 
     .. note:
 
@@ -83,6 +84,7 @@ def deployed(name, sourcepath, apppool='', hostheader='', ipaddress='*', port=80
                 - ipaddress: '*'
                 - port: 443
                 - protocol: https
+                - preload: True
     '''
     ret = {'name': name,
            'changes': {},
@@ -104,7 +106,7 @@ def deployed(name, sourcepath, apppool='', hostheader='', ipaddress='*', port=80
                           'new': name}
         ret['result'] = __salt__['win_iis.create_site'](name, sourcepath, apppool,
                                                         hostheader, ipaddress, port,
-                                                        protocol)
+                                                        protocol, preload)
     return ret
 
 

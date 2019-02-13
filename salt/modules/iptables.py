@@ -163,7 +163,7 @@ def _regex_iptables_save(cmd_output, filters=None):
                             pattern, e)
                 continue
 
-    if len(__context__['iptables.save_filters']) > 0:
+    if __context__['iptables.save_filters']:
         # line by line get rid of any regex matches
         _filtered_cmd_output = \
             [line for line in cmd_output.splitlines(True)
@@ -679,7 +679,7 @@ def save(filename=None, family='ipv4'):
     ipt = __salt__['cmd.run'](cmd)
 
     # regex out the output if configured with filters
-    if len(_conf_save_filters()) > 0:
+    if _conf_save_filters():
         ipt = _regex_iptables_save(ipt)
 
     out = __salt__['file.write'](filename, ipt)
@@ -862,10 +862,7 @@ def append(table='filter', chain=None, rule=None, family='ipv4'):
     cmd = '{0} {1} -t {2} -A {3} {4}'.format(
             _iptables_cmd(family), wait, table, chain, rule)
     out = __salt__['cmd.run'](cmd)
-    if len(out) == 0:
-        return True
-    else:
-        return False
+    return not out
 
 
 def insert(table='filter', chain=None, position=None, rule=None, family='ipv4'):
@@ -1035,11 +1032,8 @@ def _parse_conf(conf_file=None, in_mem=False, family='ipv4'):
             if args[-1].startswith('-'):
                 args.append('')
             parsed_args = []
-            if sys.version.startswith('2.6'):
-                (opts, leftover_args) = parser.parse_args(args)
-                parsed_args = vars(opts)
-            else:
-                parsed_args = vars(parser.parse_args(args))
+            opts, _ = parser.parse_known_args(args)
+            parsed_args = vars(opts)
             ret_args = {}
             chain = parsed_args['append']
             for arg in parsed_args:

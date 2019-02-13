@@ -212,6 +212,7 @@ def latest_version(*names, **kwargs):
     else:
         return versions_dict
 
+
 # available_version is being deprecated
 available_version = salt.utils.functools.alias_function(latest_version, 'available_version')
 
@@ -389,7 +390,7 @@ def install(name=None, pkgs=None, taps=None, options=None, **kwargs):
     except MinionError as exc:
         raise CommandExecutionError(exc)
 
-    if pkg_params is None or len(pkg_params) == 0:
+    if not pkg_params:
         return {}
 
     formulas = ' '.join(pkg_params)

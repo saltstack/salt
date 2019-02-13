@@ -247,7 +247,7 @@ def filter_by(lookup_dict,
         each case to be collected in the base and overridden by the grain
         selection dictionary and the merge dictionary. Default is None.
 
-        .. versionadded:: 2015.8.11, 2016.3.2
+        .. versionadded:: 2015.8.11,2016.3.2
 
     CLI Example:
 

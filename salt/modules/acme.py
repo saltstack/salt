@@ -223,18 +223,25 @@ def cert(name,
     res = __salt__['cmd.run_all'](' '.join(cmd))
 
     if res['retcode'] != 0:
-        return {'result': False,
-                'comment': 'Certificate {0} renewal failed with:\n{1}{2}'
-                           ''.format(name, res['stdout'], res['stderr'])}
+        if 'expand' in res['stderr']:
+            cmd.append('--expand')
+            res = __salt__['cmd.run_all'](' '.join(cmd))
+            if res['retcode'] != 0:
+                return {'result': False, 'comment': 'Certificate {0} renewal failed with:\n{1}'.format(name, res['stderr'])}
+        else:
+            return {'result': False, 'comment': 'Certificate {0} renewal failed with:\n{1}'.format(name, res['stderr'])}
 
     if 'no action taken' in res['stdout']:
         comment = 'Certificate {0} unchanged'.format(cert_file)
+        result = None
     elif renew:
         comment = 'Certificate {0} renewed'.format(name)
+        result = True
     else:
         comment = 'Certificate {0} obtained'.format(name)
+        result = True
 
-    ret = {'comment': comment, 'not_after': expires(name), 'changes': {}, 'result': True}
+    ret = {'comment': comment, 'not_after': expires(name), 'changes': {}, 'result': result}
     ret, _ = __salt__['file.check_perms'](_cert_file(name, 'privkey'),
                                           ret,
                                           owner, group, mode,

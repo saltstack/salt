@@ -58,7 +58,7 @@ def merge(obj_a, obj_b, strategy='smart', renderer='yaml', merge_lists=False):
 
 def merge_all(lst, strategy='smart', renderer='yaml', merge_lists=False):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Merge a list of objects into each other in order
 

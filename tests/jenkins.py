@@ -848,9 +848,9 @@ def parse():
     parser.add_option(
         '--test-transport',
         default='zeromq',
-        choices=('zeromq', 'raet', 'tcp'),
+        choices=('zeromq', 'tcp'),
         help=('Select which transport to run the integration tests with, '
-              'zeromq, raet, or tcp. Default: %default')
+              'zeromq or tcp. Default: %default')
     )
     parser.add_option(
         '--test-without-coverage',
@@ -1000,6 +1000,7 @@ def parse():
         parser.exit('--commit or --pull-request is required')
 
     return options
+
 
 if __name__ == '__main__':
     exit_code = run(parse())

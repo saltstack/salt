@@ -23,7 +23,7 @@ Code Names
 To distinguish future releases from the current release, code names are used.
 The periodic table is used to derive the next codename. The first release in
 the date based system was code named ``Hydrogen``, each subsequent release will
-go to the next `atomic number <https://en.wikipedia.org/wiki/List_of_elements>`.
+go to the next `atomic number <https://en.wikipedia.org/wiki/List_of_elements>`_.
 
 Assigned codenames:
 
@@ -35,7 +35,9 @@ Assigned codenames:
 - Carbon: ``2016.11.0``
 - Nitrogen: ``2017.7.0``
 - Oxygen: ``2018.3.0``
-- Fluorine: ``TBD``
+- Fluorine: ``2019.2.0``
+- Neon: ``TBD``
+- Sodium: ``TBD``
 
 Example
 -------

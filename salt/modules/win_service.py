@@ -107,7 +107,7 @@ def _status_wait(service_name, end_time, service_states):
     Helper function that will wait for the status of the service to match the
     provided status before an end time expires. Used for service stop and start
 
-    .. versionadded:: 2017.7.9, 2018.3.4
+    .. versionadded:: 2017.7.9,2018.3.4
 
     Args:
         service_name (str):
@@ -460,7 +460,7 @@ def start(name, timeout=90):
             The time in seconds to wait for the service to start before
             returning. Default is 90 seconds
 
-            .. versionadded:: 2017.7.9, 2018.3.4
+            .. versionadded:: 2017.7.9,2018.3.4
 
     Returns:
         bool: ``True`` if successful, otherwise ``False``. Also returns ``True``
@@ -482,7 +482,7 @@ def start(name, timeout=90):
         if exc.winerror != 1056:
             raise CommandExecutionError(
                 'Failed To Start {0}: {1}'.format(name, exc.strerror))
-        log.debug('Service "{0}" is running'.format(name))
+        log.debug('Service "%s" is running', name)
 
     srv_status = _status_wait(service_name=name,
                               end_time=time.time() + int(timeout),
@@ -502,7 +502,7 @@ def stop(name, timeout=90):
             The time in seconds to wait for the service to stop before
             returning. Default is 90 seconds
 
-            .. versionadded:: 2017.7.9, 2018.3.4
+            .. versionadded:: 2017.7.9,2018.3.4
 
     Returns:
         bool: ``True`` if successful, otherwise ``False``. Also returns ``True``
@@ -520,7 +520,7 @@ def stop(name, timeout=90):
         if exc.winerror != 1062:
             raise CommandExecutionError(
                 'Failed To Stop {0}: {1}'.format(name, exc.strerror))
-        log.debug('Service "{0}" is not running'.format(name))
+        log.debug('Service "%s" is not running', name)
 
     srv_status = _status_wait(service_name=name,
                               end_time=time.time() + int(timeout),
@@ -549,7 +549,7 @@ def restart(name, timeout=90):
                 then to the start command. A timeout of 90 could take up to 180
                 seconds if the service is long in stopping and starting
 
-            .. versionadded:: 2017.7.9, 2018.3.4
+            .. versionadded:: 2017.7.9,2018.3.4
 
     Returns:
         bool: ``True`` if successful, otherwise ``False``
@@ -1212,7 +1212,7 @@ def delete(name, timeout=90):
             returning. This is necessary because a service must be stopped
             before it can be deleted. Default is 90 seconds
 
-            .. versionadded:: 2017.7.9, 2018.3.4
+            .. versionadded:: 2017.7.9,2018.3.4
 
     Returns:
         bool: ``True`` if successful, otherwise ``False``. Also returns ``True``
@@ -1235,7 +1235,7 @@ def delete(name, timeout=90):
         if exc.winerror != 1060:
             raise CommandExecutionError(
                 'Failed to open {0}. {1}'.format(name, exc.strerror))
-        log.debug('Service "{0}" is not present'.format(name))
+        log.debug('Service "%s" is not present', name)
         return True
 
     try:

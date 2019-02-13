@@ -1,9 +1,8 @@
-========================================
-In Progress: Salt 2017.7.8 Release Notes
-========================================
+===========================
+Salt 2017.7.8 Release Notes
+===========================
 
-Version 2017.7.8 is an **unreleased** bugfix release for :ref:`2017.7.0 <release-2017-7-0>`.
-This release is still in progress and has not been released yet.
+Version 2017.7.8 is a security and bugfix release for :ref:`2017.7.0 <release-2017-7-0>`.
 
 Statistics
 ==========
@@ -14,6 +13,14 @@ Statistics
 
 - Contributors: **52** (`AVeenstra`_, `Ch3LL`_, `Circuitsoft`_, `DmitryKuzmenko`_, `KaiSforza`_, `Martin819`_, `OrlandoArcapix`_, `UtahDave`_, `Vaelatern`_, `abednarik`_, `asnell`_, `b1naryth1ef`_, `baniobloom`_, `basepi`_, `bdrung`_, `beornf`_, `bmcorser`_, `bowmanjd-lms`_, `damon-atkins`_, `darkpixel`_, `discogestalt`_, `doesitblend`_, `dqminh`_, `dubb-b`_, `dwoz`_, `frankiexyz`_, `frogunder`_, `fzipi`_, `garethgreenaway`_, `grokrecursion`_, `gtmanfred`_, `jacksontj`_, `jagguli`_, `lejambon`_, `lomeroe`_, `lordcirth`_, `lusche`_, `mbunkus`_, `meaksh`_, `mirceaulinic`_, `nbraud`_, `pritambaral`_, `ralex`_, `rallytime`_, `rmcintosh`_, `slaws`_, `terminalmage`_, `twangboy`_, `twellspring`_, `wyardley`_, `xetix`_, `zer0def`_)
 
+Security Fix
+============
+
+CVE-2018-15751 Remote command execution and incorrect access control when using salt-api.
+
+CVE-2018-15750 Directory traversal vulnerability when using salt-api. Allows an attacker to determine what files exist on a server when querying /run or /events.
+
+Credit and thanks for discovery and responsible disclosure: nullbr4in, xcuter, koredge, loupos, blackcon, Naver Business Platform
 
 New win_snmp behavior
 =====================

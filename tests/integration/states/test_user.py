@@ -20,6 +20,7 @@ from tests.support.helpers import destructiveTest, requires_system_grains, skip_
 from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import Salt libs
+import salt.utils.files
 import salt.utils.platform
 
 try:
@@ -126,43 +127,8 @@ class UserTest(ModuleCase, SaltReturnAssertsMixin):
         else:
             self.assertEqual(group_name, self.user_name)
 
-    @skipIf(salt.utils.platform.is_windows(), 'windows minion does not support gid_from_name')
-    @requires_system_grains
-    def test_user_present_gid_from_name_default(self, grains=None):
-        '''
-        This is a DESTRUCTIVE TEST. It creates a new user on the on the minion.
-        This is an integration test. Not all systems will automatically create
-        a group of the same name as the user, but I don't have access to any.
-        If you run the test and it fails, please fix the code it's testing to
-        work on your operating system.
-        '''
-        # MacOS users' primary group defaults to staff (20), not the name of
-        # user
-        gid_from_name = False if grains['os_family'] == 'MacOS' else True
-
-        ret_user_present = self.run_state('user.present', name=self.user_name,
-                             gid_from_name=gid_from_name, home=self.user_home)
-
-        if gid_from_name:
-            self.assertSaltFalseReturn(ret_user_present)
-            ret_user_present = ret_user_present[next(iter(ret_user_present))]
-            self.assertTrue('is not present' in ret_user_present['comment'])
-        else:
-            self.assertSaltTrueReturn(ret_user_present)
-            ret_user_info = self.run_function('user.info', [self.user_name])
-            self.assertReturnNonEmptySaltType(ret_user_info)
-            group_name = grp.getgrgid(ret_user_info['gid']).gr_name
-            if not salt.utils.platform.is_darwin():
-                self.assertTrue(os.path.isdir(self.user_home))
-            if grains['os_family'] in ('Suse',):
-                self.assertEqual(group_name, 'users')
-            elif grains['os_family'] == 'MacOS':
-                self.assertEqual(group_name, 'staff')
-            else:
-                self.assertEqual(group_name, self.user_name)
-
-    @skipIf(salt.utils.platform.is_windows(), 'windows minion does not support gid_from_name')
-    def test_user_present_gid_from_name(self):
+    @skipIf(salt.utils.platform.is_windows(), 'windows minion does not support usergroup')
+    def test_user_present_usergroup_false(self):
         '''
         This is a DESTRUCTIVE TEST it creates a new user on the on the minion.
         This is a unit test, NOT an integration test. We create a group of the
@@ -170,8 +136,32 @@ class UserTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         ret = self.run_state('group.present', name=self.user_name)
         self.assertSaltTrueReturn(ret)
+
         ret = self.run_state('user.present', name=self.user_name,
-                             gid_from_name=True, home=self.user_home)
+                             gid=self.user_name, usergroup=False,
+                             home=self.user_home)
+        self.assertSaltTrueReturn(ret)
+
+        ret = self.run_function('user.info', [self.user_name])
+        self.assertReturnNonEmptySaltType(ret)
+        group_name = grp.getgrgid(ret['gid']).gr_name
+
+        if not salt.utils.platform.is_darwin():
+            self.assertTrue(os.path.isdir(self.user_home))
+        self.assertEqual(group_name, self.user_name)
+        ret = self.run_state('user.absent', name=self.user_name)
+        self.assertSaltTrueReturn(ret)
+        ret = self.run_state('group.absent', name=self.user_name)
+        self.assertSaltTrueReturn(ret)
+
+    @skipIf(salt.utils.platform.is_windows(), 'windows minion does not support usergroup')
+    def test_user_present_usergroup(self):
+        '''
+        This is a DESTRUCTIVE TEST it creates a new user on the on the minion.
+        This is a unit test, NOT an integration test.
+        '''
+        ret = self.run_state('user.present', name=self.user_name,
+                             usergroup=True, home=self.user_home)
         self.assertSaltTrueReturn(ret)
 
         ret = self.run_function('user.info', [self.user_name])

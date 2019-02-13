@@ -24,6 +24,7 @@ import datetime
 
 # Import salt libs
 import salt.utils.args
+import salt.utils.compat
 import salt.utils.data
 import salt.utils.functools
 import salt.utils.path
@@ -67,13 +68,13 @@ def __virtual__():
 
 def _vartree():
     import portage  # pylint: disable=3rd-party-module-not-gated
-    portage = reload(portage)
+    portage = salt.utils.compat.reload(portage)
     return portage.db[portage.root]['vartree']
 
 
 def _porttree():
     import portage  # pylint: disable=3rd-party-module-not-gated
-    portage = reload(portage)
+    portage = salt.utils.compat.reload(portage)
     return portage.db[portage.root]['porttree']
 
 
@@ -194,8 +195,10 @@ def check_db(*names, **kwargs):
     ret = {}
     for name in names:
         if name in ret:
-            log.warning('pkg.check_db: Duplicate package name \'{0}\' '
-                        'submitted'.format(name))
+            log.warning(
+                'pkg.check_db: Duplicate package name \'%s\' submitted',
+                name
+            )
             continue
         if '/' not in name:
             ret.setdefault(name, {})['found'] = False
@@ -255,7 +258,7 @@ def latest_version(*names, **kwargs):
     '''
     refresh = salt.utils.data.is_true(kwargs.pop('refresh', True))
 
-    if len(names) == 0:
+    if not names:
         return ''
 
     # Refresh before looking for the latest version available
@@ -275,6 +278,7 @@ def latest_version(*names, **kwargs):
     if len(names) == 1:
         return ret[names[0]]
     return ret
+
 
 # available_version is being deprecated
 available_version = salt.utils.functools.alias_function(latest_version, 'available_version')
@@ -475,7 +479,7 @@ def refresh_db():
         timestamp = datetime.datetime.fromtimestamp(os.path.getmtime(main_repo_root))
         if now - timestamp < day:
             log.info('Did not sync package tree since last sync was done at'
-                     ' {0}, less than 1 day ago'.format(timestamp))
+                     ' %s, less than 1 day ago', timestamp)
             return False
 
     if has_emaint:
@@ -626,7 +630,7 @@ def install(name=None,
         {'<package>': {'old': '<old-version>',
                        'new': '<new-version>'}}
     '''
-    log.debug('Called modules.pkg.install: {0}'.format(
+    log.debug('Called modules.pkg.install: %s',
         {
             'name': name,
             'refresh': refresh,
@@ -635,7 +639,7 @@ def install(name=None,
             'kwargs': kwargs,
             'binhost': binhost,
         }
-    ))
+    )
     if salt.utils.data.is_true(refresh):
         refresh_db()
 
@@ -659,7 +663,7 @@ def install(name=None,
                 version_num += '[{0}]'.format(','.join(uses))
             pkg_params = {name: version_num}
 
-    if pkg_params is None or len(pkg_params) == 0:
+    if not pkg_params:
         return {}
     elif pkg_type == 'file':
         emerge_opts = ['tbz2file']
@@ -694,7 +698,7 @@ def install(name=None,
                     prefix = gt_lt or ''
                     prefix += eq or ''
                     # If no prefix characters were supplied and verstr contains a version, use '='
-                    if len(verstr) > 0 and verstr[0] != ':' and verstr[0] != '[':
+                    if verstr and verstr[0] != ':' and verstr[0] != '[':
                         prefix = prefix or '='
                         target = '{0}{1}-{2}'.format(prefix, param, verstr)
                     else:
@@ -1224,7 +1228,7 @@ def check_extra_requirements(pkgname, pkgver):
     try:
         cpv = _porttree().dbapi.xmatch('bestmatch-visible', atom)
     except portage.exception.InvalidAtom as iae:
-        log.error('Unable to find a matching package for {0}: ({1})'.format(atom, iae))
+        log.error('Unable to find a matching package for %s: (%s)', atom, iae)
         return False
 
     if cpv == '':
@@ -1241,8 +1245,7 @@ def check_extra_requirements(pkgname, pkgver):
 
     des_uses = set(portage.dep.dep_getusedeps(atom))
     cur_use = cur_use.split()
-    if len([x for x in des_uses.difference(cur_use)
-            if x[0] != '-' or x[1:] in cur_use]) > 0:
+    if [x for x in des_uses.difference(cur_use) if x[0] != '-' or x[1:] in cur_use]:
         return False
 
     if keyword:

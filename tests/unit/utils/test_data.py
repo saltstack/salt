@@ -144,6 +144,36 @@ class DataTestCase(TestCase):
             )
         )
 
+    def test_subdict_match_with_wildcards(self):
+        '''
+        Tests subdict matching when wildcards are used in the expression
+        '''
+        data = {
+            'a': {
+                'b': {
+                    'ç': 'd',
+                    'é': ['eff', 'gee', '8ch'],
+                    'ĩ': {'j': 'k'}
+                }
+            }
+        }
+        assert salt.utils.data.subdict_match(data, '*:*:*:*')
+        assert salt.utils.data.subdict_match(data, 'a:*:*:*')
+        assert salt.utils.data.subdict_match(data, 'a:b:*:*')
+        assert salt.utils.data.subdict_match(data, 'a:b:ç:*')
+        assert salt.utils.data.subdict_match(data, 'a:b:*:d')
+        assert salt.utils.data.subdict_match(data, 'a:*:ç:d')
+        assert salt.utils.data.subdict_match(data, '*:b:ç:d')
+        assert salt.utils.data.subdict_match(data, '*:*:ç:d')
+        assert salt.utils.data.subdict_match(data, '*:*:*:d')
+        assert salt.utils.data.subdict_match(data, 'a:*:*:d')
+        assert salt.utils.data.subdict_match(data, 'a:b:*:ef*')
+        assert salt.utils.data.subdict_match(data, 'a:b:*:g*')
+        assert salt.utils.data.subdict_match(data, 'a:b:*:j:*')
+        assert salt.utils.data.subdict_match(data, 'a:b:*:j:k')
+        assert salt.utils.data.subdict_match(data, 'a:b:*:*:k')
+        assert salt.utils.data.subdict_match(data, 'a:b:*:*:*')
+
     def test_traverse_dict(self):
         test_two_level_dict = {'foo': {'bar': 'baz'}}
 
@@ -567,4 +597,25 @@ class DataTestCase(TestCase):
         self.assertEqual(
             salt.utils.data.stringify(['one', 'two', str('three'), 4, 5]),  # future lint: disable=blacklisted-function
             ['one', 'two', 'three', '4', '5']
+        )
+
+    def test_json_query(self):
+        # Raises exception if jmespath module is not found
+        with patch('salt.utils.data.jmespath', None):
+            self.assertRaisesRegex(
+                RuntimeError, 'requires jmespath',
+                salt.utils.data.json_query, {}, '@'
+            )
+
+        # Test search
+        user_groups = {
+            'user1': {'groups': ['group1', 'group2', 'group3']},
+            'user2': {'groups': ['group1', 'group2']},
+            'user3': {'groups': ['group3']},
+        }
+        expression = '*.groups[0]'
+        primary_groups = ['group1', 'group1', 'group3']
+        self.assertEqual(
+            sorted(salt.utils.data.json_query(user_groups, expression)),
+            primary_groups
         )
