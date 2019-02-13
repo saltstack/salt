@@ -83,6 +83,27 @@ def _update_nilrt_restart_state():
         __salt__['cmd.shell']('md5sum {0} >{1}/nisysapi.ini.md5sum'
                               .format(nisysapi_path, NILRT_RESTARTCHECK_STATE_PATH))
 
+    # Expert plugin files get added to a conf.d dir, so keep track of the total
+    # no. of files, their timestamps and content hashes
+    nisysapi_conf_d_path = "/usr/lib/{0}/nisysapi/conf.d/experts/".format(
+        'arm-linux-gnueabi' if 'arm' in __grains__.get('cpuarch') else 'x86_64-linux-gnu'
+    )
+
+    if os.path.exists(nisysapi_conf_d_path):
+        with salt.utils.files.fopen('{0}/sysapi.conf.d.count'.format(
+                NILRT_RESTARTCHECK_STATE_PATH), 'w') as fcount:
+            fcount.write(str(len(os.listdir(nisysapi_conf_d_path))))
+
+        for fexpert in os.listdir(nisysapi_conf_d_path):
+            __salt__['cmd.shell']('stat -c %Y {0}/{1} >{2}/{1}.timestamp'
+                                  .format(nisysapi_conf_d_path,
+                                          fexpert,
+                                          NILRT_RESTARTCHECK_STATE_PATH))
+            __salt__['cmd.shell']('md5sum {0}/{1} >{2}/{1}.md5sum'
+                                  .format(nisysapi_conf_d_path,
+                                          fexpert,
+                                          NILRT_RESTARTCHECK_STATE_PATH))
+
 
 def _get_restartcheck_result(errors):
     '''
@@ -128,9 +149,8 @@ def __virtual__():
                     NILRT_RESTARTCHECK_STATE_PATH,
                     exc.errno,
                     exc.strerror)
-        # modules.dep always exists, make sure it's restart state files also exist
-        if not (os.path.exists(os.path.join(NILRT_RESTARTCHECK_STATE_PATH, 'modules.dep.timestamp')) and
-                os.path.exists(os.path.join(NILRT_RESTARTCHECK_STATE_PATH, 'modules.dep.md5sum'))):
+        # populate state dir if empty
+        if not os.listdir(NILRT_RESTARTCHECK_STATE_PATH):
             _update_nilrt_restart_state()
         return __virtualname__
 
@@ -158,7 +178,7 @@ def latest_version(*names, **kwargs):
     '''
     refresh = salt.utils.data.is_true(kwargs.pop('refresh', True))
 
-    if len(names) == 0:
+    if not names:
         return ''
 
     ret = {}
@@ -457,7 +477,7 @@ def install(name=None,
     to_downgrade = []
 
     _append_noaction_if_testmode(cmd_prefix, **kwargs)
-    if pkg_params is None or len(pkg_params) == 0:
+    if not pkg_params:
         return {}
     elif pkg_type == 'file':
         if reinstall:
@@ -601,12 +621,12 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
     remove_dependencies
         Remove package and all dependencies
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     auto_remove_deps
         Remove packages that were installed automatically to satisfy dependencies
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     Returns a dict containing the changes.
 
@@ -1061,7 +1081,7 @@ def _process_info_installed_output(out, filter_attrs):
             # This is a continuation of the last attr
             if filter_attrs is None or attr in filter_attrs:
                 line = line.strip()
-                if len(attrs[attr]):
+                if attrs[attr]:
                     # If attr is empty, don't add leading newline
                     attrs[attr] += '\n'
                 attrs[attr] += line

@@ -102,7 +102,7 @@ class SaltStackVersion(object):
         'Carbon'        : (2016, 11),
         'Nitrogen'      : (2017, 7),
         'Oxygen'        : (2018, 3),
-        'Fluorine'      : (MAX_SIZE - 100, 0),
+        'Fluorine'      : (2019, 2),
         'Neon'          : (MAX_SIZE - 99, 0),
         'Sodium'        : (MAX_SIZE - 98, 0),
         'Magnesium'     : (MAX_SIZE - 97, 0),

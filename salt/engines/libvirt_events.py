@@ -62,7 +62,7 @@ A polkit rule like the following one will allow `salt` user to connect to libvir
 
 :depends: libvirt 1.0.0+ python binding
 
-.. versionadded:: Fluorine
+.. versionadded:: 2019.2.0
 '''
 
 from __future__ import absolute_import, unicode_literals, print_function

@@ -24,11 +24,11 @@ provided `kubeconfig` entry is preferred.
     salt '*' kubernetes.nodes kubeconfig=/etc/salt/k8s/kubeconfig context=minikube
 
 .. versionadded: 2017.7.0
-.. versionchanged:: Fluorine
+.. versionchanged:: 2019.2.0
 
 .. warning::
 
-    Configuration options changed in Fluorine. The following configuration options have been removed:
+    Configuration options changed in 2019.2.0. The following configuration options have been removed:
 
     - kubernetes.user
     - kubernetes.password

@@ -17,7 +17,6 @@ from salt.ext.six.moves.urllib.request import urlopen
 # Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.paths import FILES
 from tests.support.unit import TestCase, skipIf
 from tests.support.helpers import requires_network, skip_if_binaries_missing
 
@@ -26,8 +25,6 @@ import salt.utils.files
 import salt.utils.path
 import salt.modules.zcbuildout as buildout
 import salt.modules.cmdmod as cmd
-
-ROOT = os.path.join(FILES, 'file', 'base', 'buildout')
 
 KNOWN_VIRTUALENV_BINARY_NAMES = (
     'virtualenv',
@@ -71,6 +68,8 @@ class Base(TestCase, LoaderModuleMockMixin):
     def setUpClass(cls):
         if not os.path.isdir(RUNTIME_VARS.TMP):
             os.makedirs(RUNTIME_VARS.TMP)
+
+        cls.root = os.path.join(RUNTIME_VARS.BASE_FILES, 'buildout')
         cls.rdir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         cls.tdir = os.path.join(cls.rdir, 'test')
         for idx, url in six.iteritems(buildout._URL_VERSIONS):
@@ -103,7 +102,7 @@ class Base(TestCase, LoaderModuleMockMixin):
     def setUp(self):
         super(Base, self).setUp()
         self._remove_dir()
-        shutil.copytree(ROOT, self.tdir)
+        shutil.copytree(self.root, self.tdir)
 
         for idx in BOOT_INIT:
             path = os.path.join(
@@ -278,7 +277,7 @@ class BuildoutTestCase(Base):
     @requires_network()
     def test__find_cfgs(self):
         result = sorted(
-            [a.replace(ROOT, '') for a in buildout._find_cfgs(ROOT)])
+            [a.replace(self.root, '') for a in buildout._find_cfgs(self.root)])
         assertlist = sorted(
             ['/buildout.cfg',
              '/c/buildout.cfg',
