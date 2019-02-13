@@ -3294,7 +3294,7 @@ def directory(name,
                   perms: full_control
             - win_inheritance: False
     '''
-    name = os.path.normcase(os.path.expanduser(name))
+    name = os.path.expanduser(name)
     ret = {'name': name,
            'changes': {},
            'result': True,
@@ -3842,9 +3842,7 @@ def recurse(name,
         # "env" is not supported; Use "saltenv".
         kwargs.pop('env')
 
-    name = salt.utils.data.decode(
-        os.path.normcase(os.path.expanduser(name))
-    )
+    name = salt.utils.data.decode(os.path.expanduser(name))
 
     user = _test_owner(kwargs, user=user)
     if salt.utils.platform.is_windows():
