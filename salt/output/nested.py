@@ -34,6 +34,11 @@ from salt.ext.six import string_types
 from salt.utils import get_colors
 import salt.utils.locales
 
+try:
+    from collections.abc import Mapping
+except ImportError:
+    from collections import Mapping
+
 
 class NestDisplay(object):
     '''
@@ -109,7 +114,7 @@ class NestDisplay(object):
                 first_line = False
         elif isinstance(ret, (list, tuple)):
             for ind in ret:
-                if isinstance(ind, (list, tuple, dict)):
+                if isinstance(ind, (list, tuple, Mapping)):
                     out.append(
                         self.ustring(
                             indent,
@@ -117,11 +122,11 @@ class NestDisplay(object):
                             '|_'
                         )
                     )
-                    prefix = '' if isinstance(ind, dict) else '- '
+                    prefix = '' if isinstance(ind, Mapping) else '- '
                     self.display(ind, indent + 2, prefix, out)
                 else:
                     self.display(ind, indent, '- ', out)
-        elif isinstance(ret, dict):
+        elif isinstance(ret, Mapping):
             if indent:
                 out.append(
                     self.ustring(
