@@ -32,6 +32,7 @@ def __random_string(size=6):
         for x in range(size)
     )
 
+
 # Create user strings for tests
 ADD_USER = __random_string()
 DEL_USER = __random_string()

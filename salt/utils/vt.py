@@ -686,7 +686,7 @@ class Terminal(object):
                         stdout = None
                     else:
                         if self.stream_stdout:
-                            self.stream_stdout.write(salt.utils.data.encode(stdout))
+                            self.stream_stdout.write(salt.utils.stringutils.to_str(stdout))
                             self.stream_stdout.flush()
 
                         if self.stdout_logger:

@@ -179,7 +179,7 @@ def rand_int(start=1, end=10, seed=None):
     seed :
         Optional hashable object
 
-    .. versionchanged:: Fluorine
+    .. versionchanged:: 2019.2.0
         Added seed argument. Will return the same result when run with the same seed.
 
 
