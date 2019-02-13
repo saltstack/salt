@@ -260,8 +260,12 @@ class Maintenance(salt.utils.process.SignalHandlingMultiprocessingProcess):
                     keys.append(fn_)
             log.debug('Writing master key cache')
             # Write a temporary file securely
-            with salt.utils.atomicfile.atomic_open(os.path.join(self.opts['pki_dir'], acc, '.key_cache')) as cache_file:
-                self.serial.dump(keys, cache_file)
+            if six.PY2:
+                with salt.utils.atomicfile.atomic_open(os.path.join(self.opts['pki_dir'], acc, '.key_cache')) as cache_file:
+                    self.serial.dump(keys, cache_file)
+            else:
+                with salt.utils.atomicfile.atomic_open(os.path.join(self.opts['pki_dir'], acc, '.key_cache'), mode='wb') as cache_file:
+                    self.serial.dump(keys, cache_file)
 
     def handle_key_rotate(self, now):
         '''
@@ -671,7 +675,7 @@ class Master(SMaster):
             pub_channels = []
             log.info('Creating master publisher process')
             log_queue = salt.log.setup.get_multiprocessing_logging_queue()
-            for transport, opts in iter_transport_opts(self.opts):
+            for _, opts in iter_transport_opts(self.opts):
                 chan = salt.transport.server.PubServerChannel.factory(opts)
                 chan.pre_fork(self.process_manager, kwargs={'log_queue': log_queue})
                 pub_channels.append(chan)

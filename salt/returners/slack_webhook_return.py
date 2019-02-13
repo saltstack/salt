@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
-Return salt data via slack
+Return salt data via Slack using Incoming Webhooks
 
-..  versionadded:: 2018.3.4
+:codeauthor: :email:`Carlos D. Álvaro <github@cdalvaro.io>`
 
 The following fields can be set in the minion conf file:
 
@@ -162,7 +162,7 @@ def _generate_payload(author_icon, title, report):
         'title': 'Changed: {changed}'.format(changed=report['changed'].get('counter', None))
     }
 
-    if len(report['changed'].get('tasks', [])) > 0:
+    if report['changed'].get('tasks'):
         changed['fields'] = list(
             map(_format_task, report['changed'].get('tasks')))
 
@@ -171,12 +171,12 @@ def _generate_payload(author_icon, title, report):
         'title': 'Failed: {failed}'.format(failed=report['failed'].get('counter', None))
     }
 
-    if len(report['failed'].get('tasks', [])) > 0:
+    if report['failed'].get('tasks'):
         failed['fields'] = list(
             map(_format_task, report['failed'].get('tasks')))
 
     text = 'Function: {function}\n'.format(function=report.get('function'))
-    if len(report.get('arguments', [])) > 0:
+    if report.get('arguments'):
         text += 'Function Args: {arguments}\n'.format(
             arguments=str(list(map(str, report.get('arguments')))))
 
@@ -318,11 +318,11 @@ def returner(ret):
 
     _options = _get_options(ret)
 
-    webhook = _options.get('webhook')
+    webhook = _options.get('webhook', None)
     show_tasks = _options.get('show_tasks')
     author_icon = _options.get('author_icon')
 
-    if not webhook:
+    if not webhook or webhook is '':
         log.error('%s.webhook not defined in salt config', __virtualname__)
         return
 

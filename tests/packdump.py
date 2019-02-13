@@ -9,8 +9,8 @@ import os
 import sys
 import pprint
 
-# Import third party libs
-import msgpack
+# Import Salt libs
+import salt.utils.msgpack
 
 
 def dump(path):
@@ -21,7 +21,7 @@ def dump(path):
         print('Not a file')
         return
     with open(path, 'rb') as fp_:
-        data = msgpack.loads(fp_.read())
+        data = salt.utils.msgpack.loads(fp_.read())
         pprint.pprint(data)
 
 

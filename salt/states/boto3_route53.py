@@ -564,7 +564,7 @@ def rr_present(name, HostedZoneId=None, DomainName=None, PrivateZone=False, Name
                     r = __salt__['boto_ec2.find_instances'](
                             tags={tag_name: tag_value}, return_objs=True, in_states=good_states,
                             region=region, key=key, keyid=keyid, profile=profile)
-                    if len(r) < 1:
+                    if not r:
                         ret['comment'] = 'No EC2 instance with tag {} == {} found'.format(tag_name,
                                 tag_value)
                         log.error(ret['comment'])

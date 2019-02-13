@@ -231,8 +231,7 @@ def install(name=None, refresh=False, pkgs=None, version=None, test=False, **kwa
         return {}
 
     if pkgs:
-        log.debug('Removing these fileset(s)/rpm package(s) {0}: {1}'
-            .format(name, targets))
+        log.debug('Removing these fileset(s)/rpm package(s) %s: %s', name, targets)
 
     # Get a list of the currently installed pkgs.
     old = list_pkgs()
@@ -320,8 +319,7 @@ def remove(name=None, pkgs=None, **kwargs):
         return {}
 
     if pkgs:
-        log.debug('Removing these fileset(s)/rpm package(s) {0}: {1}'
-            .format(name, targets))
+        log.debug('Removing these fileset(s)/rpm package(s) %s: %s', name, targets)
 
     errors = []
 
@@ -394,6 +392,7 @@ def latest_version(*names, **kwargs):
     if len(names) == 1:
         return ret[names[0]]
     return ret
+
 
 # available_version is being deprecated
 available_version = salt.utils.functools.alias_function(latest_version, 'available_version')
