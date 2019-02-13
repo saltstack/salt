@@ -1280,7 +1280,7 @@ def list_upgrades(bin_env=None,
             if match:
                 name, version_ = match.groups()
             else:
-                logger.error('Can\'t parse line \'{0}\''.format(line))
+                logger.error('Can\'t parse line \'%s\'', line)
                 continue
             packages[name] = version_
 
@@ -1465,11 +1465,11 @@ def list_all_versions(pkg,
 
     index_url
         Base URL of Python Package Index
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     extra_index_url
         Additional URL of Python Package Index
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     CLI Example:
 

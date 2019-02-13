@@ -82,6 +82,8 @@ def fire_master(data, tag, preload=None):
                 # only set a False ret if it hasn't been sent atleast once
                 if ret is None:
                     ret = False
+            finally:
+                channel.close()
         return ret
     else:
         # Usually, we can send the event via the minion, which is faster

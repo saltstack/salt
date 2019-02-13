@@ -904,3 +904,6 @@ class FSChan(object):
             log.error('Malformed request, invalid cmd: %s', load)
             return {}
         return getattr(self.fs, cmd)(load)
+
+    def close(self):
+        pass

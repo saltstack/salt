@@ -51,6 +51,7 @@ def __virtual__():
         return False, 'The \'{0}\' module could not be loaded: ' \
                       '\'requests\' is not installed.'.format(__virtualname__)
 
+
 ROUTERS = {'MessagingRouter': 'messaging',
            'EventsRouter': 'evconsole',
            'ProcessRouter': 'process',
