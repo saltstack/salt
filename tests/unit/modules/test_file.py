@@ -1249,8 +1249,10 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
                     patch('os.stat', self._anyattr), \
                     patch('salt.modules.file.log', _log):
                 self.assertFalse(filemod.line('/dummy/path', content='foo', match='bar', mode=mode))
-            self.assertIn('Cannot find text to {0}'.format(mode),
-                          _log.warning.call_args_list[0][0][0])
+            assert 'Cannot find text to ' in _log.warning.call_args_list[0][0][0], \
+                _log.warning.call_args_list[0][0][0]
+            assert _log.warning.call_args_list[0][0][1] == mode, \
+                _log.warning.call_args_list[0][0][1]
 
     @patch('os.path.realpath', MagicMock())
     @patch('os.path.isfile', MagicMock(return_value=True))

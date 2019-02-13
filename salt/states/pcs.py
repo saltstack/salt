@@ -568,16 +568,19 @@ def cluster_node_present(name, node, extra_args=None):
     log.trace('Output of pcs status nodes corosync: %s', is_member)
 
     for line in is_member['stdout'].splitlines():
-        if len(line.split(':')) in [2]:
-            key = line.split(':')[0].strip()
-            value = line.split(':')[1].strip()
-            if key in ['Offline', 'Online']:
-                if len(value.split()) > 0:
-                    if node in value.split():
-                        node_add_required = False
-                        ret['comment'] += 'Node {0} is already member of the cluster\n'.format(node)
-                    else:
-                        current_nodes += value.split()
+        try:
+            key, value = [x.strip() for x in line.split(':')]
+        except ValueError:
+            continue
+        else:
+            if not value or key not in ('Offline', 'Online'):
+                continue
+            values = value.split(':')
+            if node in values:
+                node_add_required = False
+                ret['comment'] += 'Node {0} is already member of the cluster\n'.format(node)
+            else:
+                current_nodes += values
 
     if not node_add_required:
         return ret

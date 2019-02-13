@@ -701,10 +701,7 @@ def append(table='filter', chain=None, rule=None, family='ipv4'):
     cmd = '{0} add rule {1} {2} {3} {4}'.\
             format(_nftables_cmd(), nft_family, table, chain, rule)
     out = __salt__['cmd.run'](cmd, python_shell=False)
-    if len(out) == 0:
-        return True
-    else:
-        return False
+    return not out
 
 
 def insert(table='filter', chain=None, position=None, rule=None, family='ipv4'):
@@ -762,11 +759,7 @@ def insert(table='filter', chain=None, position=None, rule=None, family='ipv4'):
         cmd = '{0} insert rule {1} {2} {3} {4}'.\
                 format(_nftables_cmd(), nft_family, table, chain, rule)
     out = __salt__['cmd.run'](cmd, python_shell=False)
-
-    if len(out) == 0:
-        return True
-    else:
-        return False
+    return not out
 
 
 def delete(table, chain=None, position=None, rule=None, family='ipv4'):
@@ -820,11 +813,7 @@ def delete(table, chain=None, position=None, rule=None, family='ipv4'):
     cmd = '{0} delete rule {1} {2} {3} handle {4}'.\
             format(_nftables_cmd(), nft_family, table, chain, position)
     out = __salt__['cmd.run'](cmd, python_shell=False)
-
-    if len(out) == 0:
-        return True
-    else:
-        return False
+    return not out
 
 
 def flush(table='filter', chain='', family='ipv4'):
@@ -859,8 +848,4 @@ def flush(table='filter', chain='', family='ipv4'):
         cmd = '{0} flush table {1} {2}'.\
                 format(_nftables_cmd(), nft_family, table)
     out = __salt__['cmd.run'](cmd, python_shell=False)
-
-    if len(out) == 0:
-        return True
-    else:
-        return False
+    return not out

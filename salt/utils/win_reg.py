@@ -769,7 +769,7 @@ def cast_vdata(vdata=None, vtype='REG_SZ'):
         return [_to_unicode(i) for i in vdata]
     # Make sure REG_QWORD is a 64 bit integer
     elif vtype_value == win32con.REG_QWORD:
-        return vdata if six.PY3 else long(vdata)  # pylint: disable=W1699
+        return vdata if six.PY3 else long(vdata)  # pylint: disable=incompatible-py3-code,undefined-variable
     # Everything else is int
     else:
         return int(vdata)

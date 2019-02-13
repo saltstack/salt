@@ -216,7 +216,7 @@ def install(name=None, pkgs=None, sources=None, **kwargs):
     except MinionError as exc:
         raise CommandExecutionError(exc)
 
-    if pkg_params is None or len(pkg_params) == 0:
+    if not pkg_params:
         return {}
 
     old = list_pkgs()
@@ -348,7 +348,7 @@ def upgrade_available(name):
     '''
     Check whether or not an upgrade is available for a given package
 
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     CLI Example:
 
@@ -369,7 +369,7 @@ def upgrade(name=None,
 
     Returns a dictionary containing the changes:
 
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     .. code-block:: python
 
