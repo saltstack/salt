@@ -15,6 +15,7 @@ import salt.utils.dns
 from salt.utils.dns import _to_port, _tree, _weighted_order, _data2rec, _data2rec_group
 from salt.utils.dns import _lookup_gai, _lookup_dig, _lookup_drill, _lookup_host, _lookup_nslookup
 from salt.utils.dns import lookup
+import salt.modules.cmdmod
 
 # Testing
 from tests.support.unit import skipIf, TestCase
@@ -317,6 +318,12 @@ class DNSlookupsCase(TestCase):
                     self.assertEqual(
                         lookup(rec, rec_t, method='nslookup', servers='8.8.8.8'), test_res,
                     )
+
+    @skipIf(not salt.utils.dns.HAS_DIG, 'dig is not available')
+    def test_dig_options(self):
+        cmd = 'dig {0} -v'.format(salt.utils.dns.DIG_OPTIONS)
+        cmd = salt.modules.cmdmod.retcode(cmd, python_shell=False, output_loglevel='quiet')
+        self.assertEqual(cmd, 0)
 
     def test_dig(self):
         wrong_type = {'retcode': 0, 'stderr':  ';; Warning, ignoring invalid type ABC'}
