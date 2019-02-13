@@ -49,14 +49,12 @@ class SSHClient(FSClient):
             '',
             **__salt__.kwargs)
         ret = single.shell.send(src, dest, makedirs)
+        log.warning('HERE BE {}'.format(ret))
 
-        return not ret[2]
-
-
-
+        return src
 
 
-def _mk_client():
+def __mk_client():
     '''
     Create a file client and add it to the context.
 
@@ -70,9 +68,57 @@ def _mk_client():
             SSHClient(__opts__)
 
 
+def _push(path, keep_symlinks=False, upload_path=None, remove_source=False):
+    if not __opts__.get('file_recv', False):
+        log.error('Push requested but master does not allow file_recv')
+        return False
+
+    log.debug('Trying to copy \'%s\' to master', path)
+    if '../' in path or not os.path.isabs(path):
+        log.debug('Path must be absolute, returning False')
+        return False
+    if not keep_symlinks:
+        path = os.path.realpath(path)
+    if not os.path.isfile(path):
+        log.debug('Path failed os.path.isfile check, returning False')
+        return False
+
+    if upload_path:
+        if '../' in upload_path:
+            log.debug('Path must be absolute, returning False')
+            log.debug('Bad path: %s', upload_path)
+            return False
+        load_path = upload_path.lstrip(os.sep)
+    else:
+        load_path = path.lstrip(os.sep)
+    # Normalize the path. This does not eliminate
+    # the possibility that relative entries will still be present
+    load_path_normal = os.path.normpath(load_path)
+
+    # If this is Windows and a drive letter is present, remove it
+    load_path_split_drive = os.path.splitdrive(load_path_normal)[1]
+
+    # Finally, split the remaining path into a list for delivery to the master
+    load_path_list = [_f for _f in load_path_split_drive.split(os.sep) if _f]
+
+    single = salt.client.ssh.Single(
+        __opts__,
+        '',
+        **__salt__.kwargs)
+
+    # TODO: yeah but no receive yet
+    ret = single.shell.send()
+    #ret = single.shell.send(src, dest, makedirs)
+
+    return not ret[2]
+
+
 def _fix_me():
-    salt.modules.cp._mk_client = _mk_client
+    salt.modules.cp._mk_client = __mk_client
+    salt.modules.cp.push = _push
     salt.modules.cp.__context__ = __context__
+    salt.modules.cp.__pillar__ = __pillar__
+    salt.modules.cp.__grains__ = __grains__
     salt.modules.cp.__opts__ = __opts__
     salt.modules.cp.__salt__ = __salt__
     log.warning('MODULE LOADED')
@@ -146,8 +192,6 @@ def list_states(*args, **kwargs):
 def stat_file(*args, **kwargs):
     _fix_me()
     return salt.modules.cp.stat_file(*args, **kwargs)
-
-
 
 
 # def _render_filenames(path, dest, saltenv, template):
