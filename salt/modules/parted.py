@@ -19,6 +19,7 @@ from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import os
+import re
 import stat
 import string
 import logging
@@ -91,15 +92,15 @@ def _validate_partition_boundary(boundary):
     '''
     Ensure valid partition boundaries are supplied.
     '''
-    try:
-        for unit in VALID_UNITS:
-            if six.text_type(boundary).endswith(unit):
-                return
-        int(boundary)
-    except Exception:
-        raise CommandExecutionError(
-            'Invalid partition boundary passed: "{0}"'.format(boundary)
-        )
+    boundary = six.text_type(boundary)
+    match = re.search(r'^([\d.]+)(\D*)$', boundary)
+    if match:
+        unit = match.group(2)
+        if not unit or unit in VALID_UNITS:
+            return
+    raise CommandExecutionError(
+        'Invalid partition boundary passed: "{0}"'.format(boundary)
+    )
 
 
 def probe(*devices):
@@ -155,7 +156,7 @@ def list_(device, unit=None):
     for line in out:
         if line in ('BYT;', 'CHS;', 'CYL;'):
             continue
-        cols = line.replace(';', '').split(':')
+        cols = line.rstrip(';').split(':')
         if mode == 'info':
             if 7 <= len(cols) <= 8:
                 ret['info'] = {
@@ -177,15 +178,26 @@ def list_(device, unit=None):
                 raise CommandExecutionError(
                     'Problem encountered while parsing output from parted')
         else:
-            if len(cols) == 7:
-                ret['partitions'][cols[0]] = {
-                    'number': cols[0],
-                    'start': cols[1],
-                    'end': cols[2],
-                    'size': cols[3],
-                    'type': cols[4],
-                    'file system': cols[5],
-                    'flags': cols[6]}
+            # Parted (v3.1) have a variable field list in machine
+            # readable output:
+            #
+            # number:start:end:[size:]([file system:name:flags;]|[free;])
+            #
+            # * If units are in CHS 'size' is not printed.
+            # * If is a logical partition with PED_PARTITION_FREESPACE
+            #   set, the last three fields are replaced with the
+            #   'free' text.
+            #
+            fields = ['number', 'start', 'end']
+            if unit != 'chs':
+                fields.append('size')
+            if cols[-1] == 'free':
+                # Drop the last element from the list
+                cols.pop()
+            else:
+                fields.extend(['file system', 'name', 'flags'])
+            if len(fields) == len(cols):
+                ret['partitions'][cols[0]] = dict(six.moves.zip(fields, cols))
             else:
                 raise CommandExecutionError(
                     'Problem encountered while parsing output from parted')

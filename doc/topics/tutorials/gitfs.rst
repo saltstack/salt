@@ -531,7 +531,13 @@ Global Remotes
 
 The ``all_saltenvs`` per-remote configuration parameter overrides the logic
 Salt uses to map branches/tags to fileserver environments (i.e. saltenvs). This
-allows a single branch/tag to appear in *all* saltenvs.
+allows a single branch/tag to appear in *all* GitFS saltenvs.
+
+.. note::
+   ``all_saltenvs`` only works *within* GitFS. That is, files in a branch
+   configured using ``all_saltenvs`` will *not* show up in a fileserver
+   environment defined via some other fileserver backend (e.g.
+   :conf_master:`file_roots`).
 
 This is very useful in particular when working with :ref:`salt formulas
 <conventions-formula>`. Prior to the addition of this feature, it was necessary
