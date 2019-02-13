@@ -20,10 +20,10 @@ def installed(name, channel=None):
     '''
     Ensure that the named snap package is installed
 
-    name : str
+    name
         The snap package
 
-    channel : str
+    channel
         Optional. The channel to install the package from.
     '''
     ret = {'name': name,
@@ -90,7 +90,7 @@ def removed(name):
     '''
     Ensure that the named snap package is not installed
 
-    name : str
+    name
         The snap package
     '''
 
