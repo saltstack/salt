@@ -239,7 +239,7 @@ setLogRecordFactory(SaltLogRecord)
 
 
 class SaltLoggingClass(six.with_metaclass(LoggingMixInMeta, LOGGING_LOGGER_CLASS, NewStyleClassMixIn)):
-    def __new__(cls, *args):  # pylint: disable=W0613, E1002
+    def __new__(cls, *args):  # pylint: disable=W0613,E0012
         '''
         We override `__new__` in our logging logger class in order to provide
         some additional features like expand the module name padding if length
@@ -428,7 +428,7 @@ if logging.getLoggerClass() is not SaltLoggingClass:
     logging.addLevelName(TRACE, 'TRACE')
     logging.addLevelName(GARBAGE, 'GARBAGE')
 
-    if len(logging.root.handlers) == 0:
+    if not logging.root.handlers:
         # No configuration to the logging system has been done so far.
         # Set the root logger at the lowest level possible
         logging.root.setLevel(GARBAGE)

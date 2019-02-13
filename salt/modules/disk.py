@@ -85,7 +85,7 @@ def usage(args=None):
     '''
     Return usage information for volumes mounted on this minion
 
-    .. versionchanged:: Fluorine
+    .. versionchanged:: 2019.2.0
 
         Default for SunOS changed to 1 kilobyte blocks
 
@@ -593,7 +593,7 @@ def hdparms(disks, args=None):
         disk_data = {}
         for line in _hdparm('-{0} {1}'.format(args, disk), False).splitlines():
             line = line.strip()
-            if len(line) == 0 or line == disk + ':':
+            if not line or line == disk + ':':
                 continue
 
             if ':' in line:
@@ -623,13 +623,13 @@ def hdparms(disks, args=None):
                             deep_key, val = val.split('=', 1)
                             deep_key = deep_key.strip()
                             val = val.strip()
-                            if len(val):
+                            if val:
                                 valdict[deep_key] = val
-                        elif len(val):
+                        elif val:
                             rvals.append(val)
-                if len(valdict):
+                if valdict:
                     rvals.append(valdict)
-                if len(rvals) == 0:
+                if not rvals:
                     continue
                 elif len(rvals) == 1:
                     rvals = rvals[0]
@@ -825,7 +825,7 @@ def _iostat_fbsd(interval, count, disks):
     for line in ret:
         if not line.startswith('device'):
             continue
-        elif not len(dev_header):
+        elif not dev_header:
             dev_header = line.split()[1:]
         while line is not False:
             line = next(ret, False)
@@ -876,12 +876,12 @@ def _iostat_linux(interval, count, disks):
     ret = iter(__salt__['cmd.run_stdout'](iostat_cmd, output_loglevel='quiet').splitlines())
     for line in ret:
         if line.startswith('avg-cpu:'):
-            if not len(sys_header):
+            if not sys_header:
                 sys_header = tuple(line.split()[1:])
             line = [decimal.Decimal(x) for x in next(ret).split()]
             sys_stats.append(line)
         elif line.startswith('Device:'):
-            if not len(dev_header):
+            if not dev_header:
                 dev_header = tuple(line.split()[1:])
             while line is not False:
                 line = next(ret, False)
@@ -894,7 +894,7 @@ def _iostat_linux(interval, count, disks):
 
     iostats = {}
 
-    if len(sys_header):
+    if sys_header:
         iostats['sys'] = _iostats_dict(sys_header, sys_stats)
 
     for disk, stats in dev_stats.items():

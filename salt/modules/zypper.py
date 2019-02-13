@@ -310,7 +310,7 @@ class _Zypper(object):
             if self.__systemd_scope:
                 cmd.extend(['systemd-run', '--scope'])
             cmd.extend(self.__cmd)
-            log.debug("Calling Zypper: " + ' '.join(cmd))
+            log.debug('Calling Zypper: %s', ' '.join(cmd))
             self.__call_result = __salt__['cmd.run_all'](cmd, **kwargs)
             if self._check_result():
                 break
@@ -343,7 +343,7 @@ class _Zypper(object):
                 was_blocked = True
 
         if was_blocked:
-            __salt__['event.fire_master']({'success': not len(self.error_msg),
+            __salt__['event.fire_master']({'success': not self.error_msg,
                                            'info': self.error_msg or 'Zypper has been released'},
                                           self.TAG_RELEASED)
         if self.error_msg and not self.__no_raise and not self.__ignore_repo_failure:
@@ -653,7 +653,7 @@ def latest_version(*names, **kwargs):
             ret[name] = ''
 
     # Return a string if only one package name passed
-    if len(names) == 1 and len(ret):
+    if len(names) == 1 and ret:
         return ret[names[0]]
 
     return ret
@@ -961,7 +961,7 @@ def _get_configured_repos(root=None):
     if os.path.exists(repos):
         repos_cfg.read([repos + '/' + fname for fname in os.listdir(repos) if fname.endswith(".repo")])
     else:
-        log.warning('Repositories not found in {}'.format(repos))
+        log.warning('Repositories not found in %s', repos)
 
     return repos_cfg
 
@@ -1393,7 +1393,7 @@ def install(name=None,
     except MinionError as exc:
         raise CommandExecutionError(exc)
 
-    if pkg_params is None or len(pkg_params) == 0:
+    if not pkg_params:
         return {}
 
     version_num = Wildcard(__zypper__(root=root))(name, version)
@@ -1812,7 +1812,7 @@ def list_locks(root=None):
     except IOError:
         pass
     except Exception:
-        log.warning('Detected a problem when accessing {}'.format(_locks))
+        log.warning('Detected a problem when accessing %s', _locks)
 
     return locks
 
