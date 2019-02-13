@@ -132,20 +132,20 @@ def recursive_copytree(source, destination, overwrite=False):
             src_path = os.path.join(root, item)
             dst_path = os.path.join(destination, src_path.replace(source, '').lstrip(os.sep))
             if not os.path.exists(dst_path):
-                log.debug('Creating directory: {0}'.format(dst_path))
+                log.debug('Creating directory: %s', dst_path)
                 os.makedirs(dst_path)
         for item in files:
             src_path = os.path.join(root, item)
             dst_path = os.path.join(destination, src_path.replace(source, '').lstrip(os.sep))
             if os.path.exists(dst_path) and not overwrite:
                 if os.stat(src_path).st_mtime > os.stat(dst_path).st_mtime:
-                    log.debug('Copying {0} to {1}'.format(src_path, dst_path))
+                    log.debug('Copying %s to %s', src_path, dst_path)
                     shutil.copy2(src_path, dst_path)
             else:
                 if not os.path.isdir(os.path.dirname(dst_path)):
-                    log.debug('Creating directory: {0}'.format(os.path.dirname(dst_path)))
+                    log.debug('Creating directory: %s', os.path.dirname(dst_path))
                     os.makedirs(os.path.dirname(dst_path))
-                log.debug('Copying {0} to {1}'.format(src_path, dst_path))
+                log.debug('Copying %s to %s', src_path, dst_path)
                 shutil.copy2(src_path, dst_path)
 
 
@@ -221,6 +221,10 @@ RUNTIME_VARS = RuntimeVars(
     TMP_PRODENV_STATE_TREE=paths.TMP_PRODENV_STATE_TREE,
     RUNNING_TESTS_USER=RUNNING_TESTS_USER,
     RUNTIME_CONFIGS={},
+    CODE_DIR=paths.CODE_DIR,
+    BASE_FILES=paths.BASE_FILES,
+    PROD_FILES=paths.PROD_FILES,
+    TESTS_DIR=paths.TESTS_DIR,
     PYTEST_SESSION=False
 )
 # <---- Tests Runtime Variables --------------------------------------------------------------------------------------

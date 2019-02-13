@@ -141,7 +141,7 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(zypper.__zypper__.call('foo'), stdout_xml_snippet)
             self.assertEqual(len(sniffer.calls), 1)
 
-            zypper.__zypper__.call('bar')
+            zypper.__zypper__.call('--no-refresh', 'bar')
             self.assertEqual(len(sniffer.calls), 2)
             self.assertEqual(sniffer.calls[0]['args'][0], ['zypper', '--non-interactive', '--no-refresh', 'foo'])
             self.assertEqual(sniffer.calls[1]['args'][0], ['zypper', '--non-interactive', '--no-refresh', 'bar'])

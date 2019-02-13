@@ -875,7 +875,7 @@ class PillarClient(Client):
             ):
                 # Don't walk any directories that match file_ignore_regex or glob
                 dirs[:] = [d for d in dirs if not salt.fileserver.is_file_ignored(self.opts, d)]
-                if len(dirs) == 0 and len(files) == 0:
+                if not dirs and not files:
                     ret.append(salt.utils.data.decode(os.path.relpath(root, path)))
         return ret
 

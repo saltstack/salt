@@ -38,7 +38,7 @@ def sdecode(string_):
         'Sodium',
         'Use of \'salt.utils.locales.sdecode\' detected. This function '
         'has been replaced by \'salt.utils.data.decode\' as of '
-        'Salt Fluorine. This warning will be removed in Salt Sodium.',
+        'Salt 2019.2.0. This warning will be removed in Salt Sodium.',
         stacklevel=3
     )
     return salt.utils.data.decode(string_)
@@ -49,7 +49,7 @@ def sdecode_if_string(value_):
         'Sodium',
         'Use of \'salt.utils.locales.sdecode_if_string\' detected. This '
         'function has been replaced by \'salt.utils.data.decode\' as of '
-        'Salt Fluorine. This warning will be removed in Salt Sodium.',
+        'Salt 2019.2.0. This warning will be removed in Salt Sodium.',
         stacklevel=3
     )
     return salt.utils.data.decode(value_)
