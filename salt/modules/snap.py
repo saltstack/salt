@@ -24,6 +24,20 @@ def __virtual__():
 
 
 def install(pkg, channel=None, refresh=False):
+    '''
+    Install the specified snap package from the specified channel.
+    Returns a dictionary of "result" and "output".
+
+    pkg
+        The snap package name
+
+    channel
+        Optional. The snap channel to install from, eg "beta"
+
+    refresh : False
+        If True, use "snap refresh" instead of "snap install".
+        This allows changing the channel of a previously installed package.
+    '''
     args = []
     ret = {'result': None, 'output': ""}
 
@@ -47,16 +61,40 @@ def install(pkg, channel=None, refresh=False):
 
 
 def is_installed(pkg):
+    '''
+    Returns True if there is any version of the specified package installed.
+
+    pkg
+        The package name
+    '''
     return bool(versions_installed(pkg))
 
 
 def remove(pkg):
-    retcode = subprocess.call([SNAP_BINARY_NAME, 'remove', pkg])
-    return retcode == 0
+    '''
+    Remove the specified snap package. Returns a dictionary of "result" and "output".
+
+    pkg
+        The package name
+    '''
+    try:
+        ret['output'] = subprocess.check_output([SNAP_BINARY_NAME, 'remove', pkg])
+        ret['result'] = True
+    except subprocess.CalledProcessError as e:
+        ret['output'] = e.output
+        ret['result'] = False
 
 
 # Parse 'snap list' into a dict
 def versions_installed(pkg):
+    '''
+    Query which version(s) of the specified snap package are installed.
+    Returns a list of 0 or more dictionaries.
+
+    pkg
+        The package name
+    '''
+
     try:
         # Try to run it, merging stderr into output
         output = subprocess.check_output([SNAP_BINARY_NAME, 'list', pkg], stderr=subprocess.STDOUT)
