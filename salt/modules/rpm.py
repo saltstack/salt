@@ -545,17 +545,8 @@ def info(*packages, **kwargs):
     query.append("-----\\n")
 
     call = __salt__['cmd.run_all'](cmd + (" --queryformat '{0}'".format(''.join(query))),
-                                   output_loglevel='trace', env={'TZ': 'UTC'}, clean_env=True)
-    if call['retcode'] != 0:
-        comment = ''
-        if 'stderr' in call:
-            comment += (call['stderr'] or call['stdout'])
-        raise CommandExecutionError(comment)
-    elif 'error' in call['stderr']:
-        raise CommandExecutionError(call['stderr'])
-    else:
-        out = call['stdout']
-
+                                   output_loglevel='trace', env={'TZ': 'UTC'}, clean_env=True, ignore_retcode=True)
+    out = call['stdout']
     _ret = list()
     for pkg_info in re.split(r"----*", out):
         pkg_info = pkg_info.strip()
