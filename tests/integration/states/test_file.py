@@ -148,7 +148,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         remove files created in previous tests
         '''
         user = 'salt'
-        if user in str(self.run_function('user.list_users', [user])):
+        if user in str(self.run_function('user.list_users')):
             self.run_function('user.delete', [user])
 
         for path in (FILEPILLAR, FILEPILLARDEF, FILEPILLARGIT):
