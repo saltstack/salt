@@ -77,7 +77,6 @@ def communicator(func):
             queue.put('Exception')
             queue.put('{0}\n{1}\n'.format(ex, trace))
         except SystemExit as ex:
-            print("Communicatior: caught exception")
             trace = traceback.format_exc()
             queue.put('ERROR')
             queue.put('System exit')
