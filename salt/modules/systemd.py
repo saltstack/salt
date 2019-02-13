@@ -9,9 +9,9 @@ Provides the service module for systemd
     minion, and it is using a different module (or gives an error similar to
     *'service.start' is not available*), see :ref:`here
     <module-provider-override>`.
-    
+
 .. important::
-    This is an implementation of virtual 'service' module. As such, you must 
+    This is an implementation of virtual 'service' module. As such, you must
     call it under the name 'service' and NOT 'systemd'. You can see that also
     in the examples below.
 '''
