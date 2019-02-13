@@ -9,8 +9,8 @@ import logging
 import socket
 
 # Import Salt Testing Libs
-import tests.integration as integration
 from tests.support.unit import TestCase, skipIf
+from tests.support.runtests import RUNTIME_VARS
 from tests.integration.cloud.helpers.virtualbox import (VirtualboxTestCase,
                                                         VirtualboxCloudTestCase,
                                                         CONFIG_NAME,
@@ -87,7 +87,7 @@ class VirtualboxProviderTest(VirtualboxCloudTestCase):
 
         # check if personal access token, ssh_key_file, and ssh_key_names are present
         config_path = os.path.join(
-            integration.FILES,
+            RUNTIME_VARS.FILES,
             'conf',
             'cloud.providers.d',
             PROVIDER_NAME + '.conf'
@@ -96,7 +96,7 @@ class VirtualboxProviderTest(VirtualboxCloudTestCase):
         providers = cloud_providers_config(config_path)
         log.debug("config: %s", providers)
         config_path = os.path.join(
-            integration.FILES,
+            RUNTIME_VARS.FILES,
             'conf',
             'cloud.profiles.d',
             PROVIDER_NAME + '.conf'
@@ -251,7 +251,7 @@ class VirtualboxProviderHeavyTests(VirtualboxCloudTestCase):
 
         # check if personal access token, ssh_key_file, and ssh_key_names are present
         config_path = os.path.join(
-            integration.FILES,
+            RUNTIME_VARS.FILES,
             'conf',
             'cloud.providers.d',
             PROVIDER_NAME + '.conf'
@@ -260,7 +260,7 @@ class VirtualboxProviderHeavyTests(VirtualboxCloudTestCase):
         providers = cloud_providers_config(config_path)
         log.debug("config: %s", providers)
         config_path = os.path.join(
-            integration.FILES,
+            RUNTIME_VARS.FILES,
             'conf',
             'cloud.profiles.d',
             PROVIDER_NAME + '.conf'

@@ -1034,6 +1034,7 @@ def hw_addr(iface):
     '''
     return salt.utils.network.hw_addr(iface)
 
+
 # Alias hwaddr to preserve backward compat
 hwaddr = salt.utils.functools.alias_function(hw_addr, 'hwaddr')
 
@@ -1123,7 +1124,7 @@ def ip_in_subnet(ip_addr, cidr):
 
 def convert_cidr(cidr):
     '''
-    returns the network and subnet mask of a cidr addr
+    returns the network address, subnet mask and broadcast address of a cidr address
 
     .. versionadded:: 2016.3.0
 
@@ -1134,11 +1135,13 @@ def convert_cidr(cidr):
         salt '*' network.convert_cidr 172.31.0.0/16
     '''
     ret = {'network': None,
-           'netmask': None}
+           'netmask': None,
+           'broadcast': None}
     cidr = calc_net(cidr)
     network_info = ipaddress.ip_network(cidr)
     ret['network'] = six.text_type(network_info.network_address)
     ret['netmask'] = six.text_type(network_info.netmask)
+    ret['broadcast'] = six.text_type(network_info.broadcast_address)
     return ret
 
 
@@ -1212,6 +1215,7 @@ def ip_addrs6(interface=None, include_loopback=False, cidr=None):
     else:
         return addrs
 
+
 ipaddrs6 = salt.utils.functools.alias_function(ip_addrs6, 'ipaddrs6')
 
 
@@ -1284,7 +1288,7 @@ def mod_hostname(hostname):
                 if 'Static hostname' in line[0]:
                     o_hostname = line[1].strip()
         else:
-            log.debug('{0} was unable to get hostname'.format(hostname_cmd))
+            log.debug('%s was unable to get hostname', hostname_cmd)
             o_hostname = __salt__['network.get_hostname']()
     elif not salt.utils.platform.is_sunos():
         # don't run hostname -f because -f is not supported on all platforms
@@ -1299,10 +1303,8 @@ def mod_hostname(hostname):
             hostname,
             ))
         if result['retcode'] != 0:
-            log.debug('{0} was unable to set hostname. Error: {1}'.format(
-                hostname_cmd,
-                result['stderr'],
-                ))
+            log.debug('%s was unable to set hostname. Error: %s',
+                      hostname_cmd, result['stderr'])
             return False
     elif not salt.utils.platform.is_sunos():
         __salt__['cmd.run']('{0} {1}'.format(hostname_cmd, hostname))

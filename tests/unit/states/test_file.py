@@ -777,6 +777,28 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                                                      (name, user=user, group=group),
                                                      ret)
 
+                        if salt.utils.platform.is_windows():
+                            mock_ret = MagicMock(return_value=ret)
+                            comt = ('File {0} not updated'.format(name))
+                        else:
+                            perms = {'luser': user,
+                                     'lmode': '0644',
+                                     'lgroup': group}
+                            mock_ret = MagicMock(return_value=(ret, perms))
+                            comt = ('File {0} will be updated with '
+                                    'permissions 0400 from its current '
+                                    'state of 0644'.format(name))
+
+                        with patch.dict(filestate.__salt__,
+                                        {'file.check_perms': mock_ret}):
+                            with patch.object(os.path, 'exists', mock_t):
+                                with patch.dict(filestate.__opts__, {'test': True}):
+                                    ret.update({'comment': comt})
+                                    self.assertDictEqual(filestate.managed
+                                                         (name, user=user,
+                                                          group=group,
+                                                          mode=400), ret)
+
     # 'directory' function tests: 1
 
     def test_directory(self):

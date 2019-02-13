@@ -238,6 +238,7 @@ def increment(key, delta=1, host=DEFAULT_HOST, port=DEFAULT_PORT):
     except ValueError:
         raise SaltInvocationError('Delta value must be an integer')
 
+
 incr = salt.utils.functools.alias_function(increment, 'incr')
 
 
@@ -268,5 +269,6 @@ def decrement(key, delta=1, host=DEFAULT_HOST, port=DEFAULT_PORT):
         return conn.decr(key, delta)
     except ValueError:
         raise SaltInvocationError('Delta value must be an integer')
+
 
 decr = salt.utils.functools.alias_function(decrement, 'decr')

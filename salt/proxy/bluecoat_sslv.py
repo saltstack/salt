@@ -102,7 +102,7 @@ def __virtual__():
 def _validate_response_code(response_code_to_check):
     formatted_response_code = response_code_to_check
     if formatted_response_code not in [200, 201, 202, 204]:
-        log.error("Received error HTTP status code: {0}" .format(formatted_response_code))
+        log.error("Received error HTTP status code: %s", formatted_response_code)
         raise salt.exceptions.CommandExecutionError(
             "Did not receive a valid response from host.")
 
@@ -181,8 +181,8 @@ def logon():
     logon_response = session.post(DETAILS['url'], data=json.dumps(payload), verify=False)
 
     if logon_response.status_code != 200:
-        log.error("Error logging into proxy. HTTP Error code: {0}" .format(
-            logon_response.status_code))
+        log.error("Error logging into proxy. HTTP Error code: %s",
+                  logon_response.status_code)
         raise salt.exceptions.CommandExecutionError(
             "Did not receive a valid response from host.")
 
