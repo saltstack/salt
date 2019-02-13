@@ -57,7 +57,7 @@ class LogCollector(object):
 
     class MessagesList(list):
         def append(self, obj):
-            list.append(self, '{} - {}'.format(datetime.datetime.utcnow().strftime('%T.%f')[:-3], obj))
+            list.append(self, '{} - {}'.format(datetime.datetime.utcnow().strftime('%H:%M:%S.%f')[:-3], obj))
         __call__ = append
 
     def __init__(self):
