@@ -292,9 +292,9 @@ def compliance_report(filepath=None,
     filepath
         The absolute path to the validation file.
 
-        .. versionchanged:: Fluorine
+        .. versionchanged:: 2019.2.0
 
-        Beginning with release codename ``Fluorine``, this function has been
+        Beginning with release codename ``2019.2.0``, this function has been
         enhanced, to be able to leverage the multi-engine template rendering
         of Salt, besides the possibility to retrieve the file source from
         remote systems, the URL schemes supported being:
@@ -314,20 +314,20 @@ def compliance_report(filepath=None,
             (including pure Python).
 
     string
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
         The compliance report send as inline string, to be used as the file to
         send through the renderer system. Note, not all renderer modules can
         work with strings; the 'py' renderer requires a file, for example.
 
     renderer: ``jinja|yaml``
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
         The renderer pipe to send the file through; this is overridden by a
         "she-bang" at the top of the file.
 
     kwargs
-        .. versionchanged:: Fluorine
+        .. versionchanged:: 2019.2.0
 
         Keyword args to pass to Salt's compile_template() function.
 
@@ -420,7 +420,7 @@ def compliance_report(filepath=None,
 @proxy_napalm_wrap
 def netmiko_args(**kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Return the key-value arguments used for the authentication arguments for
     the netmiko module.
@@ -491,7 +491,7 @@ def netmiko_args(**kwargs):
 @proxy_napalm_wrap
 def netmiko_fun(fun, *args, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Call an arbitrary function from the :mod:`Netmiko<salt.modules.netmiko_mod>`
     module, passing the authentication details from the existing NAPALM
@@ -525,7 +525,7 @@ def netmiko_fun(fun, *args, **kwargs):
 @proxy_napalm_wrap
 def netmiko_call(method, *args, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Execute an arbitrary Netmiko method, passing the authentication details from
     the existing NAPALM connection.
@@ -554,7 +554,7 @@ def netmiko_call(method, *args, **kwargs):
 @proxy_napalm_wrap
 def netmiko_multi_call(*methods, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Execute a list of arbitrary Netmiko methods, passing the authentication
     details from the existing NAPALM connection.
@@ -581,7 +581,7 @@ def netmiko_multi_call(*methods, **kwargs):
 @proxy_napalm_wrap
 def netmiko_commands(*commands, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Invoke one or more commands to be executed on the remote device, via Netmiko.
     Returns a list of strings, with the output from each command.
@@ -631,7 +631,7 @@ def netmiko_commands(*commands, **kwargs):
 @proxy_napalm_wrap
 def netmiko_config(*config_commands, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Load a list of configuration commands on the remote device, via Netmiko.
 
@@ -702,7 +702,7 @@ def netmiko_config(*config_commands, **kwargs):
 @proxy_napalm_wrap
 def netmiko_conn(**kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Return the connection object with the network device, over Netmiko, passing
     the authentication details from the existing NAPALM connection.
@@ -728,7 +728,7 @@ def netmiko_conn(**kwargs):
 @proxy_napalm_wrap
 def junos_rpc(cmd=None, dest=None, format=None, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Execute an RPC request on the remote Junos device.
 
@@ -788,7 +788,7 @@ def junos_rpc(cmd=None, dest=None, format=None, **kwargs):
 @proxy_napalm_wrap
 def junos_commit(**kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Commit the changes loaded in the candidate configuration.
 
@@ -837,7 +837,7 @@ def junos_commit(**kwargs):
 @proxy_napalm_wrap
 def junos_install_os(path=None, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Installs the given image on the device.
 
@@ -876,7 +876,7 @@ def junos_install_os(path=None, **kwargs):
 @proxy_napalm_wrap
 def junos_facts(**kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     The complete list of Junos facts collected by ``junos-eznc``.
 
@@ -905,7 +905,7 @@ def junos_facts(**kwargs):
 @proxy_napalm_wrap
 def junos_cli(command, format=None, dev_timeout=None, dest=None, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Execute a CLI command and return the output in the specified format.
 
@@ -942,7 +942,7 @@ def junos_cli(command, format=None, dev_timeout=None, dest=None, **kwargs):
 @proxy_napalm_wrap
 def junos_copy_file(src, dst, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Copies the file on the remote Junos device.
 
@@ -969,7 +969,7 @@ def junos_copy_file(src, dst, **kwargs):
 @proxy_napalm_wrap
 def junos_call(fun, *args, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Execute an arbitrary function from the
     :mod:`junos execution module <salt.module.junos>`. To check what ``args``
@@ -1010,7 +1010,7 @@ def junos_call(fun, *args, **kwargs):
 
 def pyeapi_nxos_api_args(**prev_kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Return the key-value arguments used for the authentication arguments for the
     :mod:`pyeapi execution module <salt.module.arista_pyeapi>`.
@@ -1064,7 +1064,7 @@ def pyeapi_run_commands(*commands, **kwargs):
 @proxy_napalm_wrap
 def pyeapi_call(method, *args, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Invoke an arbitrary method from the ``pyeapi`` library.
     This function forwards the existing connection details to the
@@ -1091,7 +1091,7 @@ def pyeapi_call(method, *args, **kwargs):
 @proxy_napalm_wrap
 def pyeapi_conn(**kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Return the connection object with the Arista switch, over ``pyeapi``,
     passing the authentication details from the existing NAPALM connection.
@@ -1122,7 +1122,7 @@ def pyeapi_config(commands=None,
                   saltenv='base',
                   **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Configures the Arista switch with the specified commands, via the ``pyeapi``
     library. This function forwards the existing connection details to the
@@ -1184,7 +1184,7 @@ def nxos_api_rpc(commands,
                  method='cli',
                  **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Execute an arbitrary RPC request via the Nexus API.
 
@@ -1214,7 +1214,7 @@ def nxos_api_config(commands=None,
                     saltenv='base',
                     **kwargs):
     '''
-     .. versionadded:: Fluorine
+     .. versionadded:: 2019.2.0
 
     Configures the Nexus switch with the specified commands, via the NX-API.
 
@@ -1272,7 +1272,7 @@ def nxos_api_config(commands=None,
 @proxy_napalm_wrap
 def nxos_api_show(commands, raw_text=True, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Execute one or more show (non-configuration) commands.
 
@@ -1298,7 +1298,7 @@ def nxos_api_show(commands, raw_text=True, **kwargs):
 @proxy_napalm_wrap
 def rpc(command, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     This is a wrapper to execute RPC requests on various network operating
     systems supported by NAPALM, invoking the following functions for the NAPALM
@@ -1355,7 +1355,7 @@ def rpc(command, **kwargs):
 @depends(HAS_CISCOCONFPARSE)
 def config_find_lines(regex, source='running'):
     r'''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Return the configuration lines that match the regular expressions from the
     ``regex`` argument. The configuration is read from the network device
@@ -1382,7 +1382,7 @@ def config_find_lines(regex, source='running'):
 @depends(HAS_CISCOCONFPARSE)
 def config_lines_w_child(parent_regex, child_regex, source='running'):
     r'''
-     .. versionadded:: Fluorine
+     .. versionadded:: 2019.2.0
 
     Return the configuration lines that match the regular expressions from the
     ``parent_regex`` argument, having child lines matching ``child_regex``.
@@ -1421,7 +1421,7 @@ def config_lines_w_child(parent_regex, child_regex, source='running'):
 @depends(HAS_CISCOCONFPARSE)
 def config_lines_wo_child(parent_regex, child_regex, source='running'):
     '''
-      .. versionadded:: Fluorine
+      .. versionadded:: 2019.2.0
 
     Return the configuration lines that match the regular expressions from the
     ``parent_regex`` argument, having the child lines *not* matching
@@ -1461,7 +1461,7 @@ def config_lines_wo_child(parent_regex, child_regex, source='running'):
 @depends(HAS_CISCOCONFPARSE)
 def config_filter_lines(parent_regex, child_regex, source='running'):
     r'''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Return a list of detailed matches, for the configuration blocks (parent-child
     relationship) whose parent respects the regular expressions configured via
@@ -1507,7 +1507,7 @@ def config_filter_lines(parent_regex, child_regex, source='running'):
 
 def config_tree(source='running', with_tags=False):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Transform Cisco IOS style configuration to structured Python dictionary.
     Depending on the value of the ``with_tags`` argument, this function may
@@ -1535,7 +1535,7 @@ def config_merge_tree(source='running',
                       merge_path=None,
                       saltenv='base'):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Return the merge tree of the ``initial_config`` with the ``merge_config``,
     as a Python dictionary.
@@ -1576,7 +1576,7 @@ def config_merge_text(source='running',
                       merge_path=None,
                       saltenv='base'):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Return the merge result of the configuration from ``source`` with the
     merge configuration, as plain text (without loading the config on the
@@ -1618,7 +1618,7 @@ def config_merge_diff(source='running',
                       merge_path=None,
                       saltenv='base'):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Return the merge diff, as text, after merging the merge config into the
     configuration source requested (without loading the config on the device).
@@ -1659,7 +1659,7 @@ def config_diff_tree(source1='candidate',
                      source2='running',
                      running_path=None):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Return the diff, as Python dictionary, between two different sources.
     The sources can be either specified using the ``source1`` and ``source2``
@@ -1722,7 +1722,7 @@ def config_diff_text(source1='candidate',
                      source2='running',
                      running_path=None):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Return the diff, as text, between the two different configuration sources.
     The sources can be either specified using the ``source1`` and ``source2``
@@ -1780,7 +1780,7 @@ def scp_get(remote_path,
             preserve_times=False,
             **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Transfer files and directories from remote network device to the localhost
     of the Minion.
@@ -1863,7 +1863,7 @@ def scp_put(files,
             saltenv='base',
             **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Transfer files and directories to remote network device.
 

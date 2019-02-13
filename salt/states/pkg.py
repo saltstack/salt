@@ -135,10 +135,6 @@ if salt.utils.platform.is_windows():
     # The following imports are used by the namespaced win_pkg funcs
     # and need to be included in their globals.
     # pylint: disable=import-error,unused-import
-    try:
-        import msgpack
-    except ImportError:
-        import msgpack_pure as msgpack
     from salt.utils.versions import LooseVersion
     # pylint: enable=import-error,unused-import
 # pylint: enable=invalid-name
@@ -1518,7 +1514,7 @@ def installed(
         information.
 
     '''
-    if isinstance(pkgs, list) and len(pkgs) == 0:
+    if not pkgs and isinstance(pkgs, list):
         return {'name': name,
                 'changes': {},
                 'result': True,
@@ -1824,10 +1820,10 @@ def installed(
             change_name = i['name']
             if change_name in changes:
                 comment.append(i['comment'])
-                if len(changes[change_name]['new']) > 0:
+                if changes[change_name]['new']:
                     changes[change_name]['new'] += '\n'
                 changes[change_name]['new'] += '{0}'.format(i['changes']['new'])
-                if len(changes[change_name]['old']) > 0:
+                if changes[change_name]['old']:
                     changes[change_name]['old'] += '\n'
                 changes[change_name]['old'] += '{0}'.format(i['changes']['old'])
             else:
@@ -2038,7 +2034,7 @@ def downloaded(name,
                          'this platform'
         return ret
 
-    if isinstance(pkgs, list) and len(pkgs) == 0:
+    if not pkgs and isinstance(pkgs, list):
         ret['result'] = True
         ret['comment'] = 'No packages to download provided'
         return ret
@@ -2151,7 +2147,7 @@ def patch_installed(name, advisory_ids=None, downloadonly=None, **kwargs):
                          'this platform'
         return ret
 
-    if isinstance(advisory_ids, list) and len(advisory_ids) == 0:
+    if not advisory_ids and isinstance(advisory_ids, list):
         ret['result'] = True
         ret['comment'] = 'No advisory ids provided'
         return ret
@@ -2394,7 +2390,7 @@ def latest(
                     'comment': 'Invalidly formatted "pkgs" parameter. See '
                                'minion log.'}
     else:
-        if isinstance(pkgs, list) and len(pkgs) == 0:
+        if not pkgs and isinstance(pkgs, list):
             return {
                 'name': name,
                 'changes': {},

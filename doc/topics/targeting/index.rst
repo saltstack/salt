@@ -116,10 +116,10 @@ There are many ways to target individual minions or groups of minions in Salt:
 Loadable Matchers
 =================
 
-.. versionadded:: Flourine
+.. versionadded:: 2019.2.0
 
 Internally targeting is implemented with chunks of code called Matchers.  As of
-the Flourine release, matchers can be loaded dynamically.  Currently new matchers
+the 2019.2.0 release, matchers can be loaded dynamically.  Currently new matchers
 cannot be created, but existing matchers can have their functionality altered or
 extended.  For more information on Matchers see
 

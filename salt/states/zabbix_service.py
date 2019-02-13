@@ -114,7 +114,7 @@ def present(host, service_root, trigger_desc, service_name=None, **kwargs):
         service = __salt__['zabbix.service_add'](
             service_rootid=root_id, service_name=service_name, triggerid=trigger_id, **kwargs)
         if service:
-            ret['comment'] = "Service {0} added {1} {2} {3}".format(service_name, root_id, service_name, trigger_id)
+            ret['comment'] = "Service {0} added {1} {0} {2}".format(service_name, root_id, trigger_id)
             ret['changes'] = changes_service_added
             ret['result'] = True
         else:
