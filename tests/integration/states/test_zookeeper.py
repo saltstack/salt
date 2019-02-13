@@ -5,6 +5,7 @@ Integration tests for the zookeeper states
 
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
+import logging
 
 # Import Salt Testing Libs
 from tests.support.unit import skipIf
@@ -21,6 +22,8 @@ try:
 except ImportError:
     HAS_KAZOO = False
 
+log = logging.getLogger(__name__)
+
 
 @destructiveTest
 @skipIf(not salt.utils.path.which('dockerd'), 'Docker not installed')
@@ -29,15 +32,17 @@ class ZookeeperTestCase(ModuleCase, SaltReturnAssertsMixin):
     '''
     Test zookeeper states
     '''
+    @classmethod
+    def setUpClass(cls):
+        cls.container_name = 'zookeeper_salt'
+
     def setUp(self):
-        '''
-        '''
         self.run_state('docker_image.present', name='zookeeper')
-        self.run_state('docker_container.running', name='zookeeper', image='zookeeper', port_bindings='2181:2181')
+        self.run_state('docker_container.running', name=self.container_name, image='zookeeper', port_bindings='2181:2181')
 
     def tearDown(self):
-        self.run_state('docker_container.stopped', name='zookeeper')
-        self.run_state('docker_container.absent', name='zookeeper')
+        self.run_state('docker_container.stopped', name=self.container_name)
+        self.run_state('docker_container.absent', name=self.container_name)
         self.run_state('docker_image.absent', name='docker.io/zookeeper', force=True)
 
     def test_zookeeper_present(self):

@@ -341,7 +341,7 @@ def mod_run_check(cmd_kwargs, onlyif, unless, creates):
     if onlyif is not None:
         if isinstance(onlyif, six.string_types):
             cmd = __salt__['cmd.retcode'](onlyif, ignore_retcode=True, python_shell=True, **cmd_kwargs)
-            log.debug('Last command return code: {0}'.format(cmd))
+            log.debug('Last command return code: %s', cmd)
             if cmd != 0:
                 return {'comment': 'onlyif condition is false',
                         'skip_watch': True,
@@ -349,7 +349,7 @@ def mod_run_check(cmd_kwargs, onlyif, unless, creates):
         elif isinstance(onlyif, list):
             for entry in onlyif:
                 cmd = __salt__['cmd.retcode'](entry, ignore_retcode=True, python_shell=True, **cmd_kwargs)
-                log.debug('Last command \'{0}\' return code: {1}'.format(entry, cmd))
+                log.debug('Last command \'%s\' return code: %s', entry, cmd)
                 if cmd != 0:
                     return {'comment': 'onlyif condition is false: {0}'.format(entry),
                             'skip_watch': True,
@@ -364,7 +364,7 @@ def mod_run_check(cmd_kwargs, onlyif, unless, creates):
     if unless is not None:
         if isinstance(unless, six.string_types):
             cmd = __salt__['cmd.retcode'](unless, ignore_retcode=True, python_shell=True, **cmd_kwargs)
-            log.debug('Last command return code: {0}'.format(cmd))
+            log.debug('Last command return code: %s', cmd)
             if cmd == 0:
                 return {'comment': 'unless condition is true',
                         'skip_watch': True,
@@ -373,7 +373,7 @@ def mod_run_check(cmd_kwargs, onlyif, unless, creates):
             cmd = []
             for entry in unless:
                 cmd.append(__salt__['cmd.retcode'](entry, ignore_retcode=True, python_shell=True, **cmd_kwargs))
-                log.debug('Last command return code: {0}'.format(cmd))
+                log.debug('Last command return code: %s', cmd)
             if all([c == 0 for c in cmd]):
                 return {'comment': 'unless condition is true',
                         'skip_watch': True,
