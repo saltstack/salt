@@ -18,7 +18,7 @@ def __virtual__():
 
 def installed(name, channel=None):
     '''
-    Ensure that the snap package is installed
+    Ensure that the named snap package is installed
 
     name : str
         The snap package
@@ -83,4 +83,42 @@ def installed(name, channel=None):
         return ret
 
     ret['result'] = True
+    return ret
+
+
+def removed(name):
+    '''
+    Ensure that the named snap package is not installed
+
+    name : str
+        The snap package
+    '''
+
+    ret = {'name': name,
+           'changes': {},
+           'pchanges': {},
+           'result': None,
+           'comment': ''}
+
+    old = __salt__['snap.versions_installed'](name)
+    if not old:
+        ret['comment'] = 'Package {0} is not installed'.format(name)
+        if __opts__['test']:
+            ret['result'] = True
+        else:
+            ret['result'] = None
+
+        return ret
+
+    if __opts__['test']:
+        ret['result'] = None
+        ret['pchanges']['old'] = old[0]['version']
+        ret['pchanges']['new'] = None
+        return ret
+
+    remove = __salt__['snap.remove'](name)
+    ret['comment'] = 'Package {0} removed'.format(name)
+    ret['result'] = True
+    ret['changes']['old'] = old[0]['version']
+    ret['changes']['new'] = None
     return ret
