@@ -5083,7 +5083,7 @@ def _findOptionValueAdvAudit(option):
                 field_names = _get_audit_defaults('fieldnames')
                 # If the file doesn't exist anywhere, create it with default
                 # fieldnames
-                __salt__['file.mkdir'](os.path.dirname(f_audit))
+                __salt__['file.makedirs'](f_audit)
                 __salt__['file.write'](f_audit, ','.join(field_names))
 
         audit_settings = {}
@@ -5187,7 +5187,7 @@ def _set_audit_file_data(option, value):
             # Copy the temporary csv file over the existing audit.csv in both
             # locations if a value was written
             __salt__['file.copy'](f_temp.name, f_audit, remove_existing=True)
-            __salt__['file.mkdir'](os.path.dirname(f_audit_gpo))
+            __salt__['file.makedirs'](f_audit_gpo)
             __salt__['file.copy'](f_temp.name, f_audit_gpo, remove_existing=True)
     finally:
         f_temp.close()
