@@ -76,11 +76,11 @@ def _fix_me():
     salt.modules.cp.__opts__ = __opts__
     salt.modules.cp.__salt__ = __salt__
     log.warning('MODULE LOADED')
-    
 
-def get_file(*args, **kwargs):
+
+def cache_dir(*args, **kwargs):
     _fix_me()
-    return salt.modules.cp.get_file(*args, **kwargs)
+    return salt.modules.cp.cache_dir(*args, **kwargs)
 
 
 def cache_file(*args, **kwargs):
@@ -88,9 +88,29 @@ def cache_file(*args, **kwargs):
     return salt.modules.cp.cache_file(*args, **kwargs)
 
 
+def cache_files(*args, **kwargs):
+    _fix_me()
+    return salt.modules.cp.cache_files(*args, **kwargs)
+
+
 def get_dir(*args, **kwargs):
     _fix_me()
     return salt.modules.cp.get_dir(*args, **kwargs)
+
+
+def get_file(*args, **kwargs):
+    _fix_me()
+    return salt.modules.cp.get_file(*args, **kwargs)
+
+
+def get_file_str(*args, **kwargs):
+    _fix_me()
+    return salt.modules.cp.get_file_str(*args, **kwargs)
+
+
+def get_template(*args, **kwargs):
+    _fix_me()
+    return salt.modules.cp.get_template(*args, **kwargs)
 
 
 def get_url(*args, **kwargs):
@@ -98,9 +118,9 @@ def get_url(*args, **kwargs):
     return salt.modules.cp.get_url(*args, **kwargs)
 
 
-def list_states(*args, **kwargs):
+def hash_file(*args, **kwargs):
     _fix_me()
-    return salt.modules.cp.list_states(*args, **kwargs)
+    return salt.modules.cp.hash_file(*args, **kwargs)
 
 
 def list_master(*args, **kwargs):
@@ -116,6 +136,18 @@ def list_master_dirs(*args, **kwargs):
 def list_master_symlinks(*args, **kwargs):
     _fix_me()
     return salt.modules.cp.list_master_symlinks(*args, **kwargs)
+
+
+def list_states(*args, **kwargs):
+    _fix_me()
+    return salt.modules.cp.list_states(*args, **kwargs)
+
+
+def stat_file(*args, **kwargs):
+    _fix_me()
+    return salt.modules.cp.stat_file(*args, **kwargs)
+
+
 
 
 # def _render_filenames(path, dest, saltenv, template):
