@@ -10,6 +10,7 @@ import shutil
 
 # Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
+from tests.support.paths import FILES, TMP
 from tests.support.case import ModuleCase
 from tests.support.helpers import skip_if_binaries_missing
 
