@@ -103,7 +103,7 @@ def _add(app, endpoint, payload):
     try:
         return getattr(getattr(nb, app), endpoint).create(**payload)
     except RequestError as e:
-        log.error("{}, {}, {}".format(e.req.request.headers, e.request_body, e.error))
+        log.error('%s, %s, %s', e.req.request.headers, e.request_body, e.error)
         return False
 
 
@@ -379,7 +379,7 @@ def create_device(name,
 
         status = {'label': "Active", 'value': 1}
     except RequestError as e:
-        log.error("{}, {}, {}".format(e.req.request.headers, e.request_body, e.error))
+        log.error('%s, %s, %s', e.req.request.headers, e.request_body, e.error)
         return False
 
     payload = {'name': name, 'display_name': name, 'slug': slugify(name), 'device_type': nb_type['id'],
@@ -416,7 +416,7 @@ def update_device(name, **kwargs):
         nb_device.save()
         return {'dcim': {'devices': kwargs}}
     except RequestError as e:
-        log.error("{}, {}, {}".format(e.req.request.headers, e.request_body, e.error))
+        log.error('%s, %s, %s', e.req.request.headers, e.request_body, e.error)
         return False
 
 
@@ -798,7 +798,7 @@ def update_interface(device_name, interface_name, **kwargs):
             nb_interface.save()
             return {'dcim': {'interfaces': {nb_interface.id: dict(nb_interface)}}}
         except RequestError as e:
-            log.error("{}, {}, {}".format(e.req.request.headers, e.request_body, e.error))
+            log.error('%s, %s, %s', e.req.request.headers, e.request_body, e.error)
             return False
 
 

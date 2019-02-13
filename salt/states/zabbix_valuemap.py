@@ -115,7 +115,7 @@ def present(name, params, **kwargs):
         else:
             # ACTION.CREATE
             valuemap_create = __salt__['zabbix.run_query']('valuemap.create', input_params, **kwargs)
-            log.info('Zabbix Value map: valuemap.create result: ' + six.text_type(valuemap_create))
+            log.info('Zabbix Value map: valuemap.create result: %s', valuemap_create)
 
             if valuemap_create:
                 ret['result'] = True

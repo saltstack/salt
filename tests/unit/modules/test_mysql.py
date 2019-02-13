@@ -24,6 +24,52 @@ try:
 except Exception:
     NO_MYSQL = True
 
+__all_privileges__ = [
+    'ALTER',
+    'ALTER ROUTINE',
+    'BACKUP_ADMIN',
+    'BINLOG_ADMIN',
+    'CONNECTION_ADMIN',
+    'CREATE',
+    'CREATE ROLE',
+    'CREATE ROUTINE',
+    'CREATE TABLESPACE',
+    'CREATE TEMPORARY TABLES',
+    'CREATE USER',
+    'CREATE VIEW',
+    'DELETE',
+    'DROP',
+    'DROP ROLE',
+    'ENCRYPTION_KEY_ADMIN',
+    'EVENT',
+    'EXECUTE',
+    'FILE',
+    'GROUP_REPLICATION_ADMIN',
+    'INDEX',
+    'INSERT',
+    'LOCK TABLES',
+    'PERSIST_RO_VARIABLES_ADMIN',
+    'PROCESS',
+    'REFERENCES',
+    'RELOAD',
+    'REPLICATION CLIENT',
+    'REPLICATION SLAVE',
+    'REPLICATION_SLAVE_ADMIN',
+    'RESOURCE_GROUP_ADMIN',
+    'RESOURCE_GROUP_USER',
+    'ROLE_ADMIN',
+    'SELECT',
+    'SET_USER_ID',
+    'SHOW DATABASES',
+    'SHOW VIEW',
+    'SHUTDOWN',
+    'SUPER',
+    'SYSTEM_VARIABLES_ADMIN',
+    'TRIGGER',
+    'UPDATE',
+    'XA_RECOVER_ADMIN'
+]
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(NO_MYSQL, 'Install MySQL bindings before running MySQL unit tests.')
@@ -256,15 +302,16 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
             "GRANT SELECT ON `testdb`.`testtabletwo` TO 'testuer'@'%'",
             "GRANT SELECT ON `testdb`.`testtablethree` TO 'testuser'@'%'",
         ]
-        mock = MagicMock(return_value=mock_grants)
-        with patch.object(mysql, 'user_grants', return_value=mock_grants) as mock_user_grants:
-            ret = mysql.grant_exists(
-                'SELECT, INSERT, UPDATE',
-                'testdb.testtableone',
-                'testuser',
-                '%'
-            )
-            self.assertEqual(ret, True)
+        with patch.object(mysql, 'version', return_value='5.6.41'):
+            mock = MagicMock(return_value=mock_grants)
+            with patch.object(mysql, 'user_grants', return_value=mock_grants) as mock_user_grants:
+                ret = mysql.grant_exists(
+                    'SELECT, INSERT, UPDATE',
+                    'testdb.testtableone',
+                    'testuser',
+                    '%'
+                )
+                self.assertEqual(ret, True)
 
     def test_grant_exists_false(self):
         '''
@@ -275,15 +322,47 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
             "GRANT SELECT, INSERT, UPDATE ON `testdb`.`testtableone` TO 'testuser'@'%'",
             "GRANT SELECT ON `testdb`.`testtablethree` TO 'testuser'@'%'",
         ]
-        mock = MagicMock(return_value=mock_grants)
-        with patch.object(mysql, 'user_grants', return_value=mock_grants) as mock_user_grants:
-            ret = mysql.grant_exists(
-                'SELECT',
-                'testdb.testtabletwo',
-                'testuser',
-                '%'
-            )
-            self.assertEqual(ret, False)
+        with patch.object(mysql, 'version', return_value='5.6.41'):
+            mock = MagicMock(return_value=mock_grants)
+            with patch.object(mysql, 'user_grants', return_value=mock_grants) as mock_user_grants:
+                ret = mysql.grant_exists(
+                    'SELECT',
+                    'testdb.testtabletwo',
+                    'testuser',
+                    '%'
+                )
+                self.assertEqual(ret, False)
+
+    def test_grant_exists_all(self):
+        '''
+        Test to ensure that we can find a grant that exists
+        '''
+        mock_grants = [
+            "GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, DROP, RELOAD, SHUTDOWN, PROCESS, FILE, REFERENCES, INDEX, ALTER, SHOW DATABASES, SUPER, CREATE TEMPORARY TABLES, LOCK TABLES, EXECUTE, REPLICATION SLAVE, REPLICATION CLIENT, CREATE VIEW, SHOW VIEW, CREATE ROUTINE, ALTER ROUTINE, CREATE USER, EVENT, TRIGGER, CREATE TABLESPACE, CREATE ROLE, DROP ROLE ON testdb.testtableone TO `testuser`@`%`",
+            "GRANT BACKUP_ADMIN,BINLOG_ADMIN,CONNECTION_ADMIN,ENCRYPTION_KEY_ADMIN,GROUP_REPLICATION_ADMIN,PERSIST_RO_VARIABLES_ADMIN,REPLICATION_SLAVE_ADMIN,RESOURCE_GROUP_ADMIN,RESOURCE_GROUP_USER,ROLE_ADMIN,SET_USER_ID,SYSTEM_VARIABLES_ADMIN,XA_RECOVER_ADMIN ON testdb.testtableone TO `testuser`@`%`"
+        ]
+        with patch.object(mysql, 'version', return_value='8.0.10'):
+            mock = MagicMock(return_value=mock_grants)
+            with patch.object(mysql, 'user_grants', return_value=mock_grants) as mock_user_grants:
+                ret = mysql.grant_exists(
+                    'ALL',
+                    'testdb.testtableone',
+                    'testuser',
+                    '%'
+                )
+                self.assertEqual(ret, True)
+
+        mock_grants = ["GRANT ALL PRIVILEGES ON testdb.testtableone TO `testuser`@`%`"]
+        with patch.object(mysql, 'version', return_value='5.6.41'):
+            mock = MagicMock(return_value=mock_grants)
+            with patch.object(mysql, 'user_grants', return_value=mock_grants) as mock_user_grants:
+                ret = mysql.grant_exists(
+                    'ALL PRIVILEGES',
+                    'testdb.testtableone',
+                    'testuser',
+                    '%'
+                )
+                self.assertEqual(ret, True)
 
     @skipIf(True, 'TODO: Mock up user_grants()')
     def test_grant_add(self):
@@ -339,7 +418,9 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
         connect_mock = MagicMock()
         with patch.object(mysql, '_connect', connect_mock):
             with patch.dict(mysql.__salt__, {'config.option': MagicMock()}):
-                side_effect = MySQLdb.OperationalError(9999, 'Something Went Wrong')
+                # Use the OperationalError from the salt mysql module because that
+                # exception can come from either MySQLdb or pymysql
+                side_effect = mysql.OperationalError(9999, 'Something Went Wrong')
                 with patch.object(mysql, '_execute', MagicMock(side_effect=side_effect)):
                     mysql.query('testdb', 'SELECT * FROM testdb')
             self.assertIn('mysql.error', mysql.__context__)

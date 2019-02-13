@@ -98,7 +98,7 @@ def _find_utmp():
             result[os.stat(utmp).st_mtime] = utmp
         except Exception:
             pass
-    if len(result):
+    if result:
         return result[sorted(result).pop()]
     else:
         return False

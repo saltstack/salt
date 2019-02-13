@@ -1642,6 +1642,52 @@ def list_datastores(kwargs=None, call=None):
     return {'Datastores': salt.utils.vmware.list_datastores(_get_si())}
 
 
+def list_datastores_full(kwargs=None, call=None):
+    '''
+    List all the datastores for this VMware environment, with extra information
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f list_datastores_full my-vmware-config
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The list_datastores_full function must be called with '
+            '-f or --function.'
+        )
+
+    return {'Datastores': salt.utils.vmware.list_datastores_full(_get_si())}
+
+
+def list_datastore_full(kwargs=None, call=None, datastore=None):
+    '''
+    Returns a dictionary with basic information for the given datastore
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f list_datastore_full my-vmware-config datastore=datastore-name
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The list_datastore_full function must be called with '
+            '-f or --function.'
+        )
+
+    if kwargs:
+        datastore = kwargs.get('datastore', None)
+
+    if not datastore:
+        raise SaltCloudSystemExit(
+            'The list_datastore_full function requires a datastore'
+        )
+
+    return {datastore: salt.utils.vmware.list_datastore_full(_get_si(), datastore)}
+
+
 def list_hosts(kwargs=None, call=None):
     '''
     List all the hosts for this VMware environment
@@ -3080,7 +3126,7 @@ def create_datacenter(kwargs=None, call=None):
             'You must specify name of the new datacenter to be created.'
         )
 
-    if len(datacenter_name) >= 80 or len(datacenter_name) <= 0:
+    if not datacenter_name or len(datacenter_name) >= 80:
         raise SaltCloudSystemExit(
             'The datacenter name must be a non empty string of less than 80 characters.'
         )
@@ -4420,7 +4466,7 @@ def create_datastore_cluster(kwargs=None, call=None):
             'You must specify name of the new datastore cluster to be created.'
         )
 
-    if len(datastore_cluster_name) >= 80 or len(datastore_cluster_name) <= 0:
+    if not datastore_cluster_name or len(datastore_cluster_name) >= 80:
         raise SaltCloudSystemExit(
             'The datastore cluster name must be a non empty string of less than 80 characters.'
         )
