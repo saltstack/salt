@@ -70,7 +70,7 @@ class VirtualboxCloudTestCase(ShellCase):
         # Attempt to clean json output before fix of https://github.com/saltstack/salt/issues/27629
         valid_initial_chars = ['{', '[', '"']
         for line in output[:]:
-            if len(line) == 0 or (line[0] not in valid_initial_chars):
+            if not line or (line[0] not in valid_initial_chars):
                 output.pop(0)
             else:
                 break
