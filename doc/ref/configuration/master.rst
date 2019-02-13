@@ -6,16 +6,16 @@ Configuring the Salt Master
 
 The Salt system is amazingly simple and easy to configure, the two components
 of the Salt system each have a respective configuration file. The
-:command:`salt-master` is configured via the master configuration file, and the
-:command:`salt-minion` is configured via the minion configuration file.
+``salt-master`` is configured via the master configuration file, and the
+``salt-minion`` is configured via the minion configuration file.
 
 .. seealso::
+
     :ref:`Example master configuration file <configuration-examples-master>`.
 
-The configuration file for the salt-master is located at
-:file:`/etc/salt/master` by default.  A notable exception is FreeBSD, where the
-configuration file is located at :file:`/usr/local/etc/salt`.  The available
-options are as follows:
+The configuration file for the salt-master is located at ``/etc/salt/master``
+by default. A notable exception is FreeBSD, where the configuration file is
+located at ``/usr/local/etc/salt``. The available options are as follows:
 
 
 .. _primary-master-configuration:
@@ -749,6 +749,22 @@ accessible from the minions.
 
     master_job_cache: redis
 
+.. conf_master:: job_cache_store_endtime
+
+``job_cache_store_endtime``
+---------------------------
+
+.. versionadded:: 2015.8.0
+
+Default: ``False``
+
+Specify whether the Salt Master should store end times for jobs as returns
+come in.
+
+.. code-block:: yaml
+
+    job_cache_store_endtime: False
+
 .. conf_master:: enforce_mine_cache
 
 ``enforce_mine_cache``
@@ -1027,7 +1043,7 @@ cache events are fired when a minion requests a minion data cache refresh.
 ``http_connect_timeout``
 ------------------------
 
-.. versionadded:: Fluorine
+.. versionadded:: 2019.2.0
 
 Default: ``20``
 
@@ -4665,6 +4681,55 @@ The queue size for workers in the reactor.
     reactor_worker_hwm: 10000
 
 
+.. _salt-api-master-settings:
+
+Salt-API Master Settings
+========================
+
+There are some settings for :ref:`salt-api <netapi-introduction>` that can be
+configured on the Salt Master.
+
+.. conf_master:: api_logfile
+
+``api_logfile``
+---------------
+
+Default: ``/var/log/salt/api``
+
+The logfile location for ``salt-api``.
+
+.. code-block:: yaml
+
+    api_logfile: /var/log/salt/api
+
+.. conf_master:: api_pidfile
+
+``api_pidfile``
+---------------
+
+Default: /var/run/salt-api.pid
+
+If this master will be running ``salt-api``, specify the pidfile of the
+``salt-api`` daemon.
+
+.. code-block:: yaml
+
+    api_pidfile: /var/run/salt-api.pid
+
+.. conf_master:: rest_timeout
+
+``rest_timeout``
+----------------
+
+Default: ``300``
+
+Used by ``salt-api`` for the master requests timeout.
+
+.. code-block:: yaml
+
+    rest_timeout: 300
+
+
 .. _syndic-server-settings:
 
 Syndic Server Settings
@@ -5038,6 +5103,9 @@ Node Groups
 ===========
 
 .. conf_master:: nodegroups
+
+``nodegroups``
+--------------
 
 Default: ``{}``
 

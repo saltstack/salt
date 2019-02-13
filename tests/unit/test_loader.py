@@ -330,17 +330,13 @@ class LazyLoaderSingleItem(TestCase):
         '''
         Checks that a KeyError is raised when the function key does not contain a '.'
         '''
+        key = 'testing_no_dot'
+        expected = "The key '{0}' should contain a '.'".format(key)
         with self.assertRaises(KeyError) as err:
             inspect.isfunction(self.loader['testing_no_dot'])
 
-        if six.PY2:
-            self.assertEqual(err.exception[0],
-                             'The key \'%s\' should contain a \'.\'')
-        else:
-            self.assertEqual(
-                six.text_type(err.exception),
-                six.text_type(("The key '%s' should contain a '.'", 'testing_no_dot'))
-            )
+        result = err.exception.args[0]
+        assert result == expected, result
 
 
 module_template = '''

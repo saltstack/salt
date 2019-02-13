@@ -16,7 +16,6 @@ from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ModuleCase
 from tests.support.helpers import with_tempdir
 from tests.support.unit import skipIf
-from tests.support.paths import BASE_FILES
 from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import Salt libs
@@ -83,9 +82,9 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
                 for line in lines:
                     fhw.write(line + ending)
 
-        destpath = os.path.join(BASE_FILES, 'testappend', 'firstif')
+        destpath = os.path.join(RUNTIME_VARS.BASE_FILES, 'testappend', 'firstif')
         _reline(destpath)
-        destpath = os.path.join(BASE_FILES, 'testappend', 'secondif')
+        destpath = os.path.join(RUNTIME_VARS.BASE_FILES, 'testappend', 'secondif')
         _reline(destpath)
 
     def test_show_highstate(self):
@@ -2168,6 +2167,19 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         )
 
         state_id = 'test_|-always-passes_|-always-passes_|-succeed_without_changes'
+        self.assertIn(state_id, state_run)
+        self.assertEqual(state_run[state_id]['comment'],
+                         'Success!')
+        self.assertTrue(state_run[state_id]['result'])
+
+    def test_state_sls_lazyloader_allows_recursion(self):
+        '''
+        This tests that referencing dunders like __salt__ work
+        context: https://github.com/saltstack/salt/pull/51499
+        '''
+        state_run = self.run_function('state.sls', mods='issue-51499')
+
+        state_id = 'test_|-always-passes_|-foo_|-succeed_without_changes'
         self.assertIn(state_id, state_run)
         self.assertEqual(state_run[state_id]['comment'],
                          'Success!')

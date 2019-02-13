@@ -767,7 +767,7 @@ def _file_lists(load, form):
                 dir_rel_fn = os.path.join(repo['mountpoint'], relpath)
                 if relpath != '.':
                     ret['dirs'].add(dir_rel_fn)
-                    if len(dirs) == 0 and len(files) == 0:
+                    if not dirs and not files:
                         ret['empty_dirs'].add(dir_rel_fn)
                 for fname in files:
                     rel_fn = os.path.relpath(

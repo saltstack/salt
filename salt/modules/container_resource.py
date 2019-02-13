@@ -372,12 +372,11 @@ def copy_to(name,
     # Before we try to replace the file, compare checksums.
     source_md5 = __salt__['file.get_sum'](local_file, 'md5')
     if source_md5 == _get_md5(name, dest, run_all):
-        log.debug('{0} and {1}:{2} are the same file, skipping copy'
-                  .format(source, name, dest))
+        log.debug('%s and %s:%s are the same file, skipping copy', source, name, dest)
         return True
 
-    log.debug('Copying {0} to {1} container \'{2}\' as {3}'
-              .format(source, container_type, name, dest))
+    log.debug('Copying %s to %s container \'%s\' as %s',
+              source, container_type, name, dest)
 
     # Using cat here instead of opening the file, reading it into memory,
     # and passing it as stdin to run(). This will keep down memory
