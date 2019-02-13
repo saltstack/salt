@@ -138,8 +138,23 @@ def output(data, **kwargs):  # pylint: disable=unused-argument
     The HighState Outputter is only meant to be used with the state.highstate
     function, or a function that returns highstate return data.
     '''
+    if len(data.keys()) == 1:
+        # account for nested orchs via saltutil.runner
+        if 'return' in data:
+            data = data['return']
+
+        # account for envelope data if being passed lookup_jid ret
+        if isinstance(data, dict):
+            _data = next(iter(data.values()))
+            if 'jid' in _data and 'fun' in _data:
+                data = _data['return']
+
+    # output() is recursive, if we aren't passed a dict just return it
+    if isinstance(data, int) or isinstance(data, six.string_types):
+        return data
+
     # Discard retcode in dictionary as present in orchestrate data
-    local_masters = [key for key in data.keys() if key.endswith('.local_master')]
+    local_masters = [key for key in data.keys() if key.endswith('_master')]
     orchestrator_output = 'retcode' in data.keys() and len(local_masters) == 1
 
     if orchestrator_output:

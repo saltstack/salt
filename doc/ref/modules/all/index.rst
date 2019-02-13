@@ -231,6 +231,7 @@ execution modules
     logrotate
     lvs
     lxc
+    lxd
     mac_assistive
     mac_brew
     mac_defaults

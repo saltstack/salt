@@ -258,7 +258,7 @@ def event(tagmatch='*',
     Watch Salt's event bus and block until the given tag is matched
 
     .. versionadded:: 2014.7.0
-    .. versionchanged:: Fluorine
+    .. versionchanged:: 2019.2.0
         ``tagmatch`` can now be either a glob or regular expression.
 
     This is useful for utilizing Salt's event bus from shell scripts or for

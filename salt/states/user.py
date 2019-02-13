@@ -469,7 +469,7 @@ def present(name,
             _, algo, shadow_salt, shadow_hash = __salt__['shadow.info'](name)['passwd'].split('$', 4)
             if algo == '1':
                 log.warning('Using MD5 for hashing passwords is considered insecure!')
-            log.debug('Re-using existing shadow salt for hashing password using {}'.format(algorithms.get(algo)))
+            log.debug('Re-using existing shadow salt for hashing password using %s', algorithms.get(algo))
             password = __salt__['shadow.gen_password'](password, crypt_salt=shadow_salt, algorithm=algorithms.get(algo))
         except ValueError:
             log.info('No existing shadow salt found, defaulting to a randomly generated new one')
