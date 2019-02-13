@@ -10,6 +10,7 @@
 # Import Python libs
 from __future__ import absolute_import, unicode_literals, print_function
 import os
+import tempfile
 
 # Import Salt Testing libs
 from tests.support.unit import TestCase
@@ -38,7 +39,7 @@ class TestFileBuffer(TestCase):
         '''
         https://github.com/saltstack/salt/issues/51309
         '''
-        temp_name = os.path.join(os.environ.get('TEMP'),
+        temp_name = os.path.join(tempfile.gettempdir(),
                                  generate_random_name(prefix='salt-test-'))
         cmd = 'tzutil /l > {0}'.format(temp_name)
         cmdmod.run(cmd=cmd, python_shell=True)
