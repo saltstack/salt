@@ -106,9 +106,9 @@ def _status_path(directory, ret, minimum, maximum, absolute, free):
             used = 0
             available = 0
         else:
-            used = float(int(data[directory]['total']) - int(data[directory]['available'])) / \
-                int(data[directory]['total']) * 100
-            available = float(data[directory]['available']) / int(data[directory]['total']) * 100
+            used = round(float(int(data[directory]['total']) - int(data[directory]['available'])) /
+                         int(data[directory]['total']) * 100, 1)
+            available = round(float(data[directory]['available']) / int(data[directory]['total']) * 100, 1)
 
     ret['data'] = data
     return _check_min_max(absolute, free, available, used, maximum, minimum, ret)
