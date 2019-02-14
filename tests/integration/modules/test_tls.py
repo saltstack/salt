@@ -7,7 +7,6 @@
 from __future__ import absolute_import, unicode_literals, print_function
 
 import os
-import shutil
 import tempfile
 
 # Testing libs
@@ -17,7 +16,6 @@ from tests.support.mock import (
     MagicMock,
     NO_MOCK,
     NO_MOCK_REASON,
-    patch
 )
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
@@ -61,9 +59,9 @@ class TLSModuleTest(ModuleCase, LoaderModuleMockMixin):
         }
 
     @classmethod
-    def setUpClass(self):
-        self.ca_name = 'roscivs'
-        self.tempdir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
+    def setUpClass(cls):
+        cls.ca_name = 'roscivs'
+        cls.tempdir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
 
     def test_ca_exists_should_be_False_before_ca_is_created(self):
         self.assertFalse(tls.ca_exists(self.ca_name))
