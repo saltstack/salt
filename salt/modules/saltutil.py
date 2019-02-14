@@ -1132,7 +1132,7 @@ def running():
     return salt.utils.minion.running(__opts__)
 
 
-def clear_cache():
+def clear_cache(days=-1):
     '''
     Forcibly removes all caches on a minion.
 
@@ -1145,12 +1145,16 @@ def clear_cache():
 
     .. code-block:: bash
 
-        salt '*' saltutil.clear_cache
+        salt '*' saltutil.clear_cache days=7
     '''
+    threshold = time.time() - days * 24 * 60 * 60
     for root, dirs, files in salt.utils.files.safe_walk(__opts__['cachedir'], followlinks=False):
         for name in files:
             try:
-                os.remove(os.path.join(root, name))
+                file = os.path.join(root, name)
+                mtime = os.path.getmtime(file)
+                if mtime < threshold:
+                    os.remove(file)
             except OSError as exc:
                 log.error(
                     'Attempt to clear cache with saltutil.clear_cache '
@@ -1175,7 +1179,7 @@ def clear_job_cache(hours=24):
 
         salt '*' saltutil.clear_job_cache hours=12
     '''
-    threshold = time.time() - hours * 3600
+    threshold = time.time() - hours * 60 * 60
     for root, dirs, files in salt.utils.files.safe_walk(os.path.join(__opts__['cachedir'], 'minion_jobs'),
                                                   followlinks=False):
         for name in dirs:
