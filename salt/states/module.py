@@ -261,7 +261,7 @@ def run(**kwargs):
         'result': None,
     }
 
-    functions = [func for func in kwargs.keys() if '.' in func]
+    functions = [func for func in kwargs if '.' in func]
     missing = []
     tests = []
     for func in functions:

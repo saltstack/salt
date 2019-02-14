@@ -364,7 +364,7 @@ def managed(name,
                 comments.append('DNS protocol will be changed to: {0}'
                                 .format(changes['dns_proto']))
             if dns_proto == 'static' and 'dns_servers' in changes:
-                if len(changes['dns_servers']) == 0:
+                if not changes['dns_servers']:
                     comments.append('The list of DNS servers will be cleared')
                 else:
                     comments.append(
@@ -399,7 +399,7 @@ def managed(name,
             __salt__['ip.set_dhcp_dns'](name)
 
         elif 'dns_servers' in changes:
-            if len(changes['dns_servers']) == 0:
+            if not changes['dns_servers']:
                 # To clear the list of DNS servers you have to pass []. Later
                 # changes gets passed like *args and a single empty list is
                 # converted to an empty tuple. So, you have to add [] here

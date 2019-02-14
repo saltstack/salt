@@ -97,7 +97,7 @@ class TelegramBotMsgBeaconTestCase(TestCase, LoaderModuleMockMixin):
             inst = MagicMock(name='telegram.Bot()')
             telegram_api.Bot = MagicMock(name='telegram', return_value=inst)
 
-            log.debug('telegram {}'.format(telegram))
+            log.debug('telegram %s', telegram)
             username = 'different_user'
             user = telegram.user.User(id=1, first_name='', username=username)
             chat = telegram.chat.Chat(1, 'private', username=username)
