@@ -118,7 +118,7 @@ def _check_load_paths(load_path):
         else:
             log.info('Invalid augeas_cfg load_path entry: %s removed', _path)
 
-    if len(_paths) == 0:
+    if not _paths:
         return None
 
     return ':'.join(_paths)
