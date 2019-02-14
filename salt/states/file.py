@@ -2259,7 +2259,7 @@ def managed(name,
         .. versionadded:: 0.17.0
         .. versionchanged:: 2016.11.0
             contents_pillar can also be a list, and the pillars will be
-            concatinated together to form one file.
+            concatenated together to form one file.
 
 
         Operates like ``contents``, but draws from a value stored in pillar,
@@ -2300,7 +2300,7 @@ def managed(name,
         .. note::
             The private key above is shortened to keep the example brief, but
             shows how to do multiline string in YAML. The key is followed by a
-            pipe character, and the mutliline string is indented two more
+            pipe character, and the multiline string is indented two more
             spaces.
 
             To avoid the hassle of creating an indented multiline YAML string,
@@ -3241,7 +3241,7 @@ def directory(name,
         example: ``{'Administrators': {'perms': 'full_control', 'applies_to':
         'this_folder_only'}}`` Can be a single basic perm or a list of advanced
         perms. ``perms`` must be specified. ``applies_to`` is optional and
-        defaults to ``this_folder_subfoler_files``.
+        defaults to ``this_folder_subfolder_files``.
 
         .. versionadded:: 2017.7.0
 
@@ -6810,7 +6810,7 @@ def copy_(name,
     return ret
 
 
-def rename(name, source, force=False, makedirs=False):
+def rename(name, source, force=False, makedirs=False, **kwargs):
     '''
     If the source file exists on the system, rename it to the named file. The
     named file will not be overwritten if it already exists unless the force

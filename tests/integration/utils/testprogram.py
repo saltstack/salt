@@ -214,7 +214,7 @@ class TestProgram(six.with_metaclass(TestProgramMeta, object)):
         cpath = self.abs_path(self.config_file_get(config))
         with salt.utils.files.fopen(cpath, 'w') as cfo:
             cfg = self.config_stringify(config)
-            log.debug('Writing configuration for {0} to {1}:\n{2}'.format(self.name, cpath, cfg))
+            log.debug('Writing configuration for %s to %s:\n%s', self.name, cpath, cfg)
             cfo.write(cfg)
             cfo.flush()
 
@@ -264,14 +264,14 @@ class TestProgram(six.with_metaclass(TestProgramMeta, object)):
         '''Create directory structure.'''
         subdirs = []
         for branch in self.dirtree:
-            log.debug('checking dirtree: {0}'.format(branch))
+            log.debug('checking dirtree: %s', branch)
             if not branch:
                 continue
             if isinstance(branch, six.string_types) and branch[0] == '&':
-                log.debug('Looking up dirtree branch "{0}"'.format(branch))
+                log.debug('Looking up dirtree branch "%s"', branch)
                 try:
                     dirattr = getattr(self, branch[1:], None)
-                    log.debug('dirtree "{0}" => "{1}"'.format(branch, dirattr))
+                    log.debug('dirtree "%s" => "%s"', branch, dirattr)
                 except AttributeError:
                     raise ValueError(
                         'Unable to find dirtree attribute "{0}" on object "{1}.name = {2}: {3}"'.format(
@@ -296,7 +296,7 @@ class TestProgram(six.with_metaclass(TestProgramMeta, object)):
         for subdir in subdirs:
             path = self.abs_path(subdir)
             if not os.path.exists(path):
-                log.debug('make_dirtree: {0}'.format(path))
+                log.debug('make_dirtree: %s', path)
                 os.makedirs(path)
 
     def setup(self, *args, **kwargs):
@@ -668,7 +668,7 @@ class TestSaltProgram(six.with_metaclass(TestSaltProgramMeta, TestProgram)):
                         continue
                 cfg[key] = _val
             cfg = self.config_merge(cfg_base, cfg)
-        log.debug('Generated config => {0}'.format(cfg))
+        log.debug('Generated config => %s', cfg)
         return cfg
 
     def config_stringify(self, config):
@@ -697,7 +697,7 @@ class TestSaltProgram(six.with_metaclass(TestSaltProgramMeta, TestProgram)):
         lines.insert(0, '#!{0}\n'.format(sys.executable))
 
         script_path = self.abs_path(os.path.join(self.script_dir, self.script))
-        log.debug('Installing "{0}" to "{1}"'.format(script_source, script_path))
+        log.debug('Installing "%s" to "%s"', script_source, script_path)
         with salt.utils.files.fopen(script_path, 'w') as sdo:
             sdo.write(''.join(lines))
             sdo.flush()
