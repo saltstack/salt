@@ -19,12 +19,14 @@ from tests.support.mock import (
 
 # Import Salt Libs
 import salt.modules.debian_ip as debian_ip
+import salt.utils.platform
 
 # Import third party libs
 import jinja2.exceptions
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(salt.utils.platform.is_windows(), 'Do not run these tests on Windows')
 class DebianIpTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.debian_ip
