@@ -2789,6 +2789,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
 
         self.assertSaltTrueReturn(ret)
 
+    @with_tempfile()
     def test_issue_50221(self, name):
         expected = 'abc{0}{0}{0}'.format(os.linesep)
         ret = self.run_function(

@@ -252,6 +252,9 @@ class NetworkTestCase(TestCase):
             def setsockopt(self, *args, **kwargs):
                 pass
 
+            def settimeout(self, *args, **kwargs):
+                pass
+
             def sendto(self, *args, **kwargs):
                 pass
 
@@ -273,17 +276,18 @@ class NetworkTestCase(TestCase):
             {'host': '2001:0db8:85a3::8a2e:0370:7334',
              'port': '',
              'mocked': [(10, 1, 6, '', ('2001:db8:85a3::8a2e:370:7334', 0, 0, 0))],
-             'ret': '2001:db8:85a3::8a2e:370:7334'},
+             'ret': '[2001:db8:85a3::8a2e:370:7334]'},
             {'host': '2001:0db8:85a3::8a2e:370:7334',
              'port': '1234',
              'mocked': [(10, 1, 6, '', ('2001:db8:85a3::8a2e:370:7334', 0, 0, 0))],
-             'ret': '2001:db8:85a3::8a2e:370:7334'},
+             'ret': '[2001:db8:85a3::8a2e:370:7334]'},
             {'host': 'salt-master',
              'port': '1234',
              'mocked': [(2, 1, 6, '', ('127.0.0.1', 0))],
              'ret': '127.0.0.1'},
         ]
         for host in hosts:
+            log.debug('=== host %s ===', host)
             with patch.object(socket, 'getaddrinfo', MagicMock(return_value=host['mocked'])):
                 with patch('socket.socket', MockSocket):
                     ret = network.dns_check(host['host'], host['port'])
