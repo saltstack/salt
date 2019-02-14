@@ -99,6 +99,21 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
                             password='BLUECOW'
             )
 
+        with patch.object(mysql, 'version', return_value='10.1.38-MariaDB'):
+            self._test_call(mysql.user_exists,
+                            {'sql': ('SELECT User,Host FROM mysql.user WHERE '
+                                     'User = %(user)s AND Host = %(host)s AND '
+                                     'Password = PASSWORD(%(password)s)'),
+                             'sql_args': {'host': 'localhost',
+                                          'password': 'BLUECOW',
+                                          'user': 'mytestuser'
+                                         }
+                            },
+                            user='mytestuser',
+                            host='localhost',
+                            password='BLUECOW'
+            )
+
         with patch.object(mysql, 'version', return_value='8.0.11'):
             self._test_call(mysql.user_exists,
                             {'sql': ('SELECT User,Host FROM mysql.user WHERE '
@@ -122,6 +137,19 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
                             },
                             user='mytestuser',
                             host='%',
+                            password='BLUECOW'
+            )
+
+        with patch.object(mysql, 'version', return_value='10.2.21-MariaDB'):
+            self._test_call(mysql.user_exists,
+                            {'sql': ('SELECT User,Host FROM mysql.user WHERE '
+                                     'User = %(user)s AND Host = %(host)s'),
+                             'sql_args': {'host': 'localhost',
+                                          'user': 'mytestuser'
+                                         }
+                            },
+                            user='mytestuser',
+                            host='localhost',
                             password='BLUECOW'
             )
 
@@ -187,7 +215,11 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
                     mysql.user_chpass('testuser', password='BLUECOW')
                     calls = (
                         call().cursor().execute(
-                            "ALTER USER 'testuser'@'localhost' IDENTIFIED BY 'BLUECOW';"
+                            "ALTER USER %(user)s@%(host)s IDENTIFIED BY %(password)s;",
+                            {'password': 'BLUECOW',
+                             'user': 'testuser',
+                             'host': 'localhost',
+                            }
                         ),
                         call().cursor().execute('FLUSH PRIVILEGES;'),
                     )

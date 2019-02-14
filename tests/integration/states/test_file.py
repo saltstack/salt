@@ -2530,6 +2530,26 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             '',
         ]).encode('utf-8'))
 
+    @with_tempfile()
+    def test_issue_50221(self, name):
+        expected = 'abc{0}{0}{0}'.format(os.linesep)
+        ret = self.run_function(
+            'pillar.get',
+            ['issue-50221']
+        )
+        assert ret == expected
+        ret = self.run_function(
+            'state.apply',
+            ['issue-50221'],
+            pillar={
+                'name': name
+            },
+        )
+        self.assertSaltTrueReturn(ret)
+        with salt.utils.files.fopen(name, 'r') as fp:
+            contents = fp.read()
+        assert contents == expected
+
     def test_managed_file_issue_51208(self):
         '''
         Test to ensure we can handle a file with escaped double-quotes
