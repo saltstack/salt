@@ -289,6 +289,63 @@ class WinLgpoTest(ModuleCase):
         '''
         Test setting/unsetting/changing WindowsUpdate policy
         '''
+        the_policy = {
+            'Configure automatic updating': '4 - Auto download and schedule the install',
+            'Install during automatic maintenance': False,
+            'Scheduled install day': '7 - Every Saturday',
+            'Scheduled install time': '17:00',
+            'Install updates for other Microsoft products': True
+        }
+        the_policy_check = [
+            r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU[\s]*NoAutoUpdate[\s]*DWORD:0',
+            r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU[\s]*AUOptions[\s]*DWORD:4',
+            r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU[\s]*AutomaticMaintenanceEnabled[\s]*DELETE',
+            r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU[\s]*ScheduledInstallDay[\s]*DWORD:7',
+            r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU[\s]*ScheduledInstallTime[\s]*DWORD:17',
+            r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU[\s]*AllowMUUpdateService[\s]*DWORD:1\s*'
+        ]
+
+        # Configure Automatic Updates has different options in 2016 than in 2012
+        # and has only one boolean item, so we'll test it "False" in this block
+        # and then "True" in next block
+        if self.osrelease in ['2012Server', '2012ServerR2']:
+            the_policy = {
+                'Configure automatic updating': '4 - Auto download and schedule the install',
+                'Install during automatic maintenance': False,
+                'Schedule install day': '7 - Every Saturday',
+                'Schedule install time': '17:00',
+            }
+            the_policy_check = [
+                r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU[\s]*NoAutoUpdate[\s]*DWORD:0',
+                r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU[\s]*AUOptions[\s]*DWORD:4',
+                r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU[\s]*AutomaticMaintenanceEnabled[\s]*DELETE',
+                r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU[\s]*ScheduledInstallDay[\s]*DWORD:7',
+                r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU[\s]*ScheduledInstallTime[\s]*DWORD:17',
+            ]
+            # test as False
+            self._testComputerAdmxPolicy(r'Windows Components\Windows Update\Configure Automatic Updates',
+                                         the_policy,
+                                         the_policy_check)
+            # configure as True for "enable Automatic Updates" test below
+            the_policy = {
+                'Configure automatic updating': '4 - Auto download and schedule the install',
+                'Install during automatic maintenance': True,
+                'Schedule install day': '7 - Every Saturday',
+                'Schedule install time': '17:00',
+            }
+            the_policy_check = [
+                r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU[\s]*NoAutoUpdate[\s]*DWORD:0',
+                r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU[\s]*AUOptions[\s]*DWORD:4',
+                r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU[\s]*AutomaticMaintenanceEnabled[\s]*DWORD:1\s*',
+                r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU[\s]*ScheduledInstallDay[\s]*DWORD:7',
+                r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU[\s]*ScheduledInstallTime[\s]*DWORD:17',
+            ]
+
+        # enable Automatic Updates
+        self._testComputerAdmxPolicy(r'Windows Components\Windows Update\Configure Automatic Updates',
+                                     the_policy,
+                                     the_policy_check)
+
         # disable Configure Automatic Updates
         self._testComputerAdmxPolicy(r'Windows Components\Windows Update\Configure Automatic Updates',
                                      'Disabled',
