@@ -246,3 +246,4 @@ def returner(ret):
     key = 'salt.return.{}'.format(ret['fun'])
     value = salt.output.try_printout(data, ret.get('out', out), opts)
     zabbix_send(key, value)
+
