@@ -95,6 +95,7 @@ def _gather_buffer_space():
     # Return the higher number between 5% of the system memory and 10MiB
     return max([total_mem * 0.05, 10 << 20])
 
+
 # For the time being this will be a fixed calculation
 # TODO: Allow user configuration
 _DFLT_IPC_WBUFFER = _gather_buffer_space() * .5

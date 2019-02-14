@@ -524,6 +524,7 @@ def latest_version(*names, **kwargs):
         return ret[names[0]]
     return ret
 
+
 # available_version is being deprecated
 available_version = salt.utils.alias_function(latest_version, 'available_version')
 
@@ -916,6 +917,7 @@ def list_upgrades(refresh=True, **kwargs):
         return {}
 
     return dict([(x.name, x.version) for x in _yum_pkginfo(out['stdout'])])
+
 
 # Preserve expected CLI usage (yum list updates)
 list_updates = salt.utils.alias_function(list_upgrades, 'list_updates')
@@ -2109,6 +2111,7 @@ def list_holds(pattern=__HOLD_PATTERN, full=True):
             ret.append(match)
     return ret
 
+
 get_locked_packages = salt.utils.alias_function(list_holds, 'get_locked_packages')
 
 
@@ -2415,6 +2418,7 @@ def group_install(name,
         return {}
 
     return install(pkgs=pkgs, **kwargs)
+
 
 groupinstall = salt.utils.alias_function(group_install, 'groupinstall')
 
