@@ -1,3 +1,4 @@
+-r req_win.txt
 backports-abc==0.5
 backports.ssl-match-hostname==3.5.0.1
 certifi
@@ -28,7 +29,6 @@ pyOpenSSL==17.5.0
 python-dateutil==2.6.1
 python-gnupg==0.4.1
 pythonnet==2.3.0
-pywin32==223
 PyYAML==3.12
 pyzmq==16.0.3
 requests==2.21.0
@@ -37,4 +37,3 @@ smmap==0.9.0
 timelib==0.2.4
 tornado==4.5.1
 wheel==0.30.0a0
-WMI==1.4.9
