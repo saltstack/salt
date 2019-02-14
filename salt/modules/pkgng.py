@@ -212,6 +212,7 @@ def version(*names, **kwargs):
         for x, y in six.iteritems(ret)
     ])
 
+
 # Support pkg.info get version info, since this is the CLI usage
 info = salt.utils.alias_function(version, 'info')
 
@@ -1073,6 +1074,7 @@ def remove(name=None,
         )
 
     return ret
+
 
 # Support pkg.delete to remove packages, since this is the CLI usage
 delete = salt.utils.alias_function(remove, 'delete')
