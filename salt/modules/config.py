@@ -6,6 +6,7 @@ Return config information
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 import copy
+import fnmatch
 import re
 import os
 import logging
@@ -77,6 +78,11 @@ DEFAULTS = {'mongo.db': 'salt',
             'aliases.file': '/etc/aliases',
             'virt': {'tunnel': False,
                      'images': os.path.join(syspaths.SRV_ROOT_DIR, 'salt-images')},
+
+            'docker.compare_container_networks': {
+                'static': ['Aliases', 'Links', 'IPAMConfig'],
+                'automatic': ['IPAddress', 'Gateway',
+                              'GlobalIPv6Address', 'IPv6Gateway']},
             }
 
 
@@ -130,12 +136,32 @@ def valid_fileproto(uri):
 
 def option(
         value,
-        default='',
+        default=None,
         omit_opts=False,
+        omit_grains=False,
+        omit_pillar=False,
         omit_master=False,
-        omit_pillar=False):
+        wildcard=False):
     '''
     Pass in a generic option and receive the value that will be assigned
+
+    default
+        The default value if no match is found. If not specified, then the
+        fallback default will be an empty string, unless ``wildcard=True``, in
+        which case the return will be an empty dictionary.
+
+    wildcard : False
+        If used, this will perform pattern matching on keys. Note that this
+        will also significantly change the return data. Instead of only a value
+        being returned, a dictionary mapping the matched keys to their values
+        is returned. For example, using ``wildcard=True`` with a ``key`` of
+        ``'foo.ba*`` could return a dictionary like so:
+
+        .. code-block:: python
+
+            {'foo.bar': True, 'foo.baz': False}
+
+        .. versionadded:: Neon
 
     CLI Example:
 
@@ -143,18 +169,47 @@ def option(
 
         salt '*' config.option redis.host
     '''
-    if not omit_opts:
-        if value in __opts__:
-            return __opts__[value]
-    if not omit_master:
-        if value in __pillar__.get('master', {}):
-            return __pillar__['master'][value]
-    if not omit_pillar:
-        if value in __pillar__:
-            return __pillar__[value]
-    if value in DEFAULTS:
-        return DEFAULTS[value]
-    return default
+    if default is None:
+        default = '' if not wildcard else {}
+
+    if not wildcard:
+        if not omit_opts:
+            if value in __opts__:
+                return __opts__[value]
+        if not omit_grains:
+            if value in __grains__:
+                return __grains__[value]
+        if not omit_pillar:
+            if value in __pillar__:
+                return __pillar__[value]
+        if not omit_master:
+            if value in __pillar__.get('master', {}):
+                return __pillar__['master'][value]
+        if value in DEFAULTS:
+            return DEFAULTS[value]
+
+        # No match
+        return default
+    else:
+        # We need to do the checks in the reverse order so that minion opts
+        # takes precedence
+        ret = {}
+        for omit, data in ((omit_master, __pillar__.get('master', {})),
+                           (omit_pillar, __pillar__),
+                           (omit_grains, __grains__),
+                           (omit_opts, __opts__)):
+            if not omit:
+                ret.update(
+                    {x: data[x] for x in fnmatch.filter(data, value)}
+                )
+        # Check the DEFAULTS as well to see if the pattern matches it
+        for item in (x for x in fnmatch.filter(DEFAULTS, value)
+                     if x not in ret):
+            ret[item] = DEFAULTS[item]
+
+        # If no matches, return the default
+        return ret or default
+
 
 
 def merge(value,
@@ -219,9 +274,9 @@ def get(key, default='', delimiter=':', merge=None, omit_opts=False,
     .. versionadded: 0.14.0
 
     Attempt to retrieve the named value from the minion config file, pillar,
-    grains or the master config. If the named value is not available, return the
-    value specified by ``default``. If not specified, the default is an empty
-    string.
+    grains or the master config. If the named value is not available, return
+    the value specified by the ``default`` argument. If this argument is not
+    specified, ``default`` falls back to an empty string.
 
     Values can also be retrieved from nested dictionaries. Assume the below
     data structure:
