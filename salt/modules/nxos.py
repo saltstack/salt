@@ -319,6 +319,13 @@ def sendline(command, method='cli_show_ascii', **kwargs):
 
         salt '*' nxos.cmd sendline 'show run | include "^username admin password"'
     '''
+    smethods = ['cli_show_ascii', 'cli_show', 'cli_conf']
+    if method not in smethods:
+        msg = "INPUT ERROR: Second argument 'method' must be one of %s" % smethods
+        msg = msg + "\n  Value passed: %s" % method
+        msg = msg + "\n  Hint: White space separated commands should be wrapped by double quotes"
+        return msg
+
     if salt.utils.platform.is_proxy():
         return __proxy__['nxos.sendline'](command, method, **kwargs)
     else:
@@ -341,16 +348,23 @@ def show(commands, raw_text=True, **kwargs):
 
     .. code-block:: bash
 
-        salt-call --local nxos.show 'show version'
-        salt '*' nxos.show 'show bgp sessions ; show processes' raw_text=False
-        salt 'regular-minion' nxos.show 'show interfaces' host=sw01.example.com username=test password=test
+        salt-call --local nxos.show version
+        salt '*' nxos.show 'bgp sessions ; processes' raw_text=False
+        salt 'regular-minion' nxos.show interfaces host=sw01.example.com username=test password=test
     '''
+    if not isinstance(raw_text, bool):
+        msg = "INPUT ERROR: Second argument 'raw_text' must be either True or False"
+        msg = msg + "\n  Value passed: %s" % raw_text
+        msg = msg + "\n  Hint: White space separated show commands should be wrapped by double quotes"
+        return msg
+
     if raw_text:
         method = 'cli_show_ascii'
     else:
         method = 'cli_show'
 
-    response_list = sendline(commands, method, **kwargs)
+    commands = commands.replace('show', '').lstrip()
+    response_list = sendline('show ' + commands, method, **kwargs)
     if isinstance(response_list, list):
         ret = [response for response in response_list if response]
         if not ret:
