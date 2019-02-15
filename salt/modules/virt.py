@@ -5298,3 +5298,29 @@ def volume_infos(pool, volume, **kwargs):
     finally:
         conn.close()
     return result
+
+
+def volume_delete(pool, volume, **kwargs):
+    '''
+    Delete a libvirt managed volume.
+
+    :param pool: libvirt storage pool name
+    :param volume: name of the volume to delete
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
+
+    .. versionadded:: Neon
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt "*" virt.volume_delete <pool> <volume>
+    '''
+    conn = __get_conn(**kwargs)
+    try:
+        vol = _get_storage_vol(conn, pool, volume)
+        return not bool(vol.delete())
+    finally:
+        conn.close()
