@@ -1774,12 +1774,15 @@ class Pygit2(GitProvider):
                     link_tgt = salt.utils.path.join(
                         prefix, self.repo[entry.oid].data,
                         use_posixpath=True)
+                    link_tgt = os.path.relpath(link_tgt, self.root(tgt_env))
                     if link_tgt in top_tree:
                         if top_tree[link_tgt].type == 'tree':
                             blob = self.repo[top_tree[link_tgt].oid]
                     else:
-                        log.warning('Broken symlink: %s',
-                            salt.utils.path.join(prefix, entry.name, use_posixpath=True))
+                        log.warning(
+                            'Broken symlink: %s',
+                            salt.utils.path.join(
+                                prefix, entry.name, use_posixpath=True))
                 if not isinstance(blob, pygit2.Tree):
                     continue
                 blobs.append(
@@ -1924,9 +1927,12 @@ class Pygit2(GitProvider):
                                     top_tree
                                 )
                         else:
-                            log.warning('Broken symlink: %s',
-                                salt.utils.path.join(prefix, entry.name, use_posixpath=True))
-                        blobs.setdefault('symlinks', {})[repo_path] = link_tgt
+                            log.warning(
+                                'Broken symlink: %s',
+                                salt.utils.path.join(
+                                    prefix, entry.name, use_posixpath=True))
+                        target = os.path.relpath(link_tgt, self.root(tgt_env))
+                        blobs.setdefault('symlinks', {})[repo_path] = target
                     if include_in_files:
                         blobs.setdefault('files', []).append(repo_path)
                 elif isinstance(obj, pygit2.Tree):
