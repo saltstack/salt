@@ -21,6 +21,7 @@ from __future__ import absolute_import
 
 # Import python libs
 import logging
+import json
 import salt.utils
 
 log = logging.getLogger(__name__)
@@ -66,7 +67,10 @@ def present(name,
     if policy:
         if policy.get('pattern') != pattern:
             updates.append('Pattern')
-        if policy.get('definition') != definition:
+        current_definition = policy.get('definition')
+        current_definition = json.loads(current_definition) if current_definition else ''
+        new_definition = json.loads(definition) if definition else ''
+        if current_definition != new_definition:
             updates.append('Definition')
         if int(policy.get('priority')) != priority:
             updates.append('Priority')

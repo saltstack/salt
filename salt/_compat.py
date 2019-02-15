@@ -133,6 +133,7 @@ def string_io(data=None):  # cStringIO can't handle unicode
     except (UnicodeEncodeError, TypeError):
         return StringIO(data)
 
+
 if PY3:
     import ipaddress
 else:
