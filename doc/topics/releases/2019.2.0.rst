@@ -1335,6 +1335,7 @@ Execution Modules
 - :mod:`salt.modules.netmiko <salt.modules.netmiko_mod>`
 - :mod:`salt.modules.nxos_api <salt.modules.nxos_api>`
 - :mod:`salt.modules.peeringdb <salt.modules.peeringdb>`
+- :mod:`salt.modules.purefb <salt.modules.purefb>`
 - :mod:`salt.modules.pyeapi <salt.modules.arista_pyeapi>`
 
 Pillar Modules
