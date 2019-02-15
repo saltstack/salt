@@ -242,7 +242,6 @@ def option(
         return ret or default
 
 
-
 def merge(value,
           default='',
           omit_opts=False,

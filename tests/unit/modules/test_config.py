@@ -84,7 +84,6 @@ class TestModulesConfig(TestCase, LoaderModuleMockMixin):
             ret = config.option(self.wildcard_opt_name)
             assert ret == '', ret
 
-
     def test_omits(self):
         with patch.dict(config.DEFAULTS, DEFAULTS):
 
