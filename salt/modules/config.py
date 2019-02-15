@@ -141,14 +141,42 @@ def option(
         omit_grains=False,
         omit_pillar=False,
         omit_master=False,
+        omit_all=False,
         wildcard=False):
     '''
-    Pass in a generic option and receive the value that will be assigned
+    Returns the setting for the specified config value. The priority for
+    matches is the same as in :py:func:`config.get <salt.modules.config.get>`,
+    only this function does not recurse into nested data structures. Another
+    difference between this function and :py:func:`config.get
+    <salt.modules.config.get>` is that it comes with a set of "sane defaults".
+    To view these, you can run the following command:
+
+    .. code-block:: bash
+
+        salt '*' config.option '*' omit_all=True wildcard=True
 
     default
         The default value if no match is found. If not specified, then the
         fallback default will be an empty string, unless ``wildcard=True``, in
         which case the return will be an empty dictionary.
+
+    omit_opts : False
+        Pass as ``True`` to exclude matches from the minion configuration file
+
+    omit_grains : False
+        Pass as ``True`` to exclude matches from the grains
+
+    omit_pillar : False
+        Pass as ``True`` to exclude matches from the pillar data
+
+    omit_master : False
+        Pass as ``True`` to exclude matches from the master configuration file
+
+    omit_all : True
+        Shorthand to omit all of the above and return matches only from the
+        "sane defaults".
+
+        .. versionadded:: Neon
 
     wildcard : False
         If used, this will perform pattern matching on keys. Note that this
@@ -169,6 +197,9 @@ def option(
 
         salt '*' config.option redis.host
     '''
+    if omit_all:
+        omit_opts = omit_grains = omit_pillar = omit_master = True
+
     if default is None:
         default = '' if not wildcard else {}
 

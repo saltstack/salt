@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 import fnmatch
@@ -160,5 +159,16 @@ class TestModulesConfig(TestCase, LoaderModuleMockMixin):
                                 omit_grains=True,
                                 omit_pillar=True,
                                 omit_master=True,
+                                wildcard=True)
+            assert ret == self._wildcard_match(config.DEFAULTS), ret
+
+            # Match should be in master opts
+            ret = config.option(self.opt_name,
+                                omit_all=True)
+            assert ret == config.DEFAULTS[self.opt_name], ret
+
+            # Wildcard match
+            ret = config.option(self.wildcard_opt_name,
+                                omit_all=True,
                                 wildcard=True)
             assert ret == self._wildcard_match(config.DEFAULTS), ret
