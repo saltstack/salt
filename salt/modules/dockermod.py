@@ -50,7 +50,23 @@ Authentication
 If you have previously performed a ``docker login`` from the minion, then the
 credentials saved in ``~/.docker/config.json`` will be used for any actions
 which require authentication. If not, then credentials can be configured in
-Pillar data. The configuration schema is as follows:
+any of the following locations:
+
+- Minion config file
+- Grains
+- Pillar data
+- Master config file (requires :conf_minion:`pillar_opts` to be set to ``True``
+  in Minion config file in order to work)
+
+.. important::
+    Versions prior to Neon require that Docker credentials are configured in
+    Pillar data. Be advised that Pillar data is still recommended though,
+    because this keeps the configuration from being stored on the Minion.
+
+    Also, keep in mind that if one gets your ``~/.docker/config.json``, the
+    password can be decoded from its contents.
+
+The configuration schema is as follows:
 
 .. code-block:: yaml
 
@@ -346,7 +362,7 @@ def _get_client(timeout=NOTSET, **kwargs):
         client_kwargs['timeout'] = timeout
     for key, val in (('base_url', 'docker.url'),
                      ('version', 'docker.version')):
-        param = __salt__['config.get'](val, NOTSET)
+        param = __salt__['config.option'](val, NOTSET)
         if param is not NOTSET:
             client_kwargs[key] = param
 
@@ -359,7 +375,7 @@ def _get_client(timeout=NOTSET, **kwargs):
         # it's not defined by user.
         client_kwargs['version'] = 'auto'
 
-    docker_machine = __salt__['config.get']('docker.machine', NOTSET)
+    docker_machine = __salt__['config.option']('docker.machine', NOTSET)
 
     if docker_machine is not NOTSET:
         docker_machine_json = __salt__['cmd.run'](
@@ -458,7 +474,7 @@ def _check_update_mine():
         ret = __context__['docker.update_mine']
     except KeyError:
         ret = __context__['docker.update_mine'] = __salt__[
-            'config.get']('docker.update_mine', default=True)
+            'config.option']('docker.update_mine', default=True)
     return ret
 
 
@@ -524,7 +540,7 @@ def _get_exec_driver():
     '''
     contextkey = 'docker.exec_driver'
     if contextkey not in __context__:
-        from_config = __salt__['config.get'](contextkey, None)
+        from_config = __salt__['config.option'](contextkey, None)
         # This if block can be removed once we make docker-exec a default
         # option, as it is part of the logic in the commented block above.
         if from_config is not None:
@@ -1067,7 +1083,8 @@ def compare_container_networks(first, second):
     def _get_nets(data):
         return data.get('NetworkSettings', {}).get('Networks', {})
 
-    compare_keys = __opts__['docker.compare_container_networks']
+    compare_keys = __salt__['config.option']('docker.compare_container_networks')
+
     result1 = inspect_container(first) \
         if not isinstance(first, dict) \
         else first
@@ -1408,24 +1425,22 @@ def login(*registries):
     # NOTE: This function uses the "docker login" CLI command so that login
     # information is added to the config.json, since docker-py isn't designed
     # to do so.
-    registry_auth = __pillar__.get('docker-registries', {})
+    registry_auth = __salt__['config.get']('docker-registries', {})
     ret = {'retcode': 0}
     errors = ret.setdefault('Errors', [])
     if not isinstance(registry_auth, dict):
         errors.append(
             '\'docker-registries\' Pillar value must be a dictionary')
         registry_auth = {}
-    for key, data in six.iteritems(__pillar__):
+    for reg_name, reg_conf in six.iteritems(
+            __salt__['config.option']('*-docker-registries', wildcard=True)):
         try:
-            if key.endswith('-docker-registries'):
-                try:
-                    registry_auth.update(data)
-                except TypeError:
-                    errors.append(
-                        '\'{0}\' Pillar value must be a dictionary'.format(key)
-                    )
-        except AttributeError:
-            pass
+            registry_auth.update(reg_conf)
+        except TypeError:
+            errors.append(
+                'Docker registry \'{0}\' was not specified as a '
+                'dictionary'.format(reg_name)
+            )
 
     # If no registries passed, we will auth to all of them
     if not registries:
