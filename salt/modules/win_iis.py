@@ -2085,7 +2085,7 @@ def get_webconfiguration_settings(name, settings, location=''):
 
         # Some ItemProperties are Strings and others are ConfigurationAttributes.
         # Since the former doesn't have a Value property, we need to account
-        # for this.é"
+        # for this.
         ps_cmd.append("$Property = Get-WebConfigurationProperty -PSPath '{0}'".format(name))
         ps_cmd.append("-Name '{0}' -Filter '{1}' -Location '{2}' -ErrorAction Stop;".format(setting['name'], setting['filter'], location))
         if setting['name'].split('.')[-1] == 'Collection':
