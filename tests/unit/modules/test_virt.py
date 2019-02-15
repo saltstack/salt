@@ -3018,3 +3018,157 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                                           'password': 'c2VjcmV0'}))
         self.mock_conn.storagePoolDefineXML.assert_called_once_with(expected_xml)
         mock_secret.setValue.assert_called_once_with(b'secret')
+
+    def test_volume_infos(self):
+        '''
+        Test virt.volume_infos
+        '''
+        vms_disks = [
+            '''
+                <disk type='file' device='disk'>
+                  <driver name='qemu' type='qcow2'/>
+                  <source file='/path/to/vol0.qcow2'/>
+                  <target dev='vda' bus='virtio'/>
+                </disk>
+            ''',
+            '''
+                <disk type='file' device='disk'>
+                  <driver name='qemu' type='qcow2'/>
+                  <source file='/path/to/vol3.qcow2'/>
+                  <target dev='vda' bus='virtio'/>
+                </disk>
+            ''',
+            '''
+                <disk type='file' device='disk'>
+                  <driver name='qemu' type='qcow2'/>
+                  <source file='/path/to/vol2.qcow2'/>
+                  <target dev='vda' bus='virtio'/>
+                </disk>
+            '''
+        ]
+        mock_vms = []
+        for idx, disk in enumerate(vms_disks):
+            vm = MagicMock()
+            # pylint: disable=no-member
+            vm.name.return_value = 'vm{0}'.format(idx)
+            vm.XMLDesc.return_value = '''
+                    <domain type='kvm' id='1'>
+                      <name>vm{0}</name>
+                      <devices>{1}</devices>
+                    </domain>
+                '''.format(idx, disk)
+            # pylint: enable=no-member
+            mock_vms.append(vm)
+
+        mock_pool_data = [
+            {
+                'name': 'pool0',
+                'volumes': [
+                    {
+                        'key': '/key/of/vol0',
+                        'name': 'vol0',
+                        'path': '/path/to/vol0.qcow2',
+                        'info': [0, 123456789, 123456],
+                        'backingStore': None
+                    }
+                ]
+            },
+            {
+                'name': 'pool1',
+                'volumes': [
+                    {
+                        'key': '/key/of/vol1',
+                        'name': 'vol1',
+                        'path': '/path/to/vol1.qcow2',
+                        'info': [0, 12345, 1234],
+                        'backingStore': None
+                    },
+                    {
+                        'key': '/key/of/vol2',
+                        'name': 'vol2',
+                        'path': '/path/to/vol2.qcow2',
+                        'info': [0, 12345, 1234],
+                        'backingStore': '/path/to/vol0.qcow2'
+                    },
+                ],
+            }
+        ]
+        mock_pools = []
+        for pool_data in mock_pool_data:
+            mock_pool = MagicMock()
+            mock_pool.name.return_value = pool_data['name']  # pylint: disable=no-member
+            mock_volumes = []
+            for vol_data in pool_data['volumes']:
+                mock_volume = MagicMock()
+                # pylint: disable=no-member
+                mock_volume.name.return_value = vol_data['name']
+                mock_volume.key.return_value = vol_data['key']
+                mock_volume.path.return_value = '/path/to/{0}.qcow2'.format(vol_data['name'])
+                mock_volume.info.return_value = vol_data['info']
+                backing_store = '''
+                    <backingStore>
+                      <format>qcow2</format>
+                      <path>{0}</path>
+                    </backingStore>
+                '''.format(vol_data['backingStore']) if vol_data['backingStore'] else '<backingStore/>'
+                mock_volume.XMLDesc.return_value = '''
+                    <volume type='file'>
+                      <name>{0}</name>
+                      <target>
+                        <format>qcow2</format>
+                        <path>/path/to/{0}.qcow2</path>
+                      </target>
+                      {1}
+                    </volume>
+                '''.format(vol_data['name'], backing_store)
+                mock_volumes.append(mock_volume)
+                # pylint: enable=no-member
+            mock_pool.listAllVolumes.return_value = mock_volumes  # pylint: disable=no-member
+            mock_pools.append(mock_pool)
+
+        self.mock_conn.listAllStoragePools.return_value = mock_pools  # pylint: disable=no-member
+
+        with patch('salt.modules.virt._get_domain', MagicMock(return_value=mock_vms)):
+            actual = virt.volume_infos('pool0', 'vol0')
+            self.assertEqual(1, len(actual.keys()))
+            self.assertEqual(1, len(actual['pool0'].keys()))
+            self.assertEqual(['vm0', 'vm2'], sorted(actual['pool0']['vol0']['used_by']))
+            self.assertEqual('/path/to/vol0.qcow2', actual['pool0']['vol0']['path'])
+            self.assertEqual('file', actual['pool0']['vol0']['type'])
+            self.assertEqual('/key/of/vol0', actual['pool0']['vol0']['key'])
+            self.assertEqual(123456789, actual['pool0']['vol0']['capacity'])
+            self.assertEqual(123456, actual['pool0']['vol0']['allocation'])
+
+            self.assertEqual(virt.volume_infos('pool1', None), {
+                'pool1': {
+                    'vol1': {
+                        'type': 'file',
+                        'key': '/key/of/vol1',
+                        'path': '/path/to/vol1.qcow2',
+                        'capacity': 12345,
+                        'allocation': 1234,
+                        'used_by': [],
+                    },
+                    'vol2': {
+                        'type': 'file',
+                        'key': '/key/of/vol2',
+                        'path': '/path/to/vol2.qcow2',
+                        'capacity': 12345,
+                        'allocation': 1234,
+                        'used_by': ['vm2'],
+                    }
+                }
+            })
+
+            self.assertEqual(virt.volume_infos(None, 'vol2'), {
+                'pool1': {
+                    'vol2': {
+                        'type': 'file',
+                        'key': '/key/of/vol2',
+                        'path': '/path/to/vol2.qcow2',
+                        'capacity': 12345,
+                        'allocation': 1234,
+                        'used_by': ['vm2'],
+                    }
+                }
+            })
