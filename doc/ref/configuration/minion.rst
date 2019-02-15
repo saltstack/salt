@@ -847,6 +847,23 @@ A value of 10 minutes is a reasonable default.
 
     grains_refresh_every: 0
 
+.. conf_minion:: metadata_server_grains
+
+``metadata_server_grains``
+--------------------------
+
+.. versionadded:: 2017.7.0
+
+Default: ``False``
+
+Set this option to enable gathering of cloud metadata from
+``http://169.254.169.254/latest`` for use in grains (see :py:mod:`here
+<salt.grains.metadata>` for more information).
+
+.. code-block:: yaml
+
+    metadata_server_grains: True
+
 .. conf_minion:: fibre_channel_grains
 
 ``fibre_channel_grains``
