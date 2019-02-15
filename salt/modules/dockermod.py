@@ -1062,6 +1062,11 @@ def compare_container_networks(first, second):
     than waiting for a new Salt release one can just set
     :conf_minion:`docker.compare_container_networks`.
 
+    .. versionchanged:: Neon
+        This config option can now also be set in pillar data and grains.
+        Additionally, it can be set in the master config file, provided that
+        :conf_minion:`pillar_opts` is enabled on the minion.
+
     .. note::
         The checks for automatic IP configuration described above only apply if
         ``IPAMConfig`` is among the keys set for static IP checks in
