@@ -14,7 +14,6 @@ import datetime
 
 # Import salt libs
 import salt.log
-import salt.crypt
 import salt.transport.frame
 from salt.exceptions import SaltReqTimeoutError
 from salt.utils import immutabletypes
