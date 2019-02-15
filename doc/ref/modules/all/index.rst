@@ -423,6 +423,7 @@ execution modules
     ssh
     ssh_package
     ssh_service
+    snap
     snapper
     state
     status
