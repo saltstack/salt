@@ -119,9 +119,9 @@ class PillarTestCase(TestCase):
                    MagicMock(return_value=MagicMock(args=['extra_minion_data']))):
             pillar._external_pillar_data('fake_pillar', {'arg': 'foo'},
                                          'fake_ext_pillar')
-        mock_ext_pillar_func.assert_called_once_with('mocked-minion',
-                                                     'fake_pillar',
-                                                     arg='foo')
+        mock_ext_pillar_func.assert_called_once_with(
+            'mocked-minion', 'fake_pillar', arg='foo',
+            extra_minion_data={'worker_cache': None})
 
     def test_ext_pillar_no_extra_minion_data_val_list(self):
         opts = {
@@ -162,7 +162,9 @@ class PillarTestCase(TestCase):
                                          'fake_ext_pillar')
         mock_ext_pillar_func.assert_called_once_with('mocked-minion',
                                                      'fake_pillar',
-                                                     'foo')
+                                                     'foo',
+                                                     extra_minion_data={
+                                                         'worker_cache': None})
 
     def test_ext_pillar_no_extra_minion_data_val_elem(self):
         opts = {
@@ -200,8 +202,9 @@ class PillarTestCase(TestCase):
                    MagicMock(return_value=MagicMock(args=['extra_minion_data']))):
             pillar._external_pillar_data('fake_pillar', 'fake_val',
                                          'fake_ext_pillar')
-        mock_ext_pillar_func.assert_called_once_with('mocked-minion',
-                                                     'fake_pillar', 'fake_val')
+        mock_ext_pillar_func.assert_called_once_with(
+            'mocked-minion', 'fake_pillar', 'fake_val',
+            extra_minion_data={'worker_cache': None})
 
     def test_ext_pillar_with_extra_minion_data_val_dict(self):
         opts = {
@@ -242,7 +245,7 @@ class PillarTestCase(TestCase):
                                          'fake_ext_pillar')
         mock_ext_pillar_func.assert_called_once_with(
             'mocked-minion', 'fake_pillar', arg='foo',
-            extra_minion_data={'fake_key': 'foo'})
+            extra_minion_data={'worker_cache': None, 'fake_key': 'foo'})
 
     def test_ext_pillar_with_extra_minion_data_val_list(self):
         opts = {
@@ -283,7 +286,7 @@ class PillarTestCase(TestCase):
                                          'fake_ext_pillar')
         mock_ext_pillar_func.assert_called_once_with(
             'mocked-minion', 'fake_pillar', 'bar',
-            extra_minion_data={'fake_key': 'foo'})
+            extra_minion_data={'worker_cache': None, 'fake_key': 'foo'})
 
     def test_ext_pillar_with_extra_minion_data_val_elem(self):
         opts = {
@@ -324,7 +327,7 @@ class PillarTestCase(TestCase):
                                          'fake_ext_pillar')
         mock_ext_pillar_func.assert_called_once_with(
             'mocked-minion', 'fake_pillar', 'bar',
-            extra_minion_data={'fake_key': 'foo'})
+            extra_minion_data={'worker_cache': None, 'fake_key': 'foo'})
 
     def test_dynamic_pillarenv(self):
         opts = {

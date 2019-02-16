@@ -54,25 +54,37 @@ def get_pillar(opts, grains, minion_id, saltenv=None, ext=None, funcs=None,
         'remote': RemotePillar,
         'local': Pillar
     }.get(file_client, Pillar)
+
+    if extra_minion_data:
+        worker_cache = extra_minion_data.pop('worker_cache', None)
+    else:
+        worker_cache = None
+
     # If local pillar and we're caching, run through the cache system first
     log.debug('Determining pillar cache')
     if opts['pillar_cache']:
         log.info('Compiling pillar from cache')
         log.debug('get_pillar using pillar cache with ext: %s', ext)
         return PillarCache(opts, grains, minion_id, saltenv, ext=ext, functions=funcs,
-                pillar_override=pillar_override, pillarenv=pillarenv)
+                pillar_override=pillar_override, pillarenv=pillarenv,
+                           worker_cache=worker_cache)
     return ptype(opts, grains, minion_id, saltenv, ext, functions=funcs,
                  pillar_override=pillar_override, pillarenv=pillarenv,
+                 worker_cache=worker_cache,
                  extra_minion_data=extra_minion_data)
 
 
 # TODO: migrate everyone to this one!
 def get_async_pillar(opts, grains, minion_id, saltenv=None, ext=None, funcs=None,
-                     pillar_override=None, pillarenv=None,
-                     extra_minion_data=None):
+                     pillar_override=None, pillarenv=None, extra_minion_data=None):
     '''
     Return the correct pillar driver based on the file_client option
     '''
+    if extra_minion_data:
+        worker_cache = extra_minion_data.pop('worker_cache', None)
+    else:
+        worker_cache = None
+
     file_client = opts['file_client']
     if opts.get('master_type') == 'disable' and file_client == 'remote':
         file_client = 'local'
@@ -82,7 +94,7 @@ def get_async_pillar(opts, grains, minion_id, saltenv=None, ext=None, funcs=None
     }.get(file_client, AsyncPillar)
     return ptype(opts, grains, minion_id, saltenv, ext, functions=funcs,
                  pillar_override=pillar_override, pillarenv=pillarenv,
-                 extra_minion_data=extra_minion_data)
+                 worker_cache=worker_cache, extra_minion_data=extra_minion_data)
 
 
 class RemotePillarMixin(object):
@@ -136,7 +148,9 @@ class AsyncRemotePillar(RemotePillarMixin):
     Get the pillar from the master
     '''
     def __init__(self, opts, grains, minion_id, saltenv, ext=None, functions=None,
-                 pillar_override=None, pillarenv=None, extra_minion_data=None):
+                 pillar_override=None, pillarenv=None,
+                 worker_cache=None,  # pylint: disable=unused-argument
+                 extra_minion_data=None):
         self.opts = opts
         self.opts['saltenv'] = saltenv
         self.ext = ext
@@ -207,7 +221,9 @@ class RemotePillar(RemotePillarMixin):
     Get the pillar from the master
     '''
     def __init__(self, opts, grains, minion_id, saltenv, ext=None, functions=None,
-                 pillar_override=None, pillarenv=None, extra_minion_data=None):
+                 pillar_override=None, pillarenv=None,
+                 worker_cache=None,  # pylint: disable=unused-argument
+                 extra_minion_data=None):
         self.opts = opts
         self.opts['saltenv'] = saltenv
         self.ext = ext
@@ -283,7 +299,8 @@ class PillarCache(object):
     '''
     # TODO ABC?
     def __init__(self, opts, grains, minion_id, saltenv, ext=None, functions=None,
-                 pillar_override=None, pillarenv=None, extra_minion_data=None):
+                 pillar_override=None, pillarenv=None, worker_cache=None,
+                 extra_minion_data=None):
         # Yes, we need all of these because we need to route to the Pillar object
         # if we have no cache. This is another refactor target.
 
@@ -300,6 +317,8 @@ class PillarCache(object):
             self.saltenv = 'base'
         else:
             self.saltenv = saltenv
+
+        self.worker_cache = worker_cache
 
         # Determine caching backend
         self.cache = salt.utils.cache.CacheFactory.factory(
@@ -325,6 +344,7 @@ class PillarCache(object):
                               self.grains,
                               self.minion_id,
                               self.saltenv,
+                              worker_cache=self.worker_cache,
                               ext=self.ext,
                               functions=self.functions,
                               pillarenv=self.pillarenv)
@@ -379,7 +399,8 @@ class Pillar(object):
     Read over the pillar top files and render the pillar data
     '''
     def __init__(self, opts, grains, minion_id, saltenv, ext=None, functions=None,
-                 pillar_override=None, pillarenv=None, extra_minion_data=None):
+                 pillar_override=None, pillarenv=None,
+                 worker_cache=None, extra_minion_data=None):
         self.minion_id = minion_id
         self.ext = ext
         if pillarenv is None:
@@ -425,6 +446,7 @@ class Pillar(object):
             self.extra_minion_data = {}
             log.error('Extra minion data must be a dictionary')
         self._closing = False
+        self.extra_minion_data.update(dict(worker_cache=worker_cache))
 
     def __valid_on_demand_ext_pillar(self, opts):
         '''

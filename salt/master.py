@@ -30,6 +30,7 @@ from salt.utils.zeromq import zmq, ZMQDefaultLoop, install_zmq, ZMQ_VERSION_INFO
 import tornado.gen  # pylint: disable=F0401
 
 # Import salt libs
+import salt.cache.imscache
 import salt.crypt
 import salt.client
 import salt.client.ssh.client
@@ -1169,9 +1170,11 @@ class AESFuncs(object):
             ignore_config_errors=True
         )
         self.__setup_fileserver()
+        self.worker_cache = salt.cache.imscache.cache_from_opts(opts)
         self.masterapi = salt.daemons.masterapi.RemoteFuncs(opts)
 
     def __setup_fileserver(self):
+
         '''
         Set the local file objects from the file server interface
         '''
@@ -1526,6 +1529,8 @@ class AESFuncs(object):
             return False
         load['grains']['id'] = load['id']
 
+        extra_data = load.get('extra_minion_data', {})
+        extra_data.update(dict(worker_cache=self.worker_cache))
         pillar = salt.pillar.get_pillar(
             self.opts,
             load['grains'],
@@ -1534,7 +1539,7 @@ class AESFuncs(object):
             ext=load.get('ext'),
             pillar_override=load.get('pillar_override', {}),
             pillarenv=load.get('pillarenv'),
-            extra_minion_data=load.get('extra_minion_data'))
+            extra_minion_data=extra_data)
         data = pillar.compile_pillar()
         self.fs_.update_opts()
         if self.opts.get('minion_data_cache', False):
