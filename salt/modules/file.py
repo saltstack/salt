@@ -3233,6 +3233,7 @@ def tail(path, lines):
     '''
     path = os.path.expanduser(path)
     lines_found = []
+    buffer_size = 4098
 
     if not os.path.isfile(path):
         raise SaltInvocationError('File not found: {0}'.format(path))
@@ -3240,6 +3241,7 @@ def tail(path, lines):
     if not __utils__['files.is_text'](path):
         raise SaltInvocationError(
             'Cannot tail a binary file: {0}'.format(path))
+
     try:
         lines = int(lines)
     except ValueError:
@@ -3247,11 +3249,28 @@ def tail(path, lines):
 
     try:
         with salt.utils.fopen(path) as tail_fh:
-            block_counter = -1
-            while len(lines_found) < lines:
-                tail_fh.seek(block_counter * 4098, os.SEEK_END)
-                lines_found = tail_fh.readlines()
-                block_counter -= 1
+            blk_cnt = 1
+            size = os.stat('test.txt').st_size
+
+            if size > buffer_size:
+                tail_fh.seek(-buffer_size * blk_cnt, os.SEEK_END)
+            data = string.split(tail_fh.read(buffer_size), os.linesep)
+
+            for i in range(lines):
+                while len(data) == 1 and ((blk_cnt * buffer_size) < size):
+                  blk_cnt += 1
+                  line = data[0]
+                  try:
+                      tail_fh.seek(-buffer_size * blk_cnt, os.SEEK_END)
+                      data = string.split(tail_fh.read(buffer_size) + line, os.linesep)
+                  except IOError:
+                    tail_fh.seek(0)
+                    data = string.split(tail_fh.read(size - (buffer_size * (blk_cnt - 1))) + line, os.linesep)
+
+                line = data[-1]
+                data.pop()
+                lines_found.append(line)
+
         return lines_found[-lines:]
     except (OSError, IOError):
         raise CommandExecutionError('Could not tail \'{0}\''.format(path))
