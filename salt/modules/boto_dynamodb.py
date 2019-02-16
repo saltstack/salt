@@ -49,6 +49,10 @@ import time
 import salt.utils.versions
 from salt.exceptions import SaltInvocationError
 
+log = logging.getLogger(__name__)
+logging.getLogger("boto").setLevel(logging.INFO)
+
+
 try:
     # pylint: disable=unused-import
     import boto
@@ -65,6 +69,8 @@ try:
     )
     from boto.dynamodb2.table import Table
     from boto.exception import JSONResponseError
+    import botocore
+    import boto3  # pylint: disable=unused-import
 
     logging.getLogger("boto").setLevel(logging.INFO)
 
@@ -79,10 +85,126 @@ def __virtual__():
     """
     Only load if boto libraries exist.
     """
-    has_boto_reqs = salt.utils.versions.check_boto_reqs(check_boto3=False)
+    has_boto_reqs = salt.utils.versions.check_boto_reqs()
     if has_boto_reqs is True:
         __utils__["boto.assign_funcs"](__name__, "dynamodb2", pack=__salt__)
     return has_boto_reqs
+
+
+def list_tags_of_resource(ResourceArn, region=None, key=None, keyid=None, profile=None):
+    """
+    Returns a dictionary of all Tags currently attached to a given resource.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_dynamodb.list_tags_of_resource \
+              ResourceArn=arn:aws:dynamodb:us-east-1:012345678901:table/my-table
+    """
+    conn3 = __utils__["boto3.get_connection"](
+        "dynamodb", region=region, key=key, keyid=keyid, profile=profile
+    )
+    retries = 10
+    sleep = 6
+    Tags = []
+    while retries:
+        try:
+            log.debug("Garnering tags of resource %s", ResourceArn)
+            Marker = ""
+            while Marker is not None:
+                ret = conn3.list_tags_of_resource(
+                    ResourceArn=ResourceArn, NextToken=Marker
+                )
+                Tags += ret.get("Tags", [])
+                Marker = ret.get("NextToken")
+            return {tag["Key"]: tag["Value"] for tag in Tags}
+        except botocore.exceptions.ParamValidationError as err:
+            raise SaltInvocationError(str(err))
+        except botocore.exceptions.ClientError as err:
+            if retries and err.response.get("Error", {}).get("Code") == "Throttling":
+                retries -= 1
+                log.debug("Throttled by AWS API, retrying in %s seconds...", sleep)
+                time.sleep(sleep)
+                continue
+            log.error(
+                "Failed to list Tags for resource %s: %s", ResourceArn, err.message
+            )
+            return None
+
+
+def tag_resource(ResourceArn, Tags, region=None, key=None, keyid=None, profile=None):
+    """
+    Sets given tags (provided as list or dict) on the given resource.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_dynamodb.tag_resource \
+              ResourceArn=arn:aws:dynamodb:us-east-1:012345678901:table/my-table \
+              Tags='{Name: my-table, Owner: Ops}'
+    """
+    conn3 = __utils__["boto3.get_connection"](
+        "dynamodb", region=region, key=key, keyid=keyid, profile=profile
+    )
+    retries = 10
+    sleep = 6
+    if isinstance(Tags, dict):
+        Tags = [{"Key": key, "Value": val} for key, val in Tags.items()]
+    while retries:
+        try:
+            log.debug("Setting tags on resource %s", ResourceArn)
+            ret = conn3.tag_resource(ResourceArn=ResourceArn, Tags=Tags)
+            return True
+        except botocore.exceptions.ParamValidationError as err:
+            raise SaltInvocationError(str(err))
+        except botocore.exceptions.ClientError as err:
+            if retries and err.response.get("Error", {}).get("Code") == "Throttling":
+                retries -= 1
+                log.debug("Throttled by AWS API, retrying in %s seconds...", sleep)
+                time.sleep(sleep)
+                continue
+            log.error("Failed to set Tags on resource %s: %s", ResourceArn, err.message)
+            return False
+
+
+def untag_resource(
+    ResourceArn, TagKeys, region=None, key=None, keyid=None, profile=None
+):
+    """
+    Removes given tags (provided as list) from the given resource.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_dynamodb.untag_resource \
+              ResourceArn=arn:aws:dynamodb:us-east-1:012345678901:table/my-table \
+              TagKeys='[Name, Owner]'
+    """
+    conn3 = __utils__["boto3.get_connection"](
+        "dynamodb", region=region, key=key, keyid=keyid, profile=profile
+    )
+    retries = 10
+    sleep = 6
+    while retries:
+        try:
+            log.debug("Removing tags from resource %s", ResourceArn)
+            ret = conn3.untag_resource(ResourceArn=ResourceArn, TagKeys=TagKeys)
+            return True
+        except botocore.exceptions.ParamValidationError as err:
+            raise SaltInvocationError(str(err))
+        except botocore.exceptions.ClientError as err:
+            if retries and err.response.get("Error", {}).get("Code") == "Throttling":
+                retries -= 1
+                log.debug("Throttled by AWS API, retrying in %s seconds...", sleep)
+                time.sleep(sleep)
+                continue
+            log.error(
+                "Failed to remove Tags from resource %s: %s", ResourceArn, err.message
+            )
+            return False
 
 
 def create_table(
