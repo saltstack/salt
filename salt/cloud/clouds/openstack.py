@@ -218,7 +218,7 @@ import pprint
 import socket
 
 # Import Salt Libs
-import salt.utils.json
+import salt.utils.versions.LooseVersion as _LooseVersion
 import salt.config as config
 from salt.ext import six
 from salt.exceptions import (
@@ -854,7 +854,7 @@ def call(conn=None, call=None, kwargs=None):
     func = kwargs.pop('func')
     for key, value in kwargs.items():
         try:
-            kwargs[key] = salt.utils.json.loads(value)
+            kwargs[key] = __utils__['json.loads'](value)
         except ValueError:
             continue
     try:
