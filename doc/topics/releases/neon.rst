@@ -13,6 +13,16 @@ to see the data loaded from a jinja map, or imported using ``import_yaml`` or
 ``import_json``. See :py:mod:`here <salt.modules.jinja>` for more information.
 
 
+OpenStack Cloud Driver Updates
+==============================
+
+The OpenStack SaltCloud driver has the default dependency changed to ``openstacksdk>=0.10.0``.
+
+If you are already using this module with the ``shade`` module, it will continue
+to work, but all new openstack features will require moving to using the
+openstacksdk pypi module.
+
+
 Saltcheck Updates
 =================
 

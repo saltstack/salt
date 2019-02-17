@@ -3,7 +3,7 @@
 Openstack Cloud Driver
 ======================
 
-:depends: `shade <https://pypi.python.org/pypi/shade>`_
+:depends: `openstacksdk <https://pypi.python.org/pypi/openstacksdk>`_
 
 OpenStack is an open source project that is in use by a number a cloud
 providers, each of which have their own ways of using it.
@@ -230,12 +230,23 @@ from salt.exceptions import (
 
 # Import 3rd-Party Libs
 try:
-    import shade.openstackcloud
-    import shade.exc
-    import os_client_config
-    HAS_SHADE = True
+    import openstack
+    import openstack.connection.Connection as OpenStackCloud
+    import openstack.config.vendors as vendors
+    HAS_OPENSTACK = (
+        _LooseVersion(openstack.__version__) >= _LooseVersion('0.10.0'),
+        'Please install pypi module openstacksdk >= 0.10.0'
+    )
 except ImportError:
-    HAS_SHADE = False
+    HAS_OPENSTACK = False, 'Please install pypi module openstacksdk >= 0.10.0'
+    try:
+        import shade
+        import shade.openstackcloud.OpenStackCloud as OpenStackCloud
+        import shade.exc
+        import os_client_config.vendors as vendors
+        HAS_SHADE = _LooseVersion(shade.__version__) >= _LooseVersion('1.19.0')
+    except ImportError:
+        HAS_SHADE = False
 
 log = logging.getLogger(__name__)
 __virtualname__ = 'openstack'
@@ -247,8 +258,8 @@ def __virtual__():
     '''
     if get_configured_provider() is False:
         return False
-    if get_dependencies() is False:
-        return False
+    if not get_dependencies():
+        return HAS_OPENSTACK
     return __virtualname__
 
 
@@ -270,13 +281,12 @@ def get_dependencies():
     Warn if dependencies aren't met.
     '''
     deps = {
-        'shade': HAS_SHADE,
-        'os_client_config': HAS_SHADE,
+        'openstacksdk': HAS_OPENSTACK[0],
     }
     return config.check_driver_dependencies(
         __virtualname__,
         deps
-    )
+    ) or HAS_SHADE
 
 
 def preferred_ip(vm_, ips):
@@ -316,7 +326,7 @@ def get_conn():
     vm_ = get_configured_provider()
     profile = vm_.pop('profile', None)
     if profile is not None:
-        vm_ = __utils__['dictupdate.update'](os_client_config.vendors.get_profile(profile), vm_)
+        vm_ = __utils__['dictupdate.update'](vendors.get_profile(profile), vm_)
     conn = shade.openstackcloud.OpenStackCloud(cloud_config=None, **vm_)
     if __active_provider_name__ is not None:
         __context__[__active_provider_name__] = conn
