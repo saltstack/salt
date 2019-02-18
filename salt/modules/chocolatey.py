@@ -933,8 +933,14 @@ def version(name, check_remote=False, source=None, pre_versions=False):
         available = {k.lower(): v for k, v in available.items()}
 
         for pkg in packages:
-            packages[pkg] = {'installed': installed[pkg],
-                             'available': available[pkg]}
+            # Grab the current version from the package that was installed
+            packages[pkg] = {'installed': installed[pkg]}
+
+            # If there's a remote package available, then also include that
+            # in the dictionary that we return.
+            if pkg in available:
+                packages[pkg]['available'] = available[pkg]
+            continue
 
     return packages
 
