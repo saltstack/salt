@@ -363,8 +363,7 @@ def show(commands, raw_text=True, **kwargs):
     else:
         method = 'cli_show'
 
-    commands = commands.replace('show', '').lstrip()
-    response_list = sendline('show ' + commands, method, **kwargs)
+    response_list = sendline(commands, method, **kwargs)
     if isinstance(response_list, list):
         ret = [response for response in response_list if response]
         if not ret:
