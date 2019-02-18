@@ -348,9 +348,9 @@ def show(commands, raw_text=True, **kwargs):
 
     .. code-block:: bash
 
-        salt-call --local nxos.show version
-        salt '*' nxos.show 'bgp sessions ; processes' raw_text=False
-        salt 'regular-minion' nxos.show interfaces host=sw01.example.com username=test password=test
+        salt-call --local nxos.show 'show version'
+        salt '*' nxos.show 'show bgp sessions ; show processes' raw_text=False
+        salt 'regular-minion' nxos.show 'show interfaces' host=sw01.example.com username=test password=test
     '''
     if not isinstance(raw_text, bool):
         msg = "INPUT ERROR: Second argument 'raw_text' must be either True or False"
