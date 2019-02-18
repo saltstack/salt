@@ -3250,7 +3250,7 @@ def tail(path, lines):
     try:
         with salt.utils.fopen(path) as tail_fh:
             blk_cnt = 1
-            size = os.stat('test.txt').st_size
+            size = os.stat(path).st_size
 
             if size > buffer_size:
                 tail_fh.seek(-buffer_size * blk_cnt, os.SEEK_END)
