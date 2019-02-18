@@ -275,6 +275,8 @@ class EtcdClient(object):
         try:
             result = self.client.write(key, value, ttl=ttl, dir=False)
         except (etcd.EtcdNotFile, etcd.EtcdRootReadOnly, ValueError) as err:
+            # If EtcdNotFile is raised, then this key is a directory and
+            # really this is a name collision.
             log.error('etcd: %s', err)
             return None
         except MaxRetryError as err:
@@ -298,6 +300,8 @@ class EtcdClient(object):
             log.info('etcd: directory already exists: %s', key)
             return True
         except (etcd.EtcdNotDir, etcd.EtcdRootReadOnly, ValueError) as err:
+            # If EtcdNotDir is raised, then the specified path is a file and
+            # thus this is an error.
             log.error('etcd: %s', err)
             return None
         except MaxRetryError as err:
