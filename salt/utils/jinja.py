@@ -381,7 +381,7 @@ def regex_search(txt, rgx, ignorecase=False, multiline=False):
 
 
 @jinja_filter('regex_match')
-def regex_match(txt, rgx, ignorecase=False, multiline=False):
+def regex_match(txt, rgx, ignorecase=False, multiline=False, as_dict=False):
     '''
     Searches for a pattern in the text.
 
@@ -404,6 +404,8 @@ def regex_match(txt, rgx, ignorecase=False, multiline=False):
     obj = re.match(rgx, txt, flag)
     if not obj:
         return
+    if as_dict:
+        return obj.groupdict()
     return obj.groups()
 
 
