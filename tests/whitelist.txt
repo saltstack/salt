@@ -36,7 +36,6 @@ integration.modules.test_localemod
 integration.modules.test_lxc
 integration.modules.test_mine
 integration.modules.test_mysql
-integration.modules.test_nacl
 integration.modules.test_network
 integration.modules.test_nilrt_ip
 integration.modules.test_pillar

@@ -20,6 +20,7 @@ from random import randint
 # Import salt libs
 from salt.exceptions import SaltSystemExit, SaltClientError, SaltReqTimeoutError
 import salt.defaults.exitcodes  # pylint: disable=unused-import
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
@@ -58,14 +59,22 @@ def _handle_signals(client, signum, sigframe):
         exit_msg = '\nExiting gracefully on Ctrl-c'
         try:
             jid = client.local_client.pub_data['jid']
+            target = client.local_client.target_data
             exit_msg += (
                 '\n'
                 'This job\'s jid is: {0}\n'
                 'The minions may not have all finished running and any remaining '
-                'minions will return upon completion. To look up the return data '
-                'for this job later, run the following command:\n\n'
+                'minions will return upon completion.\n\n'
+                'To look up the return data for this job later, run the '
+                'following command:\n'
                 'salt-run jobs.lookup_jid {0}'.format(jid)
             )
+            if target:
+                exit_msg += (
+                    '\n\n'
+                    'To set up the state run to safely exit, run the following command:\n'
+                    'salt {0} state.soft_kill {1}'.format(target, jid)
+                )
         except (AttributeError, KeyError):
             pass
     else:
@@ -93,6 +102,16 @@ def salt_master():
     Start the salt master.
     '''
     import salt.cli.daemons
+# REMOVEME after Python 2.7 support is dropped (also the six import)
+    if six.PY2:
+        from salt.utils.versions import warn_until
+        # Message borrowed from pip's deprecation warning
+        warn_until('Sodium',
+                   'Python 2.7 will reach the end of its life on January 1st,'
+                   ' 2020. Please upgrade your Python as Python 2.7 won\'t be'
+                   ' maintained after that date.  Salt will drop support for'
+                   ' Python 2.7 in the Sodium release or later.')
+# END REMOVEME
     master = salt.cli.daemons.Master()
     master.start()
 
@@ -179,6 +198,16 @@ def salt_minion():
         minion = salt.cli.daemons.Minion()
         minion.start()
         return
+# REMOVEME after Python 2.7 support is dropped (also the six import)
+    elif six.PY2:
+        from salt.utils.versions import warn_until
+        # Message borrowed from pip's deprecation warning
+        warn_until('Sodium',
+                   'Python 2.7 will reach the end of its life on January 1st,'
+                   ' 2020. Please upgrade your Python as Python 2.7 won\'t be'
+                   ' maintained after that date.  Salt will drop support for'
+                   ' Python 2.7 in the Sodium release or later.')
+# END REMOVEME
 
     if '--disable-keepalive' in sys.argv:
         sys.argv.remove('--disable-keepalive')

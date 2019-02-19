@@ -25,6 +25,7 @@ import traceback
 import re
 import time
 import random
+import collections
 
 # Import salt libs
 import salt.loader
@@ -40,10 +41,12 @@ import salt.utils.event
 import salt.utils.files
 import salt.utils.hashutils
 import salt.utils.immutabletypes as immutabletypes
+import salt.utils.msgpack as msgpack
 import salt.utils.platform
 import salt.utils.process
 import salt.utils.url
 import salt.syspaths as syspaths
+import salt.transport.client
 from salt.serializers.msgpack import serialize as msgpack_serialize, deserialize as msgpack_deserialize
 from salt.template import compile_template, compile_template_str
 from salt.exceptions import (
@@ -55,7 +58,6 @@ from salt.utils.odict import OrderedDict, DefaultOrderedDict
 import salt.utils.yamlloader as yamlloader
 
 # Import third party libs
-import msgpack
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 from salt.ext import six
 from salt.ext.six.moves import map, range, reload_module
@@ -71,6 +73,7 @@ STATE_REQUISITE_KEYWORDS = frozenset([
     'onchanges_any',
     'onfail',
     'onfail_any',
+    'onfail_all',
     'onfail_stop',
     'prereq',
     'prerequired',
@@ -1357,8 +1360,9 @@ class State(object):
                 names = []
                 if state.startswith('__'):
                     continue
-                chunk = {'state': state,
-                         'name': name}
+                chunk = OrderedDict()
+                chunk['state'] = state
+                chunk['name'] = name
                 if orchestration_jid is not None:
                     chunk['__orchestration_jid__'] = orchestration_jid
                 if '__sls__' in body:
@@ -1537,7 +1541,7 @@ class State(object):
                     if isinstance(arg, dict):
                         # It is not a function, verify that the arg is a
                         # requisite in statement
-                        if len(arg) < 1:
+                        if not arg:
                             # Empty arg dict
                             # How did we get this far?
                             continue
@@ -1615,7 +1619,7 @@ class State(object):
                                                             found = True
                                         if not found:
                                             continue
-                                if len(ind) < 1:
+                                if not ind:
                                     continue
                                 pstate = next(iter(ind))
                                 pname = ind[pstate]
@@ -1755,14 +1759,15 @@ class State(object):
         try:
             ret = self.states[cdata['full']](*cdata['args'],
                                              **cdata['kwargs'])
-        except Exception:
+        except Exception as exc:
+            log.debug('An exception occurred in this state: %s', exc,
+                      exc_info_on_loglevel=logging.DEBUG)
             trb = traceback.format_exc()
             ret = {
                 'result': False,
                 'name': name,
                 'changes': {},
-                'comment': 'An exception occurred in this state: {0}'.format(
-                    trb)
+                'comment': 'An exception occurred in this state: {0}'.format(trb)
             }
 
         utc_finish_time = datetime.datetime.utcnow()
@@ -1938,12 +1943,18 @@ class State(object):
                         ret = self.call_parallel(cdata, low)
                     else:
                         self.format_slots(cdata)
-                        ret = self.states[cdata['full']](*cdata['args'],
-                                                         **cdata['kwargs'])
+                        if cdata['full'].split('.')[-1] == '__call__':
+                            # __call__ requires OrderedDict to preserve state order
+                            # kwargs are also invalid overall
+                            ret = self.states[cdata['full']](cdata['args'], module=None, state=cdata['kwargs'])
+                        else:
+                            ret = self.states[cdata['full']](*cdata['args'], **cdata['kwargs'])
                 self.states.inject_globals = {}
             if 'check_cmd' in low and '{0[state]}.mod_run_check_cmd'.format(low) not in self.states:
                 ret.update(self._run_check_cmd(low))
-        except Exception:
+        except Exception as exc:
+            log.debug('An exception occurred in this state: %s', exc,
+                      exc_info_on_loglevel=logging.DEBUG)
             trb = traceback.format_exc()
             # There are a number of possibilities to not have the cdata
             # populated with what we might have expected, so just be smart
@@ -1958,8 +1969,7 @@ class State(object):
                 'result': False,
                 'name': name,
                 'changes': {},
-                'comment': 'An exception occurred in this state: {0}'.format(
-                    trb)
+                'comment': 'An exception occurred in this state: {0}'.format(trb)
             }
         finally:
             if low.get('__prereq__'):
@@ -2301,6 +2311,8 @@ class State(object):
             present = True
         if 'onfail_any' in low:
             present = True
+        if 'onfail_all' in low:
+            present = True
         if 'onchanges' in low:
             present = True
         if 'onchanges_any' in low:
@@ -2316,6 +2328,7 @@ class State(object):
                 'prereq': [],
                 'onfail': [],
                 'onfail_any': [],
+                'onfail_all': [],
                 'onchanges': [],
                 'onchanges_any': []}
         if pre:
@@ -2407,7 +2420,7 @@ class State(object):
                 else:
                     if run_dict[tag].get('__state_ran__', True):
                         req_stats.add('met')
-            if r_state.endswith('_any'):
+            if r_state.endswith('_any') or r_state == 'onfail':
                 if 'met' in req_stats or 'change' in req_stats:
                     if 'fail' in req_stats:
                         req_stats.remove('fail')
@@ -2417,8 +2430,14 @@ class State(object):
                     if 'fail' in req_stats:
                         req_stats.remove('fail')
                 if 'onfail' in req_stats:
-                    if 'fail' in req_stats:
+                    # a met requisite in this case implies a success
+                    if 'met' in req_stats:
                         req_stats.remove('onfail')
+            if r_state.endswith('_all'):
+                if 'onfail' in req_stats:
+                    # a met requisite in this case implies a failure
+                    if 'met' in req_stats:
+                        req_stats.remove('met')
             fun_stats.update(req_stats)
 
         if 'unmet' in fun_stats:
@@ -2430,8 +2449,8 @@ class State(object):
                 status = 'met'
             else:
                 status = 'pre'
-        elif 'onfail' in fun_stats and 'met' not in fun_stats:
-            status = 'onfail'  # all onfail states are OK
+        elif 'onfail' in fun_stats and 'onchangesmet' not in fun_stats:
+            status = 'onfail'
         elif 'onchanges' in fun_stats and 'onchangesmet' not in fun_stats:
             status = 'onchanges'
         elif 'change' in fun_stats:
@@ -2781,10 +2800,33 @@ class State(object):
         running.update(errors)
         return running
 
+    def inject_default_call(self, high):
+        '''
+        Sets .call function to a state, if not there.
+
+        :param high:
+        :return:
+        '''
+        for chunk in high:
+            state = high[chunk]
+            if not isinstance(state, collections.Mapping):
+                continue
+            for state_ref in state:
+                needs_default = True
+                if not isinstance(state[state_ref], list):
+                    continue
+                for argset in state[state_ref]:
+                    if isinstance(argset, six.string_types):
+                        needs_default = False
+                        break
+                if needs_default:
+                    state[state_ref].insert(-1, '__call__')
+
     def call_high(self, high, orchestration_jid=None):
         '''
         Process a high data call and ensure the defined states.
         '''
+        self.inject_default_call(high)
         errors = []
         # If there is extension data reconcile it
         high, ext_errors = self.reconcile_extend(high)
@@ -3675,7 +3717,7 @@ class BaseHighState(object):
 
                     for arg in state[name][s_dec]:
                         if isinstance(arg, dict):
-                            if len(arg) > 0:
+                            if arg:
                                 if next(six.iterkeys(arg)) == 'order':
                                     found = True
                     if not found:
@@ -3801,12 +3843,14 @@ class BaseHighState(object):
         statefiles = []
         for saltenv, states in six.iteritems(matches):
             for sls_match in states:
-                try:
+                if saltenv in self.avail:
                     statefiles = fnmatch.filter(self.avail[saltenv], sls_match)
-                except KeyError:
-                    all_errors.extend(
-                        ['No matching salt environment for environment '
-                         '\'{0}\' found'.format(saltenv)]
+                elif '__env__' in self.avail:
+                    statefiles = fnmatch.filter(self.avail['__env__'], sls_match)
+                else:
+                    all_errors.append(
+                        'No matching salt environment for environment '
+                        '\'{0}\' found'.format(saltenv)
                     )
                 # if we did not found any sls in the fileserver listing, this
                 # may be because the sls was generated or added later, we can
@@ -4179,12 +4223,14 @@ class RemoteHighState(object):
     '''
     Manage gathering the data from the master
     '''
+    # XXX: This class doesn't seem to be used anywhere
     def __init__(self, opts, grains):
         self.opts = opts
         self.grains = grains
         self.serial = salt.payload.Serial(self.opts)
         # self.auth = salt.crypt.SAuth(opts)
-        self.channel = salt.transport.Channel.factory(self.opts['master_uri'])
+        self.channel = salt.transport.client.ReqChannel.factory(self.opts['master_uri'])
+        self._closing = False
 
     def compile_master(self):
         '''
@@ -4197,3 +4243,13 @@ class RemoteHighState(object):
             return self.channel.send(load, tries=3, timeout=72000)
         except SaltReqTimeoutError:
             return {}
+
+    def destroy(self):
+        if self._closing:
+            return
+
+        self._closing = True
+        self.channel.close()
+
+    def __del__(self):
+        self.destroy()

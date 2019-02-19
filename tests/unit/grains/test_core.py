@@ -601,7 +601,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         self.assertIn(returned_grains['windowsdomaintype'], valid_types)
         valid_releases = ['Vista', '7', '8', '8.1', '10', '2008Server',
                           '2008ServerR2', '2012Server', '2012ServerR2',
-                          '2016Server']
+                          '2016Server', '2019Server']
         self.assertIn(returned_grains['osrelease'], valid_releases)
 
     @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
@@ -708,6 +708,22 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
                                 core._virtual({'kernel': 'Linux'}).get('virtual_subtype'),
                                 'Docker'
                             )
+
+    @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
+    def test_xen_virtual(self):
+        '''
+        Test if OS grains are parsed correctly in Ubuntu Xenial Xerus
+        '''
+        with patch.object(os.path, 'isfile', MagicMock(return_value=False)):
+            with patch.dict(core.__salt__, {'cmd.run': MagicMock(return_value='')}), \
+                patch.object(os.path,
+                             'isfile',
+                             MagicMock(side_effect=lambda x: True if x == '/sys/bus/xen/drivers/xenconsole' else False)):
+                log.debug('Testing Xen')
+                self.assertEqual(
+                    core._virtual({'kernel': 'Linux'}).get('virtual_subtype'),
+                    'Xen PV DomU'
+                )
 
     def _check_ipaddress(self, value, ip_v):
         '''
@@ -848,9 +864,32 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         ret = {'fqdns': ['bluesniff.foo.bar', 'foo.bar.baz', 'rinzler.evil-corp.com']}
         with patch.object(socket, 'gethostbyaddr', side_effect=reverse_resolv_mock):
             fqdns = core.fqdns()
-            self.assertIn('fqdns', fqdns)
-            self.assertEqual(len(fqdns['fqdns']), len(ret['fqdns']))
-            self.assertEqual(set(fqdns['fqdns']), set(ret['fqdns']))
+            assert "fqdns" in fqdns
+            assert len(fqdns['fqdns']) == len(ret['fqdns'])
+            assert set(fqdns['fqdns']) == set(ret['fqdns'])
+
+    @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
+    @patch.object(salt.utils.platform, 'is_windows', MagicMock(return_value=False))
+    @patch('salt.utils.network.ip_addrs', MagicMock(return_value=['1.2.3.4', '5.6.7.8']))
+    @patch('salt.utils.network.ip_addrs6',
+           MagicMock(return_value=['fe80::a8b2:93ff:fe00:0', 'fe80::a8b2:93ff:dead:beef']))
+    @patch('salt.utils.network.socket.getfqdn', MagicMock(side_effect=lambda v: v))  # Just pass-through
+    def test_fqdns_aliases(self):
+        '''
+        FQDNs aliases
+        '''
+        reverse_resolv_mock = [('foo.bar.baz', ["throwmeaway", "this.is.valid.alias"], ['1.2.3.4']),
+                               ('rinzler.evil-corp.com', ["false-hostname", "badaliass"], ['5.6.7.8']),
+                               ('foo.bar.baz', [], ['fe80::a8b2:93ff:fe00:0']),
+                               ('bluesniff.foo.bar', ["alias.bluesniff.foo.bar"], ['fe80::a8b2:93ff:dead:beef'])]
+        with patch.object(socket, 'gethostbyaddr', side_effect=reverse_resolv_mock):
+            fqdns = core.fqdns()
+            assert "fqdns" in fqdns
+            for alias in ["this.is.valid.alias", "alias.bluesniff.foo.bar"]:
+                assert alias in fqdns["fqdns"]
+
+            for alias in ["throwmeaway", "false-hostname", "badaliass"]:
+                assert alias not in fqdns["fqdns"]
 
     def test_core_virtual(self):
         '''

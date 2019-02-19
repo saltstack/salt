@@ -6,8 +6,8 @@ import os
 import copy
 
 # Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.paths import TMP
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -29,8 +29,8 @@ from salt.utils.odict import OrderedDict
 class GrainsModuleTestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
-        conf_file = os.path.join(TMP, '__salt_test_grains')
-        cachedir = os.path.join(TMP, '__salt_test_grains_cache_dir')
+        conf_file = os.path.join(RUNTIME_VARS.TMP, '__salt_test_grains')
+        cachedir = os.path.join(RUNTIME_VARS.TMP, '__salt_test_grains_cache_dir')
         if not os.path.isdir(cachedir):
             os.makedirs(cachedir)
         return {

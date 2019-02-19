@@ -45,7 +45,7 @@ the remote libvirt machine.
 Per call connection setup
 -------------------------
 
-.. versionadded:: Fluorine
+.. versionadded:: 2019.2.0
 
 All the calls requiring the libvirt connection configuration as mentioned above can
 override this configuration using ``connection``, ``username`` and ``password`` parameters.
@@ -293,7 +293,7 @@ def _parse_qemu_img_info(info):
                    'file format': disk_infos['format'],
                    'disk size': disk_infos['actual-size'],
                    'virtual size': disk_infos['virtual-size'],
-                   'cluster size': disk_infos['cluster-size']
+                   'cluster size': disk_infos['cluster-size'] if 'cluster-size' in disk_infos else None,
                }
 
         if 'full-backing-filename' in disk_infos.keys():
@@ -600,6 +600,13 @@ def _gen_xml(name,
         context['boot_dev'] = ['hd']
 
     context['loader'] = loader
+
+    if os_type == 'xen':
+        # Compute the Xen PV boot method
+        if __grains__['os_family'] == 'Suse':
+            context['kernel'] = '/usr/lib/grub2/x86_64-xen/grub.xen'
+            context['boot_dev'] = []
+
     if 'serial_type' in kwargs:
         context['serial_type'] = kwargs['serial_type']
     if 'serial_type' in context and context['serial_type'] == 'tcp':
@@ -973,6 +980,10 @@ def _disk_profile(profile, hypervisor, disks=None, vm_name=None, image=None, poo
                    'device': 'disk',
                    'model': 'virtio',
                    'sparse_volume': False}
+    elif hypervisor == 'xen':
+        overlay = {'format': 'qcow2',
+                   'device': 'disk',
+                   'model': 'xen'}
     else:
         overlay = {}
 
@@ -1023,7 +1034,7 @@ def _fill_disk_filename(vm_name, disk, hypervisor, **kwargs):
     Compute the disk file name and update it in the disk value.
     '''
     base_dir = disk.get('pool', None)
-    if hypervisor in ['qemu', 'kvm']:
+    if hypervisor in ['qemu', 'kvm', 'xen']:
         # Compute the base directory from the pool property. We may have either a path
         # or a libvirt pool name there.
         # If the pool is a known libvirt one with a target path, use it as target path
@@ -1056,7 +1067,9 @@ def _complete_nics(interfaces, hypervisor, dmac=None):
     vmware_overlay = {'type': 'bridge', 'source': 'DEFAULT', 'model': 'e1000'}
     kvm_overlay = {'type': 'bridge', 'source': 'br0', 'model': 'virtio'}
     bhyve_overlay = {'type': 'bridge', 'source': 'bridge0', 'model': 'virtio'}
+    xen_overlay = {'type': 'bridge', 'source': 'br0', 'model': None}
     overlays = {
+            'xen': xen_overlay,
             'kvm': kvm_overlay,
             'qemu': kvm_overlay,
             'vmware': vmware_overlay,
@@ -1262,7 +1275,7 @@ def init(name,
         These data are merged with the ones from the nic profile. The structure of
         each dictionary is documented in init-nic-def_.
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     :param hypervisor: the virtual machine type. By default the value will be
         computed according to the virtual host capabilities.
@@ -1277,7 +1290,7 @@ def init(name,
         create. These data are merged with the ones from the disk profile. The
         structure of each dictionary is documented in init-disk-def_.
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     :param saltenv: Fileserver environment (Default: ``'base'``)
 
@@ -1300,31 +1313,30 @@ def init(name,
 
             graphics={'type': 'vnc'}
 
-        .. deprecated:: Fluorine
+        .. deprecated:: 2019.2.0
 
     :param graphics:
         Dictionary providing details on the graphics device to create. (Default: ``None``)
         See init-graphics-def_ for more details on the possible values.
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     :param loader:
         Dictionary providing details on the BIOS firmware loader. (Default: ``None``)
         See init-loader-def_ for more details on the possible values.
 
-        .. versionadded:: Neon
-
+        .. versionadded:: 2019.2.0
     :param os_type:
         type of virtualization as found in the ``//os/type`` element of the libvirt definition.
         The default value is taken from the host capabilities, with a preference for ``hvm``.
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     :param arch:
         architecture of the virtual machine. The default value is taken from the host capabilities,
         but ``x86_64`` is prefed over ``i686``.
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     :param enable_qcow:
         ``True`` to create a QCOW2 overlay image, rather than copying the image
@@ -1341,7 +1353,7 @@ def init(name,
                 'overlay_image': True
             }
 
-        .. deprecated:: Fluorine
+        .. deprecated:: 2019.2.0
 
     :param pool:
         Path of the folder where the image files are located for vmware/esx hypervisors.
@@ -1372,7 +1384,7 @@ def init(name,
                 'mac': 'MY:MA:CC:ADD:RE:SS'
             }
 
-        .. deprecated:: Fluorine
+        .. deprecated:: 2019.2.0
 
     :param config: minion configuration to use when seeding.  See :mod:`seed
         module <salt.modules.seed>` for more details
@@ -1385,15 +1397,15 @@ def init(name,
         (Default: ``True``)
     :param connection: libvirt connection URI, overriding defaults
 
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     :param username: username to connect with, overriding defaults
 
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     :param password: password to connect with, overriding defaults
 
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     .. _init-nic-def:
 
@@ -1546,25 +1558,26 @@ def init(name,
     caps = capabilities(**kwargs)
     os_types = sorted({guest['os_type'] for guest in caps['guests']})
     arches = sorted({guest['arch']['name'] for guest in caps['guests']})
-    hypervisors = sorted({x for y in [guest['arch']['domains'].keys() for guest in caps['guests']] for x in y})
-    hypervisor = __salt__['config.get']('libvirt:hypervisor', hypervisor)
-    if hypervisor is not None:
-        salt.utils.versions.warn_until(
-            'Sodium',
-            '\'libvirt:hypervisor\' configuration property has been deprecated. '
-            'Rather use the \'virt:connection:uri\' to properly define the libvirt '
-            'URI or alias of the host to connect to. \'libvirt:hypervisor\' will '
-            'stop being used in {version}.'
-        )
-    else:
-        # Use the machine types as possible values
-        # Prefer 'kvm' over the others if available
-        hypervisor = 'kvm' if 'kvm' in hypervisors else hypervisors[0]
+    if not hypervisor:
+        hypervisor = __salt__['config.get']('libvirt:hypervisor', hypervisor)
+        if hypervisor is not None:
+            salt.utils.versions.warn_until(
+                'Sodium',
+                '\'libvirt:hypervisor\' configuration property has been deprecated. '
+                'Rather use the \'virt:connection:uri\' to properly define the libvirt '
+                'URI or alias of the host to connect to. \'libvirt:hypervisor\' will '
+                'stop being used in {version}.'
+            )
+        else:
+            # Use the machine types as possible values
+            # Prefer 'kvm' over the others if available
+            hypervisors = sorted({x for y in [guest['arch']['domains'].keys() for guest in caps['guests']] for x in y})
+            hypervisor = 'kvm' if 'kvm' in hypervisors else hypervisors[0]
 
     # esxi used to be a possible value for the hypervisor: map it to vmware since it's the same
     hypervisor = 'vmware' if hypervisor == 'esxi' else hypervisor
 
-    log.debug('Using hyperisor %s', hypervisor)
+    log.debug('Using hypervisor %s', hypervisor)
 
     # the NICs are computed as follows:
     # 1 - get the default NICs from the profile
@@ -1623,7 +1636,7 @@ def init(name,
                 )
                 define_vol_xml_str(vol_xml)
 
-        elif hypervisor in ['qemu', 'kvm']:
+        elif hypervisor in ['qemu', 'kvm', 'xen']:
 
             create_overlay = enable_qcow
             if create_overlay:
@@ -1684,8 +1697,10 @@ def init(name,
             '\'enable_vnc\' will be removed in {version}. ')
         graphics = {'type': 'vnc'}
 
-    os_type = 'hvm' if 'hvm' in os_types else os_types[0]
-    arch = 'x86_64' if 'x86_64' in arches else arches[0]
+    if os_type is None:
+        os_type = 'hvm' if 'hvm' in os_types else os_types[0]
+    if arch is None:
+        arch = 'x86_64' if 'x86_64' in arches else arches[0]
 
     vm_xml = _gen_xml(name, cpu, mem, diskp, nicp, hypervisor, os_type, arch, graphics, loader, **kwargs)
     conn = __get_conn(**kwargs)
@@ -1919,7 +1934,7 @@ def update(name,
               'errors': ['error messages for failures']
             }
 
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     CLI Example:
 
@@ -1960,11 +1975,12 @@ def update(name,
         need_update = True
 
     # Update the memory, note that libvirt outputs all memory sizes in KiB
-    mem_node = desc.find('memory')
-    if mem and int(mem_node.text) != mem * 1024:
-        mem_node.text = six.text_type(mem)
-        mem_node.set('unit', 'MiB')
-        need_update = True
+    for mem_node_name in ['memory', 'currentMemory']:
+        mem_node = desc.find(mem_node_name)
+        if mem and int(mem_node.text) != mem * 1024:
+            mem_node.text = six.text_type(mem)
+            mem_node.set('unit', 'MiB')
+            need_update = True
 
     # Update the XML definition with the new disks and diff changes
     devices_node = desc.find('devices')
@@ -1995,7 +2011,7 @@ def update(name,
                     _qemu_image_create(all_disks[idx])
 
         try:
-            conn.defineXML(ElementTree.tostring(desc))
+            conn.defineXML(salt.utils.stringutils.to_str(ElementTree.tostring(desc)))
             status['definition'] = True
         except libvirt.libvirtError as err:
             conn.close()
@@ -2019,12 +2035,12 @@ def update(name,
                 for added in changes[dev_type].get('new', []):
                     commands.append({'device': dev_type,
                                      'cmd': 'attachDevice',
-                                     'args': [ElementTree.tostring(added)]})
+                                     'args': [salt.utils.stringutils.to_str(ElementTree.tostring(added))]})
 
                 for removed in changes[dev_type].get('deleted', []):
                     commands.append({'device': dev_type,
                                      'cmd': 'detachDevice',
-                                     'args': [ElementTree.tostring(removed)]})
+                                     'args': [salt.utils.stringutils.to_str(ElementTree.tostring(removed))]})
 
         for cmd in commands:
             try:
@@ -2051,13 +2067,13 @@ def list_domains(**kwargs):
 
     :param connection: libvirt connection URI, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param username: username to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param password: password to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     CLI Example:
 
@@ -2079,13 +2095,13 @@ def list_active_vms(**kwargs):
 
     :param connection: libvirt connection URI, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param username: username to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param password: password to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     CLI Example:
 
@@ -2107,13 +2123,13 @@ def list_inactive_vms(**kwargs):
 
     :param connection: libvirt connection URI, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param username: username to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param password: password to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     CLI Example:
 
@@ -2137,13 +2153,13 @@ def vm_info(vm_=None, **kwargs):
     :param vm_: name of the domain
     :param connection: libvirt connection URI, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param username: username to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param password: password to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     .. code-block:: python
 
@@ -2206,13 +2222,13 @@ def vm_state(vm_=None, **kwargs):
     :param vm_: name of the domain
     :param connection: libvirt connection URI, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param username: username to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param password: password to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     CLI Example:
 
@@ -2261,13 +2277,13 @@ def node_info(**kwargs):
 
     :param connection: libvirt connection URI, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param username: username to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param password: password to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     CLI Example:
 
@@ -2288,13 +2304,13 @@ def get_nics(vm_, **kwargs):
     :param vm_: name of the domain
     :param connection: libvirt connection URI, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param username: username to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param password: password to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     CLI Example:
 
@@ -2315,13 +2331,13 @@ def get_macs(vm_, **kwargs):
     :param vm_: name of the domain
     :param connection: libvirt connection URI, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param username: username to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param password: password to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     CLI Example:
 
@@ -2340,13 +2356,13 @@ def get_graphics(vm_, **kwargs):
     :param vm_: name of the domain
     :param connection: libvirt connection URI, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param username: username to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param password: password to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     CLI Example:
 
@@ -2375,7 +2391,7 @@ def get_loader(vm_, **kwargs):
 
         salt '*' virt.get_loader <domain>
 
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
     '''
     conn = __get_conn(**kwargs)
     loader = _get_loader(_get_domain(conn, vm_))
@@ -2390,13 +2406,13 @@ def get_disks(vm_, **kwargs):
     :param vm_: name of the domain
     :param connection: libvirt connection URI, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param username: username to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param password: password to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     CLI Example:
 
@@ -2420,13 +2436,13 @@ def setmem(vm_, memory, config=False, **kwargs):
     :param config: if True then libvirt will be asked to modify the config as well
     :param connection: libvirt connection URI, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param username: username to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param password: password to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     CLI Example:
 
@@ -2469,13 +2485,13 @@ def setvcpus(vm_, vcpus, config=False, **kwargs):
     :param config: if True then libvirt will be asked to modify the config as well
     :param connection: libvirt connection URI, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param username: username to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param password: password to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     CLI Example:
 
@@ -2523,13 +2539,13 @@ def freemem(**kwargs):
 
     :param connection: libvirt connection URI, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param username: username to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param password: password to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     CLI Example:
 
@@ -2561,13 +2577,13 @@ def freecpu(**kwargs):
 
     :param connection: libvirt connection URI, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param username: username to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param password: password to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     CLI Example:
 
@@ -2587,13 +2603,13 @@ def full_info(**kwargs):
 
     :param connection: libvirt connection URI, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param username: username to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param password: password to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     CLI Example:
 
@@ -2617,13 +2633,13 @@ def get_xml(vm_, **kwargs):
     :param vm_: domain name
     :param connection: libvirt connection URI, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param username: username to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param password: password to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     CLI Example:
 
@@ -2649,13 +2665,13 @@ def get_profiles(hypervisor=None, **kwargs):
     :param hypervisor: override the default machine type.
     :param connection: libvirt connection URI, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param username: username to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param password: password to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     CLI Example:
 
@@ -2702,13 +2718,13 @@ def shutdown(vm_, **kwargs):
     :param vm_: domain name
     :param connection: libvirt connection URI, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param username: username to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param password: password to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     CLI Example:
 
@@ -2730,13 +2746,13 @@ def pause(vm_, **kwargs):
     :param vm_: domain name
     :param connection: libvirt connection URI, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param username: username to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param password: password to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     CLI Example:
 
@@ -2758,13 +2774,13 @@ def resume(vm_, **kwargs):
     :param vm_: domain name
     :param connection: libvirt connection URI, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param username: username to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param password: password to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     CLI Example:
 
@@ -2786,13 +2802,13 @@ def start(name, **kwargs):
     :param vm_: domain name
     :param connection: libvirt connection URI, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param username: username to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param password: password to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     CLI Example:
 
@@ -2813,13 +2829,13 @@ def stop(name, **kwargs):
     :param vm_: domain name
     :param connection: libvirt connection URI, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param username: username to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param password: password to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     CLI Example:
 
@@ -2840,13 +2856,13 @@ def reboot(name, **kwargs):
     :param vm_: domain name
     :param connection: libvirt connection URI, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param username: username to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param password: password to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     CLI Example:
 
@@ -2867,13 +2883,13 @@ def reset(vm_, **kwargs):
     :param vm_: domain name
     :param connection: libvirt connection URI, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param username: username to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param password: password to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     CLI Example:
 
@@ -2899,13 +2915,13 @@ def ctrl_alt_del(vm_, **kwargs):
     :param vm_: domain name
     :param connection: libvirt connection URI, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param username: username to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param password: password to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     CLI Example:
 
@@ -2922,18 +2938,18 @@ def ctrl_alt_del(vm_, **kwargs):
 
 def create_xml_str(xml, **kwargs):  # pylint: disable=redefined-outer-name
     '''
-    Start a domain based on the XML passed to the function
+    Start a transient domain based on the XML passed to the function
 
     :param xml: libvirt XML definition of the domain
     :param connection: libvirt connection URI, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param username: username to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param password: password to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     CLI Example:
 
@@ -2949,18 +2965,18 @@ def create_xml_str(xml, **kwargs):  # pylint: disable=redefined-outer-name
 
 def create_xml_path(path, **kwargs):
     '''
-    Start a domain based on the XML-file path passed to the function
+    Start a transient domain based on the XML-file path passed to the function
 
     :param path: path to a file containing the libvirt XML definition of the domain
     :param connection: libvirt connection URI, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param username: username to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param password: password to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     CLI Example:
 
@@ -2980,18 +2996,18 @@ def create_xml_path(path, **kwargs):
 
 def define_xml_str(xml, **kwargs):  # pylint: disable=redefined-outer-name
     '''
-    Define a domain based on the XML passed to the function
+    Define a persistent domain based on the XML passed to the function
 
     :param xml: libvirt XML definition of the domain
     :param connection: libvirt connection URI, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param username: username to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param password: password to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     CLI Example:
 
@@ -3007,18 +3023,18 @@ def define_xml_str(xml, **kwargs):  # pylint: disable=redefined-outer-name
 
 def define_xml_path(path, **kwargs):
     '''
-    Define a domain based on the XML-file path passed to the function
+    Define a persistent domain based on the XML-file path passed to the function
 
     :param path: path to a file containing the libvirt XML definition of the domain
     :param connection: libvirt connection URI, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param username: username to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param password: password to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     CLI Example:
 
@@ -3044,13 +3060,13 @@ def define_vol_xml_str(xml, **kwargs):  # pylint: disable=redefined-outer-name
     :param xml: libvirt XML definition of the storage volume
     :param connection: libvirt connection URI, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param username: username to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param password: password to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     CLI Example:
 
@@ -3091,13 +3107,13 @@ def define_vol_xml_path(path, **kwargs):
     :param path: path to a file containing the libvirt XML definition of the volume
     :param connection: libvirt connection URI, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param username: username to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param password: password to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     CLI Example:
 
@@ -3268,13 +3284,13 @@ def set_autostart(vm_, state='on', **kwargs):
                   pool not to be started when the host boots
     :param connection: libvirt connection URI, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param username: username to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param password: password to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     CLI Example:
 
@@ -3306,13 +3322,13 @@ def undefine(vm_, **kwargs):
     :param vm_: domain name
     :param connection: libvirt connection URI, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param username: username to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param password: password to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     CLI Example:
 
@@ -3333,9 +3349,9 @@ def undefine(vm_, **kwargs):
 
 def purge(vm_, dirs=False, removables=None, **kwargs):
     '''
-    Recursively destroy and delete a virtual machine, pass True for dir's to
-    also delete the directories containing the virtual machine disk images -
-    USE WITH EXTREME CAUTION!
+    Recursively destroy and delete a persistent virtual machine, pass True for
+    dir's to also delete the directories containing the virtual machine disk
+    images - USE WITH EXTREME CAUTION!
 
     Pass removables=False to avoid deleting cdrom and floppy images. To avoid
     disruption, the default but dangerous value is True. This will be changed
@@ -3345,16 +3361,16 @@ def purge(vm_, dirs=False, removables=None, **kwargs):
     :param dirs: pass True to remove containing directories
     :param removables: pass True to remove removable devices
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param connection: libvirt connection URI, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param username: username to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param password: password to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     CLI Example:
 
@@ -3442,7 +3458,7 @@ def is_kvm_hyper():
 
         salt '*' virt.is_kvm_hyper
 
-    .. deprecated:: Fluorine
+    .. deprecated:: 2019.2.0
     '''
     salt.utils.versions.warn_until(
         'Sodium',
@@ -3482,7 +3498,7 @@ def is_xen_hyper():
 
         salt '*' virt.is_xen_hyper
 
-    .. deprecated:: Fluorine
+    .. deprecated:: 2019.2.0
     '''
     salt.utils.versions.warn_until(
         'Sodium',
@@ -3508,7 +3524,7 @@ def get_hypervisor():
 
         salt '*' virt.get_hypervisor
 
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
         the function and the ``kvm``, ``xen`` and ``bhyve`` hypervisors support
     '''
     # To add a new 'foo' hypervisor, add the _is_foo_hyper function,
@@ -3557,13 +3573,13 @@ def vm_cputime(vm_=None, **kwargs):
     :param vm_: domain name
     :param connection: libvirt connection URI, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param username: username to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param password: password to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     .. code-block:: python
 
@@ -3620,13 +3636,13 @@ def vm_netstats(vm_=None, **kwargs):
     :param vm_: domain name
     :param connection: libvirt connection URI, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param username: username to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param password: password to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     .. code-block:: python
 
@@ -3701,13 +3717,13 @@ def vm_diskstats(vm_=None, **kwargs):
     :param vm_: domain name
     :param connection: libvirt connection URI, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param username: username to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param password: password to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     .. code-block:: python
 
@@ -3802,13 +3818,13 @@ def list_snapshots(domain=None, **kwargs):
     :param domain: domain name
     :param connection: libvirt connection URI, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param username: username to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param password: password to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     .. versionadded:: 2016.3.0
 
@@ -3840,13 +3856,13 @@ def snapshot(domain, name=None, suffix=None, **kwargs):
                    can be distinguished from manually created.
     :param connection: libvirt connection URI, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param username: username to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param password: password to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     .. versionadded:: 2016.3.0
 
@@ -3886,13 +3902,13 @@ def delete_snapshots(name, *names, **kwargs):
     :param names: names of the snapshots to remove
     :param connection: libvirt connection URI, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param username: username to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param password: password to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     .. versionadded:: 2016.3.0
 
@@ -3927,13 +3943,13 @@ def revert_snapshot(name, vm_snapshot=None, cleanup=False, **kwargs):
     :param cleanup: Remove all newer than reverted snapshots. Values: True or False (default False).
     :param connection: libvirt connection URI, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param username: username to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param password: password to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     .. versionadded:: 2016.3.0
 
@@ -4061,9 +4077,13 @@ def _parse_caps_guest(guest):
     # Note that some features have no default and toggle attributes.
     # This may not be a perfect match, but represent them as enabled by default
     # without possibility to toggle them.
-    result['features'] = {child.tag: {'toggle': True if child.get('toggle') == 'yes' else False,
-                                      'default': True if child.get('default') == 'no' else True}
-                          for child in guest.find('features') or []}
+    # Some guests may also have no feature at all (xen pv for instance)
+    features_nodes = guest.find('features')
+    if features_nodes is not None:
+        result['features'] = {child.tag: {'toggle': True if child.get('toggle') == 'yes' else False,
+                                          'default': True if child.get('default') == 'no' else True}
+                              for child in features_nodes}
+
     return result
 
 
@@ -4214,7 +4234,7 @@ def capabilities(**kwargs):
     :param username: username to connect with, overriding defaults
     :param password: password to connect with, overriding defaults
 
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     CLI Example:
 
@@ -4319,6 +4339,29 @@ def _parse_caps_loader(node):
 def _parse_domain_caps(caps):
     '''
     Parse the XML document of domain capabilities into a structure.
+    Return the domain capabilities given an emulator, architecture, machine or virtualization type.
+
+    .. versionadded:: 2019.2.0
+
+    :param emulator: return the capabilities for the given emulator binary
+    :param arch: return the capabilities for the given CPU architecture
+    :param machine: return the capabilities for the given emulated machine type
+    :param domain: return the capabilities for the given virtualization type.
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
+
+    The list of the possible emulator, arch, machine and domain can be found in
+    the host capabilities output.
+
+    If none of the parameters is provided the libvirt default domain capabilities
+    will be returned.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.domain_capabilities arch='x86_64' domain='kvm'
     '''
     result = {
         'emulator': caps.find('path').text if caps.find('path') is not None else None,
@@ -4363,7 +4406,7 @@ def domain_capabilities(emulator=None, arch=None, machine=None, domain=None, **k
     '''
     Return the domain capabilities given an emulator, architecture, machine or virtualization type.
 
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     :param emulator: return the capabilities for the given emulator binary
     :param arch: return the capabilities for the given CPU architecture
@@ -4446,13 +4489,13 @@ def cpu_baseline(full=False, migratable=False, out='libvirt', **kwargs):
     :param out: 'libvirt' (default) for usable libvirt XML definition, 'salt' for nice dict
     :param connection: libvirt connection URI, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param username: username to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     :param password: password to connect with, overriding defaults
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     CLI Example:
 
@@ -4464,7 +4507,7 @@ def cpu_baseline(full=False, migratable=False, out='libvirt', **kwargs):
     conn = __get_conn(**kwargs)
     caps = ElementTree.fromstring(conn.getCapabilities())
     cpu = caps.find('host/cpu')
-    log.debug('Host CPU model definition: %s', ElementTree.tostring(cpu))
+    log.debug('Host CPU model definition: %s', salt.utils.stringutils.to_str(ElementTree.tostring(cpu)))
 
     flags = 0
     if migratable:
@@ -4479,7 +4522,7 @@ def cpu_baseline(full=False, migratable=False, out='libvirt', **kwargs):
         # This one is only in 1.1.3+
         flags += libvirt.VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES
 
-    cpu = ElementTree.fromstring(conn.baselineCPU([ElementTree.tostring(cpu)], flags))
+    cpu = ElementTree.fromstring(conn.baselineCPU([salt.utils.stringutils.to_str(ElementTree.tostring(cpu))], flags))
     conn.close()
 
     if full and not getattr(libvirt, 'VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES', False):
@@ -4540,7 +4583,7 @@ def network_define(name, bridge, forward, **kwargs):
 
         salt '*' virt.network_define network main bridge openvswitch
 
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
     '''
     conn = __get_conn(**kwargs)
     vport = kwargs.get('vport', None)
@@ -4593,7 +4636,7 @@ def list_networks(**kwargs):
     :param username: username to connect with, overriding defaults
     :param password: password to connect with, overriding defaults
 
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     CLI Example:
 
@@ -4619,7 +4662,7 @@ def network_info(name=None, **kwargs):
 
     If no name is provided, return the infos for all defined virtual networks.
 
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     CLI Example:
 
@@ -4669,7 +4712,7 @@ def network_start(name, **kwargs):
     :param username: username to connect with, overriding defaults
     :param password: password to connect with, overriding defaults
 
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     CLI Example:
 
@@ -4694,7 +4737,7 @@ def network_stop(name, **kwargs):
     :param username: username to connect with, overriding defaults
     :param password: password to connect with, overriding defaults
 
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     CLI Example:
 
@@ -4719,7 +4762,7 @@ def network_undefine(name, **kwargs):
     :param username: username to connect with, overriding defaults
     :param password: password to connect with, overriding defaults
 
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     CLI Example:
 
@@ -4747,7 +4790,7 @@ def network_set_autostart(name, state='on', **kwargs):
     :param username: username to connect with, overriding defaults
     :param password: password to connect with, overriding defaults
 
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     CLI Example:
 
@@ -4904,7 +4947,7 @@ def pool_define(name,
         salt '*' virt.pool_define myshare netfs source_format=cifs \
                                   source_dir=samba_share source_hosts="['example.com']" target=/mnt/cifs
 
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
     '''
     conn = __get_conn(**kwargs)
     pool_xml = _gen_pool_xml(
@@ -4944,7 +4987,7 @@ def list_pools(**kwargs):
     :param username: username to connect with, overriding defaults
     :param password: password to connect with, overriding defaults
 
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     CLI Example:
 
@@ -4970,7 +5013,7 @@ def pool_info(name=None, **kwargs):
 
     If no name is provided, return the infos for all defined storage pools.
 
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     CLI Example:
 
@@ -5023,7 +5066,7 @@ def pool_start(name, **kwargs):
     :param username: username to connect with, overriding defaults
     :param password: password to connect with, overriding defaults
 
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     CLI Example:
 
@@ -5048,7 +5091,7 @@ def pool_build(name, **kwargs):
     :param username: username to connect with, overriding defaults
     :param password: password to connect with, overriding defaults
 
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     CLI Example:
 
@@ -5073,7 +5116,7 @@ def pool_stop(name, **kwargs):
     :param username: username to connect with, overriding defaults
     :param password: password to connect with, overriding defaults
 
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     CLI Example:
 
@@ -5098,7 +5141,7 @@ def pool_undefine(name, **kwargs):
     :param username: username to connect with, overriding defaults
     :param password: password to connect with, overriding defaults
 
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     CLI Example:
 
@@ -5125,7 +5168,7 @@ def pool_delete(name, fast=True, **kwargs):
     :param username: username to connect with, overriding defaults
     :param password: password to connect with, overriding defaults
 
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     CLI Example:
 
@@ -5153,7 +5196,7 @@ def pool_refresh(name, **kwargs):
     :param username: username to connect with, overriding defaults
     :param password: password to connect with, overriding defaults
 
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     CLI Example:
 
@@ -5181,7 +5224,7 @@ def pool_set_autostart(name, state='on', **kwargs):
     :param username: username to connect with, overriding defaults
     :param password: password to connect with, overriding defaults
 
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     CLI Example:
 
@@ -5206,7 +5249,7 @@ def pool_list_volumes(name, **kwargs):
     :param username: username to connect with, overriding defaults
     :param password: password to connect with, overriding defaults
 
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     CLI Example:
 
@@ -5218,5 +5261,118 @@ def pool_list_volumes(name, **kwargs):
     try:
         pool = conn.storagePoolLookupByName(name)
         return pool.listVolumes()
+    finally:
+        conn.close()
+
+
+def _get_storage_vol(conn, pool, vol):
+    '''
+    Helper function getting a storage volume. Will throw a libvirtError
+    if the pool or the volume couldn't be found.
+    '''
+    pool_obj = conn.storagePoolLookupByName(pool)
+    return pool_obj.storageVolLookupByName(vol)
+
+
+def _get_all_volumes_paths(conn):
+    '''
+    Extract the path and backing stores path of all volumes.
+
+    :param conn: libvirt connection to use
+    '''
+    volumes = [vol for l in [obj.listAllVolumes() for obj in conn.listAllStoragePools()] for vol in l]
+    return {vol.path(): [path.text for path in ElementTree.fromstring(vol.XMLDesc()).findall('.//backingStore/path')]
+            for vol in volumes}
+
+
+def volume_infos(pool, volume, **kwargs):
+    '''
+    Provide details on a storage volume. If no volume name is provided, the infos
+    all the volumes contained in the pool are provided. If no pool is provided,
+    the infos of the volumes of all pools are output.
+
+    :param pool: libvirt storage pool name
+    :param volume: name of the volume to get infos from
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
+
+    .. versionadded:: Neon
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt "*" virt.volume_infos <pool> <volume>
+    '''
+    result = {}
+    conn = __get_conn(**kwargs)
+    try:
+        backing_stores = _get_all_volumes_paths(conn)
+        disks = {domain.name():
+                 {node.get('file') for node
+                  in ElementTree.fromstring(domain.XMLDesc(0)).findall('.//disk/source/[@file]')}
+                 for domain in _get_domain(conn)}
+
+        def _volume_extract_infos(vol):
+            '''
+            Format the volume info dictionary
+
+            :param vol: the libvirt storage volume object.
+            '''
+            types = ['file', 'block', 'dir', 'network', 'netdir', 'ploop']
+            infos = vol.info()
+
+            # If we have a path, check its use.
+            used_by = []
+            if vol.path():
+                as_backing_store = {path for (path, all_paths) in backing_stores.items() if vol.path() in all_paths}
+                used_by = [vm_name for (vm_name, vm_disks) in disks.items()
+                           if vm_disks & as_backing_store or vol.path() in vm_disks]
+
+            return {
+                'type': types[infos[0]] if infos[0] < len(types) else 'unknown',
+                'key': vol.key(),
+                'path': vol.path(),
+                'capacity': infos[1],
+                'allocation': infos[2],
+                'used_by': used_by,
+            }
+
+        pools = [obj for obj in conn.listAllStoragePools() if pool is None or obj.name() == pool]
+        vols = {pool_obj.name(): {vol.name(): _volume_extract_infos(vol)
+                                  for vol in pool_obj.listAllVolumes()
+                                  if volume is None or vol.name() == volume}
+                for pool_obj in pools}
+        return {pool_name: volumes for (pool_name, volumes) in vols.items() if volumes}
+    except libvirt.libvirtError as err:
+        log.debug('Silenced libvirt error: %s', str(err))
+    finally:
+        conn.close()
+    return result
+
+
+def volume_delete(pool, volume, **kwargs):
+    '''
+    Delete a libvirt managed volume.
+
+    :param pool: libvirt storage pool name
+    :param volume: name of the volume to delete
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
+
+    .. versionadded:: Neon
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt "*" virt.volume_delete <pool> <volume>
+    '''
+    conn = __get_conn(**kwargs)
+    try:
+        vol = _get_storage_vol(conn, pool, volume)
+        return not bool(vol.delete())
     finally:
         conn.close()

@@ -6,16 +6,17 @@ Test the hosts module
 from __future__ import absolute_import, print_function, unicode_literals
 import os
 import shutil
+import logging
 
 # Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ModuleCase
-from tests.support.paths import FILES, TMP
 
 # Import Salt libs
 import salt.utils.files
 import salt.utils.stringutils
 
-HFN = os.path.join(TMP, 'hosts')
+log = logging.getLogger(__name__)
 
 
 class HostsModuleTest(ModuleCase):
@@ -25,30 +26,25 @@ class HostsModuleTest(ModuleCase):
 
     maxDiff = None
 
-    def __clean_hosts(self):
-        '''
-        Clean out the hosts file
-        '''
-        shutil.copyfile(os.path.join(FILES, 'hosts'), HFN)
+    @classmethod
+    def setUpClass(cls):
+        cls.hosts_file = os.path.join(RUNTIME_VARS.TMP, 'hosts')
 
     def __clear_hosts(self):
         '''
         Delete the tmp hosts file
         '''
-        if os.path.isfile(HFN):
-            os.remove(HFN)
+        if os.path.isfile(self.hosts_file):
+            os.remove(self.hosts_file)
 
-    def tearDown(self):
-        '''
-        Make sure the tmp hosts file is gone
-        '''
-        self.__clear_hosts()
+    def setUp(self):
+        shutil.copyfile(os.path.join(RUNTIME_VARS.FILES, 'hosts'), self.hosts_file)
+        self.addCleanup(self.__clear_hosts)
 
     def test_list_hosts(self):
         '''
         hosts.list_hosts
         '''
-        self.__clean_hosts()
         hosts = self.run_function('hosts.list_hosts')
         self.assertEqual(len(hosts), 10)
         self.assertEqual(hosts['::1'], ['ip6-localhost', 'ip6-loopback'])
@@ -59,8 +55,8 @@ class HostsModuleTest(ModuleCase):
         hosts.list_hosts
         without a hosts file
         '''
-        if os.path.isfile(HFN):
-            os.remove(HFN)
+        if os.path.isfile(self.hosts_file):
+            os.remove(self.hosts_file)
         hosts = self.run_function('hosts.list_hosts')
         self.assertEqual(hosts, {})
 
@@ -68,7 +64,6 @@ class HostsModuleTest(ModuleCase):
         '''
         hosts.get_ip
         '''
-        self.__clean_hosts()
         self.assertEqual(
             self.run_function('hosts.get_ip', ['myname']), '127.0.0.1'
         )
@@ -80,7 +75,6 @@ class HostsModuleTest(ModuleCase):
         '''
         hosts.get_alias
         '''
-        self.__clean_hosts()
         self.assertEqual(
             self.run_function('hosts.get_alias', ['127.0.0.1']),
             ['localhost', 'myname']
@@ -99,7 +93,6 @@ class HostsModuleTest(ModuleCase):
         '''
         hosts.has_pair
         '''
-        self.__clean_hosts()
         self.assertTrue(
             self.run_function('hosts.has_pair', ['127.0.0.1', 'myname'])
         )
@@ -111,7 +104,6 @@ class HostsModuleTest(ModuleCase):
         '''
         hosts.set_hosts
         '''
-        self.__clean_hosts()
         self.assertTrue(
             self.run_function('hosts.set_host', ['192.168.1.123', 'newip'])
         )
@@ -131,7 +123,6 @@ class HostsModuleTest(ModuleCase):
         '''
         hosts.add_host
         '''
-        self.__clean_hosts()
         self.assertTrue(
             self.run_function('hosts.add_host', ['192.168.1.123', 'newip'])
         )
@@ -145,7 +136,6 @@ class HostsModuleTest(ModuleCase):
         self.assertEqual(len(self.run_function('hosts.list_hosts')), 11)
 
     def test_rm_host(self):
-        self.__clean_hosts()
         self.assertTrue(
             self.run_function('hosts.has_pair', ['127.0.0.1', 'myname'])
         )
@@ -168,7 +158,7 @@ class HostsModuleTest(ModuleCase):
         # use an empty one so we can prove the syntax of the entries
         # being added by the hosts module
         self.__clear_hosts()
-        with salt.utils.files.fopen(HFN, 'w'):
+        with salt.utils.files.fopen(self.hosts_file, 'w'):
             pass
 
         self.assertTrue(
@@ -207,7 +197,7 @@ class HostsModuleTest(ModuleCase):
         )
 
         # now read the lines and ensure they're formatted correctly
-        with salt.utils.files.fopen(HFN, 'r') as fp_:
+        with salt.utils.files.fopen(self.hosts_file, 'r') as fp_:
             lines = salt.utils.stringutils.to_unicode(fp_.read()).splitlines()
         self.assertEqual(lines, [
             '192.168.1.3\t\thost3.fqdn.com',

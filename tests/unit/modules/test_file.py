@@ -8,9 +8,9 @@ import tempfile
 import textwrap
 
 # Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.helpers import with_tempfile
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.paths import TMP
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import MagicMock, Mock, patch, mock_open, DEFAULT
 
@@ -225,6 +225,22 @@ class FileReplaceTestCase(TestCase, LoaderModuleMockMixin):
         information.
         '''
         filemod.replace(self.tfile.name, r'Etiam', 123)
+
+    def test_search_only_return_true(self):
+        ret = filemod.replace(self.tfile.name,
+                              r'Etiam', 'Salticus',
+                              search_only=True)
+
+        self.assertIsInstance(ret, bool)
+        self.assertEqual(ret, True)
+
+    def test_search_only_return_false(self):
+        ret = filemod.replace(self.tfile.name,
+                              r'Etian', 'Salticus',
+                              search_only=True)
+
+        self.assertIsInstance(ret, bool)
+        self.assertEqual(ret, False)
 
 
 class FileCommentLineTestCase(TestCase, LoaderModuleMockMixin):
@@ -1233,8 +1249,10 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
                     patch('os.stat', self._anyattr), \
                     patch('salt.modules.file.log', _log):
                 self.assertFalse(filemod.line('/dummy/path', content='foo', match='bar', mode=mode))
-            self.assertIn('Cannot find text to {0}'.format(mode),
-                          _log.warning.call_args_list[0][0][0])
+            assert 'Cannot find text to ' in _log.warning.call_args_list[0][0][0], \
+                _log.warning.call_args_list[0][0][0]
+            assert _log.warning.call_args_list[0][0][1] == mode, \
+                _log.warning.call_args_list[0][0][1]
 
     @patch('os.path.realpath', MagicMock())
     @patch('os.path.isfile', MagicMock(return_value=True))
@@ -1683,6 +1701,37 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
             assert writelines_content[0] == expected, (writelines_content[0], expected)
 
     @with_tempfile()
+    def test_line_insert_duplicate_ensure_before(self, name):
+        '''
+        Test for file.line for insertion ensuring the line is before
+        :return:
+        '''
+        cfg_content = '/etc/init.d/someservice restart'
+        file_content = os.linesep.join([
+            '#!/bin/bash',
+            '',
+            cfg_content,
+            'exit 0'
+        ])
+        file_modified = os.linesep.join([
+            '#!/bin/bash',
+            '',
+            cfg_content,
+            'exit 0'
+        ])
+
+        isfile_mock = MagicMock(side_effect=lambda x: True if x == name else DEFAULT)
+        with patch('os.path.isfile', isfile_mock), \
+                patch('os.stat', MagicMock(return_value=DummyStat())), \
+                patch('salt.utils.files.fopen',
+                      mock_open(read_data=file_content)), \
+                patch('salt.utils.atomicfile.atomic_open',
+                      mock_open()) as atomic_open_mock:
+            filemod.line(name, content=cfg_content, before='exit 0', mode='ensure')
+            # If file not modified no handlers in dict
+            assert atomic_open_mock.filehandles.get(name) is None
+
+    @with_tempfile()
     def test_line_insert_ensure_before_first_line(self, name):
         '''
         Test for file.line for insertion ensuring the line is before first line
@@ -1755,6 +1804,35 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
             # ... with the updated content
             expected = self._get_body(file_modified)
             assert writelines_content[0] == expected, (writelines_content[0], expected)
+
+    @with_tempfile()
+    def test_line_insert_duplicate_ensure_after(self, name):
+        '''
+        Test for file.line for insertion ensuring the line is after
+        :return:
+        '''
+        cfg_content = 'exit 0'
+        file_content = os.linesep.join([
+            '#!/bin/bash',
+            '/etc/init.d/someservice restart',
+            cfg_content
+        ])
+        file_modified = os.linesep.join([
+            '#!/bin/bash',
+            '/etc/init.d/someservice restart',
+            cfg_content
+        ])
+
+        isfile_mock = MagicMock(side_effect=lambda x: True if x == name else DEFAULT)
+        with patch('os.path.isfile', isfile_mock), \
+                patch('os.stat', MagicMock(return_value=DummyStat())), \
+                patch('salt.utils.files.fopen',
+                      mock_open(read_data=file_content)), \
+                patch('salt.utils.atomicfile.atomic_open',
+                      mock_open()) as atomic_open_mock:
+            filemod.line(name, content=cfg_content, after='/etc/init.d/someservice restart', mode='ensure')
+            # If file not modified no handlers in dict
+            assert atomic_open_mock.filehandles.get(name) is None
 
     @with_tempfile()
     def test_line_insert_ensure_beforeafter_twolines(self, name):
@@ -1961,7 +2039,7 @@ class FileBasicsTestCase(TestCase, LoaderModuleMockMixin):
             self.tfile.close()
         self.addCleanup(os.remove, self.tfile.name)
         self.addCleanup(delattr, self, 'tfile')
-        self.myfile = os.path.join(TMP, 'myfile')
+        self.myfile = os.path.join(RUNTIME_VARS.TMP, 'myfile')
         with salt.utils.files.fopen(self.myfile, 'w+') as fp:
             fp.write(salt.utils.stringutils.to_str('Hello\n'))
         self.addCleanup(os.remove, self.myfile)

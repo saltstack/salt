@@ -584,10 +584,20 @@ class GitProvider(object):
         '''
         cleaned = []
         cmd_str = 'git remote prune origin'
+
+        # Attempt to force all output to plain ascii english, which is what some parsing code
+        # may expect.
+        # According to stackoverflow (http://goo.gl/l74GC8), we are setting LANGUAGE as well
+        # just to be sure.
+        env = os.environ.copy()
+        env[b"LANGUAGE"] = b"C"
+        env[b"LC_ALL"] = b"C"
+
         cmd = subprocess.Popen(
             shlex.split(cmd_str),
             close_fds=not salt.utils.platform.is_windows(),
             cwd=os.path.dirname(self.gitdir),
+            env=env,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT)
         output = cmd.communicate()[0]
@@ -984,6 +994,11 @@ class GitProvider(object):
         Resolve dynamically-set branch
         '''
         if self.role == 'git_pillar' and self.branch == '__env__':
+            try:
+                return self.all_saltenvs
+            except AttributeError:
+                # all_saltenvs not configured for this remote
+                pass
             target = self.opts.get('pillarenv') \
                 or self.opts.get('saltenv') \
                 or 'base'
@@ -1395,6 +1410,19 @@ class Pygit2(GitProvider):
             override_params, cache_root, role
         )
 
+    def peel(self, obj):
+        '''
+        Compatibility function for pygit2.Reference objects. Older versions of
+        pygit2 use .get_object() to return the object to which the reference
+        points, while newer versions use .peel(). In pygit2 0.27.4,
+        .get_object() was removed. This function will try .peel() first and
+        fall back to .get_object().
+        '''
+        try:
+            return obj.peel()
+        except AttributeError:
+            return obj.get_object()
+
     def checkout(self):
         '''
         Checkout the configured branch/tag
@@ -1413,7 +1441,7 @@ class Pygit2(GitProvider):
             return None
 
         try:
-            head_sha = local_head.get_object().hex
+            head_sha = self.peel(local_head).hex
         except AttributeError:
             # Shouldn't happen, but just in case a future pygit2 API change
             # breaks things, avoid a traceback and log an error.
@@ -1462,7 +1490,7 @@ class Pygit2(GitProvider):
         try:
             if remote_ref in refs:
                 # Get commit id for the remote ref
-                oid = self.repo.lookup_reference(remote_ref).get_object().id
+                oid = self.peel(self.repo.lookup_reference(remote_ref)).id
                 if local_ref not in refs:
                     # No local branch for this remote, so create one and point
                     # it at the commit id of the remote ref
@@ -1470,7 +1498,7 @@ class Pygit2(GitProvider):
 
                 try:
                     target_sha = \
-                        self.repo.lookup_reference(remote_ref).get_object().hex
+                        self.peel(self.repo.lookup_reference(remote_ref)).hex
                 except KeyError:
                     log.error(
                         'pygit2 was unable to get SHA for %s in %s remote '
@@ -1606,6 +1634,10 @@ class Pygit2(GitProvider):
         will let the calling function know whether or not a new repo was
         initialized by this function.
         '''
+        # https://github.com/libgit2/pygit2/issues/339
+        # https://github.com/libgit2/libgit2/issues/2122
+        home = os.path.expanduser('~')
+        pygit2.settings.search_path[pygit2.GIT_CONFIG_LEVEL_GLOBAL] = home
         new = False
         if not os.listdir(self.cachedir):
             # Repo cachedir is empty, initialize a new repo there
@@ -1614,17 +1646,7 @@ class Pygit2(GitProvider):
         else:
             # Repo cachedir exists, try to attach
             try:
-                try:
-                    self.repo = pygit2.Repository(self.cachedir)
-                except GitError as exc:
-                    import pwd
-                    # https://github.com/libgit2/pygit2/issues/339
-                    # https://github.com/libgit2/libgit2/issues/2122
-                    if "Error stat'ing config file" not in six.text_type(exc):
-                        raise
-                    home = pwd.getpwnam(salt.utils.user.get_user()).pw_dir
-                    pygit2.settings.search_path[pygit2.GIT_CONFIG_LEVEL_GLOBAL] = home
-                    self.repo = pygit2.Repository(self.cachedir)
+                self.repo = pygit2.Repository(self.cachedir)
             except KeyError:
                 log.error(_INVALID_REPO, self.cachedir, self.url, self.role)
                 return new
@@ -1653,7 +1675,7 @@ class Pygit2(GitProvider):
                 blobs.append(
                     salt.utils.path.join(prefix, entry.name, use_posixpath=True)
                 )
-                if len(blob):
+                if blob:
                     _traverse(
                         blob, blobs, salt.utils.path.join(
                             prefix, entry.name, use_posixpath=True)
@@ -1675,7 +1697,7 @@ class Pygit2(GitProvider):
         else:
             relpath = lambda path: path
         blobs = []
-        if len(tree):
+        if tree:
             _traverse(tree, blobs, self.root(tgt_env))
         add_mountpoint = lambda path: salt.utils.path.join(
             self.mountpoint(tgt_env), path, use_posixpath=True)
@@ -1805,7 +1827,7 @@ class Pygit2(GitProvider):
         else:
             relpath = lambda path: path
         blobs = {}
-        if len(tree):
+        if tree:
             _traverse(tree, blobs, self.root(tgt_env))
         add_mountpoint = lambda path: salt.utils.path.join(
             self.mountpoint(tgt_env), path, use_posixpath=True)
@@ -1861,8 +1883,8 @@ class Pygit2(GitProvider):
         refs/remotes/origin/
         '''
         try:
-            return self.repo.lookup_reference(
-                'refs/remotes/origin/{0}'.format(ref)).get_object().tree
+            return self.peel(self.repo.lookup_reference(
+                'refs/remotes/origin/{0}'.format(ref))).tree
         except KeyError:
             return None
 
@@ -1871,8 +1893,8 @@ class Pygit2(GitProvider):
         Return a pygit2.Tree object matching a tag ref fetched into refs/tags/
         '''
         try:
-            return self.repo.lookup_reference(
-                'refs/tags/{0}'.format(ref)).get_object().tree
+            return self.peel(self.repo.lookup_reference(
+                'refs/tags/{0}'.format(ref))).tree
         except KeyError:
             return None
 
@@ -2991,10 +3013,18 @@ class GitPillar(GitBase):
             cachedir = self.do_checkout(repo)
             if cachedir is not None:
                 # Figure out which environment this remote should be assigned
-                if repo.env:
+                if repo.branch == '__env__' and hasattr(repo, 'all_saltenvs'):
+                    env = self.opts.get('pillarenv') \
+                        or self.opts.get('saltenv') \
+                        or self.opts.get('git_pillar_base')
+                elif repo.env:
                     env = repo.env
                 else:
-                    env = 'base' if repo.branch == repo.base else repo.get_checkout_target()
+                    if repo.branch == repo.base:
+                        env = 'base'
+                    else:
+                        tgt = repo.get_checkout_target()
+                        env = 'base' if tgt == repo.base else tgt
                 if repo._mountpoint:
                     if self.link_mountpoint(repo):
                         self.pillar_dirs[repo.linkdir] = env
@@ -3008,6 +3038,7 @@ class GitPillar(GitBase):
         points at the correct path
         '''
         lcachelink = salt.utils.path.join(repo.linkdir, repo._mountpoint)
+        lcachedest = salt.utils.path.join(repo.cachedir, repo.root()).rstrip(os.sep)
         wipe_linkdir = False
         create_link = False
         try:
@@ -3041,11 +3072,11 @@ class GitPillar(GitBase):
                             )
                             wipe_linkdir = True
                         else:
-                            if ldest != repo.cachedir:
+                            if ldest != lcachedest:
                                 log.debug(
                                     'Destination of %s (%s) does not match '
                                     'the expected value (%s)',
-                                    lcachelink, ldest, repo.cachedir
+                                    lcachelink, ldest, lcachedest
                                 )
                                 # Since we know that the parent dirs of the
                                 # link are set up properly, all we need to do
@@ -3090,16 +3121,16 @@ class GitPillar(GitBase):
 
                 if create_link:
                     try:
-                        os.symlink(repo.cachedir, lcachelink)
+                        os.symlink(lcachedest, lcachelink)
                         log.debug(
                             'Successfully linked %s to cachedir %s',
-                            lcachelink, repo.cachedir
+                            lcachelink, lcachedest
                         )
                         return True
                     except OSError as exc:
                         log.error(
                             'Failed to create symlink to %s at path %s: %s',
-                            repo.cachedir, lcachelink, exc.__str__()
+                            lcachedest, lcachelink, exc.__str__()
                         )
                         return False
         except GitLockError:

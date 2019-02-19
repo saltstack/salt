@@ -769,7 +769,7 @@ def edit_config(name, xpath=None, value=None, commit=False):
     xpath_split = xpath.split("/")
 
     # Retrieve the head of the xpath for validation.
-    if len(xpath_split) > 0:
+    if xpath_split:
         head = xpath_split[-1]
         if "[" in head:
             head = head.split("[")[0]

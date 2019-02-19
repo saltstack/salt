@@ -176,12 +176,13 @@ from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import multiprocessing
 import copy
+import re
 
 # Import Salt libs
 import salt.utils.nxos
 from salt.utils.vt_helper import SSHConnection
 from salt.utils.vt import TerminalException
-from salt.exceptions import CommandExecutionError
+from salt.exceptions import (NxosCliError, CommandExecutionError)
 
 log = logging.getLogger(__file__)
 
@@ -222,7 +223,7 @@ def init(opts=None):
         log.info('NXOS PROXY: Initialize nxapi proxy connection')
         return _init_nxapi(opts)
     else:
-        log.error('Unknown Connection Type: {0}'.format(CONNECTION))
+        log.error('Unknown Connection Type: %s', CONNECTION)
         return False
 
 
@@ -260,7 +261,7 @@ def grains(**kwargs):
 
         salt '*' nxos.cmd grains
     '''
-    import __main__ as main
+    import __main__ as main  # pylint: disable=unused-import
     if not DEVICE_DETAILS['grains_cache']:
         data = sendline('show version')
         if CONNECTION == 'nxapi':
@@ -268,7 +269,7 @@ def grains(**kwargs):
         ret = salt.utils.nxos.system_info(data)
         log.debug(ret)
         DEVICE_DETAILS['grains_cache'].update(ret['nxos'])
-    return DEVICE_DETAILS['grains_cache']
+    return {'nxos': DEVICE_DETAILS['grains_cache']}
 
 
 def grains_refresh(**kwargs):
@@ -293,7 +294,7 @@ def shutdown(opts):
         return _shutdown_nxapi(opts)
 
 
-def sendline(command, method='cli_show_ascii'):
+def sendline(command, method='cli_show_ascii', **kwargs):
     '''
     Send arbitrary show or config commands to the NX-OS device.
 
@@ -317,12 +318,12 @@ def sendline(command, method='cli_show_ascii'):
     '''
     try:
         if CONNECTION == 'ssh':
-            result = _sendline_ssh(command)
+            result = _sendline_ssh(command, **kwargs)
         elif CONNECTION == 'nxapi':
-            result = _nxapi_request(command, method)
-    except (TerminalException, CommandExecutionError) as e:
+            result = _nxapi_request(command, method, **kwargs)
+    except (TerminalException, NxosCliError) as e:
         log.error(e)
-        return 'Command {0} failed'.format(command)
+        raise
     return result
 
 
@@ -369,9 +370,9 @@ def proxy_config(commands, **kwargs):
             for each in ret:
                 if 'Failure' in each:
                     log.error(each)
-    except (TerminalException, CommandExecutionError) as e:
+    except CommandExecutionError as e:
         log.error(e)
-        return [commands, repr(e)]
+        raise
     return [commands, ret]
 
 
@@ -402,10 +403,14 @@ def _init_ssh(opts):
             ssh_args=opts['proxy'].get('ssh_args', ''),
             prompt=this_prompt)
         out, err = DEVICE_DETAILS[_worker_name()].sendline('terminal length 0')
-        log.info('SSH session establised for process {}'.format(_worker_name()))
-    except TerminalException as e:
-        log.error(e)
-        return False
+        log.info('SSH session establised for process %s', _worker_name())
+    except Exception as ex:
+        log.error('Unable to connect to %s', opts['proxy']['host'])
+        log.error('Please check the following:\n')
+        log.error('-- Verify that "feature ssh" is enabled on your NX-OS device: %s', opts['proxy']['host'])
+        log.error('-- Exception Generated: %s', ex)
+        log.error(ex)
+        exit()
     DEVICE_DETAILS['initialized'] = True
     DEVICE_DETAILS['no_save_config'] = opts['proxy'].get('no_save_config', False)
 
@@ -428,13 +433,36 @@ def _shutdown_ssh(opts):
     DEVICE_DETAILS[_worker_name()].close_connection()
 
 
-def _sendline_ssh(command):
+def _sendline_ssh(command, **kwargs):
     if _ping_ssh() is False:
         _init_ssh(None)
     out, err = DEVICE_DETAILS[_worker_name()].sendline(command)
     _, out = out.split('\n', 1)
     out, _, _ = out.rpartition('\n')
+    _parse_output_for_errors(out, command, **kwargs)
     return out
+
+
+def _parse_output_for_errors(data, command, **kwargs):
+    '''
+    Helper method to parse command output for error information
+    '''
+    if re.search('% Invalid', data):
+        raise CommandExecutionError({
+            'rejected_input': command,
+            'message': 'CLI excution error',
+            'code': '400',
+            'cli_error': data.lstrip(),
+        })
+    if kwargs.get('error_pattern') is not None:
+        for re_line in kwargs.get('error_pattern'):
+            if re.search(re_line, data):
+                raise CommandExecutionError({
+                    'rejected_input': command,
+                    'message': 'CLI excution error',
+                    'code': '400',
+                    'cli_error': data.lstrip(),
+                })
 
 
 def _worker_name():
@@ -467,10 +495,14 @@ def _init_nxapi(opts):
         DEVICE_DETAILS['initialized'] = True
         DEVICE_DETAILS['up'] = True
         DEVICE_DETAILS['no_save_config'] = opts['proxy'].get('no_save_config', False)
-    except CommandExecutionError:
-        log.error('Unable to connect to %s', conn_args['host'], exc_info=True)
-        raise
-    log.info('nxapi DEVICE_DETAILS info: {}'.format(DEVICE_DETAILS))
+    except Exception as ex:
+        log.error('Unable to connect to %s', conn_args['host'])
+        log.error('Please check the following:\n')
+        log.error('-- Verify that "feature nxapi" is enabled on your NX-OS device: %s', conn_args['host'])
+        log.error('-- Verify that nxapi settings on the NX-OS device and proxy minion config file match')
+        log.error('-- Exception Generated: %s', ex)
+        exit()
+    log.info('nxapi DEVICE_DETAILS info: %s', DEVICE_DETAILS)
     return True
 
 

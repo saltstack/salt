@@ -14,10 +14,10 @@ import string
 import tempfile
 
 # Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ModuleCase
 from tests.support.helpers import with_tempdir
 from tests.support.mixins import SaltReturnAssertsMixin
-from tests.support.paths import TMP
 
 # Import salt libs
 import salt.utils.files
@@ -90,7 +90,7 @@ class WithGitMirror(object):
     def __init__(self, repo_url, **kwargs):
         self.repo_url = repo_url
         if 'dir' not in kwargs:
-            kwargs['dir'] = TMP
+            kwargs['dir'] = RUNTIME_VARS.TMP
         self.kwargs = kwargs
 
     def __call__(self, func):
@@ -835,9 +835,9 @@ class LocalRepoGitTest(ModuleCase, SaltReturnAssertsMixin):
     Tests which do no require connectivity to github.com
     '''
     def setUp(self):
-        self.repo = tempfile.mkdtemp(dir=TMP)
-        self.admin = tempfile.mkdtemp(dir=TMP)
-        self.target = tempfile.mkdtemp(dir=TMP)
+        self.repo = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
+        self.admin = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
+        self.target = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         for dirname in (self.repo, self.admin, self.target):
             self.addCleanup(shutil.rmtree, dirname, ignore_errors=True)
 

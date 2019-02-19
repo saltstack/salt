@@ -10,9 +10,9 @@ import os
 import shutil
 
 # Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.integration.utils import testprogram
 from tests.support.case import ShellCase
-from tests.support.paths import TMP
 from tests.support.mixins import ShellCaseCommonTestsMixin
 from tests.support.helpers import skip_if_not_root
 from tests.support.unit import skipIf
@@ -98,7 +98,7 @@ class RunTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin)
         Skip on windows because syslog not available
         '''
         old_cwd = os.getcwd()
-        config_dir = os.path.join(TMP, 'issue-7754')
+        config_dir = os.path.join(RUNTIME_VARS.TMP, 'issue-7754')
         if not os.path.isdir(config_dir):
             os.makedirs(config_dir)
 

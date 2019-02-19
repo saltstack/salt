@@ -46,7 +46,8 @@ class DpkgTestCase(TestCase, LoaderModuleMockMixin):
                                               'depend on the latest\n recommended Emacs release.\n',
          'package': 'emacs', 'source': 'emacs-defaults',
          'maintainer': 'Simpsons Developers <simpsons-devel-discuss@lists.springfield.org>',
-         'build_date_time_t': 1407430308, 'installed_size': '25', 'install_date': '2016-12-14T20:02:58Z'}
+         'build_date_time_t': 1407430308, 'installed_size': '25', 'install_date': '2016-12-14T20:02:58Z',
+         'status': 'ii'}
     ]
 
     def setup_loader_modules(self):
@@ -147,12 +148,13 @@ class DpkgTestCase(TestCase, LoaderModuleMockMixin):
         for pkg_section in ['section', 'architecture', 'original-maintainer', 'maintainer', 'package', 'installed-size',
                             'build_date_time_t', 'sha256', 'origin', 'build_date', 'size', 'source', 'version',
                             'install_date_time_t', 'license', 'priority', 'description', 'md5sum', 'supported',
-                            'filename', 'sha1', 'install_date', 'arch']:
+                            'filename', 'sha1', 'install_date', 'arch', "status"]:
             assert pkg_section in pkg_data
 
         assert pkg_data['section'] == 'editors'
         assert pkg_data['maintainer'] == 'Simpsons Developers <simpsons-devel-discuss@lists.springfield.org>'
         assert pkg_data['license'] == 'BSD v3'
+        assert pkg_data['status'] == 'ii'
 
     @patch('salt.modules.dpkg._get_pkg_ds_avail', MagicMock(return_value=dselect_pkg))
     @patch('salt.modules.dpkg._get_pkg_info', MagicMock(return_value=pkgs_info))
