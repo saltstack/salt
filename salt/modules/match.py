@@ -320,6 +320,7 @@ def filter_by(lookup,
               tgt_type='compound',
               minion_id=None,
               merge=None,
+              merge_lists=False,
               default='default'):
     '''
     Return the first match in a dictionary of target patterns
@@ -359,7 +360,7 @@ def filter_by(lookup,
                 if lookup[key] is None:
                     return merge
                 else:
-                    salt.utils.dictupdate.update(lookup[key], copy.deepcopy(merge))
+                    salt.utils.dictupdate.update(lookup[key], copy.deepcopy(merge), merge_lists=merge_lists)
 
             return lookup[key]
 
