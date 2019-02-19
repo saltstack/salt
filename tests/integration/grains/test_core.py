@@ -58,6 +58,9 @@ class TestGrainsReg(ModuleCase, LoaderModuleMockMixin):
     Test the core windows grains
     '''
 
+    def tearDown(self):
+        del self.opts
+
     def setup_loader_modules(self):
         self.opts = opts = salt.config.DEFAULT_MINION_OPTS.copy()
         utils = salt.loader.utils(opts, whitelist=['reg'])
