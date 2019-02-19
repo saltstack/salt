@@ -2,6 +2,7 @@
 
 # Import Python Libs
 from __future__ import absolute_import
+import sys
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -20,6 +21,7 @@ import salt.utils.data
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(sys.platform != 'solaris', 'Skip when not running on Solaris')
 class IpsTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.solarisips
