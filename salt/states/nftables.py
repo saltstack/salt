@@ -106,6 +106,9 @@ from __future__ import absolute_import, print_function, unicode_literals
 # Import salt libs
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
 
+import logging
+log = logging.getLogger(__name__)
+
 
 def __virtual__():
     '''
@@ -258,7 +261,12 @@ def append(name, family='ipv4', **kwargs):
             command.strip(),
             family)
         return ret
-    if __salt__['nftables.append'](kwargs['table'], kwargs['chain'], rule, family):
+    result = __salt__['nftables.append'](kwargs['table'],
+                                         kwargs['chain'],
+                                         rule,
+                                         family)
+    log.debug('=== result %s ===', result)
+    if result['result']:
         ret['changes'] = {'locale': name}
         ret['result'] = True
         ret['comment'] = 'Set nftables rule for {0} to: {1} for {2}'.format(
@@ -274,9 +282,10 @@ def append(name, family='ipv4', **kwargs):
     else:
         ret['result'] = False
         ret['comment'] = ('Failed to set nftables rule for {0}.\n'
-                          'Attempted rule was {1} for {2}').format(
+                          'Attempted rule was {1} for {2}.\n'
+                          '{3}').format(
                                   name,
-                                  command.strip(), family)
+                                  command.strip(), family, result['comment'])
         return ret
 
 
