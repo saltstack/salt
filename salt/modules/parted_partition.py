@@ -668,7 +668,8 @@ def set_(device, minor, flag, state):
       * legacy_boot
       * msftdata
       * irst
-      * esp type
+      * esp
+      * type
 
     CLI Example:
 
