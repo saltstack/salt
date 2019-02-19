@@ -220,7 +220,7 @@ def latest_version(*names, **kwargs):
     fromrepo = kwargs.pop('fromrepo', None)
     cache_valid_time = kwargs.pop('cache_valid_time', 0)
 
-    if len(names) == 0:
+    if not names:
         return ''
     ret = {}
     # Initialize the dict with empty strings
@@ -572,7 +572,7 @@ def install(name=None,
     if not fromrepo and repo:
         fromrepo = repo
 
-    if pkg_params is None or len(pkg_params) == 0:
+    if not pkg_params:
         return {}
 
     cmd_prefix = []
@@ -1282,7 +1282,7 @@ def list_pkgs(versions_as_list=False,
             osarch = __grains__.get('osarch', '')
             if arch != 'all' and osarch == 'amd64' and osarch != arch:
                 name += ':{0}'.format(arch)
-        if len(cols):
+        if cols:
             if ('install' in linetype or 'hold' in linetype) and \
                     'installed' in status:
                 __salt__['pkg_resource.add_pkg'](ret['installed'],
@@ -1586,7 +1586,7 @@ def _skip_source(source):
             pieces = source.mysplit(source.line)
             if pieces[1].strip()[0] == "[":
                 options = pieces.pop(1).strip("[]").split()
-                if len(options) > 0:
+                if options:
                     log.debug("Source %s will be included although is marked invalid", source.uri)
                     return False
             return True
@@ -2304,7 +2304,7 @@ def mod_repo(repo, saltenv='base', **kwargs):
         # and the resulting source line.  The idea here is to ensure
         # we are not returning bogus data because the source line
         # has already been modified on a previous run.
-        repo_matches = source.type == repo_type and source.uri == repo_uri and source.dist == repo_dist
+        repo_matches = source.type == repo_type and source.uri.rstrip('/') == repo_uri.rstrip('/') and source.dist == repo_dist
         kw_matches = source.dist == kw_dist and source.type == kw_type
 
         if repo_matches or kw_matches:
@@ -2812,6 +2812,8 @@ def info_installed(*names, **kwargs):
     ret = dict()
     for pkg_name, pkg_nfo in __salt__['lowpkg.info'](*names, failhard=failhard, attr=attr).items():
         t_nfo = dict()
+        if pkg_nfo.get('status', 'ii')[1] != 'i':
+            continue    # return only packages that are really installed
         # Translate dpkg-specific keys to a common structure
         for key, value in pkg_nfo.items():
             if key == 'package':
@@ -2824,6 +2826,8 @@ def info_installed(*names, **kwargs):
                 t_nfo['packager'] = value
             elif key == 'homepage':
                 t_nfo['url'] = value
+            elif key == 'status':
+                continue    # only installed pkgs are returned, no need for status
             else:
                 t_nfo[key] = value
 

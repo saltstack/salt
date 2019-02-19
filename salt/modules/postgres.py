@@ -2510,7 +2510,7 @@ def _get_object_owner(name,
         ])).format(name)
     elif object_type == 'function':
         query = (' '.join([
-            'SELECT rolname AS name',
+            'SELECT proname AS name',
             'FROM pg_catalog.pg_proc p',
             'JOIN pg_catalog.pg_namespace n',
             'ON n.oid = p.pronamespace',

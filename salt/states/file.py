@@ -693,7 +693,8 @@ def _check_directory(name,
                      require=False,
                      exclude_pat=None,
                      max_depth=None,
-                     follow_symlinks=False):
+                     follow_symlinks=False,
+                     children_only=False):
     '''
     Check what changes need to be made on a directory
     '''
@@ -743,10 +744,13 @@ def _check_directory(name,
                     fchange = _check_dir_meta(path, user, group, mode, follow_symlinks)
                     if fchange:
                         changes[path] = fchange
+
     # Recurse skips root (we always do dirs, not root), so always check root:
-    fchange = _check_dir_meta(name, user, group, mode, follow_symlinks)
-    if fchange:
-        changes[name] = fchange
+    if not children_only:
+        fchange = _check_dir_meta(name, user, group, mode, follow_symlinks)
+        if fchange:
+            changes[name] = fchange
+
     if clean:
         keep = _gen_keep_files(name, require, walk_d)
 
@@ -792,10 +796,12 @@ def _check_directory_win(name,
     if not os.path.isdir(name):
         changes = {name: {'directory': 'new'}}
     else:
-        # Check owner
+        # Check owner by SID
         if win_owner is not None:
-            owner = salt.utils.win_dacl.get_owner(name)
-            if not owner.lower() == win_owner.lower():
+            current_owner = salt.utils.win_dacl.get_owner(name)
+            current_owner_sid = salt.utils.win_functions.get_sid_from_name(current_owner)
+            expected_owner_sid = salt.utils.win_functions.get_sid_from_name(win_owner)
+            if not current_owner_sid == expected_owner_sid:
                 changes['owner'] = win_owner
 
         # Check perms
@@ -2259,7 +2265,7 @@ def managed(name,
         .. versionadded:: 0.17.0
         .. versionchanged:: 2016.11.0
             contents_pillar can also be a list, and the pillars will be
-            concatinated together to form one file.
+            concatenated together to form one file.
 
 
         Operates like ``contents``, but draws from a value stored in pillar,
@@ -2300,7 +2306,7 @@ def managed(name,
         .. note::
             The private key above is shortened to keep the example brief, but
             shows how to do multiline string in YAML. The key is followed by a
-            pipe character, and the mutliline string is indented two more
+            pipe character, and the multiline string is indented two more
             spaces.
 
             To avoid the hassle of creating an indented multiline YAML string,
@@ -2679,7 +2685,6 @@ def managed(name,
                 'to True to allow the managed file to be empty.'
                 .format(contents_id)
             )
-
         if isinstance(use_contents, six.binary_type) and b'\0' in use_contents:
             contents = use_contents
         elif isinstance(use_contents, six.text_type) and str('\0') in use_contents:
@@ -2693,9 +2698,10 @@ def managed(name,
                     'contents_grains is not a string or list of strings, and '
                     'is not binary data. SLS is likely malformed.'
                 )
-            contents = os.linesep.join(
-                [line.rstrip('\n').rstrip('\r') for line in validated_contents]
-            )
+            contents = ''
+            for part in validated_contents:
+                for line in part.splitlines():
+                    contents += line.rstrip('\n').rstrip('\r') + os.linesep
             if contents_newline and not contents.endswith(os.linesep):
                 contents += os.linesep
         if template:
@@ -3241,7 +3247,7 @@ def directory(name,
         example: ``{'Administrators': {'perms': 'full_control', 'applies_to':
         'this_folder_only'}}`` Can be a single basic perm or a list of advanced
         perms. ``perms`` must be specified. ``applies_to`` is optional and
-        defaults to ``this_folder_subfoler_files``.
+        defaults to ``this_folder_subfolder_files``.
 
         .. versionadded:: 2017.7.0
 
@@ -3408,7 +3414,7 @@ def directory(name,
     else:
         presult, pcomment, pchanges = _check_directory(
             name, user, group, recurse or [], dir_mode, file_mode, clean,
-            require, exclude_pat, max_depth, follow_symlinks)
+            require, exclude_pat, max_depth, follow_symlinks, children_only)
 
     if pchanges:
         ret['changes'].update(pchanges)
@@ -6810,7 +6816,7 @@ def copy_(name,
     return ret
 
 
-def rename(name, source, force=False, makedirs=False):
+def rename(name, source, force=False, makedirs=False, **kwargs):
     '''
     If the source file exists on the system, rename it to the named file. The
     named file will not be overwritten if it already exists unless the force

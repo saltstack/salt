@@ -71,7 +71,7 @@ def _check_cygwin_installed(cyg_arch='x86_64'):
     path_to_cygcheck = os.sep.join(['C:',
                                     _get_cyg_dir(cyg_arch),
                                     'bin', 'cygcheck.exe'])
-    LOG.debug('Path to cygcheck.exe: {0}'.format(path_to_cygcheck))
+    LOG.debug('Path to cygcheck.exe: %s', path_to_cygcheck)
     if not os.path.exists(path_to_cygcheck):
         LOG.debug('Could not find cygcheck.exe')
         return False
@@ -87,7 +87,7 @@ def _get_all_packages(mirror=DEFAULT_MIRROR,
         __context__['cyg.all_packages'] = {}
     if mirror not in __context__['cyg.all_packages']:
         __context__['cyg.all_packages'][mirror] = []
-    if not len(__context__['cyg.all_packages'][mirror]):
+    if not __context__['cyg.all_packages'][mirror]:
         pkg_source = '/'.join([mirror, cyg_arch, 'setup.bz2'])
 
         file_data = _urlopen(pkg_source).read()
@@ -125,7 +125,7 @@ def check_valid_package(package,
     if mirrors is None:
         mirrors = [{DEFAULT_MIRROR: DEFAULT_MIRROR_KEY}]
 
-    LOG.debug('Checking Valid Mirrors: {0}'.format(mirrors))
+    LOG.debug('Checking Valid Mirrors: %s', mirrors)
 
     for mirror in mirrors:
         for mirror_url, key in mirror.items():
@@ -262,7 +262,7 @@ def uninstall(packages,
     args = []
     if packages is not None:
         args.append('--remove-packages {pkgs}'.format(pkgs=packages))
-        LOG.debug('args: {0}'.format(args))
+        LOG.debug('args: %s', args)
         if not _check_cygwin_installed(cyg_arch):
             LOG.debug('We\'re convinced cygwin isn\'t installed')
             return True
@@ -290,8 +290,7 @@ def update(cyg_arch='x86_64', mirrors=None):
 
     # Can't update something that isn't installed
     if not _check_cygwin_installed(cyg_arch):
-        LOG.debug('Cygwin ({0}) not installed,\
-                  could not update'.format(cyg_arch))
+        LOG.debug('Cygwin (%s) not installed, could not update', cyg_arch)
         return False
 
     return _run_silent_cygwin(cyg_arch=cyg_arch, args=args, mirrors=mirrors)

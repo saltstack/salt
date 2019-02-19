@@ -1976,7 +1976,7 @@ def parse_host_port(host_port):
     if _s_[0] == "[":
         if "]" in host_port:
             host, _s_ = _s_.lstrip("[").rsplit("]", 1)
-            host = ipaddress.IPv6Address(host)
+            host = ipaddress.IPv6Address(host).compressed
             if _s_[0] == ":":
                 port = int(_s_.lstrip(":"))
             else:
@@ -1994,7 +1994,7 @@ def parse_host_port(host_port):
             host = _s_
     try:
         if not isinstance(host, ipaddress._BaseAddress):
-            host_ip = ipaddress.ip_address(host)
+            host_ip = ipaddress.ip_address(host).compressed
             host = host_ip
     except ValueError:
         log.debug('"%s" Not an IP address? Assuming it is a hostname.', host)
@@ -2003,3 +2003,15 @@ def parse_host_port(host_port):
             raise ValueError('bad hostname: "{}"'.format(host))
 
     return host, port
+
+
+def is_fqdn(hostname):
+    """
+    Verify if hostname conforms to be a FQDN.
+
+    :param hostname: text string with the name of the host
+    :return: bool, True if hostname is correct FQDN, False otherwise
+    """
+
+    compliant = re.compile(r"(?!-)[A-Z\d\-\_]{1,63}(?<!-)$", re.IGNORECASE)
+    return "." in hostname and len(hostname) < 0xff and all(compliant.match(x) for x in hostname.rstrip(".").split("."))
