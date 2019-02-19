@@ -106,6 +106,10 @@ if not hasattr(os, 'uname'):
 
 _INTERFACES = {}
 
+# Possible value for h_errno defined in netdb.h
+HOST_NOT_FOUND = 1
+NO_DATA = 4
+
 
 def _windows_cpudata():
     '''
@@ -2233,7 +2237,7 @@ def fqdns():
             name, aliaslist, addresslist = socket.gethostbyaddr(ip)
             fqdns.update([socket.getfqdn(name)] + [als for als in aliaslist if salt.utils.network.is_fqdn(als)])
         except socket.herror as err:
-            if err.errno == 0:
+            if err.errno in (0, HOST_NOT_FOUND, NO_DATA):
                 # No FQDN for this IP address, so we don't need to know this all the time.
                 log.debug("Unable to resolve address %s: %s", ip, err)
             else:
