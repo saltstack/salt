@@ -85,6 +85,75 @@ class MatchTestCase(TestCase, LoaderModuleMockMixin):
 
         self.assertDictEqual(match.filter_by(lookup, merge=mdict), result)
 
+    def test_filter_by_merge_lists_rep(self):
+        '''
+        Tests if filter_by merges list values by replacing the original list
+        values with the merged list values.
+        '''
+        lookup = {
+            'foo*': {
+                'list_key': []
+             },
+            'bar*': {
+                'list_key': [
+                    'val1',
+                    'val2'
+                ]
+            }
+        }
+
+        mdict = {
+            'list_key': [
+                'val3',
+                'val4'
+            ]
+        }
+
+        # list replacement specified by the merge_lists=False option
+        result = {
+            'list_key': [
+                'val3',
+                'val4'
+            ]
+        }
+
+        self.assertDictEqual(match.filter_by(lookup, merge=mdict, merge_lists=False), result)
+
+    def test_filter_by_merge_lists_agg(self):
+        '''
+        Tests if filter_by merges list values by aggregating them.
+        '''
+        lookup = {
+            'foo*': {
+                'list_key': []
+             },
+            'bar*': {
+                'list_key': [
+                    'val1',
+                    'val2'
+                ]
+            }
+        }
+
+        mdict = {
+            'list_key': [
+                'val3',
+                'val4'
+            ]
+        }
+
+        # list aggregation specified by the merge_lists=True option
+        result = {
+            'list_key': [
+                'val1',
+                'val2',
+                'val3',
+                'val4'
+            ]
+        }
+
+        self.assertDictEqual(match.filter_by(lookup, merge=mdict, merge_lists=True), result)
+
     def test_filter_by_merge_with_none(self):
         '''
         Tests if filter_by merges a None object with a merge dictionary.
