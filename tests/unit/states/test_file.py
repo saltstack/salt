@@ -775,7 +775,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                             with patch.object(os.path, 'exists', mock_t):
                                 with patch.dict(filestate.__opts__, {'test': True}):
                                     ret.update({'comment': comt})
-                                    if salt.utils.is_windows():
+                                    if salt.utils.platform.is_windows():
                                         self.assertDictEqual(filestate.managed
                                                              (name, user=user,
                                                               group=group), ret)
