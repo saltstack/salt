@@ -26,7 +26,7 @@ class MasterUtilJobsTestCase(ShellTestCase):
     def test_get_running_jobs(self):
         ret = self.run_run_plus("test.sleep", '90', asynchronous=True)
         jid = ret['jid']
-        time.sleep(2)
+        time.sleep(20)
         jobs = master.get_running_jobs(DEFAULT_CONFIG)
         jids = [job['jid'] for job in jobs]
         assert jids.count(jid) == 1
