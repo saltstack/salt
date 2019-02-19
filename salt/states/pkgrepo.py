@@ -332,6 +332,11 @@ def managed(name, ppa=None, **kwargs):
             if enabled is not None \
             else salt.utils.is_true(disabled)
 
+    elif __grains__['os'] == 'Debian':
+        kwargs['disabled'] = not salt.utils.is_true(enabled) \
+            if enabled is not None \
+            else salt.utils.is_true(disabled)
+
     elif __grains__['os_family'] in ('RedHat', 'Suse'):
         if 'humanname' in kwargs:
             kwargs['name'] = kwargs.pop('humanname')
