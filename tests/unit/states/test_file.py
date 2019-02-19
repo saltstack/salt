@@ -794,10 +794,16 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                             with patch.object(os.path, 'exists', mock_t):
                                 with patch.dict(filestate.__opts__, {'test': True}):
                                     ret.update({'comment': comt})
-                                    self.assertDictEqual(filestate.managed
-                                                         (name, user=user,
-                                                          group=group,
-                                                          mode=400), ret)
+                                    if salt.utils.platform.is_windows():
+                                        self.assertDictEqual(filestate.managed
+                                                             (name, user=user,
+                                                              group=group
+                                                              ), ret)
+                                    else:
+                                        self.assertDictEqual(filestate.managed
+                                                             (name, user=user,
+                                                              group=group,
+                                                              mode=400), ret)
 
     # 'directory' function tests: 1
 
@@ -948,6 +954,17 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                             self.assertDictEqual(filestate.directory
                                                  (name, user=user, group=group),
                                                  ret)
+
+                        recurse = ['mode']
+                        ret.update({'comment': 'The directory {} is in the '
+                                               'correct state'.format(name),
+                                    'changes': {},
+                                    'result': True})
+                        with patch.object(os.path, 'isdir', mock_t):
+                            self.assertDictEqual(filestate.directory
+                                                 (name, user=user, dir_mode=700,
+                                                  recurse=recurse, group=group,
+                                                  children_only=True), ret)
 
     # 'recurse' function tests: 1
 
