@@ -235,11 +235,14 @@ def get_sls_opts(opts, **kwargs):
                 )
             opts['saltenv'] = kwargs['saltenv']
 
-    if 'pillarenv' in kwargs or opts.get('pillarenv_from_saltenv', False):
-        pillarenv = kwargs.get('pillarenv') or kwargs.get('saltenv')
-        if pillarenv is not None and not isinstance(pillarenv, six.string_types):
-            opts['pillarenv'] = six.text_type(pillarenv)
-        else:
-            opts['pillarenv'] = pillarenv
+    pillarenv = None
+    if kwargs.get('pillarenv'):
+        pillarenv = kwargs.get('pillarenv')
+    if opts.get('pillarenv_from_saltenv') and not pillarenv:
+        pillarenv = kwargs.get('saltenv')
+    if pillarenv is not None and not isinstance(pillarenv, six.string_types):
+        opts['pillarenv'] = six.text_type(pillarenv)
+    else:
+        opts['pillarenv'] = pillarenv
 
     return opts

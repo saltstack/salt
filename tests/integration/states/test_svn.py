@@ -11,8 +11,8 @@ import shutil
 import socket
 
 # Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ModuleCase
-from tests.support.paths import TMP
 from tests.support.mixins import SaltReturnAssertsMixin
 
 
@@ -37,7 +37,7 @@ class SvnTest(ModuleCase, SaltReturnAssertsMixin):
             msg = 'error resolving {0}, possible network issue?'
             self.skipTest(msg.format(self.__domain))
 
-        self.target = os.path.join(TMP, 'apache_http_test_repo')
+        self.target = os.path.join(RUNTIME_VARS.TMP, 'apache_http_test_repo')
         self.name = 'http://{0}/repos/asf/httpd/httpd/trunk/test/'.format(
             self.__domain
         )

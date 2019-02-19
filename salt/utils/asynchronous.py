@@ -83,6 +83,11 @@ class SyncWrapper(object):
                 # their associated io_loop is closed to allow for proper
                 # cleanup.
                 self.asynchronous.close()
+            elif hasattr(self.asynchronous, 'destroy'):
+                # Certain things such as streams should be closed before
+                # their associated io_loop is closed to allow for proper
+                # cleanup.
+                self.asynchronous.destroy()
             del self.asynchronous
             self.io_loop.close()
             del self.io_loop

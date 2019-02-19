@@ -307,6 +307,8 @@ All beacons are configured using a similar process of enabling the beacon,
 writing a reactor SLS (and state SLS if needed), and mapping a beacon event to
 the reactor SLS.
 
+.. _writing-beacons:
+
 Writing Beacon Plugins
 ======================
 
@@ -377,5 +379,5 @@ new execution modules and functions to back specific beacons.
 Distributing Custom Beacons
 ---------------------------
 
-Custom beacons can be distributed to minions using ``saltutil``, see
-:ref:`Dynamic Module Distribution <dynamic-module-distribution>`.
+Custom beacons can be distributed to minions via the standard methods, see
+:ref:`Modular Systems <modular-systems>`.

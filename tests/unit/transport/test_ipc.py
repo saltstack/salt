@@ -25,8 +25,8 @@ from salt.ext import six
 from salt.ext.six.moves import range
 
 # Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.mock import MagicMock
-from tests.support.paths import TMP
 from tests.support.unit import skipIf
 
 log = logging.getLogger(__name__)
@@ -40,9 +40,10 @@ class BaseIPCReqCase(tornado.testing.AsyncTestCase):
     def setUp(self):
         super(BaseIPCReqCase, self).setUp()
         #self._start_handlers = dict(self.io_loop._handlers)
-        self.socket_path = os.path.join(TMP, 'ipc_test.ipc')
+        self.socket_path = os.path.join(RUNTIME_VARS.TMP, 'ipc_test.ipc')
 
         self.server_channel = salt.transport.ipc.IPCMessageServer(
+            salt.config.master_config(None),
             self.socket_path,
             io_loop=self.io_loop,
             payload_handler=self._handle_payload,
@@ -100,11 +101,41 @@ class IPCMessageClient(BaseIPCReqCase):
     def tearDown(self):
         super(IPCMessageClient, self).tearDown()
         try:
-            self.channel.close()
+            # Make sure we close no matter what we've done in the tests
+            del self.channel
         except socket.error as exc:
             if exc.errno != errno.EBADF:
                 # If its not a bad file descriptor error, raise
                 raise
+
+    def test_singleton(self):
+        channel = self._get_channel()
+        assert self.channel is channel
+        # Delete the local channel. Since there's still one more refefence
+        # __del__ wasn't called
+        del channel
+        assert self.channel
+        msg = {'foo': 'bar', 'stop': True}
+        self.channel.send(msg)
+        self.wait()
+        self.assertEqual(self.payloads[0], msg)
+
+    def test_last_singleton_instance_closes(self):
+        channel = self._get_channel()
+        msg = {'foo': 'bar', 'stop': True}
+        log.debug('Sending msg1')
+        self.channel.send(msg)
+        self.wait()
+        self.assertEqual(self.payloads[0], msg)
+        channel.close()
+        # Since this is a singleton, and only the last singleton instance
+        # should actually close the connection, the next code should still
+        # work and not timeout
+        msg = {'bar': 'foo', 'stop': True}
+        log.debug('Sending msg2')
+        self.channel.send(msg)
+        self.wait()
+        self.assertEqual(self.payloads[1], msg)
 
     def test_basic_send(self):
         msg = {'foo': 'bar', 'stop': True}

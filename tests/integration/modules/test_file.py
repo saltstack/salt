@@ -21,9 +21,9 @@ except ImportError:
     pass
 
 # Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
-from tests.support.paths import FILES, TMP
 
 # Import salt libs
 import salt.utils.files
@@ -45,18 +45,18 @@ class FileModuleTest(ModuleCase):
     Validate the file module
     '''
     def setUp(self):
-        self.myfile = os.path.join(TMP, 'myfile')
+        self.myfile = os.path.join(RUNTIME_VARS.TMP, 'myfile')
         with salt.utils.files.fopen(self.myfile, 'w+') as fp:
             fp.write(salt.utils.stringutils.to_str('Hello' + os.linesep))
-        self.mydir = os.path.join(TMP, 'mydir/isawesome')
+        self.mydir = os.path.join(RUNTIME_VARS.TMP, 'mydir/isawesome')
         if not os.path.isdir(self.mydir):
             # left behind... Don't fail because of this!
             os.makedirs(self.mydir)
-        self.mysymlink = os.path.join(TMP, 'mysymlink')
+        self.mysymlink = os.path.join(RUNTIME_VARS.TMP, 'mysymlink')
         if os.path.islink(self.mysymlink) or os.path.isfile(self.mysymlink):
             os.remove(self.mysymlink)
         symlink(self.myfile, self.mysymlink)
-        self.mybadsymlink = os.path.join(TMP, 'mybadsymlink')
+        self.mybadsymlink = os.path.join(RUNTIME_VARS.TMP, 'mybadsymlink')
         if os.path.islink(self.mybadsymlink) or os.path.isfile(self.mybadsymlink):
             os.remove(self.mybadsymlink)
         symlink('/nonexistentpath', self.mybadsymlink)
@@ -143,8 +143,8 @@ class FileModuleTest(ModuleCase):
             self.skipTest('patch is not installed')
 
         src_patch = os.path.join(
-            FILES, 'file', 'base', 'hello.patch')
-        src_file = os.path.join(TMP, 'src.txt')
+            RUNTIME_VARS.FILES, 'file', 'base', 'hello.patch')
+        src_file = os.path.join(RUNTIME_VARS.TMP, 'src.txt')
         with salt.utils.files.fopen(src_file, 'w+') as fp:
             fp.write(salt.utils.stringutils.to_str('Hello\n'))
 

@@ -8,8 +8,8 @@ from __future__ import absolute_import, print_function, unicode_literals
 import os
 
 # Import Salt Testing Libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.paths import TMP
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     NO_MOCK,
@@ -31,7 +31,7 @@ class QueueTest(TestCase, LoaderModuleMockMixin):
         return {
             queue_mod: {
                 '__opts__': {
-                    'sock_dir': os.path.join(TMP, 'queue-runner-sock-dir'),
+                    'sock_dir': os.path.join(RUNTIME_VARS.TMP, 'queue-runner-sock-dir'),
                     'transport': 'zeromq'
                 }
             }

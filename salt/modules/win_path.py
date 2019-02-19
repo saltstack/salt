@@ -11,7 +11,6 @@ from __future__ import absolute_import, print_function, unicode_literals
 # Import Python libs
 import logging
 import os
-import re
 
 # Import Salt libs
 import salt.utils.args
@@ -50,7 +49,7 @@ def _normalize_dir(string_):
     '''
     Normalize the directory to make comparison possible
     '''
-    return re.sub(r'\\$', '', salt.utils.stringutils.to_unicode(string_))
+    return os.path.normpath(salt.utils.stringutils.to_unicode(string_))
 
 
 def rehash():
@@ -200,7 +199,7 @@ def add(path, index=None, **kwargs):
             elif index <= -num_dirs:
                 # Negative index is too large, shift index to beginning of list
                 index = pos = 0
-            elif index <= 0:
+            elif index < 0:
                 # Negative indexes (other than -1 which is handled above) must
                 # be inserted at index + 1 for the item  to end up in the
                 # position you want, since list.insert() inserts before the

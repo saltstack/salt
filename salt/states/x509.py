@@ -530,11 +530,12 @@ def certificate_managed(name,
         raise salt.exceptions.SaltInvocationError(
             'signing_policy must be specified if ca_server is.')
 
-    new = __salt__['x509.create_certificate'](testrun=True, **kwargs)
+    new = __salt__['x509.create_certificate'](testrun=False, text=True, **kwargs)
+    new = __salt__['x509.read_certificate'](certificate=new)
+    newcert = __salt__['x509.create_certificate'](testrun=True, **kwargs)
 
     if isinstance(new, dict):
         new_comp = copy.deepcopy(new)
-        new.pop('Issuer Public Key')
         if 'serial_number' not in kwargs:
             new_comp.pop('Serial Number')
             if 'signing_cert' not in kwargs:
@@ -549,7 +550,7 @@ def certificate_managed(name,
         new_comp.pop('MD5 Finger Print')
         new_comp.pop('SHA1 Finger Print')
         new_comp.pop('SHA-256 Finger Print')
-        new_issuer_public_key = new_comp.pop('Issuer Public Key')
+        new_issuer_public_key = new_issuer_public_key = newcert.pop('Issuer Public Key')
     else:
         new_comp = new
 
