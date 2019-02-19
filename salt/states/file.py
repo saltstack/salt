@@ -693,7 +693,8 @@ def _check_directory(name,
                      require=False,
                      exclude_pat=None,
                      max_depth=None,
-                     follow_symlinks=False):
+                     follow_symlinks=False,
+                     children_only=False):
     '''
     Check what changes need to be made on a directory
     '''
@@ -743,10 +744,13 @@ def _check_directory(name,
                     fchange = _check_dir_meta(path, user, group, mode, follow_symlinks)
                     if fchange:
                         changes[path] = fchange
+
     # Recurse skips root (we always do dirs, not root), so always check root:
-    fchange = _check_dir_meta(name, user, group, mode, follow_symlinks)
-    if fchange:
-        changes[name] = fchange
+    if not children_only:
+        fchange = _check_dir_meta(name, user, group, mode, follow_symlinks)
+        if fchange:
+            changes[name] = fchange
+
     if clean:
         keep = _gen_keep_files(name, require, walk_d)
 
@@ -3410,7 +3414,7 @@ def directory(name,
     else:
         presult, pcomment, pchanges = _check_directory(
             name, user, group, recurse or [], dir_mode, file_mode, clean,
-            require, exclude_pat, max_depth, follow_symlinks)
+            require, exclude_pat, max_depth, follow_symlinks, children_only)
 
     if pchanges:
         ret['changes'].update(pchanges)
@@ -3555,7 +3559,7 @@ def directory(name,
                             ret, _ = __salt__['file.check_perms'](
                                 full, ret, user, group, file_mode, None, follow_symlinks)
                     except CommandExecutionError as exc:
-                        if not exc.strerror.endswith('does not exist'):
+                        if not exc.strerror.startswith('Path not found'):
                             errors.append(exc.strerror)
 
             if check_dirs:
