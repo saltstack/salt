@@ -218,7 +218,7 @@ import pprint
 import socket
 
 # Import Salt Libs
-import salt.utils.versions.LooseVersion as _LooseVersion
+import salt.utils.versions
 import salt.config as config
 from salt.ext import six
 from salt.exceptions import (
@@ -235,7 +235,7 @@ try:
     import shade.exc
     import os_client_config
     HAS_SHADE = (
-        _LooseVersion(shade.__version__) >= _LooseVersion('1.19.0'),
+        salt.utils.versions._LooseVersion(shade.__version__) >= salt.utils.versions._LooseVersion('1.19.0'),
         'Please install newer version of shade: >= 1.19.0'
     )
 except ImportError:
