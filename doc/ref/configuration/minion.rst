@@ -298,7 +298,7 @@ connected master in the configuration. :conf_minion:`master_alive_interval`
 must also be set. This is used to keep track of which masters are currently
 connected.
 
-.. code_block:: yaml
+.. code-block:: yaml
 
     master_return_strategy: source
 
