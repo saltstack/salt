@@ -21,7 +21,6 @@ import salt.utils.data
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-@skipIf(sys.platform != 'solaris', 'Skip when not running on Solaris')
 class IpsTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.solarisips
@@ -172,7 +171,7 @@ class IpsTestCase(TestCase, LoaderModuleMockMixin):
         Test installing a package that is already installed
         '''
         result = None
-        expected_result = 'Package already installed.'
+        expected_result = {}
         with patch.object(solarisips, 'is_installed', return_value=True):
             result = solarisips.install(name='less')
         self.assertEqual(result, expected_result)
