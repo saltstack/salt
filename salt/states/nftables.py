@@ -336,18 +336,18 @@ def insert(name, family='ipv4', **kwargs):
         return res
     rule = res['rule']
 
-    res  = __salt__['nftables.build_rule'](full=True,
-                                           family=family,
-                                           command='insert',
-                                           **kwargs)
+    res = __salt__['nftables.build_rule'](full=True,
+                                          family=family,
+                                          command='insert',
+                                          **kwargs)
     if not res['result']:
         return res
     command = res['rule']
 
     res = __salt__['nftables.check'](kwargs['table'],
-                                    kwargs['chain'],
-                                    rule,
-                                    family)
+                                     kwargs['chain'],
+                                     rule,
+                                     family)
     if res['result']:
         ret['result'] = True
         ret['comment'] = 'nftables rule for {0} already set for {1} ({2})'.format(

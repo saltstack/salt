@@ -764,7 +764,7 @@ def append(table='filter', chain=None, rule=None, family='ipv4'):
             rule='tcp dport 22 log accept' \\
             family=ipv6
     '''
-    ret = {'comment': 'Failed to append rule {0} to chain {0} in table {1}.'.format(rule, chain, table),
+    ret = {'comment': 'Failed to append rule {0} to chain {1} in table {2}.'.format(rule, chain, table),
            'result': False}
 
     if not chain:
