@@ -99,6 +99,15 @@ at some point be deprecated in favor of a more generic `firewall` state.
         - sport: 1025:65535
         - save: True
 
+    output:
+      nftables.chain_present:
+        - family: ip
+        - table: filter
+
+    output:
+      nftables.chain_absent:
+        - family: ip
+        - table: filter
 
 '''
 from __future__ import absolute_import, print_function, unicode_literals

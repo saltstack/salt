@@ -156,14 +156,14 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
         kwargs['dport'] = six.text_type(kwargs['dport'])
         if ':' in kwargs['dport']:
             kwargs['dport'] = kwargs['dport'].replace(':', '-')
-        rule += 'dport {{ {0}}} '.format(kwargs['dport'])
+        rule += 'dport {{ {0} }} '.format(kwargs['dport'])
         del kwargs['dport']
 
     if 'sport' in kwargs:
         kwargs['sport'] = six.text_type(kwargs['sport'])
         if ':' in kwargs['sport']:
             kwargs['sport'] = kwargs['sport'].replace(':', '-')
-        rule += 'sport {{ {0}}} '.format(kwargs['sport'])
+        rule += 'sport {{ {0} }} '.format(kwargs['sport'])
         del kwargs['sport']
 
     if 'dports' in kwargs:
@@ -175,7 +175,7 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
         _dports.sort(reverse=True)
         kwargs['dports'] = ', '.join(six.text_type(x) for x in _dports)
 
-        rule += 'dport {{ {0}}} '.format(kwargs['dports'])
+        rule += 'dport {{ {0} }} '.format(kwargs['dports'])
         del kwargs['dports']
 
     if 'sports' in kwargs:
@@ -227,6 +227,8 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
     # Insert the protocol prior to dport or sport
     rule = rule.replace('dport', '{0} dport'.format(proto))
     rule = rule.replace('sport', '{0} sport'.format(proto))
+
+    ret['rule'] = rule
 
     if full in ['True', 'true']:
 
@@ -398,7 +400,6 @@ def get_rule_handle(table='filter', chain=None, rule=None, family='ipv4'):
         return ret
 
     res = check_table(table, family=family)
-    log.debug('=== res %s ===', res)
     if not res['result']:
         return res
 
@@ -721,15 +722,11 @@ def delete_chain(table='filter', chain=None, family='ipv4'):
 
     res = check_table(table, family=family)
     if not res['result']:
-        ret['comment'] = 'Table {0} in family {1} does not exist'.\
-                format(table, family)
-        return ret
+        return res
 
     res = check_chain(table, chain, family=family)
     if not res['result']:
-        ret['comment'] = 'Chain {0} in table {1} in family {2} already exists'.\
-                format(chain, table, family)
-        return ret
+        return res
 
     nft_family = _NFTABLES_FAMILIES[family]
     cmd = '{0} delete chain {1} {2} {3}'.\
