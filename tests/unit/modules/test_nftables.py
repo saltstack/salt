@@ -386,9 +386,27 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(nftables.delete_chain(chain='input'), ret)
 
         ret = {'result': False,
-               'comment': 'Chain input in table filter in family ipv4 already exists'}
+               'comment': 'Chain input in table filter in family ipv4 could not be deleted'}
         mock = MagicMock(return_value='table ip filter')
-        with patch.dict(nftables.__salt__, {'cmd.run': mock}):
+        with patch.dict(nftables.__salt__, {'cmd.run': mock}), \
+                patch('salt.modules.nftables.check_table',
+                      MagicMock(return_value={'result': True,
+                                              'comment': ''})), \
+                patch('salt.modules.nftables.check_chain',
+                      MagicMock(return_value={'result': True,
+                                              'comment': ''})):
+            self.assertEqual(nftables.delete_chain(chain='input'), ret)
+
+        ret = {'result': True,
+               'comment': 'Chain input in table filter in family ipv4 deleted'}
+        mock = MagicMock(return_value='')
+        with patch.dict(nftables.__salt__, {'cmd.run': mock}), \
+                patch('salt.modules.nftables.check_table',
+                      MagicMock(return_value={'result': True,
+                                              'comment': ''})), \
+                patch('salt.modules.nftables.check_chain',
+                      MagicMock(return_value={'result': True,
+                                              'comment': ''})):
             self.assertEqual(nftables.delete_chain(chain='input'), ret)
 
     def test_delete_chain_variables(self):
