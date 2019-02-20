@@ -110,7 +110,6 @@ class GemModuleTest(ModuleCase):
         gem.sources_add
         gem.sources_remove
         '''
-
         source = 'http://production.cf.rubygems.org'
 
         self.run_function('gem.sources_add', [source])
