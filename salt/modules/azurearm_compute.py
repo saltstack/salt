@@ -125,7 +125,7 @@ def availability_set_create_or_update(name, resource_group, **kwargs):  # pylint
     try:
         setmodel = __utils__['azurearm.create_object_model']('compute', 'AvailabilitySet', **kwargs)
     except TypeError as exc:
-        result = {'error': 'The object model could not be built. ({1})'.format(str(exc))}
+        result = {'error': 'The object model could not be built. ({0})'.format(str(exc))}
         return result
 
     try:
