@@ -321,9 +321,11 @@ def sendline(command, method='cli_show_ascii', **kwargs):
     '''
     smethods = ['cli_show_ascii', 'cli_show', 'cli_conf']
     if method not in smethods:
-        msg = "INPUT ERROR: Second argument 'method' must be one of {}".format(smethods)
-        msg = msg + '\n  Value passed: {}'.format(method)
-        msg = msg + '\n  Hint: White space separated commands should be wrapped by double quotes'
+        msg = """
+        INPUT ERROR: Second argument 'method' must be one of {}
+        Value passed: {}
+        Hint: White space separated commands should be wrapped by double quotes
+        """.format(smethods, method)
         return msg
 
     if salt.utils.platform.is_proxy():
@@ -353,9 +355,11 @@ def show(commands, raw_text=True, **kwargs):
         salt 'regular-minion' nxos.show 'show interfaces' host=sw01.example.com username=test password=test
     '''
     if not isinstance(raw_text, bool):
-        msg = "INPUT ERROR: Second argument 'raw_text' must be either True or False"
-        msg = msg + '\n  Value passed: {}'.format(raw_text)
-        msg = msg + '\n  Hint: White space separated show commands should be wrapped by double quotes'
+        msg = """
+        INPUT ERROR: Second argument 'raw_text' must be either True or False
+        Value passed: {}
+        Hint: White space separated show commands should be wrapped by double quotes
+        """.format(raw_text)
         return msg
 
     if raw_text:
