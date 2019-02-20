@@ -6754,7 +6754,9 @@ def copy_(name,
         elif not __opts__['test'] and changed:
             # Remove the destination to prevent problems later
             try:
-                __salt__['file.remove'](name)
+                # On windows, if a file has the read-only attribute then we are unable
+                # to complete this copy unless force is set to true.
+                __salt__['file.remove'](name, force=force)
             except (IOError, OSError):
                 return _error(
                     ret,
