@@ -22,6 +22,9 @@ from tests.support.helpers import (
 from tests.support.unit import skipIf
 from tests.support.runtests import RUNTIME_VARS
 
+# Import 3rd party libs
+import salt.ext.six as six
+
 # Import salt libs
 import salt.utils.files
 import salt.utils.path
@@ -78,6 +81,7 @@ class CPModuleTest(ModuleCase):
         self.assertNotIn('bacon', data)
 
     @with_tempfile()
+    @skipIf(salt.utils.platform.is_windows() and six.PY3, 'This test hangs on Windows on Py3')
     def test_get_file_templated_paths(self, tgt):
         '''
         cp.get_file
