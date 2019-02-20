@@ -231,15 +231,15 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
     if full in ['True', 'true']:
 
         if not table:
-            ret['comment'] = 'Error: Table needs to be specified'
+            ret['comment'] = 'Table needs to be specified'
             return ret
 
         if not chain:
-            ret['comment'] = 'Error: Chain needs to be specified'
+            ret['comment'] = 'Chain needs to be specified'
             return ret
 
         if not command:
-            ret['comment'] = 'Error: Command needs to be specified'
+            ret['comment'] = 'Command needs to be specified'
             return ret
 
         if command in ['Insert', 'insert', 'INSERT']:
@@ -379,35 +379,36 @@ def get_rule_handle(table='filter', chain=None, rule=None, family='ipv4'):
     .. code-block:: bash
 
         salt '*' nftables.get_rule_handle filter input \\
-            rule='input tcp dport 22 log accept'
+            rule='tcp dport 22 log accept'
 
         IPv6:
         salt '*' nftables.get_rule_handle filter input \\
-            rule='input tcp dport 22 log accept' \\
+            rule='tcp dport 22 log accept' \\
             family=ipv6
     '''
     ret = {'comment': '',
            'result': False}
 
     if not chain:
-        ret['comment'] = 'Error: Chain needs to be specified'
+        ret['comment'] = 'Chain needs to be specified'
         return ret
 
     if not rule:
-        ret['comment'] = 'Error: Rule needs to be specified'
+        ret['comment'] = 'Rule needs to be specified'
         return ret
 
-    if not check_table(table, family=family):
-        return 'Error: table {0} in family {1} does not exist'.\
-                format(table, family)
+    res = check_table(table, family=family)
+    log.debug('=== res %s ===', res)
+    if not res['result']:
+        return res
 
-    if not check_chain(table, chain, family=family):
-        return 'Error: chain {0} in table {1} in family {2} does not exist'.\
-                format(chain, table, family)
+    res = check_chain(table, chain, family=family)
+    if not res['result']:
+        return res
 
-    if not check(table, chain, rule, family=family):
-        return 'Error: rule {0} chain {1} in table {2} in family {3} does not exist'.\
-                format(rule, chain, table, family)
+    res = check(table, chain, rule, family=family)
+    if not res['result']:
+        return res
 
     nft_family = _NFTABLES_FAMILIES[family]
     cmd = '{0} --numeric --numeric --numeric --handle list chain {1} {2} {3}'.\
@@ -419,8 +420,9 @@ def get_rule_handle(table='filter', chain=None, rule=None, family='ipv4'):
     for r in rules:
         match = pat.search(r)
         if match:
-            return match.group('handle')
-    return 'Error: could not find rule {0}'.format(rule)
+            return {'result': True, 'handle': match.group('handle')}
+    return {'result': False,
+            'comment': 'Could not find rule {0}'.format(rule)}
 
 
 def check(table='filter', chain=None, rule=None, family='ipv4'):
@@ -437,33 +439,31 @@ def check(table='filter', chain=None, rule=None, family='ipv4'):
     .. code-block:: bash
 
         salt '*' nftables.check filter input \\
-            rule='input tcp dport 22 log accept'
+            rule='tcp dport 22 log accept'
 
         IPv6:
         salt '*' nftables.check filter input \\
-            rule='input tcp dport 22 log accept' \\
+            rule='tcp dport 22 log accept' \\
             family=ipv6
     '''
     ret = {'comment': '',
            'result': False}
 
     if not chain:
-        ret['comment'] = 'Error: Chain needs to be specified'
+        ret['comment'] = 'Chain needs to be specified'
         return ret
 
     if not rule:
-        ret['comment'] = 'Error: Rule needs to be specified'
+        ret['comment'] = 'Rule needs to be specified'
         return ret
 
-    if not check_table(table, family=family):
-        ret['comment'] = 'Table {0} in family {1} does not exist'.\
-                         format(table, family)
-        return ret
+    res = check_table(table, family=family)
+    if not res['result']:
+        return res
 
-    if not check_chain(table, chain, family=family):
-        ret['comment'] = 'Chain {0} in table {1} in family {2} does not exist'.\
-                         format(chain, table, family)
-        return ret
+    res = check_chain(table, chain, family=family)
+    if not res['result']:
+        return res
 
     nft_family = _NFTABLES_FAMILIES[family]
     cmd = '{0} --handle --numeric --numeric --numeric list chain {1} {2} {3}'.\
@@ -472,10 +472,10 @@ def check(table='filter', chain=None, rule=None, family='ipv4'):
     out = __salt__['cmd.run'](cmd, python_shell=False).find(search_rule)
 
     if out == -1:
-        ret['comment'] = 'Rule {0} chain {1} in table {2} in family {3} does not exist'.\
+        ret['comment'] = 'Rule {0} in chain {1} in table {2} in family {3} does not exist'.\
                          format(rule, chain, table, family)
     else:
-        ret['comment'] = 'Rule {0} chain {1} in table {2} in family {3} exists'.\
+        ret['comment'] = 'Rule {0} in chain {1} in table {2} in family {3} exists'.\
                          format(rule, chain, table, family)
         ret['result'] = True
     return ret
@@ -566,7 +566,7 @@ def new_table(table, family='ipv4'):
            'result': False}
 
     if not table:
-        ret['comment'] = 'Error: Table needs to be specified'
+        ret['comment'] = 'Table needs to be specified'
         return ret
 
     res = check_table(table, family=family)
@@ -665,7 +665,7 @@ def new_chain(table='filter', chain=None, table_type=None, hook=None, priority=N
 
     res = check_chain(table, chain, family=family)
     if res['result']:
-        ret['comment'] = 'Error: chain {0} in table {1} in family {2} already exists'.\
+        ret['comment'] = 'Chain {0} in table {1} in family {2} already exists'.\
                 format(chain, table, family)
         return ret
 
@@ -678,7 +678,7 @@ def new_chain(table='filter', chain=None, table_type=None, hook=None, priority=N
                     format(cmd, table_type, hook, priority)
         else:
             # Specify one, require all
-            ret['comment'] = 'Error: table_type, hook, and priority required.'
+            ret['comment'] = 'Table_type, hook, and priority required.'
             return ret
 
     out = __salt__['cmd.run'](cmd, python_shell=False)
@@ -721,13 +721,13 @@ def delete_chain(table='filter', chain=None, family='ipv4'):
 
     res = check_table(table, family=family)
     if not res['result']:
-        ret['comment'] = 'Error: table {0} in family {1} does not exist'.\
+        ret['comment'] = 'Table {0} in family {1} does not exist'.\
                 format(table, family)
         return ret
 
     res = check_chain(table, chain, family=family)
     if not res['result']:
-        ret['comment'] = 'Error: chain {0} in table {1} in family {2} already exists'.\
+        ret['comment'] = 'Chain {0} in table {1} in family {2} already exists'.\
                 format(chain, table, family)
         return ret
 
@@ -771,11 +771,11 @@ def append(table='filter', chain=None, rule=None, family='ipv4'):
            'result': False}
 
     if not chain:
-        ret['comment'] = 'Error: Chain needs to be specified'
+        ret['comment'] = 'Chain needs to be specified'
         return ret
 
     if not rule:
-        ret['comment'] = 'Error: Rule needs to be specified'
+        ret['comment'] = 'Rule needs to be specified'
         return ret
 
     res = check_table(table, family=family)
@@ -788,7 +788,7 @@ def append(table='filter', chain=None, rule=None, family='ipv4'):
 
     res = check(table, chain, rule, family=family)
     if res['result']:
-        ret['comment'] = 'Error: rule {0} chain {1} in table {2} in family {3} already exists'.\
+        ret['comment'] = 'Rule {0} chain {1} in table {2} in family {3} already exists'.\
                          format(rule, chain, table, family)
         return ret
 
@@ -823,10 +823,10 @@ def insert(table='filter', chain=None, position=None, rule=None, family='ipv4'):
     .. code-block:: bash
 
         salt '*' nftables.insert filter input \\
-            rule='input tcp dport 22 log accept'
+            rule='tcp dport 22 log accept'
 
         salt '*' nftables.insert filter input position=3 \\
-            rule='input tcp dport 22 log accept'
+            rule='tcp dport 22 log accept'
 
         IPv6:
         salt '*' nftables.insert filter input \\
@@ -841,11 +841,11 @@ def insert(table='filter', chain=None, position=None, rule=None, family='ipv4'):
            'result': False}
 
     if not chain:
-        ret['comment'] = 'Error: Chain needs to be specified'
+        ret['comment'] = 'Chain needs to be specified'
         return ret
 
     if not rule:
-        ret['comment'] = 'Error: Rule needs to be specified'
+        ret['comment'] = 'Rule needs to be specified'
         return ret
 
     res = check_table(table, family=family)
@@ -858,7 +858,7 @@ def insert(table='filter', chain=None, position=None, rule=None, family='ipv4'):
 
     res = check(table, chain, rule, family=family)
     if res['result']:
-        ret['comment'] = 'Error: rule {0} chain {1} in table {2} in family {3} already exists'.\
+        ret['comment'] = 'Rule {0} chain {1} in table {2} in family {3} already exists'.\
                          format(rule, chain, table, family)
         return ret
 
@@ -898,20 +898,20 @@ def delete(table, chain=None, position=None, rule=None, family='ipv4'):
         salt '*' nftables.delete filter input position=3
 
         salt '*' nftables.delete filter input \\
-            rule='input tcp dport 22 log accept'
+            rule='tcp dport 22 log accept'
 
         IPv6:
         salt '*' nftables.delete filter input position=3 family=ipv6
 
         salt '*' nftables.delete filter input \\
-            rule='input tcp dport 22 log accept' \\
+            rule='tcp dport 22 log accept' \\
             family=ipv6
     '''
     ret = {'comment': 'Failed to delete rule {0} in table {1}.'.format(rule, table),
            'result': False}
 
     if position and rule:
-        ret['comment'] = 'Error: Only specify a position or a rule, not both'
+        ret['comment'] = 'Only specify a position or a rule, not both'
         return ret
 
     res = check_table(table, family=family)
@@ -924,7 +924,7 @@ def delete(table, chain=None, position=None, rule=None, family='ipv4'):
 
     res = check(table, chain, rule, family=family)
     if not res['result']:
-        ret['comment'] = 'Error: rule {0} chain {1} in table {2} in family {3} does not exist'.\
+        ret['comment'] = 'Rule {0} chain {1} in table {2} in family {3} does not exist'.\
                          format(rule, chain, table, family)
         return ret
 

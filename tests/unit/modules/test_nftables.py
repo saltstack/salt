@@ -50,18 +50,18 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(nftables.build_rule(full='True'),
                          {'result': False,
                           'rule': '',
-                          'comment': 'Error: Table needs to be specified'})
+                          'comment': 'Table needs to be specified'})
 
         self.assertEqual(nftables.build_rule(table='filter', full='True'),
                          {'result': False,
                           'rule': '',
-                          'comment': 'Error: Chain needs to be specified'})
+                          'comment': 'Chain needs to be specified'})
 
         self.assertEqual(nftables.build_rule(table='filter', chain='input',
                                              full='True'),
                          {'result': False,
                           'rule': '',
-                         'comment': 'Error: Command needs to be specified'})
+                         'comment': 'Command needs to be specified'})
 
         self.assertEqual(nftables.build_rule(table='filter', chain='input',
                                              command='insert', position='3',
@@ -134,33 +134,46 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
         Test if it get the handle for a particular rule
         '''
         self.assertEqual(nftables.get_rule_handle(),
-                         'Error: Chain needs to be specified')
+                         {'result': False,
+                          'comment': 'Chain needs to be specified'})
 
         self.assertEqual(nftables.get_rule_handle(chain='input'),
-                         'Error: Rule needs to be specified')
+                         {'result': False,
+                          'comment': 'Rule needs to be specified'})
 
         _ru = 'input tcp dport 22 log accept'
-        ret = 'Error: table filter in family ipv4 does not exist'
+        ret = {'result': False,
+               'comment': 'Table filter in family ipv4 does not exist'}
         mock = MagicMock(return_value='')
         with patch.dict(nftables.__salt__, {'cmd.run': mock}):
             self.assertEqual(nftables.get_rule_handle(chain='input', rule=_ru),
                              ret)
 
-        ret = 'Error: chain input in table filter in family ipv4 does not exist'
+        ret = {'result': False,
+               'comment': 'Chain input in table filter in family ipv4 does not exist'}
         mock = MagicMock(return_value='table ip filter')
         with patch.dict(nftables.__salt__, {'cmd.run': mock}):
             self.assertEqual(nftables.get_rule_handle(chain='input', rule=_ru),
                              ret)
 
-        ret = ('Error: rule input tcp dport 22 log accept chain input'
-               ' in table filter in family ipv4 does not exist')
-        ret1 = 'Error: could not find rule input tcp dport 22 log accept'
+        ret = {'result': False,
+               'comment': ('Rule input tcp dport 22 log accept chain'
+                           ' input in table filter in family ipv4 does not exist')}
+        ret1 = {'result': False,
+                'comment': 'Could not find rule input tcp dport 22 log accept'}
         with patch.object(nftables, 'check_table',
-                          MagicMock(return_value=True)):
+                          MagicMock(return_value={'result': True,
+                                                  'comment': ''})):
             with patch.object(nftables, 'check_chain',
-                              MagicMock(return_value=True)):
+                              MagicMock(return_value={'result': True,
+                                                      'comment': ''})):
+                _ret1 = {'result': False,
+                         'comment': ('Rule input tcp dport 22 log accept'
+                                     ' chain input in table filter in'
+                                     ' family ipv4 does not exist')}
+                _ret2 = {'result': True, 'comment': ''}
                 with patch.object(nftables, 'check',
-                                  MagicMock(side_effect=[False, True])):
+                                  MagicMock(side_effect=[_ret1, _ret2])):
                     self.assertEqual(nftables.get_rule_handle(chain='input',
                                                               rule=_ru), ret)
 
@@ -179,33 +192,37 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
         '''
         self.assertEqual(nftables.check(),
                          {'result': False,
-                          'comment': 'Error: Chain needs to be specified'})
+                          'comment': 'Chain needs to be specified'})
 
         self.assertEqual(nftables.check(chain='input'),
                          {'result': False,
-                          'comment': 'Error: Rule needs to be specified'})
+                          'comment': 'Rule needs to be specified'})
 
-        _ru = 'input tcp dport 22 log accept'
+        _ru = 'tcp dport 22 log accept'
         ret = {'result': False,
-               'comment': 'Error: table filter in family ipv4 does not exist'}
+               'comment': 'Table filter in family ipv4 does not exist'}
         mock = MagicMock(return_value='')
         with patch.dict(nftables.__salt__, {'cmd.run': mock}):
             self.assertEqual(nftables.check(chain='input', rule=_ru), ret)
 
         mock = MagicMock(return_value='table ip filter')
         ret = {'result': False,
-               'comment': 'Error: chain input in table filter in family ipv4 does not exist'}
+               'comment': 'Chain input in table filter in family ipv4 does not exist'}
         with patch.dict(nftables.__salt__, {'cmd.run': mock}):
             self.assertEqual(nftables.check(chain='input', rule=_ru), ret)
 
         mock = MagicMock(return_value='table ip filter chain input {{')
+        ret = {'result': False, 'comment':
+               'Rule tcp dport 22 log accept in chain input in table filter in family ipv4 does not exist'}
         with patch.dict(nftables.__salt__, {'cmd.run': mock}):
-            self.assertFalse(nftables.check(chain='input', rule=_ru))
+            self.assertEqual(nftables.check(chain='input', rule=_ru), ret)
 
         r_val = 'table ip filter chain input {{ input tcp dport 22 log accept #'
         mock = MagicMock(return_value=r_val)
+        ret = {'result': True,
+               'comment': 'Rule tcp dport 22 log accept in chain input in table filter in family ipv4 exists'}
         with patch.dict(nftables.__salt__, {'cmd.run': mock}):
-            self.assertTrue(nftables.check(chain='input', rule=_ru))
+            self.assertEqual(nftables.check(chain='input', rule=_ru), ret)
 
     # 'check_chain' function tests: 1
 
@@ -259,7 +276,7 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
         '''
         self.assertEqual(nftables.new_table(table=None),
                          {'result': False,
-                          'comment': 'Error: Table needs to be specified'})
+                          'comment': 'Table needs to be specified'})
 
         mock = MagicMock(return_value='')
         ret = {'comment': 'Table nat in family ipv4 created', 'result': True}
@@ -326,7 +343,7 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(nftables.new_chain(chain='input'), ret)
 
         ret = {'result': False,
-               'comment': 'Error: chain input in table filter in family ipv4 already exists'}
+               'comment': 'Chain input in table filter in family ipv4 already exists'}
         mock = MagicMock(return_value='table ip filter chain input {{')
         with patch.dict(nftables.__salt__, {'cmd.run': mock}):
             self.assertEqual(nftables.new_chain(chain='input'), ret)
@@ -346,7 +363,7 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(nftables.new_chain(chain='input',
                                                 table_type='filter'),
                              {'result': False,
-                              'comment': 'Error: table_type, hook, and priority required.'})
+                              'comment': 'Table_type, hook, and priority required.'})
 
             self.assertTrue(nftables.new_chain(chain='input',
                                                table_type='filter',
@@ -363,13 +380,13 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
                           'comment': 'Chain needs to be specified'})
 
         ret = {'result': False,
-               'comment': 'Error: table filter in family ipv4 does not exist'}
+               'comment': 'Table filter in family ipv4 does not exist'}
         mock = MagicMock(return_value='')
         with patch.dict(nftables.__salt__, {'cmd.run': mock}):
             self.assertEqual(nftables.delete_chain(chain='input'), ret)
 
         ret = {'result': False,
-               'comment': 'Error: chain input in table filter in family ipv4 already exists'}
+               'comment': 'Chain input in table filter in family ipv4 already exists'}
         mock = MagicMock(return_value='table ip filter')
         with patch.dict(nftables.__salt__, {'cmd.run': mock}):
             self.assertEqual(nftables.delete_chain(chain='input'), ret)
@@ -398,11 +415,11 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
         '''
         self.assertEqual(nftables.append(),
                          {'result': False,
-                          'comment': 'Error: Chain needs to be specified'})
+                          'comment': 'Chain needs to be specified'})
 
         self.assertEqual(nftables.append(chain='input'),
                          {'result': False,
-                          'comment': 'Error: Rule needs to be specified'})
+                          'comment': 'Rule needs to be specified'})
 
         _ru = 'input tcp dport 22 log accept'
         ret = {'comment': 'Table filter in family ipv4 does not exist',
@@ -419,7 +436,7 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
 
         r_val = 'table ip filter chain input {{ input tcp dport 22 log accept #'
         mock = MagicMock(return_value=r_val)
-        _expected = {'comment': 'Error: rule input tcp dport 22 log accept chain input in table filter in family ipv4 already exists',
+        _expected = {'comment': 'Rule input tcp dport 22 log accept chain input in table filter in family ipv4 already exists',
                      'result': False}
         with patch.dict(nftables.__salt__, {'cmd.run': mock}):
             self.assertEqual(nftables.append(chain='input',
@@ -456,11 +473,11 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
         '''
         self.assertEqual(nftables.insert(),
                          {'result': False,
-                          'comment': 'Error: Chain needs to be specified'})
+                          'comment': 'Chain needs to be specified'})
 
         self.assertEqual(nftables.insert(chain='input'),
                          {'result': False,
-                          'comment': 'Error: Rule needs to be specified'})
+                          'comment': 'Rule needs to be specified'})
 
         _ru = 'input tcp dport 22 log accept'
         ret = {'result': False,
@@ -520,7 +537,7 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
         '''
         _ru = 'input tcp dport 22 log accept'
         ret = {'result': False,
-               'comment': 'Error: Only specify a position or a rule, not both'}
+               'comment': 'Only specify a position or a rule, not both'}
         self.assertEqual(nftables.delete(table='filter', chain='input',
                                          position='3', rule=_ru),
                          ret)
