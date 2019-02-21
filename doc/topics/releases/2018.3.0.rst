@@ -250,7 +250,7 @@ examples.
 
 .. note::
     git_pillar does not yet support variable update intervals, this is targeted
-    for the next feature release (Fluorine).
+    for the next feature release (2019.2.0).
 
 LDAP via External Authentication Changes
 ========================================

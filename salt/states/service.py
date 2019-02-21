@@ -120,20 +120,21 @@ def _enabled_used_error(ret):
     return ret
 
 
-def _enable(name, started, result=True, **kwargs):
+def _enable(name, started, result=True, skip_verify=False, **kwargs):
     '''
     Enable the service
     '''
     ret = {}
 
-    # is service available?
-    try:
-        if not _available(name, ret):
+    if not skip_verify:
+        # is service available?
+        try:
+            if not _available(name, ret):
+                return ret
+        except CommandExecutionError as exc:
+            ret['result'] = False
+            ret['comment'] = exc.strerror
             return ret
-    except CommandExecutionError as exc:
-        ret['result'] = False
-        ret['comment'] = exc.strerror
-        return ret
 
     # Set default expected result
     ret['result'] = result
@@ -222,21 +223,22 @@ def _enable(name, started, result=True, **kwargs):
     return ret
 
 
-def _disable(name, started, result=True, **kwargs):
+def _disable(name, started, result=True, skip_verify=False, **kwargs):
     '''
     Disable the service
     '''
     ret = {}
 
-    # is service available?
-    try:
-        if not _available(name, ret):
-            ret['result'] = True
+    if not skip_verify:
+        # is service available?
+        try:
+            if not _available(name, ret):
+                ret['result'] = True
+                return ret
+        except CommandExecutionError as exc:
+            ret['result'] = False
+            ret['comment'] = exc.strerror
             return ret
-    except CommandExecutionError as exc:
-        ret['result'] = False
-        ret['comment'] = exc.strerror
-        return ret
 
     # Set default expected result
     ret['result'] = result
@@ -423,19 +425,28 @@ def running(name,
     else:
         before_toggle_enable_status = True
 
+    unmask_ret = {'comment': ''}
+    if unmask:
+        unmask_ret = unmasked(name, unmask_runtime)
+
     # See if the service is already running
     if before_toggle_status:
-        ret['comment'] = 'The service {0} is already running'.format(name)
+        ret['comment'] = '\n'.join(
+            [_f for _f in ['The service {0} is already running'.format(name),
+                           unmask_ret['comment']] if _f]
+        )
         if enable is True and not before_toggle_enable_status:
-            ret.update(_enable(name, None, **kwargs))
+            ret.update(_enable(name, None, skip_verify=False, **kwargs))
         elif enable is False and before_toggle_enable_status:
-            ret.update(_disable(name, None, **kwargs))
+            ret.update(_disable(name, None, skip_verify=False, **kwargs))
         return ret
 
     # Run the tests
     if __opts__['test']:
         ret['result'] = None
-        ret['comment'] = 'Service {0} is set to start'.format(name)
+        ret['comment'] = '\n'.join(
+            [_f for _f in ['Service {0} is set to start'.format(name),
+                           unmask_ret['comment']] if _f])
         return ret
 
     # Conditionally add systemd-specific args to call to service.start
@@ -458,9 +469,9 @@ def running(name,
         ret['result'] = False
         ret['comment'] = 'Service {0} failed to start'.format(name)
         if enable is True:
-            ret.update(_enable(name, False, result=False, **kwargs))
+            ret.update(_enable(name, False, result=False, skip_verify=False, **kwargs))
         elif enable is False:
-            ret.update(_disable(name, False, result=False, **kwargs))
+            ret.update(_disable(name, False, result=False, skip_verify=False, **kwargs))
         return ret
 
     if init_delay:
@@ -485,15 +496,18 @@ def running(name,
         ret['result'] = False
 
     if enable is True:
-        ret.update(_enable(name, after_toggle_status, result=after_toggle_status, **kwargs))
+        ret.update(_enable(name, after_toggle_status, result=after_toggle_status, skip_verify=False, **kwargs))
     elif enable is False:
-        ret.update(_disable(name, after_toggle_status, result=after_toggle_status, **kwargs))
+        ret.update(_disable(name, after_toggle_status, result=after_toggle_status, skip_verify=False, **kwargs))
 
     if init_delay:
         ret['comment'] = (
             '{0}\nDelayed return for {1} seconds'
             .format(ret['comment'], init_delay)
         )
+
+    if unmask:
+        ret['comment'] = '\n'.join([ret['comment'], unmask_ret['comment']])
 
     return ret
 
@@ -574,9 +588,9 @@ def dead(name,
     if not before_toggle_status:
         ret['comment'] = 'The service {0} is already dead'.format(name)
         if enable is True and not before_toggle_enable_status:
-            ret.update(_enable(name, None, **kwargs))
+            ret.update(_enable(name, None, skip_verify=False, **kwargs))
         elif enable is False and before_toggle_enable_status:
-            ret.update(_disable(name, None, **kwargs))
+            ret.update(_disable(name, None, skip_verify=False, **kwargs))
         return ret
 
     # Run the tests
@@ -598,9 +612,9 @@ def dead(name,
         ret['result'] = False
         ret['comment'] = 'Service {0} failed to die'.format(name)
         if enable is True:
-            ret.update(_enable(name, True, result=False, **kwargs))
+            ret.update(_enable(name, True, result=False, skip_verify=False, **kwargs))
         elif enable is False:
-            ret.update(_disable(name, True, result=False, **kwargs))
+            ret.update(_disable(name, True, result=False, skip_verify=False, **kwargs))
         return ret
 
     if init_delay:
@@ -626,14 +640,16 @@ def dead(name,
         ret['comment'] = 'Service {0} was killed'.format(name)
 
     if enable is True:
-        ret.update(_enable(name, after_toggle_status, result=not after_toggle_status, **kwargs))
+        ret.update(_enable(name, after_toggle_status, result=not after_toggle_status, skip_verify=False, **kwargs))
     elif enable is False:
-        ret.update(_disable(name, after_toggle_status, result=not after_toggle_status, **kwargs))
+        ret.update(_disable(name, after_toggle_status, result=not after_toggle_status, skip_verify=False, **kwargs))
 
     return ret
 
 
-def enabled(name, **kwargs):
+def enabled(name,
+            skip_verify=False,
+            **kwargs):
     '''
     Ensure that the service is enabled on boot, only use this state if you
     don't want to manage the running process, remember that if you want to
@@ -642,17 +658,24 @@ def enabled(name, **kwargs):
 
     name
         The name of the init or rc script used to manage the service
+
+    skip_verify
+        Skip verifying that the service is available before enabling it.
+        ``True`` will skip the verification. The default is ``False``,
+        which will ensure the service is available before enabling it.
     '''
     ret = {'name': name,
            'changes': {},
            'result': True,
            'comment': ''}
 
-    ret.update(_enable(name, None, **kwargs))
+    ret.update(_enable(name, None, skip_verify=skip_verify, **kwargs))
     return ret
 
 
-def disabled(name, **kwargs):
+def disabled(name,
+            skip_verify=False,
+             **kwargs):
     '''
     Ensure that the service is disabled on boot, only use this state if you
     don't want to manage the running process, remember that if you want to
@@ -661,13 +684,18 @@ def disabled(name, **kwargs):
 
     name
         The name of the init or rc script used to manage the service
+
+    skip_verify
+        Skip verifying that the service is available before disabling it.
+        ``True`` will skip the verification. The default is ``False``,
+        which will ensure the service is available before disabling it.
     '''
     ret = {'name': name,
            'changes': {},
            'result': True,
            'comment': ''}
 
-    ret.update(_disable(name, None, **kwargs))
+    ret.update(_disable(name, None, skip_verify=skip_verify, **kwargs))
     return ret
 
 

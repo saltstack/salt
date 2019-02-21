@@ -13,7 +13,7 @@ import salt.daemons.masterapi as masterapi
 import salt.utils.platform
 
 # Import Salt Testing Libs
-from tests.support.paths import TMP_CONF_DIR
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     patch,
@@ -570,7 +570,7 @@ class RemoteFuncsTestCase(TestCase):
     '''
 
     def setUp(self):
-        opts = salt.config.master_config(os.path.join(TMP_CONF_DIR, 'master'))
+        opts = salt.config.master_config(os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'master'))
         self.funcs = masterapi.RemoteFuncs(opts)
         self.funcs.cache = FakeCache()
 

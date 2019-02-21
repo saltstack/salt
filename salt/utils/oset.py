@@ -87,7 +87,7 @@ class OrderedSet(collections.MutableSet):
         return OrderedSet(self)
 
     def __getstate__(self):
-        if len(self) == 0:
+        if not self.items:
             # The state can't be an empty list.
             # We need to return a truthy value, or else __setstate__ won't be run.
             #

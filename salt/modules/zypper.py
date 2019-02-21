@@ -41,6 +41,7 @@ import salt.utils.pkg
 import salt.utils.pkg.rpm
 import salt.utils.stringutils
 import salt.utils.systemd
+import salt.utils.versions
 from salt.utils.versions import LooseVersion
 import salt.utils.environment
 from salt.exceptions import CommandExecutionError, MinionError, SaltInvocationError
@@ -289,7 +290,7 @@ class _Zypper(object):
         self.__called = True
         if self.__xml:
             self.__cmd.append('--xmlout')
-        if not self.__refresh:
+        if not self.__refresh and '--no-refresh' not in args:
             self.__cmd.append('--no-refresh')
         if self.__root:
             self.__cmd.extend(['--root', self.__root])
@@ -309,7 +310,7 @@ class _Zypper(object):
             if self.__systemd_scope:
                 cmd.extend(['systemd-run', '--scope'])
             cmd.extend(self.__cmd)
-            log.debug("Calling Zypper: " + ' '.join(cmd))
+            log.debug('Calling Zypper: %s', ' '.join(cmd))
             self.__call_result = __salt__['cmd.run_all'](cmd, **kwargs)
             if self._check_result():
                 break
@@ -342,7 +343,7 @@ class _Zypper(object):
                 was_blocked = True
 
         if was_blocked:
-            __salt__['event.fire_master']({'success': not len(self.error_msg),
+            __salt__['event.fire_master']({'success': not self.error_msg,
                                            'info': self.error_msg or 'Zypper has been released'},
                                           self.TAG_RELEASED)
         if self.error_msg and not self.__no_raise and not self.__ignore_repo_failure:
@@ -652,7 +653,7 @@ def latest_version(*names, **kwargs):
             ret[name] = ''
 
     # Return a string if only one package name passed
-    if len(names) == 1 and len(ret):
+    if len(names) == 1 and ret:
         return ret[names[0]]
 
     return ret
@@ -960,7 +961,7 @@ def _get_configured_repos(root=None):
     if os.path.exists(repos):
         repos_cfg.read([repos + '/' + fname for fname in os.listdir(repos) if fname.endswith(".repo")])
     else:
-        log.warning('Repositories not found in {}'.format(repos))
+        log.warning('Repositories not found in %s', repos)
 
     return repos_cfg
 
@@ -1392,7 +1393,7 @@ def install(name=None,
     except MinionError as exc:
         raise CommandExecutionError(exc)
 
-    if pkg_params is None or len(pkg_params) == 0:
+    if not pkg_params:
         return {}
 
     version_num = Wildcard(__zypper__(root=root))(name, version)
@@ -1811,7 +1812,7 @@ def list_locks(root=None):
     except IOError:
         pass
     except Exception:
-        log.warning('Detected a problem when accessing {}'.format(_locks))
+        log.warning('Detected a problem when accessing %s', _locks)
 
     return locks
 
@@ -1845,6 +1846,50 @@ def clean_locks(root=None):
     return out
 
 
+def unhold(name=None, pkgs=None, **kwargs):
+    '''
+    Remove specified package lock.
+
+    root
+        operate on a different root directory.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.remove_lock <package name>
+        salt '*' pkg.remove_lock <package1>,<package2>,<package3>
+        salt '*' pkg.remove_lock pkgs='["foo", "bar"]'
+    '''
+    ret = {}
+    root = kwargs.get('root')
+    if (not name and not pkgs) or (name and pkgs):
+        raise CommandExecutionError('Name or packages must be specified.')
+    elif name:
+        pkgs = [name]
+
+    locks = list_locks(root)
+    try:
+        pkgs = list(__salt__['pkg_resource.parse_targets'](pkgs)[0].keys())
+    except MinionError as exc:
+        raise CommandExecutionError(exc)
+
+    removed = []
+    missing = []
+    for pkg in pkgs:
+        if locks.get(pkg):
+            removed.append(pkg)
+            ret[pkg]['comment'] = 'Package {0} is no longer held.'.format(pkg)
+        else:
+            missing.append(pkg)
+            ret[pkg]['comment'] = 'Package {0} unable to be unheld.'.format(pkg)
+
+    if removed:
+        __zypper__(root=root).call('rl', *removed)
+
+    return ret
+
+
 def remove_lock(packages, root=None, **kwargs):  # pylint: disable=unused-argument
     '''
     Remove specified package lock.
@@ -1860,7 +1905,7 @@ def remove_lock(packages, root=None, **kwargs):  # pylint: disable=unused-argume
         salt '*' pkg.remove_lock <package1>,<package2>,<package3>
         salt '*' pkg.remove_lock pkgs='["foo", "bar"]'
     '''
-
+    salt.utils.versions.warn_until('Sodium', 'This function is deprecated. Please use unhold() instead.')
     locks = list_locks(root)
     try:
         packages = list(__salt__['pkg_resource.parse_targets'](packages)[0].keys())
@@ -1881,6 +1926,54 @@ def remove_lock(packages, root=None, **kwargs):  # pylint: disable=unused-argume
     return {'removed': len(removed), 'not_found': missing}
 
 
+def hold(name=None, pkgs=None, **kwargs):
+    '''
+    Add a package lock. Specify packages to lock by exact name.
+
+    root
+        operate on a different root directory.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.add_lock <package name>
+        salt '*' pkg.add_lock <package1>,<package2>,<package3>
+        salt '*' pkg.add_lock pkgs='["foo", "bar"]'
+
+    :param name:
+    :param pkgs:
+    :param kwargs:
+    :return:
+    '''
+    ret = {}
+    root = kwargs.get('root')
+    if (not name and not pkgs) or (name and pkgs):
+        raise CommandExecutionError('Name or packages must be specified.')
+    elif name:
+        pkgs = [name]
+
+    locks = list_locks(root=root)
+    added = []
+    try:
+        pkgs = list(__salt__['pkg_resource.parse_targets'](pkgs)[0].keys())
+    except MinionError as exc:
+        raise CommandExecutionError(exc)
+
+    for pkg in pkgs:
+        ret[pkg] = {'name': pkg, 'changes': {}, 'result': False, 'comment': ''}
+        if not locks.get(pkg):
+            added.append(pkg)
+            ret[pkg]['comment'] = 'Package {0} is now being held.'.format(pkg)
+        else:
+            ret[pkg]['comment'] = 'Package {0} is already set to be held.'.format(pkg)
+
+    if added:
+        __zypper__(root=root).call('al', *added)
+
+    return ret
+
+
 def add_lock(packages, root=None, **kwargs):  # pylint: disable=unused-argument
     '''
     Add a package lock. Specify packages to lock by exact name.
@@ -1896,6 +1989,7 @@ def add_lock(packages, root=None, **kwargs):  # pylint: disable=unused-argument
         salt '*' pkg.add_lock <package1>,<package2>,<package3>
         salt '*' pkg.add_lock pkgs='["foo", "bar"]'
     '''
+    salt.utils.versions.warn_until('Sodium', 'This function is deprecated. Please use hold() instead.')
     locks = list_locks(root)
     added = []
     try:
