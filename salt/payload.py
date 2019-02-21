@@ -154,7 +154,7 @@ class Serial(object):
                 try:
                     ret = salt.utils.msgpack.loads(msg, use_list=True,
                                                    ext_hook=ext_type_decoder,
-                                                   encoding=encoding,
+                                                   raw=False,
                                                    _msgpack_module=msgpack)
                 except UnicodeDecodeError:
                     # msg contains binary data
