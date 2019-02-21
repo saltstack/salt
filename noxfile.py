@@ -41,7 +41,9 @@ def _create_ci_directories():
 
 def _install_requirements(session, *extra_requirements):
     # Install requirements
-    _requirements_files = []
+    _requirements_files = [
+        os.path.join(REPO_ROOT, 'requirements', 'pytest.txt')
+    ]
     if sys.platform.startswith('linux'):
         requirements_files = [
             os.path.join(REPO_ROOT, 'requirements', 'tests.txt')
@@ -49,7 +51,6 @@ def _install_requirements(session, *extra_requirements):
     elif sys.platform.startswith('win'):
         requirements_files = [
             os.path.join(REPO_ROOT, 'pkg', 'windows', 'req.txt'),
-            os.path.join(REPO_ROOT, 'pkg', 'windows', 'req_testing.txt'),
         ]
     elif sys.platform.startswith('darwin'):
         requirements_files = [
@@ -61,6 +62,10 @@ def _install_requirements(session, *extra_requirements):
         if not requirements_files:
             break
         requirements_file = requirements_files.pop(0)
+
+        if requirements_file not in _requirements_files:
+            _requirements_files.append(requirements_file)
+
         session.log('Processing {}'.format(requirements_file))
         with open(requirements_file) as rfh:  # pylint: disable=resource-leakage
             for line in rfh:
@@ -82,6 +87,7 @@ def _install_requirements(session, *extra_requirements):
 
 
 def _run_with_coverage(session, *test_cmd):
+    session.install('coverage')
     session.run('coverage', 'erase')
     python_path_env_var = os.environ.get('PYTHONPATH') or None
     if python_path_env_var is None:
