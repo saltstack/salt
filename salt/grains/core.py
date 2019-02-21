@@ -1464,6 +1464,7 @@ _OS_FAMILY_MAP = {
     'IDMS': 'Debian',
     'Funtoo': 'Gentoo',
     'AIX': 'AIX',
+    'TurnKey': 'Debian',
 }
 
 # Matches any possible format:
@@ -2187,14 +2188,13 @@ def fqdns():
     grains = {}
     fqdns = set()
 
-    addresses = salt.utils.network.ip_addrs(include_loopback=False,
-                                            interface_data=_INTERFACES)
-    addresses.extend(salt.utils.network.ip_addrs6(include_loopback=False,
-                                                  interface_data=_INTERFACES))
+    addresses = salt.utils.network.ip_addrs(include_loopback=False, interface_data=_get_interfaces())
+    addresses.extend(salt.utils.network.ip_addrs6(include_loopback=False, interface_data=_get_interfaces()))
     err_message = 'Exception during resolving address: %s'
     for ip in addresses:
         try:
-            fqdns.add(socket.getfqdn(socket.gethostbyaddr(ip)[0]))
+            name, aliaslist, addresslist = socket.gethostbyaddr(ip)
+            fqdns.update([socket.getfqdn(name)] + [als for als in aliaslist if salt.utils.network.is_fqdn(als)])
         except socket.herror as err:
             if err.errno == 0:
                 # No FQDN for this IP address, so we don't need to know this all the time.
@@ -2204,8 +2204,7 @@ def fqdns():
         except (socket.error, socket.gaierror, socket.timeout) as err:
             log.error(err_message, err)
 
-    grains['fqdns'] = sorted(list(fqdns))
-    return grains
+    return {"fqdns": sorted(list(fqdns))}
 
 
 def ip_fqdn():
