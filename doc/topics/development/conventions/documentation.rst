@@ -187,7 +187,7 @@ Link to :ref:`glossary entries <glossary>` using the `term role`_. A
 cross-reference should be added the first time a Salt-specific term is used in
 a document.
 
-.. _`term role`: http://sphinx-doc.org/markup/inline.html#role-term
+.. _`term role`: https://www.sphinx-doc.org/en/master/glossary.html#term-role
 
 .. code-block:: restructuredtext
 
@@ -252,7 +252,7 @@ to survive document renames or movement.
 
 Note, the ``:doc:`` role should *not* be used to link documents together.
 
-.. _`ref role`: http://sphinx-doc.org/markup/inline.html#role-ref
+.. _`ref role`: https://www.sphinx-doc.org/en/master/usage/restructuredtext/roles.html#role-ref
 
 
 .. _docs-ref-modules:
