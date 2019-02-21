@@ -322,8 +322,8 @@ def sendline(command, method='cli_show_ascii', **kwargs):
     smethods = ['cli_show_ascii', 'cli_show', 'cli_conf']
     if method not in smethods:
         msg = """
-        INPUT ERROR: Second argument 'method' must be one of {}
-        Value passed: {}
+        INPUT ERROR: Second argument 'method' must be one of {0}
+        Value passed: {1}
         Hint: White space separated commands should be wrapped by double quotes
         """.format(smethods, method)
         return msg
@@ -357,7 +357,7 @@ def show(commands, raw_text=True, **kwargs):
     if not isinstance(raw_text, bool):
         msg = """
         INPUT ERROR: Second argument 'raw_text' must be either True or False
-        Value passed: {}
+        Value passed: {0}
         Hint: White space separated show commands should be wrapped by double quotes
         """.format(raw_text)
         return msg
