@@ -14,7 +14,7 @@ This decision is pending further community discussion.
 
 Known Issues
 ============
-The following are known issues for the 2019.2.0 releaes and will be fixed for 2019.2.1:
+The following are known issues for the 2019.2.0 release and will be fixed for 2019.2.1:
 
 * `#51699`_
 
