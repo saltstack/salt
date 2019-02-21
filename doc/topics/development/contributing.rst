@@ -100,7 +100,8 @@ Fork a Repo Guide_>`_ and is well worth reading.
     .. note::
 
         If your change fixes a bug or implements a feature already filed in the
-        `issue tracker <GitHub issue tracker>`_, be sure to reference the issue
+        `issue tracker <https://guides.github.com/features/issues/>`_, be sure to
+	`reference the issue <https://help.github.com/en/articles/closing-issues-using-keywords>`_
         number in the commit message body.
 
     .. code-block:: bash
