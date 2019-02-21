@@ -3258,14 +3258,14 @@ def tail(path, lines):
 
             for i in range(lines):
                 while len(data) == 1 and ((blk_cnt * buffer_size) < size):
-                  blk_cnt += 1
-                  line = data[0]
-                  try:
-                      tail_fh.seek(-buffer_size * blk_cnt, os.SEEK_END)
-                      data = string.split(tail_fh.read(buffer_size) + line, os.linesep)
-                  except IOError:
-                    tail_fh.seek(0)
-                    data = string.split(tail_fh.read(size - (buffer_size * (blk_cnt - 1))) + line, os.linesep)
+                    blk_cnt += 1
+                    line = data[0]
+                    try:
+                        tail_fh.seek(-buffer_size * blk_cnt, os.SEEK_END)
+                        data = string.split(tail_fh.read(buffer_size) + line, os.linesep)
+                    except IOError:
+                        tail_fh.seek(0)
+                        data = string.split(tail_fh.read(size - (buffer_size * (blk_cnt - 1))) + line, os.linesep)
 
                 line = data[-1]
                 data.pop()
