@@ -1001,10 +1001,9 @@ class GitProvider(object):
                 pass
             target = self.opts.get('pillarenv') \
                 or self.opts.get('saltenv') \
+                or self.opts['{0}_base'.format(self.role)] \
                 or 'base'
-            return self.base \
-                if target == 'base' \
-                else six.text_type(target)
+            return target
         return self.branch
 
     def get_tree(self, tgt_env):
@@ -3006,7 +3005,8 @@ class GitPillar(GitBase):
                 elif repo.env:
                     env = repo.env
                 else:
-                    env = 'base' if repo.branch == repo.base else repo.get_checkout_target()
+                    repo_branch = repo.get_checkout_target()
+                    env = 'base' if repo.branch == repo_branch else repo_branch
                 if repo._mountpoint:
                     if self.link_mountpoint(repo):
                         self.pillar_dirs[repo.linkdir] = env
