@@ -617,6 +617,7 @@ def sync_output(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blackl
         refresh_modules()
     return ret
 
+
 sync_outputters = salt.utils.alias_function(sync_output, 'sync_outputters')
 
 
@@ -903,10 +904,11 @@ def refresh_pillar():
         ret = False  # Effectively a no-op, since we can't really return without an event system
     return ret
 
+
 pillar_refresh = salt.utils.alias_function(refresh_pillar, 'pillar_refresh')
 
 
-def refresh_modules(async=True):
+def refresh_modules(async=True):  # pylint: disable=W8606
     '''
     Signal the minion to refresh the module and grain data
 
@@ -921,7 +923,7 @@ def refresh_modules(async=True):
         salt '*' saltutil.refresh_modules
     '''
     try:
-        if async:
+        if async:  # pylint: disable=W8606
             #  If we're going to block, first setup a listener
             ret = __salt__['event.fire']({}, 'module_refresh')
         else:

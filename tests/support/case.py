@@ -141,14 +141,14 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         )
         return self.run_script('salt-ssh', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr, raw=True)
 
-    def run_run(self, arg_str, with_retcode=False, catch_stderr=False, async=False, timeout=60, config_dir=None):
+    def run_run(self, arg_str, with_retcode=False, catch_stderr=False, async=False, timeout=60, config_dir=None):  # pylint: disable=W8606
         '''
         Execute salt-run
         '''
         arg_str = '-c {0}{async_flag} -t {timeout} {1}'.format(config_dir or self.get_config_dir(),
                                                  arg_str,
                                                  timeout=timeout,
-                                                 async_flag=' --async' if async else '')
+                                                 async_flag=' --async' if async else '')  # pylint: disable=W8606
         return self.run_script('salt-run', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr)
 
     def run_run_plus(self, fun, *arg, **kwargs):
@@ -252,9 +252,9 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             if 'env' not in popen_kwargs:
                 popen_kwargs['env'] = os.environ.copy()
                 if sys.version_info[0] < 3:
-                    popen_kwargs['env'][b'PYTHONPATH'] = os.getcwd().encode()
+                    popen_kwargs['env'][b'PYTHONPATH'] = CODE_DIR.encode()
                 else:
-                    popen_kwargs['env']['PYTHONPATH'] = os.getcwd()
+                    popen_kwargs['env']['PYTHONPATH'] = CODE_DIR
         else:
             cmd = 'PYTHONPATH='
             python_path = os.environ.get('PYTHONPATH', None)
@@ -498,14 +498,14 @@ class ShellCase(ShellTestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixi
                                timeout=timeout,
                                raw=True)
 
-    def run_run(self, arg_str, with_retcode=False, catch_stderr=False, async=False, timeout=60, config_dir=None):
+    def run_run(self, arg_str, with_retcode=False, catch_stderr=False, async=False, timeout=60, config_dir=None):  # pylint: disable=W8606
         '''
         Execute salt-run
         '''
         arg_str = '-c {0}{async_flag} -t {timeout} {1}'.format(config_dir or self.get_config_dir(),
                                                                arg_str,
                                                                timeout=timeout,
-                                                               async_flag=' --async' if async else '')
+                                                               async_flag=' --async' if async else '')  # pylint: disable=W8606
         return self.run_script('salt-run',
                                arg_str,
                                with_retcode=with_retcode,

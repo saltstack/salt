@@ -95,6 +95,7 @@ def orchestrate(mods,
         ret['retcode'] = 1
     return ret
 
+
 # Aliases for orchestrate runner
 orch = salt.utils.alias_function(orchestrate, 'orch')
 sls = salt.utils.alias_function(orchestrate, 'sls')

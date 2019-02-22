@@ -682,6 +682,7 @@ def ping_all_connected_minions(opts):
         form = 'glob'
     client.cmd(tgt, 'test.ping', tgt_type=form)
 
+
 # test code for the ConCache class
 if __name__ == '__main__':
 
