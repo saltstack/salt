@@ -633,6 +633,7 @@ def _clean_dir(root, keep, exclude_pat):
     Clean out all of the files and directories in a directory (root) while
     preserving the files in a list (keep) and part of exclude_pat
     '''
+    root = os.path.normcase(root)
     real_keep = _find_keep_files(root, keep)
     removed = set()
 
