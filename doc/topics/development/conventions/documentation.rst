@@ -13,7 +13,7 @@ broadly, most of the narrative documentation is contained within the
 :blob:`doc` subdirectory and most of the reference and API documentation is
 written inline with Salt's Python code and extracted using a Sphinx extension.
 
-.. _`Sphinx`: http://sphinx-doc.org/
+.. _`Sphinx`: https://www.sphinx-doc.org/en/master/
 
 
 .. _docs-style:
@@ -206,7 +206,7 @@ occasionally useful to manually add items to the index.
 One method is to use the `index directive`_ above the document or section that
 should appear in the index.
 
-.. _`index directive`: http://sphinx-doc.org/markup/misc.html#directive-index
+.. _`index directive`: https://www.sphinx-doc.org/en/master/usage/restructuredtext/directives.html?highlight=index%20directive#index-generating-markup
 
 .. code-block:: restructuredtext
 
@@ -217,7 +217,7 @@ Another method is to use the `index role`_ inline with the text that should
 appear in the index. The index entry is created and the target text is left
 otherwise intact.
 
-.. _`index role`: http://sphinx-doc.org/markup/misc.html#role-index
+.. _`index role`: http://www.sphinx-doc.org/en/master/usage/restructuredtext/basics.html#role-index
 
 .. code-block:: restructuredtext
 
