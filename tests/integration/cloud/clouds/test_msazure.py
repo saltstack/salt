@@ -9,7 +9,7 @@ import os
 
 # Import Salt Testing Libs
 from tests.support.case import ShellCase
-from tests.support.paths import FILES
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
 from tests.support.helpers import expensiveTest, generate_random_name
 
@@ -52,12 +52,12 @@ def __has_required_azure():
 
 @skipIf(HAS_AZURE is False, 'These tests require the Azure Python SDK to be installed.')
 @skipIf(__has_required_azure() is False, 'The Azure Python SDK must be >= 0.11.1.')
+@expensiveTest
 class AzureTest(ShellCase):
     '''
     Integration tests for the Azure cloud provider in Salt-Cloud
     '''
 
-    @expensiveTest
     def setUp(self):
         '''
         Sets up the test requirements
@@ -77,7 +77,7 @@ class AzureTest(ShellCase):
         # check if subscription_id and certificate_path are present in provider file
         provider_config = cloud_providers_config(
             os.path.join(
-                FILES,
+                RUNTIME_VARS.FILES,
                 'conf',
                 'cloud.providers.d',
                 PROVIDER_NAME + '.conf'

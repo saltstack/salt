@@ -5,10 +5,12 @@ IPC transport classes
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+import errno
 import logging
 import socket
 import weakref
 import time
+import threading
 
 # Import 3rd-party libs
 import msgpack
@@ -87,10 +89,11 @@ class IPCServer(object):
     A Tornado IPC server very similar to Tornado's TCPServer class
     but using either UNIX domain sockets or TCP sockets
     '''
-    def __init__(self, socket_path, io_loop=None, payload_handler=None):
+    def __init__(self, opts, socket_path, io_loop=None, payload_handler=None):
         '''
         Create a new Tornado IPC server
 
+        :param dict opts: Salt options
         :param str/int socket_path: Path on the filesystem for the
                                     socket to bind to. This socket does
                                     not need to exist prior to calling
@@ -103,6 +106,7 @@ class IPCServer(object):
         :param func payload_handler: A function to customize handling of
                                      incoming data.
         '''
+        self.opts = opts
         self.socket_path = socket_path
         self._started = False
         self.payload_handler = payload_handler
@@ -123,12 +127,17 @@ class IPCServer(object):
         if isinstance(self.socket_path, int):
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            if self.opts.get('ipc_so_sndbuf'):
+                self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, self.opts['ipc_so_sndbuf'])
+            if self.opts.get('ipc_so_rcvbuf'):
+                self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, self.opts['ipc_so_rcvbuf'])
             self.sock.setblocking(0)
             self.sock.bind(('127.0.0.1', self.socket_path))
             # Based on default used in tornado.netutil.bind_sockets()
-            self.sock.listen(128)
+            self.sock.listen(self.opts['ipc_so_backlog'])
         else:
-            self.sock = tornado.netutil.bind_unix_socket(self.socket_path)
+            # sndbuf/rcvbuf does not apply to unix sockets
+            self.sock = tornado.netutil.bind_unix_socket(self.socket_path, backlog=self.opts['ipc_so_backlog'])
 
         with salt.utils.asynchronous.current_ioloop(self.io_loop):
             tornado.netutil.add_accept_handler(
@@ -217,7 +226,12 @@ class IPCServer(object):
             self.sock.close()
 
     def __del__(self):
-        self.close()
+        try:
+            self.close()
+        except TypeError:
+            # This is raised when Python's GC has collected objects which
+            # would be needed when calling self.close()
+            pass
 
 
 class IPCClient(object):
@@ -255,9 +269,14 @@ class IPCClient(object):
             client = object.__new__(cls)
             # FIXME
             client.__singleton_init__(io_loop=io_loop, socket_path=socket_path)
+            client._instance_key = key
             loop_instance_map[key] = client
+            client._refcount = 1
+            client._refcount_lock = threading.RLock()
         else:
             log.debug('Re-using IPCClient for %s', key)
+            with client._refcount_lock:
+                client._refcount += 1
         return client
 
     def __singleton_init__(self, socket_path, io_loop=None):
@@ -353,20 +372,45 @@ class IPCClient(object):
                 yield tornado.gen.sleep(1)
 
     def __del__(self):
-        self._close()
+        try:
+            with self._refcount_lock:
+                # Make sure we actually close no matter if something
+                # went wrong with our ref counting
+                self._refcount = 1
+            try:
+                self.close()
+            except socket.error as exc:
+                if exc.errno != errno.EBADF:
+                    # If its not a bad file descriptor error, raise
+                    raise
+        except TypeError:
+            # This is raised when Python's GC has collected objects which
+            # would be needed when calling self.close()
+            pass
 
-    def _close(self):
+    def close(self):
         '''
         Routines to handle any cleanup before the instance shuts down.
         Sockets and filehandles should be closed explicitly, to prevent
         leaks.
-
-        This class is a singleton so close have to be called only once during
-        garbage collection when nobody uses this instance.
         '''
         if self._closing:
             return
+
+        if self._refcount > 1:
+            # Decrease refcount
+            with self._refcount_lock:
+                self._refcount -= 1
+            log.debug(
+                'This is not the last %s instance. Not closing yet.',
+                self.__class__.__name__
+            )
+            return
+
         self._closing = True
+
+        log.debug('Closing %s instance', self.__class__.__name__)
+
         if self.stream is not None and not self.stream.closed():
             self.stream.close()
 
@@ -374,11 +418,12 @@ class IPCClient(object):
         # that a closed entry may not be reused.
         # This forces this operation even if the reference
         # count of the entry has not yet gone to zero.
-        if self.io_loop in IPCClient.instance_map:
-            loop_instance_map = IPCClient.instance_map[self.io_loop]
-            key = six.text_type(self.socket_path)
-            if key in loop_instance_map:
-                del loop_instance_map[key]
+        if self.io_loop in self.__class__.instance_map:
+            loop_instance_map = self.__class__.instance_map[self.io_loop]
+            if self._instance_key in loop_instance_map:
+                del loop_instance_map[self._instance_key]
+            if not loop_instance_map:
+                del self.__class__.instance_map[self.io_loop]
 
 
 class IPCMessageClient(IPCClient):
@@ -503,12 +548,17 @@ class IPCMessagePublisher(object):
         if isinstance(self.socket_path, int):
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            if self.opts.get('ipc_so_sndbuf'):
+                self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, self.opts['ipc_so_sndbuf'])
+            if self.opts.get('ipc_so_rcvbuf'):
+                self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, self.opts['ipc_so_rcvbuf'])
             self.sock.setblocking(0)
             self.sock.bind(('127.0.0.1', self.socket_path))
             # Based on default used in tornado.netutil.bind_sockets()
-            self.sock.listen(128)
+            self.sock.listen(self.opts['ipc_so_backlog'])
         else:
-            self.sock = tornado.netutil.bind_unix_socket(self.socket_path)
+            # sndbuf/rcvbuf does not apply to unix sockets
+            self.sock = tornado.netutil.bind_unix_socket(self.socket_path, backlog=self.opts['ipc_so_backlog'])
 
         with salt.utils.asynchronous.current_ioloop(self.io_loop):
             tornado.netutil.add_accept_handler(
@@ -534,7 +584,7 @@ class IPCMessagePublisher(object):
         '''
         Send message to all connected sockets
         '''
-        if not len(self.streams):
+        if not self.streams:
             return
 
         pack = salt.transport.frame.frame_msg_ipc(msg, raw_body=True)
@@ -579,7 +629,12 @@ class IPCMessagePublisher(object):
             self.sock.close()
 
     def __del__(self):
-        self.close()
+        try:
+            self.close()
+        except TypeError:
+            # This is raised when Python's GC has collected objects which
+            # would be needed when calling self.close()
+            pass
 
 
 class IPCMessageSubscriber(IPCClient):
@@ -740,25 +795,19 @@ class IPCMessageSubscriber(IPCClient):
                 yield tornado.gen.sleep(1)
         yield self._read_async(callback)
 
-    def _close(self):
+    def close(self):
         '''
         Routines to handle any cleanup before the instance shuts down.
         Sockets and filehandles should be closed explicitly, to prevent
         leaks.
-
-        This class is a singleton so close have to be called only once during
-        garbage collection when nobody uses this instance.
         '''
         if not self._closing:
-            IPCClient._close(self)
-            # This will prevent this message from showing up:
-            # '[ERROR   ] Future exception was never retrieved:
-            # StreamClosedError'
-            if self._read_sync_future is not None and self._read_sync_future.done():
-                self._read_sync_future.exception()
-            if self._read_stream_future is not None and self._read_stream_future.done():
-                self._read_stream_future.exception()
-
-    def __del__(self):
-        if IPCMessageSubscriber in globals():
-            self._close()
+            IPCClient.close(self)
+            if self._closing:
+                # This will prevent this message from showing up:
+                # '[ERROR   ] Future exception was never retrieved:
+                # StreamClosedError'
+                if self._read_sync_future is not None and self._read_sync_future.done():
+                    self._read_sync_future.exception()
+                if self._read_stream_future is not None and self._read_stream_future.done():
+                    self._read_stream_future.exception()

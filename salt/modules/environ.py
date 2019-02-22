@@ -69,10 +69,7 @@ def setval(key, val, false_unsets=False, permanent=False):
             permanent_key = r'SYSTEM\CurrentControlSet\Control\Session Manager\Environment'
 
     if not isinstance(key, six.string_types):
-        log.debug(
-            '{0}: \'key\' argument is not a string type: \'{1}\''
-            .format(__name__, key)
-        )
+        log.debug('%s: \'key\' argument is not a string type: \'%s\'', __name__, key)
     if val is False:
         if false_unsets is True:
             try:
@@ -82,9 +79,8 @@ def setval(key, val, false_unsets=False, permanent=False):
                 return None
             except Exception as exc:
                 log.error(
-                    '{0}: Exception occurred when unsetting '
-                    'environ key \'{1}\': \'{2}\''
-                    .format(__name__, key, exc)
+                    '%s: Exception occurred when unsetting '
+                    'environ key \'%s\': \'%s\'', __name__, key, exc
                 )
                 return False
         else:
@@ -97,16 +93,14 @@ def setval(key, val, false_unsets=False, permanent=False):
             return os.environ[key]
         except Exception as exc:
             log.error(
-                '{0}: Exception occurred when setting'
-                'environ key \'{1}\': \'{2}\''
-                .format(__name__, key, exc)
+                '%s: Exception occurred when setting'
+                'environ key \'%s\': \'%s\'', __name__, key, exc
             )
             return False
     else:
         log.debug(
-            '{0}: \'val\' argument for key \'{1}\' is not a string '
-            'or False: \'{2}\''
-            .format(__name__, key, val)
+            '%s: \'val\' argument for key \'%s\' is not a string '
+            'or False: \'%s\'', __name__, key, val
         )
         return False
 
@@ -161,8 +155,8 @@ def setenv(environ, false_unsets=False, clear_all=False, update_minion=False, pe
     ret = {}
     if not isinstance(environ, dict):
         log.debug(
-            '{0}: \'environ\' argument is not a dict: \'{1}\''
-            .format(__name__, environ)
+            '%s: \'environ\' argument is not a dict: \'%s\'',
+            __name__, environ
         )
         return False
     if clear_all is True:
@@ -177,9 +171,8 @@ def setenv(environ, false_unsets=False, clear_all=False, update_minion=False, pe
             ret[key] = setval(key, val, false_unsets, permanent=permanent)
         else:
             log.debug(
-                '{0}: \'val\' argument for key \'{1}\' is not a string '
-                'or False: \'{2}\''
-                .format(__name__, key, val)
+                '%s: \'val\' argument for key \'%s\' is not a string '
+                'or False: \'%s\'', __name__, key, val
             )
             return False
 
@@ -213,10 +206,7 @@ def get(key, default=''):
         salt '*' environ.get baz default=False
     '''
     if not isinstance(key, six.string_types):
-        log.debug(
-            '{0}: \'key\' argument is not a string type: \'{1}\''
-            .format(__name__, key)
-        )
+        log.debug('%s: \'key\' argument is not a string type: \'%s\'', __name__, key)
         return False
     return os.environ.get(key, default)
 
@@ -241,10 +231,7 @@ def has_value(key, value=None):
         salt '*' environ.has_value foo
     '''
     if not isinstance(key, six.string_types):
-        log.debug(
-            '{0}: \'key\' argument is not a string type: \'{1}\''
-            .format(__name__, key)
-        )
+        log.debug('%s: \'key\' argument is not a string type: \'%s\'', __name__, key)
         return False
     try:
         cur_val = os.environ[key]
@@ -286,8 +273,8 @@ def item(keys, default=''):
         key_list = keys
     else:
         log.debug(
-            '{0}: \'keys\' argument is not a string or list type: \'{1}\''
-            .format(__name__, keys)
+            '%s: \'keys\' argument is not a string or list type: \'%s\'',
+            __name__, keys
         )
     for key in key_list:
         ret[key] = os.environ.get(key, default)
