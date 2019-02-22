@@ -3007,6 +3007,7 @@ class GitPillar(GitBase):
                 else:
                     repo_branch = repo.get_checkout_target()
                     env = 'base' if repo.branch == repo_branch else repo_branch
+
                 if repo._mountpoint:
                     if self.link_mountpoint(repo):
                         self.pillar_dirs[repo.linkdir] = env
