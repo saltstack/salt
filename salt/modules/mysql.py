@@ -584,7 +584,7 @@ def quote_identifier(identifier, for_grants=False):
     '''
     if for_grants:
         return '`' + identifier.replace('`', '``').replace('_', r'\_') \
-            .replace('%', r'\%%') + '`'
+            .replace('%', r'%%') + '`'
     else:
         return '`' + identifier.replace('`', '``').replace('%', '%%') + '`'
 
