@@ -15,6 +15,7 @@ from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import patch, NO_MOCK, NO_MOCK_REASON
 from tests.support.runtests import RUNTIME_VARS
+from tests.support.paths import TMP
 
 # Import Salt libs
 import salt.fileserver.roots as roots
@@ -177,3 +178,20 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMix
         finally:
             if self.test_symlink_list_file_roots:
                 self.opts['file_roots'] = orig_file_roots
+
+    def test_dynamic_file_roots(self):
+        dyn_root_dir = tempfile.mkdtemp(dir=TMP)
+        top_sls = os.path.join(dyn_root_dir, 'top.sls')
+        with salt.utils.files.fopen(top_sls, 'w') as fp_:
+            fp_.write("{{saltenv}}:\n  '*':\n    - dynamo\n")
+        dynamo_sls = os.path.join(dyn_root_dir, 'dynamo.sls')
+        with salt.utils.files.fopen(dynamo_sls, 'w') as fp_:
+            fp_.write("foo:\n  test.nop\n")
+        opts = {'file_roots': copy.copy(self.opts['file_roots'])}
+        opts['file_roots']['__env__'] = [dyn_root_dir]
+        with patch.dict(roots.__opts__, opts):
+            ret1 = roots.find_file('dynamo.sls', 'dyn')
+            ret2 = roots.file_list({'saltenv': 'dyn'})
+        self.assertEqual('dynamo.sls', ret1['rel'])
+        self.assertIn('top.sls', ret2)
+        self.assertIn('dynamo.sls', ret2)
