@@ -14,7 +14,8 @@ end
 
 group :windows do
   gem 'winrm', '~>2.0'
-  gem 'winrm-fs', '~>1.3.1'
+#  gem 'winrm-fs', '~>1.3.1'
+  gem 'winrm-fs', :git => 'https://github.com/s0undt3ch/winrm-fs.git', :branch => 'hotfix/saltstack-ci'
 end
 
 group :ec2 do
