@@ -632,13 +632,7 @@ def system_information():
         '''
         Return host system version.
         '''
-        if LINUX_DIST_AVAIL:
-            lin_ver = linux_distribution()
-        else:
-            lin_ver = ('Unknown OS Name',
-                       'Unknown OS Release',
-                       'Unknown OS Codename')
-
+        lin_ver = linux_distribution()
         mac_ver = platform.mac_ver()
         win_ver = platform.win32_ver()
 
@@ -696,16 +690,9 @@ def system_information():
         version = system_version()
         release = platform.release()
 
-    if not LINUX_DIST_AVAIL:
-        full_distribution_name = ('Unknown OS Name',
-                                  'Unknown OS Release',
-                                  'Unknown OS Codename')
-    else:
-        full_distribution_name = linux_distribution(full_distribution_name=False)
-
     system = [
         ('system', platform.system()),
-        ('dist', ' '.join(full_distribution_name)),
+        ('dist', ' '.join(linux_distribution(full_distribution_name=False))),
         ('release', release),
         ('machine', platform.machine()),
         ('version', version),

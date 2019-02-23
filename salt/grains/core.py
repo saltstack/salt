@@ -1885,29 +1885,13 @@ def os_data():
 
         # Use the already intelligent platform module to get distro info
         # (though apparently it's not intelligent enough to strip quotes)
-        if USE_DISTRO_LINUX_DIST:
-            if LINUX_DIST_AVAIL:
-                log.trace(
-                    'Getting OS name, release, and codename from '
-                    'distro.linux_distribution()'
-                )
-                (osname, osrelease, oscodename) = \
-                    [x.strip('"').strip("'") for x in
-                     linux_distribution()]
-            else:
-                log.warning('distro library unavailable.')
-                (osname, osrelease, oscodename) = \
-                    ('Unknown OS Name',
-                     'Unknown OS Release',
-                     'Unknown OS Codename')
-        else:
-            log.trace(
-                'Getting OS name, release, and codename from '
-                'platform.linux_distribution()'
-            )
-            (osname, osrelease, oscodename) = \
-                [x.strip('"').strip("'") for x in
-                 linux_distribution(supported_dists=_supported_dists)]
+        log.trace(
+            'Getting OS name, release, and codename from '
+            'distro.linux_distribution()'
+        )
+        (osname, osrelease, oscodename) = \
+            [x.strip('"').strip("'") for x in
+             linux_distribution(supported_dists=_supported_dists)]
         # Try to assign these three names based on the lsb info, they tend to
         # be more accurate than what python gets from /etc/DISTRO-release.
         # It's worth noting that Ubuntu has patched their Python distribution
