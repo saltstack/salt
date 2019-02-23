@@ -879,6 +879,9 @@ def _get_create_kwargs(skip_translate=None,
     else:
         networks = {}
 
+    if 'mounts' in kwargs:
+        kwargs['mounts'] = _create_mounts(kwargs['mounts'])
+
     kwargs = __utils__['docker.translate_input'](
         salt.utils.docker.translate.container,
         skip_translate=skip_translate,
@@ -2450,6 +2453,40 @@ def _create_networking_config(networks):
     log.debug("creating networking config from {}".format(networks))
     return _client_wrapper('create_networking_config',
         {k: _client_wrapper('create_endpoint_config', **v) for k, v in networks.items()})
+
+
+def _create_driver_config(**kwargs):
+    valid_kwargs = get_client_args('driver_config')['driver_config']
+    dc_kwargs = {}
+    for kw in list(kwargs):
+        if kw in valid_kwargs:
+            dc_kwargs[kw] = kwargs.pop(kw)
+    if kwargs:
+        log.warning(
+            'The following driver_config arguments were ignored because they are not '
+            'recognized by docker-py: %s', sorted(kwargs)
+        )
+    return docker.types.DriverConfig(**dc_kwargs)
+
+
+def _create_mounts(mounts):
+    ret = []
+    valid_mount_kwargs = get_client_args('mount')['mount']
+    for kwargs in mounts:
+        mount_kwargs = {}
+        for kw in list(kwargs):
+            if kw in valid_mount_kwargs:
+                if kw == 'driver_config':
+                    mount_kwargs[kw] = _create_driver_config(**kwargs.pop(kw))
+                else:
+                    mount_kwargs[kw] = kwargs.pop(kw)
+        if kwargs:
+            log.warning(
+                'The following mount arguments were ignored because they are not '
+                'recognized by docker-py: %s', sorted(kwargs)
+            )
+        ret.append(docker.types.Mount(**mount_kwargs))
+    return ret
 
 # Functions to manage containers
 @_refresh_mine_cache

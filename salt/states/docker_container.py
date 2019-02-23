@@ -1218,6 +1218,25 @@ def running(name,
                 - image: bar/baz:latest
                 - memswap_limit: 1G
 
+    mounts : []
+        List of advanced mounts to be mounted in the container.
+
+        .. code-block:: yaml
+
+            foo:
+              docker_container.running:
+                - image: bar/baz:latest
+                - mounts:
+                  - source: foo
+                    target: /bar
+                    type: volume
+                    driver_config:
+                      name: myDriver
+
+        See the mounts_ documentation for more information
+
+        .. _mounts: https://docker-py.readthedocs.io/en/latest/api.html#docker.types.Mount
+
     network_disabled : False
         If ``True``, networking will be disabled within the container
 

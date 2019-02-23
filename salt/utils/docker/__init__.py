@@ -134,6 +134,18 @@ def get_client_args(limit=None):
             except AttributeError:
                 raise CommandExecutionError('Could not get ipam args')
 
+    if not limit or 'mount' in limit:
+        try:
+            ret['mount'] = _argspec(docker.types.Mount.__init__).args
+        except AttributeError:
+            raise CommandExecutionError('Could not get mount args')
+
+    if not limit or 'driver_config' in limit:
+        try:
+            ret['driver_config'] = _argspec(docker.types.DriverConfig.__init__).args
+        except AttributeError:
+            raise CommandExecutionError('Could not get driver_config args')
+
     for item in ret:
         # The API version is passed automagically by the API code that imports
         # these classes/functions and is not an arg that we will be passing, so
