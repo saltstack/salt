@@ -20,7 +20,6 @@ import salt.utils.args
 import salt.utils.platform
 import salt.utils.stringutils
 from salt.exceptions import CommandNotFoundError
-from salt.utils.decorators import memoize as real_memoize
 from salt.utils.decorators.jinja import jinja_filter
 
 # Import 3rd-party libs
@@ -249,7 +248,7 @@ def which(exe=None):
         # memoization with a function that has no arguments, this provides
         # the exact same benefit
         pathext = res.split(os.pathsep)
-        res = { ext.lower() for ext in pathext }
+        res = {ext.lower() for ext in pathext}
 
         # ...apparently nobody uses operator or functools(?)
         is_executable = lambda path, membership=res: is_executable_common(path) and has_executable_ext(path, membership)
