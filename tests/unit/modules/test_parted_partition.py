@@ -269,7 +269,7 @@ class PartedTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(output, expected)
 
     def test_list__valid_unit_chs_valid_cmd_output(self):
-        with patch('salt.modules.parted._validate_device', MagicMock()):
+        with patch('salt.modules.parted_partition._validate_device', MagicMock()):
             self.cmdrun_stdout.return_value = self.parted_print_output('valid chs')
             output = parted.list_('/dev/sda', unit='chs')
             self.cmdrun_stdout.assert_called_once_with('parted -m -s /dev/sda unit chs print')
