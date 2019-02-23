@@ -272,8 +272,8 @@ class SaltSupportModuleTestCase(TestCase, LoaderModuleMockMixin):
             assert len(call) == 2
             calls.append(call[0])
         assert calls == [(0, b'one-support-000-000.bz2'),
-                         (0, os.linesep), (0, b'two-support-111-111.bz2'), (0, os.linesep),
-                         (0, b'three-support-222-222.bz2'), (0, os.linesep)]
+                         (0, os.linesep.encode()), (0, b'two-support-111-111.bz2'), (0, os.linesep.encode()),
+                         (0, b'three-support-222-222.bz2'), (0, os.linesep.encode())]
 
     @patch('salt.modules.saltsupport.__pillar__', {})
     @patch('salt.modules.saltsupport.SupportDataCollector', MagicMock())
