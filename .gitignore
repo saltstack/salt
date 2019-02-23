@@ -105,3 +105,6 @@ tests/integration/cloud/providers/pki/minions
 .bundle/
 Gemfile.lock
 /artifacts/
+
+# ignore pyenv local configuration file
+.python-version
