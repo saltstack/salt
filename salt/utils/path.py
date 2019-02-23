@@ -250,8 +250,17 @@ def which(exe=None):
         pathext = res.split(os.pathsep)
         res = {ext.lower() for ext in pathext}
 
-        # ...apparently nobody uses operator or functools(?)
-        is_executable = lambda path, membership=res: is_executable_common(path) and has_executable_ext(path, membership)
+        # check if our caller already specified a valid extension as then we don't need to match it
+        _, ext = os.path.splitext(exe)
+        if ext.lower() in res:
+            pathext = ['']
+
+            is_executable = is_executable_common
+
+        # The specified extension isn't valid, so we just assume it's part of the
+        # filename and proceed to walk the pathext list
+        else:
+            is_executable = lambda path, membership=res: is_executable_common(path) and has_executable_ext(path, membership)
 
     else:
         # In posix, there's no such thing as file extensions..only zuul
