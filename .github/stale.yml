@@ -2,7 +2,7 @@
 
 # Number of days of inactivity before an issue becomes stale
 # 480 is approximately 1 year and 4 months
-daysUntilStale: 480
+daysUntilStale: 470
 
 # Number of days of inactivity before a stale issue is closed
 daysUntilClose: 7
