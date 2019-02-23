@@ -8,16 +8,18 @@ from __future__ import absolute_import, print_function, unicode_literals
 import re
 import sys
 import platform
+import warnings
 
 # linux_distribution deprecated in py3.7
-LINUX_DIST_AVAIL = True
-if sys.version_info[:2] >= (3, 7):
-    try:
-        from distro import linux_distribution
-    except ImportError:
-        LINUX_DIST_AVAIL = False
-else:
-    from platform import linux_distribution
+try:
+    from platform import linux_distribution as _deprecated_linux_distribution
+
+    def linux_distribution(**kwargs):
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            return _deprecated_linux_distribution(**kwargs)
+except ImportError:
+    from distro import linux_distribution
 
 # pylint: disable=invalid-name,redefined-builtin
 # Import 3rd-party libs
