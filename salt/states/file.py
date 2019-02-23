@@ -1737,10 +1737,7 @@ def absent(name,
             ret['comment'] = 'Directory {0} is set for removal'.format(name)
             return ret
         try:
-            if salt.utils.platform.is_windows():
-                __salt__['file.remove'](name, force=True)
-            else:
-                __salt__['file.remove'](name)
+            __salt__['file.remove'](name, force=True)
             ret['comment'] = 'Removed directory {0}'.format(name)
             ret['changes']['removed'] = name
             return ret
@@ -1857,10 +1854,7 @@ def tidied(name,
         # Iterate over collected items
         try:
             for path in todelete:
-                if salt.utils.platform.is_windows():
-                    __salt__['file.remove'](path, force=True)
-                else:
-                    __salt__['file.remove'](path)
+                __salt__['file.remove'](path, force=True)
                 # Remember what we've removed, will appear in the summary
                 ret['changes']['removed'].append(path)
         except CommandExecutionError as exc:
