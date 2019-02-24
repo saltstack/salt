@@ -68,6 +68,7 @@ import salt.utils.jid
 import salt.utils.json
 try:
     import salt.utils.etcd_util
+    from salt.utils.etcd_util import etcd
     HAS_LIBS = True
 except ImportError:
     HAS_LIBS = False
@@ -250,7 +251,7 @@ def _purge_jobs():
             client.read(lockp)
 
         # It's not, so the job is dead and we can remove it
-        except etcd.EtcdKeyNotFound:
+        except etcd.EtcdKeyNotFound as E:
             res = client.delete(job.key, recursive=True)
             log.trace('sdstack_etcd returner <_purge_jobs> job {jid:s} at {path:s} has expired'.format(jid=res.key.split('/')[-1], path=res.key))
             count += 1
@@ -287,7 +288,7 @@ def get_load(jid):
     # non-existent job.
     try:
         res = client.get(loadp)
-    except salt.utils.etcd_util.etcd.EtcdKeyNotFound as E:
+    except etcd.EtcdKeyNotFound as E:
         log.error("sdstack_etcd returner <get_load> could not find job {jid:s} at the path {path:s}".format(jid=jid, path=loadp))
         return None
     log.trace('sdstack_etcd returner <get_load> found load data for job {jid:s} at {path:s} with value {data}'.format(jid=jid, path=res.key, data=res.value))
@@ -309,7 +310,7 @@ def get_jid(jid):
     # caller.
     try:
         items = client.get(jobp)
-    except salt.utils.etcd_util.etcd.EtcdKeyNotFound as E:
+    except etcd.EtcdKeyNotFound as E:
         return {}
 
     # Iterate through all of the children at our job path that are directories.
@@ -329,7 +330,7 @@ def get_jid(jid):
         # then something that shouldn't happen has happened.
         try:
             res = client.get(returnp)
-        except salt.utils.etcd_util.etcd.EtcdKeyNotFound as E:
+        except etcd.EtcdKeyNotFound as E:
             log.debug("sdstack_etcd returner <get_jid> returned nothing from minion {id:s} for job {jid:s} at path {path:s}".format(id=comps[-1], jid=jid, path=returnp))
             continue
 
@@ -355,7 +356,7 @@ def get_fun(fun):
     # nothing is available.
     try:
         items = client.get(minionsp)
-    except salt.utils.etcd_util.etcd.EtcdKeyNotFound as E:
+    except etcd.EtcdKeyNotFound as E:
         return {}
 
     # Walk through the list of all the minions that have a jid registered,
@@ -372,7 +373,7 @@ def get_fun(fun):
         # registered for some reason.
         try:
             res = client.get(funp)
-        except salt.utils.etcd_util.etcd.EtcdKeyNotFound as E:
+        except etcd.EtcdKeyNotFound as E:
             log.debug("sdstack_etcd returner <get_fun> returned nothing from minion {id:s} for job {jid:s} at path {path:s}".format(id=comps[-1], jid=str(item.value), path=funp))
             continue
 
@@ -400,7 +401,7 @@ def get_jids():
     # jobs have been created yet so return an empty list to the caller.
     try:
         items = client.get(jobsp)
-    except salt.utils.etcd_util.etcd.EtcdKeyNotFound as E:
+    except etcd.EtcdKeyNotFound as E:
         return []
 
     # Anything that's a directory is a job id. Since that's all we're returning,
@@ -430,7 +431,7 @@ def get_minions():
     # this case, return an empty last for the caller.
     try:
         items = client.get(minionsp)
-    except salt.utils.etcd_util.etcd.EtcdKeyNotFound as E:
+    except etcd.EtcdKeyNotFound as E:
         return []
 
     # We can just walk through everything that isn't a directory. This path
