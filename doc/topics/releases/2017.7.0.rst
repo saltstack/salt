@@ -468,7 +468,7 @@ New modules:
   from the napalm-logs library into the Salt event bus. The events are based
   on the syslog messages from the network devices and structured following
   the OpenConfig/IETF YANG models.
-- :mod:`NAPALM Helpers <salt.modules.napalm_mod>` - Generic helpers for
+- :mod:`NAPALM Helpers <salt.modules.napalm>` - Generic helpers for
   NAPALM-related operations. For example, the
   :mod:`Compliance report <salt.modules.napalm.compliance_report>` function
   can be used inside the state modules to compare the expected and the

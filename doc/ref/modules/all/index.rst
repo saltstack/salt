@@ -274,7 +274,7 @@ execution modules
     namecheap_domains_ns
     namecheap_ssl
     namecheap_users
-    napalm
+    napalm_mod
     napalm_netacl
     napalm_bgp
     napalm_formula
