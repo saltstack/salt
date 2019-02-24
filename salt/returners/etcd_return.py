@@ -235,7 +235,7 @@ def _purge_jobs():
     except salt.utils.etcd_util.etcd.EtcdKeyNotFound as E:
         return 0
 
-    # Iterate through all of the children at our job path while looking for 
+    # Iterate through all of the children at our job path while looking for
     # the .lock.p key. If one isn't found, then we can remove this job because
     # it has expired.
     count = 0
