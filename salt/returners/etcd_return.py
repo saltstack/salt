@@ -460,7 +460,7 @@ def event_return(events):
     option in master config.
     '''
     write_profile = __opts__.get('etcd.returner_write_profile')
-    client, path, _ = _get_conn(__opts__, write_profile)
+    client, path, ttl = _get_conn(__opts__, write_profile)
 
     # Iterate through all the events, and add them to the events path based
     # on the tag that is labeled in each event. We aggregate all errors into
@@ -475,19 +475,52 @@ def event_return(events):
             'master_id': __opts__['id'],
         }
 
+
         # Use the tag from the event package to build a watchable path
         eventp = '/'.join([path, 'events', package['tag']])
 
         # Now we can write the event package into the event path
         try:
             json = salt.utils.json.dumps(package)
-            res = client.set(eventp, json)
+            res = client.write(eventp, json)
+
         except Exception as E:
             log.trace("sdstack_etcd returner <event_return> unable to write event with the tag {name:s} into the path {path:s} due to exception ({exception}) being raised".format(name=package['tag'], path=eventp, exception=E))
             exceptions.append((E, package))
             continue
 
-        log.trace("sdstack_etcd returner <event_return> wrote event with the tag {name:s} to {path:s} using {data}".format(path=res.key, name=package['tag'], data=res.value))
+        log.trace("sdstack_etcd returner <event_return> wrote event ({index:d}) with the tag {name:s} to {path:s} using {data}".format(path=res.key, name=package['tag'], data=res.value, index=res.modifiedIndex))
+
+        # Next we need to cache the index for said event so that we can use it to
+        # determine whether it is ready to be purged or not. We do this by using
+        # the modifiedIndex to write the tag into a cache.
+
+        index = res.createdIndex
+
+        try:
+            # If the event is a new key, then we can simply cache it with the specified ttl
+            if res.newKey:
+                etcd.write('/'.join([path, 'cache', str(index), 'id']), res.modifiedIndex, prevExist=False, ttl=ttl if ttl > 0 else None)
+
+            # Otherwise, the event was updated and thus we need to update our cache too
+            else:
+                etcd.write('/'.join([path, 'cache', str(index), 'id']), res.modifiedIndex, prevValue=res._prev_node.modifiedIndex, ttl=ttl if ttl > 0 else None)
+
+        except etcd.EtcdCompareFailed as E:
+            log.error("sdstack_etcd returner <event_return> unable to update cache for {index:d} due to non-matching modification index ({mod:d})".format(index=index, mod=res._prev_node.modifiedIndex))
+
+        except etcd.EtcdAlreadyExist as E:
+            log.error("sdstack_etcd returner <event_return> unable to cache event for {index:d} due to event already existing".format(index=index))
+
+        # If we got here, then we should be able to write the tag under the current index
+        try:
+            etcd.write('/'.join([path, 'cache', str(index), 'tag']), package['tag'])
+
+        except Exception as E:
+            log.trace("sdstack_etcd returner <event_return> unable to cache tag {name:s} under index {index:d} due to exception ({exception}) being raised".format(name=package['tag'], index=index, exception=E))
+            exceptions.append((E, package))
+
+        continue
 
     # Go back through all of the exceptions that occurred and log them.
     for e, pack in exceptions:
