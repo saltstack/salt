@@ -98,10 +98,17 @@ def _get_conn(opts, profile=None):
     # Grab the returner_root from the options
     path = opts.get('etcd.returner_root', '/salt/return')
 
+    # Calculate the time-to-live for a job while giving etcd.ttl priority.
+    # The etcd.ttl option specifies the number of seconds, whereas the keep_jobs
+    # option specifies the number of hours. If any of these values are zero,
+    # then jobs are forever persistent.
+
+    ttl = opts.get('etcd.ttl', int(opts.get('keep_jobs', 0)) * 60 * 60)
+
     # Grab a connection using etcd_util, and then return the EtcdClient
     # from one of its attributes
     wrapper = salt.utils.etcd_util.get_conn(opts, profile)
-    return wrapper.client, path
+    return wrapper.client, path, ttl
 
 
 def returner(ret):
@@ -110,7 +117,7 @@ def returner(ret):
     '''
     write_profile = __opts__.get('etcd.returner_write_profile')
 
-    client, path = _get_conn(__opts__, write_profile)
+    client, path, _ = _get_conn(__opts__, write_profile)
 
     # If a minion is returning a standalone job, update it with a new jid, and
     # save it to ensure it can be queried similar to the mysql returner.
@@ -157,14 +164,7 @@ def save_load(jid, load, minions=None):
     Save the load to the specified jid.
     '''
     write_profile = __opts__.get('etcd.returner_write_profile')
-    client, path = _get_conn(__opts__, write_profile)
-
-    # Calculate the time-to-live for a job while giving etcd.ttl priority.
-    # The etcd.ttl option specifies the number of seconds, whereas the keep_jobs
-    # option specifies the number of hours. If any of these values are zero,
-    # then jobs are forever persistent.
-
-    ttl = opts.get('etcd.ttl', int(opts.get('keep_jobs', 0)) * 60 * 60)
+    client, path, ttl = _get_conn(__opts__, write_profile)
 
     # Check if the specified jid is 'req', as only incorrect code will do that
     if jid == 'req':
@@ -198,7 +198,7 @@ def save_minions(jid, minions, syndic_id=None):  # pylint: disable=unused-argume
     included for API compatibility only.
     '''
     write_profile = __opts__.get('etcd.returner_write_profile')
-    client, path = _get_conn(__opts__, write_profile)
+    client, path, _ = _get_conn(__opts__, write_profile)
 
     # Check if the specified jid is 'req', as only incorrect code will do that
     if jid == 'req':
@@ -216,9 +216,9 @@ def save_minions(jid, minions, syndic_id=None):  # pylint: disable=unused-argume
     return
 
 
-def _purge_jobs(ttl):
+def _purge_jobs():
     write_profile = __opts__.get('etcd.returner_write_profile')
-    client, path = _get_conn(__opts__, write_profile)
+    client, path, _ = _get_conn(__opts__, write_profile)
 
     # Figure out the path that our jobs should exist at
     jobp = '/'.join([path, 'jobs'])
@@ -274,7 +274,7 @@ def get_load(jid):
     Return the load data that marks a specified jid.
     '''
     read_profile = __opts__.get('etcd.returner_read_profile')
-    client, path = _get_conn(__opts__, read_profile)
+    client, path, _ = _get_conn(__opts__, read_profile)
 
     # Figure out the path that our job should be at
     loadp = '/'.join([path, 'jobs', jid, '.load.p'])
@@ -296,7 +296,7 @@ def get_jid(jid):
     '''
     Return the information returned when the specified job id was executed.
     '''
-    client, path = _get_conn(__opts__)
+    client, path, _ = _get_conn(__opts__)
 
     # Figure out the path that our job should be at
     jobp = '/'.join([path, 'jobs', jid])
@@ -342,7 +342,7 @@ def get_fun(fun):
     '''
     Return a dict containing the last function called for all the minions that have called a function.
     '''
-    client, path = _get_conn(__opts__)
+    client, path, _ = _get_conn(__opts__)
 
     # Find any minions that had their last function registered by returner()
     minionsp = '/'.join([path, 'minions'])
@@ -388,7 +388,7 @@ def get_jids():
     '''
     Return a list of all job ids that have returned something.
     '''
-    client, path = _get_conn(__opts__)
+    client, path, _ = _get_conn(__opts__)
 
     # Enumerate all the jobs that are available.
     jobsp = '/'.join([path, 'jobs'])
@@ -418,7 +418,7 @@ def get_minions():
     '''
     Return a list of all minions that have returned something.
     '''
-    client, path = _get_conn(__opts__)
+    client, path, _ = _get_conn(__opts__)
 
     # Find any minions that have returned anything
     minionsp = '/'.join([path, 'minions'])
@@ -458,7 +458,7 @@ def event_return(events):
     option in master config.
     '''
     write_profile = __opts__.get('etcd.returner_write_profile')
-    client, path = _get_conn(__opts__, write_profile)
+    client, path, _ = _get_conn(__opts__, write_profile)
 
     # Iterate through all the events, and add them to the events path based
     # on the tag that is labeled in each event. We aggregate all errors into
