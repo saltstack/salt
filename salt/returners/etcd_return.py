@@ -123,8 +123,10 @@ def returner(ret):
     # If a minion is returning a standalone job, update it with a new jid, and
     # save it to ensure it can be queried similar to the mysql returner.
     if ret['jid'] == 'req':
-        ret['jid'] = prep_jid(nocache=ret.get('nocache', False))
-        save_load(ret['jid'], ret)
+        jid = prep_jid(nocache=ret.get('nocache', False))
+        log.debug('sdstack_etcd returner <returner> satisfying request for new job id request with {jid:s}'.format(jid=jid))
+        ret['jid'] = jid
+        save_load(jid, ret)
 
     # Update the given minion in the external job cache with the current (latest job)
     # This is used by get_fun() to return the last function that was called
@@ -172,7 +174,7 @@ def save_load(jid, load, minions=None):
 
     # Check if the specified jid is 'req', as only incorrect code will do that
     if jid == 'req':
-        log.warning('sdstack_etcd returner <save_load> was called for job {jid:s} with {data:s}'.format(jid=jid, data=load))
+        log.warning('sdstack_etcd returner <save_load> was called with a request job id ({jid:s}) with {data:s}'.format(jid=jid, data=load))
 
     # Figure out the path using jobs/$jid/.load.p
     loadp = '/'.join([path, 'jobs', jid, '.load.p'])
@@ -188,6 +190,7 @@ def save_load(jid, load, minions=None):
     # check to see if the job has expired. This allows a user to signal to
     # salt that its okey to remove the entire key by removing this lock.
     lockp = '/'.join([path, 'jobs', jid, '.lock.p'])
+    log.trace('sdstack_etcd returner <save_load> writing lock file for job {jid:s} at {path:s} using index {index:d}'.format(jid=jid, path=lockp, index=res.modifiedIndex))
     res = client.set(lockp, res.modifiedIndex, ttl=ttl if ttl > 0 else None)
 
     if res.ttl is not None:
@@ -206,7 +209,7 @@ def save_minions(jid, minions, syndic_id=None):  # pylint: disable=unused-argume
 
     # Check if the specified jid is 'req', as only incorrect code will do that
     if jid == 'req':
-        log.warning('sdstack_etcd returner <save_minions> was called for job {jid:s} and minions {minions:s}'.format(jid=jid, minions=repr(minions)))
+        log.warning('sdstack_etcd returner <save_minions> was called with a request job id ({jid:s}) for minions {minions:s}'.format(jid=jid, minions=repr(minions)))
 
     # Figure out the path that our job should be at
     jobp = '/'.join([path, 'jobs', jid])
@@ -229,6 +232,7 @@ def _purge_jobs():
 
     # Try and read the job directory. If we have a missing key exception then no
     # minions have returned anything yet and so we can simply leave.
+    log.trace('sdstack_etcd returner <_purge_jobs> reading jobs at {path:s}'.format(path=jobp))
     try:
         jobs = client.read(jobp)
     except salt.utils.etcd_util.etcd.EtcdKeyNotFound as E:
@@ -247,6 +251,7 @@ def _purge_jobs():
         lockp = '/'.join([job.key, '.lock.p'])
 
         # Ping it to see if it's alive
+        log.trace('sdstack_etcd returner <_purge_jobs> checking lock for job {jid:s} at {path:s}'.format(jid=job.key.split('/')[-1], path=lockp))
         try:
             client.read(lockp)
 
@@ -256,6 +261,7 @@ def _purge_jobs():
             log.debug('sdstack_etcd returner <_purge_jobs> job {jid:s} at {path:s} has expired'.format(jid=res.key.split('/')[-1], path=res.key))
             count += 1
         continue
+    log.trace('sdstack_etcd returner <_purge_jobs> purged {count:d} jobs'.format(count=count))
     return count
 
 
@@ -268,6 +274,7 @@ def _purge_events():
 
     # Try and read the event cache directory. If we have a missing key exception then no
     # events have been cached and so we can simply leave.
+    log.trace('sdstack_etcd returner <_purge_events> reading event cache at {path:s}'.format(path=cachep))
     try:
         cache = client.read(cachep)
     except etcd.EtcdKeyNotFound as E:
@@ -289,6 +296,7 @@ def _purge_events():
         # Grab the actual tag from our indexp in case we need to remove it. If this key
         # doesn't exist, then the current entry in our cache doesn't even matter
         # because we can't do anything without a tag
+        log.trace('sdstack_etcd returner <_purge_events> reading tag for event index {index:s} at {path:s}'.format(index=event.key.split('/')[-1], path=tagp))
         try:
             tag = client.read(tagp)
 
@@ -301,6 +309,7 @@ def _purge_events():
             continue
 
         # Ping the index to see if it's alive
+        log.trace('sdstack_etcd returner <_purge_events> reading modification index for event index {index:s} at {path:s}'.format(index=event.key.split('/')[-1], path=indexp))
         try:
             index = client.read(indexp)
             alive = True
@@ -315,12 +324,14 @@ def _purge_events():
             continue
 
         ## Remove the event cache and its tag
+        log.debug('sdstack_etcd returner <_purge_events> event {index:s} at {path:s} has expired'.format(index=event.key.split('/')[-1], path=event.key))
 
         # Remove the whole event cache entry
+        log.trace('sdstack_etcd returner <_purge_events> (recursively) removing cache for event {index:s} at {path:s}'.format(index=event.key.split('/')[-1], path=event.key))
         res = client.delete(event.key, recursive=True)
-        log.debug('sdstack_etcd returner <_purge_events> event {index:s} at {path:s} has expired'.format(index=res.key.split('/')[-1], path=res.key))
 
         # Remove the old event tag
+        log.trace('sdstack_etcd returner <_purge_events> removing tag for event {index:s} at {path:s}'.format(index=event.key.split('/')[-1], path=tag.value))
         comp = tag.value.split('/')
         try:
             res = client.delete('/'.join([path, 'events'] + comp), prevIndex=index.value)
@@ -335,8 +346,9 @@ def _purge_events():
         count += 1
 
         # Descend trying to clean up every parent directory
+        log.debug('sdstack_etcd returner <_purge_events> recursively removing directories for event {index:s} at {path:s}'.format(index=event.key.split('/')[-1], path='/'.join(comp[:i])))
         for i in range(len(comp), 0, -1):
-            log.trace('sdstack_etcd returner <_purge_events> removing directory at {path:s}'.format('/'.join(comp[:i])))
+            log.trace('sdstack_etcd returner <_purge_events> removing directory for event {index:s} at {path:s}'.format(index=event.key.split('/')[-1], path='/'.join(comp[:i])))
             try:
                 client.delete('/'.join([path, 'events'] + comp[:i]), dir=True)
             except Exception as E:
@@ -394,11 +406,11 @@ def get_jid(jid):
 
     # Figure out the path that our job should be at
     jobp = '/'.join([path, 'jobs', jid])
-    log.debug('sdstack_etcd returner <get_jid> reading job fields for job {jid:s} from {path:s}'.format(jid=jid, path=jobp))
 
     # Try and read the job directory. If we have a missing key exception then no
     # minions have returned anything yet and so we return an empty dict for the
     # caller.
+    log.debug('sdstack_etcd returner <get_jid> reading job fields for job {jid:s} from {path:s}'.format(jid=jid, path=jobp))
     try:
         items = client.get(jobp)
     except etcd.EtcdKeyNotFound as E:
@@ -406,6 +418,7 @@ def get_jid(jid):
 
     # Iterate through all of the children at our job path that are directories.
     # Anything that is a directory should be a minion that contains some results.
+    log.debug('sdstack_etcd returner <get_jid> iterating through minion results for job {jid:s} from {path:s}'.format(jid=items.key.split('/')[-1], path=items.key))
     ret = {}
     for item in items.leaves:
         if not item.dir:
@@ -419,10 +432,11 @@ def get_jid(jid):
         # Now we know the minion and the path to the return for its job, we can
         # just grab it. If the key exists, but the value is missing entirely,
         # then something that shouldn't happen has happened.
+        log.trace('sdstack_etcd returner <get_jid> grabbing result from minion {id:s} for job {jid:s} at {path:s}'.format(id=comps[-1], jid=jid, path=items.returnp))
         try:
             res = client.get(returnp)
         except etcd.EtcdKeyNotFound as E:
-            log.debug("sdstack_etcd returner <get_jid> returned nothing from minion {id:s} for job {jid:s} at path {path:s}".format(id=comps[-1], jid=jid, path=returnp))
+            log.debug("sdstack_etcd returner <get_jid> returned nothing from minion {id:s} for job {jid:s} at {path:s}".format(id=comps[-1], jid=jid, path=returnp))
             continue
 
         # We found something, so update our return dict with the minion id and
@@ -440,11 +454,11 @@ def get_fun(fun):
 
     # Find any minions that had their last function registered by returner()
     minionsp = '/'.join([path, 'minions'])
-    log.debug('sdstack_etcd returner <get_fun> reading minions at {path:s} for function {fun:s}'.format(path=minionsp, fun=fun))
 
     # If the minions key isn't found, then no minions registered a function
     # and thus we need to return an empty dict so the caller knows that
     # nothing is available.
+    log.debug('sdstack_etcd returner <get_fun> reading minions at {path:s} for function {fun:s}'.format(path=minionsp, fun=fun))
     try:
         items = client.get(minionsp)
     except etcd.EtcdKeyNotFound as E:
@@ -452,6 +466,7 @@ def get_fun(fun):
 
     # Walk through the list of all the minions that have a jid registered,
     # and cross reference this with the job returns.
+    log.debug('sdstack_etcd returner <get_fun> iterating through minions for function {fun:s} at {path:s}'.format(fun=fun, path=items.key))
     ret = {}
     for item in items.leaves:
 
@@ -462,6 +477,7 @@ def get_fun(fun):
 
         # Try and read the field, and skip it if it doesn't exist or wasn't
         # registered for some reason.
+        log.trace('sdstack_etcd returner <get_fun> reading function from minion {id:s} for job {jid:s} at {path:s}'.format(id=comps[-1], jid=str(item.value), path=funp))
         try:
             res = client.get(funp)
         except etcd.EtcdKeyNotFound as E:
@@ -470,6 +486,7 @@ def get_fun(fun):
 
         # Check if the function field (fun) matches what the user is looking for
         # If it does, then we can just add the minion to our results
+        log.trace('sdstack_etcd returner <get_fun> decoding json data from minion {id:s} for job {jid:s} at {path:s}'.format(id=comps[-1], jid=str(item.value), path=funp))
         data = salt.utils.json.loads(res.value)
         if data == fun:
             ret[comps[-1]] = str(data)
@@ -486,10 +503,10 @@ def get_jids():
 
     # Enumerate all the jobs that are available.
     jobsp = '/'.join([path, 'jobs'])
-    log.debug("sdstack_etcd returner <get_jids> listing jobs at {path:s}".format(path=jobsp))
 
     # Fetch all the jobs. If the key doesn't exist, then it's likely that no
     # jobs have been created yet so return an empty list to the caller.
+    log.debug("sdstack_etcd returner <get_jids> listing jobs at {path:s}".format(path=jobsp))
     try:
         items = client.get(jobsp)
     except etcd.EtcdKeyNotFound as E:
@@ -497,6 +514,7 @@ def get_jids():
 
     # Anything that's a directory is a job id. Since that's all we're returning,
     # aggregate them into a list.
+    log.debug("sdstack_etcd returner <get_jids> iterating through jobs at {path:s}".format(path=items.key))
     ret = []
     for item in items.leaves:
         comps = str(item.key).split('/')
@@ -516,10 +534,10 @@ def get_minions():
 
     # Find any minions that have returned anything
     minionsp = '/'.join([path, 'minions'])
-    log.debug('sdstack_etcd returner <get_minions> reading minions at {path:s}'.format(path=minionsp))
 
     # If no minions were found, then nobody has returned anything recently. In
     # this case, return an empty last for the caller.
+    log.debug('sdstack_etcd returner <get_minions> reading minions at {path:s}'.format(path=minionsp))
     try:
         items = client.get(minionsp)
     except etcd.EtcdKeyNotFound as E:
@@ -527,6 +545,7 @@ def get_minions():
 
     # We can just walk through everything that isn't a directory. This path
     # is simply a list of minions and the last job that each one returned.
+    log.debug('sdstack_etcd returner <get_minions> iterating through minions at {path:s}'.format(path=items.key))
     ret = []
     for item in items.leaves:
         if not item.dir:
@@ -557,6 +576,7 @@ def event_return(events):
     # Iterate through all the events, and add them to the events path based
     # on the tag that is labeled in each event. We aggregate all errors into
     # a list so the writing of the events are as atomic as possible.
+    log.debug("sdstack_etcd returner <event_return> iterating through {count:d} events to write into our profile".format(count=len(events)))
     exceptions = []
     for event in events:
 
@@ -567,11 +587,11 @@ def event_return(events):
             'master_id': __opts__['id'],
         }
 
-
         # Use the tag from the event package to build a watchable path
         eventp = '/'.join([path, 'events', package['tag']])
 
         # Now we can write the event package into the event path
+        log.debug("sdstack_etcd returner <event_return> writing package into event path at {path:s}".format(path=eventp))
         try:
             json = salt.utils.json.dumps(package)
             res = client.write(eventp, json)
@@ -581,7 +601,7 @@ def event_return(events):
             exceptions.append((E, package))
             continue
 
-        log.trace("sdstack_etcd returner <event_return> wrote event ({index:d}) with the tag {name:s} to {path:s} using {data}".format(path=res.key, name=package['tag'], data=res.value, index=res.modifiedIndex))
+        log.trace("sdstack_etcd returner <event_return> wrote event ({index:d}) with the tag {name:s} to {path:s} using {data}".format(path=res.key, name=package['tag'], data=res.value, index=res.createdIndex))
 
         # Next we need to cache the index for said event so that we can use it to
         # determine whether it is ready to be purged or not. We do this by using
@@ -592,10 +612,12 @@ def event_return(events):
         try:
             # If the event is a new key, then we can simply cache it with the specified ttl
             if res.newKey:
+                log.trace("sdstack_etcd returner <event_return> writing new id ({id:s}) to {path:s} for the event {index:s} with the tag {name:s} {expire:s}".format(path='/'.join([path, 'cache', str(index), 'id']), id=str(index), index=res.modifiedIndex, name=package['tag'], expire='that will need to be manually removed' if ttl is None else 'that will expire in {ttl:d} seconds'.format(ttl)))
                 etcd.write('/'.join([path, 'cache', str(index), 'id']), res.modifiedIndex, prevExist=False, ttl=ttl if ttl > 0 else None)
 
             # Otherwise, the event was updated and thus we need to update our cache too
             else:
+                log.trace("sdstack_etcd returner <event_return> updating id ({id:s}) at {path:s} for the event {index:s} with the tag {name:s} {expire:s}".format(path='/'.join([path, 'cache', str(index), 'id']), id=str(index), index=res.modifiedIndex, name=package['tag'], expire='that will need to be manually removed' if ttl is None else 'that will expire in {ttl:d} seconds'.format(ttl)))
                 etcd.write('/'.join([path, 'cache', str(index), 'id']), res.modifiedIndex, prevValue=res._prev_node.modifiedIndex, ttl=ttl if ttl > 0 else None)
 
         except etcd.EtcdCompareFailed as E:
@@ -606,6 +628,7 @@ def event_return(events):
 
         # If we got here, then we should be able to write the tag under the current index
         try:
+            log.trace("sdstack_etcd returner <event_return> updating cached tag at {path:s} for the event {index:s} with the tag {name:s}".format(path='/'.join([path, 'cache', str(index), 'tag']), index=index, name=package['tag']))
             etcd.write('/'.join([path, 'cache', str(index), 'tag']), package['tag'])
 
         except Exception as E:
