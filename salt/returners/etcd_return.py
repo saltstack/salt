@@ -112,9 +112,11 @@ def returner(ret):
 
     client, path = _get_conn(__opts__, write_profile)
 
-    # if a minion is returning a standalone job, get a jid
+    # If a minion is returning a standalone job, update it with a new jid, and
+    # save it to ensure it can be queried similar to the mysql returner.
     if ret['jid'] == 'req':
         ret['jid'] = prep_jid(nocache=ret.get('nocache', False))
+        save_load(ret['jid'], ret)
 
     # Update the given minion in the external job cache with the current (latest job)
     # This is used by get_fun() to return the last function that was called
@@ -157,6 +159,10 @@ def save_load(jid, load, minions=None):
     write_profile = __opts__.get('etcd.returner_write_profile')
     client, path = _get_conn(__opts__, write_profile)
 
+    # Check if the specified jid is 'req', as only incorrect code will do that
+    if jid == 'req':
+        log.warning('sdstack_etcd returner <save_load> was called for job {jid:s} with {data:s}'.format(jid=jid, data=load))
+
     # Figure out the path using jobs/$jid/.load.p
     loadp = '/'.join([path, 'jobs', jid, '.load.p'])
     log.debug('sdstack_etcd returner <save_load> setting load data for job {jid:s} at {path:s} with {data:s}'.format(jid=jid, path=loadp, data=load))
@@ -176,6 +182,10 @@ def save_minions(jid, minions, syndic_id=None):  # pylint: disable=unused-argume
     '''
     write_profile = __opts__.get('etcd.returner_write_profile')
     client, path = _get_conn(__opts__, write_profile)
+
+    # Check if the specified jid is 'req', as only incorrect code will do that
+    if jid == 'req':
+        log.warning('sdstack_etcd returner <save_minions> was called for job {jid:s} and minions {minions:s}'.format(jid=jid, minions=repr(minions)))
 
     # Figure out the path that our job should be at
     jobp = '/'.join([path, 'jobs', jid])
