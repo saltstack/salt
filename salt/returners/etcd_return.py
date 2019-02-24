@@ -159,6 +159,13 @@ def save_load(jid, load, minions=None):
     write_profile = __opts__.get('etcd.returner_write_profile')
     client, path = _get_conn(__opts__, write_profile)
 
+    # Calculate the time-to-live for a job while giving etcd.ttl priority.
+    # The etcd.ttl option specifies the number of seconds, whereas the keep_jobs
+    # option specifies the number of hours. If any of these values are zero,
+    # then jobs are forever persistent.
+
+    ttl = opts.get('etcd.ttl', int(opts.get('keep_jobs', 0)) * 60 * 60)
+
     # Check if the specified jid is 'req', as only incorrect code will do that
     if jid == 'req':
         log.warning('sdstack_etcd returner <save_load> was called for job {jid:s} with {data:s}'.format(jid=jid, data=load))
@@ -172,6 +179,16 @@ def save_load(jid, load, minions=None):
     res = client.set(loadp, data)
 
     log.trace('sdstack_etcd returner <save_load> saved load data for job {jid:s} at {path:s} with {data}'.format(jid=jid, path=res.key, data=load))
+
+    # Since this is when a job is being created, create a lock that we can
+    # check to see if the job has expired. This allows a user to signal to
+    # salt that its okey to remove the entire key by removing this lock.
+    lockp = '/'.join([path, 'jobs', jid, '.lock.p'])
+    res = client.set(lockp, res.modifiedIndex, ttl=ttl if ttl > 0 else None)
+
+    if res.ttl is not None:
+        log.trace('sdstack_etcd returner <save_load> job {jid:s} at {path:s} will expire in {ttl:d} seconds'.format(jid=jid, path=res.key, ttl=res.ttl))
+
     return
 
 
@@ -199,29 +216,57 @@ def save_minions(jid, minions, syndic_id=None):  # pylint: disable=unused-argume
     return
 
 
+def _purge_jobs(ttl):
+    write_profile = __opts__.get('etcd.returner_write_profile')
+    client, path = _get_conn(__opts__, write_profile)
+
+    # Figure out the path that our jobs should exist at
+    jobp = '/'.join([path, 'jobs'])
+    log.debug('sdstack_etcd returner <get_jid> reading job fields for job {jid:s} from {path:s}'.format(jid=jid, path=jobp))
+
+    # Try and read the job directory. If we have a missing key exception then no
+    # minions have returned anything yet and so we can simply leave.
+    try:
+        jobs = client.read(jobp)
+    except salt.utils.etcd_util.etcd.EtcdKeyNotFound as E:
+        return 0
+
+    # Iterate through all of the children at our job path while looking for 
+    # the .lock.p key. If one isn't found, then we can remove this job because
+    # it has expired.
+    count = 0
+    for job in jobs.leaves:
+        if not job.dir:
+            log.warning('sdstack_etcd returner <_purge_jobs> found a non-job at {path:s} {expire:s}'.format(path=job.key, expire='that will need to be manually removed' if job.ttl is None else 'that will expire in {ttl:d} seconds'.format(job.ttl)))
+            continue
+
+        # Build our lock path
+        lockp = '/'.join([job.key, '.lock.p'])
+
+        # Ping it to see if it's alive
+        try:
+            client.read(lockp)
+
+        # It's not, so the job is dead and we can remove it
+        except etcd.EtcdKeyNotFound:
+            res = client.delete(job.key, recursive=True)
+            log.trace('sdstack_etcd returner <_purge_jobs> job {jid:s} at {path:s} has expired'.format(jid=res.key.split('/')[-1], path=res.key))
+            count += 1
+        continue
+    return count
+
+
 def clean_old_jobs():
     '''
-    FIXME: This needs to be implemented
+    Called in the master's event loop every loop_interval. Removes any jobs,
+    and returns that are older than the etcd.ttl option (seconds), or the
+    keep_jobs option (hours).
+
+    :return:
     '''
-    # XXX:
-    # This needs to be implemented. The reason why we don't use ttl to
-    # automatically clean this up is because Salt doesn't know about ttl
-    # and so it assumes that records are always available until it
-    # removes them (which makes them unavailable). That's what this api
-    # call is for at least.
-    #
-    # If we use ttl to automatically remove records we encounter issues
-    # such as that Salt's main code isn't monitorying returner records
-    # in any way, instead treating returners as just a data store with
-    # nearly an arbitrary schema. Related is that it has not exposed an
-    # interface to returners for persisting a connection, modifying
-    # records at arbitrary times, and notifying (like an event-callback)
-    # Salt that a record change has happened.
-    #
-    # Because these features aren't available, this api needs to be
-    # implemented if we want salt to be able to clean old jobs that have
-    # expired.
-    pass
+
+    jobc = _purge_jobs(ttl)
+    log.trace('sdstack_etcd returner <clean_old_jobs> successfully removed {:d} jobs'.format(jobc))
 
 
 def get_load(jid):
