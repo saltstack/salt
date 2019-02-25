@@ -493,7 +493,7 @@ def get_jid(jid):
         # Now we know the minion and the path to the return for its job, we can
         # just grab it. If the key exists, but the value is missing entirely,
         # then something that shouldn't happen has happened.
-        log.trace('sdstack_etcd returner <get_jid> grabbing result from minion {minion:s} for job {jid:s} at {path:s}'.format(minion=comps[-1], jid=jid, path=items.returnp))
+        log.trace('sdstack_etcd returner <get_jid> grabbing result from minion {minion:s} for job {jid:s} at {path:s}'.format(minion=comps[-1], jid=jid, path=items.key))
         try:
             res = client.read(returnp)
         except etcd.EtcdKeyNotFound as E:
@@ -700,3 +700,60 @@ def event_return(events):
     for e, pack in exceptions:
         log.exception("sdstack_etcd returner <event_return> exception ({exception}) was raised while trying to write event {name:s} with the data {data}".format(exception=e, name=pack['tag'], data=pack))
     return
+
+
+def get_jids_filter(count, filter_find_job=True):
+    '''
+    Return a list of all job ids
+    :param int count: show not more than the count of most recent jobs
+    :param bool filter_find_jobs: filter out 'saltutil.find_job' jobs
+    '''
+    read_profile = __opts__.get('etcd.returner_read_profile')
+    client, path, ttl = _get_conn(__opts__, read_profile)
+
+    # Enumerate all the jobs that are available.
+    jobsp = '/'.join([path, Schema['job-cache']])
+
+    # Fetch all the jobs. If the key doesn't exist, then it's likely that no
+    # jobs have been created yet so return an empty list to the caller.
+    log.debug("sdstack_etcd returner <get_jids_filter> listing jobs at {path:s}".format(path=jobsp))
+    try:
+        items = client.read(jobsp, sorted=True)
+    except etcd.EtcdKeyNotFound as E:
+        return []
+
+    # Anything that's a directory is a job id. Since that's all we're returning,
+    # aggregate them into a list. We do this ahead of time in order to conserve
+    # memory by avoiding just decoding everything here
+    log.debug("sdstack_etcd returner <get_jids_filter> collecting jobs at {path:s}".format(path=items.key))
+    jids = []
+    for item in items.leaves:
+        if not item.dir:
+            continue
+        jids.append(item.key.split('/')[-1])
+
+    log.debug("sdstack_etcd returner <get_jids_filter> collecting {count:d} job loads at {path:s}".format(path=items.key, count=count))
+    ret = []
+    for jid in jids[-count:]:
+
+        # Figure out the path to .load.p from the current jid
+        loadp = '/'.join([path, Schema['job-cache'], jid, '.load.p'])
+
+        # Now we can load the data from the job
+        try:
+            res = client.read(loadp)
+        except etcd.EtcdKeyNotFound as E:
+            log.error("sdstack_etcd returner <get_jids_filter> could not find job data {jid:s} at the path {path:s}".format(jid=jid, path=loadp))
+            continue
+
+        try:
+            data = salt.utils.json.loads(res.value)
+        except:
+            log.error("sdstack_etcd returner <get_jids_filter> could not decode job data {jid:s} at the path {path:s}".format(jid=jid, path=loadp))
+            continue
+
+        if filter_find_job and data['fun'] == 'saltutil.find_job':
+            continue
+
+        ret.append(salt.utils.jid.format_jid_instance_ext(jid, data))
+    return ret
