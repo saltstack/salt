@@ -393,16 +393,10 @@ def _purge_events():
         log.trace('sdstack_etcd returner <_purge_events> (recursively) removing cache for event {index:d} at {path:s}'.format(index=index, path=event.key))
         res = client.delete(event.key, recursive=True)
 
-        # Remove the old event tag
+        # Remove the event tag associated with the current index associated with the current index
         log.trace('sdstack_etcd returner <_purge_events> removing tag for event {index:d} at {path:s}'.format(index=index, path=ev_tag.value))
         comp = ev_tag.value.split('/')
-        try:
-            res = client.delete('/'.join([path, Schema['event-path']] + comp), prevIndex=ev_index.value)
-
-        except etcd.EtcdCompareFailed as E:
-            log.warning('sdstack_etcd returner <_purge_events> event tag at {path:s} does not match modification index {mod:d}'.format(path=ev_tag.value, mod=ev_index.value))
-            log.trace('sdstack_etcd returner <_purge_events> forcefully removing event tag at {path:s}'.format(path=ev_tag.value))
-            res = client.delete('/'.join([path, Schema['event-path']] + comp))
+        res = client.delete('/'.join([path, Schema['event-path']] + comp))
 
         # Remove the last component (the key), so we can walk through the directories trying to remove them one-by-one
         comp.pop(-1)
