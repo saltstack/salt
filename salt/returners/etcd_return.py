@@ -676,7 +676,7 @@ def event_return(events):
             # Otherwise, the event was updated and thus we need to update our cache too
             else:
                 log.trace("sdstack_etcd returner <event_return> updating id ({id:d}) at {path:s} for the new event {index:d} with the tag {name:s} {expire:s}".format(path='/'.join([path, Schema['event-cache'], str(res.createdIndex), 'id']), id=res.createdIndex, index=res.modifiedIndex, name=package['tag'], expire='that will need to be manually removed' if ttl is None else 'that will expire in {ttl:d} seconds'.format(ttl=ttl)))
-                client.write('/'.join([path, Schema['event-cache'], str(res.createdIndex), 'id']), res.modifiedIndex, prevValue=res._prev_node.modifiedIndex, ttl=ttl if ttl > 0 else None)
+                client.write('/'.join([path, Schema['event-cache'], str(res.createdIndex), 'id']), res.modifiedIndex, ttl=ttl if ttl > 0 else None)
 
         except etcd.EtcdCompareFailed as E:
             log.error("sdstack_etcd returner <event_return> unable to update cache for {index:d} due to non-matching modification index ({mod:d})".format(index=res.createdIndex, mod=res._prev_node.modifiedIndex))
