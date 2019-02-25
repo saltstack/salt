@@ -389,10 +389,6 @@ def _purge_events():
         ## Remove the event cache and its tag
         log.debug('sdstack_etcd returner <_purge_events> event {index:d} at {path:s} has expired'.format(index=index, path=event.key))
 
-        # Remove the whole event cache entry
-        log.trace('sdstack_etcd returner <_purge_events> (recursively) removing cache for event {index:d} at {path:s}'.format(index=index, path=event.key))
-        res = client.delete(event.key, recursive=True)
-
         # Remove the event tag associated with the current index associated with the current index
         log.trace('sdstack_etcd returner <_purge_events> removing tag for event {index:d} at {path:s}'.format(index=index, path=ev_tag.value))
         comp = ev_tag.value.split('/')
@@ -412,7 +408,11 @@ def _purge_events():
                 log.debug('sdstack_etcd returner <_purge_events> exception ({exception:s}) was raised while trying to remove directory at {path:s}'.format(path='/'.join([path, Schema['event-path']] + comp[:i]), exception=E))
                 break
             continue
-        continue
+
+        # Remove the whole event cache entry
+        log.trace('sdstack_etcd returner <_purge_events> (recursively) removing cache for event {index:d} at {path:s}'.format(index=index, path=event.key))
+        res = client.delete(event.key, recursive=True)
+
     return count
 
 
