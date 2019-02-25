@@ -332,7 +332,7 @@ def _purge_jobs():
 
         # It's not, so the job is dead and we can remove it
         except etcd.EtcdKeyNotFound as E:
-            log.debug('sdstack_etcd returner <_purge_jobs> job {jid:s} at {path:s} has expired'.format(jid=jid, path=res.key))
+            log.debug('sdstack_etcd returner <_purge_jobs> job {jid:s} at {path:s} has expired'.format(jid=jid, path=lockp))
 
             res = client.delete(job.key, recursive=True)
             count += 1
