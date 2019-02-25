@@ -100,8 +100,10 @@ def beacon(config):
             # mount_re comes in formatted with a $ at the end
             # can be `C:\\$` or `C:\\\\$`
             # re string must be like `C:\\\\` regardless of \\ or \\\\
+            # also, psutil returns uppercase
             mount_re = re.sub(r':\\\$', r':\\\\', mount_re)
             mount_re = re.sub(r':\\\\\$', r':\\\\', mount_re)
+            mount_re = mount_re.upper()
 
         for part in parts:
             if re.match(mount_re, part.mountpoint):
