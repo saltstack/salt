@@ -249,7 +249,7 @@ def save_load(jid, load, minions=None):
     # If we failed here, it's okay because the lock won't get written so this
     # will get scheduled for deletion.
     except Exception as E:
-        log.trace("sdstack_etcd returner <save_load> unable to store load for job {jid:s} to the path {path:s} due to exception ({exception}) being raised".format(jid=jid, path=loadp, exception=E)
+        log.trace("sdstack_etcd returner <save_load> unable to store load for job {jid:s} to the path {path:s} due to exception ({exception}) being raised".format(jid=jid, path=loadp, exception=E))
         return
 
     # Since this is when a job is being created, create a lock that we can
@@ -263,7 +263,7 @@ def save_load(jid, load, minions=None):
             log.trace('sdstack_etcd returner <save_load> job {jid:s} at {path:s} will expire in {ttl:d} seconds'.format(jid=jid, path=res.key, ttl=res.ttl))
 
     except Exception as E:
-        log.trace("sdstack_etcd returner <save_load> unable to write lock for job {jid:s} to the path {path:s} due to exception ({exception}) being raised".format(jid=jid, path=lockp, exception=E)
+        log.trace("sdstack_etcd returner <save_load> unable to write lock for job {jid:s} to the path {path:s} due to exception ({exception}) being raised".format(jid=jid, path=lockp, exception=E))
 
     return
 
