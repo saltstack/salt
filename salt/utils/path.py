@@ -263,13 +263,20 @@ def which(exe=None):
             is_executable = lambda path, membership=res: is_executable_common(path) and has_executable_ext(path, membership)
 
     else:
-        # In posix, there's no such thing as file extensions..only zuul
+        # in posix, there's no such thing as file extensions..only zuul
         pathext = ['']
 
         # executable semantics are pretty simple on reasonable platforms...
         is_executable = is_executable_common
 
-    ## Now to search through our system_path for something that is executable
+    ## search for the executable
+
+    # check to see if the full path was specified as then we don't need
+    # to actually walk the system_path for any reason
+    if is_executable(exe):
+        return exe
+
+    # now to search through our system_path
     for path in system_path:
         p = join(path, exe)
 
@@ -282,7 +289,7 @@ def which(exe=None):
             continue
         continue
 
-    ## If something was executable, we should've found it already...
+    ## if something was executable, we should've found it already...
     log.trace(
         '\'%s\' could not be found in the following search path: \'%s\'',
         exe, system_path
