@@ -686,10 +686,10 @@ def event_return(events):
             log.error("sdstack_etcd returner <event_return> unable to cache event for {index:d} due to event already existing".format(index=res.createdIndex))
 
         # If we got here, then we should be able to write the tag under the current index
-        tagp = '/'.join([path, Schema['event-path'], package['tag'])
+        tagp = '/'.join([path, Schema['event-path'], package['tag']])
         try:
             log.trace("sdstack_etcd returner <event_return> updating cached tag at {path:s} for the event {index:d} with the tag {name:s}".format(path='/'.join([path, Schema['event-cache'], str(res.createdIndex), 'tag']), index=res.createdIndex, name=package['tag']))
-            client.write('/'.join([path, Schema['event-cache'], str(res.createdIndex), 'tag']), tagp])
+            client.write('/'.join([path, Schema['event-cache'], str(res.createdIndex), 'tag']), tagp)
 
         except Exception as E:
             log.trace("sdstack_etcd returner <event_return> unable to cache tag {name:s} under index {index:d} due to exception ({exception}) being raised".format(name=package['tag'], index=res.createdIndex, exception=E))
