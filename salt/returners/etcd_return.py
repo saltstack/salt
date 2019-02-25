@@ -119,7 +119,7 @@ import logging
 # Import salt libs
 import salt.utils.jid
 import salt.utils.json
-
+from salt.ext.six.moves import range
 try:
     import salt.utils.etcd_util
     from salt.utils.etcd_util import etcd
