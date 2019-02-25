@@ -217,7 +217,7 @@ def returner(ret):
     # Go back through all the exceptions that occurred while trying to write the
     # fields and log them.
     for e, field, value in exceptions:
-        log.exception("sdstack_etcd returner <returner> exception ({exception:s}) was raised while trying to set the field {field:s} for job {jid:s} to {value}".format(exception=e, field=field, jid=ret['jid'], value=value))
+        log.exception("sdstack_etcd returner <returner> exception ({exception}) was raised while trying to set the field {field:s} for job {jid:s} to {value}".format(exception=e, field=field, jid=ret['jid'], value=value))
     return
 
 
@@ -375,43 +375,57 @@ def _purge_events():
         log.trace('sdstack_etcd returner <_purge_events> reading modification index for event index {index:d} at {path:s}'.format(index=index, path=ev_indexp))
         try:
             ev_index = client.read(ev_indexp)
-            alive = True
 
-        # It's not, so the job is dead and we can remove it
-        except etcd.EtcdKeyNotFound as E:
-            alive = False
-
-        # Cycle to the next event iteration if it's still alive
-        if alive:
+            # Cycle to the next event iteration if it's still alive
             log.trace('sdstack_etcd returner <_purge_events> event {index:d} at {path:s} is still alive'.format(index=index, path=event.key))
             continue
 
-        ## Remove the event cache and its tag
-        log.debug('sdstack_etcd returner <_purge_events> event {index:d} at {path:s} has expired'.format(index=index, path=event.key))
+        # It's not, so the job is dead and we can remove it
+        except etcd.EtcdKeyNotFound as E:
+            log.debug('sdstack_etcd returner <_purge_events> event {index:d} at {path:s} has expired'.format(index=index, path=event.key))
 
-        # Remove the event tag associated with the current index associated with the current index
+        ## Remove the event cache and its tag
+
+        # Remove the event tag associated with the current index
         log.trace('sdstack_etcd returner <_purge_events> removing tag for event {index:d} at {path:s}'.format(index=index, path=ev_tag.value))
         comp = ev_tag.value.split('/')
-        res = client.delete('/'.join([path, Schema['event-path']] + comp))
 
-        # Remove the last component (the key), so we can walk through the directories trying to remove them one-by-one
-        comp.pop(-1)
-        count += 1
+        # Try and remove the event path that was specified while checking that
+        # its index is what we expect. If it's not, then we know that we're not
+        # the only person that's using this event and so we don't need to delete
+        # it yet, because another event will.
+        event_base = [path, Schema['event-path']]
+        try:
+            res = client.delete('/'.join(event_base + comp), prevIndex=ev_index.value)
+
+        # Our tag is in use by someone else, so we can simply remove the cache
+        # entry and then cycle to the next event.
+        except etcd.EtcdCompareFailed as E:
+            log.trace('sdstack_etcd returner <_purge_events> refusing to remove tag for event {index:d} at {path:s} as it is still in use'.format(index=index, path='/'.join(event_base + comp[:])))
+            count += 1
+
+            # Remove the whole event cache entry
+            log.trace('sdstack_etcd returner <_purge_events> (recursively) removing cache for event {index:d} at {path:s}'.format(index=index, path=event.key))
+            res = client.delete(event.key, recursive=True)
+            continue
 
         # Descend trying to clean up every parent directory
-        log.debug('sdstack_etcd returner <_purge_events> recursively removing directories for event {index:d} at {path:s}'.format(index=index, path='/'.join(comp)))
+        comp.pop(-1)
+        log.debug('sdstack_etcd returner <_purge_events> recursively removing directories for event {index:d} at {path:s}'.format(index=index, path='/'.join(event_base + comp[:])))
         for i in range(len(comp), 0, -1):
-            log.trace('sdstack_etcd returner <_purge_events> removing directory for event {index:d} at {path:s}'.format(index=index, path='/'.join(comp[:i])))
+            log.trace('sdstack_etcd returner <_purge_events> removing directory for event {index:d} at {path:s}'.format(index=index, path='/'.join(event_base + comp[:i])))
             try:
-                client.delete('/'.join([path, Schema['event-path']] + comp[:i]), dir=True)
-            except Exception as E:
-                log.debug('sdstack_etcd returner <_purge_events> exception ({exception:s}) was raised while trying to remove directory at {path:s}'.format(path='/'.join([path, Schema['event-path']] + comp[:i]), exception=E))
+                client.delete('/'.join(event_base + comp[:i]), dir=True)
+            except etcd.EtcdDirNotEmpty as E:
+                log.debug('sdstack_etcd returner <_purge_events> Unable to remove directory at {path:s} due to other tags under it still being in use ({exception})'.format(path='/'.join(event_base + comp[:i]), exception=E))
                 break
             continue
 
         # Remove the whole event cache entry
         log.trace('sdstack_etcd returner <_purge_events> (recursively) removing cache for event {index:d} at {path:s}'.format(index=index, path=event.key))
         res = client.delete(event.key, recursive=True)
+
+        count += 1
 
     return count
 
