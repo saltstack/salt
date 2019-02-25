@@ -552,15 +552,29 @@ def get_jid(jid):
         # then something that shouldn't happen has happened.
         log.trace('sdstack_etcd returner <get_jid> grabbing result from minion {minion:s} for job {jid:s} at {path:s}'.format(minion=comps[-1], jid=jid, path=returnp))
         try:
-            res = client.read(returnp)
+            result = client.read(returnp, recursive=True)
         except etcd.EtcdKeyNotFound as E:
             log.debug("sdstack_etcd returner <get_jid> returned nothing from minion {minion:s} for job {jid:s} at {path:s}".format(minion=comps[-1], jid=jid, path=returnp))
             continue
 
-        # We found something, so update our return dict with the minion id and
-        # the result that it returned.
-        ret[comps[-1]] = {'return': salt.utils.json.loads(res.value)}
-        log.debug("sdstack_etcd returner <get_jid> job {jid:s} from minion {minion:s} at path {path:s} returned {result}".format(minion=comps[-1], jid=jid, path=res.key, result=res.value))
+        # Aggregate any keys that we found into a dictionary
+        res = {}
+        for item in result.leaves:
+            name = item.key.split('/')[-1]
+            try:
+                res[name] = salt.utils.json.loads(item.value)
+
+            # We use a general exception here instead of ValueError jic someone
+            # changes the semantics of salt.utils.json.loads out from underneath us
+            except Exception as E:
+                log.warning("sdstack_etcd returner <get_jid> unable to decode field {name:s} from minion {minion:s} for job {jid:s} at {path:s}".format(minion=comps[-1], jid=jid, path=item.key, name=name))
+                res[name] = item.value
+            continue
+
+        # We found something, so update our return dict for the minion id with
+        # the results that it returned.
+        ret[comps[-1]] = res
+        log.debug("sdstack_etcd returner <get_jid> job {jid:s} from minion {minion:s} at path {path:s} returned {result}".format(minion=comps[-1], jid=jid, path=result.key, result=res))
     return ret
 
 
@@ -611,7 +625,7 @@ def get_fun(fun):
         data = salt.utils.json.loads(res.value)
         if data == fun:
             ret[comps[-1]] = str(data)
-            log.debug("sdstack_etcd returner <get_fun> found job {jid:s} for minion {minion:s} using {fun:s} at {path:s}".format(minion=comps[-1], fun=data, minion=jid, path=minion.key))
+            log.debug("sdstack_etcd returner <get_fun> found job {jid:s} for minion {minion:s} using {fun:s} at {path:s}".format(minion=comps[-1], fun=data, jid=jid, path=minion.key))
         continue
     return ret
 
