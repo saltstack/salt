@@ -257,7 +257,7 @@ class CkMinions(object):
                              exact_match=False):
         '''
         Helper function to search for minions in master caches
-        If 'greedy' return accepted minions that matched by the condition or absend in the cache.
+        If 'greedy' return accepted minions that matched by the condition or absent in the cache.
         If not 'greedy' return the only minions have cache data and matched by the condition.
         '''
         cache_enabled = self.opts.get('minion_data_cache', False)
