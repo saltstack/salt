@@ -190,10 +190,10 @@ def returner(ret):
 
     # We can use the ttl here because our minionp is actually linked to the job
     # which will expire according to the ttl anyways..
-    log.debug("sdstack_etcd returner <returner> updating (last) job id of {id:s} at {path:s} with job {jid:s}".format(jid=ret['jid'], id=ret['id'], path=minionp))
+    log.debug("sdstack_etcd returner <returner> updating (last) job id of {minion:s} at {path:s} with job {jid:s}".format(jid=ret['jid'], minion=ret['id'], path=minionp))
     res = client.write(minionp, ret['jid'], ttl=ttl if ttl > 0 else None)
     if hasattr(res, '_prev_node'):
-        log.trace("sdstack_etcd returner <returner> the previous job id {old:s} for {id:s} at {path:s} was set to {new:s}".format(old=res._prev_node.value, id=ret['id'], path=minionp, new=res.value))
+        log.trace("sdstack_etcd returner <returner> the previous job id {old:s} for {minion:s} at {path:s} was set to {new:s}".format(old=res._prev_node.value, minion=ret['id'], path=minionp, new=res.value))
 
     # Figure out the path for the specified job and minion
     jobp = '/'.join([path, Schema['job-cache'], ret['jid'], ret['id']])
@@ -275,7 +275,7 @@ def save_minions(jid, minions, syndic_id=None):  # pylint: disable=unused-argume
     for minion in set(minions):
         minionp = '/'.join([path, minion])
         res = client.write(minionp, None, dir=True)
-        log.trace('sdstack_etcd returner <save_minions> added minion {id:s} for job {jid:s} to {path:s}'.format(id=minion, jid=jid, path=res.key))
+        log.trace('sdstack_etcd returner <save_minions> added minion {minion:s} for job {jid:s} to {path:s}'.format(minion=minion, jid=jid, path=res.key))
     return
 
 
@@ -493,17 +493,17 @@ def get_jid(jid):
         # Now we know the minion and the path to the return for its job, we can
         # just grab it. If the key exists, but the value is missing entirely,
         # then something that shouldn't happen has happened.
-        log.trace('sdstack_etcd returner <get_jid> grabbing result from minion {id:s} for job {jid:s} at {path:s}'.format(id=comps[-1], jid=jid, path=items.returnp))
+        log.trace('sdstack_etcd returner <get_jid> grabbing result from minion {minion:s} for job {jid:s} at {path:s}'.format(minion=comps[-1], jid=jid, path=items.returnp))
         try:
             res = client.read(returnp)
         except etcd.EtcdKeyNotFound as E:
-            log.debug("sdstack_etcd returner <get_jid> returned nothing from minion {id:s} for job {jid:s} at {path:s}".format(id=comps[-1], jid=jid, path=returnp))
+            log.debug("sdstack_etcd returner <get_jid> returned nothing from minion {minion:s} for job {jid:s} at {path:s}".format(minion=comps[-1], jid=jid, path=returnp))
             continue
 
         # We found something, so update our return dict with the minion id and
         # the result that it returned.
         ret[comps[-1]] = {'return': salt.utils.json.loads(res.value)}
-        log.trace("sdstack_etcd returner <get_jid> job {jid:s} from minion {id:s} at path {path:s} returned {result}".format(id=comps[-1], jid=jid, path=res.key, result=res.value))
+        log.trace("sdstack_etcd returner <get_jid> job {jid:s} from minion {minion:s} at path {path:s} returned {result}".format(minion=comps[-1], jid=jid, path=res.key, result=res.value))
     return ret
 
 
@@ -538,20 +538,20 @@ def get_fun(fun):
 
         # Try and read the field, and skip it if it doesn't exist or wasn't
         # registered for some reason.
-        log.trace('sdstack_etcd returner <get_fun> reading function from minion {id:s} for job {jid:s} at {path:s}'.format(id=comps[-1], jid=str(item.value), path=funp))
+        log.trace('sdstack_etcd returner <get_fun> reading function from minion {minion:s} for job {jid:s} at {path:s}'.format(minion=comps[-1], jid=str(item.value), path=funp))
         try:
             res = client.read(funp)
         except etcd.EtcdKeyNotFound as E:
-            log.debug("sdstack_etcd returner <get_fun> returned nothing from minion {id:s} for job {jid:s} at path {path:s}".format(id=comps[-1], jid=str(item.value), path=funp))
+            log.debug("sdstack_etcd returner <get_fun> returned nothing from minion {minion:s} for job {jid:s} at path {path:s}".format(minion=comps[-1], jid=str(item.value), path=funp))
             continue
 
         # Check if the function field (fun) matches what the user is looking for
         # If it does, then we can just add the minion to our results
-        log.trace('sdstack_etcd returner <get_fun> decoding json data from minion {id:s} for job {jid:s} at {path:s}'.format(id=comps[-1], jid=str(item.value), path=funp))
+        log.trace('sdstack_etcd returner <get_fun> decoding json data from minion {minion:s} for job {jid:s} at {path:s}'.format(minion=comps[-1], jid=str(item.value), path=funp))
         data = salt.utils.json.loads(res.value)
         if data == fun:
             ret[comps[-1]] = str(data)
-            log.trace("sdstack_etcd returner <get_fun> found job {jid:s} for minion {id:s} using {fun:s} at {path:s}".format(jid=comps[-1], fun=data, id=item.value, path=item.key))
+            log.trace("sdstack_etcd returner <get_fun> found job {jid:s} for minion {minion:s} using {fun:s} at {path:s}".format(jid=comps[-1], fun=data, minion=item.value, path=item.key))
         continue
     return ret
 
@@ -612,7 +612,7 @@ def get_minions():
         if not item.dir:
             comps = str(item.key).split('/')
             ret.append(comps[-1])
-            log.trace("sdstack_etcd returner <get_minions> found minion {id:s} at {path:s}".format(id=comps[-1], path=item.key))
+            log.trace("sdstack_etcd returner <get_minions> found minion {minion:s} at {path:s}".format(minion=comps[-1], path=item.key))
         continue
     return ret
 
@@ -676,7 +676,7 @@ def event_return(events):
 
             # Otherwise, the event was updated and thus we need to update our cache too
             else:
-                log.trace("sdstack_etcd returner <event_return> updating id ({id:s}) at {path:s} for the new event {index:d} with the tag {name:s} {expire:s}".format(path='/'.join([path, Schema['event-cache'], str(res.createdIndex), 'id']), id=res.createdIndex, index=res.modifiedIndex, name=package['tag'], expire='that will need to be manually removed' if ttl is None else 'that will expire in {ttl:d} seconds'.format(ttl=ttl)))
+                log.trace("sdstack_etcd returner <event_return> updating id ({id:d}) at {path:s} for the new event {index:d} with the tag {name:s} {expire:s}".format(path='/'.join([path, Schema['event-cache'], str(res.createdIndex), 'id']), id=res.createdIndex, index=res.modifiedIndex, name=package['tag'], expire='that will need to be manually removed' if ttl is None else 'that will expire in {ttl:d} seconds'.format(ttl=ttl)))
                 client.write('/'.join([path, Schema['event-cache'], str(res.createdIndex), 'id']), res.modifiedIndex, prevValue=res._prev_node.modifiedIndex, ttl=ttl if ttl > 0 else None)
 
         except etcd.EtcdCompareFailed as E:
