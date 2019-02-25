@@ -409,7 +409,7 @@ def _purge_events():
             try:
                 client.delete('/'.join([path, Schema['event-path']] + comp[:i]), dir=True)
             except Exception as E:
-                log.debug('sdstack_etcd returner <_purge_events> exception ({exception:s}) was raised while trying to remove directory at {path:s}'.format(path='/'.join([path, Schema['event-path'], comp[:i]]), exception=E))
+                log.debug('sdstack_etcd returner <_purge_events> exception ({exception:s}) was raised while trying to remove directory at {path:s}'.format(path='/'.join([path, Schema['event-path']] + comp[:i]), exception=E))
                 break
             continue
         continue
