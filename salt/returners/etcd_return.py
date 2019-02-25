@@ -135,7 +135,7 @@ def returner(ret):
     # We can use the ttl here because our minionp is actually linked to the job
     # which will expire according to the ttl anyways..
     log.debug("sdstack_etcd returner <returner> updating (last) job id of {id:s} at {path:s} with job {jid:s}".format(jid=ret['jid'], id=ret['id'], path=minionp))
-    res = client.set(minionp, ret['jid'], ttl=ttl if ttl > 0 else None)
+    res = client.write(minionp, ret['jid'], ttl=ttl if ttl > 0 else None)
     if hasattr(res, '_prev_node'):
         log.trace("sdstack_etcd returner <returner> the previous job id {old:s} for {id:s} at {path:s} was set to {new:s}".format(old=res._prev_node.value, id=ret['id'], path=minionp, new=res.value))
 
@@ -151,7 +151,7 @@ def returner(ret):
         fieldp = '/'.join([jobp, field])
         data = salt.utils.json.dumps(ret[field])
         try:
-            res = client.set(fieldp, data)
+            res = client.write(fieldp, data)
         except Exception as E:
             log.trace("sdstack_etcd returner <returner> unable to set field {field:s} for job {jid:s} at {path:s} to {result}".format(field=field, jid=ret['jid'], path=fieldp, result=ret[field]))
             exceptions.append((E, field, ret[field]))
@@ -182,7 +182,7 @@ def save_load(jid, load, minions=None):
 
     # Now we can just store the current load
     data = salt.utils.json.dumps(load)
-    res = client.set(loadp, data)
+    res = client.write(loadp, data)
 
     log.trace('sdstack_etcd returner <save_load> saved load data for job {jid:s} at {path:s} with {data}'.format(jid=jid, path=res.key, data=load))
 
@@ -191,7 +191,7 @@ def save_load(jid, load, minions=None):
     # salt that its okey to remove the entire key by removing this lock.
     lockp = '/'.join([path, 'jobs', jid, '.lock.p'])
     log.trace('sdstack_etcd returner <save_load> writing lock file for job {jid:s} at {path:s} using index {index:d}'.format(jid=jid, path=lockp, index=res.modifiedIndex))
-    res = client.set(lockp, res.modifiedIndex, ttl=ttl if ttl > 0 else None)
+    res = client.write(lockp, res.modifiedIndex, ttl=ttl if ttl > 0 else None)
 
     if res.ttl is not None:
         log.trace('sdstack_etcd returner <save_load> job {jid:s} at {path:s} will expire in {ttl:d} seconds'.format(jid=jid, path=res.key, ttl=res.ttl))
@@ -218,7 +218,7 @@ def save_minions(jid, minions, syndic_id=None):  # pylint: disable=unused-argume
     # Iterate through all of the minions and add a directory for them to the job path
     for minion in set(minions):
         minionp = '/'.join([path, minion])
-        res = client.set(minionp, None, dir=True)
+        res = client.write(minionp, None, dir=True)
         log.trace('sdstack_etcd returner <save_minions> added minion {id:s} for job {jid:s} to {path:s}'.format(id=minion, jid=jid, path=res.key))
     return
 
@@ -390,7 +390,7 @@ def get_load(jid):
     # we need to return None, because that's what our caller expects on a
     # non-existent job.
     try:
-        res = client.get(loadp)
+        res = client.read(loadp)
     except etcd.EtcdKeyNotFound as E:
         log.error("sdstack_etcd returner <get_load> could not find job {jid:s} at the path {path:s}".format(jid=jid, path=loadp))
         return None
@@ -412,7 +412,7 @@ def get_jid(jid):
     # caller.
     log.debug('sdstack_etcd returner <get_jid> reading job fields for job {jid:s} from {path:s}'.format(jid=jid, path=jobp))
     try:
-        items = client.get(jobp)
+        items = client.read(jobp)
     except etcd.EtcdKeyNotFound as E:
         return {}
 
@@ -434,7 +434,7 @@ def get_jid(jid):
         # then something that shouldn't happen has happened.
         log.trace('sdstack_etcd returner <get_jid> grabbing result from minion {id:s} for job {jid:s} at {path:s}'.format(id=comps[-1], jid=jid, path=items.returnp))
         try:
-            res = client.get(returnp)
+            res = client.read(returnp)
         except etcd.EtcdKeyNotFound as E:
             log.debug("sdstack_etcd returner <get_jid> returned nothing from minion {id:s} for job {jid:s} at {path:s}".format(id=comps[-1], jid=jid, path=returnp))
             continue
@@ -460,7 +460,7 @@ def get_fun(fun):
     # nothing is available.
     log.debug('sdstack_etcd returner <get_fun> reading minions at {path:s} for function {fun:s}'.format(path=minionsp, fun=fun))
     try:
-        items = client.get(minionsp)
+        items = client.read(minionsp)
     except etcd.EtcdKeyNotFound as E:
         return {}
 
@@ -479,7 +479,7 @@ def get_fun(fun):
         # registered for some reason.
         log.trace('sdstack_etcd returner <get_fun> reading function from minion {id:s} for job {jid:s} at {path:s}'.format(id=comps[-1], jid=str(item.value), path=funp))
         try:
-            res = client.get(funp)
+            res = client.read(funp)
         except etcd.EtcdKeyNotFound as E:
             log.debug("sdstack_etcd returner <get_fun> returned nothing from minion {id:s} for job {jid:s} at path {path:s}".format(id=comps[-1], jid=str(item.value), path=funp))
             continue
@@ -508,7 +508,7 @@ def get_jids():
     # jobs have been created yet so return an empty list to the caller.
     log.debug("sdstack_etcd returner <get_jids> listing jobs at {path:s}".format(path=jobsp))
     try:
-        items = client.get(jobsp)
+        items = client.read(jobsp)
     except etcd.EtcdKeyNotFound as E:
         return []
 
@@ -539,7 +539,7 @@ def get_minions():
     # this case, return an empty last for the caller.
     log.debug('sdstack_etcd returner <get_minions> reading minions at {path:s}'.format(path=minionsp))
     try:
-        items = client.get(minionsp)
+        items = client.read(minionsp)
     except etcd.EtcdKeyNotFound as E:
         return []
 
