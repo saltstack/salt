@@ -579,11 +579,13 @@ def get_jids():
     ret = []
     for item in items.leaves:
         comps = str(item.key).split('/')
-        if item.dir:
-            jid = comps[-1]
-            ret.append(jid)
-            log.trace("sdstack_etcd returner <get_jids> found job {jid:s} at {path:s}".format(jid=comps[-1], path=item.key))
-        continue
+        if not item.dir:
+            continue
+
+        jid = comps[-1]
+        ret.append(jid)
+
+        log.trace("sdstack_etcd returner <get_jids> found job {jid:s} at {path:s}".format(jid=comps[-1], path=item.key))
     return ret
 
 
@@ -609,11 +611,13 @@ def get_minions():
     log.debug('sdstack_etcd returner <get_minions> iterating through minions at {path:s}'.format(path=items.key))
     ret = []
     for item in items.leaves:
-        if not item.dir:
-            comps = str(item.key).split('/')
-            ret.append(comps[-1])
-            log.trace("sdstack_etcd returner <get_minions> found minion {minion:s} at {path:s}".format(minion=comps[-1], path=item.key))
-        continue
+        if item.dir:
+            continue
+
+        comps = str(item.key).split('/')
+        ret.append(comps[-1])
+
+        log.trace("sdstack_etcd returner <get_minions> found minion {minion:s} at {path:s}".format(minion=comps[-1], path=item.key))
     return ret
 
 
