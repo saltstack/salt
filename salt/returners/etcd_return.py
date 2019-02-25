@@ -616,12 +616,12 @@ def event_return(events):
         try:
             # If the event is a new key, then we can simply cache it with the specified ttl
             if res.newKey:
-                log.trace("sdstack_etcd returner <event_return> writing new id ({id:s}) to {path:s} for the event {index:s} with the tag {name:s} {expire:s}".format(path='/'.join([path, 'cache', str(index), 'id']), id=str(index), index=res.modifiedIndex, name=package['tag'], expire='that will need to be manually removed' if ttl is None else 'that will expire in {ttl:d} seconds'.format(ttl)))
+                log.trace("sdstack_etcd returner <event_return> writing new id ({id:s}) to {path:s} for the event {index:s} with the tag {name:s} {expire:s}".format(path='/'.join([path, 'cache', str(index), 'id']), id=str(index), index=res.modifiedIndex, name=package['tag'], expire='that will need to be manually removed' if ttl is None else 'that will expire in {ttl:d} seconds'.format(ttl=ttl)))
                 etcd.write('/'.join([path, 'cache', str(index), 'id']), res.modifiedIndex, prevExist=False, ttl=ttl if ttl > 0 else None)
 
             # Otherwise, the event was updated and thus we need to update our cache too
             else:
-                log.trace("sdstack_etcd returner <event_return> updating id ({id:s}) at {path:s} for the event {index:s} with the tag {name:s} {expire:s}".format(path='/'.join([path, 'cache', str(index), 'id']), id=str(index), index=res.modifiedIndex, name=package['tag'], expire='that will need to be manually removed' if ttl is None else 'that will expire in {ttl:d} seconds'.format(ttl)))
+                log.trace("sdstack_etcd returner <event_return> updating id ({id:s}) at {path:s} for the event {index:s} with the tag {name:s} {expire:s}".format(path='/'.join([path, 'cache', str(index), 'id']), id=str(index), index=res.modifiedIndex, name=package['tag'], expire='that will need to be manually removed' if ttl is None else 'that will expire in {ttl:d} seconds'.format(ttl=ttl)))
                 etcd.write('/'.join([path, 'cache', str(index), 'id']), res.modifiedIndex, prevValue=res._prev_node.modifiedIndex, ttl=ttl if ttl > 0 else None)
 
         except etcd.EtcdCompareFailed as E:
