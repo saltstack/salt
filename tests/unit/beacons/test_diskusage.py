@@ -121,7 +121,7 @@ class DiskUsageBeaconTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(ret, [{'diskusage': 50, 'mount': '/'}])
 
     def test_diskusage_windows_single_slash(self):
-        '''
+        r'''
         This tests new behavior (C:\)
         '''
         disk_usage_mock = Mock(return_value=WINDOWS_STUB_DISK_USAGE)
@@ -159,7 +159,7 @@ class DiskUsageBeaconTestCase(TestCase, LoaderModuleMockMixin):
                 self.assertEqual(ret, [{'diskusage': 50, 'mount': 'C:\\'}])
 
     def test_diskusage_windows_lowercase(self):
-        '''
+        r'''
         This tests lowercase drive letter (c:\)
         '''
         disk_usage_mock = Mock(return_value=WINDOWS_STUB_DISK_USAGE)
