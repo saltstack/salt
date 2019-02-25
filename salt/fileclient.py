@@ -1030,7 +1030,13 @@ class RemoteClient(Client):
             return
 
         self._closing = True
-        self.channel.close()
+        channel = None
+        try:
+            channel = self.channel
+        except AttributeError:
+            pass
+        if channel is not None:
+            channel.close()
 
     def get_file(self,
                  path,
