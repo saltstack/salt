@@ -409,14 +409,14 @@ def _purge_events():
         count += 1
 
         # Descend trying to clean up every parent directory
-        log.debug('sdstack_etcd returner <_purge_events> recursively removing directories for event {index:d} at {path:s}'.format(index=index, path='/'.join(comp[:i])))
+        log.debug('sdstack_etcd returner <_purge_events> recursively removing directories for event {index:d} at {path:s}'.format(index=index, path='/'.join(comp)))
         for i in range(len(comp), 0, -1):
             log.trace('sdstack_etcd returner <_purge_events> removing directory for event {index:d} at {path:s}'.format(index=index, path='/'.join(comp[:i])))
             try:
                 client.delete('/'.join([path, Schema['event-path']] + comp[:i]), dir=True)
             except Exception as E:
-                log.debug('sdstack_etcd returner <_purge_events> exception ({exception:s}) was raised while trying to remove directory at {path:s}'.format(path='/'.join([path, Schema['event-path']], comp[:i]), exception=E))
-                break;
+                log.debug('sdstack_etcd returner <_purge_events> exception ({exception:s}) was raised while trying to remove directory at {path:s}'.format(path='/'.join([path, Schema['event-path'], comp[:i]]), exception=E))
+                break
             continue
         continue
     return count
