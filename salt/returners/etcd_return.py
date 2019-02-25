@@ -295,7 +295,7 @@ def _purge_jobs():
     log.trace('sdstack_etcd returner <_purge_jobs> reading jobs at {path:s}'.format(path=jobp))
     try:
         jobs = client.read(jobp)
-    except salt.utils.etcd_util.etcd.EtcdKeyNotFound as E:
+    except etcd.EtcdKeyNotFound as E:
         return 0
 
     # Iterate through all of the children at our job path while looking for
@@ -307,7 +307,7 @@ def _purge_jobs():
             log.warning('sdstack_etcd returner <_purge_jobs> found a non-job at {path:s} {expire:s}'.format(path=job.key, expire='that will need to be manually removed' if job.ttl is None else 'that will expire in {ttl:d} seconds'.format(ttl=job.ttl)))
             continue
 
-        # Build our lock path
+        # Build our lock path that we'll use to see if the job is alive
         lockp = '/'.join([job.key, '.lock.p'])
 
         # Ping it to see if it's alive
@@ -462,14 +462,17 @@ def clean_old_jobs():
     :return:
     '''
 
+    # First we'll purge the jobs...
     jobc = _purge_jobs()
     if jobc > 0:
         log.trace('sdstack_etcd returner <clean_old_jobs> successfully removed {count:d} jobs'.format(count=jobc))
 
+    # ...and then we'll purge the events
     eventsc = _purge_events()
     if eventsc > 0:
         log.trace('sdstack_etcd returner <clean_old_jobs> successfully removed {count:d} events'.format(count=eventsc))
 
+    # Log that we hit a cleanup iteration
     log.debug('sdstack_etcd returner <clean_old_jobs> completed purging jobs and events')
 
 
@@ -706,13 +709,13 @@ def event_return(events):
         log.trace("sdstack_etcd returner <event_return> wrote event ({index:d}) with the tag {name:s} to {path:s} using {data}".format(path=res.key, name=package['tag'], data=res.value, index=res.createdIndex))
 
         # Next we need to cache the index for said event so that we can use it to
-        # determine whether it is ready to be purged or not. We do this by using
-        # the modifiedIndex to link the cache event with the tag. If we were
-        # using the etcd3 api we could make all 3 of these writes atomic, but
-        # we're not and so this is a manual effort.
+        # determine if the event actually owns it or not. We do this by using its
+        # modifiedIndex to link the cache event with the tag. If we were using the
+        # etcd3 api we could make all 3 of these writes atomic, but we're not and
+        # so this is a manual effort.
 
         try:
-            # If the event is a new key, then we can simply cache it with the specified ttl
+            # If the event is a new key, then we can simply cache it without concern
             if res.newKey:
                 log.trace("sdstack_etcd returner <event_return> writing new id ({id:d}) to {path:s} for the new event {index:d} with the tag {name:s}".format(path='/'.join([path, Schema['event-cache'], str(res.createdIndex), 'id']), id=res.createdIndex, index=res.modifiedIndex, name=package['tag']))
                 client.write('/'.join([path, Schema['event-cache'], str(res.createdIndex), 'id']), res.modifiedIndex, prevExist=False)
@@ -727,9 +730,9 @@ def event_return(events):
             exceptions.append((E, package))
             continue
 
-        # If we got here, then we should be able to write the tag under the current index
+        # If we got here, then we should be able to write the tag using the event index
         try:
-            log.trace("sdstack_etcd returner <event_return> updating cached tag at {path:s} for the event {index:d} with the tag {name:s}".format(path='/'.join([path, Schema['event-cache'], str(res.createdIndex), 'tag']), index=res.createdIndex, name=package['tag']))
+            log.trace("sdstack_etcd returner <event_return> updating cache at {path:s} for the event {index:d} with the tag {name:s}".format(path='/'.join([path, Schema['event-cache'], str(res.createdIndex), 'tag']), index=res.createdIndex, name=package['tag']))
             client.write('/'.join([path, Schema['event-cache'], str(res.createdIndex), 'tag']), package['tag'])
 
         except Exception as E:
@@ -739,9 +742,11 @@ def event_return(events):
 
         # Now that both have been written, let's write our lock to actually enable the event
         try:
-            log.trace("sdstack_etcd returner <event_return> writing new lock ({id:d}) to {path:s} for the event {index:d} with the tag {name:s} {expire:s}".format(path='/'.join([path, Schema['event-cache'], str(res.createdIndex), 'id']), id=res.createdIndex, index=res.modifiedIndex, name=package['tag'], expire='that will need to be manually removed' if ttl is None else 'that will expire in {ttl:d} seconds'.format(ttl=ttl)))
+            log.trace("sdstack_etcd returner <event_return> writing lock ({id:d}) to {path:s} for the event {index:d} with the tag {name:s} {expire:s}".format(path='/'.join([path, Schema['event-cache'], str(res.createdIndex), 'id']), id=res.createdIndex, index=res.modifiedIndex, name=package['tag'], expire='that will need to be manually removed' if ttl is None else 'that will expire in {ttl:d} seconds'.format(ttl=ttl)))
             client.write('/'.join([path, Schema['event-cache'], str(res.createdIndex), 'lock']), res.modifiedIndex, ttl=ttl if ttl > 0 else None)
 
+        # If we can't write the lock, it's fine because the maintenance thread
+        # will purge this event from the cache anyways
         except Exception as E:
             log.error("sdstack_etcd returner <event_return> unable to add lock for {index:d} due to exception ({exception}) being raised".format(index=res.createdIndex, exception=E))
             exceptions.append((E, package))
