@@ -621,12 +621,12 @@ def event_return(events):
             # If the event is a new key, then we can simply cache it with the specified ttl
             if res.newKey:
                 log.trace("sdstack_etcd returner <event_return> writing new id ({id:d}) to {path:s} for the new event {index:d} with the tag {name:s} {expire:s}".format(path='/'.join([path, 'cache', str(res.createdIndex), 'id']), id=res.createdIndex, index=res.modifiedIndex, name=package['tag'], expire='that will need to be manually removed' if ttl is None else 'that will expire in {ttl:d} seconds'.format(ttl=ttl)))
-                etcd.write('/'.join([path, 'cache', str(res.createdIndex), 'id']), res.modifiedIndex, prevExist=False, ttl=ttl if ttl > 0 else None)
+                client.write('/'.join([path, 'cache', str(res.createdIndex), 'id']), res.modifiedIndex, prevExist=False, ttl=ttl if ttl > 0 else None)
 
             # Otherwise, the event was updated and thus we need to update our cache too
             else:
                 log.trace("sdstack_etcd returner <event_return> updating id ({id:s}) at {path:s} for the new event {index:d} with the tag {name:s} {expire:s}".format(path='/'.join([path, 'cache', str(res.createdIndex), 'id']), id=res.createdIndex, index=res.modifiedIndex, name=package['tag'], expire='that will need to be manually removed' if ttl is None else 'that will expire in {ttl:d} seconds'.format(ttl=ttl)))
-                etcd.write('/'.join([path, 'cache', str(res.createdIndex), 'id']), res.modifiedIndex, prevValue=res._prev_node.modifiedIndex, ttl=ttl if ttl > 0 else None)
+                client.write('/'.join([path, 'cache', str(res.createdIndex), 'id']), res.modifiedIndex, prevValue=res._prev_node.modifiedIndex, ttl=ttl if ttl > 0 else None)
 
         except etcd.EtcdCompareFailed as E:
             log.error("sdstack_etcd returner <event_return> unable to update cache for {index:d} due to non-matching modification index ({mod:d})".format(index=res.createdIndex, mod=res._prev_node.modifiedIndex))
@@ -637,7 +637,7 @@ def event_return(events):
         # If we got here, then we should be able to write the tag under the current index
         try:
             log.trace("sdstack_etcd returner <event_return> updating cached tag at {path:s} for the event {index:d} with the tag {name:s}".format(path='/'.join([path, 'cache', str(res.createdIndex), 'tag']), index=res.createdIndex, name=package['tag']))
-            etcd.write('/'.join([path, 'cache', str(res.createdIndex), 'tag']), package['tag'])
+            client.write('/'.join([path, 'cache', str(res.createdIndex), 'tag']), package['tag'])
 
         except Exception as E:
             log.trace("sdstack_etcd returner <event_return> unable to cache tag {name:s} under index {index:d} due to exception ({exception}) being raised".format(name=package['tag'], index=res.createdIndex, exception=E))
