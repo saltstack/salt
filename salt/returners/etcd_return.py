@@ -233,27 +233,37 @@ def save_load(jid, load, minions=None):
 
     # Check if the specified jid is 'req', as only incorrect code will do that
     if jid == 'req':
-        log.warning('sdstack_etcd returner <save_load> was called with a request job id ({jid:s}) with {data:s}'.format(jid=jid, data=load))
+        log.warning('sdstack_etcd returner <save_load> was called using a request job id ({jid:s}) with {data:s}'.format(jid=jid, data=load))
 
-    # Figure out the path using jobs/$jid/.load.p
+    # Build the paths that we'll use for our job
     loadp = '/'.join([path, Schema['job-cache'], jid, '.load.p'])
-    log.debug('sdstack_etcd returner <save_load> setting load data for job {jid:s} at {path:s} with {data:s}'.format(jid=jid, path=loadp, data=load))
+    lockp = '/'.join([path, Schema['job-cache'], jid, '.lock.p'])
 
-    # Now we can just store the current load
+    ## Now we can just store the current load
     data = salt.utils.json.dumps(load)
-    res = client.write(loadp, data)
 
-    log.trace('sdstack_etcd returner <save_load> saved load data for job {jid:s} at {path:s} with {data}'.format(jid=jid, path=res.key, data=load))
+    log.debug('sdstack_etcd returner <save_load> storing load data for job {jid:s} to {path:s} with {data:s}'.format(jid=jid, path=loadp, data=load))
+    try:
+        res = client.write(loadp, data)
+
+    # If we failed here, it's okay because the lock won't get written so this
+    # will get scheduled for deletion.
+    except Exception as E:
+        log.trace("sdstack_etcd returner <save_load> unable to store load for job {jid:s} to the path {path:s} due to exception ({exception}) being raised".format(jid=jid, path=loadp, exception=E)
+        return
 
     # Since this is when a job is being created, create a lock that we can
     # check to see if the job has expired. This allows a user to signal to
-    # salt that its okey to remove the entire key by removing this lock.
-    lockp = '/'.join([path, Schema['job-cache'], jid, '.lock.p'])
+    # salt that it's okay to remove the entire key by removing this lock.
     log.trace('sdstack_etcd returner <save_load> writing lock file for job {jid:s} at {path:s} using index {index:d}'.format(jid=jid, path=lockp, index=res.modifiedIndex))
-    res = client.write(lockp, res.modifiedIndex, ttl=ttl if ttl > 0 else None)
 
-    if res.ttl is not None:
-        log.trace('sdstack_etcd returner <save_load> job {jid:s} at {path:s} will expire in {ttl:d} seconds'.format(jid=jid, path=res.key, ttl=res.ttl))
+    try:
+        res = client.write(lockp, res.modifiedIndex, ttl=ttl if ttl > 0 else None)
+        if res.ttl is not None:
+            log.trace('sdstack_etcd returner <save_load> job {jid:s} at {path:s} will expire in {ttl:d} seconds'.format(jid=jid, path=res.key, ttl=res.ttl))
+
+    except Exception as E:
+        log.trace("sdstack_etcd returner <save_load> unable to write lock for job {jid:s} to the path {path:s} due to exception ({exception}) being raised".format(jid=jid, path=lockp, exception=E)
 
     return
 
@@ -274,11 +284,12 @@ def save_minions(jid, minions, syndic_id=None):  # pylint: disable=unused-argume
     jobp = '/'.join([path, Schema['job-cache'], jid])
     log.debug('sdstack_etcd returner <save_minions> adding minions for job {jid:s} to {path:s}'.format(jid=jid, path=jobp))
 
-    # Iterate through all of the minions and add a directory for them to the job path
-    for minion in set(minions):
-        minionp = '/'.join([path, minion])
+    # Iterate through all of the minions we received and add the directory for them
+    # to the job path despite there being no content here.
+    for minion in minions:
+        minionp = '/'.join([jobp, minion])
         res = client.write(minionp, None, dir=True)
-        log.trace('sdstack_etcd returner <save_minions> added minion {minion:s} for job {jid:s} to {path:s}'.format(minion=minion, jid=jid, path=res.key))
+        log.trace('sdstack_etcd returner <save_minions> added minion {minion:s} path to job {jid:s} at {path:s}'.format(minion=minion, jid=jid, path=res.key))
     return
 
 
@@ -514,6 +525,7 @@ def get_jid(jid):
     try:
         items = client.read(jobp)
     except etcd.EtcdKeyNotFound as E:
+        log.trace('sdstack_etcd returner <get_jid> unable to read job {jid:s} from {path:s}'.format(jid=jid, path=jobp))
         return {}
 
     # Iterate through all of the children at our job path that are directories.
