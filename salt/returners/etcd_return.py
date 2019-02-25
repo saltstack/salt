@@ -368,10 +368,14 @@ def clean_old_jobs():
     '''
 
     jobc = _purge_jobs()
-    log.trace('sdstack_etcd returner <clean_old_jobs> successfully removed {:d} jobs'.format(jobc))
+    if jobc > 0:
+        log.trace('sdstack_etcd returner <clean_old_jobs> successfully removed {:d} jobs'.format(jobc))
 
     eventsc = _purge_events()
-    log.trace('sdstack_etcd returner <clean_old_jobs> successfully removed {:d} events'.format(eventsc))
+    if eventsc > 0:
+        log.trace('sdstack_etcd returner <clean_old_jobs> successfully removed {:d} events'.format(eventsc))
+
+    log.debug('sdstack_etcd returner <clean_old_jobs> completed purging jobs and events')
 
 
 def get_load(jid):
