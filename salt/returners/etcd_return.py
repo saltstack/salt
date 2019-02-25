@@ -307,6 +307,7 @@ def _purge_jobs():
     try:
         jobs = client.read(jobp)
     except etcd.EtcdKeyNotFound as E:
+        log.debug('sdstack_etcd returner <_purge_jobs> no jobs were found at {path:s}'.format(path=jobp))
         return 0
 
     # Iterate through all of the children at our job path while looking for
@@ -317,19 +318,23 @@ def _purge_jobs():
         if not job.dir:
             log.warning('sdstack_etcd returner <_purge_jobs> found a non-job at {path:s} {expire:s}'.format(path=job.key, expire='that will need to be manually removed' if job.ttl is None else 'that will expire in {ttl:d} seconds'.format(ttl=job.ttl)))
             continue
+        jid = job.key.split('/')[-1]
 
         # Build our lock path that we'll use to see if the job is alive
         lockp = '/'.join([job.key, '.lock.p'])
 
         # Ping it to see if it's alive
-        log.trace('sdstack_etcd returner <_purge_jobs> checking lock for job {jid:s} at {path:s}'.format(jid=job.key.split('/')[-1], path=lockp))
+        log.trace('sdstack_etcd returner <_purge_jobs> checking lock for job {jid:s} at {path:s}'.format(jid=jid, path=lockp))
         try:
-            client.read(lockp)
+            res = client.read(lockp)
+
+            log.debug('sdstack_etcd returner <_purge_jobs> job {jid:s} at {path:s} is still alive and {expire:s}'.format(jid=jid, path=res.key, expire='will need to be manually removed' if res.ttl is None else 'will expire in {ttl:d} seconds'.format(ttl=res.ttl)))
 
         # It's not, so the job is dead and we can remove it
         except etcd.EtcdKeyNotFound as E:
+            log.debug('sdstack_etcd returner <_purge_jobs> job {jid:s} at {path:s} has expired'.format(jid=jid, path=res.key))
+
             res = client.delete(job.key, recursive=True)
-            log.debug('sdstack_etcd returner <_purge_jobs> job {jid:s} at {path:s} has expired'.format(jid=res.key.split('/')[-1], path=res.key))
             count += 1
         continue
     log.trace('sdstack_etcd returner <_purge_jobs> purged {count:d} jobs'.format(count=count))
@@ -496,17 +501,17 @@ def get_load(jid):
 
     # Figure out the path that our job should be at
     loadp = '/'.join([path, Schema['job-cache'], jid, '.load.p'])
-    log.debug('sdstack_etcd returner <get_load> reading load data for job {jid:s} from {path:s}'.format(jid=jid, path=loadp))
 
     # Read it. If EtcdKeyNotFound was raised then the key doesn't exist and so
     # we need to return None, because that's what our caller expects on a
     # non-existent job.
+    log.debug('sdstack_etcd returner <get_load> reading load data for job {jid:s} from {path:s}'.format(jid=jid, path=loadp))
     try:
         res = client.read(loadp)
     except etcd.EtcdKeyNotFound as E:
         log.error("sdstack_etcd returner <get_load> could not find job {jid:s} at the path {path:s}".format(jid=jid, path=loadp))
         return None
-    log.trace('sdstack_etcd returner <get_load> found load data for job {jid:s} at {path:s} with value {data}'.format(jid=jid, path=res.key, data=res.value))
+    log.debug('sdstack_etcd returner <get_load> found load data for job {jid:s} at {path:s} with value {data}'.format(jid=jid, path=res.key, data=res.value))
     return salt.utils.json.loads(res.value)
 
 
@@ -517,35 +522,35 @@ def get_jid(jid):
     client, path, _ = _get_conn(__opts__)
 
     # Figure out the path that our job should be at
-    jobp = '/'.join([path, Schema['job-cache'], jid])
+    resultsp = '/'.join([path, Schema['job-cache'], jid])
 
     # Try and read the job directory. If we have a missing key exception then no
     # minions have returned anything yet and so we return an empty dict for the
     # caller.
-    log.debug('sdstack_etcd returner <get_jid> reading job fields for job {jid:s} from {path:s}'.format(jid=jid, path=jobp))
+    log.debug('sdstack_etcd returner <get_jid> reading minions that have returned results for job {jid:s} at {path:s}'.format(jid=jid, path=resultsp))
     try:
-        items = client.read(jobp)
+        results = client.read(resultsp)
     except etcd.EtcdKeyNotFound as E:
-        log.trace('sdstack_etcd returner <get_jid> unable to read job {jid:s} from {path:s}'.format(jid=jid, path=jobp))
+        log.trace('sdstack_etcd returner <get_jid> unable to read job {jid:s} from {path:s}'.format(jid=jid, path=resultsp))
         return {}
 
     # Iterate through all of the children at our job path that are directories.
     # Anything that is a directory should be a minion that contains some results.
-    log.debug('sdstack_etcd returner <get_jid> iterating through minion results for job {jid:s} from {path:s}'.format(jid=items.key.split('/')[-1], path=items.key))
+    log.debug('sdstack_etcd returner <get_jid> iterating through minions with results for job {jid:s} from {path:s}'.format(jid=results.key.split('/')[-1], path=results.key))
     ret = {}
-    for item in items.leaves:
+    for item in results.leaves:
         if not item.dir:
             continue
 
         # Extract the minion name from the key in the job, and use it to build
         # the path to the return value
-        comps = str(item.key).split('/')
-        returnp = '/'.join([path, Schema['job-cache'], jid, comps[-1], 'return'])
+        comps = item.key.split('/')
+        returnp = '/'.join([resultsp, comps[-1], 'return'])
 
         # Now we know the minion and the path to the return for its job, we can
         # just grab it. If the key exists, but the value is missing entirely,
         # then something that shouldn't happen has happened.
-        log.trace('sdstack_etcd returner <get_jid> grabbing result from minion {minion:s} for job {jid:s} at {path:s}'.format(minion=comps[-1], jid=jid, path=items.key))
+        log.trace('sdstack_etcd returner <get_jid> grabbing result from minion {minion:s} for job {jid:s} at {path:s}'.format(minion=comps[-1], jid=jid, path=returnp))
         try:
             res = client.read(returnp)
         except etcd.EtcdKeyNotFound as E:
@@ -555,7 +560,7 @@ def get_jid(jid):
         # We found something, so update our return dict with the minion id and
         # the result that it returned.
         ret[comps[-1]] = {'return': salt.utils.json.loads(res.value)}
-        log.trace("sdstack_etcd returner <get_jid> job {jid:s} from minion {minion:s} at path {path:s} returned {result}".format(minion=comps[-1], jid=jid, path=res.key, result=res.value))
+        log.debug("sdstack_etcd returner <get_jid> job {jid:s} from minion {minion:s} at path {path:s} returned {result}".format(minion=comps[-1], jid=jid, path=res.key, result=res.value))
     return ret
 
 
@@ -573,37 +578,40 @@ def get_fun(fun):
     # nothing is available.
     log.debug('sdstack_etcd returner <get_fun> reading minions at {path:s} for function {fun:s}'.format(path=minionsp, fun=fun))
     try:
-        items = client.read(minionsp)
+        minions = client.read(minionsp)
     except etcd.EtcdKeyNotFound as E:
         return {}
 
     # Walk through the list of all the minions that have a jid registered,
     # and cross reference this with the job returns.
-    log.debug('sdstack_etcd returner <get_fun> iterating through minions for function {fun:s} at {path:s}'.format(fun=fun, path=items.key))
+    log.debug('sdstack_etcd returner <get_fun> iterating through minions for function {fun:s} at {path:s}'.format(fun=fun, path=minions.key))
     ret = {}
-    for item in items.leaves:
+    for minion in minions.leaves:
+        if minion.dir:
+            log.warning('sdstack_etcd returner <get_fun> found a non-minion at {path:s} {expire:s}'.format(path=minion.key, expire='that will need to be manually removed' if minion.ttl is None else 'that will expire in {ttl:d} seconds'.format(ttl=minion.ttl)))
+            continue
 
         # Now that we have a minion and it's last jid, we use it to fetch the
         # function field (fun) that was registered by returner().
-        comps = str(item.key).split('/')
-        funp = '/'.join([path, Schema['job-cache'], str(item.value), comps[-1], 'fun'])
+        jid, comps = minion.value, minion.key.split('/')
+        funp = '/'.join([path, Schema['job-cache'], jid, comps[-1], 'fun'])
 
         # Try and read the field, and skip it if it doesn't exist or wasn't
         # registered for some reason.
-        log.trace('sdstack_etcd returner <get_fun> reading function from minion {minion:s} for job {jid:s} at {path:s}'.format(minion=comps[-1], jid=str(item.value), path=funp))
+        log.trace('sdstack_etcd returner <get_fun> reading function from minion {minion:s} for job {jid:s} at {path:s}'.format(minion=comps[-1], jid=jid, path=funp))
         try:
             res = client.read(funp)
         except etcd.EtcdKeyNotFound as E:
-            log.debug("sdstack_etcd returner <get_fun> returned nothing from minion {minion:s} for job {jid:s} at path {path:s}".format(minion=comps[-1], jid=str(item.value), path=funp))
+            log.debug("sdstack_etcd returner <get_fun> returned nothing from minion {minion:s} for job {jid:s} at path {path:s}".format(minion=comps[-1], jid=jid, path=funp))
             continue
 
         # Check if the function field (fun) matches what the user is looking for
         # If it does, then we can just add the minion to our results
-        log.trace('sdstack_etcd returner <get_fun> decoding json data from minion {minion:s} for job {jid:s} at {path:s}'.format(minion=comps[-1], jid=str(item.value), path=funp))
+        log.trace('sdstack_etcd returner <get_fun> decoding json data from minion {minion:s} for job {jid:s} at {path:s}'.format(minion=comps[-1], jid=jid, path=funp))
         data = salt.utils.json.loads(res.value)
         if data == fun:
             ret[comps[-1]] = str(data)
-            log.trace("sdstack_etcd returner <get_fun> found job {jid:s} for minion {minion:s} using {fun:s} at {path:s}".format(jid=comps[-1], fun=data, minion=item.value, path=item.key))
+            log.debug("sdstack_etcd returner <get_fun> found job {jid:s} for minion {minion:s} using {fun:s} at {path:s}".format(minion=comps[-1], fun=data, minion=jid, path=minion.key))
         continue
     return ret
 
@@ -621,23 +629,26 @@ def get_jids():
     # jobs have been created yet so return an empty list to the caller.
     log.debug("sdstack_etcd returner <get_jids> listing jobs at {path:s}".format(path=jobsp))
     try:
-        items = client.read(jobsp)
+        jobs = client.read(jobsp)
     except etcd.EtcdKeyNotFound as E:
         return []
 
     # Anything that's a directory is a job id. Since that's all we're returning,
     # aggregate them into a list.
-    log.debug("sdstack_etcd returner <get_jids> iterating through jobs at {path:s}".format(path=items.key))
+    log.debug("sdstack_etcd returner <get_jids> iterating through jobs at {path:s}".format(path=jobs.key))
     ret = []
-    for item in items.leaves:
-        comps = str(item.key).split('/')
-        if not item.dir:
+    for job in jobs.leaves:
+        comps = job.key.split('/')
+        if not job.dir:
+            log.warning('sdstack_etcd returner <get_minions> found a non-job at {path:s} {expire:s}'.format(path=job.key, expire='that will need to be manually removed' if job.ttl is None else 'that will expire in {ttl:d} seconds'.format(ttl=job.ttl)))
             continue
 
         jid = comps[-1]
         ret.append(jid)
 
-        log.trace("sdstack_etcd returner <get_jids> found job {jid:s} at {path:s}".format(jid=comps[-1], path=item.key))
+        log.trace("sdstack_etcd returner <get_jids> found job {jid:s} at {path:s}".format(jid=jid, path=job.key))
+
+    log.debug("sdstack_etcd returner <get_jids> found {count:d} jobs at {path:s}".format(count=len(ret), path=jobs.key))
     return ret
 
 
@@ -654,22 +665,21 @@ def get_minions():
     # this case, return an empty last for the caller.
     log.debug('sdstack_etcd returner <get_minions> reading minions at {path:s}'.format(path=minionsp))
     try:
-        items = client.read(minionsp)
+        minions = client.read(minionsp)
     except etcd.EtcdKeyNotFound as E:
         return []
 
     # We can just walk through everything that isn't a directory. This path
     # is simply a list of minions and the last job that each one returned.
-    log.debug('sdstack_etcd returner <get_minions> iterating through minions at {path:s}'.format(path=items.key))
+    log.debug('sdstack_etcd returner <get_minions> iterating through minions at {path:s}'.format(path=minions.key))
     ret = []
-    for item in items.leaves:
-        if item.dir:
+    for minion in minions.leaves:
+        if minion.dir:
+            log.warning('sdstack_etcd returner <get_minions> found a non-minion at {path:s} {expire:s}'.format(path=minion.key, expire='that will need to be manually removed' if minion.ttl is None else 'that will expire in {ttl:d} seconds'.format(ttl=minion.ttl)))
             continue
-
-        comps = str(item.key).split('/')
+        comps = str(minion.key).split('/')
+        log.trace("sdstack_etcd returner <get_minions> found minion {minion:s} at {path:s}".format(minion=comps[-1], path=minion.key))
         ret.append(comps[-1])
-
-        log.trace("sdstack_etcd returner <get_minions> found minion {minion:s} at {path:s}".format(minion=comps[-1], path=item.key))
     return ret
 
 
@@ -787,26 +797,26 @@ def get_jids_filter(count, filter_find_job=True):
     # jobs have been created yet so return an empty list to the caller.
     log.debug("sdstack_etcd returner <get_jids_filter> listing jobs at {path:s}".format(path=jobsp))
     try:
-        items = client.read(jobsp, sorted=True)
+        jobs = client.read(jobsp, sorted=True)
     except etcd.EtcdKeyNotFound as E:
         return []
 
     # Anything that's a directory is a job id. Since that's all we're returning,
     # aggregate them into a list. We do this ahead of time in order to conserve
     # memory by avoiding just decoding everything here
-    log.debug("sdstack_etcd returner <get_jids_filter> collecting jobs at {path:s}".format(path=items.key))
+    log.debug("sdstack_etcd returner <get_jids_filter> collecting jobs at {path:s}".format(path=jobs.key))
     jids = []
-    for item in items.leaves:
-        if not item.dir:
+    for job in jobs.leaves:
+        if not job.dir:
             continue
-        jids.append(item.key.split('/')[-1])
+        jids.append(job.key.split('/')[-1])
 
-    log.debug("sdstack_etcd returner <get_jids_filter> collecting {count:d} job loads at {path:s}".format(path=items.key, count=count))
+    log.debug("sdstack_etcd returner <get_jids_filter> collecting {count:d} job loads at {path:s}".format(path=jobs.key, count=count))
     ret = []
     for jid in jids[-count:]:
 
         # Figure out the path to .load.p from the current jid
-        loadp = '/'.join([path, Schema['job-cache'], jid, '.load.p'])
+        loadp = '/'.join([jobsp, jid, '.load.p'])
 
         # Now we can load the data from the job
         try:
