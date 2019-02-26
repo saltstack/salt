@@ -423,6 +423,7 @@ class SSHThinTestCase(TestCase):
         self.assertIn('The minimum required python version to run salt-ssh is '
                       '"2.6"', str(err.value))
 
+    @skipIf(six.PY2, 'Test only needed on Python 3')
     @patch('salt.exceptions.SaltSystemExit', Exception)
     @patch('salt.utils.thin.log', MagicMock())
     @patch('salt.utils.thin.os.makedirs', MagicMock())
