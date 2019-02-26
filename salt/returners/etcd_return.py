@@ -189,7 +189,7 @@ def returner(ret):
     # it's likely there's no load saved since this job came directly from a
     # minion.
     if ret['jid'] == 'req':
-        log.debug('sdstack_etcd returner <returner> received a new job id request () for {data}'.format(jid=ret['jid'], data=ret))
+        log.debug('sdstack_etcd returner <returner> received a new job id request ({jid:s}) for {data}'.format(jid=ret['jid'], data=ret))
         save_load(ret['jid'], ret)
 
     # Update the given minion in the external job cache with the current (latest job)
@@ -238,7 +238,7 @@ def save_load(jid, load, minions=None):
 
     # Check if the specified jid is 'req', as only incorrect code will do this
     if jid == 'req':
-        log.warning('sdstack_etcd returner <save_load> was called using a request job id ({jid:s}) with {data:s}'.format(jid=jid, data=load))
+        log.debug('sdstack_etcd returner <save_load> was called using a request job id ({jid:s}) with {data:s}'.format(jid=jid, data=load))
 
     # Build the paths that we'll use for registration of our job
     loadp = '/'.join([path, Schema['job-cache'], jid, '.load.p'])
@@ -293,7 +293,7 @@ def save_minions(jid, minions, syndic_id=None):  # pylint: disable=unused-argume
 
     # Check if the specified jid is 'req', as only incorrect code will do that
     if jid == 'req':
-        log.warning('sdstack_etcd returner <save_minions> was called with a request job id ({jid:s}) for minions {minions:s}'.format(jid=jid, minions=repr(minions)))
+        log.debug('sdstack_etcd returner <save_minions> was called with a request job id ({jid:s}) for minions {minions:s}'.format(jid=jid, minions=repr(minions)))
 
     # Figure out the path that our job should be at
     jobp = '/'.join([path, Schema['job-cache'], jid])
