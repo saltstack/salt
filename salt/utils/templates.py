@@ -139,6 +139,7 @@ def generate_sls_context(tmplpath, sls):
                 tplfile=template,
                 tpldir=slspath if slspath else ".",
                 tpldot=slspath.replace("/", "."),
+                tplroot=slspath.partition("/")[0],
             )
         )
 
