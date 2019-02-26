@@ -238,8 +238,7 @@ def beacon(config):
                     break
                 path = os.path.dirname(path)
 
-            for path in _config.get('files', {}):
-                excludes = _config['files'][path].get('exclude', '')
+            excludes = _config['files'][path].get('exclude', '')
 
             if excludes and isinstance(excludes, list):
                 for exclude in excludes:
