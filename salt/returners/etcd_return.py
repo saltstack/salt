@@ -180,12 +180,11 @@ def returner(ret):
     write_profile = __opts__.get('etcd.returner_write_profile')
     client, path, ttl = _get_conn(__opts__, write_profile)
 
-    # If a minion is returning a standalone job, update it with a new jid, and
-    # save it to ensure it can be queried similar to the mysql returner.
+    # If a minion is returning a standalone job, make sure to save the load as
+    # it's likely there's no load saved since this job came directly from a
+    # minion.
     if ret['jid'] == 'req':
-        jid = prep_jid(nocache=ret.get('nocache', False))
-        log.debug('sdstack_etcd returner <returner> satisfying request for new job id request with {jid:s}'.format(jid=jid))
-        ret['jid'] = jid
+        log.debug('sdstack_etcd returner <returner> received a new job id request ({jid:s}) for {data}'.format(jid=jid, data=ret))
         save_load(jid, ret)
 
     # Update the given minion in the external job cache with the current (latest job)
