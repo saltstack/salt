@@ -201,7 +201,7 @@ def returner(ret):
     log.debug("sdstack_etcd returner <returner> updating (last) job id of {minion:s} at {path:s} with job {jid:s}".format(jid=ret['jid'], minion=ret['id'], path=minionp))
     res = client.write(minionp, ret['jid'], ttl=ttl if ttl > 0 else None)
     if hasattr(res, '_prev_node'):
-        log.trace("sdstack_etcd returner <returner> the previous job id {old:s} for {minion:s} at {path:s} was set to {new:s}".format(old=res._prev_node.value, minion=ret['id'], path=minionp, new=res.value))
+        log.debug("sdstack_etcd returner <returner> the previous job id {old:s} for {minion:s} at {path:s} was set to {new:s}".format(old=res._prev_node.value, minion=ret['id'], path=minionp, new=res.value))
 
     # Figure out the path for the specified job and minion
     jobp = '/'.join([path, Schema['job-cache'], ret['jid'], ret['id']])
@@ -297,14 +297,85 @@ def save_minions(jid, minions, syndic_id=None):  # pylint: disable=unused-argume
 
     # Figure out the path that our job should be at
     jobp = '/'.join([path, Schema['job-cache'], jid])
-    log.debug('sdstack_etcd returner <save_minions> adding minions for job {jid:s} to {path:s}'.format(jid=jid, path=jobp))
+    loadp = '/'.join([jobp, '.load.p'])
 
-    # Iterate through all of the minions we received and add the directory for them
-    # to the job path despite there being no content here.
+    # Now we can try and read the load out of it.
+    try:
+        load = cient.read(loadp)
+
+    # If it doesn't exist, then bitch and complain because somebody lied to us
+    except etcd.EtcdKeyNotFound as E:
+        log.error('sdstack_etcd returner <save_minions> was called with an invalid job id ({jid:s}) for minions {minions:s}'.format(jid=jid, minions=repr(minions)))
+        return
+
+    log.debug('sdstack_etcd returner <save_minions> adding minions{syndics:s} for job {jid:s} to {path:s}'.format(jid=jid, path=jobp, syndics='' if syndic_id is None else ' from syndic {0}'.format(syndic_id)))
+
+    # Iterate through all of the minions we received and update both the job
+    # and minion-fun cache with what we know. Most of the other returners
+    # don't do this, but it is definitely being called and is necessary for
+    # syndics to actually work.
+    exceptions = []
     for minion in minions:
-        minionp = '/'.join([jobp, minion])
-        res = client.write(minionp, None, dir=True)
-        log.trace('sdstack_etcd returner <save_minions> added minion {minion:s} path to job {jid:s} at {path:s}'.format(minion=minion, jid=jid, path=res.key))
+        minionp = '/'.join([path, Schema['minion-fun'], minion])
+
+        # Go ahead and write the job to the minion-fun cache and log if we've
+        # overwritten an already existing job id.
+        log.debug('sdstack_etcd returner <save_minions> writing (last) job id of {minion:s}{syndics:s} at {path:s} with job {jid:s}'.format(jid=jid, path=minionp, minion=minion, syndics='' if syndic_id is None else ' from syndic {0}'.format(syndic_id)))
+        try:
+            client.write(minionp, jid, ttl=load.ttl, prevExist=False)
+
+        # If the minion already exists, then that's fine as we'll just update it
+        # and move on.
+        except etcd.EtcdAlreadyExist as E:
+            node = client.read(minionp)
+
+            log.debug('sdstack_etcd returner <save_minions> updating previous job id ({old:s}) of {minion:s}{syndics:s} at {path:s} with job {jid:s}'.format(old=node.value, minion=minion, jid=jid, path=node.key, syndics='' if syndic_id is None else ' from syndic {0}'.format(syndic_id)))
+
+            node.value = jid
+            client.update(node)
+
+        except Exception as E:
+            log.trace("sdstack_etcd returner <save_minions> unable to write job id {jid:s} for minion {minion:s} to {path:s} due to exception ({exception})".format(jid=jid, minion=minion, path=minionp, exception=E))
+            exceptions.append((E, 'job', minion))
+
+        # Now we can try and update the job. We don't have much, just the jid,
+        # the minion, and the master id (syndic_id)
+        resultp = '/'.join([jobp, minion])
+
+        # One... (jid)
+        try:
+            res = client.write('/'.join([resultp, 'jid']), jid)
+
+        except Exception as E:
+            log.trace("sdstack_etcd returner <save_minions> unable to write job id {jid:s} to the result for the minion {minion:s} at {path:s} due to exception ({exception})".format(jid=jid, minion=minion, path='/'.join([resultp, 'jid']), exception=E))
+            exceptions.append((E, 'result.jid', minion))
+
+        # Two... (id)
+        try:
+            res = client.write('/'.join([resultp, 'id']), minion)
+
+        except Exception as E:
+            log.trace("sdstack_etcd returner <save_minions> unable to write minion id {minion:s} to the result for job {jid:s} at {path:s} due to exception ({exception})".format(jid=jid, minion=minion, path='/'.join([resultp, 'id']), exception=E))
+            exceptions.append((E, 'result.id', minion))
+
+        # Three... (master_id)
+        try:
+            if syndic_id is not None:
+                res = client.write('/'.join([resultp, 'master_id']), syndic_id)
+
+        except Exception as E:
+            log.trace("sdstack_etcd returner <save_minions> unable to write master_id {syndic:s} to the result for job {jid:s} at {path:s} due to exception ({exception})".format(jid=jid, minion=minion, path='/'.join([resultp, 'master_id']), syndic=syndic_id, exception=E))
+            exceptions.append((E, 'result.master_id', minion))
+
+        # Crruuunch.
+
+    # Go back through all the exceptions that occurred while trying to write the
+    # fields and log them.
+    for E, field, minion in exceptions:
+        if field == 'job':
+            log.exception("sdstack_etcd returner <save_minions> exception ({exception}) was raised while trying to update the function cache for minion {minion:s} to job {jid:s}".format(exception=E, field=field, minion=minion, jid=jid))
+            continue
+        log.exception("sdstack_etcd returner <save_minions> exception ({exception}) was raised while trying to update the {field:s} field in the result for job {jid:s} belonging to minion {minion:s}".format(exception=E, field=field, minion=minion, jid=jid))
     return
 
 
