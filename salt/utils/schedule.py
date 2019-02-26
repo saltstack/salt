@@ -240,7 +240,7 @@ class Schedule(object):
                             )
                             data['_skip_reason'] = 'maxrunning'
                             data['_skipped'] = True
-                            data['_skip_time'] = now
+                            data['_skipped_time'] = now
                             data['run'] = False
                             return data
         return data
@@ -357,7 +357,7 @@ class Schedule(object):
         # assume job is enabled.
         for job in data:
             if 'enabled' not in data[job]:
-                data[job]['enabled'] = True
+                data[job]['_enabled'] = True
 
         new_job = next(six.iterkeys(data))
 
@@ -1378,8 +1378,10 @@ class Schedule(object):
             # Clear these out between runs
             for item in ['_continue',
                          '_error',
+                         '_enabled',
                          '_skipped',
-                         '_skip_reason']:
+                         '_skip_reason',
+                         '_skipped_time']:
                 if item in data:
                     del data[item]
             run = False
@@ -1598,12 +1600,22 @@ class Schedule(object):
             # If there is no job specific enabled available,
             # grab the global which defaults to True.
             if 'enabled' not in data:
-                data['enabled'] = self.enabled
+                data['_enabled'] = self.enabled
+
+            # If globally disabled, disable the job
+            if not self.enabled:
+                data['_enabled'] = self.enabled
+                data['_skip_reason'] = 'disabled'
+                data['_skipped_time'] = now
+                data['_skipped'] = True
+                run = False
 
             # Job is disabled, set run to False
             if 'enabled' in data and not data['enabled']:
-                log.debug('Job: %s is disabled', job_name)
+                data['_enabled'] = False
                 data['_skip_reason'] = 'disabled'
+                data['_skipped_time'] = now
+                data['_skipped'] = True
                 run = False
 
             miss_msg = ''
@@ -1614,7 +1626,7 @@ class Schedule(object):
             try:
                 if run:
                     # Job is disabled, continue
-                    if 'enabled' in data and not data['enabled']:
+                    if '_enabled' in data and not data['_enabled']:
                         log.debug('Job: %s is disabled', job_name)
                         data['_skip_reason'] = 'disabled'
                         data['_skipped_time'] = now
