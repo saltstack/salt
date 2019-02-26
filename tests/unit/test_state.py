@@ -8,6 +8,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import os
 import shutil
 import tempfile
+from collections import Counter
 
 # Import Salt Testing libs
 import tests.integration as integration
@@ -25,6 +26,8 @@ import salt.exceptions
 import salt.state
 from salt.utils.odict import OrderedDict
 from salt.utils.decorators import state as statedecorators
+from salt.ext.six.moves import range
+
 
 try:
     import pytest
@@ -574,3 +577,65 @@ class StateFormatSlotsTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             self.state_obj.format_slots(cdata)
         mock.assert_called_once_with('fun_arg', fun_key='fun_val')
         self.assertEqual(cdata, {'args': ['arg'], 'kwargs': {'key': 'value1thing~'}})
+
+
+class AvailableStatesTestCase(TestCase):
+    '''
+    Test cases for AvailableStates class
+    '''
+
+    def setUp(self):
+        self.calls_counter = Counter()
+        self.envs = ('base', 'some')
+        self.available_states = salt.state.AvailableStates(self.envs, self.gather_states)
+
+    def tearDown(self):
+        del self.calls_counter
+        del self.envs
+        del self.available_states
+
+    @staticmethod
+    def make_file_list(key):
+        return ['{}-{}'.format(key, i) for i in range(3)]
+
+    def gather_states(self, key):
+        self.calls_counter[key] += 1
+        return self.make_file_list(key)
+
+    def test_gather_called(self):
+        '''
+        test gather_func called once when key accessed
+        '''
+        for env in self.envs:
+            self.assertEqual(self.calls_counter[env], 0)
+            self.available_states.get(env)
+            self.assertEqual(self.calls_counter[env], 1)
+            self.available_states.get(env)
+            self.assertEqual(self.calls_counter[env], 1)
+
+    def test_gather_not_called(self):
+        '''
+        test gather_func not called if key not accessed
+        '''
+        for env in self.envs:
+            self.assertTrue(env in self.available_states)
+            self.assertEqual(self.calls_counter[env], 0)
+
+    def test_looks_like_dict(self):
+        '''
+        test AvailableStates behaves like dict
+        '''
+        self.assertSequenceEqual(self.envs, self.available_states.keys())
+        self.assertSequenceEqual(self.envs, [k for k in self.available_states])
+        self.assertSequenceEqual(self.envs, list(self.available_states))
+        self.assertFalse('nonexistent_key' in self.available_states)
+        for env in self.envs:
+            file_list = self.make_file_list(env)
+            self.assertSequenceEqual(file_list, self.available_states.get(env))
+            self.assertSequenceEqual(file_list, self.available_states[env])
+            self.assertTrue(env in self.available_states)
+        original_dict = {k: self.make_file_list(k) for k in self.envs}
+        self.assertDictEqual(original_dict, dict(self.available_states))
+        self.assertEqual(original_dict, self.available_states)
+        with self.assertRaises(AttributeError):
+            self.available_states['any'] = 'some'

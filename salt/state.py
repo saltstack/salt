@@ -41,6 +41,7 @@ import salt.utils.event
 import salt.utils.files
 import salt.utils.hashutils
 import salt.utils.immutabletypes as immutabletypes
+import salt.utils.lazy
 import salt.utils.msgpack as msgpack
 import salt.utils.platform
 import salt.utils.process
@@ -3105,6 +3106,41 @@ class State(object):
         return self.call_high(high)
 
 
+class AvailableStates(salt.utils.lazy.LazyDict):
+    def __init__(self, envs, gather_func):
+        self._envs = set(envs)
+        self._gather_func = gather_func
+        super(AvailableStates, self).__init__()
+
+    def __setitem__(self, key, val):
+        raise AttributeError('setitem not supported for {}'.format(self.__class__.__name__))
+
+    def __delitem__(self, key):
+        del self._dict[key]
+        self._envs.remove(key)
+
+    def _missing(self, key):
+        return key not in self._envs
+
+    def _load(self, key):
+        if key in self._envs:
+            self._dict[key] = self._gather_func(key)
+        return True
+
+    def _load_all(self):
+        for key in self._envs:
+            self._load(key)
+
+    def __len__(self):
+        return len(self._envs)
+
+    def __iter__(self):
+        return iter(self._envs)
+
+    def __contains__(self, key):
+        return key in self._envs
+
+
 class BaseHighState(object):
     '''
     The BaseHighState is an abstract base class that is the foundation of
@@ -3116,18 +3152,9 @@ class BaseHighState(object):
     def __init__(self, opts):
         self.opts = self.__gen_opts(opts)
         self.iorder = 10000
-        self.avail = self.__gather_avail()
+        self.avail = AvailableStates(self._get_envs(), self.client.list_states)
         self.serial = salt.payload.Serial(self.opts)
         self.building_highstate = OrderedDict()
-
-    def __gather_avail(self):
-        '''
-        Gather the lists of available sls data from the master
-        '''
-        avail = {}
-        for saltenv in self._get_envs():
-            avail[saltenv] = self.client.list_states(saltenv)
-        return avail
 
     def __gen_opts(self, opts):
         '''
