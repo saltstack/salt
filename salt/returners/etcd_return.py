@@ -69,18 +69,19 @@ job are two special keys. One of them is ".load.p" which contains information
 about the job when it was created. The other key is ".lock.p" which is responsible
 for whether the job is still valid or it is scheduled to be cleaned up.
 
-The contents if ".lock.p" contains the modificationIndex of the of the ".load.p"
+The contents if ".lock.p" contains the modifiedIndex of the of the ".load.p"
 key and when configured via the "etcd.ttl" or "keep_jobs" will have the ttl
 applied to it. When this file is expired via the ttl or explicitly removed by
 the administrator, the job will then be scheduled for removal.
 
 event
 +++++
-This key is essentially a namespace for all of the events that are submitted
-to Salt. When an event is received, the data for the event is written under
-this key using the "tag" parameter at its path. The creationIndex for this key
-is then cached in order to determine whether it should be scheduled for
-removal or not.
+This key is essentially a namespace for all of the events (packages) that are
+submitted to the returner. When an event is received, the package for the event
+is written under this key using the "tag" parameter for its path. The
+createdIndex for this key is then cached as the event id in order to determine
+whether it should be scheduled for removal or not. Any time a package is updated
+its modifiedIndex is used to determine which event actually owns it.
 
 minion.job
 ++++++++++
@@ -91,12 +92,12 @@ support the external job cache feature of Salt.
 event.cache
 +++++++++++
 Underneath this key is a list of all of the events that were received by the
-returner. Each event is identified by its creationIndex when the event was
+returner. Each event is identified by its createdIndex when the event was
 registered under the "event" key that was described previously. Each event
 under this key contains three keys. These are the "index" key, the "tag" key,
 and the "lock" key.
 
-The "index" key contains the latest modificationIndex of the most recent event
+The "index" key contains the latest modifiedIndex of the most recent event
 that was registered under the event key. This is used to determine whether
 the data for the event has been modified or if the event's tag collides with
 another event and is a duplicate.
@@ -109,7 +110,7 @@ event and its tag will be scheduled for removal.
 
 The other key under each event, is the "tag" key. The "tag" key simply
 contains the path to the tag that was registered with the event. The value
-of the "index" key points to the modificationIndex of this particular path.
+of the "index" key points to the modifiedIndex of this particular path.
 '''
 from __future__ import absolute_import, print_function, unicode_literals
 
@@ -389,7 +390,7 @@ def _purge_events():
 
         # Now that we know the event is dead, we can read the index so that
         # we can check it against the actual event later.
-        log.trace('sdstack_etcd returner <_purge_events> reading modificationIndex for event {event:d} at {path:s}'.format(event=event, path=ev_indexp))
+        log.trace('sdstack_etcd returner <_purge_events> reading modifiedIndex for event {event:d} at {path:s}'.format(event=event, path=ev_indexp))
         try:
             ev_index = client.read(ev_indexp)
 
@@ -795,16 +796,16 @@ def event_return(events):
         try:
             # If the event is a new key, then we can simply cache it without concern
             if res.newKey:
-                log.trace("sdstack_etcd returner <event_return> writing new event {event:d} with the modificationIndex {index:d} for the tag {name:s} at {path:s}".format(path=indexp, event=event, index=res.modifiedIndex, name=package['tag']))
+                log.trace("sdstack_etcd returner <event_return> writing new event {event:d} with the modifiedIndex {index:d} for the tag {name:s} at {path:s}".format(path=indexp, event=event, index=res.modifiedIndex, name=package['tag']))
                 client.write(indexp, res.modifiedIndex, prevExist=False)
 
             # Otherwise, the event was updated and thus we need to update our cache too
             else:
-                log.trace("sdstack_etcd returner <event_return> updating event {event:d} with the tag {name:s} at {path:s} with the modificationIndex {index:d}".format(path=indexp, event=event, index=res.modifiedIndex, name=package['tag']))
+                log.trace("sdstack_etcd returner <event_return> updating event {event:d} with the tag {name:s} at {path:s} with the modifiedIndex {index:d}".format(path=indexp, event=event, index=res.modifiedIndex, name=package['tag']))
                 client.write(indexp, res.modifiedIndex)
 
         except etcd.EtcdAlreadyExist as E:
-            log.error("sdstack_etcd returner <event_return> unable to write modificationIndex {index:d} for tag {name:s} to event {event:d} due to the event already existing".format(event=event, index=res.modifiedIndex, name=package['tag']))
+            log.error("sdstack_etcd returner <event_return> unable to write modifiedIndex {index:d} for tag {name:s} to event {event:d} due to the event already existing".format(event=event, index=res.modifiedIndex, name=package['tag']))
             exceptions.append((E, package))
             continue
 
