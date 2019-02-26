@@ -93,13 +93,13 @@ event.cache
 Underneath this key is a list of all of the events that were received by the
 returner. Each event is identified by its creationIndex when the event was
 registered under the "event" key that was described previously. Each event
-under this key contains three keys. These are the "id" key, the "tag" key,
+under this key contains three keys. These are the "index" key, the "tag" key,
 and the "lock" key.
 
-The "id" key contains the latest modificationIndex of the most recent event
+The "index" key contains the latest modificationIndex of the most recent event
 that was registered under the event key. This is used to determine whether
-the data for the event has been modified or if the event's tag name collides
-with another event.
+the data for the event has been modified or if the event's tag collides with
+another event and is a duplicate.
 
 The "lock" key is responsible for informing the maintenance service that the
 event is still in use. If the retuerner is configured via the "etcd.ttl" or
@@ -109,7 +109,7 @@ event and its tag will be scheduled for removal.
 
 The other key under each event, is the "tag" key. The "tag" key simply
 contains the path to the tag that was registered with the event. The value
-of the "id" key points to the modificationIndex of this particular path.
+of the "index" key points to the modificationIndex of this particular path.
 '''
 from __future__ import absolute_import, print_function, unicode_literals
 
@@ -219,8 +219,8 @@ def returner(ret):
 
     # Go back through all the exceptions that occurred while trying to write the
     # fields and log them.
-    for e, field, value in exceptions:
-        log.exception("sdstack_etcd returner <returner> exception ({exception}) was raised while trying to set the field {field:s} for job {jid:s} to {value}".format(exception=e, field=field, jid=ret['jid'], value=value))
+    for E, field, value in exceptions:
+        log.exception("sdstack_etcd returner <returner> exception ({exception}) was raised while trying to set the field {field:s} for job {jid:s} to {value}".format(exception=E, field=field, jid=ret['jid'], value=value))
     return
 
 
@@ -373,7 +373,7 @@ def _purge_events():
 
         # Build all of the event paths that we're going to use
         ev_lockp = '/'.join([event.key, 'lock'])
-        ev_indexp = '/'.join([event.key, 'id'])
+        ev_indexp = '/'.join([event.key, 'index'])
         ev_tagp = '/'.join([event.key, 'tag'])
 
         # Ping the event lock to see if it's actually alive
@@ -386,9 +386,9 @@ def _purge_events():
         except etcd.EtcdKeyNotFound as E:
             log.debug('sdstack_etcd returner <_purge_events> event {id:d} at {path:s} has expired and will be removed'.format(id=index, path=event.key))
 
-        # Now that we know the event is alive, we can read the index so that
+        # Now that we know the event is dead, we can read the index so that
         # we can check it against the actual event later.
-        log.trace('sdstack_etcd returner <_purge_events> reading modification index for event {id:d} at {path:s}'.format(id=index, path=ev_indexp))
+        log.trace('sdstack_etcd returner <_purge_events> reading modificationIndex for event {id:d} at {path:s}'.format(id=index, path=ev_indexp))
         try:
             ev_index = client.read(ev_indexp)
 
@@ -398,7 +398,7 @@ def _purge_events():
         except etcd.EtcdKeyNotFound as E:
             log.warning('sdstack_etcd returner <_purge_events> event {id:d} at {path:s} is corrupt (missing id) and will be removed'.format(id=index, path=event.key))
 
-            log.debug('sdstack_etcd returner <_purge_events> removing corrupt event cache for event {id:d} at {path:s}'.format(id=index, path=event.key))
+            log.debug('sdstack_etcd returner <_purge_events> removing corrupt event {id:d} at {path:s}'.format(id=index, path=event.key))
             res = client.delete(event.key, recursive=True)
 
             count += 1
@@ -415,7 +415,7 @@ def _purge_events():
         except etcd.EtcdKeyNotFound as E:
             log.warning('sdstack_etcd returner <_purge_events> event {id:d} at {path:p} is corrupt (missing tag) and will be removed'.format(id=index, path=event.key))
 
-            log.debug('sdstack_etcd returner <_purge_events> removing corrupt event cache for event {id:d} at {path:s}'.format(id=index, path=event.key))
+            log.debug('sdstack_etcd returner <_purge_events> removing corrupt event {id:d} at {path:s}'.format(id=index, path=event.key))
             client.delete(event.key, recursive=True)
 
             count += 1
@@ -432,35 +432,35 @@ def _purge_events():
         # its index is what we expect. If it's not, then we know that we're not
         # the only person that's using this event and so we don't need to delete
         # it yet, because another event will.
-        event_base = [path, Schema['event-path']]
+        basep = [path, Schema['event-path']]
         try:
-            res = client.delete('/'.join(event_base + comp), prevIndex=ev_index.value)
+            res = client.delete('/'.join(basep + comp), prevIndex=ev_index.value)
 
         # Our tag is in use by someone else, so we can simply remove the cache
         # entry and then cycle to the next event.
         except etcd.EtcdCompareFailed as E:
-            log.debug('sdstack_etcd returner <_purge_events> refusing to remove tag for event {id:d} at {path:s} as it is still in use'.format(id=index, path='/'.join(event_base + comp[:])))
+            log.debug('sdstack_etcd returner <_purge_events> refusing to remove tag for event {id:d} at {path:s} as it is still in use'.format(id=index, path='/'.join(basep + comp[:])))
             count += 1
 
             # Remove the whole event cache entry
-            log.debug('sdstack_etcd returner <_purge_events> removing (duplicate) event cache for event {id:d} at {path:s}'.format(id=index, path=event.key))
+            log.debug('sdstack_etcd returner <_purge_events> removing (duplicate) event {id:d} at {path:s}'.format(id=index, path=event.key))
             res = client.delete(event.key, recursive=True)
             continue
 
-        # Descend trying to clean up every parent directory
+        # Walk up each parent trying to remove it unless the directory is not empty
         comp.pop(-1)
-        log.debug('sdstack_etcd returner <_purge_events> (recursively) removing parent keys for event {id:d} at {path:s}'.format(id=index, path='/'.join(event_base + comp[:])))
+        log.debug('sdstack_etcd returner <_purge_events> (recursively) removing parent keys for event {id:d} at {path:s}'.format(id=index, path='/'.join(basep + comp[:])))
         for i in range(len(comp), 0, -1):
-            log.trace('sdstack_etcd returner <_purge_events> removing directory for event {id:d} at {path:s}'.format(id=index, path='/'.join(event_base + comp[:i])))
+            log.trace('sdstack_etcd returner <_purge_events> removing directory for event {id:d} at {path:s}'.format(id=index, path='/'.join(basep + comp[:i])))
             try:
-                client.delete('/'.join(event_base + comp[:i]), dir=True)
+                client.delete('/'.join(basep + comp[:i]), dir=True)
             except etcd.EtcdDirNotEmpty as E:
-                log.debug('sdstack_etcd returner <_purge_events> Unable to remove directory at {path:s} due to other tags under it still being in use ({exception})'.format(path='/'.join(event_base + comp[:i]), exception=E))
+                log.debug('sdstack_etcd returner <_purge_events> Unable to remove directory at {path:s} due to other tags under it still being in use ({exception})'.format(path='/'.join(basep + comp[:i]), exception=E))
                 break
             continue
 
         # Remove the whole event cache entry now that we've properly removed the tag
-        log.debug('sdstack_etcd returner <_purge_events> removing event cache for event {id:d} at {path:s}'.format(id=index, path=event.key))
+        log.debug('sdstack_etcd returner <_purge_events> removing event {id:d} at {path:s}'.format(id=index, path=event.key))
         res = client.delete(event.key, recursive=True)
 
         count += 1
@@ -751,8 +751,11 @@ def event_return(events):
         log.debug("sdstack_etcd returner <event_return> writing package into event path at {path:s}".format(path=eventp))
         json = salt.utils.json.dumps(package)
         try:
+            # Try and write the event if it doesn't exist
             res = client.write(eventp, json, prevExist=False)
 
+        # If the event doesn't actually exist, then just modify it instead of re-creating it
+        # and tampering with the createdIndex
         except etcd.EtcdAlreadyExist as E:
             log.trace("sdstack_etcd returner <event_return> fetching already existing event with the tag {name:s} at {path:s}".format(name=package['tag'], path=eventp))
             res = client.read(eventp)
@@ -762,7 +765,7 @@ def event_return(events):
             client.update(res)
 
         except Exception as E:
-            log.trace("sdstack_etcd returner <event_return> unable to write event with the tag {name:s} into the path {path:s} due to exception ({exception}) being raised".format(name=package['tag'], path=eventp, exception=E))
+            log.trace("sdstack_etcd returner <event_return> unable to write event with the tag {name:s} into {path:s} due to exception ({exception}) being raised".format(name=package['tag'], path=eventp, exception=E))
             exceptions.append((E, package))
             continue
 
@@ -774,48 +777,53 @@ def event_return(events):
         # etcd3 api we could make all 3 of these writes atomic, but we're not and
         # so this is a manual effort.
 
+        basep = '/'.join([path, Schema['event-cache'], str(res.createdIndex)])
+
+        indexp = '/'.join([basep, 'index'])
         try:
             # If the event is a new key, then we can simply cache it without concern
             if res.newKey:
-                log.trace("sdstack_etcd returner <event_return> writing new id ({id:d}) to {path:s} for the new event {index:d} with the tag {name:s}".format(path='/'.join([path, Schema['event-cache'], str(res.createdIndex), 'id']), id=res.createdIndex, index=res.modifiedIndex, name=package['tag']))
-                client.write('/'.join([path, Schema['event-cache'], str(res.createdIndex), 'id']), res.modifiedIndex, prevExist=False)
+                log.trace("sdstack_etcd returner <event_return> writing new event ({id:d}) with the tag {name:s} to {path:s} with the modificationIndex {index:d}".format(path=indexp, id=res.createdIndex, index=res.modifiedIndex, name=package['tag']))
+                client.write(indexp, res.modifiedIndex, prevExist=False)
 
             # Otherwise, the event was updated and thus we need to update our cache too
             else:
-                log.trace("sdstack_etcd returner <event_return> updating id ({id:d}) at {path:s} for the existing event {index:d} with the tag {name:s}".format(path='/'.join([path, Schema['event-cache'], str(res.createdIndex), 'id']), id=res.createdIndex, index=res.modifiedIndex, name=package['tag']))
-                client.write('/'.join([path, Schema['event-cache'], str(res.createdIndex), 'id']), res.modifiedIndex)
+                log.trace("sdstack_etcd returner <event_return> updating event {id:d} with the tag {name:s} at {path:s} with the modificationIndex {index:d}".format(path=indexp, id=res.createdIndex, index=res.modifiedIndex, name=package['tag']))
+                client.write(indexp, res.modifiedIndex)
 
         except etcd.EtcdAlreadyExist as E:
-            log.error("sdstack_etcd returner <event_return> unable to cache event for {index:d} due to event already existing".format(index=res.createdIndex))
+            log.error("sdstack_etcd returner <event_return> unable to write modificationIndex {index:d} for event {id:d} with the tag {name:s} due to event already existing".format(id=res.createdIndex, index=res.modifiedIndex, name=package['tag']))
             exceptions.append((E, package))
             continue
 
         # If we got here, then we should be able to write the tag using the event index
+        tagp = '/'.join([basep, 'tag'])
         try:
-            log.trace("sdstack_etcd returner <event_return> updating cache at {path:s} for the event {id:d} with the tag {name:s}".format(path='/'.join([path, Schema['event-cache'], str(res.createdIndex), 'tag']), id=res.createdIndex, name=package['tag']))
-            client.write('/'.join([path, Schema['event-cache'], str(res.createdIndex), 'tag']), package['tag'])
+            log.trace("sdstack_etcd returner <event_return> updating cache for event {id:d} with tag {name:s} at {path:s}".format(path=tagp, id=res.createdIndex, name=package['tag']))
+            client.write(tagp, package['tag'])
 
         except Exception as E:
-            log.trace("sdstack_etcd returner <event_return> unable to cache tag {name:s} under id {id:d} due to exception ({exception}) being raised".format(name=package['tag'], id=res.createdIndex, exception=E))
+            log.trace("sdstack_etcd returner <event_return> unable to cache tag {name:s} for event {id:d} at {path:s} due to exception ({exception}) being raised".format(path=tagp, name=package['tag'], id=res.createdIndex, exception=E))
             exceptions.append((E, package))
             continue
 
         # Now that both have been written, let's write our lock to actually enable the event
+        lockp = '/'.join([basep, 'lock'])
         try:
-            log.trace("sdstack_etcd returner <event_return> writing lock ({id:d}) to {path:s} for the event {index:d} with the tag {name:s} {expire:s}".format(path='/'.join([path, Schema['event-cache'], str(res.createdIndex), 'id']), id=res.createdIndex, index=res.modifiedIndex, name=package['tag'], expire='that will need to be manually removed' if ttl is None else 'that will expire in {ttl:d} seconds'.format(ttl=ttl)))
-            client.write('/'.join([path, Schema['event-cache'], str(res.createdIndex), 'lock']), res.modifiedIndex, ttl=ttl if ttl > 0 else None)
+            log.trace("sdstack_etcd returner <event_return> writing lock for event {id:d} with the tag {name:s} to {path:s} {expire:s}".format(path=lockp, id=res.createdIndex, name=package['tag'], expire='that will need to be manually removed' if ttl is None else 'that will expire in {ttl:d} seconds'.format(ttl=ttl)))
+            client.write(lockp, None, ttl=ttl if ttl > 0 else None)
 
         # If we can't write the lock, it's fine because the maintenance thread
         # will purge this event from the cache anyways
         except Exception as E:
-            log.error("sdstack_etcd returner <event_return> unable to add lock for {index:d} due to exception ({exception}) being raised".format(index=res.createdIndex, exception=E))
+            log.error("sdstack_etcd returner <event_return> unable to write lock for event {id:d} with the tag {name:s} to {path:s} due to exception ({exception}) being raised".format(path=lockp, name=package['tag'], id=res.createdIndex, exception=E))
             exceptions.append((E, package))
 
         continue
 
     # Go back through all of the exceptions that occurred and log them.
-    for e, pack in exceptions:
-        log.exception("sdstack_etcd returner <event_return> exception ({exception}) was raised while trying to write event {name:s} with the data {data}".format(exception=e, name=pack['tag'], data=pack))
+    for E, pack in exceptions:
+        log.exception("sdstack_etcd returner <event_return> exception ({exception}) was raised while trying to write event {name:s} with the data {data}".format(exception=E, name=pack['tag'], data=pack))
     return
 
 
