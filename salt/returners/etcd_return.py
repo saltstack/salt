@@ -750,7 +750,7 @@ def event_return(events):
         # for some reason.
 
         package = dict(event)
-        package.setdefault('master_id', __opts__['id']
+        package.setdefault('master_id', __opts__['id'])
         package.setdefault('timestamp', time.time())
 
         # Use the tag from the event package to build a watchable path
