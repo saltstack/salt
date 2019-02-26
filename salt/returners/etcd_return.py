@@ -79,9 +79,9 @@ event
 This key is essentially a namespace for all of the events (packages) that are
 submitted to the returner. When an event is received, the package for the event
 is written under this key using the "tag" parameter for its path. The
-createdIndex for this key is then cached as the event id in order to determine
-whether it should be scheduled for removal or not. Any time a package is updated
-its modifiedIndex is used to determine which event actually owns it.
+modifiedIndex for this key is then cached as the event id although the event id
+can actually be arbitrary since the "index" key contains the real modifiedIndex
+of the package key.
 
 minion.job
 ++++++++++
@@ -92,25 +92,28 @@ support the external job cache feature of Salt.
 event.cache
 +++++++++++
 Underneath this key is a list of all of the events that were received by the
-returner. Each event is identified by its createdIndex when the event was
-registered under the "event" key that was described previously. Each event
-under this key contains three keys. These are the "index" key, the "tag" key,
-and the "lock" key.
+returner. As mentioned before, each event is identified by the modifiedIndex
+of the key containing the event package. Underneath each event, there are
+three sub-keys. These are the "index" key, the "tag" key, and the "lock" key.
 
-The "index" key contains the latest modifiedIndex of the most recent event
-that was registered under the event key. This is used to determine whether
-the data for the event has been modified or if the event's tag collides with
-another event and is a duplicate.
+The "index" key contains the modifiedIndex of the package that was stored under
+the event key. This is used to determine the original creator for the event's
+package and is used to keep track of whether the package for the event has
+been modified by another event (since event tags can be overwritten preserving
+the semantics of the original etcd returner).
 
 The "lock" key is responsible for informing the maintenance service that the
-event is still in use. If the retuerner is configured via the "etcd.ttl" or
+event is still in use. If the returner is configured via the "etcd.ttl" or
 the "keep_jobs" option, this key will have the ttl applied to it. When
-the "lock" key has expired or explicitly removed by the administrator, the
-event and its tag will be scheduled for removal.
+the "lock" key has expired or is explicitly removed by the administrator, the
+event and its tag will be scheduled for removal. The createdIndex for the
+package path is written to this key in case an application wishes to identify
+the package path by an index.
 
-The other key under each event, is the "tag" key. The "tag" key simply
-contains the path to the tag that was registered with the event. The value
-of the "index" key points to the modifiedIndex of this particular path.
+The other key under an event, is the "tag" key. The "tag" key simply contains
+the path to the package that was registered as the tag attribute for the event.
+The value of the "index" key corresponds to the modifiedIndex of this particular
+path.
 '''
 from __future__ import absolute_import, print_function, unicode_literals
 
@@ -775,19 +778,19 @@ def event_return(events):
             exceptions.append((E, package))
             continue
 
-        # From now on, we can use the createdIndex of our tag path as our event
-        # identifier. This field is actually the key for the specific event in
-        # our cache. The modifiedIndex of our tag path is what we'll use to
-        # keep track of whether we're truly the owner of the event since the
-        # same tag can be associated with more than one event.
-        event = res.createdIndex
+        # From now on, we can use the modifiedIndex of our tag path as our event
+        # identifier. Despite usage of the modifiedIndex as a unique identifier,
+        # this identifer can be arbitrary as the index sub-key is responsible
+        # for determining ownership of the event package that was registered.
+        event = res.modifiedIndex
         log.trace("sdstack_etcd returner <event_return> wrote event {event:d} with the tag {name:s} to {path:s} using {data}".format(path=res.key, event=event, name=package['tag'], data=res.value))
 
         # Now we'll need to store the modifiedIndex for said event so that we can
         # use it to determine ownership. This modifiedIndex is what links the
-        # actual event with the tag on one direction. If we were using the etcd3
-        # api, then we could make these 3 writes (index, tag, and lock) atomic.
-        # But we're not, and so we're stuck doing this manually.
+        # actual event with the tag. If we were using the etcd3 api, then we
+        # could make these 3 writes (index, tag, and lock) atomic. But we're
+        # not, and so this is a manual effort and potentially racy depending on
+        # the uniqueness of the modifiedIndex (which etcd guarantees unique)
 
         basep = '/'.join([path, Schema['event-cache'], event])
 
@@ -824,10 +827,10 @@ def event_return(events):
         lockp = '/'.join([basep, 'lock'])
         try:
             log.trace("sdstack_etcd returner <event_return> writing lock for event {event:d} with the tag {name:s} to {path:s} {expire:s}".format(path=lockp, event=event, name=package['tag'], expire='that will need to be manually removed' if ttl is None else 'that will expire in {ttl:d} seconds'.format(ttl=ttl)))
-            client.write(lockp, None, ttl=ttl if ttl > 0 else None)
+            client.write(lockp, res.createdIndex, ttl=ttl if ttl > 0 else None)
 
         # If we can't write the lock, it's fine because the maintenance thread
-        # will purge this event from the cache anyways
+        # will purge this event from the cache anyways if it's not written.
         except Exception as E:
             log.error("sdstack_etcd returner <event_return> unable to write lock for event {event:d} with the tag {name:s} to {path:s} due to exception ({exception}) being raised".format(path=lockp, name=package['tag'], event=event, exception=E))
             exceptions.append((E, package))
