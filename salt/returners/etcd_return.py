@@ -132,7 +132,7 @@ log = logging.getLogger(__name__)
 
 Schema = {
     "minion-fun": 'minion.job',
-    "event-path": 'event',
+    "package-path": 'event',
     "event-cache": 'event.cache',
     "job-cache": 'job',
 }
@@ -422,25 +422,25 @@ def _purge_events():
             count += 1
             continue
 
-        ## Everything is valid, so now we can properly remove the tag (if the
+        ## Everything is valid, so now we can properly remove the package (if the
         ## current event is the owner), and then we can remove the cache entry.
 
-        # Remove the tag associated with the current event index
-        log.trace('sdstack_etcd returner <_purge_events> removing tag for event {event:d} at {path:s}'.format(event=event, path=ev_tag.value))
-        comp = ev_tag.value.split('/')
+        # Remove the package associated with the current event index
+        log.trace('sdstack_etcd returner <_purge_events> removing package for event {event:d} at {path:s}'.format(event=event, path=ev_tag.value))
+        packagep = ev_tag.value.split('/')
 
-        # Try and remove the event path that was specified while checking that
-        # its index is what we expect. If it's not, then we know that we're not
-        # the only person that's using this event and so we don't need to delete
-        # it yet, because another event will.
-        basep = [path, Schema['event-path']]
+        # Try and remove the package path that was cached while checking that
+        # its modifiedIndex is what we expect. If it's not, then we know that
+        # we're not the only person that's using this event and so we don't
+        # need to delete it yet, because another event will do it eventually.
+        basep = [path, Schema['package-path']]
         try:
-            res = client.delete('/'.join(basep + comp), prevIndex=ev_index.value)
+            res = client.delete('/'.join(basep + packagep), prevIndex=ev_index.value)
 
-        # Our tag is in use by someone else, so we can simply remove the cache
+        # Our package is in use by someone else, so we can simply remove the cache
         # entry and then cycle to the next event.
         except etcd.EtcdCompareFailed as E:
-            log.debug('sdstack_etcd returner <_purge_events> refusing to remove tag for event {event:d} at {path:s} as it is still in use'.format(event=event, path='/'.join(basep + comp[:])))
+            log.debug('sdstack_etcd returner <_purge_events> refusing to remove package for event {event:d} at {path:s} as it is still in use'.format(event=event, path='/'.join(basep + packagep[:])))
             count += 1
 
             # Remove the whole event cache entry
@@ -448,19 +448,19 @@ def _purge_events():
             res = client.delete(ev.key, recursive=True)
             continue
 
-        # Walk up each parent trying to remove it unless the directory is not empty
-        comp.pop(-1)
-        log.debug('sdstack_etcd returner <_purge_events> (recursively) removing parent keys for event {event:d} at {path:s}'.format(event=event, path='/'.join(basep + comp[:])))
-        for i in range(len(comp), 0, -1):
-            log.trace('sdstack_etcd returner <_purge_events> removing directory for event {event:d} at {path:s}'.format(event=event, path='/'.join(basep + comp[:i])))
+        # Walk through each component of the package path trying to remove them unless the directory is not empty
+        packagep.pop(-1)
+        log.debug('sdstack_etcd returner <_purge_events> (recursively) removing parent keys for event {event:d} package at {path:s}'.format(event=event, path='/'.join(basep + packagep[:])))
+        for i in range(len(packagep), 0, -1):
+            log.trace('sdstack_etcd returner <_purge_events> removing directory for event {event:d} package at {path:s}'.format(event=event, path='/'.join(basep + packagep[:i])))
             try:
-                client.delete('/'.join(basep + comp[:i]), dir=True)
+                client.delete('/'.join(basep + packagep[:i]), dir=True)
             except etcd.EtcdDirNotEmpty as E:
-                log.debug('sdstack_etcd returner <_purge_events> Unable to remove directory at {path:s} due to other tags under it still being in use ({exception})'.format(path='/'.join(basep + comp[:i]), exception=E))
+                log.debug('sdstack_etcd returner <_purge_events> Unable to remove directory for event {event:d} package at {path:s} due to other tags under it still being in use ({exception})'.format(path='/'.join(basep + packagep[:i]), event=event, exception=E))
                 break
             continue
 
-        # Remove the whole event cache entry now that we've properly removed the tag
+        # Remove the whole event cache entry now that we've properly removed the package
         log.debug('sdstack_etcd returner <_purge_events> removing event {event:d} at {path:s}'.format(event=event, path=ev.key))
         res = client.delete(ev.key, recursive=True)
 
@@ -746,31 +746,31 @@ def event_return(events):
         # for some reason.
 
         package = dict(event)
-        package.setdefault('master_id', __opts__['id'])
+        package.setdefault('master_id', __opts__['id']
         package.setdefault('timestamp', time.time())
 
         # Use the tag from the event package to build a watchable path
-        eventp = '/'.join([path, Schema['event-path'], package['tag']])
+        packagep = '/'.join([path, Schema['package-path'], package['tag']])
 
         # Now we can write the event package into the event path
-        log.debug("sdstack_etcd returner <event_return> writing package into event path at {path:s}".format(path=eventp))
+        log.debug("sdstack_etcd returner <event_return> writing package into event path at {path:s}".format(path=packagep))
         json = salt.utils.json.dumps(package)
         try:
             # Try and write the event if it doesn't exist
-            res = client.write(eventp, json, prevExist=False)
+            res = client.write(packagep, json, prevExist=False)
 
         # If the event doesn't actually exist, then just modify it instead of re-creating it
         # and tampering with the createdIndex
         except etcd.EtcdAlreadyExist as E:
-            log.trace("sdstack_etcd returner <event_return> fetching already existing event with the tag {name:s} at {path:s}".format(name=package['tag'], path=eventp))
-            res = client.read(eventp)
+            log.trace("sdstack_etcd returner <event_return> fetching already existing event with the tag {name:s} at {path:s}".format(name=package['tag'], path=packagep))
+            res = client.read(packagep)
 
-            log.update("sdstack_etcd returner <event_return> updating already existing event ({event:d}) with the tag {name:s} at {path:s}".format(event=res.createdIndex, name=package['tag'], path=eventp))
+            log.update("sdstack_etcd returner <event_return> updating package for event ({event:d}) with the tag {name:s} at {path:s}".format(event=res.createdIndex, name=package['tag'], path=packagep))
             res.value = json
             client.update(res)
 
         except Exception as E:
-            log.trace("sdstack_etcd returner <event_return> unable to write event with the tag {name:s} into {path:s} due to exception ({exception}) being raised".format(name=package['tag'], path=eventp, exception=E))
+            log.trace("sdstack_etcd returner <event_return> unable to write event with the tag {name:s} into {path:s} due to exception ({exception}) being raised".format(name=package['tag'], path=packagep, exception=E))
             exceptions.append((E, package))
             continue
 
