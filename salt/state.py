@@ -883,19 +883,31 @@ class State(object):
         else:
             low_data_onlyif = low_data['onlyif']
         for entry in low_data_onlyif:
-            if not isinstance(entry, six.string_types):
+            if isinstance(entry, six.string_types):
+                cmd = self.functions['cmd.retcode'](
+                    entry, ignore_retcode=True, python_shell=True, **cmd_opts)
+                log.debug('Last command return code: %s', cmd)
+                if cmd != 0 and ret['result'] is False:
+                    ret.update({'comment': 'onlyif condition is false',
+                                'skip_watch': True,
+                                'result': True})
+                elif cmd == 0:
+                    ret.update({'comment': 'onlyif condition is true', 'result': False})
+            elif isinstance(entry, dict):
+                if 'fun' not in entry:
+                    ret['comment'] = 'no `fun` argument in onlyif: {0}'.format(entry)
+                    log.warning(ret['comment'])
+                    return ret
+                result = self.functions[entry.pop('fun')](**entry)
+                if not result:
+                    ret.update({'comment': 'onlyif condition is false',
+                                'skip_watch': True,
+                                'result': True})
+                else:
+                    ret.update({'comment': 'onlyif condition is true',
+                                'result': False})
+            else:
                 ret.update({'comment': 'onlyif execution failed, bad type passed', 'result': False})
-                return ret
-            cmd = self.functions['cmd.retcode'](
-                entry, ignore_retcode=True, python_shell=True, **cmd_opts)
-            log.debug('Last command return code: %s', cmd)
-            if cmd != 0 and ret['result'] is False:
-                ret.update({'comment': 'onlyif condition is false',
-                            'skip_watch': True,
-                            'result': True})
-                return ret
-            elif cmd == 0:
-                ret.update({'comment': 'onlyif condition is true', 'result': False})
         return ret
 
     def _run_check_unless(self, low_data, cmd_opts):
@@ -909,19 +921,30 @@ class State(object):
         else:
             low_data_unless = low_data['unless']
         for entry in low_data_unless:
-            if not isinstance(entry, six.string_types):
+            if isinstance(entry, six.string_types):
+                cmd = self.functions['cmd.retcode'](entry, ignore_retcode=True, python_shell=True, **cmd_opts)
+                log.debug('Last command return code: %s', cmd)
+                if cmd == 0 and ret['result'] is False:
+                    ret.update({'comment': 'unless condition is true',
+                                'skip_watch': True,
+                                'result': True})
+                elif cmd != 0:
+                    ret.update({'comment': 'unless condition is false', 'result': False})
+            elif isinstance(entry, dict):
+                if 'fun' not in entry:
+                    ret['comment'] = 'no `fun` argument in onlyif: {0}'.format(entry)
+                    log.warning(ret['comment'])
+                    return ret
+                result = self.functions[entry.pop('fun')](**entry)
+                if result:
+                    ret.update({'comment': 'unless condition is true',
+                                'skip_watch': True,
+                                'result': True})
+                else:
+                    ret.update({'comment': 'unless condition is false',
+                                'result': False})
+            else:
                 ret.update({'comment': 'unless condition is false, bad type passed', 'result': False})
-                return ret
-            cmd = self.functions['cmd.retcode'](
-                entry, ignore_retcode=True, python_shell=True, **cmd_opts)
-            log.debug('Last command return code: %s', cmd)
-            if cmd == 0 and ret['result'] is False:
-                ret.update({'comment': 'unless condition is true',
-                            'skip_watch': True,
-                            'result': True})
-            elif cmd != 0:
-                ret.update({'comment': 'unless condition is false', 'result': False})
-                return ret
 
         # No reason to stop, return ret
         return ret
