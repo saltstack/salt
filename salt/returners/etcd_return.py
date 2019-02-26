@@ -671,7 +671,7 @@ def get_jids():
 
         # If we can't decode the json, then we're screwed so log it in case the user cares
         except Exception as E:
-            log.error("sdstack_etcd returner <get_jids> could not decode data for job {jid:s} at the path {path:s} due to exception ({exception}). Data was {data:s}".format(jid=jid, path=loadp, exception=E, data=res.value))
+            log.error("sdstack_etcd returner <get_jids> could not decode data for job {jid:s} at the path {path:s} due to exception ({exception}) being raised. Data was {data:s}".format(jid=jid, path=loadp, exception=E, data=res.value))
             continue
 
         # Cool. Everything seems to be good...
@@ -760,7 +760,7 @@ def event_return(events):
             log.trace("sdstack_etcd returner <event_return> fetching already existing event with the tag {name:s} at {path:s}".format(name=package['tag'], path=eventp))
             res = client.read(eventp)
 
-            log.update("sdstack_etcd returner <event_return> updating already existing event ({id:d}) with the tag {name:s} at {path:s}".format(id=res.createdIndex, name=package['tag'], path=eventp))
+            log.update("sdstack_etcd returner <event_return> updating already existing event ({event:d}) with the tag {name:s} at {path:s}".format(event=res.createdIndex, name=package['tag'], path=eventp))
             res.value = json
             client.update(res)
 
@@ -769,54 +769,61 @@ def event_return(events):
             exceptions.append((E, package))
             continue
 
-        log.trace("sdstack_etcd returner <event_return> wrote event ({id:d}) with the tag {name:s} to {path:s} using {data}".format(path=res.key, name=package['tag'], data=res.value, id=res.createdIndex))
+        # From now on, we can use the createdIndex of our tag path as our event
+        # identifier. This field is actually the key for the specific event in
+        # our cache. The modifiedIndex of our tag path is what we'll use to
+        # keep track of whether we're truly the owner of the event since the
+        # same tag can be associated with more than one event.
+        event = res.createdIndex
+        log.trace("sdstack_etcd returner <event_return> wrote event {event:d} with the tag {name:s} to {path:s} using {data}".format(path=res.key, event=event, name=package['tag'], data=res.value))
 
-        # Next we need to cache the index for said event so that we can use it to
-        # determine if the event actually owns it or not. We do this by using its
-        # modifiedIndex to link the cache event with the tag. If we were using the
-        # etcd3 api we could make all 3 of these writes atomic, but we're not and
-        # so this is a manual effort.
+        # Now we'll need to store the modifiedIndex for said event so that we can
+        # use it to determine ownership. This modifiedIndex is what links the
+        # actual event with the tag on one direction. If we were using the etcd3
+        # api, then we could make these 3 writes (index, tag, and lock) atomic.
+        # But we're not, and so we're stuck doing this manually.
 
-        basep = '/'.join([path, Schema['event-cache'], str(res.createdIndex)])
+        basep = '/'.join([path, Schema['event-cache'], event])
 
+        # Here we'll write our modifiedIndex to our event cache.
         indexp = '/'.join([basep, 'index'])
         try:
             # If the event is a new key, then we can simply cache it without concern
             if res.newKey:
-                log.trace("sdstack_etcd returner <event_return> writing new event ({id:d}) with the tag {name:s} to {path:s} with the modificationIndex {index:d}".format(path=indexp, id=res.createdIndex, index=res.modifiedIndex, name=package['tag']))
+                log.trace("sdstack_etcd returner <event_return> writing new event {event:d} with the modificationIndex {index:d} for the tag {name:s} at {path:s}".format(path=indexp, event=event, index=res.modifiedIndex, name=package['tag']))
                 client.write(indexp, res.modifiedIndex, prevExist=False)
 
             # Otherwise, the event was updated and thus we need to update our cache too
             else:
-                log.trace("sdstack_etcd returner <event_return> updating event {id:d} with the tag {name:s} at {path:s} with the modificationIndex {index:d}".format(path=indexp, id=res.createdIndex, index=res.modifiedIndex, name=package['tag']))
+                log.trace("sdstack_etcd returner <event_return> updating event {event:d} with the tag {name:s} at {path:s} with the modificationIndex {index:d}".format(path=indexp, event=event, index=res.modifiedIndex, name=package['tag']))
                 client.write(indexp, res.modifiedIndex)
 
         except etcd.EtcdAlreadyExist as E:
-            log.error("sdstack_etcd returner <event_return> unable to write modificationIndex {index:d} for event {id:d} with the tag {name:s} due to event already existing".format(id=res.createdIndex, index=res.modifiedIndex, name=package['tag']))
+            log.error("sdstack_etcd returner <event_return> unable to write modificationIndex {index:d} for tag {name:s} to event {event:d} due to the event already existing".format(event=event, index=res.modifiedIndex, name=package['tag']))
             exceptions.append((E, package))
             continue
 
         # If we got here, then we should be able to write the tag using the event index
         tagp = '/'.join([basep, 'tag'])
         try:
-            log.trace("sdstack_etcd returner <event_return> updating cache for event {id:d} with tag {name:s} at {path:s}".format(path=tagp, id=res.createdIndex, name=package['tag']))
+            log.trace("sdstack_etcd returner <event_return> updating event {event:d} at {path:s} with tag {name:s}".format(path=tagp, event=event, name=package['tag']))
             client.write(tagp, package['tag'])
 
         except Exception as E:
-            log.trace("sdstack_etcd returner <event_return> unable to cache tag {name:s} for event {id:d} at {path:s} due to exception ({exception}) being raised".format(path=tagp, name=package['tag'], id=res.createdIndex, exception=E))
+            log.trace("sdstack_etcd returner <event_return> unable to update event {event:d} at {path:s} with tag {name:s} due to exception ({exception}) being raised".format(path=tagp, name=package['tag'], event=event, exception=E))
             exceptions.append((E, package))
             continue
 
         # Now that both have been written, let's write our lock to actually enable the event
         lockp = '/'.join([basep, 'lock'])
         try:
-            log.trace("sdstack_etcd returner <event_return> writing lock for event {id:d} with the tag {name:s} to {path:s} {expire:s}".format(path=lockp, id=res.createdIndex, name=package['tag'], expire='that will need to be manually removed' if ttl is None else 'that will expire in {ttl:d} seconds'.format(ttl=ttl)))
+            log.trace("sdstack_etcd returner <event_return> writing lock for event {event:d} with the tag {name:s} to {path:s} {expire:s}".format(path=lockp, event=event, name=package['tag'], expire='that will need to be manually removed' if ttl is None else 'that will expire in {ttl:d} seconds'.format(ttl=ttl)))
             client.write(lockp, None, ttl=ttl if ttl > 0 else None)
 
         # If we can't write the lock, it's fine because the maintenance thread
         # will purge this event from the cache anyways
         except Exception as E:
-            log.error("sdstack_etcd returner <event_return> unable to write lock for event {id:d} with the tag {name:s} to {path:s} due to exception ({exception}) being raised".format(path=lockp, name=package['tag'], id=res.createdIndex, exception=E))
+            log.error("sdstack_etcd returner <event_return> unable to write lock for event {event:d} with the tag {name:s} to {path:s} due to exception ({exception}) being raised".format(path=lockp, name=package['tag'], event=event, exception=E))
             exceptions.append((E, package))
 
         continue
@@ -877,7 +884,7 @@ def get_jids_filter(count, filter_find_job=True):
 
         # If we can't decode the json, then we're screwed so log it in case the user cares
         except Exception as E:
-            log.error("sdstack_etcd returner <get_jids_filter> could not decode data for job {jid:s} at the path {path:s} due to exception ({exception}). Data was {data:s}".format(jid=jid, path=loadp, exception=E, data=res.value))
+            log.error("sdstack_etcd returner <get_jids_filter> could not decode data for job {jid:s} at the path {path:s} due to exception ({exception}) being raised. Data was {data:s}".format(jid=jid, path=loadp, exception=E, data=res.value))
             continue
 
         if filter_find_job and data['fun'] == 'saltutil.find_job':
