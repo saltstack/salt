@@ -115,6 +115,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging
+import time
 
 # Import salt libs
 import salt.utils.jid
@@ -737,12 +738,16 @@ def event_return(events):
     exceptions = []
     for event in events:
 
-        # Package the event data into a value to write into our etcd profile
-        package = {
-            'tag': event.get('tag', ''),
-            'data': event.get('data', ''),
-            'master_id': __opts__['id'],
-        }
+        # Each event that we receive should already come with these properties,
+        # but we add these just in case the schema changes as a result of a
+        # refactor or something. Some of the other returns also include a
+        # timestamp despite the time only having meaning to the minion that
+        # it's coming from. We'll include it in case the user wants it too
+        # for some reason.
+
+        package = dict(event)
+        package.setdefault('master_id', __opts__['id'])
+        package.setdefault('timestamp', time.time())
 
         # Use the tag from the event package to build a watchable path
         eventp = '/'.join([path, Schema['event-path'], package['tag']])
