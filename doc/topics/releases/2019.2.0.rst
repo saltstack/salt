@@ -12,6 +12,15 @@ Python 2 will be deprecated from SaltStack no earlier then the Sodium
 release, that is either the Sodium release or a later release.
 This decision is pending further community discussion.
 
+Known Issues
+============
+The following are known issues for the 2019.2.0 release and will be fixed for 2019.2.1:
+
+* `#51699`_
+
+.. _`#51699`: https://github.com/saltstack/salt/issues/51699
+
+
 Non-Backward-Compatible Change to YAML Renderer
 ===============================================
 
@@ -1336,6 +1345,7 @@ Execution Modules
 - :mod:`salt.modules.netmiko <salt.modules.netmiko_mod>`
 - :mod:`salt.modules.nxos_api <salt.modules.nxos_api>`
 - :mod:`salt.modules.peeringdb <salt.modules.peeringdb>`
+- :mod:`salt.modules.purefb <salt.modules.purefb>`
 - :mod:`salt.modules.pyeapi <salt.modules.arista_pyeapi>`
 
 Pillar Modules
