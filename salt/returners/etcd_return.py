@@ -189,8 +189,8 @@ def returner(ret):
     # it's likely there's no load saved since this job came directly from a
     # minion.
     if ret['jid'] == 'req':
-        log.debug('sdstack_etcd returner <returner> received a new job id request ({jid:s}) for {data}'.format(jid=jid, data=ret))
-        save_load(jid, ret)
+        log.debug('sdstack_etcd returner <returner> received a new job id request () for {data}'.format(jid=ret['jid'], data=ret))
+        save_load(ret['jid'], ret)
 
     # Update the given minion in the external job cache with the current (latest job)
     # This is used by get_fun() to return the last function that was called
