@@ -13,13 +13,13 @@ import os
 import fnmatch
 import re
 import copy
+import logging
 
 # Import Salt libs
 import salt.utils.files
 import salt.utils.stringutils
 from salt.ext import six
 
-import logging
 log = logging.getLogger(__name__)
 
 
@@ -37,7 +37,10 @@ def _get_ssh_known_hosts_file(opts):
     return ssh_known_hosts_file
 
 
-def _parse_ssh_known_hosts_from_line(line):
+def _parse_ssh_known_hosts_line(line):
+    '''
+    :return: Dict that contain the three fields from a known_hosts line
+    '''
     line_unicode = salt.utils.stringutils.to_unicode(line)
     fields = line_unicode.split(" ")
 
@@ -50,7 +53,7 @@ def _parse_ssh_known_hosts_from_line(line):
     names, keytype, key = fields
     names = names.split(",")
 
-    return { 'names': names, 'keytype' : keytype, 'key' : key }
+    return {'names': names, 'keytype': keytype, 'key': key}
 
 
 def parse_ssh_known_hosts(lines):
@@ -61,24 +64,24 @@ def parse_ssh_known_hosts(lines):
     :return: Dictionary of targets in similar style to the flat roster
     '''
 
-    targets = {}
+    targets_ = {}
     for line in lines:
-        host_key = _parse_ssh_known_hosts_from_line(line)
-        
+        host_key = _parse_ssh_known_hosts_line(line)
+
         for host in host_key['names']:
-            targets.update({ host : { 'host' : host}})
+            targets_.update({host: {'host': host}})
 
-    return targets
+    return targets_
 
 
-def targets(tgt, tgt_type='glob', **kwargs):
+def targets(tgt, tgt_type='glob'):
     '''
     Return the targets from the flat yaml file, checks opts for location but
     defaults to /etc/salt/roster
     '''
     ssh_known_hosts_file = _get_ssh_known_hosts_file(__opts__)
-    with salt.utils.files.fopen(ssh_known_hosts_file, 'r') as fp:
-        all_minions = parse_ssh_known_hosts([line.rstrip() for line in fp])
+    with salt.utils.files.fopen(ssh_known_hosts_file, 'r') as hostfile:
+        all_minions = parse_ssh_known_hosts([line.rstrip() for line in hostfile])
     rmatcher = RosterMatcher(all_minions, tgt, tgt_type)
     return rmatcher.targets()
 
