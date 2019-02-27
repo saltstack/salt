@@ -873,7 +873,7 @@ def event_return(events):
         # not, and so this is a manual effort and potentially racy depending on
         # the uniqueness of the modifiedIndex (which etcd guarantees unique)
 
-        basep = '/'.join([path, Schema['event-cache'], event])
+        basep = '/'.join([path, Schema['event-cache'], str(event)])
 
         # Here we'll write our modifiedIndex to our event cache.
         indexp = '/'.join([basep, 'index'])
