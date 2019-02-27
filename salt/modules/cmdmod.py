@@ -2904,6 +2904,7 @@ def run_chroot(root,
                group=None,
                shell=DEFAULT_SHELL,
                python_shell=True,
+               binds=None,
                env=None,
                clean_env=False,
                template=None,
@@ -2962,6 +2963,11 @@ def run_chroot(root,
     :param bool python_shell: If False, let python handle the positional
         arguments. Set to True to use shell features, such as pipes or
         redirection.
+
+    :param list binds: List of directories that will be exported inside
+        the chroot with the bind option.
+
+        .. versionadded:: Sodium
 
     :param dict env: Environment variables to be set prior to execution.
 
@@ -3059,6 +3065,15 @@ def run_chroot(root,
         'sysfs',
         fstype='sysfs')
 
+    binds = binds if binds else []
+    for bind_exported in binds:
+        bind_exported_to = os.path.relpath(bind_exported, os.path.sep)
+        bind_exported_to = os.path.join(root, bind_exported_to)
+        __salt__['mount.mount'](
+            bind_exported_to,
+            bind_exported,
+            opts='default,bind')
+
     # Execute chroot routine
     sh_ = '/bin/sh'
     if os.path.isfile(os.path.join(root, 'bin/bash')):
@@ -3108,6 +3123,11 @@ def run_chroot(root,
     if _chroot_pids(root):
         log.error('Processes running in chroot could not be killed, '
                   'filesystem will remain mounted')
+
+    for bind_exported in binds:
+        bind_exported_to = os.path.relpath(bind_exported, os.path.sep)
+        bind_exported_to = os.path.join(root, bind_exported_to)
+        __salt__['mount.umount'](bind_exported_to)
 
     __salt__['mount.umount'](os.path.join(root, 'sys'))
     __salt__['mount.umount'](os.path.join(root, 'proc'))

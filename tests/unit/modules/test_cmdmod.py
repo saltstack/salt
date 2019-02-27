@@ -433,3 +433,33 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
             ret = cmdmod.run_all('some command', output_encoding='latin1')
 
         self.assertEqual(ret['stdout'], stdout)
+
+    def test_run_chroot_mount(self):
+        '''
+        Test cmdmod.run_chroot mount / umount balance
+        '''
+        mock_mount = MagicMock()
+        mock_umount = MagicMock()
+        mock_run_all = MagicMock()
+        with patch.dict(cmdmod.__salt__, {
+                'mount.mount': mock_mount,
+                'mount.umount': mock_umount}):
+            with patch('salt.modules.cmdmod.run_all', mock_run_all):
+                cmdmod.run_chroot('/mnt', 'cmd')
+                self.assertEqual(mock_mount.call_count, 3)
+                self.assertEqual(mock_umount.call_count, 3)
+
+    def test_run_chroot_mount_bind(self):
+        '''
+        Test cmdmod.run_chroot mount / umount balance with bind mount
+        '''
+        mock_mount = MagicMock()
+        mock_umount = MagicMock()
+        mock_run_all = MagicMock()
+        with patch.dict(cmdmod.__salt__, {
+                'mount.mount': mock_mount,
+                'mount.umount': mock_umount}):
+            with patch('salt.modules.cmdmod.run_all', mock_run_all):
+                cmdmod.run_chroot('/mnt', 'cmd', binds=['/var'])
+                self.assertEqual(mock_mount.call_count, 4)
+                self.assertEqual(mock_umount.call_count, 4)
