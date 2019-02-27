@@ -203,10 +203,7 @@ class TestWhich(TestCase):
             # specify which calls return which values. First call to os.access
             # returns X, the second Y, the third Z, etc...
             osaccess.side_effect = [
-                # The first os.access should return False(the abspath one)
-                False,
-                # The second, iterating through $PATH, should also return False,
-                # still checking for Linux
+                # The first os.access should return False due to checking the explicit path (first is_executable)
                 False,
                 # We will now also return False once so we get a .EXE back from
                 # the function, see PATHEXT below.
@@ -228,7 +225,7 @@ class TestWhich(TestCase):
     def test_missing_binary_in_windows(self):
         with patch('os.access') as osaccess:
             osaccess.side_effect = [
-                # The first os.access should return False(the abspath one)
+                # The first os.access should return False due to checking the explicit path (first is_executable)
                 False,
                 # The second, iterating through $PATH, should also return False,
                 # still checking for Linux
@@ -253,10 +250,7 @@ class TestWhich(TestCase):
             # specify which calls return which values. First call to os.access
             # returns X, the second Y, the third Z, etc...
             osaccess.side_effect = [
-                # The first os.access should return False(the abspath one)
-                False,
-                # The second, iterating through $PATH, should also return False,
-                # still checking for Linux
+                # The first os.access should return False due to checking the explicit path (first is_executable)
                 False,
                 # We will now also return False 3 times so we get a .CMD back from
                 # the function, see PATHEXT below.
