@@ -495,7 +495,7 @@ You can now dynamically generate a Salt-SSH roster from the terraform resources
 defined with `terraform-provider-salt <https://github.com/dmacvicar/terraform-provider-salt>`_.
 
 This allows you to combine both terraform and Salt-SSH to provision and
-configure your hosts. See th :py:mod:`terraform roster<salt.roster.terraform>` for
+configure your hosts. See the :py:mod:`terraform roster<salt.roster.terraform>` for
 an example on how to setup and use.
 
 
