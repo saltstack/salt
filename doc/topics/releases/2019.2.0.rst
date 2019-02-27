@@ -487,6 +487,18 @@ module.
       proxytype: docker
       name: keen_proskuriakova
 
+
+Terraform Salt-SSH Roster
+=========================
+
+You can now dynamically generate a Salt-SSH roster from the terraform resources
+defined with `terraform-provider-salt <https://github.com/dmacvicar/terraform-provider-salt>`_.
+
+This allows you to combine both terraform and Salt-SSH to provision and
+configure your hosts. See th :py:mod:`terraform roster<salt.roster.terraform>` for
+an example on how to setup and use.
+
+
 Grains Dictionary Passed into Custom Grains
 ===========================================
 
