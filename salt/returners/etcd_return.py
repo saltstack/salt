@@ -259,7 +259,8 @@ def save_load(jid, load, minions=None):
 
         log.debug('sdstack_etcd returner <save_load> updating load data for job {jid:s} at {path:s} with {data:s}'.format(jid=jid, path=loadp, data=load))
         res = client.update(node)
-        log.warning("sdstack_etcd returner <save_load> updated the load data for job {jid:s} at {path:s} with {data:s}. Old data was {old:s}".format(jid=jid, path=res.key, data=res.value, old=res._prev_node.value))
+        if res._prev_node.value != res.value:
+            log.warning("sdstack_etcd returner <save_load> overwrote the load data for job {jid:s} at {path:s} with {data:s}. Old data was {old:s}".format(jid=jid, path=res.key, data=res.value, old=res._prev_node.value))
 
     # If we failed here, it's okay because the lock won't get written so this
     # essentially means the job will get scheduled for deletion.
