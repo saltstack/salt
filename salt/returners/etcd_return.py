@@ -850,7 +850,7 @@ def event_return(events):
             log.trace("sdstack_etcd returner <event_return> fetching already existing event with the tag {name:s} at {path:s}".format(name=package['tag'], path=packagep))
             node = client.read(packagep)
 
-            log.debug("sdstack_etcd returner <event_return> updating package for event ({event:d}) with the tag {name:s} at {path:s}".format(event=res.createdIndex, name=package['tag'], path=packagep))
+            log.debug("sdstack_etcd returner <event_return> updating package for event ({event:d}) with the tag {name:node} at {path:s}".format(event=node.modifiedIndex, name=package['tag'], path=packagep))
             node.value = json
             res = client.update(node)
 
