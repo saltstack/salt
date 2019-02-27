@@ -659,7 +659,7 @@ def _fetch_events(q):
         except Exception as exc:
             # This is broad but we'll see all kinds of issues right now
             # if we drop the proc out from under the socket while we're reading
-			log.exception("Exception caught while getting events %r", exc)
+            log.exception("Exception caught while getting events %r", exc)
         q.put(events)
 
 
