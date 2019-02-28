@@ -55,7 +55,7 @@ prepended by underscore, such as:
 Modules must be synced before they can be used. This can happen a few ways,
 discussed below.
 
-.. note:
+.. note::
     Using saltenvs besides ``base`` may not work in all contexts.
 
 Sync Via States
@@ -159,7 +159,7 @@ Wheel        ``salt.wheels`` (:ref:`index <all-salt.wheel>`)                  ``
 
 .. [#no-fs] These modules cannot be loaded from the Salt File Server.
 
-.. note:
+.. note::
     While it is possible to import modules directly with the import statement,
     it is strongly recommended that the appropriate
     :ref:`dunder dictionary <dunder-dictionaries>` is used to access them
@@ -397,7 +397,7 @@ Tokens
 Token stores for :ref:`External Authentication <acl-eauth>`. See the
 :py:mod:`salt.tokens` docstring for details.
 
-.. note:
+.. note::
     The runner to load tokens modules is
     :py:func:`saltutil.sync_eauth_tokens <salt.runners.saltutil.sync_eauth_tokens>`.
 
