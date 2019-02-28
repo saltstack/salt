@@ -11,6 +11,9 @@ Support for YUM/DNF
     DNF is fully supported as of version 2015.5.10 and 2015.8.4 (partial
     support for DNF was initially added in 2015.8.0), and DNF is used
     automatically in place of YUM in Fedora 22 and newer.
+
+.. versionadded:: 3003
+    Support for ``tdnf`` on Photon OS.
 """
 
 
@@ -70,7 +73,14 @@ def __virtual__():
     except Exception:  # pylint: disable=broad-except
         return (False, "Module yumpkg: no yum based system detected")
 
-    enabled = ("amazon", "xcp", "xenserver", "virtuozzolinux", "virtuozzo")
+    enabled = (
+        "amazon",
+        "xcp",
+        "xenserver",
+        "virtuozzolinux",
+        "virtuozzo",
+        "vmware photon",
+    )
 
     if os_family == "redhat" or os_grain in enabled:
         if _yum() is None:
@@ -163,6 +173,9 @@ def _yum():
                 break
             elif _check(os.path.join(dir, "yum")):
                 context[contextkey] = "yum"
+                break
+            elif _check(os.path.join(dir, "tdnf")):
+                context[contextkey] = "tdnf"
                 break
     return context.get(contextkey)
 
@@ -366,7 +379,12 @@ def _get_yum_config():
         # fall back to parsing the config ourselves
         # Look for the config the same order yum does
         fn = None
-        paths = ("/etc/yum/yum.conf", "/etc/yum.conf", "/etc/dnf/dnf.conf")
+        paths = (
+            "/etc/yum/yum.conf",
+            "/etc/yum.conf",
+            "/etc/dnf/dnf.conf",
+            "/etc/tdnf/tdnf.conf",
+        )
         for path in paths:
             if os.path.exists(path):
                 fn = path
