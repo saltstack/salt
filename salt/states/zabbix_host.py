@@ -122,8 +122,8 @@ def present(host, groups, interfaces, **kwargs):
             interface_type = interface_ports[value['type'].lower()][0]
             main = '1' if six.text_type(value.get('main', 'true')).lower() == 'true' else '0'
             useip = '1' if six.text_type(value.get('useip', 'true')).lower() == 'true' else '0'
-            interface_ip = value.get('ip')
-            dns = value.get('dns', key)
+            interface_ip = value.get('ip') or ""
+            dns = value.get('dns', key) or ""
             port = six.text_type(value.get('port', interface_ports[value['type'].lower()][1]))
 
             interfaces_list.append({'type': interface_type,
