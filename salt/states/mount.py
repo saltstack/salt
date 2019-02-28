@@ -226,6 +226,10 @@ def mounted(name,
         if opts == 'defaults':
             opts = ''
 
+    # Defaults is not a valid option on Solaris
+    if 'Solaris' in __grains__['os'] and opts == 'defaults':
+        opts = '-'
+
     # Make sure that opts is correct, it can be a list or a comma delimited
     # string
     if isinstance(opts, string_types):
@@ -617,6 +621,14 @@ def mounted(name,
                                                   config,
                                                   test=True,
                                                   match_on=match_on)
+            elif 'Solaris' in __grains__['os']:
+                out = __salt__['mount.set_vfstab'](name,
+                                                   device,
+                                                   fstype,
+                                                   opts,
+                                                   config=config,
+                                                   test=True,
+                                                   match_on=match_on)
             else:
                 out = __salt__['mount.set_fstab'](name,
                                                   device,
@@ -673,6 +685,13 @@ def mounted(name,
                                                   mount,
                                                   config,
                                                   match_on=match_on)
+            elif 'Solaris' in __grains__['os']:
+                out = __salt__['mount.set_vfstab'](name,
+                                                   device,
+                                                   fstype,
+                                                   opts,
+                                                   config=config,
+                                                   match_on=match_on)
             else:
                 out = __salt__['mount.set_fstab'](name,
                                                   device,
