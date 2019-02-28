@@ -913,6 +913,10 @@ def unmounted(name,
             if config == '/etc/fstab':
                 config = "/etc/filesystems"
             fstab_data = __salt__['mount.filesystems'](config)
+        elif 'Solaris' in __grains__['os']:
+            if config == '/etc/fstab':
+                config = '/etc/vfstab'
+            fstab_data = __salt__['mount.vfstab'](config)
         else:
             fstab_data = __salt__['mount.fstab'](config)
 
@@ -934,6 +938,8 @@ def unmounted(name,
                     out = __salt__['mount.rm_automaster'](name, device, config)
                 elif 'AIX' in __grains__['os']:
                     out = __salt__['mount.rm_filesystems'](name, device, config)
+                elif 'Solaris' in __grains__['os']:
+                    out = __salt__['mount.rm_vfstab'](name, device, config)
                 else:
                     out = __salt__['mount.rm_fstab'](name, device, config)
                 if out is not True:
