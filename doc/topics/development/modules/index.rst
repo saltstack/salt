@@ -133,6 +133,8 @@ Executor     ``salt.executors`` (:ref:`index <all-salt.executors>`)           ``
 File Server  ``salt.fileserver`` (:ref:`index <file-server>`)                 ``fileserver``            ``fileserver_dirs``
 Grain        ``salt.grains`` (:ref:`index <all-salt.grains>`)                 ``grains``                ``grains_dirs``
 Log Handler  ``salt.log.handlers`` (:ref:`index <external-logging-handlers>`) ``log_handlers``          ``log_handlers_dirs``
+Matcher      ``salt.matchers``                                                ``matchers``              ``matchers_dirs``
+Metaproxy    ``salt.metaproxy``                                               ``metaproxy`` [#no-fs]_   ``metaproxy_dirs``
 Net API      ``salt.netapi`` (:ref:`index <all-netapi-modules>`)              ``netapi`` [#no-fs]_      ``netapi_dirs``
 Outputter    ``salt.output`` (:ref:`index <all-salt.output>`)                 ``output``                ``outputter_dirs``
 Pillar       ``salt.pillar`` (:ref:`index <all-salt.pillars>`)                ``pillar``                ``pillar_dirs``
@@ -179,7 +181,7 @@ Beacon
 
 * :ref:`Writing Beacons <writing-beacons>`
 
-Beacons are polled by the Salt event loop to monitor non-salt processes. See 
+Beacons are polled by the Salt event loop to monitor non-salt processes. See
 :ref:`Beacons <beacons>` for more information about the beacon system.
 
 Cache
@@ -257,6 +259,19 @@ Log Handler
 
 Log handlers allows the logs from salt (master or minion) to be sent to log
 aggregation systems.
+
+Matcher
+-------
+
+Matcher modules are used to define the :ref:`minion targeting expressions <targeting>`.
+For now, it is only possible to override the :ref:`existing matchers <matchers>`
+(the required CLI plumbing for custom matchers is not implemented yet).
+
+Metaproxy
+---------
+
+Metaproxy is an abstraction layer above the existing proxy minion. It enables
+adding different types of proxy minions that can still load existing proxymodules.
 
 Net API
 -------
