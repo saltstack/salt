@@ -192,9 +192,10 @@ class Schedule(object):
         if remove_hidden:
             _schedule = copy.deepcopy(schedule)
             for job in _schedule:
-                for item in _schedule[job]:
-                    if item.startswith('_'):
-                        del schedule[job][item]
+                if isinstance(_schedule[job], dict):
+                    for item in _schedule[job]:
+                        if item.startswith('_'):
+                            del schedule[job][item]
         return schedule
 
     def _check_max_running(self, func, data, opts, now):
