@@ -131,10 +131,21 @@ def _linux_disks():
     '''
     ret = {'disks': [], 'SSDs': []}
 
+    # Virtual Devices which show up as non-rotational, but since they
+    # are virtual they are not true SSDs. Device Mapper, Bcache and VirtIO
+    virtual_devs = ['dm-', 'bcache', 'vd']
+
     for entry in glob.glob('/sys/block/*/queue/rotational'):
         try:
             with salt.utils.files.fopen(entry) as entry_fp:
                 device = entry.split('/')[3]
+
+                for prefix in virtual_devs:
+                    if device.startswith(prefix):
+                        log.trace('Device %s seems like a virtual device. '
+                                  'Skipping this device')
+                        continue
+
                 flag = entry_fp.read(1)
                 if flag == '0':
                     ret['SSDs'].append(device)
