@@ -1469,6 +1469,30 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertFalse(ret['changes'])
         self.assertEqual(ret['comment'], 'Success!')
 
+    def test_onlyif_req_retcode(self):
+        ret = self.run_function(
+            'state.single',
+            fun='test.succeed_with_changes',
+            name='onlyif test',
+            onlyif=[
+                {'fun': 'test.retcode'},
+            ],
+        )['test_|-onlyif test_|-onlyif test_|-succeed_with_changes']
+        self.assertTrue(ret['result'])
+        self.assertFalse(ret['changes'])
+        self.assertEqual(ret['comment'], 'onlyif condition is false')
+        ret = self.run_function(
+            'state.single',
+            fun='test.succeed_with_changes',
+            name='onlyif test',
+            onlyif=[
+                {'fun': 'test.retcode', 'code': 0},
+            ],
+        )['test_|-onlyif test_|-onlyif test_|-succeed_with_changes']
+        self.assertTrue(ret['result'])
+        self.assertTrue(ret['changes'])
+        self.assertEqual(ret['comment'], 'Success!')
+
     def test_unless_req(self):
         ret = self.run_function(
             'state.single',
@@ -1513,6 +1537,30 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertTrue(ret['result'])
         self.assertFalse(ret['changes'])
         self.assertEqual(ret['comment'], 'Success!')
+
+    def test_unless_req_retcode(self):
+        ret = self.run_function(
+            'state.single',
+            fun='test.succeed_with_changes',
+            name='unless test',
+            unless=[
+                {'fun': 'test.retcode'},
+            ],
+        )['test_|-unless test_|-unless test_|-succeed_with_changes']
+        self.assertTrue(ret['result'])
+        self.assertTrue(ret['changes'])
+        self.assertEqual(ret['comment'], 'Success!')
+        ret = self.run_function(
+            'state.single',
+            fun='test.succeed_with_changes',
+            name='unless test',
+            unless=[
+                {'fun': 'test.retcode', 'code': 0},
+            ],
+        )['test_|-unless test_|-unless test_|-succeed_with_changes']
+        self.assertTrue(ret['result'])
+        self.assertFalse(ret['changes'])
+        self.assertEqual(ret['comment'], 'unless condition is true')
 
     def test_get_file_from_env_in_top_match(self):
         tgt = os.path.join(RUNTIME_VARS.TMP, 'prod-cheese-file')
