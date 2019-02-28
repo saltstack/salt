@@ -190,7 +190,10 @@ class IPv6AddressScoped(ipaddress.IPv6Address):
         packed = False
         if isinstance(data, bytes) and len(data) == 16 and b':' not in data:
             try:
-                packed = bool(int(str(bytearray(data)).encode('hex'), 16))
+                if PY3:
+                    packed = bool(int(str(bytearray(data, 'utf-8')).encode('utf-8').hex(), 16))
+                else:
+                    packed = bool(int(str(bytearray(data)).encode('hex'), 16))
             except ValueError:
                 pass
 
