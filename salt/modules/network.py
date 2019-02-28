@@ -28,7 +28,6 @@ from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,no-name-in-module,redefined-builtin
 from salt._compat import ipaddress
 
-
 log = logging.getLogger(__name__)
 
 
