@@ -514,7 +514,7 @@ def _purge_events():
         # even matter because we can't do anything without a tag. So similar to
         # before, we just remove it and cycle to the next event.
         except etcd.EtcdKeyNotFound as E:
-            log.warning('sdstack_etcd returner <_purge_events> event {event:d} at {path:p} is corrupt (missing tag) and will be removed'.format(event=event, path=ev.key))
+            log.warning('sdstack_etcd returner <_purge_events> event {event:d} at {path:s} is corrupt (missing tag) and will be removed'.format(event=event, path=ev.key))
 
             log.debug('sdstack_etcd returner <_purge_events> removing corrupt event {event:d} at {path:s}'.format(event=event, path=ev.key))
             client.delete(ev.key, recursive=True)
