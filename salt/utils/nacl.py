@@ -69,13 +69,16 @@ def _get_sk(**kwargs):
     Return sk
     '''
     config = _get_config(**kwargs)
-    key = salt.utils.stringutils.to_str(config['sk'])
+    key = None
+    if config['sk']:
+        key = salt.utils.stringutils.to_str(config['sk'])
     sk_file = config['sk_file']
     if not key and sk_file:
-        with salt.utils.files.fopen(sk_file, 'rb') as keyf:
-            key = salt.utils.stringutils.to_unicode(keyf.read()).rstrip('\n')
-    if key is None:
-        raise Exception('no key or sk_file found')
+        try:
+            with salt.utils.files.fopen(sk_file, 'rb') as keyf:
+                key = salt.utils.stringutils.to_unicode(keyf.read()).rstrip('\n')
+        except (IOError, OSError):
+            raise Exception('no key or sk_file found')
     return base64.b64decode(key)
 
 
@@ -84,13 +87,16 @@ def _get_pk(**kwargs):
     Return pk
     '''
     config = _get_config(**kwargs)
-    pubkey = salt.utils.stringutils.to_str(config['pk'])
+    pubkey = None
+    if config['pk']:
+        pubkey = salt.utils.stringutils.to_str(config['pk'])
     pk_file = config['pk_file']
     if not pubkey and pk_file:
-        with salt.utils.files.fopen(pk_file, 'rb') as keyf:
-            pubkey = salt.utils.stringutils.to_unicode(keyf.read()).rstrip('\n')
-    if pubkey is None:
-        raise Exception('no pubkey or pk_file found')
+        try:
+            with salt.utils.files.fopen(pk_file, 'rb') as keyf:
+                pubkey = salt.utils.stringutils.to_unicode(keyf.read()).rstrip('\n')
+        except (IOError, OSError):
+            raise Exception('no pubkey or pk_file found')
     pubkey = six.text_type(pubkey)
     return base64.b64decode(pubkey)
 
