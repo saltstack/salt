@@ -357,7 +357,7 @@ class Schedule(object):
         # assume job is enabled.
         for job in data:
             if 'enabled' not in data[job]:
-                data[job]['_enabled'] = True
+                data[job]['enabled'] = True
 
         new_job = next(six.iterkeys(data))
 
@@ -1600,11 +1600,11 @@ class Schedule(object):
             # If there is no job specific enabled available,
             # grab the global which defaults to True.
             if 'enabled' not in data:
-                data['_enabled'] = self.enabled
+                data['enabled'] = self.enabled
 
             # If globally disabled, disable the job
             if not self.enabled:
-                data['_enabled'] = self.enabled
+                data['enabled'] = self.enabled
                 data['_skip_reason'] = 'disabled'
                 data['_skipped_time'] = now
                 data['_skipped'] = True
@@ -1626,7 +1626,7 @@ class Schedule(object):
             try:
                 if run:
                     # Job is disabled, continue
-                    if '_enabled' in data and not data['_enabled']:
+                    if 'enabled' in data and not data['enabled']:
                         log.debug('Job: %s is disabled', job_name)
                         data['_skip_reason'] = 'disabled'
                         data['_skipped_time'] = now
