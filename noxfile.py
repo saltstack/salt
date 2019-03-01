@@ -23,6 +23,10 @@ import nox
 REPO_ROOT = os.path.abspath(os.path.dirname(__file__))
 SITECUSTOMIZE_DIR = os.path.join(REPO_ROOT, 'tests', 'support', 'coverage')
 
+# We can't just import salt because if this is running under a frozen nox, there
+# will be no salt to import
+IS_WINDOWS = sys.platform.lower().startswith('win')
+
 # Python versions to run against
 _PYTHON_VERSIONS = ('2', '2.7', '3', '3.4', '3.5', '3.6')
 
@@ -84,6 +88,11 @@ def _install_requirements(session, *extra_requirements):
 
     if extra_requirements:
         session.install(*extra_requirements)
+
+    if IS_WINDOWS:
+        # Windows hacks :/
+        nox_windows_setup = os.path.join(REPO_ROOT, 'tests', 'support', 'nox-windows-setup.py')
+        session.run('python', nox_windows_setup)
 
 
 def _run_with_coverage(session, *test_cmd):
