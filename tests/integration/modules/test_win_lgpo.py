@@ -123,25 +123,25 @@ class WinLgpoTest(ModuleCase):
         ret = self.run_function('lgpo.set_computer_policy',
                                 (policy_name, policy_config))
         log.debug('lgpo set_computer_policy ret == %s', ret)
+        cmd = ['lgpo.exe',
+               '/parse',
+               '/m',
+               r'c:\Windows\System32\GroupPolicy\Machine\Registry.pol']
         if assert_true:
             self.assertTrue(ret)
-            lgpo_output = self.run_function(
-                    'cmd.run',
-                    (),
-                    cmd='lgpo.exe /parse /m c:\\Windows\\System32\\GroupPolicy\\Machine\\Registry.pol')
+            lgpo_output = self.run_function('cmd.run', (), cmd=' '.join(cmd))
             # validate that the lgpo output doesn't say the format is invalid
             self.assertIsNone(
-                re.search(
-                    r'Invalid file format\.',
-                    lgpo_output,
-                    re.IGNORECASE), 'Failed validating Registry.pol file format')
+                re.search(r'Invalid file format\.', lgpo_output, re.IGNORECASE),
+                msg='Failed validating Registry.pol file format')
             # validate that the regexes we expect are in the output
             for expected_regex in expected_regexes:
-                match = re.search(
-                        expected_regex,
-                        lgpo_output,
-                        re.IGNORECASE)
-                self.assertIsNotNone(match, 'Failed validating policy "{0}" configuration, regex "{1}" not found in lgpo output'.format(policy_name, expected_regex))
+                match = re.search(expected_regex, lgpo_output, re.IGNORECASE)
+                self.assertIsNotNone(
+                    match,
+                    msg='Failed validating policy "{0}" configuration, regex '
+                        '"{1}" not found in lgpo output:\n{2}'
+                        ''.format(policy_name, expected_regex, lgpo_output))
         else:
             # expecting it to fail
             self.assertNotEqual(ret, True)
@@ -256,10 +256,96 @@ class WinLgpoTest(ModuleCase):
                                      [r'; Source file:  c:\\windows\\system32\\grouppolicy\\machine\\registry.pol[\s]*; PARSING COMPLETED.'])
 
     @destructiveTest
+    def test_set_computer_policy_Pol_HardenedPaths(self):
+        # Disable Pol_HardenedPaths
+        log.debug('Attempting to disable Pol_HardenedPaths')
+        self._testComputerAdmxPolicy(
+            'Pol_HardenedPaths',
+            'Disabled',
+            [r'Computer[\s]*Software\\policies\\Microsoft\\Windows\\NetworkProvider\\HardenedPaths[\s]*\*[\s]*DELETEALLVALUES'])
+        # Configure Pol_HardenedPaths
+        log.debug('Attempting to configure Pol_HardenedPaths')
+        self._testComputerAdmxPolicy(
+            'Pol_HardenedPaths',
+            {
+                'Hardened UNC Paths': {
+                    r'\\*\NETLOGON': 'RequireMutualAuthentication=1, RequireIntegrity=1',
+                    r'\\*\SYSVOL': 'RequireMutualAuthentication=1, RequireIntegrity=1'
+                }
+            },
+            [
+                r'Computer[\s]*Software\\policies\\Microsoft\\Windows\\NetworkProvider\\HardenedPaths[\s]*\\\\\*\\NETLOGON[\s]*SZ:RequireMutualAuthentication=1, RequireIntegrity=1[\s]*',
+                r'Computer[\s]*Software\\policies\\Microsoft\\Windows\\NetworkProvider\\HardenedPaths[\s]*\\\\\*\\SYSVOL[\s]*SZ:RequireMutualAuthentication=1, RequireIntegrity=1[\s]*',
+            ])
+        # Not Configure Pol_HardenedPaths
+        log.debug('Attempting to set Pol_HardenedPaths to Not Configured')
+        self._testComputerAdmxPolicy(
+            'Pol_HardenedPaths',
+            'Not Configured',
+            [r'; Source file:  c:\\windows\\system32\\grouppolicy\\machine\\registry.pol[\s]*; PARSING COMPLETED.'])
+
+    @destructiveTest
     def test_set_computer_policy_WindowsUpdate(self):
         '''
         Test setting/unsetting/changing WindowsUpdate policy
         '''
+        the_policy = {
+            'Configure automatic updating': '4 - Auto download and schedule the install',
+            'Install during automatic maintenance': False,
+            'Scheduled install day': '7 - Every Saturday',
+            'Scheduled install time': '17:00',
+            'Install updates for other Microsoft products': True
+        }
+        the_policy_check = [
+            r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU[\s]*NoAutoUpdate[\s]*DWORD:0',
+            r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU[\s]*AUOptions[\s]*DWORD:4',
+            r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU[\s]*AutomaticMaintenanceEnabled[\s]*DELETE',
+            r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU[\s]*ScheduledInstallDay[\s]*DWORD:7',
+            r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU[\s]*ScheduledInstallTime[\s]*DWORD:17',
+            r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU[\s]*AllowMUUpdateService[\s]*DWORD:1\s*'
+        ]
+
+        # Configure Automatic Updates has different options in 2016 than in 2012
+        # and has only one boolean item, so we'll test it "False" in this block
+        # and then "True" in next block
+        if self.osrelease in ['2012Server', '2012ServerR2']:
+            the_policy = {
+                'Configure automatic updating': '4 - Auto download and schedule the install',
+                'Install during automatic maintenance': False,
+                'Schedule install day': '7 - Every Saturday',
+                'Schedule install time': '17:00',
+            }
+            the_policy_check = [
+                r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU[\s]*NoAutoUpdate[\s]*DWORD:0',
+                r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU[\s]*AUOptions[\s]*DWORD:4',
+                r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU[\s]*AutomaticMaintenanceEnabled[\s]*DELETE',
+                r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU[\s]*ScheduledInstallDay[\s]*DWORD:7',
+                r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU[\s]*ScheduledInstallTime[\s]*DWORD:17',
+            ]
+            # test as False
+            self._testComputerAdmxPolicy(r'Windows Components\Windows Update\Configure Automatic Updates',
+                                         the_policy,
+                                         the_policy_check)
+            # configure as True for "enable Automatic Updates" test below
+            the_policy = {
+                'Configure automatic updating': '4 - Auto download and schedule the install',
+                'Install during automatic maintenance': True,
+                'Schedule install day': '7 - Every Saturday',
+                'Schedule install time': '17:00',
+            }
+            the_policy_check = [
+                r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU[\s]*NoAutoUpdate[\s]*DWORD:0',
+                r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU[\s]*AUOptions[\s]*DWORD:4',
+                r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU[\s]*AutomaticMaintenanceEnabled[\s]*DWORD:1\s*',
+                r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU[\s]*ScheduledInstallDay[\s]*DWORD:7',
+                r'Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU[\s]*ScheduledInstallTime[\s]*DWORD:17',
+            ]
+
+        # enable Automatic Updates
+        self._testComputerAdmxPolicy(r'Windows Components\Windows Update\Configure Automatic Updates',
+                                     the_policy,
+                                     the_policy_check)
+
         # disable Configure Automatic Updates
         self._testComputerAdmxPolicy(r'Windows Components\Windows Update\Configure Automatic Updates',
                                      'Disabled',
