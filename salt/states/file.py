@@ -4598,7 +4598,11 @@ def line(name, content=None, match=None, mode=None, location=None,
 
     check_res, check_msg = _check_file(name)
     if not check_res:
-        return _error(ret, check_msg)
+        if quiet and 'file not found' in check_msg:
+            ret['comment'] = 'No changes needed to be made'
+            return ret
+        else:
+            return _error(ret, check_msg)
 
     # We've set the content to be empty in the function params but we want to make sure
     # it gets passed when needed. Feature #37092
