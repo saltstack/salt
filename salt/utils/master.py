@@ -95,13 +95,15 @@ def read_proc_file(path, opts):
 
 def is_pid_healthy(pid):
     '''
-    This is a sanity check that will confirm the PID is in fact running
-    and will look at cmdline to see if salt is present in the pid.
+    This is a health check that will confirm the PID is running
+    and executed by salt.
+    
+    If pusutil is available:
+        * all architectures are checked
 
-    If psutil is available, we can cover essentially all archs. However,
-    if psutil is not available, we can really only check cmdline when
-    running on linux or solaris. AIX/Win we just return True with
-    the assumption that the PID is ok.
+    if psutil is not available:
+        * Linux/Solaris/etc: archs with `/proc/cmdline` available are checked
+        * AIX/Windows: assume PID is healhty and return True
     '''
     if HAS_PSUTIL:
         try:

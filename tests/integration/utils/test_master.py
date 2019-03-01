@@ -2,7 +2,7 @@
 '''
 Test master code from utils
 '''
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import
 
 import os
 import time
@@ -36,7 +36,6 @@ class MasterUtilJobsTestCase(ShellTestCase):
         '''
         ret = self.run_run_plus("test.sleep", '90', asynchronous=True)
         jid = ret['jid']
-        print("tracking jid: {}".format(jid))
 
         # Ran into a problem where the async jump was not seen until
         # after the test had finished. This caused the test to fail
@@ -45,7 +44,6 @@ class MasterUtilJobsTestCase(ShellTestCase):
         attempt = 0
         while attempt < 10:
             jobs = master.get_running_jobs(DEFAULT_CONFIG)
-            print("current jobs: {}".format(jobs))
             if jobs:
                 jids = [job['jid'] for job in jobs]
                 assert jids.count(jid) == 1
