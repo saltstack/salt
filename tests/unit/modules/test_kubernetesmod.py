@@ -18,7 +18,7 @@ from tests.support.mock import (
     NO_MOCK_REASON
 )
 
-from salt.modules import kubernetesmod
+from salt.modules import kubernetesmod as kubernetes
 
 
 @contextmanager
