@@ -419,7 +419,7 @@ def start(name, jail=None):
         salt '*' service.start <service name>
     '''
     cmd = '{0} {1} onestart'.format(_cmd(jail), name)
-    return not __salt__['cmd.retcode'](cmd, python_shell=False)
+    return not __salt__['cmd.retcode'](cmd, python_shell=False, timeout=60)
 
 
 def stop(name, jail=None):
@@ -455,7 +455,7 @@ def restart(name, jail=None):
         salt '*' service.restart <service name>
     '''
     cmd = '{0} {1} onerestart'.format(_cmd(jail), name)
-    return not __salt__['cmd.retcode'](cmd, python_shell=False)
+    return not __salt__['cmd.retcode'](cmd, python_shell=False, timeout=60)
 
 
 def reload_(name, jail=None):

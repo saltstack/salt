@@ -86,7 +86,7 @@ class TimedProc(object):
         '''
         def receive():
             if self.with_communicate:
-                self.stdout, self.stderr = self.process.communicate(input=self.stdin)
+                self.stdout, self.stderr = self.process.communicate(input=self.stdin, timeout=self.timeout)
             elif self.wait:
                 self.process.wait()
 
