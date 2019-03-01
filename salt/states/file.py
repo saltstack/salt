@@ -4603,14 +4603,14 @@ def replace(name,
 
         add_login_group_to_winbind_ssh_access_list:
           file.replace:
-            - name: '/etc/security/pam_winbind.conf' 
+            - name: '/etc/security/pam_winbind.conf'
             - pattern: '^(require_membership_of = )(.*)$'
             - repl: '\1\2,append-new-group-to-line'
 
     .. note::
 
-       The ``file.replace`` state uses Python's ``re`` module, for more 
-       advanced options, see https://docs.python.org/2/library/re.html .
+       The ``file.replace`` state uses Python's ``re`` module.
+       For more advanced options, see https://docs.python.org/2/library/re.html
     '''
     name = os.path.expanduser(name)
 
