@@ -1267,8 +1267,8 @@ def user_exists(user,
     run_verify = False
     server_version = salt.utils.data.decode(version(**connection_args))
     if not server_version:
-        lasr_err = __context__['mysql.error']
-        err = 'MySQL Error: Unable to fetch current server version. Last error was: "{}"'.format(lasr_err)
+        last_err = __context__['mysql.error']
+        err = 'MySQL Error: Unable to fetch current server version. Last error was: "{}"'.format(last_err)
         log.error(err)
         return False
     compare_version = '10.2.0' if 'MariaDB' in server_version else '8.0.11'
@@ -1411,8 +1411,8 @@ def user_create(user,
     '''
     server_version = salt.utils.data.decode(version(**connection_args))
     if not server_version:
-        lasr_err = __context__['mysql.error']
-        err = 'MySQL Error: Unable to fetch current server version. Last error was: "{}"'.format(lasr_err)
+        last_err = __context__['mysql.error']
+        err = 'MySQL Error: Unable to fetch current server version. Last error was: "{}"'.format(last_err)
         log.error(err)
         return False
     compare_version = '10.2.0' if 'MariaDB' in server_version else '8.0.11'
@@ -1521,8 +1521,8 @@ def user_chpass(user,
     '''
     server_version = salt.utils.data.decode(version(**connection_args))
     if not server_version:
-        lasr_err = __context__['mysql.error']
-        err = 'MySQL Error: Unable to fetch current server version. Last error was: "{}"'.format(lasr_err)
+        last_err = __context__['mysql.error']
+        err = 'MySQL Error: Unable to fetch current server version. Last error was: "{}"'.format(last_err)
         log.error(err)
         return False
     compare_version = '10.2.0' if 'MariaDB' in server_version else '8.0.11'
@@ -1882,8 +1882,8 @@ def grant_exists(grant,
 
     server_version = salt.utils.data.decode(version(**connection_args))
     if not server_version:
-        lasr_err = __context__['mysql.error']
-        err = 'MySQL Error: Unable to fetch current server version. Last error was: "{}"'.format(lasr_err)
+        last_err = __context__['mysql.error']
+        err = 'MySQL Error: Unable to fetch current server version. Last error was: "{}"'.format(last_err)
         log.error(err)
         return False
     if 'ALL' in grant:
