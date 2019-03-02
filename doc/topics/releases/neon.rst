@@ -272,12 +272,12 @@ Module Changes
 Enhancements to Engines
 =======================
 
-Multiple copies of a particular Salt engine can be configured by including
-the ``engine_module`` parameter in the engine configuration.
+- Multiple copies of a particular Salt engine can be configured by including 
+  the ``engine_module`` parameter in the engine configuration.
 
-.. code-block:: yaml
+  .. code-block:: yaml
 
-   engines:
+    engines:
      - production_logstash:
          host: production_log.my_network.com
          port: 5959
@@ -288,6 +288,27 @@ the ``engine_module`` parameter in the engine configuration.
          port: 5959
          proto: tcp
          engine_module: logstash
+
+
+- A new fluent engine has been added to export Salt events to fluentd.
+
+  .. code-block:: yaml
+
+    engines:
+      - fluent
+          host: localhost
+          port: 24224
+
+  .. code-block:: dtd
+
+    <source>
+      @type forward
+      port 24224
+    </source>
+    <match saltstack.**>
+      @type file
+      path /var/log/td-agent/saltstack
+    </match>
 
 Enhancements to Beacons
 =======================
