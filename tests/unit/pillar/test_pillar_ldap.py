@@ -10,7 +10,6 @@ import salt.utils.stringutils
 from salt.pillar.pillar_ldap import _config
 
 
-
 class LdapPillarTestCase(TestCase):
 
     def test__config_returns_str(self):
@@ -19,7 +18,7 @@ class LdapPillarTestCase(TestCase):
 
     def test__conf_defaults_to_none(self):
         conf = {'foo': 'bar'}
-        assert _config('bang', conf) == None
+        assert _config('bang', conf) is None
 
     def test__conf_returns_str_from_unicode_default(self):
         conf = {'foo': 'bar'}
