@@ -282,13 +282,13 @@ def bootstrap(name, user=None, silent=True):
     if __opts__['test']:
         try:
             call = __salt__['npm.install'](dir=name, runas=user, pkg=None, silent=silent, dry_run=True)
-            if call:
+            if not call or no_package_changes(call):
+                ret['result'] = True
+                ret['comment'] = '{0} is already bootstrapped'.format(name)
+            else:
                 ret['result'] = None
                 ret['changes'] = {'old': [], 'new': call}
                 ret['comment'] = '{0} is set to be bootstrapped'.format(name)
-            else:
-                ret['result'] = True
-                ret['comment'] = '{0} is already bootstrapped'.format(name)
         except (CommandNotFoundError, CommandExecutionError) as err:
             ret['result'] = False
             ret['comment'] = 'Error Bootstrapping \'{0}\': {1}'.format(name, err)
@@ -301,7 +301,7 @@ def bootstrap(name, user=None, silent=True):
         ret['comment'] = 'Error Bootstrapping \'{0}\': {1}'.format(name, err)
         return ret
 
-    if not call:
+    if not call or no_package_changes(call):
         ret['result'] = True
         ret['comment'] = 'Directory is already bootstrapped'
         return ret
@@ -318,6 +318,11 @@ def bootstrap(name, user=None, silent=True):
 
     return ret
 
+def no_package_changes(json):
+  try:
+    return not json['added'] and not json['removed'] and not json['updated'] and not json['moved'] and not json['failed']
+  except (TypeError, KeyError):
+    return False
 
 def cache_cleaned(name=None,
                   user=None,
