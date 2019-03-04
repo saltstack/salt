@@ -2272,6 +2272,8 @@ class Minion(MinionBase):
             finally:
                 async_pillar.destroy()
         self.module_refresh(force_refresh, notify)
+        self.matchers_refresh()
+        self.beacons_refresh()
 
     def manage_schedule(self, tag, data):
         '''

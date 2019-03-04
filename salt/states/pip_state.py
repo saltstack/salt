@@ -30,6 +30,7 @@ except ImportError:
     HAS_PKG_RESOURCES = False
 
 # Import salt libs
+import salt.utils.data
 import salt.utils.versions
 from salt.version import SaltStackVersion as _SaltStackVersion
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
@@ -85,20 +86,6 @@ def __virtual__():
     if 'pip.list' in __salt__:
         return __virtualname__
     return False
-
-
-def _find_key(prefix, pip_list):
-    '''
-    Does a case-insensitive match in the pip_list for the desired package.
-    '''
-    try:
-        match = next(
-            iter(x for x in pip_list if x.lower() == prefix.lower())
-        )
-    except StopIteration:
-        return None
-    else:
-        return match
 
 
 def _fulfills_version_spec(version, version_spec):
@@ -225,23 +212,20 @@ def _check_if_installed(prefix,
     ret = {'result': False, 'comment': None}
 
     # If we are not passed a pip list, get one:
-    if not pip_list:
-        pip_list = __salt__['pip.list'](prefix, bin_env=bin_env,
-                                        user=user, cwd=cwd,
-                                        env_vars=env_vars, **kwargs)
-
-    # Check if the requested package is already installed.
-    prefix_realname = _find_key(prefix, pip_list)
+    pip_list = salt.utils.data.CaseInsensitiveDict(
+        pip_list or __salt__['pip.list'](prefix, bin_env=bin_env,
+                                         user=user, cwd=cwd,
+                                         env_vars=env_vars, **kwargs)
+    )
 
     # If the package was already installed, check
     # the ignore_installed and force_reinstall flags
-    if ignore_installed is False and prefix_realname is not None:
+    if ignore_installed is False and prefix in pip_list:
         if force_reinstall is False and not upgrade:
             # Check desired version (if any) against currently-installed
             if (
                 any(version_spec) and
-                _fulfills_version_spec(pip_list[prefix_realname],
-                                       version_spec)
+                _fulfills_version_spec(pip_list[prefix], version_spec)
             ) or (not any(version_spec)):
                 ret['result'] = True
                 ret['comment'] = ('Python package {0} was already '
@@ -261,7 +245,7 @@ def _check_if_installed(prefix,
                     if 'rc' in spec[1]:
                         include_rc = True
             available_versions = __salt__['pip.list_all_versions'](
-                prefix_realname, bin_env=bin_env, include_alpha=include_alpha,
+                prefix, bin_env=bin_env, include_alpha=include_alpha,
                 include_beta=include_beta, include_rc=include_rc, user=user,
                 cwd=cwd, index_url=index_url, extra_index_url=extra_index_url)
             desired_version = ''
@@ -277,9 +261,9 @@ def _check_if_installed(prefix,
                 ret['comment'] = ('Python package {0} was already '
                                   'installed and\nthe available upgrade '
                                   'doesn\'t fulfills the version '
-                                  'requirements'.format(prefix_realname))
+                                  'requirements'.format(prefix))
                 return ret
-            if _pep440_version_cmp(pip_list[prefix_realname], desired_version) == 0:
+            if _pep440_version_cmp(pip_list[prefix], desired_version) == 0:
                 ret['result'] = True
                 ret['comment'] = ('Python package {0} was already '
                                   'installed'.format(state_pkg_name))
@@ -908,10 +892,12 @@ def installed(name,
 
                 # Case for packages that are not an URL
                 if prefix:
-                    pipsearch = __salt__['pip.list'](prefix, bin_env,
-                                                     user=user, cwd=cwd,
-                                                     env_vars=env_vars,
-                                                     **kwargs)
+                    pipsearch = salt.utils.data.CaseInsensitiveDict(
+                        __salt__['pip.list'](prefix, bin_env,
+                                             user=user, cwd=cwd,
+                                             env_vars=env_vars,
+                                             **kwargs)
+                    )
 
                     # If we didn't find the package in the system after
                     # installing it report it
@@ -922,12 +908,10 @@ def installed(name,
                             '\'pip.freeze\'.'.format(pkg)
                         )
                     else:
-                        pkg_name = _find_key(prefix, pipsearch)
-                        if pkg_name.lower() in already_installed_packages:
-                            continue
-                        ver = pipsearch[pkg_name]
-                        ret['changes']['{0}=={1}'.format(pkg_name,
-                                                         ver)] = 'Installed'
+                        if prefix in pipsearch \
+                                and prefix.lower() not in already_installed_packages:
+                            ver = pipsearch[prefix]
+                            ret['changes']['{0}=={1}'.format(prefix, ver)] = 'Installed'
                 # Case for packages that are an URL
                 else:
                     ret['changes']['{0}==???'.format(state_name)] = 'Installed'
