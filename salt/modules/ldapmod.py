@@ -144,9 +144,9 @@ def search(filter,      # pylint: disable=C0103
         attrs = _config('attrs')
     _ldap = _connect(**kwargs)
     start = time.time()
-    log.warn(
+    log.debug(
         'Running LDAP search with filter:%s, dn:%s, scope:%s, '
-        'attrs:%r', filter, dn, scope, attrs
+        'attrs:%s', filter, dn, scope, attrs
     )
     results = _ldap.search_s(dn, int(scope), filter, attrs)
     elapsed = (time.time() - start)
