@@ -7,6 +7,7 @@ Developing Salt
     :glob:
 
     *
+    modules/index
     extend/index
     tests/*
     raet/index

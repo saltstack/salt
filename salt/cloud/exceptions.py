@@ -7,7 +7,7 @@
 
     :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import salt libs
 import salt.defaults.exitcodes

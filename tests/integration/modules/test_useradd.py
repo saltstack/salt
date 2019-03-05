@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
-# Import python libs
-from __future__ import absolute_import
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 import string
 import random
 
@@ -14,15 +14,15 @@ from tests.support.helpers import (
     requires_system_grains
 )
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
+import salt.utils.platform
 
 # Import 3rd-party libs
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 
 @destructiveTest
-@skipIf(not salt.utils.is_linux(), 'These tests can only be run on linux')
+@skipIf(not salt.utils.platform.is_linux(), 'These tests can only be run on linux')
 @skip_if_not_root
 class UseraddModuleTestLinux(ModuleCase):
 
@@ -102,13 +102,13 @@ class UseraddModuleTestLinux(ModuleCase):
             uid_info = self.run_function('user.info', [name])
             self.assertIn(primary_group, uid_info['groups'])
 
-        except:
+        except Exception:
             self.run_function('user.delete', [name])
             raise
 
 
 @destructiveTest
-@skipIf(not salt.utils.is_windows(), 'These tests can only be run on Windows')
+@skipIf(not salt.utils.platform.is_windows(), 'These tests can only be run on Windows')
 @skip_if_not_root
 class UseraddModuleTestWindows(ModuleCase):
 
@@ -268,8 +268,8 @@ class UseraddModuleTestWindows(ModuleCase):
         self._add_group()
         self.run_function('user.addgroup', [self.user_name, self.group_name])
         self.assertIn(self.group_name, self.run_function('user.list_groups', [self.user_name]))
-        self.run_function('user.removegroup', [self.group_name])
-        self.assertIn(self.group_name, self.run_function('user.list_groups', [self.user_name]))
+        self.run_function('user.removegroup', [self.user_name, self.group_name])
+        self.assertNotIn(self.group_name, self.run_function('user.list_groups', [self.user_name]))
 
     def test_user_rename(self):
         '''

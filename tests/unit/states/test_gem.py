@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -46,6 +46,19 @@ class TestGemState(TestCase, LoaderModuleMockMixin):
                     version=None, proxy=None, rdoc=False, source=None,
                     ri=False, gem_bin=None
                 )
+
+    def test_installed_version(self):
+        gems = {'foo': ['1.0'], 'bar': ['2.0']}
+        gem_list = MagicMock(return_value=gems)
+        gem_install_succeeds = MagicMock(return_value=True)
+
+        with patch.dict(gem.__salt__, {'gem.list': gem_list}):
+            with patch.dict(gem.__salt__,
+                            {'gem.install': gem_install_succeeds}):
+                ret = gem.installed('foo', version='>= 1.0')
+                self.assertEqual(True, ret['result'])
+                self.assertEqual('Installed Gem meets version requirements.',
+                                 ret['comment'])
 
     def test_removed(self):
         gems = ['foo', 'bar']

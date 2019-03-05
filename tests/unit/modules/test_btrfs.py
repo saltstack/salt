@@ -3,7 +3,7 @@
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 '''
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -17,7 +17,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-import salt
+import salt.utils.files
 import salt.utils.fsutils
 import salt.modules.btrfs as btrfs
 from salt.exceptions import CommandExecutionError
@@ -88,7 +88,7 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
                                                    'stdout': 'Salt'})
                 with patch.dict(btrfs.__salt__, {'cmd.run_all': mock_run}):
                     mock_file = mock_open(read_data='/dev/sda1 / ext4 rw,data=ordered 0 0')
-                    with patch.object(salt.utils, 'fopen', mock_file):
+                    with patch.object(salt.utils.files, 'fopen', mock_file):
                         self.assertListEqual(btrfs.defragment('/dev/sda1'), ret)
 
     def test_defragment_error(self):
@@ -101,7 +101,7 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
                                                'stdout': 'Salt'})
             with patch.dict(btrfs.__salt__, {'cmd.run_all': mock_run}):
                 mock_file = mock_open(read_data='/dev/sda1 / ext4 rw,data=ordered 0 0')
-                with patch.object(salt.utils, 'fopen', mock_file):
+                with patch.object(salt.utils.files, 'fopen', mock_file):
                     self.assertRaises(CommandExecutionError, btrfs.defragment,
                                       '/dev/sda1')
 
@@ -165,7 +165,7 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(btrfs.__salt__, {'cmd.run_all': mock_cmd,
                                          'btrfs.info': mock_info}):
             mock_file = mock_open(read_data='/dev/sda1 / ext4 rw,data=ordered 0 0')
-            with patch.object(salt.utils, 'fopen', mock_file):
+            with patch.object(salt.utils.files, 'fopen', mock_file):
                 self.assertDictEqual(btrfs.mkfs('/dev/sda1'), {'log': 'Salt'})
 
     def test_mkfs_error(self):
@@ -313,7 +313,7 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
                 mock_blk = MagicMock(return_value={'/dev/sda1': {'type': 'ext4'}})
                 with patch.object(salt.utils.fsutils, '_blkid_output', mock_blk):
                     mock_file = mock_open(read_data='/dev/sda1 / ext4 rw,data=ordered 0 0')
-                    with patch.object(salt.utils, 'fopen', mock_file):
+                    with patch.object(salt.utils.files, 'fopen', mock_file):
                         self.assertRaises(CommandExecutionError, btrfs.convert,
                                           '/dev/sda1')
 

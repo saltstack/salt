@@ -26,7 +26,8 @@ file, or in the Pillar data.
     #Sandbox url
     #namecheap.url: https://api.sandbox.namecheap.xml.response
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
+
 CAN_USE_NAMECHEAP = True
 
 try:
@@ -35,7 +36,7 @@ except ImportError:
     CAN_USE_NAMECHEAP = False
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 
 def __virtual__():
@@ -265,7 +266,7 @@ def create(domain_name, years, **kwargs):
                     'TechFirstName', 'TechLastName', 'TechPhone', 'TechPostalCode', 'TechStateProvince', 'Years']
     opts = salt.utils.namecheap.get_opts('namecheap.domains.create')
     opts['DomainName'] = domain_name
-    opts['Years'] = str(years)
+    opts['Years'] = six.text_type(years)
 
     def add_to_opts(opts_dict, kwargs, value, suffix, prefices):
         for prefix in prefices:

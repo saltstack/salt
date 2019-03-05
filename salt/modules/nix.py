@@ -19,13 +19,14 @@ For more information on nix, see the `nix documentation`_.
 .. _`nix-daemon`: https://nixos.org/nix/manual/#ssec-multi-user
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import itertools
 import os
 
-import salt.utils
+import salt.utils.itertools
+import salt.utils.path
 from salt.ext.six.moves import zip
 
 
@@ -37,7 +38,7 @@ def __virtual__():
     This only works if we have access to nix-env
     '''
     nixhome = os.path.join(os.path.expanduser('~{0}'.format(__opts__['user'])), '.nix-profile/bin/')
-    if salt.utils.which(os.path.join(nixhome, 'nix-env')) and salt.utils.which(os.path.join(nixhome, 'nix-collect-garbage')):
+    if salt.utils.path.which(os.path.join(nixhome, 'nix-env')) and salt.utils.path.which(os.path.join(nixhome, 'nix-collect-garbage')):
         return True
     else:
         return (False, "The `nix` binaries required cannot be found or are not installed. (`nix-store` and `nix-env`)")
@@ -224,8 +225,7 @@ def list_pkgs(installed=True,
 
     out = _run(cmd)
 
-    # TODO: This could be a tad long when using `installed=False`, maybe use salt.utils.itertools.split?
-    return [s.split() for s in out['stdout'].splitlines()]
+    return [s.split() for s in salt.utils.itertools.split(out['stdout'], '\n')]
 
 
 def uninstall(*pkgs):

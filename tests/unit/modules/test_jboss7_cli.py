@@ -1,14 +1,15 @@
 # -*- coding: utf-8 -*-
 
-# Import python libs
-from __future__ import absolute_import
+# Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
 import re
 
-# Import salt testing libs
+# Import Salt testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase
 
-# Import salt libs
+# Import Salt libs
+from salt.ext import six
 import salt.modules.jboss7_cli as jboss7_cli
 from salt.exceptions import CommandExecutionError
 
@@ -135,8 +136,8 @@ class JBoss7CliTestCase(TestCase, LoaderModuleMockMixin):
             jboss7_cli.run_operation(self.jboss_config, 'some cli command')
             # should throw an exception
             assert False
-        except CommandExecutionError as e:
-            self.assertTrue(str(e).startswith('Could not execute jboss-cli.sh script'))
+        except CommandExecutionError as err:
+            self.assertTrue(six.text_type(err).startswith('Could not execute jboss-cli.sh script'))
 
     def test_handling_other_cmd_error(self):
         def command_response(command):
@@ -149,8 +150,8 @@ class JBoss7CliTestCase(TestCase, LoaderModuleMockMixin):
             jboss7_cli.run_command(self.jboss_config, 'some cli command')
             # should throw an exception
             self.fail('An exception should be thrown')
-        except CommandExecutionError as e:
-            self.assertTrue(str(e).startswith('Command execution failed'))
+        except CommandExecutionError as err:
+            self.assertTrue(six.text_type(err).startswith('Command execution failed'))
 
     def test_matches_cli_output(self):
         text = '''{
@@ -255,7 +256,7 @@ class JBoss7CliTestCase(TestCase, LoaderModuleMockMixin):
                  "outcome" => "success",
                  "result" => {
                     "binding-type" => "simple",
-                    "value" => "DOMAIN\\user"
+                    "value" => "DOMAIN\\foo"
                    }
                 }'''
 
@@ -263,7 +264,7 @@ class JBoss7CliTestCase(TestCase, LoaderModuleMockMixin):
 
         self.assertEqual(result['outcome'], 'success')
         self.assertEqual(result['result']['binding-type'], 'simple')
-        self.assertEqual(result['result']['value'], r'DOMAIN\user')
+        self.assertEqual(result['result']['value'], r'DOMAIN\foo')
 
     def test_numbers_without_quotes(self):
         text = r'''{

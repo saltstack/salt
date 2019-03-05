@@ -4,7 +4,7 @@ Tests for the Keystone states
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import logging
 
 # Import Salt Testing libs

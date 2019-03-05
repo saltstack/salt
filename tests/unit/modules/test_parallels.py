@@ -6,7 +6,7 @@ import textwrap
 
 # Import Salt Libs
 import salt.modules.parallels as parallels
-from salt.exceptions import SaltInvocationError
+from salt.exceptions import SaltInvocationError, CommandExecutionError
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -14,7 +14,7 @@ from tests.support.unit import TestCase, skipIf
 from tests.support.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
 
 # Import third party libs
-import salt.ext.six as six
+from salt.ext import six
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -24,27 +24,6 @@ class ParallelsTestCase(TestCase, LoaderModuleMockMixin):
     '''
     def setup_loader_modules(self):
         return {parallels: {}}
-
-    def test___virtual__(self):
-        '''
-        Test parallels.__virtual__
-        '''
-        mock_true = MagicMock(return_value=True)
-        mock_false = MagicMock(return_value=False)
-
-        # Validate false return
-        with patch('salt.utils.which', mock_false):
-            ret = parallels.__virtual__()
-            self.assertTrue(isinstance(ret, tuple))
-            self.assertEqual(len(ret), 2)
-            self.assertFalse(ret[0])
-            self.assertTrue(isinstance(ret[1], six.string_types))
-
-        # Validate true return
-        with patch('salt.utils.which', mock_true):
-            ret = parallels.__virtual__()
-            self.assertTrue(ret)
-            self.assertEqual(ret, 'parallels')
 
     def test__normalize_args(self):
         '''
@@ -94,26 +73,34 @@ class ParallelsTestCase(TestCase, LoaderModuleMockMixin):
         '''
         runas = 'macdev'
 
-        # Validate 'prlsrvctl info'
-        info_cmd = ['prlsrvctl', 'info']
-        info_fcn = MagicMock()
-        with patch.dict(parallels.__salt__, {'cmd.run': info_fcn}):
-            parallels.prlsrvctl('info', runas=runas)
-            info_fcn.assert_called_once_with(info_cmd, runas=runas)
+        # Test missing prlsrvctl binary
+        with patch('salt.utils.path.which', MagicMock(return_value=False)):
+            with self.assertRaises(CommandExecutionError):
+                parallels.prlsrvctl('info', runas=runas)
 
-        # Validate 'prlsrvctl usb list'
-        usb_cmd = ['prlsrvctl', 'usb', 'list']
-        usb_fcn = MagicMock()
-        with patch.dict(parallels.__salt__, {'cmd.run': usb_fcn}):
-            parallels.prlsrvctl('usb', 'list', runas=runas)
-            usb_fcn.assert_called_once_with(usb_cmd, runas=runas)
+        # Simulate the existence of prlsrvctl
+        with patch('salt.utils.path.which', MagicMock(return_value="/usr/bin/prlsrvctl")):
 
-        # Validate 'prlsrvctl set "--mem-limit auto"'
-        set_cmd = ['prlsrvctl', 'set', '--mem-limit', 'auto']
-        set_fcn = MagicMock()
-        with patch.dict(parallels.__salt__, {'cmd.run': set_fcn}):
-            parallels.prlsrvctl('set', '--mem-limit auto', runas=runas)
-            set_fcn.assert_called_once_with(set_cmd, runas=runas)
+            # Validate 'prlsrvctl info'
+            info_cmd = ['prlsrvctl', 'info']
+            info_fcn = MagicMock()
+            with patch.dict(parallels.__salt__, {'cmd.run': info_fcn}):
+                parallels.prlsrvctl('info', runas=runas)
+                info_fcn.assert_called_once_with(info_cmd, runas=runas)
+
+            # Validate 'prlsrvctl usb list'
+            usb_cmd = ['prlsrvctl', 'usb', 'list']
+            usb_fcn = MagicMock()
+            with patch.dict(parallels.__salt__, {'cmd.run': usb_fcn}):
+                parallels.prlsrvctl('usb', 'list', runas=runas)
+                usb_fcn.assert_called_once_with(usb_cmd, runas=runas)
+
+            # Validate 'prlsrvctl set "--mem-limit auto"'
+            set_cmd = ['prlsrvctl', 'set', '--mem-limit', 'auto']
+            set_fcn = MagicMock()
+            with patch.dict(parallels.__salt__, {'cmd.run': set_fcn}):
+                parallels.prlsrvctl('set', '--mem-limit auto', runas=runas)
+                set_fcn.assert_called_once_with(set_cmd, runas=runas)
 
     def test_prlctl(self):
         '''
@@ -121,26 +108,34 @@ class ParallelsTestCase(TestCase, LoaderModuleMockMixin):
         '''
         runas = 'macdev'
 
-        # Validate 'prlctl user list'
-        user_cmd = ['prlctl', 'user', 'list']
-        user_fcn = MagicMock()
-        with patch.dict(parallels.__salt__, {'cmd.run': user_fcn}):
-            parallels.prlctl('user', 'list', runas=runas)
-            user_fcn.assert_called_once_with(user_cmd, runas=runas)
+        # Test missing prlctl binary
+        with patch('salt.utils.path.which', MagicMock(return_value=False)):
+            with self.assertRaises(CommandExecutionError):
+                parallels.prlctl('info', runas=runas)
 
-        # Validate 'prlctl exec "macvm uname"'
-        exec_cmd = ['prlctl', 'exec', 'macvm', 'uname']
-        exec_fcn = MagicMock()
-        with patch.dict(parallels.__salt__, {'cmd.run': exec_fcn}):
-            parallels.prlctl('exec', 'macvm uname', runas=runas)
-            exec_fcn.assert_called_once_with(exec_cmd, runas=runas)
+        # Simulate the existence of prlctl
+        with patch('salt.utils.path.which', MagicMock(return_value="/usr/bin/prlctl")):
 
-        # Validate 'prlctl capture "macvm --file macvm.display.png"'
-        cap_cmd = ['prlctl', 'capture', 'macvm', '--file', 'macvm.display.png']
-        cap_fcn = MagicMock()
-        with patch.dict(parallels.__salt__, {'cmd.run': cap_fcn}):
-            parallels.prlctl('capture', 'macvm --file macvm.display.png', runas=runas)
-            cap_fcn.assert_called_once_with(cap_cmd, runas=runas)
+            # Validate 'prlctl user list'
+            user_cmd = ['prlctl', 'user', 'list']
+            user_fcn = MagicMock()
+            with patch.dict(parallels.__salt__, {'cmd.run': user_fcn}):
+                parallels.prlctl('user', 'list', runas=runas)
+                user_fcn.assert_called_once_with(user_cmd, runas=runas)
+
+            # Validate 'prlctl exec "macvm uname"'
+            exec_cmd = ['prlctl', 'exec', 'macvm', 'uname']
+            exec_fcn = MagicMock()
+            with patch.dict(parallels.__salt__, {'cmd.run': exec_fcn}):
+                parallels.prlctl('exec', 'macvm uname', runas=runas)
+                exec_fcn.assert_called_once_with(exec_cmd, runas=runas)
+
+            # Validate 'prlctl capture "macvm --file macvm.display.png"'
+            cap_cmd = ['prlctl', 'capture', 'macvm', '--file', 'macvm.display.png']
+            cap_fcn = MagicMock()
+            with patch.dict(parallels.__salt__, {'cmd.run': cap_fcn}):
+                parallels.prlctl('capture', 'macvm --file macvm.display.png', runas=runas)
+                cap_fcn.assert_called_once_with(cap_cmd, runas=runas)
 
     def test_list_vms(self):
         '''

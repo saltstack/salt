@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import os
 
 # Import Salt Testing libs
@@ -10,7 +10,7 @@ from tests.support.unit import skipIf
 from tests.support.helpers import requires_network
 
 # Import Salt libs
-import salt.utils
+import salt.utils.path
 from tests.unit.modules.test_zcbuildout import Base, KNOWN_VIRTUALENV_BINARY_NAMES
 import salt.modules.zcbuildout as modbuildout
 import salt.states.zcbuildout as buildout
@@ -19,8 +19,8 @@ import salt.modules.cmdmod as cmd
 ROOT = os.path.join(FILES, 'file/base/buildout')
 
 
-@skipIf(salt.utils.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES) is None,
-        'The \'virtualenv\' packaged needs to be installed')
+@skipIf(salt.utils.path.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES) is None,
+        "The 'virtualenv' packaged needs to be installed")
 class BuildoutTestCase(Base):
 
     def setup_loader_modules(self):
@@ -64,14 +64,14 @@ class BuildoutTestCase(Base):
         ret = buildout.installed(b_dir,
                                  python=self.py_st,
                                  onlyif='/bin/false')
-        self.assertEqual(ret['comment'], '\nonlyif execution failed')
+        self.assertEqual(ret['comment'], '\nonlyif condition is false')
         self.assertEqual(ret['result'], True)
         self.assertTrue('/b' in ret['name'])
         b_dir = os.path.join(self.tdir, 'b')
         ret = buildout.installed(b_dir,
                                  python=self.py_st,
                                  unless='/bin/true')
-        self.assertEqual(ret['comment'], '\nunless execution succeeded')
+        self.assertEqual(ret['comment'], '\nunless condition is true')
         self.assertEqual(ret['result'], True)
         self.assertTrue('/b' in ret['name'])
         ret = buildout.installed(b_dir, python=self.py_st)

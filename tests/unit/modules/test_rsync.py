@@ -3,7 +3,7 @@
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -37,7 +37,7 @@ class RsyncTestCase(TestCase, LoaderModuleMockMixin):
 
         with patch.dict(rsync.__salt__,
                         {'config.option': MagicMock(return_value='A'),
-                         'cmd.run_all': MagicMock(side_effect=[IOError('f'),
+                         'cmd.run_all': MagicMock(side_effect=[OSError(1, 'f'),
                                                                'A'])}):
             with patch.object(rsync, '_check', return_value=['A']):
                 self.assertRaises(CommandExecutionError, rsync.rsync, 'a', 'b')
@@ -48,7 +48,7 @@ class RsyncTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test for return rsync version
         '''
-        mock = MagicMock(side_effect=[IOError('f'), 'A B C\n'])
+        mock = MagicMock(side_effect=[OSError(1, 'f'), 'A B C\n'])
         with patch.dict(rsync.__salt__, {'cmd.run_stdout': mock}):
             self.assertRaises(CommandExecutionError, rsync.version)
 

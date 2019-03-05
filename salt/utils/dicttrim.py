@@ -1,10 +1,25 @@
 # -*- coding: utf-8 -*-
-from __future__ import absolute_import
-from __future__ import print_function
+from __future__ import absolute_import, print_function, unicode_literals
 
 import sys
 
 import salt.payload
+
+
+def _trim_dict_in_dict(data, max_val_size, replace_with):
+    '''
+    Takes a dictionary, max_val_size and replace_with
+    and recursively loops through and replaces any values
+    that are greater than max_val_size.
+    '''
+    for key in data:
+        if isinstance(data[key], dict):
+            _trim_dict_in_dict(data[key],
+                               max_val_size,
+                               replace_with)
+        else:
+            if sys.getsizeof(data[key]) > max_val_size:
+                data[key] = replace_with
 
 
 def trim_dict(
@@ -64,8 +79,13 @@ def trim_dict(
             max_val_size = float(max_dict_bytes * (percent / 100))
             try:
                 for key in data:
-                    if sys.getsizeof(data[key]) > max_val_size:
-                        data[key] = replace_with
+                    if isinstance(data[key], dict):
+                        _trim_dict_in_dict(data[key],
+                                           max_val_size,
+                                           replace_with)
+                    else:
+                        if sys.getsizeof(data[key]) > max_val_size:
+                            data[key] = replace_with
                 percent = percent - stepper_size
                 max_val_size = float(max_dict_bytes * (percent / 100))
                 if use_bin_type:

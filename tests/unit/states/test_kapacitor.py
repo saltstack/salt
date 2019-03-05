@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt testing libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -47,7 +47,7 @@ def _present(name='testname',
         'kapacitor.enable_task': enable_mock,
         'kapacitor.disable_task': disable_mock,
     }):
-        with patch('salt.utils.fopen', mock_open(read_data=script)) as open_mock:
+        with patch('salt.utils.files.fopen', mock_open(read_data=script)) as open_mock:
             retval = kapacitor.task_present(name, tick_script, task_type=task_type,
                 database=database, retention_policy=retention_policy, enable=enable)
 

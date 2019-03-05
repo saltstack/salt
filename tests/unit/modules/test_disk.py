@@ -4,15 +4,16 @@
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 from tests.support.mock import MagicMock, patch
 
 # Import Salt libs
 import salt.modules.disk as disk
+import salt.utils.path
 
 STUB_DISK_USAGE = {
                    '/': {'filesystem': None, '1K-blocks': 10000, 'used': 10000, 'available': 10000, 'capacity': 10000},
@@ -147,9 +148,11 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
         device = '/dev/sdX1'
         mock = MagicMock(return_value=0)
         with patch.dict(disk.__salt__, {'cmd.retcode': mock}),\
-               patch('salt.utils.which', MagicMock(return_value=True)):
+               patch('salt.utils.path.which', MagicMock(return_value=True)):
             self.assertEqual(disk.format_(device), True)
 
+    @skipIf(not salt.utils.path.which('lsblk') and not salt.utils.path.which('df'),
+            'lsblk or df not found')
     def test_fstype(self):
         '''
         unit tests for disk.fstype
@@ -159,7 +162,7 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(return_value='FSTYPE\n{0}'.format(fs_type))
         with patch.dict(disk.__grains__, {'kernel': 'Linux'}), \
                 patch.dict(disk.__salt__, {'cmd.run': mock}), \
-                patch('salt.utils.which', MagicMock(return_value=True)):
+                patch('salt.utils.path.which', MagicMock(return_value=True)):
             self.assertEqual(disk.fstype(device), fs_type)
 
     def test_resize2fs(self):
@@ -169,6 +172,6 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
         device = '/dev/sdX1'
         mock = MagicMock()
         with patch.dict(disk.__salt__, {'cmd.run_all': mock}), \
-                patch('salt.utils.which', MagicMock(return_value=True)):
+                patch('salt.utils.path.which', MagicMock(return_value=True)):
             disk.resize2fs(device)
             mock.assert_called_once_with('resize2fs {0}'.format(device), python_shell=False)

@@ -11,15 +11,13 @@ from tests.support.unit import skipIf, TestCase
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # Import salt libs
-import salt.ext.six
-import salt.utils
+import salt.utils.platform
 import salt.modules.pip as pip
 from salt.exceptions import CommandExecutionError
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class PipTestCase(TestCase, LoaderModuleMockMixin):
-
     def setup_loader_modules(self):
         return {pip: {'__salt__': {'cmd.which_bin': lambda _: 'pip'}}}
 
@@ -302,7 +300,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
             mock_path.isdir.return_value = True
             mock_path.join = join
 
-            if salt.utils.is_windows():
+            if salt.utils.platform.is_windows():
                 venv_path = 'C:\\test_env'
                 bin_path = os.path.join(venv_path, 'python.exe')
             else:
@@ -1169,6 +1167,117 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                     }
                 )
 
+    def test_list_upgrades_legacy(self):
+        eggs = [
+            'apache-libcloud (Current: 1.1.0 Latest: 2.2.1 [wheel])',
+            'appdirs (Current: 1.4.1 Latest: 1.4.3 [wheel])',
+            'awscli (Current: 1.11.63 Latest: 1.12.1 [sdist])'
+        ]
+        mock = MagicMock(
+            return_value={
+                'retcode': 0,
+                'stdout': '\n'.join(eggs)
+            }
+        )
+        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+            with patch('salt.modules.pip.version',
+                       MagicMock(return_value='6.1.1')):
+                ret = pip.list_upgrades()
+                mock.assert_called_with(
+                    [sys.executable, '-m', 'pip', 'list', '--outdated'],
+                    cwd=None,
+                    runas=None,
+                )
+                self.assertEqual(
+                    ret, {
+                        'apache-libcloud': '2.2.1 [wheel]',
+                        'appdirs': '1.4.3 [wheel]',
+                        'awscli': '1.12.1 [sdist]'
+                    }
+                )
+
+    def test_list_upgrades_gt9(self):
+        eggs = '''[{"latest_filetype": "wheel", "version": "1.1.0", "name": "apache-libcloud", "latest_version": "2.2.1"},
+                {"latest_filetype": "wheel", "version": "1.4.1", "name": "appdirs", "latest_version": "1.4.3"},
+                {"latest_filetype": "sdist", "version": "1.11.63", "name": "awscli", "latest_version": "1.12.1"}
+                ]'''
+        mock = MagicMock(
+            return_value={
+                'retcode': 0,
+                'stdout': '{0}'.format(eggs)
+            }
+        )
+        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+            with patch('salt.modules.pip.version',
+                       MagicMock(return_value='9.1.1')):
+                ret = pip.list_upgrades()
+                mock.assert_called_with(
+                    [sys.executable, '-m', 'pip', 'list', '--outdated', '--format=json'],
+                    cwd=None,
+                    runas=None,
+                )
+                self.assertEqual(
+                    ret, {
+                        'apache-libcloud': '2.2.1 [wheel]',
+                        'appdirs': '1.4.3 [wheel]',
+                        'awscli': '1.12.1 [sdist]'
+                    }
+                )
+
+    def test_is_installed_true(self):
+        eggs = [
+            'M2Crypto==0.21.1',
+            '-e git+git@github.com:s0undt3ch/salt-testing.git@9ed81aa2f918d59d3706e56b18f0782d1ea43bf8#egg=SaltTesting-dev',
+            'bbfreeze==1.1.0',
+            'bbfreeze-loader==1.1.0',
+            'pycrypto==2.6'
+        ]
+        mock = MagicMock(
+            return_value={
+                'retcode': 0,
+                'stdout': '\n'.join(eggs)
+            }
+        )
+        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+            with patch('salt.modules.pip.version',
+                       MagicMock(return_value='6.1.1')):
+                ret = pip.is_installed(pkgname='bbfreeze')
+                mock.assert_called_with(
+                    [sys.executable, '-m', 'pip', 'freeze'],
+                    cwd=None,
+                    runas=None,
+                    python_shell=False,
+                    use_vt=False,
+                )
+                self.assertTrue(ret)
+
+    def test_is_installed_false(self):
+        eggs = [
+            'M2Crypto==0.21.1',
+            '-e git+git@github.com:s0undt3ch/salt-testing.git@9ed81aa2f918d59d3706e56b18f0782d1ea43bf8#egg=SaltTesting-dev',
+            'bbfreeze==1.1.0',
+            'bbfreeze-loader==1.1.0',
+            'pycrypto==2.6'
+        ]
+        mock = MagicMock(
+            return_value={
+                'retcode': 0,
+                'stdout': '\n'.join(eggs)
+            }
+        )
+        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+            with patch('salt.modules.pip.version',
+                       MagicMock(return_value='6.1.1')):
+                ret = pip.is_installed(pkgname='notexist')
+                mock.assert_called_with(
+                    [sys.executable, '-m', 'pip', 'freeze'],
+                    cwd=None,
+                    runas=None,
+                    python_shell=False,
+                    use_vt=False,
+                )
+                self.assertFalse(ret)
+
     def test_install_pre_argument_in_resulting_command(self):
         pkg = 'pep8'
         # Lower than 1.4 versions don't end-up with `--pre` in the resulting
@@ -1192,7 +1301,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
 
         mock_run = MagicMock(return_value='pip 1.4.1 /path/to/site-packages/pip')
         mock_run_all = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-        with patch.dict(pip.__salt__, {'cmd.run': mock_run,
+        with patch.dict(pip.__salt__, {'cmd.run_stdout': mock_run,
                                        'cmd.run_all': mock_run_all}):
             with patch('salt.modules.pip._get_pip_bin',
                        MagicMock(return_value=['pip'])):

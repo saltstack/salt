@@ -7,16 +7,21 @@
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
+
+from tests.support.unit import skipIf
 
 # Import salt tests libs
 import tests.integration.utils
 from tests.integration.utils import testprogram
 
+import salt.utils.platform
+
 log = logging.getLogger(__name__)
 
 
+@skipIf(salt.utils.platform.is_windows(), 'Skip on Windows OS')
 class ProxyTest(testprogram.TestProgramCase):
     '''
     Various integration tests for the salt-proxy executable.
@@ -25,6 +30,8 @@ class ProxyTest(testprogram.TestProgramCase):
     def test_exit_status_no_proxyid(self):
         '''
         Ensure correct exit status when --proxyid argument is missing.
+
+        Skip on Windows because daemonization not supported
         '''
 
         proxy = testprogram.TestDaemonSaltProxy(
@@ -61,6 +68,8 @@ class ProxyTest(testprogram.TestProgramCase):
     def test_exit_status_unknown_user(self):
         '''
         Ensure correct exit status when the proxy is configured to run as an unknown user.
+
+        Skip on Windows because daemonization not supported
         '''
 
         proxy = testprogram.TestDaemonSaltProxy(
@@ -92,6 +101,8 @@ class ProxyTest(testprogram.TestProgramCase):
     def test_exit_status_unknown_argument(self):
         '''
         Ensure correct exit status when an unknown argument is passed to salt-proxy.
+
+        Skip on Windows because daemonization not supported
         '''
 
         proxy = testprogram.TestDaemonSaltProxy(
@@ -120,6 +131,8 @@ class ProxyTest(testprogram.TestProgramCase):
     def test_exit_status_correct_usage(self):
         '''
         Ensure correct exit status when salt-proxy starts correctly.
+
+        Skip on Windows because daemonization not supported
         '''
 
         proxy = testprogram.TestDaemonSaltProxy(

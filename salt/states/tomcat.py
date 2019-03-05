@@ -55,7 +55,9 @@ Notes
       3.10.0-327.22.2.el7.x86_64
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
+
+from salt.ext import six
 
 
 # Private
@@ -210,7 +212,7 @@ def war_deployed(name,
     # Return
     if deploy_res.startswith('OK'):
         ret['result'] = True
-        ret['comment'] = str(__salt__['tomcat.ls'](url, timeout)[name])
+        ret['comment'] = six.text_type(__salt__['tomcat.ls'](url, timeout)[name])
         ret['changes']['deploy'] = ('deployed {0} with {1}'.
                                     format(name, specified_ver))
     else:
@@ -270,8 +272,14 @@ def wait(name, url='http://localhost:8080/manager', timeout=180):
 
 def mod_watch(name, url='http://localhost:8080/manager', timeout=180):
     '''
-    The tomcat watcher function.
-    When called it will reload the webapp in question
+    The tomcat watcher, called to invoke the watch command.
+    When called, it will reload the webapp in question
+
+    .. note::
+        This state exists to support special handling of the ``watch``
+        :ref:`requisite <requisites>`. It should not be called directly.
+
+        Parameters for this function should be set by the state being triggered.
     '''
 
     msg = __salt__['tomcat.reload'](name, url, timeout)

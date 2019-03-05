@@ -52,7 +52,7 @@ and 2.x using rbenv on Ubuntu/Debian:
         - require:
           - pkg: rbenv-deps
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import re
@@ -77,7 +77,7 @@ def _ruby_installed(ret, ruby, user=None):
     for version in __salt__['rbenv.versions'](user):
         if version == ruby:
             ret['result'] = True
-            ret['comment'] = 'Requested ruby exists.'
+            ret['comment'] = 'Requested ruby exists'
             ret['default'] = default == ruby
             break
 
@@ -97,7 +97,7 @@ def _check_and_install_ruby(ret, ruby, default=False, user=None):
             ret['default'] = default
         else:
             ret['result'] = False
-            ret['comment'] = 'Could not install ruby.'
+            ret['comment'] = 'Failed to install ruby'
             return ret
 
     if default:
@@ -131,7 +131,11 @@ def installed(name, default=False, user=None):
         name = re.sub(r'^ruby-', '', name)
 
     if __opts__['test']:
-        ret['comment'] = 'Ruby {0} is set to be installed'.format(name)
+        ret = _ruby_installed(ret, name, user=user)
+        if not ret['result']:
+            ret['comment'] = 'Ruby {0} is set to be installed'.format(name)
+        else:
+            ret['comment'] = 'Ruby {0} is already installed'.format(name)
         return ret
 
     rbenv_installed_ret = _check_and_install_rbenv(rbenv_installed_ret, user)
@@ -188,16 +192,22 @@ def absent(name, user=None):
     if name.startswith('ruby-'):
         name = re.sub(r'^ruby-', '', name)
 
-    if __opts__['test']:
-        ret['comment'] = 'Ruby {0} is set to be uninstalled'.format(name)
-        return ret
-
     ret = _check_rbenv(ret, user)
     if ret['result'] is False:
         ret['result'] = True
         ret['comment'] = 'Rbenv not installed, {0} not either'.format(name)
         return ret
     else:
+        if __opts__['test']:
+            ret = _ruby_installed(ret, name, user=user)
+            if ret['result']:
+                ret['result'] = None
+                ret['comment'] = 'Ruby {0} is set to be uninstalled'.format(name)
+            else:
+                ret['result'] = True
+                ret['comment'] = 'Ruby {0} is already uninstalled'.format(name)
+            return ret
+
         return _check_and_uninstall_ruby(ret, name, user=user)
 
 
@@ -205,7 +215,6 @@ def _check_and_install_rbenv(ret, user=None):
     '''
     Verify that rbenv is installed, install if unavailable
     '''
-
     ret = _check_rbenv(ret, user)
     if ret['result'] is False:
         if __salt__['rbenv.install'](user):
@@ -216,7 +225,7 @@ def _check_and_install_rbenv(ret, user=None):
             ret['comment'] = 'Rbenv failed to install'
     else:
         ret['result'] = True
-        ret['comment'] = 'Rbenv already installed'
+        ret['comment'] = 'Rbenv is already installed'
 
     return ret
 
@@ -237,7 +246,13 @@ def install_rbenv(name, user=None):
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
     if __opts__['test']:
-        ret['comment'] = 'Rbenv is set to be installed'
+        ret = _check_rbenv(ret, user=user)
+        if ret['result'] is False:
+            ret['result'] = None
+            ret['comment'] = 'Rbenv is set to be installed'
+        else:
+            ret['result'] = True
+            ret['comment'] = 'Rbenv is already installed'
         return ret
 
     return _check_and_install_rbenv(ret, user)

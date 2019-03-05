@@ -3,7 +3,7 @@
 Get Version information from Windows
 '''
 # http://stackoverflow.com/questions/32300004/python-ctypes-getting-0-with-getversionex-function
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Third Party Libs
 import ctypes
@@ -14,7 +14,8 @@ except (ImportError, ValueError):
     HAS_WIN32 = False
 
 if HAS_WIN32:
-    kernel32 = ctypes.WinDLL('kernel32', use_last_error=True)
+    kernel32 = ctypes.WinDLL(str('kernel32'),  # future lint: disable=blacklisted-function
+                             use_last_error=True)
 
 
 # Although utils are often directly imported, it is also possible to use the

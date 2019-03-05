@@ -23,7 +23,7 @@ The hook_url can be specified in the master or minion configuration like below:
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt libs
 from salt.exceptions import SaltInvocationError

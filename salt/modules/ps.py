@@ -8,17 +8,18 @@ See http://code.google.com/p/psutil.
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 import time
 import datetime
 import re
 
 # Import salt libs
+import salt.utils.data
 from salt.exceptions import SaltInvocationError, CommandExecutionError
 
 # Import third party libs
-import salt.utils.decorators as decorators
-import salt.ext.six as six
+import salt.utils.decorators.path
+from salt.ext import six
 # pylint: disable=import-error
 try:
     import salt.utils.psutil_compat as psutil
@@ -53,9 +54,9 @@ def _get_proc_cmdline(proc):
     It's backward compatible with < 2.0 versions of psutil.
     '''
     try:
-        return proc.cmdline() if PSUTIL2 else proc.cmdline
+        return salt.utils.data.decode(proc.cmdline() if PSUTIL2 else proc.cmdline)
     except (psutil.NoSuchProcess, psutil.AccessDenied):
-        return ''
+        return []
 
 
 def _get_proc_create_time(proc):
@@ -65,7 +66,7 @@ def _get_proc_create_time(proc):
     It's backward compatible with < 2.0 versions of psutil.
     '''
     try:
-        return proc.create_time() if PSUTIL2 else proc.create_time
+        return salt.utils.data.decode(proc.create_time() if PSUTIL2 else proc.create_time)
     except (psutil.NoSuchProcess, psutil.AccessDenied):
         return None
 
@@ -77,7 +78,7 @@ def _get_proc_name(proc):
     It's backward compatible with < 2.0 versions of psutil.
     '''
     try:
-        return proc.name() if PSUTIL2 else proc.name
+        return salt.utils.data.decode(proc.name() if PSUTIL2 else proc.name)
     except (psutil.NoSuchProcess, psutil.AccessDenied):
         return []
 
@@ -89,7 +90,7 @@ def _get_proc_status(proc):
     It's backward compatible with < 2.0 versions of psutil.
     '''
     try:
-        return proc.status() if PSUTIL2 else proc.status
+        return salt.utils.data.decode(proc.status() if PSUTIL2 else proc.status)
     except (psutil.NoSuchProcess, psutil.AccessDenied):
         return None
 
@@ -101,7 +102,7 @@ def _get_proc_username(proc):
     It's backward compatible with < 2.0 versions of psutil.
     '''
     try:
-        return proc.username() if PSUTIL2 else proc.username
+        return salt.utils.data.decode(proc.username() if PSUTIL2 else proc.username)
     except (psutil.NoSuchProcess, psutil.AccessDenied, KeyError):
         return None
 
@@ -649,14 +650,14 @@ def lsof(name):
 
         salt '*' ps.lsof apache2
     '''
-    sanitize_name = str(name)
+    sanitize_name = six.text_type(name)
     lsof_infos = __salt__['cmd.run']("lsof -c " + sanitize_name)
     ret = []
     ret.extend([sanitize_name, lsof_infos])
     return ret
 
 
-@decorators.which('netstat')
+@salt.utils.decorators.path.which('netstat')
 def netstat(name):
     '''
     Retrieve the netstat information of the given process name.
@@ -667,7 +668,7 @@ def netstat(name):
 
         salt '*' ps.netstat apache2
     '''
-    sanitize_name = str(name)
+    sanitize_name = six.text_type(name)
     netstat_infos = __salt__['cmd.run']("netstat -nap")
     found_infos = []
     ret = []
@@ -678,7 +679,7 @@ def netstat(name):
     return ret
 
 
-@decorators.which('ss')
+@salt.utils.decorators.path.which('ss')
 def ss(name):
     '''
     Retrieve the ss information of the given process name.
@@ -692,7 +693,7 @@ def ss(name):
     .. versionadded:: 2016.11.6
 
     '''
-    sanitize_name = str(name)
+    sanitize_name = six.text_type(name)
     ss_infos = __salt__['cmd.run']("ss -neap")
     found_infos = []
     ret = []
@@ -715,7 +716,7 @@ def psaux(name):
 
         salt '*' ps.psaux www-data.+apache2
     '''
-    sanitize_name = str(name)
+    sanitize_name = six.text_type(name)
     pattern = re.compile(sanitize_name)
     salt_exception_pattern = re.compile("salt.+ps.psaux.+")
     ps_aux = __salt__['cmd.run']("ps aux")
@@ -729,7 +730,7 @@ def psaux(name):
             if not salt_exception_pattern.search(info):
                 nb_lines += 1
                 found_infos.append(info)
-    pid_count = str(nb_lines) + " occurence(s)."
+    pid_count = six.text_type(nb_lines) + " occurence(s)."
     ret = []
     ret.extend([sanitize_name, found_infos, pid_count])
     return ret

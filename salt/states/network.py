@@ -9,11 +9,29 @@ all interfaces are ignored unless specified.
 
 .. note::
 
-    Prior to version 2014.1.0, only RedHat-based systems (RHEL,
-    CentOS, Scientific Linux, etc.) are supported. Support for Debian/Ubuntu is
-    new in 2014.1.0 and should be considered experimental.
+    RedHat-based systems (RHEL, CentOS, Scientific, etc.)
+    have been supported since version 2014.1.0.
+
+    Debian-based systems (Debian, Ubuntu, etc.) have been
+    supported since version 2017.7.0. The following options
+    are not supported: ipaddr_start, and ipaddr_end.
 
     Other platforms are not yet supported.
+
+.. note::
+
+    On Debian-based systems, networking configuration can be specified
+    in `/etc/network/interfaces` or via included files such as (by default)
+    `/etc/network/interfaces.d/*`. This can be problematic for configuration
+    management. It is recommended to use either `file.managed` *or*
+    `network.managed`.
+
+    If using `network.managed`, it can be useful to ensure `interfaces.d/`
+    is empty. This can be done using:
+
+        /etc/network/interfaces.d:
+          file.directory:
+            - clean: True
 
 .. code-block:: yaml
 
@@ -31,9 +49,17 @@ all interfaces are ignored unless specified.
       network.managed:
         - enabled: True
         - type: eth
-        - proto: none
-        - ipaddr: 10.1.0.1
+        - proto: static
+        - ipaddr: 10.1.0.7
         - netmask: 255.255.255.0
+        - gateway: 10.1.0.1
+        - enable_ipv6: true
+        - ipv6proto: static
+        - ipv6ipaddrs:
+          - 2001:db8:dead:beef::3/64
+          - 2001:db8:dead:beef::7/64
+        - ipv6gateway: 2001:db8:dead:beef::1
+        - ipv6netmask: 64
         - dns:
           - 8.8.8.8
           - 8.8.4.4
@@ -121,12 +147,11 @@ all interfaces are ignored unless specified.
         - type: bond
         - ipaddr: 10.1.0.1
         - netmask: 255.255.255.0
-        - mode: active-backup
+        - mode: gre
         - proto: static
         - dns:
           - 8.8.8.8
           - 8.8.4.4
-        - ipv6:
         - enabled: False
         - slaves: eth2 eth3
         - require:
@@ -202,6 +227,62 @@ all interfaces are ignored unless specified.
         - require:
           - network: eth4
 
+    eth6:
+      network.managed:
+        - type: eth
+        - noifupdown: True
+
+        # IPv4
+        - proto: static
+        - ipaddr: 192.168.4.9
+        - netmask: 255.255.255.0
+        - gateway: 192.168.4.1
+        - enable_ipv6: True
+
+        # IPv6
+        - ipv6proto: static
+        - ipv6ipaddr: 2001:db8:dead:c0::3
+        - ipv6netmask: 64
+        - ipv6gateway: 2001:db8:dead:c0::1
+        # override shared; makes those options v4-only
+        - ipv6ttl: 15
+
+        # Shared
+        - mtu: 1480
+        - ttl: 18
+        - dns:
+          - 8.8.8.8
+          - 8.8.4.4
+
+    eth7:
+        - type: eth
+        - proto: static
+        - ipaddr: 10.1.0.7
+        - netmask: 255.255.255.0
+        - gateway: 10.1.0.1
+        - enable_ipv6: True
+        - ipv6proto: static
+        - ipv6ipaddr: 2001:db8:dead:beef::3
+        - ipv6netmask: 64
+        - ipv6gateway: 2001:db8:dead:beef::1
+        - noifupdown: True
+
+    eth8:
+      network.managed:
+        - enabled: True
+        - type: eth
+        - proto: static
+        - enable_ipv6: true
+        - ipv6proto: static
+        - ipv6ipaddrs:
+          - 2001:db8:dead:beef::3/64
+          - 2001:db8:dead:beef::7/64
+        - ipv6gateway: 2001:db8:dead:beef::1
+        - ipv6netmask: 64
+        - dns:
+          - 8.8.8.8
+          - 8.8.4.4
+
     system:
       network.system:
         - enabled: True
@@ -217,17 +298,11 @@ all interfaces are ignored unless specified.
       network.managed:
         - name: lo
         - type: eth
+        - proto: loopback
         - onboot: yes
         - userctl: no
         - ipv6_autoconf: no
         - enable_ipv6: true
-        - ipaddrs:
-          - 127.0.0.1/8
-          - 10.1.0.4/32
-          - 10.1.0.12/32
-        - ipv6addrs:
-          - fc00::1/128
-          - fc00::100/128
 
     .. note::
         Apply changes to hostname immediately.
@@ -253,13 +328,18 @@ all interfaces are ignored unless specified.
     When managing bridged interfaces on a Debian or Ubuntu based system, the
     ports argument is required.  Red Hat systems will ignore the argument.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
-# Import python libs
+# Import Python libs
 import difflib
-import salt.utils
+
+# Import Salt libs
 import salt.utils.network
+import salt.utils.platform
 import salt.loader
+
+# Import 3rd party libs
+from salt.ext import six
 
 # Set up logging
 import logging
@@ -271,7 +351,7 @@ def __virtual__():
     Confine this module to non-Windows systems with the required execution
     module available.
     '''
-    if not salt.utils.is_windows() and 'ip.get_interface' in __salt__:
+    if not salt.utils.platform.is_windows() and 'ip.get_interface' in __salt__:
         return True
     return False
 
@@ -339,7 +419,7 @@ def managed(name, type, enabled=True, **kwargs):
                 apply_ranged_setting = True
     except AttributeError as error:
         ret['result'] = False
-        ret['comment'] = str(error)
+        ret['comment'] = six.text_type(error)
         return ret
 
     # Debian based system can have a type of source
@@ -377,7 +457,7 @@ def managed(name, type, enabled=True, **kwargs):
         except AttributeError as error:
             #TODO Add a way of reversing the interface changes.
             ret['result'] = False
-            ret['comment'] = str(error)
+            ret['comment'] = six.text_type(error)
             return ret
 
     if kwargs['test']:
@@ -392,7 +472,7 @@ def managed(name, type, enabled=True, **kwargs):
                 return ret
             except Exception as error:
                 ret['result'] = False
-                ret['comment'] = str(error)
+                ret['comment'] = six.text_type(error)
                 return ret
         ret['result'] = True
         ret['comment'] = "no change, passing it"
@@ -429,7 +509,7 @@ def managed(name, type, enabled=True, **kwargs):
                     ret['changes']['status'] = 'Interface {0} down'.format(name)
     except Exception as error:
         ret['result'] = False
-        ret['comment'] = str(error)
+        ret['comment'] = six.text_type(error)
         return ret
 
     # Try to enslave bonding interfaces after master was created
@@ -446,7 +526,8 @@ def managed(name, type, enabled=True, **kwargs):
             if missing_slaves:
                 ifenslave_path = __salt__['cmd.run'](['which', 'ifenslave']).strip()
                 if ifenslave_path:
-                    log.info("Adding slaves '{0}' to the master {1}".format(' '.join(missing_slaves), name))
+                    log.info("Adding slaves '%s' to the master %s",
+                             ' '.join(missing_slaves), name)
                     cmd = [ifenslave_path, name] + list(missing_slaves)
                     __salt__['cmd.run'](cmd, python_shell=False)
                 else:
@@ -455,8 +536,9 @@ def managed(name, type, enabled=True, **kwargs):
                     "Added slaves '{0}' to master '{1}'"
                     .format(' '.join(missing_slaves), name))
             else:
-                log.info("All slaves '{0}' are already added to the master {1}"
-                         ", no actions required".format(' '.join(missing_slaves), name))
+                log.info("All slaves '%s' are already added to the master %s"
+                         ", no actions required",
+                         ' '.join(missing_slaves), name)
 
     if enabled and interface_status:
         # Interface was restarted, return
@@ -517,7 +599,7 @@ def routes(name, **kwargs):
             ret['changes']['network_routes'] = '\n'.join(diff)
     except AttributeError as error:
         ret['result'] = False
-        ret['comment'] = str(error)
+        ret['comment'] = six.text_type(error)
         return ret
 
     # Apply interface routes
@@ -526,7 +608,7 @@ def routes(name, **kwargs):
             __salt__['ip.apply_network_settings'](**kwargs)
         except AttributeError as error:
             ret['result'] = False
-            ret['comment'] = str(error)
+            ret['comment'] = six.text_type(error)
             return ret
 
     return ret
@@ -577,11 +659,11 @@ def system(name, **kwargs):
             ret['changes']['network_settings'] = '\n'.join(diff)
     except AttributeError as error:
         ret['result'] = False
-        ret['comment'] = str(error)
+        ret['comment'] = six.text_type(error)
         return ret
     except KeyError as error:
         ret['result'] = False
-        ret['comment'] = str(error)
+        ret['comment'] = six.text_type(error)
         return ret
 
     # Apply global network settings
@@ -590,7 +672,7 @@ def system(name, **kwargs):
             __salt__['ip.apply_network_settings'](**kwargs)
         except AttributeError as error:
             ret['result'] = False
-            ret['comment'] = str(error)
+            ret['comment'] = six.text_type(error)
             return ret
 
     return ret

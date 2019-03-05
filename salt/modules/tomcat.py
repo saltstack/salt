@@ -60,7 +60,7 @@ Also configure a user in the conf/tomcat-users.xml file:
      Tomcat Version:
          Apache Tomcat/7.0.37
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import os
@@ -84,7 +84,7 @@ from salt.ext.six.moves.urllib.request import (
 # pylint: enable=no-name-in-module,import-error
 
 # Import Salt libs
-import salt.utils
+import salt.utils.data
 
 log = logging.getLogger(__name__)
 
@@ -146,9 +146,10 @@ def _get_credentials():
             # Look for the config key
             # Support old-style config format and new
             for config_key in __valid_configs[item]:
-                value = salt.utils.traverse_dict_and_list(struct,
-                                                          config_key,
-                                                          None)
+                value = salt.utils.data.traverse_dict_and_list(
+                    struct,
+                    config_key,
+                    None)
                 if value:
                     ret[item] = value
                     break

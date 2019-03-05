@@ -31,7 +31,7 @@ returner modules
     mongo_return
     multi_returner
     mysql
-    nagios_return
+    nagios_nrdp_return
     odbc
     pgjsonb
     postgres
@@ -46,5 +46,6 @@ returner modules
     splunk
     sqlite3_return
     syslog_return
+    telegram_return
     xmpp_return
     zabbix_return

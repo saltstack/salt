@@ -4,7 +4,7 @@ A convenience system to manage jobs, both active and already run
 '''
 
 # Import python libs
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 import fnmatch
 import logging
 import os
@@ -12,13 +12,14 @@ import os
 # Import salt libs
 import salt.client
 import salt.payload
-import salt.utils
+import salt.utils.args
+import salt.utils.files
 import salt.utils.jid
 import salt.minion
 import salt.returners
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.exceptions import SaltClientError
 
 try:
@@ -69,9 +70,10 @@ def active(display_progress=False):
     for jid in ret:
         returner = _get_returner((__opts__['ext_job_cache'], __opts__['master_job_cache']))
         data = mminion.returners['{0}.get_jid'.format(returner)](jid)
-        for minion in data:
-            if minion not in ret[jid]['Returned']:
-                ret[jid]['Returned'].append(minion)
+        if data:
+            for minion in data:
+                if minion not in ret[jid]['Returned']:
+                    ret[jid]['Returned'].append(minion)
 
     return ret
 
@@ -132,15 +134,16 @@ def lookup_jid(jid,
     targeted_minions = data.get('Minions', [])
     returns = data.get('Result', {})
 
-    for minion in returns:
-        if display_progress:
-            __jid_event__.fire_event({'message': minion}, 'progress')
-        if u'return' in returns[minion]:
-            if returned:
-                ret[minion] = returns[minion].get(u'return')
-        else:
-            if returned:
-                ret[minion] = returns[minion].get('return')
+    if returns:
+        for minion in returns:
+            if display_progress:
+                __jid_event__.fire_event({'message': minion}, 'progress')
+            if u'return' in returns[minion]:
+                if returned:
+                    ret[minion] = returns[minion].get(u'return')
+            else:
+                if returned:
+                    ret[minion] = returns[minion].get('return')
     if missing:
         for minion_id in (x for x in targeted_minions if x not in returns):
             ret[minion_id] = 'Minion did not return'
@@ -325,14 +328,14 @@ def list_jobs(ext_source=None,
                 if isinstance(targets, six.string_types):
                     targets = [targets]
                 for target in targets:
-                    for key in salt.utils.split_input(search_target):
+                    for key in salt.utils.args.split_input(search_target):
                         if fnmatch.fnmatch(target, key):
                             _match = True
 
         if search_function and _match:
             _match = False
             if 'Function' in ret[item]:
-                for key in salt.utils.split_input(search_function):
+                for key in salt.utils.args.split_input(search_function):
                     if fnmatch.fnmatch(ret[item]['Function'], key):
                         _match = True
 
@@ -540,6 +543,10 @@ def _format_job_instance(job):
     '''
     Helper to format a job instance
     '''
+    if not job:
+        ret = {'Error': 'Cannot contact returner or no job with this jid'}
+        return ret
+
     ret = {'Function': job.get('fun', 'unknown-function'),
            'Arguments': list(job.get('arg', [])),
            # unlikely but safeguard from invalid returns
@@ -579,13 +586,13 @@ def _walk_through(job_dir, display_progress=False):
 
         for final in os.listdir(t_path):
             load_path = os.path.join(t_path, final, '.load.p')
-            with salt.utils.fopen(load_path, 'rb') as rfh:
+            with salt.utils.files.fopen(load_path, 'rb') as rfh:
                 job = serial.load(rfh)
 
             if not os.path.isfile(load_path):
                 continue
 
-            with salt.utils.fopen(load_path, 'rb') as rfh:
+            with salt.utils.files.fopen(load_path, 'rb') as rfh:
                 job = serial.load(rfh)
             jid = job['jid']
             if display_progress:

@@ -4,7 +4,8 @@ Test module for syslog_ng
 '''
 
 # Import Python modules
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
+import os
 from textwrap import dedent
 
 # Import Salt Testing libs
@@ -13,7 +14,7 @@ from tests.support.unit import skipIf, TestCase
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # Import Salt libs
-import salt
+import salt.utils.platform
 import salt.modules.syslog_ng as syslog_ng
 
 _VERSION = "3.6.0alpha0"
@@ -57,6 +58,12 @@ _SYSLOG_NG_CTL_NOT_INSTALLED_RETURN_VALUE = {
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class SyslogNGTestCase(TestCase, LoaderModuleMockMixin):
+
+    # pylint: disable=blacklisted-function
+    orig_env = {str('PATH'): str('/foo:/bar')}
+    bin_dir = str('/baz')
+    mocked_env = {str('PATH'): str('/foo:/bar:/baz')}
+    # pylint: enable=blacklisted-function
 
     def setup_loader_modules(self):
         return {syslog_ng: {}}
@@ -198,84 +205,145 @@ class SyslogNGTestCase(TestCase, LoaderModuleMockMixin):
             };
             '''), b)
 
+    @skipIf(salt.utils.platform.is_windows(), 'Module not available on Windows')
     def test_version(self):
-        mock_return_value = {"retcode": 0, 'stdout': VERSION_OUTPUT}
-        expected_output = {"retcode": 0, "stdout": "3.6.0alpha0"}
-        mock_args = "syslog-ng -V"
-        self._assert_template(mock_args,
-                              mock_return_value,
-                              function_to_call=syslog_ng.version,
-                              expected_output=expected_output)
+        cmd_ret = {'retcode': 0, 'stdout': VERSION_OUTPUT}
+        expected_output = {'retcode': 0, 'stdout': _VERSION}
+        cmd_args = ['syslog-ng', '-V']
 
+        cmd_mock = MagicMock(return_value=cmd_ret)
+        with patch.dict(syslog_ng.__salt__, {'cmd.run_all': cmd_mock}), \
+                patch.dict(os.environ, self.orig_env):
+            result = syslog_ng.version()
+            self.assertEqual(result, expected_output)
+            cmd_mock.assert_called_once_with(
+                cmd_args,
+                env=None,
+                python_shell=False
+            )
+
+        cmd_mock = MagicMock(return_value=cmd_ret)
+        with patch.dict(syslog_ng.__salt__, {'cmd.run_all': cmd_mock}), \
+                patch.dict(os.environ, self.orig_env):
+            result = syslog_ng.version(syslog_ng_sbin_dir=self.bin_dir)
+            self.assertEqual(result, expected_output)
+            cmd_mock.assert_called_once_with(
+                cmd_args,
+                env=self.mocked_env,
+                python_shell=False
+            )
+
+    @skipIf(salt.utils.platform.is_windows(), 'Module not available on Windows')
     def test_stats(self):
-        mock_return_value = {"retcode": 0, 'stdout': STATS_OUTPUT}
-        expected_output = {"retcode": 0, "stdout": STATS_OUTPUT}
-        mock_args = "syslog-ng-ctl stats"
-        self._assert_template(mock_args,
-                              mock_return_value,
-                              function_to_call=syslog_ng.stats,
-                              expected_output=expected_output)
+        cmd_ret = {'retcode': 0, 'stdout': STATS_OUTPUT}
+        cmd_args = ['syslog-ng-ctl', 'stats']
 
+        cmd_mock = MagicMock(return_value=cmd_ret)
+        with patch.dict(syslog_ng.__salt__, {'cmd.run_all': cmd_mock}), \
+                patch.dict(os.environ, self.orig_env):
+            result = syslog_ng.stats()
+            self.assertEqual(result, cmd_ret)
+            cmd_mock.assert_called_once_with(
+                cmd_args,
+                env=None,
+                python_shell=False
+            )
+
+        cmd_mock = MagicMock(return_value=cmd_ret)
+        with patch.dict(syslog_ng.__salt__, {'cmd.run_all': cmd_mock}), \
+                patch.dict(os.environ, self.orig_env):
+            result = syslog_ng.stats(syslog_ng_sbin_dir=self.bin_dir)
+            self.assertEqual(result, cmd_ret)
+            cmd_mock.assert_called_once_with(
+                cmd_args,
+                env=self.mocked_env,
+                python_shell=False
+            )
+
+    @skipIf(salt.utils.platform.is_windows(), 'Module not available on Windows')
     def test_modules(self):
-        mock_return_value = {"retcode": 0, 'stdout': VERSION_OUTPUT}
-        expected_output = {"retcode": 0, "stdout": _MODULES}
-        mock_args = "syslog-ng -V"
-        self._assert_template(mock_args,
-                              mock_return_value,
-                              function_to_call=syslog_ng.modules,
-                              expected_output=expected_output)
+        cmd_ret = {'retcode': 0, 'stdout': VERSION_OUTPUT}
+        expected_output = {'retcode': 0, 'stdout': _MODULES}
+        cmd_args = ['syslog-ng', '-V']
 
-    def test_config_test_ok(self):
-        mock_return_value = {"retcode": 0, "stderr": "", "stdout": "Syslog-ng startup text..."}
-        mock_args = "syslog-ng --syntax-only"
-        self._assert_template(mock_args,
-                              mock_return_value,
-                              function_to_call=syslog_ng.config_test,
-                              expected_output=mock_return_value)
+        cmd_mock = MagicMock(return_value=cmd_ret)
+        with patch.dict(syslog_ng.__salt__, {'cmd.run_all': cmd_mock}), \
+                patch.dict(os.environ, self.orig_env):
+            result = syslog_ng.modules()
+            self.assertEqual(result, expected_output)
+            cmd_mock.assert_called_once_with(
+                cmd_args,
+                env=None,
+                python_shell=False
+            )
 
-    def test_config_test_fails(self):
-        mock_return_value = {"retcode": 1, 'stderr': "Syntax error...", "stdout": ""}
-        mock_args = "syslog-ng --syntax-only"
-        self._assert_template(mock_args,
-                              mock_return_value,
-                              function_to_call=syslog_ng.config_test,
-                              expected_output=mock_return_value)
+        cmd_mock = MagicMock(return_value=cmd_ret)
+        with patch.dict(syslog_ng.__salt__, {'cmd.run_all': cmd_mock}), \
+                patch.dict(os.environ, self.orig_env):
+            result = syslog_ng.modules(syslog_ng_sbin_dir=self.bin_dir)
+            self.assertEqual(result, expected_output)
+            cmd_mock.assert_called_once_with(
+                cmd_args,
+                env=self.mocked_env,
+                python_shell=False
+            )
 
+    @skipIf(salt.utils.platform.is_windows(), 'Module not available on Windows')
+    def test_config_test(self):
+        cmd_ret = {'retcode': 0, 'stderr': '', 'stdout': 'Foo'}
+        cmd_args = ['syslog-ng', '--syntax-only']
+
+        cmd_mock = MagicMock(return_value=cmd_ret)
+        with patch.dict(syslog_ng.__salt__, {'cmd.run_all': cmd_mock}), \
+                patch.dict(os.environ, self.orig_env):
+            result = syslog_ng.config_test()
+            self.assertEqual(result, cmd_ret)
+            cmd_mock.assert_called_once_with(
+                cmd_args,
+                env=None,
+                python_shell=False
+            )
+
+        cmd_mock = MagicMock(return_value=cmd_ret)
+        with patch.dict(syslog_ng.__salt__, {'cmd.run_all': cmd_mock}), \
+                patch.dict(os.environ, self.orig_env):
+            result = syslog_ng.config_test(syslog_ng_sbin_dir=self.bin_dir)
+            self.assertEqual(result, cmd_ret)
+            cmd_mock.assert_called_once_with(
+                cmd_args,
+                env=self.mocked_env,
+                python_shell=False
+            )
+
+    @skipIf(salt.utils.platform.is_windows(), 'Module not available on Windows')
     def test_config_test_cfgfile(self):
-        cfgfile = "/path/to/syslog-ng.conf"
-        mock_return_value = {"retcode": 1, 'stderr': "Syntax error...", "stdout": ""}
-        mock_args = "syslog-ng --syntax-only --cfgfile={0}".format(cfgfile)
-        self._assert_template(mock_args,
-                              mock_return_value,
-                              function_to_call=syslog_ng.config_test,
-                              function_args={"cfgfile": cfgfile},
-                              expected_output=mock_return_value)
+        cfgfile = '/path/to/syslog-ng.conf'
+        cmd_ret = {'retcode': 1, 'stderr': 'Syntax error...', 'stdout': ''}
+        cmd_args = ['syslog-ng', '--syntax-only',
+                    '--cfgfile={0}'.format(cfgfile)]
 
-    def _assert_template(self,
-                         mock_function_args,
-                         mock_return_value,
-                         function_to_call,
-                         expected_output,
-                         function_args=None):
-        if function_args is None:
-            function_args = {}
+        cmd_mock = MagicMock(return_value=cmd_ret)
+        with patch.dict(syslog_ng.__salt__, {'cmd.run_all': cmd_mock}), \
+                patch.dict(os.environ, self.orig_env):
+            self.assertEqual(syslog_ng.config_test(cfgfile=cfgfile), cmd_ret)
+            cmd_mock.assert_called_once_with(
+                cmd_args,
+                env=None,
+                python_shell=False
+            )
 
-        installed = True
-        if not salt.utils.which("syslog-ng"):
-            installed = False
-            if "syslog-ng-ctl" in mock_function_args:
-                expected_output = _SYSLOG_NG_CTL_NOT_INSTALLED_RETURN_VALUE
-            else:
-                expected_output = _SYSLOG_NG_NOT_INSTALLED_RETURN_VALUE
-
-        mock_function = MagicMock(return_value=mock_return_value)
-
-        with patch.dict(syslog_ng.__salt__, {'cmd.run_all': mock_function}):
-            got = function_to_call(**function_args)
-            self.assertEqual(expected_output, got)
-
-            if installed:
-                self.assertTrue(mock_function.called)
-                self.assertEqual(len(mock_function.call_args), 2)
-                mock_param = mock_function.call_args
-                self.assertEqual(mock_param[0][0], mock_function_args.split())
+        cmd_mock = MagicMock(return_value=cmd_ret)
+        with patch.dict(syslog_ng.__salt__, {'cmd.run_all': cmd_mock}), \
+                patch.dict(os.environ, self.orig_env):
+            self.assertEqual(
+                syslog_ng.config_test(
+                    syslog_ng_sbin_dir=self.bin_dir,
+                    cfgfile=cfgfile
+                ),
+                cmd_ret
+            )
+            cmd_mock.assert_called_once_with(
+                cmd_args,
+                env=self.mocked_env,
+                python_shell=False
+            )

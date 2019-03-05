@@ -7,7 +7,7 @@ Provides access to randomness generators.
 
 '''
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import base64
 import hashlib
 import random
@@ -17,7 +17,7 @@ import salt.utils.pycrypto
 from salt.exceptions import SaltInvocationError
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 if six.PY2:
     ALGORITHMS_ATTR_NAME = 'algorithms'

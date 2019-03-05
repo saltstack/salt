@@ -2,7 +2,7 @@
 '''
 This module contains routines shared by the virt system.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import os
@@ -10,7 +10,7 @@ import time
 import logging
 
 # Import salt libs
-import salt.utils
+import salt.utils.files
 
 
 log = logging.getLogger(__name__)
@@ -34,7 +34,7 @@ class VirtKey(object):
         Accept the provided key
         '''
         try:
-            with salt.utils.fopen(self.path, 'r') as fp_:
+            with salt.utils.files.fopen(self.path, 'r') as fp_:
                 expiry = int(fp_.read())
         except (OSError, IOError):
             log.error(
@@ -49,14 +49,16 @@ class VirtKey(object):
         # Limit acceptance window to 10 minutes
         # TODO: Move this value to the master config file
         if (time.time() - expiry) > 600:
-            log.warning('Request to sign key for minion "{0}" on hyper "{1}" denied: '
-                        'authorization expired'.format(self.id, self.hyper))
+            log.warning(
+                'Request to sign key for minion "%s" on hyper "%s" denied: '
+                'authorization expired', self.id, self.hyper
+            )
             return False
 
         pubfn = os.path.join(self.opts['pki_dir'],
                 'minions',
                 self.id)
-        with salt.utils.fopen(pubfn, 'w+') as fp_:
+        with salt.utils.files.fopen(pubfn, 'w+') as fp_:
             fp_.write(pub)
         self.void()
         return True
@@ -65,8 +67,8 @@ class VirtKey(object):
         '''
         Prepare the master to expect a signing request
         '''
-        with salt.utils.fopen(self.path, 'w+') as fp_:
-            fp_.write(str(int(time.time())))
+        with salt.utils.files.fopen(self.path, 'w+') as fp_:
+            fp_.write(str(int(time.time())))  # future lint: disable=blacklisted-function
         return True
 
     def void(self):

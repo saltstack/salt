@@ -86,11 +86,10 @@ To override individual configuration items, append
     implmentation's documentation to determine how to adjust this limit.
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import python libs
-import json
 try:
     import syslog
     HAS_SYSLOG = True
@@ -99,8 +98,9 @@ except ImportError:
 
 # Import Salt libs
 import salt.utils.jid
+import salt.utils.json
 import salt.returners
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 # Define the module's virtual name
@@ -148,10 +148,10 @@ def _verify_options(options):
 
     for opt_name, opt in bitwise_args:
         if not hasattr(syslog, opt):
-            log.error('syslog has no attribute {0}'.format(opt))
+            log.error('syslog has no attribute %s', opt)
             return False
         if not isinstance(getattr(syslog, opt), int):
-            log.error('{0} is not a valid syslog {1}'.format(opt, opt_name))
+            log.error('%s is not a valid syslog %s', opt, opt_name)
             return False
 
     # Sanity check tag
@@ -192,17 +192,13 @@ def returner(ret):
         logoption = logoption | getattr(syslog, opt)
 
     # Open syslog correctly based on options and tag
-    try:
-        if 'tag' in _options:
-            syslog.openlog(ident=_options['tag'], logoption=logoption)
-        else:
-            syslog.openlog(logoption=logoption)
-    except TypeError:
-        # Python 2.6 syslog.openlog does not accept keyword args
-        syslog.openlog(_options.get('tag', 'salt-minion'), logoption)
+    if 'tag' in _options:
+        syslog.openlog(ident=salt.utils.stringutils.to_str(_options['tag']), logoption=logoption)
+    else:
+        syslog.openlog(logoption=logoption)
 
     # Send log of given level and facility
-    syslog.syslog(facility | level, '{0}'.format(json.dumps(ret)))
+    syslog.syslog(facility | level, salt.utils.json.dumps(ret))
 
     # Close up to reset syslog to defaults
     syslog.closelog()
@@ -213,4 +209,4 @@ def prep_jid(nocache=False,
     '''
     Do any work necessary to prepare a JID, including sending a custom id
     '''
-    return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid()
+    return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid(__opts__)

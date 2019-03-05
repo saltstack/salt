@@ -20,7 +20,7 @@ Module for working with the Grafana v4 API
             grafana_password: admin
             grafana_timeout: 3
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 try:
     import requests

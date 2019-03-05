@@ -19,7 +19,7 @@ This external Pillar source can be configured in the master config file as such:
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import copy
 import hashlib
 import logging
@@ -27,10 +27,10 @@ import os
 
 # Import Salt Libs
 import salt.pillar
-import salt.utils
+import salt.utils.stringutils
 
 # Import Third Party Libs
-import salt.ext.six as six
+from salt.ext import six
 try:
     import hglib
 except ImportError:
@@ -105,7 +105,7 @@ class Repo(object):
         if six.PY2:
             repo_hash = hash_type(repo_uri).hexdigest()
         else:
-            repo_hash = hash_type(salt.utils.to_bytes(repo_uri)).hexdigest()
+            repo_hash = hash_type(salt.utils.stringutils.to_bytes(repo_uri)).hexdigest()
         self.working_dir = os.path.join(cachedir, repo_hash)
         if not os.path.isdir(self.working_dir):
             self.repo = hglib.clone(repo_uri, self.working_dir)

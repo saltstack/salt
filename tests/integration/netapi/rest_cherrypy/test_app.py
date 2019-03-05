@@ -2,10 +2,11 @@
 
 # Import python libs
 from __future__ import absolute_import
-import json
+import os
 
 # Import salt libs
-import salt.utils
+import salt.utils.json
+import salt.utils.stringutils
 
 # Import test support libs
 import tests.support.cherrypy_testclasses as cptc
@@ -124,6 +125,71 @@ class TestRun(cptc.BaseRestCherryPyTest):
         })
         self.assertEqual(response.status, '401 Unauthorized')
 
+    def test_run_empty_token(self):
+        '''
+        Test the run URL with empty token
+        '''
+        cmd = dict(self.low, **{'token': ''})
+        body = urlencode(cmd)
+
+        request, response = self.request('/run', method='POST', body=body,
+            headers={
+                'content-type': 'application/x-www-form-urlencoded'
+        })
+        assert response.status == '401 Unauthorized'
+
+    def test_run_empty_token_upercase(self):
+        '''
+        Test the run URL with empty token with upercase characters
+        '''
+        cmd = dict(self.low, **{'ToKen': ''})
+        body = urlencode(cmd)
+
+        request, response = self.request('/run', method='POST', body=body,
+            headers={
+                'content-type': 'application/x-www-form-urlencoded'
+        })
+        assert response.status == '401 Unauthorized'
+
+    def test_run_wrong_token(self):
+        '''
+        Test the run URL with incorrect token
+        '''
+        cmd = dict(self.low, **{'token': 'bad'})
+        body = urlencode(cmd)
+
+        request, response = self.request('/run', method='POST', body=body,
+            headers={
+                'content-type': 'application/x-www-form-urlencoded'
+        })
+        assert response.status == '401 Unauthorized'
+
+    def test_run_pathname_token(self):
+        '''
+        Test the run URL with path that exists in token
+        '''
+        cmd = dict(self.low, **{'token': os.path.join('etc', 'passwd')})
+        body = urlencode(cmd)
+
+        request, response = self.request('/run', method='POST', body=body,
+            headers={
+                'content-type': 'application/x-www-form-urlencoded'
+        })
+        assert response.status == '401 Unauthorized'
+
+    def test_run_pathname_not_exists_token(self):
+        '''
+        Test the run URL with path that does not exist in token
+        '''
+        cmd = dict(self.low, **{'token': os.path.join('tmp', 'doesnotexist')})
+        body = urlencode(cmd)
+
+        request, response = self.request('/run', method='POST', body=body,
+            headers={
+                'content-type': 'application/x-www-form-urlencoded'
+        })
+        assert response.status == '401 Unauthorized'
+
 
 class TestWebhookDisableAuth(cptc.BaseRestCherryPyTest):
 
@@ -183,7 +249,7 @@ class TestArgKwarg(cptc.BaseRestCherryPyTest):
         are supported by runners.
         '''
         cmd = dict(self.low)
-        body = json.dumps(cmd)
+        body = salt.utils.json.dumps(cmd)
 
         request, response = self.request(
             '/',
@@ -195,7 +261,7 @@ class TestArgKwarg(cptc.BaseRestCherryPyTest):
                 'Accept': 'application/json',
             }
         )
-        resp = json.loads(salt.utils.to_str(response.body[0]))
+        resp = salt.utils.json.loads(salt.utils.stringutils.to_str(response.body[0]))
         self.assertEqual(resp['return'][0]['args'], [1234])
         self.assertEqual(resp['return'][0]['kwargs'],
                          {'ext_source': 'redis'})
@@ -253,6 +319,6 @@ class TestJobs(cptc.BaseRestCherryPyTest):
                 'X-Auth-Token': self._token(),
         })
 
-        resp = json.loads(salt.utils.to_str(response.body[0]))
+        resp = salt.utils.json.loads(salt.utils.stringutils.to_str(response.body[0]))
         self.assertIn('test.ping', str(resp['return']))
         self.assertEqual(response.status, '200 OK')

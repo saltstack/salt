@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 from datetime import datetime
 import os
-import json
 import pprint
 import shutil
 
@@ -27,13 +26,11 @@ from tests.support.mock import (
     mock_open,
     patch)
 
-# Import third party libs
-import yaml
-
 # Import salt libs
-import salt
-import salt.utils
 import salt.utils.files
+import salt.utils.json
+import salt.utils.platform
+import salt.utils.yaml
 import salt.states.file as filestate
 import salt.serializers.yaml as yamlserializer
 import salt.serializers.json as jsonserializer
@@ -57,16 +54,17 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                 },
                 '__opts__': {'test': False, 'cachedir': ''},
                 '__instance_id__': '',
-                '__low__': {}
+                '__low__': {},
+                '__utils__': {},
             }
         }
 
     def tearDown(self):
         remove_dir = '/tmp/etc'
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             remove_dir = 'c:\\tmp\\etc'
         try:
-            salt.utils.rm_rf(remove_dir)
+            salt.utils.files.rm_rf(remove_dir)
         except OSError:
             pass
 
@@ -85,13 +83,13 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
             }
 
             filestate.serialize('/tmp', dataset)
-            self.assertEqual(yaml.load(returner.returned), dataset)
+            self.assertEqual(salt.utils.yaml.safe_load(returner.returned), dataset)
 
             filestate.serialize('/tmp', dataset, formatter="yaml")
-            self.assertEqual(yaml.load(returner.returned), dataset)
+            self.assertEqual(salt.utils.yaml.safe_load(returner.returned), dataset)
 
             filestate.serialize('/tmp', dataset, formatter="json")
-            self.assertEqual(json.loads(returner.returned), dataset)
+            self.assertEqual(salt.utils.json.loads(returner.returned), dataset)
 
             filestate.serialize('/tmp', dataset, formatter="python")
             self.assertEqual(returner.returned, pprint.pformat(dataset) + '\n')
@@ -150,7 +148,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
         test_dir = '/tmp'
         user = 'salt'
 
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             group = 'salt'
         else:
             group = 'saltstack'
@@ -185,7 +183,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                                              'file.group_to_gid': mock_empty,
                                              'user.info': mock_empty,
                                              'user.current': mock_user}):
-            if salt.utils.is_windows():
+            if salt.utils.platform.is_windows():
                 comt = ('User {0} does not exist'.format(user))
                 ret = return_val({'comment': comt, 'name': name})
             else:
@@ -202,7 +200,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                                              'user.current': mock_user}):
             with patch.dict(filestate.__opts__, {'test': True}):
                 with patch.object(os.path, 'exists', mock_f):
-                    if salt.utils.is_windows():
+                    if salt.utils.platform.is_windows():
                         comt = ('User {0} does not exist'.format(user))
                         ret = return_val(
                             {
@@ -231,7 +229,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
             with patch.dict(filestate.__opts__, {'test': False}):
                 with patch.object(os.path, 'isdir', mock_f):
                     with patch.object(os.path, 'exists', mock_f):
-                        if salt.utils.is_windows():
+                        if salt.utils.platform.is_windows():
                             comt = 'User {0} does not exist'.format(user)
                             ret = return_val(
                                 {
@@ -261,7 +259,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                 with patch.object(os.path, 'isdir', mock_t):
                     with patch.object(salt.states.file, '_check_symlink_ownership', mock_t):
                         with patch('salt.utils.win_functions.get_sid_from_name', return_value='test-sid'):
-                            if salt.utils.is_windows():
+                            if salt.utils.platform.is_windows():
                                 comt = ('Symlink {0} is present and owned by '
                                         '{1}'.format(name, user))
                             else:
@@ -606,7 +604,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                                               'G12', 'G12', 'G12', 'G12', 'G12'])
             mock_if = MagicMock(side_effect=[True, False, False, False, False,
                                              False, False, False])
-            if salt.utils.is_windows():
+            if salt.utils.platform.is_windows():
                 mock_ret = MagicMock(return_value=ret)
             else:
                 mock_ret = MagicMock(return_value=(ret, None))
@@ -646,7 +644,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
                 # Group argument is ignored on Windows systems. Group is set to
                 # user
-                if salt.utils.is_windows():
+                if salt.utils.platform.is_windows():
                     comt = ('User salt is not available Group salt'
                             ' is not available')
                 else:
@@ -760,6 +758,33 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                                                      (name, user=user, group=group),
                                                      ret)
 
+                        if salt.utils.platform.is_windows():
+                            mock_ret = MagicMock(return_value=ret)
+                            comt = ('File {0} not updated'.format(name))
+                        else:
+                            perms = {'luser': user,
+                                     'lmode': '0644',
+                                     'lgroup': group}
+                            mock_ret = MagicMock(return_value=(ret, perms))
+                            comt = ('File {0} will be updated with '
+                                    'permissions 0400 from its current '
+                                    'state of 0644'.format(name))
+
+                        with patch.dict(filestate.__salt__,
+                                        {'file.check_perms': mock_ret}):
+                            with patch.object(os.path, 'exists', mock_t):
+                                with patch.dict(filestate.__opts__, {'test': True}):
+                                    ret.update({'comment': comt})
+                                    if salt.utils.platform.is_windows():
+                                        self.assertDictEqual(filestate.managed
+                                                             (name, user=user,
+                                                              group=group), ret)
+                                    else:
+                                        self.assertDictEqual(filestate.managed
+                                                             (name, user=user,
+                                                              group=group,
+                                                              mode=400), ret)
+
     # 'directory' function tests: 1
 
     def test_directory(self):
@@ -769,7 +794,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
         name = '/etc/testdir'
         user = 'salt'
         group = 'saltstack'
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             name = name.replace('/', '\\')
 
         ret = {'name': name,
@@ -790,7 +815,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
         mock_t = MagicMock(return_value=True)
         mock_f = MagicMock(return_value=False)
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             mock_perms = MagicMock(return_value=ret)
         else:
             mock_perms = MagicMock(return_value=(ret, ''))
@@ -812,7 +837,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
              patch('salt.utils.win_dacl.get_sid', mock_error), \
              patch('os.path.isdir', mock_t), \
              patch('salt.states.file._check_directory_win', mock_check):
-            if salt.utils.is_windows():
+            if salt.utils.platform.is_windows():
                 comt = ('User salt is not available Group salt'
                         ' is not available')
             else:
@@ -861,7 +886,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
                 with patch.object(os.path, 'isdir', mock_f):
                     with patch.dict(filestate.__opts__, {'test': True}):
-                        if salt.utils.is_windows():
+                        if salt.utils.platform.is_windows():
                             comt = 'The directory "{0}" will be changed' \
                                    ''.format(name)
                         else:
@@ -872,7 +897,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                             'comment': comt,
                             'result': None,
                             'pchanges': p_chg,
-                            'changes': {name: {'directory': 'new'}}
+                            'changes': {}
                         })
                         self.assertDictEqual(filestate.directory(name,
                                                                  user=user,
@@ -898,6 +923,11 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                                                  ret)
 
                         recurse = ['ignore_files', 'ignore_dirs']
+                        ret.update({'comment': 'Must not specify "recurse" '
+                                               'options "ignore_files" and '
+                                               '"ignore_dirs" at the same '
+                                               'time.',
+                                    'pchanges': {}})
                         with patch.object(os.path, 'isdir', mock_t):
                             self.assertDictEqual(filestate.directory
                                                  (name, user=user,
@@ -919,7 +949,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
         source = 'salt://code/flask'
         user = 'salt'
         group = 'saltstack'
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             name = name.replace('/', '\\')
 
         ret = {'name': name,
@@ -949,7 +979,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                                              'cp.list_master': mock_l}):
 
             # Group argument is ignored on Windows systems. Group is set to user
-            if salt.utils.is_windows():
+            if salt.utils.platform.is_windows():
                 comt = ('User salt is not available Group salt'
                         ' is not available')
             else:
@@ -1079,7 +1109,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
         Test to comment out specified lines in a file.
         '''
         with patch.object(os.path, 'exists', MagicMock(return_value=True)):
-            name = '/etc/aliases' if salt.utils.is_darwin() else '/etc/fstab'
+            name = '/etc/aliases' if salt.utils.platform.is_darwin() else '/etc/fstab'
             regex = 'bind 127.0.0.1'
 
             ret = {'name': name,
@@ -1120,7 +1150,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                         self.assertDictEqual(filestate.comment(name, regex), ret)
 
                     with patch.dict(filestate.__opts__, {'test': False}):
-                        with patch.object(salt.utils, 'fopen',
+                        with patch.object(salt.utils.files, 'fopen',
                                           MagicMock(mock_open())):
                             comt = ('Commented lines successfully')
                             ret.update({'comment': comt, 'result': True})
@@ -1134,7 +1164,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
         Test to uncomment specified commented lines in a file
         '''
         with patch.object(os.path, 'exists', MagicMock(return_value=True)):
-            name = '/etc/aliases' if salt.utils.is_darwin() else '/etc/fstab'
+            name = '/etc/aliases' if salt.utils.platform.is_darwin() else '/etc/fstab'
             regex = 'bind 127.0.0.1'
 
             ret = {'name': name,
@@ -1175,7 +1205,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                         self.assertDictEqual(filestate.uncomment(name, regex), ret)
 
                     with patch.dict(filestate.__opts__, {'test': False}):
-                        with patch.object(salt.utils, 'fopen',
+                        with patch.object(salt.utils.files, 'fopen',
                                           MagicMock(mock_open())):
                             comt = ('Uncommented lines successfully')
                             ret.update({'comment': comt, 'result': True})
@@ -1188,7 +1218,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
         Test to ensure that some text appears at the beginning of a file.
         '''
         name = '/tmp/etc/motd'
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             name = 'c:\\tmp\\etc\\motd'
         assert not os.path.exists(os.path.split(name)[0])
         source = ['salt://motd/hr-messages.tmpl']
@@ -1222,7 +1252,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
             comt = ('The following files will be changed:\n/tmp/etc:'
                     ' directory - new\n')
             pchanges = {'/tmp/etc': {'directory': 'new'}}
-            if salt.utils.is_windows():
+            if salt.utils.platform.is_windows():
                 comt = 'The directory "c:\\tmp\\etc" will be changed'
                 pchanges = {'c:\\tmp\\etc': {'directory': 'new'}}
             ret.update({'comment': comt, 'name': name, 'pchanges': pchanges})
@@ -1245,9 +1275,9 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
                     ret.pop('data', None)
                     ret.update({'name': name})
-                    with patch.object(salt.utils, 'fopen',
+                    with patch.object(salt.utils.files, 'fopen',
                                       MagicMock(mock_open(read_data=''))):
-                        with patch.object(salt.utils, 'istextfile', mock_f):
+                        with patch.dict(filestate.__utils__, {'files.is_text': mock_f}):
                             with patch.dict(filestate.__opts__, {'test': True}):
                                 change = {'diff': 'Replace binary file'}
                                 comt = ('File {0} is set to be updated'
@@ -1430,7 +1460,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
                     # Group argument is ignored on Windows systems. Group is set
                     # to user
-                    if salt.utils.is_windows():
+                    if salt.utils.platform.is_windows():
                         comt = ('User salt is not available Group salt'
                                 ' is not available')
                     else:
@@ -1913,7 +1943,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
 class TestFindKeepFiles(TestCase):
 
-    @skipIf(salt.utils.is_windows(), 'Do not run on Windows')
+    @skipIf(salt.utils.platform.is_windows(), 'Do not run on Windows')
     def test__find_keep_files_unix(self):
         keep = filestate._find_keep_files(
             '/test/parent_folder',
@@ -1928,17 +1958,22 @@ class TestFindKeepFiles(TestCase):
         actual = sorted(list(keep))
         assert actual == expected, actual
 
-    @skipIf(not salt.utils.is_windows(), 'Only run on Windows')
+    @skipIf(not salt.utils.platform.is_windows(), 'Only run on Windows')
     def test__find_keep_files_win32(self):
+        '''
+        Test _find_keep_files. The `_find_keep_files` function is only called by
+        _clean_dir, so case doesn't matter. Should return all lower case.
+        '''
         keep = filestate._find_keep_files(
             'c:\\test\\parent_folder',
-            ['C:\\test\\parent_folder\\meh-2.txt']
+            ['C:\\test\\parent_folder\\meh-1.txt',
+             'C:\\Test\\Parent_folder\\Meh-2.txt']
         )
         expected = [
             'c:\\',
             'c:\\test',
             'c:\\test\\parent_folder',
-            'c:\\test\\parent_folder\\meh-2.txt'
-        ]
+            'c:\\test\\parent_folder\\meh-1.txt',
+            'c:\\test\\parent_folder\\meh-2.txt']
         actual = sorted(list(keep))
-        assert actual == expected, actual
+        self.assertListEqual(actual, expected)

@@ -20,13 +20,13 @@ import sys
 import tempfile
 import time
 
-import yaml
-
-import salt.utils
+import salt.utils.files
+import salt.utils.platform
 import salt.utils.process
 import salt.utils.psutil_compat as psutils
+import salt.utils.yaml
 import salt.defaults.exitcodes as exitcodes
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 from tests.support.unit import TestCase
@@ -212,7 +212,7 @@ class TestProgram(six.with_metaclass(TestProgramMeta, object)):
         if not config:
             return
         cpath = self.abs_path(self.config_file_get(config))
-        with salt.utils.fopen(cpath, 'w') as cfo:
+        with salt.utils.files.fopen(cpath, 'w') as cfo:
             cfg = self.config_stringify(config)
             log.debug('Writing configuration for {0} to {1}:\n{2}'.format(self.name, cpath, cfg))
             cfo.write(cfg)
@@ -391,7 +391,10 @@ class TestProgram(six.with_metaclass(TestProgramMeta, object)):
             # Always ensure that the test tree is searched first for python modules
             if CODE_DIR != env_pypath[0]:
                 env_pypath.insert(0, CODE_DIR)
-            env_delta['PYTHONPATH'] = ':'.join(env_pypath)
+            if salt.utils.platform.is_windows():
+                env_delta['PYTHONPATH'] = ';'.join(env_pypath)
+            else:
+                env_delta['PYTHONPATH'] = ':'.join(env_pypath)
 
         cmd_env = dict(os.environ)
         cmd_env.update(env_delta)
@@ -416,7 +419,10 @@ class TestProgram(six.with_metaclass(TestProgramMeta, object)):
 
             popen_kwargs['preexec_fn'] = detach_from_parent_group
 
-        self.argv = [self.program]
+        if salt.utils.platform.is_windows():
+            self.argv = ['python.exe', self.program]
+        else:
+            self.argv = [self.program]
         self.argv.extend(args)
         log.debug('TestProgram.run: %s Environment %s', self.argv, env_delta)
         process = subprocess.Popen(self.argv, **popen_kwargs)
@@ -430,7 +436,7 @@ class TestProgram(six.with_metaclass(TestProgramMeta, object)):
 
                 if datetime.now() > stop_at:
                     if term_sent is False:
-                        if salt.utils.is_windows():
+                        if salt.utils.platform.is_windows():
                             _, alive = win32_kill_process_tree(process.pid)
                             if alive:
                                 log.error("Child processes still alive: %s", alive)
@@ -443,7 +449,7 @@ class TestProgram(six.with_metaclass(TestProgramMeta, object)):
                             continue
 
                     try:
-                        if salt.utils.is_windows():
+                        if salt.utils.platform.is_windows():
                             _, alive = win32_kill_process_tree(process.pid)
                             if alive:
                                 log.error("Child processes still alive: %s", alive)
@@ -625,7 +631,7 @@ class TestSaltProgram(six.with_metaclass(TestSaltProgramMeta, TestProgram)):
 
     @staticmethod
     def config_caster(cfg):
-        return yaml.safe_load(cfg)
+        return salt.utils.yaml.safe_load(cfg)
 
     def __init__(self, *args, **kwargs):
         if len(args) < 2 and 'program' not in kwargs:
@@ -674,8 +680,7 @@ class TestSaltProgram(six.with_metaclass(TestSaltProgramMeta, TestProgram)):
                 cfg[key] = val.format(**subs)
             else:
                 cfg[key] = val
-        scfg = yaml.safe_dump(cfg, default_flow_style=False)
-        return scfg
+        return salt.utils.yaml.safe_dump(cfg, default_flow_style=False)
 
     def setup(self, *args, **kwargs):
         super(TestSaltProgram, self).setup(*args, **kwargs)
@@ -685,7 +690,7 @@ class TestSaltProgram(six.with_metaclass(TestSaltProgramMeta, TestProgram)):
         '''Generate the script file that calls python objects and libraries.'''
         lines = []
         script_source = os.path.join(CODE_DIR, 'scripts', self.script)
-        with salt.utils.fopen(script_source, 'r') as sso:
+        with salt.utils.files.fopen(script_source, 'r') as sso:
             lines.extend(sso.readlines())
         if lines[0].startswith('#!'):
             lines.pop(0)
@@ -693,7 +698,7 @@ class TestSaltProgram(six.with_metaclass(TestSaltProgramMeta, TestProgram)):
 
         script_path = self.abs_path(os.path.join(self.script_dir, self.script))
         log.debug('Installing "{0}" to "{1}"'.format(script_source, script_path))
-        with salt.utils.fopen(script_path, 'w') as sdo:
+        with salt.utils.files.fopen(script_path, 'w') as sdo:
             sdo.write(''.join(lines))
             sdo.flush()
 

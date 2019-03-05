@@ -1,250 +1,258 @@
 # -*- coding: utf-8 -*-
 '''
-OpenStack Cloud Module
+Openstack Cloud Driver
 ======================
+
+:depends: `shade>=1.19.0 <https://pypi.python.org/pypi/shade>`_
 
 OpenStack is an open source project that is in use by a number a cloud
 providers, each of which have their own ways of using it.
 
-:depends: libcloud >= 0.13.2
+This OpenStack driver uses a the shade python module which is managed by the
+OpenStack Infra team.  This module is written to handle all the different
+versions of different OpenStack tools for salt, so most commands are just passed
+over to the module to handle everything.
 
-OpenStack provides a number of ways to authenticate. This module uses password-
-based authentication, using auth v2.0. It is likely to start supporting other
-methods of authentication provided by OpenStack in the future.
+Provider
+--------
 
-Note that there is currently a dependency upon netaddr. This can be installed
-on Debian-based systems by means of the python-netaddr package.
-
-This module has been tested to work with HP Cloud and Rackspace. See the
-documentation for specific options for either of these providers. Some
-examples, using the old cloud configuration syntax, are provided below:
-
-Set up in the cloud configuration at ``/etc/salt/cloud.providers`` or
-``/etc/salt/cloud.providers.d/openstack.conf``:
-
+There are two ways to configure providers for this driver.  The first one is to
+just let shade handle everything, and configure using os-client-config_ and
+setting up `/etc/openstack/clouds.yml`.
 
 .. code-block:: yaml
 
-    my-openstack-config:
-      # The OpenStack identity service url
-      identity_url: https://region-b.geo-1.identity.hpcloudsvc.com:35357/v2.0/tokens
-      # The OpenStack Identity Version (default: 2)
-      auth_version: 2
-      # The OpenStack compute region
-      compute_region: region-b.geo-1
-      # The OpenStack compute service name
-      compute_name: Compute
-      # The OpenStack tenant name (not tenant ID)
-      tenant: myuser-tenant1
-      # The OpenStack user name
-      user: myuser
-      # The OpenStack keypair name
+    clouds:
+      democloud:
+        region_name: RegionOne
+        auth:
+          username: 'demo'
+          password: secret
+          project_name: 'demo'
+          auth_url: 'http://openstack/identity'
+
+And then this can be referenced in the salt provider based on the `democloud`
+name.
+
+.. code-block:: yaml
+
+    myopenstack:
+      driver: openstack
+      cloud: democloud
+      region_name: RegionOne
+
+This allows for just using one configuration for salt-cloud and for any other
+openstack tools which are all using `/etc/openstack/clouds.yml`
+
+The other method allows for specifying everything in the provider config,
+instead of using the extra configuration file.  This will allow for passing
+salt-cloud configs only through pillars for minions without having to write a
+clouds.yml file on each minion.abs
+
+.. code-block:: yaml
+
+    myopenstack:
+      driver: openstack
+      region_name: RegionOne
+      auth:
+        username: 'demo'
+        password: secret
+        project_name: 'demo'
+        auth_url: 'http://openstack/identity'
+
+Or if you need to use a profile to setup some extra stuff, it can be passed as a
+`profile` to use any of the vendor_ config options.
+
+.. code-block:: yaml
+
+    myrackspace:
+      driver: openstack
+      profile: rackspace
+      auth:
+        username: rackusername
+        api_key: myapikey
+      region_name: ORD
+      auth_type: rackspace_apikey
+
+And this will pull in the profile for rackspace and setup all the correct
+options for the auth_url and different api versions for services.
+
+
+Profile
+-------
+
+Most of the options for building servers are just passed on to the
+create_server_ function from shade.
+
+The salt specific ones are:
+
+  - ssh_key_file: The path to the ssh key that should be used to login to the machine to bootstrap it
+  - ssh_key_file: The name of the keypair in openstack
+  - userdata_template: The renderer to use if the userdata is a file that is templated. Default: False
+  - ssh_interface: The interface to use to login for bootstrapping: public_ips, private_ips, floating_ips, fixed_ips
+
+.. code-block:: yaml
+
+    centos:
+      provider: myopenstack
+      image: CentOS 7
+      size: ds1G
       ssh_key_name: mykey
-      # Skip SSL certificate validation
-      insecure: false
-      # The ssh key file
-      ssh_key_file: /path/to/keyfile/test.pem
-      # The OpenStack network UUIDs
-      networks:
-          - fixed:
-              - 4402cd51-37ee-435e-a966-8245956dc0e6
-          - floating:
-              - Ext-Net
-      files:
-          /path/to/dest.txt:
-              /local/path/to/src.txt
-      # Skips the service catalog API endpoint, and uses the following
-      base_url: http://192.168.1.101:3000/v2/12345
-      driver: openstack
-      userdata_file: /tmp/userdata.txt
-      # config_drive is required for userdata at rackspace
-      config_drive: True
+      ssh_key_file: /root/.ssh/id_rsa
 
-For in-house Openstack Essex installation, libcloud needs the service_type :
+This is the minimum setup required.
+
+If metadata is set to make sure that the host has finished setting up the
+`wait_for_metadata` can be set.
 
 .. code-block:: yaml
 
-  my-openstack-config:
-    identity_url: 'http://control.openstack.example.org:5000/v2.0/'
-    compute_name : Compute Service
-    service_type : compute
+    centos:
+      provider: myopenstack
+      image: CentOS 7
+      size: ds1G
+      ssh_key_name: mykey
+      ssh_key_file: /root/.ssh/id_rsa
+      meta:
+        build_config: rack_user_only
+      wait_for_metadata:
+        rax_service_level_automation: Complete
+        rackconnect_automation_status: DEPLOYED
 
-To use identity v3 for authentication, specify the `domain` and `auth_version`
+Anything else from the create_server_ docs can be passed through here.
 
-.. code-block:: yaml
-
-    my-openstack-config:
-      identity_url: 'http://control.openstack.example.org:5000/v3/auth/tokens'
-      auth_version: 3
-      compute_name : Compute Service
-      compute_region: East
-      service_type : compute
-      tenant: tenant
-      domain: testing
-      user: daniel
-      password: securepassword
-      driver: openstack
-
-
-Either a password or an API key must also be specified:
-
-.. code-block:: yaml
-
-    my-openstack-password-or-api-config:
-      # The OpenStack password
-      password: letmein
-      # The OpenStack API key
-      apikey: 901d3f579h23c8v73q9
-
-Optionally, if you don't want to save plain-text password in your configuration file, you can use keyring:
-
-.. code-block:: yaml
-
-    my-openstack-keyring-config:
-      # The OpenStack password is stored in keyring
-      # don't forget to set the password by running something like:
-      # salt-cloud --set-password=myuser my-openstack-keyring-config
-      password: USE_KEYRING
-
-For local installations that only use private IP address ranges, the
-following option may be useful. Using the old syntax:
-
-.. code-block:: yaml
-
-    my-openstack-config:
-      # Ignore IP addresses on this network for bootstrap
-      ignore_cidr: 192.168.50.0/24
-
-It is possible to upload a small set of files (no more than 5, and nothing too
-large) to the remote server. Generally this should not be needed, as salt
-itself can upload to the server after it is spun up, with nowhere near the
-same restrictions.
-
-.. code-block:: yaml
-
-    my-openstack-config:
-      files:
-          /path/to/dest.txt:
-              /local/path/to/src.txt
-
-Alternatively, one could use the private IP to connect by specifying:
-
-.. code-block:: yaml
-
-    my-openstack-config:
-      ssh_interface: private_ips
-
+- **image**: Image dict, name or ID to boot with. image is required
+            unless boot_volume is given.
+- **flavor**: Flavor dict, name or ID to boot onto.
+- **auto_ip**: Whether to take actions to find a routable IP for
+              the server. (defaults to True)
+- **ips**: List of IPs to attach to the server (defaults to None)
+- **ip_pool**: Name of the network or floating IP pool to get an
+              address from. (defaults to None)
+- **root_volume**: Name or ID of a volume to boot from
+                  (defaults to None - deprecated, use boot_volume)
+- **boot_volume**: Name or ID of a volume to boot from
+                  (defaults to None)
+- **terminate_volume**: If booting from a volume, whether it should
+                       be deleted when the server is destroyed.
+                       (defaults to False)
+- **volumes**: (optional) A list of volumes to attach to the server
+- **meta**: (optional) A dict of arbitrary key/value metadata to
+           store for this server. Both keys and values must be
+           <=255 characters.
+- **files**: (optional, deprecated) A dict of files to overwrite
+            on the server upon boot. Keys are file names (i.e.
+            ``/etc/passwd``) and values
+            are the file contents (either as a string or as a
+            file-like object). A maximum of five entries is allowed,
+            and each file must be 10k or less.
+- **reservation_id**: a UUID for the set of servers being requested.
+- **min_count**: (optional extension) The minimum number of
+                servers to launch.
+- **max_count**: (optional extension) The maximum number of
+                servers to launch.
+- **security_groups**: A list of security group names
+- **userdata**: user data to pass to be exposed by the metadata
+            server this can be a file type object as well or a
+            string.
+- **key_name**: (optional extension) name of previously created
+            keypair to inject into the instance.
+- **availability_zone**: Name of the availability zone for instance
+                        placement.
+- **block_device_mapping**: (optional) A dict of block
+            device mappings for this server.
+- **block_device_mapping_v2**: (optional) A dict of block
+            device mappings for this server.
+- **nics**:  (optional extension) an ordered list of nics to be
+            added to this server, with information about
+            connected networks, fixed IPs, port etc.
+- **scheduler_hints**: (optional extension) arbitrary key-value pairs
+                  specified by the client to help boot an instance
+- **config_drive**: (optional extension) value for config drive
+                  either boolean, or volume-id
+- **disk_config**: (optional extension) control how the disk is
+                  partitioned when the server is created.  possible
+                  values are 'AUTO' or 'MANUAL'.
+- **admin_pass**: (optional extension) add a user supplied admin
+                 password.
+- **timeout**: (optional) Seconds to wait, defaults to 60.
+              See the ``wait`` parameter.
+- **reuse_ips**: (optional) Whether to attempt to reuse pre-existing
+                           floating ips should a floating IP be
+                           needed (defaults to True)
+- **network**: (optional) Network dict or name or ID to attach the
+              server to.  Mutually exclusive with the nics parameter.
+              Can also be be a list of network names or IDs or
+              network dicts.
+- **boot_from_volume**: Whether to boot from volume. 'boot_volume'
+                       implies True, but boot_from_volume=True with
+                       no boot_volume is valid and will create a
+                       volume from the image and use that.
+- **volume_size**: When booting an image from volume, how big should
+                  the created volume be? Defaults to 50.
+- **nat_destination**: Which network should a created floating IP
+                      be attached to, if it's not possible to
+                      infer from the cloud's configuration.
+                      (Optional, defaults to None)
+- **group**: ServerGroup dict, name or id to boot the server in.
+            If a group is provided in both scheduler_hints and in
+            the group param, the group param will win.
+            (Optional, defaults to None)
 
 .. note::
 
-    When using floating ips from networks, if the OpenStack driver is unable to
-    allocate a new ip address for the server, it will check that for
-    unassociated ip addresses in the floating ip pool.  If SaltCloud is running
-    in parallel mode, it is possible that more than one server will attempt to
-    use the same ip address.
+    If there is anything added, that is not in this list, it can be added to an `extras`
+    dictionary for the profile, and that will be to the create_server function.
 
+.. _create_server: https://docs.openstack.org/shade/latest/user/usage.html#shade.OpenStackCloud.create_server
+.. _vendor: https://docs.openstack.org/os-client-config/latest/user/vendor-support.html
+.. _os-client-config: https://docs.openstack.org/os-client-config/latest/user/configuration.html#config-files
 '''
+from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
-from __future__ import absolute_import
-import os
+# Import Python Libs
+import copy
 import logging
-import socket
+import os
 import pprint
-from salt.utils.versions import LooseVersion as _LooseVersion
+import socket
 
-# Import libcloud
-try:
-    import libcloud
-    from libcloud.compute.base import NodeState
-    HAS_LIBCLOUD = True
-except ImportError:
-    HAS_LIBCLOUD = False
-
-# These functions require libcloud trunk or >= 0.14.0
-HAS014 = False
-try:
-    from libcloud.compute.drivers.openstack import OpenStackNetwork
-    from libcloud.compute.drivers.openstack import OpenStack_1_1_FloatingIpPool
-    # This work-around for Issue #32743 is no longer needed for libcloud >= 1.4.0.
-    # However, older versions of libcloud must still be supported with this work-around.
-    # This work-around can be removed when the required minimum version of libcloud is
-    # 2.0.0 (See PR #40837 - which is implemented in Salt Oxygen).
-    if _LooseVersion(libcloud.__version__) < _LooseVersion('1.4.0'):
-        # See https://github.com/saltstack/salt/issues/32743
-        import libcloud.security
-        libcloud.security.CA_CERTS_PATH.append('/etc/ssl/certs/YaST-CA.pem')
-    HAS014 = True
-except Exception:
-    pass
-
-# Import generic libcloud functions
-from salt.cloud.libcloudfuncs import *   # pylint: disable=W0614,W0401
-
-# Import salt libs
-import salt.utils
-
-# Import salt.cloud libs
-import salt.utils.cloud
-import salt.utils.pycrypto as sup
+# Import Salt Libs
+import salt.utils.versions
 import salt.config as config
-from salt.utils import namespaced_function
+from salt.ext import six
 from salt.exceptions import (
-    SaltCloudConfigError,
-    SaltCloudNotFound,
     SaltCloudSystemExit,
+    SaltCloudExecutionTimeout,
     SaltCloudExecutionFailure,
-    SaltCloudExecutionTimeout
+    SaltCloudConfigError,
 )
 
-# Import netaddr IP matching
+# Import 3rd-Party Libs
 try:
-    from netaddr import all_matching_cidrs
-    HAS_NETADDR = True
+    import shade
+    import shade.openstackcloud
+    import shade.exc
+    import os_client_config
+    HAS_SHADE = (
+        salt.utils.versions._LooseVersion(shade.__version__) >= salt.utils.versions._LooseVersion('1.19.0'),
+        'Please install newer version of shade: >= 1.19.0'
+    )
 except ImportError:
-    HAS_NETADDR = False
+    HAS_SHADE = (False, 'Install pypi module shade >= 1.19.0')
 
-# Get logging started
 log = logging.getLogger(__name__)
-
 __virtualname__ = 'openstack'
 
 
-# Some of the libcloud functions need to be in the same namespace as the
-# functions defined in the module, so we create new function objects inside
-# this module namespace
-get_size = namespaced_function(get_size, globals())
-get_image = namespaced_function(get_image, globals())
-avail_locations = namespaced_function(avail_locations, globals())
-avail_images = namespaced_function(avail_images, globals())
-avail_sizes = namespaced_function(avail_sizes, globals())
-script = namespaced_function(script, globals())
-destroy = namespaced_function(destroy, globals())
-reboot = namespaced_function(reboot, globals())
-list_nodes = namespaced_function(list_nodes, globals())
-list_nodes_full = namespaced_function(list_nodes_full, globals())
-list_nodes_select = namespaced_function(list_nodes_select, globals())
-show_instance = namespaced_function(show_instance, globals())
-get_node = namespaced_function(get_node, globals())
-
-
-# Only load in this module is the OPENSTACK configurations are in place
 def __virtual__():
     '''
-    Set up the libcloud functions and check for OPENSTACK configurations
+    Check for OpenStack dependencies
     '''
     if get_configured_provider() is False:
         return False
-
     if get_dependencies() is False:
-        return False
-
-    salt.utils.warn_until(
-        'Oxygen',
-        'This driver has been deprecated and will be removed in the '
-        '{version} release of Salt. Please use the nova driver instead.'
-    )
-
+        return HAS_SHADE
     return __virtualname__
 
 
@@ -253,9 +261,11 @@ def get_configured_provider():
     Return the first configured instance.
     '''
     return config.is_provider_configured(
-        __opts__,
-        __active_provider_name__ or __virtualname__,
-        ('user',)
+        __opts__, __active_provider_name__ or __virtualname__,
+        ('auth', 'region_name'), log_message=False,
+    ) or config.is_provider_configured(
+        __opts__, __active_provider_name__ or __virtualname__,
+        ('cloud', 'region_name')
     )
 
 
@@ -264,114 +274,13 @@ def get_dependencies():
     Warn if dependencies aren't met.
     '''
     deps = {
-        'libcloud': HAS_LIBCLOUD,
-        'netaddr': HAS_NETADDR
+        'shade': shade[0],
+        'os_client_config': shade[0],
     }
     return config.check_driver_dependencies(
         __virtualname__,
         deps
     )
-
-
-def get_conn():
-    '''
-    Return a conn object for the passed VM data
-    '''
-    vm_ = get_configured_provider()
-    driver = get_driver(Provider.OPENSTACK)
-    authinfo = {
-        'ex_force_auth_url': config.get_cloud_config_value(
-            'identity_url', vm_, __opts__, search_global=False
-        ),
-        'ex_force_service_name': config.get_cloud_config_value(
-            'compute_name', vm_, __opts__, search_global=False
-        ),
-        'ex_force_service_region': config.get_cloud_config_value(
-            'compute_region', vm_, __opts__, search_global=False
-        ),
-        'ex_tenant_name': config.get_cloud_config_value(
-            'tenant', vm_, __opts__, search_global=False
-        ),
-        'ex_domain_name': config.get_cloud_config_value(
-            'domain', vm_, __opts__, default='Default', search_global=False
-        ),
-    }
-
-    service_type = config.get_cloud_config_value('service_type',
-                                                 vm_,
-                                                 __opts__,
-                                                 search_global=False)
-    if service_type:
-        authinfo['ex_force_service_type'] = service_type
-
-    base_url = config.get_cloud_config_value('base_url',
-                                             vm_,
-                                             __opts__,
-                                             search_global=False)
-
-    if base_url:
-        authinfo['ex_force_base_url'] = base_url
-
-    insecure = config.get_cloud_config_value(
-        'insecure', vm_, __opts__, search_global=False
-    )
-    if insecure:
-        import libcloud.security
-        libcloud.security.VERIFY_SSL_CERT = False
-
-    user = config.get_cloud_config_value(
-        'user', vm_, __opts__, search_global=False
-    )
-    password = config.get_cloud_config_value(
-        'password', vm_, __opts__, search_global=False
-    )
-
-    if password is not None:
-        if config.get_cloud_config_value('auth_version', vm_, __opts__, search_global=False) == 3:
-            authinfo['ex_force_auth_version'] = '3.x_password'
-        else:
-            authinfo['ex_force_auth_version'] = '2.0_password'
-        log.debug('OpenStack authenticating using password')
-        if password == 'USE_KEYRING':
-            # retrieve password from system keyring
-            credential_id = "salt.cloud.provider.{0}".format(__active_provider_name__)
-            logging.debug("Retrieving keyring password for {0} ({1})".format(
-                credential_id,
-                user)
-            )
-            # attempt to retrieve driver specific password first
-            driver_password = salt.utils.cloud.retrieve_password_from_keyring(
-                credential_id,
-                user
-            )
-            if driver_password is None:
-                provider_password = salt.utils.cloud.retrieve_password_from_keyring(
-                    credential_id.split(':')[0],  # fallback to provider level
-                    user)
-                if provider_password is None:
-                    raise SaltCloudSystemExit(
-                        "Unable to retrieve password from keyring for provider {0}".format(
-                            __active_provider_name__
-                        )
-                    )
-                else:
-                    actual_password = provider_password
-            else:
-                actual_password = driver_password
-        else:
-            actual_password = password
-        return driver(
-            user,
-            actual_password,
-            **authinfo
-        )
-
-    authinfo['ex_force_auth_version'] = '2.0_apikey'
-    log.debug('OpenStack authenticating using apikey')
-    return driver(
-        user,
-        config.get_cloud_config_value('apikey', vm_, __opts__,
-                                      search_global=False), **authinfo)
 
 
 def preferred_ip(vm_, ips):
@@ -391,28 +300,6 @@ def preferred_ip(vm_, ips):
             return ip
         except Exception:
             continue
-
-    return False
-
-
-def ignore_cidr(vm_, ip):
-    '''
-    Return True if we are to ignore the specified IP. Compatible with IPv4.
-    '''
-    if HAS_NETADDR is False:
-        log.error('Error: netaddr is not installed')
-        # If we cannot check, assume all is ok
-        return False
-
-    cidr = config.get_cloud_config_value(
-        'ignore_cidr', vm_, __opts__, default='', search_global=False
-    )
-    if cidr != '' and all_matching_cidrs(ip, [cidr]):
-        log.warning(
-            'IP \'{0}\' found within \'{1}\'; ignoring it.'.format(ip, cidr)
-        )
-        return True
-
     return False
 
 
@@ -421,49 +308,317 @@ def ssh_interface(vm_):
     Return the ssh_interface type to connect to. Either 'public_ips' (default)
     or 'private_ips'.
     '''
-    return config.get_cloud_config_value(
-        'ssh_interface', vm_, __opts__, default='public_ips',
-        search_global=False
+    return config.get_cloud_config_value('ssh_interface', vm_, __opts__, default='public_ips', search_global=False)
+
+
+def get_conn():
+    '''
+    Return a conn object for the passed VM data
+    '''
+    if __active_provider_name__ in __context__:
+        return __context__[__active_provider_name__]
+    vm_ = get_configured_provider()
+    profile = vm_.pop('profile', None)
+    if profile is not None:
+        vm_ = __utils__['dictupdate.update'](os_client_config.vendors.get_profile(profile), vm_)
+    conn = shade.openstackcloud.OpenStackCloud(cloud_config=None, **vm_)
+    if __active_provider_name__ is not None:
+        __context__[__active_provider_name__] = conn
+    return conn
+
+
+def list_nodes(conn=None, call=None):
+    '''
+    Return a list of VMs
+
+    CLI Example
+
+    .. code-block:: bash
+
+        salt-cloud -f list_nodes myopenstack
+
+    '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The list_nodes function must be called with -f or --function.'
+        )
+    ret = {}
+    for node, info in list_nodes_full(conn=conn).items():
+        for key in ('id', 'name', 'size', 'state', 'private_ips', 'public_ips', 'floating_ips', 'fixed_ips', 'image'):
+            ret.setdefault(node, {}).setdefault(key, info.get(key))
+
+    return ret
+
+
+def list_nodes_min(conn=None, call=None):
+    '''
+    Return a list of VMs with minimal information
+
+    CLI Example
+
+    .. code-block:: bash
+
+        salt-cloud -f list_nodes_min myopenstack
+
+    '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The list_nodes_min function must be called with -f or --function.'
+        )
+    if conn is None:
+        conn = get_conn()
+    ret = {}
+    for node in conn.list_servers(bare=True):
+        ret[node.name] = {'id': node.id, 'state': node.status}
+    return ret
+
+
+def _get_ips(node, addr_type='public'):
+    ret = []
+    for _, interface in node.addresses.items():
+        for addr in interface:
+            if addr_type in ('floating', 'fixed') and addr_type == addr.get('OS-EXT-IPS:type'):
+                ret.append(addr['addr'])
+            elif addr_type == 'public' and __utils__['cloud.is_public_ip'](addr['addr']):
+                ret.append(addr['addr'])
+            elif addr_type == 'private' and not __utils__['cloud.is_public_ip'](addr['addr']):
+                ret.append(addr['addr'])
+    return ret
+
+
+def list_nodes_full(conn=None, call=None):
+    '''
+    Return a list of VMs with all the information about them
+
+    CLI Example
+
+    .. code-block:: bash
+
+        salt-cloud -f list_nodes_full myopenstack
+
+    '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The list_nodes_full function must be called with -f or --function.'
+        )
+    if conn is None:
+        conn = get_conn()
+    ret = {}
+    for node in conn.list_servers(detailed=True):
+        ret[node.name] = dict(node)
+        ret[node.name]['id'] = node.id
+        ret[node.name]['name'] = node.name
+        ret[node.name]['size'] = node.flavor.name
+        ret[node.name]['state'] = node.status
+        ret[node.name]['private_ips'] = _get_ips(node, 'private')
+        ret[node.name]['public_ips'] = _get_ips(node, 'public')
+        ret[node.name]['floating_ips'] = _get_ips(node, 'floating')
+        ret[node.name]['fixed_ips'] = _get_ips(node, 'fixed')
+        ret[node.name]['image'] = node.image.name
+    return ret
+
+
+def list_nodes_select(conn=None, call=None):
+    '''
+    Return a list of VMs with the fields from `query.selection`
+
+    CLI Example
+
+    .. code-block:: bash
+
+        salt-cloud -f list_nodes_full myopenstack
+
+    '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The list_nodes_select function must be called with -f or --function.'
+        )
+    return __utils__['cloud.list_nodes_select'](
+        list_nodes(conn, 'function'), __opts__['query.selection'], call,
     )
 
 
-def rackconnect(vm_):
+def show_instance(name, conn=None, call=None):
     '''
-    Determine if we should wait for rackconnect automation before running.
-    Either 'False' (default) or 'True'.
+    Get VM on this OpenStack account
+
+    name
+
+        name of the instance
+
+    CLI Example
+
+    .. code-block:: bash
+
+        salt-cloud -a show_instance myserver
+
     '''
-    return config.get_cloud_config_value(
-        'rackconnect', vm_, __opts__, default='False',
-        search_global=False
-    )
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The show_instance action must be called with -a or --action.'
+        )
+    if conn is None:
+        conn = get_conn()
+
+    node = conn.get_server(name, bare=True)
+    ret = dict(node)
+    ret['id'] = node.id
+    ret['name'] = node.name
+    ret['size'] = conn.get_flavor(node.flavor.id).name
+    ret['state'] = node.status
+    ret['private_ips'] = _get_ips(node, 'private')
+    ret['public_ips'] = _get_ips(node, 'public')
+    ret['floating_ips'] = _get_ips(node, 'floating')
+    ret['fixed_ips'] = _get_ips(node, 'fixed')
+    if isinstance(node.image, six.string_types):
+        ret['image'] = node.image
+    else:
+        ret['image'] = conn.get_image(node.image.id).name
+    return ret
 
 
-def managedcloud(vm_):
+def avail_images(conn=None, call=None):
     '''
-    Determine if we should wait for the managed cloud automation before
-    running. Either 'False' (default) or 'True'.
+    List available images for OpenStack
+
+    CLI Example
+
+    .. code-block:: bash
+
+        salt-cloud -f avail_images myopenstack
+        salt-cloud --list-images myopenstack
+
     '''
-    return config.get_cloud_config_value(
-        'managedcloud', vm_, __opts__, default='False',
-        search_global=False
-    )
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The avail_images function must be called with '
+            '-f or --function, or with the --list-images option'
+        )
+    if conn is None:
+        conn = get_conn()
+    return conn.list_images()
 
 
-def networks(vm_, kwargs=None):
-    conn = get_conn()
-    if kwargs is None:
-        kwargs = {}
-
-    floating = _assign_floating_ips(vm_, conn, kwargs)
-    vm_['floating'] = floating
-
-
-def request_instance(vm_=None, call=None):
+def avail_sizes(conn=None, call=None):
     '''
-    Put together all of the information necessary to request an instance on Openstack
-    and then fire off the request the instance.
+    List available sizes for OpenStack
 
-    Returns data about the instance
+    CLI Example
+
+    .. code-block:: bash
+
+        salt-cloud -f avail_sizes myopenstack
+        salt-cloud --list-sizes myopenstack
+
+    '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The avail_sizes function must be called with '
+            '-f or --function, or with the --list-sizes option'
+        )
+    if conn is None:
+        conn = get_conn()
+    return conn.list_flavors()
+
+
+def list_networks(conn=None, call=None):
+    '''
+    List networks for OpenStack
+
+    CLI Example
+
+    .. code-block:: bash
+
+        salt-cloud -f list_networks myopenstack
+
+    '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The list_networks function must be called with '
+            '-f or --function'
+        )
+    if conn is None:
+        conn = get_conn()
+    return conn.list_networks()
+
+
+def list_subnets(conn=None, call=None, kwargs=None):
+    '''
+    List subnets in a virtual network
+
+    network
+        network to list subnets of
+
+    .. code-block:: bash
+
+        salt-cloud -f list_subnets myopenstack network=salt-net
+
+    '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The list_subnets function must be called with '
+            '-f or --function.'
+        )
+    if conn is None:
+        conn = get_conn()
+    if kwargs is None or (isinstance(kwargs, dict) and 'network' not in kwargs):
+        raise SaltCloudSystemExit(
+            'A `network` must be specified'
+        )
+    return conn.list_subnets(filters={'network': kwargs['network']})
+
+
+def _clean_create_kwargs(**kwargs):
+    '''
+    Sanatize kwargs to be sent to create_server
+    '''
+    VALID_OPTS = {
+        'name': six.string_types,
+        'image': six.string_types,
+        'flavor': six.string_types,
+        'auto_ip': bool,
+        'ips': list,
+        'ip_pool': six.string_types,
+        'root_volume': six.string_types,
+        'boot_volume': six.string_types,
+        'terminate_volume': bool,
+        'volumes': list,
+        'meta': dict,
+        'files': dict,
+        'reservation_id': six.string_types,
+        'security_groups': list,
+        'key_name': six.string_types,
+        'availability_zone': six.string_types,
+        'block_device_mapping': dict,
+        'block_device_mapping_v2': dict,
+        'nics': list,
+        'scheduler_hints': dict,
+        'config_drive': bool,
+        'disk_config': six.string_types,  # AUTO or MANUAL
+        'admin_pass': six.string_types,
+        'wait': bool,
+        'timeout': int,
+        'reuse_ips': bool,
+        'network': dict,
+        'boot_from_volume': bool,
+        'volume_size': int,
+        'nat_destination': six.string_types,
+        'group': six.string_types,
+        'userdata': six.string_types,
+    }
+    extra = kwargs.pop('extra', {})
+    for key, value in six.iteritems(kwargs.copy()):
+        if key in VALID_OPTS:
+            if isinstance(value, VALID_OPTS[key]):
+                continue
+            log.error('Error %s: %s is not of type %s', key, value, VALID_OPTS[key])
+        kwargs.pop(key)
+    return __utils__['dictupdate.update'](kwargs, extra)
+
+
+def request_instance(vm_, conn=None, call=None):
+    '''
+    Request an instance to be built
     '''
     if call == 'function':
         # Technically this function may be called other ways too, but it
@@ -471,276 +626,52 @@ def request_instance(vm_=None, call=None):
         raise SaltCloudSystemExit(
             'The request_instance action must be called with -a or --action.'
         )
-    salt.utils.cloud.check_name(vm_['name'], 'a-zA-Z0-9._-')
+    kwargs = copy.deepcopy(vm_)
+    log.info('Creating Cloud VM %s', vm_['name'])
+    __utils__['cloud.check_name'](vm_['name'], 'a-zA-Z0-9._-')
     conn = get_conn()
-    kwargs = {
-        'name': vm_['name']
-    }
-
-    try:
-        kwargs['image'] = get_image(conn, vm_)
-    except Exception as exc:
-        raise SaltCloudSystemExit(
-            'Error creating {0} on OPENSTACK\n\n'
-            'Could not find image {1}: {2}\n'.format(
-                vm_['name'], vm_['image'], exc
-            )
-        )
-
-    try:
-        kwargs['size'] = get_size(conn, vm_)
-    except Exception as exc:
-        raise SaltCloudSystemExit(
-            'Error creating {0} on OPENSTACK\n\n'
-            'Could not find size {1}: {2}\n'.format(
-                vm_['name'], vm_['size'], exc
-            )
-        )
-
-    # Note: This currently requires libcloud trunk
-    avz = config.get_cloud_config_value(
-        'availability_zone', vm_, __opts__, default=None, search_global=False
+    userdata = config.get_cloud_config_value(
+        'userdata', vm_, __opts__, search_global=False, default=None
     )
-    if avz is not None:
-        kwargs['ex_availability_zone'] = avz
-
-    kwargs['ex_keyname'] = config.get_cloud_config_value(
-        'ssh_key_name', vm_, __opts__, search_global=False
-    )
-
-    security_groups = config.get_cloud_config_value(
-        'security_groups', vm_, __opts__, search_global=False
-    )
-    if security_groups is not None:
-        vm_groups = security_groups.split(',')
-        avail_groups = conn.ex_list_security_groups()
-        group_list = []
-
-        for vmg in vm_groups:
-            if vmg in [ag.name for ag in avail_groups]:
-                group_list.append(vmg)
-            else:
-                raise SaltCloudNotFound(
-                    'No such security group: \'{0}\''.format(vmg)
-                )
-
-        kwargs['ex_security_groups'] = [
-            g for g in avail_groups if g.name in group_list
-        ]
-
-    floating = _assign_floating_ips(vm_, conn, kwargs)
-    vm_['floating'] = floating
-
-    files = config.get_cloud_config_value(
-        'files', vm_, __opts__, search_global=False
-    )
-    if files:
-        kwargs['ex_files'] = {}
-        for src_path in files:
-            with salt.utils.fopen(files[src_path], 'r') as fp_:
-                kwargs['ex_files'][src_path] = fp_.read()
-
-    userdata_file = config.get_cloud_config_value(
-        'userdata_file', vm_, __opts__, search_global=False, default=None
-    )
-    if userdata_file is not None:
+    if userdata is not None and os.path.isfile(userdata):
         try:
-            with salt.utils.fopen(userdata_file, 'r') as fp_:
-                kwargs['ex_userdata'] = salt.utils.cloud.userdata_template(
+            with __utils__['files.fopen'](userdata, 'r') as fp_:
+                kwargs['userdata'] = __utils__['cloud.userdata_template'](
                     __opts__, vm_, fp_.read()
                 )
         except Exception as exc:
             log.exception(
-                'Failed to read userdata from %s: %s', userdata_file, exc)
-
-    config_drive = config.get_cloud_config_value(
-        'config_drive', vm_, __opts__, default=None, search_global=False
+                'Failed to read userdata from %s: %s', userdata, exc)
+    if 'size' in kwargs:
+        kwargs['flavor'] = kwargs.pop('size')
+    kwargs['key_name'] = config.get_cloud_config_value(
+        'ssh_key_name', vm_, __opts__, search_global=False, default=None
     )
-    if config_drive is not None:
-        kwargs['ex_config_drive'] = config_drive
-
-    event_kwargs = {
-        'name': kwargs['name'],
-        'image': kwargs['image'].name,
-        'size': kwargs['size'].name,
-        'profile': vm_['profile'],
-    }
-
-    __utils__['cloud.fire_event'](
-        'event',
-        'requesting instance',
-        'salt/cloud/{0}/requesting'.format(vm_['name']),
-        args={
-            'kwargs': __utils__['cloud.filter_event']('requesting', event_kwargs, list(event_kwargs)),
-        },
-        sock_dir=__opts__['sock_dir'],
-        transport=__opts__['transport']
-    )
-
-    default_profile = {}
-    if 'profile' in vm_ and vm_['profile'] is not None:
-        default_profile = {'profile': vm_['profile']}
-
-    kwargs['ex_metadata'] = config.get_cloud_config_value(
-        'metadata', vm_, __opts__, default=default_profile, search_global=False
-    )
-    if not isinstance(kwargs['ex_metadata'], dict):
-        raise SaltCloudConfigError('\'metadata\' should be a dict.')
-
+    kwargs['wait'] = True
     try:
-        data = conn.create_node(**kwargs)
-    except Exception as exc:
-        raise SaltCloudSystemExit(
-            'Error creating {0} on OpenStack\n\n'
-            'The following exception was thrown by libcloud when trying to '
-            'run the initial deployment: {1}\n'.format(
-                vm_['name'], exc
-            )
-        )
+        conn.create_server(**_clean_create_kwargs(**kwargs))
+    except shade.exc.OpenStackCloudException as exc:
+        log.error('Error creating server %s: %s', vm_['name'], exc)
+        destroy(vm_['name'], conn=conn, call='action')
+        raise SaltCloudSystemExit(six.text_type(exc))
 
-    vm_['password'] = data.extra.get('password', None)
-    return data, vm_
-
-
-def _query_node_data(vm_, data, floating, conn):
-    try:
-        node = show_instance(vm_['name'], 'action')
-        log.debug(
-            'Loaded node data for {0}:\n{1}'.format(
-                vm_['name'],
-                pprint.pformat(node)
-            )
-        )
-    except Exception as err:
-        log.error(
-            'Failed to get nodes list: {0}'.format(
-                err
-            ),
-            # Show the traceback if the debug logging level is enabled
-            exc_info_on_loglevel=logging.DEBUG
-        )
-        # Trigger a failure in the wait for IP function
-        return False
-
-    running = node['state'] == NodeState.RUNNING
-    if not running:
-        # Still not running, trigger another iteration
-        return
-
-    if rackconnect(vm_) is True:
-        check_libcloud_version((0, 14, 0), why='rackconnect: True')
-        extra = node.get('extra')
-        rc_status = extra.get('metadata', {}).get(
-            'rackconnect_automation_status', '')
-        access_ip = extra.get('access_ip', '')
-
-        if rc_status != 'DEPLOYED':
-            log.debug('Waiting for Rackconnect automation to complete')
-            return
-
-    if managedcloud(vm_) is True:
-        extra = node.get('extra')
-        mc_status = extra.get('metadata', {}).get(
-            'rax_service_level_automation', '')
-
-        if mc_status != 'Complete':
-            log.debug('Waiting for managed cloud automation to complete')
-            return
-
-    public = node['public_ips']
-    if floating:
-        try:
-            name = data.name
-            ip = floating[0].ip_address
-            conn.ex_attach_floating_ip_to_node(data, ip)
-            log.info(
-                'Attaching floating IP \'{0}\' to node \'{1}\''.format(
-                    ip, name
-                )
-            )
-            data.public_ips.append(ip)
-            public = data.public_ips
-        except Exception:
-            # Note(pabelanger): Because we loop, we only want to attach the
-            # floating IP address one. So, expect failures if the IP is
-            # already attached.
-            pass
-
-    result = []
-    private = node['private_ips']
-    if private and not public:
-        log.warning(
-            'Private IPs returned, but not public... Checking for '
-            'misidentified IPs'
-        )
-        for private_ip in private:
-            private_ip = preferred_ip(vm_, [private_ip])
-            if private_ip is False:
-                continue
-            if salt.utils.cloud.is_public_ip(private_ip):
-                log.warning('{0} is a public IP'.format(private_ip))
-                data.public_ips.append(private_ip)
-                log.warning(
-                    'Public IP address was not ready when we last checked.'
-                    ' Appending public IP address now.'
-                )
-                public = data.public_ips
-            else:
-                log.warning('{0} is a private IP'.format(private_ip))
-                ignore_ip = ignore_cidr(vm_, private_ip)
-                if private_ip not in data.private_ips and not ignore_ip:
-                    result.append(private_ip)
-
-    if rackconnect(vm_) is True and ssh_interface(vm_) != 'private_ips':
-        data.public_ips = access_ip
-        return data
-
-    # populate return data with private_ips
-    # when ssh_interface is set to private_ips and public_ips exist
-    if not result and ssh_interface(vm_) == 'private_ips':
-        for private_ip in private:
-            ignore_ip = ignore_cidr(vm_, private_ip)
-            if not ignore_ip:
-                result.append(private_ip)
-
-    if result:
-        log.debug('result = {0}'.format(result))
-        data.private_ips = result
-        if ssh_interface(vm_) == 'private_ips':
-            return data
-
-    if public:
-        data.public_ips = public
-        if ssh_interface(vm_) != 'private_ips':
-            return data
+    return show_instance(vm_['name'], conn=conn, call='action')
 
 
 def create(vm_):
     '''
     Create a single VM from a data dict
     '''
-    try:
-        # Check for required profile parameters before sending any API calls.
-        if vm_['profile'] and config.is_profile_configured(__opts__,
-                                                           __active_provider_name__ or 'openstack',
-                                                           vm_['profile'],
-                                                           vm_=vm_) is False:
-            return False
-    except AttributeError:
-        pass
-
     deploy = config.get_cloud_config_value('deploy', vm_, __opts__)
     key_filename = config.get_cloud_config_value(
         'ssh_key_file', vm_, __opts__, search_global=False, default=None
     )
-    if key_filename is not None:
-        key_filename = os.path.expanduser(key_filename)
-        if not os.path.isfile(key_filename):
-            raise SaltCloudConfigError(
-                'The defined ssh_key_file \'{0}\' does not exist'.format(
-                    key_filename
-                )
+    if key_filename is not None and not os.path.isfile(key_filename):
+        raise SaltCloudConfigError(
+            'The defined ssh_key_file \'{0}\' does not exist'.format(
+                key_filename
             )
+        )
 
     vm_['key_filename'] = key_filename
 
@@ -752,42 +683,40 @@ def create(vm_):
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
-
     conn = get_conn()
 
     if 'instance_id' in vm_:
         # This was probably created via another process, and doesn't have
         # things like salt keys created yet, so let's create them now.
         if 'pub_key' not in vm_ and 'priv_key' not in vm_:
-            log.debug('Generating minion keys for \'{0[name]}\''.format(vm_))
-            vm_['priv_key'], vm_['pub_key'] = salt.utils.cloud.gen_keys(
-                salt.config.get_cloud_config_value(
+            log.debug('Generating minion keys for \'%s\'', vm_['name'])
+            vm_['priv_key'], vm_['pub_key'] = __utils__['cloud.gen_keys'](
+                config.get_cloud_config_value(
                     'keysize',
                     vm_,
                     __opts__
                 )
             )
-        data = conn.ex_get_node_details(vm_['instance_id'])
-        if vm_['key_filename'] is None and 'change_password' in __opts__ and __opts__['change_password'] is True:
-            vm_['password'] = sup.secure_password()
-            conn.ex_set_password(data, vm_['password'])
-        networks(vm_)
     else:
         # Put together all of the information required to request the instance,
         # and then fire off the request for it
-        data, vm_ = request_instance(vm_)
+        request_instance(conn=conn, call='action', vm_=vm_)
+    data = show_instance(vm_.get('instance_id', vm_['name']), conn=conn, call='action')
+    log.debug('VM is now running')
 
-        # Pull the instance ID, valid for both spot and normal instances
-        vm_['instance_id'] = data.id
-
+    def __query_node(vm_):
+        data = show_instance(vm_['name'], conn=conn, call='action')
+        if 'wait_for_metadata' in vm_:
+            for key, value in six.iteritems(vm_.get('wait_for_metadata', {})):
+                log.debug('Waiting for metadata: {0}={1}'.format(key, value))
+                if data['metadata'].get(key, None) != value:
+                    log.debug('Metadata is not ready: {0}={1}'.format(key, data['metadata'].get(key, None)))
+                    return False
+        return preferred_ip(vm_, data[ssh_interface(vm_)])
     try:
-        data = salt.utils.cloud.wait_for_ip(
-            _query_node_data,
-            update_args=(vm_, data, vm_['floating'], conn),
-            timeout=config.get_cloud_config_value(
-                'wait_for_ip_timeout', vm_, __opts__, default=10 * 60),
-            interval=config.get_cloud_config_value(
-                'wait_for_ip_interval', vm_, __opts__, default=10),
+        ip_address = __utils__['cloud.wait_for_fun'](
+            __query_node,
+            vm_=vm_
         )
     except (SaltCloudExecutionTimeout, SaltCloudExecutionFailure) as exc:
         try:
@@ -796,113 +725,134 @@ def create(vm_):
         except SaltCloudSystemExit:
             pass
         finally:
-            raise SaltCloudSystemExit(str(exc))
+            raise SaltCloudSystemExit(six.text_type(exc))
+    log.debug('Using IP address %s', ip_address)
 
-    log.debug('VM is now running')
-
-    if ssh_interface(vm_) == 'private_ips':
-        ip_address = preferred_ip(vm_, data.private_ips)
-    elif rackconnect(vm_) is True and ssh_interface(vm_) != 'private_ips':
-        ip_address = data.public_ips
-    else:
-        ip_address = preferred_ip(vm_, data.public_ips)
-    log.debug('Using IP address {0}'.format(ip_address))
-
-    if salt.utils.cloud.get_salt_interface(vm_, __opts__) == 'private_ips':
-        salt_ip_address = preferred_ip(vm_, data.private_ips)
-        log.info('Salt interface set to: {0}'.format(salt_ip_address))
-    else:
-        salt_ip_address = preferred_ip(vm_, data.public_ips)
-        log.debug('Salt interface set to: {0}'.format(salt_ip_address))
+    salt_interface = __utils__['cloud.get_salt_interface'](vm_, __opts__)
+    salt_ip_address = preferred_ip(vm_, data[salt_interface])
+    log.debug('Salt interface set to: %s', salt_ip_address)
 
     if not ip_address:
         raise SaltCloudSystemExit('A valid IP address was not found')
 
-    vm_['salt_host'] = salt_ip_address
     vm_['ssh_host'] = ip_address
+    vm_['salt_host'] = salt_ip_address
+
     ret = __utils__['cloud.bootstrap'](vm_, __opts__)
-    ret.update(data.__dict__)
+    ret.update(data)
 
-    if hasattr(data, 'extra') and 'password' in data.extra:
-        del data.extra['password']
-
-    log.info('Created Cloud VM \'{0[name]}\''.format(vm_))
+    log.info('Created Cloud VM \'%s\'', vm_['name'])
     log.debug(
-        '\'{0[name]}\' VM creation details:\n{1}'.format(
-            vm_, pprint.pformat(data.__dict__)
-        )
+        '\'%s\' VM creation details:\n%s',
+        vm_['name'], pprint.pformat(data)
     )
+
+    event_data = {
+        'name': vm_['name'],
+        'profile': vm_['profile'],
+        'provider': vm_['driver'],
+        'instance_id': data['id'],
+        'floating_ips': data['floating_ips'],
+        'fixed_ips': data['fixed_ips'],
+        'private_ips': data['private_ips'],
+        'public_ips': data['public_ips'],
+    }
 
     __utils__['cloud.fire_event'](
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
-        args=__utils__['cloud.filter_event']('created', vm_, ['name', 'profile', 'provider', 'driver']),
+        args=__utils__['cloud.filter_event']('created', event_data, list(event_data)),
+        sock_dir=__opts__['sock_dir'],
+        transport=__opts__['transport']
+    )
+    __utils__['cloud.cachedir_index_add'](vm_['name'], vm_['profile'], 'nova', vm_['driver'])
+    return ret
+
+
+def destroy(name, conn=None, call=None):
+    '''
+    Delete a single VM
+    '''
+    if call == 'function':
+        raise SaltCloudSystemExit(
+            'The destroy action must be called with -d, --destroy, '
+            '-a or --action.'
+        )
+
+    __utils__['cloud.fire_event'](
+        'event',
+        'destroying instance',
+        'salt/cloud/{0}/destroying'.format(name),
+        args={'name': name},
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
-    return ret
+    if not conn:
+        conn = get_conn()
+    node = show_instance(name, conn=conn, call='action')
+    log.info('Destroying VM: %s', name)
+    ret = conn.delete_server(name)
+    if ret:
+        log.info('Destroyed VM: %s', name)
+        # Fire destroy action
+        __utils__['cloud.fire_event'](
+            'event',
+            'destroyed instance',
+            'salt/cloud/{0}/destroyed'.format(name),
+            args={'name': name},
+            sock_dir=__opts__['sock_dir'],
+            transport=__opts__['transport']
+        )
+        if __opts__.get('delete_sshkeys', False) is True:
+            __utils__['cloud.remove_sshkey'](getattr(node, __opts__.get('ssh_interface', 'public_ips'))[0])
+        if __opts__.get('update_cachedir', False) is True:
+            __utils__['cloud.delete_minion_cachedir'](name, __active_provider_name__.split(':')[0], __opts__)
+        __utils__['cloud.cachedir_index_del'](name)
+        return True
+
+    log.error('Failed to Destroy VM: %s', name)
+    return False
 
 
-def _assign_floating_ips(vm_, conn, kwargs):
-    floating = []
-    nets = config.get_cloud_config_value(
-        'networks', vm_, __opts__, search_global=False
-    )
+def call(conn=None, call=None, kwargs=None):
+    '''
+    Call function from shade.
 
-    if HAS014:
-        if nets is not None:
-            for net in nets:
-                if 'fixed' in net:
-                    kwargs['networks'] = [
-                        OpenStackNetwork(n, None, None, None)
-                        for n in net['fixed']
-                    ]
-                elif 'floating' in net:
-                    pool = OpenStack_1_1_FloatingIpPool(
-                        net['floating'], conn.connection
-                    )
-                    try:
-                        floating.append(pool.create_floating_ip())
-                    except Exception as e:
-                        log.debug('Cannot allocate IP from floating pool \'%s\'. Checking for unassociated ips.',
-                                  net['floating'])
-                        for idx in pool.list_floating_ips():
-                            if idx.node_id is None:
-                                floating.append(idx)
-                                break
-                    if not floating:
-                        raise SaltCloudSystemExit(
-                            'There are no more floating IP addresses '
-                            'available, please create some more'
-                        )
-        # otherwise, attempt to obtain list without specifying pool
-        # this is the same as 'nova floating-ip-list'
-        elif ssh_interface(vm_) != 'private_ips':
-            try:
-                # This try/except is here because it appears some
-                # OpenStack providers return a 404 Not Found for the
-                # floating ip pool URL if there are no pools setup
-                pool = OpenStack_1_1_FloatingIpPool(
-                    '', conn.connection
-                )
-                try:
-                    floating.append(pool.create_floating_ip())
-                except Exception as e:
-                    log.debug('Cannot allocate IP from the default floating pool. Checking for unassociated ips.')
-                    for idx in pool.list_floating_ips():
-                        if idx.node_id is None:
-                            floating.append(idx)
-                            break
-                if not floating:
-                    log.warning(
-                        'There are no more floating IP addresses '
-                        'available, please create some more if necessary'
-                    )
-            except Exception as e:
-                if str(e).startswith('404'):
-                    pass
-                else:
-                    raise
-    return floating
+    func
+
+        function to call from shade.openstackcloud library
+
+    CLI Example
+
+    .. code-block:: bash
+
+        salt-cloud -f call myopenstack func=list_images
+        t sujksalt-cloud -f call myopenstack func=create_network name=mysubnet
+    '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The call function must be called with '
+            '-f or --function.'
+        )
+
+    if 'func' not in kwargs:
+        raise SaltCloudSystemExit(
+            'No `func` argument passed'
+        )
+
+    if conn is None:
+        conn = get_conn()
+
+    func = kwargs.pop('func')
+    for key, value in kwargs.items():
+        try:
+            kwargs[key] = __utils__['json.loads'](value)
+        except ValueError:
+            continue
+    try:
+        return getattr(conn, func)(**kwargs)
+    except shade.exc.OpenStackCloudException as exc:
+        log.error('Error running %s: %s', func, exc)
+        raise SaltCloudSystemExit(six.text_type(exc))

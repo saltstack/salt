@@ -21,28 +21,28 @@ A state module to manage LVMs
         - stripes: 5
         - stripesize: 8K
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import os
 
 # Import salt libs
-import salt.utils
-import salt.ext.six as six
+import salt.utils.path
+from salt.ext import six
 
 
 def __virtual__():
     '''
     Only load the module if lvm is installed
     '''
-    if salt.utils.which('lvm'):
+    if salt.utils.path.which('lvm'):
         return 'lvm'
     return False
 
 
 def pv_present(name, **kwargs):
     '''
-    Set a physical device to be used as an LVM physical volume
+    Set a Physical Device to be used as an LVM Physical Volume
 
     name
         The device name to initialize.
@@ -106,13 +106,13 @@ def pv_absent(name):
 
 def vg_present(name, devices=None, **kwargs):
     '''
-    Create an LVM volume group
+    Create an LVM Volume Group
 
     name
-        The volume group name to create
+        The Volume Group name to create
 
     devices
-        A list of devices that will be added to the volume group
+        A list of devices that will be added to the Volume Group
 
     kwargs
         Any supported options to vgcreate. See
@@ -211,18 +211,19 @@ def lv_present(name,
                pv='',
                thinvolume=False,
                thinpool=False,
+               force=False,
                **kwargs):
     '''
-    Create a new logical volume
+    Create a new Logical Volume
 
     name
-        The name of the logical volume
+        The name of the Logical Volume
 
     vgname
-        The volume group name for this logical volume
+        The name of the Volume Group on which the Logical Volume resides
 
     size
-        The initial size of the logical volume
+        The initial size of the Logical Volume
 
     extents
         The number of logical extents to allocate
@@ -231,7 +232,7 @@ def lv_present(name,
         The name of the snapshot
 
     pv
-        The physical volume to use
+        The Physical Volume to use
 
     kwargs
         Any supported options to lvcreate. See
@@ -240,10 +241,16 @@ def lv_present(name,
     .. versionadded:: to_complete
 
     thinvolume
-        Logical volume is thinly provisioned
+        Logical Volume is thinly provisioned
 
     thinpool
-        Logical volume is a thin pool
+        Logical Volume is a thin pool
+
+    .. versionadded:: 2018.3.0
+
+    force
+        Assume yes to all prompts
+
     '''
     ret = {'changes': {},
            'comment': '',
@@ -261,7 +268,7 @@ def lv_present(name,
     else:
         lvpath = '/dev/{0}/{1}'.format(vgname, name)
 
-    if __salt__['lvm.lvdisplay'](lvpath):
+    if __salt__['lvm.lvdisplay'](lvpath, quiet=True):
         ret['comment'] = 'Logical Volume {0} already present'.format(name)
     elif __opts__['test']:
         ret['comment'] = 'Logical Volume {0} is set to be created'.format(name)
@@ -276,26 +283,27 @@ def lv_present(name,
                                            pv=pv,
                                            thinvolume=thinvolume,
                                            thinpool=thinpool,
+                                           force=force,
                                            **kwargs)
 
         if __salt__['lvm.lvdisplay'](lvpath):
             ret['comment'] = 'Created Logical Volume {0}'.format(name)
             ret['changes']['created'] = changes
         else:
-            ret['comment'] = 'Failed to create Logical Volume {0}'.format(name)
+            ret['comment'] = 'Failed to create Logical Volume {0}. Error: {1}'.format(name, changes)
             ret['result'] = False
     return ret
 
 
 def lv_absent(name, vgname=None):
     '''
-    Remove a given existing logical volume from a named existing volume group
+    Remove a given existing Logical Volume from a named existing volume group
 
     name
-        The logical volume to remove
+        The Logical Volume to remove
 
     vgname
-        The volume group name
+        The name of the Volume Group on which the Logical Volume resides
     '''
     ret = {'changes': {},
            'comment': '',

@@ -15,6 +15,8 @@ import os
 import sys
 import glob
 import time
+import operator
+import platform
 try:
     from urllib2 import urlopen
 except ImportError:
@@ -124,6 +126,7 @@ SALT_REQS = os.path.join(os.path.abspath(SETUP_DIRNAME), 'requirements', 'base.t
 SALT_ZEROMQ_REQS = os.path.join(os.path.abspath(SETUP_DIRNAME), 'requirements', 'zeromq.txt')
 SALT_RAET_REQS = os.path.join(os.path.abspath(SETUP_DIRNAME), 'requirements', 'raet.txt')
 SALT_WINDOWS_REQS = os.path.join(os.path.abspath(SETUP_DIRNAME), 'pkg', 'windows', 'req.txt')
+SALT_LONG_DESCRIPTION_FILE = os.path.join(os.path.abspath(SETUP_DIRNAME), 'README.rst')
 
 # Salt SSH Packaging Detection
 PACKAGED_FOR_SALT_SSH_FILE = os.path.join(os.path.abspath(SETUP_DIRNAME), '.salt-ssh-package')
@@ -136,6 +139,74 @@ exec(compile(open(SALT_VERSION).read(), SALT_VERSION, 'exec'))
 
 
 # ----- Helper Functions -------------------------------------------------------------------------------------------->
+
+def _parse_op(op):
+    '''
+    >>> _parse_op('>')
+    'gt'
+    >>> _parse_op('>=')
+    'ge'
+    >>> _parse_op('=>')
+    'ge'
+    >>> _parse_op('=> ')
+    'ge'
+    >>> _parse_op('<')
+    'lt'
+    >>> _parse_op('<=')
+    'le'
+    >>> _parse_op('==')
+    'eq'
+    >>> _parse_op(' <= ')
+    'le'
+    '''
+    op = op.strip()
+    if '>' in op:
+        if '=' in op:
+            return 'ge'
+        else:
+            return 'gt'
+    elif '<' in op:
+        if '=' in op:
+            return 'le'
+        else:
+            return 'lt'
+    elif '!' in op:
+        return 'ne'
+    else:
+        return 'eq'
+
+
+def _parse_ver(ver):
+    '''
+    >>> _parse_ver("'3.4'  # pyzmq 17.1.0 stopped building wheels for python3.4")
+    '3.4'
+    >>> _parse_ver('"3.4"')
+    '3.4'
+    >>> _parse_ver('"2.6.17"')
+    '2.6.17'
+    '''
+    if '#' in ver:
+        ver, _ = ver.split('#', 1)
+        ver = ver.strip()
+    return ver.strip('\'').strip('"')
+
+
+def _check_ver(pyver, op, wanted):
+    '''
+    >>> _check_ver('2.7.15', 'gt', '2.7')
+    True
+    >>> _check_ver('2.7.15', 'gt', '2.7.15')
+    False
+    >>> _check_ver('2.7.15', 'ge', '2.7.15')
+    True
+    >>> _check_ver('2.7.15', 'eq', '2.7.15')
+    True
+    '''
+    pyver = distutils.version.LooseVersion(pyver)
+    wanted = distutils.version.LooseVersion(wanted)
+    return getattr(operator, '__{}__'.format(op))(pyver, wanted)
+
+
 def _parse_requirements_file(requirements_file):
     parsed_requirements = []
     with open(requirements_file) as rfh:
@@ -150,7 +221,16 @@ def _parse_requirements_file(requirements_file):
                 # Python 3 already has futures, installing it will only break
                 # the current python installation whenever futures is imported
                 continue
-            parsed_requirements.append(line)
+            try:
+                pkg, pyverspec = line.rsplit(';', 1)
+            except ValueError:
+                pkg, pyverspec = line, ''
+            pyverspec = pyverspec.strip()
+            if pyverspec:
+                _, op, ver = pyverspec.split(' ', 2)
+                if not _check_ver(platform.python_version(), _parse_op(op), _parse_ver(ver)):
+                    continue
+            parsed_requirements.append(pkg)
     return parsed_requirements
 # <---- Helper Functions ---------------------------------------------------------------------------------------------
 
@@ -229,6 +309,7 @@ class GenerateSaltSyspaths(Command):
                 spm_formula_path=self.distribution.salt_spm_formula_dir,
                 spm_pillar_path=self.distribution.salt_spm_pillar_dir,
                 spm_reactor_path=self.distribution.salt_spm_reactor_dir,
+                home_dir=self.distribution.salt_home_dir,
             )
         )
 
@@ -362,7 +443,6 @@ class DownloadWindowsDlls(Command):
         if getattr(self.distribution, 'salt_download_windows_dlls', None) is None:
             print('This command is not meant to be called on it\'s own')
             exit(1)
-        import platform
         import pip
         # pip has moved many things to `_internal` starting with pip 10
         if LooseVersion(pip.__version__) < LooseVersion('10.0'):
@@ -432,6 +512,10 @@ class Sdist(sdist):
             self.run_command('write_salt_ssh_packaging_file')
             self.filelist.files.append(os.path.basename(PACKAGED_FOR_SALT_SSH_FILE))
 
+        if not IS_PY3 and not isinstance(base_dir, str):
+            # Work around some bad code in distutils which logs unicode paths
+            # against a str format string.
+            base_dir = base_dir.encode('utf-8')
         sdist.make_release_tree(self, base_dir, files)
 
         # Let's generate salt/_version.py to include in the sdist tarball
@@ -620,6 +704,7 @@ PIDFILE_DIR = {pidfile_dir!r}
 SPM_FORMULA_PATH = {spm_formula_path!r}
 SPM_PILLAR_PATH = {spm_pillar_path!r}
 SPM_REACTOR_PATH = {spm_reactor_path!r}
+HOME_DIR = {home_dir!r}
 '''
 
 
@@ -755,6 +840,8 @@ class SaltDistribution(distutils.dist.Distribution):
          'Salt\'s pre-configured SPM pillar directory'),
         ('salt-spm-reactor-dir=', None,
          'Salt\'s pre-configured SPM reactor directory'),
+        ('salt-home-dir=', None,
+         'Salt\'s pre-configured user home directory'),
     ]
 
     def __init__(self, attrs=None):
@@ -779,6 +866,7 @@ class SaltDistribution(distutils.dist.Distribution):
         self.salt_spm_formula_dir = None
         self.salt_spm_pillar_dir = None
         self.salt_spm_reactor_dir = None
+        self.salt_home_dir = None
 
         # Salt version
         self.with_salt_version = None
@@ -786,6 +874,12 @@ class SaltDistribution(distutils.dist.Distribution):
         self.name = 'salt-ssh' if PACKAGED_FOR_SALT_SSH else 'salt'
         self.salt_version = __version__  # pylint: disable=undefined-variable
         self.description = 'Portable, distributed, remote execution and configuration management system'
+        kwargs = {}
+        if IS_PY3:
+            kwargs['encoding'] = 'utf-8'
+        with open(SALT_LONG_DESCRIPTION_FILE, **kwargs) as f:
+            self.long_description = f.read()
+        self.long_description_content_type = 'text/x-rst'
         self.author = 'Thomas S Hatch'
         self.author_email = 'thatch45@gmail.com'
         self.url = 'http://saltstack.org'
@@ -932,7 +1026,6 @@ class SaltDistribution(distutils.dist.Distribution):
 
         if IS_WINDOWS_PLATFORM:
             install_requires = _parse_requirements_file(SALT_WINDOWS_REQS)
-
         return install_requires
 
     @property
@@ -1076,6 +1169,7 @@ class SaltDistribution(distutils.dist.Distribution):
                 'wmi',
                 'site',
                 'psutil',
+                'pytz',
             ])
         elif IS_SMARTOS_PLATFORM:
             # we have them as requirements in pkg/smartos/esky/requirements.txt

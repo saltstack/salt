@@ -6,11 +6,11 @@ This includes client side transport, for the ReqServer and the Publisher
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import Salt Libs
-from salt.utils.async import SyncWrapper
+from salt.utils.asynchronous import SyncWrapper
 
 log = logging.getLogger(__name__)
 
@@ -156,7 +156,7 @@ class AsyncPubChannel(AsyncChannel):
         # switch on available ttypes
         if ttype == 'detect':
             opts['detect_mode'] = True
-            log.info('Transport is set to detect; using {0}'.format(ttype))
+            log.info('Transport is set to detect; using %s', ttype)
         if ttype == 'zeromq':
             import salt.transport.zeromq
             return salt.transport.zeromq.AsyncZeroMQPubChannel(opts, **kwargs)

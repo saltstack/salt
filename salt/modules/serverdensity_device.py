@@ -7,17 +7,18 @@ Wrapper around Server Density API
 '''
 
 # Import Python libs
-from __future__ import absolute_import
-import json
+from __future__ import absolute_import, unicode_literals, print_function
 import logging
 import os
 import tempfile
 
-# Import 3rd-party libs
-import salt.ext.six as six
-from salt.ext.six.moves import map  # pylint: disable=import-error,no-name-in-module,redefined-builtin
-
+# Import Salt libs
+import salt.utils.json
 from salt.exceptions import CommandExecutionError
+
+# Import 3rd-party libs
+from salt.ext import six
+from salt.ext.six.moves import map  # pylint: disable=import-error,no-name-in-module,redefined-builtin
 
 try:
     import requests
@@ -50,9 +51,9 @@ def get_sd_auth(val, sd_auth_pillar_name='serverdensity'):
         salt '*' serverdensity_device.get_sd_auth <val>
     '''
     sd_pillar = __pillar__.get(sd_auth_pillar_name)
-    log.debug('Server Density Pillar: {0}'.format(sd_pillar))
+    log.debug('Server Density Pillar: %s', sd_pillar)
     if not sd_pillar:
-        log.error('Could not load {0} pillar'.format(sd_auth_pillar_name))
+        log.error('Could not load %s pillar', sd_auth_pillar_name)
         raise CommandExecutionError(
             '{0} pillar is required for authentication'.format(sd_auth_pillar_name)
         )
@@ -60,7 +61,7 @@ def get_sd_auth(val, sd_auth_pillar_name='serverdensity'):
     try:
         return sd_pillar[val]
     except KeyError:
-        log.error('Could not find value {0} in pillar'.format(val))
+        log.error('Could not find value %s in pillar', val)
         raise CommandExecutionError('{0} value was not found in pillar'.format(val))
 
 
@@ -86,7 +87,7 @@ def create(name, **params):
         salt '*' serverdensity_device.create lama
         salt '*' serverdensity_device.create rich_lama group=lama_band installedRAM=32768
     '''
-    log.debug('Server Density params: {0}'.format(params))
+    log.debug('Server Density params: %s', params)
     params = _clean_salt_variables(params)
 
     params['name'] = name
@@ -95,13 +96,13 @@ def create(name, **params):
         params={'token': get_sd_auth('api_token')},
         data=params
     )
-    log.debug('Server Density API Response: {0}'.format(api_response))
-    log.debug('Server Density API Response content: {0}'.format(api_response.content))
+    log.debug('Server Density API Response: %s', api_response)
+    log.debug('Server Density API Response content: %s', api_response.content)
     if api_response.status_code == 200:
         try:
-            return json.loads(api_response.content)
+            return salt.utils.json.loads(api_response.content)
         except ValueError:
-            log.error('Could not parse API Response content: {0}'.format(api_response.content))
+            log.error('Could not parse API Response content: %s', api_response.content)
             raise CommandExecutionError(
                 'Failed to create, API Response: {0}'.format(api_response)
             )
@@ -126,13 +127,13 @@ def delete(device_id):
         'https://api.serverdensity.io/inventory/devices/' + device_id,
         params={'token': get_sd_auth('api_token')}
     )
-    log.debug('Server Density API Response: {0}'.format(api_response))
-    log.debug('Server Density API Response content: {0}'.format(api_response.content))
+    log.debug('Server Density API Response: %s', api_response)
+    log.debug('Server Density API Response content: %s', api_response.content)
     if api_response.status_code == 200:
         try:
-            return json.loads(api_response.content)
+            return salt.utils.json.loads(api_response.content)
         except ValueError:
-            log.error('Could not parse API Response content: {0}'.format(api_response.content))
+            log.error('Could not parse API Response content: %s', api_response.content)
             raise CommandExecutionError(
                 'Failed to create, API Response: {0}'.format(api_response)
             )
@@ -168,21 +169,21 @@ def ls(**params):
 
     # Convert all ints to strings:
     for key, val in six.iteritems(params):
-        params[key] = str(val)
+        params[key] = six.text_type(val)
 
     api_response = requests.get(
         'https://api.serverdensity.io/inventory/{0}'.format(endpoint),
-        params={'token': get_sd_auth('api_token'), 'filter': json.dumps(params)}
+        params={'token': get_sd_auth('api_token'), 'filter': salt.utils.json.dumps(params)}
     )
-    log.debug('Server Density API Response: {0}'.format(api_response))
-    log.debug('Server Density API Response content: {0}'.format(api_response.content))
+    log.debug('Server Density API Response: %s', api_response)
+    log.debug('Server Density API Response content: %s', api_response.content)
     if api_response.status_code == 200:
         try:
-            return json.loads(api_response.content)
+            return salt.utils.json.loads(api_response.content)
         except ValueError:
             log.error(
-                'Could not parse Server Density API Response content: {0}'
-                .format(api_response.content)
+                'Could not parse Server Density API Response content: %s',
+                api_response.content
             )
             raise CommandExecutionError(
                 'Failed to create, Server Density API Response: {0}'
@@ -213,15 +214,15 @@ def update(device_id, **params):
         params={'token': get_sd_auth('api_token')},
         data=params
     )
-    log.debug('Server Density API Response: {0}'.format(api_response))
-    log.debug('Server Density API Response content: {0}'.format(api_response.content))
+    log.debug('Server Density API Response: %s', api_response)
+    log.debug('Server Density API Response content: %s', api_response.content)
     if api_response.status_code == 200:
         try:
-            return json.loads(api_response.content)
+            return salt.utils.json.loads(api_response.content)
         except ValueError:
             log.error(
-                'Could not parse Server Density API Response content: {0}'
-                .format(api_response.content)
+                'Could not parse Server Density API Response content: %s',
+                api_response.content
             )
             raise CommandExecutionError(
                 'Failed to create, API Response: {0}'.format(api_response)

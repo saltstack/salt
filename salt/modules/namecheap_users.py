@@ -26,7 +26,7 @@ file, or in the Pillar data.
     #Sandbox url
     #namecheap.url: https://api.sandbox.namecheap.xml.response
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 CAN_USE_NAMECHEAP = True
 

@@ -11,6 +11,7 @@ Ensure a process matching a given pattern is absent.
       process.absent:
         - name: apache2
 '''
+from __future__ import absolute_import, unicode_literals, print_function
 
 
 def __virtual__():
@@ -25,7 +26,7 @@ def absent(name, user=None, signal=None):
         The pattern to match.
 
     user
-        The user process belongs
+        The user to which the process belongs
 
     signal
         Signal to send to the process(es).

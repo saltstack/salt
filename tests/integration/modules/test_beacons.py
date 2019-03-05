@@ -4,7 +4,7 @@
 '''
 
 # Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 
 # Salt Libs
@@ -31,11 +31,14 @@ class BeaconsAddDeleteTest(ModuleCase):
         if os.path.isfile(self.beacons_config_file_path):
             os.unlink(self.beacons_config_file_path)
 
+        # Reset beacons
+        self.run_function('beacons.reset')
+
     def test_add_and_delete(self):
         '''
         Test adding and deleting a beacon
         '''
-        _add = self.run_function('beacons.add', ['ps', [{'apache2': 'stopped'}]])
+        _add = self.run_function('beacons.add', ['ps', [{'processes': {'apache2': 'stopped'}}]])
         self.assertTrue(_add['result'])
 
         # save added beacon
@@ -71,7 +74,7 @@ class BeaconsTest(ModuleCase):
         self.__class__.beacons_config_file_path = os.path.join(self.minion_conf_d_dir, 'beacons.conf')
         try:
             # Add beacon to disable
-            self.run_function('beacons.add', ['ps', [{'apache2': 'stopped'}]])
+            self.run_function('beacons.add', ['ps', [{'processes': {'apache2': 'stopped'}}]])
             self.run_function('beacons.save')
         except CommandExecutionError:
             self.skipTest('Unable to add beacon')
@@ -80,6 +83,9 @@ class BeaconsTest(ModuleCase):
         # delete added beacon
         self.run_function('beacons.delete', ['ps'])
         self.run_function('beacons.save')
+
+        # Reset beacons
+        self.run_function('beacons.reset')
 
     def test_disable(self):
         '''
@@ -143,6 +149,6 @@ class BeaconsTest(ModuleCase):
         # list beacons
         ret = self.run_function('beacons.list', return_yaml=False)
         if 'enabled' in ret:
-            self.assertEqual(ret, {'ps': [{'apache2': 'stopped'}], 'enabled': True})
+            self.assertEqual(ret, {'ps': [{'processes': {'apache2': 'stopped'}}], 'enabled': True})
         else:
-            self.assertEqual(ret, {'ps': {'apache': 'stopped'}})
+            self.assertEqual(ret, {'ps': [{'processes': {'apache2': 'stopped'}}]})

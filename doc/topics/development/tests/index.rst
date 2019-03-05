@@ -32,6 +32,46 @@ or the integration testing factions contain respective integration or unit
 test files for Salt execution modules.
 
 
+.. note::
+    Salt's test framework provides for the option to only run tests which
+    correspond to a given file (or set of files), via the ``--from-filenames``
+    argument to ``runtests.py``:
+
+    .. code-block:: bash
+
+        python /path/to/runtests.py --from-filenames=salt/modules/foo.py
+
+    Therefore, where possible, test files should be named to match the source
+    files they are testing. For example, when writing tests for
+    ``salt/modules/foo.py``, unit tests should go into
+    ``tests/unit/modules/test_foo.py``, and integration tests should go into
+    ``tests/integration/modules/test_foo.py``.
+
+    However, integration tests are organized differently from unit tests, and
+    this may not always be plausible. In these cases, to ensure that the proper
+    tests are run for these files, they must be mapped in
+    `tests/filename_map.yml`__.
+
+    The filename map is used to supplement the test framework's filename
+    matching logic. This allows one to ensure that states correspnding to an
+    execution module are also tested when ``--from-filenames`` includes that
+    execution module. It can also be used for those cases where the path to a
+    test file doesn't correspond directly to the file which is being tested
+    (e.g. the ``shell``, ``spm``, and ``ssh`` integration tests, among others).
+    Both glob expressions and regular expressions are permitted in the filename
+    map.
+
+
+    .. important::
+        Test modules which don't map directly to the source file they are
+        testing (using the naming convention described above), **must** be
+        added to the ``ignore`` tuple in ``tests/unit/test_module_names.py``,
+        in the ``test_module_name_source_match`` function. This unit test
+        ensures that we maintain the naming convention for test files.
+
+    .. __: https://github.com/saltstack/salt/blob/develop/tests/filename_map.yml
+
+
 Integration Tests
 -----------------
 
@@ -219,7 +259,7 @@ the default cloud provider configuration file for DigitalOcean looks like this:
 .. code-block:: yaml
 
     digitalocean-config:
-      driver: digital_ocean
+      driver: digitalocean
       client_key: ''
       api_key: ''
       location: New York 1
@@ -230,7 +270,7 @@ must be provided:
 .. code-block:: yaml
 
     digitalocean-config:
-      driver: digital_ocean
+      driver: digitalocean
       client_key: wFGEwgregeqw3435gDger
       api_key: GDE43t43REGTrkilg43934t34qT43t4dgegerGEgg
       location: New York 1
@@ -445,8 +485,8 @@ successfully. If a network connection is not detected, the test will not run.
 order for the test to be executed. Otherwise, the test is skipped.
 
 `@requires_system_grains` -- Loads and passes the grains on the system as an
-keyword argument to the test function with the name `grains`. 
-    
+keyword argument to the test function with the name `grains`.
+
 `@skip_if_binaries_missing(['list', 'of', 'binaries'])` -- If called from inside a test,
 the test will be skipped if the binaries are not all present on the system.
 

@@ -26,7 +26,7 @@ See also the module documentation
 
 '''
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 log = logging.getLogger(__name__)
@@ -77,7 +77,7 @@ def cert(name,
         window = None
         try:
             window = int(renew)
-        except:  # pylint: disable=bare-except
+        except Exception:
             pass
 
         comment = 'Certificate {0} '.format(name)

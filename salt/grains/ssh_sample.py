@@ -2,8 +2,8 @@
 '''
 Generate baseline proxy minion grains
 '''
-from __future__ import absolute_import
-import salt.utils
+from __future__ import absolute_import, print_function, unicode_literals
+import salt.utils.platform
 
 __proxyenabled__ = ['ssh_sample']
 
@@ -12,7 +12,7 @@ __virtualname__ = 'ssh_sample'
 
 def __virtual__():
     try:
-        if salt.utils.is_proxy() and __opts__['proxy']['proxytype'] == 'ssh_sample':
+        if salt.utils.platform.is_proxy() and __opts__['proxy']['proxytype'] == 'ssh_sample':
             return __virtualname__
     except KeyError:
         pass

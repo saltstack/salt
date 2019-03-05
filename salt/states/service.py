@@ -3,10 +3,10 @@
 Starting or restarting of services and daemons
 ==============================================
 
-Services are defined as system daemons typically started with system init or
-rc scripts. The service state uses whichever service module that is loaded on
-the minion with the virtualname of ``service``. Services can be defined as
-running or dead.
+Services are defined as system daemons and are typically launched using system
+init or rc scripts. This service state uses whichever service module is loaded
+on the minion with the virtualname of ``service``. Services can be defined as
+either running or dead.
 
 If you need to know if your init system is supported, see the list of supported
 :mod:`service modules <salt.modules.service.py>` for your desired init system
@@ -30,7 +30,7 @@ section of Salt's module documentation to work around possible errors.
     httpd:
       service.running: []
 
-The service can also be set to be started at runtime via the enable option:
+The service can also be set to start at runtime via the enable option:
 
 .. code-block:: yaml
 
@@ -39,8 +39,8 @@ The service can also be set to be started at runtime via the enable option:
         - enable: True
 
 By default if a service is triggered to refresh due to a watch statement the
-service is by default restarted. If the desired behavior is to reload the
-service, then set the reload value to True:
+service is restarted. If the desired behavior is to reload the service, then
+set the reload value to True:
 
 .. code-block:: yaml
 
@@ -57,18 +57,18 @@ service, then set the reload value to True:
     :ref:`Requisites <requisites>` documentation.
 
 '''
-
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import time
 
 # Import Salt libs
-import salt.utils
+import salt.utils.data
+import salt.utils.platform
 from salt.utils.args import get_function_argspec as _argspec
 from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 SYSTEMD_ONLY = ('no_block', 'unmask', 'unmask_runtime')
 
@@ -255,7 +255,7 @@ def _disable(name, started, result=True, **kwargs):
         return ret
 
     # Service can be disabled
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         # service.disabled in Windows returns True for services that are set to
         # Manual start, so we need to check specifically for Disabled
         before_toggle_disable_status = __salt__['service.info'](name)['StartType'] in ['Disabled']
@@ -400,11 +400,14 @@ def running(name,
 
     # Convert enable to boolean in case user passed a string value
     if isinstance(enable, six.string_types):
-        enable = salt.utils.is_true(enable)
+        enable = salt.utils.data.is_true(enable)
 
     # Check if the service is available
     try:
         if not _available(name, ret):
+            if __opts__.get('test'):
+                ret['result'] = None
+                ret['comment'] = 'Service {0} not present; if created in this state run, it would have been started'.format(name)
             return ret
     except CommandExecutionError as exc:
         ret['result'] = False
@@ -419,9 +422,16 @@ def running(name,
     else:
         before_toggle_enable_status = True
 
+    unmask_ret = {'comment': ''}
+    if unmask:
+        unmask_ret = unmasked(name, unmask_runtime)
+
     # See if the service is already running
     if before_toggle_status:
-        ret['comment'] = 'The service {0} is already running'.format(name)
+        ret['comment'] = '\n'.join(
+            [_f for _f in ['The service {0} is already running'.format(name),
+                           unmask_ret['comment']] if _f]
+        )
         if enable is True and not before_toggle_enable_status:
             ret.update(_enable(name, None, **kwargs))
         elif enable is False and before_toggle_enable_status:
@@ -431,7 +441,9 @@ def running(name,
     # Run the tests
     if __opts__['test']:
         ret['result'] = None
-        ret['comment'] = 'Service {0} is set to start'.format(name)
+        ret['comment'] = '\n'.join(
+            [_f for _f in ['Service {0} is set to start'.format(name),
+                           unmask_ret['comment']] if _f])
         return ret
 
     # Conditionally add systemd-specific args to call to service.start
@@ -440,7 +452,7 @@ def running(name,
     if warnings:
         ret.setdefault('warnings', []).extend(warnings)
 
-    if salt.utils.is_windows() and kwargs.get('timeout', False):
+    if salt.utils.platform.is_windows() and kwargs.get('timeout', False):
         start_kwargs.update({'timeout': kwargs.get('timeout')})
 
     try:
@@ -491,6 +503,9 @@ def running(name,
             .format(ret['comment'], init_delay)
         )
 
+    if unmask:
+        ret['comment'] = '\n'.join([ret['comment'], unmask_ret['comment']])
+
     return ret
 
 
@@ -535,14 +550,18 @@ def dead(name,
 
     # Convert enable to boolean in case user passed a string value
     if isinstance(enable, six.string_types):
-        enable = salt.utils.is_true(enable)
+        enable = salt.utils.data.is_true(enable)
 
     # Check if the service is available
     try:
         if not _available(name, ret):
-            # A non-available service is OK here, don't let the state fail
-            # because of it.
-            ret['result'] = True
+            if __opts__.get('test'):
+                ret['result'] = None
+                ret['comment'] = 'Service {0} not present; if created in this state run, it would have been stopped'.format(name)
+            else:
+                # A non-available service is OK here, don't let the state fail
+                # because of it.
+                ret['result'] = True
             return ret
     except CommandExecutionError as exc:
         ret['result'] = False
@@ -553,7 +572,7 @@ def dead(name,
     # command, so it is just an indicator but can not be fully trusted
     before_toggle_status = __salt__['service.status'](name, sig)
     if 'service.enabled' in __salt__:
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             # service.enabled in Windows returns True for services that are set
             # to Auto start, but services set to Manual can also be disabled
             before_toggle_enable_status = __salt__['service.info'](name)['StartType'] in ['Auto', 'Manual']
@@ -582,7 +601,7 @@ def dead(name,
     if warnings:
         ret.setdefault('warnings', []).extend(warnings)
 
-    if salt.utils.is_windows() and kwargs.get('timeout', False):
+    if salt.utils.platform.is_windows() and kwargs.get('timeout', False):
         stop_kwargs.update({'timeout': kwargs.get('timeout')})
 
     func_ret = __salt__['service.stop'](name, **stop_kwargs)
@@ -825,6 +844,14 @@ def mod_watch(name,
               **kwargs):
     '''
     The service watcher, called to invoke the watch command.
+    When called, it will restart or reload the named service.
+
+    .. note::
+        This state exists to support special handling of the ``watch``
+        :ref:`requisite <requisites>`. It should not be called directly.
+
+        Parameters for this function should be set by the watching service.
+        (i.e. ``service.running``)
 
     name
         The name of the init or rc script used to manage the service
@@ -837,11 +864,13 @@ def mod_watch(name,
         The string to search for when looking for the service process with ps
 
     reload
-        Use reload instead of the default restart (exclusive option with full_restart,
-        defaults to reload if both are used)
+        When set, reload the service instead of restarting it.
+        (i.e. ``service nginx reload``)
 
     full_restart
-        Use service.full_restart instead of restart (exclusive option with reload)
+        Perform a full stop/start of a service by passing ``--full-restart``.
+        This option is ignored if ``reload`` is set and is supported by only a few
+        :py:func:`service modules <salt.modules.service>`.
 
     force
         Use service.force_reload instead of reload (needs reload to be set to True)

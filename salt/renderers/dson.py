@@ -12,7 +12,7 @@ This renderer requires `Dogeon`__ (installable via pip)
 .. __: https://github.com/soasme/dogeon
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging
@@ -20,12 +20,18 @@ import logging
 try:
     import dson
 except ImportError:
-    raise
+    dson = None
 
 # Import salt libs
 from salt.ext import six
 
 log = logging.getLogger(__name__)
+
+
+def __virtual__():
+    if dson is None:
+        return False, 'Failed to load: dson module not installed'
+    return True
 
 
 def render(dson_input, saltenv='base', sls='', **kwargs):

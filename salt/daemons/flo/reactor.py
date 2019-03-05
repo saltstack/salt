@@ -3,19 +3,20 @@
 Start the reactor!
 '''
 # pylint: disable=3rd-party-module-not-gated
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 # Import salt libs
 import salt.utils.reactor
 import salt.utils.event
+import salt.utils.stringutils
 # Import ioflo libs
 import ioflo.base.deeding
 
 
 @ioflo.base.deeding.deedify(
-        'SaltRaetReactorFork',
+        salt.utils.stringutils.to_str('SaltRaetReactorFork'),
         ioinits={
-            'opts': '.salt.opts',
-            'proc_mgr': '.salt.usr.proc_mgr'})
+            'opts': salt.utils.stringutils.to_str('.salt.opts'),
+            'proc_mgr': salt.utils.stringutils.to_str('.salt.usr.proc_mgr')})
 def reactor_fork(self):
     '''
     Add a reactor object to the process manager
@@ -26,10 +27,10 @@ def reactor_fork(self):
 
 
 @ioflo.base.deeding.deedify(
-        'SaltRaetEventReturnFork',
+        salt.utils.stringutils.to_str('SaltRaetEventReturnFork'),
         ioinits={
-            'opts': '.salt.opts',
-            'proc_mgr': '.salt.usr.proc_mgr'})
+            'opts': salt.utils.stringutils.to_str('.salt.opts'),
+            'proc_mgr': salt.utils.stringutils.to_str('.salt.usr.proc_mgr')})
 def event_return_fork(self):
     '''
     Add a reactor object to the process manager

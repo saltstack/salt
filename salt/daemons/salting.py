@@ -3,7 +3,7 @@
 salting.py module of salt specific interfaces to raet
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 # pylint: skip-file
 # pylint: disable=W0611
 
@@ -21,7 +21,7 @@ from raet.keeping import Keep
 
 from salt.key import RaetKey
 
-from salt.utils import kinds
+import salt.utils.kinds as kinds
 
 
 class SaltKeep(Keep):

@@ -137,18 +137,18 @@ The script will be executed every reboot if cron daemon support this option.
 This counter part definition will ensure than a job with a special keyword
 is not set.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import os
 
 # Import salt libs
-import salt.utils
 import salt.utils.files
 from salt.modules.cron import (
     _needs_change,
     _cron_matched
 )
+from salt.ext import six
 
 
 def __virtual__():
@@ -173,21 +173,21 @@ def _check_cron(user,
     Return the changes
     '''
     if minute is not None:
-        minute = str(minute).lower()
+        minute = six.text_type(minute).lower()
     if hour is not None:
-        hour = str(hour).lower()
+        hour = six.text_type(hour).lower()
     if daymonth is not None:
-        daymonth = str(daymonth).lower()
+        daymonth = six.text_type(daymonth).lower()
     if month is not None:
-        month = str(month).lower()
+        month = six.text_type(month).lower()
     if dayweek is not None:
-        dayweek = str(dayweek).lower()
+        dayweek = six.text_type(dayweek).lower()
     if identifier is not None:
-        identifier = str(identifier)
+        identifier = six.text_type(identifier)
     if commented is not None:
         commented = commented is True
     if cmd is not None:
-        cmd = str(cmd)
+        cmd = six.text_type(cmd)
     lst = __salt__['cron.list_tab'](user)
     if special is None:
         for cron in lst['crons']:
@@ -405,9 +405,9 @@ def absent(name,
         The special keyword used in the job (eg. @reboot, @hourly...).
         Quotes must be used, otherwise PyYAML will strip the '@' sign.
     '''
-    ### NOTE: The keyword arguments in **kwargs are ignored in this state, but
-    ###       cannot be removed from the function definition, otherwise the use
-    ###       of unsupported arguments will result in a traceback.
+    # NOTE: The keyword arguments in **kwargs are ignored in this state, but
+    #       cannot be removed from the function definition, otherwise the use
+    #       of unsupported arguments will result in a traceback.
 
     name = name.strip()
     if identifier is False:
@@ -550,11 +550,11 @@ def file(name,
         return ret
 
     cron_path = salt.utils.files.mkstemp()
-    with salt.utils.fopen(cron_path, 'w+') as fp_:
+    with salt.utils.files.fopen(cron_path, 'w+') as fp_:
         raw_cron = __salt__['cron.raw_cron'](user)
         if not raw_cron.endswith('\n'):
             raw_cron = "{0}\n".format(raw_cron)
-        fp_.write(raw_cron)
+        fp_.write(salt.utils.stringutils.to_str(raw_cron))
 
     ret = {'changes': {},
            'comment': '',
@@ -572,17 +572,18 @@ def file(name,
         return ret
 
     if __opts__['test']:
-        fcm = __salt__['file.check_managed'](cron_path,
-                                             source,
-                                             source_hash,
-                                             source_hash_name,
-                                             user,
-                                             group,
-                                             mode,
-                                             template,
-                                             context,
-                                             defaults,
-                                             __env__,
+        fcm = __salt__['file.check_managed'](name=cron_path,
+                                             source=source,
+                                             source_hash=source_hash,
+                                             source_hash_name=source_hash_name,
+                                             user=user,
+                                             group=group,
+                                             mode=mode,
+                                             attrs=[],  # no special attrs for cron
+                                             template=template,
+                                             context=context,
+                                             defaults=defaults,
+                                             saltenv=__env__,
                                              **kwargs
                                              )
         ret['result'], ret['comment'] = fcm
@@ -597,18 +598,19 @@ def file(name,
     # Gather the source file from the server
     try:
         sfn, source_sum, comment = __salt__['file.get_managed'](
-            cron_path,
-            template,
-            source,
-            source_hash,
-            source_hash_name,
-            user,
-            group,
-            mode,
-            __env__,
-            context,
-            defaults,
-            False,        # skip_verify
+            name=cron_path,
+            template=template,
+            source=source,
+            source_hash=source_hash,
+            source_hash_name=source_hash_name,
+            user=user,
+            group=group,
+            mode=mode,
+            attrs=[],
+            saltenv=__env__,
+            context=context,
+            defaults=defaults,
+            skip_verify=False,        # skip_verify
             **kwargs
         )
     except Exception as exc:
@@ -625,16 +627,17 @@ def file(name,
 
     try:
         ret = __salt__['file.manage_file'](
-            cron_path,
-            sfn,
-            ret,
-            source,
-            source_sum,
-            user,
-            group,
-            mode,
-            __env__,
-            backup
+            name=cron_path,
+            sfn=sfn,
+            ret=ret,
+            source=source,
+            source_sum=source_sum,
+            user=user,
+            group=group,
+            mode=mode,
+            attrs=[],
+            saltenv=__env__,
+            backup=backup
         )
     except Exception as exc:
         ret['result'] = False
@@ -649,7 +652,7 @@ def file(name,
         if cron_ret['retcode'] == 0:
             ret['comment'] = 'Crontab for user {0} was updated'.format(user)
             ret['result'] = True
-            ret['changes'] = ret['changes']['diff']
+            ret['changes'] = ret['changes']
         else:
             ret['comment'] = 'Unable to update user {0} crontab {1}.' \
                              ' Error: {2}'.format(user, cron_path, cron_ret['stderr'])

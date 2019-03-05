@@ -13,9 +13,10 @@ When you want to use host globs for target matching, use ``--roster clustershell
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import socket
 import copy
+from salt.ext import six
 from salt.ext.six.moves import map  # pylint: disable=import-error,redefined-builtin
 
 REQ_ERROR = None
@@ -37,13 +38,13 @@ def targets(tgt, tgt_type='glob', **kwargs):
     ports = __opts__['ssh_scan_ports']
     if not isinstance(ports, list):
         # Comma-separate list of integers
-        ports = list(map(int, str(ports).split(',')))
+        ports = list(map(int, six.text_type(ports).split(',')))
 
     hosts = list(NodeSet(tgt))
     host_addrs = dict([(h, socket.gethostbyname(h)) for h in hosts])
 
     for host, addr in host_addrs.items():
-        addr = str(addr)
+        addr = six.text_type(addr)
         ret[addr] = copy.deepcopy(__opts__.get('roster_defaults', {}))
         for port in ports:
             try:
@@ -52,7 +53,7 @@ def targets(tgt, tgt_type='glob', **kwargs):
                 sock.connect((addr, port))
                 sock.shutdown(socket.SHUT_RDWR)
                 sock.close()
-                ret[host].update({'host': host, 'port': port})
+                ret[host].update({'host': addr, 'port': port})
             except socket.error:
                 pass
     return ret

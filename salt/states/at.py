@@ -5,7 +5,7 @@ Configuration disposable regularly scheduled tasks for at.
 
 The at state can be add disposable regularly scheduled tasks for your system.
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
 import logging
@@ -291,6 +291,12 @@ def watch(name, timespec, tag=None, user=None, job=None, unique_tag=False):
 def mod_watch(name, **kwargs):
     '''
     The at watcher, called to invoke the watch command.
+
+    .. note::
+        This state exists to support special handling of the ``watch``
+        :ref:`requisite <requisites>`. It should not be called directly.
+
+        Parameters for this function should be set by the state being triggered.
 
     name
         The name of the atjob

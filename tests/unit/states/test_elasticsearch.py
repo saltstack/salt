@@ -3,7 +3,7 @@
     :codeauthor: Lukas Raska <lukas@raska.me>
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -17,8 +17,8 @@ from tests.support.mock import (
 from salt.exceptions import CommandExecutionError
 
 # Import Salt Libs
+import salt.utils.dictdiffer as dictdiffer
 from salt.states import elasticsearch
-from salt.utils import dictdiffer
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)

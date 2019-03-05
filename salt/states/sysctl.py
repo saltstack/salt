@@ -11,13 +11,16 @@ Control the kernel sysctl system.
     sysctl.present:
       - value: 20
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
 import re
 
 # Import salt libs
 from salt.exceptions import CommandExecutionError
+
+# Import 3rd part libs
+from salt.ext import six
 
 
 def __virtual__():
@@ -59,7 +62,7 @@ def present(name, value, config=None):
     if __opts__['test']:
         current = __salt__['sysctl.show']()
         configured = __salt__['sysctl.show'](config_file=config)
-        if not configured:
+        if configured is None:
             ret['result'] = None
             ret['comment'] = (
                 'Sysctl option {0} might be changed, we failed to check '
@@ -69,7 +72,7 @@ def present(name, value, config=None):
             return ret
         if name in current and name not in configured:
             if re.sub(' +|\t+', ' ', current[name]) != \
-                    re.sub(' +|\t+', ' ', str(value)):
+                    re.sub(' +|\t+', ' ', six.text_type(value)):
                 ret['result'] = None
                 ret['comment'] = (
                     'Sysctl option {0} set to be changed to {1}'
@@ -93,7 +96,7 @@ def present(name, value, config=None):
             )
             return ret
         elif name in configured and name in current:
-            if str(value).split() == __salt__['sysctl.get'](name).split():
+            if six.text_type(value).split() == __salt__['sysctl.get'](name).split():
                 ret['result'] = True
                 ret['comment'] = (
                     'Sysctl value {0} = {1} is already set'

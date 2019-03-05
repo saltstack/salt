@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import Python libs
-from __future__ import absolute_import
-import json
+from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import random
 import string
@@ -15,6 +14,7 @@ from tests.support.mock import MagicMock, NO_MOCK, NO_MOCK_REASON, patch
 # Import Salt libs
 import salt.config
 import salt.loader
+import salt.utils.json
 from salt.utils.versions import LooseVersion
 import salt.states.boto_lambda as boto_lambda
 
@@ -63,7 +63,8 @@ function_ret = dict(FunctionName='testfunction',
                     CodeSha256='abcdef',
                     CodeSize=199,
                     FunctionArn='arn:lambda:us-east-1:1234:Something',
-                    LastModified='yes')
+                    LastModified='yes',
+                    VpcConfig={'SubnetIds': [], 'SecurityGroupIds': []})
 alias_ret = dict(AliasArn='arn:lambda:us-east-1:1234:Something',
                  Name='testalias',
                  FunctionVersion='3',
@@ -106,7 +107,10 @@ class BotoLambdaStateTestCaseBase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
         ctx = {}
-        utils = salt.loader.utils(self.opts, whitelist=['boto', 'boto3'], context=ctx)
+        utils = salt.loader.utils(
+            self.opts,
+            whitelist=['boto', 'boto3', 'args', 'systemd', 'path', 'platform'],
+            context=ctx)
         serializers = salt.loader.serializers(self.opts)
         self.funcs = funcs = salt.loader.minion_mods(self.opts, context=ctx, utils=utils, whitelist=['boto_lambda'])
         self.salt_states = salt.loader.states(opts=self.opts, functions=funcs, utils=utils, whitelist=['boto_lambda'],
@@ -254,7 +258,7 @@ class BotoLambdaFunctionTestCase(BotoLambdaStateTestCaseBase, BotoLambdaTestCase
         self.conn.list_functions.return_value = {'Functions': [function_ret]}
         self.conn.update_function_code.return_value = function_ret
         self.conn.get_policy.return_value = {
-            "Policy": json.dumps(
+            "Policy": salt.utils.json.dumps(
                 {"Version": "2012-10-17",
                  "Statement": [
                      {"Condition":

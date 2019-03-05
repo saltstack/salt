@@ -9,10 +9,10 @@ from tests.support.unit import skipIf
 from tests.support.helpers import destructiveTest
 
 # Import Salt libs
-import salt.utils
+import salt.utils.platform
 
 
-@skipIf(not salt.utils.is_windows(), 'windows test only')
+@skipIf(not salt.utils.platform.is_windows(), 'windows test only')
 class WinDNSTest(ModuleCase):
     '''
     Test for salt.modules.win_dns_client
@@ -22,8 +22,12 @@ class WinDNSTest(ModuleCase):
         '''
         Test add and removing a dns server
         '''
+        # Get a list of interfaces on the system
+        interfaces = self.run_function('network.interfaces_names')
+        skipIf(interfaces.count == 0, 'This test requires a network interface')
+
+        interface = interfaces[0]
         dns = '8.8.8.8'
-        interface = 'Ethernet'
         # add dns server
         self.assertTrue(self.run_function('win_dns_client.add_dns', [dns, interface], index=42))
 

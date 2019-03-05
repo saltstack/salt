@@ -6,7 +6,7 @@ This includes server side transport, for the ReqServer and the Publisher
 '''
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 
 class ReqServerChannel(object):
@@ -55,7 +55,7 @@ class ReqServerChannel(object):
         '''
         Do anything you need post-fork. This should handle all incoming payloads
         and call payload_handler. You will also be passed io_loop, for all of your
-        async needs
+        asynchronous needs
         '''
         pass
 
@@ -92,7 +92,7 @@ class PubServerChannel(object):
             raise Exception('Channels are only defined for ZeroMQ and raet')
             # return NewKindOfChannel(opts, **kwargs)
 
-    def pre_fork(self, process_manager):
+    def pre_fork(self, process_manager, kwargs=None):
         '''
         Do anything necessary pre-fork. Since this is on the master side this will
         primarily be used to create IPC channels and create our daemon process to

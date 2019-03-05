@@ -109,15 +109,15 @@ Or we can remove the limit altogether!
         - property: cpu-shares
 
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
 import logging
 
 # Import Salt libs
-import salt.utils
-import salt.utils.files
+import salt.utils.args
 import salt.utils.atomicfile
+import salt.utils.files
 from salt.modules.zonecfg import _parse_value, _zonecfg_resource_default_selectors
 from salt.exceptions import CommandExecutionError
 from salt.utils.odict import OrderedDict
@@ -127,7 +127,6 @@ log = logging.getLogger(__name__)
 
 __func_alias__ = {
     'import_': 'import',
-    'export_': 'export',
 }
 
 # Define the state's virtual name
@@ -285,7 +284,7 @@ def resource_present(name, resource_type, resource_selector_property, resource_s
            'comment': ''}
 
     # sanitize input
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     resource_selector_value = _parse_value(resource_selector_value)
     for k, v in kwargs.items():
         kwargs[k] = _parse_value(kwargs[k])
@@ -321,11 +320,11 @@ def resource_present(name, resource_type, resource_selector_property, resource_s
 
                     ## check if update reauired
                     for key in kwargs:
-                        log.debug('zone.resource_preent - key={0} value={1} current_value={2}'.format(
+                        log.debug('zone.resource_preent - key=%s value=%s current_value=%s',
                             key,
                             resource[key] if key in resource else None,
                             _parse_value(kwargs[key]),
-                        ))
+                        )
                         # note: something odd with ncpus property, we fix it here for now
                         if key == 'ncpus' and key in kwargs:
                             kwargs[key] = '{0:.2f}'.format(float(kwargs[key]))
@@ -623,7 +622,7 @@ def halted(name, graceful=True):
     return ret
 
 
-def export_(name, path, replace=False):
+def export(name, path, replace=False):
     '''
     Export a zones configuration
 
@@ -760,6 +759,11 @@ def import_(name, path, mode='import', nodataset=False, brand_opts=None):
         ``install``: will import and then try to install the zone
         ``attach``: will import and then try to attach of the zone
 
+    .. code-block:: yaml
+
+        omipkg1:
+          zone.import:
+            - path: /foo/bar/baz
     '''
     ret = {'name': name,
            'changes': {},
@@ -915,7 +919,7 @@ def present(name, brand, zonepath, properties=None, resources=None):
         if isinstance(properties, list):
             for prop in properties:
                 if not isinstance(prop, OrderedDict) or len(prop) != 1:
-                    log.warning('zone.present - failed to parse property: {0}'.format(prop))
+                    log.warning('zone.present - failed to parse property: %s', prop)
                     continue
                 for key, value in prop.items():
                     res = None
@@ -933,7 +937,7 @@ def present(name, brand, zonepath, properties=None, resources=None):
         if isinstance(resources, list):
             for resource in resources:
                 if not isinstance(prop, OrderedDict) or len(prop) != 1:
-                    log.warning('zone.present - failed to parse resource: {0}'.format(resource))
+                    log.warning('zone.present - failed to parse resource: %s', resource)
                     continue
                 for key, value in resource.items():
                     zonecfg = __salt__['zonecfg.info'](name, show_all=True)

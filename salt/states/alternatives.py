@@ -26,6 +26,7 @@ Control the alternatives system
       - path: {{ my_hadoop_conf }}
 
 '''
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Define a function alias in order not to shadow built-in's
 __func_alias__ = {
@@ -201,6 +202,12 @@ def set_(name, path):
     path
         is the location of one of the alternative target files.
         (e.g. /usr/bin/less)
+
+    .. code-block:: yaml
+
+        foo:
+          alternatives.set:
+            - path: /usr/bin/foo-2.0
     '''
     ret = {'name': name,
            'path': path,

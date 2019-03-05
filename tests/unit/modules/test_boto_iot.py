@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, unicode_literals
 import random
 import string
 import logging
@@ -128,7 +128,10 @@ class BotoIoTTestCaseBase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
         self.opts = opts = salt.config.DEFAULT_MINION_OPTS
-        utils = salt.loader.utils(opts, whitelist=['boto3'], context={})
+        utils = salt.loader.utils(
+            opts,
+            whitelist=['boto3', 'args', 'systemd', 'path', 'platform'],
+            context={})
         return {boto_iot: {'__utils__': utils}}
 
     def setUp(self):
