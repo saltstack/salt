@@ -6,6 +6,9 @@ not all of the options may have been provided yet.  For a complete reference,
 see the `Parallels Desktop Reference Guide
 <http://download.parallels.com/desktop/v9/ga/docs/en_US/Parallels%20Command%20Line%20Reference%20Guide.pdf>`_.
 
+This module requires the prlctl binary to be installed to run most functions.
+To run parallels.prlsrvctl, the prlsrvctl binary is required.
+
 What has not been implemented yet can be accessed through ``parallels.prlctl``
 and ``parallels.prlsrvctl`` (note the preceding double dash ``--`` as
 necessary):
@@ -29,7 +32,7 @@ import shlex
 import salt.utils.data
 import salt.utils.path
 import salt.utils.yaml
-from salt.exceptions import SaltInvocationError
+from salt.exceptions import SaltInvocationError, CommandExecutionError
 
 # Import 3rd party libs
 from salt.ext import six
@@ -41,17 +44,6 @@ __func_alias__ = {
 log = logging.getLogger(__name__)
 # Match any GUID
 GUID_REGEX = re.compile(r'{?([0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12})}?', re.I)
-
-
-def __virtual__():
-    '''
-    Load this module if prlctl is available
-    '''
-    if not salt.utils.path.which('prlctl'):
-        return (False, 'prlctl utility not available')
-    if not salt.utils.path.which('prlsrvctl'):
-        return (False, 'prlsrvctl utility not available')
-    return __virtualname__
 
 
 def _normalize_args(args):
@@ -111,6 +103,9 @@ def prlsrvctl(sub_cmd, args=None, runas=None):
         salt '*' parallels.prlsrvctl usb list runas=macdev
         salt -- '*' parallels.prlsrvctl set '--mem-limit auto' runas=macdev
     '''
+    if not salt.utils.path.which('prlsrvctl'):
+        raise CommandExecutionError('prlsrvctl utility not available')
+
     # Construct command
     cmd = ['prlsrvctl', sub_cmd]
     if args:
@@ -141,6 +136,9 @@ def prlctl(sub_cmd, args=None, runas=None):
         salt '*' parallels.prlctl exec 'macvm uname' runas=macdev
         salt -- '*' parallels.prlctl capture 'macvm --file macvm.display.png' runas=macdev
     '''
+    if not salt.utils.path.which('prlctl'):
+        raise CommandExecutionError('prlctl utility not available')
+
     # Construct command
     cmd = ['prlctl', sub_cmd]
     if args:
@@ -467,7 +465,7 @@ def snapshot_id_to_name(name, snap_id, strict=False, runas=None):
     info = prlctl('snapshot-list', [name, '--id', snap_id], runas=runas)
 
     # Parallels desktop returned no information for snap_id
-    if not len(info):
+    if not info:
         raise SaltInvocationError(
             'No snapshots for VM "{0}" have ID "{1}"'.format(name, snap_id)
         )
@@ -545,7 +543,7 @@ def snapshot_name_to_id(name, snap_name, strict=False, runas=None):
 
     # Return one or more IDs having snap_name or raise an error upon
     # non-singular names
-    if len(named_ids) == 0:
+    if not named_ids:
         raise SaltInvocationError(
             'No snapshots for VM "{0}" have name "{1}"'.format(name, snap_name)
         )

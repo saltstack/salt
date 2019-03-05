@@ -2599,6 +2599,7 @@ def destroy(name, stop=False, path=None):
         )
     return _change_state('lxc-destroy', name, None, path=path)
 
+
 # Compatibility between LXC and nspawn
 remove = salt.utils.functools.alias_function(destroy, 'remove')
 
@@ -2942,6 +2943,7 @@ def set_password(name, users, password, encrypted=True, path=None):
             .format(', '.join(failed_users))
         )
     return True
+
 
 set_pass = salt.utils.functools.alias_function(set_password, 'set_pass')
 
@@ -4209,6 +4211,7 @@ def copy_to(name, source, dest, overwrite=False, makedirs=False, path=None):
         overwrite=overwrite,
         makedirs=makedirs)
 
+
 cp = salt.utils.functools.alias_function(copy_to, 'cp')
 
 
@@ -4689,7 +4692,7 @@ def get_pid(name, path=None):
     if name not in list_(limit='running', path=path):
         raise CommandExecutionError('Container {0} is not running, can\'t determine PID'.format(name))
     info = __salt__['cmd.run']('lxc-info -n {0}'.format(name)).split("\n")
-    pid = [line.split(':')[1].strip() for line in info if re.match(r'\s*PID', line) != None][0]
+    pid = [line.split(':')[1].strip() for line in info if re.match(r'\s*PID', line)][0]
     return pid
 
 

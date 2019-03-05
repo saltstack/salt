@@ -1,0 +1,11 @@
+system.log:
+  - filetree:
+      info: Add system log
+      args:
+        - /var/log/syslog
+
+etc/postgres:
+  - filetree:
+      info: Pick entire /etc/postgresql
+      args:
+        - /etc/postgresql

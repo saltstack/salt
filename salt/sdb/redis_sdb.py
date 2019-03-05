@@ -3,7 +3,7 @@
 Redis SDB module
 ================
 
- .. versionadded:: Fluorine
+ .. versionadded:: 2019.2.0
 
 This module allows access to Redis  using an ``sdb://`` URI.
 
@@ -81,4 +81,4 @@ def delete(key, profile=None):
     redis_kwargs = profile.copy()
     redis_kwargs.pop('driver')
     redis_conn = redis.StrictRedis(**redis_kwargs)
-    return redis_conn.get(key)
+    return redis_conn.delete(key)

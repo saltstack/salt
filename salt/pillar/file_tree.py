@@ -156,6 +156,7 @@ import salt.utils.files
 import salt.utils.minions
 import salt.utils.path
 import salt.utils.stringio
+import salt.utils.stringutils
 import salt.template
 from salt.ext import six
 
@@ -251,7 +252,7 @@ def _construct_pillar(top_dir,
             else:
                 data = contents
                 if template is True:
-                    data = salt.template.compile_template_str(template=contents,
+                    data = salt.template.compile_template_str(template=salt.utils.stringutils.to_unicode(contents),
                                                               renderers=renderers,
                                                               default=render_default,
                                                               blacklist=renderer_blacklist,
@@ -478,10 +479,10 @@ def _ext_pillar(minion_id,
 
     ngroup_pillar = {}
     nodegroups_dir = os.path.join(root_dir, 'nodegroups')
-    if os.path.exists(nodegroups_dir) and len(__opts__.get('nodegroups', ())) > 0:
+    if os.path.exists(nodegroups_dir) and __opts__.get('nodegroups'):
         master_ngroups = __opts__['nodegroups']
         ext_pillar_dirs = os.listdir(nodegroups_dir)
-        if len(ext_pillar_dirs) > 0:
+        if ext_pillar_dirs:
             for nodegroup in ext_pillar_dirs:
                 if (os.path.isdir(nodegroups_dir) and
                         nodegroup in master_ngroups):

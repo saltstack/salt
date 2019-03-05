@@ -205,10 +205,22 @@ def rename(src, dst):
         os.rename(src, dst)
 
 
-def process_read_exception(exc, path):
+def process_read_exception(exc, path, ignore=None):
     '''
     Common code for raising exceptions when reading a file fails
+
+    The ignore argument can be an iterable of integer error codes (or a single
+    integer error code) that should be ignored.
     '''
+    if ignore is not None:
+        if isinstance(ignore, six.integer_types):
+            ignore = (ignore,)
+    else:
+        ignore = ()
+
+    if exc.errno in ignore:
+        return
+
     if exc.errno == errno.ENOENT:
         raise CommandExecutionError('{0} does not exist'.format(path))
     elif exc.errno == errno.EACCES:
@@ -404,11 +416,13 @@ def flopen(*args, **kwargs):
     '''
     Shortcut for fopen with lock and context manager.
     '''
-    with fopen(*args, **kwargs) as f_handle:
+    filename, args = args[0], args[1:]
+    writing = 'wa'
+    with fopen(filename, *args, **kwargs) as f_handle:
         try:
             if is_fcntl_available(check_sunos=True):
                 lock_type = fcntl.LOCK_SH
-                if 'w' in args[1] or 'a' in args[1]:
+                if args and any([write in args[0] for write in writing]):
                     lock_type = fcntl.LOCK_EX
                 fcntl.flock(f_handle.fileno(), lock_type)
             yield f_handle
@@ -791,10 +805,10 @@ def backup_minion(path, bkroot):
 def get_encoding(path):
     '''
     Detect a file's encoding using the following:
-    - Check for ascii
     - Check for Byte Order Marks (BOM)
     - Check for UTF-8 Markers
     - Check System Encoding
+    - Check for ascii
 
     Args:
 
@@ -867,10 +881,6 @@ def get_encoding(path):
     except os.error:
         raise CommandExecutionError('Failed to open file')
 
-    # Check for ASCII first
-    if check_ascii(data):
-        return 'ASCII'
-
     # Check for Unicode BOM
     encoding = check_bom(data)
     if encoding:
@@ -883,5 +893,9 @@ def get_encoding(path):
     # Check system encoding
     if check_system_encoding(data):
         return __salt_system_encoding__
+
+    # Check for ASCII first
+    if check_ascii(data):
+        return 'ASCII'
 
     raise CommandExecutionError('Could not detect file encoding')

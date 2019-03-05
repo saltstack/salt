@@ -102,7 +102,7 @@ class TestSerializers(TestCase):
 
     @skipIf(not yaml.available, SKIP_MESSAGE % 'yaml')
     @skipIf(not yamlex.available, SKIP_MESSAGE % 'sls')
-    @flaky
+    @skipIf(six.PY3, 'Flaky on Python 3.')
     def test_compare_sls_vs_yaml_with_jinja(self):
         tpl = '{{ data }}'
         env = jinja2.Environment()
@@ -152,7 +152,7 @@ class TestSerializers(TestCase):
 
         # BLAAM! yml_src is not valid !
         final_obj = OrderedDict(yaml.deserialize(yml_src))
-        assert obj != final_obj
+        assert obj != final_obj, 'Objects matched! {} == {}'.format(obj, final_obj)
 
     @skipIf(not yamlex.available, SKIP_MESSAGE % 'sls')
     def test_sls_aggregate(self):

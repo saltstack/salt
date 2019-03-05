@@ -7,6 +7,8 @@ from __future__ import absolute_import, print_function, unicode_literals
 import time
 import logging
 
+import salt.utils.stringutils
+
 log = logging.getLogger(__name__)
 
 _DEFAULT_SPLAYTIME = 300
@@ -28,7 +30,7 @@ def _get_hash():
     bitmask = 0xffffffff
     h = 0
 
-    for i in bytearray(__grains__['id']):
+    for i in bytearray(salt.utils.stringutils.to_bytes(__grains__['id'])):
         h = (h + i) & bitmask
         h = (h + (h << 10)) & bitmask
         h = (h ^ (h >> 6)) & bitmask
@@ -66,7 +68,7 @@ def execute(opts, data, func, args, kwargs):
     .. code-block:: bash
 
         # With specified splaytime (5 minutes) and timeout with 10 second buffer
-        salt -t 310 --module-executors='[slpay, direct_call]' --executor-opts='{splaytime: 300}' '*' pkg.version cowsay
+        salt -t 310 --module-executors='[splay, direct_call]' --executor-opts='{splaytime: 300}' '*' pkg.version cowsay
     '''
     if 'executor_opts' in data and 'splaytime' in data['executor_opts']:
         splaytime = data['executor_opts']['splaytime']

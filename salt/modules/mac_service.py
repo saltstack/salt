@@ -13,11 +13,11 @@ This module has support for services in the following locations.
     /Library/LaunchDaemons/
     /Library/LaunchAgents/
 
-    # As of version "Fluorine" support for user-specific services were added.
+    # As of version "2019.2.0" support for user-specific services were added.
     /Users/foo/Library/LaunchAgents/
 
 .. note::
-    As of the Fluorine release, if a service is located in a ``LaunchAgent``
+    As of the 2019.2.0 release, if a service is located in a ``LaunchAgent``
     path and a ``runas`` user is NOT specified, the current console user will
     be used to properly interact with the service.
 
@@ -25,6 +25,7 @@ This module has support for services in the following locations.
 from __future__ import absolute_import, unicode_literals, print_function
 
 # Import python libs
+import logging
 import os
 import re
 
@@ -45,6 +46,8 @@ __virtualname__ = 'service'
 __func_alias__ = {
     'list_': 'list',
 }
+
+log = logging.getLogger(__name__)
 
 
 def __virtual__():
@@ -154,7 +157,7 @@ def _always_running_service(name):
 
     :rtype: bool
 
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
     '''
 
     # get all the info from the launchctl service
@@ -198,7 +201,7 @@ def _get_domain_target(name, service_target=False):
 
     :rtype: tuple
 
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
     '''
 
     # Get service information
@@ -233,7 +236,7 @@ def _launch_agent(name):
 
     :rtype: bool
 
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
     '''
 
     # Get the path to the service.
@@ -491,6 +494,12 @@ def status(name, sig=None, runas=None):
     # Find service with ps
     if sig:
         return __salt__['status.pid'](sig)
+
+    try:
+        _get_service(name)
+    except CommandExecutionError as msg:
+        log.error(msg)
+        return ''
 
     if not runas and _launch_agent(name):
         runas = __utils__['mac_utils.console_user'](username=True)

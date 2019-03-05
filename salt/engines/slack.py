@@ -596,7 +596,7 @@ class SlackClient(object):
         Run each of them through ``get_configured_target(('foo', f), 'pillar.get')`` and confirm a valid target
 
         '''
-        # Default to targetting all minions with a type of glob
+        # Default to targeting all minions with a type of glob
         null_target = {'target': '*', 'tgt_type': 'glob'}
 
         def check_cmd_against_group(cmd):
@@ -634,6 +634,8 @@ class SlackClient(object):
         '''
         Print out YAML using the block mode
         '''
+        # emulate the yaml_out output formatter. It relies on a global __opts__ object which
+        # we can't obviously pass in
         try:
             try:
                 outputter = data[next(iter(data))].get('out')
@@ -725,7 +727,7 @@ class SlackClient(object):
                 if count > 10:
                     log.warning('Breaking in getting messages because count is exceeded')
                     break
-                if len(msg) == 0:
+                if not msg:
                     count += 1
                     log.warning('Skipping an empty message.')
                     continue  # This one is a dud, get the next message

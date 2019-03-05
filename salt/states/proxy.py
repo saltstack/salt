@@ -55,7 +55,7 @@ def managed(name, port, services=None, user=None, password=None, bypass_domains=
         The username to use for the proxy server if required
 
     password
-        The password to use if required by the server
+        The password to use for the proxy server if required
 
     bypass_domains
         An array of the domains that should bypass the proxy
@@ -103,7 +103,7 @@ def managed(name, port, services=None, user=None, password=None, bypass_domains=
                 ret['result'] = False
                 ret['comment'] += 'Failed to set bypass proxy domains.\n'
 
-        if len(ret['changes']['new']) == 0:
+        if not ret['changes']['new']:
             del ret['changes']['new']
 
         return ret

@@ -33,6 +33,7 @@ import salt.utils.functools
 import salt.utils.hashutils
 import salt.utils.jid
 import salt.utils.json
+import salt.utils.msgpack
 import salt.utils.platform
 import salt.utils.state
 import salt.utils.stringutils
@@ -45,7 +46,6 @@ from salt.utils.odict import OrderedDict
 
 # Import 3rd-party libs
 from salt.ext import six
-import msgpack
 
 __proxyenabled__ = ['*']
 
@@ -185,7 +185,7 @@ def _get_pause(jid, state_id=None):
             data[state_id] = {}
     if os.path.exists(pause_path):
         with salt.utils.files.fopen(pause_path, 'rb') as fp_:
-            data = msgpack.loads(fp_.read())
+            data = salt.utils.msgpack.loads(fp_.read())
     return data, pause_path
 
 
@@ -256,7 +256,7 @@ def soft_kill(jid, state_id=None):
     data, pause_path = _get_pause(jid, state_id)
     data[state_id]['kill'] = True
     with salt.utils.files.fopen(pause_path, 'wb') as fp_:
-        fp_.write(msgpack.dumps(data))
+        fp_.write(salt.utils.msgpack.dumps(data))
 
 
 def pause(jid, state_id=None, duration=None):
@@ -291,7 +291,7 @@ def pause(jid, state_id=None, duration=None):
     if duration:
         data[state_id]['duration'] = int(duration)
     with salt.utils.files.fopen(pause_path, 'wb') as fp_:
-        fp_.write(msgpack.dumps(data))
+        fp_.write(salt.utils.msgpack.dumps(data))
 
 
 def resume(jid, state_id=None):
@@ -325,7 +325,7 @@ def resume(jid, state_id=None):
     if state_id == '__all__':
         data = {}
     with salt.utils.files.fopen(pause_path, 'wb') as fp_:
-        fp_.write(msgpack.dumps(data))
+        fp_.write(salt.utils.msgpack.dumps(data))
 
 
 def orchestrate(mods,
@@ -626,12 +626,19 @@ def apply_(mods=None, **kwargs):
     test
         Run states in test-only (dry-run) mode
 
+    mock
+        The mock option allows for the state run to execute without actually
+        calling any states. This then returns a mocked return which will show
+        the requisite ordering as well as fully validate the state run.
+
+        .. versionadded:: 2015.8.4
+
     pillar
         Custom Pillar values, passed as a dictionary of key-value pairs
 
         .. code-block:: bash
 
-            salt '*' state.apply test pillar='{"foo": "bar"}'
+            salt '*' state.apply stuff pillar='{"foo": "bar"}'
 
         .. note::
             Values passed this way will override Pillar values set via
@@ -674,11 +681,11 @@ def apply_(mods=None, **kwargs):
 
     .. code-block:: bash
 
-        # Run the states configured in salt://test.sls (or salt://test/init.sls)
-        salt '*' state.apply test
-        # Run the states configured in salt://test.sls (or salt://test/init.sls)
+        # Run the states configured in salt://stuff.sls (or salt://stuff/init.sls)
+        salt '*' state.apply stuff
+        # Run the states configured in salt://stuff.sls (or salt://stuff/init.sls)
         # and salt://pkgs.sls (or salt://pkgs/init.sls).
-        salt '*' state.apply test,pkgs
+        salt '*' state.apply stuff,pkgs
 
     The following additional arguments are also accepted when applying
     individual SLS files:
@@ -686,12 +693,19 @@ def apply_(mods=None, **kwargs):
     test
         Run states in test-only (dry-run) mode
 
+    mock
+        The mock option allows for the state run to execute without actually
+        calling any states. This then returns a mocked return which will show
+        the requisite ordering as well as fully validate the state run.
+
+        .. versionadded:: 2015.8.4
+
     pillar
         Custom Pillar values, passed as a dictionary of key-value pairs
 
         .. code-block:: bash
 
-            salt '*' state.apply test pillar='{"foo": "bar"}'
+            salt '*' state.apply stuff pillar='{"foo": "bar"}'
 
         .. note::
             Values passed this way will override Pillar values set via
@@ -742,7 +756,7 @@ def apply_(mods=None, **kwargs):
 
         .. code-block:: bash
 
-            salt '*' state.apply test localconfig=/path/to/minion.yml
+            salt '*' state.apply stuff localconfig=/path/to/minion.yml
 
     sync_mods
         If specified, the desired custom module types will be synced prior to
@@ -750,15 +764,15 @@ def apply_(mods=None, **kwargs):
 
         .. code-block:: bash
 
-            salt '*' state.apply test sync_mods=states,modules
-            salt '*' state.apply test sync_mods=all
+            salt '*' state.apply stuff sync_mods=states,modules
+            salt '*' state.apply stuff sync_mods=all
 
         .. note::
             This option is ignored when no SLS files are specified, as a
             :ref:`highstate <running-highstate>` automatically syncs all custom
             module types.
 
-        .. versionadded:: 2017.7.8,2018.3.3,Fluorine
+        .. versionadded:: 2017.7.8,2018.3.3,2019.2.0
     '''
     if mods:
         return sls(mods, **kwargs)
@@ -779,8 +793,8 @@ def request(mods=None,
     .. code-block:: bash
 
         salt '*' state.request
-        salt '*' state.request test
-        salt '*' state.request test,pkgs
+        salt '*' state.request stuff
+        salt '*' state.request stuff,pkgs
     '''
     kwargs['test'] = True
     ret = apply_(mods, **kwargs)
@@ -916,7 +930,7 @@ def highstate(test=None, queue=False, **kwargs):
 
         .. code-block:: bash
 
-            salt '*' state.highstate test pillar='{"foo": "bar"}'
+            salt '*' state.highstate stuff pillar='{"foo": "bar"}'
 
         .. note::
             Values passed this way will override Pillar values set via
@@ -1096,7 +1110,7 @@ def sls(mods, test=None, exclude=None, queue=False, sync_mods=None, **kwargs):
 
         .. code-block:: bash
 
-            salt '*' state.sls test pillar='{"foo": "bar"}'
+            salt '*' state.sls stuff pillar='{"foo": "bar"}'
 
         .. note::
             Values passed this way will override existing Pillar values set via
@@ -1182,10 +1196,10 @@ def sls(mods, test=None, exclude=None, queue=False, sync_mods=None, **kwargs):
 
         .. code-block:: bash
 
-            salt '*' state.sls test sync_mods=states,modules
-            salt '*' state.sls test sync_mods=all
+            salt '*' state.sls stuff sync_mods=states,modules
+            salt '*' state.sls stuff sync_mods=all
 
-        .. versionadded:: 2017.7.8,2018.3.3,Fluorine
+        .. versionadded:: 2017.7.8,2018.3.3,2019.2.0
 
     CLI Example:
 
@@ -1589,7 +1603,7 @@ def show_states(queue=False, **kwargs):
 
         salt '*' state.show_states
 
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     '''
     conflict = _check_queue(queue, kwargs)
@@ -1759,7 +1773,7 @@ def show_low_sls(mods, test=None, queue=False, **kwargs):
 
         .. code-block:: bash
 
-            salt '*' state.show_low_sls test pillar='{"foo": "bar"}'
+            salt '*' state.show_low_sls stuff pillar='{"foo": "bar"}'
 
         .. note::
             Values passed this way will override Pillar values set via
@@ -1931,7 +1945,7 @@ def sls_exists(mods, test=None, queue=False, **kwargs):
     rather than returning state details, returns True or False. The default
     environment is ``base``, use ``saltenv`` to specify a different environment.
 
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     saltenv
         Specify a salt fileserver environment from which to look for the SLS files
@@ -1956,7 +1970,7 @@ def id_exists(ids, mods, test=None, queue=False, **kwargs):
     <salt.modules.state.sls_exists>`, returns True or False. The default
     environment is base``, use ``saltenv`` to specify a different environment.
 
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     saltenv
         Specify a salt fileserver environment from which to look for the SLS files
@@ -2348,7 +2362,7 @@ def event(tagmatch='*',
     Watch Salt's event bus and block until the given tag is matched
 
     .. versionadded:: 2016.3.0
-    .. versionchanged:: Fluorine
+    .. versionchanged:: 2019.2.0
         ``tagmatch`` can now be either a glob or regular expression.
 
     This is useful for utilizing Salt's event bus from shell scripts or for

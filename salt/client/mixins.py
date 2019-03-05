@@ -28,7 +28,7 @@ import salt.utils.process
 import salt.utils.state
 import salt.utils.user
 import salt.utils.versions
-import salt.transport
+import salt.transport.client
 import salt.log.setup
 from salt.ext import six
 
@@ -136,10 +136,13 @@ class SyncClientMixin(object):
         '''
         load = kwargs
         load['cmd'] = self.client
-        channel = salt.transport.Channel.factory(self.opts,
-                                                 crypt='clear',
-                                                 usage='master_call')
-        ret = channel.send(load)
+        channel = salt.transport.client.ReqChannel.factory(self.opts,
+                                                           crypt='clear',
+                                                           usage='master_call')
+        try:
+            ret = channel.send(load)
+        finally:
+            channel.close()
         if isinstance(ret, collections.Mapping):
             if 'error' in ret:
                 salt.utils.error.raise_error(**ret['error'])
@@ -314,7 +317,7 @@ class SyncClientMixin(object):
             print_func=print_func
         )
 
-        # TODO: document these, and test that they exist
+        # TODO: test that they exist
         # TODO: Other things to inject??
         func_globals = {'__jid__': jid,
                         '__user__': data['user'],

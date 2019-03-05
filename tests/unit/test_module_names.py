@@ -15,7 +15,8 @@ import salt.utils.stringutils
 
 # Import Salt Testing libs
 from tests.support.unit import TestCase
-from tests.support.paths import CODE_DIR, test_mods
+from tests.support.paths import list_test_mods
+from tests.support.runtests import RUNTIME_VARS
 
 EXCLUDED_DIRS = [
     os.path.join('tests', 'pkg'),
@@ -29,6 +30,7 @@ EXCLUDED_DIRS = [
     os.path.join('tests', 'unit', 'files'),
     os.path.join('tests', 'integration', 'cloud', 'helpers'),
     os.path.join('tests', 'kitchen', 'tests'),
+    os.path.join('tests', 'unit', 'modules', 'nxos'),
 ]
 INCLUDED_DIRS = [
     os.path.join('tests', 'kitchen', 'tests', '*', 'tests', '*'),
@@ -48,6 +50,7 @@ EXCLUDED_FILES = [
     os.path.join('tests', 'modparser.py'),
     os.path.join('tests', 'committer_parser.py'),
     os.path.join('tests', 'zypp_plugin.py'),
+    os.path.join('tests', 'tox-helper.py'),
     os.path.join('tests', 'unit', 'transport', 'mixins.py'),
     os.path.join('tests', 'integration', 'utils', 'testprogram.py'),
 ]
@@ -68,10 +71,10 @@ class BadTestModuleNamesTestCase(TestCase):
         Make sure all test modules conform to the test_*.py naming scheme
         '''
         excluded_dirs, included_dirs = tuple(EXCLUDED_DIRS), tuple(INCLUDED_DIRS)
-        tests_dir = os.path.join(CODE_DIR, 'tests')
+        tests_dir = os.path.join(RUNTIME_VARS.CODE_DIR, 'tests')
         bad_names = []
-        for root, dirs, files in salt.utils.path.os_walk(tests_dir):
-            reldir = os.path.relpath(root, CODE_DIR)
+        for root, _, files in salt.utils.path.os_walk(tests_dir):
+            reldir = os.path.relpath(root, RUNTIME_VARS.CODE_DIR)
             if (reldir.startswith(excluded_dirs) and not self._match_dirs(reldir, included_dirs)) \
                     or reldir.endswith('__pycache__'):
                 continue
@@ -87,7 +90,7 @@ class BadTestModuleNamesTestCase(TestCase):
         error_msg = '\n\nPlease rename the following files:\n'
         for path in bad_names:
             directory, filename = path.rsplit(os.sep, 1)
-            filename, ext = os.path.splitext(filename)
+            filename, _ = os.path.splitext(filename)
             error_msg += '  {} -> {}/test_{}.py\n'.format(path, directory, filename.split('_test')[0])
 
         error_msg += '\nIf you believe one of the entries above should be ignored, please add it to either\n'
@@ -147,6 +150,8 @@ class BadTestModuleNamesTestCase(TestCase):
             'integration.scheduler.test_eval',
             'integration.scheduler.test_postpone',
             'integration.scheduler.test_skip',
+            'integration.scheduler.test_maxrunning',
+            'integration.scheduler.test_helpers',
             'integration.shell.test_spm',
             'integration.shell.test_cp',
             'integration.shell.test_syndic',
@@ -194,7 +199,7 @@ class BadTestModuleNamesTestCase(TestCase):
             msg += ''.join(errors)
             return msg
 
-        for mod_name in test_mods():
+        for mod_name in list_test_mods():
             if mod_name in ignore:
                 # Test module is being ignored, skip it
                 continue
@@ -216,7 +221,7 @@ class BadTestModuleNamesTestCase(TestCase):
                 '.'.join((flower[5:], 'py')))
 
             # The full path to the file we expect to find
-            abspath = salt.utils.path.join(CODE_DIR, relpath)
+            abspath = salt.utils.path.join(RUNTIME_VARS.CODE_DIR, relpath)
 
             if not os.path.isfile(abspath):
                 # Maybe this is in a dunder init?

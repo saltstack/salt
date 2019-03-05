@@ -42,6 +42,8 @@ except ImportError:
 
 # Import salt libs
 import salt.utils.args
+import salt.utils.data
+import salt.utils.stringutils
 from salt.exceptions import SaltInvocationError
 
 log = logging.getLogger(__name__)
@@ -116,7 +118,7 @@ def _check_load_paths(load_path):
         else:
             log.info('Invalid augeas_cfg load_path entry: %s removed', _path)
 
-    if len(_paths) == 0:
+    if not _paths:
         return None
 
     return ':'.join(_paths)
@@ -239,6 +241,7 @@ def execute(context=None, lens=None, commands=(), load_path=None):
                            'see debug log for details: {0}'.format(arg)
             return ret
 
+        args = salt.utils.data.decode(args, to_str=True)
         log.debug('%s: %s', method, args)
 
         func = getattr(aug, method)
@@ -492,7 +495,7 @@ def ls(path, load_path=None):  # pylint: disable=C0103
     def _match(path):
         ''' Internal match function '''
         try:
-            matches = aug.match(path)
+            matches = aug.match(salt.utils.stringutils.to_str(path))
         except RuntimeError:
             return {}
 

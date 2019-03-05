@@ -40,7 +40,6 @@ from salt.ext.six.moves import configparser
 
 # pylint: enable=import-error,redefined-builtin
 
-import salt.defaults.exitcodes
 # Import Salt libs
 import salt.utils.args
 import salt.utils.data
@@ -54,6 +53,7 @@ import salt.utils.pkg
 import salt.utils.pkg.rpm
 import salt.utils.systemd
 import salt.utils.versions
+import salt.defaults.exitcodes
 from salt.utils.versions import LooseVersion as _LooseVersion
 import salt.utils.environment
 from salt.exceptions import (
@@ -466,7 +466,7 @@ def latest_version(*names, **kwargs):
         salt '*' pkg.latest_version <package1> <package2> <package3> ...
     '''
     refresh = salt.utils.data.is_true(kwargs.pop('refresh', True))
-    if len(names) == 0:
+    if not names:
         return ''
 
     options = _get_options(**kwargs)
@@ -559,6 +559,7 @@ def latest_version(*names, **kwargs):
     if len(names) == 1:
         return ret[names[0]]
     return ret
+
 
 # available_version is being deprecated
 available_version = salt.utils.functools.alias_function(latest_version, 'available_version')
@@ -812,7 +813,7 @@ def list_repo_pkgs(*args, **kwargs):
         be expanded and ``--setopt`` prepended to each in the yum/dnf command
         that is run.
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     CLI Examples:
 
@@ -980,6 +981,7 @@ def list_upgrades(refresh=True, **kwargs):
 
     return dict([(x.name, x.version) for x in _yum_pkginfo(out['stdout'])])
 
+
 # Preserve expected CLI usage (yum list updates)
 list_updates = salt.utils.functools.alias_function(list_upgrades, 'list_updates')
 
@@ -1083,7 +1085,7 @@ def refresh_db(**kwargs):
         be expanded and ``--setopt`` prepended to each in the yum/dnf command
         that is run.
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     CLI Example:
 
@@ -1248,7 +1250,7 @@ def install(name=None,
 
             salt '*' pkg.install foo setopt='obsoletes=0,plugins=0'
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     Repository Options:
 
@@ -1367,7 +1369,7 @@ def install(name=None,
     except MinionError as exc:
         raise CommandExecutionError(exc)
 
-    if pkg_params is None or len(pkg_params) == 0:
+    if not pkg_params:
         return {}
 
     version_num = kwargs.get('version')
@@ -1502,7 +1504,8 @@ def install(name=None,
                     # provided. It could either be the OS architecture, or
                     # 'noarch', and we don't make that distinction in the
                     # pkg.list_pkgs return data.
-                    version_num = version_num.split(':', 1)[-1]
+                    if ignore_epoch is True:
+                        version_num = version_num.split(':', 1)[-1]
                 arch = ''
                 try:
                     namepart, archpart = pkgname.rsplit('.', 1)
@@ -1530,23 +1533,24 @@ def install(name=None,
                         )
                         continue
 
-                pkgstr = '{0}-{1}{2}'.format(pkgname, version_num, arch)
+                if ignore_epoch is True:
+                    pkgstr = '{0}-{1}{2}'.format(pkgname, version_num, arch)
+                else:
+                    pkgstr = '{0}-{1}{2}'.format(pkgname, version_num.split(':', 1)[-1], arch)
+
             else:
                 pkgstr = pkgpath
 
             # Lambda to trim the epoch from the currently-installed version if
             # no epoch is specified in the specified version
-            norm_epoch = lambda x, y: x.split(':', 1)[-1] \
-                if ':' not in y \
-                else x
             cver = old_as_list.get(pkgname, [])
             if reinstall and cver:
                 for ver in cver:
-                    ver = norm_epoch(ver, version_num)
                     if salt.utils.versions.compare(ver1=version_num,
                                                    oper='==',
                                                    ver2=ver,
-                                                   cmp_func=version_cmp):
+                                                   cmp_func=version_cmp,
+                                                   ignore_epoch=ignore_epoch):
                         # This version is already installed, so we need to
                         # reinstall.
                         to_reinstall.append((pkgname, pkgstr))
@@ -1556,11 +1560,11 @@ def install(name=None,
                     to_install.append((pkgname, pkgstr))
                 else:
                     for ver in cver:
-                        ver = norm_epoch(ver, version_num)
                         if salt.utils.versions.compare(ver1=version_num,
                                                        oper='>=',
                                                        ver2=ver,
-                                                       cmp_func=version_cmp):
+                                                   cmp_func=version_cmp,
+                                                   ignore_epoch=ignore_epoch):
                             to_install.append((pkgname, pkgstr))
                             break
                     else:
@@ -1742,7 +1746,7 @@ def upgrade(name=None,
     .. _`systemd-run(1)`: https://www.freedesktop.org/software/systemd/man/systemd-run.html
     .. _`systemd.kill(5)`: https://www.freedesktop.org/software/systemd/man/systemd.kill.html
 
-    .. versionchanged:: Fluorine
+    .. versionchanged:: 2019.2.0
         Added ``obsoletes`` and ``minimal`` arguments
 
     Returns a dictionary containing the changes:
@@ -1835,7 +1839,7 @@ def upgrade(name=None,
 
             salt '*' pkg.upgrade minimal=True
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     obsoletes : True
         Controls wether yum/dnf should take obsoletes into account and remove them.
@@ -1846,14 +1850,14 @@ def upgrade(name=None,
 
             salt '*' pkg.upgrade obsoletes=False
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     setopt
         A comma-separated or Python list of key=value options. This list will
         be expanded and ``--setopt`` prepended to each in the yum/dnf command
         that is run.
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     .. note::
         To add extra arguments to the ``yum upgrade`` command, pass them as key
@@ -1926,7 +1930,7 @@ def update(name=None,
             obsoletes=False,
             **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Calls :py:func:`pkg.upgrade <salt.modules.yumpkg.upgrade>` with
     ``obsoletes=False``. Mirrors the CLI behavior of ``yum update``.
@@ -2303,6 +2307,7 @@ def list_holds(pattern=__HOLD_PATTERN, full=True):
             ret.append(match)
     return ret
 
+
 get_locked_packages = salt.utils.functools.alias_function(list_holds, 'get_locked_packages')
 
 
@@ -2609,6 +2614,7 @@ def group_install(name,
 
     return install(pkgs=pkgs, **kwargs)
 
+
 groupinstall = salt.utils.functools.alias_function(group_install, 'groupinstall')
 
 
@@ -2750,6 +2756,8 @@ def mod_repo(repo, basedir=None, **kwargs):
         the URL for yum to reference
     mirrorlist
         the URL for yum to reference
+    key_url
+        the URL to gather the repo key from (salt:// or any other scheme supported by cp.cache_file)
 
     Key/Value pairs may also be removed from a repo's configuration by setting
     a key to a blank value. Bear in mind that a name cannot be deleted, and a
@@ -2847,6 +2855,22 @@ def mod_repo(repo, basedir=None, **kwargs):
             raise SaltInvocationError(
                 'Cannot delete mirrorlist without specifying baseurl'
             )
+
+    # Import repository gpg key
+    if 'key_url' in repo_opts:
+        key_url = kwargs['key_url']
+        fn_ = __salt__['cp.cache_file'](key_url, saltenv=(kwargs['saltenv'] if 'saltenv' in kwargs else 'base'))
+        if not fn_:
+            raise CommandExecutionError(
+                'Error: Unable to copy key from URL {0} for repository {1}'.format(key_url, repo_opts['name'])
+            )
+        cmd = ['rpm', '--import', fn_]
+        out = __salt__['cmd.retcode'](cmd, python_shell=False, **kwargs)
+        if out != salt.defaults.exitcodes.EX_OK:
+            raise CommandExecutionError(
+                'Error: Unable to import key from URL {0} for repository {1}'.format(key_url, repo_opts['name'])
+            )
+        del repo_opts['key_url']
 
     # Delete anything in the todelete list
     for key in todelete:
@@ -2969,7 +2993,7 @@ def owner(*paths):
     .. versionadded:: 2014.7.0
 
     Return the name of the package that owns the file. Multiple file paths can
-    be passed. Like :mod:`pkg.version <salt.modules.yumpkg.version`, if a
+    be passed. Like :mod:`pkg.version <salt.modules.yumpkg.version>`, if a
     single path is passed, a string will be returned, and if multiple paths are
     passed, a dictionary of file/package name pairs will be returned.
 

@@ -52,6 +52,7 @@ htmlcov/
 /*.iml
 *.sublime-project
 *.sublime-workspace
+/.vscode
 
 # ignore ctags file
 tags
@@ -94,6 +95,9 @@ tests/integration/cloud/providers/pki/minions
 
 # Ignore tox virtualenvs
 /.tox/
+
+# Ignore nox virtualenvs
+/.nox/
 
 # Kitchen tests files
 .kitchen.local.yml

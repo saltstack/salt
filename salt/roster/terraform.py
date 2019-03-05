@@ -3,14 +3,17 @@
 Dynamic roster from terraform current state
 ===========================================
 
-This roster module allows you dynamically generate the roster from the terraform resources defined with `terraform-provider-salt <https://github.com/dmacvicar/terraform-provider-salt>`_.
+This roster module allows you dynamically generate the roster from the terraform
+resources defined with the `Terraform Salt`_ provider.
 
-It exposes all salt_host resources with the same attributes to the salt-ssh roster, making it completely independent of the type of terraform resource, and providing the integration using terraform constructs with interpolation.
+It exposes all salt_host resources with the same attributes to the salt-ssh
+roster, making it completely independent of the type of terraform resource, and
+providing the integration using terraform constructs with interpolation.
 
 Basic Example
 -------------
 
-Given a simple salt-ssh tree with a Saltfile
+Given a simple salt-ssh tree with a Saltfile:
 
 .. code-block:: yaml
 
@@ -19,7 +22,7 @@ Given a simple salt-ssh tree with a Saltfile
       max_procs: 30
       wipe_ssh: True
 
-and etc/salt/master
+and ``etc/salt/master``:
 
 .. code-block:: yaml
 
@@ -32,17 +35,24 @@ and etc/salt/master
           - srv/pillar
       roster: terraform
 
-In the same folder as your `Saltfile`, create terraform file with resources like cloud instances, virtual machines, etc. For every single of those that you want to manage with Salt, create a `salt_host` resource:
+In the same folder as your ``Saltfile``, create terraform file with resources
+like cloud instances, virtual machines, etc. For every single one of those that
+you want to manage with Salt, create a ``salt_host`` resource:
 
-.. code-block:: hcl
+.. code-block:: text
+
     resource "salt_host" "dbminion" {
       salt_id = "dbserver"
       host = "${libvirt_domain.vm-db.network_interface.0.addresses.0}"
       user = "root"
       passwd = "linux"
-}
+    }
 
-You can use the count attribute to create multiple roster entries with a single definition. Please refer to the `terraform salt provider <https://github.com/dmacvicar/terraform-provider-salt>`_ for more detailed examples.
+You can use the count attribute to create multiple roster entries with a single
+definition. Please refer to the `Terraform Salt`_ provider for more detailed
+examples.
+
+.. _Terraform Salt: https://github.com/dmacvicar/terraform-provider-salt
 '''
 # Import Python libs
 from __future__ import absolute_import, unicode_literals

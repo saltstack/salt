@@ -9,23 +9,24 @@ import os
 
 # Import Salt Testing Libs
 from tests.support.case import ShellCase
-from tests.support.paths import FILES
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.helpers import expensiveTest, generate_random_name
 
 # Import Salt Libs
 from salt.config import cloud_providers_config
+
 
 # Create the cloud instance name to be used throughout the tests
 INSTANCE_NAME = generate_random_name('CLOUD-TEST-')
 PROVIDER_NAME = 'digitalocean'
 
 
+@expensiveTest
 class DigitalOceanTest(ShellCase):
     '''
     Integration tests for the DigitalOcean cloud provider in Salt-Cloud
     '''
 
-    @expensiveTest
     def setUp(self):
         '''
         Sets up the test requirements
@@ -45,7 +46,7 @@ class DigitalOceanTest(ShellCase):
         # check if personal access token, ssh_key_file, and ssh_key_names are present
         config = cloud_providers_config(
             os.path.join(
-                FILES,
+                RUNTIME_VARS.FILES,
                 'conf',
                 'cloud.providers.d',
                 PROVIDER_NAME + '.conf'
@@ -80,7 +81,7 @@ class DigitalOceanTest(ShellCase):
         '''
         _list_locations = self.run_cloud('--list-locations {0}'.format(PROVIDER_NAME))
         self.assertIn(
-            'San Francisco 1',
+            'San Francisco 2',
             [i.strip() for i in _list_locations]
         )
 

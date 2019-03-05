@@ -116,8 +116,8 @@ def _get_zone_etc_localtime():
             if 'FreeBSD' in __grains__['os_family']:
                 return get_zonecode()
             log.warning(
-                tzfile + ' is not a symbolic link, attempting to match ' +
-                tzfile + ' to zoneinfo files'
+                '%s is not a symbolic link, attempting to match it '
+                'to zoneinfo files', tzfile
             )
             # Regular file. Try to match the hash.
             hash_type = __opts__.get('hash_type', 'md5')
