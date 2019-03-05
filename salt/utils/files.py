@@ -416,11 +416,13 @@ def flopen(*args, **kwargs):
     '''
     Shortcut for fopen with lock and context manager.
     '''
-    with fopen(*args, **kwargs) as f_handle:
+    filename, args = args[0], args[1:]
+    writing = 'wa'
+    with fopen(filename, *args, **kwargs) as f_handle:
         try:
             if is_fcntl_available(check_sunos=True):
                 lock_type = fcntl.LOCK_SH
-                if 'w' in args[1] or 'a' in args[1]:
+                if args and any([write in args[0] for write in writing]):
                     lock_type = fcntl.LOCK_EX
                 fcntl.flock(f_handle.fileno(), lock_type)
             yield f_handle

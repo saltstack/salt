@@ -2659,6 +2659,8 @@ can have multiple root directories. The subdirectories in the multiple file
 roots cannot match, otherwise the downloaded files will not be able to be
 reliably ensured. A base environment is required to house the top file.
 
+As of 2018.3.5 and 2019.2.1, it is possible to have `__env__` as a catch-all environment.
+
 Example:
 
 .. code-block:: yaml
@@ -2672,6 +2674,8 @@ Example:
       prod:
         - /srv/salt/prod/services
         - /srv/salt/prod/states
+      __env__:
+        - /srv/salt/default
 
 .. note::
     For masterless Salt, this parameter must be specified in the minion config
