@@ -1529,11 +1529,16 @@ class Minion(MinionBase):
                 self.schedule.returners = self.returners
 
         process_count_max = self.opts.get('process_count_max')
+        process_count_max_sleep_secs = self.opts.get('process_count_max_sleep_secs')
         if process_count_max > 0:
             process_count = len(salt.utils.minion.running(self.opts))
             while process_count >= process_count_max:
-                log.warning("Maximum number of processes reached while executing jid %s, waiting...", data['jid'])
-                yield tornado.gen.sleep(10)
+                log.warning('Maximum number of processes (%s) reached while '
+                            'executing jid %s, waiting %s seconds...',
+                            process_count_max,
+                            data['jid'],
+                            process_count_max_sleep_secs)
+                yield tornado.gen.sleep(process_count_max_sleep_secs)
                 process_count = len(salt.utils.minion.running(self.opts))
 
         # We stash an instance references to allow for the socket
@@ -2250,6 +2255,8 @@ class Minion(MinionBase):
             finally:
                 async_pillar.destroy()
         self.module_refresh(force_refresh, notify)
+        self.matchers_refresh()
+        self.beacons_refresh()
 
     def manage_schedule(self, tag, data):
         '''

@@ -35,12 +35,12 @@ import salt.utils.files
 import salt.utils.lazy
 import salt.utils.odict
 import salt.utils.platform
-import salt.utils.thread_local_proxy
 import salt.utils.versions
 import salt.utils.stringutils
 from salt.exceptions import LoaderError
 from salt.template import check_render_pipe_str
 from salt.utils.decorators import Depends
+from salt.utils.thread_local_proxy import ThreadLocalProxy
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -541,7 +541,7 @@ def thorium(opts, functions, runners):
     return ret
 
 
-def states(opts, functions, utils, serializers, whitelist=None, proxy=None):
+def states(opts, functions, utils, serializers, whitelist=None, proxy=None, context=None):
     '''
     Returns the state modules
 
@@ -557,6 +557,9 @@ def states(opts, functions, utils, serializers, whitelist=None, proxy=None):
         __opts__ = salt.config.minion_config('/etc/salt/minion')
         statemods = salt.loader.states(__opts__, None, None)
     '''
+    if context is None:
+        context = {}
+
     ret = LazyLoader(
         _module_dirs(opts, 'states'),
         opts,
@@ -567,6 +570,7 @@ def states(opts, functions, utils, serializers, whitelist=None, proxy=None):
     ret.pack['__states__'] = ret
     ret.pack['__utils__'] = utils
     ret.pack['__serializers__'] = serializers
+    ret.pack['__context__'] = context
     return ret
 
 
@@ -627,12 +631,17 @@ def ssh_wrapper(opts, functions=None, context=None):
     )
 
 
-def render(opts, functions, states=None, proxy=None):
+def render(opts, functions, states=None, proxy=None, context=None):
     '''
     Returns the render modules
     '''
+    if context is None:
+        context = {}
+
     pack = {'__salt__': functions,
-            '__grains__': opts.get('grains', {})}
+            '__grains__': opts.get('grains', {}),
+            '__context__': context}
+
     if states:
         pack['__states__'] = states
     pack['__proxy__'] = proxy or {}
@@ -1118,7 +1127,6 @@ def _inject_into_mod(mod, name, value, force_lock=False):
         module's variable without acquiring the lock and only acquires the lock
         if a new proxy has to be created and injected.
     '''
-    from salt.utils.thread_local_proxy import ThreadLocalProxy
     old_value = getattr(mod, name, None)
     # We use a double-checked locking scheme in order to avoid taking the lock
     # when a proxy object has already been injected.
@@ -1248,7 +1256,12 @@ class LazyLoader(salt.utils.lazy.LazyDict):
 
         for k, v in six.iteritems(self.pack):
             if v is None:  # if the value of a pack is None, lets make an empty dict
-                self.context_dict.setdefault(k, {})
+                value = self.context_dict.get(k, {})
+
+                if isinstance(value, ThreadLocalProxy):
+                    value = ThreadLocalProxy.unproxy(value)
+
+                self.context_dict[k] = value
                 self.pack[k] = salt.utils.context.NamespacedDictWrapper(self.context_dict, k)
 
         self.whitelist = whitelist
@@ -1526,11 +1539,21 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         Strip out of the opts any logger instance
         '''
         if '__grains__' not in self.pack:
-            self.context_dict['grains'] = opts.get('grains', {})
+            grains = opts.get('grains', {})
+
+            if isinstance(grains, ThreadLocalProxy):
+                grains = ThreadLocalProxy.unproxy(grains)
+
+            self.context_dict['grains'] = grains
             self.pack['__grains__'] = salt.utils.context.NamespacedDictWrapper(self.context_dict, 'grains')
 
         if '__pillar__' not in self.pack:
-            self.context_dict['pillar'] = opts.get('pillar', {})
+            pillar = opts.get('pillar', {})
+
+            if isinstance(pillar, ThreadLocalProxy):
+                pillar = ThreadLocalProxy.unproxy(pillar)
+
+            self.context_dict['pillar'] = pillar
             self.pack['__pillar__'] = salt.utils.context.NamespacedDictWrapper(self.context_dict, 'pillar')
 
         mod_opts = {}

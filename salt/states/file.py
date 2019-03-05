@@ -693,7 +693,8 @@ def _check_directory(name,
                      require=False,
                      exclude_pat=None,
                      max_depth=None,
-                     follow_symlinks=False):
+                     follow_symlinks=False,
+                     children_only=False):
     '''
     Check what changes need to be made on a directory
     '''
@@ -743,10 +744,13 @@ def _check_directory(name,
                     fchange = _check_dir_meta(path, user, group, mode, follow_symlinks)
                     if fchange:
                         changes[path] = fchange
+
     # Recurse skips root (we always do dirs, not root), so always check root:
-    fchange = _check_dir_meta(name, user, group, mode, follow_symlinks)
-    if fchange:
-        changes[name] = fchange
+    if not children_only:
+        fchange = _check_dir_meta(name, user, group, mode, follow_symlinks)
+        if fchange:
+            changes[name] = fchange
+
     if clean:
         keep = _gen_keep_files(name, require, walk_d)
 
@@ -792,10 +796,12 @@ def _check_directory_win(name,
     if not os.path.isdir(name):
         changes = {name: {'directory': 'new'}}
     else:
-        # Check owner
+        # Check owner by SID
         if win_owner is not None:
-            owner = salt.utils.win_dacl.get_owner(name)
-            if not owner.lower() == win_owner.lower():
+            current_owner = salt.utils.win_dacl.get_owner(name)
+            current_owner_sid = salt.utils.win_functions.get_sid_from_name(current_owner)
+            expected_owner_sid = salt.utils.win_functions.get_sid_from_name(win_owner)
+            if not current_owner_sid == expected_owner_sid:
                 changes['owner'] = win_owner
 
         # Check perms
@@ -2679,7 +2685,6 @@ def managed(name,
                 'to True to allow the managed file to be empty.'
                 .format(contents_id)
             )
-
         if isinstance(use_contents, six.binary_type) and b'\0' in use_contents:
             contents = use_contents
         elif isinstance(use_contents, six.text_type) and str('\0') in use_contents:
@@ -2693,9 +2698,10 @@ def managed(name,
                     'contents_grains is not a string or list of strings, and '
                     'is not binary data. SLS is likely malformed.'
                 )
-            contents = os.linesep.join(
-                [line.rstrip('\n').rstrip('\r') for line in validated_contents]
-            )
+            contents = ''
+            for part in validated_contents:
+                for line in part.splitlines():
+                    contents += line.rstrip('\n').rstrip('\r') + os.linesep
             if contents_newline and not contents.endswith(os.linesep):
                 contents += os.linesep
         if template:
@@ -3408,7 +3414,7 @@ def directory(name,
     else:
         presult, pcomment, pchanges = _check_directory(
             name, user, group, recurse or [], dir_mode, file_mode, clean,
-            require, exclude_pat, max_depth, follow_symlinks)
+            require, exclude_pat, max_depth, follow_symlinks, children_only)
 
     if pchanges:
         ret['changes'].update(pchanges)
@@ -3553,7 +3559,7 @@ def directory(name,
                             ret, _ = __salt__['file.check_perms'](
                                 full, ret, user, group, file_mode, None, follow_symlinks)
                     except CommandExecutionError as exc:
-                        if not exc.strerror.endswith('does not exist'):
+                        if not exc.strerror.startswith('Path not found'):
                             errors.append(exc.strerror)
 
             if check_dirs:
@@ -4589,6 +4595,22 @@ def replace(name,
        When using YAML multiline string syntax in ``pattern:``, make sure to
        also use that syntax in the ``repl:`` part, or you might loose line
        feeds.
+
+    When regex capture groups are used in ``pattern:``, their captured value is
+    available for reuse in the ``repl:`` part as a backreference (ex. ``\1``).
+
+    .. code-block:: yaml
+
+        add_login_group_to_winbind_ssh_access_list:
+          file.replace:
+            - name: '/etc/security/pam_winbind.conf'
+            - pattern: '^(require_membership_of = )(.*)$'
+            - repl: '\1\2,append-new-group-to-line'
+
+    .. note::
+
+       The ``file.replace`` state uses Python's ``re`` module.
+       For more advanced options, see https://docs.python.org/2/library/re.html
     '''
     name = os.path.expanduser(name)
 
@@ -6810,7 +6832,7 @@ def copy_(name,
     return ret
 
 
-def rename(name, source, force=False, makedirs=False):
+def rename(name, source, force=False, makedirs=False, **kwargs):
     '''
     If the source file exists on the system, rename it to the named file. The
     named file will not be overwritten if it already exists unless the force
