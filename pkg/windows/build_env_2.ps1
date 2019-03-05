@@ -22,21 +22,9 @@
 
 # Load parameters
 param(
-    [switch]$Silent
+    [switch]$Silent,
+    [switch]$NoPipDependencies
 )
-
-Write-Output "================================================================="
-Write-Output ""
-Write-Output "               Development Environment Installation"
-Write-Output ""
-Write-Output "               - Installs All Salt Dependencies"
-Write-Output "               - Detects 32/64 bit Architectures"
-Write-Output ""
-Write-Output "               To run silently add -Silent"
-Write-Output "               eg: dev_env.ps1 -Silent"
-Write-Output ""
-Write-Output "================================================================="
-Write-Output ""
 
 #==============================================================================
 # Get the Directory of actual script
@@ -48,6 +36,22 @@ $script_path = $script_path.DirectoryName
 # Get the name of actual script
 #==============================================================================
 $script_name = $MyInvocation.MyCommand.Name
+
+Write-Output "================================================================="
+Write-Output ""
+Write-Output "               Development Environment Installation"
+Write-Output ""
+Write-Output "               - Installs All Salt Dependencies"
+Write-Output "               - Detects 32/64 bit Architectures"
+Write-Output ""
+Write-Output "               To run silently add -Silent"
+Write-Output "               eg: ${script_name} -Silent"
+Write-Output ""
+Write-Output "               To run skip installing pip dependencies add -NoPipDependencies"
+Write-Output "               eg: ${script_name} -NoPipDependencies"
+Write-Output ""
+Write-Output "================================================================="
+Write-Output ""
 
 #==============================================================================
 # Import Modules
@@ -211,25 +215,46 @@ if ( ! [bool]$Env:SALT_PIP_LOCAL_CACHE) {
 }
 
 #==============================================================================
-# Install pypi resources using pip
+# Install windows specific pypi resources using pip
 #    caching depends on environment variable SALT_REQ_LOCAL_CACHE
 #==============================================================================
 Write-Output " ----------------------------------------------------------------"
-Write-Output " - $script_name :: Installing pypi resources using pip . . ."
+Write-Output " - $script_name :: Installing windows specific pypi resources using pip . . ."
 Write-Output " ----------------------------------------------------------------"
 if ( ! [bool]$Env:SALT_REQ_LOCAL_CACHE) {
-    Start_Process_and_test_exitcode "cmd" "/c $($ini['Settings']['Python2Dir'])\python.exe -m pip --disable-pip-version-check --no-cache-dir install -r $($script_path)\req.txt" "pip install"
+    Start_Process_and_test_exitcode "cmd" "/c $($ini['Settings']['Python2Dir'])\python.exe -m pip --disable-pip-version-check --no-cache-dir install -r $($script_path)\req_win.txt" "pip install"
 } else {
     if ( (Get-ChildItem $Env:SALT_REQ_LOCAL_CACHE | Measure-Object).Count -eq 0 ) {
         # folder empty
-        Write-Output "    pip download from req.txt into empty local cache SALT_REQ $Env:SALT_REQ_LOCAL_CACHE"
-        Start_Process_and_test_exitcode "cmd" "/c $($ini['Settings']['Python2Dir'])\python.exe -m pip --disable-pip-version-check download --dest $Env:SALT_REQ_LOCAL_CACHE -r $($script_path)\req.txt" "pip download"
+        Write-Output "    pip download from req_win.txt into empty local cache SALT_REQ $Env:SALT_REQ_LOCAL_CACHE"
+        Start_Process_and_test_exitcode "cmd" "/c $($ini['Settings']['Python2Dir'])\python.exe -m pip --disable-pip-version-check download --dest $Env:SALT_REQ_LOCAL_CACHE -r $($script_path)\req_win.txt" "pip download"
     }
     Write-Output "    reading from local pip cache $Env:SALT_REQ_LOCAL_CACHE"
     Write-Output "    If a (new) resource is missing, please delete all files in this cache, go online and repeat"
-  Start_Process_and_test_exitcode "cmd" "/c $($ini['Settings']['Python2Dir'])\python.exe -m pip --disable-pip-version-check install --no-index --find-links=$Env:SALT_REQ_LOCAL_CACHE -r $($script_path)\req.txt" "pip install"
+  Start_Process_and_test_exitcode "cmd" "/c $($ini['Settings']['Python2Dir'])\python.exe -m pip --disable-pip-version-check install --no-index --find-links=$Env:SALT_REQ_LOCAL_CACHE -r $($script_path)\req_win.txt" "pip install"
 }
 
+#==============================================================================
+# Install pypi resources using pip
+#    caching depends on environment variable SALT_REQ_LOCAL_CACHE
+#==============================================================================
+If ($NoPipDependencies -eq $false) {
+  Write-Output " ----------------------------------------------------------------"
+  Write-Output " - $script_name :: Installing pypi resources using pip . . ."
+  Write-Output " ----------------------------------------------------------------"
+  if ( ! [bool]$Env:SALT_REQ_LOCAL_CACHE) {
+      Start_Process_and_test_exitcode "cmd" "/c $($ini['Settings']['Python2Dir'])\python.exe -m pip --disable-pip-version-check --no-cache-dir install -r $($script_path)\req.txt" "pip install"
+  } else {
+      if ( (Get-ChildItem $Env:SALT_REQ_LOCAL_CACHE | Measure-Object).Count -eq 0 ) {
+          # folder empty
+          Write-Output "    pip download from req.txt into empty local cache SALT_REQ $Env:SALT_REQ_LOCAL_CACHE"
+          Start_Process_and_test_exitcode "cmd" "/c $($ini['Settings']['Python2Dir'])\python.exe -m pip --disable-pip-version-check download --dest $Env:SALT_REQ_LOCAL_CACHE -r $($script_path)\req.txt" "pip download"
+      }
+      Write-Output "    reading from local pip cache $Env:SALT_REQ_LOCAL_CACHE"
+      Write-Output "    If a (new) resource is missing, please delete all files in this cache, go online and repeat"
+    Start_Process_and_test_exitcode "cmd" "/c $($ini['Settings']['Python2Dir'])\python.exe -m pip --disable-pip-version-check install --no-index --find-links=$Env:SALT_REQ_LOCAL_CACHE -r $($script_path)\req.txt" "pip install"
+  }
+}
 #==============================================================================
 # Cleaning Up PyWin32
 #==============================================================================
