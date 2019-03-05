@@ -31,6 +31,7 @@ class Saltutil(TestCase, LoaderModuleMockMixin):
         sync_output = {
             'clouds': [],
             'engines': [],
+            'executors': [],
             'grains': [],
             'beacons': [],
             'utils': [],
@@ -61,6 +62,7 @@ class Saltutil(TestCase, LoaderModuleMockMixin):
         sync_output = {
             'clouds': [],
             'engines': [],
+            'executors': [],
             'grains': [],
             'beacons': [],
             'utils': [],
@@ -92,6 +94,7 @@ class Saltutil(TestCase, LoaderModuleMockMixin):
         sync_output = {
             'clouds': [],
             'engines': [],
+            'executors': [],
             'grains': [],
             'beacons': [],
             'utils': [],

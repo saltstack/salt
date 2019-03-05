@@ -9,6 +9,7 @@ import sys
 import copy
 import importlib
 import types
+import importlib
 
 # Import salt libs
 import salt.loader
