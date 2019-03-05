@@ -509,7 +509,7 @@ class ProcessManager(object):
                     yield gen.sleep(10)
                 else:
                     time.sleep(10)
-                if len(self._process_map) == 0:
+                if not self._process_map:
                     break
             # OSError is raised if a signal handler is called (SIGTERM) during os.wait
             except OSError:
@@ -824,7 +824,7 @@ def default_signals(*signals):
     old_signals = {}
     for signum in signals:
         try:
-            old_signals[signum] = signal.getsignal(signum)
+            saved_signal = signal.getsignal(signum)
             signal.signal(signum, signal.SIG_DFL)
         except ValueError as exc:
             # This happens when a netapi module attempts to run a function
@@ -834,6 +834,8 @@ def default_signals(*signals):
                 'Failed to register signal for signum %d: %s',
                 signum, exc
             )
+        else:
+            old_signals[signum] = saved_signal
 
     # Do whatever is needed with the reset signals
     yield

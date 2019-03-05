@@ -2,7 +2,7 @@
 '''
 Execution module to manage Cisco Nexus Switches (NX-OS) over the NX-API
 
-.. versionadded:: Fluorine
+.. versionadded:: 2019.2.0
 
 Execution module used to interface the interaction with a remote or local Nexus
 switch whether we're running in a Proxy Minion or regular Minion (or regular

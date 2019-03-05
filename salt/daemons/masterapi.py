@@ -575,7 +575,7 @@ class RemoteFuncs(object):
                 if any(re.match(perm, fun) for perm in perms):
                     functions_allowed.append(fun)
 
-            if not len(functions_allowed):
+            if not functions_allowed:
                 return {}
         else:
             functions_allowed = functions

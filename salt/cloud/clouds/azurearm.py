@@ -5,7 +5,7 @@ Azure ARM Cloud Module
 
 .. versionadded:: 2016.11.0
 
-.. versionchanged:: Fluorine
+.. versionchanged:: 2019.2.0
 
 The Azure ARM cloud module is used to control access to Microsoft Azure Resource Manager
 
@@ -865,7 +865,7 @@ def create_network_interface(call=None, kwargs=None):
                     ]
                     break
             except CloudError as exc:
-                log.error('There was a cloud error: {0}'.format(exc))
+                log.error('There was a cloud error: %s', exc)
             count += 1
             if count > 120:
                 raise ValueError('Timed out waiting for public IP Address.')
@@ -1425,9 +1425,9 @@ def create(vm_):
         Query node data.
         '''
         data = show_instance(name, call='action')
-        ip_address = None
-        if len(data.keys()) == 0:
+        if not data:
             return False
+        ip_address = None
         if bootstrap_interface == 'public':
             ip_address = data['public_ips'][0]
         if bootstrap_interface == 'private':
@@ -1896,7 +1896,7 @@ def list_subnets(call=None, kwargs=None):
 
 def create_or_update_vmextension(call=None, kwargs=None):  # pylint: disable=unused-argument
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Create or update a VM extension object "inside" of a VM object.
 
@@ -2002,7 +2002,7 @@ def create_or_update_vmextension(call=None, kwargs=None):  # pylint: disable=unu
 
 def stop(name, call=None):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Stop (deallocate) a VM
 
@@ -2063,7 +2063,7 @@ def stop(name, call=None):
 
 def start(name, call=None):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Start a VM
 

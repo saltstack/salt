@@ -31,7 +31,7 @@ import salt.config
 import salt.cache
 import salt.defaults.exitcodes
 import salt.payload
-import salt.transport
+import salt.transport.client
 import salt.loader
 import salt.utils.args
 import salt.utils.event
@@ -528,45 +528,14 @@ class LocalClient(object):
             {'dave': {...}}
             {'stewart': {...}}
         '''
-        # We need to re-import salt.utils.args here
-        # even though it has already been imported.
-        # when cmd_batch is called via the NetAPI
-        # the module is unavailable.
-        import salt.utils.args
-
         # Late import - not used anywhere else in this file
         import salt.cli.batch
+        opts = salt.cli.batch.batch_get_opts(
+            tgt, fun, batch, self.opts,
+            arg=arg, tgt_type=tgt_type, ret=ret, kwarg=kwarg, **kwargs)
 
-        arg = salt.utils.args.condition_input(arg, kwarg)
-        opts = {'tgt': tgt,
-                'fun': fun,
-                'arg': arg,
-                'tgt_type': tgt_type,
-                'ret': ret,
-                'batch': batch,
-                'failhard': kwargs.get('failhard', False),
-                'raw': kwargs.get('raw', False)}
+        eauth = salt.cli.batch.batch_get_eauth(kwargs)
 
-        if 'timeout' in kwargs:
-            opts['timeout'] = kwargs['timeout']
-        if 'gather_job_timeout' in kwargs:
-            opts['gather_job_timeout'] = kwargs['gather_job_timeout']
-        if 'batch_wait' in kwargs:
-            opts['batch_wait'] = int(kwargs['batch_wait'])
-
-        eauth = {}
-        if 'eauth' in kwargs:
-            eauth['eauth'] = kwargs.pop('eauth')
-        if 'username' in kwargs:
-            eauth['username'] = kwargs.pop('username')
-        if 'password' in kwargs:
-            eauth['password'] = kwargs.pop('password')
-        if 'token' in kwargs:
-            eauth['token'] = kwargs.pop('token')
-
-        for key, val in six.iteritems(self.opts):
-            if key not in opts:
-                opts[key] = val
         batch = salt.cli.batch.Batch(opts, eauth=eauth, quiet=True)
         for ret in batch.run():
             yield ret
@@ -1751,9 +1720,9 @@ class LocalClient(object):
 
         master_uri = 'tcp://' + salt.utils.zeromq.ip_bracket(self.opts['interface']) + \
                      ':' + six.text_type(self.opts['ret_port'])
-        channel = salt.transport.Channel.factory(self.opts,
-                                                 crypt='clear',
-                                                 master_uri=master_uri)
+        channel = salt.transport.client.ReqChannel.factory(self.opts,
+                                                           crypt='clear',
+                                                           master_uri=master_uri)
 
         try:
             # Ensure that the event subscriber is connected.
@@ -1761,7 +1730,8 @@ class LocalClient(object):
             if listen and not self.event.connect_pub(timeout=timeout):
                 raise SaltReqTimeoutError()
             payload = channel.send(payload_kwargs, timeout=timeout)
-        except SaltReqTimeoutError:
+        except SaltReqTimeoutError as err:
+            log.error(err)
             raise SaltReqTimeoutError(
                 'Salt request timed out. The master is not responding. You '
                 'may need to run your command with `--async` in order to '
@@ -1798,7 +1768,7 @@ class LocalClient(object):
             return payload
 
         # We have the payload, let's get rid of the channel fast(GC'ed faster)
-        del channel
+        channel.close()
 
         return {'jid': payload['load']['jid'],
                 'minions': payload['load']['minions']}
@@ -1906,7 +1876,7 @@ class LocalClient(object):
             raise tornado.gen.Return(payload)
 
         # We have the payload, let's get rid of the channel fast(GC'ed faster)
-        del channel
+        channel.close()
 
         raise tornado.gen.Return({'jid': payload['load']['jid'],
                                   'minions': payload['load']['minions']})
