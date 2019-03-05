@@ -63,7 +63,7 @@ This will fail when pkgs is a list or dictionary. You will need to update the st
 
     grafana_packages:
       pkg.installed:
-      - names: {{ server.pkgs |tojson }}
+      - names: {{ server.pkgs|tojson }}
 
 This test case has also been tested with the ``yaml`` and ``json`` filters successfully.
 
