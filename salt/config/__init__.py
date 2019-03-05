@@ -1953,15 +1953,10 @@ PROVIDER_CONFIG_DEFAULTS = immutabletypes.freeze({
 # <---- Salt Cloud Configuration Defaults ------------------------------------
 
 
-def _validate_file_roots(file_roots):
+def _normalize_roots(file_roots):
     '''
-    If the file_roots option has a key that is None then we will error out,
-    just replace it with an empty list
+    Normalize file or pillar roots.
     '''
-    if not isinstance(file_roots, dict):
-        log.warning('The file_roots parameter is not properly formatted,'
-                    ' using defaults')
-        return {'base': _expand_glob_path([salt.syspaths.BASE_FILE_ROOTS_DIR])}
     for saltenv, dirs in six.iteritems(file_roots):
         normalized_saltenv = six.text_type(saltenv)
         if normalized_saltenv != saltenv:
@@ -1971,6 +1966,30 @@ def _validate_file_roots(file_roots):
         file_roots[normalized_saltenv] = \
                 _expand_glob_path(file_roots[normalized_saltenv])
     return file_roots
+
+
+def _validate_pillar_roots(pillar_roots):
+    '''
+    If the pillar_roots option has a key that is None then we will error out,
+    just replace it with an empty list
+    '''
+    if not isinstance(pillar_roots, dict):
+        log.warning('The pillar_roots parameter is not properly formatted,'
+                    ' using defaults')
+        return {'base': _expand_glob_path([salt.syspaths.BASE_PILLAR_ROOTS_DIR])}
+    return _normalize_roots(pillar_roots)
+
+
+def _validate_file_roots(file_roots):
+    '''
+    If the file_roots option has a key that is None then we will error out,
+    just replace it with an empty list
+    '''
+    if not isinstance(file_roots, dict):
+        log.warning('The file_roots parameter is not properly formatted,'
+                    ' using defaults')
+        return {'base': _expand_glob_path([salt.syspaths.BASE_FILE_ROOTS_DIR])}
+    return _normalize_roots(file_roots)
 
 
 def _expand_glob_path(file_roots):
@@ -3800,7 +3819,7 @@ def apply_minion_config(overrides=None,
     # nothing else!
     opts['open_mode'] = opts['open_mode'] is True
     opts['file_roots'] = _validate_file_roots(opts['file_roots'])
-    opts['pillar_roots'] = _validate_file_roots(opts['pillar_roots'])
+    opts['pillar_roots'] = _validate_pillar_roots(opts['pillar_roots'])
     # Make sure ext_mods gets set if it is an untrue value
     # (here to catch older bad configs)
     opts['extension_modules'] = (

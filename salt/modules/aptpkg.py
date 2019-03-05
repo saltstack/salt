@@ -1466,7 +1466,7 @@ def _split_repo_str(repo):
     Return APT source entry as a tuple.
     '''
     split = sourceslist.SourceEntry(repo)
-    return split.type, split.uri, split.dist, split.comps
+    return split.type, split.architectures, split.uri, split.dist, split.comps
 
 
 def _consolidate_repo_sources(sources):
@@ -1672,7 +1672,7 @@ def get_repo(repo, **kwargs):
 
     if repos:
         try:
-            repo_type, repo_uri, repo_dist, repo_comps = _split_repo_str(repo)
+            repo_type, repo_architectures, repo_uri, repo_dist, repo_comps = _split_repo_str(repo)
             if ppa_auth:
                 uri_match = re.search('(http[s]?://)(.+)', repo_uri)
                 if uri_match:
@@ -1745,7 +1745,11 @@ def del_repo(repo, **kwargs):
     if repos:
         deleted_from = dict()
         try:
-            repo_type, repo_uri, repo_dist, repo_comps = _split_repo_str(repo)
+            repo_type, \
+                repo_architectures, \
+                repo_uri, \
+                repo_dist, \
+                repo_comps = _split_repo_str(repo)
         except SyntaxError:
             raise SaltInvocationError(
                 'Error: repo \'{0}\' not a well formatted definition'
@@ -1753,8 +1757,10 @@ def del_repo(repo, **kwargs):
             )
 
         for source in repos:
-            if (source.type == repo_type and source.uri == repo_uri and
-                    source.dist == repo_dist):
+            if (source.type == repo_type
+                    and source.architectures == repo_architectures
+                    and source.uri == repo_uri
+                    and source.dist == repo_dist):
 
                 s_comps = set(source.comps)
                 r_comps = set(repo_comps)
@@ -2221,7 +2227,11 @@ def mod_repo(repo, saltenv='base', **kwargs):
     repos = [s for s in sources if not s.invalid]
     mod_source = None
     try:
-        repo_type, repo_uri, repo_dist, repo_comps = _split_repo_str(repo)
+        repo_type, \
+            repo_architectures, \
+            repo_uri, \
+            repo_dist, \
+            repo_comps = _split_repo_str(repo)
     except SyntaxError:
         raise SyntaxError(
             'Error: repo \'{0}\' not a well formatted definition'.format(repo)
@@ -2292,6 +2302,8 @@ def mod_repo(repo, saltenv='base', **kwargs):
 
     if 'architectures' in kwargs:
         kwargs['architectures'] = kwargs['architectures'].split(',')
+    else:
+        kwargs['architectures'] = repo_architectures
 
     if 'disabled' in kwargs:
         kwargs['disabled'] = salt.utils.data.is_true(kwargs['disabled'])
@@ -2304,7 +2316,7 @@ def mod_repo(repo, saltenv='base', **kwargs):
         # and the resulting source line.  The idea here is to ensure
         # we are not returning bogus data because the source line
         # has already been modified on a previous run.
-        repo_matches = source.type == repo_type and source.uri == repo_uri and source.dist == repo_dist
+        repo_matches = source.type == repo_type and source.uri.rstrip('/') == repo_uri.rstrip('/') and source.dist == repo_dist
         kw_matches = source.dist == kw_dist and source.type == kw_type
 
         if repo_matches or kw_matches:
@@ -2312,6 +2324,8 @@ def mod_repo(repo, saltenv='base', **kwargs):
                 if comp in getattr(source, 'comps', []):
                     mod_source = source
             if not source.comps:
+                mod_source = source
+            if kwargs['architectures'] != source.architectures:
                 mod_source = source
             if mod_source:
                 break

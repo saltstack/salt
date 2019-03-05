@@ -34,6 +34,7 @@ import salt.utils.versions
 from salt.exceptions import CommandExecutionError, MinionError
 from salt.ext import six
 
+
 # Import third party libs
 HAS_PORTAGE = False
 try:
