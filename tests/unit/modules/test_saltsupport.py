@@ -5,11 +5,13 @@
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+import os
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import patch, MagicMock, NO_MOCK, NO_MOCK_REASON
+from tests.support.helpers import dedent
 from salt.modules import saltsupport
 import salt.exceptions
 import datetime
@@ -29,7 +31,7 @@ class SaltSupportModuleTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {saltsupport: {}}
 
-    @patch('tempfile.gettempdir', MagicMock(return_value='/mnt/storage'))
+    @patch('tempfile.gettempdir', MagicMock(return_value=os.path.join('mnt', 'storage')))
     @patch('salt.modules.saltsupport.__grains__', {'fqdn': 'c-3po'})
     @patch('time.strftime', MagicMock(return_value='000'))
     def test_get_archive_name(self):
@@ -39,9 +41,9 @@ class SaltSupportModuleTestCase(TestCase, LoaderModuleMockMixin):
         :return:
         '''
         support = saltsupport.SaltSupportModule()
-        assert support._get_archive_name() == '/mnt/storage/c-3po-support-000-000.bz2'
+        assert support._get_archive_name() == os.path.join('mnt', 'storage', 'c-3po-support-000-000.bz2')
 
-    @patch('tempfile.gettempdir', MagicMock(return_value='/mnt/storage'))
+    @patch('tempfile.gettempdir', MagicMock(return_value=os.path.join('mnt', 'storage')))
     @patch('salt.modules.saltsupport.__grains__', {'fqdn': 'c-3po'})
     @patch('time.strftime', MagicMock(return_value='000'))
     def test_get_custom_archive_name(self):
@@ -52,11 +54,11 @@ class SaltSupportModuleTestCase(TestCase, LoaderModuleMockMixin):
         '''
         support = saltsupport.SaltSupportModule()
         temp_name = support._get_archive_name(archname='Darth Wader')
-        assert temp_name == '/mnt/storage/c-3po-darthwader-000-000.bz2'
+        assert temp_name == os.path.join('mnt', 'storage', 'c-3po-darthwader-000-000.bz2')
         temp_name = support._get_archive_name(archname='Яйця з сіллю')
-        assert temp_name == '/mnt/storage/c-3po-support-000-000.bz2'
+        assert temp_name == os.path.join('mnt', 'storage', 'c-3po-support-000-000.bz2')
         temp_name = support._get_archive_name(archname='!@#$%^&*()Fillip J. Fry')
-        assert temp_name == '/mnt/storage/c-3po-fillipjfry-000-000.bz2'
+        assert temp_name == os.path.join('mnt', 'storage', 'c-3po-fillipjfry-000-000.bz2')
 
     @patch('salt.cli.support.get_profiles', MagicMock(return_value={'message': 'Feature was not beta tested'}))
     def test_profiles_format(self):
@@ -73,7 +75,7 @@ class SaltSupportModuleTestCase(TestCase, LoaderModuleMockMixin):
         assert profiles['custom'] == []
         assert profiles['standard']['message'] == 'Feature was not beta tested'
 
-    @patch('tempfile.gettempdir', MagicMock(return_value='/mnt/storage'))
+    @patch('tempfile.gettempdir', MagicMock(return_value=os.path.join('mnt', 'storage')))
     @patch('os.listdir', MagicMock(return_value=['one-support-000-000.bz2', 'two-support-111-111.bz2', 'trash.bz2',
                                                  'hostname-000-000.bz2', 'three-support-wrong222-222.bz2',
                                                  '000-support-000-000.bz2']))
@@ -86,8 +88,12 @@ class SaltSupportModuleTestCase(TestCase, LoaderModuleMockMixin):
         support = saltsupport.SaltSupportModule()
         out = support.archives()
         assert len(out) == 3
-        for name in ['/mnt/storage/one-support-000-000.bz2', '/mnt/storage/two-support-111-111.bz2',
-                     '/mnt/storage/000-support-000-000.bz2']:
+        files = [
+            os.path.join('mnt', 'storage', 'one-support-000-000.bz2'),
+            os.path.join('mnt', 'storage', 'two-support-111-111.bz2'),
+            os.path.join('mnt', 'storage', '000-support-000-000.bz2'),
+        ]
+        for name in files:
             assert name in out
 
     def test_last_archive(self):
@@ -96,10 +102,13 @@ class SaltSupportModuleTestCase(TestCase, LoaderModuleMockMixin):
         :return:
         '''
         support = saltsupport.SaltSupportModule()
-        support.archives = MagicMock(return_value=['/mnt/storage/one-support-000-000.bz2',
-                                                   '/mnt/storage/two-support-111-111.bz2',
-                                                   '/mnt/storage/three-support-222-222.bz2'])
-        assert support.last_archive() == '/mnt/storage/three-support-222-222.bz2'
+        files = [
+            os.path.join('mnt', 'storage', 'one-support-000-000.bz2'),
+            os.path.join('mnt', 'storage', 'two-support-111-111.bz2'),
+            os.path.join('mnt', 'storage', 'three-support-222-222.bz2'),
+        ]
+        support.archives = MagicMock(return_value=files)
+        assert support.last_archive() == os.path.join('mnt', 'storage', 'three-support-222-222.bz2')
 
     @patch('os.unlink', MagicMock(return_value=True))
     def test_delete_all_archives_success(self):
@@ -108,9 +117,12 @@ class SaltSupportModuleTestCase(TestCase, LoaderModuleMockMixin):
         :return:
         '''
         support = saltsupport.SaltSupportModule()
-        support.archives = MagicMock(return_value=['/mnt/storage/one-support-000-000.bz2',
-                                                   '/mnt/storage/two-support-111-111.bz2',
-                                                   '/mnt/storage/three-support-222-222.bz2'])
+        files = [
+            os.path.join('mnt', 'storage', 'one-support-000-000.bz2'),
+            os.path.join('mnt', 'storage', 'two-support-111-111.bz2'),
+            os.path.join('mnt', 'storage', 'three-support-222-222.bz2'),
+        ]
+        support.archives = MagicMock(return_value=files)
         ret = support.delete_archives()
         assert 'files' in ret
         assert 'errors' in ret
@@ -131,9 +143,12 @@ class SaltSupportModuleTestCase(TestCase, LoaderModuleMockMixin):
         :return:
         '''
         support = saltsupport.SaltSupportModule()
-        support.archives = MagicMock(return_value=['/mnt/storage/one-support-000-000.bz2',
-                                                   '/mnt/storage/two-support-111-111.bz2',
-                                                   '/mnt/storage/three-support-222-222.bz2'])
+        files = [
+            os.path.join('mnt', 'storage', 'one-support-000-000.bz2'),
+            os.path.join('mnt', 'storage', 'two-support-111-111.bz2'),
+            os.path.join('mnt', 'storage', 'three-support-222-222.bz2'),
+        ]
+        support.archives = MagicMock(return_value=files)
         ret = support.delete_archives()
         assert 'files' in ret
         assert 'errors' in ret
@@ -142,13 +157,13 @@ class SaltSupportModuleTestCase(TestCase, LoaderModuleMockMixin):
         assert isinstance(ret['errors'], dict)
         assert isinstance(ret['files'], dict)
 
-        assert ret['files']['/mnt/storage/three-support-222-222.bz2'] == 'removed'
-        assert ret['files']['/mnt/storage/one-support-000-000.bz2'] == 'left'
-        assert ret['files']['/mnt/storage/two-support-111-111.bz2'] == 'left'
+        assert ret['files'][os.path.join('mnt', 'storage', 'three-support-222-222.bz2')] == 'removed'
+        assert ret['files'][os.path.join('mnt', 'storage', 'one-support-000-000.bz2')] == 'left'
+        assert ret['files'][os.path.join('mnt', 'storage', 'two-support-111-111.bz2')] == 'left'
 
         assert len(ret['errors']) == 2
-        assert ret['errors']['/mnt/storage/one-support-000-000.bz2'] == 'Decreasing electron flux'
-        assert ret['errors']['/mnt/storage/two-support-111-111.bz2'] == 'Solar flares interference'
+        assert ret['errors'][os.path.join('mnt', 'storage', 'one-support-000-000.bz2')] == 'Decreasing electron flux'
+        assert ret['errors'][os.path.join('mnt', 'storage', 'two-support-111-111.bz2')] == 'Solar flares interference'
 
     def test_format_sync_stats(self):
         '''
@@ -157,12 +172,12 @@ class SaltSupportModuleTestCase(TestCase, LoaderModuleMockMixin):
         :return:
         '''
         support = saltsupport.SaltSupportModule()
-        stats = '''
-robot: Bender
-cute: Leela
-weird: Zoidberg
-professor: Farnsworth
-        '''
+        stats = dedent('''
+        robot: Bender
+        cute: Leela
+        weird: Zoidberg
+        professor: Farnsworth
+        ''')
         f_stats = support.format_sync_stats({'retcode': 0, 'stdout': stats})
         assert list(f_stats['transfer'].keys()) == ['robot', 'cute', 'weird', 'professor']
         assert list(f_stats['transfer'].values()) == ['Bender', 'Leela', 'Zoidberg', 'Farnsworth']
@@ -257,8 +272,8 @@ professor: Farnsworth
             assert len(call) == 2
             calls.append(call[0])
         assert calls == [(0, b'one-support-000-000.bz2'),
-                         (0, b'\n'), (0, b'two-support-111-111.bz2'), (0, b'\n'),
-                         (0, b'three-support-222-222.bz2'), (0, b'\n')]
+                         (0, os.linesep.encode()), (0, b'two-support-111-111.bz2'), (0, os.linesep.encode()),
+                         (0, b'three-support-222-222.bz2'), (0, os.linesep.encode())]
 
     @patch('salt.modules.saltsupport.__pillar__', {})
     @patch('salt.modules.saltsupport.SupportDataCollector', MagicMock())
