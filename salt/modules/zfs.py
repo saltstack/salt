@@ -30,6 +30,10 @@ def _check_zfs():
     Looks to see if zfs is present on the system.
     '''
     # Get the path to the zfs binary.
+    # Don't try to load this on Windows (#51703)
+    # Don't merge this forward
+    if salt.utils.platform.is_windows():
+        return False, 'ZFS: Not available on Windows'
     return salt.utils.which('zfs')
 
 

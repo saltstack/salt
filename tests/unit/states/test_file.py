@@ -1930,15 +1930,20 @@ class TestFindKeepFiles(TestCase):
 
     @skipIf(not salt.utils.is_windows(), 'Only run on Windows')
     def test__find_keep_files_win32(self):
+        '''
+        Test _find_keep_files. The `_find_keep_files` function is only called by
+        _clean_dir, so case doesn't matter. Should return all lower case.
+        '''
         keep = filestate._find_keep_files(
             'c:\\test\\parent_folder',
-            ['C:\\test\\parent_folder\\meh-2.txt']
+            ['C:\\test\\parent_folder\\meh-1.txt',
+             'C:\\Test\\Parent_folder\\Meh-2.txt']
         )
         expected = [
             'c:\\',
             'c:\\test',
             'c:\\test\\parent_folder',
-            'c:\\test\\parent_folder\\meh-2.txt'
-        ]
+            'c:\\test\\parent_folder\\meh-1.txt',
+            'c:\\test\\parent_folder\\meh-2.txt']
         actual = sorted(list(keep))
-        assert actual == expected, actual
+        self.assertListEqual(actual, expected)
