@@ -246,7 +246,7 @@ def pvcreate(devices, override=True, **kwargs):
     for device in devices:
         if not os.path.exists(device):
             raise CommandExecutionError('{0} does not exist'.format(device))
-        if not pvdisplay(device):
+        if not pvdisplay(device, quiet=True):
             cmd.append(device)
         elif not override:
             raise CommandExecutionError('Device "{0}" is already an LVM physical volume.'.format(device))
@@ -311,7 +311,7 @@ def pvremove(devices, override=True):
 
     # Verify pvcremove was successful
     for device in devices:
-        if pvdisplay(device):
+        if pvdisplay(device, quiet=True):
             raise CommandExecutionError('Device "{0}" was not affected.'.format(device))
 
     return True
