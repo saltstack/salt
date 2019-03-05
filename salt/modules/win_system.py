@@ -526,7 +526,6 @@ def get_system_info():
         else:
             return '{0:.3f}TB'.format(val / 2**40)
 
-
     # Lookup dicts for Win32_OperatingSystem
     os_type = {1: 'Work Station',
                2: 'Domain Controller',
