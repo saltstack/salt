@@ -6,6 +6,7 @@
     This script is meant to run under the nox virtualenv to take care of required
     windows procedures
 '''
+# pylint: disable=resource-leakage
 
 from __future__ import absolute_import, print_function, unicode_literals
 import os
