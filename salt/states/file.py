@@ -298,6 +298,7 @@ from salt.state import get_accumulator_dir as _get_accumulator_dir
 if salt.utils.platform.is_windows():
     import salt.utils.win_dacl
     import salt.utils.win_functions
+    import salt.utils.winapi
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -620,6 +621,7 @@ def _check_file(name):
 def _find_keep_files(root, keep):
     '''
     Compile a list of valid keep files (and directories).
+    Used by _clean_dir()
     '''
     real_keep = set()
     real_keep.add(root)
@@ -643,6 +645,7 @@ def _clean_dir(root, keep, exclude_pat):
     Clean out all of the files and directories in a directory (root) while
     preserving the files in a list (keep) and part of exclude_pat
     '''
+    root = os.path.normcase(root)
     real_keep = _find_keep_files(root, keep)
     removed = set()
 
@@ -781,10 +784,12 @@ def _check_directory_win(name,
     if not os.path.isdir(name):
         changes = {name: {'directory': 'new'}}
     else:
-        # Check owner
+        # Check owner by SID
         if win_owner is not None:
-            owner = salt.utils.win_dacl.get_owner(name)
-            if not owner.lower() == win_owner.lower():
+            current_owner = salt.utils.win_dacl.get_owner(name)
+            current_owner_sid = salt.utils.win_functions.get_sid_from_name(current_owner)
+            expected_owner_sid = salt.utils.win_functions.get_sid_from_name(win_owner)
+            if not current_owner_sid == expected_owner_sid:
                 changes['owner'] = win_owner
 
         # Check perms
@@ -1203,7 +1208,8 @@ def _shortcut_check(name,
         ), pchanges
 
     if os.path.isfile(name):
-        shell = win32com.client.Dispatch("WScript.Shell")
+        with salt.utils.winapi.Com():
+            shell = win32com.client.Dispatch("WScript.Shell")
         scut = shell.CreateShortcut(name)
         state_checks = [scut.TargetPath.lower() == target.lower()]
         if arguments is not None:
@@ -3019,7 +3025,7 @@ def directory(name,
                   perms: full_control
             - win_inheritance: False
     '''
-    name = os.path.normcase(os.path.expanduser(name))
+    name = os.path.expanduser(name)
     ret = {'name': name,
            'changes': {},
            'pchanges': {},
@@ -3547,7 +3553,7 @@ def recurse(name,
         # "env" is not supported; Use "saltenv".
         kwargs.pop('env')
 
-    name = os.path.normcase(os.path.expanduser(sdecode(name)))
+    name = os.path.expanduser(sdecode(name))
 
     user = _test_owner(kwargs, user=user)
     if salt.utils.platform.is_windows():
@@ -6847,7 +6853,8 @@ def shortcut(
 
     # This will just load the shortcut if it already exists
     # It won't create the file until calling scut.Save()
-    shell = win32com.client.Dispatch("WScript.Shell")
+    with salt.utils.winapi.Com():
+        shell = win32com.client.Dispatch("WScript.Shell")
     scut = shell.CreateShortcut(name)
 
     # The shortcut target will automatically be created with its
