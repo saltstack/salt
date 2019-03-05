@@ -1313,7 +1313,7 @@ def deploy_windows(host,
             )
 
             if ret_code != 0:
-                raise Exception("Fail installer %d", ret_code)
+                raise Exception('Fail installer {0}'.format(ret_code))
 
         # Copy over minion_conf
         if minion_conf:

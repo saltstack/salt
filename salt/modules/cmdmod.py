@@ -283,7 +283,7 @@ def _run(cmd,
     '''
     if 'pillar' in kwargs and not pillar_override:
         pillar_override = kwargs['pillar']
-    if _is_valid_shell(shell) is False:
+    if output_loglevel != 'quiet' and _is_valid_shell(shell) is False:
         log.warning(
             'Attempt to run a shell command with what may be an invalid shell! '
             'Check to ensure that the shell <%s> is valid for this user.',
@@ -3035,12 +3035,16 @@ def run_chroot(root,
     '''
     __salt__['mount.mount'](
         os.path.join(root, 'dev'),
-        'udev',
+        'devtmpfs',
         fstype='devtmpfs')
     __salt__['mount.mount'](
         os.path.join(root, 'proc'),
         'proc',
         fstype='proc')
+    __salt__['mount.mount'](
+        os.path.join(root, 'sys'),
+        'sysfs',
+        fstype='sysfs')
 
     # Execute chroot routine
     sh_ = '/bin/sh'
@@ -3092,6 +3096,7 @@ def run_chroot(root,
         log.error('Processes running in chroot could not be killed, '
                   'filesystem will remain mounted')
 
+    __salt__['mount.umount'](os.path.join(root, 'sys'))
     __salt__['mount.umount'](os.path.join(root, 'proc'))
     __salt__['mount.umount'](os.path.join(root, 'dev'))
     if hide_output:

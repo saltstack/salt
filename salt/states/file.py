@@ -293,6 +293,7 @@ import salt.utils.stringutils
 import salt.utils.templates
 import salt.utils.url
 import salt.utils.versions
+from salt.utils.locales import sdecode
 from salt.exceptions import CommandExecutionError
 from salt.serializers import DeserializationError
 from salt.state import get_accumulator_dir as _get_accumulator_dir
@@ -626,6 +627,7 @@ def _check_file(name):
 def _find_keep_files(root, keep):
     '''
     Compile a list of valid keep files (and directories).
+    Used by _clean_dir()
     '''
     real_keep = set()
     real_keep.add(root)
@@ -649,6 +651,7 @@ def _clean_dir(root, keep, exclude_pat):
     Clean out all of the files and directories in a directory (root) while
     preserving the files in a list (keep) and part of exclude_pat
     '''
+    root = os.path.normcase(root)
     real_keep = _find_keep_files(root, keep)
     removed = set()
 
@@ -787,10 +790,12 @@ def _check_directory_win(name,
     if not os.path.isdir(name):
         changes = {name: {'directory': 'new'}}
     else:
-        # Check owner
+        # Check owner by SID
         if win_owner is not None:
-            owner = salt.utils.win_dacl.get_owner(name)
-            if not owner.lower() == win_owner.lower():
+            current_owner = salt.utils.win_dacl.get_owner(name)
+            current_owner_sid = salt.utils.win_functions.get_sid_from_name(current_owner)
+            expected_owner_sid = salt.utils.win_functions.get_sid_from_name(win_owner)
+            if not current_owner_sid == expected_owner_sid:
                 changes['owner'] = win_owner
 
         # Check perms
@@ -2116,7 +2121,7 @@ def managed(name,
     attrs
         The attributes to have on this file, e.g. ``a``, ``i``. The attributes
         can be any or a combination of the following characters:
-        ``acdijstuADST``.
+        ``aAcCdDeijPsStTu``.
 
         .. note::
             This option is **not** supported on Windows.
@@ -2593,7 +2598,6 @@ def managed(name,
                 'to True to allow the managed file to be empty.'
                 .format(contents_id)
             )
-
         if isinstance(use_contents, six.binary_type) and b'\0' in use_contents:
             contents = use_contents
         elif isinstance(use_contents, six.text_type) and str('\0') in use_contents:
@@ -2607,9 +2611,10 @@ def managed(name,
                     'contents_grains is not a string or list of strings, and '
                     'is not binary data. SLS is likely malformed.'
                 )
-            contents = os.linesep.join(
-                [line.rstrip('\n').rstrip('\r') for line in validated_contents]
-            )
+            contents = ''
+            for part in validated_contents:
+                for line in part.splitlines():
+                    contents += line.rstrip('\n').rstrip('\r') + os.linesep
             if contents_newline and not contents.endswith(os.linesep):
                 contents += os.linesep
         if template:
@@ -2675,6 +2680,7 @@ def managed(name,
             ret, 'Defaults must be formed as a dict')
 
     if not replace and os.path.exists(name):
+        ret_perms = {}
         # Check and set the permissions if necessary
         if salt.utils.platform.is_windows():
             ret = __salt__['file.check_perms'](
@@ -2686,10 +2692,19 @@ def managed(name,
                 inheritance=win_inheritance,
                 reset=win_perms_reset)
         else:
-            ret, _ = __salt__['file.check_perms'](
+            ret, ret_perms = __salt__['file.check_perms'](
                 name, ret, user, group, mode, attrs, follow_symlinks)
         if __opts__['test']:
-            ret['comment'] = 'File {0} not updated'.format(name)
+            if isinstance(ret_perms, dict) and \
+               'lmode' in ret_perms and \
+               mode != ret_perms['lmode']:
+                ret['comment'] = ('File {0} will be updated with permissions '
+                                  '{1} from its current '
+                                  'state of {2}'.format(name,
+                                                        mode,
+                                                        ret_perms['lmode']))
+            else:
+                ret['comment'] = 'File {0} not updated'.format(name)
         elif not ret['changes'] and ret['result']:
             ret['comment'] = ('File {0} exists with proper permissions. '
                               'No changes made.'.format(name))
@@ -3181,7 +3196,7 @@ def directory(name,
                   perms: full_control
             - win_inheritance: False
     '''
-    name = os.path.normcase(os.path.expanduser(name))
+    name = os.path.expanduser(name)
     ret = {'name': name,
            'changes': {},
            'pchanges': {},
@@ -3438,7 +3453,7 @@ def directory(name,
                             ret, _ = __salt__['file.check_perms'](
                                 full, ret, user, group, file_mode, None, follow_symlinks)
                     except CommandExecutionError as exc:
-                        if not exc.strerror.endswith('does not exist'):
+                        if not exc.strerror.startswith('Path not found'):
                             errors.append(exc.strerror)
 
             if check_dirs:
@@ -3709,9 +3724,7 @@ def recurse(name,
         # "env" is not supported; Use "saltenv".
         kwargs.pop('env')
 
-    name = salt.utils.data.decode(
-        os.path.normcase(os.path.expanduser(name))
-    )
+    name = os.path.expanduser(sdecode(name))
 
     user = _test_owner(kwargs, user=user)
     if salt.utils.platform.is_windows():

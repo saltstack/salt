@@ -8,10 +8,16 @@ from __future__ import absolute_import, print_function, unicode_literals
 import re
 import sys
 import platform
+import warnings
 
 # linux_distribution deprecated in py3.7
 try:
-    from platform import linux_distribution
+    from platform import linux_distribution as _deprecated_linux_distribution
+
+    def linux_distribution(**kwargs):
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            return _deprecated_linux_distribution(**kwargs)
 except ImportError:
     from distro import linux_distribution
 
