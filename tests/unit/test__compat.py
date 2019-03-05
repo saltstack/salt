@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Unit tests for salt.config
+Unit tests for salt._compat
 '''
 
 # Import Python libs
@@ -9,18 +9,13 @@ import logging
 import sys
 
 # Import Salt Testing libs
-from tests.support.helpers import with_tempdir, with_tempfile, destructiveTest
-from tests.support.mixins import AdaptedConfigurationTestCaseMixin
-from tests.support.paths import TMP
-from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, Mock, MagicMock, patch
+from tests.support.unit import TestCase
 
 # Import Salt libs
 import salt._compat as compat
 
 # Import 3rd Party libs
-from salt.ext.six import binary_type, string_types, text_type, integer_types
-from salt.ext.six.moves import cStringIO, StringIO
+from salt.ext.six import binary_type, text_type
 
 log = logging.getLogger(__name__)
 PY3 = sys.version_info.major == 3
@@ -74,5 +69,3 @@ class CompatTestCase(TestCase):
         else:
             expected = 'StringIO.StringIO instance'
         self.assertTrue(expected in repr(ret))
-
-
