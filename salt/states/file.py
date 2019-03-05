@@ -708,6 +708,8 @@ def _check_directory(name,
         for i in walk_l:
             walk_d[i[0]] = (i[1], i[2])
 
+    # Preserve rootdir_mode before going into recurse
+    rootdir_mode = mode
     if recurse:
         try:
             recurse_set = _get_recurse_set(recurse)
@@ -725,7 +727,7 @@ def _check_directory(name,
             if check_files:
                 for fname in files:
                     fchange = {}
-                    mode = file_mode
+                    mode = file_mode if mode is not None else None
                     path = os.path.join(root, fname)
                     stats = __salt__['file.stats'](
                         path, None, follow_symlinks
@@ -747,7 +749,7 @@ def _check_directory(name,
 
     # Recurse skips root (we always do dirs, not root), so always check root:
     if not children_only:
-        fchange = _check_dir_meta(name, user, group, mode, follow_symlinks)
+        fchange = _check_dir_meta(name, user, group, rootdir_mode, follow_symlinks)
         if fchange:
             changes[name] = fchange
 
