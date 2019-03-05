@@ -1058,7 +1058,7 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
                         if minion_id not in minions:
                             minions[minion_id] = False
                 else:
-                    chunk_ret[f_result['data']['id']] = f_result if full_return else f_result['data']['return']
+                    chunk_ret[f_result['data']['id']] = f_result['data'] if full_return else f_result['data']['return']
                     # clear finished event future
                     minions[f_result['data']['id']] = True
                     # if there are no more minions to wait for, then we are done
