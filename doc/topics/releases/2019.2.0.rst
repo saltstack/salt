@@ -65,7 +65,7 @@ This will fail when pkgs is a list or dictionary. You will need to update the st
       pkg.installed:
       - names: {{ server.pkgs |tojson }}
 
-This test case has also been tested with the yaml and json filters successfully.
+This test case has also been tested with the ``yaml`` and ``json`` filters successfully.
 
 .. note::
     This filter was added in Jinja 2.9. However, fear not! The 2018.3.3 release
