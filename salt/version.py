@@ -8,16 +8,18 @@ from __future__ import absolute_import, print_function, unicode_literals
 import re
 import sys
 import platform
+import warnings
 
 # linux_distribution deprecated in py3.7
-LINUX_DIST_AVAIL = True
-if sys.version_info[:2] >= (3, 7):
-    try:
-        from distro import linux_distribution
-    except ImportError:
-        LINUX_DIST_AVAIL = False
-else:
-    from platform import linux_distribution
+try:
+    from platform import linux_distribution as _deprecated_linux_distribution
+
+    def linux_distribution(**kwargs):
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            return _deprecated_linux_distribution(**kwargs)
+except ImportError:
+    from distro import linux_distribution
 
 # pylint: disable=invalid-name,redefined-builtin
 # Import 3rd-party libs
@@ -630,13 +632,7 @@ def system_information():
         '''
         Return host system version.
         '''
-        if LINUX_DIST_AVAIL:
-            lin_ver = linux_distribution()
-        else:
-            lin_ver = ('Unknown OS Name',
-                       'Unknown OS Release',
-                       'Unknown OS Codename')
-
+        lin_ver = linux_distribution()
         mac_ver = platform.mac_ver()
         win_ver = platform.win32_ver()
 
@@ -694,16 +690,9 @@ def system_information():
         version = system_version()
         release = platform.release()
 
-    if not LINUX_DIST_AVAIL:
-        full_distribution_name = ('Unknown OS Name',
-                                  'Unknown OS Release',
-                                  'Unknown OS Codename')
-    else:
-        full_distribution_name = linux_distribution(full_distribution_name=False)
-
     system = [
         ('system', platform.system()),
-        ('dist', ' '.join(full_distribution_name)),
+        ('dist', ' '.join(linux_distribution(full_distribution_name=False))),
         ('release', release),
         ('machine', platform.machine()),
         ('version', version),
