@@ -56,7 +56,7 @@ def pv_present(name, **kwargs):
            'name': name,
            'result': True}
 
-    if __salt__['lvm.pvdisplay'](name):
+    if __salt__['lvm.pvdisplay'](name, quiet=True):
         ret['comment'] = 'Physical Volume {0} already present'.format(name)
     elif __opts__['test']:
         ret['comment'] = 'Physical Volume {0} is set to be created'.format(name)
@@ -86,7 +86,7 @@ def pv_absent(name):
            'name': name,
            'result': True}
 
-    if not __salt__['lvm.pvdisplay'](name):
+    if not __salt__['lvm.pvdisplay'](name, quiet=True):
         ret['comment'] = 'Physical Volume {0} does not exist'.format(name)
     elif __opts__['test']:
         ret['comment'] = 'Physical Volume {0} is set to be removed'.format(name)
@@ -95,7 +95,7 @@ def pv_absent(name):
     else:
         changes = __salt__['lvm.pvremove'](name)
 
-        if __salt__['lvm.pvdisplay'](name):
+        if __salt__['lvm.pvdisplay'](name, quiet=True):
             ret['comment'] = 'Failed to remove Physical Volume {0}'.format(name)
             ret['result'] = False
         else:
@@ -125,7 +125,7 @@ def vg_present(name, devices=None, **kwargs):
     if isinstance(devices, six.string_types):
         devices = devices.split(',')
 
-    if __salt__['lvm.vgdisplay'](name):
+    if __salt__['lvm.vgdisplay'](name, quiet=True):
         ret['comment'] = 'Volume Group {0} already present'.format(name)
         for device in devices:
             realdev = os.path.realpath(device)
@@ -185,7 +185,7 @@ def vg_absent(name):
            'name': name,
            'result': True}
 
-    if not __salt__['lvm.vgdisplay'](name):
+    if not __salt__['lvm.vgdisplay'](name, quiet=True):
         ret['comment'] = 'Volume Group {0} already absent'.format(name)
     elif __opts__['test']:
         ret['comment'] = 'Volume Group {0} is set to be removed'.format(name)
@@ -194,7 +194,7 @@ def vg_absent(name):
     else:
         changes = __salt__['lvm.vgremove'](name)
 
-        if not __salt__['lvm.vgdisplay'](name):
+        if not __salt__['lvm.vgdisplay'](name, quiet=True):
             ret['comment'] = 'Removed Volume Group {0}'.format(name)
             ret['changes']['removed'] = changes
         else:
@@ -311,7 +311,7 @@ def lv_absent(name, vgname=None):
            'result': True}
 
     lvpath = '/dev/{0}/{1}'.format(vgname, name)
-    if not __salt__['lvm.lvdisplay'](lvpath):
+    if not __salt__['lvm.lvdisplay'](lvpath, quiet=True):
         ret['comment'] = 'Logical Volume {0} already absent'.format(name)
     elif __opts__['test']:
         ret['comment'] = 'Logical Volume {0} is set to be removed'.format(name)
@@ -320,7 +320,7 @@ def lv_absent(name, vgname=None):
     else:
         changes = __salt__['lvm.lvremove'](name, vgname)
 
-        if not __salt__['lvm.lvdisplay'](lvpath):
+        if not __salt__['lvm.lvdisplay'](lvpath, quiet=True):
             ret['comment'] = 'Removed Logical Volume {0}'.format(name)
             ret['changes']['removed'] = changes
         else:
